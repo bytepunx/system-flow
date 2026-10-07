@@ -20,9 +20,18 @@ import {
 	forecastAccuracy,
 	forecastByModel,
 	forecastRows,
+	driftedIn,
+	FORECAST_KINDS,
+	hasClaims,
+	holdTime,
 	human,
 	humanSigned,
+	isClaimsKind,
+	isForecastKind,
 	KINDS,
+	parallelism,
+	touchesDrift,
+	CLAIMS_KINDS,
 	percentile,
 	PLANNING_KINDS,
 	spreadOf,
@@ -41,6 +50,7 @@ import {
 	spendRows,
 	withUsage,
 	type Bucket,
+	type Claims,
 	type ErrorFilter,
 	type ItemMetrics,
 	type Report
@@ -306,16 +316,17 @@ const dark = theme(true);
 describe('chart builders', () => {
 	it('every kind builds with one y-axis and a tooltip', () => {
 		for (const k of KINDS) {
-			// the fixture carries no forecasts: the planning charts draw from their own
-			const planning = (PLANNING_KINDS as readonly string[]).includes(k);
-			const o = build(k, planning ? forecasting : report, light) as {
+			// the fixture carries no forecasts or claims: the planning charts draw from their own
+			const fixture = isClaimsKind(k) ? claiming : isForecastKind(k) ? forecasting : report;
+			const o = build(k, fixture, light) as {
 				yAxis: unknown;
 				tooltip: unknown;
 				series: unknown[];
 			};
 			expect(o.yAxis, k).toBeDefined();
-			// delivery accuracy alone draws its share on time on a second axis
-			if (k === 'delivery-accuracy') expect((o.yAxis as unknown[]).length).toBe(2);
+			// delivery accuracy and touches drift alone draw a share on a second axis
+			if (k === 'delivery-accuracy' || k === 'touches-drift')
+				expect((o.yAxis as unknown[]).length).toBe(2);
 			else expect(Array.isArray(o.yAxis), `${k} must not use two y-axes`).toBe(false);
 			expect(o.tooltip, k).toBeDefined();
 			// whose stories carry no delivery errors: delivery accuracy has its own fixture below
@@ -1083,7 +1094,7 @@ describe('planning charts', () => {
 			'delivery-accuracy': ['2026-08-02T12:00:00Z', '2026-09-01T12:00:00Z', 0],
 			'forecast-by-model': ['2026-08-02T00:00:00Z', '2026-09-01T00:00:00Z', 43200e3]
 		} as const;
-		for (const kind of PLANNING_KINDS) {
+		for (const kind of FORECAST_KINDS) {
 			const o = build(kind, report, light) as Accuracy;
 			const [from, to, half] = spans[kind];
 			expect(o.series, kind).toEqual([]);
@@ -1113,11 +1124,16 @@ describe('planning charts', () => {
 			nature: true,
 			model: false
 		});
+		// the Planning group lists the forecast charts, then the claims charts (S-0214)
 		expect(PLANNING_KINDS.map((k) => titleOf(k))).toEqual([
 			'Forecast Accuracy',
 			'Delivery Accuracy',
-			'Forecast Error / Model'
+			'Forecast Error / Model',
+			'Parallelism',
+			'Hold Time',
+			'Touches Drift'
 		]);
+		expect(PLANNING_KINDS).toEqual([...FORECAST_KINDS, ...CLAIMS_KINDS]);
 		expect(KINDS).toEqual(expect.arrayContaining([...PLANNING_KINDS]));
 	});
 
@@ -1578,5 +1594,286 @@ describe('planning charts', () => {
 		expect(forecastRows(forecasting, { model: '(none)' }).map((row) => row.id)).toEqual(['S-104']);
 		// null lists from an older flai
 		expect(forecastRows({ ...forecasting, items: null } as unknown as Report)).toEqual([]);
+	});
+});
+
+// Claims as flai sends them (S-0205, ADR-0113) over the stories of `forecasting`, in the window
+// of 2 August 12:00 to 1 September 12:00: a day per day of the window, a week per ISO week from
+// 27 July to 31 August, and the drift of S-101 (two files outside), S-102 (exact), and S-103 (a file
+// outside, a touch unchanged), done in the window; of S-106, done before it; of S-108, cancelled;
+// and of S-109, in progress.
+const windowDays = Array.from({ length: 31 }, (_, n) =>
+	new Date(Date.parse('2026-08-02') + n * 86400e3).toISOString().slice(0, 10)
+);
+const held = (overlap: number, after: number, noTouches: number) => ({
+	overlap,
+	after,
+	'no-touches': noTouches
+});
+const drift = (id: string, outside: string[], unchanged: string[]) => ({
+	id,
+	committed: [...outside, 'flai/internal/metrics/claims.go'].sort(),
+	outside,
+	unchanged,
+	outside_count: outside.length,
+	unchanged_count: unchanged.length
+});
+const claims: Claims = {
+	limit: 2,
+	days: windowDays.map((date, n) => ({ date, in_progress: n % 4, held: n === 10 ? 2 : 0 })),
+	weeks: [
+		{ week: '2026-W31', start: '2026-07-27', held_seconds: held(0, 0, 0), stories: 0, exact: 0 },
+		{
+			week: '2026-W32',
+			start: '2026-08-03',
+			held_seconds: held(7200, 3600, 0),
+			stories: 1,
+			exact: 0,
+			exact_share: 0
+		},
+		{
+			week: '2026-W33',
+			start: '2026-08-10',
+			held_seconds: held(0, 0, 1800),
+			stories: 1,
+			exact: 1,
+			exact_share: 1
+		},
+		{
+			week: '2026-W34',
+			start: '2026-08-17',
+			held_seconds: held(900, 0, 0),
+			stories: 1,
+			exact: 0,
+			exact_share: 0
+		},
+		{ week: '2026-W35', start: '2026-08-24', held_seconds: held(0, 0, 0), stories: 0, exact: 0 },
+		{ week: '2026-W36', start: '2026-08-31', held_seconds: held(0, 5400, 0), stories: 0, exact: 0 }
+	],
+	drift: [
+		drift('S-101', ['flai/cmd/a.go', 'flai/cmd/b.go'], []),
+		drift('S-102', [], []),
+		drift('S-103', ['docs/x.md'], ['flaiover/src/lib/viz']),
+		drift('S-106', ['flai/cmd/c.go'], []),
+		drift('S-108', ['flai/cmd/d.go'], []),
+		drift('S-109', ['flai/cmd/e.go'], ['docs'])
+	]
+};
+const claiming: Report = { ...forecasting, claims };
+
+describe('claims charts', () => {
+	type Line = {
+		name: string;
+		type: string;
+		stack?: string;
+		yAxisIndex?: number;
+		lineStyle: { color: string; type: string };
+		itemStyle: { color: string };
+		data: unknown[];
+	};
+	type Option = {
+		useUTC?: boolean;
+		legend: { show: boolean };
+		xAxis: { type: string; min?: number; max?: number; minInterval?: number };
+		yAxis: { name: string } | { name: string; min?: number; max?: number }[];
+		tooltip: { formatter: (p: unknown) => string };
+		series: Line[];
+	};
+	const day = 86400e3;
+	const start = Date.parse('2026-08-02T12:00:00Z');
+	const end = Date.parse('2026-09-01T12:00:00Z');
+	const empty: Claims = { days: [], weeks: [], drift: [] };
+
+	it('parallelism plots the items in progress and the stories held per day, and the limit', () => {
+		const o = parallelism(claiming, light) as Option;
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['in progress', 'line'],
+			['held', 'line'],
+			['limit', 'line']
+		]);
+		const [inProgress, heldStories, limit] = o.series;
+		expect(inProgress.data.length).toBe(31);
+		expect(inProgress.data.slice(0, 3)).toEqual([
+			['2026-08-02', 0],
+			['2026-08-03', 1],
+			['2026-08-04', 2]
+		]);
+		expect(inProgress.data[30]).toEqual(['2026-09-01', 2]);
+		expect(heldStories.data[10]).toEqual(['2026-08-12', 2]);
+		expect(heldStories.data[11]).toEqual(['2026-08-13', 0]);
+		// the limit is a flat dashed line over every day
+		expect(new Set(limit.data.map((d) => (d as [string, number])[1]))).toEqual(new Set([2]));
+		expect(limit.data.length).toBe(31);
+		expect(limit.lineStyle).toMatchObject({ type: 'dashed', color: light.textSecondary });
+		// in progress and held in their states' colours
+		expect(inProgress.itemStyle.color).toBe(light.series[0]);
+		expect(heldStories.itemStyle.color).toBe(light.series[3]);
+		expect(o.legend.show).toBe(true);
+		expect((o.yAxis as { name: string }).name).toBe('stories');
+		// a series by the day: from the day that holds the window's start to now
+		expect(o.xAxis).toMatchObject({
+			type: 'time',
+			min: Date.parse('2026-08-02T00:00:00Z'),
+			max: end
+		});
+		expect((build('parallelism', claiming, light) as Option).series).toEqual(o.series);
+	});
+	it('draws no limit line when the board has none, and a gap where a day carries no held count', () => {
+		const days = claims.days.map(({ date, in_progress }) => ({ date, in_progress }));
+		const unlimited: Report = { ...claiming, claims: { ...claims, limit: undefined, days } };
+		const o = parallelism(unlimited, light) as Option;
+		expect(o.series.map((s) => s.name)).toEqual(['in progress', 'held']);
+		// a flai older than S-0214 sends no held count
+		expect(o.series[1].data[0]).toEqual(['2026-08-02', null]);
+	});
+	it('hold time stacks the hours held per week by reason', () => {
+		const o = holdTime(claiming, light) as Option;
+		expect(o.series.map((s) => [s.name, s.type, s.stack])).toEqual([
+			['overlap', 'bar', 'held'],
+			['after', 'bar', 'held'],
+			['empty claim', 'bar', 'held']
+		]);
+		type Bar = { value: [number, number]; seconds: number };
+		const hoursOf = (s: Line) => s.data.map((d) => (d as Bar).value[1]);
+		expect(hoursOf(o.series[0])).toEqual([0, 2, 0, 0.25, 0, 0]);
+		expect(hoursOf(o.series[1])).toEqual([0, 1, 0, 0, 0, 1.5]);
+		expect(hoursOf(o.series[2])).toEqual([0, 0, 0.5, 0, 0, 0]);
+		// each bar at its week's Monday
+		expect(o.series[0].data.map((d) => (d as Bar).value[0])).toEqual(
+			['07-27', '08-03', '08-10', '08-17', '08-24', '08-31'].map((d) => Date.parse(`2026-${d}`))
+		);
+		// three reasons in three colours apart from each other
+		expect(new Set(o.series.map((s) => s.itemStyle.color)).size).toBe(3);
+		const week = 1;
+		expect(
+			o.tooltip.formatter(o.series.map((s) => ({ seriesName: s.name, data: s.data[week] })))
+		).toBe(
+			'week of 2026-08-03 (2026-W32), 3h held<br/>overlap: 2h<br/>after: 1h<br/>empty claim: 0m'
+		);
+		expect(o.tooltip.formatter([])).toBe('');
+		// from the week that holds the window's start to the one that holds now, half a week either side
+		expect(o.xAxis).toMatchObject({
+			type: 'time',
+			minInterval: 7 * day,
+			min: Date.parse('2026-07-27') - 3.5 * day,
+			max: Date.parse('2026-08-31') + 3.5 * day
+		});
+		expect(o.useUTC).toBe(true);
+		expect((o.yAxis as { name: string }).name).toBe('hours held');
+		expect((build('hold-time', claiming, light) as Option).series).toEqual(o.series);
+	});
+	it('picks the stories of the drift done in the window, cancelled ones left out', () => {
+		// S-106 is done before the window, S-108 cancelled, S-109 in progress
+		expect(driftedIn(claiming).map((s) => [s.id, s.title, s.completed])).toEqual([
+			['S-101', 'Story 101', '2026-08-03T12:00:00Z'],
+			['S-102', 'Story 102', '2026-08-12T09:30:00Z'],
+			['S-103', 'Story 103', '2026-08-20T00:00:00Z']
+		]);
+		expect(driftedIn(forecasting)).toEqual([]);
+	});
+	it('touches drift stacks each story by paths outside and unchanged, with the exact share per week', () => {
+		const o = touchesDrift(claiming, light) as Option;
+		expect(o.series.map((s) => [s.name, s.type, s.yAxisIndex])).toEqual([
+			['outside its touches', 'bar', undefined],
+			['touches unchanged', 'bar', undefined],
+			['exact touches per week', 'line', 1]
+		]);
+		expect(o.series[0].stack).toBe(o.series[1].stack);
+		type Bar = { value: [string, number]; id: string; paths: string[] };
+		const bars = (s: Line) => s.data.map((d) => [(d as Bar).id, ...(d as Bar).value]);
+		expect(bars(o.series[0])).toEqual([
+			['S-101', '2026-08-03T12:00:00Z', 2],
+			['S-102', '2026-08-12T09:30:00Z', 0],
+			['S-103', '2026-08-20T00:00:00Z', 1]
+		]);
+		expect(bars(o.series[1])).toEqual([
+			['S-101', '2026-08-03T12:00:00Z', 0],
+			['S-102', '2026-08-12T09:30:00Z', 0],
+			['S-103', '2026-08-20T00:00:00Z', 1]
+		]);
+		// each week's share at the middle of its part in the window; a week without a story is a gap
+		type Share = { value: [number, number | null] };
+		expect(o.series[2].data.map((d) => (d as Share).value)).toEqual([
+			[Date.parse('2026-08-02T18:00:00Z'), null],
+			[Date.parse('2026-08-06T12:00:00Z'), 0],
+			[Date.parse('2026-08-13T12:00:00Z'), 1],
+			[Date.parse('2026-08-20T12:00:00Z'), 0],
+			[Date.parse('2026-08-27T12:00:00Z'), null],
+			[Date.parse('2026-08-31T18:00:00Z'), null]
+		]);
+		const tip = (s: number, d: number) =>
+			o.tooltip.formatter({ seriesName: o.series[s].name, data: o.series[s].data[d] });
+		expect(tip(0, 0)).toBe(
+			'S-101 Story 101 · 2026-08-03<br/>outside its touches: 2<br/>flai/cmd/a.go, flai/cmd/b.go'
+		);
+		expect(tip(1, 1)).toBe('S-102 Story 102 · 2026-08-12<br/>touches unchanged: 0');
+		expect(tip(2, 2)).toBe(
+			'week of 2026-08-10 (2026-W33)<br/>1 of 1 story with exact touches (100%)'
+		);
+		const axes = o.yAxis as { name: string; min?: number; max?: number }[];
+		expect(axes.map((a) => a.name)).toEqual(['paths', 'exact touches']);
+		expect(axes[1]).toMatchObject({ min: 0, max: 1 });
+		expect(o.legend.show).toBe(true);
+		expect(o.xAxis).toMatchObject({ type: 'time', min: start, max: end });
+		expect((build('touches-drift', claiming, light) as Option).series).toEqual(o.series);
+	});
+	it('draws touches drift empty when git could not be read, and hold time still', () => {
+		// git unread: the weeks carry no stories, exact, or share
+		const weeks = claims.weeks!.map((wk) => ({
+			week: wk.week,
+			start: wk.start,
+			held_seconds: wk.held_seconds
+		}));
+		const unread: Report = { ...claiming, claims: { ...claims, weeks, drift: undefined } };
+		expect(driftedIn(unread)).toEqual([]);
+		const o = touchesDrift(unread, light) as Option;
+		expect(o.series).toEqual([]);
+		expect(o.xAxis).toMatchObject({ min: start, max: end });
+		expect((holdTime(unread, light) as Option).series[0].data.length).toBe(6);
+		// drift without a story done in the window: the shares alone
+		const idle: Report = { ...claiming, claims: { ...claims, drift: [] } };
+		expect((touchesDrift(idle, light) as Option).series.map((s) => s.name)).toEqual([
+			'exact touches per week'
+		]);
+	});
+	it('draws the claims charts empty over the window from an empty window or an older flai', () => {
+		const spans = {
+			parallelism: [Date.parse('2026-08-02T00:00:00Z'), end],
+			'hold-time': [Date.parse('2026-07-27') - 3.5 * day, Date.parse('2026-08-31') + 3.5 * day],
+			'touches-drift': [start, end]
+		} as const;
+		for (const r of [{ ...claiming, claims: empty }, forecasting]) {
+			for (const kind of CLAIMS_KINDS) {
+				const o = build(kind, r, light) as Option;
+				expect(
+					o.series.every((s) => s.data.length === 0),
+					kind
+				).toBe(true);
+				expect(o.xAxis, kind).toMatchObject({ min: spans[kind][0], max: spans[kind][1] });
+			}
+		}
+		expect((build('touches-drift', forecasting, light) as Option).series).toEqual([]);
+		expect((build('parallelism', forecasting, light) as Option).series.length).toBe(2);
+		// a flai older than S-0214 sends the days without weeks or held counts
+		const older: Report = { ...forecasting, claims: { limit: 2, days: claims.days } };
+		expect(hasClaims(claiming)).toBe(true);
+		expect(hasClaims(older)).toBe(false);
+		expect(hasClaims(forecasting)).toBe(false);
+		expect((holdTime(older, light) as Option).series.every((s) => s.data.length === 0)).toBe(true);
+	});
+	it('reads the stories alone, with no filter, and plots no forecast error', () => {
+		for (const kind of CLAIMS_KINDS) {
+			expect(isClaimsKind(kind), kind).toBe(true);
+			expect(isForecastKind(kind), kind).toBe(false);
+			expect(controls(kind), kind).toEqual({
+				type: false,
+				epic: false,
+				bucket: false,
+				nature: false,
+				model: false
+			});
+			expect(errorFacets(forecasting, kind), kind).toEqual({ natures: [], models: [] });
+		}
+		expect(FORECAST_KINDS.every(isForecastKind)).toBe(true);
 	});
 });

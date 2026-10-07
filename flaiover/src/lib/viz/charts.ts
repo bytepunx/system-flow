@@ -1,7 +1,8 @@
 // Chart option builders: pure functions from a flai stats report to an
 // ECharts option, so they are unit-testable without a DOM. One y-axis per
-// chart, save the share on time beside Delivery Accuracy's errors, thin
-// marks, legends for two or more series, tooltips everywhere.
+// chart, save the share on time beside Delivery Accuracy's errors and the
+// share of exact touches beside Touches Drift's paths, thin marks, legends
+// for two or more series, tooltips everywhere.
 import {
 	colorFor,
 	modelSlot,
@@ -71,6 +72,48 @@ export type ErrorStats = ErrorSpread & {
 };
 /** How far forecasts and estimates were from what happened, over the items done in the window. */
 export type Forecasts = { forecast: ErrorStats; delivery: ErrorStats; estimate: ErrorStats };
+/** The reasons a ready story is held for, as `held (…)` names them (ADR-0046, ADR-0113). */
+export const HOLD_REASONS = ['overlap', 'after', 'no-touches'] as const;
+export type HoldReason = (typeof HOLD_REASONS)[number];
+/** The items in progress at a day's end (23:59:59 UTC), and the stories held then. */
+export type ClaimsDay = {
+	date: string;
+	in_progress: number;
+	/** Absent from a flai older than S-0214. */
+	held?: number;
+};
+/**
+ * One ISO week of the window: the seconds stories were held in it by reason, and of the stories in
+ * `drift` completed in it, those whose touches were exact; the three absent when git could not be read.
+ */
+export type ClaimsWeek = {
+	week: string;
+	start: string;
+	held_seconds: Record<HoldReason, number>;
+	stories?: number;
+	exact?: number;
+	/** `exact` over `stories`; absent when `stories` is 0. */
+	exact_share?: number;
+};
+/** How far a story's touches were from the files its commits changed (S-0205). */
+export type TouchDrift = {
+	id: string;
+	committed: string[];
+	outside: string[];
+	unchanged: string[];
+	outside_count: number;
+	unchanged_count: number;
+};
+/** What claims cost in holds and parallelism, and how far touches drifted (metrics.md). */
+export type Claims = {
+	/** Absent when the board has no in-progress limit. */
+	limit?: number;
+	days: ClaimsDay[];
+	/** Absent from a flai older than S-0214. */
+	weeks?: ClaimsWeek[];
+	/** Absent when git could not be read. */
+	drift?: TouchDrift[];
+};
 /** The per-item error fields the planning charts read. */
 export type ErrorField =
 	'forecast_error_seconds' | 'delivery_error_seconds' | 'estimate_error_seconds';
@@ -217,6 +260,8 @@ export type Report = {
 	usage?: UsageReport;
 	/** Absent from a flai older than S-0205. */
 	forecasts?: Forecasts;
+	/** Absent from a flai older than S-0205. */
+	claims?: Claims;
 };
 
 /** The charts of how work flows. */
@@ -234,11 +279,17 @@ export const USAGE_KINDS = [
 	'cost-per-model'
 ] as const;
 /** The charts of forecasts and estimates against what happened (S-0212). */
-export const PLANNING_KINDS = [
+export const FORECAST_KINDS = [
 	'forecast-accuracy',
 	'delivery-accuracy',
 	'forecast-by-model'
 ] as const;
+export type ForecastKind = (typeof FORECAST_KINDS)[number];
+/** The charts of what claims cost in parallelism and holds, and of touches drift (S-0214). */
+export const CLAIMS_KINDS = ['parallelism', 'hold-time', 'touches-drift'] as const;
+export type ClaimsKind = (typeof CLAIMS_KINDS)[number];
+/** The charts the Planning group lists: forecasts, then claims. */
+export const PLANNING_KINDS = [...FORECAST_KINDS, ...CLAIMS_KINDS] as const;
 export type PlanningKind = (typeof PLANNING_KINDS)[number];
 export const KINDS = [...FLOW_KINDS, ...USAGE_KINDS, ...PLANNING_KINDS] as const;
 export type Kind = (typeof KINDS)[number];
@@ -259,7 +310,10 @@ export const TITLES: Record<Kind, string> = {
 	'cost-per-model': 'Avg. Cost / Model',
 	'forecast-accuracy': 'Forecast Accuracy',
 	'delivery-accuracy': 'Delivery Accuracy',
-	'forecast-by-model': 'Forecast Error / Model'
+	'forecast-by-model': 'Forecast Error / Model',
+	parallelism: 'Parallelism',
+	'hold-time': 'Hold Time',
+	'touches-drift': 'Touches Drift'
 };
 /** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
 export const SPEND_KINDS: readonly Kind[] = [
@@ -281,15 +335,22 @@ export function bucketsFor(since: string): BucketSize[] {
 	const days = since.endsWith('w') ? parseInt(since) * 7 : parseInt(since);
 	return BUCKETS.filter((b) => b !== 'hour' || days <= MAX_HOUR_WINDOW_DAYS);
 }
-const isPlanning = (kind: Kind): kind is PlanningKind =>
-	(PLANNING_KINDS as readonly Kind[]).includes(kind);
+/** Whether a chart is drawn from the forecast errors, and narrowed by nature and model. */
+export const isForecastKind = (kind: Kind): kind is ForecastKind =>
+	(FORECAST_KINDS as readonly Kind[]).includes(kind);
+/** Whether a chart is drawn from `claims`. */
+export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
+	(CLAIMS_KINDS as readonly Kind[]).includes(kind);
 /**
  * The controls a chart uses. Spend over time is summed by flai, so no epic narrows it; a chart
- * per item shows every type, so none is chosen. The planning charts read the stories, narrowed by
- * nature and model; the chart per model shows every model, by the bucket.
+ * per item shows every type, so none is chosen. The forecast charts read the stories, narrowed by
+ * nature and model; the chart per model shows every model, by the bucket. The claims charts read
+ * the stories, which alone are held, by the day, the week, and the story, as flai lays them out.
  */
 export function controls(kind: Kind) {
-	if (isPlanning(kind))
+	if (isClaimsKind(kind))
+		return { type: false, epic: false, bucket: false, nature: false, model: false };
+	if (isForecastKind(kind))
 		return {
 			type: false,
 			epic: false,
@@ -523,8 +584,12 @@ export function cfd(r: Report, t: Theme): Opt {
 /** The items of a day in time in state: the moment the UTC day starts, and those completed in it. */
 type StateDay = { at: number; items: ItemMetrics[] };
 type StateBar = { value: [number, number]; ids: string[] };
-/** How many of a day's items the tooltip of time in state names before it counts the rest. */
+/** How many names a tooltip lists before it counts the rest. */
 const NAMED = 10;
+/** Names for a tooltip: the first NAMED, then how many more. */
+const named = (names: string[]) =>
+	names.slice(0, NAMED).join(', ') +
+	(names.length > NAMED ? ` and ${names.length - NAMED} more` : '');
 /**
  * Time in state (S-0168): one stacked bar per UTC day of the window in which items were completed,
  * the mean hours per state of those items, on a time axis that spans the window.
@@ -561,11 +626,8 @@ export function timeInState(r: Report, t: Theme, epic?: string): Opt {
 				const list = ps.filter((p) => p?.data);
 				if (list.length === 0) return '';
 				const ids = list[0].data.ids;
-				const named =
-					ids.slice(0, NAMED).join(', ') +
-					(ids.length > NAMED ? ` and ${ids.length - NAMED} more` : '');
 				const lines = list.map((p) => `${p.marker ?? ''}${p.seriesName}: ${p.data.value[1]} hours`);
-				return `${new Date(list[0].data.value[0]).toISOString().slice(0, 10)}, mean of ${ids.length} ${ids.length === 1 ? r.type : plural(r.type)}<br/>${named}<br/>${lines.join('<br/>')}`;
+				return `${new Date(list[0].data.value[0]).toISOString().slice(0, 10)}, mean of ${ids.length} ${ids.length === 1 ? r.type : plural(r.type)}<br/>${named(ids)}<br/>${lines.join('<br/>')}`;
 			}
 		}),
 		xAxis: axisX(t, {
@@ -1095,8 +1157,8 @@ export const NO_MODEL = '(none)';
 export const modelOf = (i: ItemMetrics) => i.model ?? NO_MODEL;
 /** The nature and the model a planning chart is narrowed to; neither when absent. */
 export type ErrorFilter = { nature?: string; model?: string };
-/** The errors each planning chart plots. */
-export const ERRORS_OF: Record<PlanningKind, readonly ErrorField[]> = {
+/** The errors each forecast chart plots. */
+export const ERRORS_OF: Record<ForecastKind, readonly ErrorField[]> = {
 	'forecast-accuracy': ['forecast_error_seconds', 'estimate_error_seconds'],
 	'delivery-accuracy': ['delivery_error_seconds'],
 	'forecast-by-model': ['forecast_error_seconds']
@@ -1108,15 +1170,15 @@ const passes = (i: ItemMetrics, f: ErrorFilter) =>
 	(!f.nature || i.nature === f.nature) && (!f.model || modelOf(i) === f.model);
 /**
  * The natures and the models of the items done in the window that carry an error a planning chart
- * plots, in order of name: what its nature and model selects offer.
+ * plots, in order of name: what its nature and model selects offer; none for a claims chart, which
+ * plots no error.
  */
 export function errorFacets(
 	report: Report,
 	kind: PlanningKind
 ): { natures: string[]; models: string[] } {
-	const items = doneIn(normalise(report)).filter((i) =>
-		ERRORS_OF[kind].some((f) => i[f] !== undefined)
-	);
+	const fields: readonly ErrorField[] = isForecastKind(kind) ? ERRORS_OF[kind] : [];
+	const items = doneIn(normalise(report)).filter((i) => fields.some((f) => i[f] !== undefined));
 	return {
 		natures: [...new Set(items.map((i) => i.nature))].sort(),
 		models: [...new Set(items.map(modelOf))].sort()
@@ -1268,6 +1330,11 @@ export function onTimeShare(report: Report, f: ErrorFilter = {}): OnTimeWeek[] {
 }
 /** A share as a whole percentage. */
 const percent = (v: number) => `${Math.round(v * 100)}%`;
+/** Where a week's share is drawn: the middle of the part of the week from `start` in the window. */
+function midWeek(w: { start: number; end: number }, start: string): number {
+	const from = Date.parse(start);
+	return (Math.max(from, w.start) + Math.min(from + BUCKET_MS.week, w.end)) / 2;
+}
 /** A week's share on the time axis; null, a gap in the line, for a week without any. */
 type SharePoint = OnTimeWeek & { value: [number, number | null] };
 /**
@@ -1293,11 +1360,10 @@ export function deliveryAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 	const lines = band(s, DAY_S);
 	const w = windowOf(r);
 	const weeks = w
-		? onTimeShare(r, f).map((wk): SharePoint => {
-				const from = Date.parse(wk.start);
-				const mid = (Math.max(from, w.start) + Math.min(from + BUCKET_MS.week, w.end)) / 2;
-				return { ...wk, value: [mid, wk.share ?? null] };
-			})
+		? onTimeShare(r, f).map((wk): SharePoint => ({
+				...wk,
+				value: [midWeek(w, wk.start), wk.share ?? null]
+			}))
 		: [];
 	const shares = weeks.some((wk) => wk.share !== undefined) ? weeks : [];
 	const series = [
@@ -1464,6 +1530,233 @@ export function forecastRows(report: Report, f: ErrorFilter = {}): ForecastRow[]
 		}));
 }
 
+/** Whether the report carries what the claims charts are drawn from: a flai older than S-0214 does not. */
+export const hasClaims = (r: Report) => r.claims?.weeks !== undefined;
+type DayPoint = [string, number | null];
+/**
+ * Parallelism (S-0214): per day of the window, the items in progress at its end as a line and the
+ * stories held then as a second, with the board's in-progress limit as a flat dashed line, none
+ * when the board has no limit.
+ */
+export function parallelism(r: Report, t: Theme): Opt {
+	const days = r.claims?.days ?? [];
+	const limit = r.claims?.limit;
+	const daily = (name: string, color: string, data: DayPoint[], dashed = false) => ({
+		name,
+		type: 'line',
+		showSymbol: false,
+		lineStyle: { width: dashed ? 1 : 2, color, type: dashed ? 'dashed' : 'solid' },
+		itemStyle: { color },
+		data
+	});
+	const series = [
+		daily(
+			'in progress',
+			colorFor(t, STATE_SLOT, 'in-progress', 0),
+			days.map((d) => [d.date, d.in_progress])
+		),
+		// a held story waits in ready, and is drawn in its colour
+		daily(
+			'held',
+			colorFor(t, STATE_SLOT, 'ready', 0),
+			days.map((d) => [d.date, d.held ?? null])
+		)
+	];
+	if (limit !== undefined)
+		series.push(
+			daily(
+				'limit',
+				t.textSecondary,
+				days.map((d) => [d.date, limit]),
+				true
+			)
+		);
+	return base(t, {
+		legend: legend(t, true),
+		tooltip: tooltip(t, { trigger: 'axis', axisPointer: { type: 'line' } }),
+		xAxis: axisX(t, { type: 'time', ...span(r, true) }),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: plural(r.type),
+			nameTextStyle: { color: t.textSecondary },
+			minInterval: 1
+		}),
+		series
+	});
+}
+/**
+ * Each reason's series on the hold-time chart: its name, `no-touches` as the empty claim it is,
+ * and its colour, of the three slots that stay apart for every pair in both modes.
+ */
+const HOLD_SERIES: Record<HoldReason, { name: string; slot: number }> = {
+	overlap: { name: 'overlap', slot: 6 },
+	after: { name: 'after', slot: 4 },
+	'no-touches': { name: 'empty claim', slot: 5 }
+};
+/** A reason's hours held in a week, at the week's Monday, with its seconds for the tooltip. */
+type HoldBar = { value: [number, number]; seconds: number; week: string; start: string };
+/**
+ * Hold time (S-0214): one bar per ISO week of the window, the hours stories were held in it,
+ * stacked by the one reason each hold is named by (ADR-0113), so that a bar's height is the time held.
+ */
+export function holdTime(r: Report, t: Theme): Opt {
+	const weeks = r.claims?.weeks ?? [];
+	const series = HOLD_REASONS.map((reason) => ({
+		name: HOLD_SERIES[reason].name,
+		type: 'bar',
+		stack: 'held',
+		barMaxWidth: 24,
+		itemStyle: {
+			color: t.series[HOLD_SERIES[reason].slot],
+			borderColor: t.surface,
+			borderWidth: 1
+		},
+		data: weeks.map((wk): HoldBar => {
+			const seconds = wk.held_seconds[reason] ?? 0;
+			return {
+				value: [Date.parse(wk.start), seconds / 3600],
+				seconds,
+				week: wk.week,
+				start: wk.start
+			};
+		})
+	}));
+	return base(t, {
+		useUTC: true,
+		legend: legend(t, true),
+		tooltip: tooltip(t, {
+			trigger: 'axis',
+			axisPointer: { type: 'shadow' },
+			formatter: (ps: { marker?: string; seriesName: string; data: HoldBar }[]) => {
+				const list = ps.filter((p) => p?.data);
+				if (list.length === 0) return '';
+				const { week, start } = list[0].data;
+				const held = list.reduce((n, p) => n + p.data.seconds, 0);
+				const lines = list.map((p) => `${p.marker ?? ''}${p.seriesName}: ${human(p.data.seconds)}`);
+				return `week of ${start} (${week}), ${human(held)} held<br/>${lines.join('<br/>')}`;
+			}
+		}),
+		xAxis: axisX(t, {
+			type: 'time',
+			minInterval: BUCKET_MS.week,
+			...buckets(
+				r,
+				'week',
+				weeks.map((wk) => Date.parse(wk.start))
+			)
+		}),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: 'hours held',
+			nameTextStyle: { color: t.textSecondary }
+		}),
+		series
+	});
+}
+/** A story of the touches-drift chart: its drift as flai reports it, and its title and completion. */
+export type DriftedStory = TouchDrift & { title: string; completed: string };
+/**
+ * The stories of `claims.drift` done in the window, cancelled ones left out, in order of
+ * completion: those the touches-drift chart draws; none when git could not be read.
+ */
+export function driftedIn(report: Report): DriftedStory[] {
+	const r = normalise(report);
+	const done = new Map(doneIn(r).map((i) => [i.id, i]));
+	return (r.claims?.drift ?? [])
+		.flatMap((d): DriftedStory[] => {
+			const i = done.get(d.id);
+			return i ? [{ ...d, title: i.title, completed: i.completed! }] : [];
+		})
+		.sort((a, b) => Date.parse(a.completed) - Date.parse(b.completed));
+}
+/** A story's count of paths of one kind of drift, at its completion, with the paths it counts. */
+type DriftBar = { value: [string, number]; id: string; title: string; paths: string[] };
+/** A week's share of exact touches; null, a gap in the line, for a week without such a story. */
+type ExactPoint = ClaimsWeek & { value: [number, number | null] };
+/**
+ * Touches drift (S-0214): per story of `claims.drift` done in the window, at its completion, the
+ * files its commits changed outside its touches and the touches no commit changed, stacked. On a
+ * second axis, the share of the stories done in each ISO week whose touches were exact, drawn at
+ * the middle of the part of the week in the window; a week without any is a gap.
+ */
+export function touchesDrift(r: Report, t: Theme): Opt {
+	const stories = driftedIn(r);
+	const w = windowOf(r);
+	const weeks = w
+		? (r.claims?.weeks ?? []).map((wk): ExactPoint => ({
+				...wk,
+				value: [midWeek(w, wk.start), wk.exact_share ?? null]
+			}))
+		: [];
+	const shares = weeks.some((wk) => wk.exact_share !== undefined) ? weeks : [];
+	const bar = (name: string, slot: number, of: (s: DriftedStory) => [number, string[]]) => ({
+		name,
+		type: 'bar',
+		stack: 'drift',
+		barMaxWidth: 24,
+		itemStyle: { color: t.series[slot], borderColor: t.surface, borderWidth: 1 },
+		data: stories.map((s): DriftBar => {
+			const [n, paths] = of(s);
+			return { value: [s.completed, n], id: s.id, title: s.title, paths };
+		})
+	});
+	const series = [
+		bar('outside its touches', 4, (s) => [s.outside_count, s.outside]),
+		bar('touches unchanged', 6, (s) => [s.unchanged_count, s.unchanged]),
+		{
+			name: 'exact touches per week',
+			type: 'line',
+			yAxisIndex: 1,
+			connectNulls: false,
+			symbol: 'emptyCircle',
+			symbolSize: 8,
+			lineStyle: { width: 2, color: t.series[5] },
+			itemStyle: { color: t.series[5] },
+			data: shares
+		}
+	].filter((x) => x.data.length > 0);
+	const noun = (n: number) => (n === 1 ? r.type : plural(r.type));
+	const name = { color: t.textSecondary, align: 'left' };
+	return base(t, {
+		// room for the legend above the axis names, and for the share's labels on the right
+		grid: { left: 56, right: 56, top: 64, bottom: 48, containLabel: false },
+		legend: marks(t, series.length > 1),
+		tooltip: tooltip(t, {
+			formatter: (p: { seriesName: string; data: DriftBar | ExactPoint }) => {
+				const d = p.data;
+				if ('id' in d) {
+					const paths = d.paths.length > 0 ? `<br/>${named(d.paths)}` : '';
+					return `${d.id} ${d.title} · ${d.value[0].slice(0, 10)}<br/>${p.seriesName}: ${d.value[1]}${paths}`;
+				}
+				const of =
+					d.exact_share === undefined
+						? `no ${r.type} done`
+						: `${d.exact} of ${d.stories} ${noun(d.stories ?? 0)} with exact touches (${percent(d.exact_share)})`;
+				return `week of ${d.start} (${d.week})<br/>${of}`;
+			}
+		}),
+		xAxis: axisX(t, { type: 'time', ...span(r) }),
+		yAxis: [
+			axisY(t, {
+				type: 'value',
+				name: 'paths',
+				minInterval: 1,
+				nameTextStyle: name
+			}),
+			axisY(t, {
+				type: 'value',
+				name: 'exact touches',
+				min: 0,
+				max: 1,
+				nameTextStyle: { ...name, align: 'right' },
+				splitLine: { show: false },
+				axisLabel: { color: t.textSecondary, formatter: percent }
+			})
+		],
+		series
+	});
+}
+
 /** A chart's ECharts option: the planning charts narrowed by the filter, the others by the epic. */
 export function build(
 	kind: Kind,
@@ -1508,5 +1801,11 @@ export function build(
 			return deliveryAccuracy(r, t, filter);
 		case 'forecast-by-model':
 			return forecastByModel(r, t, filter);
+		case 'parallelism':
+			return parallelism(r, t);
+		case 'hold-time':
+			return holdTime(r, t);
+		case 'touches-drift':
+			return touchesDrift(r, t);
 	}
 }
