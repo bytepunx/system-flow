@@ -3,11 +3,11 @@ id: T-1071
 type: task
 nature: improvement
 title: flai/internal/verify runs the close-out's steps for a story's worktree and answers one result with each step's state, duration, and findings
-status: in-progress
+status: done
 parent: S-0270
 owner: alex
 created: 2026-10-06T22:52:15Z
-updated: 2026-10-07T03:27:06Z
+updated: 2026-10-07T03:36:07Z
 transitions:
   - to: ready
     at: 2026-10-07T03:27:06Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T03:27:06Z
     by: agent-S-0270
+  - to: done
+    at: 2026-10-07T03:36:07Z
+    by: agent-S-0270
 stream: S-0270
 tags: [flai, cli]
 touches: [flai/internal/verify/verify.go, flai/internal/verify/verify_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/proc.go, flai/internal/verify/proc_unix.go, flai/internal/verify/proc_windows.go, flai/internal/verify/proc_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go]
+usage:
+  source: log
+  seconds: 541
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 25993
+      cache_read: 4499646
+      cache_write: 130600
+      cost: 2.235
 ---
 # T-1071 flai/internal/verify runs the close-out's steps for a story's worktree and answers one result with each step's state, duration, and findings
 

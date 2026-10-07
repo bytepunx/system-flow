@@ -3,11 +3,11 @@ id: S-0270
 type: story
 nature: improvement
 title: "Verification is a module: flai verify runs the tiers the diff selects and answers structured findings, replacing the verifier sub-agent's run"
-status: in-progress
+status: done
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:29Z
-updated: 2026-10-07T03:27:06Z
+updated: 2026-10-07T06:48:44Z
 transitions:
   - to: ready
     at: 2026-10-06T22:48:06Z
@@ -21,15 +21,48 @@ transitions:
   - to: in-progress
     at: 2026-10-07T03:25:12Z
     by: agent-S-0270
+  - to: review
+    at: 2026-10-07T06:46:29Z
+    by: agent-S-0270
+  - to: done
+    at: 2026-10-07T06:48:44Z
+    by: alex
 tags: [cli, mcp, dashboard]
 topics: [automation, mcp, hostapi, code, conventions, template, dashboard]
-touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/serve/checks.go, flai/internal/serve/checks_config.go, scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/verify_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/server/agent.ts, "flaiover/src/routes/api/items/[id]/verify/+server.ts", "flaiover/src/routes/api/items/[id]/verify/verify.test.ts", design/adrs, design/system/flai-cli.md, design/system/devex.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, system-flow.yaml, template/root/system-flow.yaml.tmpl]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/root.go, flai/internal/verify, flai/internal/serve/checks.go, flai/internal/serve/checks_config.go, scripts/close-out.sh, scripts/README.md, template/root/scripts/close-out.sh, template/root/scripts/README.md, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/verify_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/server/agent.ts, "flaiover/src/routes/api/items/[id]/verify/+server.ts", "flaiover/src/routes/api/items/[id]/verify/verify.test.ts", design/adrs, design/system/flai-cli.md, design/system/devex.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, system-flow.yaml, template/root/system-flow.yaml.tmpl, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, design/conventions/code-quality.md, design/conventions/strategic-agents.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, template/root/design/conventions/code-quality.md, template/root/design/conventions/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, design/system/flaiover-dashboard.md, design/system/project-manifest.md, design/system/agent-context.md, docs/operators/settings.md, design/system/conventions.md, design/system/strategic-agents.md, design/system/workflow.md, docs/operators/index.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md, design/issues/summary.md]
 after: [S-0273]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 5974
+  models:
+    - model: claude-opus-5-5
+      input: 770
+      output: 322836
+      cache_read: 55886149
+      cache_write: 1622070
+      cost: 27.7595
+    - model: claude-sonnet-5-5
+      input: 20
+      output: 5255
+      cache_read: 213854
+      cache_write: 89169
+      cost: 0.3183
+  strategic:
+    - kind: orchestrator
+      seconds: 8244
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 190
+          output: 3228
+          cache_read: 11966096
+          cache_write: 56451
+          cost: 3.0333
 cost_of_delay:
   value: 43
   by: planner-E-0017
@@ -51,11 +84,11 @@ finalized:
 Before review a story agent starts a Sonnet verifier sub-agent to run the close-out and read its log: 88 minutes over 22 stories, and in S-0248 three runs of the same two-minute script. `flai verify S-nnnn`, `verify` over MCP, and `verify.run` on the host channel run what `scripts/close-out.sh` runs for the branch's diff, cheapest tier first, and answer findings as data: step, path, line, message, and whether the step passed, failed, or was not reached, with the duration of each. A finding outside the story (S-0249) is a note, not a failure. The agent reads twenty lines, not a log, and the sub-agent is kept for judgement, checking the diff against the criteria and the conventions, if at all.
 
 ## Acceptance criteria
-- [ ] `flai verify S-nnnn` runs the project's lint, test tiers, check, and narrative check for the story's worktree and answers one structured result, as text and `--json`, with each step's state and duration
-- [ ] The same is `verify` over MCP and `verify.run` on the host channel; the dashboard's story page can show the last result
-- [ ] `scripts/close-out.sh` calls it, or shares its implementation, so that the two never disagree
-- [ ] `design/conventions/delegation.md`, the harness prompt, and the verifier definition send the agent to `flai verify` for the run and keep the sub-agent for the criteria and conventions review
-- [ ] `design/system/flai-cli.md`, `devex.md`, and the user guide describe it
+- [x] `flai verify S-nnnn` runs the project's lint, test tiers, check, and narrative check for the story's worktree and answers one structured result, as text and `--json`, with each step's state and duration
+- [x] The same is `verify` over MCP and `verify.run` on the host channel; the dashboard's story page can show the last result
+- [x] `scripts/close-out.sh` calls it, or shares its implementation, so that the two never disagree
+- [x] `design/conventions/delegation.md`, the harness prompt, and the verifier definition send the agent to `flai verify` for the run and keep the sub-agent for the criteria and conventions review
+- [x] `design/system/flai-cli.md`, `devex.md`, and the user guide describe it
 
 ## Tasks
 - T-1071 flai/internal/verify runs the close-out's steps for a story's worktree and answers one result with each step's state, duration, and findings

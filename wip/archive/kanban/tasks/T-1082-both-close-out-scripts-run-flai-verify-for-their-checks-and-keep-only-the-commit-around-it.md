@@ -3,16 +3,36 @@ id: T-1082
 type: task
 nature: improvement
 title: Both close-out scripts run flai verify for their checks and keep only the commit around it
-status: backlog
+status: done
 parent: S-0270
 owner: alex
 created: 2026-10-06T22:52:46Z
-updated: 2026-10-07T03:27:06Z
-transitions: []
+updated: 2026-10-07T04:33:21Z
+transitions:
+  - to: ready
+    at: 2026-10-07T03:49:38Z
+    by: agent-S-0270
+  - to: in-progress
+    at: 2026-10-07T03:49:39Z
+    by: agent-S-0270
+  - to: done
+    at: 2026-10-07T04:33:21Z
+    by: agent-S-0270
 stream: S-0270
 tags: [flai, template]
 touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md, system-flow.yaml, template/root/system-flow.yaml.tmpl]
 after: [T-1075]
+usage:
+  source: log
+  seconds: 2622
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 27465
+      cache_read: 4754468
+      cache_write: 137996
+      cost: 2.3616
 ---
 # T-1082 Both close-out scripts run flai verify for their checks and keep only the commit around it
 

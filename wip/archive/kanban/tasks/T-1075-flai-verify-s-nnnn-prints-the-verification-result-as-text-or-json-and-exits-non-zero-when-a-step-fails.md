@@ -3,16 +3,36 @@ id: T-1075
 type: task
 nature: improvement
 title: flai verify S-nnnn prints the verification result as text or --json and exits non-zero when a step fails
-status: backlog
+status: done
 parent: S-0270
 owner: alex
 created: 2026-10-06T22:52:25Z
-updated: 2026-10-06T22:52:25Z
-transitions: []
+updated: 2026-10-07T03:49:36Z
+transitions:
+  - to: ready
+    at: 2026-10-07T03:36:08Z
+    by: agent-S-0270
+  - to: in-progress
+    at: 2026-10-07T03:36:08Z
+    by: agent-S-0270
+  - to: done
+    at: 2026-10-07T03:49:36Z
+    by: agent-S-0270
 stream: S-0270
 tags: [flai, cli]
-touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/root.go]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/root.go, flai/internal/verify/text.go]
 after: [T-1071]
+usage:
+  source: log
+  seconds: 808
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 24823
+      cache_read: 4297125
+      cache_write: 124722
+      cost: 2.1344
 ---
 # T-1075 flai verify S-nnnn prints the verification result as text or --json and exits non-zero when a step fails
 

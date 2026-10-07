@@ -3,11 +3,11 @@ id: S-0271
 type: story
 nature: improvement
 title: "Criteria and narrative state are commands: flai story tick checks a criterion and flai stream state writes Current state and Next steps"
-status: ready
+status: in-progress
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:30Z
-updated: 2026-10-07T03:29:50Z
+updated: 2026-10-07T06:46:43Z
 transitions:
   - to: ready
     at: 2026-10-06T22:48:17Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-10-06T23:59:04Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T06:46:43Z
+    by: agent-S-0271
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions]
 touches: [flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/tooling.md, design/conventions/work-management.md, design/conventions/session-start.md, template/root/design/conventions/tooling.md, template/root/design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]

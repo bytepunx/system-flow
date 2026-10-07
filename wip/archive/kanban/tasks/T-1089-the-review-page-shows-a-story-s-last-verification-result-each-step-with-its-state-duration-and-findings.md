@@ -3,16 +3,36 @@ id: T-1089
 type: task
 nature: improvement
 title: The review page shows a story's last verification result, each step with its state, duration, and findings
-status: backlog
+status: done
 parent: S-0270
 owner: alex
 created: 2026-10-06T22:52:56Z
-updated: 2026-10-06T22:52:56Z
-transitions: []
+updated: 2026-10-07T04:33:22Z
+transitions:
+  - to: ready
+    at: 2026-10-07T03:49:39Z
+    by: agent-S-0270
+  - to: in-progress
+    at: 2026-10-07T03:49:39Z
+    by: agent-S-0270
+  - to: done
+    at: 2026-10-07T04:33:22Z
+    by: agent-S-0270
 stream: S-0270
 tags: [flaiover, dashboard]
 touches: ["flaiover/src/routes/api/items/[id]/verify/+server.ts", "flaiover/src/routes/api/items/[id]/verify/verify.test.ts", flaiover/src/lib/server/agent.ts, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts]
 after: [T-1076]
+usage:
+  source: log
+  seconds: 2623
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 33495
+      cache_read: 5798261
+      cache_write: 168292
+      cost: 2.8801
 ---
 # T-1089 The review page shows a story's last verification result, each step with its state, duration, and findings
 

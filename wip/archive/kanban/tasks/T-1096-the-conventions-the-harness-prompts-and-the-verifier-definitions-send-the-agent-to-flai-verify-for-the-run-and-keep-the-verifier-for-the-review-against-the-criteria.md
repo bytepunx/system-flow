@@ -3,16 +3,42 @@ id: T-1096
 type: task
 nature: improvement
 title: The conventions, the harness prompts, and the verifier definitions send the agent to flai verify for the run and keep the verifier for the review against the criteria
-status: backlog
+status: done
 parent: S-0270
 owner: alex
 created: 2026-10-06T22:53:06Z
-updated: 2026-10-06T22:53:20Z
-transitions: []
+updated: 2026-10-07T06:40:45Z
+transitions:
+  - to: ready
+    at: 2026-10-07T03:49:40Z
+    by: agent-S-0270
+  - to: in-progress
+    at: 2026-10-07T03:49:40Z
+    by: agent-S-0270
+  - to: done
+    at: 2026-10-07T06:40:45Z
+    by: agent-S-0270
 stream: S-0270
 tags: [flai, template, conventions]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, template/CHANGELOG.md, design/adrs]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/root/design/conventions/work-management.md, ".claude/agents/verifier.md", template/root/.claude/agents/verifier.md, template/CHANGELOG.md, design/adrs, design/conventions/code-quality.md, design/conventions/strategic-agents.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, template/root/design/conventions/code-quality.md, template/root/design/conventions/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md]
 after: [T-1075]
+usage:
+  source: log
+  seconds: 4140
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 190
+      output: 79556
+      cache_read: 13771940
+      cache_write: 399724
+      cost: 6.8407
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 3613
+      cache_read: 147042
+      cache_write: 61311
+      cost: 0.2188
 ---
 # T-1096 The conventions, the harness prompts, and the verifier definitions send the agent to flai verify for the run and keep the verifier for the review against the criteria
 

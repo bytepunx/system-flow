@@ -19,31 +19,31 @@ topics: [automation, mcp, hostapi]
 touches: [flai, design/conventions, template]
 usage:
   source: sum
-  seconds: 8690
+  seconds: 14664
   models:
     - model: claude-opus-5-5
-      input: 1978
-      output: 791528
-      cache_read: 105493196
-      cache_write: 3127949
-      cost: 55.1715
+      input: 2748
+      output: 1114364
+      cache_read: 161379345
+      cache_write: 4750019
+      cost: 82.931
     - model: claude-sonnet-5-5
-      input: 110
-      output: 22725
-      cache_read: 1432121
-      cache_write: 256058
-      cost: 1.154
+      input: 130
+      output: 27980
+      cache_read: 1645975
+      cache_write: 345227
+      cost: 1.4723
   strategic:
     - kind: orchestrator
-      seconds: 662
+      seconds: 9083
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 32
-          output: 592
-          cache_read: 1808601
-          cache_write: 5630
-          cost: 0.4547
+          input: 236
+          output: 4037
+          cache_read: 14592849
+          cache_write: 66250
+          cost: 3.6941
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6h

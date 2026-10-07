@@ -3,16 +3,36 @@ id: T-1076
 type: task
 nature: improvement
 title: verify over MCP and verify.run and verify.status on the host channel answer the verification result
-status: backlog
+status: done
 parent: S-0270
 owner: alex
 created: 2026-10-06T22:52:32Z
-updated: 2026-10-06T22:52:39Z
-transitions: []
+updated: 2026-10-07T03:49:36Z
+transitions:
+  - to: ready
+    at: 2026-10-07T03:36:08Z
+    by: agent-S-0270
+  - to: in-progress
+    at: 2026-10-07T03:36:09Z
+    by: agent-S-0270
+  - to: done
+    at: 2026-10-07T03:49:36Z
+    by: agent-S-0270
 stream: S-0270
 tags: [flai, mcp]
-touches: [flai/internal/mcpserver/folder.go, flai/internal/mcpserver/verify_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/internal/mcpserver/folder.go, flai/internal/mcpserver/verify_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go, flaiover/src/lib/server/agent.ts]
 after: [T-1071]
+usage:
+  source: log
+  seconds: 807
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 33378
+      cache_read: 5778089
+      cache_write: 167706
+      cost: 2.8701
 ---
 # T-1076 verify over MCP and verify.run and verify.status on the host channel answer the verification result
 

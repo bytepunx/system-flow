@@ -3,11 +3,11 @@ id: S-0212
 type: story
 nature: feature
 title: Charts compare forecasts and estimates with what happened
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-07T03:30:07Z
+updated: 2026-10-07T06:47:57Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:50Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-10-07T03:29:31Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T06:46:47Z
+    by: agent-S-0212
 tags: [dashboard]
 topics: [planning]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, design/system/metrics.md, flaiover/src/lib/components/ForecastTable.svelte, flaiover/src/lib/components/ForecastTable.svelte.test.ts]
@@ -57,6 +60,7 @@ The operator should see whether the planner's forecasts can be trusted before le
 - T-0956 The forecast-by-model chart maps the p50 absolute forecast error per bucket per model
 - T-0958 The chart page lists the planning charts under a Planning group, with nature and model filters and a table view
 - T-0962 The dashboard design, the metrics chart table, and the user guide describe the planning charts
+- T-1156 flai stats gives each item the model its forecasts are grouped under
 
 ## Notes
 
