@@ -3,11 +3,11 @@ id: I-0092
 title: Two story branches that each bump the same issue conflict in its front matter, whose count, last_reported, and updated lines both rewrite
 class: efficiency
 status: open
-count: 2
-cost: 5m
+count: 3
+cost: 7m
 first_reported: 2026-10-06T19:46:45Z
-last_reported: 2026-10-07T00:54:07Z
-updated: 2026-10-07T00:54:07Z
+last_reported: 2026-10-07T09:16:07Z
+updated: 2026-10-07T09:16:07Z
 ---
 
 # I-0092 Two story branches that each bump the same issue conflict in its front matter, whose count, last_reported, and updated lines both rewrite
@@ -24,6 +24,10 @@ S-0292's close-out and S-0221's both bumped I-0078 to 9, so S-0221's sync before
 ### 2026-10-07T00:54:07Z
 Story: S-0254.
 S-0254's close-out bumped I-0073 and I-0078 while S-0228's acceptance bumped them on main; the final sync stopped on both, and on summary.md, until the two instances were merged by hand and the summary regenerated
+
+### 2026-10-07T09:16:07Z
+Story: S-0275.
+S-0275 bumped I-0079, I-0058, and I-0111 while S-0213 and S-0246 bumped or closed the same issues; each trial merge conflicted, and S-0275 dropped its bumps, keeping the occurrences in its narrative.
 
 ## Remediation
 
