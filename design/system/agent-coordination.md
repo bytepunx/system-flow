@@ -22,6 +22,7 @@ The finding of S-0124, for E-0009. The operator drags stories into `ready`, and 
 | Story branches | `story/S-nnnn` in `.flai-cache/worktrees/` (ADR-0019) | A conflict between two open stories surfaces only after one is accepted, as a rebase conflict at the other's `flai stream sync` or `flai accept`. Nothing compares two open branches. |
 | Dependencies | none | Only `parent`. No `depends_on` or `blocked_by`. |
 | Yellow on the board | `AgentDot` in flaiover, fed by `serve.Activity()` | Yellow means the agent is waiting: a question is open, the story is blocked, or a retry is queued for room. A story the launcher skips gets no per-story reason; the reasons are joined into one `Waiting` string in `serve/agents.json`. |
+| Messages between stories | `wip/messages/`, `flai message` (S-0330, [ADR-0120](../adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md)) | The agents of two open stories write to each other without the operator. Kept apart from threads; see [Messages between stories](#messages-between-stories). |
 
 ADR-0019 considered locks instead of `touches` and rejected them: "a lock nobody releases blocks work; a warning plus a visible badge keeps humans in charge." Any hold chosen here refines that decision, so it has to answer the same worry: a hold must be released by something that always happens (acceptance, cancellation, a return to backlog), be visible with its reason, and be overridable by the operator.
 
@@ -114,6 +115,17 @@ The September 2026 preprints are not peer reviewed; only their central ideas are
 The stories that build it are under E-0009. Until they are accepted, flai behaves as described in "What flai does today".
 
 [ADR-0096](../adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md) (S-0295, 2026-10-06) refines this decision: a story in review holds nothing, an overlap inside the manifest's shared paths never holds, and a story's tasks narrow its folder touches in its claim. [workflow.md](workflow.md#branches-and-collisions-adr-0019) says how the hold works now.
+
+## Messages between stories
+
+The hold, the trial merge, and the notice at accept coordinate stories through flai. Since S-0330 the agents of two open stories can also agree between themselves, for example on who changes a shared file first, without asking the operator to relay. [ADR-0120](../adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md) records the decision.
+
+- **Addressed story to story.** `flai message send S-nnnn "<text>"` starts a conversation from the sender's story to another. Both must be in progress or in review. The sender's story is `--from`, else `FLAI_STORY`, else the story in an `agent-S-nnnn` `FLAI_AGENT`, else the story branch checked out. `--about` names the paths the conversation is about. `flai message reply MS-nnnn` answers from one of the two stories. A conversation awaits the story that did not write its last message.
+- **Kept in `wip/messages`.** One file per conversation, `MS-nnnn-<slug>.md`, written in the main checkout as threads are, with dated entries under `## Entries`. `flai check` validates them, and a story's close-out counts its own conversations as inside the story.
+- **Closed with the story.** A conversation reads as closed once either story is done, cancelled, or archived, and then takes no reply. `flai accept` and `flai archive` close the open conversations of the stories they archive, with the entry `Closed: S-nnnn was accepted` or `was archived`. A closed conversation is never reopened; a new message starts a new one.
+- **Apart from threads.** None appears in `flai thread list`, among the threads awaiting the operator in `inbox` or the dashboard's designer inbox, or in a narrative's `## Open questions`. The operator reads them with `flai message list --all` and `flai message show`. A question for the designer is still a thread.
+
+Today the command line is the only way in: an agent finds the conversations of its story with `flai message list --story S-nnnn`. The MCP tools and the agents' inbox (S-0331) and the dashboard's view (S-0336) come in later stories of E-0018.
 
 ## Within a story
 

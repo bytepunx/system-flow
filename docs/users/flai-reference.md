@@ -38,6 +38,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [license](#flai-license) | Print the license flai is distributed under |
 | [manifest](#flai-manifest) | Change the strategic agents' settings in system-flow.yaml |
 | [mcp](#flai-mcp) | Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start |
+| [message](#flai-message) | Conversations between the agents of two open stories, apart from the operator's threads (wip/messages) |
 | [migrate](#flai-migrate) | One-off migrations of a repository to the current standard |
 | [move](#flai-move) | Transition a work item, enforcing the workflow rules |
 | [new](#flai-new) | Create a new monorepo from the template |
@@ -109,6 +110,7 @@ Subcommands:
 - [license](#flai-license): Print the license flai is distributed under
 - [manifest](#flai-manifest): Change the strategic agents' settings in system-flow.yaml
 - [mcp](#flai-mcp): Serve this repository to agents over the Model Context Protocol: on stdio, or over HTTP with flai mcp start
+- [message](#flai-message): Conversations between the agents of two open stories, apart from the operator's threads (wip/messages)
 - [migrate](#flai-migrate): One-off migrations of a repository to the current standard
 - [move](#flai-move): Transition a work item, enforcing the workflow rules
 - [new](#flai-new): Create a new monorepo from the template
@@ -152,17 +154,20 @@ The operator's acceptance step as one command, per design/conventions/work-manag
 2. flai archive for the item and its children and narrative, and for an
    epic that followed its story to done, the epic and its cancelled stories;
    every thread still open or answered on what is archived is resolved,
-   as "<id> was accepted", by whoever accepts (I-0073)
-3. git commit the work item, the archive, and the threads; while another
-   git process holds the index lock, git add and git commit are run again,
-   for about nine seconds in all, and the lock is never removed
+   as "<id> was accepted", by whoever accepts (I-0073), and every
+   conversation still open of a story archived is closed, as "<id> was
+   accepted", or "<id> was archived" for an epic's cancelled story (ADR-0120)
+3. git commit the work item, the archive, the threads, and the
+   conversations; while another git process holds the index lock, git add
+   and git commit are run again, for about nine seconds in all, and the
+   lock is never removed
 4. tell every story in progress or in review whose touches cover a path
    the merge changed which paths those are, for its agent's MCP inbox
 ```
 
 Acceptance computes no release, creates no tag, and pushes nothing (S-0087): that is a deliberate step of its own, run when the operator chooses to publish what has accumulated on main, not tied to any one item. See flai release --pending.
 
-flai move &lt;story&gt; done from review runs exactly this. An item that is already done but was never archived (an older flai, a hand edit) is completed from step 0 without a second transition. An item that is done and archived while its archived file is not committed is one whose commit failed: the error kept git's output and named this command. It is completed by resolving the threads left open on what it archived, as step 2 does, and from step 3, committing what the main checkout holds under the usual subject, and step 4 tells the open stories the paths the story's commits changed. A done, archived item whose file is committed is refused as already done. The orchestrator completes neither: that is the operator's. --dry-run changes nothing.
+flai move &lt;story&gt; done from review runs exactly this. An item that is already done but was never archived (an older flai, a hand edit) is completed from step 0 without a second transition. An item that is done and archived while its archived file is not committed is one whose commit failed: the error kept git's output and named this command. It is completed by resolving the threads and closing the conversations left open on what it archived, as step 2 does, and from step 3, committing what the main checkout holds under the usual subject, and step 4 tells the open stories the paths the story's commits changed. A done, archived item whose file is committed is refused as already done. The orchestrator completes neither: that is the operator's. --dry-run changes nothing.
 
 A story whose branch changes a path Claude Code protects (a .claude folder, .mcp.json, and the others of ADR-0106) is accepted by its operator only: the story's owner or the project's owner, or anyone but the orchestrator when neither is named. Anyone else is refused, before anything is merged, with the files named; --dry-run lists them.
 
@@ -380,7 +385,7 @@ flai archive [id...] [flags]
 
 Without IDs, every closed epic, every closed story with its tasks, and every closed task whose story is no longer on the board is archived. With IDs, each must be done or cancelled; a story brings its tasks and narrative.
 
-Every thread still open or answered on an item archived is resolved, as "&lt;id&gt; was archived", so that none is left open on an archived item (I-0073). Nothing is committed. --dry-run names the threads it would resolve.
+Every thread still open or answered on an item archived is resolved, as "&lt;id&gt; was archived", so that none is left open on an archived item (I-0073), and every conversation still open of a story archived is closed, with the entry "Closed: &lt;id&gt; was archived" (ADR-0120). Nothing is committed. --dry-run names the threads it would resolve and the conversations it would close.
 
 Flags:
 
@@ -1837,6 +1842,120 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--rotate` | replace the token |
+
+### flai message
+
+Conversations between the agents of two open stories, apart from the operator's threads (wip/messages).
+
+Conversations between the agents of two stories in progress or in review (ADR-0120). A message goes from one story to another, and the messages between the two make a conversation, one file in wip/messages, MS-nnnn-&lt;slug&gt;.md, in the main checkout.
+
+A conversation awaits the story that did not write its last message. It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
+
+Messages are kept apart from threads: none appears in flai thread list, among the threads awaiting the operator, or in a narrative's Open questions. A question for the designer is still a thread.
+
+Subcommands:
+
+- [list](#flai-message-list): List conversations; those still open by default
+- [reply](#flai-message-reply): Add a message to a conversation from one of its two stories
+- [send](#flai-message-send): Start a conversation from one open story to another with its first message
+- [show](#flai-message-show): Print a conversation with every message
+
+#### flai message list
+
+List conversations; those still open by default.
+
+```text
+flai message list [flags]
+```
+
+Lists conversations in ID order, one a line: its ID, the story that started it and the one it went to, the story it awaits, the time of its last message, and its title.
+
+By default only the conversations that do not read as closed are listed, those of every story. --story lists only the conversations the story is one of the two of, in any padding; it has no default, so that the operator sees every story's. --all adds the closed ones, each with why it is closed in place of the story it awaits.
+
+Examples:
+
+```bash
+flai message list --story S-0330
+flai message list --all --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--all` | include the conversations that read as closed |
+| `--story` string | only the conversations this story is one of the two of |
+
+#### flai message reply
+
+Add a message to a conversation from one of its two stories.
+
+```text
+flai message reply <MS-nnnn> "<text>" [flags]
+```
+
+Adds a message to the conversation &lt;MS-nnnn&gt; from one of its two stories, and prints whom it now awaits: the other story.
+
+The replying story is --from, else FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here. A reply is refused from a story that is not one of the two, from a story no longer in progress or in review, and on a conversation that reads as closed, which takes none; nothing is written. The author is --by, else FLAI\_AGENT, else the config author.
+
+Examples:
+
+```bash
+flai message reply MS-0004 "Yes, it is yours until you push." --from S-0331
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--by` string | author (default: FLAI\_AGENT, then config author) |
+| `--from` string | the story the message comes from (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
+
+#### flai message send
+
+Start a conversation from one open story to another with its first message.
+
+```text
+flai message send <S-nnnn> "<text>" [flags]
+```
+
+Starts a conversation from the sender's story to the story &lt;S-nnnn&gt; with its first message, and prints its ID, title, the two stories, and its path. The title is the first line of the message.
+
+The sender's story is --from, else FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here; with none, the send is refused. Both stories must be in progress or in review, and not the same story: a send to or from a story in any other state, or archived, is refused with its state, and nothing is written.
+
+--about names a repository path the conversation is about, a file or folder relative to the root that must exist; give it once per path. The author of the message is --by, else FLAI\_AGENT, else the config author.
+
+Examples:
+
+```bash
+flai message send S-0331 "I am changing flai/cmd/root.go. Will you leave it to me until I push?" --from S-0330
+flai message send S-0331 "Who adds the docs row?" --about docs/operators/settings.md --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--about` stringArray | repository path the conversation is about, relative to the root (repeatable) |
+| `--by` string | author (default: FLAI\_AGENT, then config author) |
+| `--from` string | the story the message comes from (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
+
+#### flai message show
+
+Print a conversation with every message.
+
+```text
+flai message show <MS-nnnn>
+```
+
+Prints the conversation &lt;MS-nnnn&gt;: its ID and title; the two stories, its status, and the story it awaits, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, and text. The ID may be given in any padding, such as ms-4.
+
+Examples:
+
+```bash
+flai message show MS-0004
+flai message show ms-4 --json
+```
 
 ### flai migrate
 

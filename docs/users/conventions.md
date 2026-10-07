@@ -34,6 +34,7 @@ my-project/
 │   ├── kanban/             # board.md, epics/, stories/, tasks/
 │   ├── agents/             # one narrative per active story, and index.md
 │   ├── threads/            # conversations anchored to a document or an item
+│   ├── messages/           # conversations between the agents of two open stories
 │   └── archive/            # finished items and narratives
 ├── scripts/                # purpose-named shell scripts behind the Makefile
 ├── Makefile                # the entry point for build, test, lint, check
@@ -213,6 +214,7 @@ A resuming agent reads `index.md`, then each active narrative's current state an
 | Experiment results | `design/experiments/S-nnnn-slug.md`, named for the experiment story; the folder's `template.md` is the shape | Front matter `title`, `updated`, `status`, `story`; sections Hypothesis, Success measure, What was done, Results, Recommendation (adopt, adapt, or drop) | Written by the experiment story before review; acceptance refuses an experiment without it, and `flai check` validates it |
 | Analysis reports | `design/analysis/<date>-<focus>.md`, the focus `bottlenecks`, `intent`, `risk`, or `all`; indexed in `design/analysis/README.md` | Front matter `title`, `updated`, `status` (`draft` while the analyzer writes it, then `active`), `focus`, and the window, `from` and `to`; one section per finding, with its evidence, severity, and estimated impact | Written by the analyzer alone, one per run; `flai check` validates each and warns of one the index does not list |
 | Threads | `wip/threads/` | A conversation anchored to a document, a heading, or a work item | Opened and answered with `flai thread` or from the dashboard |
+| Messages | `wip/messages/` | A conversation between the agents of two stories in progress or in review, apart from the threads ([ADR-0120](../../design/adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md)) | Sent and answered with `flai message`; closed when either story is accepted, cancelled, or archived |
 
 Every document under `design/` and `docs/` starts with front matter carrying at least `title`, `updated`, and `status` (`active`, `draft`, or `deprecated`); `README.md` files are indexes and are exempt. Files are lowercase kebab-case, links are relative, diagrams are Mermaid, and dates are ISO 8601 UTC. Every folder a reader might land in has a `README.md` saying what it is for. Full rules: [documentation-standard.md](../../design/system/documentation-standard.md), [conventions.md](../../design/system/conventions.md), [continuous-improvement.md](../../design/system/continuous-improvement.md).
 
@@ -249,9 +251,9 @@ The dates and times in the files below are examples. Write the real time, in UTC
    ```bash
    mkdir -p design/adrs design/system design/tech design/conventions design/issues \
      docs/users docs/operators docs/contributors \
-     wip/kanban/epics wip/kanban/stories wip/kanban/tasks wip/agents wip/archive wip/threads scripts
+     wip/kanban/epics wip/kanban/stories wip/kanban/tasks wip/agents wip/archive wip/threads wip/messages scripts
    for d in design/adrs design/system design/tech design/issues docs/operators docs/contributors \
-     wip/kanban/epics wip/kanban/stories wip/kanban/tasks wip/archive wip/threads scripts; do
+     wip/kanban/epics wip/kanban/stories wip/kanban/tasks wip/archive wip/threads wip/messages scripts; do
      touch "$d/.gitkeep"
    done
    ```

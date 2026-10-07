@@ -1,6 +1,6 @@
 ---
 title: Repository layout
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 topics: [all]
 ---
@@ -37,6 +37,8 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 │   │   ├── epics/
 │   │   ├── stories/
 │   │   └── tasks/
+│   ├── threads/            # conversations between the designer and agents, anchored to a document or item
+│   ├── messages/           # conversations between the agents of two open stories
 │   └── archive/            # completed items and narratives, same layout as kanban/ and agents/
 ├── scripts/                # purpose-named shell scripts; the Makefile and CI call these
 ├── Makefile                # entry point for build, lint, check, test; targets call scripts/
@@ -63,6 +65,8 @@ Work in process. Everything in here is expected to change daily. See [work-hiera
 
 - `kanban/` holds active items. An item is active from creation until it is archived.
 - `agents/` holds one narrative file per active story.
+- `threads/` holds the conversations between the designer and agents, one file per thread, `TH-nnnn-<slug>.md`, each anchored to a document, a heading, or a work item ([ADR-0020](../adrs/0020-files-plus-mcp.md)).
+- `messages/` holds the conversations between the agents of two stories in progress or in review, one file per conversation, `MS-nnnn-<slug>.md`, kept apart from threads and closed when either story leaves ([ADR-0120](../adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md)).
 - `archive/` mirrors `kanban/` and `agents/`. `flai archive` moves done and cancelled items here so the board stays small while history stays available for metrics.
 
 `design/issues/` records recurring friction, defects, blockers, and inefficiencies with a count and cost per issue. See [continuous-improvement.md](continuous-improvement.md) and [ADR-0014](../adrs/0014-design-issues.md).
