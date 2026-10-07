@@ -2,11 +2,11 @@
 id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 14
 first_reported: 2026-10-05T03:24:33Z
 last_reported: 2026-10-07T03:10:53Z
-updated: 2026-10-07T03:10:53Z
+updated: 2026-10-07T09:42:24Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -114,3 +114,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0279 remediates this issue, created from it at 2026-10-05T04:40:48Z.
+Closed 2026-10-07T09:42:24Z: S-0279 fixed it as ADR-0115 decides: a close-out's scoped flai check keeps only a wip.overlap that names its story, as a note, and --record-issues records no wip.overlap (T-1145); wip.overlap compares the claims of the stories in progress, as the pull hold does, one finding per pair of stories (T-1143).
