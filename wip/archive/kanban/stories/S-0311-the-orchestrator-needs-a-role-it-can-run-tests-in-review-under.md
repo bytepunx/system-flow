@@ -3,10 +3,10 @@ id: S-0311
 type: story
 nature: feature
 title: The Orchestrator needs a role it can run tests in review under
-status: review
+status: done
 owner: alex
 created: 2026-10-07T14:24:35Z
-updated: 2026-10-07T14:49:55Z
+updated: 2026-10-07T14:57:59Z
 transitions:
   - to: ready
     at: 2026-10-07T14:24:36Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-07T14:49:55Z
     by: agent-S-0311
+  - to: done
+    at: 2026-10-07T14:57:59Z
+    by: alex
 tags: [cli]
 topics: [orchestrator]
 touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/proc_test.go, flai/internal/mcpserver/verify_test.go, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/verify.go, flai/cmd/test.go, flai/cmd/verify_test.go, flai/cmd/test_test.go]

@@ -4,10 +4,10 @@ title: "S-0311 not accepted: my verify fails on the very defect it fixes, and fo
 anchor:
   path: wip/kanban/stories/S-0311-the-orchestrator-needs-a-role-it-can-run-tests-in-review-under.md
   item: S-0311
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T14:52:14Z
-updated: 2026-10-07T14:52:14Z
+updated: 2026-10-07T14:57:59Z
 ---
 
 # TH-0292 S-0311 not accepted: my verify fails on the very defect it fixes, and four threads are unresolved
@@ -41,3 +41,6 @@ blocked: thread TH-0291 on S-0311 is answered, not resolved: S-0293 and S-0311 c
 The verifier matched the single criterion to changed files within the touches at 30e6b4fc:
 
 - 1: `flai/internal/verify/run.go` (tiers run with `FLAI_ROLE=verify` last), `flai/internal/verify/run_test.go`, `flai/internal/verify/proc_test.go`, `flai/cmd/verify_test.go`, `flai/cmd/test_test.go`, `flai/internal/mcpserver/verify_test.go`, `flai/cmd/verify.go`, `flai/cmd/test.go`, `docs/users/flai.md`, `docs/users/flai-reference.md`, `design/system/flai-cli.md`, `design/system/strategic-agents.md`
+
+### 2026-10-07T14:57:59Z alex
+Resolved: S-0311 was accepted
