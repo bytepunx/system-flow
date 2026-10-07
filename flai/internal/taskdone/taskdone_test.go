@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -310,5 +311,26 @@ func TestExitCode(t *testing.T) {
 		if got := (Result{Stopped: stopped}).ExitCode(); got != want {
 			t.Errorf("stopped at %q: %d, want %d", stopped, got, want)
 		}
+	}
+}
+
+// S-0331: the inbox a closed task answers lists the open conversations of the
+// task's story under messages, as the MCP tool inbox does for its agent.
+func TestRunAnswersTheStorysMessages(t *testing.T) {
+	repo, _ := project(t)
+	write(t, repo.Root, "wip/kanban/stories/S-006-six.md", "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: in-progress\nparent: E-001\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-31T10:00:00Z\ntransitions:\n  - to: ready\n    at: 2026-08-25T10:00:00Z\n    by: agent\n  - to: in-progress\n    at: 2026-08-31T10:00:00Z\n    by: agent\ntags: []\n---\n\n# S-006 Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n")
+	if _, err := messages.Send(repo, messages.SendOptions{From: "S-006", To: "S-004", Author: "agent-S-006", Text: "Who changes the readme?", Now: clock}); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := Run(context.Background(), options(repo, "fix: [S-004] T-003 nothing to commit"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Inbox == nil || len(res.Inbox.Messages) != 1 {
+		t.Fatalf("stopped %q %s, inbox %+v", res.Stopped, res.Error, res.Inbox)
+	}
+	if m := res.Inbox.Messages[0]; m.With != "S-006" || m.Awaiting != "you" || m.Last.Text != "Who changes the readme?" {
+		t.Errorf("message %+v", m)
 	}
 }

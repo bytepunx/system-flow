@@ -384,7 +384,7 @@ func (r *run) check() error {
 // inbox reads the agent's inbox as the MCP tool inbox does, advancing its
 // cursor.
 func (r *run) inbox(ctx context.Context) error {
-	in, err := inbox.Read(ctx, inbox.Options{Repo: r.o.Repo, Agent: r.o.Agent, Now: r.o.Now, Runner: r.o.Runner, Version: r.o.Version})
+	in, err := inbox.Read(ctx, inbox.Options{Repo: r.o.Repo, Agent: r.o.Agent, Own: r.story.ID, Now: r.o.Now, Runner: r.o.Runner, Version: r.o.Version})
 	if err != nil {
 		return fmt.Errorf("read %s's inbox: %w", r.o.Agent, err)
 	}

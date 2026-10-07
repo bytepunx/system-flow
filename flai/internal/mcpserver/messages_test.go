@@ -226,13 +226,25 @@ func TestTheMessageToolsAndInstructions(t *testing.T) {
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
 	for name, in := range map[string]string{"project": f.cs.InitializeResult().Instructions, "folder": folderSetup(t, root).cs.InitializeResult().Instructions} {
-		for _, want := range []string{"message that story's agent with message_send, naming the paths in about", "Answer a message to your story with message_reply before you go on", "message_get", "open a thread for the operator with thread_open only when the two of you do not agree"} {
+		for _, want := range []string{"message that story's agent with message_send, naming the paths in about", "Answer a message to your story with message_reply before you go on", "message_get", "open a thread for the operator with thread_open only when the two of you do not agree", "inbox lists your story's open conversations under messages, which awaiting_you does not count", "wait_for_events wakes on a message to your story, an event of kind message"} {
 			if !strings.Contains(in, want) {
 				t.Errorf("the %s instructions do not say %q: %s", name, want, in)
 			}
 		}
 		if strings.Contains(in, "on a thread before you change them") {
 			t.Errorf("the %s instructions still send an overlap to a thread: %s", name, in)
+		}
+	}
+	for name, cs := range map[string]*mcp.ClientSession{"project": f.cs, "folder": folderSetup(t, root).cs} {
+		res, err := cs.ListTools(context.Background(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, tool := range res.Tools {
+			want := map[string]string{"inbox": "messages lists the open conversations of this session's own story", "wait_for_events": "wakes it as an event of kind message"}[tool.Name]
+			if want != "" && !strings.Contains(tool.Description, want) {
+				t.Errorf("the %s %s description does not say %q: %s", name, tool.Name, want, tool.Description)
+			}
 		}
 	}
 }
@@ -258,5 +270,101 @@ func TestTheMessageToolsRouteByProject(t *testing.T) {
 	}
 	if !res.IsError || !strings.Contains(res.Content[0].(*mcp.TextContent).Text, filepath.Join(root, "beta")) {
 		t.Errorf("message_get should look in the project named: %+v", res.Content)
+	}
+}
+
+// S-0331: inbox lists the open conversations of the session's own story
+// under messages, which awaiting_you does not count, and a session with no
+// story of its own has none.
+func TestTheInboxToolListsTheStorysConversations(t *testing.T) {
+	f, other := messagesFixture(t)
+	if _, err := messages.Send(f.repo, messages.SendOptions{From: other.ID, To: f.story.ID, Author: "agent-" + other.ID, Text: "Will you leave plan.md to me?", About: []string{"design/system/plan.md"}, Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+
+	none, failed := f.call(t, "inbox", map[string]any{})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if _, ok := none["messages"]; ok {
+		t.Errorf("a session with no story of its own has no messages: %v", none["messages"])
+	}
+
+	t.Setenv("FLAI_STORY", f.story.ID)
+	out, failed := f.call(t, "inbox", map[string]any{})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	list, _ := out["messages"].([]any)
+	if len(list) != 1 {
+		t.Fatalf("one conversation: %v", out["messages"])
+	}
+	m := list[0].(map[string]any)
+	last, _ := m["last"].(map[string]any)
+	if m["id"] != "MS-0001" || m["with"] != other.ID || m["awaiting"] != "you" || m["about"].([]any)[0] != "design/system/plan.md" || last["story"] != other.ID || last["text"] != "Will you leave plan.md to me?" {
+		t.Errorf("the conversation as the story's agent sees it: %v", m)
+	}
+	if out["awaiting_you"].(float64) != 0 {
+		t.Errorf("awaiting_you counts threads only: %v", out["awaiting_you"])
+	}
+}
+
+// messageEvents are the events of kind message in a wait's answer.
+func messageEvents(out map[string]any) []map[string]any {
+	var got []map[string]any
+	events, _ := out["events"].([]any)
+	for _, e := range events {
+		if e := e.(map[string]any); e["kind"] == "message" {
+			got = append(got, e)
+		}
+	}
+	return got
+}
+
+// S-0331: a held wait_for_events answers within a poll of a message to the
+// session's story, as an event of kind message naming the conversation and
+// the sender's story, told once; the story's own reply is not told back.
+func TestAMessageWakesAWaitingAgent(t *testing.T) {
+	f, other := messagesFixture(t)
+	t.Setenv("FLAI_STORY", f.story.ID)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+
+	type waited struct {
+		out     map[string]any
+		elapsed time.Duration
+	}
+	done := make(chan waited, 1)
+	start := time.Now()
+	go func() {
+		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+		done <- waited{out, time.Since(start)}
+	}()
+	time.Sleep(150 * time.Millisecond)
+	c, err := messages.Send(f.repo, messages.SendOptions{From: other.ID, To: f.story.ID, Author: "agent-" + other.ID, Text: "Will you leave plan.md to me?", About: []string{"design/system/plan.md"}, Now: *f.clock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case w := <-done:
+		got := messageEvents(w.out)
+		if w.out["timed_out"] == true || len(got) != 1 || got[0]["id"] != c.ID || got[0]["title"] != c.Title || got[0]["cause"] != other.ID || got[0]["by"] != "agent-"+other.ID || got[0]["to"] != "design/system/plan.md" {
+			t.Fatalf("one message event naming the conversation and the sender's story: %v", w.out)
+		}
+		if w.elapsed > 1500*time.Millisecond {
+			t.Errorf("the agent should hear within a poll, took %v", w.elapsed)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("wait_for_events never returned")
+	}
+
+	*f.clock = f.clock.Add(time.Minute)
+	if _, failed := f.call(t, "message_reply", map[string]any{"id": c.ID, "text": "Yes."}); failed != "" {
+		t.Fatal(failed)
+	}
+	quiet, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 1})
+	if got := messageEvents(quiet); quiet["timed_out"] != true || len(got) != 0 {
+		t.Errorf("neither the message told nor the story's own reply is told again: %v", quiet)
 	}
 }

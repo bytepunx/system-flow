@@ -26,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/search"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -194,7 +195,7 @@ func New(opt Options) *mcp.Server {
 	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: inboxDescription}, route(one, (*server).inbox))
 	addProjectTools(srv, one)
-	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, or narrative changes or the timeout passes: timeout_seconds, 60 by default and at most 1800 (30 minutes). Hold it when idle, as the orchestrator does between decisions, or to react within a second to the designer's answer on a thread awaiting them. For a story's agent that flai serve started, it answers at once with end true and why, after any events already behind the cursor, when the story has a question of the agent's own open to the designer and no task in progress: the agent then writes its narrative's Current state and Next steps with stream_state and ends, and flai serve starts it again when the question is answered; otherwise it holds as above. It does not see a sub-agent finish: a story's agent waits for one by launching it with the Agent tool's run_in_background set to false, which returns the sub-agent's result as the tool's result, and flai guard refuses a story's agent this call while a sub-agent of its session runs and no thread on its story is open. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
+	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, narrative, or conversation changes or the timeout passes: timeout_seconds, 60 by default and at most 1800 (30 minutes). Hold it when idle, as the orchestrator does between decisions, or to react within a second to the designer's answer on a thread awaiting them. " + messageEventDescription + " For a story's agent that flai serve started, it answers at once with end true and why, after any events already behind the cursor, when the story has a question of the agent's own open to the designer and no task in progress: the agent then writes its narrative's Current state and Next steps with stream_state and ends, and flai serve starts it again when the question is answered; otherwise it holds as above. It does not see a sub-agent finish: a story's agent waits for one by launching it with the Agent tool's run_in_background set to false, which returns the sub-agent's result as the tool's result, and flai guard refuses a story's agent this call while a sub-agent of its session runs and no thread on its story is open. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on (S-0097). Answers at once when there is something: reason resume with your own story still in progress; thread with threads awaiting you written to since it last answered; pull with the first ready story that is not held when the in-progress limit leaves room for it and review is under its limit (a story whose touches overlap a story in progress or in review, or that names in after a story not yet done, is held: it keeps its place and is offered once clear) (pull it with story_start, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in one call; if story_start says it is in progress already, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, however long it takes, up to timeout_seconds; timed_out then says whether it is waiting for room (a story is ready, the in-progress limit is full), for review (a story is ready, review is full: no story is pulled until the operator accepts or sends one back), for a held story to be clear (held: every ready story is held, and ready says why each is), or for a story to be ready: call it again. Move your story to review first: while one of yours is in progress, it answers resume."}, s.waitForWork)
 	for _, key := range []string{"design", "docs"} {
 		srv.AddResourceTemplate(&mcp.ResourceTemplate{
@@ -239,7 +240,9 @@ type InboxIn struct {
 type InboxOut = inbox.Inbox
 
 func (s *server) inbox(ctx context.Context, _ *mcp.CallToolRequest, in InboxIn) (*mcp.CallToolResult, InboxOut, error) {
-	out, err := inbox.Read(ctx, inbox.Options{Repo: s.repo, Agent: s.agent, Story: in.Story, All: in.All, Now: s.now, Runner: s.runner, Version: s.version})
+	// messages are the open conversations of this session's own story, as
+	// the message tools resolve it (S-0331)
+	out, err := inbox.Read(ctx, inbox.Options{Repo: s.repo, Agent: s.agent, Story: in.Story, All: in.All, Own: s.recordingStory(""), Now: s.now, Runner: s.runner, Version: s.version})
 	if err != nil {
 		return nil, InboxOut{}, err
 	}
@@ -737,7 +740,7 @@ type WaitIn struct {
 
 // WaitOut reports what changed.
 type WaitOut struct {
-	Events   []Event  `json:"events" jsonschema:"what others changed to work items since this agent last looked, newest kept, at most 50"`
+	Events   []Event  `json:"events" jsonschema:"what others changed to work items since this agent last looked, and the messages to this session's story, each of kind message, newest kept, at most 50"`
 	Omitted  int      `json:"events_omitted" jsonschema:"how many older events were left out because of the cap; they are not reported later"`
 	Changed  []string `json:"changed" jsonschema:"repository paths that were added, modified, or removed while waiting"`
 	TimedOut bool     `json:"timed_out"`
@@ -746,9 +749,10 @@ type WaitOut struct {
 }
 
 // watched returns the folders whose changes matter to an agent: threads,
-// work items, and narratives, all in the main checkout.
+// work items, narratives, and conversations between stories (S-0331), all
+// in the main checkout.
 func (s *server) watched() []string {
-	return []string{threads.Dir(s.repo), s.repo.KanbanDir(), s.repo.AgentsDir()}
+	return []string{threads.Dir(s.repo), s.repo.KanbanDir(), s.repo.AgentsDir(), messages.Dir(s.repo)}
 }
 
 // snapshot fingerprints every markdown file under the watched folders.

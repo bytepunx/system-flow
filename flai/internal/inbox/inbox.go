@@ -1,7 +1,9 @@
 // Package inbox builds an agent's inbox: the threads awaiting it, the stories
 // ready to pull in pull order, what is unpublished, and what others changed
 // since it last looked, read and advanced through the agent's cursor. The MCP
-// tool inbox and flai task done answer the same inbox from it (ADR-0107).
+// tool inbox and flai task done answer the same inbox from it (ADR-0107). It
+// lists the open conversations of the agent's story too, and reports a
+// message to that story once, as an event (ADR-0120, S-0331).
 package inbox
 
 import (
@@ -17,6 +19,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -30,6 +33,9 @@ type Options struct {
 	Story string // only threads on this story and its tasks, in any zero padding
 	All   bool   // threads awaiting someone else too
 	Now   func() time.Time
+	// Own is the agent's own story, whose open conversations the inbox lists
+	// under messages (S-0331); none lists none.
+	Own string
 	// Runner asks git what is accepted and not yet published (ADR-0067),
 	// and the newest flai release in the project's history (S-0181);
 	// without one the inbox says nothing of either.
@@ -44,8 +50,9 @@ type Inbox struct {
 	// FlaiOutdated is set while this flai is older than the newest flai
 	// release in the project's history (S-0181).
 	FlaiOutdated *release.Outdated    `json:"flai_outdated,omitempty" jsonschema:"this MCP server's flai is older than the newest flai release tagged in the project's history, so it may lack rules and fields the project uses; listed on every call while it is true: tell the designer, who upgrades the host with the command named"`
-	AwaitingYou  int                  `json:"awaiting_you"`
+	AwaitingYou  int                  `json:"awaiting_you" jsonschema:"threads awaiting you; messages never count here"`
 	Threads      []ThreadSummary      `json:"threads"`
+	Messages     []MessageSummary     `json:"messages,omitempty" jsonschema:"the open conversations of this agent's story with the agents of other open stories (ADR-0120), in ID order; absent when it has none, or this session has no story of its own"`
 	Ready        []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; listed on every call"`
 	CanPull      bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room and review is under its limit, so that one may be pulled"`
 	PullHold     string               `json:"pull_hold,omitempty" jsonschema:"why no story may be pulled now: the in-progress limit is full, or review is full and waits on acceptance"`
@@ -102,8 +109,18 @@ func Read(ctx context.Context, opt Options) (Inbox, error) {
 	if out.Ready == nil {
 		out.Ready = []workitem.BoardCard{}
 	}
+	if opt.Own != "" {
+		done = perf.Track(ctx, "messages.read")
+		out.Messages, err = Conversations(opt.Repo, opt.Own)
+		done()
+		if err != nil {
+			return Inbox{}, err
+		}
+	}
+	// the inbox lists the story's conversations as they stand, as it lists
+	// threads, so its changes are the work items' only: no story for CatchUp
 	done = perf.Track(ctx, "changes.read")
-	out.Changes, out.Omitted, err = CatchUp(opt.Repo, opt.Agent, opt.Now(), items)
+	out.Changes, out.Omitted, err = CatchUp(opt.Repo, opt.Agent, "", opt.Now(), items)
 	done()
 	if err != nil {
 		return Inbox{}, err
@@ -165,6 +182,59 @@ func Summarize(repo *workitem.Repo, agent string, th *threads.Thread) ThreadSumm
 		}
 	}
 	return out
+}
+
+// ---- messages ----
+
+// MessageSummary is a conversation of the agent's story without its entries,
+// as the agent of that story sees it (S-0331).
+type MessageSummary struct {
+	ID       string         `json:"id"`
+	Title    string         `json:"title"`
+	With     string         `json:"with" jsonschema:"the other story of the two, whose agent this story's agent talks to"`
+	About    []string       `json:"about" jsonschema:"the repository paths the conversation is about"`
+	Updated  string         `json:"updated"`
+	Entries  int            `json:"entries"`
+	Last     messages.Entry `json:"last" jsonschema:"the newest entry: its time, author, story, and text"`
+	Awaiting string         `json:"awaiting" jsonschema:"'you' when the conversation awaits this story, whose agent answers it with message_reply before going on, else 'other'"`
+	Project  string         `json:"project,omitempty" jsonschema:"the project the conversation is in, when the server serves more than one"`
+}
+
+// Conversations are story's open conversations as its agent sees them, in ID
+// order: one that reads as closed is left out (ADR-0120).
+func Conversations(repo *workitem.Repo, story string) ([]MessageSummary, error) {
+	all, err := messages.For(repo, story)
+	if err != nil {
+		return nil, err
+	}
+	own := workitem.CanonicalID(story)
+	var out []MessageSummary
+	for _, c := range all {
+		if closed, _ := c.Closed(repo); closed {
+			continue
+		}
+		entries := c.Entries()
+		sum := MessageSummary{ID: c.ID, Title: c.Title, With: otherStory(c, own), About: c.About, Updated: c.Updated, Entries: len(entries), Awaiting: "other"}
+		if sum.About == nil {
+			sum.About = []string{}
+		}
+		if n := len(entries); n > 0 {
+			sum.Last = entries[n-1]
+		}
+		if workitem.CanonicalID(c.Awaiting()) == own {
+			sum.Awaiting = "you"
+		}
+		out = append(out, sum)
+	}
+	return out, nil
+}
+
+// otherStory is the story of c's two that is not own, a canonical ID.
+func otherStory(c *messages.Conversation, own string) string {
+	if workitem.CanonicalID(c.From) == own {
+		return c.To
+	}
+	return c.From
 }
 
 // ---- changes ----
@@ -243,6 +313,13 @@ const Edited = "edited"
 // other's: Cause is the other story, To the paths the claim gained (I-0059).
 const Overlapped = "overlapped"
 
+// Message is the kind, and the type, of the change that a message came to the
+// agent's story from the other story of a conversation, a new conversation or
+// a reply (S-0331): ID and Title are the conversation's, Cause the sender's
+// story, By its agent, To the paths the conversation is about, comma
+// separated, and At the time of the newest such entry.
+const Message = "message"
+
 // MaxPaths is how many paths an overlap's summary names; To has them all.
 const MaxPaths = 10
 
@@ -254,12 +331,13 @@ type Event struct {
 }
 
 // CatchUp returns what others than agent changed since its cursor, among
-// items listed archive included, the newest MaxEvents of them, and how many
-// older ones it left out, and advances the cursor past all of them: what a
-// look leaves out never comes back in a later one. A first look, with no
-// cursor, is told of stories and epics only; a day of task transitions is
-// history to an agent that has just arrived, not news.
-func CatchUp(repo *workitem.Repo, agent string, now time.Time, items []*workitem.Item) ([]Event, int, error) {
+// items listed archive included, and the messages to story, the agent's own,
+// when it is given, the newest MaxEvents of them, and how many older ones it
+// left out, and advances the cursor past all of them: what a look leaves out
+// never comes back in a later one. A first look, with no cursor, is told of
+// stories and epics only; a day of task transitions is history to an agent
+// that has just arrived, not news.
+func CatchUp(repo *workitem.Repo, agent, story string, now time.Time, items []*workitem.Item) ([]Event, int, error) {
 	board, err := repo.LoadBoard()
 	if err != nil {
 		return nil, 0, err
@@ -316,6 +394,23 @@ func CatchUp(repo *workitem.Repo, agent string, now time.Time, items []*workitem
 		}
 		noticed(c, summary)
 	}
+	// Messages to the agent's story (S-0331): one change for each open
+	// conversation whose newest entry by the other story is news, so that a
+	// new conversation and a reply are each told once; the agent's own are not.
+	if story != "" {
+		convs, err := messages.For(repo, story)
+		if err != nil {
+			return nil, 0, err
+		}
+		for _, c := range convs {
+			if e, ok := lastFromOther(c, workitem.CanonicalID(story), agent); ok {
+				if closed, _ := c.Closed(repo); !closed {
+					m := workitem.Change{ID: c.ID, Type: Message, Title: c.Title, Kind: Message, To: strings.Join(c.About, ","), By: e.Author, Cause: e.Story, At: e.At}
+					noticed(m, Describe(m))
+				}
+			}
+		}
+	}
 	sort.SliceStable(events, func(i, j int) bool { return events[i].At < events[j].At })
 	omitted := 0
 	if len(events) > MaxEvents {
@@ -361,6 +456,16 @@ func Describe(c workitem.Change) string {
 		return c.ID + " " + c.Title + " was edited" + who + ": " + strings.ReplaceAll(c.To, ",", ", ") + ". Read it again before you go on"
 	case Overlapped:
 		return c.Cause + " was accepted" + who + " and changed " + namePaths(c.To) + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
+	case Message:
+		about := ""
+		if c.To != "" {
+			about = " about " + namePaths(c.To)
+		}
+		from := c.Cause + "'s agent"
+		if c.By != "" {
+			from += ", " + c.By + ","
+		}
+		return from + " wrote in " + c.ID + " " + c.Title + about + ": read it with message_get and answer it with message_reply before you go on"
 	}
 	return c.ID + " " + c.Kind
 }
@@ -373,7 +478,21 @@ func describeGrown(c workitem.Change, grew, reached string) string {
 	if c.By != "" {
 		who = ", written by " + c.By
 	}
-	return grew + "'s claim grew to overlap " + reached + "'s on " + namePaths(c.To) + who + ". Both stories claim them now: coordinate with " + c.Cause + "'s agent before " + c.ID + " " + c.Title + " changes them"
+	return grew + "'s claim grew to overlap " + reached + "'s on " + namePaths(c.To) + who + ". Both stories claim them now: message " + c.Cause + "'s agent with message_send, naming the paths in about, before " + c.ID + " " + c.Title + " changes them"
+}
+
+// lastFromOther is c's newest entry written for the story of its two that is
+// not own, by an agent other than agent, if there is one: an entry that closed
+// it names no story, and one by own's agent is not news to it.
+func lastFromOther(c *messages.Conversation, own, agent string) (messages.Entry, bool) {
+	es := c.Entries()
+	for i := len(es) - 1; i >= 0; i-- {
+		e := es[i]
+		if e.Story != "" && workitem.CanonicalID(e.Story) != own && e.Author != agent {
+			return e, true
+		}
+	}
+	return messages.Entry{}, false
 }
 
 // namePaths names the comma-separated paths of an overlap, at most MaxPaths.

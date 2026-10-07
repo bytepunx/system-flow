@@ -16,7 +16,11 @@ import (
 // what to do when a story in progress comes to claim the paths its story
 // does: message that story's agent, not open a thread, and ask the operator
 // only when the two do not agree (S-0331).
-const overlapInstructions = "When its cause is a story in progress, not an accepted one, a write grew the two stories' claims to overlap on those paths: before you change them, message that story's agent with message_send, naming the paths in about, and narrow your touches if you can (I-0059). Answer a message to your story with message_reply before you go on, and read a conversation with message_get. Messages go between the agents of two open stories, apart from the operator's threads (ADR-0120): open a thread for the operator with thread_open only when the two of you do not agree."
+const overlapInstructions = "When its cause is a story in progress, not an accepted one, a write grew the two stories' claims to overlap on those paths: before you change them, message that story's agent with message_send, naming the paths in about, and narrow your touches if you can (I-0059). inbox lists your story's open conversations under messages, which awaiting_you does not count, and wait_for_events wakes on a message to your story, an event of kind message naming the conversation and the sender's story. Answer a message to your story with message_reply before you go on, and read a conversation with message_get. Messages go between the agents of two open stories, apart from the operator's threads (ADR-0120): open a thread for the operator with thread_open only when the two of you do not agree."
+
+// messageEventDescription says, in wait_for_events's description, how a
+// message to the agent's story arrives (S-0331).
+const messageEventDescription = "A message to this session's own story from the other story of a conversation, a new conversation or a reply, wakes it as an event of kind message, once per conversation and look: id and title are the conversation's, cause the sender's story, by its agent, and to the paths it is about; answer it with message_reply before you go on. Your own story's messages are not reported back, and a session with no story of its own gets none."
 
 // messagesWhat says what a message is, for each message tool's description
 // (ADR-0120).

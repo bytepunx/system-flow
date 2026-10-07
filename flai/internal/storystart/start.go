@@ -144,7 +144,7 @@ func Start(ctx context.Context, o Options) (Result, error) {
 	if res.Pack, err = ctxpack.ForStory(o.Repo, story.ID, o.Budget); err != nil {
 		return res, &StepError{Story: story.ID, Step: StepPrime, Finish: "flai prime --story " + story.ID, Err: err}
 	}
-	in, err := inbox.Read(ctx, inbox.Options{Repo: o.Repo, Agent: o.Agent, Now: o.Now, Runner: o.Runner, Version: o.Version})
+	in, err := inbox.Read(ctx, inbox.Options{Repo: o.Repo, Agent: o.Agent, Own: story.ID, Now: o.Now, Runner: o.Runner, Version: o.Version})
 	if err != nil {
 		return res, &StepError{Story: story.ID, Step: StepInbox, Finish: "the MCP tool inbox", Err: fmt.Errorf("read %s's inbox: %w", o.Agent, err)}
 	}

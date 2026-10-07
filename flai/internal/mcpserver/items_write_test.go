@@ -464,10 +464,10 @@ func TestAWriteThatGrowsAClaimIntoAnotherTellsBothStories(t *testing.T) {
 			t.Errorf("the changes: %v / %v", mine, theirs)
 		}
 		want := f.story.ID + "'s claim grew to overlap " + other.ID + "'s on " + strings.ReplaceAll(paths, ",", ", ") + ", written by claude"
-		if s := theirs["summary"].(string); !strings.Contains(s, want) || !strings.Contains(s, "coordinate with "+f.story.ID+"'s agent before "+other.ID+" Other changes them") {
+		if s := theirs["summary"].(string); !strings.Contains(s, want) || !strings.Contains(s, "message "+f.story.ID+"'s agent with message_send, naming the paths in about, before "+other.ID+" Other changes them") {
 			t.Errorf("summary: %s", s)
 		}
-		if s := mine["summary"].(string); !strings.Contains(s, "coordinate with "+other.ID+"'s agent") || strings.Contains(s, "accepted") {
+		if s := mine["summary"].(string); !strings.Contains(s, "message "+other.ID+"'s agent with message_send") || strings.Contains(s, "accepted") {
 			t.Errorf("summary: %s", s)
 		}
 		if again := overlapped(); len(again) != 0 {

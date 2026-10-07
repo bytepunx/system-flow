@@ -27,13 +27,14 @@ type Event = inbox.Event
 // describe says a change in words.
 var describe = inbox.Describe
 
-// catchUp returns what others changed since the agent's cursor, the newest
-// maxEvents of them, and how many older ones it left out, and advances the
-// cursor past all of them, as inbox.CatchUp does.
+// catchUp returns what others changed since the agent's cursor, and the
+// messages to this session's own story (S-0331), the newest maxEvents of
+// them, and how many older ones it left out, and advances the cursor past all
+// of them, as inbox.CatchUp does.
 func (s *server) catchUp(ctx context.Context) ([]Event, int, error) {
 	items, err := s.listItems(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
-	return inbox.CatchUp(s.repo, s.agent, s.now(), items)
+	return inbox.CatchUp(s.repo, s.agent, s.recordingStory(""), s.now(), items)
 }

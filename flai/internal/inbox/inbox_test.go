@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -170,7 +171,7 @@ func TestAChangeIsReportedOnceAcrossCalls(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, omitted, err := CatchUp(f.repo, "claude", f.clock, items)
+	again, omitted, err := CatchUp(f.repo, "claude", "", f.clock, items)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,5 +180,117 @@ func TestAChangeIsReportedOnceAcrossCalls(t *testing.T) {
 	}
 	if other := f.read(t, Options{Agent: "codex"}); len(other.Changes) == 0 {
 		t.Error("another agent's cursor is its own: it hears of the move")
+	}
+}
+
+// send starts a conversation from one story to another, by from's agent.
+func (f *fixture) send(t *testing.T, from, to *workitem.Item, text string, at time.Time) *messages.Conversation {
+	t.Helper()
+	c, err := messages.Send(f.repo, messages.SendOptions{From: from.ID, To: to.ID, Author: "agent-" + from.ID, Text: text, About: []string{"design/system"}, Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
+// S-0331: the inbox lists the open conversations of the agent's own story,
+// each with the other story, its about, its last entry, and whether it awaits
+// this story; a closed one, and one between two other stories, are left out;
+// awaiting_you counts threads only; and with no story there are none.
+func TestTheInboxListsTheOpenConversationsOfTheAgentsStory(t *testing.T) {
+	f := setup(t)
+	other := f.storyIn(t, "Other", []string{"docs/other"}, workitem.Ready, workitem.InProgress)
+	third := f.storyIn(t, "Third", []string{"docs/third"}, workitem.Ready, workitem.InProgress)
+	toMe := f.send(t, other, f.story, "Will you leave plan.md to me?", t0)
+	fromMe := f.send(t, f.story, third, "I am changing the inbox.", t0)
+	f.send(t, other, third, "Not ours.", t0)
+	closed := f.send(t, f.story, other, "Done with this.", t0)
+	if _, err := messages.Close(f.repo, closed.ID, "alex", "settled", t0); err != nil {
+		t.Fatal(err)
+	}
+
+	in := f.read(t, Options{Agent: "claude", Own: f.story.ID})
+	if len(in.Messages) != 2 || in.Messages[0].ID != toMe.ID || in.Messages[1].ID != fromMe.ID {
+		t.Fatalf("the story's two open conversations, in ID order: %+v", in.Messages)
+	}
+	mine, sent := in.Messages[0], in.Messages[1]
+	if mine.Awaiting != "you" || mine.With != other.ID || len(mine.About) != 1 || mine.About[0] != "design/system" || mine.Entries != 1 {
+		t.Errorf("a message to the story awaits it, with the other story and about: %+v", mine)
+	}
+	if mine.Last.Author != "agent-"+other.ID || mine.Last.Story != other.ID || mine.Last.Text != "Will you leave plan.md to me?" || mine.Last.At != t0.Format(workitem.TimeFormat) {
+		t.Errorf("the last entry: %+v", mine.Last)
+	}
+	if sent.Awaiting != "other" || sent.With != third.ID {
+		t.Errorf("a message the story sent awaits the other: %+v", sent)
+	}
+	if in.AwaitingYou != 0 || len(in.Threads) != 0 {
+		t.Errorf("awaiting_you counts threads only: %d %v", in.AwaitingYou, in.Threads)
+	}
+	if none := f.read(t, Options{Agent: "claude"}); none.Messages != nil {
+		t.Errorf("an agent with no story of its own has no messages: %+v", none.Messages)
+	}
+}
+
+// S-0331: a message to the agent's story is a change of kind message, told
+// once per conversation and look, naming the conversation and the sender's
+// story; the story's own entries are not told back, nor are any without a
+// story.
+func TestAMessageToTheStoryIsToldOnce(t *testing.T) {
+	f := setup(t)
+	other := f.storyIn(t, "Other", []string{"docs/other"}, workitem.Ready, workitem.InProgress)
+	catchUp := func(story string) []Event {
+		t.Helper()
+		items, err := f.repo.List(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		events, _, err := CatchUp(f.repo, "claude", story, f.clock, items)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []Event
+		for _, e := range events {
+			if e.Kind == Message {
+				out = append(out, e)
+			}
+		}
+		return out
+	}
+	catchUp(f.story.ID) // the first look sets the cursor
+
+	f.clock = t0.Add(10 * time.Minute)
+	c := f.send(t, other, f.story, "Will you leave plan.md to me?", t0.Add(5*time.Minute))
+	got := catchUp(f.story.ID)
+	if len(got) != 1 || got[0].ID != c.ID || got[0].Type != Message || got[0].Cause != other.ID || got[0].By != "agent-"+other.ID || got[0].To != "design/system" || got[0].Title != c.Title {
+		t.Fatalf("one message event naming the conversation and the sender's story: %+v", got)
+	}
+	if s := got[0].Summary; !strings.Contains(s, other.ID+"'s agent, agent-"+other.ID+", wrote in "+c.ID) || !strings.Contains(s, "about design/system") || !strings.Contains(s, "message_reply") {
+		t.Errorf("summary: %s", s)
+	}
+	if again := catchUp(f.story.ID); len(again) != 0 {
+		t.Errorf("told once: %+v", again)
+	}
+
+	f.clock = t0.Add(20 * time.Minute)
+	if _, err := messages.Reply(f.repo, c.ID, f.story.ID, "claude", "Yes.", t0.Add(15*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if mine := catchUp(f.story.ID); len(mine) != 0 {
+		t.Errorf("the story's own reply is not told back: %+v", mine)
+	}
+
+	f.clock = t0.Add(30 * time.Minute)
+	if _, err := messages.Reply(f.repo, c.ID, other.ID, "agent-"+other.ID, "Thanks.", t0.Add(25*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if none := catchUp(""); len(none) != 0 {
+		t.Errorf("no story, no messages: %+v", none)
+	}
+	f.clock = t0.Add(40 * time.Minute)
+	if _, err := messages.Reply(f.repo, c.ID, other.ID, "agent-"+other.ID, "And one more.", t0.Add(35*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if reply := catchUp(f.story.ID); len(reply) != 1 || reply[0].At != t0.Add(35*time.Minute).Format(workitem.TimeFormat) {
+		t.Errorf("a reply is told too, as the newest entry: %+v", reply)
 	}
 }
