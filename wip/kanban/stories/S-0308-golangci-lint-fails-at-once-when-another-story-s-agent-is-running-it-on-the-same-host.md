@@ -6,7 +6,7 @@ title: golangci-lint fails at once when another story's agent is running it on t
 status: backlog
 owner: alex
 created: 2026-10-07T01:07:14Z
-updated: 2026-10-07T03:29:59Z
+updated: 2026-10-07T03:30:07Z
 transitions: []
 tags: []
 touches: [flai/.golangci.yaml, flai/tests/integration/golangci_lock_test.go, design/system/devex.md, design/issues/I-0101-golangci-lint-fails-at-once-when-another-story-s-agent-is-running-it-on-the-same-host.md, design/issues/summary.md]
@@ -25,10 +25,10 @@ cost_of_delay:
   at: 2026-10-07T02:19:34Z
 forecast:
   duration: 10m
-  delivery: 2026-10-07T11:29:00Z
-  basis: "Its own forecast of 10m; 33rd in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0212, S-0213, S-0214, S-0216, S-0215, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0246, S-0265, S-0279, S-0280, S-0287, S-0288, S-0289, S-0290, S-0291, S-0293, S-0297, S-0298, S-0304, S-0305 and S-0306."
+  delivery: 2026-10-07T11:35:00Z
+  basis: "Its own forecast of 10m; 33rd in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0246, S-0265, S-0279, S-0280, S-0287, S-0288, S-0289, S-0290, S-0291, S-0293, S-0297, S-0298, S-0304, S-0305 and S-0306."
   by: flai
-  at: 2026-10-07T03:29:59Z
+  at: 2026-10-07T03:30:07Z
 finalized:
   by: alex
   at: 2026-10-07T02:17:22Z
