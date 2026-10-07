@@ -82,8 +82,19 @@ func TestCommitPathsWithNothingChangedCommitsNothing(t *testing.T) {
 	if now := gitOut(t, dir, "rev-parse", "HEAD"); now != head {
 		t.Errorf("HEAD moved from %s to %s", head, now)
 	}
-	if st := gitOut(t, dir, "status", "--porcelain"); st != " M c.md" {
-		t.Errorf("status %q", st)
+	assertUnstagedOnly(t, dir, "c.md")
+}
+
+// assertUnstagedOnly fails unless path is the worktree's one change and
+// nothing is staged; the runner trims git's output, so status's leading
+// column cannot say it.
+func assertUnstagedOnly(t *testing.T, dir, path string) {
+	t.Helper()
+	if staged := gitOut(t, dir, "diff", "--cached", "--name-only"); staged != "" {
+		t.Errorf("staged %q", staged)
+	}
+	if changed := gitOut(t, dir, "diff", "--name-only"); changed != path {
+		t.Errorf("unstaged %q, want %q", changed, path)
 	}
 }
 
@@ -102,7 +113,5 @@ func TestCommitPathsRefusesABranchThatIsNotTheStorys(t *testing.T) {
 			t.Errorf("the refusal lacks %q: %v", want, err)
 		}
 	}
-	if st := gitOut(t, dir, "status", "--porcelain"); st != " M a.md" {
-		t.Errorf("status %q", st)
-	}
+	assertUnstagedOnly(t, dir, "a.md")
 }
