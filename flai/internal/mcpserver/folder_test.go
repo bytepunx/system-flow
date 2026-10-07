@@ -105,6 +105,23 @@ func (f *folderFixture) call(t *testing.T, name string, args any) (out map[strin
 	return out, ""
 }
 
+// toolAnswer is what call answered, for a call made in a goroutine.
+type toolAnswer struct {
+	out    map[string]any
+	failed string
+}
+
+// callLater makes the call in a goroutine and answers on the channel, so that
+// a test can change the project while the call is held.
+func (f *folderFixture) callLater(t *testing.T, name string, args any) <-chan toolAnswer {
+	done := make(chan toolAnswer, 1)
+	go func() {
+		out, failed := f.call(t, name, args)
+		done <- toolAnswer{out, failed}
+	}()
+	return done
+}
+
 func projectKeys(out map[string]any) []string {
 	var keys []string
 	for _, p := range out["projects"].([]any) {
@@ -185,22 +202,18 @@ func TestWaitForWorkAcrossAFolder(t *testing.T) {
 	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
 	f := folderSetup(t, root)
 
-	quiet, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
-	if quiet["timed_out"] != true || quiet["waiting_for"] != "ready" || len(quiet["projects"].([]any)) != 2 {
-		t.Fatalf("nothing ready: %v", quiet)
+	quiet, failed := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
+	if failed != "" || quiet["timed_out"] != true || quiet["waiting_for"] != "ready" || len(quiet["projects"].([]any)) != 2 {
+		t.Fatalf("nothing ready: %v %s", quiet, failed)
 	}
-	done := make(chan map[string]any, 1)
-	go func() {
-		out, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 3})
-		done <- out
-	}()
+	done := f.callLater(t, "wait_for_work", map[string]any{"timeout_seconds": 3})
 	time.Sleep(150 * time.Millisecond)
 	story := readyStoryIn(t, beta, "Beta work", t0.Add(2*time.Minute))
 	select {
-	case out := <-done:
-		s, _ := out["story"].(map[string]any)
-		if out["reason"] != "pull" || out["project"] != "beta" || out["folder"] != "beta" || s["id"] != story.ID {
-			t.Errorf("handed over: %v", out)
+	case a := <-done:
+		s, _ := a.out["story"].(map[string]any)
+		if a.failed != "" || a.out["reason"] != "pull" || a.out["project"] != "beta" || a.out["folder"] != "beta" || s["id"] != story.ID {
+			t.Errorf("handed over: %v %s", a.out, a.failed)
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("wait_for_work never answered")
@@ -209,6 +222,35 @@ func TestWaitForWorkAcrossAFolder(t *testing.T) {
 	// the agent pulls it in that project
 	if out, failed := f.call(t, "item_move", map[string]any{"project": "beta", "id": story.ID, "to": "in-progress"}); failed != "" || out["status"] != "in-progress" {
 		t.Errorf("pull: %v %s", out, failed)
+	}
+}
+
+// I-0102: a held wait that reads a story file os.WriteFile has truncated and
+// not yet filled fails with the file's parse error. readyStoryIn once wrote
+// that way while TestWaitForWorkAcrossAFolder held its wait, and a loaded host
+// widened the window until a poll fell into it.
+func TestAHeldWaitFailsOnATruncatedStory(t *testing.T) {
+	root := t.TempDir()
+	makeProject(t, filepath.Join(root, "alpha"), "alpha")
+	beta := makeProject(t, filepath.Join(root, "beta"), "beta")
+	s, err := beta.Create(workitem.NewOptions{Type: workitem.Story, Title: "Beta work", Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := folderSetup(t, root)
+
+	done := f.callLater(t, "wait_for_work", map[string]any{"timeout_seconds": 3})
+	time.Sleep(150 * time.Millisecond)
+	if err := os.Truncate(s.Path, 0); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case a := <-done:
+		if !strings.Contains(a.failed, filepath.Base(s.Path)) {
+			t.Errorf("the wait did not fail on the truncated story: %v %q", a.out, a.failed)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("wait_for_work never answered")
 	}
 }
 
@@ -226,16 +268,16 @@ func TestWaitForWorkAcrossAFolderSkipsHeldStories(t *testing.T) {
 	clear := readyStoryIn(t, beta, "Clear", t0, "docs")
 	f := folderSetup(t, root)
 
-	out, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
-	if s, _ := out["story"].(map[string]any); out["reason"] != "pull" || out["project"] != "beta" || s["id"] != clear.ID {
-		t.Fatalf("the clear story in beta: %v", out)
+	out, failed := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
+	if s, _ := out["story"].(map[string]any); failed != "" || out["reason"] != "pull" || out["project"] != "beta" || s["id"] != clear.ID {
+		t.Fatalf("the clear story in beta: %v %s", out, failed)
 	}
 	if _, failed := f.call(t, "item_move", map[string]any{"project": "beta", "id": clear.ID, "to": "in-progress"}); failed != "" {
 		t.Fatal(failed)
 	}
-	quiet, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
-	if quiet["timed_out"] != true || quiet["waiting_for"] != "held" || quiet["reason"] != "" {
-		t.Fatalf("only a held story is left: %v", quiet)
+	quiet, failed := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1})
+	if failed != "" || quiet["timed_out"] != true || quiet["waiting_for"] != "held" || quiet["reason"] != "" {
+		t.Fatalf("only a held story is left: %v %s", quiet, failed)
 	}
 	for _, p := range quiet["projects"].([]any) {
 		pw := p.(map[string]any)
@@ -281,18 +323,15 @@ func TestWaitForEventsAcrossAFolder(t *testing.T) {
 	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
 		t.Fatal(failed)
 	}
-	done := make(chan map[string]any, 1)
-	go func() {
-		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
-		done <- out
-	}()
+	done := f.callLater(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
 	time.Sleep(150 * time.Millisecond)
 	readyStoryIn(t, beta, "Beta work", t0.Add(2*time.Minute))
 	select {
-	case out := <-done:
-		events := out["events"].([]any)
-		if out["timed_out"] == true || len(events) == 0 {
-			t.Fatalf("wait: %v", out)
+	case a := <-done:
+		out := a.out
+		events, _ := out["events"].([]any)
+		if a.failed != "" || out["timed_out"] == true || len(events) == 0 {
+			t.Fatalf("wait: %v %s", out, a.failed)
 		}
 		for _, e := range events {
 			if e.(map[string]any)["project"] != "beta" {
@@ -318,8 +357,8 @@ func TestAnEmptyFolderIsServed(t *testing.T) {
 	if _, failed := f.call(t, "item_get", map[string]any{"id": "S-1"}); !strings.Contains(failed, "there is no system-flow project in") {
 		t.Errorf("item_get: %q", failed)
 	}
-	if out, _ := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1}); out["waiting_for"] != "ready" {
-		t.Errorf("wait_for_work: %v", out)
+	if out, failed := f.call(t, "wait_for_work", map[string]any{"timeout_seconds": 1}); failed != "" || out["waiting_for"] != "ready" {
+		t.Errorf("wait_for_work: %v %s", out, failed)
 	}
 }
 
