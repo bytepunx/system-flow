@@ -7,7 +7,7 @@ count: 1
 cost: 2m
 first_reported: 2026-10-06T23:31:35Z
 last_reported: 2026-10-06T23:31:35Z
-updated: 2026-10-06T23:31:35Z
+updated: 2026-10-07T01:07:13Z
 ---
 
 # I-0100 The acceptance's commit step fails when another process holds git's index lock, and the acceptance cannot then be finished by flai
@@ -27,3 +27,5 @@ flai accept S-0299 at 23:03:32Z on 2026-10-06 merged the branch, moved the story
 ## Remediation
 
 Directions to weigh: retry the commit a few times when git reports the index lock held, since the other writer is brief; or make an acceptance that is done and archived but whose commit is missing resumable, as one that is done but not archived already is ("completed from step 0 without a second transition"); and record the commit's failure in the journal.
+
+Story S-0307 remediates this issue, created from it at 2026-10-07T01:07:13Z.
