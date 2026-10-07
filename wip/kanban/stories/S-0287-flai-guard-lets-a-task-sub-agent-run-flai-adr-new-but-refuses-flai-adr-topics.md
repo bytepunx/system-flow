@@ -6,7 +6,7 @@ title: flai guard lets a task sub-agent run flai adr new but refuses flai adr to
 status: backlog
 owner: alex
 created: 2026-10-06T09:56:50Z
-updated: 2026-10-07T23:19:38Z
+updated: 2026-10-07T23:20:33Z
 transitions: []
 tags: [cli, flai, guard]
 topics: [cli, conventions, template]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-07T23:18:54Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T05:05:00Z
-  basis: "S-0246, the last guard remediation (rule, tests, design, docs), took 31m of agent time; this adds an ADR refining ADR-0060 and a convention change in the template, so 45m, not flai's 5m from two criteria and no touches; delivery is flai's 04:25Z pushed back by the 40m difference."
-  by: planner-S-0287
-  at: 2026-10-07T23:18:54Z
+  delivery: 2026-10-08T05:08:00Z
+  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 3, behind S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241 and S-0280."
+  by: flai
+  at: 2026-10-07T23:20:33Z
 ---
 # S-0287 flai guard lets a task sub-agent run flai adr new but refuses flai adr topics
 

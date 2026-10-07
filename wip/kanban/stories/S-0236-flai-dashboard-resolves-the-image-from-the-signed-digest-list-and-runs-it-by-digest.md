@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T22:55:27Z
+updated: 2026-10-07T23:20:33Z
 transitions: []
 tags: [cli]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T22:55:27Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T02:33:00Z
-  basis: "Done feature stories of 4 to 7 criteria took about 1h each; raised to 1h30m for 8 tasks in 5 layers across a new Go package, five dashboard subcommands, a Svelte page, and seven documents. flai replays the delivery from the pull order."
-  by: planner-S-0236
-  at: 2026-10-07T22:55:27Z
+  delivery: 2026-10-08T02:39:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0233, S-0234 and S-0235."
+  by: flai
+  at: 2026-10-07T23:20:33Z
 ---
 # S-0236 flai dashboard resolves the image from the signed digest list and runs it by digest
 

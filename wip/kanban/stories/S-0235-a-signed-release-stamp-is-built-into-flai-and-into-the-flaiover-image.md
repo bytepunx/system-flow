@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T22:50:03Z
+updated: 2026-10-07T23:20:33Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T22:50:03Z
 forecast:
   duration: 1h
-  delivery: 2026-10-08T01:11:00Z
-  basis: "Five tasks in three layers across Go, TypeScript, two release workflows, and the docs; S-0232, of the same spread, closed four tasks in 14 minutes and its code task ran past 20 more, so 1h rather than flai's 34m or the earlier 1h15m."
-  by: planner-S-0235
-  at: 2026-10-07T22:49:39Z
+  delivery: 2026-10-08T00:35:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0233 and S-0234."
+  by: flai
+  at: 2026-10-07T23:20:33Z
 ---
 # S-0235 A signed release stamp is built into flai and into the flaiover image
 

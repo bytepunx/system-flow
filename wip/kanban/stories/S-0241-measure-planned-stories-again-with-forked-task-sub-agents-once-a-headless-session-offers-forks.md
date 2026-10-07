@@ -6,7 +6,7 @@ title: Measure planned stories again with forked task sub-agents once a headless
 status: backlog
 owner: arobson
 created: 2026-10-02T17:14:07Z
-updated: 2026-10-07T23:14:44Z
+updated: 2026-10-07T23:20:33Z
 transitions: []
 tags: [template]
 topics: [conventions]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-07T23:14:44Z
 forecast:
   duration: 2h
-  delivery: 2026-10-08T04:25:00Z
-  basis: "S-0176 took 1h45m from in-progress to review and 6355 s of agent time for the same three replays, their blind reviews, and a results document, so 2h replaces flai's 8m from size 5; delivery is flai's pull-order date moved by that difference, and holds only if a headless session offers forks by then, which Claude Code 2.1.290 does not."
-  by: planner-S-0241
-  at: 2026-10-07T23:12:30Z
+  delivery: 2026-10-08T04:37:00Z
+  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 3, behind S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238 and S-0239."
+  by: flai
+  at: 2026-10-07T23:20:33Z
 ---
 # S-0241 Measure planned stories again with forked task sub-agents once a headless session offers forks
 

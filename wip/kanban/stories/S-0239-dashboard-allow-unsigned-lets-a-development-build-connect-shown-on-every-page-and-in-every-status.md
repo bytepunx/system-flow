@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T23:10:45Z
+updated: 2026-10-07T23:20:33Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T23:10:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T05:17:00Z
-  basis: "Eight tasks in four layers on both components: a setting in the configuration and the manifest, the container's variable, both handshakes, three statuses, the connection list, a banner, and docs. S-0237's six tasks on both sides are planned at 1h30m, so 1h30m stands over flai's 1h8m. flai replays the delivery from the pull order."
-  by: planner-S-0239
-  at: 2026-10-07T23:10:45Z
+  delivery: 2026-10-08T05:52:00Z
+  basis: "Its own forecast of 1h30m; 7th in the pull order with an in-progress limit of 3, behind S-0232, S-0233, S-0234, S-0235, S-0236, S-0237 and S-0238."
+  by: flai
+  at: 2026-10-07T23:20:33Z
 ---
 # S-0239 dashboard.allow_unsigned lets a development build connect, shown on every page and in every status
 

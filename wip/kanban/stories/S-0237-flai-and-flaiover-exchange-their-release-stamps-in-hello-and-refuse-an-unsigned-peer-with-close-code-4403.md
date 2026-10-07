@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T23:01:49Z
+updated: 2026-10-07T23:20:33Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T22:13:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T02:57:00Z
-  basis: "Six tasks in three layers: the handshake changed on both sides with a protocol 1 case, status in two commands, two dashboard views, and docs; S-0235's five tasks with half the code took 1h, so 1h30m rather than flai's 1h1m."
-  by: planner-S-0237
-  at: 2026-10-07T23:01:49Z
+  delivery: 2026-10-08T02:21:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0232, S-0233, S-0234, S-0235 and S-0236."
+  by: flai
+  at: 2026-10-07T23:20:33Z
 ---
 # S-0237 flai and flaiover exchange their release stamps in hello and refuse an unsigned peer with close code 4403
 
