@@ -3,17 +3,20 @@ id: S-0215
 type: story
 nature: feature
 title: A chart shows how long agents spend waiting on threads and on review
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T03:27:47Z
+updated: 2026-10-07T03:29:37Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
     by: alex
   - to: backlog
     at: 2026-10-04T00:41:41Z
+    by: alex
+  - to: ready
+    at: 2026-10-07T03:29:20Z
     by: alex
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts]
@@ -29,10 +32,10 @@ cost_of_delay:
   at: 2026-10-05T05:44:37Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-07T06:10:00Z
-  basis: "Its own forecast of 1h15m; 7th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0212, S-0213 and S-0214."
+  delivery: 2026-10-07T05:51:00Z
+  basis: "Its own forecast of 1h15m; 5th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275 and S-0216."
   by: flai
-  at: 2026-10-07T03:27:47Z
+  at: 2026-10-07T03:29:37Z
 ---
 # S-0215 A chart shows how long agents spend waiting on threads and on review
 

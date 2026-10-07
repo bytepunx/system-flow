@@ -3,17 +3,20 @@ id: S-0214
 type: story
 nature: feature
 title: Charts show parallelism, holds, and touches drift
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T03:27:47Z
+updated: 2026-10-07T03:29:37Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
     by: alex
   - to: backlog
     at: 2026-10-04T00:41:39Z
+    by: alex
+  - to: ready
+    at: 2026-10-07T03:29:21Z
     by: alex
 tags: [dashboard]
 topics: [planning, analysis]
@@ -30,10 +33,10 @@ cost_of_delay:
   at: 2026-10-05T05:46:07Z
 forecast:
   duration: 1h45m
-  delivery: 2026-10-07T06:37:00Z
-  basis: "Its own forecast of 1h45m; 6th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0212 and S-0213."
+  delivery: 2026-10-07T06:39:00Z
+  basis: "Its own forecast of 1h45m; 6th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0216 and S-0215."
   by: flai
-  at: 2026-10-07T03:27:47Z
+  at: 2026-10-07T03:29:37Z
 ---
 # S-0214 Charts show parallelism, holds, and touches drift
 

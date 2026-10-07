@@ -3,17 +3,20 @@ id: S-0213
 type: story
 nature: feature
 title: Charts show cost of delay outstanding, incurred, and what the pull order costs
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T03:27:47Z
+updated: 2026-10-07T03:29:37Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
     by: alex
   - to: backlog
     at: 2026-10-04T00:41:46Z
+    by: alex
+  - to: ready
+    at: 2026-10-07T03:29:29Z
     by: alex
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flai/internal/statsread, flai/internal/planning/forecast.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, docs/users/flai.md]
@@ -29,10 +32,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:55Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-07T06:08:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275 and S-0212."
+  delivery: 2026-10-07T07:10:00Z
+  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0216, S-0215, S-0214 and S-0212."
   by: flai
-  at: 2026-10-07T03:27:47Z
+  at: 2026-10-07T03:29:37Z
 ---
 # S-0213 Charts show cost of delay outstanding, incurred, and what the pull order costs
 

@@ -3,17 +3,20 @@ id: S-0212
 type: story
 nature: feature
 title: Charts compare forecasts and estimates with what happened
-status: backlog
+status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-07T03:27:47Z
+updated: 2026-10-07T03:29:37Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:50Z
     by: alex
   - to: backlog
     at: 2026-10-04T00:41:38Z
+    by: alex
+  - to: ready
+    at: 2026-10-07T03:29:31Z
     by: alex
 tags: [dashboard]
 topics: [planning]
@@ -30,10 +33,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:27Z
 forecast:
   duration: 31m
-  delivery: 2026-10-07T04:45:00Z
-  basis: "Its own forecast of 31m; 4th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274 and S-0275."
+  delivery: 2026-10-07T05:27:00Z
+  basis: "Its own forecast of 31m; 7th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0216, S-0215 and S-0214."
   by: flai
-  at: 2026-10-07T03:27:47Z
+  at: 2026-10-07T03:29:37Z
 ---
 # S-0212 Charts compare forecasts and estimates with what happened
 
