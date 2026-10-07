@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T20:28:28Z
+updated: 2026-10-07T20:31:38Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -51,10 +51,10 @@ Touches:
 - Design: `design/tech/docker.md`, which describes the image.
 - Folder touches kept, as declared: `flai/internal/buildinfo`, which may gain a stamp file beside `buildinfo.go`; `docs/operators`.
 
-Forecast: 1h15m, delivery 2026-10-08T10:58Z.
+Forecast: 1h15m. flai replays the delivery from the pull order whenever it changes.
 
 - `flai forecast` gave 24m from 116 s per unit of size, over only 3 medium-band feature stories.
 - Done feature stories of this size took a median of about 1h of agent time. This one builds, verifies, and tests a stamp in both components and both workflows, so 1h15m.
-- Delivery is played out after S-0232 at flai's cycle factor of 6.85.
+- The first delivery was played out after S-0232 at flai's cycle factor of 6.85.
 
 Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

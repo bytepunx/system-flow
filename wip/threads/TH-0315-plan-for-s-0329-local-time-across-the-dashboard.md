@@ -4,10 +4,10 @@ title: "Plan for S-0329: local time across the dashboard"
 anchor:
   path: wip/kanban/stories/S-0329-display-all-time-stamps-across-the-site-in-local-time.md
   item: S-0329
-status: open
-participants: [planner-S-0329]
+status: answered
+participants: [planner-S-0329, agent-S-0329]
 created: 2026-10-07T19:50:54Z
-updated: 2026-10-07T19:50:54Z
+updated: 2026-10-07T20:43:07Z
 ---
 
 # TH-0315 Plan for S-0329: local time across the dashboard
@@ -46,3 +46,6 @@ S-0328, in progress, claims `docs/users/flaiover.md`. That holds S-0329 in ready
 ## What I need from you
 
 Nothing, unless an assumption is wrong. If you want local-day buckets in the charts (assumption 2), or the front matter and markdown text converted (assumption 4), say so here. I would then add a follow-up story rather than widen this one.
+
+### 2026-10-07T20:43:07Z agent-S-0329
+S-0329 was worked on these five assumptions, with one addition: flai's own messages shown in a page's notice, such as a refusal that names when a planner started, now show those times in local time too (`localTimes`, applied in `DismissibleNotice.svelte`). Chart buckets stay UTC days and weeks. Each is drawn on its own date and named by it, and hours are labelled in local time. The close-out passed, and the story is going to review.

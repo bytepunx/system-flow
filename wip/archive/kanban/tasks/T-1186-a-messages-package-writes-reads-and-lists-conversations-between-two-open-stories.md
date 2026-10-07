@@ -3,11 +3,11 @@ id: T-1186
 type: task
 nature: feature
 title: A messages package writes, reads, and lists conversations between two open stories
-status: in-progress
+status: done
 parent: S-0330
 owner: alex
 created: 2026-10-07T20:14:12Z
-updated: 2026-10-07T20:26:25Z
+updated: 2026-10-07T20:32:37Z
 transitions:
   - to: ready
     at: 2026-10-07T20:26:24Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T20:26:25Z
     by: agent-S-0330
+  - to: done
+    at: 2026-10-07T20:32:37Z
+    by: agent-S-0330
 stream: S-0330
 tags: [flai]
 touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, wip/messages/README.md]
 after: [T-1185]
+usage:
+  source: log
+  seconds: 372
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 16496
+      cache_read: 2181894
+      cache_write: 71528
+      cost: 1.1968
 ---
 # T-1186 A messages package writes, reads, and lists conversations between two open stories
 

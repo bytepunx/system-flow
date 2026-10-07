@@ -7,11 +7,11 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T20:28:28Z
+updated: 2026-10-07T20:31:40Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [flai/internal/channel, flai/internal/serve, flaiover/src/lib/server/agent.ts, flaiover/src/routes, docs/operators, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/HostFlaiBanner.svelte, flaiover/src/lib/components/HostFlaiBanner.svelte.test.ts, flai/cmd/serve.go, flai/cmd/host.go, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md]
+touches: [flai/internal/channel, flaiover/src/lib/server/agent.ts, docs/operators, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/HostFlaiBanner.svelte, flaiover/src/lib/components/HostFlaiBanner.svelte.test.ts, flai/cmd/serve.go, flai/cmd/host.go, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/settings.ts]
 after: [S-0235]
 agent:
   harness: claude-code
@@ -49,12 +49,13 @@ Touches:
 - Declared: `flai/internal/channel`, `flai/internal/serve`, `flaiover/src/lib/server/agent.ts`, `flaiover/src/routes`, `docs/operators`, `docs/users/flaiover.md`.
 - Layout: `flaiover/src/lib/server/agent.test.ts`; `flaiover/src/lib/hostflai.svelte.ts` and `flaiover/src/lib/components/HostFlaiBanner.svelte` with its test, which show a flai the dashboard cannot use; `flai/cmd/serve.go` and `flai/cmd/host.go`, which print `flai serve status` and `flai host status`.
 - Design: `design/system/dashboard-host-channel.md` and `design/system/flaiover-dashboard.md` § The channel to flai on the host, which describe `hello`.
-- Folder touches kept, as declared: `flai/internal/channel` (`channel.go`, its test, and `channeltest`); `flai/internal/serve`, where `dashboards.go` dials; `flaiover/src/routes`, where the connection list is; `docs/operators`. Each is wide: `flai/internal/serve` and `flaiover/src/routes` hold most stories that touch the host or a page. The story's agent should narrow them to files when it writes the tasks.
+- Folder touches kept, as declared: `flai/internal/channel` (`channel.go`, its test, and `channeltest`), where `hello` and the close codes are; `docs/operators`, whose runbooks may gain a page on the refusal.
+- Narrowed on TH-0313: `flai/internal/serve` to `flai/internal/serve/serve.go`, which builds the channel client, and its test; `flaiover/src/routes` to `flaiover/src/routes/api/projects/+server.ts` and its test, the per-project connection list, with `flaiover/src/lib/components/ProjectSwitcher.svelte` and `flaiover/src/lib/settings.ts`, which show it.
 
-Forecast: 1h30m, delivery 2026-10-08T21:15Z.
+Forecast: 1h30m. flai replays the delivery from the pull order whenever it changes.
 
 - `flai forecast` gave 22m from 116 s per unit of size, over only 3 medium-band feature stories.
 - Done feature stories of this size took a median of about 1h of agent time. This one changes the protocol on both sides, with status, UI, and four test cases on each, so 1h30m.
-- Delivery is played out after S-0235 at flai's cycle factor of 6.85.
+- The first delivery was played out after S-0235 at flai's cycle factor of 6.85.
 
 Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

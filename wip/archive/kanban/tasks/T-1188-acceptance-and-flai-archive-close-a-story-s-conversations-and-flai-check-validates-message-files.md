@@ -3,16 +3,36 @@ id: T-1188
 type: task
 nature: feature
 title: Acceptance and flai archive close a story's conversations, and flai check validates message files
-status: backlog
+status: done
 parent: S-0330
 owner: alex
 created: 2026-10-07T20:14:23Z
-updated: 2026-10-07T20:14:23Z
-transitions: []
+updated: 2026-10-07T20:48:28Z
+transitions:
+  - to: ready
+    at: 2026-10-07T20:33:08Z
+    by: agent-S-0330
+  - to: in-progress
+    at: 2026-10-07T20:33:08Z
+    by: agent-S-0330
+  - to: done
+    at: 2026-10-07T20:48:28Z
+    by: agent-S-0330
 stream: S-0330
 tags: [flai]
-touches: [flai/cmd/accept.go, flai/cmd/accept_threads_test.go, flai/cmd/archive.go, flai/cmd/archive_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go]
+touches: [flai/cmd/accept.go, flai/cmd/accept_threads_test.go, flai/cmd/archive.go, flai/cmd/archive_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go]
 after: [T-1186]
+usage:
+  source: log
+  seconds: 920
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 103
+      output: 45266
+      cache_read: 5987128
+      cache_write: 196273
+      cost: 3.2841
 ---
 # T-1188 Acceptance and flai archive close a story's conversations, and flai check validates message files
 

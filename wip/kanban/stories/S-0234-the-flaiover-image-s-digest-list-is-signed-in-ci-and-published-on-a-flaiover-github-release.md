@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T20:28:28Z
+updated: 2026-10-07T20:31:36Z
 transitions: []
 tags: [dashboard]
 topics: [release, security]
@@ -50,10 +50,10 @@ Touches:
 - Design: `design/tech/docker.md`, whose Tags row names what `release-flaiover.yml` publishes; `design/system/release-signing.md`, where criterion 4's `RepoDigests` finding is recorded.
 - Folder touch kept, as declared: `docs/operators`, where the update runbook and perhaps a new note on unsigned `latest` builds change.
 
-Forecast: 45m, delivery 2026-10-08T07:33Z.
+Forecast: 45m. flai replays the delivery from the pull order whenever it changes.
 
 - `flai forecast` gave 16m from 116 s per unit of size, over only 3 medium-band feature stories.
 - It is one workflow, so under the 1h median of done feature stories. But criterion 4 needs pulls by index and platform digest to be tried with Docker, so 45m.
-- Delivery is played out after S-0232 at flai's cycle factor of 6.85.
+- The first delivery was played out after S-0232 at flai's cycle factor of 6.85.
 
 Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

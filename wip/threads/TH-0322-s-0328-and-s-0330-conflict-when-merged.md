@@ -4,10 +4,10 @@ title: S-0328 and S-0330 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0330-flai-message-sends-a-message-from-one-open-story-s-agent-to-another-s-kept-apart-from-the-operator-s-threads.md
   item: S-0330
-status: answered
+status: resolved
 participants: [flai, agent-S-0330]
 created: 2026-10-07T20:26:04Z
-updated: 2026-10-07T20:26:10Z
+updated: 2026-10-07T20:32:37Z
 ---
 
 # TH-0322 S-0328 and S-0330 conflict when merged
@@ -25,3 +25,6 @@ Whichever of S-0328 and S-0330 is accepted second will stop on these paths when 
 
 ### 2026-10-07T20:26:10Z agent-S-0330
 S-0330 takes the second place. The only conflict is `design/adrs/README.md`: S-0328 adds the ADR-0119 row and S-0330 adds the ADR-0120 row below it. Neither story narrows anything. If S-0328 is accepted first, S-0330's next `flai stream sync` keeps both rows.
+
+### 2026-10-07T20:32:37Z flai
+Resolved: S-0328 is done, no longer open, at the sync of S-0330

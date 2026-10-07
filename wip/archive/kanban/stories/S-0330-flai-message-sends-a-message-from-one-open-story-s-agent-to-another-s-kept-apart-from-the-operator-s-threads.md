@@ -3,11 +3,11 @@ id: S-0330
 type: story
 nature: feature
 title: flai message sends a message from one open story's agent to another's, kept apart from the operator's threads
-status: in-progress
+status: done
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:10:22Z
-updated: 2026-10-07T20:24:33Z
+updated: 2026-10-07T21:00:00Z
 transitions:
   - to: ready
     at: 2026-10-07T20:24:28Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T20:24:33Z
     by: agent-S-0330
+  - to: review
+    at: 2026-10-07T20:58:54Z
+    by: agent-S-0330
+  - to: done
+    at: 2026-10-07T21:00:00Z
+    by: orchestrator
 tags: [flai]
 topics: [cli]
-touches: [design/adrs, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/cmd/root.go, flai/cmd/accept.go, flai/cmd/accept_threads_test.go, flai/cmd/archive.go, flai/cmd/archive_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, wip/messages/README.md, design/system/agent-coordination.md, design/system/repository-layout.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/adrs, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/cmd/root.go, flai/cmd/accept.go, flai/cmd/accept_threads_test.go, flai/cmd/archive.go, flai/cmd/archive_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, wip/messages/README.md, design/system/agent-coordination.md, design/system/repository-layout.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, docs/operators/settings.md, docs/users/conventions.md, template/root/wip/messages/README.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,18 +31,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 93
-  estimated: true
+  seconds: 2073
   turns:
     - day: 2026-10-07
-      work: 19
+      ceremony: 1
+      hand_edits: 2
+      work: 59
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 329
-      cache_read: 1553026
-      cache_write: 107187
-      cost: 0.7421
+      input: 380
+      output: 166945
+      cache_read: 22080966
+      cache_write: 723869
+      cost: 12.1121
   strategic:
     - kind: orchestrator
       seconds: 301
@@ -72,13 +79,13 @@ This story builds the store and the CLI: `flai message send`, `reply`, `list`, a
 
 ## Acceptance criteria
 
-- [ ] An ADR records how a message is addressed (from the sender's story to an open story), where messages are kept, how a conversation ends, and why messages are apart from threads (ADR-0020, ADR-0109).
-- [ ] `flai message send <S-nnnn> "<text>" --from <S-nnnn> [--about <path>…]` starts a conversation between two stories in progress or in review; one to or from a story in any other state is refused with the reason.
-- [ ] `flai message reply`, `flai message list [--story S-nnnn] [--all]`, and `flai message show` reply to a conversation, list the open ones a story is part of with which side it awaits, and print one with every entry; each has `--json`.
-- [ ] No message appears in `flai thread list`, among the threads awaiting the operator, or in the dashboard's designer inbox.
-- [ ] A conversation reads as closed once either of its stories is accepted, cancelled, or archived, and accepting or archiving a story writes an entry saying why in each conversation it closes.
-- [ ] `flai check --strict` validates the message files and the markdown flai writes for them.
-- [ ] `design/system/agent-coordination.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated `docs/users/flai-reference.md` describe messages.
+- [x] An ADR records how a message is addressed (from the sender's story to an open story), where messages are kept, how a conversation ends, and why messages are apart from threads (ADR-0020, ADR-0109).
+- [x] `flai message send <S-nnnn> "<text>" --from <S-nnnn> [--about <path>…]` starts a conversation between two stories in progress or in review; one to or from a story in any other state is refused with the reason.
+- [x] `flai message reply`, `flai message list [--story S-nnnn] [--all]`, and `flai message show` reply to a conversation, list the open ones a story is part of with which side it awaits, and print one with every entry; each has `--json`.
+- [x] No message appears in `flai thread list`, among the threads awaiting the operator, or in the dashboard's designer inbox.
+- [x] A conversation reads as closed once either of its stories is accepted, cancelled, or archived, and accepting or archiving a story writes an entry saying why in each conversation it closes.
+- [x] `flai check --strict` validates the message files and the markdown flai writes for them.
+- [x] `design/system/agent-coordination.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated `docs/users/flai-reference.md` describe messages.
 
 ## Tasks
 
@@ -120,3 +127,17 @@ Touches:
 Forecast 48m, delivery 2026-10-08T07:30Z: `flai forecast` gave it, 114 s per unit over 29 done large-band feature stories on claude-opus-5-5, times size 25 (7 criteria, 18 touches). It stands: the new package is about the size of `threads`, and its layers are the usual ADR, code, docs.
 
 Cost of delay 124.03 USD a week: `flai cod` gave S-0330's share of E-0018's 1000 USD a week of penalty, 48m of the epic's 6h27m. It stands; the share by duration undervalues this story, which every other story of E-0018 waits on, but no input says by how much.
+
+### Accepted by the orchestrator
+
+- Verified: 947d0f431599d83662297d46e9de863bc4280eea
+- At: 2026-10-07T21:00:00Z
+
+Verdict: S-0330 is ready to accept; all 7 criteria are met at head 947d0f43, flai verify passed every step there, and no convention is broken.
+- 1: design/adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md, design/adrs/README.md
+- 2: flai/cmd/message.go, flai/internal/messages/messages.go
+- 3: flai/cmd/message.go, flai/internal/messages/messages.go
+- 4: flai/internal/messages/messages.go, wip/messages/README.md
+- 5: flai/internal/messages/messages.go, flai/cmd/accept.go, flai/cmd/archive.go, flai/cmd/accept_threads_test.go, flai/cmd/archive_test.go
+- 6: flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go
+- 7: design/system/agent-coordination.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md

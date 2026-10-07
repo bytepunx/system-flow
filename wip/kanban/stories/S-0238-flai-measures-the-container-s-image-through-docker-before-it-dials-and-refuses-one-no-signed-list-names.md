@@ -7,11 +7,11 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T20:28:28Z
+updated: 2026-10-07T20:31:41Z
 transitions: []
 tags: [cli]
 topics: [release, security]
-touches: [flai/internal/serve, flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md]
+touches: [flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/imagecheck.go, flai/internal/serve/imagecheck_test.go]
 after: [S-0236]
 agent:
   harness: claude-code
@@ -49,12 +49,13 @@ Touches:
 - Declared: `flai/internal/serve`, `flai/cmd/serve.go`, `flai/cmd/dashboard.go`, `docs/operators`, `docs/users/flai.md`.
 - Layout: `flai/cmd/host.go`, which prints `flai host status`.
 - Co-change and design: `design/system/flai-cli.md`, which describes the three statuses.
-- Folder touches kept, as declared: `flai/internal/serve`, where `dashboards.go` dials and the check may be a new file; `docs/operators`. `flai/internal/serve` holds every story that touches `flai serve`; the story's agent should narrow it to files when it writes the tasks.
+- Folder touch kept, as declared: `docs/operators`, whose runbooks may gain a page on the check.
+- Narrowed on TH-0313: `flai/internal/serve` to `flai/internal/serve/serve.go`, which builds the channel client and would run the check before it dials, and its test; and `flai/internal/serve/imagecheck.go` with its test, a predicted new file for the check, which the story's agent may name otherwise.
 
-Forecast: 1h, delivery 2026-10-09T02:23Z.
+Forecast: 1h. flai replays the delivery from the pull order whenever it changes.
 
 - `flai forecast` gave 20m from 116 s per unit of size, over only 3 medium-band feature stories.
 - Done feature stories of this size took a median of about 1h of agent time. This one is a Docker check before dialling, three statuses, and a fake runner, so 1h.
-- Delivery is played out after S-0236 at flai's cycle factor of 6.85.
+- The first delivery was played out after S-0236 at flai's cycle factor of 6.85.
 
 Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 8
-      output: 38
-      cache_read: 470372
-      cache_write: 4472
-      cost: 0.2122
+      output: 3555
+      cache_read: 470214
+      cache_write: 15415
+      cost: 0.2579
 ---
 # T-1185 An ADR records how messages between stories are addressed, kept, and closed, and why they are apart from threads
 

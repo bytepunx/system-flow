@@ -3,11 +3,11 @@ id: T-1182
 type: task
 nature: improvement
 title: Strategic agent panels, the story agent, plan actions, host agent notices, and settings show their times in local time
-status: in-progress
+status: done
 parent: S-0329
 owner: alex
 created: 2026-10-07T19:49:33Z
-updated: 2026-10-07T20:26:26Z
+updated: 2026-10-07T20:37:50Z
 transitions:
   - to: ready
     at: 2026-10-07T20:26:26Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T20:26:26Z
     by: agent-S-0329
+  - to: done
+    at: 2026-10-07T20:37:50Z
+    by: agent-S-0329
 stream: S-0329
 tags: [dashboard]
 touches: [flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/PlannerPanel.svelte.test.ts, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/components/PlanAction.svelte, flaiover/src/lib/components/PlanAction.svelte.test.ts, flaiover/src/lib/components/HostAgentNotice.svelte, flaiover/src/lib/components/HostAgentNotice.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts]
 after: [T-1180]
+usage:
+  source: log
+  seconds: 684
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 57
+      output: 20759
+      cache_read: 3532759
+      cache_write: 90835
+      cost: 1.6787
 ---
 # T-1182 Strategic agent panels, the story agent, plan actions, host agent notices, and settings show their times in local time
 

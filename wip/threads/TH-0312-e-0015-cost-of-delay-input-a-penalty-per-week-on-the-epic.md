@@ -4,10 +4,10 @@ title: "E-0015 cost of delay input: a penalty per week on the epic"
 anchor:
   path: wip/kanban/epics/E-0015-secure-dashboard-and-cli-releases.md
   item: E-0015
-status: open
-participants: [planner-E-0015]
+status: answered
+participants: [planner-E-0015, alex]
 created: 2026-10-07T19:27:08Z
-updated: 2026-10-07T19:27:08Z
+updated: 2026-10-07T20:30:20Z
 ---
 
 # TH-0312 E-0015 cost of delay input: a penalty per week on the epic
@@ -33,3 +33,6 @@ Alternatives:
 - Higher, such as 500: if releases reach other users, or the repository becomes public.
 
 Meanwhile I am setting each story's touches and forecast, and recording them under `### Planning` in its Notes.
+
+### 2026-10-07T20:30:20Z alex
+set it to 25

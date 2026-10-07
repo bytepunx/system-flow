@@ -3,11 +3,11 @@ id: T-1183
 type: task
 nature: improvement
 title: Charts and the chart tables show their times and dates in local time, over flai's UTC buckets
-status: in-progress
+status: done
 parent: S-0329
 owner: alex
 created: 2026-10-07T19:49:43Z
-updated: 2026-10-07T20:26:27Z
+updated: 2026-10-07T20:37:55Z
 transitions:
   - to: ready
     at: 2026-10-07T20:26:27Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T20:26:27Z
     by: agent-S-0329
+  - to: done
+    at: 2026-10-07T20:37:55Z
+    by: agent-S-0329
 stream: S-0329
 tags: [dashboard]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", flaiover/src/lib/components/SpendTable.svelte, flaiover/src/lib/components/SpendTable.svelte.test.ts, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts, flaiover/src/lib/components/ForecastTable.svelte, flaiover/src/lib/components/ForecastTable.svelte.test.ts]
 after: [T-1180]
+usage:
+  source: log
+  seconds: 688
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 165
+      output: 60144
+      cache_read: 10235408
+      cache_write: 263175
+      cost: 4.8636
 ---
 # T-1183 Charts and the chart tables show their times and dates in local time, over flai's UTC buckets
 

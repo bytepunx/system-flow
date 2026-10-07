@@ -3,16 +3,36 @@ id: T-1184
 type: task
 nature: improvement
 title: The user guide and the dashboard's design say times are shown in local time, and a sweep finds no UTC display left
-status: backlog
+status: done
 parent: S-0329
 owner: alex
 created: 2026-10-07T19:50:05Z
-updated: 2026-10-07T19:50:15Z
-transitions: []
+updated: 2026-10-07T20:40:59Z
+transitions:
+  - to: ready
+    at: 2026-10-07T20:38:25Z
+    by: agent-S-0329
+  - to: in-progress
+    at: 2026-10-07T20:38:25Z
+    by: agent-S-0329
+  - to: done
+    at: 2026-10-07T20:40:58Z
+    by: agent-S-0329
 stream: S-0329
 tags: [dashboard, docs]
-touches: [docs/users/flaiover.md, design/system/flaiover-dashboard.md]
+touches: [docs/users/flaiover.md, design/system/flaiover-dashboard.md, flaiover/src/lib/components/DismissibleNotice.svelte, flaiover/src/lib/components/DismissibleNotice.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/localtime.test.ts, flaiover/src/lib/localtime.ts, flaiover/src/lib/planning.test.ts, flaiover/src/lib/planning.ts, flaiover/src/lib/settings.ts, "flaiover/src/routes/items/[id]/item.svelte.test.ts"]
 after: [T-1181, T-1182, T-1183]
+usage:
+  source: log
+  seconds: 153
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 25315
+      cache_read: 4308157
+      cache_write: 110772
+      cost: 2.0471
 ---
 # T-1184 The user guide and the dashboard's design say times are shown in local time, and a sweep finds no UTC display left
 

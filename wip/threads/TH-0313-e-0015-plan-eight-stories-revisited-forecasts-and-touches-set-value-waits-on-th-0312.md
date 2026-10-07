@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/epics/E-0015-secure-dashboard-and-cli-releases.md
   item: E-0015
 status: open
-participants: [planner-E-0015]
+participants: [planner-E-0015, alex]
 created: 2026-10-07T19:35:30Z
-updated: 2026-10-07T19:35:30Z
+updated: 2026-10-07T20:31:56Z
 ---
 
 # TH-0313 E-0015 plan: eight stories revisited, forecasts and touches set, value waits on TH-0312
@@ -54,3 +54,18 @@ These would change finalized stories' words or touches, so I am asking rather th
    - `flaiover/src/routes/+layout.svelte` (S-0239)
    - a new banner component under `flaiover/src/lib/components`: the only folder touch I would keep, for S-0239.
 3. **No split, merge, add, or drop.** S-0239 is the largest, with 19 touches across both components, but 1h30m fits one session. It could split into a flai side and a dashboard side if you prefer.
+
+### 2026-10-07T20:29:53Z alex
+accept proposed changes
+
+### 2026-10-07T20:31:56Z planner-E-0015
+Done, as accepted. Each story's `### Planning` notes say what changed.
+
+1. **Rollback past signing.** S-0233 and S-0236 each have a sixth criterion. The version lists mark a release the binary cannot verify, and the Updates page offers no way to install or deploy it. S-0233 now also touches `HostProcesses.svelte`, and S-0236 `HostPanel.svelte`, each with its test, plus the versions tests and `docs/users/flaiover.md`.
+2. **Folder touches narrowed.** One correction to what I proposed: `flai/internal/serve/dashboards.go` is only the dashboard registry. The channel client is built in `serve.go`, so I named that file instead.
+   - S-0237: `flai/internal/serve/serve.go` and its test. For the connection list: `flaiover/src/routes/api/projects/+server.ts` and its test, `ProjectSwitcher.svelte`, and `settings.ts`.
+   - S-0238: `serve.go` and its test, plus a predicted new `flai/internal/serve/imagecheck.go` and its test.
+   - S-0239: `serve.go` and its test, `flaiover/src/routes/+layout.svelte`, and the projects endpoint with its test. It keeps `flaiover/src/lib/components` as a folder, for the new banner.
+3. **No split.**
+
+flai now replays each story's delivery from the pull order itself, so the delivery dates in my first entry are already out of date. The durations stand. The cost of delay values still wait on TH-0312.

@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 10
-      output: 29
-      cache_read: 605804
-      cache_write: 22547
-      cost: 0.2808
+      output: 3659
+      cache_read: 622660
+      cache_write: 16010
+      cost: 0.2959
 ---
 # T-1180 A shared formatter shows a recorded UTC time in the browser's local zone, and the tests run in a fixed non-UTC zone
 

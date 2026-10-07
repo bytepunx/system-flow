@@ -3,10 +3,10 @@ id: S-0329
 type: story
 nature: improvement
 title: Display all time stamps across the site in local time
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-07T19:44:24Z
-updated: 2026-10-07T20:24:21Z
+updated: 2026-10-07T20:43:10Z
 transitions:
   - to: ready
     at: 2026-10-07T19:44:25Z
@@ -14,8 +14,11 @@ transitions:
   - to: in-progress
     at: 2026-10-07T20:24:21Z
     by: agent-S-0329
+  - to: review
+    at: 2026-10-07T20:43:10Z
+    by: agent-S-0329
 tags: [dashboard]
-touches: [flaiover/src, flaiover/vite.config.ts, flaiover/src/lib/localtime.ts, flaiover/src/lib/localtime.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/Threads.svelte.test.ts, flaiover/src/routes/threads/threads.svelte.test.ts, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/Inbox.svelte.test.ts, flaiover/src/lib/components/OpenQuestions.svelte, flaiover/src/lib/components/OpenQuestions.svelte.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/routes/activity/activity.svelte.test.ts, flaiover/src/lib/components/AgentStopConfirm.svelte, flaiover/src/lib/components/HostFlai.svelte, flaiover/src/lib/components/HostFlai.svelte.test.ts, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/PlannerPanel.svelte.test.ts, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/components/PlanAction.svelte, flaiover/src/lib/components/PlanAction.svelte.test.ts, flaiover/src/lib/components/HostAgentNotice.svelte, flaiover/src/lib/components/HostAgentNotice.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", flaiover/src/lib/components/SpendTable.svelte, flaiover/src/lib/components/SpendTable.svelte.test.ts, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts, flaiover/src/lib/components/ForecastTable.svelte, flaiover/src/lib/components/ForecastTable.svelte.test.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
+touches: [flaiover/src, flaiover/vite.config.ts, flaiover/src/lib/localtime.ts, flaiover/src/lib/localtime.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/Threads.svelte.test.ts, flaiover/src/routes/threads/threads.svelte.test.ts, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/Inbox.svelte.test.ts, flaiover/src/lib/components/OpenQuestions.svelte, flaiover/src/lib/components/OpenQuestions.svelte.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/routes/activity/activity.svelte.test.ts, flaiover/src/lib/components/AgentStopConfirm.svelte, flaiover/src/lib/components/HostFlai.svelte, flaiover/src/lib/components/HostFlai.svelte.test.ts, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, flaiover/src/lib/components/StrategicAgentPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte, flaiover/src/lib/components/OrchestratorPanel.svelte.test.ts, flaiover/src/lib/components/PlannerPanel.svelte.test.ts, flaiover/src/lib/components/AnalyzerPanel.svelte.test.ts, flaiover/src/lib/components/PlanAction.svelte, flaiover/src/lib/components/PlanAction.svelte.test.ts, flaiover/src/lib/components/HostAgentNotice.svelte, flaiover/src/lib/components/HostAgentNotice.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", flaiover/src/lib/components/SpendTable.svelte, flaiover/src/lib/components/SpendTable.svelte.test.ts, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts, flaiover/src/lib/components/ForecastTable.svelte, flaiover/src/lib/components/ForecastTable.svelte.test.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/issues/I-0105-flai-test-never-runs-flaiover-s-prettier-eslint-or-svelte-check-so-formatting-faults-surface-only-at-the-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,21 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 113
-  estimated: true
+  seconds: 1140
   turns:
     - day: 2026-10-07
-      ceremony: 1
+      ceremony: 4
       test_runs: 1
-      hand_edits: 1
-      work: 16
+      hand_edits: 3
+      work: 51
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 191
-      cache_read: 1634318
-      cache_write: 125663
-      cost: 0.7867
+      input: 420
+      output: 152984
+      cache_read: 26035100
+      cache_write: 669419
+      cost: 12.3712
   strategic:
     - kind: planner
       seconds: 392
@@ -56,15 +58,21 @@ usage:
           cache_write: 134159
           cost: 5.4833
     - kind: orchestrator
-      seconds: 532
+      seconds: 1515
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 86
-          output: 1465
-          cache_read: 5290669
-          cache_write: 15111
-          cost: 1.3076
+          input: 172
+          output: 2765
+          cache_read: 16589904
+          cache_write: 55279
+          cost: 4.1016
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 56
+          cache_read: 213782
+          cache_write: 57248
+          cost: 0.2336
 cost_of_delay:
   inputs:
     penalty_per_week: 0
@@ -87,8 +95,8 @@ forecast:
 Every view in the site currently displays time stamps in UTC. It's important that we _record_ timestamps in UTC, but they should be displayed in the user's local time zone.
 
 ## Acceptance criteria
-- [ ] No times display in the dashboard in UTC
-- [ ] All times display in the dashboard in the local time zone
+- [x] No times display in the dashboard in UTC
+- [x] All times display in the dashboard in the local time zone
 
 ## Tasks
 - T-1180 A shared formatter shows a recorded UTC time in the browser's local zone, and the tests run in a fixed non-UTC zone

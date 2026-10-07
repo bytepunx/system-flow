@@ -3,16 +3,36 @@ id: T-1189
 type: task
 nature: feature
 title: The design and the users' guide describe messages between stories, and the command reference is regenerated
-status: backlog
+status: done
 parent: S-0330
 owner: alex
 created: 2026-10-07T20:14:26Z
-updated: 2026-10-07T20:14:26Z
-transitions: []
+updated: 2026-10-07T20:54:08Z
+transitions:
+  - to: ready
+    at: 2026-10-07T20:50:21Z
+    by: agent-S-0330
+  - to: in-progress
+    at: 2026-10-07T20:50:21Z
+    by: agent-S-0330
+  - to: done
+    at: 2026-10-07T20:54:08Z
+    by: agent-S-0330
 stream: S-0330
 tags: [flai]
-touches: [design/system/agent-coordination.md, design/system/repository-layout.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/system/agent-coordination.md, design/system/repository-layout.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/users/conventions.md, template/root/wip/messages/README.md]
 after: [T-1187, T-1188]
+usage:
+  source: log
+  seconds: 227
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 33465
+      cache_read: 4426209
+      cache_write: 145102
+      cost: 2.4279
 ---
 # T-1189 The design and the users' guide describe messages between stories, and the command reference is regenerated
 

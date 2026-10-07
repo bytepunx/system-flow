@@ -3,11 +3,11 @@ id: T-1181
 type: task
 nature: improvement
 title: Item, thread, inbox, review, activity, and host views show their times in local time
-status: in-progress
+status: done
 parent: S-0329
 owner: alex
 created: 2026-10-07T19:49:23Z
-updated: 2026-10-07T20:26:26Z
+updated: 2026-10-07T20:37:43Z
 transitions:
   - to: ready
     at: 2026-10-07T20:26:25Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T20:26:26Z
     by: agent-S-0329
+  - to: done
+    at: 2026-10-07T20:37:43Z
+    by: agent-S-0329
 stream: S-0329
 tags: [dashboard]
 touches: ["flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/Threads.svelte.test.ts, flaiover/src/routes/threads/threads.svelte.test.ts, flaiover/src/lib/components/InboxView.svelte, flaiover/src/lib/components/Inbox.svelte.test.ts, flaiover/src/lib/components/OpenQuestions.svelte, flaiover/src/lib/components/OpenQuestions.svelte.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/ActivityView.svelte, flaiover/src/lib/components/ActivityView.svelte.test.ts, flaiover/src/routes/activity/+page.svelte, flaiover/src/routes/activity/activity.svelte.test.ts, flaiover/src/lib/components/AgentStopConfirm.svelte, flaiover/src/lib/components/HostFlai.svelte, flaiover/src/lib/components/HostFlai.svelte.test.ts, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts]
 after: [T-1180]
+usage:
+  source: log
+  seconds: 677
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 17768
+      cache_read: 3023781
+      cache_write: 77748
+      cost: 1.4368
 ---
 # T-1181 Item, thread, inbox, review, activity, and host views show their times in local time
 

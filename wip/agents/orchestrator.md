@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 65.2449
-accrued_seconds: 68614
-tasks_completed: 71
-last_run: 2026-10-07T20:25:48Z
+accrued_cost: 69.1362
+accrued_seconds: 69780
+tasks_completed: 73
+last_run: 2026-10-07T20:45:14Z
 ---
 
 # Orchestrator activity
@@ -508,6 +508,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0328
 - Seconds: 75
 - Cost: 0.4712 USD, estimated
+
+### 2026-10-07T20:28:51Z
+
+- Summary: Published under judgement after the operator accepted S-0328: 1 pending, 800 USD/week; flai 1.35.2→1.36.0 (flai/v1.36.0), flaiover 0.41.1→0.41.2 (flaiover/v0.41.2), template 1.0.70→1.0.71 (v1.0.71, 1247a03); bundled S-0328; pushed
+- Items: S-0328
+- Seconds: 183
+- Cost: 0.8637 USD, estimated
+
+### 2026-10-07T20:45:14Z
+
+- Summary: Left S-0329 in review, not accepted: flai verify passed at head 7ba38d15, and the verifier matched criteria 1–2 to changed files. The dry-run is blocked only by TH-0315 (planner-S-0329's plan thread, answered and not resolved), which I cannot resolve. Asked the operator on TH-0323 to resolve it so I can accept, or to accept it themselves
+- Items: S-0329
+- Seconds: 983
+- Cost: 3.0276 USD, estimated
 
 ## Refusals
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T20:28:28Z
+updated: 2026-10-07T20:31:34Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -67,10 +67,10 @@ Touches:
 - Folder touches kept, as declared: `flai/internal/buildinfo`, where the key constant may go in a new file beside `buildinfo.go`; `docs/operators`, where the key runbook may be a new file under `runbooks/`. The story's agent narrows both when it writes the tasks.
 - Co-change listed `design/system/flai-cli.md` and `docs/users/flai.md` at 60% and 56%. Not added: nothing a user runs changes here.
 
-Forecast: 1h, delivery 2026-10-08T02:25Z.
+Forecast: 1h. flai replays the delivery from the pull order whenever it changes.
 
 - `flai forecast` gave 24m from 116 s per unit of size, over only 3 medium-band feature stories.
 - 19 done feature stories with 4 to 7 criteria took a median of about 1h of agent time (S-0198 to S-0229, S-0298). This one spans CI, Go, and TypeScript, and checks cosign and GoReleaser documentation, so 1h.
-- Delivery is flai's playout at its cycle factor of 6.85. It does not count the operator's key-generation step in criterion 1, which can delay it.
+- The first delivery was flai's playout at its cycle factor of 6.85. It does not count the operator's key-generation step in criterion 1, which can delay it.
 
 Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.
