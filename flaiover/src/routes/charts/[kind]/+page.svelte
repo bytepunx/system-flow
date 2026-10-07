@@ -7,6 +7,7 @@
 	import Chart from '$lib/components/Chart.svelte';
 	import SpendTable from '$lib/components/SpendTable.svelte';
 	import ForecastTable from '$lib/components/ForecastTable.svelte';
+	import WaitTable from '$lib/components/WaitTable.svelte';
 	import {
 		bucketsFor,
 		build,
@@ -319,6 +320,11 @@
 			The flai on the host sends no forecast errors, which this chart is drawn from: it is older
 			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
 		</p>
+	{:else if kind === 'agent-waiting' && report && !report.waiting}
+		<p class="mb-2 text-sm text-muted" data-testid="waiting-older">
+			The flai on the host sends no waiting, which this chart is drawn from: it is older than the
+			dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
 	{:else if forecastKind && !forecastSet}
 		<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
 			No story done in the window has a forecast. The planner sets one when it plans a story, or set
@@ -357,6 +363,12 @@
 		{#await import('$lib/viz/charts') then m}
 			<Chart option={m.stateShare(report, t)} theme={t} height={120} />
 		{/await}
+	{/if}
+	{#if kind === 'agent-waiting' && report?.waiting}
+		<h2 class="mt-6 mb-2 text-base font-medium">Longest waits</h2>
+		<div class="overflow-x-auto text-xs">
+			<WaitTable rows={report.waiting.longest ?? []} type={report.type} />
+		</div>
 	{/if}
 	<details class="mt-4 text-xs">
 		<summary class="cursor-pointer text-muted">table view</summary>

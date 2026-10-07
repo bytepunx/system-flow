@@ -344,6 +344,38 @@ describe('the charts page (S-0163)', () => {
 		expect(controls()).toEqual(['window', 'type', 'epic']);
 		expect(text('[data-testid="usage-table"] thead')).toContain('tokens/agent minute');
 	});
+
+	it('lists the longest waits under agent waiting only, and says when flai sends none (S-0215)', async () => {
+		let waiting: unknown = {
+			weeks: [],
+			empty_wakes: { count: 0 },
+			longest: [
+				{
+					item: 'S-0001',
+					kind: 'thread',
+					thread: 'TH-0003',
+					started: '2026-09-29T09:00:00Z',
+					seconds: 3600
+				}
+			]
+		};
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			return answer({ ...reportIn('day'), waiting });
+		});
+		await open('agent-waiting');
+		expect(text('h2')).toBe('Longest waits');
+		expect(text('[data-testid="wait-table"] tbody')).toContain('TH-0003');
+		unmount(c!);
+		await open('cycle-time');
+		expect(document.querySelector('[data-testid="wait-table"]')).toBeNull();
+		unmount(c!);
+		waiting = undefined;
+		await open('agent-waiting');
+		expect(text('[data-testid="waiting-older"]')).toContain('flai self-upgrade');
+		expect(document.querySelector('[data-testid="wait-table"]')).toBeNull();
+		expect(document.querySelector('[data-testid="wait-none"]')).toBeNull();
+	});
 });
 
 describe('the window (S-0166)', () => {
