@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:17:59Z
+updated: 2026-10-07T08:48:14Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
@@ -47,10 +47,10 @@ cost_of_delay:
   at: 2026-10-05T05:44:37Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-07T09:47:00Z
-  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 3, behind S-0275 and S-0214."
+  delivery: 2026-10-07T10:32:00Z
+  basis: "Its own forecast of 1h15m; 1st in the pull order with an in-progress limit of 3, behind S-0214, S-0265 and S-0275."
   by: flai
-  at: 2026-10-07T08:17:59Z
+  at: 2026-10-07T08:48:14Z
 ---
 # S-0215 A chart shows how long agents spend waiting on threads and on review
 

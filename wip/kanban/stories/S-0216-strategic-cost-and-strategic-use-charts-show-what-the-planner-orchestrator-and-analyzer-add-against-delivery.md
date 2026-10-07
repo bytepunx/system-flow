@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:17:45Z
+updated: 2026-10-07T08:48:14Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:57Z
@@ -47,10 +47,10 @@ cost_of_delay:
   at: 2026-10-05T05:50:17Z
 forecast:
   duration: 40m
-  delivery: 2026-10-07T12:42:00Z
-  basis: "Its own forecast of 40m; 3rd in the pull order with an in-progress limit of 3, behind S-0213, S-0275, S-0214 and S-0215."
+  delivery: 2026-10-07T12:51:00Z
+  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 3, behind S-0214, S-0265, S-0275 and S-0215."
   by: flai
-  at: 2026-10-07T08:17:45Z
+  at: 2026-10-07T08:48:14Z
 ---
 # S-0216 Strategic Cost and Strategic Use charts show what the planner, orchestrator, and analyzer add against delivery
 
