@@ -33,7 +33,7 @@ leaving the rest; --clear empties it. With no path, the touches are shown.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if (add || remove) && len(args) == 1 {
-				return fmt.Errorf("--add and --remove need the paths to change: flai touches %s --add <path>...", args[0])
+				return fmt.Errorf("--add and --remove need the paths to change: flai touches %s --add <path>", args[0])
 			}
 			repo, err := a.project()
 			if err != nil {
