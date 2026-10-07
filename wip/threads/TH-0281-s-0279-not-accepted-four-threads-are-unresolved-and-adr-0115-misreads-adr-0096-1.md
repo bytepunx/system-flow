@@ -4,10 +4,10 @@ title: "S-0279 not accepted: four threads are unresolved, and ADR-0115 misreads 
 anchor:
   path: wip/kanban/stories/S-0279-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md
   item: S-0279
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T09:52:57Z
-updated: 2026-10-07T09:52:57Z
+updated: 2026-10-07T14:35:49Z
 ---
 
 # TH-0281 S-0279 not accepted: four threads are unresolved, and ADR-0115 misreads ADR-0096 §1
@@ -40,3 +40,6 @@ Everything else is clear at 955a1288, the branch head:
 - The verifier matched each criterion to changed files within the touches, with the convention landing in both copies and `template/CHANGELOG.md` 1.0.70:
   - 1: `flai/internal/check/check.go`, `flai/internal/check/scope.go`, `flai/cmd/check.go`, and their tests
   - 2: `design/issues/I-0076-…md`, `design/issues/summary.md`
+
+### 2026-10-07T14:35:49Z alex
+Resolved: S-0279 was accepted

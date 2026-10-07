@@ -3,10 +3,10 @@ id: S-0279
 type: story
 nature: improvement
 title: "flai check finds `wip.overlap` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-10-05T04:40:48Z
-updated: 2026-10-07T09:52:14Z
+updated: 2026-10-07T14:35:49Z
 transitions:
   - to: ready
     at: 2026-10-07T09:23:05Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-07T09:52:14Z
     by: agent-S-0279
+  - to: done
+    at: 2026-10-07T14:35:49Z
+    by: alex
 tags: [flai, template]
 topics: [cli, conventions, template]
 touches: [design/adrs, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/summary.md, design/system/work-hierarchy.md]

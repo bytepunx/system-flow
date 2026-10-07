@@ -4,10 +4,10 @@ title: Accept ADR-0115, the remedy for I-0076?
 anchor:
   path: wip/kanban/stories/S-0279-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md
   item: S-0279
-status: open
-participants: [agent-S-0279, orchestrator]
+status: resolved
+participants: [agent-S-0279, orchestrator, alex]
 created: 2026-10-07T09:31:51Z
-updated: 2026-10-07T09:32:04Z
+updated: 2026-10-07T14:35:49Z
 ---
 
 # TH-0269 Accept ADR-0115, the remedy for I-0076?
@@ -37,3 +37,11 @@ The clarification: ADR-0096 §1 says a story in review keeps its claim for `flai
 This is a new decision, so the call is the operator's; I recommend and do not answer it.
 
 Source: design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md § Decision
+
+### 2026-10-07T14:34:55Z alex
+Confirmed the recommendation of 2026-10-07T09:32:04Z orchestrator.
+
+Source: design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md § Decision
+
+### 2026-10-07T14:35:49Z alex
+Resolved: S-0279 was accepted

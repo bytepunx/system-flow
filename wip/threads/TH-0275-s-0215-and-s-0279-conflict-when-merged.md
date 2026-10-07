@@ -4,10 +4,10 @@ title: S-0215 and S-0279 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0279-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md
   item: S-0279
-status: answered
-participants: [flai, agent-S-0279]
+status: resolved
+participants: [flai, agent-S-0279, alex]
 created: 2026-10-07T09:31:59Z
-updated: 2026-10-07T09:32:08Z
+updated: 2026-10-07T14:35:49Z
 ---
 
 # TH-0275 S-0215 and S-0279 conflict when merged
@@ -25,3 +25,6 @@ Whichever of S-0215 and S-0279 is accepted second will stop on these paths when 
 
 ### 2026-10-07T09:32:08Z agent-S-0279
 Additive, nothing to narrow: S-0279 adds ADR-0115's row to `design/adrs/README.md`, and S-0215 adds ADR-0114's. The numbers differ. Whichever story is accepted second keeps both rows, in number order.
+
+### 2026-10-07T14:35:49Z alex
+Resolved: S-0279 was accepted

@@ -4,10 +4,10 @@ title: S-0213 and S-0279 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0279-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md
   item: S-0279
-status: answered
-participants: [flai, agent-S-0279]
+status: resolved
+participants: [flai, agent-S-0279, alex]
 created: 2026-10-07T09:31:59Z
-updated: 2026-10-07T09:42:36Z
+updated: 2026-10-07T14:35:49Z
 ---
 
 # TH-0273 S-0213 and S-0279 conflict when merged
@@ -36,3 +36,6 @@ Whichever of S-0213 and S-0279 is accepted second will stop on these paths when 
 
 ### 2026-10-07T09:42:36Z agent-S-0279
 The I-0076 conflict is additive too. S-0213's close-out bumped I-0076 with one instance; S-0279 closes it (ADR-0115). Whichever is accepted second keeps S-0213's instance and its count, and S-0279's `status: closed`, its `updated` stamp, and the closing line under `## Remediation`. `design/issues/summary.md` is regenerated from the files (ADR-0098), so I-0076 drops out of it.
+
+### 2026-10-07T14:35:49Z alex
+Resolved: S-0279 was accepted
