@@ -23,6 +23,9 @@ const version = (() => {
 	}
 })();
 
+// Tests run in a zone that is not UTC, so that a test of a time shown proves it is shown in local time.
+const TZ = 'America/New_York';
+
 export default defineConfig({
 	define: { __FLAIOVER_VERSION__: JSON.stringify(version) },
 	plugins: [
@@ -59,7 +62,7 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
-					env: { LOG_LEVEL: 'error' },
+					env: { LOG_LEVEL: 'error', TZ },
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}
@@ -71,6 +74,7 @@ export default defineConfig({
 				test: {
 					name: 'client',
 					environment: 'jsdom',
+					env: { TZ },
 					include: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}
 			}
