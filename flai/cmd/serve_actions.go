@@ -339,7 +339,7 @@ journal.`,
 argument list after --; the name the sessions work under; and, with
 --auto-restarts, how many times flai serve restarts a story's agent on its own
 after it ends with its story in progress, 2 when unset and 0 for never
-(ADR-0107). Past that, flai serve opens a thread on the story for you.`,
+(ADR-0108). Past that, flai serve opens a thread on the story for you.`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			restartsSet := cmd.Flags().Changed("auto-restarts")

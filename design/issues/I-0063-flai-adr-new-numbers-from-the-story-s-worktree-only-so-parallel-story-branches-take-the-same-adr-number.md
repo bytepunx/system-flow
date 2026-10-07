@@ -51,6 +51,6 @@ S-0286's ADR took 0105 in its worktree while S-0272's branch had 0105 too; the t
 
 ### 2026-10-07T01:48:31Z
 Story: S-0294.
-S-0294's flai adr new took 0106, which S-0286's branch held (S-0286 was in review, then accepted); renumbered to ADR-0107 by hand, and the sync then stopped on design/adrs/README.md and design/system/flai-cli.md.
+S-0294's flai adr new took 0106, which S-0286's branch held (S-0286 was in review, then accepted); renumbered to ADR-0107 by hand, and the sync then stopped on design/adrs/README.md and design/system/flai-cli.md; the sync's trial merge then found S-0269's branch holding 0107 too (TH-0238), and S-0294 renumbered again, to ADR-0108.
 
 ## Remediation

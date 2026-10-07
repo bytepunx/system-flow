@@ -2251,7 +2251,7 @@ Set the command, as an argument list after --, the name, or how many times a sto
 flai serve agent set [--name] [--auto-restarts <n>] [-- <program> [args...]] [flags]
 ```
 
-Sets what you give and leaves the rest as it was: the command, as an argument list after --; the name the sessions work under; and, with --auto-restarts, how many times flai serve restarts a story's agent on its own after it ends with its story in progress, 2 when unset and 0 for never (ADR-0107). Past that, flai serve opens a thread on the story for you.
+Sets what you give and leaves the rest as it was: the command, as an argument list after --; the name the sessions work under; and, with --auto-restarts, how many times flai serve restarts a story's agent on its own after it ends with its story in progress, 2 when unset and 0 for never (ADR-0108). Past that, flai serve opens a thread on the story for you.
 
 Flags:
 

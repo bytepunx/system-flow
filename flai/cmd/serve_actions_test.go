@@ -337,7 +337,7 @@ func TestServeAgentHarness(t *testing.T) {
 	}
 }
 
-// S-0294 (ADR-0107): --auto-restarts sets how many times flai serve restarts
+// S-0294 (ADR-0108): --auto-restarts sets how many times flai serve restarts
 // a story's agent on its own, alone without touching the command, the name,
 // or the harnesses; show says it and whether it is the default; a negative
 // count is refused; and clear keeps it.

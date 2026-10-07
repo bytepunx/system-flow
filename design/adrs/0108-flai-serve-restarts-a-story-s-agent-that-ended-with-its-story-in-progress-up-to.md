@@ -1,5 +1,5 @@
 ---
-id: ADR-0107
+id: ADR-0108
 title: "flai serve restarts a story's agent that ended with its story in progress, up to agent.auto_restarts times, then asks the operator on a thread"
 status: proposed
 date: 2026-10-07
@@ -8,7 +8,7 @@ superseded_by: []
 refines: [ADR-0043]
 ---
 
-# ADR-0107 flai serve restarts a story's agent that ended with its story in progress, up to agent.auto_restarts times, then asks the operator on a thread
+# ADR-0108 flai serve restarts a story's agent that ended with its story in progress, up to agent.auto_restarts times, then asks the operator on a thread
 
 ## Context
 

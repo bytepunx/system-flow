@@ -73,14 +73,14 @@ type AgentStart struct {
 	// agent may do. A harness not here runs with its adapter's defaults.
 	Harnesses map[string]HarnessHost `json:"harnesses,omitempty"`
 	// AutoRestarts is how many times flai serve restarts a story's agent on
-	// its own after it ends with its story in progress (ADR-0107). Nil means
+	// its own after it ends with its story in progress (ADR-0108). Nil means
 	// DefaultAutoRestarts, 0 turns the restart off, and a negative count is
 	// refused; read it through AutoRestartLimit.
 	AutoRestarts *int `json:"auto_restarts,omitempty"`
 }
 
 // DefaultAutoRestarts is how many times flai serve restarts a story's agent
-// on its own while agent.auto_restarts is unset (ADR-0107).
+// on its own while agent.auto_restarts is unset (ADR-0108).
 const DefaultAutoRestarts = 2
 
 // AutoRestartLimit is how many times flai serve restarts a story's agent on
