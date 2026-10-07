@@ -39,6 +39,9 @@ type Options struct {
 	Projects []manifest.Project
 	WIPLimit int
 	Commits  map[string][]string
+	// Shared is the manifest's claims, whose shared paths an overlap wholly
+	// inside holds nothing in the replay of the holds (ADR-0096).
+	Shared manifest.Claims
 }
 
 // ItemMetrics are the per-item derived values.
@@ -211,7 +214,8 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	}
 	perItem := map[string]ItemMetrics{}
 	waits := threadWaits(all, opt.Threads, opt.Now)
-	held := heldSeconds(items, all, opt.Projects, opt.Now)
+	replay := replayHolds(items, all, start, opt)
+	held := replay.seconds
 	rate := CostPerAgentHour(all)
 	for _, it := range items {
 		m := Derive(it, opt.Now)
@@ -269,7 +273,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
 	rep.Waiting = waiting(items, perItem, waits, start, opt.Now)
-	rep.Claims = claims(items, all, start, opt)
+	rep.Claims = claims(items, all, start, opt, replay)
 	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).

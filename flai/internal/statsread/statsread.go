@@ -42,6 +42,7 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 	}
 	opt.WIPLimit = board.WIPLimits[workitem.InProgress]
 	opt.Projects = repo.Manifest.Projects
+	opt.Shared = repo.SharedClaims()
 	if opt.Commits, err = storygit.Committed(r, repo); err != nil {
 		log.Warn("cannot read the stories' commits for touches drift", "component", "stats", "err", err.Error(),
 			"detail", "claims.drift is left out; run flai stats in the project's git checkout, with git installed, to compare touches with commits")
