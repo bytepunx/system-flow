@@ -3,15 +3,18 @@ id: S-0332
 type: story
 nature: improvement
 title: flai tells two stories' agents of a trial-merge conflict or a grown overlap with a message between them, and asks the operator only when they do not agree
-status: ready
+status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:10:41Z
-updated: 2026-10-07T22:25:33Z
+updated: 2026-10-07T22:47:38Z
 transitions:
   - to: ready
     at: 2026-10-07T21:43:11Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T22:47:38Z
+    by: agent-S-0332
 tags: [flai, template]
 topics: [cli, git, conventions, template]
 touches: [design/adrs, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/itemedit/claim.go, flai/internal/itemedit/claim_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 318
+      seconds: 325
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 57
-          output: 976
-          cache_read: 5826045
-          cache_write: 35947
-          cost: 1.4444
+          input: 63
+          output: 1013
+          cache_read: 6159168
+          cache_write: 49704
+          cost: 1.5299
 cost_of_delay:
   value: 142.12
   by: planner-E-0018

@@ -7,17 +7,48 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T22:25:33Z
+updated: 2026-10-07T22:41:17Z
 transitions: []
 tags: [cli]
 topics: [release, security]
-touches: [flai/internal/selfupgrade, flai/cmd/selfupgrade.go, install.sh, docs/users/flai.md, docs/operators, ".github/workflows/system-flow-check.yml", flai/cmd/host.go, flai/cmd/selfupgrade_test.go, scripts/install-test.sh, design/system/flai-cli.md, flai/cmd/host_versions_test.go, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, docs/users/flaiover.md]
+touches: [flai/internal/selfupgrade, flai/cmd/selfupgrade.go, install.sh, docs/users/flai.md, docs/operators, ".github/workflows/system-flow-check.yml", flai/cmd/host.go, flai/cmd/selfupgrade_test.go, scripts/install-test.sh, design/system/flai-cli.md, flai/cmd/host_versions_test.go, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/runbooks/install.md, docs/operators/runbooks/update.md]
 after: [S-0232]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 35
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 10
+          output: 4
+          cache_read: 0
+          cache_write: 9948
+          cost: 0.002
+        - model: claude-opus-5-5
+          input: 30
+          output: 1046
+          cache_read: 2208472
+          cache_write: 110135
+          cost: 0.6065
+    - kind: orchestrator
+      seconds: 272
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 34
+          output: 472
+          cache_read: 2279538
+          cache_write: 29521
+          cost: 0.569
 cost_of_delay:
   value: 3.29
   by: planner-E-0015
@@ -25,9 +56,9 @@ cost_of_delay:
 forecast:
   duration: 1h15m
   delivery: 2026-10-08T01:03:00Z
-  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 3, behind S-0232, S-0333 and S-0332."
-  by: flai
-  at: 2026-10-07T22:25:33Z
+  basis: "Five tasks in three layers across Go, install.sh, Svelte, and docs; flai forecast's 36m (106 s per unit over 32 large-band stories) raised to the about 1h median of done feature stories of 4 to 7 criteria, plus a quarter for the crypto test fixtures."
+  by: planner-S-0233
+  at: 2026-10-07T22:40:56Z
 ---
 # S-0233 flai self-upgrade, flai host upgrade, and install.sh verify the release's signature before installing it
 
@@ -44,6 +75,11 @@ A release is installed only when its `checksums.txt` was signed by a key the ins
 - [ ] `flai self-upgrade --list` and `flai host versions`, with `--json`, mark each flai release whose signature this binary cannot verify, such as one from before signing, and the Updates page shows it as not installable and offers no way to install it.
 
 ## Tasks
+- T-1226 selfupgrade verifies checksums.txt.sig with crypto/ecdsa and the embedded key before the archive's hash, and refuses what it cannot verify
+- T-1227 install.sh verifies checksums.txt.sig with openssl and the embedded public key before the checksum, and refuses without openssl
+- T-1228 flai self-upgrade --list and flai host versions mark each release this binary cannot verify, and flai host upgrade reports the refusal
+- T-1229 The Updates page shows a flai release this binary cannot verify as not installable and offers no way to install it
+- T-1230 The user, operator, and design documentation say what an upgrade and install.sh verify and what a refusal means
 
 ## Notes
 
@@ -53,16 +89,25 @@ The first release that carries this verification is itself installed by older fl
 
 Touches:
 
-- Declared: `flai/internal/selfupgrade`, `flai/cmd/selfupgrade.go`, `install.sh`, `docs/users/flai.md`, `docs/operators`, `.github/workflows/system-flow-check.yml`.
-- Layout: `flai/cmd/host.go`, where `flai host upgrade` lives; `flai/cmd/selfupgrade_test.go`; `scripts/install-test.sh`, which tests `install.sh`.
-- Co-change and design: `design/system/flai-cli.md`, changed with these paths in 65% of their commits, whose self-upgrade section says what is verified.
+- Declared, kept: `flai/internal/selfupgrade`, `flai/cmd/selfupgrade.go`, `install.sh`, `docs/users/flai.md`, `docs/operators`, `.github/workflows/system-flow-check.yml`.
+- Layout: `flai/cmd/host.go`, whose `flai host upgrade` runs `flai self-upgrade` as a child, and whose `flai host versions` prints `self-upgrade --list`'s JSON through `printHostVersions`; `flai/cmd/selfupgrade_test.go`; `scripts/install-test.sh`, which `scripts/smoke.sh` runs for the CI step.
+- Co-change and design: `design/system/flai-cli.md`, changed with these paths in 65% of their commits. Its Versions section says what is verified.
+- Co-change: `docs/users/flai-reference.md`, at 24%, generated from the help text that T-1228 changes.
+- Layout: `docs/operators/runbooks/install.md` and `update.md`, the runbooks the operator documentation criterion changes.
 - Criterion 6, added on TH-0313: `flai/cmd/host_versions_test.go`; `flaiover/src/lib/components/HostProcesses.svelte` and its test, which list and install flai releases on the Updates page; `docs/users/flaiover.md`, which describes that page.
-- Folder touches kept, as declared: `flai/internal/selfupgrade`, where the verification may be a new file beside `selfupgrade.go`, and the test key pair goes under a new `testdata/`; `docs/operators`, whose install and update runbooks change.
+- Tasks name files below the folder touches, which narrow them in the claim (ADR-0096):
+  - `flai/internal/selfupgrade/selfupgrade.go` and its test
+  - a new `signature.go` and its test
+  - a new `installsh_test.go`
+  - the two runbooks
+- Folder touches kept:
+  - `flai/internal/selfupgrade` was declared. T-1226 also keeps `flai/internal/selfupgrade/testdata` as a folder, because the key pairs' file names are not known yet.
+  - `docs/operators` was declared.
+- Not added: `flai/internal/hostapi/writes.go` and `flai/internal/mcpserver/versions.go`. The host API's `host.upgrade` runs `flai host upgrade`, which refuses through self-upgrade. MCP's list of releases is not named by the criteria.
 
-Forecast: 1h15m. flai replays the delivery from the pull order whenever it changes.
+Forecast: 1h15m, kept. flai replays the delivery from the pull order whenever it changes.
 
-- `flai forecast` gave 22m from 116 s per unit of size, over only 3 medium-band feature stories.
-- Done feature stories of this size took a median of about 1h of agent time. This one adds signature checks in Go and in `install.sh`, two commands, and four test cases, so 1h15m.
-- The first delivery was played out after S-0232 at flai's cycle factor of 6.85.
+- `flai forecast` now gives 36m, from a median of 106 s per unit of size over 32 large-band feature stories, times a size of 20.
+- Done feature stories with 4 to 7 criteria took a median of about 1h of agent time. This one has five tasks in three layers, across Go, `install.sh`, Svelte, and docs, and two test key pairs, so 1h15m stands.
 
-Cost of delay: 3.29 USD a week, as `flai cod` gives it: this story's 1h15m share of the 9h30m forecast over E-0015's eight open stories, of the epic's 25 USD a week penalty, which the operator set on TH-0312. Kept as given: each story closes part of one exposure, and that exposure is closed only when the chain is done, so a share by work fits.
+Cost of delay: 3.29 USD a week, as `flai cod` gives it, kept. It is this story's 1h15m share of the 9h30m forecast over E-0015's eight open stories, applied to the epic's 25 USD a week penalty, which the operator set on TH-0312. Each story closes part of one exposure, and the exposure closes only when the whole chain is done, so a share by work fits.

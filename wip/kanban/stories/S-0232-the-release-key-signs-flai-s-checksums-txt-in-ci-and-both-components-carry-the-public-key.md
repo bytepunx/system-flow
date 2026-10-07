@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T22:15:47Z
+updated: 2026-10-07T22:28:05Z
 transitions:
   - to: ready
     at: 2026-10-07T22:14:01Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0232
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, scripts/flai-snapshot.sh]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,20 +25,25 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 572
-  estimated: true
+  seconds: 882
   turns:
     - day: 2026-10-07
-      ceremony: 1
-      hand_edits: 1
-      work: 21
+      ceremony: 4
+      hand_edits: 3
+      work: 34
   models:
+    - model: claude-haiku-4-5-20251001
+      input: 210085
+      output: 8754
+      cache_read: 0
+      cache_write: 0
+      cost: 0.2639
     - model: claude-opus-5-5
-      input: 162
-      output: 859
-      cache_read: 7793675
-      cache_write: 260106
-      cost: 3.5731
+      input: 274
+      output: 95486
+      cache_read: 13408615
+      cache_write: 462641
+      cost: 7.525
   strategic:
     - kind: orchestrator
       seconds: 823
@@ -69,11 +74,11 @@ The first step of ADR-0070: a cosign key pair exists, the two release workflows 
 
 ## Acceptance criteria
 - [ ] The operator documentation has a runbook for generating the pair with `cosign generate-key-pair`, storing the encrypted key and its password as two GitHub Actions secrets, publishing the public key, and rotating or replacing a compromised key; the operator has run it once and the fingerprint of the public key is recorded there.
-- [ ] `flai/.goreleaser.yaml` has a `signs` section that runs `cosign sign-blob` over the checksum file with the key from the environment and `--tlog-upload=false`, and uploads `checksums.txt.sig` as a release asset; `release-flai.yml` provides the secrets and installs cosign, and a release whose key is missing fails.
+- [x] `flai/.goreleaser.yaml` has a `signs` section that runs `cosign sign-blob` over the checksum file with the key from the environment and `--tlog-upload=false`, and uploads `checksums.txt.sig` as a release asset; `release-flai.yml` provides the secrets and installs cosign, and a release whose key is missing fails.
 - [ ] `release-flai.yml` also runs `actions/attest-build-provenance` over the archives and the checksum file.
 - [ ] The public key is a PEM constant in a flai package and in a flaiover server module, each with a test that parses it, and the two are identical.
-- [ ] The claims marked **to check** in `release-signing.md § Signing releases` that bear on cosign and GoReleaser were checked against their current documentation and the document corrected where it was wrong.
-- [ ] `design/tech/ci.md` lists cosign and the attestation action with their versions and why.
+- [x] The claims marked **to check** in `release-signing.md § Signing releases` that bear on cosign and GoReleaser were checked against their current documentation and the document corrected where it was wrong.
+- [x] `design/tech/ci.md` lists cosign and the attestation action with their versions and why.
 
 ## Tasks
 - T-1221 release-signing.md's cosign, GoReleaser, and attestation claims are checked against their current documentation and corrected

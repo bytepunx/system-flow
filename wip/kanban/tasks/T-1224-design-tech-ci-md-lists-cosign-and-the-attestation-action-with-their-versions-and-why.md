@@ -3,16 +3,36 @@ id: T-1224
 type: task
 nature: feature
 title: design/tech/ci.md lists cosign and the attestation action with their versions and why
-status: backlog
+status: done
 parent: S-0232
 owner: alex
 created: 2026-10-07T22:15:40Z
-updated: 2026-10-07T22:15:47Z
-transitions: []
+updated: 2026-10-07T22:27:58Z
+transitions:
+  - to: ready
+    at: 2026-10-07T22:27:42Z
+    by: agent-S-0232
+  - to: in-progress
+    at: 2026-10-07T22:27:43Z
+    by: agent-S-0232
+  - to: done
+    at: 2026-10-07T22:27:58Z
+    by: agent-S-0232
 stream: S-0232
 tags: []
 touches: [design/tech/ci.md]
 after: [T-1223]
+usage:
+  source: log
+  seconds: 15
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 4349
+      cache_read: 610746
+      cache_write: 21073
+      cost: 0.3428
 ---
 # T-1224 design/tech/ci.md lists cosign and the attestation action with their versions and why
 

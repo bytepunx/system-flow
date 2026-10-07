@@ -3,11 +3,11 @@ id: T-1222
 type: task
 nature: feature
 title: The release-key runbook generates, stores, publishes, and rotates the cosign key pair, and records its fingerprint
-status: in-progress
+status: done
 parent: S-0232
 owner: alex
 created: 2026-10-07T22:15:32Z
-updated: 2026-10-07T22:24:04Z
+updated: 2026-10-07T22:27:34Z
 transitions:
   - to: ready
     at: 2026-10-07T22:24:04Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T22:24:04Z
     by: agent-S-0232
+  - to: done
+    at: 2026-10-07T22:27:34Z
+    by: agent-S-0232
 stream: S-0232
 tags: []
 touches: [docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md]
 after: [T-1221]
+usage:
+  source: log
+  seconds: 210
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 9348
+      cache_read: 1312692
+      cache_write: 45292
+      cost: 0.7367
 ---
 # T-1222 The release-key runbook generates, stores, publishes, and rotates the cosign key pair, and records its fingerprint
 

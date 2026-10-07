@@ -18,13 +18,12 @@ tags: [dashboard, cli]
 topics: [releases]
 usage:
   source: sum
-  seconds: 3118
-  estimated: true
+  seconds: 3428
   turns:
     - day: 2026-10-07
-      ceremony: 1
-      hand_edits: 1
-      work: 21
+      ceremony: 4
+      hand_edits: 3
+      work: 34
   models:
     - model: claude-fable-5-1
       input: 2082
@@ -33,17 +32,17 @@ usage:
       cache_write: 202190
       cost: 10.1839
     - model: claude-haiku-4-5-20251001
-      input: 266
-      output: 9362
+      input: 210351
+      output: 18116
       cache_read: 1564698
       cache_write: 78430
-      cost: 0.3016
+      cost: 0.5655
     - model: claude-opus-5-5
-      input: 266
-      output: 25292
-      cache_read: 10833355
-      cache_write: 402288
-      cost: 5.6431
+      input: 378
+      output: 119919
+      cache_read: 16448295
+      cache_write: 604823
+      cost: 9.595
     - model: claude-sonnet-5-5
       input: 48
       output: 14014
@@ -51,16 +50,32 @@ usage:
       cache_write: 128752
       cost: 0.5753
   strategic:
+    - kind: planner
+      seconds: 35
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 10
+          output: 4
+          cache_read: 0
+          cache_write: 9948
+          cost: 0.002
+        - model: claude-opus-5-5
+          input: 30
+          output: 1046
+          cache_read: 2208472
+          cache_write: 110135
+          cost: 0.6065
     - kind: orchestrator
-      seconds: 823
+      seconds: 1258
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 94
-          output: 1657
-          cache_read: 17636947
-          cache_write: 35717
-          cost: 4.3563
+          input: 150
+          output: 2425
+          cache_read: 21620427
+          cache_write: 78732
+          cost: 5.3484
 cost_of_delay:
   inputs:
     penalty_per_week: 25

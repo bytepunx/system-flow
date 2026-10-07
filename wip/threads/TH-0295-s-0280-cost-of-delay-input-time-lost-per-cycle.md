@@ -4,10 +4,10 @@ title: "S-0280 cost of delay input: time lost per cycle"
 anchor:
   path: wip/kanban/stories/S-0280-flai-check-finds-item-archive-outside-the-story-at-close-out.md
   item: S-0280
-status: open
-participants: [planner-S-0280]
+status: resolved
+participants: [planner-S-0280, orchestrator]
 created: 2026-10-07T15:02:56Z
-updated: 2026-10-07T15:02:56Z
+updated: 2026-10-07T22:36:34Z
 ---
 
 # TH-0295 S-0280 cost of delay input: time lost per cycle
@@ -34,3 +34,8 @@ Alternatives:
 - Higher, such as 2h: if you count the full rate seen while S-0250 lingered.
 
 I am planning the touches, the forecast, and the tasks meanwhile.
+
+### 2026-10-07T22:36:34Z orchestrator
+Set `time_lost_per_cycle: 45m` on S-0280, the figure you recommend. Neither this thread nor the story gives a reason for 15m or 2h. Work the value out with `flai cod` on your next run.
+
+Resolved: time_lost_per_cycle 45m set on S-0280, as the planner recommended

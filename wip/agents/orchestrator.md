@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 80.9060
-accrued_seconds: 75720
-tasks_completed: 87
-last_run: 2026-10-07T22:24:19Z
+accrued_cost: 85.0305
+accrued_seconds: 76926
+tasks_completed: 101
+last_run: 2026-10-07T22:44:33Z
 ---
 
 # Orchestrator activity
@@ -620,6 +620,104 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0232
 - Seconds: 5
 - Cost: 0.1938 USD, estimated
+
+### 2026-10-07T22:25:46Z
+
+- Summary: Published under judgement after the operator accepted S-0329: 1 pending, 0 USD/week; flaiover 0.41.3→0.41.4 (flaiover/v0.41.4); bundled S-0329; pushed. TH-0323 and TH-0315 were resolved by the acceptance's archive
+- Items: S-0329
+- Seconds: 87
+- Cost: 0.2935 USD, estimated
+
+### 2026-10-07T22:36:05Z
+
+- Summary: stopped: stopped from the dashboard
+- Items: none
+- Seconds: 619
+- Cost: 2.4520 USD, estimated
+
+### 2026-10-07T22:36:34Z
+
+- Summary: Answered TH-0295, citing no source
+- Items: S-0280
+- Seconds: 21
+- Cost: 0.1264 USD, estimated
+
+### 2026-10-07T22:36:38Z
+
+- Summary: Answered TH-0297, citing no source
+- Items: S-0280
+- Seconds: 4
+- Cost: 0.0516 USD, estimated
+
+### 2026-10-07T22:36:41Z
+
+- Summary: Settled planner-S-0280's threads under plan_backlog_stories: set time_lost_per_cycle 45m on S-0280, the planner's recommended figure (no reason given for 15m or 2h), and resolved TH-0295; approved the four-task, three-layer plan with its 25m forecast and file touches, and resolved TH-0297. The planner works out the value on its next run
+- Items: S-0280
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-07T22:36:47Z
+
+- Summary: Started the planner for S-0233 under plan_backlog_stories: first story flai plan --candidates lists (no tasks); no epic candidates. The other 26 story candidates wait, one at a time
+- Items: S-0233
+- Seconds: 6
+- Cost: 0.0539 USD, estimated
+
+### 2026-10-07T22:36:54Z
+
+- Summary: Checked in after the restart: no promote candidates under throughput (S-0233–S-0239 held by after or overlap on S-0232; the rest drafts, held for no touches, or lacking a forecast or value); ready unchanged (S-0332 alone, held on S-0333), so no reorder; review empty, so nothing to accept or publish. Complete drafts S-0334 and S-0336 keep their threads TH-0319 and TH-0320; the incomplete drafts have theirs. TH-0324 has my pending recommendation; TH-0312, TH-0313, and TH-0318 are epic planners', left to the operator
+- Items: S-0332
+- Seconds: 7
+- Cost: 0.0855 USD, estimated
+
+### 2026-10-07T22:37:21Z
+
+- Summary: Finalized S-0280: flai promote --drafts lists it complete, and its 2 criteria, 14 file touches (one justified folder, design/adrs), 25m forecast, and 112.50 USD/week value (from the 45m input) agree with the approved plan. Not promoted: held on overlap with S-0333 in design/conventions/work-management.md; no promote candidates
+- Items: S-0280
+- Seconds: 27
+- Cost: 0.1234 USD, estimated
+
+### 2026-10-07T22:41:43Z
+
+- Summary: Answered TH-0325, citing wip/kanban/stories/S-0233-flai-self-upgrade-flai-host-upgrade-and-install-sh-verify-the-release-s-signature-before-installing-it.md
+- Items: S-0233
+- Seconds: 262
+- Cost: 0.4778 USD, estimated
+
+### 2026-10-07T22:41:47Z
+
+- Summary: Approved planner-S-0233's plan on TH-0325 and resolved it: tasks T-1226–T-1230 in three layers cover all six criteria; forecast 1h15m and value 3.29 USD/week kept. Answered that the MCP versions tool stays out, as criterion 6 does not name it (source: the story)
+- Items: S-0233
+- Seconds: 4
+- Cost: 0.0373 USD, estimated
+
+### 2026-10-07T22:41:52Z
+
+- Summary: Started the planner for S-0234 under plan_backlog_stories: first story flai plan --candidates lists now that S-0233's planner has ended (no tasks)
+- Items: S-0234
+- Seconds: 5
+- Cost: 0.0375 USD, estimated
+
+### 2026-10-07T22:44:25Z
+
+- Summary: Answered TH-0326, citing design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md § Decision
+- Items: S-0234
+- Seconds: 153
+- Cost: 0.3046 USD, estimated
+
+### 2026-10-07T22:44:28Z
+
+- Summary: Approved planner-S-0234's plan on TH-0326 and resolved it: T-1231–T-1233, one per layer, cover all five criteria; forecast 45m and value 1.97 USD/week kept. Noted that criterion 2's provenance attestation follows the operator's answer on TH-0324 (source: ADR-0070 § Decision)
+- Items: S-0234
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-07T22:44:33Z
+
+- Summary: Started the planner for S-0235 under plan_backlog_stories: first story flai plan --candidates lists now that S-0234's planner has ended (no tasks)
+- Items: S-0235
+- Seconds: 5
+- Cost: 0.0810 USD, estimated
 
 ## Refusals
 

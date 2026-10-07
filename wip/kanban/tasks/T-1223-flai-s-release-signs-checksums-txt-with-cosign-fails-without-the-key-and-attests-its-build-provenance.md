@@ -3,11 +3,11 @@ id: T-1223
 type: task
 nature: feature
 title: flai's release signs checksums.txt with cosign, fails without the key, and attests its build provenance
-status: in-progress
+status: done
 parent: S-0232
 owner: alex
 created: 2026-10-07T22:15:33Z
-updated: 2026-10-07T22:24:05Z
+updated: 2026-10-07T22:27:39Z
 transitions:
   - to: ready
     at: 2026-10-07T22:24:04Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T22:24:05Z
     by: agent-S-0232
+  - to: done
+    at: 2026-10-07T22:27:39Z
+    by: agent-S-0232
 stream: S-0232
 tags: []
-touches: [flai/.goreleaser.yaml, ".github/workflows/release-flai.yml"]
+touches: [flai/.goreleaser.yaml, ".github/workflows/release-flai.yml", scripts/flai-snapshot.sh]
 after: [T-1221]
+usage:
+  source: log
+  seconds: 214
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 10915
+      cache_read: 1532756
+      cache_write: 52885
+      cost: 0.8602
 ---
 # T-1223 flai's release signs checksums.txt with cosign, fails without the key, and attests its build provenance
 

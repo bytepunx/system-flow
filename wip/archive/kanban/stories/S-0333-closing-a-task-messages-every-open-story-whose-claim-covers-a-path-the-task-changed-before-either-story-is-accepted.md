@@ -3,11 +3,11 @@ id: S-0333
 type: story
 nature: feature
 title: Closing a task messages every open story whose claim covers a path the task changed, before either story is accepted
-status: in-progress
+status: done
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:10:50Z
-updated: 2026-10-07T22:09:26Z
+updated: 2026-10-07T22:48:25Z
 transitions:
   - to: ready
     at: 2026-10-07T21:43:11Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T22:09:26Z
     by: agent-S-0333
+  - to: review
+    at: 2026-10-07T22:47:32Z
+    by: agent-S-0333
+  - to: done
+    at: 2026-10-07T22:48:25Z
+    by: orchestrator
 tags: [flai, template]
 topics: [cli, git, conventions, template]
-touches: [flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, design/system/agent-coordination.md]
 after: [S-0331]
 agent:
   harness: claude-code
@@ -26,21 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 232
-  estimated: true
+  seconds: 2298
   turns:
     - day: 2026-10-07
       ceremony: 1
       test_runs: 1
-      hand_edits: 1
-      work: 28
+      hand_edits: 2
+      work: 63
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 553
-      cache_read: 3111157
-      cache_write: 125592
-      cost: 1.451
+      input: 278
+      output: 93365
+      cache_read: 16872294
+      cache_write: 451143
+      cost: 8.1585
   strategic:
     - kind: orchestrator
       seconds: 305
@@ -74,11 +79,11 @@ Tell an agent what another story changed while both are still working, not only 
 
 ## Acceptance criteria
 
-- [ ] `flai task done` and the MCP tool `task_done`, after committing, message each other story in progress or in review whose claim covers a path the commit changed, inside the shared paths too, `about` those paths, naming the task, the commit, and its subject; one conversation per pair of stories, reused when it is open.
-- [ ] A story with an empty claim is told of every path, as the notice at acceptance does.
-- [ ] A commit that changes no path another open story claims sends nothing, and a notice that cannot be sent is logged and does not fail the task's close.
-- [ ] `flai task done --json` and `task_done` return whom they told as `told`.
-- [ ] `design/system/workflow.md` § Branches and collisions, `agent-narrative.md`, and `work-management.md` in both copies say what a story's agent does with such a message.
+- [x] `flai task done` and the MCP tool `task_done`, after committing, message each other story in progress or in review whose claim covers a path the commit changed, inside the shared paths too, `about` those paths, naming the task, the commit, and its subject; one conversation per pair of stories, reused when it is open.
+- [x] A story with an empty claim is told of every path, as the notice at acceptance does.
+- [x] A commit that changes no path another open story claims sends nothing, and a notice that cannot be sent is logged and does not fail the task's close.
+- [x] `flai task done --json` and `task_done` return whom they told as `told`.
+- [x] `design/system/workflow.md` § Branches and collisions, `agent-narrative.md`, and `work-management.md` in both copies say what a story's agent does with such a message.
 
 ## Tasks
 
@@ -113,3 +118,16 @@ Touches:
 Forecast 44m, delivery 2026-10-08T09:32Z: `flai forecast` gave it, 114 s per unit over 29 done large-band feature stories, times size 23. It stands.
 
 Cost of delay 113.70 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 44m of 6h27m. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: f2e5abba7b6984c91cdc25bf273c6a782ba4a7f3
+- At: 2026-10-07T22:48:25Z
+
+Verdict: meets all criteria (verifier at f2e5abba7b6984c91cdc25bf273c6a782ba4a7f3; flai verify passed every step at that commit)
+
+- 1: flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/task_done.go, flai/internal/mcpserver/task.go
+- 2: flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/cmd/accept_overlap.go, flai/internal/taskdone/taskdone_test.go
+- 3: flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go
+- 4: flai/internal/taskdone/taskdone.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task_test.go
+- 5: design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/agent-coordination.md, docs/users/flai.md, docs/users/flai-reference.md

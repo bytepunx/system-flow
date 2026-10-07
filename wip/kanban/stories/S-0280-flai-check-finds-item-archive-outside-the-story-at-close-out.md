@@ -6,7 +6,7 @@ title: "flai check finds `item.archive` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-05T07:09:05Z
-updated: 2026-10-07T22:25:33Z
+updated: 2026-10-07T22:37:17Z
 transitions: []
 tags: [flai, template]
 topics: [cli, conventions, template]
@@ -22,22 +22,32 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 3
+      seconds: 55
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 10
-          cache_read: 40634
-          cache_write: 303
-          cost: 0.0105
-draft: true
+          input: 28
+          output: 230
+          cache_read: 1155262
+          cache_write: 108430
+          cost: 0.3119
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 45m
+    by: orchestrator
+    at: 2026-10-07T22:36:31Z
+  value: 112.5
+  by: planner-S-0280
+  at: 2026-10-07T22:37:10Z
 forecast:
   duration: 25m
   delivery: 2026-10-08T06:25:00Z
   basis: "Its own forecast of 25m; 10th in the pull order with an in-progress limit of 3, behind S-0232, S-0333, S-0332, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239 and S-0241."
   by: flai
   at: 2026-10-07T22:25:33Z
+finalized:
+  by: orchestrator
+  at: 2026-10-07T22:37:17Z
 ---
 # S-0280 flai check finds `item.archive` outside the story at close-out
 
@@ -89,14 +99,16 @@ Touches:
 - **Criterion 2:** the I-0078 file and `design/issues/summary.md`, which `flai issue close` writes.
 - **Folder touch kept:** `design/adrs`. T-1164 adds an ADR whose number and slug `flai adr new` picks, so no task can name the file yet. It lies inside `claims.shared`, so it holds no story.
 - **Not taken from `flai touches suggest`:** `flai/internal/check/check.go` and `check_test.go`, since the rule itself does not change. Also `design/system/workflow.md`, `docs/operators/settings.md`, and the other co-changes the goal names none of. T-1165 widens its touches if `check.go` must change.
+- **Overlap with S-0333**, in progress: it claims both copies of `work-management.md`, which T-1167 changes. S-0280 is held while S-0333 is in progress. Whichever goes second rebases onto the other.
 
-Forecast 25m, delivery 2026-10-07T21:27Z.
+Forecast 25m.
 
-- `flai forecast` gave 21m: 78 s per unit of size over 43 done large-band improvement stories on claude-opus-5-5, times size 16 (2 criteria, 14 touches). It delivered at 21:23Z, 10th in the pull order.
+- `flai forecast` gave 21m: 78 s per unit of size over 43 done large-band improvement stories on claude-opus-5-5, times size 16 (2 criteria, 14 touches).
 - Raised by 4m. The story has three serial layers, each with its own commit, sync, and test cycle. S-0279, the same remedy for I-0076 with one more layer, took 26m of agent time.
-- Delivery is shifted by the same 4m.
+- Delivery is flai's, replanned from the pull order as stories are accepted.
 
-Cost of delay: not set yet.
+Cost of delay 112.50 USD a week, as `flai cod` gives it.
 
-- `flai cod` cannot work it out: the story has no inputs and no epic.
-- The inputs are the operator's, asked for on the cost thread on S-0280. The recommendation there is `time_lost_per_cycle: 45m`, as S-0279 took.
+- The input is `time_lost_per_cycle: 45m`, set by the orchestrator on the cost thread on S-0280, as recommended there.
+- I-0078 has 38 instances in about two days while S-0250 lingered. At about 1m of agent time and one issue-bump commit each, averaged over weeks with and without a lingering cancelled item, that is 45m per 168h cycle, at 150 USD an hour.
+- The figure stands as computed.

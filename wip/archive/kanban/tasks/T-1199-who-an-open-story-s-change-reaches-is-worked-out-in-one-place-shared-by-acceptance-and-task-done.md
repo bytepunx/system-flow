@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 157
-      cache_read: 1209155
-      cache_write: 10689
-      cost: 0.5468
+      input: 20
+      output: 6666
+      cache_read: 1204636
+      cache_write: 32210
+      cost: 0.5825
 ---
 # T-1199 Who an open story's change reaches is worked out in one place, shared by acceptance and task done
 

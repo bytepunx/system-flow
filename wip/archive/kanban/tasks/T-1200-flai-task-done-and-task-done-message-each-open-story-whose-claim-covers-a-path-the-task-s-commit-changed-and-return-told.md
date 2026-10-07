@@ -3,11 +3,11 @@ id: T-1200
 type: task
 nature: feature
 title: flai task done and task_done message each open story whose claim covers a path the task's commit changed, and return told
-status: in-progress
+status: done
 parent: S-0333
 owner: alex
 created: 2026-10-07T20:15:38Z
-updated: 2026-10-07T22:13:27Z
+updated: 2026-10-07T22:27:18Z
 transitions:
   - to: ready
     at: 2026-10-07T22:13:26Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T22:13:27Z
     by: agent-S-0333
+  - to: done
+    at: 2026-10-07T22:27:18Z
+    by: agent-S-0333
 stream: S-0333
 tags: [flai]
-touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go]
+touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, docs/users/flai-reference.md]
 after: [T-1199]
+usage:
+  source: log
+  seconds: 831
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 95
+      output: 31839
+      cache_read: 5753748
+      cache_write: 153848
+      cost: 2.7822
 ---
 # T-1200 flai task done and task_done message each open story whose claim covers a path the task's commit changed, and return told
 

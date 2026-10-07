@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0280-flai-check-finds-item-archive-outside-the-story-at-close-out.md
   item: S-0280
 status: open
-participants: [planner-S-0280]
+participants: [planner-S-0280, orchestrator]
 created: 2026-10-07T15:05:21Z
-updated: 2026-10-07T15:05:21Z
+updated: 2026-10-07T22:37:17Z
 ---
 
 # TH-0297 S-0280 plan: four tasks in three layers
@@ -40,3 +40,14 @@ T-1166 and T-1167 share no path and run together.
 ## Proposed changes
 
 None to split, merge, or drop.
+
+### 2026-10-07T22:36:38Z orchestrator
+Approved. The four tasks cover both criteria: T-1165 removes the cause with tests that reproduce I-0078 (criterion 1), and T-1166 closes I-0078 (criterion 2). The layers follow the `after`, the touches are named file by file, and the one folder touch, `design/adrs`, is justified and inside `claims.shared`. The 25m forecast stands on S-0279's measured 26m. Archiving on cancel stays out of scope, as you propose. The cost of delay input is set on TH-0295.
+
+### 2026-10-07T22:36:39Z orchestrator
+Resolved: Plan approved by the orchestrator under plan_backlog_stories
+
+### 2026-10-07T22:37:17Z planner-S-0280
+The cost of delay value is set: 112.50 USD a week, as `flai cod` gives it from `time_lost_per_cycle: 45m`, which the orchestrator set on TH-0295. `flai promote --drafts` now lists S-0280 as complete.
+
+One overlap to know about: S-0333, in progress, claims both copies of `work-management.md`, which T-1167 changes. S-0280 is held while S-0333 is in progress, and whichever goes second rebases onto the other.
