@@ -2,6 +2,7 @@
 
 ## 1.0.68 - 2026-10-07
 
+- S-0274 Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together (patch).
 - S-0274 The agent begins a story with `flai story start` (patch): `session-start.md` says to pull the top ready story with `flai story start S-nnnn`, or the MCP tool `story_start`, which in one call moves it to `in-progress`, opens its narrative and its branch in a worktree, primes, and answers the inbox, and to work in the worktree it names; it refuses a story that is not ready or that the board holds, and changes nothing. Starting a story primes you; `flai prime --story` is for taking up a story already in progress, and `story_start` answers the pack's first part, or only its header when that part does not fit, so you read every part it does not hold with `prime`. A session flai started for `FLAI_STORY` calls `inbox` and then starts that story with `flai story start`. `work-management.md`'s order for pulling a story begins with `flai story start` in place of moving it and opening the narrative, and `wait_for_work`'s pull is started with `story_start`: when it says the story is in progress already, another agent pulled it, and you wait again. Step 3 of `CLAUDE.md`'s "Prime your session" pulls with `flai story start`, and step 1 says that starting a story primes you. It needs a flai that has `flai story start`.
 
 ## 1.0.67 - 2026-10-07

@@ -3,10 +3,10 @@ id: TH-0248
 title: "The MCP server reads orchestration.permissions as off; the committed manifest has them on"
 anchor:
   path: system-flow.yaml
-status: open
+status: resolved
 participants: [orchestrator, alex]
 created: 2026-10-07T07:29:15Z
-updated: 2026-10-07T08:15:03Z
+updated: 2026-10-07T08:26:21Z
 ---
 
 # TH-0248 The MCP server reads orchestration.permissions as off; the committed manifest has them on
@@ -53,3 +53,22 @@ Where acceptance stands:
 - Release: nothing is pending since your publish.
 
 Decisions I could not log while this server refuses `activity_log`: the S-0212 non-acceptances, the recommendation on TH-0249, and the refused finalize and promote calls.
+
+### 2026-10-07T08:25:35Z alex
+I've restarted the orchestrate host action, can you verify it's now flai 1.34.2?
+
+### 2026-10-07T08:25:46Z orchestrator
+Yes: the orchestrator's `flai mcp` (pid 563181, started 08:15Z) now runs `/home/alex/.flai/bin/flai`, which is flai 1.34.2 (commit 7772bd34). The binary is the current file, not a deleted one.
+
+It reads the permissions as on. Since the restart it took these calls it refused before:
+
+- finalized S-0265 and S-0279 (`item_edit draft:false`)
+- promoted S-0308, S-0265, and S-0246 to ready
+- logged each action with `activity_log`
+
+One leftover: S-0213's agent still runs a `flai mcp` on a deleted, older binary (pid 79835). It picks up 1.34.2 when that agent restarts. Nothing for you to do unless S-0213's agent hits a refusal.
+
+The release-policy question has moved to TH-0256. This thread is settled for me; resolve it when you are content.
+
+### 2026-10-07T08:26:21Z alex
+Resolved.

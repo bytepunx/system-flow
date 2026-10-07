@@ -3,11 +3,11 @@ id: T-1074
 type: task
 nature: improvement
 title: The issues package returns the paths each new, bump, and close wrote
-status: in-progress
+status: done
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:52:24Z
-updated: 2026-10-07T08:15:12Z
+updated: 2026-10-07T08:20:15Z
 transitions:
   - to: ready
     at: 2026-10-07T08:15:12Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:15:12Z
     by: agent-S-0275
+  - to: done
+    at: 2026-10-07T08:20:15Z
+    by: agent-S-0275
 stream: S-0275
 tags: [cli]
 touches: [flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/record.go, flai/internal/issues/record_test.go]
+usage:
+  source: log
+  seconds: 303
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 140
+      cache_read: 1355461
+      cache_write: 97855
+      cost: 0.6527
 ---
 # T-1074 The issues package returns the paths each new, bump, and close wrote
 

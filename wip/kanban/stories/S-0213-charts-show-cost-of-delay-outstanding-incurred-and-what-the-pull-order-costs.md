@@ -3,11 +3,11 @@ id: S-0213
 type: story
 nature: feature
 title: Charts show cost of delay outstanding, incurred, and what the pull order costs
-status: review
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:17:48Z
+updated: 2026-10-07T08:18:03Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -23,6 +23,9 @@ transitions:
     by: agent-S-0213
   - to: review
     at: 2026-10-07T08:17:48Z
+    by: agent-S-0213
+  - to: in-progress
+    at: 2026-10-07T08:18:03Z
     by: agent-S-0213
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flai/internal/statsread, flai/internal/planning/forecast.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, docs/users/flai.md, docs/users/flai-reference.md]
@@ -43,6 +46,17 @@ usage:
       cache_read: 22671579
       cache_write: 837112
       cost: 10.5463
+  strategic:
+    - kind: orchestrator
+      seconds: 3
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 8
+          cache_read: 128096
+          cache_write: 2761
+          cost: 0.0341
 cost_of_delay:
   value: 91.22
   by: planner-S-0213
@@ -95,3 +109,4 @@ Figures:
 
 - Criterion 3 draws three lines, not two: the pull order, by cost of delay, and by WSJF, with the saving stated against the cheaper of the two policies ([ADR-0112](../../../design/adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)).
 - CoD Outstanding and CoD Incurred offer the item type, as they sum the report's type; CoD by Order projects the ready stories whatever the type.
+- 2026-10-07T08:18:03Z: moved to in-progress: S-0212 was accepted as S-0213 moved to review; S-0213 takes the eight conflicting paths at its sync (TH-0250)

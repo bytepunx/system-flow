@@ -3,12 +3,18 @@ id: T-1077
 type: task
 nature: improvement
 title: flai issue bump, new, and close and flai adr new take --commit
-status: backlog
+status: in-progress
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:52:34Z
-updated: 2026-10-06T22:52:34Z
-transitions: []
+updated: 2026-10-07T08:21:01Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:21:01Z
+    by: agent-S-0275
+  - to: in-progress
+    at: 2026-10-07T08:21:01Z
+    by: agent-S-0275
 stream: S-0275
 tags: [cli]
 touches: [flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, flai/internal/adr/adr.go]

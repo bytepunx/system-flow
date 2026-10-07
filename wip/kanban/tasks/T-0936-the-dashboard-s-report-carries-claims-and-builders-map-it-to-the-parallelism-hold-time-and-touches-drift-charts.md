@@ -3,12 +3,18 @@ id: T-0936
 type: task
 nature: feature
 title: The dashboard's Report carries claims, and builders map it to the parallelism, hold-time, and touches-drift charts
-status: backlog
+status: in-progress
 parent: S-0214
 owner: alex
 created: 2026-10-05T05:45:20Z
-updated: 2026-10-05T05:45:29Z
-transitions: []
+updated: 2026-10-07T08:23:20Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:23:20Z
+    by: agent-S-0214
+  - to: in-progress
+    at: 2026-10-07T08:23:20Z
+    by: agent-S-0214
 stream: S-0214
 tags: [dashboard]
 touches: [flaiover/src/lib/viz]

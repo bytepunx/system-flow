@@ -14,6 +14,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 2
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 1
+          output: 6
+          cache_read: 24135
+          cache_write: 161
+          cost: 0.0064
 draft: true
 ---
 # S-0280 flai check finds `item.archive` outside the story at close-out

@@ -3,12 +3,18 @@ id: T-0929
 type: task
 nature: feature
 title: flai stats reports held stories per day, held hours by reason per week, and the weekly share of exact touches
-status: backlog
+status: in-progress
 parent: S-0214
 owner: alex
 created: 2026-10-05T05:45:09Z
-updated: 2026-10-05T05:45:09Z
-transitions: []
+updated: 2026-10-07T08:23:19Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:23:19Z
+    by: agent-S-0214
+  - to: in-progress
+    at: 2026-10-07T08:23:19Z
+    by: agent-S-0214
 stream: S-0214
 tags: [flai]
 touches: [flai/internal/metrics]

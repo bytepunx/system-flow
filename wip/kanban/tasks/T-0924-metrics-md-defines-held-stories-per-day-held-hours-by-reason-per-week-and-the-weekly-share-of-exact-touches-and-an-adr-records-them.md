@@ -3,15 +3,35 @@ id: T-0924
 type: task
 nature: feature
 title: metrics.md defines held stories per day, held hours by reason per week, and the weekly share of exact touches, and an ADR records them
-status: backlog
+status: done
 parent: S-0214
 owner: alex
 created: 2026-10-05T05:45:00Z
-updated: 2026-10-05T05:45:00Z
-transitions: []
+updated: 2026-10-07T08:23:03Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:18:40Z
+    by: agent-S-0214
+  - to: in-progress
+    at: 2026-10-07T08:18:41Z
+    by: agent-S-0214
+  - to: done
+    at: 2026-10-07T08:23:03Z
+    by: agent-S-0214
 stream: S-0214
 tags: [flai]
 touches: [design/system/metrics.md, design/adrs]
+usage:
+  source: log
+  seconds: 262
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 522
+      cache_read: 2992734
+      cache_write: 101395
+      cost: 1.3898
 ---
 # T-0924 metrics.md defines held stories per day, held hours by reason per week, and the weekly share of exact touches, and an ADR records them
 

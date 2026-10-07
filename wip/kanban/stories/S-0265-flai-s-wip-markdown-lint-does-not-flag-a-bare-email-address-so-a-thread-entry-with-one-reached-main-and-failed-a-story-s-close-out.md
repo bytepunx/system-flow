@@ -3,11 +3,14 @@ id: S-0265
 type: story
 nature: remediation
 title: flai's wip markdown lint does not flag a bare email address, so a thread entry with one reached main and failed a story's close-out
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-05T00:03:14Z
-updated: 2026-10-07T08:17:59Z
-transitions: []
+updated: 2026-10-07T08:20:41Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:20:41Z
+    by: orchestrator
 tags: []
 topics: [cli]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases, docs/users/flai.md, design/issues/I-0056-flai-s-wip-markdown-lint-does-not-flag-a-bare-email-address-so-a-thread-entry-with-one-reached-main-and-failed-a-story-s-close-out.md, design/issues/summary.md]
@@ -38,16 +41,15 @@ usage:
           cache_write: 234172
           cost: 4.2409
     - kind: orchestrator
-      seconds: 607
+      seconds: 628
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 33
-          output: 495
-          cache_read: 2243030
-          cache_write: 11424
-          cost: 0.5883
-draft: true
+          input: 47
+          output: 642
+          cache_read: 2772932
+          cache_write: 63733
+          cost: 0.7402
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -62,6 +64,9 @@ forecast:
   basis: "Its own forecast of 25m; 14th in the pull order with an in-progress limit of 3, behind S-0275, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241 and S-0246."
   by: flai
   at: 2026-10-07T08:17:59Z
+finalized:
+  by: orchestrator
+  at: 2026-10-07T08:20:26Z
 ---
 # S-0265 flai's wip markdown lint does not flag a bare email address, so a thread entry with one reached main and failed a story's close-out
 

@@ -3,11 +3,14 @@ id: S-0308
 type: story
 nature: improvement
 title: golangci-lint fails at once when another story's agent is running it on the same host
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-07T01:07:14Z
-updated: 2026-10-07T08:17:59Z
-transitions: []
+updated: 2026-10-07T08:20:40Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:20:40Z
+    by: orchestrator
 tags: []
 touches: [flai/.golangci.yaml, flai/tests/integration/golangci_lock_test.go, design/system/devex.md, design/issues/I-0101-golangci-lint-fails-at-once-when-another-story-s-agent-is-running-it-on-the-same-host.md, design/issues/summary.md]
 agent:
@@ -21,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 607
+      seconds: 612
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 32
-          output: 495
-          cache_read: 2243029
-          cache_write: 11423
-          cost: 0.5883
+          input: 36
+          output: 544
+          cache_read: 2446451
+          cache_write: 15463
+          cost: 0.6424
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

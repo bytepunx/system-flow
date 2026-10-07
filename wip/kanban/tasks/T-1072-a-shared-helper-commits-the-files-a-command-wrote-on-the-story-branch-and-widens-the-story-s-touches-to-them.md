@@ -3,11 +3,11 @@ id: T-1072
 type: task
 nature: improvement
 title: A shared helper commits the files a command wrote on the story branch and widens the story's touches to them
-status: in-progress
+status: done
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:52:18Z
-updated: 2026-10-07T08:15:11Z
+updated: 2026-10-07T08:20:19Z
 transitions:
   - to: ready
     at: 2026-10-07T08:15:11Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:15:11Z
     by: agent-S-0275
+  - to: done
+    at: 2026-10-07T08:20:19Z
+    by: agent-S-0275
 stream: S-0275
 tags: [cli]
 touches: [flai/internal/storygit/commit.go, flai/internal/storygit/commit_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
+usage:
+  source: log
+  seconds: 304
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 284
+      cache_read: 2033156
+      cache_write: 110778
+      cost: 0.9629
 ---
 # T-1072 A shared helper commits the files a command wrote on the story branch and widens the story's touches to them
 

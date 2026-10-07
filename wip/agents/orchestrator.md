@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 17.5560
-accrued_seconds: 22124
-tasks_completed: 17
-last_run: 2026-10-07T07:29:19Z
+accrued_cost: 22.5819
+accrued_seconds: 25507
+tasks_completed: 25
+last_run: 2026-10-07T08:25:49Z
 ---
 
 # Orchestrator activity
@@ -131,6 +131,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 2427
 - Cost: 2.3531 USD, estimated
 
+### 2026-10-07T08:19:49Z
+
+- Summary: stopped: stopped from the dashboard
+- Items: none
+- Seconds: 3030
+- Cost: 4.1479 USD, estimated
+
+### 2026-10-07T08:20:30Z
+
+- Summary: Finalized drafts S-0265 (forecast 25m, value 25.00 USD/week) and S-0279 (forecast 45m, value 112.50 USD/week): flai promote --drafts lists both complete, and their criteria, task touches, forecasts, and values are consistent
+- Items: S-0265, S-0279
+- Seconds: 34
+- Cost: 0.1956 USD, estimated
+
+### 2026-10-07T08:20:38Z
+
+- Summary: Left drafts S-0280, S-0287, S-0309, S-0310 as drafts and opened one thread on each (TH-0252..TH-0255): flai promote --drafts lists each as lacking touches, a forecast duration and delivery, and a cost of delay value
+- Items: S-0280, S-0287, S-0309, S-0310
+- Seconds: 8
+- Cost: 0.0254 USD, estimated
+
+### 2026-10-07T08:20:45Z
+
+- Summary: Promoted S-0308 (rank 1, forecast 10m), S-0265 (rank 2, forecast 25m), and S-0246 (rank 3, forecast 30m) to ready, in flai promote --candidates' throughput order; ready had room (2 of 10)
+- Items: S-0308, S-0265, S-0246
+- Seconds: 7
+- Cost: 0.1111 USD, estimated
+
+### 2026-10-07T08:20:54Z
+
+- Summary: Ordered ready by throughput with flai order --by throughput --apply: S-0215 and S-0216 kept (placed by flaiover in the last day), then S-0308 10m, S-0265 25m, S-0246 30m. A first attempt with --json and a redirect was refused by flai guard as placing by hand; the plain form passed
+- Items: S-0215, S-0216, S-0308, S-0265, S-0246
+- Seconds: 9
+- Cost: 0.0855 USD, estimated
+
+### 2026-10-07T08:20:59Z
+
+- Summary: Did not publish S-0212 and S-0274: release_evaluate gives policy judgement (not met by itself), 2 pending worth 97.79 USD/week, against the value of 1000 the manifest sets with no policy; asked the operator on TH-0256 whether policy threshold was meant
+- Items: S-0212, S-0274
+- Seconds: 5
+- Cost: 0.0000 USD
+
+### 2026-10-07T08:25:46Z
+
+- Summary: Answered TH-0248, citing no source
+- Items: none
+- Seconds: 287
+- Cost: 0.4263 USD, estimated
+
+### 2026-10-07T08:25:49Z
+
+- Summary: Replied on TH-0248: the orchestrator's flai mcp now runs flai 1.34.2 (7772bd34) and reads the permissions as on; S-0213's agent still runs an older, deleted flai mcp binary
+- Items: S-0213
+- Seconds: 3
+- Cost: 0.0341 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -141,4 +197,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-07T07:50:56Z
 
 - Call: `FLAI_AGENT=orchestrator flai board --json >/dev/null 2>`
+- Needs: none
+
+### 2026-10-07T08:20:45Z
+
+- Call: `flai order --by throughput --apply --json 2>`
 - Needs: none

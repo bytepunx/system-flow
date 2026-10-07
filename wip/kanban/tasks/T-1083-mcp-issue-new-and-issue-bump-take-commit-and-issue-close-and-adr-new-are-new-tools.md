@@ -3,12 +3,18 @@ id: T-1083
 type: task
 nature: improvement
 title: MCP issue_new and issue_bump take commit, and issue_close and adr_new are new tools
-status: backlog
+status: in-progress
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:52:46Z
-updated: 2026-10-06T22:52:54Z
-transitions: []
+updated: 2026-10-07T08:21:02Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:21:02Z
+    by: agent-S-0275
+  - to: in-progress
+    at: 2026-10-07T08:21:02Z
+    by: agent-S-0275
 stream: S-0275
 tags: [mcp]
 touches: [flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/adr.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/folder.go]

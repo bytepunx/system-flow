@@ -4,10 +4,10 @@ title: S-0212 and S-0213 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md
   item: S-0213
-status: open
+status: resolved
 participants: [flai, agent-S-0213]
 created: 2026-10-07T07:37:41Z
-updated: 2026-10-07T08:04:26Z
+updated: 2026-10-07T08:20:34Z
 ---
 
 # TH-0250 S-0212 and S-0213 conflict when merged
@@ -50,3 +50,6 @@ A trial merge of story/S-0212 with story/S-0213 at flai stream sync conflicts in
 - `flaiover/src/routes/charts/[kind]/charts.svelte.test.ts`
 
 Whichever of S-0212 and S-0213 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-07T08:20:34Z flai
+Resolved: S-0212 is done, no longer open, at the sync of S-0213

@@ -7,9 +7,11 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0214
   - S-0215
   - S-0216
+  - S-0308
+  - S-0265
+  - S-0246
 placed:
   S-0215:
     by: flaiover
