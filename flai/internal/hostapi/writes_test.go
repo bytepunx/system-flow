@@ -124,6 +124,11 @@ var refused = map[string][]string{
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1.5],` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1]}`,
 	},
+	// S-0273: flai test in a checkout, its paths kept inside it
+	"test.run": {
+		`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"paths":["../etc"],` + rid + `}`, `{"paths":["/etc"],` + rid + `}`,
+		`{"paths":["a\nb"],` + rid + `}`, `{"paths":[""],` + rid + `}`, `{"paths":"flai",` + rid + `}`, `{"max":-1,` + rid + `}`, `{"paths":["flai"]}`,
+	},
 	"item.edit": {
 		`{"id":"S-0001","title":"no hash",` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `",` + rid + `}`,
@@ -174,8 +179,6 @@ var refused = map[string][]string{
 	"checks.tail":   {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
 	"checks.run":    {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
 	"checks.cancel": {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
-	"test.run": {`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"paths":["../etc"],` + rid + `}`, `{"paths":["/etc"],` + rid + `}`,
-		`{"paths":["a\nb"],` + rid + `}`, `{"paths":[""],` + rid + `}`, `{"paths":"flai",` + rid + `}`, `{"max":-1,` + rid + `}`, `{"paths":["flai"]}`},
 	"agent.restart": {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.start":   {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.commit":  {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
