@@ -204,7 +204,9 @@ type holdReplay struct {
 // under the reason it is named by, the code Holds.Of gives it. An overlap
 // inside the manifest's shared paths holds nothing (ADR-0096).
 func replayHolds(items, all []*workitem.Item, start time.Time, opt Options) holdReplay {
-	now := opt.Now
+	// Held time is whole seconds, as timestamps are: a hold still open runs
+	// to now's last whole second.
+	now := opt.Now.Truncate(time.Second)
 	out := holdReplay{seconds: map[string]*float64{}}
 	day0, week0 := firstDay(start), monday(start)
 	for d := day0; !d.After(now); d = d.AddDate(0, 0, 1) {

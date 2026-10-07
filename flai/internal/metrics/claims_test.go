@@ -344,6 +344,25 @@ func TestHeldSecondsLeaveSharedPathsOut(t *testing.T) {
 	}
 }
 
+// A hold still open at a now with a fraction of a second counts whole seconds,
+// as metrics.md's precision says.
+func TestHeldSecondsAreWholeWhenNowIsNot(t *testing.T) {
+	const old = "2026-08-15T00:00:00Z"
+	items := []*workitem.Item{
+		claimItem("S-0001", workitem.Story, old, []string{"flai/cmd"}, workitem.InProgress, "2026-08-31T12:00:00Z"),
+		claimItem("S-0002", workitem.Story, old, []string{"flai/cmd"}, workitem.Ready, "2026-08-31T12:00:00Z"),
+	}
+	rep := Compute(items, Options{Now: now.Add(500 * time.Millisecond), Since: threeDays})
+	for _, m := range rep.Items {
+		if m.ID == "S-0002" && (m.HeldSeconds == nil || *m.HeldSeconds != 24*3600) {
+			t.Errorf("S-0002 held = %v, want %v", deref(m.HeldSeconds), 24*3600)
+		}
+	}
+	if w := rep.Claims.Weeks[len(rep.Claims.Weeks)-1].HeldSeconds; w.Overlap != 24*3600 {
+		t.Errorf("this week's overlap = %v, want %v", w.Overlap, 24*3600)
+	}
+}
+
 // weeksString shows weeks with their pointers' values.
 func weeksString(ws []ClaimWeek) string {
 	data, _ := json.Marshal(ws)
