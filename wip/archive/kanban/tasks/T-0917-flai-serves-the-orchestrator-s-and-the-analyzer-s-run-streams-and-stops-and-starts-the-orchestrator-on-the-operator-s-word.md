@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 196
-      output: 1024
-      cache_read: 18092502
-      cache_write: 313109
-      cost: 8.1552
+      input: 268
+      output: 119355
+      cache_read: 18330223
+      cache_write: 443706
+      cost: 8.5438
 ---
 # T-0917 flai serves the orchestrator's and the analyzer's run streams, and stops and starts the orchestrator on the operator's word
 

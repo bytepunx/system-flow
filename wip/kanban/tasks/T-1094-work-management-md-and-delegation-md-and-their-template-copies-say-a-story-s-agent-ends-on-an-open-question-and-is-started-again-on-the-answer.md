@@ -3,15 +3,35 @@ id: T-1094
 type: task
 nature: improvement
 title: work-management.md and delegation.md, and their template copies, say a story's agent ends on an open question and is started again on the answer
-status: backlog
+status: done
 parent: S-0272
 owner: alex
 created: 2026-10-06T22:53:02Z
-updated: 2026-10-06T22:53:02Z
-transitions: []
+updated: 2026-10-07T00:48:59Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:42:41Z
+    by: agent-S-0272
+  - to: in-progress
+    at: 2026-10-07T00:42:41Z
+    by: agent-S-0272
+  - to: done
+    at: 2026-10-07T00:48:59Z
+    by: agent-S-0272
 stream: S-0272
 tags: [conventions, template]
 touches: [design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md]
+usage:
+  source: log
+  seconds: 378
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 65
+      cache_read: 588928
+      cache_write: 57416
+      cost: 0.2867
 ---
 # T-1094 work-management.md and delegation.md, and their template copies, say a story's agent ends on an open question and is started again on the answer
 

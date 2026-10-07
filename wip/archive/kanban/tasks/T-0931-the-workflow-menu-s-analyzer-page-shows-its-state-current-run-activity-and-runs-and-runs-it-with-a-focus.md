@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 272
-      cache_read: 2779291
-      cache_write: 109686
-      cost: 1.2801
+      input: 42
+      output: 18734
+      cache_read: 2877175
+      cache_write: 69646
+      cost: 1.3411
 ---
 # T-0931 The Workflow menu's Analyzer page shows its state, current run, activity, and runs, and runs it with a focus
 

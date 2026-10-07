@@ -3,11 +3,11 @@ id: S-0228
 type: story
 nature: feature
 title: The Workflow menu has Orchestrator and Analyzer pages showing their status, activity log, and runs
-status: in-progress
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:18Z
-updated: 2026-10-07T00:36:34Z
+updated: 2026-10-07T00:51:08Z
 transitions:
   - to: ready
     at: 2026-10-06T22:46:46Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:58:30Z
     by: alex
+  - to: review
+    at: 2026-10-07T00:49:39Z
+    by: agent-S-0228
+  - to: done
+    at: 2026-10-07T00:51:08Z
+    by: alex
 tags: [dashboard]
 topics: [orchestration, analysis]
-touches: [flaiover/src/routes, flaiover/src/lib/components, flaiover/src/routes/api, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/sitemenu.ts, flai/internal/hostapi, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/planner.ts, flaiover/src/lib/planner.test.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/activity.ts, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/agents.go, flai/cmd/serve.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/users/flai-reference.md, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/agents_test.go, flaiover/src/routes/api/orchestrator, flaiover/src/routes/api/analyzer, flaiover/src/routes/api/agent-stream, flaiover/src/routes/workflow/orchestrator, flaiover/src/routes/workflow/analyzer, flaiover/src/lib/components/AgentStream.svelte, flaiover/src/lib/components/AgentStream.svelte.test.ts, flaiover/src/lib/server/agent.test.ts]
+touches: [flaiover/src/routes, flaiover/src/lib/components, flaiover/src/routes/api, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/sitemenu.ts, flai/internal/hostapi, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/planner.ts, flaiover/src/lib/planner.test.ts, flaiover/src/lib/strategic.ts, flaiover/src/lib/strategic.test.ts, flaiover/src/lib/activity.ts, flai/internal/serve/stream.go, flai/internal/serve/stream_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/serve/agents.go, flai/cmd/serve.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/users/flai-reference.md, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/orchestrate_hold_test.go, flai/internal/serve/agents_test.go, flaiover/src/routes/api/orchestrator, flaiover/src/routes/api/analyzer, flaiover/src/routes/api/agent-stream, flaiover/src/routes/workflow/orchestrator, flaiover/src/routes/workflow/analyzer, flaiover/src/lib/components/AgentStream.svelte, flaiover/src/lib/components/AgentStream.svelte.test.ts, flaiover/src/lib/server/agent.test.ts, design/system/strategic-agents.md, docs/users/flai.md, docs/operators/index.md]
 after: [S-0208, S-0218, S-0223, S-0259]
 agent:
   harness: claude-code
@@ -26,15 +32,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2037
-  estimated: true
+  seconds: 2834
   models:
     - model: claude-opus-5-5
-      input: 466
-      output: 2540
-      cache_read: 30732052
-      cache_write: 811017
-      cost: 13.9765
+      input: 624
+      output: 277460
+      cache_read: 42611536
+      cache_write: 1031465
+      cost: 19.8613
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 4094
+      cache_read: 171868
+      cache_write: 35915
+      cost: 0.1651
+  strategic:
+    - kind: orchestrator
+      seconds: 27
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 16
+          output: 256
+          cache_read: 532936
+          cache_write: 3381
+          cost: 0.238
 cost_of_delay:
   value: 60.81
   by: planner-S-0228
@@ -53,10 +75,10 @@ forecast:
 The orchestrator and the analyzer are invisible without a place in the dashboard. Each gets a page under the Workflow menu, laid out like S-0259's Planner page. The page shows whether the agent's host action is enabled and running, its activity document newest first, its runs with cost and outcome, and the actions the operator can take: run the analyzer, or start and stop the orchestrator.
 
 ## Acceptance criteria
-- [ ] `/workflow/orchestrator` and `/workflow/analyzer` are in the two-tier site menu's Workflow tier, beside the Planner page. Each shows the host action's state with the command that enables it, the current run if any (the agent pane that story pages have), the activity log's entries with duration and cost, the front matter totals, and a list of past runs
-- [ ] The analyzer page has a Run button with the focus. The orchestrator page has a Stop button and the last decisions with their reasons
-- [ ] Pages update live from `/api/events` as the activity documents change
-- [ ] `design/system/flaiover-dashboard.md` and the user guide describe them; tests cover each page's data and actions
+- [x] `/workflow/orchestrator` and `/workflow/analyzer` are in the two-tier site menu's Workflow tier, beside the Planner page. Each shows the host action's state with the command that enables it, the current run if any (the agent pane that story pages have), the activity log's entries with duration and cost, the front matter totals, and a list of past runs
+- [x] The analyzer page has a Run button with the focus. The orchestrator page has a Stop button and the last decisions with their reasons
+- [x] Pages update live from `/api/events` as the activity documents change
+- [x] `design/system/flaiover-dashboard.md` and the user guide describe them; tests cover each page's data and actions
 
 ## Tasks
 - T-0917 flai serves the orchestrator's and the analyzer's run streams, and stops and starts the orchestrator on the operator's word

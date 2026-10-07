@@ -3,15 +3,35 @@ id: T-1090
 type: task
 nature: improvement
 title: The story agent's start prompt says to write the narrative's state and end on an open question, and to end when wait_for_events answers end
-status: backlog
+status: done
 parent: S-0272
 owner: alex
 created: 2026-10-06T22:52:57Z
-updated: 2026-10-06T22:52:57Z
-transitions: []
+updated: 2026-10-07T00:48:59Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:42:40Z
+    by: agent-S-0272
+  - to: in-progress
+    at: 2026-10-07T00:42:41Z
+    by: agent-S-0272
+  - to: done
+    at: 2026-10-07T00:48:59Z
+    by: agent-S-0272
 stream: S-0272
 tags: [cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 378
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 295
+      cache_read: 1043376
+      cache_write: 64989
+      cost: 0.4918
 ---
 # T-1090 The story agent's start prompt says to write the narrative's state and end on an open question, and to end when wait_for_events answers end
 

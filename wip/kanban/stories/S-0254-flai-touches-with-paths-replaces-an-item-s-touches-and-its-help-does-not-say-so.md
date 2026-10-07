@@ -6,7 +6,7 @@ title: flai touches with paths replaces an item's touches, and its help does not
 status: in-progress
 owner: alex
 created: 2026-10-03T20:33:24Z
-updated: 2026-10-07T00:41:04Z
+updated: 2026-10-07T00:43:51Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:26Z
@@ -22,6 +22,17 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 179
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 255
+      cache_read: 1668126
+      cache_write: 89588
+      cost: 0.7798
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
@@ -44,8 +55,8 @@ forecast:
 This story remediates [I-0067](../../../design/issues/I-0067-flai-touches-with-paths-replaces-an-item-s-touches-and-its-help-does-not-say-so.md), "flai touches with paths replaces an item's touches, and its help does not say so". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0067 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0067 is closed with `flai issue close I-0067 --reason` saying what fixed it
+- [x] The cause I-0067 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0067 is closed with `flai issue close I-0067 --reason` saying what fixed it
 
 ## Tasks
 - T-0976 flai touches adds with --add and removes with --remove, and its help says paths given alone replace the list

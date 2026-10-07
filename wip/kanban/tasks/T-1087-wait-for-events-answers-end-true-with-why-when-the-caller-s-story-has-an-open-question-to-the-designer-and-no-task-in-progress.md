@@ -3,15 +3,35 @@ id: T-1087
 type: task
 nature: improvement
 title: "wait_for_events answers end: true with why when the caller's story has an open question to the designer and no task in progress"
-status: backlog
+status: done
 parent: S-0272
 owner: alex
 created: 2026-10-06T22:52:52Z
-updated: 2026-10-06T22:52:52Z
-transitions: []
+updated: 2026-10-07T00:48:59Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:42:40Z
+    by: agent-S-0272
+  - to: in-progress
+    at: 2026-10-07T00:42:40Z
+    by: agent-S-0272
+  - to: done
+    at: 2026-10-07T00:48:59Z
+    by: agent-S-0272
 stream: S-0272
 tags: [cli, mcp]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+usage:
+  source: log
+  seconds: 379
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 301
+      cache_read: 1599382
+      cache_write: 82279
+      cost: 0.7461
 ---
 # T-1087 wait_for_events answers end: true with why when the caller's story has an open question to the designer and no task in progress
 

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:31Z
-updated: 2026-10-07T00:40:58Z
+updated: 2026-10-07T00:49:21Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:31Z
@@ -17,12 +17,23 @@ transitions:
     by: agent-S-0272
 tags: [cli, mcp]
 topics: [automation, mcp, conventions, metrics, template]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, design/adrs, design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/restart_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, design/system/work-hierarchy.md, design/adrs, design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 490
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 204
+      output: 1149
+      cache_read: 7082194
+      cache_write: 394111
+      cost: 3.3167
 cost_of_delay:
   value: 96
   by: planner-E-0017

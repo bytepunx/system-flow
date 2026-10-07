@@ -3,15 +3,35 @@ id: T-1097
 type: task
 nature: improvement
 title: An ADR and metrics.md define an empty wake and where flai stats reports it
-status: backlog
+status: done
 parent: S-0272
 owner: alex
 created: 2026-10-06T22:53:06Z
-updated: 2026-10-06T22:53:06Z
-transitions: []
+updated: 2026-10-07T00:49:00Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:42:42Z
+    by: agent-S-0272
+  - to: in-progress
+    at: 2026-10-07T00:42:42Z
+    by: agent-S-0272
+  - to: done
+    at: 2026-10-07T00:49:00Z
+    by: agent-S-0272
 stream: S-0272
 tags: [metrics]
-touches: [design/adrs, design/system/metrics.md]
+touches: [design/adrs, design/system/metrics.md, design/system/work-hierarchy.md]
+usage:
+  source: log
+  seconds: 377
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 277
+      cache_read: 2103384
+      cache_write: 94879
+      cost: 0.9752
 ---
 # T-1097 An ADR and metrics.md define an empty wake and where flai stats reports it
 

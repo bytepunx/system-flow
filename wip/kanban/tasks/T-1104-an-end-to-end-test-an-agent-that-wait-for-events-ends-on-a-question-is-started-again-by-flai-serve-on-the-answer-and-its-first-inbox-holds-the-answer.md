@@ -3,12 +3,18 @@ id: T-1104
 type: task
 nature: improvement
 title: "An end-to-end test: an agent that wait_for_events ends on a question is started again by flai serve on the answer, and its first inbox holds the answer"
-status: backlog
+status: in-progress
 parent: S-0272
 owner: alex
 created: 2026-10-06T22:53:22Z
-updated: 2026-10-06T22:53:30Z
-transitions: []
+updated: 2026-10-07T00:49:25Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:49:24Z
+    by: agent-S-0272
+  - to: in-progress
+    at: 2026-10-07T00:49:25Z
+    by: agent-S-0272
 stream: S-0272
 tags: [cli, mcp]
 touches: [flai/internal/serve/restart_test.go]

@@ -3,11 +3,11 @@ id: T-0976
 type: task
 nature: improvement
 title: flai touches adds with --add and removes with --remove, and its help says paths given alone replace the list
-status: in-progress
+status: done
 parent: S-0254
 owner: alex
 created: 2026-10-05T05:49:34Z
-updated: 2026-10-07T00:41:25Z
+updated: 2026-10-07T00:42:47Z
 transitions:
   - to: ready
     at: 2026-10-07T00:41:25Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T00:41:25Z
     by: agent-S-0254
+  - to: done
+    at: 2026-10-07T00:42:47Z
+    by: agent-S-0254
 stream: S-0254
 tags: [cli]
 touches: [flai/cmd/touches.go, flai/cmd/touches_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go]
+usage:
+  source: log
+  seconds: 82
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 68
+      cache_read: 419082
+      cache_write: 13781
+      cost: 0.192
 ---
 # T-0976 flai touches adds with --add and removes with --remove, and its help says paths given alone replace the list
 

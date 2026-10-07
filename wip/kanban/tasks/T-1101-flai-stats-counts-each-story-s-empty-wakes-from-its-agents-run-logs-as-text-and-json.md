@@ -3,15 +3,21 @@ id: T-1101
 type: task
 nature: improvement
 title: flai stats counts each story's empty wakes from its agents' run logs, as text and --json
-status: backlog
+status: in-progress
 parent: S-0272
 owner: alex
 created: 2026-10-06T22:53:15Z
-updated: 2026-10-06T22:53:15Z
-transitions: []
+updated: 2026-10-07T00:49:24Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:49:24Z
+    by: agent-S-0272
+  - to: in-progress
+    at: 2026-10-07T00:49:24Z
+    by: agent-S-0272
 stream: S-0272
 tags: [cli, metrics]
-touches: [flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go]
+touches: [flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go]
 after: [T-1097]
 ---
 # T-1101 flai stats counts each story's empty wakes from its agents' run logs, as text and --json

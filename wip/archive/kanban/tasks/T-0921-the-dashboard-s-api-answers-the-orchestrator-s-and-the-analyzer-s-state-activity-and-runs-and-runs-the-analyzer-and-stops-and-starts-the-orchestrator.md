@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 104
-      output: 658
-      cache_read: 4717939
-      cache_write: 139809
-      cost: 2.1526
+      input: 71
+      output: 31501
+      cache_read: 4837894
+      cache_write: 117107
+      cost: 2.255
 ---
 # T-0921 The dashboard's API answers the orchestrator's and the analyzer's state, activity, and runs, and runs the analyzer and stops and starts the orchestrator
 

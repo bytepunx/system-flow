@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 76
-      output: 442
-      cache_read: 4115085
-      cache_write: 167277
-      cost: 1.8975
+      input: 62
+      output: 27770
+      cache_read: 4264855
+      cache_write: 103236
+      cost: 1.9879
 ---
 # T-0928 The Workflow menu's Orchestrator page shows its state, current run, decisions, and runs, and stops and starts it
 
