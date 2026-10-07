@@ -105,6 +105,25 @@ func TestForecastAndEstimateErrorsPerItem(t *testing.T) {
 	}
 }
 
+// ADR-0111: each item carries the model its errors are grouped under, its
+// agent's model, (none) without an agent or a model.
+func TestItemModelIsTheOneForecastsGroupBy(t *testing.T) {
+	rep := Compute(forecastItems(), Options{Now: now})
+	want := map[string]string{"S-0001": "claude-opus-5-5", "S-0002": "claude-haiku-4-5", "S-0003": "(none)", "S-0004": "(none)"}
+	for _, m := range rep.Items {
+		if w, ok := want[m.ID]; ok && m.Model != w {
+			t.Errorf("%s model = %q, want %q", m.ID, m.Model, w)
+		}
+	}
+	data, err := json.Marshal(rep.Items[2])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"model":"(none)"`) {
+		t.Errorf("S-0003 json lacks its model: %s", data)
+	}
+}
+
 // S-0205: the absolute errors of the stories done in the window, in all, by
 // nature, and by model, with (none) for an agent without a model.
 func TestForecastsSpreadTheAbsoluteErrorsOfItemsDoneInTheWindow(t *testing.T) {

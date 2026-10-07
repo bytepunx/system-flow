@@ -38,6 +38,10 @@ const noModel = "(none)"
 // deriveForecast sets the item's forecast and its errors, and the error of its
 // estimate in seconds, from the cycle time and estimate already derived.
 func deriveForecast(m *ItemMetrics, it *workitem.Item, completed time.Time) {
+	m.Model = noModel
+	if it.Agent != nil && it.Agent.Model != "" {
+		m.Model = it.Agent.Model
+	}
 	if m.CycleTime != nil && m.Estimate != nil {
 		e := *m.CycleTime - *m.Estimate
 		m.EstErrorSeconds = &e
@@ -66,13 +70,9 @@ func forecasts(items []*workitem.Item, per map[string]ItemMetrics, inWindow func
 			continue
 		}
 		m := per[it.ID]
-		model := noModel
-		if it.Agent != nil && it.Agent.Model != "" {
-			model = it.Agent.Model
-		}
-		forecast.add(m.ForecastError, it.Nature, model)
-		delivery.add(m.DeliveryError, it.Nature, model)
-		estimate.add(m.EstErrorSeconds, it.Nature, model)
+		forecast.add(m.ForecastError, it.Nature, m.Model)
+		delivery.add(m.DeliveryError, it.Nature, m.Model)
+		estimate.add(m.EstErrorSeconds, it.Nature, m.Model)
 	}
 	return Forecasts{Forecast: forecast.stats(), Delivery: delivery.stats(), Estimate: estimate.stats()}
 }

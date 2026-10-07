@@ -68,6 +68,9 @@ type ItemMetrics struct {
 	Forecast      *float64 `json:"forecast_seconds,omitempty"`
 	ForecastError *float64 `json:"forecast_error_seconds,omitempty"`
 	DeliveryError *float64 `json:"delivery_error_seconds,omitempty"`
+	// Model is its agent's model, (none) without one: the model its errors
+	// are grouped under in Forecasts (ADR-0111).
+	Model string `json:"model"`
 	// CostOfDelay is its value per week, and CostIncurred what its time in
 	// backlog and ready cost at that value (S-0205).
 	CostOfDelay  *float64 `json:"cost_of_delay,omitempty"`

@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -165,8 +165,9 @@ The planner's `forecast` and the human's `estimate` against what happened ([ADR-
 | `forecast_error_seconds` | Cycle time minus `forecast.duration` |
 | `delivery_error_seconds` | `completed` minus `forecast.delivery` |
 | `estimate_error_seconds` | Cycle time minus `estimate`. `estimate_error` stays beside it, the same over the estimate |
+| `model` | `agent.model`, `(none)` without an agent or a model, on every item ([ADR-0111](../adrs/0111-flai-stats-gives-each-item-the-model-its-forecasts-are-grouped-under.md)) |
 
-`forecasts` has `forecast`, `delivery`, and `estimate`, each over the items with that error: `count`, `p50_seconds`, and `p85_seconds` of the absolute error, and the same per nature under `by_nature` and per story agent model (`agent.model`, `(none)` without one) under `by_model`. A set with no items has `count` 0 and no percentiles.
+`forecasts` has `forecast`, `delivery`, and `estimate`, each over the items with that error: `count`, `p50_seconds`, and `p85_seconds` of the absolute error, and the same per nature under `by_nature` and per story agent model, the item's `model`, under `by_model`. A set with no items has `count` 0 and no percentiles.
 
 ### Cost of delay
 
