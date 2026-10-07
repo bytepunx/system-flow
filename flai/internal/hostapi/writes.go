@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -303,7 +304,8 @@ const ActionDashboard = "dashboard"
 
 // ActionChecks is the host action that runs the commands named in the
 // manifest or the host's configuration, in a story's worktree, and reports
-// the outcome (S-0082).
+// the outcome (S-0082); since S-0273 also the manifest's test tiers, through
+// flai test.
 const ActionChecks = "checks"
 
 // ActionHost is the host action that has flai host start, stop, or restart
@@ -344,7 +346,7 @@ var Actions = map[string]string{
 	ActionAutoApprove: "has flai's MCP tool permission_prompt allow, without asking you, a flai serve agent's Edit or Write of a file in a .claude/ folder (its settings, hooks, and agent definitions) in its own in-progress story's worktree, which Claude Code run headless refuses without a person's approval, and lets that story's sub-agents make those writes too, which flai guard otherwise refuses them; off, permission_prompt asks the story's owner on a thread and waits for allow. It is the operator's shell tool (ADR-0067): no dashboard sees or changes it",
 	ActionAgent:       "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready, the in-progress limit has room, and review is under its limit, start a ready story's agent on demand, start or queue a new one for a story whose agent dropped or failed, start one to commit what a story in review left uncommitted in its worktree, and stop a story's agent, ending its process and everything it started; whoever can move a story to ready or press Start agent, Retry, Have an agent commit them, or Stop, a holder of the dashboard token included, then starts or stops it",
 	ActionDashboard:   "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
-	ActionChecks:      "run the commands named in flai serve checks set or the manifest's checks:, in a story's worktree, on this host, and cancel a run; whoever can open the review page then decides what runs there",
+	ActionChecks:      "run the commands named in flai serve checks set or the manifest's checks:, and the test tiers the manifest's tests: declare through flai test, in a story's worktree or the main checkout, on this host, and cancel a checks run; whoever can open the review page then decides what runs there",
 	ActionHost:        "have flai host start, stop, or restart flai serve and the MCP servers of every project on this host, and download the newest flai release with your GitHub credentials, install it over the flai on this host, and restart everything on it",
 	ActionSettings:    "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
 	ActionPlan:        "start the planner, with the project's planning agent (planning.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for an epic or a story when you press Plan or run flai plan; it writes work items and threads through flai and moves nothing past backlog; a holder of the dashboard token can then start it for any epic or story not done or cancelled",
@@ -438,8 +440,17 @@ type spec struct {
 	about func(raw json.RawMessage) (key, root string)
 	// build validates and returns the arguments (without --json) and what goes on standard input.
 	build func(p channel.Project, raw json.RawMessage) (args []string, stdin string, err *channel.Error)
+	// dir, when set, is the folder the command runs in instead of the
+	// project's: test.run's story worktree (S-0273). It is asked once build
+	// has accepted the params, before the host action is.
+	dir func(p channel.Project, raw json.RawMessage) (string, *channel.Error)
 	// exits maps exit codes that carry a payload on standard output to error codes.
 	exits map[int]int
+	// answers are exit codes besides 0 whose JSON object on standard output
+	// is the answer, not an error: flai test's 1, a tier that failed
+	// (S-0273). Without one on standard output the exit is the error it
+	// would otherwise be.
+	answers []int
 	// judge, when set, reads a successful answer and may refuse it after all:
 	// item.finalize refuses a story flai edit left unchanged, which was not a
 	// draft (S-0201).
@@ -1563,6 +1574,15 @@ func itemSpecs() map[string]spec {
 			}
 			return []string{"checks", "cancel", in.ID}, "", nil
 		}},
+		// test.run: flai test, the project's test and lint tiers for paths,
+		// in a story's worktree or the main checkout (S-0273), under the same
+		// host action as checks.run, since it too runs the project's commands
+		// on the host. It is detached and streams progress as checks.run is;
+		// flai test has no time limit of its own, so the ceiling is the
+		// detach timeout. A tier that failed (exit 1) is an answer; exit 2,
+		// flai test unable to answer, is an error with flai's words.
+		"test.run": {action: ActionChecks, progress: true, describe: describeTestRun, detachTimeout: 2 * time.Hour,
+			dir: testDir, answers: []int{1}, judge: testResult, build: testArgs},
 		// agent.restart: a new agent for a story whose agent dropped or
 		// failed (S-0116, ADR-0043); flai serve agent restart judges whether
 		// it may, and says why not.
@@ -1743,6 +1763,126 @@ func describeChecksRun(res any, err *channel.Error) (outcome, detail string) {
 	return "done", said.Story + ": " + said.Outcome
 }
 
+// testRun is what test.run is asked: the item whose worktree the tiers run
+// in, none for the main checkout, and flai test's own arguments.
+type testRun struct {
+	ID    string   `json:"id"`
+	Paths []string `json:"paths"`
+	All   bool     `json:"all"`
+	Max   int      `json:"max"`
+}
+
+// testArgs is test.run's command line, before --json: flai test with --all
+// and --max when given, and the paths after --. A path is relative to the
+// checkout's root and stays inside it; flai test refuses one that is not there.
+func testArgs(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[testRun](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	if in.ID != "" {
+		if e := needID(in.ID); e != nil {
+			return nil, "", e
+		}
+	}
+	if in.Max < 0 {
+		return nil, "", bad("max %d is not a number of findings; give 1 or more, or leave it out for %d", in.Max, verify.DefaultMax)
+	}
+	args := []string{"test"}
+	if in.All {
+		args = append(args, "--all")
+	}
+	if in.Max > 0 {
+		args = append(args, "--max="+strconv.Itoa(in.Max))
+	}
+	if len(in.Paths) > 0 {
+		args = append(args, "--")
+	}
+	for _, p := range in.Paths {
+		p = strings.TrimSpace(p)
+		switch {
+		case strings.ContainsAny(p, "\x00\n\r"):
+			return nil, "", bad("%q in paths holds a line break or NUL", p)
+		case !filepath.IsLocal(p):
+			return nil, "", bad("%q in paths is not a file or folder inside the checkout; give it relative to the repository's root, such as flai/internal/verify", p)
+		}
+		args = append(args, filepath.ToSlash(p))
+	}
+	return args, "", nil
+}
+
+// testDir is the checkout test.run runs in: the worktree of the item named,
+// which must exist, or the project's main checkout, as the MCP tool test's is.
+func testDir(p channel.Project, raw json.RawMessage) (string, *channel.Error) {
+	in, e := decode[testRun](raw)
+	if e != nil {
+		return "", e
+	}
+	if in.ID == "" {
+		return p.Root, nil
+	}
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		return "", failed(err)
+	}
+	it, err := repo.Get(in.ID)
+	if errors.Is(err, workitem.ErrNotFound) {
+		return "", &channel.Error{Code: NotFound, Message: fmt.Sprintf("%s is not a work item here; name a story with a worktree, or leave id out to run in the main checkout", in.ID)}
+	}
+	if err != nil {
+		return "", failed(err)
+	}
+	wt := repo.WorktreePath(it.ID)
+	if st, err := os.Stat(wt); err != nil || !st.IsDir() {
+		return "", bad("%s has no worktree; open it with flai stream open %s on the host, or leave id out to run in the main checkout", it.ID, it.ID)
+	}
+	return wt, nil
+}
+
+// testResult refuses an answer of flai test's that is not its result, an
+// object: flai test --json prints one whenever it answers.
+func testResult(w Written) *channel.Error {
+	if !isObject(w.Data) {
+		return &channel.Error{Code: channel.CodeInternal, Message: "flai test answered without its result on standard output; run flai test --json in the checkout on the host to see why"}
+	}
+	return nil
+}
+
+// isObject reports whether out is a JSON object.
+func isObject(out []byte) bool {
+	out = bytes.TrimSpace(out)
+	return len(out) > 0 && out[0] == '{' && json.Valid(out)
+}
+
+// answered reads an exit the spec counts as an answer as success, when its
+// standard output holds the answer.
+func answered(ran Ran, exits []int) Ran {
+	if ran.Exit != 0 && slices.Contains(exits, ran.Exit) && isObject(ran.Stdout) {
+		ran.Exit = 0
+	}
+	return ran
+}
+
+// describeTestRun reads flai test --json's result for the journal: passed,
+// or the tier that failed.
+func describeTestRun(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said verify.Result
+	_ = json.Unmarshal(w.Data, &said)
+	if said.Passed {
+		return "done", "passed"
+	}
+	for _, t := range said.Tiers {
+		if t.State == verify.Failed {
+			return "done", "the tier " + t.Name + " failed"
+		}
+	}
+	return "done", "failed"
+}
+
 // describeHost reads flai host upgrade's --json shape for the journal; a
 // process action says what was asked (its say).
 func describeHost(res any, err *channel.Error) (outcome, detail string) {
@@ -1872,6 +2012,12 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 			if e != nil {
 				return nil, e
 			}
+			dir := p.Root
+			if sp.dir != nil {
+				if dir, e = sp.dir(p, raw); e != nil {
+					return nil, e
+				}
+			}
 			key := ""
 			if !sp.reads {
 				var id struct {
@@ -1923,7 +2069,7 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 					return repeated(id.RequestID, was)
 				}
 			}
-			r := Run{Dir: p.Root, Args: withJSON(args), Stdin: stdin}
+			r := Run{Dir: dir, Args: withJSON(args), Stdin: stdin}
 			if sp.progress {
 				r.OnEvent = func(ev map[string]any) { channel.Progress(ctx, ev) }
 			}
@@ -1936,7 +2082,7 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 			done := perf.Track(ctx, perf.Exec("flai", args))
 			ran, err := run(execCtx, r)
 			done()
-			res, rerr := outcome(ran, err, sp.exits)
+			res, rerr := outcome(answered(ran, sp.answers), err, sp.exits)
 			if w, ok := res.(Written); ok && rerr == nil && sp.judge != nil {
 				if e := sp.judge(w); e != nil {
 					res, rerr = nil, e

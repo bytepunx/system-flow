@@ -65,6 +65,7 @@ var good = map[string]struct {
 	"checks.tail":   {`{"id":"S-0001","from":128}`, "checks tail S-0001 --from=128 --wait=20 --json", ""},
 	"checks.run":    {`{"id":"S-0001",` + rid + `}`, "checks run S-0001 --json", ""},
 	"checks.cancel": {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
+	"test.run":      {`{"paths":["flai/internal/verify"," docs "],"all":true,"max":3,` + rid + `}`, "test --all --max=3 --json -- flai/internal/verify docs", ""},
 	"agent.restart": {`{"id":"S-0001",` + rid + `}`, "serve agent restart S-0001 --json", ""},
 	"agent.start":   {`{"id":"S-0001",` + rid + `}`, "serve agent start S-0001 --json", ""},
 	"agent.commit":  {`{"id":"S-0001",` + rid + `}`, "serve agent commit S-0001 --json", ""},
@@ -173,6 +174,8 @@ var refused = map[string][]string{
 	"checks.tail":   {`{"id":"S-0001","from":-1}`, `{"id":"--help","from":0}`},
 	"checks.run":    {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
 	"checks.cancel": {`{"id":"--help",` + rid + `}`, `{"id":"S-0001"}`},
+	"test.run": {`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"paths":["../etc"],` + rid + `}`, `{"paths":["/etc"],` + rid + `}`,
+		`{"paths":["a\nb"],` + rid + `}`, `{"paths":[""],` + rid + `}`, `{"paths":"flai",` + rid + `}`, `{"max":-1,` + rid + `}`, `{"paths":["flai"]}`},
 	"agent.restart": {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.start":   {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
 	"agent.commit":  {`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001"}`},
@@ -1287,6 +1290,95 @@ func TestChecksHostActionJournalEntry(t *testing.T) {
 	}
 }
 
+// S-0273: test.run runs flai test --json in a story's worktree under the
+// checks host action, and answers its result whether the tiers passed or a
+// tier failed; flai test unable to answer is an error with flai's words.
+func TestTestRunAnswersFlaiTestsResultInAStorysWorktree(t *testing.T) {
+	p := withDocs(t) // S-0001 and T-0001 are in the fixture
+	worktree := filepath.Join(p.Root, ".flai-cache", "worktrees", "S-0001")
+	if err := os.MkdirAll(worktree, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var journal []Entry
+	on := false
+	host := Host{
+		Enabled: func(action, root string) bool { return on && action == ActionChecks && root == p.Root },
+		Record:  func(e Entry) { journal = append(journal, e) },
+	}
+	const params = `{"id":"S-0001","paths":["flai/internal/verify"],` + rid + `}`
+	call := func(params string, ran Ran) (*recorder, any, *channel.Error) {
+		rec := &recorder{ran: ran}
+		res, e := writeMethods(rec.run, time.Now, host)["test.run"](context.Background(), p, json.RawMessage(params))
+		return rec, res, e
+	}
+	fatal := func(msg string) []map[string]any { return []map[string]any{{"level": "FATAL", "err": msg}} }
+
+	if rec, _, e := call(params, Ran{}); e == nil || e.Code != Disabled || len(rec.runs) != 0 || !strings.Contains(e.Message, "flai serve enable checks") {
+		t.Fatalf("with checks off: %+v, ran %d", e, len(rec.runs))
+	}
+	on = true
+
+	passed := `{"passed":true,"paths":["flai/internal/verify/run.go"],"tiers":[{"name":"go","command":["go","test","./internal/verify"],"state":"passed","exit_code":0,"duration_ms":900}]}`
+	rec, res, e := call(params, Ran{Stdout: []byte(passed)})
+	if e != nil {
+		t.Fatalf("a pass: %+v", e)
+	}
+	if got := strings.Join(rec.runs[0].Args, " "); got != "test --json -- flai/internal/verify" || rec.runs[0].Dir != worktree {
+		t.Errorf("ran %q in %s, want flai test in %s", got, rec.runs[0].Dir, worktree)
+	}
+	if w := res.(Written); string(w.Data) != passed {
+		t.Errorf("a pass answered %s", w.Data)
+	}
+
+	failedTier := `{"passed":false,"paths":["flai/internal/verify/run.go"],"tiers":[{"name":"go","command":["go","test","./internal/verify"],"state":"failed","exit_code":1,"duration_ms":900,"findings":[{"name":"TestRun","path":"flai/internal/verify/run_test.go","line":12,"message":"got 1, want 2"}]}]}`
+	_, res, e = call(params, Ran{Exit: 1, Stdout: []byte(failedTier)})
+	if e != nil {
+		t.Fatalf("a tier that failed is an answer, not an error: %+v", e)
+	}
+	if w := res.(Written); string(w.Data) != failedTier {
+		t.Errorf("a failure answered %s", w.Data)
+	}
+
+	if rec, _, e := call(`{`+rid+`}`, Ran{Stdout: []byte(passed)}); e != nil || rec.runs[0].Dir != p.Root || strings.Join(rec.runs[0].Args, " ") != "test --json" {
+		t.Errorf("with no id, the main checkout: %+v, %+v", e, rec.runs)
+	}
+
+	said := "flai/x is not a file or folder; name one in the checkout at " + worktree + ", relative to the working directory"
+	if _, _, e := call(params, Ran{Exit: 2, Events: fatal(said)}); e == nil || e.Code != channel.CodeInternal || e.Message != said {
+		t.Errorf("flai test unable to answer: %+v", e)
+	}
+	if _, _, e := call(params, Ran{Exit: 1, Events: fatal("open system-flow.yaml: permission denied")}); e == nil || e.Message != "open system-flow.yaml: permission denied" {
+		t.Errorf("exit 1 without a result is flai's error: %+v", e)
+	}
+	if _, _, e := call(params, Ran{Exit: 1, Stdout: []byte("not json"), Events: fatal("boom")}); e == nil || e.Message != "boom" {
+		t.Errorf("exit 1 with output that is not the result: %+v", e)
+	}
+	if _, _, e := call(params, Ran{}); e == nil || !strings.Contains(e.Message, "without its result") {
+		t.Errorf("exit 0 without a result: %+v", e)
+	}
+
+	if rec, _, e := call(`{"id":"S-9999",`+rid+`}`, Ran{}); e == nil || e.Code != NotFound || len(rec.runs) != 0 {
+		t.Errorf("an item that is not there: %+v", e)
+	}
+	if rec, _, e := call(`{"id":"T-0001",`+rid+`}`, Ran{}); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "has no worktree") || len(rec.runs) != 0 {
+		t.Errorf("an item with no worktree: %+v", e)
+	}
+
+	want := []struct{ outcome, detail string }{
+		{"disabled", ""}, {"done", "passed"}, {"done", "the tier go failed"}, {"done", "passed"},
+		{"failed", said}, {"failed", "open system-flow.yaml: permission denied"}, {"failed", "boom"},
+		{"failed", "flai test answered without its result on standard output; run flai test --json in the checkout on the host to see why"},
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Outcome != w.outcome || got.Detail != w.detail || got.Action != ActionChecks || got.Method != "test.run" {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
+	}
+}
+
 // S-0081: dashboard.restart, dashboard.upgrade, and dashboard.stop can each
 // end the very WebSocket connection their own request arrived on (a restart
 // or a successful upgrade stops the container answering it; a stop does
@@ -1299,7 +1391,7 @@ func TestChecksHostActionJournalEntry(t *testing.T) {
 // context instead.
 func TestADetachedWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 	p := withDocs(t)
-	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop", "checks.run", "host.process", "host.upgrade"} {
+	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop", "checks.run", "test.run", "host.process", "host.upgrade"} {
 		t.Run(name, func(t *testing.T) {
 			parentCtx, cancelParent := context.WithCancel(context.Background())
 			t.Cleanup(cancelParent)
