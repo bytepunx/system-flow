@@ -4,9 +4,10 @@
 # commit, stopping at the first step that fails (I-0012).
 # Usage: scripts/close-out.sh S-nnnn [git commit options: -m, or -F with a file
 # outside the worktree, which git add -A would otherwise commit]
-# The cycle before it (git.md): commit each task when it is done, run
-# flai stream sync and resolve what it reports, run the task's tests, and
-# commit any fix; then commit what is outstanding and sync again before this.
+# The cycle before it (git.md): close each task when it is done with
+# flai task done, which commits, syncs, and checks, resolve what a stopped
+# sync lists, run the task's tests, and close any fix the same way; then
+# commit what is outstanding and sync again before this.
 # Run it in the story's worktree. The tests follow what the branch changes
 # against main (CLOSE_OUT_BASE): flai/ runs flai-test.sh (lint, vitest, the
 # full Go tests once, and smoke, which holds the check and the markdown lint);

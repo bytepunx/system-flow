@@ -4,9 +4,10 @@
 # then the commit, stopping at the first step that fails.
 # Usage: scripts/close-out.sh S-nnnn [git commit options: -m, or -F with a file
 # outside the worktree, which git add -A would otherwise commit]
-# The cycle before it (git.md): commit each task when it is done, run
-# flai stream sync and resolve what it reports, run the task's tests, and
-# commit any fix; then commit what is outstanding and sync again before this.
+# The cycle before it (git.md): close each task when it is done with
+# flai task done, which commits, syncs, and checks, resolve what a stopped
+# sync lists, run the task's tests, and close any fix the same way; then
+# commit what is outstanding and sync again before this.
 # Run it in the story's worktree. Add this project's other checks as steps
 # of their own; keep each one gated on its exit code.
 set -eu
