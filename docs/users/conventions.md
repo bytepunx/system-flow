@@ -391,4 +391,4 @@ The dates and times in the files below are examples. Write the real time, in UTC
     flai check --strict
     ```
 
-From here, let `flai` keep the files true: `flai move S-0001 in-progress` pulls the story, `flai stream open S-0001` opens its narrative and branch, `flai task new --story S-0001 "..."` writes its tasks, and `flai board` shows where everything stands. Every command: [flai.md](flai.md).
+From here, let `flai` keep the files true: `flai story start S-0001` pulls the story, opening its narrative and branch and priming the session, `flai task new --story S-0001 "..."` writes its tasks, and `flai board` shows where everything stands. Every command: [flai.md](flai.md).
