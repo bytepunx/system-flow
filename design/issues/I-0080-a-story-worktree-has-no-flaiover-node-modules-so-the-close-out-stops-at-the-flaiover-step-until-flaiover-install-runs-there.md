@@ -3,11 +3,11 @@ id: I-0080
 title: A story worktree has no flaiover/node_modules, so the close-out stops at the flaiover step until flaiover-install runs there
 class: efficiency
 status: open
-count: 2
-cost: 3m
+count: 3
+cost: 2m
 first_reported: 2026-10-05T07:07:27Z
-last_reported: 2026-10-06T19:09:21Z
-updated: 2026-10-06T19:09:21Z
+last_reported: 2026-10-07T00:43:51Z
+updated: 2026-10-07T00:43:51Z
 ---
 
 # I-0080 A story worktree has no flaiover/node_modules, so the close-out stops at the flaiover step until flaiover-install runs there
@@ -24,6 +24,10 @@ S-0217's first close-out stopped at flaiover lint, types, and unit tests with pr
 ### 2026-10-06T19:09:21Z
 Story: S-0295.
 S-0295's worktree had no flaiover/node_modules before T-1032; make flaiover-install fixed it in 3s
+
+### 2026-10-07T00:43:51Z
+Story: S-0228.
+S-0228's worktree had no flaiover/node_modules; ran scripts/flaiover-install.sh there before the first vitest run
 
 ## Remediation
 
