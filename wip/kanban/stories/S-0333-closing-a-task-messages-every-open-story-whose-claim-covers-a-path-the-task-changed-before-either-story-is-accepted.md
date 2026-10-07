@@ -3,12 +3,18 @@ id: S-0333
 type: story
 nature: feature
 title: Closing a task messages every open story whose claim covers a path the task changed, before either story is accepted
-status: backlog
+status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:10:50Z
-updated: 2026-10-07T21:42:43Z
-transitions: []
+updated: 2026-10-07T22:09:26Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:43:11Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T22:09:26Z
+    by: agent-S-0333
 tags: [flai, template]
 topics: [cli, git, conventions, template]
 touches: [flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -24,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 300
+      seconds: 305
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 45
-          output: 819
-          cache_read: 3661515
-          cache_write: 10356
-          cost: 0.9048
+          input: 49
+          output: 875
+          cache_read: 4351899
+          cache_write: 13924
+          cost: 1.0758
 cost_of_delay:
   value: 113.7
   by: planner-E-0018

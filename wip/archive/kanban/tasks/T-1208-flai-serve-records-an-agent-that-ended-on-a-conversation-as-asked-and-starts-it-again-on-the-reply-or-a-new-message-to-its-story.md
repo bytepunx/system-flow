@@ -3,15 +3,35 @@ id: T-1208
 type: task
 nature: improvement
 title: flai serve records an agent that ended on a conversation as asked, and starts it again on the reply or a new message to its story
-status: backlog
+status: done
 parent: S-0335
 owner: alex
 created: 2026-10-07T20:16:36Z
-updated: 2026-10-07T20:16:36Z
-transitions: []
+updated: 2026-10-07T21:58:19Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:45:15Z
+    by: agent-S-0335
+  - to: in-progress
+    at: 2026-10-07T21:45:16Z
+    by: agent-S-0335
+  - to: done
+    at: 2026-10-07T21:58:19Z
+    by: agent-S-0335
 stream: S-0335
 tags: [flai]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/commit.go, flai/internal/serve/commit_test.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/serve/stop.go]
+usage:
+  source: log
+  seconds: 783
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 101
+      output: 40990
+      cache_read: 5618280
+      cache_write: 181447
+      cost: 3.06
 ---
 # T-1208 flai serve records an agent that ended on a conversation as asked, and starts it again on the reply or a new message to its story
 

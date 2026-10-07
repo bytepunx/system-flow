@@ -17,20 +17,20 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 4544
+  seconds: 6120
   turns:
     - day: 2026-10-07
-      ceremony: 3
+      ceremony: 7
       test_runs: 1
-      hand_edits: 5
-      work: 115
+      hand_edits: 7
+      work: 171
   models:
     - model: claude-opus-5-5
-      input: 716
-      output: 287686
-      cache_read: 42665040
-      cache_write: 1459561
-      cost: 23.0943
+      input: 1012
+      output: 407386
+      cache_read: 59071699
+      cache_write: 1989427
+      cost: 32.0302
   strategic:
     - kind: planner
       seconds: 1011
@@ -49,15 +49,15 @@ usage:
           cache_write: 339947
           cost: 35.112
     - kind: orchestrator
-      seconds: 5853
+      seconds: 5886
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 450
-          output: 8076
-          cache_read: 42324388
-          cache_write: 117619
-          cost: 10.4581
+          input: 466
+          output: 8315
+          cache_read: 44854219
+          cache_write: 128231
+          cost: 11.0841
         - model: claude-sonnet-5-5
           input: 38
           output: 229

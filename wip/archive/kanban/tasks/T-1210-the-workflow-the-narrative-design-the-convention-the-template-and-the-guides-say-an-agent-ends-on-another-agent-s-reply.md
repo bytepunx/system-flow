@@ -3,16 +3,36 @@ id: T-1210
 type: task
 nature: improvement
 title: The workflow, the narrative design, the convention, the template, and the guides say an agent ends on another agent's reply
-status: backlog
+status: done
 parent: S-0335
 owner: alex
 created: 2026-10-07T20:16:45Z
-updated: 2026-10-07T20:16:45Z
-transitions: []
+updated: 2026-10-07T22:02:09Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:59:20Z
+    by: agent-S-0335
+  - to: in-progress
+    at: 2026-10-07T21:59:21Z
+    by: agent-S-0335
+  - to: done
+    at: 2026-10-07T22:02:09Z
+    by: agent-S-0335
 stream: S-0335
 tags: [flai, template]
 touches: [design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md]
 after: [T-1207, T-1209]
+usage:
+  source: log
+  seconds: 168
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 21207
+      cache_read: 2906780
+      cache_write: 93877
+      cost: 1.5832
 ---
 # T-1210 The workflow, the narrative design, the convention, the template, and the guides say an agent ends on another agent's reply
 

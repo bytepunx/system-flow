@@ -3,15 +3,27 @@ id: S-0335
 type: story
 nature: improvement
 title: A story's agent that waits only on another agent's reply ends, and flai serve starts it again when the reply or a new message to its story comes
-status: backlog
+status: done
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:14Z
-updated: 2026-10-07T21:42:43Z
-transitions: []
+updated: 2026-10-07T22:10:05Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:43:11Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T21:43:16Z
+    by: agent-S-0335
+  - to: review
+    at: 2026-10-07T22:09:19Z
+    by: agent-S-0335
+  - to: done
+    at: 2026-10-07T22:10:05Z
+    by: orchestrator
 tags: [flai, flaiover, template]
 topics: [cli, dashboard, conventions, template]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/commit.go, flai/internal/serve/commit_test.go, flai/internal/serve/restart.go, flai/internal/serve/start.go, flai/internal/serve/stop.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flaiover/src/lib/activity.ts]
 after: [S-0331]
 agent:
   harness: claude-code
@@ -19,20 +31,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1576
+  turns:
+    - day: 2026-10-07
+      ceremony: 4
+      hand_edits: 2
+      work: 56
+  models:
+    - model: claude-opus-5-5
+      input: 296
+      output: 119700
+      cache_read: 16406659
+      cache_write: 529866
+      cost: 8.9359
   strategic:
     - kind: orchestrator
-      seconds: 300
+      seconds: 303
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 45
-          output: 818
-          cache_read: 3661515
-          cache_write: 10355
-          cost: 0.9048
+          input: 47
+          output: 826
+          cache_read: 3872358
+          cache_write: 12109
+          cost: 0.9572
 cost_of_delay:
   value: 93.02
   by: planner-E-0018
@@ -55,11 +78,11 @@ Make a message to another agent cost no more than a question to the operator. Si
 
 ## Acceptance criteria
 
-- [ ] `wait_for_events` answers `end: true` with a `why` naming the conversations when flai serve started the agent for its story, a conversation of its story awaits the other story's reply, and no task of the story is in progress, as it does for a question to the operator.
-- [ ] flai serve records such a run `asked`, and starts it again in its session when the other story replies, as it does on a thread's answer.
-- [ ] flai serve starts again, in its session, an agent that ended `asked` when a new message to its story arrives, even while its question to the operator is unanswered.
-- [ ] `agent.status` and the dashboard's agent state say the agent waits on a story's agent, naming the story, rather than on the operator.
-- [ ] `design/system/workflow.md` § Branches and collisions, `agent-narrative.md`, and `work-management.md` in both copies describe it.
+- [x] `wait_for_events` answers `end: true` with a `why` naming the conversations when flai serve started the agent for its story, a conversation of its story awaits the other story's reply, and no task of the story is in progress, as it does for a question to the operator.
+- [x] flai serve records such a run `asked`, and starts it again in its session when the other story replies, as it does on a thread's answer.
+- [x] flai serve starts again, in its session, an agent that ended `asked` when a new message to its story arrives, even while its question to the operator is unanswered.
+- [x] `agent.status` and the dashboard's agent state say the agent waits on a story's agent, naming the story, rather than on the operator.
+- [x] `design/system/workflow.md` § Branches and collisions, `agent-narrative.md`, and `work-management.md` in both copies describe it.
 
 ## Tasks
 
@@ -97,3 +120,15 @@ Forecast 36m, delivery 2026-10-08T10:04Z.
 - Raised by 11m to the feature rate, 114 s per unit: it adds a restart trigger to flai serve, whose asked runs S-0317 shows are fragile, and a dashboard change. Delivery is shifted by the same 11m.
 
 Cost of delay 93.02 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 36m of 6h27m. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: 372797d957f8ec13dbdc1f6a5c37e8c3e0f3db7e
+- At: 2026-10-07T22:10:05Z
+
+Verdict: all five criteria are met at 372797d9, the branch head; flai verify passed every step there, the branch changes no .claude/ path, and no convention is broken.
+- 1: flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go
+- 2: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/messages/messages.go, flai/internal/harness/harness.go
+- 3: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go
+- 4: flai/internal/serve/agents.go, flaiover/src/lib/activity.ts, flaiover/src/lib/components/StoryAgent.svelte, flaiover/src/lib/components/StoryAgent.svelte.test.ts
+- 5: design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md

@@ -3,15 +3,35 @@ id: T-1207
 type: task
 nature: improvement
 title: wait_for_events tells a story's agent to end when its story awaits only another story's reply
-status: backlog
+status: done
 parent: S-0335
 owner: alex
 created: 2026-10-07T20:16:32Z
-updated: 2026-10-07T20:16:32Z
-transitions: []
+updated: 2026-10-07T21:58:12Z
+transitions:
+  - to: ready
+    at: 2026-10-07T21:45:15Z
+    by: agent-S-0335
+  - to: in-progress
+    at: 2026-10-07T21:45:15Z
+    by: agent-S-0335
+  - to: done
+    at: 2026-10-07T21:58:12Z
+    by: agent-S-0335
 stream: S-0335
 tags: [flai]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go]
+usage:
+  source: log
+  seconds: 777
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 20281
+      cache_read: 2779745
+      cache_write: 89774
+      cost: 1.514
 ---
 # T-1207 wait_for_events tells a story's agent to end when its story awaits only another story's reply
 
