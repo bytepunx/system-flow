@@ -6,7 +6,7 @@ title: golangci-lint fails at once when another story's agent is running it on t
 status: backlog
 owner: alex
 created: 2026-10-07T01:07:14Z
-updated: 2026-10-07T01:07:14Z
+updated: 2026-10-07T02:17:22Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-07T01:07:14Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:17:22Z
 ---
 # S-0308 golangci-lint fails at once when another story's agent is running it on the same host
 
