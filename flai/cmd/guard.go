@@ -42,7 +42,9 @@ ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A
 refusal prints why on standard error and exits 2, which Claude Code hands
 back to the sub-agent. Every word of a command line is looked at, so a
 command run through env, sudo, timeout, xargs, find -exec, or a shell's -c
-is found too. The story's agent's own calls carry no agent_id and pass, save
+is found too. A heredoc's text (cat <<EOF, python3 - <<'EOF') is input, not
+commands, and is not looked at, unless a shell on its line reads it (bash
+<<EOF, cat <<EOF | sh). The story's agent's own calls carry no agent_id and pass, save
 the wait below, as does anything it cannot read: the guard fails open. An
 input whose hook_event_name is neither SubagentStart nor SubagentStop is a
 PreToolUse's, named or not. It is not a shell, and
