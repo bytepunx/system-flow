@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 38.0592
-accrued_seconds: 31091
-tasks_completed: 49
-last_run: 2026-10-07T09:58:57Z
+accrued_cost: 39.9390
+accrued_seconds: 47037
+tasks_completed: 52
+last_run: 2026-10-07T14:24:43Z
 ---
 
 # Orchestrator activity
@@ -354,6 +354,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0216
 - Seconds: 359
 - Cost: 1.2008 USD, estimated
+
+### 2026-10-07T14:14:39Z
+
+- Summary: Published under judgement after the operator accepted S-0214: 1 pending, 106.42 USD/week; flai 1.34.6→1.34.7 (flai/v1.34.7), flaiover 0.37.1→0.38.0 (flaiover/v0.38.0); bundled S-0214; pushed
+- Items: S-0214
+- Seconds: 15342
+- Cost: 1.0089 USD, estimated
+
+### 2026-10-07T14:14:53Z
+
+- Summary: Promoted S-0298 to ready (rank 1, forecast 1h1m, sole flai promote --candidates candidate once S-0214 was accepted) and applied the throughput order. Re-checked the five reviews: each is still blocked by its conflict or decision threads; S-0215's worktree is mid-sync
+- Items: S-0298, S-0215, S-0246, S-0216, S-0279, S-0213
+- Seconds: 14
+- Cost: 0.3438 USD, estimated
+
+### 2026-10-07T14:24:43Z
+
+- Summary: Re-applied the throughput order after the operator moved S-0311 to ready: S-0298 1h1m, then S-0311, which has no forecast duration and goes after
+- Items: S-0298, S-0311
+- Seconds: 590
+- Cost: 0.5271 USD, estimated
 
 ## Refusals
 

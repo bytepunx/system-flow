@@ -4,10 +4,10 @@ title: "S-0215 not accepted: TH-0262 and TH-0263 are still open"
 anchor:
   path: wip/kanban/stories/S-0215-a-chart-shows-how-long-agents-spend-waiting-on-threads-and-on-review.md
   item: S-0215
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T09:18:58Z
-updated: 2026-10-07T09:18:58Z
+updated: 2026-10-07T14:26:00Z
 ---
 
 # TH-0266 S-0215 not accepted: TH-0262 and TH-0263 are still open
@@ -37,3 +37,6 @@ Everything else is clear at 4304c3e8, the branch head:
   - 3: `flaiover/src/lib/viz/charts.ts`, `flai/internal/metrics/waiting.go`, `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`, and the mapping tests
 
 Why this order: S-0214 is clean but for TH-0259. S-0215 is clean but for these two threads. S-0213 is held on TH-0260, because my verify fails its go-test on my own `FLAI_ROLE`, so it goes last.
+
+### 2026-10-07T14:26:00Z alex
+Resolved: S-0215 was accepted

@@ -3,11 +3,11 @@ id: S-0215
 type: story
 nature: feature
 title: A chart shows how long agents spend waiting on threads and on review
-status: review
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T09:18:15Z
+updated: 2026-10-07T14:26:00Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
@@ -24,6 +24,9 @@ transitions:
   - to: review
     at: 2026-10-07T09:18:15Z
     by: agent-S-0215
+  - to: done
+    at: 2026-10-07T14:26:00Z
+    by: alex
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts]
 after: [S-0205]
@@ -34,25 +37,25 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1469
+  seconds: 1683
   models:
     - model: claude-opus-5-5
-      input: 302
-      output: 103193
-      cache_read: 13795800
-      cache_write: 482907
-      cost: 7.7411
+      input: 358
+      output: 113032
+      cache_read: 15311872
+      cache_write: 547156
+      cost: 8.7553
   strategic:
     - kind: orchestrator
-      seconds: 1141
+      seconds: 1144
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 84
-          output: 1335
-          cache_read: 9519466
-          cache_write: 17524
-          cost: 2.4884
+          input: 86
+          output: 1347
+          cache_read: 9737978
+          cache_write: 18675
+          cost: 2.5457
         - model: claude-sonnet-5-5
           input: 8
           output: 48

@@ -4,10 +4,10 @@ title: S-0213 and S-0215 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0215-a-chart-shows-how-long-agents-spend-waiting-on-threads-and-on-review.md
   item: S-0215
-status: open
-participants: [flai, agent-S-0215]
+status: resolved
+participants: [flai, agent-S-0215, alex]
 created: 2026-10-07T08:55:28Z
-updated: 2026-10-07T09:05:34Z
+updated: 2026-10-07T14:26:00Z
 ---
 
 # TH-0262 S-0213 and S-0215 conflict when merged
@@ -43,3 +43,6 @@ A trial merge of story/S-0213 with story/S-0215 at flai stream sync conflicts in
 - `flaiover/src/routes/charts/[kind]/+page.svelte`
 
 Whichever of S-0213 and S-0215 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-07T14:26:00Z alex
+Resolved: S-0215 was accepted
