@@ -146,8 +146,11 @@ already in progress is never continued for you.
 After a clean rebase it trial-merges the branch with the branch of every other
 story in progress or in review (git merge-tree --write-tree, git 2.38 or
 newer), writing nothing to any worktree, and lists each branch it conflicts
-with and the conflicting paths. Generated files are left out, so a pair whose
-only conflict is summary.md counts as clean. Each conflicting pair of stories
+with and the conflicting paths. A pair's conflicts are the paths both branches
+changed since they left the main branch, not what the main branch brought
+since: a path where main has since changed what a branch behind it did is
+that story's own rebase to settle (I-0064). Generated files are left out, so a pair
+whose only conflict is summary.md counts as clean. Each conflicting pair of stories
 has one thread, written by flai on the story that synced, which both stories'
 agents and the designer see in their inboxes; a sync that finds the pair
 merging cleanly again resolves it. It also lists the paths the branch changed since

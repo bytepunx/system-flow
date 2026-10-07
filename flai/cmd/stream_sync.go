@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/exec"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -25,6 +26,11 @@ import (
 // design/issues/summary.md today, are left out of a pair's conflicts: the
 // rebase writes them again when it stops on them alone, so a pair whose only
 // conflict is one merges cleanly as far as the check is concerned (ADR-0098).
+// A pair's conflicts are the paths both stories changed since each left the
+// main branch: the trial merge's base is where the two branches meet, which
+// is the other branch's old base when it is stale, so it also stops where
+// main has since changed what the other did. That is the other story's own
+// rebase to settle, not a conflict between the two (I-0064, S-0251).
 
 // branchCheck is how another open story's branch merges with this one.
 type branchCheck struct {
@@ -47,17 +53,20 @@ type syncChecks struct {
 // checkSync lists the paths story's branch changed since base outside its
 // claim, and trial-merges the branch with the branch of every other story
 // in progress or in review that has one, in ID order. A pair's conflicts
-// leave out the generated files, so a pair that conflicts in them alone is
-// clean (ADR-0098).
+// are the conflicting paths both branches changed since they left base, less
+// the generated files, so a pair that conflicts in them alone, or only where
+// main changed what one of them did, is clean (ADR-0098, I-0064).
 func (a *app) checkSync(repo *workitem.Repo, story *workitem.Item, base string) (syncChecks, error) {
 	out := syncChecks{Branches: []branchCheck{}, Outside: []string{}}
 	items, err := repo.List(false)
 	if err != nil {
 		return out, err
 	}
-	if out.Outside, err = a.outsideClaim(repo, story, items, base); err != nil {
+	mine, err := a.branchChanges(repo.MainRoot, base, storyBranch(story.ID))
+	if err != nil {
 		return out, err
 	}
+	out.Outside = outsideClaim(repo, story, items, mine)
 	var others []*workitem.Item
 	for _, it := range items {
 		if it.Type == workitem.Story && it.ID != story.ID && (it.Status == workitem.InProgress || it.Status == workitem.Review) && a.branchExists(repo.MainRoot, storyBranch(it.ID)) {
@@ -83,7 +92,11 @@ func (a *app) checkSync(repo *workitem.Repo, story *workitem.Item, base string) 
 		if err != nil {
 			return out, fmt.Errorf("trial merge of %s with %s: %w", storyBranch(story.ID), storyBranch(o.ID), err)
 		}
-		conflicts = withoutGenerated(conflicts, generated)
+		theirs, err := a.branchChanges(repo.MainRoot, base, storyBranch(o.ID))
+		if err != nil {
+			return out, err
+		}
+		conflicts = changedByBoth(withoutGenerated(conflicts, generated), mine, theirs)
 		out.Branches = append(out.Branches, branchCheck{Story: o.ID, Status: o.Status, Branch: storyBranch(o.ID), Clean: len(conflicts) == 0, Conflicts: conflicts})
 	}
 	return out, nil
@@ -102,29 +115,54 @@ func withoutGenerated(conflicts, generated []string) []string {
 	return out
 }
 
-// outsideClaim is the paths story's branch changed since it left base that
-// no entry of its claim (ADR-0046, ADR-0096: its touches, a folder narrowed
-// to its tasks' touches inside it, and its open tasks', a component as its
-// path) covers. The wip folder is flai's and is left out.
-func (a *app) outsideClaim(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item, base string) ([]string, error) {
-	diff, err := a.runner.Run(repo.MainRoot, "git", "diff", "--name-only", base+"..."+storyBranch(story.ID))
+// changedByBoth is conflicts less the paths only one of the two branches
+// changed, mine and theirs: those conflict with what main brought, not with
+// each other (I-0064).
+func changedByBoth(conflicts, mine, theirs []string) []string {
+	out := []string{}
+	for _, p := range conflicts {
+		if slices.Contains(mine, p) && slices.Contains(theirs, p) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// branchChanges is the paths branch changed since it left base, from the
+// merge base of the two.
+func (a *app) branchChanges(root, base, branch string) ([]string, error) {
+	diff, err := a.runner.Run(root, "git", "diff", "--name-only", base+"..."+branch)
 	if err != nil {
 		return nil, err
 	}
+	out := []string{}
+	for _, p := range strings.Split(diff, "\n") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+// outsideClaim is the paths of changed, what story's branch changed since it
+// left the main branch, that no entry of its claim (ADR-0046, ADR-0096: its
+// touches, a folder narrowed to its tasks' touches inside it, and its open
+// tasks', a component as its path) covers. The wip folder is flai's and is
+// left out.
+func outsideClaim(repo *workitem.Repo, story *workitem.Item, items []*workitem.Item, changed []string) []string {
 	claim := workitem.NewHolds(items, repo.Manifest.Projects).Claim(story)
 	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/")
 	if wip == "" {
 		wip = "wip"
 	}
 	out := []string{}
-	for _, p := range strings.Split(diff, "\n") {
-		p = strings.TrimSpace(p)
-		if p == "" || coveredBy(p, []string{wip}) || coveredBy(p, claim) {
+	for _, p := range changed {
+		if coveredBy(p, []string{wip}) || coveredBy(p, claim) {
 			continue
 		}
 		out = append(out, p)
 	}
-	return out, nil
+	return out
 }
 
 // coveredBy says whether path is one of entries or lies below one.

@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 ---
 
@@ -2896,7 +2896,7 @@ Conflicts stop the rebase inside the worktree. Each conflicting path is listed o
 
 A stop whose only conflicting path is a generated file, which today is design/issues/summary.md alone, does not wait for you (ADR-0098). Sync writes the file again from the issue files in the worktree at that stop, git adds it, and continues the rebase, until the rebase finishes or stops on another path. A stop where other paths conflict too is left for you, and lists them all, summary.md included; once the others are resolved, flai issue summary run in the worktree writes it. flai accept syncs the same way. A rebase already in progress is never continued for you.
 
-After a clean rebase it trial-merges the branch with the branch of every other story in progress or in review (git merge-tree --write-tree, git 2.38 or newer), writing nothing to any worktree, and lists each branch it conflicts with and the conflicting paths. Generated files are left out, so a pair whose only conflict is summary.md counts as clean. Each conflicting pair of stories has one thread, written by flai on the story that synced, which both stories' agents and the designer see in their inboxes; a sync that finds the pair merging cleanly again resolves it. It also lists the paths the branch changed since the main branch that the story's touches, and its open tasks', do not cover, so that they are widened with flai touches.
+After a clean rebase it trial-merges the branch with the branch of every other story in progress or in review (git merge-tree --write-tree, git 2.38 or newer), writing nothing to any worktree, and lists each branch it conflicts with and the conflicting paths. A pair's conflicts are the paths both branches changed since they left the main branch, not what the main branch brought since: a path where main has since changed what a branch behind it did is that story's own rebase to settle (I-0064). Generated files are left out, so a pair whose only conflict is summary.md counts as clean. Each conflicting pair of stories has one thread, written by flai on the story that synced, which both stories' agents and the designer see in their inboxes; a sync that finds the pair merging cleanly again resolves it. It also lists the paths the branch changed since the main branch that the story's touches, and its open tasks', do not cover, so that they are widened with flai touches.
 
 ### flai task
 

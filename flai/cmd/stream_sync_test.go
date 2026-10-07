@@ -709,6 +709,106 @@ func TestSyncTrialMergeReportsOtherConflictsWithoutTheIssueSummary(t *testing.T)
 	}
 }
 
+// staleStories makes S-0001, whose branch changes docs/guide.md and then
+// falls behind main, which changes it too, and S-0002, opened after main's
+// change, whose branch changes design/note.md (I-0064). Each story then
+// commits its side of files. It returns the main checkout and S-0002's
+// worktree.
+func staleStories(t *testing.T, files map[string][2]string) (root, a string) {
+	t.Helper()
+	root = syncProject(t)
+	b := openSyncStory(t, root, 1, "docs")
+	commitIn(t, b, "docs/guide.md", "stale branch's line\n")
+	_ = os.WriteFile(filepath.Join(root, "docs", "guide.md"), []byte("main's line\n"), 0o644)
+	gitIn(t, root, "add", "docs/guide.md")
+	gitIn(t, root, "commit", "-q", "-m", "docs: main's guide")
+	a = openSyncStory(t, root, 2, "design,docs")
+	commitIn(t, a, "design/note.md", "fresh branch's note\n")
+	for p, c := range files {
+		commitIn(t, b, p, c[0])
+		commitIn(t, a, p, c[1])
+	}
+	return root, a
+}
+
+// I-0064: a stale branch's change to a path main has changed since conflicts
+// with main, not with a fresh branch that carries main's change and leaves
+// the path alone. The trial merge stopped on it and blamed the fresh story's
+// sync; a pair's conflicts are the paths both changed, so the pair is clean.
+func TestSyncTrialMergeLeavesOutWhatMainBrought(t *testing.T) {
+	root, a := staleStories(t, nil)
+	// git itself reports the pair as conflicting in main's change
+	if raw, err := (&app{runner: execx.System{}}).trialMerge(root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md" {
+		t.Fatalf("git's trial merge: %v %q", err, raw)
+	}
+
+	out, branches, open := trialSync(t, root, a)
+	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001 (in progress)\n") || strings.Contains(out, "conflicts with") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	if len(branches) != 1 || branches[0].Story != "S-0001" || !branches[0].Clean || branches[0].Conflicts == nil || len(branches[0].Conflicts) != 0 || branches[0].Thread != "" {
+		t.Errorf("branches: %+v", branches)
+	}
+	if len(open) != 0 {
+		t.Errorf("a conflict thread was opened: %+v", open)
+	}
+}
+
+// A path both branches change still conflicts beside one main brought, and
+// is the only one the sync and the pair's thread name.
+func TestSyncTrialMergeReportsWhatBothChangedBesideWhatMainBrought(t *testing.T) {
+	root, a := staleStories(t, map[string][2]string{"docs/more.md": {"stale branch's more\n", "fresh branch's more\n"}})
+	if raw, err := (&app{runner: execx.System{}}).trialMerge(root, "story/S-0002", "story/S-0001"); err != nil || strings.Join(raw, ",") != "docs/guide.md,docs/more.md" {
+		t.Fatalf("git's trial merge: %v %q", err, raw)
+	}
+
+	out, branches, open := trialSync(t, root, a)
+	if !strings.Contains(out, "story/S-0002 conflicts with story/S-0001 (in progress) in docs/more.md; see TH-0001\n") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	if len(branches) != 1 || branches[0].Clean || strings.Join(branches[0].Conflicts, ",") != "docs/more.md" || branches[0].Thread != "TH-0001" {
+		t.Errorf("branches: %+v", branches)
+	}
+	if len(open) != 1 {
+		t.Fatalf("conflict threads: %+v", open)
+	}
+	for _, e := range open[0].Entries() {
+		if !strings.Contains(e.Text, "- `docs/more.md`\n") || strings.Contains(e.Text, "guide.md") {
+			t.Errorf("thread entry: %s", e.Text)
+		}
+	}
+}
+
+// A pair's thread that named only what main brought, as a sync before the
+// fix wrote it, is resolved at the next sync, which finds the pair clean.
+func TestSyncResolvesAThreadOnWhatMainBrought(t *testing.T) {
+	root, a := staleStories(t, nil)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	th, err := threads.New(repo, threads.NewOptions{Title: conflictTitle("S-0002", "S-0001"), On: "S-0002", Author: conflictAuthor,
+		Text: conflictText("S-0002", "S-0001", []string{"docs/guide.md"}), Now: issueClock.Add(3 * time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, _, open := trialSync(t, root, a)
+	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001 (in progress)\n") {
+		t.Errorf("sync output:\n%s", out)
+	}
+	if len(open) != 0 {
+		t.Errorf("conflict threads left open: %+v", open)
+	}
+	th, err = threads.Get(repo, th.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := th.Entries(); th.Open() || !strings.Contains(e[len(e)-1].Text, "story/S-0001 and story/S-0002 merge cleanly at the sync of S-0002") {
+		t.Errorf("not resolved: %+v", e)
+	}
+}
+
 // The generated files are one list, the issue summary alone today, named as
 // git names them (ADR-0098).
 func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
