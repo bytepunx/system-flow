@@ -7,7 +7,7 @@ count: 2
 cost: 6m
 first_reported: 2026-10-06T21:01:06Z
 last_reported: 2026-10-07T15:09:19Z
-updated: 2026-10-07T15:09:19Z
+updated: 2026-10-07T18:59:46Z
 ---
 
 # I-0094 The dashboard upgrade stops the old container and cannot start the new one, because the name flaiover is still in use
@@ -30,3 +30,5 @@ On 2026-10-07 at 15:07:21Z flai dashboard upgrade, run in a shell from the opera
 ## Remediation
 
 Directions to weigh: after stopping the old container, wait until Docker no longer lists the name before running the new one, with a short limit; or run the new container under a temporary name and rename it; and when the start fails, start the previous image again so that the operator is not left without a dashboard. A test with a stand-in for docker that keeps the name for a moment after `stop` would reproduce it.
+
+Story S-0316 remediates this issue, created from it at 2026-10-07T18:59:46Z.
