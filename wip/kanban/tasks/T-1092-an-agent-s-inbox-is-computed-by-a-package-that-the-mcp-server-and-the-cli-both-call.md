@@ -3,12 +3,18 @@ id: T-1092
 type: task
 nature: improvement
 title: An agent's inbox is computed by a package that the MCP server and the CLI both call
-status: backlog
+status: in-progress
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:52:57Z
-updated: 2026-10-06T22:52:57Z
-transitions: []
+updated: 2026-10-07T01:43:27Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:43:27Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T01:43:27Z
+    by: agent-S-0269
 stream: S-0269
 tags: [mcp]
 touches: [flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/folder.go]

@@ -3,10 +3,10 @@ id: S-0286
 type: story
 nature: improvement
 title: A story that changes a path Claude Code protects is flagged at review and accepted only by the operator, flai checks permission_prompt against each new Claude Code, and the prompt covers every protected path in a worktree but .git
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T06:32:43Z
-updated: 2026-10-07T01:04:27Z
+updated: 2026-10-07T01:43:45Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:48Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:00:34Z
     by: agent-S-0286
+  - to: review
+    at: 2026-10-07T01:41:49Z
+    by: agent-S-0286
+  - to: done
+    at: 2026-10-07T01:43:45Z
+    by: alex
 tags: [flai, flaiover]
 topics: [cli, dashboard]
-touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/preview/accept.go, flai/cmd/accept.go, flai/internal/serve, flai/internal/harness, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/adrs, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/preview/orchestrator.go, flai/cmd/accept_protected_test.go, flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/serve.go, flai/internal/harness/adapters.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/preview/accept.go, flai/cmd/accept.go, flai/internal/serve, flai/internal/harness, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/adrs, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/preview/orchestrator.go, flai/cmd/accept_protected_test.go, flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/serve.go, flai/internal/harness/adapters.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 after: [S-0283]
 agent:
   harness: claude-code
@@ -25,15 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 197
-  estimated: true
+  seconds: 2500
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 252
-      cache_read: 3201894
-      cache_write: 172320
-      cost: 1.4987
+      input: 486
+      output: 195570
+      cache_read: 33490774
+      cache_write: 847412
+      cost: 15.7514
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 5335
+      cache_read: 344636
+      cache_write: 71727
+      cost: 0.3016
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h
@@ -68,11 +79,11 @@ Three parts:
 
 ## Acceptance criteria
 - [x] An ADR refining ADR-0086 records the three parts and why acceptance is the gate
-- [ ] `flai accept`'s preview and the dashboard's review page list the files a story's branch changes on a protected path, and say that only the operator accepts it
-- [ ] An agent's acceptance of such a story is refused with the files named: by an agent on its own name, and by the orchestrator under `accept_reviews` once S-0221 has that path; a test covers each path there is
-- [ ] When flai serve's Claude Code has a version not yet checked, flai runs one write under a `.claude/` folder of a scratch project through `permission_prompt` with it, records the version and the outcome, and on a failure opens a thread to the operator that quotes Claude Code's error; a version already checked is not checked again; a test runs it with a stand-in for `claude`
-- [ ] `permission_prompt` handles an Edit, Write, MultiEdit, or NotebookEdit of any path Claude Code protects inside an in-progress story's worktree, and still refuses `.git`, the main checkout, and every path outside the worktree, with tests
-- [ ] The design, the users' and operators' guides, and `flai serve actions` say what auto-approve allows, what the review shows, and what the check does
+- [x] `flai accept`'s preview and the dashboard's review page list the files a story's branch changes on a protected path, and say that only the operator accepts it
+- [x] An agent's acceptance of such a story is refused with the files named: by an agent on its own name, and by the orchestrator under `accept_reviews` once S-0221 has that path; a test covers each path there is
+- [x] When flai serve's Claude Code has a version not yet checked, flai runs one write under a `.claude/` folder of a scratch project through `permission_prompt` with it, records the version and the outcome, and on a failure opens a thread to the operator that quotes Claude Code's error; a version already checked is not checked again; a test runs it with a stand-in for `claude`
+- [x] `permission_prompt` handles an Edit, Write, MultiEdit, or NotebookEdit of any path Claude Code protects inside an in-progress story's worktree, and still refuses `.git`, the main checkout, and every path outside the worktree, with tests
+- [x] The design, the users' and operators' guides, and `flai serve actions` say what auto-approve allows, what the review shows, and what the check does
 
 ## Tasks
 - T-1106 An ADR refining ADR-0086 records the acceptance gate for protected paths, the check of permission_prompt against each new Claude Code, and the prompt's wider scope

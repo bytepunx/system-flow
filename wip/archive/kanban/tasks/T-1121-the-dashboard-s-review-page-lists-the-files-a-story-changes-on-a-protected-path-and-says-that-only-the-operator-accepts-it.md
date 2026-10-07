@@ -3,16 +3,36 @@ id: T-1121
 type: task
 nature: improvement
 title: The dashboard's review page lists the files a story changes on a protected path and says that only the operator accepts it
-status: backlog
+status: done
 parent: S-0286
 owner: alex
 created: 2026-10-06T22:54:10Z
-updated: 2026-10-06T22:54:10Z
-transitions: []
+updated: 2026-10-07T01:36:16Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:28:31Z
+    by: agent-S-0286
+  - to: in-progress
+    at: 2026-10-07T01:28:32Z
+    by: agent-S-0286
+  - to: done
+    at: 2026-10-07T01:36:16Z
+    by: agent-S-0286
 stream: S-0286
 tags: [flaiover]
 touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts]
 after: [T-1120]
+usage:
+  source: log
+  seconds: 464
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 9285
+      cache_read: 1590094
+      cache_write: 40234
+      cost: 0.7479
 ---
 # T-1121 The dashboard's review page lists the files a story changes on a protected path and says that only the operator accepts it
 

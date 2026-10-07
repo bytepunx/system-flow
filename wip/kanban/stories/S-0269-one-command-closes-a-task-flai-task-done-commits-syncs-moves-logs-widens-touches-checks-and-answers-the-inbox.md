@@ -3,11 +3,11 @@ id: S-0269
 type: story
 nature: improvement
 title: "One command closes a task: flai task done commits, syncs, moves, logs, widens touches, checks, and answers the inbox"
-status: ready
+status: in-progress
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:28Z
-updated: 2026-10-07T01:07:09Z
+updated: 2026-10-07T01:42:03Z
 transitions:
   - to: ready
     at: 2026-10-06T22:47:57Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-10-06T23:58:59Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T01:42:03Z
+    by: agent-S-0269
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions, git]
 touches: [flai/cmd/items.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/move.go, flai/cmd/touches.go, flai/cmd/check.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, design/conventions/git.md, template/root/design/conventions/work-management.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]

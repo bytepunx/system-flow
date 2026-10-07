@@ -3,11 +3,11 @@ id: T-1114
 type: task
 nature: improvement
 title: flai serve checks permission_prompt against each Claude Code version it has not checked, records the outcome, and opens a thread to the operator on a failure
-status: in-progress
+status: done
 parent: S-0286
 owner: alex
 created: 2026-10-06T22:53:44Z
-updated: 2026-10-07T01:04:25Z
+updated: 2026-10-07T01:18:55Z
 transitions:
   - to: ready
     at: 2026-10-07T01:04:24Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T01:04:25Z
     by: agent-S-0286
+  - to: done
+    at: 2026-10-07T01:18:55Z
+    by: agent-S-0286
 stream: S-0286
 tags: [flai]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/serve.go, flai/internal/harness/adapters.go]
 after: [T-1106]
+usage:
+  source: log
+  seconds: 870
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 131
+      output: 52629
+      cache_read: 9012531
+      cache_write: 228043
+      cost: 4.2388
 ---
 # T-1114 flai serve checks permission_prompt against each Claude Code version it has not checked, records the outcome, and opens a thread to the operator on a failure
 

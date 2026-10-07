@@ -3,16 +3,36 @@ id: T-1122
 type: task
 nature: improvement
 title: The design, the users' and operators' guides, and flai serve actions say what auto-approve allows, what the review shows, and what the Claude Code check does
-status: backlog
+status: done
 parent: S-0286
 owner: alex
 created: 2026-10-06T22:54:18Z
-updated: 2026-10-06T22:54:18Z
-transitions: []
+updated: 2026-10-07T01:36:17Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:28:32Z
+    by: agent-S-0286
+  - to: in-progress
+    at: 2026-10-07T01:28:32Z
+    by: agent-S-0286
+  - to: done
+    at: 2026-10-07T01:36:17Z
+    by: agent-S-0286
 stream: S-0286
 tags: [flai]
-touches: [design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, flai/internal/hostapi/writes.go]
+touches: [design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, docs/operators/settings.md, flai/internal/hostapi/writes.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, docs/operators/index.md, docs/operators/runbooks/backup.md]
 after: [T-1114, T-1120]
+usage:
+  source: log
+  seconds: 465
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 111
+      output: 44849
+      cache_read: 7680172
+      cache_write: 194330
+      cost: 3.6121
 ---
 # T-1122 The design, the users' and operators' guides, and flai serve actions say what auto-approve allows, what the review shows, and what the Claude Code check does
 

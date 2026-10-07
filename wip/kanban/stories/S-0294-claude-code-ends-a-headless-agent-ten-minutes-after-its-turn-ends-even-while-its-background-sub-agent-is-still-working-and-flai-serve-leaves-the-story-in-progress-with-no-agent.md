@@ -3,14 +3,17 @@ id: S-0294
 type: story
 nature: remediation
 title: Claude Code ends a headless agent ten minutes after its turn ends, even while its background sub-agent is still working, and flai serve leaves the story in progress with no agent
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T11:44:49Z
-updated: 2026-10-07T01:07:09Z
+updated: 2026-10-07T01:42:03Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:56Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T01:42:03Z
+    by: agent-S-0294
 tags: [cli, serve]
 topics: [automation]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/restart.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, design/adrs, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, design/issues/I-0084-claude-code-ends-a-headless-agent-ten-minutes-after-its-turn-ends-even-while-its-background-sub-agent-is-still-working-and-flai-serve-leaves-the-story-in-progress-with-no-agent.md, design/issues/summary.md]

@@ -3,16 +3,36 @@ id: T-1120
 type: task
 nature: improvement
 title: flai accept's preview lists the files a story's branch changes on a protected path, and an agent's acceptance of such a story is refused with the files named
-status: backlog
+status: done
 parent: S-0286
 owner: alex
 created: 2026-10-06T22:54:04Z
-updated: 2026-10-06T22:54:04Z
-transitions: []
+updated: 2026-10-07T01:27:29Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:20:41Z
+    by: agent-S-0286
+  - to: in-progress
+    at: 2026-10-07T01:20:41Z
+    by: agent-S-0286
+  - to: done
+    at: 2026-10-07T01:27:29Z
+    by: agent-S-0286
 stream: S-0286
 tags: [flai]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/orchestrator.go, flai/cmd/accept.go, flai/cmd/accept_protected_test.go]
 after: [T-1110]
+usage:
+  source: log
+  seconds: 408
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 15333
+      cache_read: 2625646
+      cache_write: 66436
+      cost: 1.2349
 ---
 # T-1120 flai accept's preview lists the files a story's branch changes on a protected path, and an agent's acceptance of such a story is refused with the files named
 

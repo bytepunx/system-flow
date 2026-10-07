@@ -3,12 +3,18 @@ id: T-1080
 type: task
 nature: improvement
 title: An ADR and flai-cli.md set flai task done's steps, stop rule, answer, and its MCP and host-channel names
-status: backlog
+status: in-progress
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:52:39Z
-updated: 2026-10-06T22:52:39Z
-transitions: []
+updated: 2026-10-07T01:43:26Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:43:26Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T01:43:26Z
+    by: agent-S-0269
 stream: S-0269
 tags: [cli, design]
 touches: [design/adrs, design/system/flai-cli.md]

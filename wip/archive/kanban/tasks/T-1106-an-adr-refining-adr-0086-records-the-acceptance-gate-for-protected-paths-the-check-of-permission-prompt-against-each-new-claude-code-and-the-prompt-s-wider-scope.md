@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 40
-      cache_read: 713382
-      cache_write: 9061
-      cost: 0.3209
+      input: 10
+      output: 4185
+      cache_read: 716599
+      cache_write: 18132
+      cost: 0.337
 ---
 # T-1106 An ADR refining ADR-0086 records the acceptance gate for protected paths, the check of permission_prompt against each new Claude Code, and the prompt's wider scope
 

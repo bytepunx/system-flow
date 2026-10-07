@@ -3,12 +3,18 @@ id: T-1085
 type: task
 nature: improvement
 title: The story-branch sync is a storygit function that cmd's stream sync calls and that answers a structured result
-status: backlog
+status: in-progress
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:52:50Z
-updated: 2026-10-06T22:52:50Z
-transitions: []
+updated: 2026-10-07T01:43:27Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:43:26Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T01:43:27Z
+    by: agent-S-0269
 stream: S-0269
 tags: [cli, git]
 touches: [flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go]
