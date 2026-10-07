@@ -1,6 +1,7 @@
 // Chart option builders: pure functions from a flai stats report to an
 // ECharts option, so they are unit-testable without a DOM. One y-axis per
-// chart, thin marks, legends for two or more series, tooltips everywhere.
+// chart, save the share on time beside Delivery Accuracy's errors, thin
+// marks, legends for two or more series, tooltips everywhere.
 import {
 	colorFor,
 	modelSlot,
@@ -1146,6 +1147,16 @@ const errorPoints = (items: ItemMetrics[], field: ErrorField): ErrorPoint[] =>
 		const e = i[field];
 		return e === undefined ? [] : [{ value: [i.completed!, e], id: i.id, title: i.title }];
 	});
+/** The p50 and p85 of a spread either side of zero, in seconds over `unit`: the reference lines. */
+function band(s: ErrorSpread | undefined, unit = 1): Opt[] {
+	const at: [string, number | undefined][] = [
+		['p50', s?.p50_seconds],
+		['p85', s?.p85_seconds]
+	];
+	return at.flatMap(([name, v]) =>
+		v === undefined ? [] : [v / unit, -v / unit].map((yAxis) => ({ yAxis, name }))
+	);
+}
 /**
  * Forecast accuracy (S-0212): one point per story done in the window with a forecast, x completed,
  * y the forecast error; the estimate error as a second series. The p50 and p85 of the absolute
@@ -1156,13 +1167,7 @@ export function forecastAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 	const forecast = errorPoints(items, 'forecast_error_seconds');
 	const estimate = errorPoints(items, 'estimate_error_seconds');
 	const s = spreadFor(r, 'forecast', f, forecast.map((p) => p.value[1]));
-	const at: [string, number | undefined][] = [
-		['p50', s?.p50_seconds],
-		['p85', s?.p85_seconds]
-	];
-	const lines = at.flatMap(([name, v]) =>
-		v === undefined ? [] : [v, -v].map((yAxis) => ({ yAxis, name }))
-	);
+	const lines = band(s);
 	const scatter = (name: string, color: string, symbol: string, data: ErrorPoint[]) => ({
 		name,
 		type: 'scatter',
@@ -1191,6 +1196,141 @@ export function forecastAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 			nameTextStyle: { color: t.textSecondary, align: 'left' },
 			axisLabel: { color: t.textSecondary, formatter: humanSigned }
 		}),
+		series
+	});
+}
+const DAY_S = 86400;
+/**
+ * One ISO week of the delivery-accuracy chart: the stories with a delivery forecast done in it,
+ * how many of them on or before the forecast date, and that as a share, absent when none was.
+ */
+export type OnTimeWeek = {
+	week: string;
+	start: string;
+	count: number;
+	on_time: number;
+	share?: number;
+};
+/** The ISO week, as flai names it (2026-W32), that starts on a Monday at a moment in UTC. */
+function isoWeek(monday: number): string {
+	const thursday = monday + 3 * DAY_MS;
+	const year = new Date(thursday).getUTCFullYear();
+	const week = Math.floor((thursday - Date.UTC(year, 0, 1)) / BUCKET_MS.week) + 1;
+	return `${year}-W${String(week).padStart(2, '0')}`;
+}
+/**
+ * The share of the stories done in the window with a delivery forecast, of the filter's nature and
+ * model, delivered on or before the forecast date, per ISO week from the one that holds the
+ * window's start to the one that holds now (ADR-0054); none from a report without a window.
+ */
+export function onTimeShare(report: Report, f: ErrorFilter = {}): OnTimeWeek[] {
+	const r = normalise(report);
+	const w = windowOf(r);
+	if (!w) return [];
+	const weeks = new Map<number, OnTimeWeek>();
+	for (let m = floorTo(w.start, 'week'); m <= w.end; m += BUCKET_MS.week)
+		weeks.set(m, {
+			week: isoWeek(m),
+			start: new Date(m).toISOString().slice(0, 10),
+			count: 0,
+			on_time: 0
+		});
+	for (const i of doneIn(r)) {
+		const e = i.delivery_error_seconds;
+		const week = weeks.get(floorTo(Date.parse(i.completed!), 'week'));
+		if (e === undefined || !week || !passes(i, f)) continue;
+		week.count += 1;
+		if (e <= 0) week.on_time += 1;
+	}
+	return [...weeks.values()].map((wk) =>
+		wk.count > 0 ? { ...wk, share: wk.on_time / wk.count } : wk
+	);
+}
+/** A share as a whole percentage. */
+const percent = (v: number) => `${Math.round(v * 100)}%`;
+/** A week's share on the time axis; null, a gap in the line, for a week without any. */
+type SharePoint = OnTimeWeek & { value: [number, number | null] };
+/**
+ * Delivery accuracy (S-0212): one point per story done in the window with a delivery forecast,
+ * x completed, y the days it was delivered after the forecast date, early below zero, with the p50
+ * and p85 of the absolute delivery error either side of zero. On a second axis, the share of those
+ * stories delivered on or before the forecast date per ISO week, drawn at the middle of the part of
+ * the week in the window; a week without any is a gap.
+ */
+export function deliveryAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt {
+	const items = doneIn(r).filter((i) => passes(i, f));
+	const errors = errorPoints(items, 'delivery_error_seconds');
+	const late = errors.map((p): ErrorPoint => ({
+		...p,
+		value: [p.value[0], p.value[1] / DAY_S]
+	}));
+	const s = spreadFor(r, 'delivery', f, errors.map((p) => p.value[1]));
+	const lines = band(s, DAY_S);
+	const w = windowOf(r);
+	const weeks = w
+		? onTimeShare(r, f).map((wk): SharePoint => {
+				const from = Date.parse(wk.start);
+				const mid = (Math.max(from, w.start) + Math.min(from + BUCKET_MS.week, w.end)) / 2;
+				return { ...wk, value: [mid, wk.share ?? null] };
+			})
+		: [];
+	const shares = weeks.some((wk) => wk.share !== undefined) ? weeks : [];
+	const series = [
+		{
+			name: 'delivery error',
+			type: 'scatter',
+			symbolSize: 10,
+			itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 2 },
+			data: late,
+			markLine: lines.length > 0 ? refLine(t, lines, '{b}') : undefined
+		},
+		{
+			name: 'on time per week',
+			type: 'line',
+			yAxisIndex: 1,
+			connectNulls: false,
+			symbol: 'emptyCircle',
+			symbolSize: 8,
+			lineStyle: { width: 2, color: t.series[2] },
+			itemStyle: { color: t.series[2] },
+			data: shares
+		}
+	].filter((x) => x.data.length > 0);
+	const name = { color: t.textSecondary, align: 'left' };
+	return base(t, {
+		// room for the legend above the axis names, and for the share's labels on the right
+		grid: { left: 56, right: 56, top: 64, bottom: 48, containLabel: false },
+		legend: marks(t, series.length > 1),
+		tooltip: tooltip(t, {
+			formatter: (p: { seriesName: string; data: ErrorPoint | SharePoint }) => {
+				const d = p.data;
+				if (!('week' in d))
+					return `${d.id} ${d.title}<br/>${p.seriesName}: ${humanSigned(d.value[1] * DAY_S)} · ${d.value[0].slice(0, 10)}`;
+				const of =
+					d.share === undefined
+						? 'no story with a delivery forecast'
+						: `${d.on_time} of ${d.count} on or before the forecast date (${percent(d.share)})`;
+				return `week of ${d.start} (${d.week})<br/>${of}`;
+			}
+		}),
+		xAxis: axisX(t, { type: 'time', ...span(r) }),
+		yAxis: [
+			axisY(t, {
+				type: 'value',
+				name: 'days after forecast date',
+				nameTextStyle: name,
+				axisLabel: { color: t.textSecondary, formatter: (v: number) => humanSigned(v * DAY_S) }
+			}),
+			axisY(t, {
+				type: 'value',
+				name: 'on time',
+				min: 0,
+				max: 1,
+				nameTextStyle: { ...name, align: 'right' },
+				splitLine: { show: false },
+				axisLabel: { color: t.textSecondary, formatter: percent }
+			})
+		],
 		series
 	});
 }
@@ -1244,6 +1384,7 @@ export function build(
 		case 'forecast-accuracy':
 			return forecastAccuracy(r, t, filter);
 		case 'delivery-accuracy':
+			return deliveryAccuracy(r, t, filter);
 		case 'forecast-by-model':
 			return blank(r, t);
 	}

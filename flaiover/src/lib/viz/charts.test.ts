@@ -14,6 +14,7 @@ import {
 	timePerModel,
 	costSpent,
 	cycleTime,
+	deliveryAccuracy,
 	doneIn,
 	errorFacets,
 	forecastAccuracy,
@@ -24,6 +25,7 @@ import {
 	PLANNING_KINDS,
 	spreadOf,
 	normalise,
+	onTimeShare,
 	stateShare,
 	throughput,
 	timeInState,
@@ -304,7 +306,9 @@ describe('chart builders', () => {
 		for (const k of KINDS) {
 			const o = build(k, report, light) as { yAxis: unknown; tooltip: unknown; series: unknown[] };
 			expect(o.yAxis, k).toBeDefined();
-			expect(Array.isArray(o.yAxis), `${k} must not use two y-axes`).toBe(false);
+			// delivery accuracy alone draws its share on time on a second axis
+			if (k === 'delivery-accuracy') expect((o.yAxis as unknown[]).length).toBe(2);
+			else expect(Array.isArray(o.yAxis), `${k} must not use two y-axes`).toBe(false);
 			expect(o.tooltip, k).toBeDefined();
 			// the fixture carries no forecasts: the planning charts have their own
 			if (!(PLANNING_KINDS as readonly string[]).includes(k))
@@ -1100,5 +1104,215 @@ describe('planning charts', () => {
 			'Forecast Error / Model'
 		]);
 		expect(KINDS).toEqual(expect.arrayContaining([...PLANNING_KINDS]));
+	});
+
+	// Delivery errors on the stories of `forecasting`: S-101 a day early, S-102 half a day late,
+	// S-103 on the day, S-104 two days late, S-105 an hour early; S-106 is done before the window,
+	// S-108 is cancelled, and S-107 carries no delivery forecast.
+	const delivered: Record<string, number> = {
+		'S-101': -86400,
+		'S-102': 43200,
+		'S-103': 0,
+		'S-104': 172800,
+		'S-105': -3600,
+		'S-106': -60,
+		'S-108': 600
+	};
+	const delivering: Report = {
+		...forecasting,
+		items: forecasting.items.map((i) =>
+			i.id in delivered ? { ...i, delivery_error_seconds: delivered[i.id] } : i
+		),
+		forecasts: {
+			...forecasting.forecasts!,
+			delivery: {
+				count: 5,
+				p50_seconds: 43200,
+				p85_seconds: 172800,
+				by_nature: {
+					feature: { count: 3, p50_seconds: 86400, p85_seconds: 172800 },
+					improvement: { count: 2, p50_seconds: 3600, p85_seconds: 43200 }
+				},
+				by_model: {
+					[opus]: { count: 3, p50_seconds: 3600, p85_seconds: 86400 },
+					[haiku]: { count: 1, p50_seconds: 43200, p85_seconds: 43200 },
+					'(none)': { count: 1, p50_seconds: 172800, p85_seconds: 172800 }
+				}
+			}
+		}
+	};
+	type Week = {
+		value: [number, number | null];
+		week: string;
+		start: string;
+		count: number;
+		on_time: number;
+		share?: number;
+	};
+	type Delivery = Omit<Accuracy, 'yAxis' | 'tooltip'> & {
+		yAxis: {
+			name: string;
+			min?: number;
+			max?: number;
+			axisLabel: { formatter: (v: number) => string };
+		}[];
+		tooltip: {
+			formatter: (p: { seriesName: string; data: Scatter['data'][number] | Week }) => string;
+		};
+	};
+	const delivery = (f: ErrorFilter, r: Report = delivering) =>
+		build('delivery-accuracy', r, light, undefined, f) as Delivery;
+	const refs = (o: Delivery) => o.series[0].markLine?.data.map((d) => [d.name, d.yAxis]);
+	const weeksOf = (o: Delivery) =>
+		(o.series.find((s) => s.name === 'on time per week')?.data ?? []) as unknown as Week[];
+	const ids = (o: Delivery) => o.series[0].data.map((d) => d.id);
+	const at = (s: string) => Date.parse(s);
+	const day = 86400;
+
+	it('delivery accuracy plots each story done in the window by its delivery error in days', () => {
+		const o = deliveryAccuracy(delivering, light) as Delivery;
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['delivery error', 'scatter'],
+			['on time per week', 'line']
+		]);
+		// x completed, y completed minus the forecast date in days, unrounded so that flai's seconds
+		// stand; done before the window, without a delivery forecast, cancelled, or not done: left out
+		expect(points(o.series[0])).toEqual([
+			['S-101', '2026-08-03T12:00:00Z', -1],
+			['S-102', '2026-08-12T09:30:00Z', 0.5],
+			['S-103', '2026-08-20T00:00:00Z', 0],
+			['S-104', '2026-08-25T06:00:00Z', 2],
+			['S-105', '2026-08-28T00:00:00Z', -3600 / day]
+		]);
+		// flai's p50 and p85 of the absolute delivery error, in days, either side of zero
+		expect(refs(o)).toEqual(band(0.5, 2));
+		expect(o.series[1]).toMatchObject({ yAxisIndex: 1, connectNulls: false });
+		expect(o.yAxis.map((y) => y.name)).toEqual(['days after forecast date', 'on time']);
+		expect(o.yAxis[0].axisLabel.formatter(-1)).toBe('-1d');
+		expect(o.yAxis[1]).toMatchObject({ min: 0, max: 1 });
+		expect(o.yAxis[1].axisLabel.formatter(0.5)).toBe('50%');
+		expect(o.legend.show).toBe(true);
+		expect(o.tooltip.formatter({ seriesName: 'delivery error', data: o.series[0].data[1] })).toBe(
+			'S-102 Story 102<br/>delivery error: +12h · 2026-08-12'
+		);
+		expect(delivery({}).series).toEqual(o.series);
+	});
+	it('delivery accuracy gives the share on time per ISO week of the window, none in an empty week', () => {
+		// from the week that holds the window's start, 2 August, to the one that holds now, 1
+		// September; S-107, done in W33 without a delivery forecast, counts in neither points nor share
+		expect(onTimeShare(delivering)).toEqual([
+			{ week: '2026-W31', start: '2026-07-27', count: 0, on_time: 0 },
+			{ week: '2026-W32', start: '2026-08-03', count: 1, on_time: 1, share: 1 },
+			{ week: '2026-W33', start: '2026-08-10', count: 1, on_time: 0, share: 0 },
+			{ week: '2026-W34', start: '2026-08-17', count: 1, on_time: 1, share: 1 },
+			{ week: '2026-W35', start: '2026-08-24', count: 2, on_time: 1, share: 0.5 },
+			{ week: '2026-W36', start: '2026-08-31', count: 0, on_time: 0 }
+		]);
+		// each at the middle of the part of its week in the window; an empty week is a gap, not 0
+		const o = deliveryAccuracy(delivering, light) as Delivery;
+		expect(weeksOf(o).map((w) => w.value)).toEqual([
+			[at('2026-08-02T18:00:00Z'), null],
+			[at('2026-08-06T12:00:00Z'), 1],
+			[at('2026-08-13T12:00:00Z'), 0],
+			[at('2026-08-20T12:00:00Z'), 1],
+			[at('2026-08-27T12:00:00Z'), 0.5],
+			[at('2026-08-31T18:00:00Z'), null]
+		]);
+		const weeks = weeksOf(o);
+		expect(o.tooltip.formatter({ seriesName: 'on time per week', data: weeks[4] })).toBe(
+			'week of 2026-08-24 (2026-W35)<br/>1 of 2 on or before the forecast date (50%)'
+		);
+		expect(o.tooltip.formatter({ seriesName: 'on time per week', data: weeks[0] })).toBe(
+			'week of 2026-07-27 (2026-W31)<br/>no story with a delivery forecast'
+		);
+		// ISO weeks as flai names them across a new year: 30 December 2024 is in 2025-W01
+		const turn = {
+			...delivering,
+			window_start: '2024-12-25T00:00:00Z',
+			generated_at: '2025-01-08T00:00:00Z'
+		};
+		expect(onTimeShare(turn).map((w) => [w.week, w.start])).toEqual([
+			['2024-W52', '2024-12-23'],
+			['2025-W01', '2024-12-30'],
+			['2025-W02', '2025-01-06']
+		]);
+	});
+	it("delivery accuracy spans the report's window (ADR-0054)", () => {
+		const o = deliveryAccuracy(delivering, light) as Delivery;
+		expect(o.xAxis).toMatchObject({
+			type: 'time',
+			min: at('2026-08-02T12:00:00Z'),
+			max: at('2026-09-01T12:00:00Z')
+		});
+		// a narrower window moves the axis, drops S-101, done on 3 August, and starts the weeks at W33
+		const narrow = { ...delivering, window_start: '2026-08-10T00:00:00Z' };
+		const n = deliveryAccuracy(narrow, light) as Delivery;
+		expect(n.xAxis.min).toBe(at('2026-08-10T00:00:00Z'));
+		expect(ids(n)).toEqual(['S-102', 'S-103', 'S-104', 'S-105']);
+		expect(onTimeShare(narrow).map((w) => w.week)).toEqual([
+			'2026-W33',
+			'2026-W34',
+			'2026-W35',
+			'2026-W36'
+		]);
+		expect(weeksOf(n)[0].value).toEqual([at('2026-08-13T12:00:00Z'), 0]);
+	});
+	it("narrows delivery accuracy by nature and by model, with flai's percentiles for each", () => {
+		const feature = delivery({ nature: 'feature' });
+		expect(ids(feature)).toEqual(['S-101', 'S-103', 'S-104']);
+		expect(refs(feature)).toEqual(band(1, 2));
+		expect(weeksOf(feature).map((w) => w.value[1])).toEqual([null, 1, null, 1, 0, null]);
+		const none = delivery({ model: '(none)' });
+		expect(ids(none)).toEqual(['S-104']);
+		expect(refs(none)).toEqual(band(2, 2));
+		expect(onTimeShare(delivering, { model: '(none)' }).map((w) => w.share)).toEqual([
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			0,
+			undefined
+		]);
+		// under both, worked out from the stories shown: improvement and opus is S-105 alone
+		const both = delivery({ nature: 'improvement', model: opus });
+		expect(ids(both)).toEqual(['S-105']);
+		expect(refs(both)).toEqual(band(3600 / day, 3600 / day));
+		// the lines are flai's figures, not worked out again
+		const nudged: Report = {
+			...delivering,
+			forecasts: {
+				...delivering.forecasts!,
+				delivery: {
+					...delivering.forecasts!.delivery,
+					by_nature: { feature: { count: 3, p50_seconds: 86401, p85_seconds: 172801 } }
+				}
+			}
+		};
+		expect(refs(delivery({ nature: 'feature' }, nudged))).toEqual(band(86401 / day, 172801 / day));
+		// nothing shown: no points, no lines, and no share
+		expect(delivery({ nature: 'research' }).series).toEqual([]);
+		expect(errorFacets(delivering, 'delivery-accuracy')).toEqual({
+			natures: ['feature', 'improvement'],
+			models: ['(none)', haiku, opus]
+		});
+	});
+	it('draws an empty delivery accuracy from a report without delivery errors', () => {
+		// forecasts but no delivery errors: two axes over the window, nothing on them
+		const o = deliveryAccuracy(forecasting, light) as Delivery;
+		expect(o.series).toEqual([]);
+		expect(o.yAxis.length).toBe(2);
+		const empty = onTimeShare(forecasting);
+		expect(empty.length).toBe(6);
+		expect(empty.every((w) => w.count === 0 && w.share === undefined)).toBe(true);
+		// errors without the spreads, from an older flai: points and shares, but no lines
+		const older = delivery({}, { ...delivering, forecasts: undefined });
+		expect(older.series[0].data.length).toBe(5);
+		expect(older.series[0].markLine).toBeUndefined();
+		expect(weeksOf(older).length).toBe(6);
+		// null lists, and a report without a window, which has no weeks
+		const nulls = { ...delivering, items: null } as unknown as Report;
+		expect(delivery({}, nulls).series).toEqual([]);
+		expect(onTimeShare(nulls).map((w) => w.count)).toEqual([0, 0, 0, 0, 0, 0]);
+		expect(onTimeShare({ ...delivering, window_start: '' })).toEqual([]);
 	});
 });
