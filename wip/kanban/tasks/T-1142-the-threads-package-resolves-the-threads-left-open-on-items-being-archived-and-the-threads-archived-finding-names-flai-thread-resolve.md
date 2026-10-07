@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 198
-      cache_read: 1053136
-      cache_write: 65225
-      cost: 0.4994
+      input: 30
+      output: 10583
+      cache_read: 1076270
+      cache_write: 65423
+      cost: 0.8304
 ---
 # T-1142 The threads package resolves the threads left open on items being archived, and the threads.archived finding names flai thread resolve
 

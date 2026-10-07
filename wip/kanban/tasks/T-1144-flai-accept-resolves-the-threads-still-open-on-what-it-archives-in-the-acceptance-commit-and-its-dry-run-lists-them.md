@@ -3,11 +3,11 @@ id: T-1144
 type: task
 nature: improvement
 title: flai accept resolves the threads still open on what it archives, in the acceptance commit, and its dry run lists them
-status: in-progress
+status: done
 parent: S-0277
 owner: alex
 created: 2026-10-07T01:20:20Z
-updated: 2026-10-07T02:10:10Z
+updated: 2026-10-07T02:55:55Z
 transitions:
   - to: ready
     at: 2026-10-07T02:10:10Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T02:10:10Z
     by: agent-S-0277
+  - to: done
+    at: 2026-10-07T02:55:55Z
+    by: agent-S-0277
 stream: S-0277
 tags: [flai, cli]
 touches: [flai/cmd/accept.go, flai/internal/preview/accept.go, flai/cmd/accept_threads_test.go]
 after: [T-1142]
+usage:
+  source: log
+  seconds: 625
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 26179
+      cache_read: 2662453
+      cache_write: 161842
+      cost: 2.0543
 ---
 # T-1144 flai accept resolves the threads still open on what it archives, in the acceptance commit, and its dry run lists them
 

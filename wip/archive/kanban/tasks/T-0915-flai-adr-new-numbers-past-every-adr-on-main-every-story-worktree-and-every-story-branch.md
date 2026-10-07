@@ -23,15 +23,21 @@ tags: [flai, adr]
 touches: [flai/internal/adr, flai/cmd/adr.go, flai/cmd/adr_test.go, docs/users/flai-reference.md]
 usage:
   source: log
-  seconds: 409
+  seconds: 410
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 243
-      cache_read: 1318965
-      cache_write: 61048
-      cost: 0.6162
+      input: 28
+      output: 6388
+      cache_read: 1347284
+      cache_write: 54104
+      cost: 0.7744
+    - model: claude-sonnet-5-5
+      input: 8
+      output: 1679
+      cache_read: 68791
+      cache_write: 33525
+      cost: 0.1144
 ---
 # T-0915 flai adr new numbers past every ADR on main, every story worktree, and every story branch
 

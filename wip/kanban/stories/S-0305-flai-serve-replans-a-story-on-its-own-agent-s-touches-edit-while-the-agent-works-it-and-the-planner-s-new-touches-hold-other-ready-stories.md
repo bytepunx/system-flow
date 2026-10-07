@@ -6,9 +6,11 @@ title: flai serve replans a story on its own agent's touches edit while the agen
 status: backlog
 owner: alex
 created: 2026-10-07T01:07:10Z
-updated: 2026-10-07T02:17:58Z
+updated: 2026-10-07T02:19:51Z
 transitions: []
 tags: []
+topics: [planning]
+touches: [flai/internal/serve/replan.go, flai/internal/serve/replan_test.go, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0098-flai-serve-replans-a-story-on-its-own-agent-s-touches-edit-while-the-agent-works-it-and-the-planner-s-new-touches-hold-other-ready-stories.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -34,6 +36,9 @@ This story remediates [I-0098](../../../design/issues/I-0098-flai-serve-replans-
 - [ ] I-0098 is closed with `flai issue close I-0098 --reason` saying what fixed it
 
 ## Tasks
+- T-1151 The replanner neither queues nor starts the planner for a story whose own agent is at work
+- T-1152 The design and the user guide say an edit by a story's own agent, or a story whose agent is at work, starts no planner on its own
+- T-1154 Close I-0098 with what fixed it
 
 ## Notes
 

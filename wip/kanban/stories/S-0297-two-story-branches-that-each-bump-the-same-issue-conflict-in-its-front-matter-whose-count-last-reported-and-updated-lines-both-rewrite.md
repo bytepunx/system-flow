@@ -6,9 +6,11 @@ title: Two story branches that each bump the same issue conflict in its front ma
 status: backlog
 owner: alex
 created: 2026-10-06T19:46:46Z
-updated: 2026-10-07T02:18:22Z
+updated: 2026-10-07T02:19:43Z
 transitions: []
-tags: []
+tags: [cli]
+topics: [cli, git, continuous-improvement]
+touches: [flai/internal/issues/merge.go, flai/internal/issues/merge_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/branch.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, design/adrs, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0092-two-story-branches-that-each-bump-the-same-issue-conflict-in-its-front-matter-whose-count-last-reported-and-updated-lines-both-rewrite.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -19,6 +21,9 @@ cost_of_delay:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-06T19:46:46Z
+  value: 12.5
+  by: planner-S-0297
+  at: 2026-10-07T02:18:55Z
 finalized:
   by: alex
   at: 2026-10-07T02:18:22Z

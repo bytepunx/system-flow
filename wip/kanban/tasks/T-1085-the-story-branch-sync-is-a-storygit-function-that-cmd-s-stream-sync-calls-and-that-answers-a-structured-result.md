@@ -27,17 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 123
-      output: 489
-      cache_read: 6932760
-      cache_write: 173739
-      cost: 3.1667
+      input: 120
+      output: 52057
+      cache_read: 7008356
+      cache_write: 204986
+      cost: 3.6381
     - model: claude-sonnet-5-5
-      input: 6
-      output: 18
-      cache_read: 24770
-      cache_write: 1015
-      cost: 0.0169
+      input: 9
+      output: 1240
+      cache_read: 31162
+      cache_write: 13636
+      cost: 0.0527
 ---
 # T-1085 The story-branch sync is a storygit function that cmd's stream sync calls and that answers a structured result
 

@@ -24,15 +24,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 177
-  estimated: true
+  seconds: 803
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 324
-      cache_read: 2097262
-      cache_write: 188511
-      cost: 1.0206
+      input: 160
+      output: 56520
+      cache_read: 5748194
+      cache_write: 349415
+      cost: 4.4352
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h35m

@@ -3,11 +3,11 @@ id: T-0916
 type: task
 nature: remediation
 title: The design and the user guides say how ADRs are numbered, and I-0063 is closed
-status: in-progress
+status: done
 parent: S-0245
 owner: alex
 created: 2026-10-05T05:44:20Z
-updated: 2026-10-07T02:10:00Z
+updated: 2026-10-07T02:12:36Z
 transitions:
   - to: ready
     at: 2026-10-07T02:10:00Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T02:10:00Z
     by: agent-S-0245
+  - to: done
+    at: 2026-10-07T02:12:36Z
+    by: agent-S-0245
 stream: S-0245
 tags: [docs, adr]
 touches: [design/system/flai-cli.md, design/system/documentation-standard.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]
 after: [T-0915]
+usage:
+  source: log
+  seconds: 156
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 12482
+      cache_read: 2632591
+      cache_write: 105719
+      cost: 1.5133
 ---
 # T-0916 The design and the user guides say how ADRs are numbered, and I-0063 is closed
 

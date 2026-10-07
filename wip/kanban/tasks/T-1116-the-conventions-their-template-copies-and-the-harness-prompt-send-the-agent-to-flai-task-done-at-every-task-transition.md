@@ -3,12 +3,18 @@ id: T-1116
 type: task
 nature: improvement
 title: The conventions, their template copies, and the harness prompt send the agent to flai task done at every task transition
-status: backlog
+status: in-progress
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:53:50Z
-updated: 2026-10-06T22:53:50Z
-transitions: []
+updated: 2026-10-07T02:58:35Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:58:35Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T02:58:35Z
+    by: agent-S-0269
 stream: S-0269
 tags: [conventions, template]
 touches: [design/conventions/work-management.md, design/conventions/git.md, template/root/design/conventions/work-management.md, template/root/design/conventions/git.md, template/CHANGELOG.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]

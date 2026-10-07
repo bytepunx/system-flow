@@ -3,16 +3,36 @@ id: T-1102
 type: task
 nature: improvement
 title: flai task done T-nnnn -m closes a task from the story's worktree and answers the result as text and --json
-status: backlog
+status: done
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:53:20Z
-updated: 2026-10-06T22:53:20Z
-transitions: []
+updated: 2026-10-07T02:58:33Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:14:02Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T02:14:02Z
+    by: agent-S-0269
+  - to: done
+    at: 2026-10-07T02:58:33Z
+    by: agent-S-0269
 stream: S-0269
 tags: [cli]
 touches: [flai/cmd/items.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go]
 after: [T-1098]
+usage:
+  source: log
+  seconds: 354
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 27156
+      cache_read: 3656013
+      cache_write: 106934
+      cost: 1.8979
 ---
 # T-1102 flai task done T-nnnn -m closes a task from the story's worktree and answers the result as text and --json
 

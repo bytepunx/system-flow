@@ -3,12 +3,18 @@ id: T-1113
 type: task
 nature: improvement
 title: The host channel's task.done runs flai task done --json and answers its result
-status: backlog
+status: in-progress
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:53:42Z
-updated: 2026-10-06T22:53:42Z
-transitions: []
+updated: 2026-10-07T02:58:34Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:58:34Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T02:58:34Z
+    by: agent-S-0269
 stream: S-0269
 tags: [hostapi]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]

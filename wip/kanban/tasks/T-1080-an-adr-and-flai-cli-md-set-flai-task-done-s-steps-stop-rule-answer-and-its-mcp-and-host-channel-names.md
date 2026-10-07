@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 266
-      cache_read: 2692919
-      cache_write: 69182
-      cost: 1.2309
+      input: 47
+      output: 20233
+      cache_read: 2723955
+      cache_write: 79672
+      cost: 1.414
 ---
 # T-1080 An ADR and flai-cli.md set flai task done's steps, stop rule, answer, and its MCP and host-channel names
 

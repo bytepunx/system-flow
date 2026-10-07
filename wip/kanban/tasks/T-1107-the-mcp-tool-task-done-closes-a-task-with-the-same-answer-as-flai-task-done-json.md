@@ -3,16 +3,36 @@ id: T-1107
 type: task
 nature: improvement
 title: The MCP tool task_done closes a task with the same answer as flai task done --json
-status: backlog
+status: done
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:53:26Z
-updated: 2026-10-06T22:53:26Z
-transitions: []
+updated: 2026-10-07T02:58:33Z
+transitions:
+  - to: ready
+    at: 2026-10-07T02:14:03Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T02:14:03Z
+    by: agent-S-0269
+  - to: done
+    at: 2026-10-07T02:58:33Z
+    by: agent-S-0269
 stream: S-0269
 tags: [mcp]
-touches: [flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go]
+touches: [flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go]
 after: [T-1098]
+usage:
+  source: log
+  seconds: 353
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 22467
+      cache_read: 3024694
+      cache_write: 88469
+      cost: 1.5702
 ---
 # T-1107 The MCP tool task_done closes a task with the same answer as flai task done --json
 

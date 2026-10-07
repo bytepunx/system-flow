@@ -23,15 +23,15 @@ tags: [mcp]
 touches: [flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/folder.go]
 usage:
   source: log
-  seconds: 1011
+  seconds: 1012
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 79
-      output: 363
-      cache_read: 3644634
-      cache_write: 111783
-      cost: 1.674
+      input: 63
+      output: 27517
+      cache_read: 3704547
+      cache_write: 108354
+      cost: 1.9231
 ---
 # T-1092 An agent's inbox is computed by a package that the MCP server and the CLI both call
 

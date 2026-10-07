@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:28Z
-updated: 2026-10-07T02:00:13Z
+updated: 2026-10-07T02:58:19Z
 transitions:
   - to: ready
     at: 2026-10-06T22:47:57Z
@@ -23,7 +23,7 @@ transitions:
     by: agent-S-0269
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions, git]
-touches: [flai/cmd/items.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/move.go, flai/cmd/touches.go, flai/cmd/check.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, design/conventions/git.md, template/root/design/conventions/work-management.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]
+touches: [flai/cmd/items.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/move.go, flai/cmd/touches.go, flai/cmd/check.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/work-management.md, design/conventions/git.md, template/root/design/conventions/work-management.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md, flai/internal/check/story.go, flai/internal/issues/generated.go, flai/cmd/branch.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -31,21 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1105
-  estimated: true
+  seconds: 2284
   models:
     - model: claude-opus-5-5
-      input: 256
-      output: 1312
-      cache_read: 14987729
-      cache_write: 496601
-      cost: 6.9001
+      input: 532
+      output: 231224
+      cache_read: 31129184
+      cache_write: 910492
+      cost: 16.1596
     - model: claude-sonnet-5-5
-      input: 6
-      output: 18
-      cache_read: 24770
-      cache_write: 1015
-      cost: 0.0169
+      input: 16
+      output: 2325
+      cache_read: 58417
+      cache_write: 25562
+      cost: 0.0989
 cost_of_delay:
   value: 427
   by: planner-E-0017

@@ -3,11 +3,11 @@ id: T-1098
 type: task
 nature: improvement
 title: A taskdone package closes a task in the ADR's order and stops at the first step that fails, with its findings
-status: in-progress
+status: done
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:53:09Z
-updated: 2026-10-07T02:00:20Z
+updated: 2026-10-07T02:14:02Z
 transitions:
   - to: ready
     at: 2026-10-07T02:00:19Z
@@ -15,10 +15,30 @@ transitions:
   - to: in-progress
     at: 2026-10-07T02:00:20Z
     by: agent-S-0269
+  - to: done
+    at: 2026-10-07T02:14:02Z
+    by: agent-S-0269
 stream: S-0269
 tags: [cli, git]
-touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/move.go, flai/cmd/touches.go, flai/cmd/check.go]
+touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/move.go, flai/cmd/touches.go, flai/cmd/check.go, flai/internal/check/story.go, flai/internal/issues/generated.go, flai/cmd/branch.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go]
 after: [T-1080, T-1085, T-1092]
+usage:
+  source: log
+  seconds: 822
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 157
+      output: 68173
+      cache_read: 9177969
+      cache_write: 268445
+      cost: 4.7644
+    - model: claude-sonnet-5-5
+      input: 7
+      output: 1085
+      cache_read: 27255
+      cache_write: 11926
+      cost: 0.0461
 ---
 # T-1098 A taskdone package closes a task in the ADR's order and stops at the first step that fails, with its findings
 

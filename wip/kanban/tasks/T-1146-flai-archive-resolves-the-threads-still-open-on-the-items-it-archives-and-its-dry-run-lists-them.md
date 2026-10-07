@@ -19,6 +19,17 @@ stream: S-0277
 tags: [flai, cli]
 touches: [flai/cmd/archive.go, flai/cmd/archive_test.go]
 after: [T-1142]
+usage:
+  source: log
+  seconds: 624
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 8712
+      cache_read: 886009
+      cache_write: 53858
+      cost: 0.6836
 ---
 # T-1146 flai archive resolves the threads still open on the items it archives, and its dry run lists them
 

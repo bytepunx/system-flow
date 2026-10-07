@@ -3,10 +3,10 @@ id: S-0245
 type: story
 nature: improvement
 title: flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-07T02:02:40Z
+updated: 2026-10-07T03:00:09Z
 transitions:
   - to: ready
     at: 2026-10-07T01:11:26Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T02:02:40Z
     by: agent-S-0245
+  - to: review
+    at: 2026-10-07T02:59:17Z
+    by: agent-S-0245
+  - to: done
+    at: 2026-10-07T03:00:09Z
+    by: alex
 tags: []
 topics: [cli]
-touches: [flai/internal/adr, flai/cmd/adr.go, flai/cmd/adr_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flai-cli.md, design/system/documentation-standard.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]
+touches: [flai/internal/adr, flai/cmd/adr.go, flai/cmd/adr_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flai-cli.md, design/system/documentation-standard.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,15 +30,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 464
-  estimated: true
+  seconds: 1531
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 412
-      cache_read: 2195965
-      cache_write: 188463
-      cost: 1.0647
+      input: 176
+      output: 37326
+      cache_read: 7619933
+      cache_write: 319812
+      cost: 4.5504
+    - model: claude-sonnet-5-5
+      input: 38
+      output: 6702
+      cache_read: 365150
+      cache_write: 99618
+      cost: 0.3892
+  strategic:
+    - kind: orchestrator
+      seconds: 515
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 26
+          output: 390
+          cache_read: 1138811
+          cache_write: 4308
+          cost: 0.2865
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -55,8 +77,8 @@ forecast:
 This story remediates [I-0063](../../../design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md), "flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0063 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0063 is closed with `flai issue close I-0063 --reason` saying what fixed it
+- [x] The cause I-0063 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0063 is closed with `flai issue close I-0063 --reason` saying what fixed it
 
 ## Tasks
 - T-0915 flai adr new numbers past every ADR on main, every story worktree, and every story branch
