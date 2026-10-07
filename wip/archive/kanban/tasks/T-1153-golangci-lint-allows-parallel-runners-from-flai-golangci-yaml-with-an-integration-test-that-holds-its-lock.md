@@ -3,15 +3,35 @@ id: T-1153
 type: task
 nature: remediation
 title: golangci-lint allows parallel runners from flai/.golangci.yaml, with an integration test that holds its lock
-status: backlog
+status: done
 parent: S-0308
 owner: alex
 created: 2026-10-07T02:19:48Z
-updated: 2026-10-07T02:19:48Z
-transitions: []
+updated: 2026-10-07T08:43:40Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:42:48Z
+    by: agent-S-0308
+  - to: in-progress
+    at: 2026-10-07T08:42:49Z
+    by: agent-S-0308
+  - to: done
+    at: 2026-10-07T08:43:40Z
+    by: agent-S-0308
 stream: S-0308
 tags: [flai, lint, test]
 touches: [flai/.golangci.yaml, flai/tests/integration/golangci_lock_test.go]
+usage:
+  source: log
+  seconds: 51
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 2174
+      cache_read: 331637
+      cache_write: 17613
+      cost: 0.2507
 ---
 # T-1153 golangci-lint allows parallel runners from flai/.golangci.yaml, with an integration test that holds its lock
 

@@ -3,16 +3,36 @@ id: T-1100
 type: task
 nature: improvement
 title: The conventions and the harness prompt send a story's agent to the one call with --commit
-status: backlog
+status: done
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:53:11Z
-updated: 2026-10-06T22:53:11Z
-transitions: []
+updated: 2026-10-07T08:44:54Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:34:28Z
+    by: agent-S-0275
+  - to: in-progress
+    at: 2026-10-07T08:34:28Z
+    by: agent-S-0275
+  - to: done
+    at: 2026-10-07T08:44:54Z
+    by: agent-S-0275
 stream: S-0275
 tags: [conventions]
-touches: [design/conventions/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/continuous-improvement.md, template/root/design/conventions/decisions.md, template/CHANGELOG.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
+touches: [design/conventions/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/continuous-improvement.md, template/root/design/conventions/decisions.md, template/CHANGELOG.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, template/root/design/adrs/README.md]
 after: [T-1077, T-1083]
+usage:
+  source: log
+  seconds: 537
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 272
+      cache_read: 1908337
+      cache_write: 68673
+      cost: 0.8881
 ---
 # T-1100 The conventions and the harness prompt send a story's agent to the one call with --commit
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 204
-      cache_read: 1416504
-      cache_write: 76365
-      cost: 0.6697
+      input: 22
+      output: 8754
+      cache_read: 1482523
+      cache_write: 36937
+      cost: 0.6933
 ---
 # T-0965 flai stats prints the pull order's projected saving and the items without a cost of delay value
 

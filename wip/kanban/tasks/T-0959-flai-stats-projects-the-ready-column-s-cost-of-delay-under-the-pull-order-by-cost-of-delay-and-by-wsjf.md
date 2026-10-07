@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 88
-      output: 471
-      cache_read: 4752242
-      cache_write: 133198
-      cost: 2.1917
+      input: 72
+      output: 28647
+      cache_read: 4851561
+      cache_write: 120877
+      cost: 2.2687
 ---
 # T-0959 flai stats projects the ready column's cost of delay under the pull order, by cost of delay, and by WSJF
 

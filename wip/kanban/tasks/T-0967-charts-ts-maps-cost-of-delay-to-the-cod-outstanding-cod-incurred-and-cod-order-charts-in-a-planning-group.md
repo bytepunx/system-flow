@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 393
-      cache_read: 3583009
-      cache_write: 131417
-      cost: 1.6663
+      input: 55
+      output: 21780
+      cache_read: 3688668
+      cache_write: 91903
+      cost: 1.7249
 ---
 # T-0967 charts.ts maps cost_of_delay to the cod-outstanding, cod-incurred, and cod-order charts in a planning group
 

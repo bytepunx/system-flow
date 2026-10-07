@@ -3,16 +3,36 @@ id: T-0946
 type: task
 nature: feature
 title: The dashboard design and user guide describe the parallelism, hold-time, and touches-drift charts
-status: backlog
+status: done
 parent: S-0214
 owner: alex
 created: 2026-10-05T05:45:44Z
-updated: 2026-10-05T05:45:44Z
-transitions: []
+updated: 2026-10-07T08:43:09Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:41:20Z
+    by: agent-S-0214
+  - to: in-progress
+    at: 2026-10-07T08:41:21Z
+    by: agent-S-0214
+  - to: done
+    at: 2026-10-07T08:43:09Z
+    by: agent-S-0214
 stream: S-0214
 tags: [dashboard, docs]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0943]
+usage:
+  source: log
+  seconds: 107
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 187
+      cache_read: 1162052
+      cache_write: 91353
+      cost: 0.563
 ---
 # T-0946 The dashboard design and user guide describe the parallelism, hold-time, and touches-drift charts
 

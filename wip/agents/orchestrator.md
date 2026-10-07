@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 22.5819
-accrued_seconds: 25507
-tasks_completed: 25
-last_run: 2026-10-07T08:25:49Z
+accrued_cost: 24.3025
+accrued_seconds: 26615
+tasks_completed: 29
+last_run: 2026-10-07T08:44:17Z
 ---
 
 # Orchestrator activity
@@ -186,6 +186,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0213
 - Seconds: 3
 - Cost: 0.0341 USD, estimated
+
+### 2026-10-07T08:28:10Z
+
+- Summary: Published under judgement (operator's answer on TH-0256): 2 pending, 97.79 USD/week; flai 1.34.2→1.34.3 (flai/v1.34.3), flaiover 0.36.1→0.37.0 (flaiover/v0.37.0), template 1.0.67→1.0.68 (v1.0.68, ffe11b9); bundled S-0212, S-0274; pushed
+- Items: S-0212, S-0274
+- Seconds: 141
+- Cost: 0.1381 USD, estimated
+
+### 2026-10-07T08:28:12Z
+
+- Summary: Answered TH-0256, citing no source
+- Items: none
+- Seconds: 2
+- Cost: 0.0350 USD, estimated
+
+### 2026-10-07T08:44:12Z
+
+- Summary: Left S-0213 in review, not accepted: flai verify at head 19a28891 stopped at go-test because test subprocesses inherited the orchestrator's FLAI_ROLE and the guard refused their fixture moves; the close-out passed all tiers at 9d31a314, the dry-run lists no blockers, and the verifier matched all 5 criteria. Asked the operator on TH-0260 to verify from their shell
+- Items: S-0213
+- Seconds: 960
+- Cost: 1.5033 USD, estimated
+
+### 2026-10-07T08:44:17Z
+
+- Summary: Re-applied the throughput order after S-0308 left ready for in-progress: S-0215 and S-0216 kept (placed by hand), then S-0265 25m and S-0246 30m. No promote candidates: every other backlog story is held, a draft, or lacks a forecast or value
+- Items: S-0265, S-0246
+- Seconds: 5
+- Cost: 0.0442 USD, estimated
 
 ## Refusals
 

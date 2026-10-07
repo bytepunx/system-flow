@@ -3,11 +3,11 @@ id: T-1083
 type: task
 nature: improvement
 title: MCP issue_new and issue_bump take commit, and issue_close and adr_new are new tools
-status: in-progress
+status: done
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:52:46Z
-updated: 2026-10-07T08:21:02Z
+updated: 2026-10-07T08:32:29Z
 transitions:
   - to: ready
     at: 2026-10-07T08:21:02Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:21:02Z
     by: agent-S-0275
+  - to: done
+    at: 2026-10-07T08:32:29Z
+    by: agent-S-0275
 stream: S-0275
 tags: [mcp]
-touches: [flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/adr.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/folder.go]
+touches: [flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/adr.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go]
 after: [T-1072, T-1074]
+usage:
+  source: log
+  seconds: 687
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 91
+      output: 470
+      cache_read: 5184574
+      cache_write: 178488
+      cost: 2.409
 ---
 # T-1083 MCP issue_new and issue_bump take commit, and issue_close and adr_new are new tools
 

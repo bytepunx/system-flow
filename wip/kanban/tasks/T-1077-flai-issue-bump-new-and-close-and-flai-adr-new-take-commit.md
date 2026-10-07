@@ -3,11 +3,11 @@ id: T-1077
 type: task
 nature: improvement
 title: flai issue bump, new, and close and flai adr new take --commit
-status: in-progress
+status: done
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:52:34Z
-updated: 2026-10-07T08:21:01Z
+updated: 2026-10-07T08:32:23Z
 transitions:
   - to: ready
     at: 2026-10-07T08:21:01Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:21:01Z
     by: agent-S-0275
+  - to: done
+    at: 2026-10-07T08:32:23Z
+    by: agent-S-0275
 stream: S-0275
 tags: [cli]
-touches: [flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, flai/internal/adr/adr.go]
+touches: [flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, flai/internal/adr/adr.go, flai/cmd/storycommit.go, flai/cmd/storycommit_test.go]
 after: [T-1072, T-1074]
+usage:
+  source: log
+  seconds: 682
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 359
+      cache_read: 4214163
+      cache_write: 145810
+      cost: 1.9584
 ---
 # T-1077 flai issue bump, new, and close and flai adr new take --commit
 

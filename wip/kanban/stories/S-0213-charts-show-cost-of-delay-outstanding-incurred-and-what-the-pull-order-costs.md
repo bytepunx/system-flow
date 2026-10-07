@@ -3,11 +3,11 @@ id: S-0213
 type: story
 nature: feature
 title: Charts show cost of delay outstanding, incurred, and what the pull order costs
-status: in-progress
+status: review
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:18:03Z
+updated: 2026-10-07T08:42:19Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -27,8 +27,11 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:18:03Z
     by: agent-S-0213
+  - to: review
+    at: 2026-10-07T08:42:19Z
+    by: agent-S-0213
 tags: [dashboard]
-touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flai/internal/statsread, flai/internal/planning/forecast.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flai/internal/statsread, flai/internal/planning/forecast.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/summary.md]
 after: [S-0205, S-0217]
 agent:
   harness: claude-code
@@ -37,26 +40,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1981
-  estimated: true
+  seconds: 4248
   models:
     - model: claude-opus-5-5
-      input: 438
-      output: 2449
-      cache_read: 22671579
-      cache_write: 837112
-      cost: 10.5463
+      input: 550
+      output: 219698
+      cache_read: 37207877
+      cache_write: 927035
+      cost: 17.3995
+    - model: claude-sonnet-5-5
+      input: 48
+      output: 14212
+      cache_read: 785691
+      cache_write: 152282
+      cost: 0.6801
   strategic:
     - kind: orchestrator
-      seconds: 3
+      seconds: 963
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 8
-          cache_read: 128096
-          cache_write: 2761
-          cost: 0.0341
+          input: 74
+          output: 981
+          cache_read: 5357263
+          cache_write: 31355
+          cost: 1.406
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 43
+          cache_read: 136303
+          cache_write: 59643
+          cost: 0.1314
 cost_of_delay:
   value: 91.22
   by: planner-S-0213

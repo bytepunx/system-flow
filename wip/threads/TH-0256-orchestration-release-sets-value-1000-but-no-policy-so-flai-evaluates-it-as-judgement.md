@@ -3,10 +3,10 @@ id: TH-0256
 title: orchestration.release sets value 1000 but no policy, so flai evaluates it as judgement
 anchor:
   path: system-flow.yaml
-status: answered
+status: resolved
 participants: [orchestrator, alex]
 created: 2026-10-07T08:20:57Z
-updated: 2026-10-07T08:27:51Z
+updated: 2026-10-07T08:29:11Z
 ---
 
 # TH-0256 orchestration.release sets value 1000 but no policy, so flai evaluates it as judgement
@@ -26,3 +26,17 @@ Until you answer, I read your value of 1000 as your intent to batch, and I do no
 
 ### 2026-10-07T08:27:51Z alex
 judgement
+
+### 2026-10-07T08:28:12Z orchestrator
+Done. Published S-0212 and S-0274 under judgement and pushed:
+
+| Component | From | To | Tag |
+|-----------|------|----|-----|
+| flai | 1.34.2 | 1.34.3 | flai/v1.34.3 |
+| flaiover | 0.36.1 | 0.37.0 | flaiover/v0.37.0 |
+| template | 1.0.67 | 1.0.68 | v1.0.68 (ffe11b9) |
+
+From here I publish each accepted batch I judge coherent and complete, and never one `whole_epics` holds back. Resolve this thread when you are content.
+
+### 2026-10-07T08:29:11Z alex
+Resolved.

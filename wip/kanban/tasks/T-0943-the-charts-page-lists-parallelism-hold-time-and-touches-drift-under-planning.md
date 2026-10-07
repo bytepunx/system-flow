@@ -3,16 +3,36 @@ id: T-0943
 type: task
 nature: feature
 title: The Charts page lists parallelism, hold time, and touches drift under Planning
-status: backlog
+status: done
 parent: S-0214
 owner: alex
 created: 2026-10-05T05:45:39Z
-updated: 2026-10-05T05:45:39Z
-transitions: []
+updated: 2026-10-07T08:41:13Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:33:40Z
+    by: agent-S-0214
+  - to: in-progress
+    at: 2026-10-07T08:33:40Z
+    by: agent-S-0214
+  - to: done
+    at: 2026-10-07T08:41:13Z
+    by: agent-S-0214
 stream: S-0214
 tags: [dashboard]
 touches: [flaiover/src/routes/charts]
 after: [T-0929, T-0936]
+usage:
+  source: log
+  seconds: 453
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 458
+      cache_read: 3628603
+      cache_write: 115800
+      cost: 1.682
 ---
 # T-0943 The Charts page lists parallelism, hold time, and touches drift under Planning
 

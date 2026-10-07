@@ -3,13 +3,22 @@ id: S-0308
 type: story
 nature: improvement
 title: golangci-lint fails at once when another story's agent is running it on the same host
-status: ready
+status: done
 owner: alex
 created: 2026-10-07T01:07:14Z
-updated: 2026-10-07T08:20:40Z
+updated: 2026-10-07T08:48:14Z
 transitions:
   - to: ready
     at: 2026-10-07T08:20:40Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T08:42:30Z
+    by: system-flow
+  - to: review
+    at: 2026-10-07T08:47:44Z
+    by: agent-S-0308
+  - to: done
+    at: 2026-10-07T08:48:14Z
     by: orchestrator
 tags: []
 touches: [flai/.golangci.yaml, flai/tests/integration/golangci_lock_test.go, design/system/devex.md, design/issues/I-0101-golangci-lint-fails-at-once-when-another-story-s-agent-is-running-it-on-the-same-host.md, design/issues/summary.md]
@@ -19,9 +28,15 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 326
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 9449
+      cache_read: 1441588
+      cache_write: 76560
+      cost: 1.0899
   strategic:
     - kind: orchestrator
       seconds: 612
@@ -58,8 +73,8 @@ finalized:
 This story remediates [I-0101](../../../design/issues/I-0101-golangci-lint-fails-at-once-when-another-story-s-agent-is-running-it-on-the-same-host.md), "golangci-lint fails at once when another story's agent is running it on the same host". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0101 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0101 is closed with `flai issue close I-0101 --reason` saying what fixed it
+- [x] The cause I-0101 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0101 is closed with `flai issue close I-0101 --reason` saying what fixed it
 
 ## Tasks
 - T-1153 golangci-lint allows parallel runners from flai/.golangci.yaml, with an integration test that holds its lock
@@ -88,3 +103,13 @@ Touches, all files, no folder touch:
 Forecast 10m, delivery 2026-10-07T11:10:00Z: flai's figure (84 s per unit of size over 8 done improvement stories, size 7), kept, since the work is that small.
 
 Cost of delay 12.50 USD a week: `flai cod` from the operator's input (5m lost per 168h cycle at 150 USD an hour), kept. Each collision fails a whole close-out, so the real loss per occurrence is likely more than 5m, but the input is the operator's and there is one instance only.
+
+### Accepted by the orchestrator
+
+- Verified: 720299aa38b4b8f8f98769de2ec85bbae55a29f8
+- At: 2026-10-07T08:48:14Z
+
+Verdict: pass. Criteria 1 and 2 are met, the diff is within the story's touches, and there are no convention breaches, verified at commit 720299aa38b4b8f8f98769de2ec85bbae55a29f8.
+
+- 1: flai/.golangci.yaml, flai/tests/integration/golangci_lock_test.go, design/system/devex.md
+- 2: design/issues/I-0101-golangci-lint-fails-at-once-when-another-story-s-agent-is-running-it-on-the-same-host.md, design/issues/summary.md

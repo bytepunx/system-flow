@@ -3,16 +3,36 @@ id: T-1093
 type: task
 nature: improvement
 title: The host channel files, bumps, and closes an issue against a story
-status: backlog
+status: done
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:53:00Z
-updated: 2026-10-06T22:53:00Z
-transitions: []
+updated: 2026-10-07T08:43:25Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:34:27Z
+    by: agent-S-0275
+  - to: in-progress
+    at: 2026-10-07T08:34:28Z
+    by: agent-S-0275
+  - to: done
+    at: 2026-10-07T08:43:25Z
+    by: agent-S-0275
 stream: S-0275
 tags: [cli]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/issue.go, flai/cmd/issue_test.go]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/issue.go, flai/cmd/issue_test.go, flaiover/src/lib/server/agent.ts]
 after: [T-1077]
+usage:
+  source: log
+  seconds: 537
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 539
+      cache_read: 5715188
+      cache_write: 164963
+      cost: 2.6412
 ---
 # T-1093 The host channel files, bumps, and closes an issue against a story
 

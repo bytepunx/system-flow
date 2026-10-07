@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 115
-      cache_read: 939916
-      cache_write: 49923
-      cost: 0.4441
+      input: 15
+      output: 5804
+      cache_read: 982985
+      cache_write: 24491
+      cost: 0.4597
 ---
 # T-0955 flai stats counts the open items without a cost of delay value per column per day
 

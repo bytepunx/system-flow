@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 309
-      cache_read: 2733586
-      cache_write: 114428
-      cost: 1.2777
+      input: 42
+      output: 16700
+      cache_read: 2828273
+      cache_write: 70466
+      cost: 1.3226
 ---
 # T-0953 metrics.md defines the pull order's projected cost of delay and the count of items without a value, and an ADR records them
 

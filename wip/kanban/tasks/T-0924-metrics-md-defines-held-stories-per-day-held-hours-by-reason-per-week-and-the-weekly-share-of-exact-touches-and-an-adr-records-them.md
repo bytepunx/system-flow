@@ -31,7 +31,7 @@ usage:
       output: 522
       cache_read: 2992734
       cache_write: 101395
-      cost: 1.3898
+      cost: 1.3899
 ---
 # T-0924 metrics.md defines held stories per day, held hours by reason per week, and the weekly share of exact touches, and an ADR records them
 

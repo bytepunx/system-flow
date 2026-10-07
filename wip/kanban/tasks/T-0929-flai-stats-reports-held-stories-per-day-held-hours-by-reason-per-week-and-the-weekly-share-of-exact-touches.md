@@ -3,11 +3,11 @@ id: T-0929
 type: task
 nature: feature
 title: flai stats reports held stories per day, held hours by reason per week, and the weekly share of exact touches
-status: in-progress
+status: done
 parent: S-0214
 owner: alex
 created: 2026-10-05T05:45:09Z
-updated: 2026-10-07T08:23:19Z
+updated: 2026-10-07T08:33:29Z
 transitions:
   - to: ready
     at: 2026-10-07T08:23:19Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:23:19Z
     by: agent-S-0214
+  - to: done
+    at: 2026-10-07T08:33:24Z
+    by: agent-S-0214
 stream: S-0214
 tags: [flai]
-touches: [flai/internal/metrics]
+touches: [flai/internal/metrics, flai/internal/statsread/statsread.go]
 after: [T-0924]
+usage:
+  source: log
+  seconds: 605
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 303
+      cache_read: 2278105
+      cache_write: 107313
+      cost: 1.0715
 ---
 # T-0929 flai stats reports held stories per day, held hours by reason per week, and the weekly share of exact touches
 

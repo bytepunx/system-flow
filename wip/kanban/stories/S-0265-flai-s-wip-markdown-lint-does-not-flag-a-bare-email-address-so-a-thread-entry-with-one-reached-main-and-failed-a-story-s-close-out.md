@@ -3,14 +3,17 @@ id: S-0265
 type: story
 nature: remediation
 title: flai's wip markdown lint does not flag a bare email address, so a thread entry with one reached main and failed a story's close-out
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-05T00:03:14Z
-updated: 2026-10-07T08:20:41Z
+updated: 2026-10-07T08:47:52Z
 transitions:
   - to: ready
     at: 2026-10-07T08:20:41Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T08:47:52Z
+    by: agent-S-0265
 tags: []
 topics: [cli]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases, docs/users/flai.md, design/issues/I-0056-flai-s-wip-markdown-lint-does-not-flag-a-bare-email-address-so-a-thread-entry-with-one-reached-main-and-failed-a-story-s-close-out.md, design/issues/summary.md]
@@ -41,15 +44,15 @@ usage:
           cache_write: 234172
           cost: 4.2409
     - kind: orchestrator
-      seconds: 628
+      seconds: 631
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 47
-          output: 642
-          cache_read: 2772932
-          cache_write: 63733
-          cost: 0.7402
+          input: 48
+          output: 646
+          cache_read: 2854291
+          cache_write: 67047
+          cost: 0.7623
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

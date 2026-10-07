@@ -9,8 +9,6 @@ wip_limits:
 order:
   - S-0215
   - S-0216
-  - S-0308
-  - S-0265
   - S-0246
 placed:
   S-0215:

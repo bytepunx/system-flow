@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 282
-      cache_read: 2536759
-      cache_write: 94393
-      cost: 1.1804
+      input: 39
+      output: 15428
+      cache_read: 2612904
+      cache_write: 65101
+      cost: 1.2219
 ---
 # T-0970 flaiover-dashboard.md and the user guide describe the cost of delay charts
 

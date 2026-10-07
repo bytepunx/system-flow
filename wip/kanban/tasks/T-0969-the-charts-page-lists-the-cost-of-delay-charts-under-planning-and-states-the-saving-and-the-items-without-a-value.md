@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 287
-      cache_read: 2389086
-      cache_write: 86488
-      cost: 1.1106
+      input: 36
+      output: 14516
+      cache_read: 2458406
+      cache_write: 61251
+      cost: 1.1496
 ---
 # T-0969 The charts page lists the cost of delay charts under Planning and states the saving and the items without a value
 

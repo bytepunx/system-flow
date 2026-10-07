@@ -3,16 +3,36 @@ id: T-1155
 type: task
 nature: remediation
 title: devex.md says the lint allows parallel runners, and I-0101 is closed with what fixed it
-status: backlog
+status: done
 parent: S-0308
 owner: alex
 created: 2026-10-07T02:19:57Z
-updated: 2026-10-07T02:19:57Z
-transitions: []
+updated: 2026-10-07T08:44:02Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:43:44Z
+    by: agent-S-0308
+  - to: in-progress
+    at: 2026-10-07T08:43:45Z
+    by: agent-S-0308
+  - to: done
+    at: 2026-10-07T08:44:02Z
+    by: agent-S-0308
 stream: S-0308
 tags: [docs, issues]
 touches: [design/system/devex.md, design/issues/I-0101-golangci-lint-fails-at-once-when-another-story-s-agent-is-running-it-on-the-same-host.md, design/issues/summary.md]
 after: [T-1153]
+usage:
+  source: log
+  seconds: 17
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 1496
+      cache_read: 228184
+      cache_write: 12118
+      cost: 0.1725
 ---
 # T-1155 devex.md says the lint allows parallel runners, and I-0101 is closed with what fixed it
 

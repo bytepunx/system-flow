@@ -23,15 +23,15 @@ tags: [cli]
 touches: [flai/internal/storygit/commit.go, flai/internal/storygit/commit_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
 usage:
   source: log
-  seconds: 304
+  seconds: 308
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 284
-      cache_read: 2033156
-      cache_write: 110778
-      cost: 0.9629
+      input: 52
+      output: 292
+      cache_read: 2184356
+      cache_write: 121602
+      cost: 1.0358
 ---
 # T-1072 A shared helper commits the files a command wrote on the story branch and widens the story's touches to them
 

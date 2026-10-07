@@ -3,12 +3,18 @@ id: T-0982
 type: task
 nature: remediation
 title: The user guide says flai's lint checks bare email addresses
-status: backlog
+status: in-progress
 parent: S-0265
 owner: alex
 created: 2026-10-05T05:50:06Z
-updated: 2026-10-05T05:50:06Z
-transitions: []
+updated: 2026-10-07T08:48:05Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:48:04Z
+    by: agent-S-0265
+  - to: in-progress
+    at: 2026-10-07T08:48:05Z
+    by: agent-S-0265
 stream: S-0265
 tags: [docs]
 touches: [docs/users/flai.md]
