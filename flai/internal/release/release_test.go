@@ -581,3 +581,32 @@ func TestRaiseMinimum(t *testing.T) {
 		t.Errorf("minimum moved: %q", got)
 	}
 }
+
+// I-0107: a changelog that already has a section for the version being
+// released, written by hand before the release was cut, gets the release's
+// bullets under that heading, not a second heading the markdown lint refuses.
+func TestBumpMergesIntoAChangelogSectionTheVersionAlreadyHas(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "tpl"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "tpl", "template.yaml"), []byte("version: 1.0.0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cl := filepath.Join(root, "tpl", "CHANGELOG.md")
+	if err := os.WriteFile(cl, []byte("# Changelog\n\n## 1.0.1 - 2026-09-16\n\n- S-004 What the story wrote (patch): the detail.\n\n## 1.0.0 - 2026-01-01\n\n- start\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	to, _ := ParseVersion("1.0.1")
+	if err := bumpVersionAndChangelog(root, "tpl/template.yaml", "tpl", to, time.Date(2026, 9, 17, 0, 0, 0, 0, time.UTC), "- S-004 Template tweak (patch).\n"); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.ReadFile(cl)
+	want := "# Changelog\n\n## 1.0.1 - 2026-09-16\n\n- S-004 Template tweak (patch).\n- S-004 What the story wrote (patch): the detail.\n\n## 1.0.0 - 2026-01-01\n\n- start\n"
+	if string(got) != want {
+		t.Errorf("changelog:\n%s\nwant:\n%s", got, want)
+	}
+	if strings.Count(string(got), "## 1.0.1") != 1 {
+		t.Errorf("one heading for 1.0.1:\n%s", got)
+	}
+}

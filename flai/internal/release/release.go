@@ -418,6 +418,14 @@ func bumpVersionAndChangelog(root, versionFile, componentPath string, to Version
 		return os.WriteFile(cl, []byte("# Changelog\n\n"+entry), 0o644)
 	}
 	s := string(existing)
+	if i := strings.Index(s, "\n## "+to.String()+" - "); i >= 0 {
+		// A section for this version is already there, written by hand before the
+		// release was cut: the bullets go under its heading, not under a second
+		// one, which the markdown lint refuses (I-0107).
+		body := i + 1 + strings.Index(s[i+1:], "\n") + 1
+		s = s[:body] + "\n" + bullets + strings.TrimLeft(s[body:], "\n")
+		return os.WriteFile(cl, []byte(s), 0o644)
+	}
 	if i := strings.Index(s, "\n## "); i >= 0 {
 		s = s[:i+1] + entry + "\n" + s[i+1:]
 	} else {

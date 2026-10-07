@@ -14,7 +14,10 @@ func TestArchiveResolvesTheThreadsOnWhatItArchives(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", t.TempDir()+"/cfg.json")
 	t.Setenv("FLAI_AGENT", "alex")
 	root := tempProject(t)
+	// the author flai archive resolves as is the config's, which a fresh config fills with this
+	// host's user: pin it, so the test does not depend on who runs it (I-0013)
 	for _, args := range [][]string{
+		{"config", "set", "author", "alex"},
 		{"story", "new", "Slice"},
 		{"task", "new", "--story", "S-0001", "Piece"},
 		{"story", "new", "Other"},

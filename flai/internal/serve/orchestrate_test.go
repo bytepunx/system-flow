@@ -171,7 +171,9 @@ func TestTheOrchestratorIsStartedAgainWhenItEnds(t *testing.T) {
 		t.Fatalf("second = %+v, want failed with exit 3", failed)
 	}
 	lab.look()
-	lab.shift = 59 * time.Second
+	// well short of the retry: the lab's clock is the host's plus the shift, and a loaded host
+	// adds seconds of its own between the failure and this look (I-0102)
+	lab.shift = orchestrateRetry - 20*time.Second
 	lab.look()
 	if r := lab.orchestrator(); r.Session != second.Session {
 		t.Fatalf("started again within a minute of a failure: %+v", r)

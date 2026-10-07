@@ -44,7 +44,12 @@ func newClaudeLab(t *testing.T, fail bool) *claudeLab {
 	t.Helper()
 	lab := &claudeLab{t: t, out: t.TempDir(), tmp: t.TempDir()}
 	t.Setenv("TMPDIR", lab.tmp)
-	lab.stub = filepath.Join(t.TempDir(), "claude")
+	// as the record has it, symbolic links followed: a macOS temp dir is a link under /private
+	stubDir := t.TempDir()
+	if real, err := filepath.EvalSymlinks(stubDir); err == nil {
+		stubDir = real
+	}
+	lab.stub = filepath.Join(stubDir, "claude")
 	do := "for d in \"$PWD\"/.flai-cache/worktrees/*/; do mkdir -p \"$d.claude\"; printf '%s\\n' '" + claudeCheckContent(claudeLabVersion) + "' > \"${d}.claude/flai-check.md\"; done\n"
 	if fail {
 		do = "echo '{\"type\":\"system\",\"subtype\":\"init\",\"model\":\"claude-haiku\"}'\n" +

@@ -66,7 +66,7 @@ func TestServeSaysTheFlaiIsOlderThanTheProject(t *testing.T) {
 			Logger: slog.New(slog.NewTextHandler(&logs, nil)),
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("1.26.4", nil), Version: "1.26.4", PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("1.26.4", nil), Version: "1.26.4", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
 			}})
 	}()
 	t.Cleanup(func() {
