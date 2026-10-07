@@ -2,12 +2,12 @@
 id: I-0064
 title: flai stream sync's trial merge blames a story for conflicts between main and another story's stale branch
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 5m
 first_reported: 2026-10-03T18:11:00Z
 last_reported: 2026-10-04T04:29:05Z
-updated: 2026-10-04T04:29:05Z
+updated: 2026-10-07T00:04:19Z
 ---
 
 # I-0064 flai stream sync's trial merge blames a story for conflicts between main and another story's stale branch
@@ -26,3 +26,4 @@ Story: S-0225.
 S-0225's sync opened TH-0105 (with S-0255) and added template/CHANGELOG.md to TH-0104 (with S-0209), though S-0225 does not change that file: main gained a CHANGELOG entry after both branches' bases, and each adds its own.
 
 ## Remediation
+Closed 2026-10-07T00:04:19Z: S-0251: flai stream sync's trial merge reports a pair's conflict only on a path both stories changed since they left main (changedByBoth in flai/cmd/stream_sync.go), so what main brought against a stale branch is no longer blamed on the story that synced
