@@ -479,3 +479,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai board 2>`
 - Needs: none
+
+### 2026-10-07T19:00:04Z
+
+- Call: `git tag --sort=-creatordate`
+- Needs: none
