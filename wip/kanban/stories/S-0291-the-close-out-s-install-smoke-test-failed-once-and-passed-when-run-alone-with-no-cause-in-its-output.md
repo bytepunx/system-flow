@@ -6,7 +6,7 @@ title: The close-out's install smoke test failed once and passed when run alone,
 status: backlog
 owner: alex
 created: 2026-10-06T10:31:55Z
-updated: 2026-10-06T10:31:55Z
+updated: 2026-10-07T02:19:00Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
     by: flai
     at: 2026-10-06T10:31:55Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:19:00Z
 ---
 # S-0291 The close-out's install smoke test failed once and passed when run alone, with no cause in its output
 
