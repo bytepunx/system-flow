@@ -389,13 +389,13 @@ describe('the item page (S-0154)', () => {
 			c = mount(ItemPage, { target: document.body });
 			await settle();
 			expect(text('item-cost-of-delay')).toEqual([
-				'cost of delay: 1,650 per week, set by planner at 2026-10-03T09:20:00Z',
-				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03T09:00:00Z'
+				'cost of delay: 1,650 per week, set by planner at 2026-10-03 05:20 EDT',
+				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03 05:00 EDT'
 			]);
 			expect(stale()).toBeNull();
 			expect(text('item-forecast')).toEqual([
-				'forecast: delivery 2026-10-07T17:00:00Z',
-				'set by planner at 2026-10-03T09:30:00Z'
+				'forecast: delivery 2026-10-07 13:00 EDT',
+				'set by planner at 2026-10-03 05:30 EDT'
 			]);
 			unmount(c);
 			serve(story);
@@ -413,7 +413,7 @@ describe('the item page (S-0154)', () => {
 				"The inputs changed after the value was set, so the planner's value is out of date."
 			);
 			expect(text('item-cost-of-delay')[1]).toBe(
-				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03T10:00:00Z'
+				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03 06:00 EDT'
 			);
 		});
 
@@ -424,7 +424,7 @@ describe('the item page (S-0154)', () => {
 			await settle();
 			expect(text('item-cost-of-delay')).toEqual([
 				'cost of delay: no value yet',
-				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03T10:00:00Z'
+				'inputs: revenue 1,200 per week · 6h lost per cycle, set by alex at 2026-10-03 06:00 EDT'
 			]);
 			expect(stale()).toBeNull();
 		});

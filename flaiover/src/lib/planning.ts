@@ -1,6 +1,7 @@
 // A work item's planning data (S-0199): its cost of delay and its forecast, as flai writes them in
 // front matter and returns them in item.get, and how the item page says them. Amounts are in the
 // project's currency, which item.get does not carry, so they are shown as plain numbers.
+import { localTime } from '$lib/localtime';
 
 /** What a cost of delay is worked out from, and who last set them and when; an absent amount is unknown, not zero. */
 export type CostInputs = {
@@ -34,9 +35,9 @@ export function amount(n: number): string {
 }
 
 function setBy(by?: string, at?: string): string[] {
-	if (by && at) return [`set by ${by} at ${at}`];
+	if (by && at) return [`set by ${by} at ${localTime(at)}`];
 	if (by) return [`set by ${by}`];
-	if (at) return [`set at ${at}`];
+	if (at) return [`set at ${localTime(at)}`];
 	return [];
 }
 
@@ -102,7 +103,7 @@ export function forecastLines(f?: Forecast): string[] {
 	if (!f) return [];
 	const when = [
 		...(f.duration ? [`${f.duration} of work`] : []),
-		...(f.delivery ? [`delivery ${f.delivery}`] : [])
+		...(f.delivery ? [`delivery ${localTime(f.delivery)}`] : [])
 	];
 	const rest = [...(f.basis ? [f.basis] : []), ...setBy(f.by, f.at)];
 	if (!when.length && !rest.length) return [];

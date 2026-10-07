@@ -27,8 +27,8 @@ describe('planning (S-0199)', () => {
 				at: '2026-10-03T09:20:00Z'
 			})
 		).toEqual([
-			'cost of delay: 1,650 per week, set by planner at 2026-10-03T09:20:00Z',
-			'inputs: revenue 1,200 per week · penalty 300 per week · 6h lost per cycle, set by alex at 2026-10-03T09:00:00Z'
+			'cost of delay: 1,650 per week, set by planner at 2026-10-03 05:20 EDT',
+			'inputs: revenue 1,200 per week · penalty 300 per week · 6h lost per cycle, set by alex at 2026-10-03 05:00 EDT'
 		]);
 	});
 
@@ -39,13 +39,13 @@ describe('planning (S-0199)', () => {
 			})
 		).toEqual([
 			'cost of delay: no value yet',
-			'inputs: penalty 0 per week, set by alex at 2026-10-03T09:00:00Z'
+			'inputs: penalty 0 per week, set by alex at 2026-10-03 05:00 EDT'
 		]);
 	});
 
 	it('says a value with no inputs, such as a share apportioned from an epic, alone', () => {
 		expect(costOfDelayLines({ value: 250, by: 'planner', at: '2026-10-03T09:20:00Z' })).toEqual([
-			'cost of delay: 250 per week, set by planner at 2026-10-03T09:20:00Z'
+			'cost of delay: 250 per week, set by planner at 2026-10-03 05:20 EDT'
 		]);
 		expect(costOfDelayLines({ value: 250 })).toEqual(['cost of delay: 250 per week']);
 	});
@@ -98,20 +98,20 @@ describe('planning (S-0199)', () => {
 				at: '2026-10-03T09:00:00Z'
 			})
 		).toEqual([
-			'forecast: 16h of work, delivery 2026-10-07T17:00:00Z',
+			'forecast: 16h of work, delivery 2026-10-07 13:00 EDT',
 			'Three similar stories took two days each.',
-			'set by planner at 2026-10-03T09:00:00Z'
+			'set by planner at 2026-10-03 05:00 EDT'
 		]);
 	});
 
 	it('says a partial forecast', () => {
 		expect(forecastLines({ delivery: '2026-10-07T17:00:00Z' })).toEqual([
-			'forecast: delivery 2026-10-07T17:00:00Z'
+			'forecast: delivery 2026-10-07 13:00 EDT'
 		]);
 		expect(forecastLines({ basis: 'A guess.', at: '2026-10-03T09:00:00Z' })).toEqual([
 			'forecast',
 			'A guess.',
-			'set at 2026-10-03T09:00:00Z'
+			'set at 2026-10-03 05:00 EDT'
 		]);
 	});
 

@@ -1,5 +1,6 @@
 // The host's settings as the dashboard's settings page sees them (S-0105), flai's settings.get.
 import { agentFrom, configText, parseConfig, type Agent } from '$lib/agent';
+import { localTime } from '$lib/localtime';
 
 export const SETTINGS_KINDS = [
 	'action',
@@ -300,7 +301,7 @@ export function sharedRefusal(text: string): string {
 export function health(p: ServedProject): string {
 	switch (p.state) {
 		case 'connected':
-			return p.since ? `connected since ${p.since}` : 'connected';
+			return p.since ? `connected since ${localTime(p.since)}` : 'connected';
 		case 'not-connected':
 			return `not connected: ${p.last_error ?? 'no answer yet'}`;
 		case 'unavailable':

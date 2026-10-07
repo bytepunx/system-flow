@@ -40,6 +40,11 @@ export function localTime(at: string, zone?: string): string {
 	return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} ${p.timeZoneName}`;
 }
 
+/** A text flai wrote, such as a refusal, with each time it names as flai records one shown by localTime. */
+export function localTimes(text: string, zone?: string): string {
+	return text.replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ/g, (at) => localTime(at, zone));
+}
+
 /** A recorded time's calendar date in the local zone, YYYY-MM-DD; what it was given when that does not parse. */
 export function localDate(at: string, zone?: string): string {
 	const p = parts(at, zone);

@@ -36,4 +36,19 @@ describe('DismissibleNotice (S-0151)', () => {
 		flushSync();
 		expect(document.querySelector('[role="alert"]')!.textContent).toContain('refused: no');
 	});
+
+	it('shows a time flai names in its text in the local zone (S-0329)', () => {
+		c = mount(DismissibleNotice, {
+			target: document.body,
+			props: {
+				text: 'the planner is already running for E-0016 (pid 42, started 2026-10-03T10:00:00Z)',
+				ondismiss: () => {},
+				testid: 'said'
+			}
+		});
+		flushSync();
+		expect(document.querySelector('[data-testid="said"]')!.textContent).toBe(
+			'the planner is already running for E-0016 (pid 42, started 2026-10-03 06:00 EDT)'
+		);
+	});
 });

@@ -246,7 +246,7 @@ describe('SettingsPanel (S-0105)', () => {
 			backend(projects());
 			await show();
 			expect(q('served-sf')!.textContent).toContain('/home/me/git/sf');
-			expect(q('served-sf')!.textContent).toContain('connected since 2026-09-26T06:00:00Z');
+			expect(q('served-sf')!.textContent).toContain('connected since 2026-09-26 02:00 EDT');
 			expect(q('served-blog')!.textContent).toContain('not connected: dial: connection refused');
 			expect(
 				q('served-blog')!.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!
