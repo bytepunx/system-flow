@@ -125,7 +125,7 @@ The hold, the trial merge, and the notice at accept coordinate stories through f
 - **Closed with the story.** A conversation reads as closed once either story is done, cancelled, or archived, and then takes no reply. `flai accept` and `flai archive` close the open conversations of the stories they archive, with the entry `Closed: S-nnnn was accepted` or `was archived`. A closed conversation is never reopened; a new message starts a new one.
 - **Apart from threads.** None appears in `flai thread list`, among the threads awaiting the operator in `inbox` or the dashboard's designer inbox, or in a narrative's `## Open questions`. The operator reads them with `flai message list --all` and `flai message show`. A question for the designer is still a thread.
 
-Today the command line is the only way in: an agent finds the conversations of its story with `flai message list --story S-nnnn`. The MCP tools and the agents' inbox (S-0331) and the dashboard's view (S-0336) come in later stories of E-0018.
+An agent finds the conversations of its story with `flai message list --story S-nnnn`, or, since S-0331, through MCP: `message_send` and `message_reply`, `inbox` listing them under `messages`, and `wait_for_events` waking on one. Since S-0333 flai sends one itself: `flai task done` tells each other open story whose claim covers a path the task's commit changed, before either story is accepted ([workflow.md](workflow.md#branches-and-collisions-adr-0019)). The dashboard's view (S-0336) comes in a later story of E-0018.
 
 ## Within a story
 
