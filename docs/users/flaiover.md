@@ -258,6 +258,7 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Cumulative Flow | How many items sit in each state, each day of the window |
 | Time in State | A bar for each day of the window with items completed: how long, on average, those items spent in each state. Hover a bar for the items it averages; the table lists each item. Under it, the share of all their time per state |
 | Throughput | Completions per week of the window, by nature, weeks with none included |
+| Agent Waiting | How long agents waited on someone else, mostly you, each week of the window: on their threads and in review, stacked, with the mean wait per item as a dashed line. The table under it lists the ten longest waits ([Agent waiting](#agent-waiting)) |
 | Tokens / Min | Tokens per minute of agent work over time, one line per model |
 | Tokens / Day | The tokens spent on the items done each day, stacked by model, with the mean per day so far as a dashed line |
 | Tokens per item | The tokens an item took on average, over time: a line for epics, for stories, and for tasks |
@@ -311,6 +312,16 @@ Parallelism, Hold Time, and Touches Drift show what claims cost. A story in read
 - **Controls.** These charts offer only the window. They need a flai on the host as new as the dashboard, and say so when it is older. Touches Drift is drawn from git: when flai cannot read it, the chart says so.
 
 The table views list Parallelism by day, with in progress, held, and the limit; Hold Time by week, with each reason's time and the total; and Touches Drift by story, with both counts, then by week, with the stories done, how many had exact touches, and the share.
+
+### Agent waiting
+
+Agent Waiting, under Flow, shows the time agents spent waiting on someone else, mostly on you: for an answer on a thread, and for a story in review to be accepted or sent back. The exact definitions are in [metrics.md](../../design/system/metrics.md#waiting).
+
+- **A bar** is a week of the window, Monday to Sunday, UTC. It stacks the hours the agents of the items done that week waited on threads and in review. A wait counts in the week its item was done, not in the week it happened.
+- **A thread wait** runs from a thread's first entry to the first reply by someone else. A recommendation does not end it; your confirmation does. Only the part while the story was in progress counts. **A review wait** runs from the move to review to the move out of it.
+- **The dashed line** is the mean wait per item done that week, threads and review together. A week with nothing done has no point, and the line breaks there.
+- **Filters.** Choose the item type. There is no epic filter, since flai adds up the waits over every epic.
+- **The table** under the chart lists the ten longest waits with a part in the window, longest first: the story, whether it waited on a thread or in review, the thread, when the wait started and when it ended, or `open`, the hours of it inside the window, and who it waited for, the one who answered the thread or moved the story out of review. It lists stories in any state but cancelled, so a story waiting now is in the table before any bar holds it. When nothing waited in the window, it says so.
 
 ## Docs
 
