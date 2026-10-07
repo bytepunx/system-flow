@@ -1,6 +1,6 @@
 ---
 title: Session start
-updated: 2026-10-02
+updated: 2026-10-07
 audience: agent
 order: 10
 status: active
@@ -24,8 +24,8 @@ What to load before touching anything, how to resume after a crash, and how to l
 - If `FLAI_STORY` is set in your environment, flai started this session on the host because that story became ready and nobody was attending the project (`FLAI_STARTED_BY` says `flai-serve`). Prime with `flai prime --story` on that story, then call `inbox`: pull that story if it is still ready and the limit allows, otherwise the first ready story, otherwise nothing. Work as in any session. When nothing is left for you to pull, hold `wait_for_work` instead of ending the session, and pull the next story it names: flai starts one agent per project at a time, so while you wait, the next ready story is yours.
 - Do not re-derive facts already recorded in the narrative, the story, or `design/system`. Read them.
 - Do not read the whole repository to orient yourself. The four documents above plus the active story and its design links are enough; go wider only when a task needs it.
-- Before any long-running or risky operation, rewrite `## Current state` and `## Next steps` so a crash mid-operation loses nothing.
-- End every session with a closing log entry, a true `## Current state`, an ordered `## Next steps` whose first item is the very next action, and `flai check --strict` passing. Leave nothing half-edited that the narrative does not describe.
+- Before any long-running or risky operation, rewrite `## Current state` and `## Next steps` with `flai stream state`, or the MCP tool `stream_state`, so a crash mid-operation loses nothing. Never edit the two sections in the narrative's file.
+- End every session with a closing log entry, a true `## Current state` and an ordered `## Next steps` whose first item is the very next action, both written with `flai stream state`, and `flai check --strict` passing. Leave nothing half-edited that the narrative does not describe.
 
 ## When in doubt
 

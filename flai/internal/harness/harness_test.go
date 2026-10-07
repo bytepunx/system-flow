@@ -291,7 +291,7 @@ func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
 // the analyzer, whom flai serve does not start again, still hold.
 func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 	ends := []string{
-		"write the narrative's Current state and Next steps, saying what you asked",
+		"write the narrative's Current state and Next steps with flai stream state, saying what you asked",
 		"and end: flai serve starts you again in this session when the thread is answered, and your first inbox holds the answer",
 		"Do not hold the flai MCP tool wait_for_events for an answer; when it answers end: true",
 	}
@@ -312,8 +312,8 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 	}
 	p := Prompt(req(nil))
 	for _, want := range []string{
-		"ask with the flai MCP tool thread_open on S-0104, and go on with the work of S-0104 that does not wait on the answer. When nothing is left but the answer, write the narrative's Current state and Next steps, saying what you asked and what you will do with each answer, and end",
-		"when it answers end: true, do as its why says: write the narrative's Current state and Next steps, and end.",
+		"ask with the flai MCP tool thread_open on S-0104, and go on with the work of S-0104 that does not wait on the answer. When nothing is left but the answer, write the narrative's Current state and Next steps with flai stream state, saying what you asked and what you will do with each answer, and end",
+		"when it answers end: true, do as its why says: write the narrative's Current state and Next steps with flai stream state, and end.",
 		// S-0285: still never ends nor waits on wait_for_events while a sub-agent runs
 		"Never end your turn while a sub-agent runs in the background",
 		"Never wait for a sub-agent with the flai MCP tool wait_for_events either",
@@ -322,7 +322,7 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 			t.Errorf("the story run's prompt lacks %q:\n%s", want, p)
 		}
 	}
-	if p := Prompt(commit); !strings.Contains(p, "ask with the flai MCP tool thread_open on S-0104, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps, saying what you asked and what is left to commit, and end") {
+	if p := Prompt(commit); !strings.Contains(p, "ask with the flai MCP tool thread_open on S-0104, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps with flai stream state, saying what you asked and what is left to commit, and end") {
 		t.Errorf("the commit run's prompt:\n%s", p)
 	}
 	for name, c := range map[string]struct {
@@ -712,6 +712,21 @@ func TestThePromptSaysHowCriteriaAreTicked(t *testing.T) {
 	for _, w := range []string{
 		"ask each to name in its final message the acceptance criteria its task meets, by their numbers in flai criteria list S-0104",
 		"close the task with flai task done and test it as above, then tick the criteria your review verified it meets",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("prompt lacks %q:\n%s", w, p)
+		}
+	}
+}
+
+// S-0271: a story's agent is told to write the narrative's Current state and
+// Next steps with flai stream state, never by editing the narrative, and to
+// write them so when it ends on an open question.
+func TestThePromptSaysHowTheNarrativesStateIsWritten(t *testing.T) {
+	p := Prompt(req(&manifest.Agent{Harness: ClaudeCode}))
+	for _, w := range []string{
+		`Keep the narrative's Current state and Next steps true: rewrite them at every task transition with flai stream state S-0104 --current "<text>" --next "<text>" (or the flai MCP tool stream_state), never by editing the narrative.`,
+		"write the narrative's Current state and Next steps with flai stream state, saying what you asked",
 	} {
 		if !strings.Contains(p, w) {
 			t.Errorf("prompt lacks %q:\n%s", w, p)
