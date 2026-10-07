@@ -51,6 +51,10 @@ type Issue struct {
 
 	Path string `yaml:"-" json:"path"`
 	Body string `yaml:"-" json:"-"`
+
+	// written is the files the last Save wrote, absolute; Changed reports
+	// them (S-0275).
+	written []string
 }
 
 // Dir is <layout.design>/issues.
@@ -59,7 +63,7 @@ func Dir(r *workitem.Repo) string {
 }
 
 // SummaryPath is summary.md's path relative to the repository root,
-// slash-separated, as git names it.
+// slash-separated, as git names it: the file WriteSummary writes.
 func SummaryPath(r *workitem.Repo) string {
 	return filepath.ToSlash(filepath.Join(r.Manifest.Layout["design"], Folder, SummaryFile))
 }
@@ -156,10 +160,32 @@ func (is *Issue) Marshal() string {
 
 // Save writes the issue.
 func (is *Issue) Save() error {
+	is.written = nil
 	if err := os.MkdirAll(filepath.Dir(is.Path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(is.Path, []byte(is.Marshal()), 0o644)
+	if err := os.WriteFile(is.Path, []byte(is.Marshal()), 0o644); err != nil {
+		return err
+	}
+	is.written = []string{is.Path}
+	return nil
+}
+
+// Changed is the files the last write of is (by New, Bump, BumpWith, Close,
+// or Save) wrote, relative to r's root and slash-separated: the issue's file,
+// or none when is was only read or nothing was written, as when NewOrBump or
+// RecordOnce finds the occurrence already recorded. summary.md is not among
+// them: WriteSummary, which the callers run after, writes SummaryPath(r).
+func (is *Issue) Changed(r *workitem.Repo) ([]string, error) {
+	out := []string{}
+	for _, p := range is.written {
+		rel, err := filepath.Rel(r.Root, p)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return nil, fmt.Errorf("%s was written at %s, outside the checkout %s; record it in the checkout whose branch it is committed on", is.ID, p, r.Root)
+		}
+		out = append(out, filepath.ToSlash(rel))
+	}
+	return out, nil
 }
 
 // List loads every issue, sorted by ID. A missing folder is an empty list.
@@ -262,8 +288,8 @@ func (opt NewOptions) check(r *workitem.Repo) (story, report string, err error) 
 	return story, report, nil
 }
 
-// New creates an issue file with count 1. Anything it refuses leaves nothing
-// written.
+// New creates an issue file with count 1; the issue's Changed reports it.
+// Anything it refuses leaves nothing written.
 func New(r *workitem.Repo, opt NewOptions) (*Issue, error) {
 	story, report, err := opt.check(r)
 	if err != nil {
@@ -304,7 +330,8 @@ type BumpOptions struct {
 }
 
 // Bump records another occurrence: count, last_reported, averaged cost, and
-// a new instance in the body naming the story it belongs to, if any.
+// a new instance in the body naming the story it belongs to, if any. The
+// issue's Changed reports the file it wrote.
 func Bump(is *Issue, story, cost, note string, now time.Time) error {
 	return BumpWith(nil, is, BumpOptions{Story: story, Cost: cost, Note: note, Now: now})
 }
@@ -312,6 +339,7 @@ func Bump(is *Issue, story, cost, note string, now time.Time) error {
 // BumpWith records another occurrence as Bump does, and with it the impact
 // and the report opt gives. r is the project the issue is in; it may be nil
 // when opt names no report. Anything it refuses leaves the issue as it was.
+// The issue's Changed reports the file it wrote.
 func BumpWith(r *workitem.Repo, is *Issue, opt BumpOptions) error {
 	if is.Status != "open" {
 		return fmt.Errorf("%s is closed; reopen it by editing status, or record a new issue", is.ID)
@@ -364,7 +392,8 @@ func BumpWith(r *workitem.Repo, is *Issue, opt BumpOptions) error {
 	return is.Save()
 }
 
-// Close marks the issue closed with a reason under Remediation.
+// Close marks the issue closed with a reason under Remediation. The file
+// stays where it is; the issue's Changed reports it.
 func Close(is *Issue, reason string, now time.Time) error {
 	if strings.TrimSpace(reason) == "" {
 		return fmt.Errorf("--reason is required")
@@ -437,7 +466,7 @@ func Summary(list []*Issue, now time.Time) string {
 	return b.String()
 }
 
-// WriteSummary regenerates summary.md.
+// WriteSummary regenerates summary.md, at SummaryPath(r).
 func WriteSummary(r *workitem.Repo, now time.Time) ([]*Issue, error) {
 	list, err := List(r)
 	if err != nil {

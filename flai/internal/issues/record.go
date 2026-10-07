@@ -71,7 +71,8 @@ const (
 // RecordOnce records an occurrence in the open issue titled opt.Title: it
 // opens the issue, with this occurrence as its first instance, when none is
 // open; bumps it when no instance names opt.Story with opt.Note; and leaves
-// it as it is when one does. It does not regenerate summary.md.
+// it as it is when one does. It does not regenerate summary.md. The issue's
+// Changed reports the file it wrote, none when it was already recorded.
 func RecordOnce(r *workitem.Repo, opt NewOptions) (*Issue, Outcome, error) {
 	list, err := List(r)
 	if err != nil {
@@ -100,7 +101,8 @@ func RecordOnce(r *workitem.Repo, opt NewOptions) (*Issue, Outcome, error) {
 // note opt gives, rather than open a second, and leaves it as it is when an
 // instance of it names that report already, so that filing a report's
 // findings again does not count them twice. It does not regenerate
-// summary.md. Anything it refuses leaves nothing written.
+// summary.md. Anything it refuses leaves nothing written. The issue's Changed
+// reports the file it wrote, none when it was already recorded.
 func NewOrBump(r *workitem.Repo, opt NewOptions) (*Issue, Outcome, error) {
 	if strings.TrimSpace(opt.Report) == "" {
 		is, err := New(r, opt)

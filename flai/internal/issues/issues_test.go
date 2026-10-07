@@ -154,6 +154,68 @@ func TestSummaryPath(t *testing.T) {
 	}
 }
 
+// S-0275: New, Bump, BumpWith, and Close report the issue file they wrote,
+// relative to the root under layout.design; an issue only read reports none,
+// and one written outside the checkout is refused.
+func TestChangedIsTheIssueFileEachWriteWrote(t *testing.T) {
+	r := repo(t)
+	r.Manifest.Layout["design"] = "notes/design"
+	changed := func(is *Issue) string {
+		t.Helper()
+		got, err := is.Changed(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Join(got, " ")
+	}
+	is, err := New(r, NewOptions{Title: "Lint: version mismatch", Class: "efficiency", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const file = "notes/design/issues/I-0001-lint-version-mismatch.md"
+	if got := changed(is); got != file {
+		t.Errorf("new: %q, want %q", got, file)
+	}
+	back, err := Get(r, "I-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := back.Changed(r); err != nil || got == nil || len(got) != 0 {
+		t.Errorf("an issue only read wrote nothing: %q %v", got, err)
+	}
+	if err := Bump(back, "S-0275", "5m", "again", t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if got := changed(back); got != file {
+		t.Errorf("bump: %q, want %q", got, file)
+	}
+	if err := BumpWith(r, back, BumpOptions{Report: "notes/design/analysis/2026-10-06-risk.md", Now: t0.Add(2 * time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	if got := changed(back); got != file {
+		t.Errorf("bump with a report: %q, want %q", got, file)
+	}
+	if err := Close(back, "fixed by S-0275", t0.Add(3*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if got := changed(back); got != file {
+		t.Errorf("close: %q, want %q", got, file)
+	}
+	if err := Bump(back, "", "", "", t0); err == nil || changed(back) != file {
+		t.Errorf("a refused bump wrote, or forgot what the close wrote: %v %q", err, changed(back))
+	}
+	if _, err := WriteSummary(r, t0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(r.Root, filepath.FromSlash(SummaryPath(r)))); err != nil || SummaryPath(r) != "notes/design/issues/summary.md" {
+		t.Errorf("WriteSummary wrote no file at SummaryPath %s: %v", SummaryPath(r), err)
+	}
+	other := repo(t)
+	if _, err := back.Changed(other); err == nil || !strings.Contains(err.Error(), "outside the checkout") {
+		t.Errorf("an issue written in another checkout: %v", err)
+	}
+}
+
 func TestNextIDWithoutStoryBranches(t *testing.T) {
 	if testing.Short() {
 		t.Skip("needs git")

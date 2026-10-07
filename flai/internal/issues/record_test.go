@@ -1,6 +1,7 @@
 package issues
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -77,5 +78,56 @@ func TestRecordOnce(t *testing.T) {
 	reread, err := Read(is.Path)
 	if err != nil || reread.Title != opt.Title {
 		t.Fatalf("title round trip: %v %+v", err, reread)
+	}
+}
+
+// S-0275: NewOrBump and RecordOnce report the issue file they wrote, whether
+// they open the issue or bump it, and none when the occurrence was recorded
+// already.
+func TestNewOrBumpAndRecordOnceReportTheFileTheyWrote(t *testing.T) {
+	r := repo(t)
+	changed := func(is *Issue) string {
+		t.Helper()
+		got, err := is.Changed(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Join(got, " ")
+	}
+	const first, second = "design/issues/I-0001-review-waits-a-day.md", "design/issues/I-0002-plain.md"
+	steps := []struct {
+		name    string
+		opt     NewOptions
+		outcome Outcome
+		want    string
+	}{
+		{"a report's finding opens", NewOptions{Title: "Review waits a day", Class: "efficiency", Report: report, Now: t0}, Opened, first},
+		{"another report's bumps", NewOptions{Title: "Review waits a day", Class: "efficiency", Report: "design/analysis/2026-10-13-risk.md", Now: t0.Add(time.Hour)}, Bumped, first},
+		{"the same report again", NewOptions{Title: "Review waits a day", Class: "efficiency", Report: report, Now: t0.Add(2 * time.Hour)}, Already, ""},
+		{"no report opens", NewOptions{Title: "Plain", Class: "defect", Now: t0}, Opened, second},
+	}
+	for _, s := range steps {
+		is, outcome, err := NewOrBump(r, s.opt)
+		if err != nil || outcome != s.outcome {
+			t.Fatalf("%s: %v %s", s.name, err, outcome)
+		}
+		if got := changed(is); got != s.want {
+			t.Errorf("%s: changed %q, want %q", s.name, got, s.want)
+		}
+	}
+	opt := NewOptions{Title: "Found at close-out", Class: "efficiency", Story: "S-0001", Note: "found", Now: t0}
+	const third = "design/issues/I-0003-found-at-close-out.md"
+	for _, want := range []struct {
+		outcome Outcome
+		changed string
+	}{{Opened, third}, {Already, ""}} {
+		is, outcome, err := RecordOnce(r, opt)
+		if err != nil || outcome != want.outcome || changed(is) != want.changed {
+			t.Fatalf("record once: %v %s %q, want %s %q", err, outcome, changed(is), want.outcome, want.changed)
+		}
+	}
+	opt.Story = "S-0002"
+	if is, outcome, err := RecordOnce(r, opt); err != nil || outcome != Bumped || changed(is) != third {
+		t.Fatalf("record once for another story: %v %s %q", err, outcome, changed(is))
 	}
 }
