@@ -118,12 +118,12 @@ func TestToolsAreAdvertised(t *testing.T) {
 		}
 	}
 	sort.Strings(names)
-	want := "activity_log agent_restart agent_start analyze board criteria_tick doc_get doc_search inbox issue_bump issue_new issue_story item_edit item_get item_move item_new order_by_policy permission_prompt plan prime promote_candidates release_evaluate release_publish shared_paths shared_paths_edit stream_state task_done test thread_get thread_open thread_reply thread_resolve verify wait_for_events wait_for_work who_touches"
+	want := "activity_log agent_restart agent_start analyze board criteria_tick doc_get doc_search inbox issue_bump issue_new issue_story item_edit item_get item_move item_new order_by_policy permission_prompt plan prime promote_candidates release_evaluate release_publish shared_paths shared_paths_edit story_start stream_state task_done test thread_get thread_open thread_reply thread_resolve verify wait_for_events wait_for_work who_touches"
 	if strings.Join(names, " ") != want {
 		t.Errorf("tools: %v", names)
 	}
 	in := f.cs.InitializeResult().Instructions
-	for _, want := range []string{"When you start work on a story, call prime with it", "A brief is not the document", "doc_get and its heading before relying on it or changing what it describes", "doc_search"} {
+	for _, want := range []string{"When you start a story with story_start, its answer holds the story's prime pack", "when you take up a story of yours again, call prime with it", "A brief is not the document", "doc_get and its heading before relying on it or changing what it describes", "doc_search"} {
 		if !strings.Contains(in, want) {
 			t.Errorf("the instructions do not say to prime with the pack and fetch what it briefs (%q): %s", want, in)
 		}

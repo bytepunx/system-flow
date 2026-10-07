@@ -47,7 +47,7 @@ configuration looks like, and flai mcp token prints its bearer token.`,
 				return err
 			}
 			agent := mcpAgent(agentFlag)
-			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, Publish: a.mcpPublisher()}
+			opt := mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Activities: a.mcpActivity, AutoApprove: a.mcpAutoApprove, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees}
 			if repo == nil {
 				// Not in a project (S-0101): every project in this folder and below it.
 				if opt.Folder, err = a.workingDir(); err != nil {
