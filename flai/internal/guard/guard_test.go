@@ -12,7 +12,7 @@ import (
 )
 
 // g knows flai's commands as the cmd package gives them.
-var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "thread", "touches", "unblock", "version"}}
+var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "test", "thread", "touches", "unblock", "version"}}
 
 func bash(agent, cmd string) Event {
 	e := Event{ToolName: "Bash", AgentType: agent}
@@ -108,6 +108,8 @@ func TestASubAgentRunsChecksButNotWrites(t *testing.T) {
 		"flai thread show TH-0042",
 		"flai stream diff S-0175",
 		"flai stream --help",
+		"flai test flai/internal/manifest --json",
+		"scripts/flai.sh test --all",
 		"git -C /w diff main...HEAD --stat",
 		"git log --oneline -5 && git status --short",
 		"git",

@@ -149,7 +149,7 @@ const MCPPrefix = "mcp__flai__"
 
 // MCPReads are flai's MCP tools a sub-agent may call: they read and use no
 // agent's identity.
-var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", "thread_get", "who_touches"}
+var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", "test", "thread_get", "who_touches"}
 
 // cliReads are the flai commands a sub-agent may run, each with the
 // subcommands it may run; nil allows the command whatever follows it, and ""
@@ -168,6 +168,7 @@ var cliReads = map[string][]string{
 	"show":     nil,
 	"stats":    nil,
 	"stream":   {"diff"},
+	"test":     nil,
 	"thread":   {"list", "show"},
 	"touches":  {"suggest"},
 	"version":  nil,
