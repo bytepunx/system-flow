@@ -47,3 +47,43 @@ claims:
     - template/CHANGELOG.md
 flai:
   minimum: 1.31.0
+tests:
+  - name: gofmt
+    command: [gofmt, "-l", "{files}"]
+    dir: flai
+    paths: ["flai/**/*.go"]
+    format: gofmt-list
+  - name: vet
+    command: [go, vet, "{packages}"]
+    dir: flai
+    paths: ["flai/**/*.go", "flai/**/testdata/**"]
+    format: plain
+  - name: golangci-lint
+    command: ["../scripts/with-env.sh", golangci-lint, run, "--allow-parallel-runners", "--show-stats=false", "--output.json.path", stdout, "{packages}"]
+    dir: flai
+    paths: ["flai/**/*.go", "flai/**/testdata/**"]
+    format: golangci-json
+  - name: go-test
+    command: [go, test, "-json", "-race", "-short", "-count=1", "{packages}"]
+    dir: flai
+    paths: ["flai/**/*.go", "flai/**/testdata/**"]
+    format: go-test-json
+  - name: vitest
+    command: ["../scripts/flaiover-unit.sh", related, "--run", "--reporter=json", "{files}"]
+    dir: flaiover
+    paths: ["flaiover/src/**", "flaiover/*.ts", "flaiover/*.js"]
+    format: vitest-json
+    all_command: ["../scripts/flaiover-unit.sh", run, "--reporter=json"]
+  - name: markdown
+    command: [scripts/lint-md.sh, "{files}"]
+    paths: ["**/*.md", "!**/node_modules/**", "!**/testdata/**", "!bin/**", "!flaiover/build/**", "!**/.svelte-kit/**", "!.flai-cache/**"]
+    format: plain
+    all_command: [scripts/lint-md.sh]
+  - name: integration
+    command: [scripts/integration.sh]
+    format: plain
+    all_only: true
+  - name: smoke
+    command: [scripts/smoke.sh]
+    format: plain
+    all_only: true

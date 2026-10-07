@@ -2,6 +2,9 @@
 # Lint plus all three test tiers in order of cost. Needs golangci-lint v2 (scripts/install-tools.sh).
 # The full Go run in integration.sh holds every short test, so test.sh's short
 # Go run is left out here and only its vitest half, flaiover-unit.sh, is kept.
+# Keep in step with the tiers under tests in system-flow.yaml, which flai test
+# runs for the paths a change touches: gofmt, vet, golangci-lint, vitest,
+# integration, and smoke here; go-test is test.sh's, and markdown is lint-md.sh's.
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT/flai"

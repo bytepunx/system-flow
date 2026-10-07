@@ -56,6 +56,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [stream](#flai-stream) | Open and append to agent narratives in wip/agents |
 | [task](#flai-task) | Create tasks (flai show prints one, flai move transitions it) |
 | [template](#flai-template) | Inspect, refresh, and switch the template source |
+| [test](#flai-test) | Run the test and lint tiers for paths or packages and answer pass or the first findings |
 | [thread](#flai-thread) | Threads between the designer and agents, anchored to documents and items (wip/threads) |
 | [touches](#flai-touches) | Set what a story or task is working on; flai check warns on overlap |
 | [unblock](#flai-unblock) | Close the open blocked interval on an item |
@@ -125,6 +126,7 @@ Subcommands:
 - [stream](#flai-stream): Open and append to agent narratives in wip/agents
 - [task](#flai-task): Create tasks (flai show prints one, flai move transitions it)
 - [template](#flai-template): Inspect, refresh, and switch the template source
+- [test](#flai-test): Run the test and lint tiers for paths or packages and answer pass or the first findings
 - [thread](#flai-thread): Threads between the designer and agents, anchored to documents and items (wip/threads)
 - [touches](#flai-touches): Set what a story or task is working on; flai check warns on overlap
 - [unblock](#flai-unblock): Close the open blocked interval on an item
@@ -3018,6 +3020,36 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--ref` string | branch, tag, or commit; empty means the default branch |
+
+### flai test
+
+Run the test and lint tiers for paths or packages and answer pass or the first findings.
+
+```text
+flai test [path|package]... [flags]
+```
+
+Run the project's test and lint tiers, the tests list in system-flow.yaml, for the files and folders given, in the checkout of the working directory: a story's worktree or the main checkout. A Go package is given as its folder. With no argument the files are those the checkout changed against the main branch, committed or not. --all runs every tier, all\_only ones too, for the whole checkout.
+
+The tiers whose paths select a file run in the manifest's order, cheapest first, and the run stops at the first that fails. The answer is pass, or the failing tier's first findings, never its whole output: each as path:line name: message, at most --max across the run, with how many were left out. A manifest without tests runs scripts/test.sh as its one tier.
+
+The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could not answer: an argument outside the checkout, tiers the manifest does not declare validly, or a run stopped before it finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with its state, command, duration, and findings.
+
+Examples:
+
+```bash
+flai test flai/internal/manifest
+flai test flaiover/src/lib/board.ts --json
+flai test                # what this checkout changed against the main branch
+flai test --all --max 10
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--all` | run every tier for the whole checkout, all\_only ones too, whatever the arguments |
+| `--max` int | the most findings to report across the run (default `5`) |
 
 ### flai thread
 
