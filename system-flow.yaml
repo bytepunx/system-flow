@@ -99,3 +99,15 @@ tests:
     paths: ["flai/**"]
     format: plain
     all_only: true
+orchestration:
+  permissions:
+    accept_reviews: true
+    answer_threads: autonomous
+    finalize_drafts: true
+    order_ready: true
+    plan_backlog_epics: true
+    promote_to_ready: true
+    publish: true
+  policy: throughput
+  release:
+    value: 1000
