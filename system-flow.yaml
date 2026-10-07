@@ -108,6 +108,7 @@ orchestration:
     plan_backlog_epics: true
     promote_to_ready: true
     publish: true
+    plan_backlog_stories: true
   policy: throughput
   release:
     value: 1000
