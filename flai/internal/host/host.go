@@ -179,10 +179,13 @@ type Options struct {
 	// Serve is how to start flai serve; MCP how to start a project's MCP server.
 	Serve func() (Spec, error)
 	MCP   func(root string) (Spec, error)
-	// Check says whether a newer flai is published; Upgrade installs it and
-	// says whether it did (installed), so that the host restarts on it.
-	Check   func(ctx context.Context) (any, error)
-	Upgrade func(ctx context.Context) (res any, installed bool, err error)
+	// Check says whether a newer flai is published; Versions lists the
+	// published releases, newest first; Upgrade installs the newest, or the
+	// published release version names when it is not "", and says whether it
+	// did (installed), so that the host restarts on it.
+	Check    func(ctx context.Context) (any, error)
+	Versions func(ctx context.Context) (any, error)
+	Upgrade  func(ctx context.Context, version string) (res any, installed bool, err error)
 	// Every is how often the state is written; Backoff the first wait after a
 	// child ends unasked, doubled up to MaxBackoff; Grace how long a child is
 	// given to stop before it is killed; Look how often an external process
@@ -516,13 +519,13 @@ func (h *host) wantMCP(roots []string) {
 	}
 }
 
-// upgrade installs a newer flai and, when one was installed, restarts the
-// host on it once the answer has gone.
-func (h *host) upgrade(ctx context.Context) (any, error) {
+// upgrade installs a newer flai, or the published release version names, and,
+// when one was installed, restarts the host on it once the answer has gone.
+func (h *host) upgrade(ctx context.Context, version string) (any, error) {
 	if h.o.Upgrade == nil {
 		return nil, errors.New("this host cannot upgrade flai")
 	}
-	res, installed, err := h.o.Upgrade(ctx)
+	res, installed, err := h.o.Upgrade(ctx, version)
 	if err != nil {
 		return nil, err
 	}

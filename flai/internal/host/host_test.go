@@ -2,12 +2,15 @@ package host
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -359,11 +362,11 @@ func TestAChildIsStoppedOnlyOnceItsProcessHasEnded(t *testing.T) {
 
 func TestAnUpgradeThatInstalledRestartsTheHost(t *testing.T) {
 	installed := false
-	r := start(t, Options{Upgrade: func(context.Context) (any, bool, error) {
+	r := start(t, Options{Upgrade: func(context.Context, string) (any, bool, error) {
 		return map[string]string{"installed": "2.0.0"}, !installed, nil
 	}})
 	pid := childOf(r.until("serve", isRunning(Serve, "")), Serve, "").PID
-	out, err := r.client.Upgrade(context.Background())
+	out, err := r.client.Upgrade(context.Background(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -381,5 +384,138 @@ func TestAnUpgradeThatInstalledRestartsTheHost(t *testing.T) {
 	}
 	if alive(pid) {
 		t.Errorf("serve (pid %d) outlived the host's restart", pid)
+	}
+}
+
+// upgrades records the version each upgrade was asked for, and answers as
+// flai self-upgrade --json does: installed, or refused with err.
+type upgrades struct {
+	mu    sync.Mutex
+	asked []string
+	err   error
+}
+
+func (u *upgrades) upgrade(_ context.Context, version string) (any, bool, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	u.asked = append(u.asked, version)
+	if u.err != nil {
+		return nil, false, u.err
+	}
+	return map[string]string{"previous": "1.2.0", "installed": version}, true, nil
+}
+
+func (u *upgrades) were() []string {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return slices.Clone(u.asked)
+}
+
+// endsToRestart waits for the host to end with ErrRestart.
+func (r *running) endsToRestart() {
+	r.t.Helper()
+	select {
+	case err := <-r.done:
+		close(r.done)
+		if !errors.Is(err, ErrRestart) {
+			r.t.Fatalf("Run returned %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		r.t.Fatal("the host did not end to restart")
+	}
+}
+
+// S-0298: an upgrade to a chosen release passes its version on and restarts
+// the host and its processes on it, as an upgrade to the newest does.
+func TestAnUpgradeToAChosenVersionRestartsTheHostOnIt(t *testing.T) {
+	u := &upgrades{}
+	r := start(t, Options{Upgrade: u.upgrade, MCP: func(string) (Spec, error) { return spec("run")() }})
+	if _, err := r.client.KeepMCP(context.Background(), []string{"/a"}); err != nil {
+		t.Fatal(err)
+	}
+	st := r.until("serve and mcp", func(st Status) bool { return isRunning(Serve, "")(st) && isRunning(MCP, "/a")(st) })
+	out, err := r.client.Upgrade(context.Background(), "1.1.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var said struct {
+		Restarting bool              `json:"restarting"`
+		Upgrade    map[string]string `json:"upgrade"`
+	}
+	if err := json.Unmarshal(out, &said); err != nil || !said.Restarting || said.Upgrade["installed"] != "1.1.0" {
+		t.Errorf("answered %s (%v)", out, err)
+	}
+	if got := u.were(); !slices.Equal(got, []string{"1.1.0"}) {
+		t.Errorf("upgrade asked for %q, want 1.1.0", got)
+	}
+	r.endsToRestart()
+	for _, c := range st.Children {
+		if alive(c.PID) {
+			t.Errorf("%s %s (pid %d) outlived the host's restart", c.Name, c.Root, c.PID)
+		}
+	}
+}
+
+// S-0298: a version that is not a bare X.Y.Z is refused before the upgrade
+// runs, and one the upgrade refuses, as self-upgrade refuses one that is not
+// published, comes back to the client, and the host goes on as it was.
+func TestARefusedVersionChangesNothing(t *testing.T) {
+	u := &upgrades{err: errors.New("flai self-upgrade: resolve flai 1.3.0: o/r has no published release tagged flai/v1.3.0; published are 1.2.0, 1.1.0")}
+	r := start(t, Options{Upgrade: u.upgrade})
+	pid := childOf(r.until("serve", isRunning(Serve, "")), Serve, "").PID
+	ctx := context.Background()
+	for _, v := range []string{"v1.1.0", "1.1", "1.1.0-rc.1", "01.1.0", "1.1.0 ", "latest", "flai/v1.1.0"} {
+		if _, err := r.client.Upgrade(ctx, v); err == nil || !strings.Contains(err.Error(), "not a release version") {
+			t.Errorf("%q: %v", v, err)
+		}
+	}
+	for _, body := range []string{"nope", `{"version": 1}`, `["1.1.0"]`} {
+		req, _ := http.NewRequest(http.MethodPost, r.client.URL+"/upgrade", strings.NewReader(body))
+		req.Header.Set("Authorization", "Bearer "+r.client.Token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("body %s: %d, want 400", body, resp.StatusCode)
+		}
+	}
+	if got := u.were(); len(got) != 0 {
+		t.Errorf("a malformed version reached the upgrade: %q", got)
+	}
+	if _, err := r.client.Upgrade(ctx, "1.3.0"); err == nil || !strings.Contains(err.Error(), "published are 1.2.0, 1.1.0") {
+		t.Errorf("an unpublished version: %v", err)
+	}
+	if got := u.were(); !slices.Equal(got, []string{"1.3.0"}) {
+		t.Errorf("upgrade asked for %q", got)
+	}
+	time.Sleep(300 * time.Millisecond) // longer than an installed upgrade waits to restart
+	select {
+	case err := <-r.done:
+		close(r.done)
+		t.Fatalf("the host ended on a refused upgrade: %v", err)
+	default:
+	}
+	if c := childOf(r.until("serve", isRunning(Serve, "")), Serve, ""); c.PID != pid {
+		t.Errorf("serve was restarted: pid %d, was %d", c.PID, pid)
+	}
+}
+
+// S-0298: GET /versions answers the list the host's Versions gives, as it is.
+func TestVersionsListsThePublishedReleases(t *testing.T) {
+	list := json.RawMessage(`[{"version":"1.2.0","tag":"flai/v1.2.0","installed":true,"latest":true},{"version":"1.1.0","tag":"flai/v1.1.0","installed":false,"latest":false}]`)
+	r := start(t, Options{Versions: func(context.Context) (any, error) { return list, nil }})
+	out, err := r.client.Versions(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []map[string]any
+	if json.Unmarshal(out, &got) != nil || len(got) != 2 || got[0]["version"] != "1.2.0" || got[0]["installed"] != true || got[1]["tag"] != "flai/v1.1.0" {
+		t.Errorf("answered %s, want %s", out, list)
+	}
+	none := start(t, Options{})
+	if _, err := none.client.Versions(context.Background()); err == nil || !strings.Contains(err.Error(), "cannot list") {
+		t.Errorf("a host with no Versions: %v", err)
 	}
 }

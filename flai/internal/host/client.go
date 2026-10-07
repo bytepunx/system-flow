@@ -95,8 +95,20 @@ func (c *Client) Check(ctx context.Context) (json.RawMessage, error) {
 	return out, c.do(ctx, http.MethodGet, "/check", nil, &out)
 }
 
-// Upgrade installs the newest flai; the host restarts on it when it did.
-func (c *Client) Upgrade(ctx context.Context) (json.RawMessage, error) {
+// Versions lists the published flai releases, newest first, as flai
+// self-upgrade --list --json prints them.
+func (c *Client) Versions(ctx context.Context) (json.RawMessage, error) {
 	var out json.RawMessage
-	return out, c.do(ctx, http.MethodPost, "/upgrade", nil, &out)
+	return out, c.do(ctx, http.MethodGet, "/versions", nil, &out)
+}
+
+// Upgrade installs the newest flai, or the published release version names
+// when it is not ""; the host restarts on it when it did.
+func (c *Client) Upgrade(ctx context.Context, version string) (json.RawMessage, error) {
+	var in any
+	if version != "" {
+		in = UpgradeRequest{Version: version}
+	}
+	var out json.RawMessage
+	return out, c.do(ctx, http.MethodPost, "/upgrade", in, &out)
 }

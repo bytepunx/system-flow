@@ -64,6 +64,8 @@ watching it work in a terminal, and for start, stop, status, and the rest.`,
   flai host stop mcp         # stop the MCP servers until flai host start mcp
   flai host check            # is a newer flai published?
   flai host upgrade          # install it and restart everything on it
+  flai host versions         # the published flai releases, newest first
+  flai host upgrade --version 1.2.0   # install that one instead, an earlier one included
   flai host stop`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -147,16 +149,49 @@ watching it work in a terminal, and for start, stop, status, and the rest.`,
 			})
 		},
 	}
+	versions := &cobra.Command{
+		Use:   "versions",
+		Short: "Ask the host for the published flai releases, newest first, marking the installed one and the newest",
+		Long: `Asks the host for the published flai releases, newest first, as flai
+self-upgrade --list prints them from the host's flai: each with its date,
+marking the installed one (the flai flai host upgrade would replace), the
+newest, and any below the flai.minimum of a project flai serve serves. With
+--json it prints the list as the host answers it: version, tag, published,
+installed, latest, and below_minimum (each project and minimum the release is
+below, left out when none). It installs nothing.`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			c, st, err := a.hostDir().Client(time.Now())
+			if err != nil {
+				return err
+			}
+			out, err := c.Versions(cmd.Context())
+			if err != nil {
+				return err
+			}
+			return a.printHostVersions(out, st.Version)
+		},
+	}
+	var version string
 	upgrade := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Have the host install the newest flai and restart itself and every process it runs on it",
-		Args:  cobra.NoArgs,
+		Short: "Have the host install the newest flai, or --version a published one, and restart itself and every process it runs on it",
+		Long: `Has the host install the newest flai, as flai self-upgrade does, and
+restart itself and every process it runs on what it installed.
+
+--version installs that published release instead, an earlier one included,
+the same way: the host restarts on it with its processes. A version that is
+not X.Y.Z is refused before anything runs, and one that is not a published
+release is refused, naming the published ones (flai host versions), before
+anything is downloaded or replaced. A release below a served project's
+flai.minimum is installed, not refused: flai host versions marks it.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, _, err := a.hostDir().Client(time.Now())
 			if err != nil {
 				return err
 			}
-			out, err := c.Upgrade(cmd.Context())
+			out, err := c.Upgrade(cmd.Context(), version)
 			if err != nil {
 				return err
 			}
@@ -169,8 +204,41 @@ watching it work in a terminal, and for start, stop, status, and the rest.`,
 			})
 		},
 	}
-	c.AddCommand(start, stop, status, process("restart", "Ask the host to restart serve, the MCP servers, or all of them"), check, upgrade)
+	upgrade.Flags().StringVar(&version, "version", "", "install this published release instead of the newest, e.g. 1.2.0")
+	c.AddCommand(start, stop, status, process("restart", "Ask the host to restart serve, the MCP servers, or all of them"), check, versions, upgrade)
 	return c
+}
+
+// printHostVersions prints the host's list of published flai releases as it
+// is, or as flai self-upgrade --list prints it, under the version the host runs.
+func (a *app) printHostVersions(out json.RawMessage, running string) error {
+	var listed []listedFlai
+	if err := json.Unmarshal(out, &listed); err != nil {
+		return fmt.Errorf("flai host answered a list of releases that is not one: %w", err)
+	}
+	if a.jsonOut {
+		var v []any
+		if err := json.Unmarshal(out, &v); err != nil {
+			return err
+		}
+		return a.printJSON(v)
+	}
+	if len(listed) == 0 {
+		fmt.Fprintf(a.out, "no published flai release (the host runs flai %s)\n", running)
+		return nil
+	}
+	fmt.Fprintf(a.out, "published flai releases, newest first (the host runs flai %s):\n", running)
+	if err := writeFlaiReleases(a.out, listed); err != nil {
+		return err
+	}
+	found := false
+	for _, r := range listed {
+		found = found || r.Installed
+	}
+	if !found {
+		fmt.Fprintln(a.out, "the flai the host would replace is not a published release")
+	}
+	return nil
 }
 
 // printRaw prints the host's JSON answer as it is, or as a line.
@@ -392,7 +460,7 @@ func (a *app) runHost(ctx context.Context) error {
 	l := &hostLauncher{a: a, exe: exe, config: path, dir: wd, taken: map[string]string{}}
 	err = host.Run(ctx, host.Options{
 		Dir: a.hostDir(), Addr: host.Addr(), Version: buildinfo.Version, Config: path, Logger: a.logger(),
-		Serve: l.serve, MCP: l.mcp, Check: l.check, Upgrade: l.upgrade, Grace: hostGrace,
+		Serve: l.serve, MCP: l.mcp, Check: l.check, Versions: l.versions, Upgrade: l.upgradeTo, Grace: hostGrace,
 		Dashboard: a.dashboardWatch(),
 	})
 	if errors.Is(err, host.ErrRestart) {
@@ -518,8 +586,8 @@ func (l *hostLauncher) mcpAddr(repo *workitem.Repo) (string, error) {
 	return addr, nil
 }
 
-// flaiJSON runs this flai with --json and reads the object it prints.
-func (l *hostLauncher) flaiJSON(ctx context.Context, args ...string) (map[string]any, error) {
+// flaiRaw runs this flai with --json and answers the JSON it prints.
+func (l *hostLauncher) flaiRaw(ctx context.Context, args ...string) (json.RawMessage, error) {
 	cmd := exec.CommandContext(ctx, l.exe, append(args, "--json", "--config", l.config)...)
 	cmd.Env = append(os.Environ(), "LOG_FORMAT=json")
 	out, err := cmd.Output()
@@ -530,9 +598,21 @@ func (l *hostLauncher) flaiJSON(ctx context.Context, args ...string) (map[string
 		}
 		return nil, err
 	}
+	if !json.Valid(out) {
+		return nil, fmt.Errorf("flai %s printed what is not JSON: %.200q", args[0], out)
+	}
+	return out, nil
+}
+
+// flaiJSON runs this flai with --json and reads the object it prints.
+func (l *hostLauncher) flaiJSON(ctx context.Context, args ...string) (map[string]any, error) {
+	out, err := l.flaiRaw(ctx, args...)
+	if err != nil {
+		return nil, err
+	}
 	var m map[string]any
 	if err := json.Unmarshal(out, &m); err != nil {
-		return nil, fmt.Errorf("flai %s printed what is not JSON: %w", args[0], err)
+		return nil, fmt.Errorf("flai %s printed what is not a JSON object: %w", args[0], err)
 	}
 	return m, nil
 }
@@ -558,8 +638,19 @@ func (l *hostLauncher) check(ctx context.Context) (any, error) {
 	return l.flaiJSON(ctx, "self-upgrade", "--check")
 }
 
-func (l *hostLauncher) upgrade(ctx context.Context) (any, bool, error) {
-	m, err := l.flaiJSON(ctx, "self-upgrade")
+// versions lists the published flai releases as self-upgrade --list does.
+func (l *hostLauncher) versions(ctx context.Context) (any, error) {
+	return l.flaiRaw(ctx, "self-upgrade", "--list")
+}
+
+// upgradeTo installs the newest flai, or the published release version names,
+// which self-upgrade refuses, naming the published ones, when it is not one.
+func (l *hostLauncher) upgradeTo(ctx context.Context, version string) (any, bool, error) {
+	args := []string{"self-upgrade"}
+	if version != "" {
+		args = append(args, "--version", version)
+	}
+	m, err := l.flaiJSON(ctx, args...)
 	if err != nil {
 		return nil, false, err
 	}

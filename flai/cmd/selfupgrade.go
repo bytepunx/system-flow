@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -212,7 +213,23 @@ func (a *app) listFlaiReleases(cmd *cobra.Command, opt selfupgrade.Options, dir 
 		return nil
 	}
 	fmt.Fprintf(a.out, "published flai releases in %s, newest first:\n", opt.Repo)
-	w := tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
+	if err := writeFlaiReleases(a.out, listed); err != nil {
+		return err
+	}
+	if !found {
+		installed := t.current
+		if installed == "" {
+			installed = "none"
+		}
+		fmt.Fprintf(a.out, "installed at %s: %s, which is not a published release\n", t.dest, installed)
+	}
+	return nil
+}
+
+// writeFlaiReleases writes one line per release: its version, its publish
+// date, and its marks.
+func writeFlaiReleases(out io.Writer, listed []listedFlai) error {
+	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
 	for _, r := range listed {
 		date := "-"
 		if !r.Published.IsZero() {
@@ -230,17 +247,7 @@ func (a *app) listFlaiReleases(cmd *cobra.Command, opt selfupgrade.Options, dir 
 		}
 		fmt.Fprintf(w, "  %s\t%s\t%s\n", r.Version, date, strings.Join(marks, ", "))
 	}
-	if err := w.Flush(); err != nil {
-		return err
-	}
-	if !found {
-		installed := t.current
-		if installed == "" {
-			installed = "none"
-		}
-		fmt.Fprintf(a.out, "installed at %s: %s, which is not a published release\n", t.dest, installed)
-	}
-	return nil
+	return w.Flush()
 }
 
 // projectMinimum is a project's flai.minimum and the name it goes by.

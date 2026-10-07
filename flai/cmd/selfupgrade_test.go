@@ -184,7 +184,7 @@ func TestTheHostRestartsOnWhatTheUpgradeInstalled(t *testing.T) {
 	if l.installedTo() != "" {
 		t.Fatal("nothing installed yet")
 	}
-	if _, installed, err := l.upgrade(context.Background()); err != nil || !installed {
+	if _, installed, err := l.upgradeTo(context.Background(), ""); err != nil || !installed {
 		t.Fatalf("upgrade: %v %v", installed, err)
 	}
 	if got := l.installedTo(); got != "/home/me/.flai/bin/flai" {
