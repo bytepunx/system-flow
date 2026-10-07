@@ -43,10 +43,10 @@ host: build-box                  # the host whose flai stream open last opened i
 Two or three paragraphs a fresh agent needs before touching anything. What the story is, what is already true in the repo, what constraints apply. Rewritten as understanding improves.
 
 ## Current state
-Where things stand right now. Which tasks are done, what is half done, what files are dirty. Rewritten on every meaningful step. This is the first thing a resuming agent reads.
+Where things stand right now. Which tasks are done, what is half done, what files are dirty. Rewritten on every meaningful step with `flai stream state`. This is the first thing a resuming agent reads.
 
 ## Next steps
-Ordered list. The first item is what to do next. Rewritten on every meaningful step.
+Ordered list. The first item is what to do next. Rewritten on every meaningful step with `flai stream state`.
 
 ## Decisions
 Bullet list of decisions made during this stream with a one-line rationale each. Anything architectural also gets an ADR; link it.
@@ -63,6 +63,8 @@ Started. Pulled S-0004 to in-progress. Read design/system/flai-cli.md.
 ### 2026-09-15T16:40:00Z
 T-0021 done. Config read/write with tests. Decided on plain encoding/json over viper, see Decisions.
 ```
+
+An agent writes `## Current state` and `## Next steps` with `flai stream state S-nnnn --current "<text>" --next "<text>"`, the MCP tool `stream_state`, or the host channel's `stream.state` (S-0271), never by editing the file. It replaces the two sections, or the one it is given, leaves every other section as it was, and appends nothing to the log. It stamps `updated`, `agent`, and `session` as `flai stream log` does, and writes `index.md` again. The same text again writes nothing. It refuses a story that is not in progress or in review, a story with no narrative, and text the project's markdown lint rejects; a text holding a `#` or `##` heading is an error. `flai check` warns, under the rule `narrative.state`, when the narrative of a story in progress or in review has an empty `## Current state` or `## Next steps`, or the template's placeholder in one, or a `## Next steps` that is not a list. The warning is advisory, so `--strict` passes over it. The other sections are written as before: `## Context`, `## Decisions`, and `## Open questions` by hand, and the `## Log` by `flai stream log`.
 
 ## Strategic agents' activity documents
 
@@ -119,7 +121,7 @@ An activity ends in one of two ways. An agent whose run spans activities, as the
 - Overlaps at acceptance are the other (S-0132, [ADR-0046](../adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)). `flai accept` notes, in `.flai-cache/overlaps.jsonl`, each open story whose claim covers a path the accepted story's merge changed. `inbox` and `wait_for_events` report each note once as an `overlapped` change on the open story, with `cause` the accepted story and `to` the paths, and with a summary that names at most ten of them. They report it whoever accepted, since the news is for the open story's agent. The log is kept apart from `edits.jsonl` because an older flai reads every line there as an edit. An agent told so syncs its story and runs its tests again before going on.
 - A claim that grows into another's is told the same way (S-0244, I-0059). When `flai task new`, `flai edit --touches`, `flai touches`, `item_new`, or `item_edit` adds paths to the claim of a story in progress that another story in progress claims, flai notes it in `overlaps.jsonl` for both stories, and each gets one `overlapped` change with `cause` the other story, `to` the paths, and a summary saying the claims grew to overlap and to coordinate with the other story's agent. An agent told so agrees with that agent on a thread who changes the paths first, and narrows its touches if it can, before it changes them. The note leaves `accepted` empty, so an older flai passes over it.
 - `wait_for_events` returns at once when the cursor is already behind, so a change made between two calls is not lost; otherwise it blocks until something changes or `timeout_seconds` passes, 60 s by default. It returns events in the same shape as `inbox` does, with the changed paths, and advances the cursor. It reports work items, threads, and narratives, not sub-agents: the story's agent waits for a sub-agent it started in the background through the harness's own notice that it ended.
-- A story's agent does not hold `wait_for_events` for the designer's answer (S-0272). When nothing is left but the answer it writes the narrative's `## Current state` and `## Next steps`, naming the question and what each answer leads to, and ends, because flai serve starts it again on the answer and the restarted agent reads them, beside its first `inbox`, which holds the answer. When flai serve started it, a thread on its story awaits an answer to its own question, and no task of the story is in progress, `wait_for_events` answers at once with `end: true` and a `why` naming the threads, and the agent writes the same two sections and ends ([workflow.md](workflow.md#branches-and-collisions-adr-0019)). An agent run by hand, and the planner, the orchestrator, and the analyzer, which flai serve does not start again on an answer, still hold it.
+- A story's agent does not hold `wait_for_events` for the designer's answer (S-0272). When nothing is left but the answer it writes the narrative's `## Current state` and `## Next steps` with `stream_state`, naming the question and what each answer leads to, and ends, because flai serve starts it again on the answer and the restarted agent reads them, beside its first `inbox`, which holds the answer. When flai serve started it, a thread on its story awaits an answer to its own question, and no task of the story is in progress, `wait_for_events` answers at once with `end: true` and a `why` naming the threads, and the agent writes the same two sections and ends ([workflow.md](workflow.md#branches-and-collisions-adr-0019)). An agent run by hand, and the planner, the orchestrator, and the analyzer, which flai serve does not start again on an answer, still hold it.
 - `wait_for_events` and `wait_for_work` hold a call for the `timeout_seconds` asked, up to 30 minutes (S-0244, I-0059; five minutes until then). Every return is a model turn that rereads the agent's whole context, about 0.05 USD at 150k cached tokens, so a five-minute cap made an idle agent pay that every five minutes. While held, a wait sends a progress notification every minute to a call that carries a progress token, because Claude Code drops a tool call that sends nothing for 30 minutes over stdio and 5 over HTTP (`CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`), and a notification starts that count again.
 - `board` returns what `flai board --json` prints: columns, limits, pull order, breaches.
 
@@ -130,7 +132,7 @@ An agent that ends its turn calls `inbox` at the start of every turn. An agent t
 An agent working in a conforming repo must:
 
 1. Open the narrative before making the first change for a story.
-2. Rewrite `## Current state` and `## Next steps` after every task transition and before any long-running operation.
+2. Rewrite `## Current state` and `## Next steps` with `flai stream state` (or `stream_state`) after every task transition and before any long-running operation.
 3. Append a `## Log` entry at every task transition, every decision, and every blocker.
 4. Never store secrets, full transcripts, or raw tool output in the narrative. Summaries only, with paths to artefacts.
 5. Update `index.md` when opening or closing a stream.

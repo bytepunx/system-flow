@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-10-03
+updated: 2026-10-07
 status: draft
 ---
 
@@ -19,7 +19,7 @@ This monorepo builds itself with its own conventions. Start with the root `CLAUD
 
 1. Pull a `ready` story from `wip/kanban/board.md` to `in-progress`.
 2. Open its narrative under `wip/agents/`.
-3. Keep the narrative's current state and next steps true as you go.
+3. Keep the narrative's current state and next steps true as you go, with `flai stream state`.
 4. Meet the definition of done in [workflow.md](../../design/system/workflow.md), move the story to `review`, open a pull request that names the story.
 
 ## Tools and environment

@@ -2880,6 +2880,7 @@ Subcommands:
 - [diff](#flai-stream-diff): What a story branch changes: files and hunks against the main branch
 - [log](#flai-stream-log): Append a timestamped entry to a story's narrative log
 - [open](#flai-stream-open): Create the narrative for a story and check out its branch in a worktree
+- [state](#flai-stream-state): Replace a story's narrative's Current state and Next steps
 - [sync](#flai-stream-sync): Rebase the story branch onto the main branch in its worktree
 
 #### flai stream answer
@@ -2940,6 +2941,35 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--no-branch` | narrative only; no branch or worktree |
+
+#### flai stream state
+
+Replace a story's narrative's Current state and Next steps.
+
+```text
+flai stream state <story-id> [--current "<text>"] [--next "<text>"] [flags]
+```
+
+Replaces what is under the story's narrative's ## Current state with the --current text and what is under ## Next steps with the --next text. Either may be left out, and its section is left as it was; giving neither is an error. A value of - reads that text from standard input, so text of several lines needs no quoting; only one of the two may be -.
+
+Every other section of the narrative is left as it was, and nothing is appended to its log: write the log with flai stream log. The narrative's updated stamp, agent, and session are written as flai stream log writes them, and wip/agents/index.md is written again. The same text again writes nothing.
+
+A story not in progress or in review is refused, as is one with no narrative, and text the project's markdown lint rejects; each refusal exits 4 and writes nothing, and with --json prints {"refused": {...}}. A text holding a # or ## heading, which would end its section, is an error.
+
+Examples:
+
+```bash
+flai stream state S-0271 --current "T-1055 is done; T-1056 is next."
+flai stream state S-0271 --next - < next-steps.md
+flai stream state S-0271 --current "Reviewing." --next "1. Answer the review." --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--current` string | the text for ## Current state, or - to read it from standard input |
+| `--next` string | the text for ## Next steps, or - to read it from standard input |
 
 #### flai stream sync
 

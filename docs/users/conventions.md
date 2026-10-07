@@ -1,6 +1,6 @@
 ---
 title: Conventions guide
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 ---
 
@@ -192,8 +192,8 @@ Who makes each transition, and the rules behind them: [workflow.md](../../design
 | Section | Holds | Kept |
 |---------|-------|------|
 | `## Context` | What a fresh agent needs to know before touching anything | Rewritten as understanding improves |
-| `## Current state` | Where things stand: which tasks are done, what is half done | Rewritten at every task transition, and before anything risky |
-| `## Next steps` | An ordered list; the first item is the very next action | Rewritten with the current state |
+| `## Current state` | Where things stand: which tasks are done, what is half done | Rewritten with `flai stream state` at every task transition, and before anything risky |
+| `## Next steps` | An ordered list; the first item is the very next action | Rewritten with the current state, by the same command |
 | `## Decisions` | Choices made, with a one-line reason each | Added to as decisions are made |
 | `## Open questions` | Questions for a person, dated. Open threads on the story are mirrored here | Answered questions move to Decisions |
 | `## Log` | One timestamped entry per meaningful step | Append-only |

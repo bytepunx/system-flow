@@ -101,7 +101,7 @@ whether or not it passes; a failure to record is an error.`,
 				fmt.Fprintf(a.out, "%d items checked, %d errors, %d warnings", res.Items, res.Errors, res.Warnings)
 				if res.Advisory > 0 {
 					// S-0243: say which warnings --strict does not fail on.
-					fmt.Fprintf(a.out, " (%d that --strict passes over: only the operator clears them, by accepting or by moving an epic)", res.Advisory)
+					fmt.Fprintf(a.out, " (%d that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes)", res.Advisory)
 				}
 				if res.Outside > 0 {
 					// S-0249: say how many findings were notes outside the story.

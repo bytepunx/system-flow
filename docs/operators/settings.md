@@ -279,6 +279,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--config` | every command ([global flags](../users/flai-reference.md#flai)), [flai agent set](../users/flai-reference.md#flai-agent-set) |
 | `--cost` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new) |
 | `--cost-of-delay-value` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--current` | [flai stream state](../users/flai-reference.md#flai-stream-state) |
 | `--defaults` | [flai new](../users/flai-reference.md#flai-new) |
 | `--deliver` | [flai release](../users/flai-reference.md#flai-release) |
 | `--dir` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
@@ -317,6 +318,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--model` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--name` | [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set), [flai serve checks set](../users/flai-reference.md#flai-serve-checks-set) |
 | `--nature` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
+| `--next` | [flai stream state](../users/flai-reference.md#flai-stream-state) |
 | `--no-branch` | [flai stream open](../users/flai-reference.md#flai-stream-open) |
 | `--no-commit` | [flai doc save](../users/flai-reference.md#flai-doc-save) |
 | `--no-descriptions` | [flai completion bash](../users/flai-reference.md#flai-completion-bash), [flai completion fish](../users/flai-reference.md#flai-completion-fish), [flai completion powershell](../users/flai-reference.md#flai-completion-powershell), [flai completion zsh](../users/flai-reference.md#flai-completion-zsh) |
