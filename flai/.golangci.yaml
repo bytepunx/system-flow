@@ -1,4 +1,8 @@
 version: "2"
+run:
+  # Story worktrees on one host share golangci-lint's lock in the temp folder;
+  # without this a second run exits 3 after 5s (I-0101, S-0308).
+  allow-parallel-runners: true
 linters:
   default: standard
   enable:
