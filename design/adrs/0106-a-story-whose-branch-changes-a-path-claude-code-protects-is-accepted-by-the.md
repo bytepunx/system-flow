@@ -1,5 +1,5 @@
 ---
-id: ADR-0105
+id: ADR-0106
 title: "A story whose branch changes a path Claude Code protects is accepted by the operator only, flai checks permission_prompt against each new Claude Code, and the prompt covers every protected path in a story's worktree but .git"
 status: accepted
 date: 2026-10-07
@@ -8,7 +8,7 @@ superseded_by: []
 refines: [ADR-0086]
 ---
 
-# ADR-0105 A story whose branch changes a path Claude Code protects is accepted by the operator only, flai checks permission_prompt against each new Claude Code, and the prompt covers every protected path in a story's worktree but .git
+# ADR-0106 A story whose branch changes a path Claude Code protects is accepted by the operator only, flai checks permission_prompt against each new Claude Code, and the prompt covers every protected path in a story's worktree but .git
 
 ## Context
 
