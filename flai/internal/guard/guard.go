@@ -1,9 +1,10 @@
 // Package guard refuses what a sub-agent may not do (ADR-0060): Claude Code
 // runs flai guard before each tool call in a project made from the template,
 // with the call on standard input, and says which sub-agent makes it. A
-// sub-agent reads; it does not change a work item, a thread, or the
-// repository's history, because the story's agent alone acts for the story
-// (ADR-0059). The story's agent's own calls carry no agent ID and are never
+// sub-agent reads; it does not change a work item, a thread, a conversation
+// with another story's agent (S-0331), or the repository's history, because
+// the story's agent alone acts for the story (ADR-0059). The story's agent's
+// own calls carry no agent ID and are never
 // refused. The guard is not a shell: it finds the programs a command line
 // runs well enough to stop a sub-agent that follows its instructions
 // carelessly, not one that sets out to hide a command (a backslash inside a
@@ -169,6 +170,14 @@ const MCPPrefix = "mcp__flai__"
 // which is neither a work item, a thread, nor history (S-0270).
 var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", "test", "thread_get", "verify", "who_touches"}
 
+// MCPStoryReads are flai's MCP tools that read for the calling agent's
+// story, which a story's sub-agent may call besides MCPReads: message_get
+// reads a conversation of the story's (S-0331, ADR-0120). The planner, the
+// orchestrator, and the analyzer have no story, so the tools refuse them, and
+// their allowlists leave them out. message_send and message_reply, which
+// write a conversation, are the story's agent's alone.
+var MCPStoryReads = []string{"message_get"}
+
 // cliReads are the flai commands a sub-agent may run, each with the
 // subcommands it may run; nil allows the command whatever follows it, and ""
 // allows it with no subcommand.
@@ -181,6 +190,7 @@ var cliReads = map[string][]string{
 	"forecast": nil,
 	"help":     nil,
 	"issue":    {"list"},
+	"message":  {"list", "show"},
 	"prime":    nil,
 	"shared":   {"list", "check"},
 	"show":     nil,
@@ -529,7 +539,7 @@ var subAgent = rules{
 		if reads(cmd, sub, rest) {
 			return "", ""
 		}
-		return "flai commands that change work items, threads, narratives, or releases are the story's agent's", ""
+		return "flai commands that change work items, threads, conversations between stories, narratives, or releases are the story's agent's", ""
 	},
 	git: func(string) string {
 		return "git commands that change the worktree, the index, branches, or history are the story's agent's"
@@ -966,10 +976,10 @@ func (g Guard) Decide(e Event) Refusal {
 		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot use %s on %s: a path Claude Code protects, such as a file in a .claude/ folder or .mcp.json, is written only with the operator's approval on a thread, which would hold this call, and the layer with it, until they answer (ADR-0086, ADR-0106). Put the file's whole new content in your final message; the story's agent writes it.", who, e.ToolName, file)}
 	}
 	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
-		if slices.Contains(MCPReads, tool) {
+		if slices.Contains(MCPReads, tool) || slices.Contains(MCPStoryReads, tool) {
 			return Refusal{}
 		}
-		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot call %s: it reads, and only the story's agent changes work items and threads or reads the inbox (ADR-0059). Put what you need done, or the question for the designer, in your final message.", who, tool)}
+		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot call %s: it reads, and only the story's agent changes work items, threads, and conversations with other stories or reads the inbox (ADR-0059). Put what you need done, or the question for the designer, in your final message.", who, tool)}
 	}
 	if e.ToolName != "Bash" {
 		return Refusal{}

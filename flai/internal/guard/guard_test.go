@@ -12,7 +12,7 @@ import (
 )
 
 // g knows flai's commands as the cmd package gives them.
-var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "test", "thread", "touches", "unblock", "verify", "version"}}
+var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "message", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "test", "thread", "touches", "unblock", "verify", "version"}}
 
 func bash(agent, cmd string) Event {
 	e := Event{ToolName: "Bash", AgentType: agent}
@@ -157,6 +157,74 @@ func TestASubAgentRunsChecksButNotWrites(t *testing.T) {
 		why := g.Check(bash("verifier", c))
 		if !strings.Contains(why, "a sub-agent (verifier) cannot run") || !strings.Contains(why, "ADR-0060") {
 			t.Errorf("%q: %q", c, why)
+		}
+	}
+}
+
+// S-0331: a sub-agent reads its story's conversations with other stories and
+// writes to none, as it reads threads and writes to none; the story's agent
+// does both. The planner, the orchestrator, and the analyzer have no story,
+// so the guard keeps the MCP tools out of their allowlists; the commands that
+// list and show conversations are reads, as flai thread list and show are.
+func TestASubAgentReadsMessagesButSendsNone(t *testing.T) {
+	sub := func(tool string) Event {
+		return Event{ToolName: MCPPrefix + tool, AgentID: "a1", AgentType: "general-purpose"}
+	}
+	sends := []string{
+		"flai message send S-0330 'I am changing flai/cmd/root.go' --from S-0331",
+		"scripts/flai.sh message reply MS-0004 'Yes, it is yours'",
+		"bin/flai --config c.json message reply MS-0004 'Yes'",
+	}
+	reads := []string{
+		"flai message list --story S-0331 --json",
+		"scripts/flai.sh message show MS-0004",
+		"bin/flai message list --all",
+	}
+	for _, tool := range []string{"message_send", "message_reply"} {
+		why := g.Check(sub(tool))
+		if !strings.Contains(why, "a sub-agent (general-purpose) cannot call "+tool) || !strings.Contains(why, "conversations with other stories") || !strings.Contains(why, "final message") {
+			t.Errorf("a sub-agent's %s: %q", tool, why)
+		}
+	}
+	for _, c := range sends {
+		why := g.Check(bash("general-purpose", c))
+		if !strings.Contains(why, "a sub-agent (general-purpose) cannot run") || !strings.Contains(why, "conversations between stories") || !strings.Contains(why, "ADR-0060") {
+			t.Errorf("a sub-agent's %q: %q", c, why)
+		}
+	}
+	if why := g.Check(sub("message_get")); why != "" {
+		t.Errorf("a sub-agent's message_get refused: %s", why)
+	}
+	for _, c := range reads {
+		if why := g.Check(bash("general-purpose", c)); why != "" {
+			t.Errorf("a sub-agent's %q refused: %s", c, why)
+		}
+	}
+	own := []Event{itemOf("message_send", "", ""), itemOf("message_reply", "", ""), itemOf("message_get", "", "")}
+	for _, c := range append(append([]string{}, sends...), reads...) {
+		own = append(own, bash("", c))
+	}
+	for _, gr := range []Guard{g, {Commands: g.Commands, Story: "S-0331", Served: true}} {
+		for _, e := range own {
+			if why := gr.Check(e); why != "" {
+				t.Errorf("the story's agent's %s %q refused: %s", e.ToolName, e.ToolInput.Command, why)
+			}
+		}
+	}
+	roles := map[string]Guard{"planner": planGuard, "orchestrator": orchestrator(allOn), "analyzer": analyzerIn(t.TempDir())}
+	for who, gr := range roles {
+		for _, tool := range []string{"message_send", "message_reply", "message_get"} {
+			if why := gr.Check(itemOf(tool, "", "")); !strings.Contains(why, "cannot call "+tool) {
+				t.Errorf("the %s's %s: %q", who, tool, why)
+			}
+		}
+		for _, c := range reads {
+			if why := gr.Check(bash("", c)); why != "" {
+				t.Errorf("the %s's %q refused: %s", who, c, why)
+			}
+		}
+		if why := gr.Check(bash("", sends[0])); why == "" {
+			t.Errorf("the %s's %q let through", who, sends[0])
 		}
 	}
 }
