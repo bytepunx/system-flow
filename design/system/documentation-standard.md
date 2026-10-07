@@ -1,6 +1,6 @@
 ---
 title: Documentation standard
-updated: 2026-09-27
+updated: 2026-10-07
 status: active
 topics: [all]
 ---
@@ -30,7 +30,7 @@ status: active             # active | draft | deprecated
 ## Naming
 
 - Files and folders are lowercase kebab-case: `repository-layout.md`.
-- ADRs are numbered with four digits and a slug: `0003-work-item-hierarchy.md`. `flai adr new` gives the number (one more than the highest file present; gaps are not filled), the slug, the front matter (`id`, `title`, `status`, `date`, `supersedes`, `superseded_by`, and `refines` when given), and the row in `design/adrs/README.md`; the status is `proposed` until `flai adr accept` or `--status accepted`. `flai check` warns with `adr.index` when the files and the index disagree.
+- ADRs are numbered with four digits and a slug: `0003-work-item-hierarchy.md`. `flai adr new` gives the number (one past the highest ADR in the checkout, the main checkout, every story's worktree, the main branch, and every story branch, so parallel stories do not take the same number; gaps are not filled), the slug, the front matter (`id`, `title`, `status`, `date`, `supersedes`, `superseded_by`, and `refines` when given), and the row in `design/adrs/README.md`; the status is `proposed` until `flai adr accept` or `--status accepted`. `flai check` warns with `adr.index` when the files and the index disagree.
 - Work items are named by ID and slug: `S-0004-cli-scaffold-and-config.md`. The ID is the stable handle; the slug may change.
 - Each folder that a reader might land in has a `README.md` that says what the folder is for.
 

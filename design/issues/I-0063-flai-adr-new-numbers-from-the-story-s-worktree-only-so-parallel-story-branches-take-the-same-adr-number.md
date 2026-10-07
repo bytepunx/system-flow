@@ -2,12 +2,12 @@
 id: I-0063
 title: flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
 class: efficiency
-status: open
+status: closed
 count: 7
 cost: 7m
 first_reported: 2026-10-03T07:58:20Z
 last_reported: 2026-10-07T01:48:31Z
-updated: 2026-10-07T01:48:31Z
+updated: 2026-10-07T02:11:43Z
 ---
 
 # I-0063 flai adr new numbers from the story's worktree only, so parallel story branches take the same ADR number
@@ -54,3 +54,4 @@ Story: S-0294.
 S-0294's flai adr new took 0106, which S-0286's branch held (S-0286 was in review, then accepted); renumbered to ADR-0107 by hand, and the sync then stopped on design/adrs/README.md and design/system/flai-cli.md; the sync's trial merge then found S-0269's branch holding 0107 too (TH-0238), and S-0294 renumbered again, to ADR-0108.
 
 ## Remediation
+Closed 2026-10-07T02:11:43Z: S-0245: flai adr new numbers one past the highest ADR in the checkout, the main checkout, every story worktree (uncommitted included), the main branch, and every story branch, through storygit.FolderNames; TestAdrNewNumbersPastEveryStorysAdrs reproduces the collision. The issue-number instance was fixed by S-0252.
