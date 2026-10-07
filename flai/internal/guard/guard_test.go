@@ -504,13 +504,15 @@ func orchestrator(p manifest.Permissions) Guard {
 }
 
 // allOn are every permission on; except turns one of them off.
-var allOn = manifest.Permissions{PlanBacklogEpics: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: manifest.AnswerAutonomous, AcceptReviews: true, Publish: true}
+var allOn = manifest.Permissions{PlanBacklogEpics: true, PlanBacklogStories: true, FinalizeDrafts: true, PromoteToReady: true, OrderReady: true, AnswerThreads: manifest.AnswerAutonomous, AcceptReviews: true, Publish: true}
 
 func except(name string) manifest.Permissions {
 	p := allOn
 	switch name {
 	case manifest.PermitPlanBacklogEpics:
 		p.PlanBacklogEpics = false
+	case manifest.PermitPlanBacklogStories:
+		p.PlanBacklogStories = false
 	case manifest.PermitFinalizeDrafts:
 		p.FinalizeDrafts = false
 	case manifest.PermitPromoteToReady:
@@ -544,6 +546,7 @@ func TestTheOrchestratorsPermissionsAllowItsCalls(t *testing.T) {
 		calls  []Event
 	}{
 		{manifest.PermitPlanBacklogEpics, manifest.Permissions{PlanBacklogEpics: true}, []Event{itemOf("plan", "E-0016", ""), itemOf("plan", "e-16", ""), bash("", "flai plan E-0016"), bash("", "scripts/flai.sh --config c.json plan E-1 --json")}},
+		{manifest.PermitPlanBacklogStories, manifest.Permissions{PlanBacklogStories: true}, []Event{itemOf("plan", "S-0001", ""), itemOf("plan", "s-1", ""), bash("", "flai plan S-0001"), bash("", "flai edit S-0001 --revenue-per-week 500 --time-lost-per-cycle=4h")}},
 		{manifest.PermitFinalizeDrafts, manifest.Permissions{FinalizeDrafts: true}, []Event{bash("", "flai edit S-0001 --no-draft"), bash("", "flai edit --by orchestrator S-0001 --no-draft=true --hash=abc --json")}},
 		{manifest.PermitPromoteToReady, manifest.Permissions{PromoteToReady: true}, []Event{itemOf("item_move", "S-0001", "ready"), bash("", "flai move S-0001 ready"), bash("", "flai move --reason 'top of the backlog' S-0001 ready")}},
 		{manifest.PermitOrderReady, manifest.Permissions{OrderReady: true}, []Event{bash("", "flai order --by wsjf --apply")}},
@@ -719,7 +722,7 @@ func TestTheOrchestratorAlwaysReadsAndAsks(t *testing.T) {
 // refusal says so and names no permission.
 func TestTheOrchestratorNeverEditsFilesOrWritesBeyondItsPermissions(t *testing.T) {
 	all := orchestrator(allOn)
-	refused := []Event{itemOf("plan", "S-0001", ""), itemOf("item_move", "S-0001", "in-progress"), itemOf("item_move", "S-0001", "backlog"), itemOf("item_move", "S-0001", "done")}
+	refused := []Event{itemOf("plan", "T-0001", ""), itemOf("item_move", "S-0001", "in-progress"), itemOf("item_move", "S-0001", "backlog"), itemOf("item_move", "S-0001", "done")}
 	for _, tool := range []string{"item_new", "item_edit", "thread_resolve", "wait_for_work", "agent_start", "agent_restart", "issue_story"} {
 		refused = append(refused, itemOf(tool, "", ""))
 	}
@@ -727,7 +730,7 @@ func TestTheOrchestratorNeverEditsFilesOrWritesBeyondItsPermissions(t *testing.T
 		refused = append(refused, Event{ToolName: tool})
 	}
 	for _, c := range []string{
-		"flai plan S-0001",
+		"flai plan T-0001",
 		"flai move S-0001 in-progress",
 		"flai move S-0001 backlog",
 		"flai edit S-0001 --no-draft --title 'Better'",
@@ -751,8 +754,8 @@ func TestTheOrchestratorNeverEditsFilesOrWritesBeyondItsPermissions(t *testing.T
 			t.Errorf("%s %q %s: %+v", e.ToolName, e.ToolInput.Command, e.ToolInput.ID, r)
 		}
 	}
-	if r := all.Decide(itemOf("plan", "S-0001", "")); !strings.Contains(r.Why, "the orchestrator cannot plan S-0001: ") || !strings.Contains(r.Why, plansEpics) {
-		t.Errorf("plan a story: %q", r.Why)
+	if r := all.Decide(itemOf("plan", "T-0001", "")); !strings.Contains(r.Why, "the orchestrator cannot plan T-0001: ") || !strings.Contains(r.Why, plansCandidates) {
+		t.Errorf("plan a task: %q", r.Why)
 	}
 }
 

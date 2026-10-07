@@ -19,14 +19,19 @@ func recommendation(e Event) Event {
 	return e
 }
 
-// openers knows TH-0001, which the orchestrator opened, and TH-0002, which
-// the operator opened; it cannot tell of any other.
+// openers knows TH-0001, which the orchestrator opened, TH-0002, which the
+// operator opened, TH-0003, which a story's planner opened, and TH-0004,
+// which an epic's planner opened; it cannot tell of any other.
 func openers(id string) (string, error) {
 	switch id {
 	case "TH-0001":
 		return workitem.ActivityOrchestrator, nil
 	case "TH-0002":
 		return "alex", nil
+	case "TH-0003":
+		return "planner-S-0328", nil
+	case "TH-0004":
+		return "planner-E-0016", nil
 	}
 	return "", errors.New(id + " not found")
 }
@@ -217,6 +222,90 @@ func TestWithoutAnOpenerEveryThreadIsAnothers(t *testing.T) {
 	}
 	if r := gd.Decide(call(t, "thread_resolve", `{"id":"TH-0001"}`)); !strings.Contains(r.Why, resolvesOwn) {
 		t.Errorf("resolve: %+v", r)
+	}
+}
+
+// S-0328, ADR-0119: on a thread a story's planner opened, plan_backlog_stories
+// lets the orchestrator answer, with or without a source, recommend, and
+// resolve, whatever answer_threads is. While it is off the thread is held
+// as another's under answer_threads, but resolving it, and replying while
+// answer_threads is off, are refused for want of plan_backlog_stories, and
+// every other refusal names it too. An epic's planner's thread is another's
+// either way.
+func TestTheOrchestratorSettlesAStoryPlannersThreadsWithPlanBacklogStories(t *testing.T) {
+	const needs = "orchestration.permissions.plan_backlog_stories"
+	suffix := "; on a thread a story's planner opened, " + needs + ", which is off, would let it reply so. " + askOperator
+	story, other, epic := threadCalls(t, "TH-0003"), threadCalls(t, "TH-0002"), threadCalls(t, "TH-0004")
+	for _, mode := range []string{"", manifest.AnswerOff, manifest.AnswerRecommend, manifest.AnswerAutonomous} {
+		on := threadGuard(manifest.Permissions{AnswerThreads: mode, PlanBacklogStories: true})
+		off := threadGuard(manifest.Permissions{AnswerThreads: mode})
+		answering := off.Permissions.Allows(manifest.PermitAnswerThreads)
+		for form, events := range story {
+			for i, e := range events {
+				if r := on.Decide(e); r != (Refusal{}) {
+					t.Errorf("answer_threads %q, plan_backlog_stories on: %s %s refused: %+v", mode, form, described(e), r)
+				}
+				r, held := off.Decide(e), off.Decide(other[form][i])
+				switch {
+				case form == "resolve" || !answering:
+					if !strings.HasPrefix(r.Why, "the orchestrator cannot ") || !strings.HasSuffix(r.Why, ": it needs "+needs+", which is off. "+askOperator) || r.Needs != needs || r.Call == "" {
+						t.Errorf("answer_threads %q, plan_backlog_stories off: %s %s: %+v", mode, form, described(e), r)
+					}
+				case held == (Refusal{}):
+					if r != (Refusal{}) {
+						t.Errorf("answer_threads %q, plan_backlog_stories off: %s %s refused, unlike on another's thread: %+v", mode, form, described(e), r)
+					}
+				default:
+					want := strings.TrimSuffix(strings.ReplaceAll(held.Why, "TH-0002", "TH-0003"), ". "+askOperator) + suffix
+					if r.Why != want || r.Needs != needs || r.Call != strings.ReplaceAll(held.Call, "TH-0002", "TH-0003") {
+						t.Errorf("answer_threads %q, plan_backlog_stories off: %s %s:\n got %+v\nwant %q", mode, form, described(e), r, want)
+					}
+				}
+			}
+		}
+		for form, events := range epic {
+			for i, e := range events {
+				for _, gd := range []Guard{on, off} {
+					r, held := gd.Decide(e), gd.Decide(other[form][i])
+					if strings.ReplaceAll(r.Why, "TH-0004", "TH-0002") != held.Why || r.Needs != held.Needs {
+						t.Errorf("answer_threads %q, plan_backlog_stories %v: %s on an epic's planner's thread %s: %+v, want it held as another's: %+v", mode, gd.Permissions.PlanBacklogStories, form, described(e), r, held)
+					}
+				}
+			}
+		}
+		for why, cmds := range map[string][]string{
+			confirms:     {"flai thread confirm TH-0003"},
+			writesAsSelf: {"flai thread reply --by planner-S-0328 TH-0003 'yes'", "flai thread resolve TH-0003 --by=alex"},
+		} {
+			for _, cmd := range cmds {
+				if r := on.Decide(bash("", cmd)); !strings.Contains(r.Why, ": the orchestrator never does it, whatever its permissions: "+why+". ") || r.Needs != "" {
+					t.Errorf("answer_threads %q, plan_backlog_stories on: %q: %+v", mode, cmd, r)
+				}
+			}
+		}
+		if r := on.Decide(bash("", "flai thread resolve --by orchestrator TH-0003")); r.Why != "" {
+			t.Errorf("answer_threads %q: resolve as itself refused: %s", mode, r.Why)
+		}
+	}
+}
+
+// S-0328: a story's planner is planner- and a story's ID, in any padding;
+// no other opener is one.
+func TestAStorysPlannerIsPlannerAndAStorysID(t *testing.T) {
+	for who, want := range map[string]bool{
+		"planner-S-0328": true,
+		"planner-s-1":    true,
+		"planner-E-0016": false,
+		"planner-T-0001": false,
+		"planner-S-":     false,
+		"planner":        false,
+		"S-0328":         false,
+		"orchestrator":   false,
+		"":               false,
+	} {
+		if got := storyPlanner(who); got != want {
+			t.Errorf("%q: %v, want %v", who, got, want)
+		}
 	}
 }
 

@@ -88,8 +88,16 @@ runs in (S-0218), each off when unset or when the manifest is unreadable.
 Whatever its permissions it may do what a sub-agent may, call inbox,
 activity_log, wait_for_events, and thread_open, and run thread new and
 issue new and bump. Each permission allows more: plan_backlog_epics the
-MCP tool plan and flai plan on an epic; finalize_drafts item_edit with
-draft false and flai edit --no-draft, each with nothing else to change;
+MCP tool plan and flai plan on an epic; plan_backlog_stories the MCP tool
+plan and flai plan on a story, item_edit of a story with cost_of_delay's
+revenue_per_week, penalty_per_week, and time_lost_per_cycle, none empty,
+and flai edit of a story with --revenue-per-week, --penalty-per-week, and
+--time-lost-per-cycle, none empty, each with nothing else to change (no
+value, no clear), and every reply and resolve on a thread a story's planner
+opened (planner-S-nnnn), where without it answer_threads holds and a
+refusal names plan_backlog_stories (S-0328, ADR-0119); finalize_drafts
+item_edit with draft false and flai edit --no-draft, each with nothing else
+to change;
 promote_to_ready item_move and flai move of a story to ready; order_ready
 flai order --by <policy> --apply; answer_threads a reply on a thread
 another opened, with thread_reply or flai thread reply, as a recommendation
@@ -102,13 +110,15 @@ ADR-0093); publish the MCP tool release_publish alone, while flai
 release other than --evaluate, flai push, git push, and git tag are refused
 whatever its permissions (S-0222, ADR-0094).
 On a thread it opened it follows up and resolves, but never recommends or
-answers; it never resolves another's thread, never confirms a
-recommendation, and never names another author with --by. A call a permission
-would allow is refused while it is off, naming it (it needs
+answers; it never resolves another's thread but a story's planner's, never
+confirms a recommendation, and never names another author with --by. A call
+a permission would allow is refused while it is off, naming it (it needs
 orchestration.permissions.<name>); anything else that writes is refused
-as what the orchestrator never does: plan for a story, flai order placing
-a story by hand, item_move to done, whose refusal names flai accept --by
-orchestrator, other flai tools and commands, git's writes, and the
+as what the orchestrator never does: plan for anything but an epic or a
+story, an edit other than
+those above, flai order placing a story by hand, item_move to done, whose
+refusal names flai accept --by orchestrator, other flai tools and
+commands, git's writes, and the
 Edit, Write, and NotebookEdit tools. Whether a story it promotes is held,
 a draft, or over the ready limit is flai's to check as it moves it, not
 the guard's: the guard reads the call, not the board. Each

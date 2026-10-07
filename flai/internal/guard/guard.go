@@ -31,7 +31,10 @@
 // record issues, and log its activities, and do each of the rest only while
 // the permission that allows it is on (S-0219 maps planning an epic,
 // finalizing a draft, promoting a story to ready, and ordering the ready
-// column by a policy). With accept_reviews it accepts a story in review, with
+// column by a policy). With plan_backlog_stories it asks for the planner on
+// a story, and gives a story cost of delay inputs with an edit that changes
+// nothing else, never a value or a removal (S-0328, ADR-0119); flai judges
+// which story. With accept_reviews it accepts a story in review, with
 // flai accept or flai move to done, only as itself, --by orchestrator
 // (S-0221, ADR-0093). A refusal names that permission; a call no permission
 // allows, such as an edit of a file, a commit, or a story placed by hand in
@@ -55,11 +58,13 @@
 //
 // Its calls on threads are held by who opened the thread and by
 // answer_threads (S-0220): on a thread it opened it follows up and resolves,
-// but never recommends or answers its own question; on another's it replies
-// only while answer_threads is on, as a recommendation for the operator to
-// confirm, or, while it is autonomous, as an answer that cites its source,
-// and it never resolves one. Confirming a recommendation is the operator's
-// alone (ADR-0090).
+// but never recommends or answers its own question; on one a story's
+// planner opened, its opener planner-S-nnnn, plan_backlog_stories lets it
+// answer, with or without a source, recommend, and resolve (S-0328,
+// ADR-0119); on another's it replies only while answer_threads is on, as a
+// recommendation for the operator to confirm, or, while it is autonomous, as
+// an answer that cites its source, and it never resolves one. Confirming a
+// recommendation is the operator's alone (ADR-0090).
 //
 // A story's agent, in a session flai serve starts with FLAI_STORY and no
 // role, is refused its own wait_for_events while a sub-agent of its session
@@ -116,21 +121,28 @@ type Event struct {
 // changes, or the notebook NotebookEdit does. Fields are the names of every
 // field the input gives, whatever the guard reads of it, so that an
 // item_edit that finalizes a draft is told from one that changes more, and a
-// draft false given from one left out.
+// draft false given from one left out. CostOfDelay is item_edit's
+// cost_of_delay, each key it gives with its value as given, so that an edit
+// that gives a story cost of delay inputs is told from one that sets a value
+// or removes one (S-0328); it is nil when cost_of_delay is not an object.
 type Input struct {
-	Command        string   `json:"command"`
-	ID             string   `json:"id"`
-	To             string   `json:"to"`
-	Type           string   `json:"type"`
-	Draft          bool     `json:"draft"`
-	Recommendation bool     `json:"recommendation"`
-	Source         string   `json:"source"`
-	FilePath       string   `json:"file_path"`
-	NotebookPath   string   `json:"notebook_path"`
-	Fields         []string `json:"-"`
+	Command        string                     `json:"command"`
+	ID             string                     `json:"id"`
+	To             string                     `json:"to"`
+	Type           string                     `json:"type"`
+	Draft          bool                       `json:"draft"`
+	Recommendation bool                       `json:"recommendation"`
+	Source         string                     `json:"source"`
+	FilePath       string                     `json:"file_path"`
+	NotebookPath   string                     `json:"notebook_path"`
+	Fields         []string                   `json:"-"`
+	CostOfDelay    map[string]json.RawMessage `json:"-"`
 }
 
-// UnmarshalJSON decodes a tool call's input and the names of its fields.
+// UnmarshalJSON decodes a tool call's input, the names of its fields, and
+// the keys of its cost_of_delay. A cost_of_delay that is not an object is
+// left nil rather than failing the input, which flai guard would let through
+// unread.
 func (in *Input) UnmarshalJSON(data []byte) error {
 	type input Input
 	if err := json.Unmarshal(data, (*input)(in)); err != nil {
@@ -141,6 +153,9 @@ func (in *Input) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	in.Fields = slices.Sorted(maps.Keys(fields))
+	if raw, ok := fields["cost_of_delay"]; ok && json.Unmarshal(raw, &in.CostOfDelay) != nil {
+		in.CostOfDelay = nil
+	}
 	return nil
 }
 
@@ -354,12 +369,36 @@ var (
 // finalizes a draft.
 var finalizeFields = []string{"draft", "hash", "id", "project"}
 
+// costFields are the fields item_edit's input may give when it only gives a
+// story cost of delay inputs, and costInputs the keys of its cost_of_delay
+// that are inputs (S-0328, ADR-0119).
+var (
+	costFields = []string{"cost_of_delay", "hash", "id", "project"}
+	costInputs = []string{"penalty_per_week", "revenue_per_week", "time_lost_per_cycle"}
+)
+
+// costInputFlags are the flags of flai edit that set a cost of delay input
+// (S-0328).
+var costInputFlags = []string{"--penalty-per-week", "--revenue-per-week", "--time-lost-per-cycle"}
+
+// editValues are the flags of flai edit, flai's own among them, that take a
+// value and that an edit the orchestrator makes may give.
+var editValues = map[string]bool{"--by": true, "--config": true, "--hash": true, "--penalty-per-week": true, "--revenue-per-week": true, "--time-lost-per-cycle": true}
+
 // askOperator ends each of the orchestrator's refusals.
 const askOperator = "Ask the operator with thread_open on the item if it needs doing (strategic-agents.md, ADR-0060)."
 
-// plansEpics says why the orchestrator asks for the planner on an epic
-// alone.
-const plansEpics = "it asks for the planner on an epic alone, one flai plan --candidates lists"
+// plansCandidates says why the orchestrator asks for the planner on an epic
+// or a story alone (S-0328).
+const plansCandidates = "it asks for the planner on an epic or a story alone, one flai plan --candidates lists"
+
+// Why the orchestrator never makes an edit, by MCP and on the command line:
+// it only finalizes a draft, or gives a story cost of delay inputs (S-0219,
+// S-0328, ADR-0119).
+const (
+	editsMCP = "it edits an item only to finalize a draft, with item_edit draft false and nothing else, or to give a story cost of delay inputs, with cost_of_delay's revenue_per_week, penalty_per_week, and time_lost_per_cycle and nothing else: no value, no clear_cost_of_delay"
+	editsCLI = "it edits an item only to finalize a draft, with flai edit --no-draft and nothing else, or to give a story cost of delay inputs, with --revenue-per-week, --penalty-per-week, and --time-lost-per-cycle and nothing else: no --cost-of-delay-value, no --clear-cost-of-delay"
+)
 
 // byHand says why the orchestrator never places a story by hand in the pull
 // order (S-0219).
@@ -397,9 +436,10 @@ const (
 // RoleOrchestrate holds them to Permissions, the project's
 // orchestration.permissions, RoleAnalyze to its report, and any other leaves
 // them alone. Opener says
-// who opened the thread with an ID, for the orchestrator's calls on threads;
-// ThreadOpener reads it from a project's threads. A thread whose opener it
-// cannot tell, or every thread when Opener is nil, is held as another's.
+// who opened the thread with an ID, for the orchestrator's calls on threads,
+// itself or a story's planner among others; ThreadOpener reads it from a
+// project's threads. A thread whose opener it cannot tell, or every thread
+// when Opener is nil, is held as another's.
 // RoleAnalyze holds them to reads and the analyzer's report (S-0223): Root
 // is the project's root and Reports its reports folder, relative to Root and
 // slash separated, as analysis.Dir gives it; with either "" no file may be
@@ -562,15 +602,22 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 	}
 	switch cmd {
 	case "plan":
-		if args := positionals(rest, flaiValues); len(args) > 1 && isEpic(args[1]) {
+		args := positionals(rest, flaiValues)
+		switch {
+		case len(args) > 1 && isEpic(args[1]):
 			return manifest.PermitPlanBacklogEpics, ""
+		case len(args) > 1 && isStory(args[1]):
+			return manifest.PermitPlanBacklogStories, ""
 		}
-		return "", plansEpics
+		return "", plansCandidates
 	case "edit":
-		if finalizesOnly(rest) {
+		switch {
+		case finalizesOnly(rest):
 			return manifest.PermitFinalizeDrafts, ""
+		case setsCostInputsOnly(rest):
+			return manifest.PermitPlanBacklogStories, ""
 		}
-		return "", "it edits an item only to finalize a draft, with flai edit --no-draft and nothing else"
+		return "", editsCLI
 	case "move":
 		args := positionals(rest, moveValues)
 		switch {
@@ -638,11 +685,16 @@ func value(words []string, flag string) string {
 // thread says why the orchestrator may not make a call on a thread, and the
 // permission that would allow it; both "" when it may (S-0220). It never
 // confirms a recommendation, writes as another, or resolves a thread it did
-// not open. On a thread it opened it follows up and resolves, whatever its
-// permissions, but never recommends or answers. On another's, while
-// answer_threads is off it does not reply; recommend lets it reply with a
-// recommendation; and autonomous lets it answer too, citing a source, so
-// that an answer it cannot source goes to the operator as a recommendation.
+// not open but a story's planner's. On a thread it opened it follows up and
+// resolves, whatever its permissions, but never recommends or answers. On a
+// thread a story's planner opened, plan_backlog_stories lets it reply as an
+// answer, with or without a source, or as a recommendation, and resolve the
+// thread (S-0328, ADR-0119); while it is off, such a thread is held as
+// another's, and a refusal names plan_backlog_stories, which would allow the
+// call. On another's, while answer_threads is off it does not reply;
+// recommend lets it reply with a recommendation; and autonomous lets it
+// answer too, citing a source, so that an answer it cannot source goes to
+// the operator as a recommendation.
 func (g Guard) thread(c threadCall) (why, needs string) {
 	switch {
 	case c.verb == "confirm":
@@ -650,15 +702,29 @@ func (g Guard) thread(c threadCall) (why, needs string) {
 	case c.by != "" && c.by != workitem.ActivityOrchestrator:
 		return nevers(writesAsSelf), ""
 	}
-	own := g.opened(c.id)
+	who, stories := g.opener(c.id), manifest.PermitPlanBacklogStories
+	own, planner := who == workitem.ActivityOrchestrator, storyPlanner(who)
 	switch {
-	case c.verb == "resolve" && !own:
-		return nevers(resolvesOwn), ""
 	case own && (c.recommendation || c.sourced):
 		return nevers(answersOwn), ""
-	case own:
+	case own, planner && g.Permissions.Allows(stories):
 		return "", ""
+	case planner && (c.verb == "resolve" || !g.Permissions.Allows(manifest.PermitAnswerThreads)):
+		return off(stories), stories
+	case c.verb == "resolve":
+		return nevers(resolvesOwn), ""
 	}
+	why, needs = g.answers(c)
+	if why != "" && planner {
+		return why + "; on a thread a story's planner opened, orchestration.permissions." + stories + ", which is off, would let it reply so", stories
+	}
+	return why, needs
+}
+
+// answers says why answer_threads refuses the orchestrator a reply on
+// another's thread, and the permission that would allow it; both "" when it
+// may make it (S-0220).
+func (g Guard) answers(c threadCall) (why, needs string) {
 	mode, answers := g.Permissions.AnswerMode(), manifest.PermitAnswerThreads
 	switch {
 	case !g.Permissions.Allows(answers):
@@ -673,14 +739,24 @@ func (g Guard) thread(c threadCall) (why, needs string) {
 	return fmt.Sprintf("orchestration.permissions.%s is %s, so it replies to another's thread only as a recommendation for the operator to confirm: give recommendation true (--recommend); %s would let it answer only citing a source", answers, mode, manifest.AnswerAutonomous), ""
 }
 
-// opened says whether the orchestrator opened the thread with id, as Opener
-// tells; a thread Opener cannot tell of is another's.
-func (g Guard) opened(id string) bool {
+// opener is who opened the thread with id, as Opener tells; "" for a thread
+// Opener cannot tell of, which is another's.
+func (g Guard) opener(id string) string {
 	if g.Opener == nil || id == "" {
-		return false
+		return ""
 	}
 	who, err := g.Opener(id)
-	return err == nil && who == workitem.ActivityOrchestrator
+	if err != nil {
+		return ""
+	}
+	return who
+}
+
+// storyPlanner says whether who is a story's planner, as flai serve names
+// the planner it runs for a story: planner-S-nnnn (S-0328).
+func storyPlanner(who string) bool {
+	id, ok := strings.CutPrefix(who, workitem.ActivityPlanner+"-")
+	return ok && isStory(id)
 }
 
 // threadDoes is what a thread call does, said after "the orchestrator
@@ -713,6 +789,25 @@ func ordersByPolicy(words []string) bool {
 func finalizesDraft(in Input) bool {
 	return !in.Draft && slices.Contains(in.Fields, "draft") &&
 		!slices.ContainsFunc(in.Fields, func(f string) bool { return !slices.Contains(finalizeFields, f) })
+}
+
+// setsCostInputs says whether item_edit's input gives a story cost of delay
+// inputs and changes nothing else (S-0328, ADR-0119): cost_of_delay with one
+// input or more, none null or an empty string, which removes it, and no other
+// key, value among them; and no field but the story, its hash, and its
+// project besides. Whether the story may have them is flai's to judge.
+func setsCostInputs(in Input) bool {
+	if !isStory(in.ID) || len(in.CostOfDelay) == 0 ||
+		slices.ContainsFunc(in.Fields, func(f string) bool { return !slices.Contains(costFields, f) }) {
+		return false
+	}
+	for k, raw := range in.CostOfDelay {
+		var v any
+		if !slices.Contains(costInputs, k) || json.Unmarshal(raw, &v) != nil || v == nil || v == "" {
+			return false
+		}
+	}
+	return true
 }
 
 // isEpic says whether id is an epic's, in any zero padding.
@@ -748,6 +843,43 @@ func finalizesOnly(words []string) bool {
 		}
 	}
 	return true
+}
+
+// setsCostInputsOnly says whether the words of flai edit give a story cost
+// of delay inputs and change nothing else (S-0328, ADR-0119): one input flag
+// or more, each with a value that is not empty, which would remove it,
+// beside the flags that finalizing a draft allows but --no-draft.
+func setsCostInputsOnly(words []string) bool {
+	if args := positionals(words, editValues); len(args) < 2 || !isStory(args[1]) {
+		return false
+	}
+	inputs := 0
+	for i := 0; i < len(words); i++ {
+		w := words[i]
+		name, v, valued := strings.Cut(w, "=")
+		switch {
+		case !strings.HasPrefix(w, "-"), slices.Contains(finalizeFlags, w):
+		case slices.Contains(costInputFlags, name):
+			if !valued {
+				if i+1 == len(words) {
+					return false
+				}
+				i++
+				v = words[i]
+			}
+			if v == "" {
+				return false
+			}
+			inputs++
+		case finalizeValues[name]:
+			if !valued {
+				i++
+			}
+		default:
+			return false
+		}
+	}
+	return inputs > 0
 }
 
 // reads says whether a flai command with its subcommand and the words after
@@ -927,17 +1059,23 @@ func (g Guard) orchestrate(e Event) Refusal {
 			return refusedOrchestrator(call, threadDoes(c), why, permit)
 		case tool == "plan":
 			what = "plan " + in.ID
-			if isEpic(in.ID) {
+			switch {
+			case isEpic(in.ID):
 				needs = manifest.PermitPlanBacklogEpics
-			} else {
-				never = plansEpics
+			case isStory(in.ID):
+				needs = manifest.PermitPlanBacklogStories
+			default:
+				never = plansCandidates
 			}
 		case tool == "item_edit":
 			what = "edit " + in.ID
-			if finalizesDraft(in) {
+			switch {
+			case finalizesDraft(in):
 				what, needs = "finalize "+in.ID, manifest.PermitFinalizeDrafts
-			} else {
-				never = "it edits an item only to finalize a draft, with item_edit draft false and nothing else"
+			case setsCostInputs(in):
+				what, needs = "give "+in.ID+" cost of delay inputs", manifest.PermitPlanBacklogStories
+			default:
+				never = editsMCP
 			}
 		case tool == "item_move":
 			what = fmt.Sprintf("move %s to %s", in.ID, in.To)
