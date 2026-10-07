@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 539
-      cache_read: 5715188
-      cache_write: 164963
-      cost: 2.642
+      input: 92
+      output: 37916
+      cache_read: 5843715
+      cache_write: 159583
+      cost: 2.8525
 ---
 # T-1093 The host channel files, bumps, and closes an issue against a story
 

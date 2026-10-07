@@ -3,19 +3,36 @@ id: T-0932
 type: task
 nature: feature
 title: A table under the agent-waiting chart lists the longest waits with the story, the thread, and who was awaited
-status: ready
+status: done
 parent: S-0215
 owner: alex
 created: 2026-10-05T05:45:14Z
-updated: 2026-10-07T08:54:32Z
+updated: 2026-10-07T09:05:35Z
 transitions:
   - to: ready
     at: 2026-10-07T08:54:32Z
+    by: agent-S-0215
+  - to: in-progress
+    at: 2026-10-07T09:02:04Z
+    by: agent-S-0215
+  - to: done
+    at: 2026-10-07T09:05:35Z
     by: agent-S-0215
 stream: S-0215
 tags: [dashboard]
 touches: [flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts, flaiover/src/routes/charts]
 after: [T-0923, T-0927]
+usage:
+  source: log
+  seconds: 211
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 15026
+      cache_read: 2008880
+      cache_write: 70319
+      cost: 1.1272
 ---
 # T-0932 A table under the agent-waiting chart lists the longest waits with the story, the thread, and who was awaited
 

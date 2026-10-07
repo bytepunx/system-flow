@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 91
-      output: 470
-      cache_read: 5184574
-      cache_write: 178488
-      cost: 2.4096
+      input: 84
+      output: 34582
+      cache_read: 5329830
+      cache_write: 145549
+      cost: 2.6017
 ---
 # T-1083 MCP issue_new and issue_bump take commit, and issue_close and adr_new are new tools
 

@@ -3,15 +3,35 @@ id: T-0920
 type: task
 nature: improvement
 title: flai guard reads a heredoc's text as input, not as commands, unless a shell runs it
-status: backlog
+status: done
 parent: S-0246
 owner: alex
 created: 2026-10-05T05:44:52Z
-updated: 2026-10-05T05:44:52Z
-transitions: []
+updated: 2026-10-07T09:03:06Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:00:25Z
+    by: agent-S-0246
+  - to: in-progress
+    at: 2026-10-07T09:00:25Z
+    by: agent-S-0246
+  - to: done
+    at: 2026-10-07T09:03:06Z
+    by: agent-S-0246
 stream: S-0246
 tags: [flai]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go]
+usage:
+  source: log
+  seconds: 161
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 97
+      cache_read: 555940
+      cache_write: 11755
+      cost: 0.2556
 ---
 # T-0920 flai guard reads a heredoc's text as input, not as commands, unless a shell runs it
 

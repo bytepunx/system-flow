@@ -6,12 +6,7 @@ wip_limits:
   ready: 10
   in-progress: 3
   review: 5
-order:
-  - S-0216
-placed:
-  S-0216:
-    by: flaiover
-    at: 2026-10-07T03:30:01Z
+order: []
 ---
 
 # Board

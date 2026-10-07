@@ -3,11 +3,11 @@ id: S-0275
 type: story
 nature: improvement
 title: "Issue and ADR handling from the worktree is one call each: bump, close, and adr new number from the whole repository and commit on the story branch"
-status: in-progress
+status: done
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:33Z
-updated: 2026-10-07T08:50:01Z
+updated: 2026-10-07T09:22:42Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:38Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:14:37Z
     by: agent-S-0275
+  - to: review
+    at: 2026-10-07T09:22:05Z
+    by: agent-S-0275
+  - to: done
+    at: 2026-10-07T09:22:42Z
+    by: orchestrator
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions]
-touches: [flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/record.go, flai/internal/issues/record_test.go, flai/internal/adr/adr.go, flai/internal/storygit/commit.go, flai/internal/storygit/commit_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/adr.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/continuous-improvement.md, template/root/design/conventions/decisions.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/storycommit.go, flai/cmd/storycommit_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flaiover/src/lib/server/agent.ts, template/root/design/adrs/README.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, docs/operators/settings.md]
+touches: [flai/cmd/issue.go, flai/cmd/issue_test.go, flai/cmd/adr.go, flai/cmd/adr_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/record.go, flai/internal/issues/record_test.go, flai/internal/adr/adr.go, flai/internal/storygit/commit.go, flai/internal/storygit/commit_test.go, flai/internal/itemedit/widen.go, flai/internal/itemedit/widen_test.go, flai/internal/mcpserver/issues.go, flai/internal/mcpserver/issues_test.go, flai/internal/mcpserver/adr.go, flai/internal/mcpserver/adr_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/continuous-improvement.md, template/root/design/conventions/decisions.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, design/system/dashboard-host-channel.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/storycommit.go, flai/cmd/storycommit_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flaiover/src/lib/server/agent.ts, template/root/design/adrs/README.md, design/issues/summary.md, docs/operators/settings.md, design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md, design/issues/I-0092-two-story-branches-that-each-bump-the-same-issue-conflict-in-its-front-matter-whose-count-last-reported-and-updated-lines-both-rewrite.md]
 after: [S-0252, S-0245]
 agent:
   harness: claude-code
@@ -26,15 +32,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2139
-  estimated: true
+  seconds: 4079
   models:
     - model: claude-opus-5-5
-      input: 558
-      output: 2921
-      cache_read: 29403528
-      cache_write: 1061510
-      cost: 13.6881
+      input: 648
+      output: 267351
+      cache_read: 41204874
+      cache_write: 1125242
+      cost: 20.1134
 cost_of_delay:
   value: 41
   by: planner-E-0017
@@ -57,8 +62,8 @@ Recording friction and decisions costs several turns each: `flai issue bump` or 
 
 ## Acceptance criteria
 - [x] `flai issue bump`, `new`, and `close` and `flai adr new` take `--commit`, which commits what they wrote on the story branch and widens the story's touches to it, in one call, as text and `--json`
-- [ ] The same operations exist over MCP and on the host channel
-- [ ] The conventions, the harness prompt, `design/system/flai-cli.md`, and the user guide send the agent to the one call
+- [x] The same operations exist over MCP and on the host channel
+- [x] The conventions, the harness prompt, `design/system/flai-cli.md`, and the user guide send the agent to the one call
 
 ## Tasks
 - T-1072 A shared helper commits the files a command wrote on the story branch and widens the story's touches to them
@@ -109,3 +114,14 @@ Touches, all files; no folder touch kept. The three folder touches of the first 
 Forecast: 49m, flai's figure, and it stands. It rose from 39m because the size rose from 26 to 35. Part of that is narrowing three folders to files, which adds no work. The rest is scope the code showed: T-1074, `issue_close` over MCP, and the host channel's issue operations with their `--autocommit`. Delivery 2026-10-07T09:39Z is flai's, after S-0245's.
 
 Cost of delay: 41 USD a week, kept against flai's 90.46. flai shares E-0017's 900 USD a week by forecast time, 39m of 6h28m. planner-E-0017 shared it by the turns each story removes. git shows 94 issue and ADR files added from 2026-09-23 to 2026-10-04, plus bumps. At three turns each (write, commit, claim), that is about 280 turns. The longer forecast changes the work, not the turns removed, so the share stands. The figure assumes three turns a record, which no log classification has measured, so this share is the least certain in the epic.
+
+### Accepted by the orchestrator
+
+- Verified: 3d6aa5f278e4bf6d724f4191b18e8ae65678e1fd
+- At: 2026-10-07T09:22:42Z
+
+Verdict: S-0275 meets all three criteria, with no touches breach and no convention breach found, verified at commit 3d6aa5f278e4bf6d724f4191b18e8ae65678e1fd.
+
+- 1: flai/cmd/issue.go, flai/cmd/adr.go, flai/cmd/storycommit.go, flai/internal/storygit/commit.go, flai/internal/itemedit/widen.go, flai/internal/issues/issues.go, flai/internal/issues/record.go, flai/internal/taskdone/taskdone.go, and their tests
+- 2: flai/internal/mcpserver/issues.go, flai/internal/mcpserver/adr.go, flai/internal/hostapi/writes.go, flaiover/src/lib/server/agent.ts, design/system/dashboard-host-channel.md, and their tests
+- 3: design/conventions/continuous-improvement.md, design/conventions/decisions.md, template/root/design/conventions/continuous-improvement.md, template/root/design/conventions/decisions.md, template/CHANGELOG.md, flai/internal/harness/harness.go, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md

@@ -3,11 +3,11 @@ id: T-0923
 type: task
 nature: feature
 title: flai stats reports the longest waits of the window with their story, thread, and who was awaited
-status: in-progress
+status: done
 parent: S-0215
 owner: alex
 created: 2026-10-05T05:44:57Z
-updated: 2026-10-07T08:55:43Z
+updated: 2026-10-07T09:01:49Z
 transitions:
   - to: ready
     at: 2026-10-07T08:54:32Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:55:43Z
     by: agent-S-0215
+  - to: done
+    at: 2026-10-07T09:01:49Z
+    by: agent-S-0215
 stream: S-0215
 tags: [flai]
 touches: [flai/internal/metrics]
 after: [T-0919]
+usage:
+  source: log
+  seconds: 366
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 11674
+      cache_read: 1560682
+      cache_write: 54630
+      cost: 0.8757
 ---
 # T-0923 flai stats reports the longest waits of the window with their story, thread, and who was awaited
 

@@ -3,11 +3,11 @@ id: S-0215
 type: story
 nature: feature
 title: A chart shows how long agents spend waiting on threads and on review
-status: in-progress
+status: review
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:54:06Z
+updated: 2026-10-07T09:18:15Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:56Z
@@ -21,6 +21,9 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:54:06Z
     by: agent-S-0215
+  - to: review
+    at: 2026-10-07T09:18:15Z
+    by: agent-S-0215
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts]
 after: [S-0205]
@@ -31,26 +34,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 92
-  estimated: true
+  seconds: 1469
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 297
-      cache_read: 1595953
-      cache_write: 111397
-      cost: 0.7686
+      input: 302
+      output: 103193
+      cache_read: 13795800
+      cache_write: 482907
+      cost: 7.7411
   strategic:
     - kind: orchestrator
-      seconds: 2
+      seconds: 1141
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 8
-          cache_read: 65241
-          cache_write: 321
-          cost: 0.0171
+          input: 84
+          output: 1335
+          cache_read: 9519466
+          cache_write: 17524
+          cost: 2.4884
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 48
+          cache_read: 70344
+          cache_write: 36453
+          cost: 0.0716
 cost_of_delay:
   value: 76.01
   by: planner-S-0215
@@ -69,9 +77,9 @@ forecast:
 Agents wait for the operator: on threads they open and on stories in review. That time is the operator's bottleneck and the orchestrator's reason to exist. The designer asked for a chart of it on 2026-10-02.
 
 ## Acceptance criteria
-- [ ] `/charts/agent-waiting`: stacked bar per week of the window of hours agents waited, split into thread waits (opened to answered, from thread timestamps while the story was in progress) and review waits (review to done, from transitions), with the mean wait per story as a line
-- [ ] A table under it lists the longest waits in the window with the story, the thread, and who was awaited
-- [ ] Spans the window, reads `/api/stats`, matches `flai stats --json`; listed under Flow; design and user guide describe it; tests cover the mapping
+- [x] `/charts/agent-waiting`: stacked bar per week of the window of hours agents waited, split into thread waits (opened to answered, from thread timestamps while the story was in progress) and review waits (review to done, from transitions), with the mean wait per story as a line
+- [x] A table under it lists the longest waits in the window with the story, the thread, and who was awaited
+- [x] Spans the window, reads `/api/stats`, matches `flai stats --json`; listed under Flow; design and user guide describe it; tests cover the mapping
 
 ## Tasks
 - T-0919 metrics.md defines each wait of the window, with its story, thread, and who was awaited, and an ADR records it

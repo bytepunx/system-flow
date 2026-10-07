@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 85
-      output: 359
-      cache_read: 4214163
-      cache_write: 145810
-      cost: 1.9589
+      input: 68
+      output: 28114
+      cache_read: 4332967
+      cache_write: 118327
+      cost: 2.1151
 ---
 # T-1077 flai issue bump, new, and close and flai adr new take --commit
 

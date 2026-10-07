@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 323
-      cache_read: 2146314
-      cache_write: 76284
-      cost: 0.9987
+      input: 35
+      output: 14332
+      cache_read: 2208838
+      cache_write: 60320
+      cost: 1.0782
 ---
 # T-1100 The conventions and the harness prompt send a story's agent to the one call with --commit
 

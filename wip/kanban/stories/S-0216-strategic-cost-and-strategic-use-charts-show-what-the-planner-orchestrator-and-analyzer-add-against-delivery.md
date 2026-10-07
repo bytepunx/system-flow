@@ -3,11 +3,11 @@ id: S-0216
 type: story
 nature: feature
 title: Strategic Cost and Strategic Use charts show what the planner, orchestrator, and analyzer add against delivery
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T08:59:42Z
+updated: 2026-10-07T09:18:27Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:57Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-10-07T03:29:17Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T09:18:27Z
+    by: agent-S-0216
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts]
 after: [S-0205, S-0225, S-0226, S-0227]
@@ -32,15 +35,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 5
+      seconds: 10
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 12
-          cache_read: 165092
-          cache_write: 5091
-          cost: 0.0444
+          input: 4
+          output: 28
+          cache_read: 386507
+          cache_write: 5926
+          cost: 0.1024
 cost_of_delay:
   value: 46.84
   by: planner-S-0216

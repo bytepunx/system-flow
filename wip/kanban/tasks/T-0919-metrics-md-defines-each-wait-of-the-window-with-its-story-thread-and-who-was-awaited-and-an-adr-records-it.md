@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 92
-      cache_read: 811947
-      cache_write: 16935
-      cost: 0.3731
+      input: 18
+      output: 6135
+      cache_read: 820170
+      cache_write: 28709
+      cost: 0.4602
 ---
 # T-0919 metrics.md defines each wait of the window, with its story, thread, and who was awaited, and an ADR records it
 

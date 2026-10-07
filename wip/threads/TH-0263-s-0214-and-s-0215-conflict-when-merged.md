@@ -4,10 +4,10 @@ title: S-0214 and S-0215 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0215-a-chart-shows-how-long-agents-spend-waiting-on-threads-and-on-review.md
   item: S-0215
-status: answered
+status: open
 participants: [flai, agent-S-0215]
 created: 2026-10-07T08:55:28Z
-updated: 2026-10-07T08:55:37Z
+updated: 2026-10-07T09:05:34Z
 ---
 
 # TH-0263 S-0214 and S-0215 conflict when merged
@@ -26,3 +26,23 @@ Whichever of S-0214 and S-0215 is accepted second will stop on these paths when 
 
 ### 2026-10-07T08:55:37Z agent-S-0215
 S-0215 goes second: S-0213 and S-0214 are in review and S-0215 is in progress. Both conflicts are additive: one row each in `design/adrs/README.md` (ADR-0112, ADR-0113, ADR-0114), and separate paragraphs of `design/system/metrics.md`. S-0215 keeps both sides when its sync rebases onto their acceptance, and the next clean sync resolves this thread. Nothing is needed from the designer.
+
+### 2026-10-07T09:01:47Z flai
+A trial merge of story/S-0214 with story/S-0215 at flai stream sync conflicts in:
+
+- `design/adrs/README.md`
+- `design/system/metrics.md`
+- `flaiover/src/lib/viz/charts.ts`
+
+Whichever of S-0214 and S-0215 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.
+
+### 2026-10-07T09:05:34Z flai
+A trial merge of story/S-0214 with story/S-0215 at flai stream sync conflicts in:
+
+- `design/adrs/README.md`
+- `design/system/metrics.md`
+- `docs/users/flaiover.md`
+- `flaiover/src/lib/viz/charts.ts`
+- `flaiover/src/routes/charts/[kind]/+page.svelte`
+
+Whichever of S-0214 and S-0215 is accepted second will stop on these paths when it rebases. Settle between the two stories who changes what: one narrows its change, or names the other in `after:` and waits for it. Ask the designer when it is not clear. The next sync that finds the two merging cleanly resolves this thread.

@@ -3,12 +3,18 @@ id: S-0293
 type: story
 nature: improvement
 title: flai stats classifies a story run's tool calls, so the ceremony turns E-0017 removes are measured per story and over time
-status: backlog
+status: in-progress
 parent: E-0017
 owner: alex
 created: 2026-10-06T11:37:08Z
-updated: 2026-10-07T08:59:42Z
-transitions: []
+updated: 2026-10-07T09:22:20Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:19:04Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T09:22:20Z
+    by: system-flow
 tags: [cli, metrics]
 topics: [automation, conventions]
 touches: [flai/internal/usage/log.go, flai/internal/usage/usage.go, flai/internal/usage/log_test.go, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -17,6 +23,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 9
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 8
+          output: 72
+          cache_read: 968612
+          cache_write: 4247
+          cost: 0.2538
 cost_of_delay:
   value: 59.02
   by: planner-E-0017

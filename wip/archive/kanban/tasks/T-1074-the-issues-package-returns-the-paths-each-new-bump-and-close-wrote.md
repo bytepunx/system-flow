@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 140
-      cache_read: 1355461
-      cache_write: 97855
-      cost: 0.653
+      input: 23
+      output: 9371
+      cache_read: 1444319
+      cache_write: 39442
+      cost: 0.705
 ---
 # T-1074 The issues package returns the paths each new, bump, and close wrote
 

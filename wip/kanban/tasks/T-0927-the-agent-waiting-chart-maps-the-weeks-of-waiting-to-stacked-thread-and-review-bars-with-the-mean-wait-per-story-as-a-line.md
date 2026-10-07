@@ -3,11 +3,11 @@ id: T-0927
 type: task
 nature: feature
 title: The agent-waiting chart maps the weeks of waiting to stacked thread and review bars with the mean wait per story as a line
-status: in-progress
+status: done
 parent: S-0215
 owner: alex
 created: 2026-10-05T05:45:02Z
-updated: 2026-10-07T08:55:43Z
+updated: 2026-10-07T09:01:48Z
 transitions:
   - to: ready
     at: 2026-10-07T08:54:32Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T08:55:43Z
     by: agent-S-0215
+  - to: done
+    at: 2026-10-07T09:01:47Z
+    by: agent-S-0215
 stream: S-0215
 tags: [dashboard]
-touches: [flaiover/src/lib/viz]
+touches: [flaiover/src/lib/viz, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go]
 after: [T-0919]
+usage:
+  source: log
+  seconds: 364
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 28225
+      cache_read: 3773337
+      cache_write: 132082
+      cost: 2.1173
 ---
 # T-0927 The agent-waiting chart maps the weeks of waiting to stacked thread and review bars with the mean wait per story as a line
 

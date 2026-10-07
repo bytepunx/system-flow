@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 27.2099
-accrued_seconds: 27544
-tasks_completed: 35
-last_run: 2026-10-07T08:59:48Z
+accrued_cost: 30.1800
+accrued_seconds: 28705
+tasks_completed: 39
+last_run: 2026-10-07T09:19:09Z
 ---
 
 # Orchestrator activity
@@ -256,6 +256,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0265
 - Seconds: 291
 - Cost: 1.1169 USD, estimated
+
+### 2026-10-07T08:59:56Z
+
+- Summary: Published under judgement: 1 pending, 25 USD/week; flai 1.34.4→1.34.5 (flai/v1.34.5); bundled S-0265; pushed
+- Items: S-0265
+- Seconds: 8
+- Cost: 0.1154 USD, estimated
+
+### 2026-10-07T09:00:01Z
+
+- Summary: Re-applied the throughput order after S-0246 left ready for in-progress: S-0216 alone, kept (placed by hand). No promote candidates
+- Items: S-0216
+- Seconds: 5
+- Cost: 0.0580 USD, estimated
+
+### 2026-10-07T09:19:00Z
+
+- Summary: Left S-0215 in review, not accepted: the dry-run is blocked by the open TH-0262 and TH-0263 (flai's merge-conflict notices with S-0213 and S-0214); verify passed at head 4304c3e8 and the verifier matched all 3 criteria. Recommended on TH-0266 the order S-0214, S-0215, S-0213
+- Items: S-0215
+- Seconds: 1139
+- Cost: 2.5429 USD, estimated
+
+### 2026-10-07T09:19:09Z
+
+- Summary: Promoted S-0293 to ready (rank 1, forecast 40m, sole flai promote --candidates candidate once S-0214 left in-progress) and applied the throughput order; ready had room (0 of 10)
+- Items: S-0293
+- Seconds: 9
+- Cost: 0.2538 USD, estimated
 
 ## Refusals
 

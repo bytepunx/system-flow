@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 292
-      cache_read: 2184356
-      cache_write: 121602
-      cost: 1.0361
+      input: 36
+      output: 14869
+      cache_read: 2291682
+      cache_write: 62582
+      cost: 1.1186
 ---
 # T-1072 A shared helper commits the files a command wrote on the story branch and widens the story's touches to them
 

@@ -3,16 +3,36 @@ id: T-0926
 type: task
 nature: improvement
 title: flai guard's design and docs say how it reads a heredoc, and I-0058 is closed
-status: backlog
+status: done
 parent: S-0246
 owner: alex
 created: 2026-10-05T05:45:02Z
-updated: 2026-10-05T05:45:02Z
-transitions: []
+updated: 2026-10-07T09:19:26Z
+transitions:
+  - to: ready
+    at: 2026-10-07T09:03:12Z
+    by: agent-S-0246
+  - to: in-progress
+    at: 2026-10-07T09:03:13Z
+    by: agent-S-0246
+  - to: done
+    at: 2026-10-07T09:03:40Z
+    by: agent-S-0246
 stream: S-0246
 tags: [flai, docs]
-touches: [design/system/flai-cli.md, design/system/agent-context.md, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md]
+touches: [design/system/flai-cli.md, design/system/agent-context.md, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, flai/cmd/guard.go]
 after: [T-0920]
+usage:
+  source: log
+  seconds: 27
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 43
+      cache_read: 410850
+      cache_write: 16562
+      cost: 0.1925
 ---
 # T-0926 flai guard's design and docs say how it reads a heredoc, and I-0058 is closed
 

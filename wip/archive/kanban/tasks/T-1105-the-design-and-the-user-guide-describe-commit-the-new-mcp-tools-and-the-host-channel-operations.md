@@ -24,15 +24,15 @@ touches: [design/system/flai-cli.md, design/system/continuous-improvement.md, de
 after: [T-1077, T-1083, T-1093]
 usage:
   source: log
-  seconds: 288
+  seconds: 289
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 108
-      output: 603
-      cache_read: 5762660
-      cache_write: 138354
-      cost: 2.6514
+      input: 92
+      output: 38051
+      cache_read: 5864461
+      cache_write: 160149
+      cost: 2.8626
 ---
 # T-1105 The design and the user guide describe --commit, the new MCP tools, and the host channel operations
 

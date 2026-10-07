@@ -6,7 +6,7 @@ title: flai guard refuses a sub-agent's shell command whose heredoc text reads l
 status: in-progress
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-07T08:59:19Z
+updated: 2026-10-07T09:19:26Z
 transitions:
   - to: ready
     at: 2026-10-07T08:20:43Z
@@ -16,16 +16,23 @@ transitions:
     by: agent-S-0246
 tags: []
 topics: [cli]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/system/agent-context.md, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/system/agent-context.md, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, flai/cmd/guard.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 266
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 308
+      cache_read: 1684458
+      cache_write: 100160
+      cost: 0.8036
   strategic:
     - kind: orchestrator
       seconds: 12
