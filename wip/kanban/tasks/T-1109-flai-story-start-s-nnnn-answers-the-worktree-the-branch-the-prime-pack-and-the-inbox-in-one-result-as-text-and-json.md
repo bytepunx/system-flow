@@ -3,16 +3,36 @@ id: T-1109
 type: task
 nature: improvement
 title: flai story start S-nnnn answers the worktree, the branch, the prime pack, and the inbox in one result, as text and --json
-status: backlog
+status: done
 parent: S-0274
 owner: alex
 created: 2026-10-06T22:53:30Z
-updated: 2026-10-06T22:53:30Z
-transitions: []
+updated: 2026-10-07T07:59:35Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:40:24Z
+    by: agent-S-0274
+  - to: in-progress
+    at: 2026-10-07T07:40:24Z
+    by: agent-S-0274
+  - to: done
+    at: 2026-10-07T07:59:34Z
+    by: agent-S-0274
 stream: S-0274
 tags: [cli, go]
-touches: [flai/cmd/story_start.go, flai/cmd/story_start_test.go, flai/cmd/items.go, flai/cmd/prime.go, flai/cmd/move.go]
+touches: [flai/cmd/story_start.go, flai/cmd/story_start_test.go, flai/cmd/items.go, flai/cmd/prime.go, flai/cmd/move.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/story_start.go, flai/internal/mcpserver/story_start_test.go]
 after: [T-1099, T-1103]
+usage:
+  source: log
+  seconds: 1150
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 28581
+      cache_read: 4125244
+      cache_write: 131824
+      cost: 2.1294
 ---
 # T-1109 flai story start S-nnnn answers the worktree, the branch, the prime pack, and the inbox in one result, as text and --json
 

@@ -3,16 +3,36 @@ id: T-0965
 type: task
 nature: feature
 title: flai stats prints the pull order's projected saving and the items without a cost of delay value
-status: backlog
+status: done
 parent: S-0213
 owner: alex
 created: 2026-10-05T05:47:06Z
-updated: 2026-10-05T05:47:06Z
-transitions: []
+updated: 2026-10-07T07:59:43Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:51:09Z
+    by: agent-S-0213
+  - to: in-progress
+    at: 2026-10-07T07:51:10Z
+    by: agent-S-0213
+  - to: done
+    at: 2026-10-07T07:59:43Z
+    by: agent-S-0213
 stream: S-0213
 tags: [flai]
 touches: [flai/cmd/stats.go, flai/cmd/check_stats_test.go, docs/users/flai.md]
 after: [T-0959]
+usage:
+  source: log
+  seconds: 513
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 204
+      cache_read: 1416504
+      cache_write: 76365
+      cost: 0.6697
 ---
 # T-0965 flai stats prints the pull order's projected saving and the items without a cost of delay value
 

@@ -3,16 +3,36 @@ id: T-0969
 type: task
 nature: feature
 title: The charts page lists the cost of delay charts under Planning and states the saving and the items without a value
-status: backlog
+status: done
 parent: S-0213
 owner: alex
 created: 2026-10-05T05:47:24Z
-updated: 2026-10-05T05:47:24Z
-transitions: []
+updated: 2026-10-07T08:04:27Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:00:07Z
+    by: agent-S-0213
+  - to: in-progress
+    at: 2026-10-07T08:00:07Z
+    by: agent-S-0213
+  - to: done
+    at: 2026-10-07T08:04:27Z
+    by: agent-S-0213
 stream: S-0213
 tags: [dashboard]
 touches: ["flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
 after: [T-0967]
+usage:
+  source: log
+  seconds: 260
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 287
+      cache_read: 2389086
+      cache_write: 86488
+      cost: 1.1106
 ---
 # T-0969 The charts page lists the cost of delay charts under Planning and states the saving and the items without a value
 

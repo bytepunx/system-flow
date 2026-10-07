@@ -3,12 +3,18 @@ id: T-1074
 type: task
 nature: improvement
 title: The issues package returns the paths each new, bump, and close wrote
-status: backlog
+status: in-progress
 parent: S-0275
 owner: alex
 created: 2026-10-06T22:52:24Z
-updated: 2026-10-06T22:52:24Z
-transitions: []
+updated: 2026-10-07T08:15:12Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:15:12Z
+    by: agent-S-0275
+  - to: in-progress
+    at: 2026-10-07T08:15:12Z
+    by: agent-S-0275
 stream: S-0275
 tags: [cli]
 touches: [flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/issues/record.go, flai/internal/issues/record_test.go]

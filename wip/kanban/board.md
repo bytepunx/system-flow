@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0275
   - S-0214
   - S-0215
   - S-0216

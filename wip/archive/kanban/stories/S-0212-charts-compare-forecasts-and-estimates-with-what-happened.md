@@ -3,11 +3,11 @@ id: S-0212
 type: story
 nature: feature
 title: Charts compare forecasts and estimates with what happened
-status: review
+status: done
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-07T07:31:41Z
+updated: 2026-10-07T08:17:45Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:50Z
@@ -24,6 +24,9 @@ transitions:
   - to: review
     at: 2026-10-07T07:31:41Z
     by: agent-S-0212
+  - to: done
+    at: 2026-10-07T08:17:45Z
+    by: alex
 tags: [dashboard]
 topics: [planning]
 touches: [flaiover/src/routes/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, design/system/metrics.md, flaiover/src/lib/components/ForecastTable.svelte, flaiover/src/lib/components/ForecastTable.svelte.test.ts, design/adrs/0111-flai-stats-gives-each-item-the-model-its-forecasts-are-grouped-under.md, design/adrs/README.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md, flai/internal/metrics/forecast.go, flai/internal/metrics/forecast_test.go, flai/internal/metrics/metrics.go, design/issues/I-0105-flai-test-never-runs-flaiover-s-prettier-eslint-or-svelte-check-so-formatting-faults-surface-only-at-the-close-out.md, design/issues/I-0106-flai-serve-s-test-that-the-orchestrator-is-started-again-when-it-ends-fails-under-the-close-out-s-full-integration-run.md]
@@ -35,14 +38,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2719
+  seconds: 4649
   models:
     - model: claude-opus-5-5
-      input: 392
-      output: 214625
-      cache_read: 23096485
-      cache_write: 754164
-      cost: 13.3775
+      input: 492
+      output: 221751
+      cache_read: 25872055
+      cache_write: 810558
+      cost: 14.5266
     - model: claude-sonnet-5-5
       input: 46
       output: 9960

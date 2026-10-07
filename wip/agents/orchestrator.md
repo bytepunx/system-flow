@@ -137,3 +137,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai manifest set orchestration.permissions.accept_reviews=true`
 - Needs: none
+
+### 2026-10-07T07:50:56Z
+
+- Call: `FLAI_AGENT=orchestrator flai board --json >/dev/null 2>`
+- Needs: none

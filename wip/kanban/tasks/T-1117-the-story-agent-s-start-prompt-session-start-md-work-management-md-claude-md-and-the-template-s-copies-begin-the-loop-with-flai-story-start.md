@@ -3,16 +3,36 @@ id: T-1117
 type: task
 nature: improvement
 title: The story agent's start prompt, session-start.md, work-management.md, CLAUDE.md, and the template's copies begin the loop with flai story start
-status: backlog
+status: done
 parent: S-0274
 owner: alex
 created: 2026-10-06T22:53:52Z
-updated: 2026-10-06T22:53:52Z
-transitions: []
+updated: 2026-10-07T08:06:10Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:00:04Z
+    by: agent-S-0274
+  - to: in-progress
+    at: 2026-10-07T08:00:05Z
+    by: agent-S-0274
+  - to: done
+    at: 2026-10-07T08:06:10Z
+    by: agent-S-0274
 stream: S-0274
 tags: [conventions, template, go]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/session-start.md, design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/root/design/conventions/work-management.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/CHANGELOG.md]
 after: [T-1109, T-1111]
+usage:
+  source: log
+  seconds: 365
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 28605
+      cache_read: 4128681
+      cache_write: 131934
+      cost: 2.1311
 ---
 # T-1117 The story agent's start prompt, session-start.md, work-management.md, CLAUDE.md, and the template's copies begin the loop with flai story start
 

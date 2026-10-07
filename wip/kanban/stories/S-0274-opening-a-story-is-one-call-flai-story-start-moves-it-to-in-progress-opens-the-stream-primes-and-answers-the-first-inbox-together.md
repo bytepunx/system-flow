@@ -3,11 +3,11 @@ id: S-0274
 type: story
 nature: improvement
 title: "Opening a story is one call: flai story start moves it to in-progress, opens the stream, primes, and answers the first inbox together"
-status: in-progress
+status: review
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:32Z
-updated: 2026-10-07T07:27:50Z
+updated: 2026-10-07T08:14:21Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:35Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-07T07:27:50Z
     by: agent-S-0274
+  - to: review
+    at: 2026-10-07T08:14:17Z
+    by: agent-S-0274
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions, template]
-touches: [flai/cmd/items.go, flai/cmd/story_start.go, flai/cmd/story_start_test.go, flai/cmd/move.go, flai/cmd/stream.go, flai/cmd/prime.go, flai/cmd/branch.go, flai/internal/storygit/open.go, flai/internal/storygit/open_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/inbox.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/story_start.go, flai/internal/mcpserver/story_start_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/session-start.md, design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/root/design/conventions/work-management.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/cmd/items.go, flai/cmd/story_start.go, flai/cmd/story_start_test.go, flai/cmd/move.go, flai/cmd/stream.go, flai/cmd/prime.go, flai/cmd/branch.go, flai/internal/storygit/open.go, flai/internal/storygit/open_test.go, flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go, flai/internal/mcpserver/inbox.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/story_start.go, flai/internal/mcpserver/story_start_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/session-start.md, design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/root/design/conventions/work-management.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, docs/operators/settings.md, flaiover/src/lib/server/agent.ts, docs/users/conventions.md, design/system/agent-narrative.md, design/issues/summary.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md]
 after: [S-0261]
 agent:
   harness: claude-code
@@ -26,15 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 331
-  estimated: true
+  seconds: 2816
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 439
-      cache_read: 2638434
-      cache_write: 252090
-      cost: 1.2968
+      input: 690
+      output: 246136
+      cache_read: 35525916
+      cache_write: 1135246
+      cost: 18.3376
+    - model: claude-sonnet-5-5
+      input: 20
+      output: 5833
+      cache_read: 430570
+      cache_write: 60120
+      cost: 0.2948
 cost_of_delay:
   value: 64
   by: planner-E-0017
@@ -56,9 +64,9 @@ finalized:
 A story agent's first minute is four turns: `flai move S-nnnn in-progress`, `flai stream open`, `prime`, and `inbox`, and in S-0248 the prime's result overflowed the harness and was read back from a file (S-0261 fixes the size). `flai story start S-nnnn`, `story_start` over MCP, and `story.start` on the host channel do the four in one call and answer the worktree path, the branch, the prime pack within its budget, and the inbox. flai serve's prompt tells the agent to begin with it.
 
 ## Acceptance criteria
-- [ ] `flai story start S-nnnn` moves the story to in-progress, opens the stream, and answers the worktree, the branch, the prime pack, and the inbox in one result, as text and `--json`, refusing a story that is not ready or is held
-- [ ] The same is `story_start` over MCP and `story.start` on the host channel
-- [ ] The harness prompt, `design/conventions/session-start.md`, the template's copies, `design/system/flai-cli.md`, and the user guide begin the loop with it
+- [x] `flai story start S-nnnn` moves the story to in-progress, opens the stream, and answers the worktree, the branch, the prime pack, and the inbox in one result, as text and `--json`, refusing a story that is not ready or is held
+- [x] The same is `story_start` over MCP and `story.start` on the host channel
+- [x] The harness prompt, `design/conventions/session-start.md`, the template's copies, `design/system/flai-cli.md`, and the user guide begin the loop with it
 
 ## Tasks
 - T-1091 Opening a story's branch and worktree is a storygit function that the CLI and the MCP server can both call

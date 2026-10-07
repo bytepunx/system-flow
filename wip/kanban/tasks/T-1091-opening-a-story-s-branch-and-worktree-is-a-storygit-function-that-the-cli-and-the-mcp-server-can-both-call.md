@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 245
-      cache_read: 1302792
-      cache_write: 92408
-      cost: 0.626
+      input: 27
+      output: 9623
+      cache_read: 1388906
+      cache_write: 44383
+      cost: 0.7169
 ---
 # T-1091 Opening a story's branch and worktree is a storygit function that the CLI and the MCP server can both call
 

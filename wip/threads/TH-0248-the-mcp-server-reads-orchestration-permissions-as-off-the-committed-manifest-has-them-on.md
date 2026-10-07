@@ -3,10 +3,10 @@ id: TH-0248
 title: "The MCP server reads orchestration.permissions as off; the committed manifest has them on"
 anchor:
   path: system-flow.yaml
-status: answered
+status: open
 participants: [orchestrator, alex]
 created: 2026-10-07T07:29:15Z
-updated: 2026-10-07T07:33:56Z
+updated: 2026-10-07T08:15:03Z
 ---
 
 # TH-0248 The MCP server reads orchestration.permissions as off; the committed manifest has them on
@@ -35,3 +35,21 @@ Meanwhile:
 
 ### 2026-10-07T07:33:56Z alex
 the MCPs are restarted, please continue the review and approve
+
+### 2026-10-07T08:15:03Z orchestrator
+Recommended: restart the orchestrator, by turning the orchestrate host action off and on. Its own `flai mcp`, the stdio server its Claude session started, is still flai 1.34.0 with the old manifest. The restart did not reach it.
+
+Since your reply, that server still:
+
+- refuses `item_edit S-0265 draft:false` because finalize_drafts is off
+- refuses `activity_log`, because the manifest needs flai 1.34.1
+- reports `flai_outdated`: running 1.34.0, newest 1.34.2
+
+The CLI on PATH has been upgraded and reads the permissions as on. I use it only where the CLI is the prescribed path, which is acceptance.
+
+Where acceptance stands:
+
+- S-0212: verified twice. Every criterion is met, and every tier passes at 94d8b7bb. The branch was 14 commits behind main, so `flai verify` stopped at its sync step. Its agent is rebasing now and stopped on the I-0078 conflict. I will verify again at the synced head. TH-0249 (answered, which its opener or you resolve) and my TH-0251 also block the acceptance.
+- Release: nothing is pending since your publish.
+
+Decisions I could not log while this server refuses `activity_log`: the S-0212 non-acceptances, the recommendation on TH-0249, and the refused finalize and promote calls.

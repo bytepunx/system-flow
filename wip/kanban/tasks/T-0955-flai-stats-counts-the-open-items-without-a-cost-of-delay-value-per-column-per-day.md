@@ -3,16 +3,36 @@ id: T-0955
 type: task
 nature: feature
 title: flai stats counts the open items without a cost of delay value per column per day
-status: backlog
+status: done
 parent: S-0213
 owner: alex
 created: 2026-10-05T05:46:25Z
-updated: 2026-10-05T05:46:48Z
-transitions: []
+updated: 2026-10-07T07:39:59Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:37:56Z
+    by: agent-S-0213
+  - to: in-progress
+    at: 2026-10-07T07:37:57Z
+    by: agent-S-0213
+  - to: done
+    at: 2026-10-07T07:39:59Z
+    by: agent-S-0213
 stream: S-0213
 tags: [flai]
 touches: [flai/internal/metrics/costofdelay.go, flai/internal/metrics/costofdelay_test.go]
 after: [T-0953]
+usage:
+  source: log
+  seconds: 122
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 115
+      cache_read: 939916
+      cache_write: 49923
+      cost: 0.4441
 ---
 # T-0955 flai stats counts the open items without a cost of delay value per column per day
 

@@ -3,16 +3,36 @@ id: T-1118
 type: task
 nature: improvement
 title: flai-cli.md, the user guide, and the reference describe flai story start, story_start, and story.start
-status: backlog
+status: done
 parent: S-0274
 owner: alex
 created: 2026-10-06T22:53:57Z
-updated: 2026-10-06T22:53:57Z
-transitions: []
+updated: 2026-10-07T08:06:08Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:00:05Z
+    by: agent-S-0274
+  - to: in-progress
+    at: 2026-10-07T08:00:05Z
+    by: agent-S-0274
+  - to: done
+    at: 2026-10-07T08:06:08Z
+    by: agent-S-0274
 stream: S-0274
 tags: [docs]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-1109, T-1111]
+usage:
+  source: log
+  seconds: 363
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 39343
+      cache_read: 5678480
+      cache_write: 181458
+      cost: 2.9311
 ---
 # T-1118 flai-cli.md, the user guide, and the reference describe flai story start, story_start, and story.start
 

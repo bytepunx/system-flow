@@ -3,16 +3,36 @@ id: T-0967
 type: task
 nature: feature
 title: charts.ts maps cost_of_delay to the cod-outstanding, cod-incurred, and cod-order charts in a planning group
-status: backlog
+status: done
 parent: S-0213
 owner: alex
 created: 2026-10-05T05:47:14Z
-updated: 2026-10-05T05:47:14Z
-transitions: []
+updated: 2026-10-07T07:59:44Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:51:10Z
+    by: agent-S-0213
+  - to: in-progress
+    at: 2026-10-07T07:51:10Z
+    by: agent-S-0213
+  - to: done
+    at: 2026-10-07T07:59:44Z
+    by: agent-S-0213
 stream: S-0213
 tags: [dashboard]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/palette.ts]
 after: [T-0959]
+usage:
+  source: log
+  seconds: 514
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 393
+      cache_read: 3583009
+      cache_write: 131417
+      cost: 1.6663
 ---
 # T-0967 charts.ts maps cost_of_delay to the cod-outstanding, cod-incurred, and cod-order charts in a planning group
 

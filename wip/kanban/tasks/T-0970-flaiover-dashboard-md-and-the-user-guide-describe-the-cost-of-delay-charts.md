@@ -3,16 +3,36 @@ id: T-0970
 type: task
 nature: feature
 title: flaiover-dashboard.md and the user guide describe the cost of delay charts
-status: backlog
+status: done
 parent: S-0213
 owner: alex
 created: 2026-10-05T05:47:28Z
-updated: 2026-10-05T05:47:28Z
-transitions: []
+updated: 2026-10-07T08:04:26Z
+transitions:
+  - to: ready
+    at: 2026-10-07T08:00:08Z
+    by: agent-S-0213
+  - to: in-progress
+    at: 2026-10-07T08:00:08Z
+    by: agent-S-0213
+  - to: done
+    at: 2026-10-07T08:04:26Z
+    by: agent-S-0213
 stream: S-0213
 tags: [dashboard]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-0967]
+usage:
+  source: log
+  seconds: 258
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 282
+      cache_read: 2536759
+      cache_write: 94393
+      cost: 1.1804
 ---
 # T-0970 flaiover-dashboard.md and the user guide describe the cost of delay charts
 

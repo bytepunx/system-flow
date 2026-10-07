@@ -23,15 +23,15 @@ tags: [mcp, go]
 touches: [flai/internal/mcpserver/inbox.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go]
 usage:
   source: log
-  seconds: 290
+  seconds: 386
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 27
-      output: 117
-      cache_read: 736779
-      cache_write: 69681
-      cost: 0.3618
+      input: 22
+      output: 8004
+      cache_read: 1155246
+      cache_write: 36916
+      cost: 0.5963
 ---
 # T-1099 The inbox is an exported mcpserver function over the agent's on-disk cursor, so the CLI can answer it as MCP does
 

@@ -3,16 +3,36 @@ id: T-0959
 type: task
 nature: feature
 title: flai stats projects the ready column's cost of delay under the pull order, by cost of delay, and by WSJF
-status: backlog
+status: done
 parent: S-0213
 owner: alex
 created: 2026-10-05T05:46:37Z
-updated: 2026-10-05T05:46:54Z
-transitions: []
+updated: 2026-10-07T07:50:53Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:40:00Z
+    by: agent-S-0213
+  - to: in-progress
+    at: 2026-10-07T07:40:00Z
+    by: agent-S-0213
+  - to: done
+    at: 2026-10-07T07:50:52Z
+    by: agent-S-0213
 stream: S-0213
 tags: [flai]
-touches: [flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/metrics.go, flai/internal/planning/forecast.go, flai/internal/statsread]
+touches: [flai/internal/metrics/costorder.go, flai/internal/metrics/costorder_test.go, flai/internal/metrics/costofdelay.go, flai/internal/metrics/metrics.go, flai/internal/planning/forecast.go, flai/internal/statsread, flai/internal/metrics/costofdelay_test.go]
 after: [T-0953, T-0955]
+usage:
+  source: log
+  seconds: 652
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 471
+      cache_read: 4752242
+      cache_write: 133198
+      cost: 2.1917
 ---
 # T-0959 flai stats projects the ready column's cost of delay under the pull order, by cost of delay, and by WSJF
 

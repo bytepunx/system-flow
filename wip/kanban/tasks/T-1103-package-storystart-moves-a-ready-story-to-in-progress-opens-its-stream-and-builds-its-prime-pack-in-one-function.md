@@ -3,11 +3,11 @@ id: T-1103
 type: task
 nature: improvement
 title: Package storystart moves a ready story to in-progress, opens its stream, and builds its prime pack in one function
-status: in-progress
+status: done
 parent: S-0274
 owner: alex
 created: 2026-10-06T22:53:21Z
-updated: 2026-10-07T07:34:50Z
+updated: 2026-10-07T07:40:16Z
 transitions:
   - to: ready
     at: 2026-10-07T07:34:49Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T07:34:50Z
     by: agent-S-0274
+  - to: done
+    at: 2026-10-07T07:40:16Z
+    by: agent-S-0274
 stream: S-0274
 tags: [cli, mcp, go]
 touches: [flai/internal/storystart/start.go, flai/internal/storystart/start_test.go]
 after: [T-1091]
+usage:
+  source: log
+  seconds: 326
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 82
+      output: 29257
+      cache_read: 4222759
+      cache_write: 134940
+      cost: 2.1797
 ---
 # T-1103 Package storystart moves a ready story to in-progress, opens its stream, and builds its prime pack in one function
 

@@ -3,16 +3,36 @@ id: T-1111
 type: task
 nature: improvement
 title: The MCP tool story_start starts a story and answers its worktree, branch, pack, and inbox, and the server's instructions pull with it
-status: backlog
+status: done
 parent: S-0274
 owner: alex
 created: 2026-10-06T22:53:37Z
-updated: 2026-10-06T22:53:37Z
-transitions: []
+updated: 2026-10-07T07:59:44Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:40:25Z
+    by: agent-S-0274
+  - to: in-progress
+    at: 2026-10-07T07:40:25Z
+    by: agent-S-0274
+  - to: done
+    at: 2026-10-07T07:59:44Z
+    by: agent-S-0274
 stream: S-0274
 tags: [mcp, go]
 touches: [flai/internal/mcpserver/story_start.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go]
 after: [T-1099, T-1103]
+usage:
+  source: log
+  seconds: 1159
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 157
+      output: 55918
+      cache_read: 8070827
+      cache_write: 257907
+      cost: 4.166
 ---
 # T-1111 The MCP tool story_start starts a story and answers its worktree, branch, pack, and inbox, and the server's instructions pull with it
 
