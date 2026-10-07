@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 13
+count: 14
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-07T02:00:55Z
-updated: 2026-10-07T02:00:55Z
+last_reported: 2026-10-07T03:10:53Z
+updated: 2026-10-07T03:10:53Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -105,6 +105,11 @@ flai check found outside the story:
 Story: S-0307.
 flai check found outside the story:
 `wip/kanban/stories/S-0269-one-command-closes-a-task-flai-task-done-commits-syncs-moves-logs-widens-touches-checks-and-answers-the-inbox.md`: S-0269 touches flai/internal/harness/harness.go, which S-0294 (in progress) also touches as flai/internal/harness/harness.go
+
+### 2026-10-07T03:10:53Z
+Story: S-0277.
+flai check found outside the story:
+`wip/kanban/stories/S-0269-one-command-closes-a-task-flai-task-done-commits-syncs-moves-logs-widens-touches-checks-and-answers-the-inbox.md`: S-0269 touches design/system/workflow.md, which S-0277 (in progress) also touches as design/system/workflow.md
 
 ## Remediation
 
