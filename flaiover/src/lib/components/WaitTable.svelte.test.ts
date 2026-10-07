@@ -47,8 +47,9 @@ describe('WaitTable', () => {
 		);
 	const links = (row: number) =>
 		[
-			...document.querySelectorAll<HTMLAnchorElement>('[data-testid="wait-table"] tbody tr')[row]
-				.querySelectorAll('a')
+			...document
+				.querySelectorAll<HTMLAnchorElement>('[data-testid="wait-table"] tbody tr')
+				[row].querySelectorAll('a')
 		].map((a) => a.getAttribute('href'));
 
 	it("lists a thread's wait with its item and its thread linked, and who answered it", () => {
