@@ -1635,6 +1635,31 @@ func itemSpecs() map[string]spec {
 		// flai test unable to answer, is an error with flai's words.
 		"test.run": {action: ActionChecks, progress: true, describe: describeTestRun, detachTimeout: 2 * time.Hour,
 			dir: testDir, answers: []int{1}, judge: testResult, build: testArgs},
+		// verify.run: flai verify, a story's close-out checks in its worktree
+		// (S-0270), under the checks host action as test.run is, since it
+		// runs the project's tiers on the host. flai verify finds the story's
+		// worktree itself, so it runs in the project. It is detached and
+		// streams progress as test.run is. A step that failed (exit 1) is an
+		// answer; exit 2, flai verify unable to answer, is an error with
+		// flai's words.
+		"verify.run": {action: ActionChecks, progress: true, describe: describeVerifyRun, detachTimeout: 2 * time.Hour,
+			answers: []int{1}, judge: verifyResult, build: verifyArgs},
+		// verify.status: a read of the story's last verification, as flai
+		// verify --last prints it from .flai-cache/verify: the report, or
+		// null when the story has none. It runs nothing, so, as
+		// checks.status, it is not gated.
+		"verify.status": {reads: true, judge: verifyStored, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID string `json:"id"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needStory(in.ID); e != nil {
+				return nil, "", e
+			}
+			return []string{"verify", in.ID, "--last"}, "", nil
+		}},
 		// agent.restart: a new agent for a story whose agent dropped or
 		// failed (S-0116, ADR-0043); flai serve agent restart judges whether
 		// it may, and says why not.
@@ -1942,6 +1967,69 @@ func testResult(w Written) *channel.Error {
 		return &channel.Error{Code: channel.CodeInternal, Message: "flai test answered without its result on standard output; run flai test --json in the checkout on the host to see why"}
 	}
 	return nil
+}
+
+// verifyRun is what verify.run is asked: the story, and the most findings
+// to answer.
+type verifyRun struct {
+	ID  string `json:"id"`
+	Max int    `json:"max"`
+}
+
+// verifyArgs is verify.run's command line, before --json: flai verify with
+// the story and --max when given.
+func verifyArgs(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	in, e := decode[verifyRun](raw)
+	if e != nil {
+		return nil, "", e
+	}
+	if e := needStory(in.ID); e != nil {
+		return nil, "", e
+	}
+	if in.Max < 0 {
+		return nil, "", bad("max %d is not a number of findings; give 1 or more, or leave it out for %d", in.Max, verify.DefaultMax)
+	}
+	args := []string{"verify", in.ID}
+	if in.Max > 0 {
+		args = append(args, "--max="+strconv.Itoa(in.Max))
+	}
+	return args, "", nil
+}
+
+// verifyResult refuses an answer of flai verify's that is not its report,
+// an object: flai verify --json prints one whenever it answers.
+func verifyResult(w Written) *channel.Error {
+	if !isObject(w.Data) {
+		return &channel.Error{Code: channel.CodeInternal, Message: "flai verify answered without its report on standard output; run flai verify <story> --json in the project on the host to see why"}
+	}
+	return nil
+}
+
+// verifyStored refuses an answer of flai verify --last's that is neither
+// the stored report, an object, nor null, which says there is none.
+func verifyStored(w Written) *channel.Error {
+	if !isObject(w.Data) && string(w.Data) != "null" {
+		return &channel.Error{Code: channel.CodeInternal, Message: "flai verify --last answered neither the last report nor null; run flai verify <story> --last --json in the project on the host to see why"}
+	}
+	return nil
+}
+
+// describeVerifyRun reads flai verify --json's report for the journal: the
+// story, and passed or the step it stopped at.
+func describeVerifyRun(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var said verify.Report
+	_ = json.Unmarshal(w.Data, &said)
+	switch {
+	case said.Passed:
+		return "done", said.Story + ": passed"
+	case said.StoppedAt != "":
+		return "done", said.Story + ": stopped at " + said.StoppedAt
+	}
+	return "done", said.Story + ": failed"
 }
 
 // taskStopped reads flai task done's result and refuses one that stopped:

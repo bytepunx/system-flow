@@ -110,6 +110,9 @@ export const REQUIRED_METHODS = [
 	'checks.cancel',
 	// S-0273: flai test in a story's worktree, behind the checks host action
 	'test.run',
+	// S-0270: flai verify for a story, run behind the checks host action, and its last result
+	'verify.run',
+	'verify.status',
 	// S-0106: flai host, reached through flai serve
 	'host.status',
 	'host.check',

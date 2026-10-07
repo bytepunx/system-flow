@@ -68,6 +68,9 @@ var good = map[string]struct {
 	"checks.run":    {`{"id":"S-0001",` + rid + `}`, "checks run S-0001 --json", ""},
 	"checks.cancel": {`{"id":"S-0001",` + rid + `}`, "checks cancel S-0001 --json", ""},
 	"test.run":      {`{"paths":["flai/internal/verify"," docs "],"all":true,"max":3,` + rid + `}`, "test --all --max=3 --json -- flai/internal/verify docs", ""},
+	// S-0270: flai verify for a story, and its last report
+	"verify.run":    {`{"id":"S-0001","max":3,` + rid + `}`, "verify S-0001 --max=3 --json", ""},
+	"verify.status": {`{"id":"S-0001"}`, "verify S-0001 --last --json", ""},
 	"agent.restart": {`{"id":"S-0001",` + rid + `}`, "serve agent restart S-0001 --json", ""},
 	"agent.start":   {`{"id":"S-0001",` + rid + `}`, "serve agent start S-0001 --json", ""},
 	"agent.commit":  {`{"id":"S-0001",` + rid + `}`, "serve agent commit S-0001 --json", ""},
@@ -140,6 +143,12 @@ var refused = map[string][]string{
 		`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"paths":["../etc"],` + rid + `}`, `{"paths":["/etc"],` + rid + `}`,
 		`{"paths":["a\nb"],` + rid + `}`, `{"paths":[""],` + rid + `}`, `{"paths":"flai",` + rid + `}`, `{"max":-1,` + rid + `}`, `{"paths":["flai"]}`,
 	},
+	// S-0270: flai verify for a story only, with a request ID to run it
+	"verify.run": {
+		`{"id":"--help",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"E-0001",` + rid + `}`, `{"id":"S-0001 --last",` + rid + `}`, `{` + rid + `}`,
+		`{"id":"S-0001","max":-1,` + rid + `}`, `{"id":"S-0001","max":"3",` + rid + `}`, `{"id":"S-0001"}`,
+	},
+	"verify.status": {`{"id":"--help"}`, `{"id":"T-0001"}`, `{"id":"S-0001 --json"}`, `{}`, `[]`},
 	"item.edit": {
 		`{"id":"S-0001","title":"no hash",` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `",` + rid + `}`,
@@ -1486,6 +1495,118 @@ func TestTestRunAnswersFlaiTestsResultInAStorysWorktree(t *testing.T) {
 	}
 }
 
+// S-0270: verify.run runs flai verify --json for a story in the project
+// under the checks host action, streaming its progress, and answers its
+// report whether every step passed or one failed; flai verify unable to
+// answer is an error with flai's words.
+func TestVerifyRunAnswersFlaiVerifysReport(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	on := false
+	host := Host{
+		Enabled: func(action, root string) bool { return on && action == ActionChecks && root == p.Root },
+		Record:  func(e Entry) { journal = append(journal, e) },
+	}
+	const params = `{"id":"S-0001",` + rid + `}`
+	call := func(ran Ran) (*recorder, any, *channel.Error) {
+		rec := &recorder{ran: ran}
+		res, e := writeMethods(rec.run, time.Now, host)["verify.run"](context.Background(), p, json.RawMessage(params))
+		return rec, res, e
+	}
+	fatal := func(msg string) []map[string]any { return []map[string]any{{"level": "FATAL", "err": msg}} }
+
+	if rec, _, e := call(Ran{}); e == nil || e.Code != Disabled || len(rec.runs) != 0 || !strings.Contains(e.Message, "flai serve enable checks") {
+		t.Fatalf("with checks off: %+v, ran %d", e, len(rec.runs))
+	}
+	on = true
+
+	passed := `{"story":"S-0001","commit":"0123abc","base":"main","passed":true,"steps":[{"name":"rebase","state":"passed","duration_ms":3},{"name":"go","tier":true,"state":"passed","duration_ms":900}]}`
+	rec, res, e := call(Ran{Stdout: []byte(passed), Events: []map[string]any{{"level": "INFO", "msg": "rebase passed"}}})
+	if e != nil {
+		t.Fatalf("a pass: %+v", e)
+	}
+	if got := strings.Join(rec.runs[0].Args, " "); got != "verify S-0001 --json" || rec.runs[0].Dir != p.Root || rec.runs[0].OnEvent == nil {
+		t.Errorf("ran %q in %s (progress %v), want flai verify in the project with progress", got, rec.runs[0].Dir, rec.runs[0].OnEvent != nil)
+	}
+	if w := res.(Written); string(w.Data) != passed {
+		t.Errorf("a pass answered %s", w.Data)
+	}
+
+	stopped := `{"story":"S-0001","commit":"0123abc","base":"main","passed":false,"stopped_at":"narrative","steps":[{"name":"rebase","state":"passed","duration_ms":3},{"name":"narrative","state":"failed","duration_ms":1,"findings":[{"name":"narrative","path":"wip/agents/S-0001.md","line":9,"message":"## Next steps is empty; write it, then verify again"}]}]}`
+	_, res, e = call(Ran{Exit: 1, Stdout: []byte(stopped)})
+	if e != nil {
+		t.Fatalf("a step that failed is an answer, not an error: %+v", e)
+	}
+	if w := res.(Written); string(w.Data) != stopped {
+		t.Errorf("a failure answered %s", w.Data)
+	}
+
+	said := "verify S-0001: it has no worktree at /p/.flai-cache/worktrees/S-0001; open it with flai stream open S-0001"
+	if _, _, e := call(Ran{Exit: 2, Events: fatal(said)}); e == nil || e.Code != channel.CodeInternal || e.Message != said {
+		t.Errorf("flai verify unable to answer: %+v", e)
+	}
+	if _, _, e := call(Ran{Exit: 1, Events: fatal("boom")}); e == nil || e.Message != "boom" {
+		t.Errorf("exit 1 without a report is flai's error: %+v", e)
+	}
+	if _, _, e := call(Ran{}); e == nil || !strings.Contains(e.Message, "without its report") {
+		t.Errorf("exit 0 without a report: %+v", e)
+	}
+
+	want := []struct{ outcome, detail string }{
+		{"disabled", ""}, {"done", "S-0001: passed"}, {"done", "S-0001: stopped at narrative"},
+		{"failed", said}, {"failed", "boom"},
+		{"failed", "flai verify answered without its report on standard output; run flai verify <story> --json in the project on the host to see why"},
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Outcome != w.outcome || got.Detail != w.detail || got.Action != ActionChecks || got.Method != "verify.run" {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
+	}
+}
+
+// S-0270: verify.status answers the story's stored last report, or null
+// when it has none, whether or not the checks host action is on, and runs
+// flai verify --last, which runs nothing; it records nothing in the journal.
+func TestVerifyStatusAnswersTheLastReportOrNull(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	host := Host{Record: func(e Entry) { journal = append(journal, e) }}
+	call := func(ran Ran) (*recorder, any, *channel.Error) {
+		rec := &recorder{ran: ran}
+		res, e := writeMethods(rec.run, time.Now, host)["verify.status"](context.Background(), p, json.RawMessage(`{"id":"S-0001"}`))
+		return rec, res, e
+	}
+
+	stored := `{"story":"S-0001","commit":"0123abc","base":"main","ran_at":"2026-10-06T22:00:00Z","passed":true,"steps":[{"name":"rebase","state":"passed","duration_ms":3}]}`
+	rec, res, e := call(Ran{Stdout: []byte(stored)})
+	if e != nil {
+		t.Fatalf("a stored report with checks off: %+v", e)
+	}
+	if got := strings.Join(rec.runs[0].Args, " "); got != "verify S-0001 --last --json" || rec.runs[0].Dir != p.Root {
+		t.Errorf("ran %q in %s, want flai verify --last in the project", got, rec.runs[0].Dir)
+	}
+	if w := res.(Written); string(w.Data) != stored {
+		t.Errorf("a stored report answered %s", w.Data)
+	}
+
+	if _, res, e := call(Ran{Stdout: []byte("null\n")}); e != nil || string(res.(Written).Data) != "null" {
+		t.Errorf("no report: %+v, %+v", res, e)
+	}
+	if _, _, e := call(Ran{Stdout: []byte(`["S-0001"]`)}); e == nil || !strings.Contains(e.Message, "neither the last report nor null") {
+		t.Errorf("an answer that is no report: %+v", e)
+	}
+	if _, _, e := call(Ran{Exit: 2, Events: []map[string]any{{"level": "FATAL", "err": "read the last verify report of S-0001: unexpected end of JSON input; delete it and verify again"}}}); e == nil ||
+		!strings.Contains(e.Message, "delete it and verify again") {
+		t.Errorf("a stored report flai cannot read: %+v", e)
+	}
+	if len(journal) != 0 {
+		t.Errorf("a read is journalled: %+v", journal)
+	}
+}
+
 // S-0081: dashboard.restart, dashboard.upgrade, and dashboard.stop can each
 // end the very WebSocket connection their own request arrived on (a restart
 // or a successful upgrade stops the container answering it; a stop does
@@ -1498,7 +1619,7 @@ func TestTestRunAnswersFlaiTestsResultInAStorysWorktree(t *testing.T) {
 // context instead.
 func TestADetachedWriteSurvivesItsOwnConnectionDying(t *testing.T) {
 	p := withDocs(t)
-	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop", "checks.run", "test.run", "host.process", "host.upgrade"} {
+	for _, name := range []string{"dashboard.restart", "dashboard.upgrade", "dashboard.stop", "checks.run", "test.run", "verify.run", "host.process", "host.upgrade"} {
 		t.Run(name, func(t *testing.T) {
 			parentCtx, cancelParent := context.WithCancel(context.Background())
 			t.Cleanup(cancelParent)
