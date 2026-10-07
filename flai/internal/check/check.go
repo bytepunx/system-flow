@@ -604,6 +604,15 @@ func (c *checker) componentTag() {
 	}
 }
 
+// named is the item id names, in any zero padding, or one stored under a
+// legacy three-digit ID as written; nil when there is none.
+func (c *checker) named(id string) *workitem.Item {
+	if it, ok := c.byID[workitem.CanonicalID(id)]; ok {
+		return it
+	}
+	return c.byID[id]
+}
+
 // after reports an after: entry that names no story, the story itself, or
 // a story that waits, through after:, for this one: each would hold the
 // story until someone edits it (S-0130, ADR-0046). A task's after: names
@@ -611,19 +620,13 @@ func (c *checker) componentTag() {
 // with an entry that names a task of another story (S-0176). The archive is
 // not edited and is not reported.
 func (c *checker) after() {
-	named := func(e string) *workitem.Item {
-		if it, ok := c.byID[workitem.CanonicalID(e)]; ok {
-			return it
-		}
-		return c.byID[e]
-	}
 	for _, it := range c.items {
 		if it.Archived || (it.Type != workitem.Story && it.Type != workitem.Task) {
 			continue
 		}
 		p, rule := it.Path, it.Type+".after"
 		for _, e := range it.After {
-			switch other := named(e); {
+			switch other := c.named(e); {
 			case other == nil:
 				c.add(Error, rule, p, keyLine(p, "after"), "after names %s, which does not exist; fix it or clear it (flai edit %s --clear-after)", e, it.ID)
 			case other.ID == it.ID:
@@ -634,7 +637,7 @@ func (c *checker) after() {
 				c.add(Error, rule, p, keyLine(p, "after"), "after names %s, a task of %s; a task waits only for tasks of its own story, %s", other.ID, other.Parent, it.Parent)
 			}
 		}
-		if cycle := c.afterCycle(it, named); cycle != nil {
+		if cycle := c.afterCycle(it, c.named); cycle != nil {
 			c.add(Error, rule, p, keyLine(p, "after"), "after forms a cycle, %s, so none of them would start; drop one of the entries", strings.Join(cycle, " waits for "))
 		}
 	}
@@ -1160,7 +1163,7 @@ func (c *checker) messages() {
 		}
 		archived := ""
 		for _, side := range []struct{ field, story string }{{"from", conv.From}, {"to", conv.To}} {
-			it := c.byID[workitem.CanonicalID(side.story)]
+			it := c.named(side.story)
 			switch {
 			case it == nil:
 				c.add(Error, "messages.story", path, keyLine(path, side.field), "%s names story %s, which does not exist", side.field, side.story)
@@ -1286,7 +1289,7 @@ func (c *checker) experiments() {
 			c.add(Error, "experiments.duplicate", path, keyLine(path, "story"), "%s already has its results in %s", f.Story, prev)
 		}
 		seen[f.Story] = path
-		switch it := c.byID[workitem.CanonicalID(f.Story)]; {
+		switch it := c.named(f.Story); {
 		case it == nil:
 			c.add(Error, "experiments.story", path, keyLine(path, "story"), "story %s does not exist", f.Story)
 		case it.Type != workitem.Story || it.Nature != experiment.Nature:

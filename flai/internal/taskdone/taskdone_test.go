@@ -328,7 +328,7 @@ func TestRunAnswersTheStorysMessages(t *testing.T) {
 		t.Fatal(err)
 	}
 	if res.Inbox == nil || len(res.Inbox.Messages) != 1 {
-		t.Fatalf("stopped %q %s, inbox %+v", res.Stopped, res.Error, res.Inbox)
+		t.Fatalf("stopped %q %s, check %+v, inbox %+v", res.Stopped, res.Error, res.Check, res.Inbox)
 	}
 	if m := res.Inbox.Messages[0]; m.With != "S-006" || m.Awaiting != "you" || m.Last.Text != "Who changes the readme?" {
 		t.Errorf("message %+v", m)
