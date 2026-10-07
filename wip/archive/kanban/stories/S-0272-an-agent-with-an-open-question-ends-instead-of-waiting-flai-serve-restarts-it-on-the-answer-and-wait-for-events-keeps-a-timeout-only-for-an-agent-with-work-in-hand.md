@@ -3,11 +3,11 @@ id: S-0272
 type: story
 nature: improvement
 title: "An agent with an open question ends instead of waiting: flai serve restarts it on the answer, and wait_for_events keeps a timeout only for an agent with work in hand"
-status: in-progress
+status: done
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:31Z
-updated: 2026-10-07T00:49:21Z
+updated: 2026-10-07T01:07:09Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:31Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T00:40:58Z
     by: agent-S-0272
+  - to: review
+    at: 2026-10-07T01:06:08Z
+    by: agent-S-0272
+  - to: done
+    at: 2026-10-07T01:07:09Z
+    by: alex
 tags: [cli, mcp]
 topics: [automation, mcp, conventions, metrics, template]
-touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/restart_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, design/system/work-hierarchy.md, design/adrs, design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/serve/restart_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, design/system/work-hierarchy.md, design/adrs, design/conventions/work-management.md, design/conventions/delegation.md, template/root/design/conventions/work-management.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/workflow.md, design/system/agent-narrative.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,15 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 490
-  estimated: true
+  seconds: 1528
   models:
     - model: claude-opus-5-5
-      input: 204
-      output: 1149
-      cache_read: 7082194
-      cache_write: 394111
-      cost: 3.3167
+      input: 452
+      output: 160275
+      cache_read: 19785997
+      cache_write: 759381
+      cost: 11.544
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 4011
+      cache_read: 327010
+      cache_write: 51933
+      cost: 0.2354
 cost_of_delay:
   value: 96
   by: planner-E-0017
@@ -55,10 +66,10 @@ finalized:
 650 turns across 38 story runs woke from `wait_for_events` to find nothing, each a full-context model call. flai serve already restarts a story agent when its thread is answered, so an agent whose only pending work is a question has nothing to wait for. The convention and the harness prompt say to end the session on an open question after writing the narrative's state; `wait_for_events` answers at once with `end: true` when the caller's story has an open thread and no task in progress, and keeps its timeout for an agent that has work to go on with. The MCP server's instructions say the same.
 
 ## Acceptance criteria
-- [ ] `wait_for_events` answers `end: true` and why when the calling agent's story has an open thread to the designer and no task in progress, and the harness prompt and conventions tell the agent to end then
-- [ ] flai serve's restart on the answer is tested end to end: an agent that ended on a question is started again when the thread is answered, with the answer in its first inbox
-- [ ] `design/system/flai-serve.md` (or where serve is described), the conventions, the template's copies, and the user guide describe the loop
-- [ ] `flai stats` counts the empty wakes so that the saving is measured
+- [x] `wait_for_events` answers `end: true` and why when the calling agent's story has an open thread to the designer and no task in progress, and the harness prompt and conventions tell the agent to end then
+- [x] flai serve's restart on the answer is tested end to end: an agent that ended on a question is started again when the thread is answered, with the answer in its first inbox
+- [x] `design/system/flai-serve.md` (or where serve is described), the conventions, the template's copies, and the user guide describe the loop
+- [x] `flai stats` counts the empty wakes so that the saving is measured
 
 ## Tasks
 - T-1087 wait_for_events answers end: true with why when the caller's story has an open question to the designer and no task in progress

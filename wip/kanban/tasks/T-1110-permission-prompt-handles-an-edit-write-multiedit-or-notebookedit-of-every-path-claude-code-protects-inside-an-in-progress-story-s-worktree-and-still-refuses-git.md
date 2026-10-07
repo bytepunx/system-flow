@@ -3,12 +3,18 @@ id: T-1110
 type: task
 nature: improvement
 title: permission_prompt handles an Edit, Write, MultiEdit, or NotebookEdit of every path Claude Code protects inside an in-progress story's worktree, and still refuses .git
-status: backlog
+status: in-progress
 parent: S-0286
 owner: alex
 created: 2026-10-06T22:53:35Z
-updated: 2026-10-06T22:53:35Z
-transitions: []
+updated: 2026-10-07T01:04:24Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:04:24Z
+    by: agent-S-0286
+  - to: in-progress
+    at: 2026-10-07T01:04:24Z
+    by: agent-S-0286
 stream: S-0286
 tags: [flai]
 touches: [flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go]

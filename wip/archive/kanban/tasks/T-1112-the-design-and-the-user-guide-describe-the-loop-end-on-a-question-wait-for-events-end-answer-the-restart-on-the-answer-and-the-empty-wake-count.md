@@ -3,16 +3,36 @@ id: T-1112
 type: task
 nature: improvement
 title: "The design and the user guide describe the loop: end on a question, wait_for_events' end answer, the restart on the answer, and the empty-wake count"
-status: backlog
+status: done
 parent: S-0272
 owner: alex
 created: 2026-10-06T22:53:37Z
-updated: 2026-10-06T22:53:37Z
-transitions: []
+updated: 2026-10-07T01:01:32Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:59:07Z
+    by: agent-S-0272
+  - to: in-progress
+    at: 2026-10-07T00:59:08Z
+    by: agent-S-0272
+  - to: done
+    at: 2026-10-07T01:01:32Z
+    by: agent-S-0272
 stream: S-0272
 tags: [docs]
 touches: [design/system/workflow.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-1087, T-1090, T-1094, T-1101, T-1104]
+usage:
+  source: log
+  seconds: 144
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 19370
+      cache_read: 2391241
+      cache_write: 91775
+      cost: 1.3952
 ---
 # T-1112 The design and the user guide describe the loop: end on a question, wait_for_events' end answer, the restart on the answer, and the empty-wake count
 

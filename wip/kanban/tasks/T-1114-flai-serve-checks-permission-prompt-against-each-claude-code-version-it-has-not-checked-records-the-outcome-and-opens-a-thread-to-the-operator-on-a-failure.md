@@ -3,12 +3,18 @@ id: T-1114
 type: task
 nature: improvement
 title: flai serve checks permission_prompt against each Claude Code version it has not checked, records the outcome, and opens a thread to the operator on a failure
-status: backlog
+status: in-progress
 parent: S-0286
 owner: alex
 created: 2026-10-06T22:53:44Z
-updated: 2026-10-06T22:53:54Z
-transitions: []
+updated: 2026-10-07T01:04:25Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:04:24Z
+    by: agent-S-0286
+  - to: in-progress
+    at: 2026-10-07T01:04:25Z
+    by: agent-S-0286
 stream: S-0286
 tags: [flai]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/serve.go, flai/internal/harness/adapters.go]

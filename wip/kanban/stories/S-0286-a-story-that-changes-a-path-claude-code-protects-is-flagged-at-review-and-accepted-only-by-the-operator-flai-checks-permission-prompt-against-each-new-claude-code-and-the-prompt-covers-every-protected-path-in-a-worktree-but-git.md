@@ -3,23 +3,37 @@ id: S-0286
 type: story
 nature: improvement
 title: A story that changes a path Claude Code protects is flagged at review and accepted only by the operator, flai checks permission_prompt against each new Claude Code, and the prompt covers every protected path in a worktree but .git
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T06:32:43Z
-updated: 2026-10-07T00:51:08Z
+updated: 2026-10-07T01:04:27Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:48Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T01:00:34Z
+    by: agent-S-0286
 tags: [flai, flaiover]
 topics: [cli, dashboard]
-touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/preview/accept.go, flai/cmd/accept.go, flai/internal/serve, flai/internal/harness, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/adrs, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/preview/orchestrator.go, flai/cmd/accept_protected_test.go, flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/serve.go, flai/internal/harness/adapters.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/preview/accept.go, flai/cmd/accept.go, flai/internal/serve, flai/internal/harness, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/adrs, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/operators, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/preview/orchestrator.go, flai/cmd/accept_protected_test.go, flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, flai/internal/serve/serve.go, flai/internal/harness/adapters.go, flai/internal/hostapi/writes.go, docs/users/flai-reference.md, docs/operators/settings.md, design/issues/I-0063-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md, design/issues/summary.md]
 after: [S-0283]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 197
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 252
+      cache_read: 3201894
+      cache_write: 172320
+      cost: 1.4987
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h
@@ -53,7 +67,7 @@ Three parts:
 3. **The prompt covers what Claude Code protects.** Today it approves only a path with a `.claude` folder. Claude Code protects more, `.mcp.json` among them, which the template also ships. The prompt handles every protected path inside an in-progress story's worktree except `.git`, by the same rules: auto-approve, or a thread.
 
 ## Acceptance criteria
-- [ ] An ADR refining ADR-0086 records the three parts and why acceptance is the gate
+- [x] An ADR refining ADR-0086 records the three parts and why acceptance is the gate
 - [ ] `flai accept`'s preview and the dashboard's review page list the files a story's branch changes on a protected path, and say that only the operator accepts it
 - [ ] An agent's acceptance of such a story is refused with the files named: by an agent on its own name, and by the orchestrator under `accept_reviews` once S-0221 has that path; a test covers each path there is
 - [ ] When flai serve's Claude Code has a version not yet checked, flai runs one write under a `.claude/` folder of a scratch project through `permission_prompt` with it, records the version and the outcome, and on a failure opens a thread to the operator that quotes Claude Code's error; a version already checked is not checked again; a test runs it with a stand-in for `claude`

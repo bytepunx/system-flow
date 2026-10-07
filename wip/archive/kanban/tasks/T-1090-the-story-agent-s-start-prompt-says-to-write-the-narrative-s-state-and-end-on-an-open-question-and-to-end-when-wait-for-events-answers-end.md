@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 295
-      cache_read: 1043376
-      cache_write: 64989
-      cost: 0.4918
+      input: 25
+      output: 8913
+      cache_read: 1100293
+      cache_write: 42229
+      cost: 0.642
 ---
 # T-1090 The story agent's start prompt says to write the narrative's state and end on an open question, and to end when wait_for_events answers end
 

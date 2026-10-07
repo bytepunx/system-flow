@@ -3,15 +3,35 @@ id: T-1106
 type: task
 nature: improvement
 title: An ADR refining ADR-0086 records the acceptance gate for protected paths, the check of permission_prompt against each new Claude Code, and the prompt's wider scope
-status: backlog
+status: done
 parent: S-0286
 owner: alex
 created: 2026-10-06T22:53:24Z
-updated: 2026-10-06T22:53:24Z
-transitions: []
+updated: 2026-10-07T01:03:39Z
+transitions:
+  - to: ready
+    at: 2026-10-07T01:02:25Z
+    by: agent-S-0286
+  - to: in-progress
+    at: 2026-10-07T01:02:26Z
+    by: agent-S-0286
+  - to: done
+    at: 2026-10-07T01:03:39Z
+    by: agent-S-0286
 stream: S-0286
 tags: [flai]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 73
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 40
+      cache_read: 713382
+      cache_write: 9061
+      cost: 0.3209
 ---
 # T-1106 An ADR refining ADR-0086 records the acceptance gate for protected paths, the check of permission_prompt against each new Claude Code, and the prompt's wider scope
 

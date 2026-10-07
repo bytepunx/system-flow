@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 65
-      cache_read: 588928
-      cache_write: 57416
-      cost: 0.2867
+      input: 15
+      output: 5198
+      cache_read: 641634
+      cache_write: 24626
+      cost: 0.3744
 ---
 # T-1094 work-management.md and delegation.md, and their template copies, say a story's agent ends on an open question and is started again on the answer
 

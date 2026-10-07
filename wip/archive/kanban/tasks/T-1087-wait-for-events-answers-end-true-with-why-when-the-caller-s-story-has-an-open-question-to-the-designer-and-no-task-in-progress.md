@@ -27,11 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 301
-      cache_read: 1599382
-      cache_write: 82279
-      cost: 0.7461
+      input: 38
+      output: 13523
+      cache_read: 1669411
+      cache_write: 64072
+      cost: 0.974
+    - model: claude-sonnet-5-5
+      input: 18
+      output: 4011
+      cache_read: 327010
+      cache_write: 51933
+      cost: 0.2354
 ---
 # T-1087 wait_for_events answers end: true with why when the caller's story has an open question to the designer and no task in progress
 

@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-07T00:58:08Z
+updated: 2026-10-07T01:07:09Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0272](S-0272.md) | An agent with an open question ends instead of waiting: flai serve restarts it on the answer, and wait_for_events keeps a timeout only for an agent with work in hand | in-progress | agent-S-0272 | 2026-10-07T00:40:58Z |
+| [S-0286](S-0286.md) | A story that changes a path Claude Code protects is flagged at review and accepted only by the operator, flai checks permission_prompt against each new Claude Code, and the prompt covers every protected path in a worktree but .git | in-progress | agent-S-0286 | 2026-10-07T01:03:40Z |
 
 ## Strategic agents
 

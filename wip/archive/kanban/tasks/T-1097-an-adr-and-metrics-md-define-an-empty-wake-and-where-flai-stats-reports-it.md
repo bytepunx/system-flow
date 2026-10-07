@@ -23,15 +23,15 @@ tags: [metrics]
 touches: [design/adrs, design/system/metrics.md, design/system/work-hierarchy.md]
 usage:
   source: log
-  seconds: 377
+  seconds: 378
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 277
-      cache_read: 2103384
-      cache_write: 94879
-      cost: 0.9752
+      input: 50
+      output: 17677
+      cache_read: 2182244
+      cache_write: 83754
+      cost: 1.2732
 ---
 # T-1097 An ADR and metrics.md define an empty wake and where flai stats reports it
 

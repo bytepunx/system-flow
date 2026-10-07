@@ -3,11 +3,11 @@ id: T-1104
 type: task
 nature: improvement
 title: "An end-to-end test: an agent that wait_for_events ends on a question is started again by flai serve on the answer, and its first inbox holds the answer"
-status: in-progress
+status: done
 parent: S-0272
 owner: alex
 created: 2026-10-06T22:53:22Z
-updated: 2026-10-07T00:49:25Z
+updated: 2026-10-07T00:59:06Z
 transitions:
   - to: ready
     at: 2026-10-07T00:49:24Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T00:49:25Z
     by: agent-S-0272
+  - to: done
+    at: 2026-10-07T00:59:06Z
+    by: agent-S-0272
 stream: S-0272
 tags: [cli, mcp]
 touches: [flai/internal/serve/restart_test.go]
 after: [T-1087]
+usage:
+  source: log
+  seconds: 581
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 13996
+      cache_read: 1727835
+      cache_write: 66314
+      cost: 1.0081
 ---
 # T-1104 An end-to-end test: an agent that wait_for_events ends on a question is started again by flai serve on the answer, and its first inbox holds the answer
 
