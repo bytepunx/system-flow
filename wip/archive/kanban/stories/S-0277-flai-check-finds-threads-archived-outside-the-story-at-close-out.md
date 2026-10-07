@@ -3,10 +3,10 @@ id: S-0277
 type: story
 nature: improvement
 title: "flai check finds `threads.archived` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-05T04:40:46Z
-updated: 2026-10-07T02:07:23Z
+updated: 2026-10-07T03:13:44Z
 transitions:
   - to: ready
     at: 2026-10-07T01:12:26Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T02:07:23Z
     by: agent-S-0277
+  - to: review
+    at: 2026-10-07T03:12:06Z
+    by: agent-S-0277
+  - to: done
+    at: 2026-10-07T03:13:44Z
+    by: alex
 tags: [flai]
 topics: [cli, threads]
-touches: [flai/internal/threads/archived.go, flai/internal/threads/archived_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/cmd/accept.go, flai/internal/preview/accept.go, flai/cmd/accept_threads_test.go, flai/cmd/archive.go, flai/cmd/archive_test.go, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [flai/internal/threads/archived.go, flai/internal/threads/archived_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/cmd/accept.go, flai/internal/preview/accept.go, flai/cmd/accept_threads_test.go, flai/cmd/archive.go, flai/cmd/archive_test.go, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs, design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0076-flai-check-finds-wip-overlap-outside-the-story-at-close-out.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,14 +30,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 803
+  seconds: 1904
   models:
     - model: claude-opus-5-5
-      input: 160
-      output: 56520
-      cache_read: 5748194
-      cache_write: 349415
-      cost: 4.4352
+      input: 302
+      output: 91411
+      cache_read: 11077382
+      cache_write: 544219
+      cost: 7.4956
+    - model: claude-sonnet-5-5
+      input: 16
+      output: 3355
+      cache_read: 221967
+      cache_write: 41490
+      cost: 0.1817
+  strategic:
+    - kind: orchestrator
+      seconds: 716
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 54
+          output: 937
+          cache_read: 2646548
+          cache_write: 10532
+          cost: 0.6659
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h35m
@@ -57,8 +80,8 @@ finalized:
 This story remediates [I-0073](../../../design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md), "flai check finds `threads.archived` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0073 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0073 is closed with `flai issue close I-0073 --reason` saying what fixed it
+- [x] The cause I-0073 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0073 is closed with `flai issue close I-0073 --reason` saying what fixed it
 
 ## Tasks
 - T-1142 The threads package resolves the threads left open on items being archived, and the threads.archived finding names flai thread resolve

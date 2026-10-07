@@ -3,16 +3,36 @@ id: T-1119
 type: task
 nature: improvement
 title: The user guide describes flai task done, task_done, and task.done, and the reference is regenerated
-status: backlog
+status: done
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:54:00Z
-updated: 2026-10-06T22:54:00Z
-transitions: []
+updated: 2026-10-07T03:05:28Z
+transitions:
+  - to: ready
+    at: 2026-10-07T03:02:56Z
+    by: agent-S-0269
+  - to: in-progress
+    at: 2026-10-07T03:02:57Z
+    by: agent-S-0269
+  - to: done
+    at: 2026-10-07T03:05:28Z
+    by: agent-S-0269
 stream: S-0269
 tags: [docs]
-touches: [docs/users/flai.md, docs/users/flai-reference.md]
+touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1102, T-1107, T-1113]
+usage:
+  source: log
+  seconds: 151
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 375
+      cache_read: 2213858
+      cache_write: 89737
+      cost: 1.1537
 ---
 # T-1119 The user guide describes flai task done, task_done, and task.done, and the reference is regenerated
 

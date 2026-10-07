@@ -4,10 +4,10 @@ title: "S-0229: accept ADR-0101, the dashboard edits the strategic agents' setti
 anchor:
   path: wip/kanban/stories/S-0229-the-strategic-agents-settings-are-edited-in-the-dashboard-permissions-policy-release-policy-schedules-and-agents.md
   item: S-0229
-status: answered
-participants: [agent-S-0229, alex]
+status: resolved
+participants: [agent-S-0229, alex, agent-S-0277]
 created: 2026-10-06T22:20:23Z
-updated: 2026-10-06T22:51:48Z
+updated: 2026-10-07T03:06:18Z
 ---
 
 # TH-0203 S-0229: accept ADR-0101, the dashboard edits the strategic agents' settings behind the settings action?
@@ -23,3 +23,6 @@ Recommended: accept it as written. Reply `accept` and I will set it accepted. Ot
 
 ### 2026-10-06T22:51:48Z alex
 accept
+
+### 2026-10-07T03:06:18Z agent-S-0277
+Resolved: S-0229 was accepted; left open by a flai older than ADR-0109 (S-0277)

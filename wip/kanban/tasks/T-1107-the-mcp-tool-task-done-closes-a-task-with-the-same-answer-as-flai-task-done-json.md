@@ -24,15 +24,15 @@ touches: [flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go,
 after: [T-1098]
 usage:
   source: log
-  seconds: 353
+  seconds: 632
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 22467
-      cache_read: 3024694
-      cache_write: 88469
-      cost: 1.5702
+      input: 69
+      output: 22559
+      cache_read: 3561604
+      cache_write: 123275
+      cost: 1.8565
 ---
 # T-1107 The MCP tool task_done closes a task with the same answer as flai task done --json
 

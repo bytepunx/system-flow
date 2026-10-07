@@ -24,15 +24,21 @@ touches: [flai/cmd/items.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go]
 after: [T-1098]
 usage:
   source: log
-  seconds: 354
+  seconds: 633
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 27156
-      cache_read: 3656013
-      cache_write: 106934
-      cost: 1.8979
+      input: 79
+      output: 27248
+      cache_read: 4192923
+      cache_write: 141740
+      cost: 2.1842
+    - model: claude-sonnet-5-5
+      input: 2
+      output: 16
+      cache_read: 5573
+      cache_write: 6018
+      cost: 0.0133
 ---
 # T-1102 flai task done T-nnnn -m closes a task from the story's worktree and answers the result as text and --json
 

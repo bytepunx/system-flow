@@ -24,15 +24,15 @@ touches: [flai/cmd/accept.go, flai/internal/preview/accept.go, flai/cmd/accept_t
 after: [T-1142]
 usage:
   source: log
-  seconds: 625
+  seconds: 744
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 74
-      output: 26179
-      cache_read: 2662453
-      cache_write: 161842
-      cost: 2.0543
+      input: 78
+      output: 27109
+      cache_read: 2804566
+      cache_write: 167037
+      cost: 2.1359
 ---
 # T-1144 flai accept resolves the threads still open on what it archives, in the acceptance commit, and its dry run lists them
 

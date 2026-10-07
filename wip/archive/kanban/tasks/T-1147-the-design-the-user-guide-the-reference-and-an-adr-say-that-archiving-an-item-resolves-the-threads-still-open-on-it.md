@@ -3,16 +3,36 @@ id: T-1147
 type: task
 nature: improvement
 title: The design, the user guide, the reference, and an ADR say that archiving an item resolves the threads still open on it
-status: backlog
+status: done
 parent: S-0277
 owner: alex
 created: 2026-10-07T01:20:49Z
-updated: 2026-10-07T01:20:49Z
-transitions: []
+updated: 2026-10-07T03:06:09Z
+transitions:
+  - to: ready
+    at: 2026-10-07T03:00:37Z
+    by: agent-S-0277
+  - to: in-progress
+    at: 2026-10-07T03:00:38Z
+    by: agent-S-0277
+  - to: done
+    at: 2026-10-07T03:06:09Z
+    by: agent-S-0277
 stream: S-0277
 tags: [flai, docs]
 touches: [design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs]
 after: [T-1144, T-1146]
+usage:
+  source: log
+  seconds: 331
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 20905
+      cache_read: 3192960
+      cache_write: 116716
+      cost: 1.8336
 ---
 # T-1147 The design, the user guide, the reference, and an ADR say that archiving an item resolves the threads still open on it
 

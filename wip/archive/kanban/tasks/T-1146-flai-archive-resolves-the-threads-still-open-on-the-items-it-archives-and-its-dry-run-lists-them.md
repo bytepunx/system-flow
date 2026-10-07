@@ -3,11 +3,11 @@ id: T-1146
 type: task
 nature: improvement
 title: flai archive resolves the threads still open on the items it archives, and its dry run lists them
-status: in-progress
+status: done
 parent: S-0277
 owner: alex
 created: 2026-10-07T01:20:27Z
-updated: 2026-10-07T02:10:11Z
+updated: 2026-10-07T03:00:37Z
 transitions:
   - to: ready
     at: 2026-10-07T02:10:10Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T02:10:11Z
     by: agent-S-0277
+  - to: done
+    at: 2026-10-07T03:00:37Z
+    by: agent-S-0277
 stream: S-0277
 tags: [flai, cli]
 touches: [flai/cmd/archive.go, flai/cmd/archive_test.go]
 after: [T-1142]
 usage:
   source: log
-  seconds: 624
+  seconds: 1025
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 8712
-      cache_read: 886009
-      cache_write: 53858
-      cost: 0.6836
+      input: 49
+      output: 14494
+      cache_read: 1769128
+      cache_write: 86140
+      cost: 1.1908
 ---
 # T-1146 flai archive resolves the threads still open on the items it archives, and its dry run lists them
 

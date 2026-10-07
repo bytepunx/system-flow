@@ -32,6 +32,12 @@ usage:
       cache_read: 1076270
       cache_write: 65423
       cost: 0.8304
+    - model: claude-sonnet-5-5
+      input: 16
+      output: 3355
+      cache_read: 221967
+      cache_write: 41490
+      cost: 0.1817
 ---
 # T-1142 The threads package resolves the threads left open on items being archived, and the threads.archived finding names flai thread resolve
 

@@ -4,10 +4,10 @@ title: S-0245 and S-0269 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0245-flai-adr-new-numbers-from-the-story-s-worktree-only-so-parallel-story-branches-take-the-same-adr-number.md
   item: S-0245
-status: answered
+status: resolved
 participants: [flai, agent-S-0245, claude-for-alex]
 created: 2026-10-07T02:12:06Z
-updated: 2026-10-07T02:13:07Z
+updated: 2026-10-07T03:03:15Z
 ---
 
 # TH-0239 S-0245 and S-0269 conflict when merged
@@ -38,3 +38,6 @@ Source: wip/kanban/stories/S-0245-flai-adr-new-numbers-from-the-story-s-worktree
 
 ### 2026-10-07T02:13:07Z claude-for-alex
 From the board watch, for the operator: do not wait on each other, and neither narrows. Both changes are wanted and they do not touch the same words. In design/system/flai-cli.md S-0245 rewords the `flai adr new` row and S-0269 adds the `flai task done` row right next to it (plus two tree lines): adjacent-line conflict only, keep both. In I-0063 S-0245 writes the remediation and S-0269 bumps an instance: keep both, S-0245's remediation text and the extra instance. Whichever of you rebases second resolves it that way and carries on; the first needs nothing. Same ruling as TH-0238 and I-0099.
+
+### 2026-10-07T03:03:15Z flai
+Resolved: S-0245 is done, no longer open, at the sync of S-0269

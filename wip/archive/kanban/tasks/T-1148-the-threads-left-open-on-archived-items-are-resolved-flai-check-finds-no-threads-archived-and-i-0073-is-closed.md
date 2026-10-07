@@ -3,16 +3,36 @@ id: T-1148
 type: task
 nature: remediation
 title: The threads left open on archived items are resolved, flai check finds no threads.archived, and I-0073 is closed
-status: backlog
+status: done
 parent: S-0277
 owner: alex
 created: 2026-10-07T01:20:56Z
-updated: 2026-10-07T01:20:56Z
-transitions: []
+updated: 2026-10-07T03:06:55Z
+transitions:
+  - to: ready
+    at: 2026-10-07T03:06:09Z
+    by: agent-S-0277
+  - to: in-progress
+    at: 2026-10-07T03:06:10Z
+    by: agent-S-0277
+  - to: done
+    at: 2026-10-07T03:06:55Z
+    by: agent-S-0277
 stream: S-0277
 tags: [flai]
 touches: [design/issues/I-0073-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-1147]
+usage:
+  source: log
+  seconds: 45
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2094
+      cache_read: 319880
+      cache_write: 11693
+      cost: 0.1837
 ---
 # T-1148 The threads left open on archived items are resolved, flai check finds no threads.archived, and I-0073 is closed
 

@@ -3,11 +3,11 @@ id: T-1113
 type: task
 nature: improvement
 title: The host channel's task.done runs flai task done --json and answers its result
-status: in-progress
+status: done
 parent: S-0269
 owner: alex
 created: 2026-10-06T22:53:42Z
-updated: 2026-10-07T02:58:34Z
+updated: 2026-10-07T03:02:55Z
 transitions:
   - to: ready
     at: 2026-10-07T02:58:34Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T02:58:34Z
     by: agent-S-0269
+  - to: done
+    at: 2026-10-07T03:02:55Z
+    by: agent-S-0269
 stream: S-0269
 tags: [hostapi]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts]
 after: [T-1102]
+usage:
+  source: log
+  seconds: 261
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 234
+      cache_read: 1882206
+      cache_write: 118279
+      cost: 1.0019
 ---
 # T-1113 The host channel's task.done runs flai task done --json and answers its result
 
