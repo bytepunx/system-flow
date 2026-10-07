@@ -12,6 +12,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -37,16 +38,25 @@ func makeProject(t *testing.T, dir, key string) *workitem.Repo {
 	return repo
 }
 
-// readyStoryIn makes a story with a criterion and moves it to ready.
+// readyStoryIn makes a story with a criterion and moves it to ready. It
+// writes the criterion atomically, as flai writes items, so that a wait held
+// meanwhile never reads the story half-written (I-0102).
 func readyStoryIn(t *testing.T, repo *workitem.Repo, title string, at time.Time, touches ...string) *workitem.Item {
 	t.Helper()
 	s, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Owner: "alex", Touches: touches, Now: at})
 	if err != nil {
 		t.Fatal(err)
 	}
-	data, _ := os.ReadFile(s.Path)
-	_ = os.WriteFile(s.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n", 1)), 0o644)
-	s, _ = repo.Get(s.ID)
+	data, err := os.ReadFile(s.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := atomicfile.WriteFile(s.Path, []byte(strings.Replace(string(data), "## Acceptance criteria\n", "## Acceptance criteria\n- [ ] works\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if s, err = repo.Get(s.ID); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := repo.Transition(s, workitem.Ready, "alex", "", at); err != nil {
 		t.Fatal(err)
 	}
