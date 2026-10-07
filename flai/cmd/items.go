@@ -24,6 +24,10 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 		Short: fmt.Sprintf("Create %s (flai show prints one, flai move transitions it)", pluralType(typ)),
 	}
 	c.AddCommand(newItemNewCmd(a, typ))
+	if typ == workitem.Task {
+		// a task is closed in one call (ADR-0107); a story or an epic is not
+		c.AddCommand(newTaskDoneCmd(a))
+	}
 	return c
 }
 
