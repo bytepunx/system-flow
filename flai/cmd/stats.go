@@ -31,7 +31,9 @@ spent on epics, on stories, and on tasks over time, one point per --bucket
 (hour, day, or week) from the first with spend to now, for dashboards and
 scripts. A bucket of an hour needs a window of 31 days or less. It also
 carries forecasts (forecast, delivery, and estimate error), cost_of_delay
-(outstanding per column and incurred, by the day and week), waiting (on
+(outstanding per column, the items without a value, and incurred, by the
+day and week, and the ready column's cost projected until each story is
+pulled under the pull order, by cost of delay, and by WSJF), waiting (on
 threads and in review, by the week, and the story agents' empty wakes,
 ADR-0105), claims (in progress and held by the day
 against the limit; under claims.weeks the time held by reason and the share of
@@ -141,33 +143,89 @@ func printForecasts(a *app, f metrics.Forecasts) {
 
 // printCostOfDelay prints, when any item has a cost of delay, what is
 // outstanding in each column now and what waiting cost over the window
-// (S-0205).
+// (S-0205), then the items without a value now and what the ready stories
+// will cost until pulled under each order (S-0213). The last is printed too
+// when only stories outside the report's type have a value.
 func printCostOfDelay(a *app, rep *metrics.Report) {
 	valued := false
 	for _, m := range rep.Items {
 		valued = valued || m.CostOfDelay != nil
 	}
 	days := rep.CostOfDelay.Days
-	if !valued || len(days) == 0 {
+	order := rep.CostOfDelay.Order
+	placed := false
+	for _, s := range order.Series {
+		placed = placed || len(s.Points) > 1
+	}
+	if (!valued || len(days) == 0) && !placed {
 		return
 	}
-	last := days[len(days)-1].Outstanding
-	cols := make([]string, 0, len(last))
-	for c := range last {
+	fmt.Fprintln(a.out, "\ncost of delay (per week of waiting):")
+	if valued && len(days) > 0 {
+		last := days[len(days)-1]
+		parts := make([]string, 0, len(last.Outstanding))
+		for _, c := range columnsByState(last.Outstanding) {
+			parts = append(parts, fmt.Sprintf("%s %.2f", c, last.Outstanding[c]))
+		}
+		incurred := 0.0
+		for _, d := range days {
+			incurred += d.Incurred
+		}
+		fmt.Fprintf(a.out, "  outstanding now  %s\n", strings.Join(parts, " · "))
+		fmt.Fprintf(a.out, "  incurred in the window %.2f\n", incurred)
+	}
+	if len(days) > 0 {
+		without := days[len(days)-1].WithoutValue
+		var parts []string
+		for _, c := range columnsByState(without) {
+			if without[c] > 0 {
+				parts = append(parts, fmt.Sprintf("%s %d", c, without[c]))
+			}
+		}
+		if len(parts) > 0 {
+			fmt.Fprintf(a.out, "  without a value now  %s\n", strings.Join(parts, " · "))
+		}
+	}
+	if placed || len(order.LeftOut) > 0 {
+		fmt.Fprintf(a.out, "  ready until pulled  %s\n", orderLine(order, placed))
+	}
+}
+
+// orderNames are the cost order series' names as flai stats prints them.
+var orderNames = map[string]string{metrics.OrderCurrent: "pull order", metrics.OrderCOD: "by cost of delay", metrics.OrderWSJF: "by WSJF"}
+
+// orderLine says what the ready stories will cost until pulled under each
+// order, what the cheaper order saves, and how many were left out (S-0213).
+func orderLine(o metrics.CostOrder, placed bool) string {
+	var parts []string
+	if placed {
+		totals := make([]string, 0, len(o.Series))
+		for _, s := range o.Series {
+			totals = append(totals, fmt.Sprintf("%s %.2f", orderNames[s.By], s.Total))
+		}
+		parts = append(parts, strings.Join(totals, " · "))
+		if o.Saving > 0 {
+			parts = append(parts, fmt.Sprintf("%s saves %.2f", orderNames[o.Cheaper], o.Saving))
+		} else {
+			parts = append(parts, "the pull order is already the cheapest")
+		}
+	} else {
+		parts = append(parts, "none placed")
+	}
+	if n := len(o.LeftOut); n > 0 {
+		parts = append(parts, fmt.Sprintf("%d left out, without a value or a forecast duration", n))
+	}
+	return strings.Join(parts, "; ")
+}
+
+// columnsByState is the map's columns in board order.
+func columnsByState[V any](m map[string]V) []string {
+	cols := make([]string, 0, len(m))
+	for c := range m {
 		cols = append(cols, c)
 	}
 	sort.Slice(cols, func(i, j int) bool { return stateRank(cols[i]) < stateRank(cols[j]) })
-	parts := make([]string, 0, len(cols))
-	for _, c := range cols {
-		parts = append(parts, fmt.Sprintf("%s %.2f", c, last[c]))
-	}
-	incurred := 0.0
-	for _, d := range days {
-		incurred += d.Incurred
-	}
-	fmt.Fprintln(a.out, "\ncost of delay (per week of waiting):")
-	fmt.Fprintf(a.out, "  outstanding now  %s\n", strings.Join(parts, " · "))
-	fmt.Fprintf(a.out, "  incurred in the window %.2f\n", incurred)
+	return cols
 }
 
 // printWaiting prints how long the agents of the items completed in the

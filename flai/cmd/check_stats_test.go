@@ -194,6 +194,54 @@ func TestStatsPrintsTheEmptyWakes(t *testing.T) {
 	}
 }
 
+// S-0213: the cost of delay section adds the items without a value now, per
+// column with any, and what the ready stories will cost until pulled under
+// each order, each only when there is something to show.
+func TestStatsPrintsTheItemsWithoutAValueAndThePullOrdersCost(t *testing.T) {
+	var out bytes.Buffer
+	a := &app{out: &out}
+	value := 10.0
+	cols := func(ready, review float64) map[string]float64 {
+		return map[string]float64{workitem.Backlog: 0, workitem.Ready: ready, workitem.InProgress: 0, workitem.Review: review}
+	}
+	counts := func(backlog, ready int) map[string]int {
+		return map[string]int{workitem.Backlog: backlog, workitem.Ready: ready, workitem.InProgress: 0, workitem.Review: 0}
+	}
+	series := func(by string, total float64) metrics.OrderSeries {
+		return metrics.OrderSeries{By: by, Total: total, Points: []metrics.OrderPoint{{At: "2026-10-07T12:00:00Z"}, {At: "2026-10-08T12:00:00Z", ID: "S-0002", Incurred: total}}}
+	}
+	report := func(without map[string]int, o metrics.CostOrder) *metrics.Report {
+		return &metrics.Report{Items: []metrics.ItemMetrics{{CostOfDelay: &value}}, CostOfDelay: metrics.CostOfDelay{
+			Days:  []metrics.CostDay{{Date: "2026-10-07", Outstanding: cols(30, 10), WithoutValue: without, Incurred: 1.5}},
+			Order: o,
+		}}
+	}
+	head := "\ncost of delay (per week of waiting):\n  outstanding now  backlog 0.00 · ready 30.00 · in-progress 0.00 · review 10.00\n  incurred in the window 1.50\n"
+	for _, c := range []struct {
+		name string
+		rep  *metrics.Report
+		want string
+	}{
+		{"both", report(counts(2, 1), metrics.CostOrder{Series: []metrics.OrderSeries{series(metrics.OrderCurrent, 12.5), series(metrics.OrderCOD, 9), series(metrics.OrderWSJF, 8)},
+			Saving: 4.5, Cheaper: metrics.OrderWSJF, LeftOut: []string{"S-0003"}}),
+			head + "  without a value now  backlog 2 · ready 1\n" +
+				"  ready until pulled  pull order 12.50 · by cost of delay 9.00 · by WSJF 8.00; by WSJF saves 4.50; 1 left out, without a value or a forecast duration\n"},
+		{"the pull order the cheapest", report(counts(0, 0), metrics.CostOrder{Series: []metrics.OrderSeries{series(metrics.OrderCurrent, 8), series(metrics.OrderCOD, 9), series(metrics.OrderWSJF, 8.5)},
+			Saving: -0.5, Cheaper: metrics.OrderWSJF, LeftOut: []string{}}),
+			head + "  ready until pulled  pull order 8.00 · by cost of delay 9.00 · by WSJF 8.50; the pull order is already the cheapest\n"},
+		{"nothing to show", report(counts(0, 0), metrics.CostOrder{Series: []metrics.OrderSeries{
+			{By: metrics.OrderCurrent, Points: []metrics.OrderPoint{{}}}, {By: metrics.OrderCOD, Points: []metrics.OrderPoint{{}}}, {By: metrics.OrderWSJF, Points: []metrics.OrderPoint{{}}},
+		}, Cheaper: metrics.OrderCOD, LeftOut: []string{}}),
+			head},
+	} {
+		out.Reset()
+		printCostOfDelay(a, c.rep)
+		if out.String() != c.want {
+			t.Errorf("%s printed:\n%s\nwant:\n%s", c.name, out.String(), c.want)
+		}
+	}
+}
+
 // ADR-0079: flai stats prints each strategic agent's totals from its
 // activity document, --json carries them and the window's log entries under
 // strategic, and an unreadable document stops stats as an unreadable item
@@ -499,7 +547,9 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 	out, _, code = runInAt(t, root, at, "stats")
 	for _, want := range []string{
 		"\nforecast and estimate error (absolute):\n  forecast     p50 1d · p85 1d (n=1)\n  delivery     p50 10h · p85 10h (n=1)\n  estimate     p50 2h · p85 2h (n=1)\n",
-		"\ncost of delay (per week of waiting):\n  outstanding now  backlog 0.00 · ready 50.00 · in-progress 0.00 · review 0.00\n  incurred in the window 39.57\n",
+		// the story in ready has a value but no forecast duration (S-0213)
+		"\ncost of delay (per week of waiting):\n  outstanding now  backlog 0.00 · ready 50.00 · in-progress 0.00 · review 0.00\n  incurred in the window 39.57\n" +
+			"  ready until pulled  none placed; 1 left out, without a value or a forecast duration\n",
 		"\nwaiting, over 1 completed:\n  on threads   total 2h · mean 2h\n  in review    total 4h · mean 4h\n  empty wakes  total 4 · mean 4.0 per item with usage\n",
 		"\nclaims:\n  held in ready  total 0m · mean 0m, over 1 completed\n  held by reason  overlap 0m · after 0m · no-touches 18h, every story over the window's weeks\n  in progress now 0 of a limit of 2\n",
 		"\nstrategic agents in the window:\n  $0.25 · 1m, beside 1 completed (usage $1.00 per item)\n",
