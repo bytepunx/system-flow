@@ -6,7 +6,7 @@ title: Two stories that each add an ADR conflict in design/adrs/README.md, whose
 status: backlog
 owner: alex
 created: 2026-10-07T01:07:12Z
-updated: 2026-10-07T01:07:12Z
+updated: 2026-10-07T02:17:33Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-07T01:07:12Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:17:33Z
 ---
 # S-0306 Two stories that each add an ADR conflict in design/adrs/README.md, whose index both append a row to, and flai opens a thread for each sync that finds it
 
