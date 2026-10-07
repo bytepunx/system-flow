@@ -249,7 +249,7 @@ The same settings are changed in a shell with `flai manifest set` ([Changing the
 
 ## Charts
 
-Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in three groups: flow, usage, and planning. Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the planning charts a nature and a model. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in three groups: flow, usage, and planning. Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the forecast charts of planning a nature and a model. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
 
 | Chart | Shows |
 |-------|-------|
@@ -270,6 +270,9 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Forecast Accuracy | One point per story done in the window with a forecast: how much longer or shorter it took than forecast. Triangles show the same against your estimate, where a story has one. The p50 and p85 lines sit either side of zero |
 | Delivery Accuracy | One point per story done in the window with a forecast delivery date: how many days after that date it was done, early below zero, with the p50 and p85 lines. A line on the right-hand axis shows the share delivered on time each week |
 | Forecast Error / Model | How far forecasts were off, over time, one line per model: the p50 of the forecast errors of the stories each model's agents did in each hour, day, or week |
+| Parallelism | Each day of the window: how many items were in progress at its end, and how many stories in ready were held then, beside a dashed line at the board's in-progress limit. Stories held while in progress sits below the limit are work the claims kept from starting, not the limit |
+| Hold Time | The hours stories in ready were held in each week of the window, stacked by reason: overlap, a claim that overlaps a story in progress; after, a story it waits for is not done; empty claim, its touches or the in-progress story's are empty. Each hold counts under one reason, so a bar's height is the time held |
+| Touches Drift | One bar per story done in the window: the files it changed outside its touches, which the planner or its agent should have declared, stacked on the touches it never changed, which they should have dropped. Hover a bar for the paths. A line on the right-hand axis shows each week's share of stories whose touches were exact |
 
 The usage charts read what agents spent on each item: its tokens and cost, which flai records from the logs of the agents `flai serve` starts (see [Tokens and cost](flai.md#tokens-and-cost)). Each model keeps its colour and its mark on every chart. Until items carry usage, they say so and how to fill in stories worked before. An item's page shows its usage, per model, beside its other fields.
 
@@ -290,7 +293,7 @@ These charts need a flai on the host as new as the dashboard. With an older one 
 
 ### Planning
 
-The planning charts compare the planner's forecasts, and your estimates, with what happened. They show stories that are done; a cancelled story is left out.
+Forecast Accuracy, Delivery Accuracy, and Forecast Error / Model compare the planner's forecasts, and your estimates, with what happened. They show stories that are done; a cancelled story is left out.
 
 - **A positive error is late.** On Forecast Accuracy a point above zero took longer than its forecast duration, and one below took less. On Delivery Accuracy a point above zero was done after its forecast date, and one below was early.
 - **The p50 and p85 lines.** Half the errors fall between the two p50 lines, and 85% between the two p85 lines. The closer together the lines, the better the forecasts. With no filter or one, they are the figures `flai stats --json` gives; with both, they are worked out from the points shown.
@@ -299,6 +302,15 @@ The planning charts compare the planner's forecasts, and your estimates, with wh
 - **Which stories appear.** Only stories with a forecast. The planner sets one when it plans a story, or set it yourself with `flai edit <story> --forecast-duration 6h --forecast-delivery 2026-10-09T17:00:00Z` ([Drafts, cost of delay, and forecasts](flai.md#drafts-cost-of-delay-and-forecasts)). Until a story done in the window has one, the chart says so.
 
 The strip above the chart gives how many stories had a forecast, and the p50 and p85 of the forecast and delivery errors. The table view lists each story, newest first: when it was completed, its nature and model, its forecast, how long it took, and its forecast, delivery, and estimate errors.
+
+Parallelism, Hold Time, and Touches Drift show what claims cost. A story in ready is held while its claim overlaps a story in progress, while a story it waits for is not done, or while either claim is empty (see [Held stories](#board) on the board, and [Touches](flai.md#touches)).
+
+- **Held beside the limit.** On Parallelism, held stories on a day when in progress is below the limit could have started but for their claims. Held stories with in progress at the limit would have waited anyway.
+- **Hold hours by reason.** On Hold Time, a hold with more than one reason counts under the one the board shows, `held (after)` before `held (overlap)`, so a tall overlap or empty-claim bar points at touches drawn too wide or left out.
+- **Drift.** On Touches Drift, a file changed outside the touches is one the planner or the story's agent should have declared; a touch never changed is one they should have dropped. A story with neither had exact touches. A week with no story done has no share, and the line breaks there.
+- **Controls.** These charts offer only the window. They need a flai on the host as new as the dashboard, and say so when it is older. Touches Drift is drawn from git: when flai cannot read it, the chart says so.
+
+The table views list Parallelism by day, with in progress, held, and the limit; Hold Time by week, with each reason's time and the total; and Touches Drift by story, with both counts, then by week, with the stories done, how many had exact touches, and the share.
 
 ## Docs
 
