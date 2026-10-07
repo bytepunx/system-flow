@@ -3,11 +3,11 @@ id: S-0213
 type: story
 nature: feature
 title: Charts show cost of delay outstanding, incurred, and what the pull order costs
-status: ready
+status: in-progress
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T06:48:44Z
+updated: 2026-10-07T07:32:18Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -18,6 +18,9 @@ transitions:
   - to: ready
     at: 2026-10-07T03:29:29Z
     by: alex
+  - to: in-progress
+    at: 2026-10-07T07:32:18Z
+    by: agent-S-0213
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/charts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/viz, flaiover/src/lib/sitemenu.ts, flai/internal/metrics, design/system/metrics.md, design/adrs, flai/internal/statsread, flai/internal/planning/forecast.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, docs/users/flai.md]
 after: [S-0205, S-0217]

@@ -3,16 +3,36 @@ id: T-0958
 type: task
 nature: feature
 title: The chart page lists the planning charts under a Planning group, with nature and model filters and a table view
-status: backlog
+status: done
 parent: S-0212
 owner: alex
 created: 2026-10-05T05:46:37Z
-updated: 2026-10-05T05:46:37Z
-transitions: []
+updated: 2026-10-07T07:17:35Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:09:28Z
+    by: agent-S-0212
+  - to: in-progress
+    at: 2026-10-07T07:09:28Z
+    by: agent-S-0212
+  - to: done
+    at: 2026-10-07T07:17:35Z
+    by: agent-S-0212
 stream: S-0212
 tags: [dashboard]
 touches: [flaiover/src/routes/charts, flaiover/src/lib/components/ForecastTable.svelte, flaiover/src/lib/components/ForecastTable.svelte.test.ts]
 after: [T-0956]
+usage:
+  source: log
+  seconds: 487
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 34722
+      cache_read: 3736521
+      cache_write: 122008
+      cost: 2.1642
 ---
 # T-0958 The chart page lists the planning charts under a Planning group, with nature and model filters and a table view
 

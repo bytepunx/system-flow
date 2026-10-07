@@ -3,16 +3,36 @@ id: T-1056
 type: task
 nature: improvement
 title: The MCP tool stream_state writes a narrative's Current state and Next steps
-status: backlog
+status: done
 parent: S-0271
 owner: alex
 created: 2026-10-06T22:49:51Z
-updated: 2026-10-06T22:49:51Z
-transitions: []
+updated: 2026-10-07T07:03:54Z
+transitions:
+  - to: ready
+    at: 2026-10-07T06:57:07Z
+    by: agent-S-0271
+  - to: in-progress
+    at: 2026-10-07T06:57:08Z
+    by: agent-S-0271
+  - to: done
+    at: 2026-10-07T07:03:54Z
+    by: agent-S-0271
 stream: S-0271
 tags: [mcp]
-touches: [flai/internal/mcpserver/folder.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go]
+touches: [flai/internal/mcpserver/folder.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go]
 after: [T-1054]
+usage:
+  source: log
+  seconds: 406
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 15213
+      cache_read: 2263177
+      cache_write: 78416
+      cost: 1.2167
 ---
 # T-1056 The MCP tool stream_state writes a narrative's Current state and Next steps
 

@@ -3,11 +3,11 @@ id: T-1054
 type: task
 nature: improvement
 title: The workitem package replaces a narrative's Current state and Next steps and leaves the rest of it alone
-status: in-progress
+status: done
 parent: S-0271
 owner: alex
 created: 2026-10-06T22:49:37Z
-updated: 2026-10-07T06:47:07Z
+updated: 2026-10-07T06:51:42Z
 transitions:
   - to: ready
     at: 2026-10-07T06:47:06Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-07T06:47:07Z
     by: agent-S-0271
+  - to: done
+    at: 2026-10-07T06:51:42Z
+    by: agent-S-0271
 stream: S-0271
 tags: [cli]
 touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go]
+usage:
+  source: log
+  seconds: 275
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 11774
+      cache_read: 1751490
+      cache_write: 60687
+      cost: 0.9416
 ---
 # T-1054 The workitem package replaces a narrative's Current state and Next steps and leaves the rest of it alone
 

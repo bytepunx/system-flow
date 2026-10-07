@@ -3,15 +3,35 @@ id: T-0950
 type: task
 nature: feature
 title: The chart data types carry the forecast errors, and the forecast-accuracy chart maps them with nature and model filters
-status: backlog
+status: done
 parent: S-0212
 owner: alex
 created: 2026-10-05T05:46:04Z
-updated: 2026-10-05T05:46:04Z
-transitions: []
+updated: 2026-10-07T06:56:28Z
+transitions:
+  - to: ready
+    at: 2026-10-07T06:49:20Z
+    by: agent-S-0212
+  - to: in-progress
+    at: 2026-10-07T06:49:20Z
+    by: agent-S-0212
+  - to: done
+    at: 2026-10-07T06:56:28Z
+    by: agent-S-0212
 stream: S-0212
 tags: [dashboard]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts]
+usage:
+  source: log
+  seconds: 428
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 27794
+      cache_read: 2991012
+      cache_write: 97665
+      cost: 1.7324
 ---
 # T-0950 The chart data types carry the forecast errors, and the forecast-accuracy chart maps them with nature and model filters
 

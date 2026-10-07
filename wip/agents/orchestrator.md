@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 14.7953
-accrued_seconds: 19562
-tasks_completed: 15
-last_run: 2026-10-07T06:46:37Z
+accrued_cost: 17.5560
+accrued_seconds: 22124
+tasks_completed: 17
+last_run: 2026-10-07T07:29:19Z
 ---
 
 # Orchestrator activity
@@ -116,6 +116,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0270
 - Seconds: 1140
 - Cost: 0.5187 USD, estimated
+
+### 2026-10-07T06:48:52Z
+
+- Summary: S-0270 accepted by alex; publish is off (still no orchestration block in system-flow.yaml), so no release evaluated or published. S-0271 and S-0212 started by their agents; both got overlapped events from S-0270's merge, theirs to sync.
+- Items: S-0270
+- Seconds: 135
+- Cost: 0.4076 USD, estimated
+
+### 2026-10-07T07:29:19Z
+
+- Summary: Operator turned all permissions on (9c28ced8, policy throughput), but the MCP server still reads them as off. Refused: finalize S-0265 and S-0279 (complete, consistent drafts) and promote S-0308 (candidate rank 1 under throughput, 10m). Not retried, and not worked around. S-0271 left in review: accept dry-run blocked by open thread TH-0247 (trial-merge conflict with S-0212). Release under judgement (no release.policy): 9 pending, 1063.5 USD/week; not published. Asked the operator on TH-0248 to restart flai mcp and to set release.policy. No epics to plan (plan --candidates empty).
+- Items: S-0265, S-0279, S-0308, S-0271
+- Seconds: 2427
+- Cost: 2.3531 USD, estimated
 
 ## Refusals
 

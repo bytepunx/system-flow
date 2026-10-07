@@ -3,15 +3,35 @@ id: T-1091
 type: task
 nature: improvement
 title: Opening a story's branch and worktree is a storygit function that the CLI and the MCP server can both call
-status: backlog
+status: done
 parent: S-0274
 owner: alex
 created: 2026-10-06T22:52:57Z
-updated: 2026-10-06T22:52:57Z
-transitions: []
+updated: 2026-10-07T07:33:07Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:28:16Z
+    by: agent-S-0274
+  - to: in-progress
+    at: 2026-10-07T07:28:17Z
+    by: agent-S-0274
+  - to: done
+    at: 2026-10-07T07:33:07Z
+    by: agent-S-0274
 stream: S-0274
 tags: [cli, go]
 touches: [flai/internal/storygit/open.go, flai/internal/storygit/open_test.go, flai/cmd/branch.go, flai/cmd/stream.go]
+usage:
+  source: log
+  seconds: 290
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 245
+      cache_read: 1302792
+      cache_write: 92408
+      cost: 0.626
 ---
 # T-1091 Opening a story's branch and worktree is a storygit function that the CLI and the MCP server can both call
 

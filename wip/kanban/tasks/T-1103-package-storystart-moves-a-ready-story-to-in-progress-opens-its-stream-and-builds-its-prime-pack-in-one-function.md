@@ -3,12 +3,18 @@ id: T-1103
 type: task
 nature: improvement
 title: Package storystart moves a ready story to in-progress, opens its stream, and builds its prime pack in one function
-status: backlog
+status: in-progress
 parent: S-0274
 owner: alex
 created: 2026-10-06T22:53:21Z
-updated: 2026-10-06T22:53:21Z
-transitions: []
+updated: 2026-10-07T07:34:50Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:34:49Z
+    by: agent-S-0274
+  - to: in-progress
+    at: 2026-10-07T07:34:50Z
+    by: agent-S-0274
 stream: S-0274
 tags: [cli, mcp, go]
 touches: [flai/internal/storystart/start.go, flai/internal/storystart/start_test.go]
@@ -42,3 +48,5 @@ It waits for T-1091, whose storygit function it calls.
 - `scripts/flai-test.sh` passes.
 
 ## Notes
+
+The inbox is answered here after all: S-0269 put it in package `flai/internal/inbox` (`inbox.Read`), which `storystart` can import, so the function also returns the inbox under the agent's name (S-0274 narrative, Decisions).

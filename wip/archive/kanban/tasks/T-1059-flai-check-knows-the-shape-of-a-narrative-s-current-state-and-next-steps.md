@@ -3,16 +3,36 @@ id: T-1059
 type: task
 nature: improvement
 title: flai check knows the shape of a narrative's Current state and Next steps
-status: backlog
+status: done
 parent: S-0271
 owner: alex
 created: 2026-10-06T22:50:01Z
-updated: 2026-10-06T22:50:01Z
-transitions: []
+updated: 2026-10-07T07:09:35Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:05:18Z
+    by: agent-S-0271
+  - to: in-progress
+    at: 2026-10-07T07:05:18Z
+    by: agent-S-0271
+  - to: done
+    at: 2026-10-07T07:09:35Z
+    by: agent-S-0271
 stream: S-0271
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/check_test.go]
 after: [T-1054]
+usage:
+  source: log
+  seconds: 257
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 65
+      output: 20826
+      cache_read: 3098177
+      cache_write: 107348
+      cost: 1.6656
 ---
 # T-1059 flai check knows the shape of a narrative's Current state and Next steps
 

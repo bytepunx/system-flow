@@ -3,11 +3,11 @@ id: S-0271
 type: story
 nature: improvement
 title: "Criteria and narrative state are commands: flai story tick checks a criterion and flai stream state writes Current state and Next steps"
-status: in-progress
+status: done
 parent: E-0017
 owner: alex
 created: 2026-10-05T01:35:30Z
-updated: 2026-10-07T06:46:43Z
+updated: 2026-10-07T07:35:45Z
 transitions:
   - to: ready
     at: 2026-10-06T22:48:17Z
@@ -21,14 +21,47 @@ transitions:
   - to: in-progress
     at: 2026-10-07T06:46:43Z
     by: agent-S-0271
+  - to: review
+    at: 2026-10-07T07:27:32Z
+    by: agent-S-0271
+  - to: done
+    at: 2026-10-07T07:35:45Z
+    by: alex
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi, conventions]
-touches: [flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/tooling.md, design/conventions/work-management.md, design/conventions/session-start.md, template/root/design/conventions/tooling.md, template/root/design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [flai/cmd/stream.go, flai/cmd/stream_state_test.go, flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/stream.go, flai/internal/mcpserver/stream_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/tooling.md, design/conventions/work-management.md, design/conventions/session-start.md, template/root/design/conventions/tooling.md, template/root/design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/CHANGELOG.md, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flaiover/src/lib/server/agent.ts, design/system/workflow.md, docs/contributors/index.md, docs/users/conventions.md, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/mcpserver/server.go, flai/cmd/edit_test.go, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 2477
+  models:
+    - model: claude-opus-5-5
+      input: 512
+      output: 164471
+      cache_read: 24467488
+      cache_write: 847769
+      cost: 13.154
+    - model: claude-sonnet-5-5
+      input: 14
+      output: 3680
+      cache_read: 209909
+      cache_write: 52006
+      cost: 0.2088
+  strategic:
+    - kind: orchestrator
+      seconds: 606
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 32
+          output: 495
+          cache_read: 2243029
+          cache_write: 11423
+          cost: 0.5883
 cost_of_delay:
   value: 16
   by: planner-E-0017
@@ -50,9 +83,9 @@ finalized:
 Agents tick acceptance criteria with `sed -i` on the story file (119 turns across 85 stories) and rewrite a narrative's `## Current state` and `## Next steps` with Edit or Write (111 turns across 44 stories), each a model turn that reads the file first. `flai story tick S-nnnn <n>` (and `--untick`) checks the nth criterion and refuses one that does not exist; `flai stream state S-nnnn --current "<text>" --next "<text>"` replaces the two sections, leaving the rest of the narrative alone, and appends nothing. Both are `item_tick` and `stream_state` over MCP and `item.tick` and `stream.state` on the host channel, so the dashboard's story page can tick a criterion too. `flai check` then knows the sections' shape.
 
 ## Acceptance criteria
-- [ ] `flai story tick` and `flai stream state` exist with the behaviour above, as text and `--json`, and refuse a story that is not in progress or review
-- [ ] The same operations exist over MCP and on the host channel, and the dashboard's story page ticks a criterion through them
-- [ ] The conventions, the template's copies, the harness prompt, `design/system/flai-cli.md`, `agent-narrative.md`, and the user guide send the agent to them instead of editing the files
+- [x] `flai story tick` and `flai stream state` exist with the behaviour above, as text and `--json`, and refuse a story that is not in progress or review
+- [x] The same operations exist over MCP and on the host channel, and the dashboard's story page ticks a criterion through them
+- [x] The conventions, the template's copies, the harness prompt, `design/system/flai-cli.md`, `agent-narrative.md`, and the user guide send the agent to them instead of editing the files
 
 ## Tasks
 - T-1054 The workitem package replaces a narrative's Current state and Next steps and leaves the rest of it alone
@@ -66,6 +99,11 @@ Agents tick acceptance criteria with `sed -i` on the story file (119 turns acros
 ## Notes
 
 From the epic's log classification. `flai task done` (its sibling story) may take `--tick <n>` once this exists.
+
+### Delivered
+
+- The tick half of criteria 1 and 2 is delivered by the existing names, as alex decided on TH-0207 (option a): `flai criteria tick` and `untick` (text and `--json`), the MCP tool `criteria_tick`, and the host method `item.criteria`, through which the dashboard's item page ticks a criterion in place. No `flai story tick`, `item_tick`, or `item.tick` is added. `flai criteria tick` refuses an item that cannot be edited (archived or closed) rather than every story not in progress or review, as option (a) accepted.
+- The narrative half is new: `flai stream state`, the MCP tool `stream_state`, the host method `stream.state`, and the advisory `flai check` rule `narrative.state`.
 
 ### Planning
 

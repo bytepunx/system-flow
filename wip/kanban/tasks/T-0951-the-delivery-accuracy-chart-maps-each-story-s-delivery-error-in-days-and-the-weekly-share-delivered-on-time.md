@@ -3,16 +3,36 @@ id: T-0951
 type: task
 nature: feature
 title: The delivery-accuracy chart maps each story's delivery error in days and the weekly share delivered on time
-status: backlog
+status: done
 parent: S-0212
 owner: alex
 created: 2026-10-05T05:46:13Z
-updated: 2026-10-05T05:46:13Z
-transitions: []
+updated: 2026-10-07T07:02:56Z
+transitions:
+  - to: ready
+    at: 2026-10-07T06:56:32Z
+    by: agent-S-0212
+  - to: in-progress
+    at: 2026-10-07T06:56:32Z
+    by: agent-S-0212
+  - to: done
+    at: 2026-10-07T07:02:56Z
+    by: agent-S-0212
 stream: S-0212
 tags: [dashboard]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts]
 after: [T-0950]
+usage:
+  source: log
+  seconds: 384
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 23659
+      cache_read: 2546056
+      cache_write: 83136
+      cost: 1.4747
 ---
 # T-0951 The delivery-accuracy chart maps each story's delivery error in days and the weekly share delivered on time
 

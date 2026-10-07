@@ -3,16 +3,36 @@ id: T-1063
 type: task
 nature: improvement
 title: The design and the user guide describe flai stream state, stream_state, and stream.state
-status: backlog
+status: done
 parent: S-0271
 owner: alex
 created: 2026-10-06T22:50:17Z
-updated: 2026-10-06T22:50:17Z
-transitions: []
+updated: 2026-10-07T07:20:55Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:13:27Z
+    by: agent-S-0271
+  - to: in-progress
+    at: 2026-10-07T07:13:27Z
+    by: agent-S-0271
+  - to: done
+    at: 2026-10-07T07:17:00Z
+    by: agent-S-0271
 stream: S-0271
 tags: [docs]
-touches: [design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/system/workflow.md, docs/contributors/index.md, docs/users/conventions.md, flai/cmd/check.go, flai/cmd/check_stats_test.go, flai/internal/mcpserver/server.go, flai/cmd/edit_test.go]
 after: [T-1055, T-1056, T-1058, T-1059]
+usage:
+  source: log
+  seconds: 213
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 25445
+      cache_read: 3785382
+      cache_write: 131159
+      cost: 2.0351
 ---
 # T-1063 The design and the user guide describe flai stream state, stream_state, and stream.state
 

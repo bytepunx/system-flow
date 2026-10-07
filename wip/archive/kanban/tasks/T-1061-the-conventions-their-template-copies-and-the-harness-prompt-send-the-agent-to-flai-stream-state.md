@@ -3,16 +3,36 @@ id: T-1061
 type: task
 nature: improvement
 title: The conventions, their template copies, and the harness prompt send the agent to flai stream state
-status: backlog
+status: done
 parent: S-0271
 owner: alex
 created: 2026-10-06T22:50:11Z
-updated: 2026-10-06T22:50:11Z
-transitions: []
+updated: 2026-10-07T07:12:49Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:09:43Z
+    by: agent-S-0271
+  - to: in-progress
+    at: 2026-10-07T07:09:43Z
+    by: agent-S-0271
+  - to: done
+    at: 2026-10-07T07:12:49Z
+    by: agent-S-0271
 stream: S-0271
 tags: [conventions]
 touches: [design/conventions/tooling.md, design/conventions/work-management.md, design/conventions/session-start.md, template/root/design/conventions/tooling.md, template/root/design/conventions/work-management.md, template/root/design/conventions/session-start.md, template/CHANGELOG.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go]
 after: [T-1055, T-1056]
+usage:
+  source: log
+  seconds: 186
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 16073
+      cache_read: 2391123
+      cache_write: 82850
+      cost: 1.2855
 ---
 # T-1061 The conventions, their template copies, and the harness prompt send the agent to flai stream state
 

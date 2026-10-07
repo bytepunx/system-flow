@@ -3,12 +3,18 @@ id: T-0953
 type: task
 nature: feature
 title: metrics.md defines the pull order's projected cost of delay and the count of items without a value, and an ADR records them
-status: backlog
+status: in-progress
 parent: S-0213
 owner: alex
 created: 2026-10-05T05:46:16Z
-updated: 2026-10-05T05:46:16Z
-transitions: []
+updated: 2026-10-07T07:32:47Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:32:46Z
+    by: agent-S-0213
+  - to: in-progress
+    at: 2026-10-07T07:32:47Z
+    by: agent-S-0213
 stream: S-0213
 tags: [flai]
 touches: [design/system/metrics.md, design/adrs]

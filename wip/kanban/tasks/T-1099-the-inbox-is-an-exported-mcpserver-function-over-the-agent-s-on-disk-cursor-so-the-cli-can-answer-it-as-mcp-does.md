@@ -3,15 +3,35 @@ id: T-1099
 type: task
 nature: improvement
 title: The inbox is an exported mcpserver function over the agent's on-disk cursor, so the CLI can answer it as MCP does
-status: backlog
+status: done
 parent: S-0274
 owner: alex
 created: 2026-10-06T22:53:10Z
-updated: 2026-10-06T22:53:10Z
-transitions: []
+updated: 2026-10-07T07:34:43Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:28:17Z
+    by: agent-S-0274
+  - to: in-progress
+    at: 2026-10-07T07:28:17Z
+    by: agent-S-0274
+  - to: done
+    at: 2026-10-07T07:34:43Z
+    by: agent-S-0274
 stream: S-0274
 tags: [mcp, go]
 touches: [flai/internal/mcpserver/inbox.go, flai/internal/mcpserver/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/cursor.go]
+usage:
+  source: log
+  seconds: 290
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 117
+      cache_read: 736779
+      cache_write: 69681
+      cost: 0.3618
 ---
 # T-1099 The inbox is an exported mcpserver function over the agent's on-disk cursor, so the CLI can answer it as MCP does
 

@@ -3,16 +3,36 @@ id: T-1055
 type: task
 nature: improvement
 title: flai stream state writes a narrative's Current state and Next steps, as text and --json
-status: backlog
+status: done
 parent: S-0271
 owner: alex
 created: 2026-10-06T22:49:45Z
-updated: 2026-10-06T22:49:45Z
-transitions: []
+updated: 2026-10-07T06:56:09Z
+transitions:
+  - to: ready
+    at: 2026-10-07T06:52:03Z
+    by: agent-S-0271
+  - to: in-progress
+    at: 2026-10-07T06:52:03Z
+    by: agent-S-0271
+  - to: done
+    at: 2026-10-07T06:56:09Z
+    by: agent-S-0271
 stream: S-0271
 tags: [cli]
 touches: [flai/cmd/stream.go, flai/cmd/stream_state_test.go]
 after: [T-1054]
+usage:
+  source: log
+  seconds: 246
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 12130
+      cache_read: 1804578
+      cache_write: 62526
+      cost: 0.9702
 ---
 # T-1055 flai stream state writes a narrative's Current state and Next steps, as text and --json
 

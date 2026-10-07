@@ -3,16 +3,36 @@ id: T-1058
 type: task
 nature: improvement
 title: The host channel method stream.state writes a narrative's Current state and Next steps
-status: backlog
+status: done
 parent: S-0271
 owner: alex
 created: 2026-10-06T22:49:56Z
-updated: 2026-10-06T22:49:56Z
-transitions: []
+updated: 2026-10-07T07:12:50Z
+transitions:
+  - to: ready
+    at: 2026-10-07T07:09:42Z
+    by: agent-S-0271
+  - to: in-progress
+    at: 2026-10-07T07:09:43Z
+    by: agent-S-0271
+  - to: done
+    at: 2026-10-07T07:12:50Z
+    by: agent-S-0271
 stream: S-0271
 tags: [hostapi]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts]
 after: [T-1055]
+usage:
+  source: log
+  seconds: 187
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 12125
+      cache_read: 1803825
+      cache_write: 62500
+      cost: 0.9698
 ---
 # T-1058 The host channel method stream.state writes a narrative's Current state and Next steps
 
