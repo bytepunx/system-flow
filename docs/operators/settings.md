@@ -15,9 +15,10 @@ Every setting of flai and of the flaiover dashboard, by where it is set. Each ro
 | [Other project files](#other-project-files) | The board's front matter, `.mcp.json`, `.claude/settings.json` | The board, `flai order`, by hand |
 | [Environment variables](#environment-variables) | The shell flai runs in, or what flai hands a process it starts | Your shell profile or the command line |
 | [flaiover container](#flaiover-container) | The dashboard container's environment and mounts | `flai dashboard`, which starts it; by hand only for a container you run yourself |
+| [Release signing secrets](#release-signing-secrets) | GitHub Actions secrets of the environment `release` of `bytepunx/system-flow` | `gh secret set --env release`, by whoever holds the release key |
 | [Flags](#flags) | The command line | Each command's flags |
 
-When a setting can be made in more than one place, the first of these wins: a flag, then the project's `system-flow.yaml`, then `~/.flai/config.json`, then the default. Secrets are not settings and are listed under [where their files are](index.md#authentication); none of them is ever an environment variable of the dashboard.
+When a setting can be made in more than one place, the first of these wins: a flag, then the project's `system-flow.yaml`, then `~/.flai/config.json`, then the default. Secrets are not settings and are listed under [where their files are](index.md#authentication); none of them is ever an environment variable of the dashboard. The release workflows' secrets are under [Release signing secrets](#release-signing-secrets).
 
 ## flai configuration
 
@@ -238,6 +239,15 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 | `--user` | your user and group | So that the two secret files, readable only by you, can be read |
 
 Build arguments, for an image built with `flai dashboard --build` or `make flaiover-image`: `FLAIOVER_VERSION` and `FLAI_VERSION` from the newest `flaiover/v*` and `flai/v*` tags, `FLAI_COMMIT` the commit, and `FLAI_DATE` the build time. `flai dashboard --build` sets them.
+
+## Release signing secrets
+
+Stored secrets of the repository's CI, not of flai or the dashboard: no flai or flaiover reads them. They are in the GitHub Actions environment `release` of `bytepunx/system-flow`, which only `flai/v*` and `flaiover/v*` tags deploy to. How to make, store, rotate, and replace them is in the [release key runbook](runbooks/release-key.md).
+
+| Secret | Read by | For |
+|--------|---------|-----|
+| `COSIGN_PRIVATE_KEY` | `release-flai.yml`, and later `release-flaiover.yml` | The release key's private half, the encrypted PEM `cosign generate-key-pair` wrote, which signs `checksums.txt` ([The release signing key](runbooks/release-key.md#store-the-secrets)) |
+| `COSIGN_PASSWORD` | the same | The password that decrypts it |
 
 ## Flags
 

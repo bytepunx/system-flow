@@ -10,3 +10,4 @@ Step by step, for an operator at a shell on the host. Each runbook has a section
 | [restore.md](restore.md) | After losing the host's state, or a project's clone |
 | [migrate.md](migrate.md) | Moving to another machine, bringing a project to a newer template, or crossing a release that changed how things are kept |
 | [delete.md](delete.md) | Taking flai or the dashboard off a machine |
+| [release-key.md](release-key.md) | The release signing key is generated, rotated, or compromised; or a release is to be checked by hand |
