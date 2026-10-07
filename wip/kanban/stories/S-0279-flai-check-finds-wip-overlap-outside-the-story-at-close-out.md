@@ -6,7 +6,7 @@ title: "flai check finds `wip.overlap` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-05T04:40:48Z
-updated: 2026-10-07T03:30:07Z
+updated: 2026-10-07T06:48:44Z
 transitions: []
 tags: [flai, template]
 topics: [cli, conventions, template]
@@ -48,10 +48,10 @@ cost_of_delay:
   at: 2026-10-07T01:22:05Z
 forecast:
   duration: 45m
-  delivery: 2026-10-07T10:40:00Z
-  basis: "Its own forecast of 45m; 20th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0246 and S-0265."
+  delivery: 2026-10-07T13:48:00Z
+  basis: "Its own forecast of 45m; 18th in the pull order with an in-progress limit of 3, behind S-0212, S-0271, S-0274, S-0275, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0246 and S-0265."
   by: flai
-  at: 2026-10-07T03:30:07Z
+  at: 2026-10-07T06:48:44Z
 ---
 # S-0279 flai check finds `wip.overlap` outside the story at close-out
 

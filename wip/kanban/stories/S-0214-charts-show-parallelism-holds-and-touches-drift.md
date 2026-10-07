@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T03:29:37Z
+updated: 2026-10-07T06:48:44Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:54Z
@@ -33,10 +33,10 @@ cost_of_delay:
   at: 2026-10-05T05:46:07Z
 forecast:
   duration: 1h45m
-  delivery: 2026-10-07T06:39:00Z
-  basis: "Its own forecast of 1h45m; 6th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275, S-0216 and S-0215."
+  delivery: 2026-10-07T09:47:00Z
+  basis: "Its own forecast of 1h45m; 4th in the pull order with an in-progress limit of 3, behind S-0212, S-0271, S-0274, S-0275 and S-0213."
   by: flai
-  at: 2026-10-07T03:29:37Z
+  at: 2026-10-07T06:48:44Z
 ---
 # S-0214 Charts show parallelism, holds, and touches drift
 

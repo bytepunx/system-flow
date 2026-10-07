@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:15Z
-updated: 2026-10-07T03:29:59Z
+updated: 2026-10-07T06:48:44Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:52Z
@@ -32,10 +32,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:55Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-07T06:10:00Z
-  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275 and S-0212."
+  delivery: 2026-10-07T09:09:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0212, S-0271, S-0274 and S-0275."
   by: flai
-  at: 2026-10-07T03:29:59Z
+  at: 2026-10-07T06:48:44Z
 ---
 # S-0213 Charts show cost of delay outstanding, incurred, and what the pull order costs
 
