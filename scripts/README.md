@@ -12,7 +12,7 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `flai-build.sh` | Builds `bin/flai` from source |
 | `flai-reference.sh` | Regenerates `docs/users/flai-reference.md` and the flag index in `docs/operators/settings.md` from the command help (`go run`, leaves `bin/flai` alone) |
 | `test.sh` | Behavior tests: `go test -race -short` in `flai/`, seconds, no external dependencies, then `flaiover-unit.sh` |
-| `flaiover-unit.sh` | flaiover's vitest against a current `bin/flai`, when `flaiover/node_modules` is present; nothing otherwise. Given arguments, runs vitest with them instead of the whole suite, as `flai test`'s vitest tier does for the files it selected |
+| `flaiover-unit.sh` | flaiover's vitest against a current `bin/flai`. In a story worktree it first runs `flaiover-install.sh --if-needed`; in the main checkout it does nothing while `flaiover/node_modules` is missing. Given arguments, runs vitest with them instead of the whole suite, as `flai test`'s vitest tier does for the files it selected |
 | `integration.sh` | Integration tests: full `go test -race` including real git and the monorepo round-trip |
 | `smoke.sh` | Smoke tests: render the template and check it, then check this repository |
 | `flai-test.sh` | gofmt, vet, golangci-lint v2, then `flaiover-unit.sh`, `integration.sh`, and `smoke.sh`: not `test.sh`, whose short Go tests the full run holds, so each Go test runs once |
@@ -23,8 +23,8 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `mdlint-fixtures.sh` | Regenerates `flai/internal/mdlint/testdata/cases/expected.txt` with markdownlint-cli2, the reference flai's own markdown lint is tested against |
 | `template-test.sh` | Renders `template/` into a temp dir and checks the result |
 | `install-tools.sh` | Installs golangci-lint v2 and GoReleaser into `bin/`, pnpm into `.flai-cache/pnpm` |
-| `flaiover-install.sh` | `pnpm install --frozen-lockfile` in `flaiover/` |
+| `flaiover-install.sh` | `pnpm install --frozen-lockfile` in `flaiover/`. With `--if-needed`, only when `flaiover/node_modules` is missing or older than `pnpm-lock.yaml`, as in a story worktree, which `git worktree add` makes without it; it says so, and pnpm's output goes, on stderr |
 | `flaiover-dev.sh` | Dev server against this repository (`PROJECT_DIR` defaults to the root) |
 | `flaiover-build.sh` | Production build (adapter-node) |
-| `flaiover-test.sh` | prettier, eslint, svelte-check, vitest |
+| `flaiover-test.sh` | `flaiover-install.sh --if-needed`, then prettier, eslint, svelte-check, vitest |
 | `flaiover-image.sh` | Builds the flaiover image locally as `flaiover:local` from the repo root |
