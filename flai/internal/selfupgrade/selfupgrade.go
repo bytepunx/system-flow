@@ -28,10 +28,15 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 )
 
 // TagPrefix is the monorepo tag prefix for flai releases.
 const TagPrefix = "flai/v"
+
+// DashboardTagPrefix is the monorepo tag prefix of a dashboard release; its
+// image tag is the bare X.Y.Z after it (ADR-0117).
+const DashboardTagPrefix = "flaiover/v"
 
 // Options configure a resolution and install.
 type Options struct {
@@ -126,12 +131,12 @@ func Resolve(ctx context.Context, opt Options) (*Release, error) {
 			return &published[i], nil
 		}
 	}
-	return nil, fmt.Errorf("resolve flai %s: %s has no published release tagged %s%s (drafts and prereleases are not published); published are %s: choose one of them, or give no version for the newest", v, opt.Repo, TagPrefix, v, versionList(published))
+	return nil, fmt.Errorf("resolve flai %s: %s has no published release tagged %s%s (drafts and prereleases are not published); published are %s: choose one of them, or give no version for the newest", v, opt.Repo, TagPrefix, v, VersionList(published))
 }
 
-// versionList names the newest published versions, and how many older ones
+// VersionList names the newest published versions, and how many older ones
 // it leaves out.
-func versionList(published []Release) string {
+func VersionList(published []Release) string {
 	names := make([]string, 0, shownVersions)
 	for i := 0; i < len(published) && i < shownVersions; i++ {
 		names = append(names, published[i].Version)
@@ -141,6 +146,27 @@ func versionList(published []Release) string {
 		out += fmt.Sprintf(" and %d older", more)
 	}
 	return out
+}
+
+// Token is GITHUB_TOKEN, GH_TOKEN, or the gh CLI's session token through r;
+// "" reads the releases without one. A nil r skips gh.
+func Token(r execx.Runner) string {
+	for _, k := range []string{"GITHUB_TOKEN", "GH_TOKEN"} {
+		if v := os.Getenv(k); v != "" {
+			return v
+		}
+	}
+	if r == nil {
+		return ""
+	}
+	if _, err := r.LookPath("gh"); err != nil {
+		return ""
+	}
+	out, err := r.Run("", "gh", "auth", "token")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
 }
 
 // List answers the published GitHub releases of opt.Repo whose tag is prefix

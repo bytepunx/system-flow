@@ -12,13 +12,6 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
 )
 
-// dashboardTagPrefix is the monorepo tag of a dashboard release; its image
-// tag is the bare X.Y.Z after it (ADR-0117).
-const dashboardTagPrefix = "flaiover/v"
-
-// shownDashboardVersions is how many published releases a refused tag names.
-const shownDashboardVersions = 10
-
 // listedDashboard is one published dashboard release as dashboard versions
 // prints it.
 type listedDashboard struct {
@@ -65,7 +58,7 @@ func (a *app) runDashboardVersions(ctx context.Context, opt selfupgrade.Options)
 	if err != nil {
 		return err
 	}
-	published, err := selfupgrade.ListTags(ctx, opt, dashboardTagPrefix)
+	published, err := selfupgrade.ListTags(ctx, opt, selfupgrade.DashboardTagPrefix)
 	if err != nil {
 		return err
 	}
@@ -153,25 +146,18 @@ func (a *app) runningDashboardVersion(name string) string {
 // requirePublishedDashboard refuses a tag that is not a published dashboard
 // release, naming the published ones (ADR-0117 §3).
 func requirePublishedDashboard(ctx context.Context, opt selfupgrade.Options, tag string) error {
-	published, err := selfupgrade.ListTags(ctx, opt, dashboardTagPrefix)
+	published, err := selfupgrade.ListTags(ctx, opt, selfupgrade.DashboardTagPrefix)
 	if err != nil {
 		return err
 	}
 	if len(published) == 0 {
-		return fmt.Errorf("upgrade the dashboard to %s: %s has no published dashboard release (no tag %sX.Y.Z); check the repository the releases come from, or give --tag without --published to use a tag as it is", tag, opt.Repo, dashboardTagPrefix)
+		return fmt.Errorf("upgrade the dashboard to %s: %s has no published dashboard release (no tag %sX.Y.Z); check the repository the releases come from, or give --tag without --published to use a tag as it is", tag, opt.Repo, selfupgrade.DashboardTagPrefix)
 	}
-	names := make([]string, 0, shownDashboardVersions)
 	for _, r := range published {
 		if r.Version == tag {
 			return nil
 		}
-		if len(names) < shownDashboardVersions {
-			names = append(names, r.Version)
-		}
 	}
-	list := strings.Join(names, ", ")
-	if more := len(published) - len(names); more > 0 {
-		list += fmt.Sprintf(" and %d older", more)
-	}
-	return fmt.Errorf("upgrade the dashboard to %s: it is not a published dashboard release of %s (a tag %sX.Y.Z, whose image is tagged X.Y.Z); published are %s: give one of them as the bare X.Y.Z, or give --tag without --published to use a tag as it is", tag, opt.Repo, dashboardTagPrefix, list)
+	list := selfupgrade.VersionList(published)
+	return fmt.Errorf("upgrade the dashboard to %s: it is not a published dashboard release of %s (a tag %sX.Y.Z, whose image is tagged X.Y.Z); published are %s: give one of them as the bare X.Y.Z, or give --tag without --published to use a tag as it is", tag, opt.Repo, selfupgrade.DashboardTagPrefix, list)
 }

@@ -140,10 +140,10 @@ func TestVersionList(t *testing.T) {
 	for i := 12; i > 0; i-- {
 		rels = append(rels, Release{Version: fmt.Sprintf("1.%d.0", i)})
 	}
-	if got := versionList(rels); got != "1.12.0, 1.11.0, 1.10.0, 1.9.0, 1.8.0, 1.7.0, 1.6.0, 1.5.0, 1.4.0, 1.3.0 and 2 older" {
+	if got := VersionList(rels); got != "1.12.0, 1.11.0, 1.10.0, 1.9.0, 1.8.0, 1.7.0, 1.6.0, 1.5.0, 1.4.0, 1.3.0 and 2 older" {
 		t.Errorf("twelve: %q", got)
 	}
-	if got := versionList(rels[:2]); got != "1.12.0, 1.11.0" {
+	if got := VersionList(rels[:2]); got != "1.12.0, 1.11.0" {
 		t.Errorf("two: %q", got)
 	}
 }

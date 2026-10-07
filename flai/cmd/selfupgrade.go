@@ -308,21 +308,7 @@ func belowMinimum(version string, mins []projectMinimum) []projectMinimum {
 }
 
 // githubToken is GITHUB_TOKEN, GH_TOKEN, or the gh CLI's session token.
-func (a *app) githubToken() string {
-	for _, k := range []string{"GITHUB_TOKEN", "GH_TOKEN"} {
-		if v := os.Getenv(k); v != "" {
-			return v
-		}
-	}
-	if _, err := a.runner.LookPath("gh"); err != nil {
-		return ""
-	}
-	out, err := a.runner.Run("", "gh", "auth", "token")
-	if err != nil {
-		return ""
-	}
-	return out
-}
+func (a *app) githubToken() string { return selfupgrade.Token(a.runner) }
 
 // executablePath is the running flai; tests put one where they need it.
 var executablePath = func() (string, error) {
