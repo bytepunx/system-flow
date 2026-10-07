@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -66,8 +67,9 @@ func thread(item, status, created, updated string, entries ...string) *threads.T
 	return th
 }
 
+// waitThreads are threads on waitItems, numbered TH-0001 on in order.
 func waitThreads() []*threads.Thread {
-	return []*threads.Thread{
+	ths := []*threads.Thread{
 		thread("S-0001", "answered", "2026-08-25T02:00:00Z", "2026-08-25T05:00:00Z",
 			"2026-08-25T02:00:00Z", "agent", "2026-08-25T03:00:00Z", "agent", "2026-08-25T05:00:00Z", "designer"),
 		thread("S-12", "answered", "2026-08-24T22:00:00Z", "2026-08-25T01:00:00Z",
@@ -90,6 +92,10 @@ func waitThreads() []*threads.Thread {
 		thread("", "open", "2026-08-25T00:00:00Z", "2026-08-25T00:00:00Z",
 			"2026-08-25T00:00:00Z", "agent"),
 	}
+	for i, th := range ths {
+		th.ID = fmt.Sprintf("TH-%04d", i+1)
+	}
+	return ths
 }
 
 // tenDays starts the window at noon on Saturday 22 August 2026, in the ISO
@@ -148,7 +154,8 @@ func TestWaitPerItemIsThreadsInProgressAndTimeInReview(t *testing.T) {
 
 // S-0205: per ISO week of the window, the items done in it and the sum and
 // mean of their waits; a week without items has no mean, and cancelled items
-// and those done before the window are left out.
+// and those done before the window are left out. The longest waits follow,
+// pinned in TestLongestWaitsOfTheWindow.
 func TestWaitingByTheWeek(t *testing.T) {
 	data, err := json.Marshal(Compute(waitItems(), Options{Now: now, Since: tenDays, Threads: waitThreads()}).Waiting)
 	if err != nil {
@@ -160,9 +167,9 @@ func TestWaitingByTheWeek(t *testing.T) {
 		`{"week":"2026-W35","start":"2026-08-24","items":6,"empty_wakes":0,` +
 		`"threads":{"total_seconds":36000,"mean_seconds":6000,` + none + `},"review":{"total_seconds":32400,"mean_seconds":5400}},` +
 		`{"week":"2026-W36","start":"2026-08-31","items":2,"empty_wakes":0,` +
-		`"threads":{"total_seconds":7200,"mean_seconds":3600,` + none + `},"review":{"total_seconds":0,"mean_seconds":0}}],"empty_wakes":{"count":0}}`
-	if string(data) != want {
-		t.Errorf("waiting =\n%s\nwant\n%s", data, want)
+		`"threads":{"total_seconds":7200,"mean_seconds":3600,` + none + `},"review":{"total_seconds":0,"mean_seconds":0}}],"empty_wakes":{"count":0},"longest":[`
+	if !strings.HasPrefix(string(data), want) {
+		t.Errorf("waiting =\n%s\nwant it to start\n%s", data, want)
 	}
 }
 
@@ -322,4 +329,145 @@ func TestWaitsTheOrchestratorEndedAreCountedApart(t *testing.T) {
 	if string(data) != week {
 		t.Errorf("week =\n%s\nwant\n%s", data, week)
 	}
+}
+
+// sameWaits reports where got differs from want, wait by wait.
+func sameWaits(t *testing.T, got, want []LongWait) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Errorf("longest = %d waits, want %d: %+v", len(got), len(want), got)
+		return
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("longest[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
+// S-0215, ADR-0114: the ten waits with the most seconds in the window, each
+// on its own, of items in any state but cancelled: a thread answered (by its
+// answer's author), a thread still open (no end, nobody awaited), and review
+// waits (by the move out of review); the one in review now is open.
+func TestLongestWaitsOfTheWindow(t *testing.T) {
+	items := waitItems()
+	for _, it := range items {
+		switch it.ID {
+		case "S-0012": // done out of review
+			it.Transitions[2].By = "alex"
+		case "S-0008": // sent back from review
+			it.Transitions[2].By = "alex"
+		}
+	}
+	w := Compute(items, Options{Now: now, Since: tenDays, Threads: waitThreads()}).Waiting
+	sameWaits(t, w.Longest, []LongWait{
+		{Item: "S-0006", Kind: "review", Started: "2026-08-31T12:00:00Z", Seconds: 86400},
+		{Item: "S-0012", Kind: "review", Started: "2026-08-25T12:00:00Z", Ended: "2026-08-25T18:00:00Z", Seconds: 21600, Awaited: "alex"},
+		{Item: "S-0005", Kind: "thread", Thread: "TH-0006", Started: "2026-09-01T08:00:00Z", Seconds: 14400},
+		{Item: "S-0001", Kind: "thread", Thread: "TH-0001", Started: "2026-08-25T02:00:00Z", Ended: "2026-08-25T05:00:00Z", Seconds: 10800, Awaited: "designer"},
+		{Item: "S-0003", Kind: "thread", Thread: "TH-0003", Started: "2026-08-26T01:00:00Z", Ended: "2026-08-26T03:00:00Z", Seconds: 7200, Awaited: "designer"},
+		{Item: "S-0003", Kind: "thread", Thread: "TH-0004", Started: "2026-08-26T02:00:00Z", Ended: "2026-08-26T04:00:00Z", Seconds: 7200, Awaited: "designer"},
+		{Item: "S-0008", Kind: "thread", Thread: "TH-0009", Started: "2026-08-28T05:00:00Z", Ended: "2026-08-28T09:00:00Z", Seconds: 7200, Awaited: "designer"},
+		{Item: "S-0008", Kind: "review", Started: "2026-08-28T06:00:00Z", Ended: "2026-08-28T08:00:00Z", Seconds: 7200, Awaited: "alex"},
+		{Item: "S-0007", Kind: "thread", Thread: "TH-0008", Started: "2026-08-31T08:00:00Z", Seconds: 7200},
+		// the thread on S-12, of three waits of 3600 seconds the earliest
+		{Item: "S-0012", Kind: "thread", Thread: "TH-0002", Started: "2026-08-24T22:00:00Z", Ended: "2026-08-25T01:00:00Z", Seconds: 3600, Awaited: "designer"},
+	})
+	data, err := json.Marshal(w.Longest[:3])
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `[{"item":"S-0006","kind":"review","started":"2026-08-31T12:00:00Z","seconds":86400},` +
+		`{"item":"S-0012","kind":"review","started":"2026-08-25T12:00:00Z","ended":"2026-08-25T18:00:00Z","seconds":21600,"awaited":"alex"},` +
+		`{"item":"S-0005","kind":"thread","thread":"TH-0006","started":"2026-09-01T08:00:00Z","seconds":14400}]`
+	if string(data) != want {
+		t.Errorf("longest json =\n%s\nwant\n%s", data, want)
+	}
+}
+
+// S-0215, ADR-0114: a wait counts only its part inside the window, its start
+// still the one the thread or the move records; waits with no part in it are
+// left out, and the list is empty, not null, when none has one.
+func TestLongestWaitsAreCutByTheWindowStart(t *testing.T) {
+	for _, c := range []struct {
+		since time.Duration
+		want  []LongWait
+	}{
+		{27 * time.Hour, []LongWait{ // from 2026-08-31T09:00:00Z
+			{Item: "S-0006", Kind: "review", Started: "2026-08-31T12:00:00Z", Seconds: 86400},
+			{Item: "S-0005", Kind: "thread", Thread: "TH-0006", Started: "2026-09-01T08:00:00Z", Seconds: 14400},
+			// in progress until 10:00, an hour of it in the window
+			{Item: "S-0007", Kind: "thread", Thread: "TH-0008", Started: "2026-08-31T08:00:00Z", Seconds: 3600},
+		}},
+		{18 * time.Hour, []LongWait{ // from 2026-08-31T18:00:00Z
+			{Item: "S-0006", Kind: "review", Started: "2026-08-31T12:00:00Z", Seconds: 64800},
+			{Item: "S-0005", Kind: "thread", Thread: "TH-0006", Started: "2026-09-01T08:00:00Z", Seconds: 14400},
+		}},
+	} {
+		w := Compute(waitItems(), Options{Now: now, Since: c.since, Threads: waitThreads()}).Waiting
+		sameWaits(t, w.Longest, c.want)
+	}
+	data, err := json.Marshal(Compute(waitItems(), Options{Now: now, Since: tenDays}).Waiting.Longest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// without threads, only the review waits remain
+	if !strings.HasPrefix(string(data), `[{"item":"S-0006","kind":"review"`) {
+		t.Errorf("longest without threads = %s", data)
+	}
+	data, err = json.Marshal(Compute(nil, Options{Now: now, Since: tenDays}).Waiting.Longest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "[]" {
+		t.Errorf("longest without waits = %s, want []", data)
+	}
+}
+
+// S-0215, ADR-0114: waits of equal seconds go to the earlier start, then to
+// the item and the thread in ID order, a review wait after a thread's; a
+// thread resolved with no answer ends when it was updated, nobody awaited;
+// and a cancelled item's waits are left out.
+func TestLongestWaitsTiesAndAResolvedThread(t *testing.T) {
+	story := func(id, status string, moves ...string) *workitem.Item {
+		it := &workitem.Item{ID: id, Type: workitem.Story, Status: status, Created: "2026-08-20T00:00:00Z"}
+		for i := 0; i < len(moves); i += 3 {
+			it.Transitions = append(it.Transitions, workitem.Transition{To: moves[i], At: moves[i+1], By: moves[i+2]})
+		}
+		return it
+	}
+	ip, rv := workitem.InProgress, workitem.Review
+	items := []*workitem.Item{
+		// in progress from 02:00, after its thread started
+		story("S-0002", ip, ip, "2026-08-25T02:00:00Z", "agent"),
+		// in review from 01:00 to 02:00, sent back by alex
+		story("S-0001", workitem.Done, ip, "2026-08-25T00:00:00Z", "agent", rv, "2026-08-25T01:00:00Z", "agent",
+			ip, "2026-08-25T02:00:00Z", "alex", workitem.Done, "2026-08-25T03:00:00Z", "alex"),
+		story("S-0003", rv, ip, "2026-08-31T00:00:00Z", "agent", rv, "2026-08-31T12:00:00Z", "agent"),
+		story("S-0004", workitem.Cancelled, ip, "2026-08-26T00:00:00Z", "agent", rv, "2026-08-26T01:00:00Z", "agent",
+			workitem.Cancelled, "2026-08-27T00:00:00Z", "alex"),
+	}
+	withID := func(id string, th *threads.Thread) *threads.Thread {
+		th.ID = id
+		return th
+	}
+	ths := []*threads.Thread{
+		withID("TH-0004", thread("S-0002", "resolved", "2026-08-25T01:00:00Z", "2026-08-25T03:00:00Z",
+			"2026-08-25T01:00:00Z", "agent")),
+		withID("TH-0012", thread("S-0001", "answered", "2026-08-25T01:00:00Z", "2026-08-25T03:00:00Z",
+			"2026-08-25T01:00:00Z", "agent", "2026-08-25T03:00:00Z", "alex")),
+		withID("TH-0003", thread("S-0001", "answered", "2026-08-25T01:00:00Z", "2026-08-25T03:00:00Z",
+			"2026-08-25T01:00:00Z", "agent", "2026-08-25T03:00:00Z", "bob")),
+		withID("TH-0005", thread("S-0004", "open", "2026-08-26T00:00:00Z", "2026-08-26T00:00:00Z",
+			"2026-08-26T00:00:00Z", "agent")),
+	}
+	w := Compute(items, Options{Now: now, Since: tenDays, Threads: ths}).Waiting
+	sameWaits(t, w.Longest, []LongWait{
+		{Item: "S-0003", Kind: "review", Started: "2026-08-31T12:00:00Z", Seconds: 86400},
+		// an hour each in progress, from 02:00 to 03:00
+		{Item: "S-0001", Kind: "thread", Thread: "TH-0003", Started: "2026-08-25T01:00:00Z", Ended: "2026-08-25T03:00:00Z", Seconds: 3600, Awaited: "bob"},
+		{Item: "S-0001", Kind: "thread", Thread: "TH-0012", Started: "2026-08-25T01:00:00Z", Ended: "2026-08-25T03:00:00Z", Seconds: 3600, Awaited: "alex"},
+		{Item: "S-0001", Kind: "review", Started: "2026-08-25T01:00:00Z", Ended: "2026-08-25T02:00:00Z", Seconds: 3600, Awaited: "alex"},
+		{Item: "S-0002", Kind: "thread", Thread: "TH-0004", Started: "2026-08-25T01:00:00Z", Ended: "2026-08-25T03:00:00Z", Seconds: 3600},
+	})
 }

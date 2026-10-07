@@ -10,11 +10,37 @@ import (
 
 // Waiting is how long the agents of the items completed in each ISO week
 // waited on threads and in review (S-0205), and the empty wakes of the items
-// completed in the window (S-0272).
+// completed in the window (S-0272), and the longest waits of the window on
+// their own (S-0215).
 type Waiting struct {
 	Weeks      []WaitWeek `json:"weeks"`
 	EmptyWakes EmptyWakes `json:"empty_wakes"`
+	Longest    []LongWait `json:"longest"`
 }
+
+// LongWait is one wait of an item, on a thread or in review, with the
+// seconds of it inside the window and who was awaited (ADR-0114).
+type LongWait struct {
+	Item    string `json:"item"`
+	Kind    string `json:"kind"`
+	Thread  string `json:"thread,omitempty"`
+	Started string `json:"started"`
+	// Ended is absent while the wait is open.
+	Ended   string  `json:"ended,omitempty"`
+	Seconds float64 `json:"seconds"`
+	// Awaited is absent while the wait is open, and for a thread resolved
+	// with no entry that ended its wait.
+	Awaited string `json:"awaited,omitempty"`
+}
+
+// The kinds of a LongWait.
+const (
+	waitOnThread = "thread"
+	waitInReview = "review"
+)
+
+// longestWaits is how many waits waiting.longest lists.
+const longestWaits = 10
 
 // EmptyWakes is the sum of the empty wakes of the items completed in the
 // window, and its mean over those of them that carry agents' usage, absent
@@ -72,10 +98,16 @@ const (
 	byConfirmation
 )
 
-// wait is a thread's wait and who ended it.
+// wait is a thread's wait, or a review wait without a thread, and who ended
+// it: for a thread, the kind of ender and the author of the entry that ended
+// it, empty without one; for review, the by of the transition out of it. It
+// is open while nothing ended it.
 type wait struct {
 	span
-	by ender
+	by      ender
+	thread  string
+	awaited string
+	open    bool
 }
 
 // deriveWaitReview sets the seconds the item spent in review, from the time
@@ -131,15 +163,17 @@ func threadWait(th *threads.Thread, now time.Time) (wait, bool) {
 	if err != nil {
 		return wait{}, false
 	}
-	w := wait{span: span{from, now}}
+	w := wait{span: span{from, now}, thread: th.ID, open: true}
 	if th.Status == "resolved" {
 		w.to, _ = time.Parse(workitem.TimeFormat, th.Updated)
+		w.open = false
 	}
 	for _, e := range entries[min(1, len(entries)):] {
 		if e.Author == opener || e.Recommendation {
 			continue
 		}
 		w.to, _ = time.Parse(workitem.TimeFormat, e.At)
+		w.awaited, w.open = e.Author, false
 		switch {
 		case workitem.IsOrchestrator(e.Author):
 			w.by = byOrchestrator
@@ -241,8 +275,8 @@ func inProgress(it *workitem.Item, now time.Time) []span {
 
 // waiting lays out the waits of the items done in the window by the ISO week
 // they were completed in, from the one that holds the window's start to this
-// one, with the thread waits of each item by its canonical ID; and sums their
-// empty wakes, over the window and per week.
+// one, with the thread waits of each item by its canonical ID; sums their
+// empty wakes, over the window and per week; and lists the longest waits.
 func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[string][]wait, start, now time.Time) Waiting {
 	out := Waiting{Weeks: []WaitWeek{}}
 	measured := 0 // the items that carry agents' usage
@@ -282,6 +316,89 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 		out.EmptyWakes.Count += b.EmptyWakes
 	}
 	out.EmptyWakes.Mean = over(float64(out.EmptyWakes.Count), float64(measured))
+	out.Longest = longest(items, waits, start, now)
+	return out
+}
+
+// longest is the waits of the items not cancelled, on their threads and in
+// review, that have a part in the window, the most seconds first, at most
+// longestWaits of them (ADR-0114). The window's ends are taken to the whole
+// second, as the report prints them, so that the seconds are whole.
+func longest(items []*workitem.Item, waits map[string][]wait, start, now time.Time) []LongWait {
+	start, now = start.Truncate(time.Second), now.Truncate(time.Second)
+	out := []LongWait{}
+	add := func(lw LongWait, s span, open bool) {
+		if lw.Seconds <= 0 {
+			return
+		}
+		lw.Started = s.from.Format(workitem.TimeFormat)
+		if !open {
+			lw.Ended = s.to.Format(workitem.TimeFormat)
+		}
+		out = append(out, lw)
+	}
+	for _, it := range items {
+		if it.Status == workitem.Cancelled {
+			continue
+		}
+		for _, w := range waits[workitem.CanonicalID(it.ID)] {
+			in := inWindow(w.span, start, now)
+			add(LongWait{Item: it.ID, Kind: waitOnThread, Thread: w.thread, Awaited: w.awaited,
+				Seconds: inProgressSeconds(it, []span{in}, now)}, w.span, w.open)
+		}
+		for _, r := range inReview(it, now) {
+			in := inWindow(r.span, start, now)
+			add(LongWait{Item: it.ID, Kind: waitInReview, Awaited: r.awaited,
+				Seconds: max(0, in.to.Sub(in.from).Seconds())}, r.span, r.open)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return longerWait(out[i], out[j]) })
+	return out[:min(len(out), longestWaits)]
+}
+
+// longerWait reports whether a is listed before b: the more seconds first,
+// then the earlier start, then the item and the thread in ID order, a
+// thread's wait before a review wait.
+func longerWait(a, b LongWait) bool {
+	if a.Seconds != b.Seconds {
+		return a.Seconds > b.Seconds
+	}
+	if a.Started != b.Started {
+		return a.Started < b.Started
+	}
+	if ia, ib := workitem.CanonicalID(a.Item), workitem.CanonicalID(b.Item); ia != ib {
+		return ia < ib
+	}
+	if (a.Thread == "") != (b.Thread == "") {
+		return b.Thread == ""
+	}
+	return threads.CanonicalID(a.Thread) < threads.CanonicalID(b.Thread)
+}
+
+// inWindow is the part of the span from start to now; it ends before it
+// starts when the span has no such part.
+func inWindow(s span, start, now time.Time) span {
+	return span{laterOf(s.from, start), earlierOf(s.to, now)}
+}
+
+// inReview is each interval from a transition to review to the next
+// transition, ended by that transition's by, or open to now while review is
+// the current state.
+func inReview(it *workitem.Item, now time.Time) []wait {
+	var out []wait
+	for i, tr := range it.Transitions {
+		if tr.To != workitem.Review {
+			continue
+		}
+		from, _ := time.Parse(workitem.TimeFormat, tr.At)
+		w := wait{span: span{from, now}, open: true}
+		if i+1 < len(it.Transitions) {
+			next := it.Transitions[i+1]
+			w.to, _ = time.Parse(workitem.TimeFormat, next.At)
+			w.awaited, w.open = next.By, false
+		}
+		out = append(out, w)
+	}
 	return out
 }
 
