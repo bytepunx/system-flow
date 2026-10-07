@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.73 - 2026-10-07
+
+- S-0331 A story's agent messages the agent of another open story, not a thread, before changing a path both claim (patch, ADR-0120): `work-management.md` says that when an `overlapped` change's `cause` is a story in progress, you message that story's agent with `message_send`, or `flai message send`, naming the paths in `about`, before you change them, and narrow your `touches` if you can. `inbox` lists your story's open conversations under `messages`, and `wait_for_events` wakes on a message to your story as a change of kind `message`. You answer a message awaiting your story with `message_reply`, or `flai message reply`, before you go on with the paths it is about, and ask the operator on a thread only when the two of you do not agree; a question for the designer is still a thread. `delegation.md` says a sub-agent does not send messages, which `flai guard` refuses it. It needs a flai that has the message tools.
+
 ## 1.0.72 - 2026-10-07
 
 - S-0330 flai message sends a message from one open story's agent to another's, kept apart from the operator's threads (patch).

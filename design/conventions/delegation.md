@@ -69,7 +69,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - You work for the agent that started you, not for the designer or the board. When your prompt names a story, prime with `prime` and your role (`flai prime --story <id> --role explore` or `--role verify`), reading only the sections you need.
 - Use the worktree specified.
 - Do not edit files.
-- Do not move, create, or edit work items, write to threads, read the inbox, or wait for events or work; your tools leave them out; never work around that through the shell.
+- Do not move, create, or edit work items, write to threads or send messages, read the inbox, or wait for events or work; your tools leave them out; never work around that through the shell.
 - Answer the question you were given. Do not do the story's work.
 - As a verifier, review the diff against the story's acceptance criteria and the conventions, naming the criteria it meets by number. Do not run the tests, the lint, or `flai check` to learn whether they pass: read the story's last result with `flai verify S-nnnn --last`, and say so when it did not pass or its commit is not the branch's head.
 - Run the close-out, or `flai verify`, only when your prompt asks. Then run it once, as one command with the longest timeout the harness allows (Claude Code's Bash tool: 600000 ms), its exit status echoed after it on the same line: `flai verify S-nnnn; echo "exit $?"`. Never pipe its output, which loses the exit status, and never redirect it into a file. Read its last line, which names the outcome and the step it stopped at.
@@ -82,7 +82,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Edit only the paths your task touches. When the task needs a change outside them, stop and say so in your final message rather than make it.
 - Run only the tests for what you changed, with `flai test` on the paths you changed or the MCP tool `test`, rather than running the test and lint tools by hand; leave the whole suite, the whole lint, and `flai check` to the story's agent.
 - When a build or test fails in a path your task does not touch, another task's edit may be half done: do not fix it. Wait a minute and run it again, and say in your final message what failed, when, and for how long.
-- Do not commit, stage, or otherwise write to git. Do not move, create, or edit work items, write to threads, read the inbox, wait for events or work, or sync the stream; the guard refuses them, and you do not work around it.
+- Do not commit, stage, or otherwise write to git. Do not move, create, or edit work items, write to threads or send messages, read the inbox, wait for events or work, or sync the stream; the guard refuses them, and you do not work around it.
 - When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.
 - Your final message is all the story's agent sees. Lead with done or not done, then the files you changed, the story's acceptance criteria your task's work meets, by their numbers in `flai criteria list`, the tests you ran and their results, the decisions a reader could have made differently, and what is left. You do not tick them; the story's agent does after its review.
 
