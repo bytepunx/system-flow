@@ -46,7 +46,7 @@ claims:
     - design/issues
     - template/CHANGELOG.md
 flai:
-  minimum: 1.34.0
+  minimum: 1.34.1
 tests:
   - name: gofmt
     command: [gofmt, "-l", "{files}"]
