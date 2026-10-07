@@ -10,41 +10,14 @@ import (
 )
 
 // overlapsOf is what accepting a story tells the stories still open (S-0132,
-// ADR-0046): for each story in progress or in review other than accepted,
-// the changed paths its claim covers. A story whose claim is empty may change
-// anything, so every changed path is its business. Stories whose claim covers
-// none of the paths are left out.
+// ADR-0046): each open story itemedit.Covering finds the accepted story's
+// change reaches, as an overlap notice.
 func overlapsOf(items []*workitem.Item, projects []manifest.Project, accepted string, changed []string) []itemedit.Overlap {
-	if len(changed) == 0 {
-		return nil
-	}
-	holds := workitem.NewHolds(items, projects)
 	var out []itemedit.Overlap
-	for _, it := range items {
-		if it.Archived || it.Type != workitem.Story || it.ID == accepted || (it.Status != workitem.InProgress && it.Status != workitem.Review) {
-			continue
-		}
-		claim := holds.Claim(it)
-		var paths []string
-		for _, p := range changed {
-			if len(claim) == 0 || covered(p, claim) {
-				paths = append(paths, p)
-			}
-		}
-		if len(paths) > 0 {
-			out = append(out, itemedit.Overlap{ID: it.ID, Title: it.Title, Accepted: accepted, Paths: paths})
-		}
+	for _, c := range itemedit.Covering(items, projects, accepted, changed) {
+		out = append(out, itemedit.Overlap{ID: c.ID, Title: c.Title, Accepted: accepted, Paths: c.Paths})
 	}
 	return out
-}
-
-func covered(path string, claim []string) bool {
-	for _, c := range claim {
-		if workitem.PathsOverlap(path, c) {
-			return true
-		}
-	}
-	return false
 }
 
 // headOf is the commit the main checkout is at, or "" when git cannot say.
