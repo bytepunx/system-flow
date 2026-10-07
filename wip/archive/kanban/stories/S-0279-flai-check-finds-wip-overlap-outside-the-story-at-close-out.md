@@ -30,14 +30,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1351
+  seconds: 1555
   models:
     - model: claude-opus-5-5
-      input: 266
-      output: 76628
-      cache_read: 12199903
-      cache_write: 464088
-      cost: 6.9697
+      input: 290
+      output: 81659
+      cache_read: 12658618
+      cache_write: 499048
+      cost: 7.4418
   strategic:
     - kind: planner
       seconds: 574
@@ -56,15 +56,15 @@ usage:
           cache_write: 284594
           cost: 5.2617
     - kind: orchestrator
-      seconds: 1240
+      seconds: 1385
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 96
-          output: 1391
-          cache_read: 10183730
-          cache_write: 82984
-          cost: 2.6788
+          input: 104
+          output: 1553
+          cache_read: 11686783
+          cache_write: 88021
+          cost: 3.0723
         - model: claude-sonnet-5-5
           input: 8
           output: 48

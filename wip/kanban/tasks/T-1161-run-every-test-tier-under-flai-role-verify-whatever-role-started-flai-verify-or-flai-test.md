@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 153
-      cache_read: 856626
-      cache_write: 52983
-      cost: 0.4121
+      input: 21
+      output: 5993
+      cache_read: 893600
+      cache_write: 37815
+      cost: 0.5424
 ---
 # T-1161 Run every test tier under FLAI_ROLE=verify, whatever role started flai verify or flai test
 

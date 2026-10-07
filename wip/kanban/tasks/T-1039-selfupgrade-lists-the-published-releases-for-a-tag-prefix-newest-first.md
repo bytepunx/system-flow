@@ -23,7 +23,7 @@ tags: [cli]
 touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, design/system/flai-cli.md, design/system/flaiover-dashboard.md]
 usage:
   source: log
-  seconds: 340
+  seconds: 341
   estimated: true
   models:
     - model: claude-opus-5-5
@@ -31,7 +31,7 @@ usage:
       output: 292
       cache_read: 1960000
       cache_write: 80170
-      cost: 0.9243
+      cost: 0.9247
 ---
 # T-1039 selfupgrade lists the published releases for a tag prefix, newest first
 

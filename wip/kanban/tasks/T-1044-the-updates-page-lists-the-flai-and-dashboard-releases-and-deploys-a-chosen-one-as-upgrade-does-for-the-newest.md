@@ -3,16 +3,36 @@ id: T-1044
 type: task
 nature: improvement
 title: The Updates page lists the flai and dashboard releases and deploys a chosen one, as Upgrade does for the newest
-status: backlog
+status: done
 parent: S-0298
 owner: alex
 created: 2026-10-06T21:45:18Z
-updated: 2026-10-06T21:56:38Z
-transitions: []
+updated: 2026-10-07T14:51:28Z
+transitions:
+  - to: ready
+    at: 2026-10-07T14:43:24Z
+    by: agent-S-0298
+  - to: in-progress
+    at: 2026-10-07T14:43:25Z
+    by: agent-S-0298
+  - to: done
+    at: 2026-10-07T14:51:28Z
+    by: agent-S-0298
 stream: S-0298
 tags: [dashboard]
 touches: [flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts]
 after: [T-1042]
+usage:
+  source: log
+  seconds: 482
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 320
+      cache_read: 3700190
+      cache_write: 128918
+      cost: 1.7354
 ---
 # T-1044 The Updates page lists the flai and dashboard releases and deploys a chosen one, as Upgrade does for the newest
 

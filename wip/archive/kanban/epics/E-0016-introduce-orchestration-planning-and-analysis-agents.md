@@ -3,10 +3,10 @@ id: E-0016
 type: epic
 nature: feature
 title: Introduce Orchestration, Planning, and Analysis agents
-status: review
+status: done
 owner: alex
 created: 2026-10-02T10:51:49Z
-updated: 2026-10-07T09:58:22Z
+updated: 2026-10-07T14:57:53Z
 transitions:
   - to: ready
     at: 2026-10-03T06:23:24Z
@@ -17,11 +17,14 @@ transitions:
   - to: review
     at: 2026-10-07T09:58:22Z
     by: agent-S-0216
+  - to: done
+    at: 2026-10-07T14:57:53Z
+    by: alex
 tags: [dashboard, cli]
 topics: [orchestration, planning, analysis]
 usage:
   source: sum
-  seconds: 119854
+  seconds: 120964
   estimated: true
   models:
     - model: claude-haiku-4-5-20251001
@@ -31,11 +34,11 @@ usage:
       cache_write: 1262294
       cost: 4.5448
     - model: claude-opus-5-5
-      input: 18262
-      output: 6188158
-      cache_read: 1073384645
-      cache_write: 27894870
-      cost: 519.0138
+      input: 18442
+      output: 6221726
+      cache_read: 1082987470
+      cache_write: 28045441
+      cost: 522.811
     - model: claude-sonnet-5
       input: 1758
       output: 433950
@@ -151,3 +154,4 @@ Three new agents get introduced to system-flow:
 
 ## Notes
 - 2026-10-07T09:58:22Z: moved to review: follows S-0216, which moved to review
+- 2026-10-07T14:57:53Z: moved to done: follows S-0213, which moved to done

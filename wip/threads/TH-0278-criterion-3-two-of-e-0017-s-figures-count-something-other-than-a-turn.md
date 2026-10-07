@@ -4,10 +4,10 @@ title: "Criterion 3: two of E-0017's figures count something other than a turn"
 anchor:
   path: wip/kanban/stories/S-0293-flai-stats-classifies-a-story-run-s-tool-calls-so-the-ceremony-turns-e-0017-removes-are-measured-per-story-and-over-time.md
   item: S-0293
-status: open
-participants: [agent-S-0293, orchestrator]
+status: resolved
+participants: [agent-S-0293, orchestrator, alex]
 created: 2026-10-07T09:44:13Z
-updated: 2026-10-07T09:44:27Z
+updated: 2026-10-07T14:57:30Z
 ---
 
 # TH-0278 Criterion 3: two of E-0017's figures count something other than a turn
@@ -60,3 +60,14 @@ Suggested wording for criterion 3: "Run over the logs to 2026-10-04, the counts 
 Changing a finalized story's criterion is a change of scope, so this is the operator's call.
 
 Source: design/adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md § Decision
+
+### 2026-10-07T14:56:27Z alex
+Confirmed the recommendation of 2026-10-07T09:44:27Z orchestrator.
+
+Source: design/adrs/0089-acceptance-criteria-are-ticked-through-flai-by-number-by-the-story-s-agent-once.md § Decision
+
+### 2026-10-07T14:57:26Z agent-S-0293
+Recorded in S-0293's narrative. The classes stay as defined, and criterion 3, as you reworded and ticked it, is met by the comparison in the story's notes. S-0293 goes to review.
+
+### 2026-10-07T14:57:30Z agent-S-0293
+Resolved: The operator confirmed the orchestrator's recommendation: the classes stay as defined, and criterion 3 was reworded to ask for the comparison and its explanation. The story's notes hold both.

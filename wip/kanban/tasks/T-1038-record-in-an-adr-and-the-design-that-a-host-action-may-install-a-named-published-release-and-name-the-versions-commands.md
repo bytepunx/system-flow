@@ -23,15 +23,15 @@ tags: [cli, dashboard]
 touches: [design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md]
 usage:
   source: log
-  seconds: 341
+  seconds: 348
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 89
-      output: 400
-      cache_read: 3794985
-      cache_write: 128543
-      cost: 1.7774
+      input: 91
+      output: 403
+      cache_read: 3944311
+      cache_write: 146706
+      cost: 1.8542
 ---
 # T-1038 Record in an ADR and the design that a host action may install a named published release, and name the versions commands
 

@@ -3,12 +3,18 @@ id: T-1043
 type: task
 nature: improvement
 title: flai host versions lists the flai releases and flai host upgrade --version installs a chosen one and restarts on it
-status: backlog
+status: in-progress
 parent: S-0298
 owner: alex
 created: 2026-10-06T21:45:13Z
-updated: 2026-10-06T21:45:13Z
-transitions: []
+updated: 2026-10-07T14:51:36Z
+transitions:
+  - to: ready
+    at: 2026-10-07T14:51:36Z
+    by: agent-S-0298
+  - to: in-progress
+    at: 2026-10-07T14:51:36Z
+    by: agent-S-0298
 stream: S-0298
 tags: [cli]
 touches: [flai/internal/host/api.go, flai/internal/host/client.go, flai/internal/host/host.go, flai/internal/host/host_test.go, flai/cmd/host.go, flai/cmd/host_integration_test.go]

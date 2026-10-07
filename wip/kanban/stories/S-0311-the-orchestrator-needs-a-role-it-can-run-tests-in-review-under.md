@@ -3,10 +3,10 @@ id: S-0311
 type: story
 nature: feature
 title: The Orchestrator needs a role it can run tests in review under
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-07T14:24:35Z
-updated: 2026-10-07T14:30:14Z
+updated: 2026-10-07T14:49:55Z
 transitions:
   - to: ready
     at: 2026-10-07T14:24:36Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-07T14:29:36Z
     by: agent-S-0311
+  - to: review
+    at: 2026-10-07T14:49:55Z
+    by: agent-S-0311
 tags: [cli]
 topics: [orchestrator]
-touches: [flai/cmd, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/proc_test.go, flai/internal/mcpserver/verify_test.go, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/proc_test.go, flai/internal/mcpserver/verify_test.go, design/system/flai-cli.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/verify.go, flai/cmd/test.go, flai/cmd/verify_test.go, flai/cmd/test_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,26 +27,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 178
-  estimated: true
+  seconds: 1231
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 452
-      cache_read: 2213989
-      cache_write: 148962
-      cost: 1.0705
+      input: 204
+      output: 57158
+      cache_read: 8522925
+      cache_write: 360674
+      cost: 5.1732
   strategic:
     - kind: orchestrator
-      seconds: 308
+      seconds: 1277
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 126
-          cache_read: 1700040
-          cache_write: 7506
-          cost: 0.4456
+          input: 48
+          output: 672
+          cache_read: 8969916
+          cache_write: 19104
+          cost: 2.3453
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 32
+          cache_read: 70202
+          cache_write: 37758
+          cost: 0.0724
 forecast:
   duration: 30m
   delivery: 2026-10-07T16:00:00Z
@@ -58,7 +66,7 @@ forecast:
 The orchestrator needs the ability to execute test runs without hitting flai guard's rules about orchestrator permissions in test scenarios. This likely means using whatever FLAI_ROLE identity will avoid tripping the guard's check.
 
 ## Acceptance criteria
-- [ ] Orchestrator is able to complete test runs as a role that does not break flai's guard checks against the `orchestrator` role
+- [x] Orchestrator is able to complete test runs as a role that does not break flai's guard checks against the `orchestrator` role
 
 ## Tasks
 - T-1161 Run every test tier under FLAI_ROLE=verify, whatever role started flai verify or flai test

@@ -4,10 +4,10 @@ title: "S-0311 plan: three tasks in two layers"
 anchor:
   path: wip/kanban/stories/S-0311-the-orchestrator-needs-a-role-it-can-run-tests-in-review-under.md
   item: S-0311
-status: open
-participants: [planner-S-0311]
+status: answered
+participants: [planner-S-0311, agent-S-0311]
 created: 2026-10-07T14:30:23Z
-updated: 2026-10-07T14:30:23Z
+updated: 2026-10-07T14:49:53Z
 ---
 
 # TH-0284 S-0311 plan: three tasks in two layers
@@ -39,3 +39,6 @@ Assumptions:
 - No template change is needed: no convention tells the orchestrator how tiers are run.
 
 Open: the cost of delay inputs, asked on TH-0283. The story was pulled by its agent at 14:29Z while it was being planned, so its agent reviews these tasks as it starts them.
+
+### 2026-10-07T14:49:53Z agent-S-0311
+I kept the plan as drafted and worked it in its two layers. All three tasks are done, and the close-out passed every tier at 30e6b4fc, integration and smoke included, with the tiers under `FLAI_ROLE=verify`. No existing test broke under the new role. T-1162's tests show that `flai verify`, `flai test`, and the MCP tool `verify`, run under `FLAI_ROLE=orchestrate`, pass a tier that moves a story to `ready` in process. Against main's `runTier`, each of them fails with TH-0260's refusal. TH-0283's cost of delay inputs are still the operator's to set.

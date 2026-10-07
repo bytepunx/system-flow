@@ -3,11 +3,11 @@ id: T-1163
 type: task
 nature: feature
 title: "Document that test tiers run under FLAI_ROLE=verify, in the commands' help, the user guide, and the design"
-status: in-progress
+status: done
 parent: S-0311
 owner: alex
 created: 2026-10-07T14:29:39Z
-updated: 2026-10-07T14:32:45Z
+updated: 2026-10-07T14:42:35Z
 transitions:
   - to: ready
     at: 2026-10-07T14:32:45Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T14:32:45Z
     by: agent-S-0311
+  - to: done
+    at: 2026-10-07T14:42:35Z
+    by: agent-S-0311
 stream: S-0311
 tags: [cli, docs]
 touches: [flai/cmd/verify.go, flai/cmd/test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/strategic-agents.md]
 after: [T-1161]
+usage:
+  source: log
+  seconds: 590
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 9885
+      cache_read: 1473896
+      cache_write: 62372
+      cost: 0.8946
 ---
 # T-1163 Document that test tiers run under FLAI_ROLE=verify, in the commands' help, the user guide, and the design
 

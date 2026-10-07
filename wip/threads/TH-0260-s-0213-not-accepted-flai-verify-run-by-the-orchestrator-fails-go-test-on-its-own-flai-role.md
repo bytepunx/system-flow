@@ -4,10 +4,10 @@ title: "S-0213 not accepted: flai verify run by the orchestrator fails go-test o
 anchor:
   path: wip/kanban/stories/S-0213-charts-show-cost-of-delay-outstanding-incurred-and-what-the-pull-order-costs.md
   item: S-0213
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T08:44:08Z
-updated: 2026-10-07T08:44:08Z
+updated: 2026-10-07T14:57:53Z
 ---
 
 # TH-0260 S-0213 not accepted: flai verify run by the orchestrator fails go-test on its own FLAI_ROLE
@@ -45,3 +45,6 @@ Everything else is clear:
   - 5: `charts.ts`, `+page.svelte`, the design and user guides, and the tests in `costorder_test.go`, `costofdelay_test.go`, `statsread_test.go`, `check_stats_test.go`, `charts.test.ts`, and `charts.svelte.test.ts`
 
 Separately, this is a flai defect worth a story: `flai verify` run by the orchestrator, through the CLI or the MCP tool, fails any story whose tests run flai writes. Until it is fixed, I cannot accept a story whose tests do that.
+
+### 2026-10-07T14:57:53Z alex
+Resolved: S-0213 was accepted

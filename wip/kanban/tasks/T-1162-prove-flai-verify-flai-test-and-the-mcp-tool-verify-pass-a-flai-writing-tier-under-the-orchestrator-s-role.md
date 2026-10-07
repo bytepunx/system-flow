@@ -3,11 +3,11 @@ id: T-1162
 type: task
 nature: feature
 title: Prove flai verify, flai test, and the MCP tool verify pass a flai-writing tier under the orchestrator's role
-status: in-progress
+status: done
 parent: S-0311
 owner: alex
 created: 2026-10-07T14:29:30Z
-updated: 2026-10-07T14:32:45Z
+updated: 2026-10-07T14:42:30Z
 transitions:
   - to: ready
     at: 2026-10-07T14:32:44Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-07T14:32:45Z
     by: agent-S-0311
+  - to: done
+    at: 2026-10-07T14:42:30Z
+    by: agent-S-0311
 stream: S-0311
 tags: [cli]
 touches: [flai/cmd/verify_test.go, flai/cmd/test_test.go, flai/internal/mcpserver/verify_test.go]
 after: [T-1161]
+usage:
+  source: log
+  seconds: 585
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 19286
+      cache_read: 2875833
+      cache_write: 121700
+      cost: 1.7456
 ---
 # T-1162 Prove flai verify, flai test, and the MCP tool verify pass a flai-writing tier under the orchestrator's role
 

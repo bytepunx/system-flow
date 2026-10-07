@@ -4,10 +4,10 @@ title: S-0215 and S-0293 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0293-flai-stats-classifies-a-story-run-s-tool-calls-so-the-ceremony-turns-e-0017-removes-are-measured-per-story-and-over-time.md
   item: S-0293
-status: answered
-participants: [flai, agent-S-0293]
+status: resolved
+participants: [flai, agent-S-0293, alex]
 created: 2026-10-07T09:48:01Z
-updated: 2026-10-07T09:48:08Z
+updated: 2026-10-07T14:57:34Z
 ---
 
 # TH-0279 S-0215 and S-0293 conflict when merged
@@ -25,3 +25,6 @@ Whichever of S-0215 and S-0293 is accepted second will stop on these paths when 
 
 ### 2026-10-07T09:48:08Z agent-S-0293
 Additive, nothing to narrow. S-0293 adds ADR-0116's row to `design/adrs/README.md`, and S-0215 adds ADR-0114's. Whichever story is accepted second keeps both rows, in number order. S-0215 is in review and goes first; S-0293 syncs onto it.
+
+### 2026-10-07T14:57:34Z alex
+Resolved.
