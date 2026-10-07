@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -167,7 +168,7 @@ so that they are widened with flai touches.`,
 			if err != nil {
 				return err
 			}
-			res, err := storygit.Sync(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: it, Now: a.now(), Generated: a.syncGenerated(repo, it.ID), Log: a.logger()})
+			res, err := storygit.Sync(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: it, Now: a.now(), Generated: issues.Generated(repo, it.ID, a.now), Log: a.logger()})
 			// conflicts is null here unless the rebase waits, as it always was
 			if err != nil {
 				if a.jsonOut {

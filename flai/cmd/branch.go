@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/gitver"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
@@ -207,7 +206,7 @@ func nonNil(l []string) []string {
 // a *syncStopped, with the conflicting paths when there are any.
 func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conflicts []string, err error) {
 	// the rebase reads only the story's ID
-	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Generated: a.syncGenerated(repo, id), Log: a.logger()})
+	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Generated: issues.Generated(repo, id, a.now), Log: a.logger()})
 	if err != nil {
 		return res.Base, nil, err
 	}
@@ -215,25 +214,6 @@ func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conf
 		return res.Base, res.Conflicts, syncStoppedFrom(res)
 	}
 	return res.Base, nil, nil
-}
-
-// generatedFile is a committed file flai writes from others, so a rebase
-// stopped on it alone is resolved by writing it again (ADR-0098).
-type generatedFile struct {
-	path       string // relative to the repository root, as git names it
-	regenerate func(repo *workitem.Repo, now time.Time) error
-}
-
-// generatedFiles is every generated file: design/issues/summary.md alone
-// today, written from the issue files.
-func generatedFiles(repo *workitem.Repo) []generatedFile {
-	return []generatedFile{{
-		path: issues.SummaryPath(repo),
-		regenerate: func(r *workitem.Repo, now time.Time) error {
-			_, err := issues.WriteSummary(r, now)
-			return err
-		},
-	}}
 }
 
 // mergeStoryBranch brings a story's branch into the main branch: the

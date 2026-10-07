@@ -16,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -817,8 +818,8 @@ func TestGeneratedPathsAreTheIssueSummary(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got []string
-	for _, f := range generatedFiles(repo) {
-		got = append(got, f.path)
+	for _, f := range issues.Generated(repo, "S-0001", time.Now) {
+		got = append(got, f.Path)
 	}
 	if strings.Join(got, ",") != "design/issues/summary.md" {
 		t.Errorf("generated paths: %q", got)

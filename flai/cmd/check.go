@@ -10,9 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/check"
-	"github.com/bytepunx/system-flow/flai/internal/gitver"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
-	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -67,28 +65,16 @@ whether or not it passes; a failure to record is an error.`,
 			if err != nil {
 				return err
 			}
-			res, err := check.Run(repo, a.now())
-			if err != nil {
-				return err
-			}
-			// The clone may need a newer git than the one installed (ADR-0022).
-			// No git on PATH means nothing here depends on its version.
-			if v, err := gitver.Installed(a.runner); err == nil {
-				check.GitCompat(res, repo, v)
-			}
 			if story != "" {
 				it, err := repo.Get(story)
 				if err != nil {
 					return err
 				}
 				story = it.ID
-				changed, err := storygit.StoryChanges(a.runner, repo, story)
-				if err != nil {
-					return fmt.Errorf("scope the check to %s: %w", story, err)
-				}
-				if err := check.ScopeToStory(res, repo, story, changed); err != nil {
-					return err
-				}
+			}
+			res, err := check.RunScoped(repo, a.runner, a.now(), story)
+			if err != nil {
+				return err
 			}
 			var recorded []recordedIssue
 			if record {

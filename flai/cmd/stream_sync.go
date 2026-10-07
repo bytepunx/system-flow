@@ -5,25 +5,12 @@ import (
 	"io"
 	"strings"
 
-	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // flai stream sync runs storygit.Sync, the rebase and the checks after it
 // (ADR-0069, S-0131, ADR-0046), and prints what it answers.
-
-// syncGenerated is the generated files for storygit.Sync, each written again
-// in story id's worktree at the clock's time when a rebase stops on it alone
-// (ADR-0098).
-func (a *app) syncGenerated(repo *workitem.Repo, id string) []storygit.GeneratedFile {
-	wt := issues.RepoFor(repo, id)
-	var out []storygit.GeneratedFile
-	for _, f := range generatedFiles(repo) {
-		out = append(out, storygit.GeneratedFile{Path: f.path, Regenerate: func() error { return f.regenerate(wt, a.now()) }})
-	}
-	return out
-}
 
 // syncStoppedFrom is the stop a sync's result describes, for the report it
 // prints and the error it exits with.
