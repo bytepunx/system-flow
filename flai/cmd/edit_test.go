@@ -91,9 +91,17 @@ func TestEditRetitlesEverywhere(t *testing.T) {
 		t.Errorf("commit message: %s", msg)
 	}
 	// the fixture is not a whole project, so the check has things to say about its layout;
-	// none of them may be about the story, its parent, its narrative, or the link
-	if out, _, _ := runIn(t, root, "check"); strings.Contains(out, "S-0001") || strings.Contains(out, "E-0001") || strings.Contains(out, "plan.md") {
-		t.Errorf("the check has nothing to say about what the retitle touched:\n%s", out)
+	// none of them may be about the story, its parent, its narrative, or the link,
+	// save narrative.state on the narrative the fixture opened and never wrote
+	checked, _, _ := runIn(t, root, "check")
+	var kept []string
+	for _, l := range strings.Split(checked, "\n") {
+		if !strings.Contains(l, ": narrative.state: ") {
+			kept = append(kept, l)
+		}
+	}
+	if checked = strings.Join(kept, "\n"); strings.Contains(checked, "S-0001") || strings.Contains(checked, "E-0001") || strings.Contains(checked, "plan.md") {
+		t.Errorf("the check has nothing to say about what the retitle touched:\n%s", checked)
 	}
 }
 
