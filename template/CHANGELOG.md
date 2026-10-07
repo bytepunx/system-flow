@@ -2,6 +2,7 @@
 
 ## 1.0.76 - 2026-10-07
 
+- S-0332 flai tells two stories' agents of a trial-merge conflict or a grown overlap with a message between them, and asks the operator only when they do not agree (patch).
 - S-0332 flai tells two stories' agents of a trial-merge conflict or a grown overlap with a message between them, and asks the operator only when they do not agree (patch, ADR-0121): `work-management.md` says that when a write grows the two stories' claims to overlap, flai has messaged the other story from the one whose claim grew, in the two stories' conversation, `about` the paths, and you agree there with `message_reply`, or `flai message reply`, which of you changes them first before you change them. When `flai stream sync` finds that your branch conflicts with another open story's, it tells the two stories in their conversation, not on a thread, and names the conversation: you answer it and settle who changes what, one of you narrowing its change or naming the other in `after:` and waiting for it, and the next sync that finds the two merging cleanly closes the conversation. You ask the operator only when the two of you do not agree, with `flai message escalate <MS-nnnn> "<reason>"`, or `message_escalate`, which opens a thread on your story and records it in the conversation, which stays open. It needs a flai that has it; an older flai opens a conflict thread at sync and has no `flai message escalate`.
 
 ## 1.0.75 - 2026-10-07
