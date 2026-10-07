@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T22:44:05Z
+updated: 2026-10-07T22:48:25Z
 transitions: []
 tags: [dashboard]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T22:13:41Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T04:38:00Z
-  basis: "Planner's 45m over flai's 20m: three tasks, one of them pulling a multi-platform image twice by digest with Docker; after S-0232."
-  by: planner-S-0234
-  at: 2026-10-07T22:44:05Z
+  delivery: 2026-10-08T00:18:00Z
+  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 3, behind S-0232, S-0332 and S-0233."
+  by: flai
+  at: 2026-10-07T22:48:25Z
 ---
 # S-0234 The flaiover image's digest list is signed in CI and published on a flaiover GitHub release
 
