@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.77 - 2026-10-07
+
+- S-0280 A close-out records no `item.archive` (patch, ADR-0122): `work-management.md` says that an `item.archive`, a done or cancelled item not yet archived, is left out of a close-out's check, as a `wip.overlap` between two other stories is, since it never names your story and only `flai archive` in the main checkout clears it. It needs a flai that has it; an older flai still records every `item.archive` at close-out.
+
 ## 1.0.76 - 2026-10-07
 
 - S-0332 flai tells two stories' agents of a trial-merge conflict or a grown overlap with a message between them, and asks the operator only when they do not agree (patch).
