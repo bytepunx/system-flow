@@ -3,17 +3,20 @@ id: T-1088
 type: task
 nature: improvement
 title: The flaiover scripts install flaiover's dependencies in a story worktree that lacks them, so close-out's flaiover step and vitest run there
-status: in-progress
+status: done
 parent: S-0281
 owner: alex
 created: 2026-10-06T22:52:53Z
-updated: 2026-10-07T00:50:35Z
+updated: 2026-10-07T00:55:22Z
 transitions:
   - to: ready
     at: 2026-10-07T00:50:34Z
     by: agent-S-0281
   - to: in-progress
     at: 2026-10-07T00:50:35Z
+    by: agent-S-0281
+  - to: done
+    at: 2026-10-07T00:55:22Z
     by: agent-S-0281
 stream: S-0281
 tags: [devex]

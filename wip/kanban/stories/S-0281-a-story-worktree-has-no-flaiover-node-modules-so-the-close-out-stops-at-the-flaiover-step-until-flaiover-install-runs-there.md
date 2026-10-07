@@ -6,7 +6,7 @@ title: A story worktree has no flaiover/node_modules, so the close-out stops at 
 status: in-progress
 owner: alex
 created: 2026-10-05T07:09:06Z
-updated: 2026-10-07T00:49:54Z
+updated: 2026-10-07T00:55:52Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:44Z
@@ -46,8 +46,8 @@ finalized:
 This story remediates [I-0080](../../../design/issues/I-0080-a-story-worktree-has-no-flaiover-node-modules-so-the-close-out-stops-at-the-flaiover-step-until-flaiover-install-runs-there.md), "A story worktree has no flaiover/node_modules, so the close-out stops at the flaiover step until flaiover-install runs there". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0080 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0080 is closed with `flai issue close I-0080 --reason` saying what fixed it
+- [x] The cause I-0080 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0080 is closed with `flai issue close I-0080 --reason` saying what fixed it
 
 ## Tasks
 - T-1088 The flaiover scripts install flaiover's dependencies in a story worktree that lacks them, so close-out's flaiover step and vitest run there

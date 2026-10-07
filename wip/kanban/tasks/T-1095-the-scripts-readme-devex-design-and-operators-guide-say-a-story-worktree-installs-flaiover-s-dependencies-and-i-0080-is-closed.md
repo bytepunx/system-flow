@@ -3,12 +3,21 @@ id: T-1095
 type: task
 nature: improvement
 title: The scripts README, devex design, and operators' guide say a story worktree installs flaiover's dependencies, and I-0080 is closed
-status: backlog
+status: done
 parent: S-0281
 owner: alex
 created: 2026-10-06T22:53:04Z
-updated: 2026-10-06T22:53:04Z
-transitions: []
+updated: 2026-10-07T00:55:51Z
+transitions:
+  - to: ready
+    at: 2026-10-07T00:55:22Z
+    by: agent-S-0281
+  - to: in-progress
+    at: 2026-10-07T00:55:23Z
+    by: agent-S-0281
+  - to: done
+    at: 2026-10-07T00:55:51Z
+    by: agent-S-0281
 stream: S-0281
 tags: [devex, docs]
 touches: [scripts/README.md, design/system/devex.md, docs/operators/index.md, design/issues/I-0080-a-story-worktree-has-no-flaiover-node-modules-so-the-close-out-stops-at-the-flaiover-step-until-flaiover-install-runs-there.md, design/issues/summary.md]
