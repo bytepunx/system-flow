@@ -235,7 +235,7 @@ func Prompt(r Request) string {
 
 Do only this. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md, for how commits are made here. In the worktree, read git status and git diff. Commit the changes on story/%[2]s, in commits whose messages name %[2]s and say what changed and why, after the lint and tests the project runs for what they touch; fix what they find only when it is part of the same work. Discard a file only when it is plainly output that does not belong in the repository, and say which in the story's narrative with flai stream log %[2]s. Do not move %[2]s or its tasks, do not change anything the uncommitted work does not already change, and do not start other work. When git status in the worktree is clean, log what you committed with flai stream log %[2]s and end.
 
-If a change cannot be committed without the designer deciding something, ask with the flai MCP tool thread_open on %[2]s, then call the flai MCP tool wait_for_events, again each time it returns, until the thread has an answer, and go on.`, r.Name, r.Story, r.Commit)
+If a change cannot be committed without the designer deciding something, ask with the flai MCP tool thread_open on %[2]s, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps, saying what you asked and what is left to commit, and end: flai serve starts you again in this session when the thread is answered, and your first inbox holds the answer. Do not hold the flai MCP tool wait_for_events for an answer; when it answers end: true, write the narrative's Current state and Next steps, and end.`, r.Name, r.Story, r.Commit)
 	}
 	if r.Answered != "" {
 		return fmt.Sprintf(`The designer has answered your question %[3]s on %[2]s. Read the answer with the flai MCP tool thread_get (or flai thread show %[3]s), then go on working %[2]s to review as before.
@@ -515,11 +515,13 @@ While you work, run only the tests for what you changed, yourself, with flai tes
 }
 
 // rules is what every run working a story is told: how its issues are
-// recorded (S-0198), how to ask the designer, that it ticks each acceptance
-// criterion through flai once it has verified it (S-0282, ADR-0089), and how
-// it goes to review or blocks.
+// recorded (S-0198), how to ask the designer, and that with nothing left but
+// the answer, or when wait_for_events answers end, it writes the narrative's
+// state and ends, for flai serve starts it again on the answer (S-0272); that
+// it ticks each acceptance criterion through flai once it has verified it
+// (S-0282, ADR-0089); and how it goes to review or blocks.
 func rules(r Request) string {
 	return fmt.Sprintf(`Record friction, defects, and blockers you hit with flai issue new, or flai issue bump when the issue exists: each instance names %[1]s. Make no story for them yourself: %[1]s's review page lists them, checked, so the operator chooses at acceptance which become backlog stories. Make one with flai issue story or the flai MCP tool issue_story only when the operator asks, or when flai check warns issues.no-story.
 
-When you need the designer to decide something, ask with the flai MCP tool thread_open on %[1]s, then call the flai MCP tool wait_for_events, again each time it returns, until the thread has an answer, and go on. If you end while the question is open, flai starts you again when it is answered. Tick each acceptance criterion with flai criteria tick %[1]s <n> (or the flai MCP tool criteria_tick) as soon as you have verified it, never by editing %[1]s's file; leave one you cannot verify here unticked and say why in %[1]s's notes. When every acceptance criterion is met, commit everything outstanding in the worktree, so that git status there is clean, run flai stream sync %[1]s again and resolve what it lists, then move %[1]s to review with flai move %[1]s review and end: the move is refused while anything is uncommitted. If you cannot go on, block the story with flai block %[1]s --reason and say why in its narrative, then end.`, r.Story)
+When you need the designer to decide something, ask with the flai MCP tool thread_open on %[1]s, and go on with the work of %[1]s that does not wait on the answer. When nothing is left but the answer, write the narrative's Current state and Next steps, saying what you asked and what you will do with each answer, and end: flai serve starts you again in this session when the thread is answered, and your first inbox holds the answer. Do not hold the flai MCP tool wait_for_events for an answer; when it answers end: true, do as its why says: write the narrative's Current state and Next steps, and end. Tick each acceptance criterion with flai criteria tick %[1]s <n> (or the flai MCP tool criteria_tick) as soon as you have verified it, never by editing %[1]s's file; leave one you cannot verify here unticked and say why in %[1]s's notes. When every acceptance criterion is met, commit everything outstanding in the worktree, so that git status there is clean, run flai stream sync %[1]s again and resolve what it lists, then move %[1]s to review with flai move %[1]s review and end: the move is refused while anything is uncommitted. If you cannot go on, block the story with flai block %[1]s --reason and say why in its narrative, then end.`, r.Story)
 }

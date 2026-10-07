@@ -284,6 +284,67 @@ func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {
 	}
 }
 
+// S-0272: a story's agent, started, answered, or committing, asks on a
+// thread, writes the narrative's state, and ends rather than holding
+// wait_for_events for the answer, and ends when wait_for_events answers end;
+// flai serve starts it again on the answer. The planner, the orchestrator, and
+// the analyzer, whom flai serve does not start again, still hold.
+func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
+	ends := []string{
+		"write the narrative's Current state and Next steps, saying what you asked",
+		"and end: flai serve starts you again in this session when the thread is answered, and your first inbox holds the answer",
+		"Do not hold the flai MCP tool wait_for_events for an answer; when it answers end: true",
+	}
+	answered := req(nil)
+	answered.Answered = "TH-0001"
+	commit := req(nil)
+	commit.Commit = "/repo/.flai-cache/worktrees/S-0104"
+	for name, r := range map[string]Request{"story": req(nil), "answered": answered, "commit": commit} {
+		p := Prompt(r)
+		for _, want := range ends {
+			if !strings.Contains(p, want) {
+				t.Errorf("the %s run's prompt lacks %q:\n%s", name, want, p)
+			}
+		}
+		if strings.Contains(p, "until the thread has an answer") || strings.Contains(p, "If you end while the question is open") {
+			t.Errorf("the %s run's prompt still holds wait_for_events for an answer:\n%s", name, p)
+		}
+	}
+	p := Prompt(req(nil))
+	for _, want := range []string{
+		"ask with the flai MCP tool thread_open on S-0104, and go on with the work of S-0104 that does not wait on the answer. When nothing is left but the answer, write the narrative's Current state and Next steps, saying what you asked and what you will do with each answer, and end",
+		"when it answers end: true, do as its why says: write the narrative's Current state and Next steps, and end.",
+		// S-0285: still never ends nor waits on wait_for_events while a sub-agent runs
+		"Never end your turn while a sub-agent runs in the background",
+		"Never wait for a sub-agent with the flai MCP tool wait_for_events either",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("the story run's prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if p := Prompt(commit); !strings.Contains(p, "ask with the flai MCP tool thread_open on S-0104, and commit what does not wait on the answer. Then write the narrative's Current state and Next steps, saying what you asked and what is left to commit, and end") {
+		t.Errorf("the commit run's prompt:\n%s", p)
+	}
+	for name, c := range map[string]struct {
+		r    Request
+		hold string
+	}{
+		"planner":      {planReq("E-0016", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
+		"analyzer":     {analyzeReq("risk", nil), "and hold the flai MCP tool wait_for_events, again each time it returns, until the thread is answered; then go on"},
+		"orchestrator": {orchestrateReq(nil), "Then hold the flai MCP tool wait_for_events, again each time it returns"},
+	} {
+		p := Prompt(c.r)
+		if !strings.Contains(p, c.hold) {
+			t.Errorf("the %s's prompt no longer holds wait_for_events:\n%s", name, p)
+		}
+		for _, w := range ends {
+			if strings.Contains(p, w) {
+				t.Errorf("the %s's prompt says %q, a story agent's rule:\n%s", name, w, p)
+			}
+		}
+	}
+}
+
 // S-0175, ADR-0059: the claude-code prompt says when to delegate, what to
 // give a sub-agent, and to verify before review; the operator's command gets
 // no prompt, and an answered or commit run is not told again.
