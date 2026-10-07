@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.67 - 2026-10-07
+
+- S-0272 A story's agent with an open question ends instead of waiting, and flai serve starts it again on the answer (patch): `work-management.md` says that when you need the designer to decide something, you ask on a thread on the story or the task and go on with any work of the story that does not wait on the answer; when nothing is left but the answer, you write the narrative's `## Current state` and `## Next steps`, naming the question and what each answer leads to, and end the session, and `flai serve` starts you again, in the same session, when the thread is answered, with the answer in your first `inbox`. When `wait_for_events` answers `end: true`, the agent does the same; its `why` names the open question. An agent run by hand, not by `flai serve`, is not started again and holds `wait_for_events` until the thread is answered. `delegation.md` says to end on an open question only once every sub-agent is back, and that `wait_for_events` is held for a thread awaiting the designer by an agent that `flai serve` does not start again. The planner, the orchestrator, and the analyzer still hold `wait_for_events` for an answer. The `end: true` answer needs a flai that has it.
+
 ## 1.0.66 - 2026-10-07
 
 - S-0273 flai test runs the project's test and lint tiers for a path or a package and answers pass or the first failures as findings (patch).
