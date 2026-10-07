@@ -81,6 +81,36 @@ describe('/api/agent-stream/[story]', () => {
 		]);
 	});
 
+	// S-0228: the orchestrator's and the analyzer's pages read their runs' streams by role
+	it("asks flai for the newest run of the role's stream when the query has a role", async () => {
+		answer = { story: '', agent: 'analyzer', running: true, from: 0, next: 10, entries: [] };
+		let r = await doGet('analyzer', '?role=analyze');
+		expect(r.status).toBe(200);
+		expect(await r.json()).toMatchObject(answer as object);
+		r = await doGet('orchestrator', '?role=orchestrate&after=4096');
+		expect(r.status).toBe(200);
+		r = await doGet('S-0142', '?role=orchestrate&plan&orchestrator');
+		expect(r.status).toBe(200);
+		expect(asked.filter((a) => a.method !== 'project.info')).toEqual([
+			{ method: 'agent.stream', params: { role: 'analyze' } },
+			{ method: 'agent.stream', params: { role: 'orchestrate', after: 4096 } },
+			{ method: 'agent.stream', params: { role: 'orchestrate' } }
+		]);
+		refuse = new AgentError(502, 'flai serve has started no analyzer for the project', -32004);
+		r = await doGet('analyzer', '?role=analyze');
+		expect(r.status).toBe(404);
+		expect((await r.json()).error).toContain('no analyzer');
+	});
+
+	it('refuses a role that is not one, asking flai nothing', async () => {
+		for (const query of ['?role=plan', '?role=', '?role=orchestrator']) {
+			const r = await doGet('analyzer', query);
+			expect(r.status).toBe(400);
+			expect((await r.json()).error).toContain('role must be one of orchestrate, analyze');
+		}
+		expect(asked.filter((a) => a.method === 'agent.stream')).toEqual([]);
+	});
+
 	it("passes on flai's refusals: no agent is a 404, a bad ID a 400", async () => {
 		refuse = new AgentError(502, 'flai serve has started no agent for S-0142', -32004);
 		let r = await doGet('S-0142');

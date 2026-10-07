@@ -21,6 +21,8 @@ import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { log } from './log';
 import { version } from './metrics';
+import type { PlanRun } from '$lib/activity';
+import type { AnalyzerRun, OrchestratorRun } from '$lib/strategic';
 
 export const AGENT_PATH = '/agent';
 export const PROTOCOL = 1;
@@ -144,8 +146,27 @@ export const REQUIRED_METHODS = [
 	// S-0208: the planner for an epic or a story, gated by the plan host action
 	'plan.run',
 	// S-0223: the analyzer for the project, with a focus or none, gated by the analyze host action
-	'analyze.run'
+	'analyze.run',
+	// S-0228: the orchestrator held stopped, and let start again, gated by the orchestrate host action
+	'orchestrate.stop',
+	'orchestrate.start'
 ];
+
+/**
+ * agent.status's answer as the strategic agents' pages read it (S-0228): each item's newest planner
+ * run, and the project's newest orchestrator run, with whether the operator holds it stopped, and
+ * newest analyzer run, each with the runs before it, newest first (flai keeps twenty).
+ */
+export type StrategicStatus = {
+	enabled: boolean;
+	state?: {
+		plans?: Record<string, PlanRun>;
+		orchestrator?: OrchestratorRun | null;
+		analyzer?: AnalyzerRun | null;
+		past_orchestrators?: OrchestratorRun[] | null;
+		past_analyzers?: AnalyzerRun[] | null;
+	};
+};
 
 export type AgentStatus = {
 	/** false when the dashboard was given no agent credential (an older flai started it). */
