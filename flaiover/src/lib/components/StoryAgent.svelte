@@ -10,7 +10,9 @@
 	// with each story it names linked, whether or not the agent action is on, and hands the hold to
 	// the page for its header (S-0129). Start agent and Retry override a hold, as on the host. For a
 	// story in progress that this host has had no agent for, begun on another host or outside flai
-	// serve, it says by whom, where, and when, and Start agent has flai restart it here (S-0177).
+	// serve, it says by whom, where, and when, and Start agent has flai restart it here (S-0177). An agent
+	// that waits on other stories' agents' replies rather than the operator names those stories, linked
+	// (S-0335).
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { follow, listen } from '$lib/events';
@@ -161,6 +163,17 @@
 		{/if}
 		{#if activity.state === 'waiting' && activity.thread}
 			<p class="mt-1 text-xs">It asked in {activity.thread}: answer it below and it goes on.</p>
+		{/if}
+		{#if activity.state === 'waiting' && activity.waits_on?.length}
+			<p class="mt-1 text-xs" data-testid="story-agent-waits-on">
+				It waits on {activity.waits_on.length === 1 ? 'the agent of' : 'the agents of'}
+				{#each activity.waits_on as id, i (id)}{i ? ', ' : ''}<a
+						class="underline"
+						href={resolve('/items/[id]', { id })}>{id}</a
+					>{/each}{activity.conversations?.length
+					? ` in ${activity.conversations.join(', ')}`
+					: ''}: it goes on when one replies or writes to this story.
+			</p>
 		{/if}
 		{#if activity.state === 'failed'}
 			<p class="mt-1 text-xs text-muted" data-testid="story-agent-failed">

@@ -104,6 +104,27 @@ describe('StoryAgent (S-0104)', () => {
 			'agent waiting (claude-code, claude-haiku-4-5): waiting for an answer to TH-0009: Which port?'
 		);
 		expect(text()).toContain('It asked in TH-0009: answer it below and it goes on.');
+		expect(document.querySelector('[data-testid="story-agent-waits-on"]')).toBeNull();
+	});
+
+	// S-0335: an agent that waits on another story's agent's reply names that story, linked, rather
+	// than asking the operator to answer.
+	it("says the agent waits on another story's agent, naming the story", async () => {
+		await show({
+			'S-0104': {
+				state: 'waiting',
+				why: "waiting for S-0201's agent to reply on MS-0002: May I take board.go?",
+				waits_on: ['S-0201'],
+				conversations: ['MS-0002'],
+				run: { ...run, outcome: 'asked', ended: '2026-09-23T18:05:00Z' }
+			}
+		});
+		const line = document.querySelector<HTMLElement>('[data-testid="story-agent-waits-on"]')!;
+		expect(line.textContent!.replace(/\s+/g, ' ')).toContain(
+			'It waits on the agent of S-0201 in MS-0002: it goes on when one replies or writes to this story.'
+		);
+		expect(line.querySelector('a')!.getAttribute('href')).toContain('/items/S-0201');
+		expect(text()).not.toContain('answer it below');
 	});
 
 	// S-0154: flai serve says when a story's agent starts or ends, which changes no file.

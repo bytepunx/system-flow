@@ -26,6 +26,10 @@ export type AgentRun = {
 	session?: string;
 	/** The question it ended waiting on, when it did. */
 	thread?: string;
+	/** The conversations with other stories' agents it ended on, when it did (S-0335). */
+	conversations?: string[];
+	/** The stories whose agents' replies it ended waiting on (S-0335). */
+	waits_on?: string[];
 };
 
 export type ActivityState = 'working' | 'waiting' | 'failed' | 'worked';
@@ -85,6 +89,10 @@ export type StoryActivity = {
 	why?: string;
 	run: AgentRun;
 	thread?: string;
+	/** The stories whose agents' replies it waits on, rather than the operator's (S-0335). */
+	waits_on?: string[];
+	/** The conversations it waits on them in (S-0335). */
+	conversations?: string[];
 	/** Set for a held story in ready, whether or not it has had an agent (S-0129). */
 	hold?: Hold;
 	/** Set for a story in progress begun with no agent of this host's (S-0177). */
