@@ -80,7 +80,9 @@ func newAdrNewCmd(a *app) *cobra.Command {
 		Use:   "new \"<title>\"",
 		Short: "Record a new ADR: number, file, front matter, and index row are supplied",
 		Long: `Record an architecture decision. The number is one more than the highest
-NNNN-*.md present in design/adrs (gaps are not filled). The file is
+NNNN-*.md in design/adrs in this checkout, on main, in any story's worktree
+(uncommitted files included), and on any story branch, so parallel stories
+do not take the same number; gaps are not filled. The file is
 NNNN-slug.md with id, title, status, date, supersedes, superseded_by, and
 refines when given; its row is added to design/adrs/README.md; each ADR it
 supersedes gets superseded_by set, the one edit allowed to an accepted ADR.

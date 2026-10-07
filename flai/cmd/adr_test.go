@@ -160,6 +160,38 @@ func TestAdrNewRefusals(t *testing.T) {
 	}
 }
 
+// I-0063: an ADR another story recorded, committed on its branch or not yet
+// committed in its worktree, holds its number, so a third story's ADR takes
+// the next one.
+func TestAdrNewNumbersPastEveryStorysAdrs(t *testing.T) {
+	root := adrProject(t)
+	t.Setenv("FLAI_STORY", "")
+	writeAdr := func(dir, n, title string) {
+		t.Helper()
+		path := filepath.Join(dir, "design", "adrs", n+"-"+strings.ToLower(title)+".md")
+		if err := os.WriteFile(path, []byte(adrFile(n, title, "proposed")), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	worktree := func(story string) string {
+		t.Helper()
+		wt := filepath.Join(root, ".flai-cache", "worktrees", story)
+		gitIn(t, root, "worktree", "add", "-q", "-b", "story/"+story, wt)
+		return wt
+	}
+	one := worktree("S-0001")
+	writeAdr(one, "0008", "Committed")
+	gitIn(t, one, "add", "-A")
+	gitIn(t, one, "commit", "-q", "-m", "one")
+	gitIn(t, root, "worktree", "remove", one)
+	writeAdr(worktree("S-0002"), "0009", "Uncommitted")
+
+	out, errOut, code := runIn(t, worktree("S-0003"), "adr", "new", "Third story's decision")
+	if code != 0 || !strings.HasPrefix(out, "ADR-0010 ") {
+		t.Errorf("adr new in a third story's worktree should be ADR-0010: %d %q %s", code, out, errOut)
+	}
+}
+
 // A failure after files were written puts every one of them back.
 func TestAdrNewUndoesEverythingWhenItCannotFinish(t *testing.T) {
 	root := adrProject(t)

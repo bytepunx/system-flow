@@ -1,5 +1,6 @@
 // Package adr records an architecture decision the way the conventions ask
-// (S-0060): the number comes from the files present, the file is named and
+// (S-0060): the number comes from the files present here, on main, and in
+// every story's worktree and branch (I-0063), the file is named and
 // given its front matter, the index in design/adrs/README.md gets its row,
 // an ADR it supersedes gets superseded_by set, and the author writes only
 // the decision. Creation is one step that happens or does not, like an item
@@ -23,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/template"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -93,9 +95,15 @@ func files(dir string) (map[int]string, error) {
 	return out, nil
 }
 
-// NextNumber is one more than the highest number among the files present.
-// Gaps are not filled, and no counter kept in a document is consulted.
-func NextNumber(dir string) (int, error) {
+// NextNumber is one more than the highest ADR number in this checkout, on
+// main, in any worktree, and on any story branch, so parallel stories do not
+// take the same number (I-0063). Gaps are not filled, and no counter kept in
+// a document is consulted. A nil r is execx.System.
+func NextNumber(repo *workitem.Repo, r execx.Runner) (int, error) {
+	if r == nil {
+		r = execx.System{}
+	}
+	dir := Dir(repo)
 	fs, err := files(dir)
 	if err != nil && !os.IsNotExist(err) {
 		return 0, err
@@ -104,6 +112,15 @@ func NextNumber(dir string) (int, error) {
 	for n := range fs {
 		if n >= next {
 			next = n + 1
+		}
+	}
+	if folder, err := filepath.Rel(repo.Root, dir); err == nil {
+		for _, name := range storygit.FolderNames(r, repo, filepath.ToSlash(folder)) {
+			if m := fileName.FindStringSubmatch(name); m != nil {
+				if n, _ := strconv.Atoi(m[1]); n >= next {
+					next = n + 1
+				}
+			}
 		}
 	}
 	return next, nil
@@ -241,7 +258,7 @@ func New(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 			}
 		}
 	}
-	n, err := NextNumber(dir)
+	n, err := NextNumber(repo, r)
 	if err != nil {
 		return nil, err
 	}

@@ -218,7 +218,7 @@ Record a new ADR: number, file, front matter, and index row are supplied.
 flai adr new "<title>" [flags]
 ```
 
-Record an architecture decision. The number is one more than the highest NNNN-\*.md present in design/adrs (gaps are not filled). The file is NNNN-slug.md with id, title, status, date, supersedes, superseded\_by, and refines when given; its row is added to design/adrs/README.md; each ADR it supersedes gets superseded\_by set, the one edit allowed to an accepted ADR.
+Record an architecture decision. The number is one more than the highest NNNN-\*.md in design/adrs in this checkout, on main, in any story's worktree (uncommitted files included), and on any story branch, so parallel stories do not take the same number; gaps are not filled. The file is NNNN-slug.md with id, title, status, date, supersedes, superseded\_by, and refines when given; its row is added to design/adrs/README.md; each ADR it supersedes gets superseded\_by set, the one edit allowed to an accepted ADR.
 
 The body below the heading is the project's 0000-template.md sections, or standard input with --body-stdin. flai check runs with everything in place: if it reports anything the ADR introduces, every file is put back, the findings are printed, and the exit code is 4. --autocommit commits the new file, the index, and any superseded ADRs on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed. --print-body prints the template's sections and creates nothing.
 
