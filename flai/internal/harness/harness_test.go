@@ -569,8 +569,8 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 			"Launch every sub-agent with the Agent tool's run_in_background set to false, a layer's in one message, so that each result comes back as the tool's result however long the sub-agent runs",
 			"Never end your turn while a sub-agent runs in the background: Claude Code ends this session ten minutes after the turn ends, and the sub-agent with it",
 			"Never wait for a sub-agent with the flai MCP tool wait_for_events either, which reports work items and threads, not sub-agents, and which flai guard refuses while one runs: wait_for_events is for a thread awaiting the designer",
-			"Review each one's work yourself, fix what falls short, commit it, sync and test as above, and move the task",
-			"only you commit, sync the stream, move items, and talk to the designer",
+			"Review each one's work yourself, fix what falls short, close the task with flai task done and test it as above",
+			"only you close tasks, commit, sync the stream, move items, and talk to the designer",
 		} {
 			if !strings.Contains(p, w) {
 				t.Errorf("prompt lacks %q:\n%s", w, p)
@@ -624,19 +624,24 @@ func TestThePromptKeepsClaudeWritesFromSubAgents(t *testing.T) {
 	}
 }
 
-// S-0197, ADR-0069: at each task the story's agent commits the task, syncs
-// with flai stream sync and resolves what it lists, then runs the task's
-// tests, in that order, never rebasing or merging by hand; and before review
-// it commits everything and syncs again before the close-out run.
+// S-0197, ADR-0069, S-0269, ADR-0107: at each task the story's agent closes
+// the task with flai task done, or the MCP tool task_done, which commits,
+// syncs, moves, logs, widens touches, checks, and answers the inbox; it
+// resolves what a stopped sync lists and calls it again, then runs the task's
+// tests and closes a fix by calling it again, never rebasing or merging by
+// hand; and before review it commits everything and syncs again before the
+// close-out run. The prompt no longer lists the per-task steps one by one.
 func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
 	restarted.Restart = "ended (exit 1)"
 	for _, p := range []string{Prompt(r), Prompt(restarted)} {
 		cycle := []string{
-			"When a task is done, commit its changes, with its docs and work-item updates, on story/S-0104",
-			"then run flai stream sync S-0104, and resolve each conflict it lists in the worktree, git add it, and git rebase --continue",
-			"then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them) and commit any fix they need",
+			`When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change`,
+			"it commits on story/S-0104, runs flai stream sync S-0104, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails",
+			"When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again",
+			"when the check stops, fix what it found and call it again",
+			"Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again",
 			"Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then have one fresh verifier",
 			"through the project's close-out script where it has one (it refuses a branch that does not contain the main branch)",
 		}
@@ -649,12 +654,17 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 			}
 			at += i + len(w)
 		}
-		for _, w := range []string{
-			"refuses while anything is uncommitted: never start a rebase or merge by hand",
+		if w := "refuses while anything is uncommitted: never start a rebase or merge by hand"; !strings.Contains(p, w) {
+			t.Errorf("prompt lacks %q:\n%s", w, p)
+		}
+		for _, old := range []string{
+			"commit its changes",
+			"commit any fix they need",
 			"call the flai MCP tool inbox at every task transition",
+			"sync and test as above, and move the task",
 		} {
-			if !strings.Contains(p, w) {
-				t.Errorf("prompt lacks %q:\n%s", w, p)
+			if strings.Contains(p, old) {
+				t.Errorf("prompt still lists the per-task steps one by one (%q):\n%s", old, p)
 			}
 		}
 	}
@@ -686,7 +696,7 @@ func TestThePromptSaysHowCriteriaAreTicked(t *testing.T) {
 	p := Prompt(r)
 	for _, w := range []string{
 		"ask each to name in its final message the acceptance criteria its task meets, by their numbers in flai criteria list S-0104",
-		"and move the task, then tick the criteria your review verified it meets",
+		"close the task with flai task done and test it as above, then tick the criteria your review verified it meets",
 	} {
 		if !strings.Contains(p, w) {
 			t.Errorf("prompt lacks %q:\n%s", w, p)

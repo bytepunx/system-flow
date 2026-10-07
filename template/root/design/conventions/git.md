@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-10-05
+updated: 2026-10-07
 audience: agent
 order: 70
 status: active
@@ -16,10 +16,10 @@ How history is made in this repository.
 
 - Each story is worked on its branch, `story/S-nnnn`, in the worktree `flai stream open` creates under `.flai-cache/worktrees/`. Story commits land there; `wip/` is written in the main checkout and committed by `flai accept`.
 - Use `flai stream sync` for the branch's git operations, never start a `git rebase` or `git merge` by hand: it rebases the story's branch onto `main`, and refuses a worktree with uncommitted changes. When it stops on conflicts, finishing that rebase is part of the sync: resolve each path it lists in the worktree, `git add` it, and run `git rebase --continue`, or `git rebase --abort` to put the branch back as it was.
-- Commit each task when it is done:
-  - commit the task's changes with its documentation and work item updates on `story/S-nnnn`
-  - then run `flai stream sync` and resolve any conflicts it reports
-  - then run the tests for what the task changed, and commit any fix they need
+- Close each task when it is done with `flai task done T-nnnn -m "<message>"` in the story's worktree, or the MCP tool `task_done`, with the task's documentation and work item updates in the change. It commits on `story/S-nnnn`, runs `flai stream sync`, moves the task to `done`, logs it in the narrative, adds the paths the commit changed to the task's and the story's `touches`, runs `flai check --strict` scoped to the story, and answers the inbox, stopping at the first step that fails:
+  - when the sync stops on conflicts, resolve each path it lists in the worktree, `git add` it, run `git rebase --continue`, and call it again
+  - when the check stops, fix what it found and call it again
+  - then run the tests for what the task changed with `flai test` on those paths, and close any fix they need by calling it again
 - To show that a new test fails without the change under test, check the files the change touches out from `main` into a scratch copy outside the worktree (`git show main:<path>`) and run the test against that copy, or build the old binary from `main` and run the test against it.
 - Never use `git stash` in a worktree: every worktree of a clone shares one stash stack, so a stash pushed or popped in one session can take another session's work.
 - Before moving a story to `review`, commit what is outstanding, run `flai stream sync` again, resolve any conflicts, and close out with `scripts/close-out.sh`, which runs the tests.
