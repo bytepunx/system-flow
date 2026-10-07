@@ -6,7 +6,7 @@ title: flai's markdown lint does not split a table row on pipes inside a code sp
 status: backlog
 owner: alex
 created: 2026-10-06T09:56:52Z
-updated: 2026-10-06T09:56:52Z
+updated: 2026-10-07T02:19:47Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
     by: flai
     at: 2026-10-06T09:56:52Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:19:47Z
 ---
 # S-0289 flai's markdown lint does not split a table row on pipes inside a code span, as markdownlint does
 
