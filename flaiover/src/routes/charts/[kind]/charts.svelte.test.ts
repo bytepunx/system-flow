@@ -177,7 +177,14 @@ describe('the charts page (S-0163)', () => {
 		await open('tokens-spent');
 		expect(
 			[...document.querySelectorAll('[data-testid="charts-flow"] a')].map((l) => l.textContent)
-		).toEqual(['Cycle Time', 'Burn-up', 'Cumulative Flow', 'Time in State', 'Throughput']);
+		).toEqual([
+			'Cycle Time',
+			'Burn-up',
+			'Cumulative Flow',
+			'Time in State',
+			'Throughput',
+			'Agent Waiting'
+		]);
 		expect(
 			[...document.querySelectorAll('[data-testid="charts-usage"] a')].map((l) => l.textContent)
 		).toEqual([

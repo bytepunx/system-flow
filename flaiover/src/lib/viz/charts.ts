@@ -62,6 +62,9 @@ export type ItemMetrics = {
 	model?: string;
 	age_seconds?: number;
 	usage?: ItemUsage;
+	/** What its agent waited on threads while in progress, and in review (S-0205); absent when none. */
+	wait_threads_seconds?: number;
+	wait_review_seconds?: number;
 };
 /** The count of a set of errors and the p50 and p85 of their absolute values, absent when empty. */
 export type ErrorSpread = { count: number; p50_seconds?: number; p85_seconds?: number };
@@ -213,6 +216,45 @@ export type UsageReport = {
 		kinds: (StrategicSpend & { kind: string })[];
 	};
 };
+/** The thread waits of a week that the orchestrator, or a confirmation, ended (ADR-0091). */
+export type WaitShare = { count: number; total_seconds: number };
+/**
+ * One ISO week of waiting (S-0205): the items completed in it, and what their agents waited on
+ * threads and in review, summed over them and over their number, absent with none.
+ */
+export type WaitWeek = {
+	week: string;
+	start: string;
+	items: number;
+	empty_wakes: number;
+	threads: {
+		total_seconds: number;
+		mean_seconds?: number;
+		orchestrator: WaitShare;
+		confirmed: WaitShare;
+	};
+	review: { total_seconds: number; mean_seconds?: number };
+};
+/**
+ * One of the longest waits of the window (S-0215, ADR-0114): a thread's, or a spell in review,
+ * with its seconds in the window; `ended` and `awaited` are absent while it is open.
+ */
+export type LongestWait = {
+	item: string;
+	kind: 'thread' | 'review';
+	thread?: string;
+	started: string;
+	ended?: string;
+	seconds: number;
+	awaited?: string;
+};
+/** How long agents waited for someone else, per week of the window (S-0205). */
+export type Waiting = {
+	weeks: WaitWeek[];
+	empty_wakes: { count: number; mean?: number };
+	/** Absent from a flai older than S-0215. */
+	longest?: LongestWait[];
+};
 /**
  * Older flai builds emit null for empty lists; give every list the charts
  * iterate a value so a selection with no items draws an empty chart instead
@@ -241,6 +283,11 @@ export function normalise(r: Report): Report {
 			...r.usage,
 			models: r.usage?.models ?? [],
 			spend
+		},
+		waiting: r.waiting && {
+			...r.waiting,
+			weeks: r.waiting.weeks ?? [],
+			longest: r.waiting.longest ?? []
 		}
 	};
 }
@@ -262,10 +309,19 @@ export type Report = {
 	forecasts?: Forecasts;
 	/** Absent from a flai older than S-0205. */
 	claims?: Claims;
+	/** Absent from a flai older than S-0205. */
+	waiting?: Waiting;
 };
 
 /** The charts of how work flows. */
-export const FLOW_KINDS = ['cycle-time', 'burn-up', 'cfd', 'time-in-state', 'throughput'] as const;
+export const FLOW_KINDS = [
+	'cycle-time',
+	'burn-up',
+	'cfd',
+	'time-in-state',
+	'throughput',
+	'agent-waiting'
+] as const;
 /** The charts of what agents spent (S-0143, S-0163): they need items that carry usage. */
 export const USAGE_KINDS = [
 	'token-rate',
@@ -299,6 +355,7 @@ export const TITLES: Record<Kind, string> = {
 	cfd: 'Cumulative Flow',
 	'time-in-state': 'Time in State',
 	throughput: 'Throughput',
+	'agent-waiting': 'Agent Waiting',
 	'token-rate': 'Tokens / Min',
 	'tokens-spent': 'Tokens / Day',
 	'tokens-per-item': 'Tokens per item',
@@ -342,10 +399,11 @@ export const isForecastKind = (kind: Kind): kind is ForecastKind =>
 export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
 	(CLAIMS_KINDS as readonly Kind[]).includes(kind);
 /**
- * The controls a chart uses. Spend over time is summed by flai, so no epic narrows it; a chart
- * per item shows every type, so none is chosen. The forecast charts read the stories, narrowed by
- * nature and model; the chart per model shows every model, by the bucket. The claims charts read
- * the stories, which alone are held, by the day, the week, and the story, as flai lays them out.
+ * The controls a chart uses. Spend over time and waiting are summed by flai, so no epic narrows
+ * them; a chart per item shows every type, so none is chosen. The forecast charts read the
+ * stories, narrowed by nature and model; the chart per model shows every model, by the bucket.
+ * The claims charts read the stories, which alone are held, by the day, the week, and the story,
+ * as flai lays them out.
  */
 export function controls(kind: Kind) {
 	if (isClaimsKind(kind))
@@ -361,7 +419,7 @@ export function controls(kind: Kind) {
 	const spend = SPEND_KINDS.includes(kind);
 	return {
 		type: !PER_ITEM_KINDS.includes(kind),
-		epic: !spend && !['cfd', 'throughput'].includes(kind),
+		epic: !spend && !['cfd', 'throughput', 'agent-waiting'].includes(kind),
 		bucket: spend,
 		nature: false,
 		model: false
@@ -706,6 +764,73 @@ export function throughput(r: Report, t: Theme): Opt {
 			name: 'done',
 			nameTextStyle: { color: t.textSecondary }
 		}),
+		series
+	});
+}
+
+/** A week's hours at its Monday; null, a gap in the line, for a mean over a week with no items. */
+type WaitPoint = { value: [number, number | null]; week: WaitWeek };
+/**
+ * Agent waiting (S-0215): one stacked bar per ISO week of the window, the hours the agents of the
+ * items completed in it waited on threads and in review, with the mean of both per item as a line,
+ * a gap in a week with no items. flai lays out the weeks from the one that holds the window's
+ * start to the one that holds now, and the axis spans them (ADR-0054).
+ */
+export function agentWaiting(r: Report, t: Theme): Opt {
+	const weeks = r.waiting?.weeks ?? [];
+	const point = (wk: WaitWeek, seconds: number | null): WaitPoint => ({
+		value: [Date.parse(wk.start), seconds === null ? null : seconds / 3600],
+		week: wk
+	});
+	const bar = (name: string, color: string, seconds: (wk: WaitWeek) => number) => ({
+		name,
+		type: 'bar',
+		stack: 'waiting',
+		barMaxWidth: 24,
+		itemStyle: { color, borderColor: t.surface, borderWidth: 1 },
+		data: weeks.map((wk) => point(wk, seconds(wk)))
+	});
+	const mean = {
+		...line(t, `mean per ${r.type}`, t.textSecondary, 'emptyCircle', [], true),
+		// a point between two gaps is drawn by its mark alone, so every mark shows
+		showSymbol: true,
+		connectNulls: false,
+		data: weeks.map((wk) =>
+			point(
+				wk,
+				wk.items > 0 ? (wk.threads.total_seconds + wk.review.total_seconds) / wk.items : null
+			)
+		)
+	};
+	const series =
+		weeks.length > 0
+			? [
+					bar('threads', t.series[2], (wk) => wk.threads.total_seconds),
+					bar('review', colorFor(t, STATE_SLOT, 'review', 0), (wk) => wk.review.total_seconds),
+					mean
+				]
+			: [];
+	const noun = (n: number) => (n === 1 ? r.type : plural(r.type));
+	const tip = (ps: { marker?: string; seriesName: string; data: WaitPoint }[]) => {
+		const list = ps.filter((p) => p?.data && p.data.value[1] !== null);
+		if (list.length === 0) return '';
+		const wk = list[0].data.week;
+		const lines = list.map(
+			(p) => `${p.marker ?? ''}${p.seriesName}: ${human(p.data.value[1]! * 3600)}`
+		);
+		return `week of ${wk.start} (${wk.week}), ${wk.items} ${noun(wk.items)} done<br/>${lines.join('<br/>')}`;
+	};
+	return base(t, {
+		...bucketAxes(
+			t,
+			r,
+			'week',
+			weeks.map((wk) => Date.parse(wk.start)),
+			true,
+			'hours waited',
+			(v) => `${Math.round(v * 10) / 10}`,
+			tip
+		),
 		series
 	});
 }
@@ -1777,6 +1902,8 @@ export function build(
 			return timeInState(r, t, epic);
 		case 'throughput':
 			return throughput(r, t);
+		case 'agent-waiting':
+			return agentWaiting(r, t);
 		case 'token-rate':
 			return tokenRate(r, t);
 		case 'tokens-spent':

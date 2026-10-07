@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	agentWaiting,
 	build,
 	burnUp,
 	cfd,
@@ -17,6 +18,7 @@ import {
 	deliveryAccuracy,
 	doneIn,
 	errorFacets,
+	FLOW_KINDS,
 	forecastAccuracy,
 	forecastByModel,
 	forecastRows,
@@ -53,7 +55,8 @@ import {
 	type Claims,
 	type ErrorFilter,
 	type ItemMetrics,
-	type Report
+	type Report,
+	type WaitWeek
 } from './charts';
 import { CATEGORICAL, modelSlot, modelSymbol, theme, TYPE_SLOT } from './palette';
 
@@ -165,6 +168,20 @@ const taskDays: Bucket[] = [
 	}
 ];
 const none = { items: 0, tokens: 0, cost: 0, seconds: 0, models: [], buckets: [] };
+
+/** A week of waiting as flai lays it out (S-0205): what its items waited on threads and in review. */
+function waitWeek(week: string, start: string, items = 0, threads = 0, review = 0): WaitWeek {
+	const zero = { count: 0, total_seconds: 0 };
+	const mean = (s: number) => (items > 0 ? { mean_seconds: s / items } : {});
+	return {
+		week,
+		start,
+		items,
+		empty_wakes: 0,
+		threads: { total_seconds: threads, ...mean(threads), orchestrator: zero, confirmed: zero },
+		review: { total_seconds: review, ...mean(review) }
+	};
+}
 
 const report: Report = {
 	generated_at: '2026-09-01T12:00:00Z',
@@ -284,6 +301,29 @@ const report: Report = {
 			counts: { backlog: 0, ready: 0, 'in-progress': 1, review: 0, done: 3, cancelled: 1 }
 		}
 	],
+	// one week per ISO week of the window, 27 July to 31 August: S-001 done in the week of
+	// 3 August, S-002 in the week of 10 August, and the rest with no items
+	waiting: {
+		weeks: [
+			waitWeek('2026-W31', '2026-07-27'),
+			waitWeek('2026-W32', '2026-08-03', 1, 7200, 7200),
+			waitWeek('2026-W33', '2026-08-10', 1, 3600, 50400),
+			waitWeek('2026-W34', '2026-08-17'),
+			waitWeek('2026-W35', '2026-08-24'),
+			waitWeek('2026-W36', '2026-08-31')
+		],
+		empty_wakes: { count: 0 },
+		longest: [
+			{
+				item: 'S-002',
+				kind: 'review',
+				started: '2026-08-11T19:30:00Z',
+				ended: '2026-08-12T09:30:00Z',
+				seconds: 50400,
+				awaited: 'operator'
+			}
+		]
+	},
 	usage: {
 		items: 2,
 		tokens: 3500000,
@@ -439,6 +479,112 @@ describe('chart builders', () => {
 		const th = throughput(report, light) as { series: { name: string; data: number[] }[] };
 		expect(th.series.map((s) => s.name)).toEqual(['feature', 'improvement']);
 		expect(th.series[0].data).toEqual([1, 0]);
+	});
+	type Waits = {
+		xAxis: { type: string; min: number; max: number };
+		yAxis: { name: string };
+		legend: { show: boolean };
+		tooltip: { formatter: (ps: unknown[]) => string };
+		series: {
+			name: string;
+			type: string;
+			stack?: string;
+			connectNulls?: boolean;
+			itemStyle: { color: string };
+			data: { value: [number, number | null]; week: WaitWeek }[];
+		}[];
+	};
+	const monday = (day: string) => Date.parse(`${day}T00:00:00Z`);
+	it('agent waiting stacks the hours waited on threads and in review per week, with the mean per story as a line', () => {
+		const o = agentWaiting(report, light) as Waits;
+		expect(o.series.map((s) => [s.name, s.type, s.stack])).toEqual([
+			['threads', 'bar', 'waiting'],
+			['review', 'bar', 'waiting'],
+			['mean per story', 'line', undefined]
+		]);
+		expect(o.series[0].itemStyle.color).toBe(CATEGORICAL.light[2]);
+		expect(o.series[1].itemStyle.color).toBe(CATEGORICAL.light[7]);
+		// a bar per week, at its Monday, of the hours its items waited
+		const starts = [
+			'2026-07-27',
+			'2026-08-03',
+			'2026-08-10',
+			'2026-08-17',
+			'2026-08-24',
+			'2026-08-31'
+		];
+		expect(o.series[0].data.map((d) => d.value)).toEqual(
+			starts.map((s, i) => [monday(s), [0, 2, 1, 0, 0, 0][i]])
+		);
+		expect(o.series[1].data.map((d) => d.value)).toEqual(
+			starts.map((s, i) => [monday(s), [0, 2, 14, 0, 0, 0][i]])
+		);
+		// the mean wait per story, threads and review together; a gap in a week with no items
+		expect(o.series[2].data.map((d) => d.value)).toEqual(
+			starts.map((s, i) => [monday(s), [null, 4, 15, null, null, null][i]])
+		);
+		expect(o.series[2].connectNulls).toBe(false);
+		expect(o.yAxis.name).toBe('hours waited');
+		expect(o.legend.show).toBe(true);
+		expect(
+			o.tooltip.formatter(o.series.map((s) => ({ seriesName: s.name, data: s.data[2] })))
+		).toBe(
+			'week of 2026-08-10 (2026-W33), 1 story done<br/>threads: 1h<br/>review: 14h<br/>mean per story: 15h'
+		);
+		// a week with no items has no mean to show
+		expect(
+			o.tooltip.formatter(o.series.slice(2).map((s) => ({ seriesName: s.name, data: s.data[0] })))
+		).toBe('');
+		expect((build('agent-waiting', report, light) as Waits).series).toEqual(o.series);
+	});
+	it('agent waiting divides the waits of a week by the items done in it', () => {
+		const two: Report = {
+			...report,
+			waiting: { ...report.waiting!, weeks: [waitWeek('2026-W32', '2026-08-03', 2, 3600, 10800)] }
+		};
+		const o = agentWaiting(two, light) as Waits;
+		expect(o.series.map((s) => s.data[0].value[1])).toEqual([1, 3, 2]);
+		expect(
+			o.tooltip.formatter(o.series.map((s) => ({ seriesName: s.name, data: s.data[0] })))
+		).toBe(
+			'week of 2026-08-03 (2026-W32), 2 stories done<br/>threads: 1h<br/>review: 3h<br/>mean per story: 2h'
+		);
+	});
+	it("agent waiting spans the report's window in weeks (ADR-0054)", () => {
+		const hour = 3600e3;
+		// from the week that holds 2 August, the window's start, to the one that holds now, half a week
+		// either side
+		expect((agentWaiting(report, light) as Waits).xAxis).toMatchObject({
+			type: 'time',
+			min: monday('2026-07-27') - 84 * hour,
+			max: monday('2026-08-31') + 84 * hour
+		});
+		// whatever flai sends: a report without waiting spans the window still
+		const older = agentWaiting({ ...report, waiting: undefined }, light) as Waits;
+		expect(older.xAxis).toMatchObject({ min: monday('2026-07-27') - 84 * hour });
+	});
+	it('draws an empty agent waiting from a report without waiting, or with null lists', () => {
+		const older = build('agent-waiting', { ...report, waiting: undefined }, light) as Waits;
+		expect(older.series).toEqual([]);
+		const nulls = {
+			...report,
+			waiting: { weeks: null, empty_wakes: { count: 0 } }
+		} as unknown as Report;
+		expect((build('agent-waiting', nulls, light) as Waits).series).toEqual([]);
+		expect(normalise(nulls).waiting).toMatchObject({ weeks: [], longest: [] });
+		expect(normalise({ ...report, waiting: undefined }).waiting).toBeUndefined();
+	});
+	it('lists agent waiting under the flow charts, summed by flai over every epic', () => {
+		expect(FLOW_KINDS).toContain('agent-waiting');
+		expect(KINDS).toContain('agent-waiting');
+		expect(titleOf('agent-waiting')).toBe('Agent Waiting');
+		expect(controls('agent-waiting')).toEqual({
+			type: true,
+			epic: false,
+			bucket: false,
+			nature: false,
+			model: false
+		});
 	});
 	it('usage charts colour each model in a fixed slot by name, whatever a filter leaves', () => {
 		expect(models(report)).toEqual(['claude-haiku-4-5', 'claude-opus-5-5']);
