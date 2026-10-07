@@ -69,3 +69,43 @@ func (r *Repo) Promotable(it *Item) error {
 	}
 	return nil
 }
+
+// OrchestratorSetsCostOfDelay says why the orchestrator may not give story it
+// cost of delay inputs with an edit, or nil when it may (S-0328, ADR-0119):
+// the project gives it plan_backlog_stories, it is a story in the backlog,
+// neither it nor its epic has any cost of delay inputs, and the edit gives
+// inputs alone. besides names, as the caller words them, what else the edit
+// gives: a value, a removal, or another field; any refuses it. The
+// orchestrator sets no value and changes no inputs a story or its epic
+// already has: those stay the operator's.
+func (r *Repo) OrchestratorSetsCostOfDelay(it *Item, besides []string) error {
+	if err := r.OrchestratorPermits(manifest.PermitPlanBacklogStories, "sets a story's cost of delay inputs", it.ID); err != nil {
+		return err
+	}
+	if len(besides) > 0 {
+		return fmt.Errorf("%s: the orchestrator gives a story cost of delay inputs and nothing else, and this edit gives %s too: it sets no value, removes nothing, and changes nothing else of an item", it.ID, strings.Join(besides, ", "))
+	}
+	switch {
+	case it.Type != Story:
+		return fmt.Errorf("%s is %s: the orchestrator gives cost of delay inputs to a story in the backlog, and no other item", it.ID, articled(it.Type))
+	case it.Archived:
+		return fmt.Errorf("%s is archived: the orchestrator gives cost of delay inputs to a story in the backlog alone", it.ID)
+	case it.Status != Backlog:
+		return fmt.Errorf("%s is %s, not in the backlog: the orchestrator gives cost of delay inputs to a story in the backlog alone", it.ID, it.Status)
+	case hasCostInputs(it):
+		return fmt.Errorf("%s has cost of delay inputs already: the orchestrator gives inputs to a story without any, and changes none it has; ask the operator with thread_open on %s", it.ID, it.ID)
+	}
+	epic, err := r.parentOf(it, nil)
+	if err != nil {
+		return err
+	}
+	if epic != nil && hasCostInputs(epic) {
+		return fmt.Errorf("%s's epic %s has cost of delay inputs: the orchestrator gives inputs to a story only when neither it nor its epic has any; ask the operator with thread_open on %s", it.ID, epic.ID, it.ID)
+	}
+	return nil
+}
+
+// hasCostInputs says whether it has a cost of delay input.
+func hasCostInputs(it *Item) bool {
+	return it.CostOfDelay != nil && !it.CostOfDelay.Inputs.IsZero()
+}

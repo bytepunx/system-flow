@@ -1113,7 +1113,7 @@ A retitle keeps everything that carries the title in step: the front matter, the
 
 --after names the stories a story waits for: while any of them is not done, the story is held in ready, and flai serve and wait\_for\_work pass it over (ADR-0046). On a task it names the tasks of the same story the task waits for (S-0176). flai check refuses an entry that does not exist, a task of another story, and a cycle.
 
-Planning data (S-0199). --draft makes a backlog story a draft and --no-draft finalizes one, which may then go to ready; finalizing records who finalized it (--by) and when, in its finalized block, and --draft again removes that block (S-0201). The orchestrator (FLAI\_ROLE=orchestrate) finalizes with --no-draft alone, and only a draft that flai promote --drafts finds complete; it is refused, naming what the draft lacks, otherwise (S-0219). A cost of delay, on a story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and a value per week (--cost-of-delay-value). A story's forecast has a duration (--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one sentence). Each flag changes its key only: an empty value removes it, and removing the last input or value, or the last of duration and delivery, removes the block. --clear-cost-of-delay and --clear-forecast remove a block. A block that changes records who changed it (--by) and when.
+Planning data (S-0199). --draft makes a backlog story a draft and --no-draft finalizes one, which may then go to ready; finalizing records who finalized it (--by) and when, in its finalized block, and --draft again removes that block (S-0201). The orchestrator (FLAI\_ROLE=orchestrate) finalizes with --no-draft alone, and only a draft that flai promote --drafts finds complete; it is refused, naming what the draft lacks, otherwise (S-0219). A cost of delay, on a story or an epic, has inputs (--revenue-per-week, --penalty-per-week, as amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and a value per week (--cost-of-delay-value). A story's forecast has a duration (--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one sentence). The orchestrator gives a story in the backlog its cost of delay inputs, and nothing else, only while orchestration.permissions gives it plan\_backlog\_stories and neither the story nor its epic has any inputs (S-0328, ADR-0119). Each flag changes its key only: an empty value removes it, and removing the last input or value, or the last of duration and delivery, removes the block. --clear-cost-of-delay and --clear-forecast remove a block. A block that changes records who changed it (--by) and when.
 
 --body-stdin reads what lies below the heading; the heading is the ID and the title, and flai writes it. With --hash, the hash flai edit --show printed, a change someone made meanwhile is a conflict (exit 3) and nothing is written. flai check runs with the change in place: if it reports anything the change introduces, every file is put back and the findings are printed (exit 4). --autocommit commits every file the edit touched in one commit, unless the project sets dashboard.autocommit: false. Nothing is pushed.
 
@@ -1677,6 +1677,7 @@ Write each key=value into its block of system-flow.yaml, and remove each --unset
 
 ```text
 orchestration.permissions.plan_backlog_epics (boolean; default false)
+orchestration.permissions.plan_backlog_stories (boolean; default false)
 orchestration.permissions.finalize_drafts (boolean; default false)
 orchestration.permissions.promote_to_ready (boolean; default false)
 orchestration.permissions.order_ready (boolean; default false)
@@ -2004,9 +2005,9 @@ The run is recorded where flai serve tracks agents, by item, and its output goes
 
 It is a host action, off until you enable it (flai serve enable plan). It refuses, and says why, while the action is off for the project, for a task or an ID that is neither an epic's nor a story's, for an item that is archived, done, or cancelled, while a planner runs for the item, and when nothing can start it. The Plan button on an epic's or a story's page runs this.
 
---candidates lists, in ID order and with the reason for each, the epics the planner should plan (S-0219): an epic in the backlog with no story, and an epic not done or cancelled whose stories, archived ones included, are all done or cancelled with at least one done. It leaves out, and lists apart with why, an epic a planner runs for now and one whose newest planner run ended asking a question still awaiting the operator, as flai serve's record of planner runs on this host says. It starts nothing and writes nothing.
+--candidates lists, in ID order and with the reason for each, the epics the planner should plan (S-0219): an epic in the backlog with no story, and an epic not done or cancelled whose stories, archived ones included, are all done or cancelled with at least one done. After them it lists the stories (S-0328): a story in the backlog, draft or not, that has no touches, no forecast duration, no cost of delay value, or no task that is not cancelled, each with what it lacks. It leaves out, and lists apart with why, an item a planner runs for now and one whose newest planner run ended asking a question still awaiting the operator, as flai serve's record of planner runs on this host says; and a story whose epic a planner runs for now, or whose newest planner run ended and which has not changed since. It starts nothing and writes nothing.
 
-The orchestrator (FLAI\_ROLE=orchestrate) asks for the planner on an epic that --candidates lists alone, while orchestration.permissions gives it plan\_backlog\_epics, and its run records orchestrator, in place of asked, as what started it (S-0219).
+The orchestrator (FLAI\_ROLE=orchestrate) asks for the planner on an epic that --candidates lists alone, while orchestration.permissions gives it plan\_backlog\_epics, and on a story that --candidates lists alone, while it gives it plan\_backlog\_stories (S-0328, ADR-0119); its run records orchestrator, in place of asked, as what started it (S-0219).
 
 Examples:
 
@@ -2021,7 +2022,7 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--candidates` | list the epics the planner should plan, each with why, and those left out while a planner runs or awaits the operator; writes nothing |
+| `--candidates` | list the epics and stories the planner should plan, each with why, and those left out while a planner runs or awaits the operator; writes nothing |
 
 ### flai prime
 

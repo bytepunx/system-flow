@@ -55,8 +55,8 @@ func TestThePlannerIsStartedThroughTheServer(t *testing.T) {
 	}
 }
 
-// S-0219: the tool tells the orchestrator which epics it may ask for, and
-// that its run records it as who asked.
+// S-0219, S-0328: the tool tells the orchestrator which epics and stories it
+// may ask for, and that its run records it as who asked.
 func TestThePlanToolSaysWhatTheOrchestratorMayPlan(t *testing.T) {
 	f := setup(t)
 	res, err := f.cs.ListTools(context.Background(), nil)
@@ -67,7 +67,7 @@ func TestThePlanToolSaysWhatTheOrchestratorMayPlan(t *testing.T) {
 		if tool.Name != "plan" {
 			continue
 		}
-		for _, want := range []string{"an epic that flai plan --candidates lists", "plan_backlog_epics is on", "records orchestrator, in place of asked"} {
+		for _, want := range []string{"an epic that flai plan --candidates lists", "plan_backlog_epics is on", "a story that flai plan --candidates lists", "plan_backlog_stories is on", "records orchestrator, in place of asked"} {
 			if !strings.Contains(tool.Description, want) {
 				t.Errorf("plan's description lacks %q: %s", want, tool.Description)
 			}

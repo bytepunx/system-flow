@@ -184,6 +184,11 @@ func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEdit
 			return nil, ItemEditOut{}, err
 		}
 	}
+	if s.orchestrator() && (in.CostOfDelay != nil || in.ClearCostOfDelay) {
+		if err := s.setsCostOfDelay(in); err != nil {
+			return nil, ItemEditOut{}, err
+		}
+	}
 	var watch *itemedit.ClaimWatch
 	if in.Touches != nil {
 		watch = itemedit.WatchClaim(s.repo, in.ID)
@@ -224,6 +229,36 @@ func (s *server) finalizes(id string, ch itemedit.Change) error {
 		return fmt.Errorf("%s is not complete, so the orchestrator does not finalize it (flai promote --drafts): %s", it.ID, strings.Join(lacks, "; "))
 	}
 	return nil
+}
+
+// setsCostOfDelay says why the orchestrator may not make edit in, one that
+// gives a cost of delay, or nil when it may (S-0328, ADR-0119): it gives a
+// backlog story whose epic has none either its first cost of delay inputs,
+// and nothing else, while the project gives it plan_backlog_stories
+// (workitem's OrchestratorSetsCostOfDelay).
+func (s *server) setsCostOfDelay(in ItemEditIn) error {
+	it, err := s.repo.Get(in.ID)
+	if err != nil {
+		return err
+	}
+	var besides []string
+	if c := in.CostOfDelay; c != nil {
+		if c.Value != nil {
+			besides = append(besides, "a value")
+		}
+		if c.TimeLostPerCycle != nil && *c.TimeLostPerCycle == "" {
+			besides = append(besides, "an empty time_lost_per_cycle, which removes it")
+		}
+	}
+	if in.ClearCostOfDelay {
+		besides = append(besides, "clear_cost_of_delay")
+	}
+	rest := in
+	rest.Project, rest.ID, rest.Hash, rest.CostOfDelay, rest.ClearCostOfDelay = "", "", "", nil, false
+	if rest != (ItemEditIn{}) {
+		besides = append(besides, "a field other than cost_of_delay")
+	}
+	return s.repo.OrchestratorSetsCostOfDelay(it, besides)
 }
 
 // refusal is err with, when flai check refused the change, the findings in

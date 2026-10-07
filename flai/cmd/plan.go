@@ -56,15 +56,21 @@ this.
 --candidates lists, in ID order and with the reason for each, the epics the
 planner should plan (S-0219): an epic in the backlog with no story, and an
 epic not done or cancelled whose stories, archived ones included, are all
-done or cancelled with at least one done. It leaves out, and lists apart
-with why, an epic a planner runs for now and one whose newest planner run
-ended asking a question still awaiting the operator, as flai serve's record
-of planner runs on this host says. It starts nothing and writes nothing.
+done or cancelled with at least one done. After them it lists the stories
+(S-0328): a story in the backlog, draft or not, that has no touches, no
+forecast duration, no cost of delay value, or no task that is not
+cancelled, each with what it lacks. It leaves out, and lists apart with
+why, an item a planner runs for now and one whose newest planner run ended
+asking a question still awaiting the operator, as flai serve's record of
+planner runs on this host says; and a story whose epic a planner runs for
+now, or whose newest planner run ended and which has not changed since. It
+starts nothing and writes nothing.
 
 The orchestrator (FLAI_ROLE=orchestrate) asks for the planner on an epic
 that --candidates lists alone, while orchestration.permissions gives it
-plan_backlog_epics, and its run records orchestrator, in place of asked, as
-what started it (S-0219).`,
+plan_backlog_epics, and on a story that --candidates lists alone, while it
+gives it plan_backlog_stories (S-0328, ADR-0119); its run records
+orchestrator, in place of asked, as what started it (S-0219).`,
 		Example: `  flai serve enable plan
   flai plan E-0016
   flai plan S-0208 --json
@@ -82,18 +88,19 @@ what started it (S-0219).`,
 			return a.planNow(workitem.CanonicalID(args[0]))
 		},
 	}
-	c.Flags().BoolVar(&candidates, "candidates", false, "list the epics the planner should plan, each with why, and those left out while a planner runs or awaits the operator; writes nothing")
+	c.Flags().BoolVar(&candidates, "candidates", false, "list the epics and stories the planner should plan, each with why, and those left out while a planner runs or awaits the operator; writes nothing")
 	return c
 }
 
-// planCandidates prints the epics the planner should plan in the project,
-// leaving out those flai serve's planner runs on this host keep back.
+// planCandidates prints the epics and stories the planner should plan in
+// the project, leaving out those flai serve's planner runs on this host keep
+// back.
 func (a *app) planCandidates() error {
 	repo, err := a.project()
 	if err != nil {
 		return err
 	}
-	got, err := repo.PlanCandidates(planHeld(repo, a.serveDir().AgentStates()[mainRootOf(repo)]))
+	got, err := a.planCandidatesOf(repo)
 	if err != nil {
 		return err
 	}
@@ -101,9 +108,9 @@ func (a *app) planCandidates() error {
 		return a.printJSON(got)
 	}
 	if len(got.Candidates) == 0 {
-		fmt.Fprintln(a.out, "no epics to plan")
+		fmt.Fprintln(a.out, "nothing to plan")
 	} else {
-		fmt.Fprintln(a.out, "epics to plan:")
+		fmt.Fprintln(a.out, "to plan:")
 	}
 	for _, c := range got.Candidates {
 		fmt.Fprintf(a.out, "  %s  %s\n    - %s\n", c.ID, c.Title, c.Reason)
@@ -117,33 +124,90 @@ func (a *app) planCandidates() error {
 	return nil
 }
 
-// planHeld is why each epic st's planner runs keep from being a candidate:
-// a planner runs for it now, or its newest planner run ended asking on a
-// thread whose last word is still the planner's. A run that has not ended
-// but whose process is gone is neither: flai serve settles it at its next
-// look.
-func planHeld(repo *workitem.Repo, st serve.AgentState) map[string]string {
+// planCandidatesOf is what flai plan --candidates lists in repo's project,
+// judged with flai serve's planner runs on this host.
+func (a *app) planCandidatesOf(repo *workitem.Repo) (workitem.PlanCandidates, error) {
+	items, err := repo.List(true)
+	if err != nil {
+		return workitem.PlanCandidates{}, err
+	}
+	return workitem.PlanCandidatesOf(items, planHeld(repo, items, a.serveDir().AgentStates()[mainRootOf(repo)])), nil
+}
+
+// planHeld is why each epic and story st's planner runs keep from being a
+// candidate, judged among items: a planner runs for it now, or its newest
+// planner run ended asking on a thread whose last word is still the
+// planner's. A story is kept back too while a planner runs for its epic, and
+// when its newest planner run has ended and the story has not been updated
+// since, so that a planner that could not finish is not started again until
+// something changes (S-0328, ADR-0119). A run that has not ended but whose
+// process is gone is neither running nor ended: flai serve settles it at its
+// next look.
+func planHeld(repo *workitem.Repo, items []*workitem.Item, st serve.AgentState) map[string]string {
 	out := map[string]string{}
+	byID := map[string]*workitem.Item{}
+	for _, it := range items {
+		byID[it.ID] = it
+	}
+	running := map[string]string{}
 	for id, run := range st.Plans {
-		if run == nil || workitem.TypeOfID(id) != workitem.Epic {
+		typ := workitem.TypeOfID(id)
+		if run == nil || (typ != workitem.Epic && typ != workitem.Story) {
 			continue
 		}
 		if run.Ended == "" && run.Error == "" && run.PID > 0 && serve.Owns(run.PID, run.Start) {
-			out[id] = fmt.Sprintf("a planner runs for it now (pid %d, started %s)", run.PID, run.Started)
+			running[id] = fmt.Sprintf("(pid %d, started %s)", run.PID, run.Started)
+			out[id] = "a planner runs for it now " + running[id]
 			continue
 		}
-		if run.Outcome != serve.OutcomeAsked || run.Thread == "" {
+		if asked := plannerAsked(repo, run); asked != "" {
+			out[id] = asked
 			continue
 		}
-		th, err := threads.Get(repo, run.Thread)
-		if err != nil {
+		if story := byID[id]; typ == workitem.Story && story != nil && run.Ended != "" && !updatedAfter(story, run.Ended) {
+			out[id] = fmt.Sprintf("its planner ran until %s and it has not changed since: a planner is not started on it again until it does", run.Ended)
+		}
+	}
+	for _, it := range items {
+		if _, held := out[it.ID]; held || it.Type != workitem.Story {
 			continue
 		}
-		if e := th.Entries(); th.Open() && len(e) > 0 && e[len(e)-1].Author == run.Agent {
-			out[id] = fmt.Sprintf("its planner asked on %s, which awaits the operator: %s", th.ID, th.Title)
+		if pid, ok := running[it.Parent]; ok {
+			out[it.ID] = fmt.Sprintf("a planner runs for its epic %s now %s", it.Parent, pid)
 		}
 	}
 	return out
+}
+
+// plannerAsked says that run ended asking on a thread whose last word is
+// still the planner's, or nothing when it did not.
+func plannerAsked(repo *workitem.Repo, run *serve.AgentRun) string {
+	if run.Outcome != serve.OutcomeAsked || run.Thread == "" {
+		return ""
+	}
+	th, err := threads.Get(repo, run.Thread)
+	if err != nil {
+		return ""
+	}
+	if e := th.Entries(); th.Open() && len(e) > 0 && e[len(e)-1].Author == run.Agent {
+		return fmt.Sprintf("its planner asked on %s, which awaits the operator: %s", th.ID, th.Title)
+	}
+	return ""
+}
+
+// updatedAfter says whether it was updated after ended, a run's end. An
+// item or an end whose time does not read counts as updated, so that it is
+// not held for want of a time.
+func updatedAfter(it *workitem.Item, ended string) bool {
+	end, err := time.Parse(time.RFC3339, ended)
+	if err != nil {
+		return true
+	}
+	updated, err := time.Parse(time.RFC3339, it.Updated)
+	if err != nil {
+		return true
+	}
+	return updated.After(end)
 }
 
 // planNow starts the planner for item and prints the run, and says on
@@ -193,8 +257,9 @@ func (a *app) planOn(repo *workitem.Repo) (serve.Options, serve.Entry) {
 // flai plan does, under the same plan host action, and journals who asked
 // and what came of it. Of the agents flai serve starts, the orchestrator
 // alone may ask, for an epic flai plan --candidates lists, while the project
-// gives it plan_backlog_epics (S-0218, S-0219), and its run records the
-// orchestrator as what started it.
+// gives it plan_backlog_epics (S-0218, S-0219), and for a story it lists,
+// while the project gives it plan_backlog_stories (S-0328), and its run
+// records the orchestrator as what started it.
 func (a *app) mcpPlan(ctx context.Context, root, item, by string) (mcpserver.PlanStarted, error) {
 	orchestrator := os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate
 	if os.Getenv("FLAI_STARTED_BY") == "flai-serve" && !orchestrator {
@@ -234,19 +299,32 @@ func (a *app) mcpPlan(ctx context.Context, root, item, by string) (mcpserver.Pla
 // orchestratorPlans says why the orchestrator may not ask for the planner on
 // item in repo, or nil when it may: item is an epic flai plan --candidates
 // lists, judged with flai serve's planner runs on this host, and the project
-// gives the orchestrator plan_backlog_epics (S-0219).
+// gives the orchestrator plan_backlog_epics (S-0219); or it is a story the
+// candidates list, and the project gives it plan_backlog_stories (S-0328,
+// ADR-0119).
 func (a *app) orchestratorPlans(repo *workitem.Repo, item string) error {
-	if workitem.TypeOfID(item) != workitem.Epic {
-		return fmt.Errorf("the orchestrator asks for the planner on an epic flai plan --candidates lists alone, and %s is not an epic", item)
-	}
-	if !repo.Manifest.Orchestration.Permissions.Allows(manifest.PermitPlanBacklogEpics) {
-		return fmt.Errorf("the orchestrator asks for the planner only with orchestration.permissions.plan_backlog_epics, which is off: ask the operator with thread_open on %s", item)
+	var what, alone string
+	switch workitem.TypeOfID(item) {
+	case workitem.Epic:
+		if !repo.Manifest.Orchestration.Permissions.Allows(manifest.PermitPlanBacklogEpics) {
+			return fmt.Errorf("the orchestrator asks for the planner only with orchestration.permissions.plan_backlog_epics, which is off: ask the operator with thread_open on %s", item)
+		}
+		what = "is neither in the backlog with no stories nor open with every story done or cancelled and one done"
+		alone = "the orchestrator asks for the planner on an epic flai plan --candidates lists alone, and "
+	case workitem.Story:
+		if !repo.Manifest.Orchestration.Permissions.Allows(manifest.PermitPlanBacklogStories) {
+			return fmt.Errorf("the orchestrator asks for the planner on a story only with orchestration.permissions.plan_backlog_stories, which is off: ask the operator with thread_open on %s", item)
+		}
+		what = "has a plan: touches, a forecast duration, a cost of delay value, and a task"
+		alone = "the orchestrator asks for the planner on a story flai plan --candidates lists alone, and "
+	default:
+		return fmt.Errorf("the orchestrator asks for the planner on an epic or a story flai plan --candidates lists alone, and %s is neither", item)
 	}
 	it, err := repo.Get(item)
 	if err != nil {
 		return err
 	}
-	got, err := repo.PlanCandidates(planHeld(repo, a.serveDir().AgentStates()[mainRootOf(repo)]))
+	got, err := a.planCandidatesOf(repo)
 	if err != nil {
 		return err
 	}
@@ -257,17 +335,18 @@ func (a *app) orchestratorPlans(repo *workitem.Repo, item string) error {
 	}
 	for _, c := range got.LeftOut {
 		if c.ID == it.ID {
-			return fmt.Errorf("the orchestrator asks for the planner on an epic flai plan --candidates lists alone, and %s is left out: %s", it.ID, c.Reason)
+			return fmt.Errorf("%s%s is left out: %s", alone, it.ID, c.Reason)
 		}
 	}
-	why := "is neither in the backlog with no stories nor open with every story done or cancelled and one done"
 	switch {
 	case it.Archived:
-		why = "is archived"
+		what = "is archived"
 	case it.Closed():
-		why = "is " + it.Status
+		what = "is " + it.Status
+	case it.Type == workitem.Story && it.Status != workitem.Backlog:
+		what = "is " + it.Status + ", not in the backlog"
 	}
-	return fmt.Errorf("the orchestrator asks for the planner on an epic flai plan --candidates lists alone, and %s is not one: it %s", it.ID, why)
+	return fmt.Errorf("%s%s is not one: it %s", alone, it.ID, what)
 }
 
 // orchestratorBy names the orchestrator as who asks, with the name flai mcp

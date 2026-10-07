@@ -555,7 +555,9 @@ func TestAnOldOverlapNoticeReportsAsBefore(t *testing.T) {
 // orchestrated is a server whose caller is the orchestrator, as flai serve
 // starts it, and a maker of stories in its backlog under the fixture's epic:
 // each with a goal, a criterion, and the touches given, a draft when draft
-// is true, and with a forecast and a cost of delay when planned is true.
+// is true, and with a forecast and a cost of delay when planned is true,
+// written as the operator would, since the orchestrator sets no value
+// (S-0328).
 func orchestrated(t *testing.T) (*fixture, func(title string, draft, planned bool, touches ...string) string) {
 	t.Helper()
 	t.Setenv("FLAI_ROLE", "orchestrate")
@@ -572,8 +574,15 @@ func orchestrated(t *testing.T) (*fixture, func(title string, draft, planned boo
 		}
 		id := out["id"].(string)
 		if planned {
-			if _, failed := f.call(t, "item_edit", map[string]any{"id": id, "cost_of_delay": map[string]any{"value": 300}, "forecast": map[string]any{"duration": "2h", "delivery": "2026-09-20T12:00:00Z"}}); failed != "" {
-				t.Fatalf("%s planned: %s", title, failed)
+			it, err := f.repo.Get(id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			value := 300.0
+			it.CostOfDelay = &workitem.CostOfDelay{Value: &value, By: "alex", At: "2026-09-15T12:00:00Z"}
+			it.Forecast = &workitem.Forecast{Duration: "2h", Delivery: "2026-09-20T12:00:00Z", By: "alex", At: "2026-09-15T12:00:00Z"}
+			if err := f.repo.Save(it); err != nil {
+				t.Fatalf("%s planned: %v", title, err)
 			}
 		}
 		return id
@@ -610,6 +619,73 @@ func TestTheOrchestratorFinalizesACompleteDraft(t *testing.T) {
 	it, _ := f.repo.Get(complete)
 	if it.Draft || it.Finalized == nil || it.Finalized.By != "orchestrator" || it.Finalized.At != f.clock.UTC().Format(workitem.TimeFormat) {
 		t.Errorf("finalized = %+v, want the orchestrator, now", it.Finalized)
+	}
+}
+
+// S-0328: the orchestrator gives a backlog story its cost of delay inputs
+// with item_edit while the project gives it plan_backlog_stories, recorded as
+// its own, and only when neither the story nor its epic has any, and with
+// inputs alone: a value, a removal, another field, an item not a story in
+// the backlog are each refused, saying why, and change nothing.
+func TestTheOrchestratorGivesABacklogStoryItsFirstCostOfDelayInputs(t *testing.T) {
+	f, story := orchestrated(t)
+	bare := story("Bare", true, false)
+	priced := story("Priced", false, false)
+	it, _ := f.repo.Get(priced)
+	revenue := 100.0
+	it.CostOfDelay = &workitem.CostOfDelay{Inputs: &workitem.CostInputs{RevenuePerWeek: &revenue, By: "alex", At: "2026-09-15T12:00:00Z"}}
+	if err := f.repo.Save(it); err != nil {
+		t.Fatal(err)
+	}
+	inputs := map[string]any{"revenue_per_week": 500, "time_lost_per_cycle": "4h"}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": bare, "cost_of_delay": inputs}); !strings.Contains(failed, "the orchestrator sets a story's cost of delay inputs only with orchestration.permissions.plan_backlog_stories, which is off: ask the operator with thread_open on "+bare) {
+		t.Errorf("without plan_backlog_stories: %q", failed)
+	}
+	f.repo.Manifest.Orchestration.Permissions.PlanBacklogStories = true
+	only := ": the orchestrator gives a story cost of delay inputs and nothing else, and this edit gives "
+	for _, c := range []struct {
+		args map[string]any
+		want string
+	}{
+		{map[string]any{"id": bare, "cost_of_delay": map[string]any{"revenue_per_week": 500, "value": 300}}, bare + only + "a value too"},
+		{map[string]any{"id": bare, "cost_of_delay": map[string]any{"time_lost_per_cycle": ""}}, bare + only + "an empty time_lost_per_cycle, which removes it too"},
+		{map[string]any{"id": bare, "cost_of_delay": inputs, "clear_cost_of_delay": true}, bare + only + "clear_cost_of_delay too"},
+		{map[string]any{"id": bare, "cost_of_delay": inputs, "title": "Renamed"}, bare + only + "a field other than cost_of_delay too"},
+		{map[string]any{"id": bare, "cost_of_delay": inputs, "draft": true}, bare + only + "a field other than cost_of_delay too"},
+		{map[string]any{"id": priced, "cost_of_delay": inputs}, priced + " has cost of delay inputs already: the orchestrator gives inputs to a story without any"},
+		{map[string]any{"id": f.story.ID, "cost_of_delay": inputs}, f.story.ID + " is in-progress, not in the backlog"},
+		{map[string]any{"id": f.task.ID, "cost_of_delay": inputs}, f.task.ID + " is a task: the orchestrator gives cost of delay inputs to a story in the backlog, and no other item"},
+		{map[string]any{"id": f.story.Parent, "cost_of_delay": inputs}, f.story.Parent + " is an epic"},
+	} {
+		if _, failed := f.call(t, "item_edit", c.args); !strings.Contains(failed, c.want) {
+			t.Errorf("%v: %q, want %q", c.args, failed, c.want)
+		}
+	}
+	if it, _ := f.repo.Get(bare); it.CostOfDelay != nil || it.Title != "Bare" {
+		t.Fatalf("a refused edit changed %s: %+v %q", bare, it.CostOfDelay, it.Title)
+	}
+
+	ed, failed := f.call(t, "item_edit", map[string]any{"id": bare, "cost_of_delay": inputs})
+	if failed != "" || strings.Join(toStrings(ed["changed"]), ",") != "cost_of_delay" {
+		t.Fatalf("inputs on a bare backlog story: %v %s", ed, failed)
+	}
+	it, _ = f.repo.Get(bare)
+	if c := it.CostOfDelay; c == nil || c.Inputs == nil || c.Inputs.RevenuePerWeek == nil || *c.Inputs.RevenuePerWeek != 500 || c.Inputs.TimeLostPerCycle != "4h" || c.Inputs.By != "orchestrator" || c.Value != nil {
+		t.Errorf("the inputs = %+v, want the orchestrator's, with no value", c)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": bare, "cost_of_delay": map[string]any{"penalty_per_week": 50}}); !strings.Contains(failed, bare+" has cost of delay inputs already") {
+		t.Errorf("a second set of inputs: %q", failed)
+	}
+
+	// a story whose epic has inputs takes none
+	next := story("Next", false, false)
+	epic, _ := f.repo.Get(f.story.Parent)
+	epic.CostOfDelay = &workitem.CostOfDelay{Inputs: &workitem.CostInputs{PenaltyPerWeek: &revenue, By: "alex", At: "2026-09-15T12:00:00Z"}}
+	if err := f.repo.Save(epic); err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := f.call(t, "item_edit", map[string]any{"id": next, "cost_of_delay": inputs}); !strings.Contains(failed, next+"'s epic "+epic.ID+" has cost of delay inputs") {
+		t.Errorf("under an epic with inputs: %q", failed)
 	}
 }
 

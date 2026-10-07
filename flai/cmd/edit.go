@@ -61,7 +61,10 @@ amounts in planning.currency, and --time-lost-per-cycle, a Go duration) and
 a value per week (--cost-of-delay-value). A story's forecast has a duration
 (--forecast-duration, a Go duration), a delivery (--forecast-delivery, a UTC
 timestamp like 2026-10-09T17:00:00Z), and a basis (--forecast-basis, one
-sentence). Each flag changes its key only: an empty value removes it, and
+sentence). The orchestrator gives a story in the backlog its cost of delay
+inputs, and nothing else, only while orchestration.permissions gives it
+plan_backlog_stories and neither the story nor its epic has any inputs
+(S-0328, ADR-0119). Each flag changes its key only: an empty value removes it, and
 removing the last input or value, or the last of duration and delivery,
 removes the block. --clear-cost-of-delay and --clear-forecast remove a
 block. A block that changes records who changed it (--by) and when.
@@ -196,8 +199,14 @@ the item changed.`,
 			if ch == (itemedit.Change{}) {
 				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, a --role- flag, --unset-role, --clear-agent, --draft, --no-draft, a cost of delay or forecast flag, or --body-stdin (flai edit %s --show prints what is there)", args[0])
 			}
-			if noDraft && os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate {
+			orchestrator := os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate
+			if noDraft && orchestrator {
 				if err := orchestratorFinalizes(repo, args[0], ch); err != nil {
+					return fmt.Errorf("rule: %w", err)
+				}
+			}
+			if orchestrator && (ch.CostOfDelay != nil || ch.ClearCostOfDelay) {
+				if err := orchestratorSetsCostOfDelay(repo, args[0], ch); err != nil {
 					return fmt.Errorf("rule: %w", err)
 				}
 			}
@@ -329,6 +338,41 @@ func orchestratorFinalizes(repo *workitem.Repo, id string, ch itemedit.Change) e
 		return fmt.Errorf("%s is not complete, so the orchestrator does not finalize it (flai promote --drafts): %s", it.ID, strings.Join(lacks, "; "))
 	}
 	return nil
+}
+
+// orchestratorSetsCostOfDelay says why the orchestrator may not make change
+// ch to item id in repo, one that gives a cost of delay, or nil when it may
+// (S-0328, ADR-0119): it gives a backlog story whose epic has none either its
+// first cost of delay inputs, and nothing else, while the project gives it
+// plan_backlog_stories.
+func orchestratorSetsCostOfDelay(repo *workitem.Repo, id string, ch itemedit.Change) error {
+	it, err := repo.Get(id)
+	if err != nil {
+		return err
+	}
+	var besides []string
+	if c := ch.CostOfDelay; c != nil {
+		if c.Value != nil {
+			besides = append(besides, "--cost-of-delay-value")
+		}
+		for _, in := range []struct {
+			flag  string
+			value *string
+		}{{"--revenue-per-week", c.RevenuePerWeek}, {"--penalty-per-week", c.PenaltyPerWeek}, {"--time-lost-per-cycle", c.TimeLostPerCycle}} {
+			if in.value != nil && *in.value == "" {
+				besides = append(besides, "an empty "+in.flag+", which removes it")
+			}
+		}
+	}
+	if ch.ClearCostOfDelay {
+		besides = append(besides, "--clear-cost-of-delay")
+	}
+	rest := ch
+	rest.CostOfDelay, rest.ClearCostOfDelay = nil, false
+	if rest != (itemedit.Change{}) {
+		besides = append(besides, "a flag other than the cost of delay inputs")
+	}
+	return repo.OrchestratorSetsCostOfDelay(it, besides)
 }
 
 // planningChange puts the draft, cost of delay, and forecast flags given on

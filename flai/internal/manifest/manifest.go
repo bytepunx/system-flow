@@ -338,6 +338,11 @@ type Permissions struct {
 	// PlanBacklogEpics lets it ask the planner to draft stories for an epic
 	// in the backlog.
 	PlanBacklogEpics bool `yaml:"plan_backlog_epics,omitempty" json:"plan_backlog_epics,omitempty"`
+	// PlanBacklogStories lets it ask the planner to plan a story in the
+	// backlog that lacks a plan, settle what that planner asks on its
+	// threads, and give a backlog story without any its cost of delay
+	// inputs (S-0328, ADR-0119).
+	PlanBacklogStories bool `yaml:"plan_backlog_stories,omitempty" json:"plan_backlog_stories,omitempty"`
 	// FinalizeDrafts lets it finalize a draft story.
 	FinalizeDrafts bool `yaml:"finalize_drafts,omitempty" json:"finalize_drafts,omitempty"`
 	// PromoteToReady lets it move a story to ready.
@@ -359,18 +364,19 @@ type Permissions struct {
 
 // The permissions, as orchestration.permissions keys them.
 const (
-	PermitPlanBacklogEpics = "plan_backlog_epics"
-	PermitFinalizeDrafts   = "finalize_drafts"
-	PermitPromoteToReady   = "promote_to_ready"
-	PermitOrderReady       = "order_ready"
-	PermitAnswerThreads    = "answer_threads"
-	PermitAcceptReviews    = "accept_reviews"
-	PermitPublish          = "publish"
+	PermitPlanBacklogEpics   = "plan_backlog_epics"
+	PermitPlanBacklogStories = "plan_backlog_stories"
+	PermitFinalizeDrafts     = "finalize_drafts"
+	PermitPromoteToReady     = "promote_to_ready"
+	PermitOrderReady         = "order_ready"
+	PermitAnswerThreads      = "answer_threads"
+	PermitAcceptReviews      = "accept_reviews"
+	PermitPublish            = "publish"
 )
 
 // PermissionNames are the keys of orchestration.permissions, in the order
 // they are listed to the operator.
-var PermissionNames = []string{PermitPlanBacklogEpics, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitAcceptReviews, PermitPublish}
+var PermissionNames = []string{PermitPlanBacklogEpics, PermitPlanBacklogStories, PermitFinalizeDrafts, PermitPromoteToReady, PermitOrderReady, PermitAnswerThreads, PermitAcceptReviews, PermitPublish}
 
 // The values of orchestration.permissions.answer_threads.
 const (
@@ -421,6 +427,8 @@ func (p Permissions) Allows(name string) bool {
 	switch name {
 	case PermitPlanBacklogEpics:
 		return p.PlanBacklogEpics
+	case PermitPlanBacklogStories:
+		return p.PlanBacklogStories
 	case PermitFinalizeDrafts:
 		return p.FinalizeDrafts
 	case PermitPromoteToReady:

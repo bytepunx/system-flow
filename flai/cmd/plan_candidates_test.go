@@ -10,14 +10,17 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// S-0219: flai plan --candidates lists the epics the planner should plan,
-// each with why, leaves out one a planner runs for and one whose planner
-// waits on the operator, and writes nothing.
+// S-0219, S-0328: flai plan --candidates lists the epics and then the
+// stories the planner should plan, each with why, leaves out one a planner
+// runs for and one whose planner waits on the operator, and a story whose
+// epic a planner runs for or whose planner ended with it unchanged since,
+// and writes nothing.
 func TestPlanCandidatesCommand(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
 	t.Setenv("FLAI_CONFIG", cfg)
@@ -54,6 +57,10 @@ func TestPlanCandidatesCommand(t *testing.T) {
 	run("story", "new", "Shipped too", "--epic", "E-0003")
 	run("story", "new", "Still open", "--epic", "E-0003")
 	run("story", "new", "Shipped", "--epic", "E-0004")
+	run("story", "new", "Unplanned")      // S-0006: a candidate
+	run("story", "new", "Planned before") // S-0007: left out, unchanged since its planner ended
+	run("story", "new", "Changed since")  // S-0008: a candidate, changed since its planner ended
+	run("story", "new", "Asking")         // S-0009: left out, its planner asked
 	status("S-0001", workitem.Done)
 	status("S-0002", workitem.Cancelled)
 	status("E-0002", workitem.InProgress)
@@ -64,6 +71,7 @@ func TestPlanCandidatesCommand(t *testing.T) {
 	run("thread", "new", "--on", "E-0007", "--by", "planner-E-0007", "Which outcome?", "Say which.")
 	run("thread", "new", "--on", "E-0008", "--by", "planner-E-0008", "Which users?", "Say which.")
 	run("thread", "reply", "TH-0002", "--by", "alex", "These.")
+	run("thread", "new", "--on", "S-0009", "--by", "planner-S-0009", "What does it cost?", "Say how much.")
 
 	sleep := exec.Command("sleep", "60")
 	serve.Detach(sleep)
@@ -76,8 +84,21 @@ func TestPlanCandidatesCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	ended := "2026-09-15T20:00:00Z"
+	s7, err := repo.Get("S-0007")
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := time.Parse(workitem.TimeFormat, s7.Updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	endedAfter := updated.Add(time.Hour).Format(workitem.TimeFormat)
 	states := map[string]serve.AgentState{mainRootOf(repo): {Plans: map[string]*serve.AgentRun{
 		"E-0006": {Item: "E-0006", Agent: "planner-E-0006", PID: sleep.Process.Pid, Start: serve.Started(sleep.Process.Pid), Started: "2026-09-15T20:30:00Z"},
+		"E-0003": {Item: "E-0003", Agent: "planner-E-0003", PID: sleep.Process.Pid, Start: serve.Started(sleep.Process.Pid), Started: "2026-09-15T20:40:00Z"},
+		"S-0007": {Item: "S-0007", Agent: "planner-S-0007", Started: "2026-09-15T19:00:00Z", Ended: endedAfter, Outcome: serve.OutcomeWorked},
+		"S-0008": {Item: "S-0008", Agent: "planner-S-0008", Started: "2026-09-15T19:00:00Z", Ended: ended, Outcome: serve.OutcomeWorked},
+		"S-0009": {Item: "S-0009", Agent: "planner-S-0009", Started: "2026-09-15T19:00:00Z", Ended: endedAfter, Outcome: serve.OutcomeAsked, Thread: "TH-0003"},
 		"E-0007": {Item: "E-0007", Agent: "planner-E-0007", Started: "2026-09-15T19:00:00Z", Ended: ended, Outcome: serve.OutcomeAsked, Thread: "TH-0001"},
 		"E-0008": {Item: "E-0008", Agent: "planner-E-0008", Started: "2026-09-15T19:00:00Z", Ended: ended, Outcome: serve.OutcomeAsked, Thread: "TH-0002"},
 		"E-0001": {Item: "E-0001", Agent: "planner-E-0001", PID: 999999, Started: "2026-09-15T19:00:00Z", Ended: ended, Outcome: serve.OutcomeWorked},
@@ -94,17 +115,22 @@ func TestPlanCandidatesCommand(t *testing.T) {
 	before := treeOf(t, root)
 	out := run("plan", "--candidates")
 	for _, want := range []string{
-		"epics to plan:\n  E-0001  Empty\n    - in the backlog with no stories",
+		"to plan:\n  E-0001  Empty\n    - in the backlog with no stories",
 		"  E-0002  Finished stories\n    - every story done or cancelled (1 done, 1 cancelled) while the epic is in-progress",
 		"  E-0008  Answered\n    - in the backlog with no stories",
+		"  S-0006  Unplanned\n    - in the backlog without a plan: no touches; no forecast duration; no cost of delay value; no tasks\n",
+		"  S-0008  Changed since\n    - in the backlog without a plan: ",
 		"left out:\n  E-0006  Being planned\n    - a planner runs for it now (pid ",
 		"  E-0007  Waiting on operator\n    - its planner asked on TH-0001, which awaits the operator: Which outcome?\n",
+		"  S-0004  Still open\n    - a planner runs for its epic E-0003 now (pid ",
+		"  S-0007  Planned before\n    - its planner ran until " + endedAfter + " and it has not changed since",
+		"  S-0009  Asking\n    - its planner asked on TH-0003, which awaits the operator: What does it cost?\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
 	}
-	for _, not := range []string{"E-0003", "E-0004", "E-0005"} {
+	for _, not := range []string{"  E-0003  ", "  E-0004  ", "  E-0005  "} {
 		if strings.Contains(out, not) {
 			t.Errorf("%s listed:\n%s", not, out)
 		}
@@ -130,7 +156,7 @@ func TestPlanCandidatesCommand(t *testing.T) {
 	for _, c := range j.LeftOut {
 		left = append(left, c.ID)
 	}
-	if !reflect.DeepEqual(ids, []string{"E-0001", "E-0002", "E-0008"}) || !reflect.DeepEqual(left, []string{"E-0006", "E-0007"}) {
+	if !reflect.DeepEqual(ids, []string{"E-0001", "E-0002", "E-0008", "S-0006", "S-0008"}) || !reflect.DeepEqual(left, []string{"E-0006", "E-0007", "S-0004", "S-0007", "S-0009"}) {
 		t.Errorf("--json: candidates %v, left out %v", ids, left)
 	}
 	if !reflect.DeepEqual(treeOf(t, root), before) {

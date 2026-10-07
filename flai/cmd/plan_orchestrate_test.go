@@ -16,11 +16,12 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// S-0218, S-0219: of the agents flai serve starts, the orchestrator may have
-// the planner plan an epic flai plan --candidates lists, while the project
-// gives it plan_backlog_epics, and nothing else, through flai mcp's plan and
-// flai plan alike; its run records the orchestrator as what started it, and
-// the journal names it.
+// S-0218, S-0219, S-0328: of the agents flai serve starts, the orchestrator
+// may have the planner plan an epic flai plan --candidates lists, while the
+// project gives it plan_backlog_epics, and a story it lists, while the
+// project gives it plan_backlog_stories, and nothing else, through flai
+// mcp's plan and flai plan alike; its run records the orchestrator as what
+// started it, and the journal names it.
 func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "cfg.json")
 	t.Setenv("FLAI_CONFIG", cfg)
@@ -31,7 +32,15 @@ func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 	runIn(t, root, "epic", "new", "Open story") // E-0003: a story not done
 	runIn(t, root, "epic", "new", "Waiting")    // E-0004: left out, its planner asked
 	runIn(t, root, "epic", "new", "Also empty") // E-0005: a candidate
-	runIn(t, root, "story", "new", "Slice", "--epic", "E-0003")
+
+	runIn(t, root, "story", "new", "Slice", "--epic", "E-0003") // S-0001: a candidate story
+	runIn(t, root, "story", "new", "Planned")                   // S-0002: has a plan
+	runIn(t, root, "edit", "S-0002", "--touches", "flai/cmd", "--forecast-duration", "2h", "--cost-of-delay-value", "300")
+	runIn(t, root, "task", "new", "--story", "S-0002", "Piece")
+	runIn(t, root, "story", "new", "Dropped story")  // S-0003: cancelled
+	runIn(t, root, "story", "new", "Tried")          // S-0004: left out, unchanged since its planner ended
+	runIn(t, root, "story", "new", "Also unplanned") // S-0005: a candidate story
+	runIn(t, root, "move", "S-0003", "cancelled", "--reason", "dropped")
 	runIn(t, root, "move", "E-0002", "cancelled", "--reason", "dropped")
 	runIn(t, root, "thread", "new", "--on", "E-0004", "--by", "planner-E-0004", "Which outcome?", "Say which.")
 	runIn(t, root, "serve", "enable", "plan")
@@ -43,6 +52,7 @@ func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 	agents := filepath.Join(string(serve.DirFor(cfg)), "agents.json")
 	data, _ := json.Marshal(map[string]serve.AgentState{mainRootOf(repo): {Plans: map[string]*serve.AgentRun{
 		"E-0004": {Item: "E-0004", Agent: "planner-E-0004", Started: "2026-09-15T19:00:00Z", Ended: "2026-09-15T20:00:00Z", Outcome: serve.OutcomeAsked, Thread: "TH-0001"},
+		"S-0004": {Item: "S-0004", Agent: "planner-S-0004", Started: "2026-09-15T21:30:00Z", Ended: "2026-09-15T22:00:00Z", Outcome: serve.OutcomeWorked},
 	}}})
 	if err := os.MkdirAll(filepath.Dir(agents), 0o755); err != nil {
 		t.Fatal(err)
@@ -78,8 +88,8 @@ func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 	}
 	const alone = "the orchestrator asks for the planner on an epic flai plan --candidates lists alone, and "
 	for item, want := range map[string]string{
-		"S-0001": alone + "S-0001 is not an epic",
-		"T-0001": alone + "T-0001 is not an epic",
+		"S-0001": "the orchestrator asks for the planner on a story only with orchestration.permissions.plan_backlog_stories, which is off: ask the operator with thread_open on S-0001",
+		"T-0001": "the orchestrator asks for the planner on an epic or a story flai plan --candidates lists alone, and T-0001 is neither",
 		"E-0002": alone + "E-0002 is not one: it is cancelled",
 		"E-0003": alone + "E-0003 is not one: it is neither in the backlog with no stories nor open with every story done or cancelled and one done",
 		"E-0004": alone + "E-0004 is left out: its planner asked on TH-0001, which awaits the operator: Which outcome?",
@@ -108,18 +118,48 @@ func TestTheOrchestratorAsksForThePlannerOnACandidateEpic(t *testing.T) {
 		t.Errorf("flai plan's run trigger = %q, want orchestrator", tr)
 	}
 
+	// with plan_backlog_stories, a story the candidates list, and no other
+	// (S-0328)
+	m, _ = os.ReadFile(manifest)
+	if err := os.WriteFile(manifest, []byte(strings.Replace(string(m), "    plan_backlog_epics: true\n", "    plan_backlog_epics: true\n    plan_backlog_stories: true\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const story = "the orchestrator asks for the planner on a story flai plan --candidates lists alone, and "
+	for item, want := range map[string]string{
+		"S-0002": story + "S-0002 is not one: it has a plan: touches, a forecast duration, a cost of delay value, and a task",
+		"S-0003": story + "S-0003 is not one: it is cancelled",
+		"S-0004": story + "S-0004 is left out: its planner ran until 2026-09-15T22:00:00Z and it has not changed since",
+		"S-0009": "S-0009 not found",
+	} {
+		if _, err := a.mcpPlan(ctx, root, item, "agent-o"); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: %v, want %q", item, err, want)
+		}
+	}
+	if got, err := a.mcpPlan(ctx, root, "S-0001", "agent-o"); err != nil || got.Item != "S-0001" || got.Agent != "planner-S-0001" {
+		t.Fatalf("a candidate story: %+v %v", got, err)
+	}
+	if tr := trigger("S-0001"); tr != serve.TriggerOrchestrator {
+		t.Errorf("the story's run trigger = %q, want orchestrator", tr)
+	}
+	if _, stderr, code := runIn(t, root, "plan", "S-0002"); code == 0 || !strings.Contains(stderr, "rule: "+story+"S-0002 is not one") {
+		t.Errorf("flai plan on a planned story: exit %d %s", code, stderr)
+	}
+	if out, stderr, code := runIn(t, root, "plan", "S-0005"); code != 0 || !strings.Contains(out, "to plan S-0005 as planner-S-0005") {
+		t.Fatalf("flai plan on a candidate story: exit %d %s %s", code, out, stderr)
+	}
+
 	// another agent flai serve started is refused, and the operator's own
-	// agent plans a story as asked, as before
+	// agent plans any story as asked, as before
 	t.Setenv("FLAI_ROLE", "plan")
 	if _, err := a.mcpPlan(ctx, root, "E-0003", "planner-S-0001"); err == nil || !strings.Contains(err.Error(), "an agent flai serve started does not start the planner") {
 		t.Errorf("another agent flai serve started: %v", err)
 	}
 	t.Setenv("FLAI_ROLE", "")
 	t.Setenv("FLAI_STARTED_BY", "")
-	if got, err := a.mcpPlan(ctx, root, "S-0001", "agent-ops"); err != nil || got.Item != "S-0001" {
+	if got, err := a.mcpPlan(ctx, root, "S-0002", "agent-ops"); err != nil || got.Item != "S-0002" {
 		t.Fatalf("the operator's agent on a story: %+v %v", got, err)
 	}
-	if tr := trigger("S-0001"); tr != "asked" {
+	if tr := trigger("S-0002"); tr != "asked" {
 		t.Errorf("the operator's agent's run trigger = %q, want asked", tr)
 	}
 	js, _, _ := runIn(t, root, "serve", "journal", "--json")
