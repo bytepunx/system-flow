@@ -2,11 +2,15 @@ package mcpserver
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -363,6 +367,279 @@ func TestIssueNewRecordsForTheSessionsStoryInItsWorktree(t *testing.T) {
 	}
 	if _, err := issues.Get(f.repo, "I-0001"); err == nil {
 		t.Error("the issue should not be written in the main checkout")
+	}
+}
+
+// storyGit makes f's project a git repository whose main branch holds it,
+// with ADR 0001 and an ADR index, and checks the story's branch out in its
+// worktree, which it returns as the project there. Integration: it runs real
+// git.
+func storyGit(t *testing.T, f *fixture) *workitem.Repo {
+	t.Helper()
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	gittest.Identity(t, "t", "t@t")
+	root := f.repo.Root
+	writeIn(t, root, ".gitignore", ".flai-cache/\n")
+	writeIn(t, root, "design/adrs/0001-first.md", adrDoc("0001", "First"))
+	writeIn(t, root, "design/adrs/README.md", adrIndex)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "project")
+	wt := *f.repo
+	wt.Root = f.repo.WorktreePath(f.story.ID)
+	gitIn(t, root, "worktree", "add", "-q", "-b", storygit.Branch(f.story.ID), wt.Root, "main")
+	return &wt
+}
+
+// adrIndex is design/adrs/README.md with ADR 0001's row.
+const adrIndex = "---\ntitle: ADRs\nupdated: 2026-09-01\nstatus: active\n---\n\n# Architecture Decision Records\n\n| ADR | Title | Status |\n|-----|-------|--------|\n| [0001](0001-first.md) | First | accepted |\n"
+
+// adrDoc is an accepted ADR numbered n.
+func adrDoc(n, title string) string {
+	return "---\nid: ADR-" + n + "\ntitle: " + title + "\nstatus: accepted\ndate: 2026-09-01\nsupersedes: []\nsuperseded_by: []\n---\n\n# ADR-" + n + " " + title + "\n\n" + adrBody
+}
+
+// adrBody is an ADR's sections below its heading.
+const adrBody = "## Context\n\nc\n\n## Decision\n\nd.\n\n## Consequences\n\ne\n\n## Alternatives considered\n\nf\n"
+
+// lastCommit is the subject, the message, and the files of the commit at
+// the head of dir's branch, and how many commits the branch has beyond main.
+func lastCommit(t *testing.T, dir string) (message string, files []string, ahead string) {
+	t.Helper()
+	message = gitIn(t, dir, "log", "-1", "--format=%B")
+	files = strings.Fields(gitIn(t, dir, "show", "--name-only", "--format=", "HEAD"))
+	return message, files, gitIn(t, dir, "rev-list", "--count", "main..HEAD")
+}
+
+// strs is a decoded JSON list of strings.
+func strs(v any) []string {
+	out := []string{}
+	list, _ := v.([]any)
+	for _, e := range list {
+		s, _ := e.(string)
+		out = append(out, s)
+	}
+	return out
+}
+
+// S-0275: with commit, issue_new, issue_bump, and issue_close each write in
+// the story's worktree, commit the issue and summary.md, and only those, on
+// the story's branch with the story's prefix and the trailers, and widen the
+// story's touches; an occurrence already recorded commits nothing.
+func TestIssueToolsCommitOnTheStorysBranch(t *testing.T) {
+	t.Setenv("FLAI_STORY", "")
+	f := setup(t)
+	wt := storyGit(t, f)
+	writeIn(t, wt.Root, "design/system/plan.md", "---\ntitle: Plan\n---\n\n# Plan\n\nhalf done\n")
+	issue, summary := "design/issues/I-0001-fixture-was-ignored.md", "design/issues/summary.md"
+	id := f.story.ID
+
+	out, failed := f.call(t, "issue_new", map[string]any{"title": "Fixture was ignored", "class": "defect", "story": id,
+		"report": "design/analysis/2026-10-06-risk.md", "commit": true, "trailers": []string{"Co-Authored-By: t <t@t>"}})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	rel, _ := filepath.Rel(f.repo.Root, wt.Root)
+	if out["id"] != "I-0001" || out["outcome"] != "opened" || out["story"] != id || out["path"] != filepath.ToSlash(rel)+"/"+issue {
+		t.Errorf("issue_new: %v", out)
+	}
+	subject := "docs: [" + id + "] record I-0001 Fixture was ignored"
+	if field(out, "commit.subject") != subject || !reflect.DeepEqual(strs(field(out, "commit.paths")), []string{issue, summary}) {
+		t.Errorf("commit: %v", out["commit"])
+	}
+	if got := strs(out["touches_added"]); !reflect.DeepEqual(got, []string{issue, summary}) {
+		t.Errorf("touches_added %v", got)
+	}
+	message, files, ahead := lastCommit(t, wt.Root)
+	if message != subject+"\n\nCo-Authored-By: t <t@t>" || !reflect.DeepEqual(files, []string{issue, summary}) || ahead != "1" {
+		t.Errorf("the story's branch should hold one commit of the issue and the summary: %q %v %s", message, files, ahead)
+	}
+	if hash := gitIn(t, wt.Root, "rev-parse", "HEAD"); field(out, "commit.hash") != hash {
+		t.Errorf("commit.hash %v, head %s", field(out, "commit.hash"), hash)
+	}
+	if st := gitIn(t, wt.Root, "status", "--porcelain"); st != "M design/system/plan.md" {
+		t.Errorf("the worktree's other change should stay uncommitted, and nothing else: %q", st)
+	}
+	story, err := f.repo.Get(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"flai/internal/mcpserver", issue, summary}; !reflect.DeepEqual(story.Touches, want) {
+		t.Errorf("the story's touches in the project %v, want %v", story.Touches, want)
+	}
+	if _, err := os.Stat(filepath.Join(f.repo.Root, "design/issues")); err == nil {
+		t.Error("nothing should be written in the main checkout's design/issues")
+	}
+
+	out, failed = f.call(t, "issue_new", map[string]any{"title": "Fixture was ignored", "class": "defect", "story": id,
+		"report": "design/analysis/2026-10-06-risk.md", "commit": true})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["outcome"] != "already recorded" || out["commit"] != nil || out["touches_added"] != nil {
+		t.Errorf("an occurrence already recorded should commit nothing: %v", out)
+	}
+	if _, _, ahead := lastCommit(t, wt.Root); ahead != "1" {
+		t.Errorf("no commit should be made: %s ahead", ahead)
+	}
+
+	out, failed = f.call(t, "issue_bump", map[string]any{"id": "I-1", "story": id, "note": "again", "commit": true})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	subject = "docs: [" + id + "] bump I-0001 Fixture was ignored"
+	if out["outcome"] != "bumped" || out["count"] != float64(2) || field(out, "commit.subject") != subject || out["touches_added"] != nil {
+		t.Errorf("issue_bump: %v", out)
+	}
+	if message, files, ahead := lastCommit(t, wt.Root); message != subject || !reflect.DeepEqual(files, []string{issue, summary}) || ahead != "2" {
+		t.Errorf("the bump's commit: %q %v %s", message, files, ahead)
+	}
+
+	out, failed = f.call(t, "issue_close", map[string]any{"id": "I-0001", "reason": "fixed by " + id, "story": id, "commit": true})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	subject = "docs: [" + id + "] close I-0001 Fixture was ignored"
+	if out["outcome"] != "closed" || out["story"] != id || field(out, "commit.subject") != subject {
+		t.Errorf("issue_close: %v", out)
+	}
+	if message, files, ahead := lastCommit(t, wt.Root); message != subject || !reflect.DeepEqual(files, []string{issue, summary}) || ahead != "3" {
+		t.Errorf("the close's commit: %q %v %s", message, files, ahead)
+	}
+	if is, err := issues.Get(wt, "I-0001"); err != nil || is.Status != "closed" || !strings.Contains(is.Body, "fixed by "+id) {
+		t.Errorf("the issue in the worktree should be closed with the reason: %v %+v", err, is)
+	}
+	if st := gitIn(t, wt.Root, "status", "--porcelain"); st != "M design/system/plan.md" {
+		t.Errorf("the worktree should hold only its other change: %q", st)
+	}
+}
+
+// S-0275: commit is refused, and nothing is written, when the story's
+// worktree does not have the story's branch checked out.
+func TestCommitIsRefusedOffTheStorysBranch(t *testing.T) {
+	t.Setenv("FLAI_STORY", "")
+	f := setup(t)
+	wt := storyGit(t, f)
+	gitIn(t, wt.Root, "checkout", "-q", "-b", "elsewhere")
+	for _, c := range []struct {
+		tool string
+		args map[string]any
+	}{
+		{"issue_new", map[string]any{"title": "Off the branch", "class": "defect"}},
+		{"adr_new", map[string]any{"decision": "Off the branch", "body": adrBody}},
+	} {
+		c.args["story"], c.args["commit"] = f.story.ID, true
+		if _, failed := f.call(t, c.tool, c.args); !strings.Contains(failed, "has elsewhere checked out, not "+storygit.Branch(f.story.ID)) || !strings.Contains(failed, "nothing was written") {
+			t.Errorf("%s off the story's branch should be refused: %q", c.tool, failed)
+		}
+	}
+	if st := gitIn(t, wt.Root, "status", "--porcelain"); st != "" {
+		t.Errorf("a refusal should write nothing: %q", st)
+	}
+}
+
+// S-0275: commit is refused before anything is written when no story
+// resolves, and when the story has no worktree, by every tool that takes it.
+func TestCommitIsRefusedWithoutAStoryOrItsWorktree(t *testing.T) {
+	t.Setenv("FLAI_STORY", "")
+	f := setup(t)
+	if _, err := issues.New(f.repo, issues.NewOptions{Title: "Kept as it was", Class: "efficiency", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadDir(filepath.Join(f.repo.Root, "design/issues"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls := []struct {
+		tool string
+		args map[string]any
+	}{
+		{"issue_new", map[string]any{"title": "Not recorded", "class": "defect"}},
+		{"issue_bump", map[string]any{"id": "I-0001"}},
+		{"issue_close", map[string]any{"id": "I-0001", "reason": "fixed"}},
+		{"adr_new", map[string]any{"decision": "Not recorded", "body": adrBody}},
+	}
+	for _, c := range calls {
+		c.args["commit"] = true
+		if _, failed := f.call(t, c.tool, c.args); !strings.Contains(failed, c.tool+" with commit commits on a story's branch, and no story was given or resolved") {
+			t.Errorf("%s with commit and no story should be refused: %q", c.tool, failed)
+		}
+		c.args["story"] = f.story.ID
+		if _, failed := f.call(t, c.tool, c.args); !strings.Contains(failed, f.story.ID+" has none at .flai-cache/worktrees/"+f.story.ID+": open it with flai stream open") {
+			t.Errorf("%s with commit and a story with no worktree should be refused: %q", c.tool, failed)
+		}
+	}
+	after, _ := os.ReadDir(filepath.Join(f.repo.Root, "design/issues"))
+	if len(after) != len(before) {
+		t.Errorf("a refusal should write nothing: %v", after)
+	}
+	if is, err := issues.Get(f.repo, "I-0001"); err != nil || is.Count != 1 || is.Status != "open" {
+		t.Errorf("the issue should be as it was: %v %+v", err, is)
+	}
+	if _, err := os.Stat(filepath.Join(f.repo.Root, "design/adrs")); err == nil {
+		t.Error("a refused adr_new should write no ADR")
+	}
+}
+
+// S-0275: without commit, issue_close closes the issue in the story's
+// worktree when the story has one, regenerating its summary there, and in the
+// project otherwise, as flai issue close does; nothing is committed.
+func TestIssueCloseClosesInTheStorysWorktreeOrTheProject(t *testing.T) {
+	t.Setenv("FLAI_STORY", "")
+	f := setup(t)
+	wt := *f.repo
+	wt.Root = f.repo.WorktreePath(f.story.ID)
+	is, err := issues.New(f.repo, issues.NewOptions{Title: "Flaky test", Class: "defect", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the worktree holds the issue as the story's branch had it from main
+	data, err := os.ReadFile(is.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeIn(t, wt.Root, "design/issues/"+filepath.Base(is.Path), string(data))
+	out, failed := f.call(t, "issue_close", map[string]any{"id": "I-1", "reason": "fixed", "story": f.story.ID})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	rel, _ := filepath.Rel(f.repo.Root, wt.Root)
+	if out["outcome"] != "closed" || out["story"] != f.story.ID || out["path"] != filepath.ToSlash(rel)+"/design/issues/I-0001-flaky-test.md" || out["commit"] != nil {
+		t.Errorf("issue_close in the worktree: %v", out)
+	}
+	if is, _ := issues.Get(&wt, "I-0001"); is == nil || is.Status != "closed" {
+		t.Errorf("the worktree's issue should be closed: %+v", is)
+	}
+	if data, err := os.ReadFile(filepath.Join(wt.Root, "design/issues/summary.md")); err != nil || strings.Contains(string(data), "I-0001") {
+		t.Errorf("the worktree's summary should leave the closed issue out: %v\n%s", err, data)
+	}
+	if is, _ := issues.Get(f.repo, "I-0001"); is == nil || is.Status != "open" {
+		t.Errorf("the project's issue should be left open: %+v", is)
+	}
+	if _, failed := f.call(t, "issue_close", map[string]any{"id": "I-1", "reason": "fixed", "story": f.story.ID}); !strings.Contains(failed, "I-0001 is already closed") {
+		t.Errorf("an issue already closed should be refused: %q", failed)
+	}
+	if _, failed := f.call(t, "issue_close", map[string]any{"id": "I-9", "reason": "fixed", "story": f.story.ID}); !strings.Contains(failed, "run flai stream sync "+f.story.ID+" first") {
+		t.Errorf("an issue not in the worktree should be refused, saying to sync: %q", failed)
+	}
+	if _, failed := f.call(t, "issue_close", map[string]any{"id": "I-1", "reason": " "}); !strings.Contains(failed, "issue_close needs reason") {
+		t.Errorf("a close without a reason should be refused: %q", failed)
+	}
+
+	out, failed = f.call(t, "issue_close", map[string]any{"id": "I-0001", "reason": "no longer applies"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["story"] != nil || out["path"] != "design/issues/I-0001-flaky-test.md" {
+		t.Errorf("issue_close without a story closes in the project: %v", out)
+	}
+	if is, _ := issues.Get(f.repo, "I-0001"); is == nil || is.Status != "closed" || !strings.Contains(is.Body, "no longer applies") {
+		t.Errorf("the project's issue should be closed with the reason: %+v", is)
 	}
 }
 
