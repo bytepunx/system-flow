@@ -190,12 +190,12 @@ func New(opt Options) *mcp.Server {
 	s := newServer(opt, opt.Repo)
 	one := single{s}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "flai", Title: "system-flow repository", Version: opt.Version}, &mcp.ServerOptions{
-		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names with story_start, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in one call (if story_start says the story is in progress already, another agent pulled it first: call wait_for_work again), answer the threads it names, or go back to your own story. It answers as soon as a story is ready, the in-progress limit leaves room, and review is under its limit, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. A story's agent that flai serve started, whose story has a question of its own open to the designer and no task in progress, gets end and why from wait_for_events at once instead of a wait: write the narrative's Current state and Next steps with stream_state and end the session, and flai serve starts it again when the question is answered. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " " + taskDoneInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, topics, touches, after, agent, parent, draft, cost_of_delay, forecast, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an epic moved following a story means that story's move took its epic along: nothing to do. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. " + overlapInstructions + " Publishing is the operator's: accepted work reaches the remote only when it is published (git fetch, then flai release --pending, or the board's Publish), and you publish only when the operator asks (ADR-0067); inbox's unpublished lists what is accepted and not yet published, for that. When inbox reports flai_outdated, the flai serving you is older than the newest flai release in the project's history and may lack rules the project relies on: tell the designer, who upgrades the host with the command it names, and go on.",
+		Instructions: "This server is the agent's view of a system-flow repository. Call inbox at the start of every turn or session and before moving a story to review: it lists threads awaiting you, the stories ready to pull in pull order, and what others changed since you last looked (at most 50 changes, the newest; changes_omitted counts older ones that are not reported again; your first look covers the last 24 hours of stories and epics only, so use board and item_get for how things stand). Stories are yours to pull without being told. Whenever you have no story of your own in progress, call wait_for_work and do what it answers: pull the story it names with story_start, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in one call (if story_start says the story is in progress already, another agent pulled it first: call wait_for_work again), answer the threads it names, or go back to your own story. It answers as soon as a story is ready, the in-progress limit leaves room, and review is under its limit, and waits otherwise; when it times out, call it again, so that an idle agent is always waiting for the next story rather than stopping. An agent that ends its turn instead calls inbox when it starts again, and nothing in between is lost; wait_for_events reports every change, for an agent that wants the changes themselves. A story's agent that flai serve started, whose story has a question of its own open to the designer or a conversation awaiting another story's reply, no message it owes a reply, and no task in progress, gets end and why from wait_for_events at once instead of a wait: write the narrative's Current state and Next steps with stream_state and end the session, and flai serve starts it again when the question is answered, the reply comes, or a new message to its story comes. Reply to threads with thread_reply and ask the designer questions with thread_open. " + primeInstructions + " " + taskDoneInstructions + " Commit everything in a story's worktree before you move it to review: item_move refuses a story whose worktree has uncommitted changes, because the operator cannot accept it. Stories are accepted by the operator only: item_move refuses to move a story or epic to done. A change of kind edited means someone changed an item's own words with flai edit or from the dashboard, and to names what (title, nature, tags, topics, touches, after, agent, parent, draft, cost_of_delay, forecast, goal, criteria, notes, body): if it is your story, read it again with item_get before you go on, because its criteria or its title may no longer be what you are working to. A change that says an epic moved following a story means that story's move took its epic along: nothing to do. A change that says an item was cancelled with a parent means the parent was cancelled and took it along: if it is your story or one of its tasks, stop work on it, log that in the narrative, and leave its branch and worktree alone. A change of kind overlapped means a story was accepted (cause) and changed paths (to) that an open story claims: if it is your story, run flai stream sync on it and the tests before you go on. " + overlapInstructions + " Publishing is the operator's: accepted work reaches the remote only when it is published (git fetch, then flai release --pending, or the board's Publish), and you publish only when the operator asks (ADR-0067); inbox's unpublished lists what is accepted and not yet published, for that. When inbox reports flai_outdated, the flai serving you is older than the newest flai release in the project's history and may lack rules the project relies on: tell the designer, who upgrades the host with the command it names, and go on.",
 	})
 	srv.AddReceivingMiddleware(timing(opt.Logger, nil, opt.Slow))
 	mcp.AddTool(srv, &mcp.Tool{Name: "inbox", Description: inboxDescription}, route(one, (*server).inbox))
 	addProjectTools(srv, one)
-	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, narrative, or conversation changes or the timeout passes: timeout_seconds, 60 by default and at most 1800 (30 minutes). Hold it when idle, as the orchestrator does between decisions, or to react within a second to the designer's answer on a thread awaiting them. " + messageEventDescription + " For a story's agent that flai serve started, it answers at once with end true and why, after any events already behind the cursor, when the story has a question of the agent's own open to the designer and no task in progress: the agent then writes its narrative's Current state and Next steps with stream_state and ends, and flai serve starts it again when the question is answered; otherwise it holds as above. It does not see a sub-agent finish: a story's agent waits for one by launching it with the Agent tool's run_in_background set to false, which returns the sub-agent's result as the tool's result, and flai guard refuses a story's agent this call while a sub-agent of its session runs and no thread on its story is open. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
+	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_events", Description: "Return what others changed since this agent last looked, at once when there is something already, otherwise block until a thread, work item, narrative, or conversation changes or the timeout passes: timeout_seconds, 60 by default and at most 1800 (30 minutes). Hold it when idle, as the orchestrator does between decisions, or to react within a second to the designer's answer on a thread awaiting them. " + messageEventDescription + " For a story's agent that flai serve started, it answers at once with end true and why, after any events already behind the cursor, when the story has a question of the agent's own open to the designer or a conversation awaiting the other story's reply, no conversation awaiting its own reply, and no task in progress: the agent then writes its narrative's Current state and Next steps with stream_state and ends, and flai serve starts it again when the question is answered, the reply comes, or a new message to its story comes; otherwise it holds as above. It does not see a sub-agent finish: a story's agent waits for one by launching it with the Agent tool's run_in_background set to false, which returns the sub-agent's result as the tool's result, and flai guard refuses a story's agent this call while a sub-agent of its session runs and no thread on its story is open. At most 50 events, newest kept; events_omitted counts the rest."}, s.waitForEvents)
 	mcp.AddTool(srv, &mcp.Tool{Name: "wait_for_work", Description: "What to do when you have nothing to work on (S-0097). Answers at once when there is something: reason resume with your own story still in progress; thread with threads awaiting you written to since it last answered; pull with the first ready story that is not held when the in-progress limit leaves room for it and review is under its limit (a story whose touches overlap a story in progress or in review, or that names in after a story not yet done, is held: it keeps its place and is offered once clear) (pull it with story_start, which moves it to in-progress, opens its narrative, branch, and worktree, primes it, and answers your inbox in one call; if story_start says it is in progress already, another agent pulled it first: call wait_for_work again). Otherwise it waits until one of those is true, however long it takes, up to timeout_seconds; timed_out then says whether it is waiting for room (a story is ready, the in-progress limit is full), for review (a story is ready, review is full: no story is pulled until the operator accepts or sends one back), for a held story to be clear (held: every ready story is held, and ready says why each is), or for a story to be ready: call it again. Move your story to review first: while one of yours is in progress, it answers resume."}, s.waitForWork)
 	for _, key := range []string{"design", "docs"} {
 		srv.AddResourceTemplate(&mcp.ResourceTemplate{
@@ -744,8 +744,8 @@ type WaitOut struct {
 	Omitted  int      `json:"events_omitted" jsonschema:"how many older events were left out because of the cap; they are not reported later"`
 	Changed  []string `json:"changed" jsonschema:"repository paths that were added, modified, or removed while waiting"`
 	TimedOut bool     `json:"timed_out"`
-	End      bool     `json:"end" jsonschema:"true when this agent's story has a question of its own open to the designer and no task in progress: write the narrative's Current state and Next steps with stream_state and end the session; flai serve starts it again when the question is answered. Only for a story's agent flai serve started; false otherwise"`
-	Why      string   `json:"why,omitempty" jsonschema:"with end, the story, the threads whose answer it waits on, and why it ends rather than waits"`
+	End      bool     `json:"end" jsonschema:"true when this agent's story has a question of its own open to the designer or a conversation awaiting the other story's reply, no conversation awaiting its own reply, and no task in progress: write the narrative's Current state and Next steps with stream_state and end the session; flai serve starts it again when the question is answered, the reply comes, or a new message to its story comes. Only for a story's agent flai serve started; false otherwise"`
+	Why      string   `json:"why,omitempty" jsonschema:"with end, the story, the threads whose answer and the conversations whose reply it waits on, and why it ends rather than waits"`
 }
 
 // watched returns the folders whose changes matter to an agent: threads,
@@ -818,9 +818,11 @@ func (s *server) waitForEvents(ctx context.Context, req *mcp.CallToolRequest, in
 		return nil, WaitOut{}, err
 	}
 	// A story's agent whose only pending work is its own question to the
-	// designer ends rather than holds: flai serve starts it again on the
-	// answer (S-0272). An answer already here is among the events, and an
-	// answered thread awaits nothing, so it is never swallowed.
+	// designer, or another story's reply to its message, ends rather than
+	// holds: flai serve starts it again on the answer or the reply (S-0272,
+	// S-0335). An answer or a reply already here is among the events, and an
+	// answered thread or a conversation awaiting the story's own reply keeps
+	// the hold, so neither is swallowed.
 	if why := s.endWhy(); why != "" {
 		if events == nil {
 			events = []Event{}
@@ -872,10 +874,12 @@ func (s *server) waitForEvents(ctx context.Context, req *mcp.CallToolRequest, in
 // endWhy says why this agent should end rather than hold wait_for_events,
 // "" when it should hold: it is a story's agent flai serve started
 // (FLAI_STORY, no role), a thread on its story or one of its tasks awaits an
-// answer to its own question, and no task of the story is in progress. It is
-// serve's rule for an agent it starts again on the answer (asking and
-// awaitsAnswer in internal/serve/agents.go), so an agent told to end is one
-// serve restarts. Anything it cannot read keeps the hold.
+// answer to its own question or a conversation of its story awaits the other
+// story's reply (S-0335), no conversation of its story awaits its own reply,
+// and no task of the story is in progress. It is serve's rule for an agent it
+// starts again on the answer or the reply (internal/serve/agents.go), so an
+// agent told to end is one serve restarts. Anything it cannot read keeps the
+// hold.
 func (s *server) endWhy() string {
 	if s.story == "" || s.role != "" {
 		return ""
@@ -890,7 +894,8 @@ func (s *server) endWhy() string {
 			open = append(open, th.ID)
 		}
 	}
-	if len(open) == 0 {
+	waiting, ok := s.awaitingReplies()
+	if !ok || len(open)+len(waiting) == 0 {
 		return ""
 	}
 	items, err := s.repo.List(false)
@@ -902,8 +907,40 @@ func (s *server) endWhy() string {
 			return ""
 		}
 	}
-	sort.Strings(open)
-	return fmt.Sprintf("%s has %s open to the designer and no task in progress: write the narrative's Current state and Next steps with stream_state and end the session; flai serve starts you again when it is answered", s.story, strings.Join(open, ", "))
+	var pending []string
+	if len(open) > 0 {
+		sort.Strings(open)
+		pending = append(pending, strings.Join(open, ", ")+" open to the designer")
+	}
+	if len(waiting) > 0 {
+		pending = append(pending, strings.Join(waiting, ", "))
+	}
+	again := "when it is answered"
+	if len(waiting) > 0 {
+		again += " or a new message to " + s.story + " comes"
+	}
+	return fmt.Sprintf("%s has %s and no task in progress: write the narrative's Current state and Next steps with stream_state and end the session; flai serve starts you again %s", s.story, strings.Join(pending, " and "), again)
+}
+
+// awaitingReplies names the conversations of this agent's story that await
+// the other story's reply, each as "MS-0002 awaiting S-0004's agent", in ID
+// order. ok is false, and the agent holds, when one awaits the story's own
+// reply, a message it owes, or the conversations cannot be read.
+func (s *server) awaitingReplies() (waiting []string, ok bool) {
+	all, err := messages.For(s.repo, s.story)
+	if err != nil {
+		return nil, false
+	}
+	for _, c := range all {
+		if closed, _ := c.Closed(s.repo); closed {
+			continue
+		}
+		if workitem.CanonicalID(c.Awaiting()) == workitem.CanonicalID(s.story) {
+			return nil, false
+		}
+		waiting = append(waiting, fmt.Sprintf("%s awaiting %s's agent", c.ID, c.Other(s.story)))
+	}
+	return waiting, true
 }
 
 // awaitsAnswer says whether th is open and awaits an answer to agent's

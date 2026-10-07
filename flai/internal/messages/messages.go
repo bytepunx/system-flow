@@ -329,6 +329,54 @@ func For(r *workitem.Repo, story string) ([]*Conversation, error) {
 	return out, nil
 }
 
+// Other is the story of the two that is not story, named in any padding.
+func (c *Conversation) Other(story string) string {
+	if workitem.CanonicalID(story) == workitem.CanonicalID(c.From) {
+		return c.To
+	}
+	return c.From
+}
+
+// AwaitingOther returns story's conversations that read as open and await
+// the other story's reply: those story sent or answered last, in ID order.
+func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
+	all, err := For(r, story)
+	if err != nil {
+		return nil, err
+	}
+	var out []*Conversation
+	for _, c := range all {
+		if closed, _ := c.Closed(r); closed {
+			continue
+		}
+		if workitem.CanonicalID(c.Awaiting()) != workitem.CanonicalID(story) {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+// ToSince returns story's conversations with an entry the other story wrote
+// after t, in ID order: those a message to story arrived in since then.
+func ToSince(r *workitem.Repo, story string, t time.Time) ([]*Conversation, error) {
+	all, err := For(r, story)
+	if err != nil {
+		return nil, err
+	}
+	var out []*Conversation
+	for _, c := range all {
+		other := workitem.CanonicalID(c.Other(story))
+		for _, e := range c.Entries() {
+			at, err := time.Parse(workitem.TimeFormat, e.At)
+			if err == nil && at.After(t) && workitem.CanonicalID(e.Story) == other {
+				out = append(out, c)
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
 // NextID allocates the next MS-nnnn: one more than the highest in the folder.
 func NextID(r *workitem.Repo) string {
 	highest := 0

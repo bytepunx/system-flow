@@ -413,6 +413,44 @@ func TestListForAndGet(t *testing.T) {
 	}
 }
 
+// S-0335: a story awaits the other's reply on the open conversations it
+// wrote last, and a message to it since a time is one the other story wrote
+// after it.
+func TestAwaitingOtherAndToSince(t *testing.T) {
+	r := project(t)
+	send(t, r, "S-0001", "S-0002", "May I take board.go?", t0)
+	send(t, r, "S-0002", "S-0001", "Do you need plan.md?", t0)
+	send(t, r, "S-0001", "S-0003", "Too late", t0)
+	setStatus(t, r, "S-0003", workitem.Done)
+	if c, _ := Get(r, "MS-0001"); c.Other("s-1") != "S-0002" || c.Other("S-0002") != "S-0001" {
+		t.Errorf("other: %s %s", c.Other("s-1"), c.Other("S-0002"))
+	}
+	if list, err := AwaitingOther(r, "S-0001"); err != nil || ids(list) != "MS-0001" {
+		t.Errorf("S-0001 awaits S-0002 on MS-0001 alone, not on what it owes or on a closed one: %s %v", ids(list), err)
+	}
+	if list, _ := AwaitingOther(r, "S-0002"); ids(list) != "MS-0002" {
+		t.Errorf("S-0002: %s", ids(list))
+	}
+	if list, _ := ToSince(r, "S-0001", t0.Add(-time.Second)); ids(list) != "MS-0002" {
+		t.Errorf("to S-0001 since before: %s", ids(list))
+	}
+	if list, _ := ToSince(r, "S-0001", t0); len(list) != 0 {
+		t.Errorf("nothing to S-0001 after t0: %s", ids(list))
+	}
+	if _, err := Reply(r, "MS-0001", "S-0002", "agent-S-0002", "Yes.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if list, _ := AwaitingOther(r, "S-0001"); len(list) != 0 {
+		t.Errorf("answered: %s", ids(list))
+	}
+	if list, _ := ToSince(r, "S-0001", t0); ids(list) != "MS-0001" {
+		t.Errorf("the reply is a message to S-0001: %s", ids(list))
+	}
+	if list, _ := ToSince(r, "S-0002", t0); len(list) != 0 {
+		t.Errorf("its own reply is no message to S-0002: %s", ids(list))
+	}
+}
+
 // View is what --json prints: the front matter, the path from the root, who
 // is awaited, and the entries.
 func TestView(t *testing.T) {

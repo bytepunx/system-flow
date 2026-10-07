@@ -14,6 +14,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -1072,5 +1073,125 @@ func TestWaitForEventsHoldsOutsideAStorysAgent(t *testing.T) {
 			f.ask(t, f.story.ID)
 			f.holds(t, d)
 		})
+	}
+}
+
+// otherInProgress makes a second story of the fixture's epic, in progress,
+// for the fixture's story to converse with.
+func (f *fixture) otherInProgress(t *testing.T) *workitem.Item {
+	t.Helper()
+	epic, err := f.repo.Get(f.story.Parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return storyOfEpic(t, f.repo, epic, "Other", nil, workitem.Ready, workitem.InProgress)
+}
+
+// send starts a conversation from one story to another, by the fixture's
+// agent for its own story and by agent-S-nnnn for another, and sets the
+// agent's cursor after it, so that a wait starts with nothing behind it.
+func (f *fixture) send(t *testing.T, from, to string) *messages.Conversation {
+	t.Helper()
+	author := "agent-" + from
+	if from == f.story.ID {
+		author = "claude"
+	}
+	c, err := messages.Send(f.repo, messages.SendOptions{From: from, To: to, Author: author, Text: "Will you leave plan.md to me?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	return c
+}
+
+// S-0335: a story's agent whose story's message awaits the other story's
+// reply, and no task in progress, is told to end, with why naming the
+// conversation and the story it waits on: flai serve starts it again on the
+// reply or a new message to its story. The reply, when it comes, is an event
+// and keeps the hold, so it is never swallowed by an end.
+func TestWaitForEventsEndsAStorysAgentAwaitingAnotherStorysReply(t *testing.T) {
+	f, d := storysAgent(t)
+	other := f.otherInProgress(t)
+	c := f.send(t, f.story.ID, other.ID)
+	why, _ := f.endsAtOnce(t, d)["why"].(string)
+	want := f.story.ID + " has " + c.ID + " awaiting " + other.ID + "'s agent and no task in progress"
+	if !strings.HasPrefix(why, want) || !strings.HasSuffix(why, "flai serve starts you again when it is answered or a new message to "+f.story.ID+" comes") {
+		t.Errorf("why names the story, the conversation, the story it waits on, and when serve starts it again: %q", why)
+	}
+	if strings.Contains(why, "designer") {
+		t.Errorf("why names no thread when none is open: %q", why)
+	}
+
+	*f.clock = t0.Add(10 * time.Minute)
+	if _, err := messages.Reply(f.repo, c.ID, other.ID, "agent-"+other.ID, "Yes.", t0.Add(5*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 60})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if got := messageEvents(out); out["end"] != false || len(got) != 1 || got[0]["id"] != c.ID {
+		t.Errorf("the reply comes as an event without end: %v", out)
+	}
+}
+
+// A question to the designer and a message awaiting another story: why
+// names both.
+func TestWaitForEventsEndsOnAThreadAndAConversation(t *testing.T) {
+	f, d := storysAgent(t)
+	other := f.otherInProgress(t)
+	th := f.ask(t, f.story.ID)
+	c := f.send(t, f.story.ID, other.ID)
+	why, _ := f.endsAtOnce(t, d)["why"].(string)
+	if want := f.story.ID + " has " + th.ID + " open to the designer and " + c.ID + " awaiting " + other.ID + "'s agent and no task in progress"; !strings.HasPrefix(why, want) {
+		t.Errorf("why names the thread and the conversation:\n  %q\nwant it to start\n  %q", why, want)
+	}
+}
+
+// With a task of the story in progress the agent has work in hand: it holds
+// while its message awaits the other story.
+func TestWaitForEventsHoldsAStorysAgentAwaitingAReplyWithATaskInProgress(t *testing.T) {
+	f, d := storysAgent(t)
+	for _, to := range []string{workitem.Ready, workitem.InProgress} {
+		task, _ := f.repo.Get(f.task.ID)
+		if _, err := f.repo.Transition(task, to, "claude", "", t0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other := f.otherInProgress(t)
+	f.send(t, f.story.ID, other.ID)
+	f.holds(t, d)
+}
+
+// Without FLAI_STORY, or with a role, a conversation awaiting the other
+// story does not end the wait either.
+func TestWaitForEventsHoldsOutsideAStorysAgentAwaitingAReply(t *testing.T) {
+	for name, env := range map[string][2]string{"no FLAI_STORY": {"", ""}, "a role": {"S-0001", "plan"}} {
+		t.Run(name, func(t *testing.T) {
+			f, d := endFixture(t, env[0], env[1])
+			other := f.otherInProgress(t)
+			f.send(t, f.story.ID, other.ID)
+			f.holds(t, d)
+		})
+	}
+}
+
+// A message to the story awaiting its own reply is work it owes: the agent
+// holds, whatever else awaits others, and ends once it has replied.
+func TestWaitForEventsHoldsWhileTheStoryOwesAReply(t *testing.T) {
+	f, d := storysAgent(t)
+	other := f.otherInProgress(t)
+	f.ask(t, f.story.ID)
+	mine := f.send(t, f.story.ID, other.ID)
+	owed := f.send(t, other.ID, f.story.ID)
+	f.holds(t, d)
+	if _, err := messages.Reply(f.repo, owed.ID, f.story.ID, "claude", "Yes.", t0); err != nil {
+		t.Fatal(err)
+	}
+	why, _ := f.endsAtOnce(t, d)["why"].(string)
+	if !strings.Contains(why, mine.ID+" awaiting "+other.ID+"'s agent, "+owed.ID+" awaiting "+other.ID+"'s agent") {
+		t.Errorf("once replied, why names both conversations: %q", why)
 	}
 }
