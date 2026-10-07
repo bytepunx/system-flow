@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 11
+count: 12
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-07T00:38:11Z
-updated: 2026-10-07T00:38:11Z
+last_reported: 2026-10-07T01:04:51Z
+updated: 2026-10-07T01:04:51Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -93,6 +93,13 @@ flai check found outside the story:
 `wip/kanban/stories/S-0228-the-workflow-menu-has-orchestrator-and-analyzer-pages-showing-their-status-activity-log-and-runs.md`: S-0228 touches flai/internal/hostapi, which S-0273 (in progress) also touches as flai/internal/hostapi/writes_test.go
 `wip/kanban/stories/S-0228-the-workflow-menu-has-orchestrator-and-analyzer-pages-showing-their-status-activity-log-and-runs.md`: S-0228 touches flaiover/src/lib/server/agent.ts, which S-0273 (in progress) also touches as flaiover/src/lib/server/agent.ts
 `wip/kanban/stories/S-0273-flai-test-runs-the-project-s-test-and-lint-tiers-for-a-path-or-a-package-and-answers-pass-or-the-first-failures-as-findings.md`: S-0273 touches design/system/dashboard-host-channel.md, which T-0938 (in progress) also touches as design/system/dashboard-host-channel.md
+
+### 2026-10-07T01:04:51Z
+Story: S-0272.
+flai check found outside the story:
+`wip/kanban/stories/S-0272-an-agent-with-an-open-question-ends-instead-of-waiting-flai-serve-restarts-it-on-the-answer-and-wait-for-events-keeps-a-timeout-only-for-an-agent-with-work-in-hand.md`: S-0272 touches flai/internal/harness/harness.go, which S-0286 (in progress) also touches as flai/internal/harness
+`wip/kanban/stories/S-0272-an-agent-with-an-open-question-ends-instead-of-waiting-flai-serve-restarts-it-on-the-answer-and-wait-for-events-keeps-a-timeout-only-for-an-agent-with-work-in-hand.md`: S-0272 touches flai/internal/harness/harness_test.go, which S-0286 (in progress) also touches as flai/internal/harness
+`wip/kanban/stories/S-0272-an-agent-with-an-open-question-ends-instead-of-waiting-flai-serve-restarts-it-on-the-answer-and-wait-for-events-keeps-a-timeout-only-for-an-agent-with-work-in-hand.md`: S-0272 touches flai/internal/serve/restart_test.go, which S-0286 (in progress) also touches as flai/internal/serve
 
 ## Remediation
 
