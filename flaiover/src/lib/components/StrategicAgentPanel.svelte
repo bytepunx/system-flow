@@ -201,9 +201,7 @@
 						<tr class="border-t border-line" data-testid="{kind}-run">
 							{@render runCells?.(run)}
 							<td class="py-1 pr-4 whitespace-nowrap">{localTime(run.started)}</td>
-							<td class="py-1 pr-4 whitespace-nowrap"
-								>{run.ended ? localTime(run.ended) : '—'}</td
-							>
+							<td class="py-1 pr-4 whitespace-nowrap">{run.ended ? localTime(run.ended) : '—'}</td>
 							<td class="py-1 pr-4" data-testid="{kind}-run-outcome">{outcomeWord(run)}</td>
 							<td class="py-1 pr-4" data-testid="{kind}-run-cost"
 								>{c.count ? cost(c.cost, c.estimated) : '—'}</td

@@ -459,7 +459,9 @@
 					</li>
 					<li data-testid="planning-schedule">
 						Schedule, the planner over every ready story, in UTC:
-						{#if p.schedule}<code class="text-xs">{p.schedule}</code>{#if p.next}, next run {localTime(p.next)}{/if}{:else}none{/if}
+						{#if p.schedule}<code class="text-xs">{p.schedule}</code>{#if p.next}, next run {localTime(
+									p.next
+								)}{/if}{:else}none{/if}
 						{#if p.schedule_error}
 							<p class="text-xs text-danger" role="alert">{p.schedule_error}</p>
 						{/if}

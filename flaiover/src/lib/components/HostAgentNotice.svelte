@@ -101,9 +101,10 @@
 			<p>
 				{@render title('Agent ended')}{#if open}: the one started for {st.last.story} by
 					<code class="rounded bg-surface px-1">{st.last.command}</code>
-					{localTime(st.last.started)} ended{st.last.ended
-						? ` ${localTime(st.last.ended)}`
-						: ''}{st.last.exit ? ` with exit code ${st.last.exit}` : ''}.{/if}
+					{localTime(st.last.started)} ended{st.last.ended ? ` ${localTime(st.last.ended)}` : ''}{st
+						.last.exit
+						? ` with exit code ${st.last.exit}`
+						: ''}.{/if}
 			</p>
 		{:else}
 			<p>

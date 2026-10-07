@@ -2407,9 +2407,7 @@ describe('claims charts', () => {
 		);
 		expect(tip(1, 1)).toBe('S-102 Story 102 · 2026-08-12<br/>touches unchanged: 0');
 		// the date of its completion in the local zone: midnight in UTC is the evening before here
-		expect(tip(0, 2)).toBe(
-			'S-103 Story 103 · 2026-08-19<br/>outside its touches: 1<br/>docs/x.md'
-		);
+		expect(tip(0, 2)).toBe('S-103 Story 103 · 2026-08-19<br/>outside its touches: 1<br/>docs/x.md');
 		expect(tip(2, 2)).toBe(
 			'week of 2026-08-10 (2026-W33)<br/>1 of 1 story with exact touches (100%)'
 		);
