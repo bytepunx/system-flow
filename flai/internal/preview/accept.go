@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/protected"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -64,6 +65,9 @@ type Acceptance struct {
 	// operator accepts the story and who that is (ADR-0106).
 	Protected    []string `json:"protected,omitempty"`
 	OperatorOnly string   `json:"operator_only,omitempty"`
+	// ResolvedThreads are the threads still open or answered on what the
+	// acceptance archives, which it resolves (I-0073), or under DryRun would.
+	ResolvedThreads []string `json:"resolved_threads,omitempty"`
 }
 
 // Accept is what accepting a story or an epic would do, worked out before
@@ -115,6 +119,7 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 		// The merge, the transition, and the archive are behind it, so
 		// nothing they check applies; the commit names the epic it archived.
 		res.Epic = archivedEpic(r, repo, it)
+		threadsToResolve(repo, it, res)
 		return res, nil
 	}
 	// The workflow's own rules for done (open tasks, unticked criteria) are
@@ -190,7 +195,44 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 			res.Blockers = append(res.Blockers, b.Message)
 		}
 	}
+	threadsToResolve(repo, it, res)
 	return res, nil
+}
+
+// threadsToResolve sets on res the threads still open or answered on what
+// accepting it archives, which the acceptance resolves (I-0073). A thread
+// that cannot be read is a blocker: the acceptance would stop on it after
+// archiving.
+func threadsToResolve(repo *workitem.Repo, it *workitem.Item, res *Acceptance) {
+	all, err := repo.List(true)
+	if err != nil {
+		res.Blockers = append(res.Blockers, fmt.Sprintf("cannot list the items to find the threads accepting %s resolves: %v", it.ID, err))
+		return
+	}
+	open, err := threads.OnItems(repo, ThreadItems(all, it, res.Epic))
+	if err != nil {
+		res.Blockers = append(res.Blockers, fmt.Sprintf("cannot read the threads on what accepting %s archives, which it resolves: %v; fix the thread file it names", it.ID, err))
+		return
+	}
+	for _, th := range open {
+		res.ResolvedThreads = append(res.ResolvedThreads, th.ID)
+	}
+}
+
+// ThreadItems are the items whose threads accepting it resolves: what
+// ArchivedWith names, and each story's tasks. items include archived ones, so
+// that an acceptance finishing its commit names what it archived before.
+func ThreadItems(items []*workitem.Item, it *workitem.Item, epic *workitem.Followed) []string {
+	var ids []string
+	for _, id := range ArchivedWith(items, it.ID, epic) {
+		ids = append(ids, id)
+		if workitem.TypeOfID(id) == workitem.Story {
+			for _, c := range workitem.Children(items, id) {
+				ids = append(ids, c.ID)
+			}
+		}
+	}
+	return ids
 }
 
 // uncommitted reports whether path has changes the checkout at root has not

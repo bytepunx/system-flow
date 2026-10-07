@@ -14,6 +14,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -42,10 +43,12 @@ design/conventions/work-management.md and git.md:
   1. move the item to done (its rules apply: children closed, criteria checked);
      a story's epic follows it, to done when it was the epic's last open story
   2. flai archive for the item and its children and narrative, and for an
-     epic that followed its story to done, the epic and its cancelled stories
-  3. git commit the work item and archive; while another git process holds
-     the index lock, git add and git commit are run again, for about nine
-     seconds in all, and the lock is never removed
+     epic that followed its story to done, the epic and its cancelled stories;
+     every thread still open or answered on what is archived is resolved,
+     as "<id> was accepted", by whoever accepts (I-0073)
+  3. git commit the work item, the archive, and the threads; while another
+     git process holds the index lock, git add and git commit are run again,
+     for about nine seconds in all, and the lock is never removed
   4. tell every story in progress or in review whose touches cover a path
      the merge changed which paths those are, for its agent's MCP inbox
 
@@ -58,7 +61,8 @@ flai move <story> done from review runs exactly this. An item that is already
 done but was never archived (an older flai, a hand edit) is completed from
 step 0 without a second transition. An item that is done and archived while
 its archived file is not committed is one whose commit failed: the error
-kept git's output and named this command. It is completed from step 3,
+kept git's output and named this command. It is completed by resolving the
+threads left open on what it archived, as step 2 does, and from step 3,
 committing what the main checkout holds under the usual subject, and step 4
 tells the open stories the paths the story's commits changed. A done,
 archived item whose file is committed is refused as already done.
@@ -228,6 +232,13 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 	res.Archived = len(ap.Items)
 	a.acceptStep(it, "archived", fmt.Sprintf("%d item(s) and the narrative archived", res.Archived))
+	archived := make([]string, len(ap.Items))
+	for i, x := range ap.Items {
+		archived[i] = x.ID
+	}
+	if err := a.resolveAccepted(repo, it, res, archived, o.by); err != nil {
+		return nil, err
+	}
 	if err := a.refreshIndex(repo); err != nil {
 		return nil, err
 	}
@@ -250,6 +261,15 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 // commit failed (I-0100): steps 3 and 4 only, with no merge, no transition,
 // and no archive, since those happened.
 func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, o acceptOptions) (*preview.Acceptance, error) {
+	// the threads the run that archived left open: an older flai's, or one
+	// whose resolving failed
+	all, err := repo.List(true)
+	if err != nil {
+		return nil, err
+	}
+	if err := a.resolveAccepted(repo, it, res, preview.ThreadItems(all, it, res.Epic), o.by); err != nil {
+		return nil, err
+	}
 	if err := a.commitAcceptance(repo, it, res, o.trailers); err != nil {
 		return nil, err
 	}
@@ -267,6 +287,22 @@ func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, res *preview.
 	}
 	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
 	return res, nil
+}
+
+// resolveAccepted is step 2a: it resolves the threads still open or answered
+// on the items the acceptance of it archived, as by, with the acceptance as
+// the reason, so that none is left open on an archived item (I-0073). The
+// thread files go into the acceptance commit.
+func (a *app) resolveAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, archived []string, by string) error {
+	resolved, err := threads.ResolveOnItems(repo, archived, orDefault(by, a.author()), it.ID+" was accepted", a.now())
+	if err != nil {
+		return fmt.Errorf("resolve the threads on what the acceptance of %s archived: %w\n%s, but not committed; once the thread above is fixed, run flai accept %s to resolve the threads left and commit", it.ID, err, acceptedState(it.ID, res), it.ID)
+	}
+	res.ResolvedThreads = resolved
+	if len(resolved) > 0 {
+		a.acceptStep(it, "threads", "resolved "+strings.Join(resolved, ", ")+", open or answered on what it archived")
+	}
+	return nil
 }
 
 // commitAcceptance is step 3: it commits everything in the main checkout
@@ -302,11 +338,17 @@ func acceptSubject(id string, epic *workitem.Followed) string {
 // err, git's whole output in it: what is done, where its changes are, and
 // that flai accept finishes it.
 func notCommitted(id string, res *preview.Acceptance, changes string, err error) error {
+	return fmt.Errorf("commit the acceptance of %s: %w\n%s, and its changes are %s in the main checkout but not committed; once git's error above is resolved, run flai accept %s to commit them", id, err, acceptedState(id, res), changes, id)
+}
+
+// acceptedState says what the acceptance of id has done: done and archived,
+// and its branch merged when it was.
+func acceptedState(id string, res *preview.Acceptance) string {
 	state := id + " is done and archived"
 	if res.Merged {
 		state = res.Branch + " is merged and " + state
 	}
-	return fmt.Errorf("commit the acceptance of %s: %w\n%s, and its changes are %s in the main checkout but not committed; once git's error above is resolved, run flai accept %s to commit them", id, err, state, changes, id)
+	return state
 }
 
 // tellAccepted is step 4: it tells the stories still open which of changed
@@ -480,6 +522,9 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 			}
 			fmt.Fprintln(a.out)
 		}
+		if len(res.ResolvedThreads) > 0 {
+			fmt.Fprintf(a.out, "would resolve %s, open or answered on what it archives\n", strings.Join(res.ResolvedThreads, ", "))
+		}
 		fmt.Fprintln(a.out, "dry run: nothing changed")
 		return nil
 	}
@@ -505,6 +550,9 @@ func (a *app) printAccept(res *preview.Acceptance) error {
 			fmt.Fprint(a.out, ", archived")
 		}
 		fmt.Fprintln(a.out)
+	}
+	if len(res.ResolvedThreads) > 0 {
+		fmt.Fprintf(a.out, "resolved %s, open or answered on what it archived\n", strings.Join(res.ResolvedThreads, ", "))
 	}
 	for _, n := range res.Overlaps {
 		fmt.Fprintf(a.out, "told %s it overlaps: %s\n", n.ID, strings.Join(n.Paths, ", "))
