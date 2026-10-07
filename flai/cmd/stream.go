@@ -71,13 +71,13 @@ too.`,
 			if err := a.refreshIndex(repo); err != nil {
 				return err
 			}
-			branch, wt, from := "", "", ""
+			var opened storygit.Opened
 			if !noBranch {
-				branch, wt, from, err = a.openStoryBranch(repo, story.ID, reopen)
-				if err != nil {
+				if opened, err = a.openStoryBranch(repo, story.ID, reopen); err != nil {
 					return fmt.Errorf("narrative opened but the branch was not: %w", err)
 				}
 			}
+			branch, wt, from := opened.Branch, opened.Worktree, opened.From
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"stream": n.Stream, "path": n.Path, "branch": branch, "worktree": wt, "reopened": reopen, "from": from})
 			}
@@ -114,9 +114,9 @@ func (a *app) canReopen(repo *workitem.Repo, story string, noBranch bool) bool {
 // come from this clone.
 func fromSays(from string) string {
 	switch from {
-	case "", branchLocal:
+	case "", storygit.FromLocal:
 		return ""
-	case branchMain:
+	case storygit.FromMain:
 		return " (new, from the main branch)"
 	}
 	return " (fetched from " + from + ")"
