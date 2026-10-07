@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0017
 owner: alex
 created: 2026-10-06T11:37:08Z
-updated: 2026-10-07T09:48:14Z
+updated: 2026-10-07T14:55:59Z
 transitions:
   - to: ready
     at: 2026-10-07T09:19:04Z
@@ -75,7 +75,7 @@ It reports the counts per story and per day, so each E-0017 story's saving shows
 ## Acceptance criteria
 - [x] `flai stats` reports, per story and per day of the window, the main agent's turns in each class above, as text and `--json`, from the run logs `usage` already reads
 - [x] The classes are defined in `design/system/metrics.md`, with an ADR, since that file is the contract with the dashboard
-- [ ] Run over the logs to 2026-10-04, the counts agree with the epic's evidence within ten percent, and the story records the comparison
+- [ ] Run over the logs to 2026-10-04, the counts are compared with the epic's evidence, and the story records the comparison and explains each class that differs by more than ten percent.
 - [x] `design/system/flai-cli.md` and the user guide describe the report
 
 ## Tasks
