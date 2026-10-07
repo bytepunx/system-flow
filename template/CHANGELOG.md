@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.72 - 2026-10-07
+
+- S-0330 flai message sends a message from one open story's agent to another's, kept apart from the operator's threads (patch).
+
 ## 1.0.71 - 2026-10-07
 
 - S-0328 Add Permission and Ability to Orchestrate to Trigger Planner (patch).
