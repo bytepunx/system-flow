@@ -21,7 +21,7 @@ func (r Result) Text() string {
 			fmt.Fprintf(&b, "%s %s (%s)\n", t.State, t.Name, t.Duration)
 		}
 		for _, f := range t.Findings {
-			b.WriteString(f.text())
+			b.WriteString(f.Text())
 		}
 		if t.Omitted > 0 {
 			fmt.Fprintf(&b, "… %d more findings left out\n", t.Omitted)
@@ -30,9 +30,9 @@ func (r Result) Text() string {
 	return b.String()
 }
 
-// text is the finding as a line, path:line name: message, with the
+// Text is the finding as a line, path:line name: message, with the
 // message's further lines indented under it.
-func (f Finding) text() string {
+func (f Finding) Text() string {
 	loc := f.Path
 	if f.Line > 0 && loc != "" {
 		loc += ":" + strconv.Itoa(f.Line)
