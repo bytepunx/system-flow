@@ -38,7 +38,7 @@ describe('HostPanel', () => {
 		document.body.innerHTML = '';
 	});
 
-	it('shows what is running and hides the buttons but Versions when the action is off', async () => {
+	it('shows what is running and hides the buttons but Check for updates and Versions when the action is off', async () => {
 		api.mockResolvedValueOnce(status({ dashboard_enabled: false }));
 		c = mount(HostPanel, { target: document.body });
 		flushSync();
@@ -48,8 +48,23 @@ describe('HostPanel', () => {
 		expect(text).toContain('ghcr.io/bytepunx/flaiover:0.22.6');
 		expect(text).toContain('harbour');
 		const buttons = [...document.querySelectorAll('button')];
-		expect(buttons.map((b) => b.textContent)).toEqual(['Versions']);
+		expect(buttons.map((b) => b.textContent)).toEqual(['Check for updates', 'Versions']);
 		expect(document.body.textContent).toContain('flai serve enable dashboard');
+	});
+
+	it('checks for an update while the action is off', async () => {
+		api.mockResolvedValueOnce(status({ dashboard_enabled: false }));
+		c = mount(HostPanel, { target: document.body });
+		flushSync();
+		await settle();
+		api.mockResolvedValueOnce(answer({ running: true, upgrade_available: false }));
+		document.querySelector<HTMLButtonElement>('[data-testid="host-panel-check"]')!.click();
+		await settle();
+		expect(api).toHaveBeenLastCalledWith(
+			'/api/dashboard',
+			expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'check' }) })
+		);
+		expect(document.querySelector('[data-testid="host-panel-check-result"]')).not.toBeNull();
 	});
 
 	it('offers the four actions once enabled', async () => {

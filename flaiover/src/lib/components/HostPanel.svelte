@@ -1,8 +1,8 @@
 <script lang="ts">
 	// The dashboard managed from its own page (S-0081): what image and version the shared
-	// container is running, a Check for updates that changes nothing, and Restart / Upgrade /
-	// Stop, gated on the dashboard host action (flai serve enable dashboard, the same shape push
-	// and agent already use). Restart and, when it swaps to a new image, upgrade stop the very
+	// container is running, a Check for updates that changes nothing and so is never gated
+	// (S-0314), and Restart / Upgrade / Stop, gated on the dashboard host action (flai serve
+	// enable dashboard, the same shape push and agent already use). Restart and, when it swaps to a new image, upgrade stop the very
 	// container answering the request that asked for them: the fetch is expected to end in a
 	// network error, not a clean response, so those two treat one as "proceeding" and poll this
 	// page's own status until the container is reachable again, rather than trusting the fetch to
@@ -287,16 +287,14 @@
 			{/if}
 
 			<p class="mt-3 flex flex-wrap gap-2">
-				{#if status.dashboard_enabled}
-					<button
-						type="button"
-						class="rounded border border-line px-2 py-1 disabled:opacity-60"
-						onclick={() => act('check')}
-						disabled={!!busy}
-						data-testid="host-panel-check"
-						>{busy === 'check' ? 'Checking…' : 'Check for updates'}</button
-					>
-				{/if}
+				<button
+					type="button"
+					class="rounded border border-line px-2 py-1 disabled:opacity-60"
+					onclick={() => act('check')}
+					disabled={!!busy}
+					data-testid="host-panel-check"
+					>{busy === 'check' ? 'Checking…' : 'Check for updates'}</button
+				>
 				<button
 					type="button"
 					class="rounded border border-line px-2 py-1 disabled:opacity-60"
