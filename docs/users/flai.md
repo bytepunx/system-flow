@@ -1169,7 +1169,7 @@ Over MCP, the tool `verify` takes `story` and `max` and answers what `flai verif
 flai stats                          # stories completed in the last 30 days
 flai stats --since 90d --by nature  # grouped
 flai stats --type task
-flai stats --json                   # per-item values, weekly throughput, burn-up and cumulative flow series, aging, usage, forecasts, cost of delay, waiting, claims
+flai stats --json                   # per-item values, weekly throughput, burn-up and cumulative flow series, aging, usage, forecasts, cost of delay, waiting, claims, turns
 flai stats --since 7d --bucket hour --json   # spend over time by the hour (day by default, or week)
 ```
 
@@ -1186,6 +1186,31 @@ cost of delay (per week of waiting):
   without a value now  backlog 2 · ready 1
   ready until pulled  pull order 12.50 · by cost of delay 9.00 · by WSJF 8.00; by WSJF saves 4.50; 1 left out, without a value or a forecast duration
 ```
+
+Since S-0293 `flai stats` also reports how the stories' own agents spent their turns ([ADR-0116](../../design/adrs/0116-when-flai-measures-a-story-s-usage-from-its-logs-it-classifies-each-turn-of-the.md)). A turn is one model message of a story's agent, not a sub-agent's, that calls a tool. Each falls in the first class it matches:
+
+| Class | The turn |
+|-------|----------|
+| `test_runs` | runs a test, lint, or format tool by hand, such as `go test`, `golangci-lint`, `vitest`, `markdownlint`, or a `make` test target, rather than through `flai test` or `flai verify` |
+| `hand_edits` | edits a story, a task, or a narrative file by hand, with an editor tool or a shell command that writes it |
+| `empty_wakes` | only waits on `wait_for_events` and wakes to nothing each time |
+| `ceremony` | only does what a story-loop command does for it: the MCP `inbox` or `item_move`, or commands such as `git add`, `git commit`, `git status`, `flai stream sync`, `flai move`, or `flai check` |
+| `work` | does anything else, including the story-loop commands themselves (`flai task done`, `flai test`, `flai verify`, `flai criteria tick`) |
+
+The first four are the turns the story-loop commands save, so they fall as those commands are used. `flai serve` classifies the turns from its agents' logs when it measures a story's usage and keeps the counts per day in the story's `usage.turns`, so a story worked by hand has none. Every story counts, archived ones included, whatever `--type` is. When the stories have turns in the window, the table adds a section after waiting: the total and each class's count and share, then each day with turns, then each story.
+
+```text
+story agents' turns, over 2 stories in the window:
+  total 20 · ceremony 4 (20%) · test runs 2 (10%) · empty wakes 1 (5%) · hand edits 1 (5%) · work 12 (60%)
+  by day:
+    2026-10-04  10 · ceremony 3 · test runs 2 · empty wakes 0 · hand edits 1 · work 4
+    2026-10-06  10 · ceremony 1 · test runs 0 · empty wakes 1 · hand edits 0 · work 8
+  by story:
+    S-0270  10 · ceremony 3 · test runs 2 · empty wakes 0 · hand edits 1 · work 4  First
+    S-0293  10 · ceremony 1 · test runs 0 · empty wakes 1 · hand edits 0 · work 8  Second
+```
+
+`--json` has them under `turns`: `classes`, the class names in order; `total`, the turns and each class's count over the window; `days`, every day of the window with its counts, days without turns included; and `stories`, each story with turns in the window with its `id`, `title`, `status`, and counts. Stories measured before your flai counted turns have none until they are measured again: run `flai serve agent usage --all --write` on the host ([Turns](../../design/system/metrics.md#turns-s-0293)).
 
 Since S-0225 what the planner spent planning an item is charged to that item and the items above it, and `flai stats` reports it apart from what agents spent, never in the agents' totals or per-model figures ([Strategic usage](../../design/system/metrics.md#strategic-usage)). The table adds a `strategic usage, apart` line with its tokens, cost, and time over the items done in the window, and its cost per kind of agent, and a line with the project's cost per agent hour: the agents' cost over their hours across every story measured from its logs, archived ones included. `--json` has each item's under `items[].usage.strategic`, the totals under `usage.strategic`, each type's and each bucket's under `usage.spend.<type>.strategic`, and the rate under `usage.cost_per_agent_hour`. An item with a forecast duration, or else an estimate, has under `items[].expected_cost` what it is expected to cost at that rate, marked estimated, so it shows before any agent works it; it is absent until a story has been measured.
 

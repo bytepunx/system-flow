@@ -58,7 +58,7 @@ What strategic agents spent on an item, its `usage.strategic` ([ADR-0083](../adr
 | Token rate | Tokens over agent minutes; absent when `seconds` is 0 |
 | Per model | The same for each model the item lists: its tokens, its cost, and its tokens over the item's agent minutes |
 | Estimated | The item's `estimated` |
-| Empty wakes | The item's `usage.empty_wakes`, 0 without one: on a story, the [empty wakes](#waiting) its agents' logs held when flai serve last measured it; on an epic, its stories' summed; a task carries none ([ADR-0105](../adrs/0105-a-story-s-empty-wakes-the-wait-for-events-calls-of-its-agents-that-timed-out.md), S-0272). Their aggregates are under [Waiting](#waiting), not here |
+| Empty wakes | The item's `usage.empty_wakes`, 0 without one: on a story, the [empty wakes](#waiting) its agents' logs held when flai serve last measured it; on an epic, its stories' summed; a task carries none ([ADR-0105](../adrs/0105-a-story-s-empty-wakes-the-wait-for-events-calls-of-its-agents-that-timed-out.md), S-0272). Their aggregates are under [Waiting](#waiting), not here. The turns of the story's agent, `usage.turns`, are not among the usage values; they are under [Turns](#turns-s-0293) |
 
 Aggregates cover the items of the report's type that entered `done` in the window and carry usage; cancelled items are left out:
 
@@ -231,7 +231,7 @@ The time a story's agent waited for someone else: on its threads while it was in
 | `items[].wait_threads_seconds` | The seconds of the union of the waits of the threads anchored to the item or one of its tasks that fall in its `in-progress` intervals, whoever ended them. Absent with no such thread |
 | `items[].wait_threads_orchestrator_seconds` | The same over only the waits the orchestrator ended: the seconds of their union that fall in the item's `in-progress` intervals. Time in which such a wait overlaps one someone else ended counts here, so it is never more than `wait_threads_seconds`. Present, 0 or more, whenever `wait_threads_seconds` is |
 | `items[].wait_review_seconds` | The seconds it spent in `review`, the open interval up to now. Absent if it was never in review |
-| An empty wake | A call by a story's agent itself to the flai MCP tool `wait_for_events` whose result reports `timed_out: true`, no events, and no changed paths ([ADR-0105](../adrs/0105-a-story-s-empty-wakes-the-wait-for-events-calls-of-its-agents-that-timed-out.md), S-0272). In Claude Code's stream-json log, a `tool_use` named `mcp__flai__wait_for_events` in an event without `parent_tool_use_id`, whose `tool_result` (by `tool_use_id`) is not `is_error` and whose JSON has `timed_out` true, `events` and `changed` empty, and `end` not true. A sub-agent's call, a call refused or failed, a call that answered `end: true`, and a call with no result in the log are not. flai serve counts them over every log of the agents it started for a story each time it measures the story's usage, and writes the count as `usage.empty_wakes`; `flai stats` reads that, never the logs |
+| An empty wake | A call by a story's agent itself to the flai MCP tool `wait_for_events` whose result reports `timed_out: true`, no events, and no changed paths ([ADR-0105](../adrs/0105-a-story-s-empty-wakes-the-wait-for-events-calls-of-its-agents-that-timed-out.md), S-0272). In Claude Code's stream-json log, a `tool_use` named `mcp__flai__wait_for_events` in an event without `parent_tool_use_id`, whose `tool_result` (by `tool_use_id`) is not `is_error` and whose JSON has `timed_out` true, `events` and `changed` empty, and `end` not true. A sub-agent's call, a call refused or failed, a call that answered `end: true`, and a call with no result in the log are not. flai serve counts them over every log of the agents it started for a story each time it measures the story's usage, and writes the count as `usage.empty_wakes`; `flai stats` reads that, never the logs. A turn whose every call is an empty wake is also a turn of the `empty_wakes` class ([Turns](#turns-s-0293), S-0293): `usage.empty_wakes` counts calls, the class counts turns |
 | `items[].usage.empty_wakes` | The item's `usage.empty_wakes`, 0 when its usage has none; with `items[].usage`, absent when the item carries no usage ([Usage](#usage-s-0143-s-0163)) |
 | `waiting.empty_wakes` | `count`, the sum of `items[].usage.empty_wakes` over the items of the report's type completed in the window, cancelled ones left out, the items `waiting.weeks[]` counts; and `mean`, `count` over the number of those items that carry agents' usage, those `usage.items` counts, absent when none does. Always present, `count` 0 when none carries any. Stories measured before S-0272's release carry none and count 0 |
 
@@ -282,6 +282,51 @@ A story's commits are those on the main branch and the `story/` branches whose s
 | `cost_per_item` | The agents' usage cost of those on which agents spent, over their number; strategic usage is left out | Four decimals; absent when agents spent on none |
 | `cycle_time_seconds` | The mean cycle time of those with one | Absent when none has one |
 
+## Turns (S-0293)
+
+How a story's own agent spends its turns, so that what E-0017 moves from the agent into flai shows per story and over time ([ADR-0116](../adrs/0116-when-flai-measures-a-story-s-usage-from-its-logs-it-classifies-each-turn-of-the.md)). Each time flai serve measures a story's usage from the logs of the agents it started for it, it classifies every turn of the story's own agent and writes the counts per day as `usage.turns` ([work-hierarchy.md](work-hierarchy.md)). `flai stats` reads that, never the logs.
+
+| Term | Definition |
+|------|------------|
+| A turn | One assistant message of the story's own agent, by its message ID, in an event of Claude Code's stream-json log without `parent_tool_use_id`, that calls at least one tool. Claude Code repeats a message once per content block, so a turn's calls are gathered across the repeats of its ID. A sub-agent's message is not a turn, nor is a message that calls no tool |
+| A turn's day | The UTC date of the first event of its message ID |
+| A turn's class | The first of the classes below that it matches. A turn counts once, whatever its calls: a turn that runs a test and moves a task is a test run |
+
+| Class | A turn of the class |
+|-------|---------------------|
+| `test_runs` | Has a Bash call that runs a test, lint, or format tool by hand: `go test`, `go vet`, `gofmt`, `golangci-lint`, `vitest`, `svelte-check`, `eslint`, `prettier --check`, `markdownlint`, the `make` test and lint targets, or the scripts behind them. They are found in the command with heredoc bodies and quoted strings removed. `flai test`, `flai verify`, and the close-out are not test runs |
+| `hand_edits` | Has a call that edits a story's narrative, a task, or a story by hand: an Edit, Write, or MultiEdit of its file, or a Bash call that names its path and writes, with `sed -i`, `perl -i`, `tee`, a redirection, or a Python script that writes |
+| `empty_wakes` | Every call is a `wait_for_events` that was an [empty wake](#waiting) |
+| `ceremony` | Every call is the MCP `inbox` or `item_move`, or a Bash call whose every command is one that a story-loop command replaces: `git add`, `commit`, `status`, `log`, `diff --stat`, `show --stat`, or `rebase --continue`, or `flai stream sync`, `stream log`, `stream open`, `move`, `touches`, or `check`. The story-loop commands themselves (`task done`, `story start`, `stream state`, `criteria tick`, `test`, `verify`) are work |
+| `work` | Every other turn |
+
+The rules match commands by their text. A script that runs `go test` inside, and a tool run under another name, are work.
+
+| Value | Definition |
+|-------|------------|
+| `usage.turns` | On a story, its agent's turns per UTC day, in order of day: `day` and the count of each class, a count of 0 left out and a day with no turns left out. Each measurement replaces it. On an epic, its stories' summed day by day; a task carries none. Stories measured before S-0293's release carry none until they are measured again |
+| `turns.classes` | The classes in the order they are written: `ceremony`, `test_runs`, `empty_wakes`, `hand_edits`, `work` |
+| `turns.days[]` | Every UTC day from the one that holds the window's start to the one that holds now, oldest first, a day with no turns included: `day` (`YYYY-MM-DD`), `turns`, the day's turns in all, and the count of each class, every class present, each summed over the stories |
+| `turns.stories[]` | Each story with a turn on a day of the window, in order of canonical ID: `id`, `title`, `status`, `turns`, and the count of each class, summed over those days |
+| `turns.total` | `turns` and the count of each class, each the sum over `turns.days` |
+
+`turns` counts every story, archived ones included, whatever its status and whatever the report's `--type`. An epic's summed turns and a task's are never counted, so each turn counts once. `turns` is always present: with no turns in the window, its totals are 0, `days` still lists every day, and `stories` is `[]`. `items[].usage` does not carry turns.
+
+`flai stats` prints a section of its own after the waiting section and before claims, only when `turns.total.turns` is above 0:
+
+```text
+story agents' turns, over 2 stories in the window:
+  total 20 · ceremony 4 (20%) · test runs 2 (10%) · empty wakes 1 (5%) · hand edits 1 (5%) · work 12 (60%)
+  by day:
+    2026-10-04  10 · ceremony 3 · test runs 2 · empty wakes 0 · hand edits 1 · work 4
+    2026-10-06  10 · ceremony 1 · test runs 0 · empty wakes 1 · hand edits 0 · work 8
+  by story:
+    S-0270  10 · ceremony 3 · test runs 2 · empty wakes 0 · hand edits 1 · work 4  First
+    S-0293  10 · ceremony 1 · test runs 0 · empty wakes 1 · hand edits 0 · work 8  Second
+```
+
+The heading counts `turns.stories`. The `total` line gives each class's count and its share of the total, rounded to a whole percent. `by day` lists only the days with turns. A class is named with a space for its underscore.
+
 ## Charts
 
 Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166), save CoD by Order, which projects from now ([What the pull order costs](#what-the-pull-order-costs-s-0213)). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
@@ -327,6 +372,7 @@ So that `flai stats` and the dashboard agree to the second:
 - Time-in-state share divides total seconds per state by total lead time, over completed items in the window.
 - The planning, waiting, and claims values (S-0205) are seconds between timestamps, whole since timestamps are, and their means are not rounded. Empty wakes, held stories, and stories with exact touches are whole counts, and the mean of the empty wakes and the share of exact touches are not rounded either. The `started` and `ended` of a wait in `waiting.longest[]` are timestamps as the thread or the transition records them, `YYYY-MM-DDTHH:MM:SSZ`, and its `seconds` are whole. A day is a UTC day, from 00:00:00 up to, not including, the next; a day's or a week's share of an interval is the part of it inside the day or week, and today's ends at now. Cost of delay amounts are rounded to two decimals once summed, and strategic costs to four.
 - Strategic usage costs, per item, in totals, per kind, and in spend, are rounded to four decimals once summed, as activity costs are written; their tokens and seconds are whole. The cost per agent hour is rounded to four decimals, and an expected cost is the duration in hours times that rounded rate, rounded to four decimals, so that it can be recomputed from the JSON. Durations are Go durations, as `forecast_seconds` and `estimate_seconds` read them.
+- Turns are whole counts, each on the UTC day of its first event. The text report's shares of the total are rounded to a whole percent; `--json` has no shares.
 - A bucket holds the moments from its start up to, not including, the next one's. A week's bucket starts on the Monday of the ISO week, at 00:00:00 UTC. The running mean divides by the number of buckets from the first of the series, empty ones counted.
 
 ## Data access
