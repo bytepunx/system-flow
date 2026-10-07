@@ -95,6 +95,128 @@ export async function readNdjson(
 	emit(pending + decoder.decode());
 }
 
+/** Where a step of flai verify got to (S-0270). */
+export type VerifyState = 'passed' | 'failed' | 'not-reached';
+/** What a failed step found: a test, a check, or a linter's complaint, where it is, and what it says. */
+export type VerifyFinding = { name?: string; path?: string; line?: number; message?: string };
+/** One step of flai verify: one of its own, or a test or lint tier when `tier` is set. */
+export type VerifyStep = {
+	name: string;
+	tier?: boolean;
+	state: VerifyState;
+	duration_ms: number;
+	duration?: string;
+	findings?: VerifyFinding[];
+	omitted?: number;
+	command?: string[];
+	dir?: string;
+	exit_code?: number;
+};
+/** A finding of flai check outside the story: it does not fail the story (S-0249). */
+export type VerifyNote = {
+	rule: string;
+	level: string;
+	path?: string;
+	line?: number;
+	message: string;
+};
+/** flai verify's report for a story, as it stores the last one and verify.status answers it. */
+export type VerifyReport = {
+	story: string;
+	commit: string;
+	base: string;
+	ran_at: string;
+	duration_ms: number;
+	duration?: string;
+	passed: boolean;
+	stopped_at?: string;
+	paths?: string[];
+	steps: VerifyStep[];
+	notes?: VerifyNote[];
+};
+
+/** A finding or a note as a page shows it: where, as path:line and a name, and what it says. */
+export type VerifyLine = { where: string; message: string };
+/** A step as a row: its state in words, its duration, and the findings when it failed. */
+export type VerifyRow = {
+	name: string;
+	tier: boolean;
+	state: VerifyState;
+	label: string;
+	duration: string;
+	findings: VerifyLine[];
+	/** How many findings flai left out past its cap. */
+	omitted: number;
+};
+/** A report as a page shows it: the outcome, the commit and when, a row per step, the notes apart. */
+export type VerifyView = {
+	passed: boolean;
+	outcome: string;
+	commit: string;
+	base: string;
+	ranAt: string;
+	duration: string;
+	rows: VerifyRow[];
+	notes: VerifyLine[];
+};
+
+const STATE_LABEL: Record<VerifyState, string> = {
+	passed: 'passed',
+	failed: 'failed',
+	'not-reached': 'not reached'
+};
+
+/** A duration in milliseconds as flai writes one when the report carries none: 340ms, 5.1s. */
+function took(ms: number): string {
+	return ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+
+/** Where a finding or note is, as flai verify prints it: path:line, then its name. */
+function where(path?: string, line?: number, name?: string): string {
+	const loc = path ? (line ? `${path}:${line}` : path) : '';
+	return [loc, name ?? ''].filter((s) => s).join(' ');
+}
+
+/**
+ * A report as rows for the review page (S-0270): a row per step in the order flai ran them, with
+ * the findings under the step that failed only; a step not reached has no duration. The notes from
+ * outside the story are apart, since they do not fail it.
+ */
+export function verifyView(report: VerifyReport): VerifyView {
+	const rows = report.steps.map((s): VerifyRow => ({
+		name: s.name,
+		tier: s.tier === true,
+		state: s.state,
+		label: STATE_LABEL[s.state] ?? s.state,
+		duration: s.state === 'not-reached' ? '' : (s.duration ?? took(s.duration_ms)),
+		findings:
+			s.state === 'failed'
+				? (s.findings ?? []).map((f) => ({
+						where: where(f.path, f.line, f.name),
+						message: f.message ?? ''
+					}))
+				: [],
+		omitted: s.state === 'failed' ? (s.omitted ?? 0) : 0
+	}));
+	return {
+		passed: report.passed,
+		outcome: report.passed
+			? 'Passed every step'
+			: report.stopped_at
+				? `Stopped at ${report.stopped_at}`
+				: 'Failed',
+		commit: report.commit.slice(0, 12),
+		base: report.base,
+		ranAt: report.ran_at,
+		duration: report.duration ?? took(report.duration_ms),
+		rows,
+		notes: (report.notes ?? []).map((n) => ({
+			where: where(n.path, n.line, n.rule),
+			message: `${n.level}: ${n.message}`
+		}))
+	};
+}
+
 /**
  * The body with its nth acceptance criterion ticked or unticked (S-0085). Only lines of the
  * "Acceptance criteria" section count, in order, as criteriaOf lists them; null when there is no

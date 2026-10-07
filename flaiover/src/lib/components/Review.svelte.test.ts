@@ -75,6 +75,7 @@ function backend(over: {
 	issues?: unknown[];
 	ownIssues?: unknown[];
 	issueStory?: (id: string) => unknown;
+	verify?: () => unknown;
 }) {
 	let statusIdx = 0;
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
@@ -103,6 +104,7 @@ function backend(over: {
 			statusIdx++;
 			return json(v);
 		}
+		if (url.endsWith('/verify')) return over.verify ? over.verify() : json({ report: null });
 		if (url.endsWith('/accept'))
 			return over.accept ? over.accept() : ndjson([{ event: 'done', result: {} }]);
 		if (url.endsWith('/move') && init?.method === 'POST') return over.move ? over.move() : json({});
@@ -626,6 +628,115 @@ describe('Review', () => {
 			expect(document.querySelector('[data-testid="checks-error"]')!.textContent).toContain(
 				'already active'
 			);
+		});
+	});
+
+	describe('verification (S-0270)', () => {
+		const REPORT = {
+			story: 'S-0041',
+			commit: '0123456789abcdef0123',
+			base: 'main',
+			ran_at: '2026-10-06T22:00:00Z',
+			duration_ms: 42100,
+			duration: '42.1s',
+			passed: true,
+			steps: [
+				{ name: 'rebase', state: 'passed', duration_ms: 3, duration: '3ms' },
+				{ name: 'check', state: 'passed', duration_ms: 1500, duration: '1.5s' },
+				{ name: 'flaiover', tier: true, state: 'passed', duration_ms: 40000, duration: '40s' }
+			]
+		};
+		const section = () => document.querySelector('[data-testid="verify-section"]');
+		const steps = () =>
+			[...document.querySelectorAll('[data-testid="verify-step"]')].map((li) =>
+				(li.textContent ?? '').replace(/\s+/g, ' ').trim()
+			);
+
+		it('shows a stored passing result: the outcome, the commit and when, each step’s state and duration', async () => {
+			backend({ verify: () => json({ report: REPORT }) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			const summary = document.querySelector('[data-testid="verify-summary"]')!.textContent!;
+			expect(summary).toContain('Passed every step');
+			expect(summary).toContain('0123456789ab');
+			expect(summary).not.toContain('0123456789abcdef');
+			expect(summary).toContain('2026-10-06T22:00:00Z');
+			expect(steps()).toEqual([
+				'passed rebase 3ms',
+				'passed check 1.5s',
+				'passed flaiover tier 40s'
+			]);
+			expect(section()!.querySelector('button')).toBeNull();
+			expect(section()!.querySelector('[data-testid="verify-notes"]')).toBeNull();
+		});
+
+		it('shows where a failing result stopped, the failed step’s findings, and the notes apart', async () => {
+			backend({
+				verify: () =>
+					json({
+						report: {
+							...REPORT,
+							passed: false,
+							stopped_at: 'flaiover',
+							steps: [
+								REPORT.steps[0],
+								REPORT.steps[1],
+								{
+									name: 'flaiover',
+									tier: true,
+									state: 'failed',
+									duration_ms: 40000,
+									duration: '40s',
+									findings: [
+										{
+											name: 'Review > shows it',
+											path: 'flaiover/src/lib/x.test.ts',
+											line: 12,
+											message: 'expected 1 to be 2'
+										}
+									]
+								},
+								{ name: 'flai', tier: true, state: 'not-reached', duration_ms: 0 }
+							],
+							notes: [
+								{
+									rule: 'stale-narrative',
+									level: 'warning',
+									path: 'wip/agents/S-0001.md',
+									message: 'not touched in a week'
+								}
+							]
+						}
+					})
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(document.querySelector('[data-testid="verify-summary"]')!.textContent).toContain(
+				'Stopped at flaiover'
+			);
+			const rows = steps();
+			expect(rows[2]).toContain('failed flaiover tier 40s');
+			expect(rows[2]).toContain(
+				'flaiover/src/lib/x.test.ts:12 Review > shows it: expected 1 to be 2'
+			);
+			expect(rows[3]).toBe('not reached flai tier');
+			expect(rows[0]).toBe('passed rebase 3ms');
+			const notes = section()!.querySelector('[data-testid="verify-notes"]')!;
+			expect(notes.tagName).toBe('DETAILS');
+			const noteText = (notes.textContent ?? '').replace(/\s+/g, ' ');
+			expect(noteText).toContain('1 note from flai check outside the story');
+			expect(noteText).toContain('wip/agents/S-0001.md stale-narrative: warning: not touched');
+			expect(rows.join(' ')).not.toContain('stale-narrative');
+		});
+
+		it('shows nothing and no error when the story has no result', async () => {
+			backend({});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(api.mock.calls.map((call) => call[0])).toContain('/api/items/S-0041/verify');
+			expect(section()).toBeNull();
+			expect(document.body.textContent).not.toContain('Verification');
+			expect(document.querySelector('[role="alert"]')).toBeNull();
 		});
 	});
 

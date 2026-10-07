@@ -6,7 +6,14 @@
 	import WorktreeUncommitted, { otherBlockers } from './WorktreeUncommitted.svelte';
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
-	import { criteriaOf, readNdjson, sectionOf } from '$lib/review';
+	import {
+		criteriaOf,
+		readNdjson,
+		sectionOf,
+		verifyView,
+		type VerifyReport,
+		type VerifyView
+	} from '$lib/review';
 	import { acceptLabel, issueRows, type Issue, type IssueRow } from '$lib/issues';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import Threads from '$lib/components/Threads.svelte';
@@ -115,6 +122,12 @@
 	let tailOffset = 0;
 	let watchToken = 0;
 
+	// Verification (S-0270): the last flai verify stored for the story, read
+	// through verify.status; null when there is none or no flai is connected,
+	// and then the section is left out. Nothing here runs it.
+	let verify = $state<VerifyView | null>(null);
+	let verifyError = $state<string | null>(null);
+
 	function sleep(ms: number): Promise<void> {
 		return new Promise((r) => setTimeout(r, ms));
 	}
@@ -163,6 +176,8 @@
 		issuesError = null;
 		made = [];
 		unmade = [];
+		verify = null;
+		verifyError = null;
 		try {
 			item = (await get<{ item: Item }>(`/api/items/${target}`)).item;
 		} catch (e) {
@@ -188,6 +203,16 @@
 			void loadIssues(target);
 		}
 		void loadChecks(target);
+		void loadVerify(target);
+	}
+
+	async function loadVerify(target: string) {
+		try {
+			const { report } = await get<{ report: VerifyReport | null }>(`/api/items/${target}/verify`);
+			if (target === id) verify = report ? verifyView(report) : null;
+		} catch (e) {
+			if (target === id) verifyError = e instanceof Error ? e.message : String(e);
+		}
 	}
 
 	async function issueList(query: string): Promise<Issue[]> {
@@ -803,6 +828,79 @@
 						>
 					{/if}
 				</p>
+			{/if}
+		</section>
+	{/if}
+
+	{#if verify || verifyError}
+		<section
+			class="mt-4 rounded border border-line bg-surface p-3 text-sm"
+			data-testid="verify-section"
+		>
+			<h2 class="mb-2 font-medium">
+				Verification
+				<span class="text-xs font-normal text-muted">the last flai verify of the story</span>
+			</h2>
+			{#if verifyError}
+				<p class="text-muted" data-testid="verify-error">{verifyError}</p>
+			{:else if verify}
+				<p data-testid="verify-summary">
+					<span class={verify.passed ? 'font-medium text-good' : 'font-medium text-danger'}
+						>{verify.outcome}</span
+					>. Verified <code class="rounded bg-ground px-1 text-ink">{verify.commit}</code> against
+					<code class="rounded bg-ground px-1 text-ink">{verify.base}</code> at {verify.ranAt}, in
+					{verify.duration}.
+				</p>
+				<ul class="mt-2 space-y-1">
+					{#each verify.rows as row, i (i)}
+						<li data-testid="verify-step">
+							<span class="flex flex-wrap items-baseline gap-2">
+								<span
+									class={row.state === 'passed'
+										? 'text-good'
+										: row.state === 'failed'
+											? 'font-medium text-danger'
+											: 'text-muted'}>{row.label}</span
+								>
+								<span class="font-medium">{row.name}</span>
+								{#if row.tier}<span class="text-xs text-muted">tier</span>{/if}
+								{#if row.duration}<span class="text-xs text-muted">{row.duration}</span>{/if}
+							</span>
+							{#if row.findings.length || row.omitted}
+								<ul
+									class="mt-1 ml-4 space-y-1 rounded border border-danger bg-danger-soft p-2 font-mono text-xs text-danger"
+									aria-label="What {row.name} found"
+								>
+									{#each row.findings as f, j (j)}
+										<li>
+											{#if f.where}<span class="font-medium">{f.where}{f.message ? ':' : ''}</span
+												>{/if}
+											<span class="whitespace-pre-wrap">{f.message}</span>
+										</li>
+									{/each}
+									{#if row.omitted}<li>… {row.omitted} more findings left out</li>{/if}
+								</ul>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+				{#if verify.notes.length}
+					<details class="mt-2" data-testid="verify-notes">
+						<summary class="cursor-pointer text-muted">
+							{verify.notes.length}
+							{verify.notes.length === 1 ? 'note' : 'notes'} from flai check outside the story; they do
+							not fail it
+						</summary>
+						<ul class="mt-1 ml-4 list-disc font-mono text-xs">
+							{#each verify.notes as n, i (i)}
+								<li>
+									{#if n.where}<span class="font-medium">{n.where}:</span>{/if}
+									<span class="whitespace-pre-wrap">{n.message}</span>
+								</li>
+							{/each}
+						</ul>
+					</details>
+				{/if}
 			{/if}
 		</section>
 	{/if}
