@@ -86,6 +86,13 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `dashboard.notify_url` | unset | A webhook the dashboard posts new inbox entries to |
 | `checks[].name` | none | A check a story in review is run with, when the host names none ([The checks host action](index.md#the-checks-host-action-s-0082)) |
 | `checks[].command` | none | Its argument list |
+| `tests[].name` | none; with no `tests` key, one tier `test` | A test tier's name, unique among them. `flai test` runs the tiers, cheapest first, for the paths each selects. With no `tests` key, one `plain` tier named `test` runs `scripts/test.sh` for every path when that file exists; `tests: []` means none. A project made from the template starts with `test`, `integration`, and `smoke`, its three scripts. Changed whole with `flai manifest set tests='<JSON list>'`, such as `[{"name":"test","command":["scripts/test.sh"],"paths":["**"]}]`, or by hand ([Project manifest](../../design/system/project-manifest.md)) |
+| `tests[].command` | none | Its argument list, run without a shell; `{packages}` or `{files}`, each as an argument of its own, stands for what its paths selected |
+| `tests[].dir` | the root | The folder it runs in, relative to the root and inside it |
+| `tests[].paths` | none; required unless `all_only` | Glob patterns from the root, as `claims.shared`'s, that select the tier for a changed or named path; one beginning with `!` takes paths out |
+| `tests[].format` | `plain` | How its output becomes findings: `go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`, which reads only the exit status |
+| `tests[].all_only` | `false` | Run the tier only under `flai test --all`, as integration and smoke tests are |
+| `tests[].all_command` | `command` | The argument list run instead of `command` under `--all`; it takes no placeholder |
 | `agent.harness` | none | The harness every new story gets, such as `claude-code` ([Starting an agent](index.md#starting-an-agent-when-a-story-becomes-ready)) |
 | `agent.model` | none | The model every new story gets |
 | `prime.budget` | `80KB` | The size a story's context pack fits, for `flai prime --story` and the MCP `prime` tool; bytes, or a number with `KB` or `MB`; `--budget` overrides it for one run ([Prime a session](../users/flai.md#prime-a-session)). It bounds the pack's text, not one tool result: the MCP `prime` tool returns the pack in parts of at most 40,000 bytes whatever the budget ([ADR-0104](../../design/adrs/0104-the-mcp-prime-tool-returns-a-context-pack-in-parts-of-at-most-40-000-bytes-of.md)) |

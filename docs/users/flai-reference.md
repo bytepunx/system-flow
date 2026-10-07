@@ -1581,6 +1581,7 @@ planning.cycle (duration; default 168h)
 planning.default_duration (duration; default 1h)
 analysis.agent (agent)
 analysis.schedule (cron)
+tests (tests)
 ```
 
 A boolean is true or false; a number is written as digits, a count a whole one; a duration is a Go duration such as 168h; a cron expression has five fields in UTC, or is daily; an agent is JSON, such as {"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}}, and {} unsets it. planning.currency is not among them: changing it re-denominates every amount on the items, so it is edited by hand.

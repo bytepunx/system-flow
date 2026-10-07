@@ -295,3 +295,92 @@ func loaded(t *testing.T, data []byte) Manifest {
 	}
 	return m
 }
+
+// S-0273: tests is written from JSON as a block, one tier an item, read back
+// as given, replaced whole where it is with its key's comment kept, and
+// removed whole; [] writes a list of none.
+func TestEditSettingsWritesTests(t *testing.T) {
+	value := `[{"name":"unit","command":["go","test","-json","{packages}"],"dir":"flai","paths":["flai/**","!flai/testdata/**"],"format":"go-test-json","all_command":["go","test","-json","./..."]},{"name":"smoke","command":["scripts/smoke.sh"],"all_only":true}]`
+	block := "tests:\n" +
+		"  - name: unit\n" +
+		"    command: [go, test, \"-json\", \"{packages}\"]\n" +
+		"    dir: flai\n" +
+		"    paths: [\"flai/**\", \"!flai/testdata/**\"]\n" +
+		"    format: go-test-json\n" +
+		"    all_command: [go, test, \"-json\", \"./...\"]\n" +
+		"  - name: smoke\n" +
+		"    command: [scripts/smoke.sh]\n" +
+		"    all_only: true\n"
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"tests", value}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := settingsFixture + block; string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if len(m.Tests) != 2 || m.Tests[0].Format != FormatGoTestJSON || !m.Tests[1].AllOnly || m.Tests[0].Paths[1] != "!flai/testdata/**" {
+		t.Errorf("reads back: %+v", m.Tests)
+	}
+	v := m.SettingValues()[slices.IndexFunc(m.SettingValues(), func(v SettingValue) bool { return v.Key == "tests" })]
+	if tiers, ok := v.Value.([]TestTier); !v.Set || !ok || !sameTiers(tiers, m.Tests) {
+		t.Errorf("tests' setting value = %+v", v)
+	}
+
+	// a list written with its items at the key's indent, and a comment, is
+	// replaced whole, and the keys after it are kept
+	before := settingsFixture + "tests: # cheapest first\n- name: old\n  command: [make, test]\n  paths: [src]\nflai:\n  minimum: 1.27.0\n"
+	got, err = EditSettings([]byte(before), []Assignment{{"tests", `[{"name":"all","command":["make","check"],"all_only":true}]`}}, nil)
+	want := settingsFixture + "tests: # cheapest first\n  - name: all\n    command: [make, check]\n    all_only: true\nflai:\n  minimum: 1.27.0\n"
+	if err != nil || string(got) != want {
+		t.Errorf("replace: %v\ngot:\n%s\nwant:\n%s", err, got, want)
+	}
+
+	got, err = EditSettings([]byte(before), []Assignment{{"tests", "[]"}}, nil)
+	if want := settingsFixture + "tests: [] # cheapest first\nflai:\n  minimum: 1.27.0\n"; err != nil || string(got) != want {
+		t.Errorf("none: %v\ngot:\n%s\nwant:\n%s", err, got, want)
+	}
+	if m := loaded(t, got); m.Tests == nil || len(m.Tests) != 0 {
+		t.Errorf("tests: [] reads back as %#v", m.Tests)
+	}
+
+	got, err = EditSettings([]byte(before), nil, []string{"tests"})
+	if want := settingsFixture + "flai:\n  minimum: 1.27.0\n"; err != nil || string(got) != want {
+		t.Errorf("unset: %v\ngot:\n%s\nwant:\n%s", err, got, want)
+	}
+}
+
+// S-0273: a value that is not a list of tiers, and a tier the manifest's
+// validation refuses, are refused with the field and the reason, and nothing
+// is written.
+func TestEditSettingsRefusesBadTests(t *testing.T) {
+	for _, c := range []struct {
+		name, value, field, reason string
+	}{
+		{"not a list", `{"name":"unit"}`, "tests", "is not a list of test tiers; write one as JSON"},
+		{"not JSON", `[unit]`, "tests", "is not a list of test tiers"},
+		{"an unknown field", `[{"name":"unit","command":["x"],"paths":["**"],"timeout":5}]`, "tests", "is not a list of test tiers"},
+		{"a bad format", `[{"name":"unit","command":["x"],"paths":["**"],"format":"junit"}]`, "tests[0].format", `(tier "unit") "junit" is not a format flai reads`},
+		{"no paths", `[{"name":"unit","command":["x"]}]`, "tests[0].paths", "is empty"},
+		{"a name twice", `[{"name":"a","command":["x"],"paths":["**"]},{"name":"a","command":["y"],"paths":["**"]}]`, "tests[1].name", "is tests[0]'s name too"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			file := filepath.Join(t.TempDir(), File)
+			if err := os.WriteFile(file, []byte(settingsFixture), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			err := WriteSettings(file, []Assignment{{"tests", c.value}}, nil)
+			var refused *RefusedError
+			if !errors.As(err, &refused) {
+				t.Fatalf("want a refusal, got %v", err)
+			}
+			i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == c.field })
+			if i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
+				t.Errorf("want %s: ...%s..., got %+v", c.field, c.reason, refused.Problems)
+			}
+			if data, _ := os.ReadFile(file); string(data) != settingsFixture {
+				t.Errorf("the file changed:\n%s", data)
+			}
+		})
+	}
+}

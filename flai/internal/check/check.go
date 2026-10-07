@@ -222,6 +222,10 @@ func (c *checker) layout() {
 		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
 		c.add(Error, "manifest.analysis", mf, keyLine(mf, "analysis"), "%s", msg)
 	}
+	for _, msg := range m.TestErrors() {
+		mf := filepath.Join(c.repo.Root, "system-flow.yaml")
+		c.add(Error, "manifest.tests", mf, keyLine(mf, "tests"), "%s", msg)
+	}
 	c.sharedPatterns()
 	if m.Template.Version != "" {
 		if _, err := os.Stat(filepath.Join(c.repo.Root, "system-flow.lock.yaml")); err != nil {

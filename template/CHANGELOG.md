@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.65 - 2026-10-06
+
+- S-0273 A new project declares its test tiers in the manifest (patch): `system-flow.yaml` carries `tests`, the project's test tiers, cheapest first, each with a `name`, a `command` (an argument list that may hold `{packages}` or `{files}` as an argument of its own), the `paths` that select it (globs from the root, as `claims.shared`'s, with `!` to take paths out), the `format` of its output (`go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`), and optionally `dir`, `all_only`, and `all_command`. It starts with `scripts/test.sh` as the tier `test` for every path, and `scripts/integration.sh` and `scripts/smoke.sh` as `integration` and `smoke`, which run only under `--all`; all three are `plain`. Change them with `flai manifest set tests='<JSON list>'` or by hand. A project made before this has no `tests` key, and flai gives it one `plain` tier running `scripts/test.sh` when it exists. An older flai ignores the key, so it needs a flai that has it.
+
 ## 1.0.64 - 2026-10-06
 
 - S-0300 An epic's planner drafts the tasks of each story it drafts (patch): `strategic-agents.md`'s section "As the planner" says that for an epic it enriches each story it drafts as it would a story, and drafts its tasks as it would for a story with no tasks, and does the same for each story it revisits that is a draft with no tasks. The tasks carry no draft flag: they are drafts because their story is one, and the story's agent reviews them when it pulls the story. The epic's one plan thread names each story's tasks and their layers, and the summary names by ID the stories and tasks created and the stories revisited. `.claude/agents/planner.md` says the same, and fixes "an story's" in its description. The planner's prompt needs a flai that says so.

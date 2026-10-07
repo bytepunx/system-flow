@@ -15,11 +15,12 @@ import (
 
 // The strategic agents' settings that flai manifest set writes (S-0229,
 // ADR-0039): what the orchestrator may do and how it orders and releases,
-// and the planner's and the analyzer's agents and schedules. The catalog
-// says of each its kind, its values, its default, and what it does; whether
-// a value is allowed is always the manifest's own validation
-// (Planning.Errors, Orchestration.Errors, Analysis.Errors) on the manifest
-// as it would be, so flai manifest set and flai check cannot disagree.
+// and the planner's and the analyzer's agents and schedules; and the
+// project's test tiers (S-0273). The catalog says of each its kind, its
+// values, its default, and what it does; whether a value is allowed is
+// always the manifest's own validation (Planning.Errors,
+// Orchestration.Errors, Analysis.Errors, TestErrors) on the manifest as it
+// would be, so flai manifest set and flai check cannot disagree.
 
 // Kind is what a setting's value is, and so how it is written and edited.
 type Kind string
@@ -41,6 +42,9 @@ const (
 	KindAgent Kind = "agent"
 	// KindText is one line of text, such as an epic ID or a tag.
 	KindText Kind = "text"
+	// KindTests is a list of test tiers, given as JSON such as
+	// [{"name":"test","command":["scripts/test.sh"],"paths":["**"]}].
+	KindTests Kind = "tests"
 )
 
 // Setting is one key flai manifest set may write.
@@ -73,7 +77,7 @@ type Setting struct {
 type SettingValue struct {
 	Setting
 	// Value is the setting's value as the manifest has it: a bool, a string,
-	// a float64, an int, or an *Agent; nil when it is unset.
+	// a float64, an int, an *Agent, or a []TestTier; nil when it is unset.
 	Value any `json:"value,omitempty"`
 	// Set reports whether the manifest sets the key to something other than
 	// its zero: a permission written false reads as unset, as it acts.
@@ -186,6 +190,14 @@ func buildCatalog() []Setting {
 		Setting{Key: "analysis.schedule", Kind: KindCron,
 			Meaning: "When flai serve runs the analyzer, a five-field cron expression in UTC or daily; unset, it runs only when you ask.",
 			get:     func(m Manifest) (any, bool) { return text(m.Analysis.Schedule) }},
+		Setting{Key: "tests", Kind: KindTests,
+			Meaning: "The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none.",
+			get: func(m Manifest) (any, bool) {
+				if m.Tests == nil {
+					return nil, false
+				}
+				return m.Tests, true
+			}},
 	)
 }
 
@@ -253,7 +265,7 @@ func (m Manifest) SettingValues() []SettingValue {
 
 // Assignment is a value to write to a setting, as given on the command
 // line: a boolean, a choice, a number, a duration, or a cron expression as
-// written, or an agent as JSON.
+// written, or an agent or a list of test tiers as JSON.
 type Assignment struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
@@ -467,8 +479,82 @@ func (s Setting) parse(value string) (write, string) {
 			return block
 		}
 		return w, ""
+	case KindTests:
+		const example = `such as [{"name":"test","command":["scripts/test.sh"],"paths":["**"]}], or [] for none`
+		if !strings.HasPrefix(v, "[") {
+			return w, "is not a list of test tiers; write one as JSON, " + example
+		}
+		tiers := []TestTier{}
+		if err := yaml.UnmarshalWithOptions([]byte(v), &tiers, yaml.Strict()); err != nil {
+			return w, fmt.Sprintf("is not a list of test tiers: %s; write one as JSON, %s", firstLine(err.Error()), example)
+		}
+		if tiers == nil {
+			tiers = []TestTier{}
+		}
+		w.want = tiers
+		w.render = func(indent, old string) []string { return testsLines(tiers, indent, s.leaf(), old) }
+		return w, ""
 	}
 	return scalar(settingScalar(v), v)
+}
+
+// testsLines are the lines of a list of test tiers under key at indent, one
+// tier an item and each of its lists on one line, keeping the comment of the
+// key's line they replace.
+func testsLines(tiers []TestTier, indent, key, old string) []string {
+	if len(tiers) == 0 {
+		return []string{keyLine(indent, key, "[]", old)}
+	}
+	head := indent + key + ":"
+	if rest, ok := keyRest(old, key); ok {
+		_, comment := splitComment(rest)
+		head = withComment(head, comment)
+	}
+	out := []string{head}
+	for _, t := range tiers {
+		prefix := indent + "  - "
+		field := func(k, v string) {
+			out = append(out, prefix+k+": "+v)
+			prefix = indent + "    "
+		}
+		field("name", yamlScalar(t.Name))
+		field("command", flowList(t.Command))
+		if t.Dir != "" {
+			field("dir", yamlScalar(t.Dir))
+		}
+		if len(t.Paths) > 0 {
+			field("paths", flowList(t.Paths))
+		}
+		if t.Format != "" {
+			field("format", yamlScalar(t.Format))
+		}
+		if t.AllOnly {
+			field("all_only", "true")
+		}
+		if len(t.AllCommand) > 0 {
+			field("all_command", flowList(t.AllCommand))
+		}
+	}
+	return out
+}
+
+// flowList is a list of strings on one line, each plain or double-quoted as
+// yamlScalar says.
+func flowList(items []string) string {
+	out := make([]string, len(items))
+	for i, s := range items {
+		out[i] = yamlScalar(s)
+	}
+	return "[" + strings.Join(out, ", ") + "]"
+}
+
+// sameTiers reports whether two lists of test tiers say the same, a list
+// absent and one empty alike.
+func sameTiers(a, b []TestTier) bool {
+	return slices.EqualFunc(a, b, func(x, y TestTier) bool {
+		return x.Name == y.Name && x.Dir == y.Dir && x.Format == y.Format && x.AllOnly == y.AllOnly &&
+			slices.Equal(x.Command, y.Command) && slices.Equal(x.Paths, y.Paths) && slices.Equal(x.AllCommand, y.AllCommand)
+	})
 }
 
 // leaf is the last part of the setting's key, as its block writes it.
@@ -528,6 +614,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.Planning.Errors()...)
 	msgs = append(msgs, m.Orchestration.Errors()...)
 	msgs = append(msgs, m.Analysis.Errors()...)
+	msgs = append(msgs, m.TestErrors()...)
 	for _, e := range m.Claims.Errors() {
 		msgs = append(msgs, e.Error())
 	}
@@ -540,10 +627,10 @@ func (m Manifest) settingsProblems() []Problem {
 
 // splitProblem is a sentence of the manifest's validation as a field and a
 // reason: each begins with the key it is about, such as planning.cycle "0s"
-// is not ....
+// is not ..., or tests[1].format "junit" is not ....
 func splitProblem(msg string) Problem {
 	field, reason, ok := strings.Cut(msg, " ")
-	if !ok || strings.Trim(field, "abcdefghijklmnopqrstuvwxyz_.") != "" {
+	if !ok || strings.Trim(field, "abcdefghijklmnopqrstuvwxyz_.[]0123456789") != "" {
 		return Problem{Reason: msg}
 	}
 	return Problem{Field: field, Reason: reason}
@@ -566,6 +653,9 @@ func readsBack(data []byte, m Manifest, writes []write) error {
 		case *Agent:
 			a, _ := got.(*Agent)
 			ok = ok && a.Same(want)
+		case []TestTier:
+			tiers, _ := got.([]TestTier)
+			ok = ok && sameTiers(tiers, want)
 		default:
 			ok = ok && got == want
 		}
@@ -622,15 +712,24 @@ func findKey(lines []string, from, to int, key string) (span, string) {
 }
 
 // valueEnd is the line after the last content line of the value of the key
-// at line at: the lines below it indented deeper, up to to. Comments after
-// that last line belong to what follows.
+// at line at: the lines below it indented deeper, and, when nothing follows
+// the key on its line, the list items at its own indent, as a list under a
+// top-level key is often written; up to to. Comments after that last line
+// belong to what follows.
 func valueEnd(lines []string, at, to int) int {
 	end := at + 1
+	keyIn := len(indent(lines[at]))
+	t := strings.TrimSpace(lines[at])
+	_, rest, _ := strings.Cut(t, ":")
+	value, _ := splitComment(rest)
+	items := value == "" && !strings.HasPrefix(t, "-")
 	for i := at + 1; i < to; i++ {
 		if !isContent(lines[i]) {
 			continue
 		}
-		if len(indent(lines[i])) <= len(indent(lines[at])) {
+		in, l := len(indent(lines[i])), strings.TrimSpace(lines[i])
+		item := l == "-" || strings.HasPrefix(l, "- ")
+		if in < keyIn || in == keyIn && !(items && item) {
 			break
 		}
 		end = i + 1

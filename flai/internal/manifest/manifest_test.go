@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"encoding/json"
 	"errors"
 	"math"
 	"os"
@@ -8,7 +9,10 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 )
@@ -656,5 +660,140 @@ func TestSetMinimum(t *testing.T) {
 		if m, err := Load(path); err != nil || m.Flai.Minimum != "1.27.0" {
 			t.Errorf("reads back: %v %+v", err, m.Flai)
 		}
+	}
+}
+
+// S-0273: tests is an ordered list of tiers that loads with every field,
+// reads back the same through YAML and JSON, and is valid.
+func TestTestsRoundTrip(t *testing.T) {
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"tests:\n" +
+		"- name: unit\n" +
+		"  command: [go, test, -json, \"{packages}\"]\n" +
+		"  dir: flai\n" +
+		"  paths: [\"flai/**\", \"!flai/testdata/**\"]\n" +
+		"  format: go-test-json\n" +
+		"  all_command: [go, test, -json, ./...]\n" +
+		"- name: smoke\n" +
+		"  command: [scripts/smoke.sh]\n" +
+		"  all_only: true\n"
+	m := loaded(t, []byte(body))
+	want := []TestTier{
+		{Name: "unit", Command: []string{"go", "test", "-json", PlaceholderPackages}, Dir: "flai",
+			Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON, AllCommand: []string{"go", "test", "-json", "./..."}},
+		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true},
+	}
+	if !reflect.DeepEqual(m.Tests, want) {
+		t.Fatalf("tests:\n got %+v\nwant %+v", m.Tests, want)
+	}
+	if errs := m.TestErrors(); len(errs) != 0 {
+		t.Errorf("valid tiers refused: %v", errs)
+	}
+	if m.Tests[1].FormatOrDefault() != FormatPlain || m.Tests[0].FormatOrDefault() != FormatGoTestJSON {
+		t.Errorf("formats in effect: %q, %q", m.Tests[0].FormatOrDefault(), m.Tests[1].FormatOrDefault())
+	}
+	data, err := yaml.Marshal(Manifest{Tests: m.Tests})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var again Manifest
+	if err := yaml.Unmarshal(data, &again); err != nil || !reflect.DeepEqual(again.Tests, want) {
+		t.Errorf("YAML round trip: %v\n%s\n%+v", err, data, again.Tests)
+	}
+	js, err := json.Marshal(m.Tests)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fromJSON []TestTier
+	if err := json.Unmarshal(js, &fromJSON); err != nil || !reflect.DeepEqual(fromJSON, want) {
+		t.Errorf("JSON round trip: %v\n%s", err, js)
+	}
+	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) {
+		t.Errorf("JSON keys are not snake_case: %s", js)
+	}
+}
+
+// S-0273: a bad tier is named by its index, its field, and its name, with the
+// reason and what to write instead.
+func TestTestErrors(t *testing.T) {
+	ok := TestTier{Name: "unit", Command: []string{"scripts/test.sh"}, Paths: []string{"**"}}
+	with := func(f func(*TestTier)) TestTier {
+		tier := ok
+		f(&tier)
+		return tier
+	}
+	for _, c := range []struct {
+		name  string
+		tiers []TestTier
+		want  string
+	}{
+		{"no name", []TestTier{with(func(x *TestTier) { x.Name = " " })}, "tests[0].name is empty"},
+		{"a name twice", []TestTier{ok, ok}, `tests[1].name "unit" is tests[0]'s name too`},
+		{"no command", []TestTier{with(func(x *TestTier) { x.Command = nil })}, `tests[0].command (tier "unit") is empty`},
+		{"no program", []TestTier{with(func(x *TestTier) { x.Command = []string{"", "x"} })}, `tests[0].command (tier "unit") has no program first`},
+		{"a placeholder first", []TestTier{with(func(x *TestTier) { x.Command = []string{"{files}"} })}, "begins with the placeholder {files}"},
+		{"another placeholder", []TestTier{with(func(x *TestTier) { x.Command = []string{"go", "{story}"} })}, `tests[0].command (tier "unit") argument {story} is not a placeholder flai fills`},
+		{"a placeholder inside", []TestTier{with(func(x *TestTier) { x.Command = []string{"vitest", "--dir={files}"} })}, `argument "--dir={files}" holds a placeholder inside it`},
+		{"a placeholder under all", []TestTier{with(func(x *TestTier) { x.AllCommand = []string{"go", "test", "{packages}"} })}, `tests[0].all_command (tier "unit") argument {packages} is a placeholder`},
+		{"an absolute dir", []TestTier{with(func(x *TestTier) { x.Dir = "/srv/flai" })}, `tests[0].dir (tier "unit") "/srv/flai" is an absolute path`},
+		{"a dir outside", []TestTier{with(func(x *TestTier) { x.Dir = "../other" })}, `"../other" leaves the repository`},
+		{"a dir not clean", []TestTier{with(func(x *TestTier) { x.Dir = "flai/./web/" })}, "is not a clean path"},
+		{"no paths", []TestTier{with(func(x *TestTier) { x.Paths = nil })}, `tests[0].paths (tier "unit") is empty`},
+		{"only exclusions", []TestTier{with(func(x *TestTier) { x.Paths = []string{"!flai/testdata"} })}, "has no pattern that selects a path"},
+		{"a bad pattern", []TestTier{with(func(x *TestTier) { x.Paths = []string{"flai/**", "!../x"} })}, `tests[0].paths (tier "unit") pattern "!../x" has a .. segment`},
+		{"a bad format", []TestTier{with(func(x *TestTier) { x.Format = "junit" })}, `tests[0].format (tier "unit") "junit" is not a format flai reads; write go-test-json, vitest-json, golangci-json, gofmt-list, plain`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			errs := Manifest{Tests: c.tiers}.TestErrors()
+			if got := strings.Join(errs, "\n"); !strings.Contains(got, c.want) {
+				t.Errorf("got:\n%s\nwant ...%s...", got, c.want)
+			}
+			if p := splitProblem(errs[0]); !strings.HasPrefix(p.Field, "tests[") {
+				t.Errorf("%q is not split into a field and a reason: %+v", errs[0], p)
+			}
+		})
+	}
+	for _, tier := range []TestTier{
+		with(func(x *TestTier) { x.Paths, x.AllOnly = nil, true }),
+		with(func(x *TestTier) { x.Dir = "flaiover/web" }),
+		with(func(x *TestTier) { x.Command = []string{"go", "vet", "{packages}", "{files}"} }),
+		with(func(x *TestTier) { x.Command = []string{"sh", "-c", "echo ${HOME}"} }),
+	} {
+		if errs := (Manifest{Tests: []TestTier{tier}}).TestErrors(); len(errs) != 0 {
+			t.Errorf("%+v refused: %v", tier, errs)
+		}
+	}
+}
+
+// S-0273: with no tests key the project has one plain tier running
+// scripts/test.sh, when it is there, for every path; an empty list has none,
+// and a list with a bad tier is refused.
+func TestTestTiers(t *testing.T) {
+	script := fstest.MapFS{DefaultTestScript: {Data: []byte("#!/bin/sh\n"), Mode: 0o755}}
+	tiers, err := Manifest{}.TestTiers(script)
+	want := []TestTier{{Name: "test", Command: []string{"scripts/test.sh"}, Paths: []string{"**"}, Format: FormatPlain}}
+	if err != nil || !reflect.DeepEqual(tiers, want) {
+		t.Errorf("the default: %v %+v", err, tiers)
+	}
+	for name, fsys := range map[string]fstest.MapFS{
+		"no script":        {},
+		"a folder instead": {"scripts/test.sh/x": {Data: nil}},
+		"another script":   {"scripts/check.sh": {Data: nil}},
+	} {
+		if tiers, err := (Manifest{}).TestTiers(fsys); err != nil || tiers != nil {
+			t.Errorf("%s: %v %+v", name, err, tiers)
+		}
+	}
+	m := loaded(t, []byte("version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\ntests: []\n"))
+	if tiers, err := m.TestTiers(script); err != nil || len(tiers) != 0 || m.Tests == nil {
+		t.Errorf("tests: [] means none: %v %+v (%#v)", err, tiers, m.Tests)
+	}
+	declared := []TestTier{{Name: "unit", Command: []string{"make", "test"}, Paths: []string{"src"}}}
+	if tiers, err := (Manifest{Tests: declared}).TestTiers(script); err != nil || !reflect.DeepEqual(tiers, declared) {
+		t.Errorf("declared tiers: %v %+v", err, tiers)
+	}
+	bad := []TestTier{{Name: "unit", Command: []string{"make", "test"}}}
+	if _, err := (Manifest{Tests: bad}).TestTiers(script); err == nil || !strings.Contains(err.Error(), "tests[0].paths") {
+		t.Errorf("a bad tier: %v", err)
 	}
 }

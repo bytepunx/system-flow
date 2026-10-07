@@ -5,9 +5,11 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"maps"
 	"math"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -43,6 +45,10 @@ type Manifest struct {
 	// configuration names none: that is the operator's choice of where to
 	// name them, not a merge of both.
 	Checks []NamedCommand `yaml:"checks,omitempty" json:"checks,omitempty"`
+	// Tests are the project's test tiers, cheapest first, that flai test runs
+	// for the paths each selects (S-0273). Nil, with no tests key, means the
+	// default TestTiers gives; an empty list means none.
+	Tests []TestTier `yaml:"tests,omitempty" json:"tests,omitempty"`
 	// Agent is the project's default agent, copied into every story created
 	// while it is set (S-0103). flai agent sets it.
 	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
@@ -574,6 +580,193 @@ func (r Release) errors() []string {
 type NamedCommand struct {
 	Name    string   `yaml:"name" json:"name"`
 	Command []string `yaml:"command" json:"command"`
+}
+
+// TestTier is one tier of the project's tests: a command, the paths that
+// select it, and how its output becomes findings (S-0273).
+type TestTier struct {
+	// Name names the tier, unique among the project's tiers.
+	Name string `yaml:"name" json:"name"`
+	// Command is an argument list, run as it stands, never through a shell.
+	// An argument that is PlaceholderPackages or PlaceholderFiles alone
+	// stands for what the tier's paths selected; nothing else is
+	// interpreted.
+	Command []string `yaml:"command" json:"command"`
+	// Dir is the folder the command runs in, relative to the repository
+	// root; empty means the root.
+	Dir string `yaml:"dir,omitempty" json:"dir,omitempty"`
+	// Paths are glob patterns relative to the repository root, as
+	// claims.shared's are, that select the tier for a changed or named path;
+	// one beginning with ! takes paths out again. Required unless AllOnly.
+	Paths []string `yaml:"paths,omitempty" json:"paths,omitempty"`
+	// Format is how the command's output becomes findings: one of
+	// TestFormats; empty means FormatPlain.
+	Format string `yaml:"format,omitempty" json:"format,omitempty"`
+	// AllOnly runs the tier only when every tier is asked for, as flai test
+	// --all does, never for paths.
+	AllOnly bool `yaml:"all_only,omitempty" json:"all_only,omitempty"`
+	// AllCommand, when set, runs instead of Command when every tier is asked
+	// for. It takes no placeholders.
+	AllCommand []string `yaml:"all_command,omitempty" json:"all_command,omitempty"`
+}
+
+// The placeholders a tier's command may hold, each as an argument of its own.
+const (
+	// PlaceholderPackages stands for the packages of the paths the tier
+	// selected.
+	PlaceholderPackages = "{packages}"
+	// PlaceholderFiles stands for the files the tier selected.
+	PlaceholderFiles = "{files}"
+)
+
+// The values of a tier's format.
+const (
+	// FormatGoTestJSON is go test -json's events.
+	FormatGoTestJSON = "go-test-json"
+	// FormatVitestJSON is vitest's JSON reporter.
+	FormatVitestJSON = "vitest-json"
+	// FormatGolangciJSON is golangci-lint's JSON output.
+	FormatGolangciJSON = "golangci-json"
+	// FormatGofmtList is gofmt -l's list of files not formatted.
+	FormatGofmtList = "gofmt-list"
+	// FormatPlain is any output; the exit status alone says whether the tier
+	// passed. It is the default.
+	FormatPlain = "plain"
+)
+
+// TestFormats are the values of a tier's format, in the order they are
+// listed to the operator.
+var TestFormats = []string{FormatGoTestJSON, FormatVitestJSON, FormatGolangciJSON, FormatGofmtList, FormatPlain}
+
+// DefaultTestScript is the script the default tier runs when the manifest
+// has no tests key.
+const DefaultTestScript = "scripts/test.sh"
+
+// placeholder is an argument that looks like a placeholder: a word in
+// braces.
+var placeholder = regexp.MustCompile(`^\{[A-Za-z_][A-Za-z0-9_]*\}$`)
+
+// FormatOrDefault is the tier's format, or FormatPlain when it is empty. It
+// does not say whether the format is one of TestFormats; TestErrors does.
+func (t TestTier) FormatOrDefault() string {
+	if s := strings.TrimSpace(t.Format); s != "" {
+		return s
+	}
+	return FormatPlain
+}
+
+// TestTiers are the project's test tiers, cheapest first: the tests key's
+// when it is there, and otherwise one plain tier named test that runs
+// DefaultTestScript for every path, when fsys, the repository root, holds
+// that file; none when it does not. It refuses tiers TestErrors finds wrong,
+// with every problem.
+func (m Manifest) TestTiers(fsys fs.FS) ([]TestTier, error) {
+	if m.Tests != nil {
+		if errs := m.TestErrors(); len(errs) > 0 {
+			return nil, errors.New(strings.Join(errs, "; "))
+		}
+		return m.Tests, nil
+	}
+	if st, err := fs.Stat(fsys, DefaultTestScript); err != nil || st.IsDir() {
+		return nil, nil
+	}
+	return []TestTier{{Name: "test", Command: []string{DefaultTestScript}, Paths: []string{"**"}, Format: FormatPlain}}, nil
+}
+
+// TestErrors are what is wrong with the tests key, one sentence each, each
+// beginning with the tier's index and field, such as tests[1].format; none
+// when every tier is valid.
+func (m Manifest) TestErrors() []string {
+	var errs []string
+	seen := map[string]int{}
+	for i, t := range m.Tests {
+		at := func(field string) string {
+			s := fmt.Sprintf("tests[%d].%s", i, field)
+			if name := strings.TrimSpace(t.Name); name != "" && field != "name" {
+				s += fmt.Sprintf(" (tier %q)", name)
+			}
+			return s
+		}
+		name := strings.TrimSpace(t.Name)
+		if name == "" {
+			errs = append(errs, at("name")+" is empty; give the tier a name, such as test or unit")
+		} else if j, ok := seen[name]; ok {
+			errs = append(errs, fmt.Sprintf("%s %q is tests[%d]'s name too; give each tier a name of its own", at("name"), t.Name, j))
+		} else {
+			seen[name] = i
+		}
+		if len(t.Command) == 0 {
+			errs = append(errs, at("command")+" is empty; write the program and its arguments as a list, such as [scripts/test.sh] or [go, test, \"{packages}\"]")
+		} else {
+			errs = append(errs, commandProblems(at("command"), t.Command, true)...)
+		}
+		if len(t.AllCommand) > 0 {
+			errs = append(errs, commandProblems(at("all_command"), t.AllCommand, false)...)
+		}
+		if r := dirProblem(t.Dir); r != "" {
+			errs = append(errs, fmt.Sprintf("%s %q %s", at("dir"), t.Dir, r))
+		}
+		selects := 0
+		for _, p := range t.Paths {
+			glob, out := strings.CutPrefix(p, "!")
+			if r := patternProblem(glob); r != "" {
+				errs = append(errs, fmt.Sprintf("%s pattern %q %s", at("paths"), p, r))
+			} else if !out {
+				selects++
+			}
+		}
+		switch {
+		case t.AllOnly || selects > 0:
+		case len(t.Paths) == 0:
+			errs = append(errs, at("paths")+" is empty; write the globs that select the tier, such as flai/**, or set all_only for a tier that runs only when every tier is asked for")
+		default:
+			errs = append(errs, at("paths")+" has no pattern that selects a path, only ones beginning with ! or ones not valid; add one, such as flai/**")
+		}
+		if f := t.FormatOrDefault(); !slices.Contains(TestFormats, f) {
+			errs = append(errs, fmt.Sprintf("%s %q is not a format flai reads; write %s, or remove it for plain", at("format"), t.Format, strings.Join(TestFormats, ", ")))
+		}
+	}
+	return errs
+}
+
+// commandProblems are what is wrong with a tier's argument list, each
+// sentence beginning with field. A placeholder is allowed only where
+// placeholders is set, and only as an argument of its own.
+func commandProblems(field string, args []string, placeholders bool) []string {
+	var errs []string
+	if strings.TrimSpace(args[0]) == "" {
+		errs = append(errs, field+" has no program first; write the program, then its arguments, such as [scripts/test.sh]")
+	} else if placeholder.MatchString(args[0]) {
+		errs = append(errs, fmt.Sprintf("%s begins with the placeholder %s; write the program first, then its arguments", field, args[0]))
+	}
+	for _, a := range args[1:] {
+		switch {
+		case (a == PlaceholderPackages || a == PlaceholderFiles) && !placeholders:
+			errs = append(errs, fmt.Sprintf("%s argument %s is a placeholder, and all_command runs for no paths; write it without %s or %s", field, a, PlaceholderPackages, PlaceholderFiles))
+		case a == PlaceholderPackages || a == PlaceholderFiles:
+		case placeholder.MatchString(a):
+			errs = append(errs, fmt.Sprintf("%s argument %s is not a placeholder flai fills; write %s or %s, or remove it", field, a, PlaceholderPackages, PlaceholderFiles))
+		case strings.Contains(a, PlaceholderPackages) || strings.Contains(a, PlaceholderFiles):
+			errs = append(errs, fmt.Sprintf("%s argument %q holds a placeholder inside it, which flai does not fill; write %s or %s as an argument of its own", field, a, PlaceholderPackages, PlaceholderFiles))
+		}
+	}
+	return errs
+}
+
+// dirProblem says what is wrong with a tier's dir, or "" when it is valid: a
+// clean path inside the repository, relative to its root, or empty.
+func dirProblem(d string) string {
+	switch {
+	case d == "":
+		return ""
+	case strings.HasPrefix(d, "/") || strings.HasPrefix(d, `\`) || len(d) > 1 && d[1] == ':':
+		return "is an absolute path; write it relative to the repository root, such as flai"
+	case d == ".." || strings.HasPrefix(d, "../"):
+		return "leaves the repository; write a folder inside it, relative to its root, such as flai"
+	case path.Clean(d) != d:
+		return "is not a clean path; write it with single slashes, no . or .. segments, and none at the end, such as flai/web"
+	}
+	return ""
 }
 
 // Template records which template produced the project.
