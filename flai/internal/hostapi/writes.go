@@ -1264,6 +1264,41 @@ func itemSpecs() map[string]spec {
 			return []string{"stream", "answer", in.ID, "--by=" + owner(p), "--", strings.TrimSpace(in.Question), strings.TrimSpace(in.Answer)}, "", nil
 		}),
 
+		// stream.state writes a narrative's Current state and Next steps, or
+		// one of them (S-0271): flai stream state, each text trimmed as flai
+		// trims it, lines and all, and a blank one left out as flai leaves it.
+		// A text of only "-" is refused, since flai would read it from standard
+		// input. A story not in progress or in review, or with no narrative,
+		// and a text the markdown lint rejects, are flai's refusals (exit 4).
+		"stream.state": {exits: map[int]int{4: Refused}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID      string `json:"id"`
+				Current string `json:"current"`
+				Next    string `json:"next"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needStory(in.ID); e != nil {
+				return nil, "", e
+			}
+			var texts []string
+			for _, f := range []struct{ flag, text string }{{"current", in.Current}, {"next", in.Next}} {
+				t := strings.TrimSpace(f.text)
+				switch t {
+				case "":
+					continue
+				case "-":
+					return nil, "", bad("%s is the text itself: - is not text to write", f.flag)
+				}
+				texts = append(texts, "--"+f.flag+"="+t)
+			}
+			if len(texts) == 0 {
+				return nil, "", bad("current, next, or both are required: the text to write under ## Current state and ## Next steps")
+			}
+			return append([]string{"stream", "state", in.ID}, texts...), "", nil
+		}},
+
 		"thread.new": one(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				On      string `json:"on"`

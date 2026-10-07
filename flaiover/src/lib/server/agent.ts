@@ -82,6 +82,7 @@ export const REQUIRED_METHODS = [
 	'stream.diff',
 	'stream.log',
 	'stream.answer',
+	'stream.state',
 	'thread.new',
 	'thread.reply',
 	'thread.resolve',

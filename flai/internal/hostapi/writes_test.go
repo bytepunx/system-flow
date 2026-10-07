@@ -43,6 +43,7 @@ var good = map[string]struct {
 	"accept.run":        {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --yes --json", ""},
 	"stream.log":        {`{"id":"S-0001","entry":"--not a flag",` + rid + `}`, "stream log S-0001 --json -- --not a flag", ""},
 	"stream.answer":     {`{"id":"S-0001","question":"--not a flag?","answer":"--also not",` + rid + `}`, "stream answer S-0001 --by=olive --json -- --not a flag? --also not", ""},
+	"stream.state":      {`{"id":"S-0001","current":"  --not a flag\n- T-1 done \n","next":"1. --json\n2. -",` + rid + `}`, "stream state S-0001 --current=--not a flag\n- T-1 done --next=1. --json\n2. - --json", ""},
 	"thread.new":        {`{"on":"S-0001","heading":"Goal","title":"How deep?","text":"Eight metres?",` + rid + `}`, "thread new --on=S-0001 --by=olive --heading=Goal --json -- How deep? Eight metres?", ""},
 	"thread.reply":      {`{"id":"TH-0001","text":"Nine.","recommend":true,"source":" design/adrs/0090-x.md#Decision ",` + rid + `}`, "thread reply TH-0001 --by=olive --recommend --source=design/adrs/0090-x.md#Decision --json -- Nine.", ""},
 	"thread.confirm":    {`{"id":"TH-0001",` + rid + `}`, "thread confirm TH-0001 --by=olive --json", ""},
@@ -137,6 +138,13 @@ var refused = map[string][]string{
 		`{"id":"S-0001","message":"m",` + rid + `}`, `{"id":"E-0001","message":"m",` + rid + `}`, `{"id":"--help","message":"m",` + rid + `}`,
 		`{"id":"T-0001 --log=x","message":"m",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"T-0001","message":" \n ",` + rid + `}`,
 		`{"id":"T-0001","message":["m"],` + rid + `}`, `{"id":"T-0001","message":"m"}`,
+	},
+	// S-0271: a story's narrative state, some text to write, never standard input
+	"stream.state": {
+		`{"id":"--help","current":"c",` + rid + `}`, `{"id":"T-0001","current":"c",` + rid + `}`, `{"id":"E-0001","current":"c",` + rid + `}`,
+		`{"id":"S-0001 --next=x","current":"c",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"S-0001","current":" \n ","next":"",` + rid + `}`,
+		`{"id":"S-0001","current":"-",` + rid + `}`, `{"id":"S-0001","current":"c","next":" -\n",` + rid + `}`,
+		`{"id":"S-0001","current":["c"],` + rid + `}`, `{"id":"S-0001","current":"c"}`,
 	},
 	// S-0273: flai test in a checkout, its paths kept inside it
 	"test.run": {
@@ -2027,6 +2035,53 @@ func TestItemCriteriaTicksOrUnticksAsTheOwner(t *testing.T) {
 	rule := Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "err": "rule: S-0007 has 3 criteria: there is no 9"}}}
 	if _, e, _ := criteria(rule, `{"id":"S-0007","hash":"`+hash+`","tick":[9],`+rid+`}`); e == nil || e.Code != Rule || e.Message != "S-0007 has 3 criteria: there is no 9" {
 		t.Errorf("a number there is not: %+v", e)
+	}
+}
+
+// S-0271: stream.state runs flai stream state with the texts given, either
+// alone, and answers its result; - is refused before anything runs, since
+// flai would read it from standard input, and what flai refuses (a story
+// not in progress, or text the lint rejects) is a refusal with its data.
+func TestStreamStateWritesTheTextsGiven(t *testing.T) {
+	p := channel.Project{Key: "harbour", Root: "/p"}
+	state := func(ran Ran, params string) (any, *channel.Error, string) {
+		rec := &recorder{ran: ran}
+		res, e := writeMethods(rec.run, time.Now, Host{})["stream.state"](context.Background(), p, json.RawMessage(params))
+		if len(rec.runs) == 0 {
+			return res, e, ""
+		}
+		if rec.runs[0].Stdin != "" {
+			t.Errorf("stream.state gave flai standard input %q", rec.runs[0].Stdin)
+		}
+		return res, e, strings.Join(rec.runs[0].Args, " ")
+	}
+	done := Ran{Stdout: []byte(`{"stream":"S-0007","path":"wip/agents/S-0007.md","updated":"2026-10-07T09:00:00Z","written":["Next steps"],"changed":true}`)}
+	res, e, args := state(done, `{"id":"S-0007","next":"1. Review.",`+rid+`}`)
+	if e != nil || args != "stream state S-0007 --next=1. Review. --json" {
+		t.Errorf("next steps alone: %+v %s", e, args)
+	}
+	if w, ok := res.(Written); !ok || !strings.Contains(string(w.Data), `"written":["Next steps"]`) {
+		t.Errorf("the answer: %#v", res)
+	}
+	if _, e, args := state(done, `{"id":"S-0007","current":"Reviewing.","next":"  ",`+rid+`}`); e != nil || args != "stream state S-0007 --current=Reviewing. --json" {
+		t.Errorf("current state alone, next blank: %+v %s", e, args)
+	}
+	for _, params := range []string{`{"id":"S-0007","current":"","next":"\n",` + rid + `}`, `{"id":"S-0007",` + rid + `}`} {
+		if _, e, args := state(done, params); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "current, next, or both are required") || args != "" {
+			t.Errorf("no text, %s: %+v %s", params, e, args)
+		}
+	}
+	if _, e, args := state(done, `{"id":"S-0007","current":"c","next":" - ",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || e.Message != "next is the text itself: - is not text to write" || args != "" {
+		t.Errorf("-: %+v %s", e, args)
+	}
+	for _, refusal := range []Ran{
+		{Exit: 4, Stdout: []byte(`{"refused":{"id":"S-0007","status":"ready","reason":"S-0007 is ready"}}`), Events: []map[string]any{{"level": "FATAL", "err": "S-0007 is ready"}}},
+		{Exit: 4, Stdout: []byte(`{"refused":{"path":"wip/agents/S-0007.md","reason":"lint","findings":[{"rule":"MD012"}]}}`), Events: []map[string]any{{"level": "FATAL", "err": "lint"}}},
+	} {
+		_, e, _ := state(refusal, `{"id":"S-0007","current":"c",`+rid+`}`)
+		if e == nil || e.Code != Refused || e.Data.(map[string]any)["reason"] == nil {
+			t.Errorf("a refusal: %+v", e)
+		}
 	}
 }
 
