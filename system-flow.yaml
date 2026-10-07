@@ -79,11 +79,23 @@ tests:
     paths: ["**/*.md", "!**/node_modules/**", "!**/testdata/**", "!bin/**", "!flaiover/build/**", "!**/.svelte-kit/**", "!.flai-cache/**"]
     format: plain
     all_command: [scripts/lint-md.sh]
+  - name: template
+    command: [scripts/template-test.sh]
+    paths: ["template/**"]
+    format: plain
+    all_only: true
+  - name: flaiover
+    command: [scripts/flaiover-test.sh]
+    paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**"]
+    format: plain
+    all_only: true
   - name: integration
     command: [scripts/integration.sh]
+    paths: ["flai/**"]
     format: plain
     all_only: true
   - name: smoke
     command: [scripts/smoke.sh]
+    paths: ["flai/**"]
     format: plain
     all_only: true

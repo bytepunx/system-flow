@@ -20,6 +20,10 @@ dashboard:
   port: 4242
   bind: 0.0.0.0 # 127.0.0.1 to keep the dashboard on this host only
 tests: # the test tiers, cheapest first, that flai test runs for the paths each selects; all_only runs only under --all
+  - name: markdown # lint-md.sh lints every markdown file; give it "{files}" once it takes the paths
+    command: [scripts/lint-md.sh]
+    paths: ["**/*.md", "!**/node_modules/**", "!**/testdata/**", "!bin/**", "!.flai-cache/**"]
+    format: plain
   - name: test
     command: [scripts/test.sh]
     paths: ["**"]

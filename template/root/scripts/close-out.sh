@@ -1,31 +1,33 @@
 #!/usr/bin/env sh
-# Close out a story before review: no rebase left unfinished, the branch
-# contains the main branch, lint, tests, flai check --strict, the narrative,
-# then the commit, stopping at the first step that fails.
+# Close out a story before review: flai verify, then the commit, then the
+# sync check, stopping at the first step that fails.
 # Usage: scripts/close-out.sh S-nnnn [git commit options: -m, or -F with a file
 # outside the worktree, which git add -A would otherwise commit]
 # The cycle before it (git.md): close each task when it is done with
 # flai task done, which commits, syncs, and checks, resolve what a stopped
 # sync lists, run the task's tests, and close any fix the same way; then
 # commit what is outstanding and sync again before this.
-# Run it in the story's worktree. Add this project's other checks as steps
-# of their own; keep each one gated on its exit code.
+# Run it in the story's worktree. flai verify runs every check, so the
+# close-out and flai verify never disagree: no rebase left unfinished, the
+# branch contains the main branch, the narrative, flai check --strict scoped
+# to the story, then the tiers of system-flow.yaml's tests that the branch's
+# changes select, with CLOSE_OUT_STORY set to the story in their environment.
+# --record-issues records the check's findings outside the story in
+# design/issues, which the commit step commits. Add this project's other
+# checks as tiers in system-flow.yaml's tests, not as steps here.
 set -eu
 cd "$(dirname "$0")/.."
 
 [ $# -ge 1 ] || { echo "usage: scripts/close-out.sh S-nnnn [git commit options]" >&2; exit 2; }
 story="$1"
 shift
-# check.sh scopes flai check to the story: the findings outside it are notes,
-# recorded in design/issues, which the commit step below commits.
-CLOSE_OUT_STORY="$story"
-export CLOSE_OUT_STORY
 
 # Every run ends with one line on stdout naming the story, the outcome, and
 # the step it stopped at, so nobody runs it again to learn why it stopped.
 # Set once the story is known: a usage error prints only the usage. The trap
 # reads $? before anything else can change it, and exits with it.
-step="the main branch check"
+step="the worktree check"
+hint=""
 signal=""
 finish() {
   code="$1"
@@ -34,7 +36,7 @@ finish() {
   elif [ "$code" -eq 0 ]; then
     echo "close-out: $story passed every step; ready to move to review"
   else
-    echo "close-out: $story stopped at $step (exit $code)"
+    echo "close-out: $story stopped at $step (exit $code)$hint"
   fi
   exit "$code"
 }
@@ -43,69 +45,16 @@ trap 'finish "$?"' EXIT
 trap 'signal=interrupted; exit 130' INT
 trap 'signal=terminated; exit 143' TERM
 
-# The narrative is written in the main checkout, which a story worktree shares
-# its git directory with; the main branch is the one checked out there.
-common="$(git rev-parse --git-common-dir)"
-main="$(cd "$common/.." && pwd)"
-base="$(git -C "$main" rev-parse --abbrev-ref HEAD)"
-[ "$base" != HEAD ] || { echo "close-out: the main checkout $main is not on a branch" >&2; exit 1; }
+# flai verify runs in the story's worktree whatever the checkout it is called
+# from, and the commit below is made in this one: they must be the same.
+branch="$(git rev-parse --abbrev-ref HEAD)"
+[ "$branch" = "story/$story" ] || { echo "close-out: this checkout is on $branch, not story/$story; run this in $story's worktree" >&2; exit 1; }
 
-# A rebase flai stream sync stopped on is finished or undone first.
-step="the rebase check"
-for dir in rebase-merge rebase-apply; do
-  if [ -e "$(git rev-parse --git-path "$dir")" ]; then
-    echo "close-out: a rebase is in progress; finish it with git rebase --continue, or undo it with git rebase --abort, then run this again" >&2
-    exit 1
-  fi
-done
-
-# The branch must contain the main branch: flai stream sync rebases it there,
-# and refuses uncommitted changes, so with changes this is checked after the
-# commit.
-synced() {
-  rc=0
-  git merge-base --is-ancestor "$base" HEAD || rc=$?
-  case "$rc" in
-    0) echo "close-out: the branch contains $base" ;;
-    1) echo "close-out: the branch does not contain $base; run flai stream sync $story, resolve what it reports, and run this again" >&2; exit 1 ;;
-    *) echo "close-out: cannot tell whether the branch contains $base" >&2; exit 1 ;;
-  esac
-}
-checked=no
-step="the sync check"
-if [ -z "$(git status --porcelain)" ]; then
-  synced
-  checked=yes
-fi
-
-step="markdown lint"
-echo "close-out: $step"
-scripts/lint-md.sh
-step="behavior tests"
-echo "close-out: $step"
-scripts/test.sh
-step="integration tests"
-echo "close-out: $step"
-scripts/integration.sh
-step="smoke tests"
-echo "close-out: $step"
-scripts/smoke.sh
-step="flai check --strict"
-echo "close-out: $step"
-scripts/check.sh
-
-step="the narrative"
-narrative="$main/wip/agents/$story.md"
-echo "close-out: narrative $narrative"
-[ -f "$narrative" ] || { echo "close-out: no narrative for $story at $narrative" >&2; exit 1; }
-for section in "Current state" "Next steps"; do
-  awk -v h="## $section" '
-    $0 == h { on = 1; next }
-    on && /^## / { exit }
-    on { sub(/^[[:space:]]*([-*]|[0-9]+\.)?[[:space:]]*/, ""); if ($0 != "") { found = 1; exit } }
-    END { exit !found }
-  ' "$narrative" || { echo "close-out: ## $section in $narrative is empty; write it, then run this again" >&2; exit 1; }
-done
+step="flai verify"
+hint="; flai verify's last line above names the step it stopped at, or why it could not run"
+echo "close-out: $step $story --record-issues"
+flai verify "$story" --record-issues
+hint=""
 
 step="commit"
 status="$(git status --porcelain)"
@@ -116,8 +65,23 @@ if [ -n "$status" ]; then
   git diff --cached --stat
   git commit "$@"
 fi
+
+# The branch still contains the main branch flai verify checked it against,
+# the branch the main checkout has, which may have moved while the tiers ran.
+# The main checkout shares its git directory with the story's worktree.
 step="the sync check"
-[ "$checked" = yes ] || synced
+common="$(git rev-parse --git-common-dir)"
+main="$(cd "$common/.." && pwd)"
+base="$(git -C "$main" rev-parse --abbrev-ref HEAD)"
+[ "$base" != HEAD ] || { echo "close-out: the main checkout $main is not on a branch" >&2; exit 1; }
+rc=0
+git merge-base --is-ancestor "$base" HEAD || rc=$?
+case "$rc" in
+  0) echo "close-out: the branch contains $base" ;;
+  1) echo "close-out: the branch does not contain $base; run flai stream sync $story, resolve what it reports, and run this again" >&2; exit 1 ;;
+  *) echo "close-out: cannot tell whether the branch contains $base" >&2; exit 1 ;;
+esac
+
 step="the clean worktree check"
 status="$(git status --porcelain)"
 [ -z "$status" ] || { git status --short >&2; echo "close-out: the worktree is not clean after the commit" >&2; exit 1; }
