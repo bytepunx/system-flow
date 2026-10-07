@@ -6,7 +6,7 @@ title: A story that changes a path Claude Code protects is flagged at review and
 status: ready
 owner: alex
 created: 2026-10-06T06:32:43Z
-updated: 2026-10-07T00:09:45Z
+updated: 2026-10-07T00:41:52Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:48Z
@@ -30,10 +30,10 @@ cost_of_delay:
   at: 2026-10-06T22:55:05Z
 forecast:
   duration: 1h
-  delivery: 2026-10-07T04:02:00Z
-  basis: "Its own forecast of 1h; 9th in the pull order with an in-progress limit of 3, behind S-0228, S-0273, S-0269, S-0270, S-0271, S-0254, S-0272, S-0274, S-0275 and S-0281."
+  delivery: 2026-10-07T04:09:00Z
+  basis: "Its own forecast of 1h; 7th in the pull order with an in-progress limit of 3, behind S-0228, S-0254, S-0272, S-0269, S-0270, S-0271, S-0274, S-0275 and S-0281."
   by: flai
-  at: 2026-10-07T00:09:45Z
+  at: 2026-10-07T00:41:52Z
 finalized:
   by: alex
   at: 2026-10-06T22:49:46Z
