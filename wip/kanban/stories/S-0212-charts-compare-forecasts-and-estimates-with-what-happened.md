@@ -7,7 +7,7 @@ status: ready
 parent: E-0016
 owner: arobson
 created: 2026-10-02T11:54:14Z
-updated: 2026-10-07T03:29:50Z
+updated: 2026-10-07T03:29:59Z
 transitions:
   - to: ready
     at: 2026-10-03T20:33:50Z
@@ -33,10 +33,10 @@ cost_of_delay:
   at: 2026-10-05T05:45:27Z
 forecast:
   duration: 31m
-  delivery: 2026-10-07T04:57:00Z
-  basis: "Its own forecast of 31m; 5th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274, S-0275 and S-0216."
+  delivery: 2026-10-07T04:47:00Z
+  basis: "Its own forecast of 31m; 4th in the pull order with an in-progress limit of 3, behind S-0270, S-0271, S-0274 and S-0275."
   by: flai
-  at: 2026-10-07T03:29:50Z
+  at: 2026-10-07T03:29:59Z
 ---
 # S-0212 Charts compare forecasts and estimates with what happened
 
