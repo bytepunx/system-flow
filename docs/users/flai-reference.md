@@ -47,7 +47,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [promote](#flai-promote) | List the backlog stories that could go to ready, or the drafts and what each lacks |
 | [push](#flai-push) | Push an acceptance that was made and not pushed |
 | [release](#flai-release) | Compute a release for one item, publish everything accepted since the last release, or say whether a release is due |
-| [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary |
+| [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary, or list the published ones |
 | [serve](#flai-serve) | Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it |
 | [shared](#flai-shared) | List, check, add, and remove the shared paths, whose overlaps hold no story |
 | [show](#flai-show) | Print one work item with its children and history |
@@ -118,7 +118,7 @@ Subcommands:
 - [promote](#flai-promote): List the backlog stories that could go to ready, or the drafts and what each lacks
 - [push](#flai-push): Push an acceptance that was made and not pushed
 - [release](#flai-release): Compute a release for one item, publish everything accepted since the last release, or say whether a release is due
-- [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary
+- [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary, or list the published ones
 - [serve](#flai-serve): Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it
 - [shared](#flai-shared): List, check, add, and remove the shared paths, whose overlaps hold no story
 - [show](#flai-show): Print one work item with its children and history
@@ -869,7 +869,8 @@ Subcommands:
 - [status](#flai-dashboard-status): Show whether the dashboard container runs and answers: running, not answering, or gone
 - [stop](#flai-dashboard-stop): Stop this project's dashboard; the shared container stops only when it was the last project served
 - [token](#flai-dashboard-token): Print the dashboard token and login link; --rotate replaces it
-- [upgrade](#flai-dashboard-upgrade): Pull a newer dashboard image and swap to it, only once it answers healthy
+- [upgrade](#flai-dashboard-upgrade): Pull a newer dashboard image, or a chosen release, and swap to it, only once it answers healthy
+- [versions](#flai-dashboard-versions): List the published dashboard releases, marking the running and the configured one
 
 #### flai dashboard check
 
@@ -958,13 +959,23 @@ Flags:
 
 #### flai dashboard upgrade
 
-Pull a newer dashboard image and swap to it, only once it answers healthy.
+Pull a newer dashboard image, or a chosen release, and swap to it, only once it answers healthy.
 
 ```text
 flai dashboard upgrade [flags]
 ```
 
 Pulls the configured (or --tag) image and, if it differs from what is running, starts it as a second, temporary container on a loopback port of its own, waits for it to answer /\_health, and only then stops the running container and starts the new image at the real name and port. The running container is never stopped until the replacement has proven healthy: if it does not become healthy in time, the temporary container is removed and the running one is left exactly as it was, and this reports why.
+
+--tag deploys that image tag, an earlier release included, the same way, for this container once: dashboard.tag is not changed, so an upgrade without a tag uses the configured one again (pin with flai config set dashboard.tag). With --published the tag must be a published dashboard release, the bare X.Y.Z of a flaiover/vX.Y.Z tag (flai dashboard versions lists them): any other is refused, naming the published ones, before anything is pulled. Without it a tag is used as it is, such as a mirror's.
+
+Examples:
+
+```bash
+flai dashboard upgrade
+flai dashboard upgrade --published --tag 0.4.0
+flai dashboard upgrade --tag my-mirror-build
+```
 
 Flags:
 
@@ -973,7 +984,33 @@ Flags:
 | `--bind` string | host address to publish on (default: manifest, then config, then 0.0.0.0) |
 | `--image` string | image name (default: manifest, then config) |
 | `--port` int | host port to publish (default: manifest, then config) |
-| `--tag` string | image tag to upgrade to (default: manifest, then config) |
+| `--published` | refuse a --tag that is not a published dashboard release, before anything is pulled |
+| `--repo` string | GitHub repository whose flaiover/vX.Y.Z tags are the published dashboard releases (with --published) (default `bytepunx/system-flow`) |
+| `--tag` string | image tag to upgrade to, for this container once (default: manifest, then config) |
+
+#### flai dashboard versions
+
+List the published dashboard releases, marking the running and the configured one.
+
+```text
+flai dashboard versions [flags]
+```
+
+Lists the published dashboard releases, the repository's flaiover/vX.Y.Z tags, newest first, and installs nothing. Each release's image tag is its bare version, X.Y.Z. It marks the newest, the release the running container's image carries (its FLAIOVER\_VERSION, else its image tag), and the configured tag (flags, then the dashboard section of system-flow.yaml, then config). Docker is not needed to list: without it, or with no container running, nothing is marked running. flai dashboard upgrade --published --tag X.Y.Z deploys one of them, an earlier one included, for that container once; dashboard.tag is not changed. With --json it prints a list of version, tag, running, configured, and latest.
+
+Examples:
+
+```bash
+flai dashboard versions
+flai dashboard versions --json
+flai dashboard upgrade --published --tag 0.4.0
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--repo` string | GitHub repository whose flaiover/vX.Y.Z tags are the published dashboard releases (default `bytepunx/system-flow`) |
 
 ### flai doc
 
@@ -1253,6 +1290,8 @@ flai host restart serve    # serve, mcp, or all
 flai host stop mcp         # stop the MCP servers until flai host start mcp
 flai host check            # is a newer flai published?
 flai host upgrade          # install it and restart everything on it
+flai host versions         # the published flai releases, newest first
+flai host upgrade --version 1.2.0   # install that one instead, an earlier one included
 flai host stop
 ```
 
@@ -1263,7 +1302,8 @@ Subcommands:
 - [start](#flai-host-start): Start flai host in the background, if it is not running; with a process, ask the host to start it
 - [status](#flai-host-status): Whether flai host runs, and each process it keeps: its state, PID, version, and restarts
 - [stop](#flai-host-stop): Stop flai host and every process it runs; with a process, ask the host to stop that one only
-- [upgrade](#flai-host-upgrade): Have the host install the newest flai and restart itself and every process it runs on it
+- [upgrade](#flai-host-upgrade): Have the host install the newest flai, or --version a published one, and restart itself and every process it runs on it
+- [versions](#flai-host-versions): Ask the host for the published flai releases, newest first, marking the installed one and the newest
 
 #### flai host check
 
@@ -1307,11 +1347,31 @@ flai host stop [serve|mcp|all]
 
 #### flai host upgrade
 
-Have the host install the newest flai and restart itself and every process it runs on it.
+Have the host install the newest flai, or --version a published one, and restart itself and every process it runs on it.
 
 ```text
-flai host upgrade
+flai host upgrade [flags]
 ```
+
+Has the host install the newest flai, as flai self-upgrade does, and restart itself and every process it runs on what it installed.
+
+--version installs that published release instead, an earlier one included, the same way: the host restarts on it with its processes. A version that is not X.Y.Z is refused before anything runs, and one that is not a published release is refused, naming the published ones (flai host versions), before anything is downloaded or replaced. A release below a served project's flai.minimum is installed, not refused: flai host versions marks it.
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--version` string | install this published release instead of the newest, e.g. 1.2.0 |
+
+#### flai host versions
+
+Ask the host for the published flai releases, newest first, marking the installed one and the newest.
+
+```text
+flai host versions
+```
+
+Asks the host for the published flai releases, newest first, as flai self-upgrade --list prints them from the host's flai: each with its date, marking the installed one (the flai flai host upgrade would replace), the newest, and any below the flai.minimum of a project flai serve serves. With --json it prints the list as the host answers it: version, tag, published, installed, latest, and below\_minimum (each project and minimum the release is below, left out when none). It installs nothing.
 
 ### flai hostapi
 
@@ -2114,7 +2174,7 @@ Flags:
 
 ### flai self-upgrade
 
-Install the latest flai release over this binary.
+Install the latest flai release over this binary, or list the published ones.
 
 ```text
 flai self-upgrade [flags]
@@ -2122,10 +2182,15 @@ flai self-upgrade [flags]
 
 Resolves the newest flai release on GitHub (or --version), downloads the archive for this platform and checksums.txt, verifies the SHA-256, and replaces the running executable. While the repository is private the API needs a token: GITHUB\_TOKEN, GH\_TOKEN, or a gh auth login session. The same operation from a shell is install.sh at the repository root.
 
+--version installs that release, an earlier one included, the way the newest is installed; a version that is not a published release is refused, naming the published ones, before anything is downloaded. A release below the flai.minimum of the project in this folder, or of a project flai serve serves, is warned about and installed: going back past it is your call.
+
+--list prints the published releases, newest first, and installs nothing. It marks the installed one (the flai self-upgrade would replace), the newest, and any below such a project's flai.minimum; with --json it prints a list of version, tag, published, installed, latest, and below\_minimum (each project and minimum the release is below, left out when none).
+
 Examples:
 
 ```bash
 flai self-upgrade --check
+flai self-upgrade --list
 flai self-upgrade
 flai self-upgrade --version 1.0.3
 flai self-upgrade --dir /usr/local/bin
@@ -2137,8 +2202,9 @@ Flags:
 |------|---------|
 | `--check` | report the installed and latest versions without installing |
 | `--dir` string | install into this directory instead of over the running binary |
+| `--list` | list the published releases, newest first, without installing |
 | `--repo` string | GitHub repository that publishes flai releases (default `bytepunx/system-flow`) |
-| `--version` string | install this release instead of the latest, e.g. 1.0.3 |
+| `--version` string | install this published release instead of the latest, e.g. 1.0.3 |
 
 ### flai serve
 

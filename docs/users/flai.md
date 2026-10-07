@@ -28,6 +28,7 @@ The script detects the OS and architecture, resolves the newest `flai/v*` releas
 
 ```bash
 flai self-upgrade --check      # installed and latest versions
+flai self-upgrade --list       # the published releases, newest first; installs nothing
 flai self-upgrade              # replace this binary with the latest release
 flai self-upgrade --version 1.0.3
 flai self-upgrade --dir /some/other/directory
@@ -35,7 +36,9 @@ flai self-upgrade --dir /some/other/directory
 
 `self-upgrade` performs the same steps as the script from inside the binary: resolve, download, verify, and replace the running executable atomically. It uses the same token sources. Without `--version` it does nothing when the installed version is already the latest. With no `--dir` it replaces whichever binary is running, so once installed under `~/.flai/bin` an agent or a scheduled job can run `flai self-upgrade` itself, with no `sudo` and no extra configuration. The exception is a flai that runs from inside a system-flow project, such as a checkout's own `bin/flai`. It installs the release where `install.sh` would (`$FLAI_INSTALL_DIR`, else `~/.flai/bin`), leaves the checkout alone, and says to put that folder on your PATH ahead of the checkout's. A build there is replaced by the next build, and that folder exists on no other machine.
 
-`FLAI_RELEASES_API` points it at another source of releases that answers as GitHub's releases API does, such as a mirror. `flai host check` and `flai host upgrade`, and the dashboard's Check for upgrade and Upgrade buttons, which ask the host, follow it too.
+`--list` prints the published releases, newest first, with their dates (S-0298). It marks the installed one, the newest, and any below the `flai.minimum` of the project in this folder or of a project `flai serve` serves; `--json` gives the same as a list. `--version` installs any published release, an earlier one included, the way the newest is installed. A version that is not published is refused, naming the published ones, before anything is downloaded. One below a project's `flai.minimum` is installed with a warning: a flai below it will not read that project. Through the host, `flai host versions` and `flai host upgrade --version` do the same ([flai host](#flai-host-the-process-that-runs-flai-serve-and-the-mcp-servers)).
+
+`FLAI_RELEASES_API` points it at another source of releases that answers as GitHub's releases API does, such as a mirror. `flai host check`, `versions`, and `upgrade`, `flai dashboard versions`, the MCP tool `versions`, and the dashboard's Check for upgrade, Versions, and Upgrade buttons, which ask the host, follow it too.
 
 ### Other ways
 
@@ -923,6 +926,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `shared_paths_edit` | Remove the patterns in `remove`, then add those in `add`, as `flai shared remove` and `add` do, and return `added`, `removed`, and `shared`, the list after the change. Nothing is committed. Yours alone: `flai guard` refuses it to every sub-agent and every session `flai serve` starts, and tells the agent to ask you on a thread ([Shared paths](#shared-paths)) |
 | `order_by_policy` | The ready column's order by `policy` (`cod`, `wsjf`, `throughput`, or `fifo`; the project's `orchestration.policy` when left out), as `flai order --by <policy> --json` prints it, with each story's figure. It never writes the order ([Ordering by a policy](#ordering-by-a-policy)) |
 | `promote_candidates` | The backlog stories that could go to ready and why each other one cannot, as `flai promote --candidates --json` prints them; `limit` caps the candidates. It writes nothing ([Ordering by a policy](#ordering-by-a-policy)) |
+| `versions` | The published releases of flai and of the dashboard, each newest first (S-0298). flai's mark the one the server runs, the newest, and any below the project's `flai.minimum`; the dashboard's mark the newest. It installs and deploys nothing: that is yours, with `flai host upgrade --version` or `flai dashboard upgrade --published --tag` on the host, or the dashboard's Updates page ([Upgrade](#upgrade)) |
 | `release_evaluate` | Whether the release policy is met, with its figures, as `flai release --evaluate --json` prints it. It releases nothing ([Whether a release is due](#whether-a-release-is-due)) |
 | `release_publish` | For the orchestrator alone, while you give it `publish`: publish what is accepted and not yet released, as the board's Publish does, when the release policy allows it, with a one-sentence `reason`. It refuses, changing nothing, when the policy is not met, when `whole_epics` holds the batch back, under `judgement` without a reason, and while the `push` host action is off. Returns the versions, tags, and items released ([When the orchestrator publishes](#when-the-orchestrator-publishes)) |
 | `agent_start`, `agent_restart` | Start a story's agent on the host, as `flai serve agent start` and `restart` do, so that your own agent can give a story begun on another host an agent here ([ADR-0064](../../design/adrs/0064-a-story-in-ready-or-in-progress-with-no-agent-run-on-this-host-is-started-here.md)). Only while the operator has turned on the `agent` host action for the project, as for the dashboard's buttons; otherwise, and whenever flai would refuse the command, the tool's error says why. Each call is journalled with the agent that made it. A sub-agent cannot call them, and nor can an agent `flai serve` started: starting agents is your word, not a story's agent's |
@@ -1797,7 +1801,13 @@ flai dashboard stop
 flai dashboard token           # print the token and login link
 flai dashboard token --rotate  # new token; a running dashboard restarts
 flai dashboard --no-serve      # do not register with flai serve, or start flai host
+flai dashboard check           # is a newer image published? changes nothing
+flai dashboard upgrade         # pull the configured image and swap to it once it answers healthy
+flai dashboard versions        # the published dashboard releases, newest first
+flai dashboard upgrade --published --tag 0.27.4  # deploy one of them, an earlier one included
 ```
+
+`flai dashboard versions` lists the repository's `flaiover/vX.Y.Z` tags, newest first, and marks the release running, the configured `dashboard.tag`, and the newest (S-0298). A release's image tag is its bare `X.Y.Z`. `flai dashboard upgrade --tag` deploys that tag the way `upgrade` deploys the configured one. With `--published`, a tag that is not a published release is refused, naming the published ones, before anything is pulled; without it the tag is used as given, such as a mirror's. The tag applies to the container, not the configuration: it keeps running through restarts until the next `flai dashboard upgrade` without a tag, or `flai dashboard` starting a container after `flai dashboard stop`. Pin a release with `flai config set dashboard.tag` ([update runbook](../operators/runbooks/update.md#flaiover)).
 
 ### flai host: the process that runs flai serve and the MCP servers
 
@@ -1810,6 +1820,8 @@ flai host start             # in the background (flai dashboard does this for yo
 flai host restart serve     # serve, mcp, or all; start <process> and stop <process> too
 flai host check             # is a newer flai published?
 flai host upgrade           # install it and restart the host and everything it runs on it
+flai host versions          # the published flai releases, newest first
+flai host upgrade --version 1.16.1  # install that one instead, an earlier one included, and restart the same way
 flai host stop              # the host and everything it runs
 ```
 

@@ -168,6 +168,8 @@ flai serve disable dashboard
 
 **Understand what enabling it means.** Whoever holds the dashboard token can restart the container, pull and switch it to whatever image your configuration currently names, or stop it (for this project, or for every project it serves, if it was the last one registered). None of it reaches past Docker on this host: no git credential, no project file.
 
+Since S-0298 it also lets the Updates page deploy a chosen published dashboard release, an earlier one included, from its Versions list. The dashboard names only a bare `X.Y.Z`, never an image, and flai refuses a tag that is not a published `flaiover/vX.Y.Z` release before anything is pulled ([ADR-0117](../../design/adrs/0117-the-host-api-installs-a-release-the-dashboard-names-only-when-flai-lists-it-as.md)). The chosen release keeps running through restarts until the next upgrade without a tag ([update runbook](runbooks/update.md#flaiover)).
+
 **An upgrade never touches the running container until the new one has proven itself.** `flai dashboard upgrade` pulls the configured image and, if it differs from what is running, starts it as a second, temporary container of its own and waits for it to answer healthy; only then does it stop the running container and start the new image in its place. If the new image never answers healthy, the temporary container is removed and the one you already had keeps running, unchanged — the same command run by hand (`flai dashboard upgrade`, `flai dashboard check` to look without changing anything, `flai dashboard restart` to cycle the process without a pull) behaves identically, on or off the board.
 
 ### The checks host action (S-0082)
@@ -212,7 +214,7 @@ flai serve journal          # every start, stop, restart, and upgrade asked for,
 flai serve disable host
 ```
 
-**Understand what enabling it means.** Whoever holds the dashboard token can then stop, start, or restart `flai serve` and every project's MCP server on this host. A stopped `flai serve` cuts the dashboard off until someone starts it again in a shell (`flai serve start`). They can also have the host download the newest flai release with your GitHub credentials (`GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token`), install it over the flai on this host, and restart on it. It installs only a published release, checked against its checksum, never a binary the dashboard sends. Reading the host's status, and whether a newer flai exists, needs no action.
+**Understand what enabling it means.** Whoever holds the dashboard token can then stop, start, or restart `flai serve` and every project's MCP server on this host. A stopped `flai serve` cuts the dashboard off until someone starts it again in a shell (`flai serve start`). They can also have the host download the newest flai release with your GitHub credentials (`GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token`), install it over the flai on this host, and restart on it. It installs only a published release, checked against its checksum, never a binary the dashboard sends. Since S-0298 they can also choose which published release, an earlier one included, from the Updates page's Versions list; the host installs it and restarts exactly as for the newest ([update runbook](runbooks/update.md#flai)). Reading the host's status, whether a newer flai exists, and the list of published releases needs no action.
 
 ### The plan host action: the planner (S-0208)
 
@@ -322,7 +324,7 @@ flai host stop              # stops the host and every process it runs
 - **Its API.** `flai serve` and the `flai host` commands reach it on that address with a token. The host makes the token at start and hands it to its children, and it answers no request that carries a browser's `Origin`. Anyone on the machine can read `/_health`: the host's PID, version, config file, and start time.
 - **Where its files are.** A folder named `host` beside flai's config file: `state.json` (rewritten every second while it runs), `token` (mode 0600), and `host.log`. `flai serve` still logs to `serve/serve.log`, and each MCP server to its project's `.flai-cache/mcp-http.log`.
 - **A `flai serve` or MCP server it did not start.** If you started one by hand, or an older flai did, the host uses it and leaves it alone, and `flai host status` calls it `external`. Stop it (`flai serve stop`, `flai mcp stop`) and the host starts its own within fifteen seconds.
-- **Upgrading.** `flai host upgrade` runs `flai self-upgrade`. When that installs a release, the host stops everything and starts again on the new binary, with the same PID on Linux and macOS. On Windows it is a new process, which has not been tried.
+- **Upgrading.** `flai host upgrade` runs `flai self-upgrade`, and `flai host upgrade --version X.Y.Z` installs that published release instead, an earlier one included; `flai host versions` lists them. When that installs a release, the host stops everything and starts again on the new binary, with the same PID on Linux and macOS. On Windows it is a new process, which has not been tried.
 
 ### The dashboard's watch
 

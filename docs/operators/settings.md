@@ -309,6 +309,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
 | `--limit` | [flai doc search](../users/flai-reference.md#flai-doc-search), [flai promote](../users/flai-reference.md#flai-promote), [flai touches suggest](../users/flai-reference.md#flai-touches-suggest) |
+| `--list` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--log` | [flai task done](../users/flai-reference.md#flai-task-done) |
 | `--max` | [flai test](../users/flai-reference.md#flai-test), [flai verify](../users/flai-reference.md#flai-verify) |
 | `--max-sessions` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
@@ -339,6 +340,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--print-body` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--program` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
 | `--publish` | [flai push](../users/flai-reference.md#flai-push) |
+| `--published` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--pull` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--reason` | [flai block](../users/flai-reference.md#flai-block), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai move](../users/flai-reference.md#flai-move), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
 | `--recommend` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
@@ -350,7 +352,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--remove` | [flai touches](../users/flai-reference.md#flai-touches) |
 | `--replace` | [flai agent set](../users/flai-reference.md#flai-agent-set) |
 | `--replace-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
-| `--repo` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
+| `--repo` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade), [flai dashboard versions](../users/flai-reference.md#flai-dashboard-versions), [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--report` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new) |
 | `--reset` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
 | `--revenue-per-week` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai story new](../users/flai-reference.md#flai-story-new) |
@@ -381,7 +383,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--var` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `-v`, `--verbose` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--verified` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |
-| `--version` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
+| `--version` | [flai host upgrade](../users/flai-reference.md#flai-host-upgrade), [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--wait` | [flai checks tail](../users/flai-reference.md#flai-checks-tail) |
 | `--write` | [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage) |
 | `-y`, `--yes` | every command ([global flags](../users/flai-reference.md#flai)) |
