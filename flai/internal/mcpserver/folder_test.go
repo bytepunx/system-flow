@@ -134,7 +134,7 @@ func TestAFolderServesEveryProjectBelowIt(t *testing.T) {
 		names = append(names, tool.Name)
 	}
 	sort.Strings(names)
-	if strings.Join(names, " ") != "activity_log agent_restart agent_start analyze board criteria_tick doc_get doc_search inbox issue_bump issue_new issue_story item_edit item_get item_move item_new order_by_policy permission_prompt plan prime promote_candidates release_evaluate release_publish shared_paths shared_paths_edit thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches" {
+	if strings.Join(names, " ") != "activity_log agent_restart agent_start analyze board criteria_tick doc_get doc_search inbox issue_bump issue_new issue_story item_edit item_get item_move item_new order_by_policy permission_prompt plan prime promote_candidates release_evaluate release_publish shared_paths shared_paths_edit test thread_get thread_open thread_reply thread_resolve wait_for_events wait_for_work who_touches" {
 		t.Errorf("tools: %v", names)
 	}
 	in := f.cs.InitializeResult().Instructions
