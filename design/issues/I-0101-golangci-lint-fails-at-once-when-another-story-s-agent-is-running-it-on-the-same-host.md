@@ -2,12 +2,12 @@
 id: I-0101
 title: golangci-lint fails at once when another story's agent is running it on the same host
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-07T00:34:48Z
 last_reported: 2026-10-07T00:34:48Z
-updated: 2026-10-07T01:07:14Z
+updated: 2026-10-07T08:43:59Z
 ---
 
 # I-0101 golangci-lint fails at once when another story's agent is running it on the same host
@@ -24,3 +24,4 @@ S-0273's T-1069 sub-agent ran golangci-lint while another agent on the host was 
 ## Remediation
 
 Story S-0308 remediates this issue, created from it at 2026-10-07T01:07:14Z.
+Closed 2026-10-07T08:43:59Z: S-0308: flai/.golangci.yaml sets run.allow-parallel-runners, so a lint run beside another on the host no longer exits 3 on the shared lock; flai/tests/integration/golangci_lock_test.go holds the lock and lints with the config
