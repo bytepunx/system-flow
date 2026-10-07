@@ -583,11 +583,11 @@ story/S-0131 is rebased onto main
 story/S-0131 conflicts with story/S-0130 (in progress) in flai/cmd/edit.go; see TH-0024
 story/S-0131 merges cleanly with story/S-0129 (in review)
 story/S-0131 changed 1 path outside S-0131's touches: flai/internal/threads/threads.go
-widen them so that stories that overlap wait: flai touches S-0131 flai/cmd docs flai/internal/threads/threads.go
+widen them so that stories that overlap wait: flai touches S-0131 --add flai/internal/threads/threads.go
 ```
 
 - **Conflicts.** Sync merges the two branches in git's object store only (`git merge-tree --write-tree`, git 2.38 or newer; an older git skips it with a warning), so nothing changes in either worktree. It reports only the conflicting paths both stories changed since they left main. A branch that has not synced for a while still has main's older files, so a plain merge of the two would also stop where main has since changed what that story changed. That conflict is with main, not between the two stories, and the story behind settles it when it next rebases. It leaves `design/issues/summary.md` out of a pair's conflicts, since sync and acceptance regenerate it, so a pair whose only conflict is that file is reported clean and gets no thread. For each pair that conflicts, flai opens one thread on the story that synced, titled `S-0130 and S-0131 conflict when merged`, listing the paths. It shows in both stories' agents' MCP `inbox` and in the designer's inbox on the dashboard. Settle it between the two stories: one narrows its change, or names the other in `after:` and waits. A later sync with the same paths adds nothing, new paths add an entry, and flai resolves the thread once the two merge cleanly or the other story is no longer open.
-- **Outside the touches.** Sync lists the files the branch changed since main that the story's claim does not cover: its touches, each folder among them narrowed to the files its tasks name inside it, and its open tasks' touches (see [Touches](#touches)). It prints the `flai touches` command that widens them; when a task changed a file it did not name, widen that task's touches. Touches that are too narrow let a story that overlaps start beside it.
+- **Outside the touches.** Sync lists the files the branch changed since main that the story's claim does not cover: its touches, each folder among them narrowed to the files its tasks name inside it, and its open tasks' touches (see [Touches](#touches)). It prints the `flai touches --add` command that widens them, adding those paths and keeping the rest; when a task changed a file it did not name, widen that task's touches. Touches that are too narrow let a story that overlaps start beside it.
 - Neither check fails the sync. `--json` adds `branches` (each with `story`, `status`, `branch`, `clean`, `conflicts`, and `thread`), `outside_touches`, and `trial_merge_skipped` when git is too old.
 
 #### Relative worktree links (opt-in)
@@ -610,11 +610,13 @@ With only an older git: delete the `relativeWorktrees = true` line from `.git/co
 
 ```bash
 flai story new --epic E-0006 "Title" --touches flaiover/src/lib,docs/users
-flai touches T-0121 flai/internal/workitem
+flai touches T-0121 flai/internal/workitem          # replace the list with these
+flai touches T-0121 --add docs/users/flai.md       # add to the list
+flai touches T-0121 --remove flai/internal/workitem   # take out of the list
 flai touches T-0121 --clear
 ```
 
-`touches` is the list of paths or components a story or task is changing. Write each path from the repository's root; one that starts with a dot, such as `.claude/agents` or `.github/workflows`, is taken like any other. flai drops a trailing slash and a repeat, and refuses an entry with a comma, a leading dash, a leading slash, a `..` segment, or a control character, writing nothing, whichever way you set it: `flai touches`, `--touches` on `new` and `flai edit`, MCP's `item_new` and `item_edit`, or the dashboard. `flai check` warns (`wip.overlap`) when two in-progress items cover the same path outside the [shared paths](#shared-paths), the board prints it under each card, and the dashboard shows a "being worked on" notice on those documents.
+`touches` is the list of paths or components a story or task is changing. Paths given to `flai touches` alone replace the list, so name every one it keeps; `--add` adds the paths given and keeps the rest, and `--remove` takes them out and keeps the rest, refusing one the item does not touch. `flai edit --touches` and MCP's `item_edit` replace the list too. Write each path from the repository's root; one that starts with a dot, such as `.claude/agents` or `.github/workflows`, is taken like any other. flai drops a trailing slash and a repeat, and refuses an entry with a comma, a leading dash, a leading slash, a `..` segment, or a control character, writing nothing, whichever way you set it: `flai touches`, `--touches` on `new` and `flai edit`, MCP's `item_new` and `item_edit`, or the dashboard. `flai check` warns (`wip.overlap`) when two in-progress items cover the same path outside the [shared paths](#shared-paths), the board prints it under each card, and the dashboard shows a "being worked on" notice on those documents.
 
 It is also a claim that decides what starts ([ADR-0046](../../design/adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md), refined by [ADR-0096](../../design/adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md)). A sub-project's name or tag (`cli`, `flai`) means its path. A story's claim is worked out from its touches and its tasks':
 

@@ -3223,10 +3223,14 @@ Set what a story or task is working on; flai check warns on overlap.
 flai touches <id> [path-or-component...] [flags]
 ```
 
+Paths or components given alone replace the item's touches: name every one it keeps. --add adds those given to the list and --remove takes them out of it, leaving the rest; --clear empties it. With no path, the touches are shown.
+
 Examples:
 
 ```bash
-flai touches S-0037 flai/internal/workitem flaiover/src/routes/docs
+flai touches S-0037 flai/internal/workitem flaiover/src/routes/docs   # replace
+flai touches S-0037 --add docs/users/flai.md
+flai touches S-0037 --remove flaiover/src/routes/docs
 flai touches T-0121 --clear
 flai touches S-0037            # show
 ```
@@ -3235,7 +3239,9 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--add` | add the paths given to the list rather than replace it |
 | `--clear` | remove the list |
+| `--remove` | take the paths given out of the list rather than replace it |
 
 Subcommands:
 
