@@ -9,10 +9,12 @@ import (
 )
 
 // CostOfDelay is what waiting for the items cost, by the day and by the ISO
-// week (S-0205).
+// week (S-0205), and what waiting for the ready stories will cost under
+// three orders (S-0213).
 type CostOfDelay struct {
 	Days  []CostDay  `json:"days"`
 	Weeks []CostWeek `json:"weeks"`
+	Order CostOrder  `json:"order"`
 }
 
 // CostDay is the cost of delay outstanding per column at the end of a day, the

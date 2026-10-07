@@ -17,8 +17,9 @@ import (
 
 // Read returns every item, archived ones too, and the options read from the
 // project: the strategic agents' activity documents, the threads, the
-// issues, the manifest's projects, the board's in-progress limit, and the files each
-// story's commits changed. The caller sets the window and grouping. When git
+// issues, the manifest's projects, the board's in-progress limit and pull
+// order, planning.default_duration, and the files each story's commits
+// changed. The caller sets the window and grouping. When git
 // cannot be read, Commits stays nil, which leaves claims.drift out, and Read
 // logs a warning saying so on log; any other read that fails stops it.
 func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.Item, metrics.Options, error) {
@@ -38,9 +39,12 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 	}
 	board, err := repo.LoadBoard()
 	if err != nil {
-		return nil, opt, fmt.Errorf("cannot read the board's in-progress limit: %w; restore board.md from git or run flai check to see what is wrong", err)
+		return nil, opt, fmt.Errorf("cannot read the board's in-progress limit and pull order: %w; restore board.md from git or run flai check to see what is wrong", err)
 	}
-	opt.WIPLimit = board.WIPLimits[workitem.InProgress]
+	opt.WIPLimit, opt.Order = board.WIPLimits[workitem.InProgress], board.Order
+	if opt.Fallback, err = repo.Manifest.Planning.FallbackDuration(); err != nil {
+		return nil, opt, fmt.Errorf("cannot project the ready column's cost of delay: %w", err)
+	}
 	opt.Projects = repo.Manifest.Projects
 	opt.Shared = repo.SharedClaims()
 	if opt.Commits, err = storygit.Committed(r, repo); err != nil {

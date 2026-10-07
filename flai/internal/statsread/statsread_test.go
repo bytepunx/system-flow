@@ -114,6 +114,48 @@ func TestReadInARepositoryReadsTheCommits(t *testing.T) {
 	}
 }
 
+// reopen rewrites the project's manifest with a planning section and its
+// board with a pull order, and opens it again.
+func reopen(t *testing.T, repo *workitem.Repo, planning string) *workitem.Repo {
+	t.Helper()
+	manifest := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" + planning
+	if err := os.WriteFile(filepath.Join(repo.Root, "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	board := "---\ntitle: Board\nstatus: active\nwip_limits:\n  in-progress: 2\norder:\n  - S-0001\n---\n\n# Board\n"
+	if err := os.WriteFile(filepath.Join(repo.Root, "wip/kanban/board.md"), []byte(board), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	again, err := workitem.Open(repo.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return again
+}
+
+// S-0213: the board's pull order and planning.default_duration, with the
+// limit, are what the ready column's cost of delay is projected from.
+func TestReadPassesTheBoardsOrderAndTheFallbackDuration(t *testing.T) {
+	repo := reopen(t, project(t), "planning:\n  default_duration: 90m\n")
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opt.WIPLimit != 2 || len(opt.Order) != 1 || opt.Order[0] != "S-0001" || opt.Fallback != 90*time.Minute {
+		t.Errorf("limit %d, order %v, fallback %v; want 2, [S-0001], 1h30m", opt.WIPLimit, opt.Order, opt.Fallback)
+	}
+}
+
+// S-0213: a planning.default_duration that is not a duration stops the read,
+// as it stops flai forecast, saying what to write.
+func TestReadStopsOnABadFallbackDuration(t *testing.T) {
+	repo := reopen(t, project(t), "planning:\n  default_duration: soon\n")
+	_, _, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+	if err == nil || !strings.Contains(err.Error(), "cannot project the ready column's cost of delay") || !strings.Contains(err.Error(), "planning.default_duration") {
+		t.Errorf("a bad default duration: %v", err)
+	}
+}
+
 func TestReadStopsOnAnUnreadableThread(t *testing.T) {
 	repo := project(t)
 	if err := os.WriteFile(filepath.Join(threads.Dir(repo), "TH-0009-bad.md"), []byte("---\nid: [\n---\n"), 0o644); err != nil {

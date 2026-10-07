@@ -142,43 +142,92 @@ func playOut(items []*workitem.Item, board *workitem.Board, plan manifest.Planni
 		return res, nil
 	}
 
-	delivered := map[string]time.Time{}
+	p, ahead := startPlay(f, byID, items, order, limit, now)
+	res.Ahead = append(res.Ahead, ahead...)
+	queue := append(workitem.PullSequence(order, items, workitem.Ready), workitem.PullSequence(order, items, workitem.Backlog)...)
+	for i, sid := range queue {
+		it := byID[sid]
+		d, fromForecast := dur, false
+		if sid != id {
+			d, fromForecast = f.durationOf(it)
+		}
+		start := p.pull(it, d)
+		if sid == id {
+			res.Position = i + 1
+			res.Delivery = stamp(p.delivered[sid])
+			res.Basis = fmt.Sprintf("%s; %s in the pull order with %s, %s.", basis, ordinal(i+1), limitPhrase(limit), behind(res.Ahead))
+			break
+		}
+		res.Ahead = append(res.Ahead, Ahead{ID: sid, Status: it.Status, Duration: FormatDuration(d), FromForecast: fromForecast, Start: stamp(start), Delivery: stamp(p.delivered[sid])})
+	}
+	return res, nil
+}
+
+// PullTimes plays out stories, in the sequence given, as Forecast plays out
+// the pull order, and gives when each is pulled. They go on limit lanes, none
+// when limit is not positive, from now, after the stories in progress in
+// items, taken in order; each holds its lane for its own forecast.duration,
+// else the one worked out from items with fallback, times its busy factor
+// (S-0213).
+func PullTimes(items []*workitem.Item, order []string, limit int, fallback time.Duration, stories []*workitem.Item, now time.Time) []time.Time {
+	now = now.UTC()
+	byID := map[string]*workitem.Item{}
+	for _, it := range items {
+		byID[it.ID] = it
+	}
+	f := newForecaster(items, fallback)
+	p, _ := startPlay(f, byID, items, order, max(limit, 0), now)
+	out := make([]time.Time, len(stories))
+	for i, it := range stories {
+		d, _ := f.durationOf(it)
+		out[i] = p.pull(it, d)
+	}
+	return out
+}
+
+// play is a pull order being played out over the lanes: when each lane is
+// next free, and when each story played out so far is delivered.
+type play struct {
+	f         *forecaster
+	free      *lanes
+	delivered map[string]time.Time
+}
+
+// startPlay sets out limit lanes from now, the stories in progress in items,
+// taken in order, holding theirs until their start plus their duration times
+// their busy factor, never before now. It gives them as they were played out.
+func startPlay(f *forecaster, byID map[string]*workitem.Item, items []*workitem.Item, order []string, limit int, now time.Time) (*play, []Ahead) {
+	p := &play{f: f, delivered: map[string]time.Time{}}
 	var releases []time.Time
+	var ahead []Ahead
 	for _, sid := range workitem.PullSequence(order, items, workitem.InProgress) {
 		it := byID[sid]
 		d, fromForecast := f.durationOf(it)
 		e := f.estimate(it)
 		start := startedAt(it, now)
 		releases = append(releases, later(now, start.Add(scale(d, e.busy))))
-		delivered[sid] = later(now, start.Add(scale(d, e.cycle)))
-		res.Ahead = append(res.Ahead, Ahead{ID: sid, Status: it.Status, Duration: FormatDuration(d), FromForecast: fromForecast, Start: stamp(start), Delivery: stamp(delivered[sid])})
+		p.delivered[sid] = later(now, start.Add(scale(d, e.cycle)))
+		ahead = append(ahead, Ahead{ID: sid, Status: it.Status, Duration: FormatDuration(d), FromForecast: fromForecast, Start: stamp(start), Delivery: stamp(p.delivered[sid])})
 	}
-	free := newLanes(limit, releases, now)
-	queue := append(workitem.PullSequence(order, items, workitem.Ready), workitem.PullSequence(order, items, workitem.Backlog)...)
-	for i, sid := range queue {
-		it := byID[sid]
-		e := f.estimate(it)
-		d, fromForecast := dur, false
-		if sid != id {
-			d, fromForecast = f.durationOf(it)
+	p.free = newLanes(limit, releases, now)
+	return p, ahead
+}
+
+// pull plays out story it for duration d: it is pulled when the lane that
+// frees first is free, but not before the delivery of any story in its after
+// already played out, and holds the lane for d times its busy factor. It
+// gives when it is pulled.
+func (p *play) pull(it *workitem.Item, d time.Duration) time.Time {
+	e := p.f.estimate(it)
+	lane, start := p.free.earliest()
+	for _, dep := range it.After {
+		if t, ok := p.delivered[dep]; ok && t.After(start) {
+			start = t
 		}
-		lane, start := free.earliest()
-		for _, dep := range it.After {
-			if t, ok := delivered[dep]; ok && t.After(start) {
-				start = t
-			}
-		}
-		free.hold(lane, start.Add(scale(d, e.busy)))
-		delivered[sid] = start.Add(scale(d, e.cycle))
-		if sid == id {
-			res.Position = i + 1
-			res.Delivery = stamp(delivered[sid])
-			res.Basis = fmt.Sprintf("%s; %s in the pull order with %s, %s.", basis, ordinal(i+1), limitPhrase(limit), behind(res.Ahead))
-			break
-		}
-		res.Ahead = append(res.Ahead, Ahead{ID: sid, Status: it.Status, Duration: FormatDuration(d), FromForecast: fromForecast, Start: stamp(start), Delivery: stamp(delivered[sid])})
 	}
-	return res, nil
+	p.free.hold(lane, start.Add(scale(d, e.busy)))
+	p.delivered[it.ID] = start.Add(scale(d, e.cycle))
+	return start
 }
 
 // FormatDuration writes d as a Go duration without zero tails: 2h, 1h5m,

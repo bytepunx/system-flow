@@ -42,6 +42,11 @@ type Options struct {
 	// Shared is the manifest's claims, whose shared paths an overlap wholly
 	// inside holds nothing in the replay of the holds (ADR-0096).
 	Shared manifest.Claims
+	// Order is the board's pull order, and Fallback planning.default_duration
+	// as a duration, 0 for manifest.DefaultDuration: with WIPLimit, what the
+	// ready column's cost of delay is projected from (S-0213).
+	Order    []string
+	Fallback time.Duration
 }
 
 // ItemMetrics are the per-item derived values.
@@ -272,6 +277,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Strategic = strategic(opt.Activities, all, onIssues, start, opt.Now)
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
+	rep.CostOfDelay.Order = costOrder(all, opt)
 	rep.Waiting = waiting(items, perItem, waits, start, opt.Now)
 	rep.Claims = claims(items, all, start, opt, replay)
 	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)

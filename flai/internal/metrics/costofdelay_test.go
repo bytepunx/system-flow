@@ -102,7 +102,9 @@ func TestCostOfDelayByTheDayAndTheWeek(t *testing.T) {
 		`{"date":"2026-09-01","outstanding":{"backlog":0,"in-progress":0,"ready":100.5,"review":1400},` + oneInBacklog + `"incurred":7.18}],` +
 		`"weeks":[` +
 		`{"week":"2026-W35","start":"2026-08-24","incurred":606.67},` +
-		`{"week":"2026-W36","start":"2026-08-31","incurred":21.54}]}`
+		`{"week":"2026-W36","start":"2026-08-31","incurred":21.54}],` +
+		// S-0002 is ready with a value but no forecast, so no order places it.
+		`"order":` + emptyOrder(`"S-0002"`) + `}`
 	if string(data) != want {
 		t.Errorf("cost_of_delay =\n%s\nwant\n%s", data, want)
 	}
@@ -120,10 +122,23 @@ func TestCostOfDelayOfNoItemsIsZeroOverTheWindow(t *testing.T) {
 			`"without_value":{"backlog":0,"in-progress":0,"ready":0,"review":0},"incurred":0}`
 	}
 	want := `{"days":[` + day("2026-08-29") + `,` + day("2026-08-30") + `,` + day("2026-08-31") + `,` + day("2026-09-01") + `],` +
-		`"weeks":[{"week":"2026-W35","start":"2026-08-24","incurred":0},{"week":"2026-W36","start":"2026-08-31","incurred":0}]}`
+		`"weeks":[{"week":"2026-W35","start":"2026-08-24","incurred":0},{"week":"2026-W36","start":"2026-08-31","incurred":0}],` +
+		`"order":` + emptyOrder() + `}`
 	if string(data) != want {
 		t.Errorf("cost_of_delay =\n%s\nwant\n%s", data, want)
 	}
+}
+
+// emptyOrder is the projection of a ready column that places no story, at
+// the tests' now, with leftOut, quoted IDs, left out (S-0213).
+func emptyOrder(leftOut ...string) string {
+	first := `{"at":"2026-09-01T12:00:00Z","incurred":0}`
+	series := func(by string) string {
+		return `{"by":"` + by + `","total":0,"points":[` + first + `]}`
+	}
+	return `{"at":"2026-09-01T12:00:00Z","horizon":"2026-09-01T12:00:00Z","series":[` +
+		series("current") + `,` + series("cod") + `,` + series("wsjf") + `],` +
+		`"saving":0,"cheaper":"cod","left_out":[` + strings.Join(leftOut, ",") + `]}`
 }
 
 // unvaluedItems are stories, an epic, and a task, most without a cost of
