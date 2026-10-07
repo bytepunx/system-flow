@@ -14,8 +14,15 @@ import {
 	timePerModel,
 	costSpent,
 	cycleTime,
+	doneIn,
+	errorFacets,
+	forecastAccuracy,
 	human,
+	humanSigned,
 	KINDS,
+	percentile,
+	PLANNING_KINDS,
+	spreadOf,
 	normalise,
 	stateShare,
 	throughput,
@@ -30,6 +37,8 @@ import {
 	spendRows,
 	withUsage,
 	type Bucket,
+	type ErrorFilter,
+	type ItemMetrics,
 	type Report
 } from './charts';
 import { CATEGORICAL, modelSlot, modelSymbol, theme, TYPE_SLOT } from './palette';
@@ -297,7 +306,9 @@ describe('chart builders', () => {
 			expect(o.yAxis, k).toBeDefined();
 			expect(Array.isArray(o.yAxis), `${k} must not use two y-axes`).toBe(false);
 			expect(o.tooltip, k).toBeDefined();
-			expect(o.series.length, k).toBeGreaterThan(0);
+			// the fixture carries no forecasts: the planning charts have their own
+			if (!(PLANNING_KINDS as readonly string[]).includes(k))
+				expect(o.series.length, k).toBeGreaterThan(0);
 		}
 	});
 	it("every chart spans the report's window and plots only the items completed in it (S-0166)", () => {
@@ -555,7 +566,13 @@ describe('chart builders', () => {
 		).toBe('2026-08-03<br/>claude-haiku-4-5: $0.250 each over 1 item');
 		expect((build('cost-per-model', report, light) as Over).series).toEqual(c.series);
 		expect(titleOf('cost-per-model')).toBe('Avg. Cost / Model');
-		expect(controls('cost-per-model')).toEqual({ type: true, epic: false, bucket: true });
+		expect(controls('cost-per-model')).toEqual({
+			type: true,
+			epic: false,
+			bucket: true,
+			nature: false,
+			model: false
+		});
 	});
 	it('tokens per dollar is what a dollar bought, per model', () => {
 		const o = tokensPerDollar(report, light) as Over;
@@ -571,9 +588,27 @@ describe('chart builders', () => {
 		expect(bucketsFor('30d')).toEqual(['hour', 'day', 'week']);
 		expect(bucketsFor('90d')).toEqual(['day', 'week']);
 		expect(bucketsFor('12w')).toEqual(['day', 'week']);
-		expect(controls('tokens-per-item')).toEqual({ type: false, epic: false, bucket: true });
-		expect(controls('token-rate')).toEqual({ type: true, epic: false, bucket: true });
-		expect(controls('cost')).toEqual({ type: true, epic: true, bucket: false });
+		expect(controls('tokens-per-item')).toEqual({
+			type: false,
+			epic: false,
+			bucket: true,
+			nature: false,
+			model: false
+		});
+		expect(controls('token-rate')).toEqual({
+			type: true,
+			epic: false,
+			bucket: true,
+			nature: false,
+			model: false
+		});
+		expect(controls('cost')).toEqual({
+			type: true,
+			epic: true,
+			bucket: false,
+			nature: false,
+			model: false
+		});
 		expect(controls('cfd').epic).toBe(false);
 		expect(controls('cycle-time').epic).toBe(true);
 	});
@@ -628,7 +663,13 @@ describe('chart builders', () => {
 		).toBe('2026-08-03<br/>claude-haiku-4-5: 1h each over 1 item');
 		expect((build('time-per-model', report, light) as Over).series).toEqual(o.series);
 		expect(titleOf('time-per-model')).toBe('Avg. Time / Model');
-		expect(controls('time-per-model')).toEqual({ type: true, epic: false, bucket: true });
+		expect(controls('time-per-model')).toEqual({
+			type: true,
+			epic: false,
+			bucket: true,
+			nature: false,
+			model: false
+		});
 		// a flai older than S-0169 sends the seconds only
 		expect(minutesPerItem({ items: 2, tokens: 0, cost: 0, seconds: 5400 })).toBe(45);
 		expect(minutesPerItem({ items: 1, tokens: 0, cost: 0, seconds: 0 })).toBeUndefined();
@@ -805,5 +846,259 @@ describe('chart builders', () => {
 		expect(dark.surface).not.toBe(light.surface);
 		expect(human(93600)).toBe('1.1d');
 		expect(human(2700)).toBe('45m');
+	});
+});
+
+// Stories done in the report's window (2 August 12:00 to 1 September 12:00) with forecast errors,
+// as flai sends them (S-0205, ADR-0111); S-104 comes from a flai that sends no model. Left out:
+// S-106 done before the window, S-107 done with no forecast, S-108 cancelled, S-109 in progress.
+const story = (
+	id: string,
+	nature: string,
+	completed: string | undefined,
+	extra: Partial<ItemMetrics> = {}
+): ItemMetrics => ({
+	id,
+	type: 'story',
+	nature,
+	title: `Story ${id.slice(2)}`,
+	status: 'done',
+	created: '2026-07-01T09:00:00Z',
+	completed,
+	blocked_seconds: 0,
+	time_in_state_seconds: {},
+	model: 'claude-opus-5-5',
+	...extra
+});
+const opus = 'claude-opus-5-5';
+const haiku = 'claude-haiku-4-5';
+const forecasting: Report = {
+	...report,
+	items: [
+		story('S-101', 'feature', '2026-08-03T12:00:00Z', {
+			forecast_seconds: 7200,
+			forecast_error_seconds: 7200,
+			estimate_error_seconds: -3600
+		}),
+		story('S-102', 'improvement', '2026-08-12T09:30:00Z', {
+			model: haiku,
+			forecast_error_seconds: -1800
+		}),
+		story('S-103', 'feature', '2026-08-20T00:00:00Z', { forecast_error_seconds: -10800 }),
+		story('S-104', 'feature', '2026-08-25T06:00:00Z', {
+			model: undefined,
+			forecast_error_seconds: 3600,
+			estimate_error_seconds: 900
+		}),
+		story('S-105', 'improvement', '2026-08-28T00:00:00Z', { forecast_error_seconds: 600 }),
+		story('S-106', 'feature', '2026-07-20T00:00:00Z', { forecast_error_seconds: 99999 }),
+		story('S-107', 'feature', '2026-08-15T00:00:00Z'),
+		story('S-108', 'feature', '2026-08-16T00:00:00Z', {
+			status: 'cancelled',
+			forecast_error_seconds: 5000
+		}),
+		story('S-109', 'feature', undefined, { status: 'in-progress' })
+	],
+	forecasts: {
+		forecast: {
+			count: 5,
+			p50_seconds: 3600,
+			p85_seconds: 10800,
+			by_nature: {
+				feature: { count: 3, p50_seconds: 7200, p85_seconds: 10800 },
+				improvement: { count: 2, p50_seconds: 600, p85_seconds: 1800 }
+			},
+			by_model: {
+				[opus]: { count: 3, p50_seconds: 7200, p85_seconds: 10800 },
+				[haiku]: { count: 1, p50_seconds: 1800, p85_seconds: 1800 },
+				'(none)': { count: 1, p50_seconds: 3600, p85_seconds: 3600 }
+			}
+		},
+		delivery: { count: 0, by_nature: {}, by_model: {} },
+		estimate: {
+			count: 2,
+			p50_seconds: 900,
+			p85_seconds: 3600,
+			by_nature: { feature: { count: 2, p50_seconds: 900, p85_seconds: 3600 } },
+			by_model: {
+				[opus]: { count: 1, p50_seconds: 3600, p85_seconds: 3600 },
+				'(none)': { count: 1, p50_seconds: 900, p85_seconds: 900 }
+			}
+		}
+	}
+};
+
+describe('planning charts', () => {
+	type Scatter = {
+		name: string;
+		type: string;
+		data: { value: [string, number]; id: string; title: string }[];
+		markLine?: { data: { name: string; yAxis: number }[] };
+	};
+	type Accuracy = {
+		legend: { show: boolean };
+		xAxis: { type: string; min?: number; max?: number };
+		yAxis: { name: string; axisLabel: { formatter: (v: number) => string } };
+		tooltip: { formatter: (p: { seriesName: string; data: Scatter['data'][number] }) => string };
+		series: Scatter[];
+	};
+	const points = (s: Scatter) => s.data.map((d) => [d.id, d.value[0], d.value[1]]);
+	const lines = (o: Accuracy) => o.series[0].markLine?.data.map((d) => [d.name, d.yAxis]);
+	const accuracy = (f: ErrorFilter) =>
+		build('forecast-accuracy', forecasting, light, undefined, f) as Accuracy;
+	const band = (p50: number, p85: number) => [
+		['p50', p50],
+		['p50', -p50],
+		['p85', p85],
+		['p85', -p85]
+	];
+
+	it('forecast accuracy plots each story done in the window by its forecast and estimate errors', () => {
+		const o = forecastAccuracy(forecasting, light) as Accuracy;
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['forecast error', 'scatter'],
+			['estimate error', 'scatter']
+		]);
+		// x completed, y actual minus forecast in seconds; the stories without an error, done before
+		// the window, cancelled, or not done are left out
+		expect(points(o.series[0])).toEqual([
+			['S-101', '2026-08-03T12:00:00Z', 7200],
+			['S-102', '2026-08-12T09:30:00Z', -1800],
+			['S-103', '2026-08-20T00:00:00Z', -10800],
+			['S-104', '2026-08-25T06:00:00Z', 3600],
+			['S-105', '2026-08-28T00:00:00Z', 600]
+		]);
+		expect(points(o.series[1])).toEqual([
+			['S-101', '2026-08-03T12:00:00Z', -3600],
+			['S-104', '2026-08-25T06:00:00Z', 900]
+		]);
+		// the p50 and p85 of the absolute forecast error, flai's own, either side of zero
+		expect(lines(o)).toEqual(band(3600, 10800));
+		expect(o.series[1].markLine).toBeUndefined();
+		expect(o.legend.show).toBe(true);
+		expect(o.series[0].data[1].title).toBe('Story 102');
+		expect(o.tooltip.formatter({ seriesName: 'forecast error', data: o.series[0].data[1] })).toBe(
+			'S-102 Story 102<br/>forecast error: -30m · 2026-08-12'
+		);
+		expect(o.yAxis.name).toBe('actual minus forecast');
+		expect(o.yAxis.axisLabel.formatter(7200)).toBe('+2h');
+		expect(humanSigned(-10800)).toBe('-3h');
+		expect(humanSigned(0)).toBe('+0m');
+		expect((build('forecast-accuracy', forecasting, light) as Accuracy).series).toEqual(o.series);
+	});
+	it("forecast accuracy spans the report's window (ADR-0054)", () => {
+		const o = forecastAccuracy(forecasting, light) as Accuracy;
+		expect(o.xAxis).toMatchObject({
+			type: 'time',
+			min: Date.parse('2026-08-02T12:00:00Z'),
+			max: Date.parse('2026-09-01T12:00:00Z')
+		});
+		// a narrower window moves the axis and drops S-101, done on 3 August
+		const narrow = { ...forecasting, window_start: '2026-08-10T00:00:00Z' };
+		const n = forecastAccuracy(narrow, light) as Accuracy;
+		expect(n.xAxis.min).toBe(Date.parse('2026-08-10T00:00:00Z'));
+		expect(n.series[0].data.map((d) => d.id)).toEqual(['S-102', 'S-103', 'S-104', 'S-105']);
+		expect(n.series[1].data.map((d) => d.id)).toEqual(['S-104']);
+		expect(doneIn(narrow).map((i) => i.id)).toEqual(['S-102', 'S-103', 'S-104', 'S-105', 'S-107']);
+	});
+	it("narrows forecast accuracy by nature and by model, with flai's percentiles for each", () => {
+		const feature = accuracy({ nature: 'feature' });
+		expect(feature.series[0].data.map((d) => d.id)).toEqual(['S-101', 'S-103', 'S-104']);
+		expect(feature.series[1].data.map((d) => d.id)).toEqual(['S-101', 'S-104']);
+		expect(lines(feature)).toEqual(band(7200, 10800));
+		// a story from a flai that sends no model is (none)
+		const none = accuracy({ model: '(none)' });
+		expect(none.series[0].data.map((d) => d.id)).toEqual(['S-104']);
+		expect(lines(none)).toEqual(band(3600, 3600));
+		const fast = accuracy({ model: haiku });
+		expect(fast.series.map((s) => s.name)).toEqual(['forecast error']);
+		expect(lines(fast)).toEqual(band(1800, 1800));
+		expect(fast.legend.show).toBe(false);
+		// the lines are flai's figures, not worked out again
+		const nudged: Report = {
+			...forecasting,
+			forecasts: {
+				...forecasting.forecasts!,
+				forecast: {
+					...forecasting.forecasts!.forecast,
+					by_nature: { feature: { count: 3, p50_seconds: 7201, p85_seconds: 10801 } }
+				}
+			}
+		};
+		const read = forecastAccuracy(nudged, light, { nature: 'feature' }) as Accuracy;
+		expect(lines(read)).toEqual(band(7201, 10801));
+	});
+	it('works out the percentiles from the stories shown under both filters, as flai does', () => {
+		// improvement and opus: S-105 alone, 600; neither the nature's (600, 1800) nor the model's
+		const both = accuracy({ nature: 'improvement', model: opus });
+		expect(both.series.length).toBe(1);
+		expect(points(both.series[0])).toEqual([['S-105', '2026-08-28T00:00:00Z', 600]]);
+		expect(lines(both)).toEqual(band(600, 600));
+		// feature and opus: S-101 and S-103, 7200 and 10800 absolute
+		const featureOpus = accuracy({ nature: 'feature', model: opus });
+		expect(featureOpus.series[0].data.map((d) => d.id)).toEqual(['S-101', 'S-103']);
+		expect(lines(featureOpus)).toEqual(band(7200, 10800));
+		// nothing shown: no points and no lines
+		expect(accuracy({ nature: 'research', model: opus }).series).toEqual([]);
+		// nearest rank, at least 1, of the absolute errors: flai's figures for the window
+		expect(spreadOf([7200, -1800, -10800, 3600, 600])).toEqual({
+			count: 5,
+			p50_seconds: 3600,
+			p85_seconds: 10800
+		});
+		expect(spreadOf([-3600, 900])).toEqual({ count: 2, p50_seconds: 900, p85_seconds: 3600 });
+		expect(spreadOf([])).toEqual({ count: 0 });
+		expect(percentile([5], 1)).toBe(5);
+		expect(percentile([1, 2, 3, 4], 0)).toBe(1);
+		expect(percentile([1, 2, 3, 4], 100)).toBe(4);
+	});
+	it('lists the natures and models of the stories with an error each planning chart plots', () => {
+		expect(errorFacets(forecasting, 'forecast-accuracy')).toEqual({
+			natures: ['feature', 'improvement'],
+			models: ['(none)', haiku, opus]
+		});
+		// no story carries a delivery error
+		expect(errorFacets(forecasting, 'delivery-accuracy')).toEqual({ natures: [], models: [] });
+		const nulls = { ...forecasting, items: null } as unknown as Report;
+		expect(errorFacets(nulls, 'forecast-by-model')).toEqual({ natures: [], models: [] });
+	});
+	it('draws an empty planning chart from a report without forecasts or errors', () => {
+		// the main fixture, as an older flai sends it
+		expect(report.forecasts).toBeUndefined();
+		for (const kind of PLANNING_KINDS) {
+			const o = build(kind, report, light) as Accuracy;
+			expect(o.series, kind).toEqual([]);
+			expect(o.xAxis, kind).toMatchObject({
+				type: 'time',
+				min: Date.parse('2026-08-02T12:00:00Z'),
+				max: Date.parse('2026-09-01T12:00:00Z')
+			});
+		}
+		// errors without the spreads: points, but no lines
+		const older: Report = { ...forecasting, forecasts: undefined };
+		const o = build('forecast-accuracy', older, light) as Accuracy;
+		expect(o.series[0].data.length).toBe(5);
+		expect(o.series[0].markLine).toBeUndefined();
+	});
+	it('offers the planning charts nature and model filters on the stories', () => {
+		expect(controls('forecast-accuracy')).toEqual({
+			type: false,
+			epic: false,
+			bucket: false,
+			nature: true,
+			model: true
+		});
+		expect(controls('delivery-accuracy')).toMatchObject({ bucket: false, model: true });
+		expect(controls('forecast-by-model')).toMatchObject({
+			bucket: true,
+			nature: true,
+			model: false
+		});
+		expect(PLANNING_KINDS.map((k) => titleOf(k))).toEqual([
+			'Forecast Accuracy',
+			'Delivery Accuracy',
+			'Forecast Error / Model'
+		]);
+		expect(KINDS).toEqual(expect.arrayContaining([...PLANNING_KINDS]));
 	});
 });

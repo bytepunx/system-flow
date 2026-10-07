@@ -51,9 +51,30 @@ export type ItemMetrics = {
 	time_in_state_seconds: Record<string, number>;
 	estimate_seconds?: number;
 	estimate_error?: number;
+	/** The forecast, and the errors against it and the estimate (S-0205); absent from older flai. */
+	forecast_seconds?: number;
+	forecast_error_seconds?: number;
+	delivery_error_seconds?: number;
+	estimate_error_seconds?: number;
+	/** The item's agent model, `(none)` without one (ADR-0111); absent from an older flai. */
+	model?: string;
 	age_seconds?: number;
 	usage?: ItemUsage;
 };
+/** The count of a set of errors and the p50 and p85 of their absolute values, absent when empty. */
+export type ErrorSpread = { count: number; p50_seconds?: number; p85_seconds?: number };
+/** One kind of error spread over the items that have it, in all, per nature, and per model. */
+export type ErrorStats = ErrorSpread & {
+	by_nature: Record<string, ErrorSpread>;
+	by_model: Record<string, ErrorSpread>;
+};
+/** How far forecasts and estimates were from what happened, over the items done in the window. */
+export type Forecasts = { forecast: ErrorStats; delivery: ErrorStats; estimate: ErrorStats };
+/** The per-item error fields the planning charts read. */
+export type ErrorField =
+	| 'forecast_error_seconds'
+	| 'delivery_error_seconds'
+	| 'estimate_error_seconds';
 /** What a model spent on an item, or on the items in a window (S-0143). */
 export type ModelSpend = {
 	model: string;
@@ -195,6 +216,8 @@ export type Report = {
 	cfd: { date: string; counts: Record<string, number> }[];
 	/** Absent from a flai older than S-0143. */
 	usage?: UsageReport;
+	/** Absent from a flai older than S-0205. */
+	forecasts?: Forecasts;
 };
 
 /** The charts of how work flows. */
@@ -211,7 +234,14 @@ export const USAGE_KINDS = [
 	'time-per-model',
 	'cost-per-model'
 ] as const;
-export const KINDS = [...FLOW_KINDS, ...USAGE_KINDS] as const;
+/** The charts of forecasts and estimates against what happened (S-0212). */
+export const PLANNING_KINDS = [
+	'forecast-accuracy',
+	'delivery-accuracy',
+	'forecast-by-model'
+] as const;
+export type PlanningKind = (typeof PLANNING_KINDS)[number];
+export const KINDS = [...FLOW_KINDS, ...USAGE_KINDS, ...PLANNING_KINDS] as const;
 export type Kind = (typeof KINDS)[number];
 export const TITLES: Record<Kind, string> = {
 	'cycle-time': 'Cycle Time',
@@ -227,7 +257,10 @@ export const TITLES: Record<Kind, string> = {
 	'cost-per-item': '$ / Work Type',
 	cost: '$ / Item',
 	'time-per-model': 'Avg. Time / Model',
-	'cost-per-model': 'Avg. Cost / Model'
+	'cost-per-model': 'Avg. Cost / Model',
+	'forecast-accuracy': 'Forecast Accuracy',
+	'delivery-accuracy': 'Delivery Accuracy',
+	'forecast-by-model': 'Forecast Error / Model'
 };
 /** The charts drawn from spend over time, which flai lays out in buckets (S-0163). */
 export const SPEND_KINDS: readonly Kind[] = [
@@ -249,16 +282,29 @@ export function bucketsFor(since: string): BucketSize[] {
 	const days = since.endsWith('w') ? parseInt(since) * 7 : parseInt(since);
 	return BUCKETS.filter((b) => b !== 'hour' || days <= MAX_HOUR_WINDOW_DAYS);
 }
+const isPlanning = (kind: Kind): kind is PlanningKind =>
+	(PLANNING_KINDS as readonly Kind[]).includes(kind);
 /**
  * The controls a chart uses. Spend over time is summed by flai, so no epic narrows it; a chart
- * per item shows every type, so none is chosen.
+ * per item shows every type, so none is chosen. The planning charts read the stories, narrowed by
+ * nature and model; the chart per model shows every model, by the bucket.
  */
 export function controls(kind: Kind) {
+	if (isPlanning(kind))
+		return {
+			type: false,
+			epic: false,
+			bucket: kind === 'forecast-by-model',
+			nature: true,
+			model: kind !== 'forecast-by-model'
+		};
 	const spend = SPEND_KINDS.includes(kind);
 	return {
 		type: !PER_ITEM_KINDS.includes(kind),
 		epic: !spend && !['cfd', 'throughput'].includes(kind),
-		bucket: spend
+		bucket: spend,
+		nature: false,
+		model: false
 	};
 }
 /** A bucket's name in a title: Hour, Day, Week. */
@@ -1027,7 +1073,144 @@ export function cost(r: Report, t: Theme, epic?: string): Opt {
 	});
 }
 
-export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt {
+/** The model of an item whose agent names none, and of every item from a flai before ADR-0111. */
+export const NO_MODEL = '(none)';
+/** The model an item's errors are grouped under (ADR-0111). */
+export const modelOf = (i: ItemMetrics) => i.model ?? NO_MODEL;
+/** The nature and the model a planning chart is narrowed to; neither when absent. */
+export type ErrorFilter = { nature?: string; model?: string };
+/** The errors each planning chart plots. */
+export const ERRORS_OF: Record<PlanningKind, readonly ErrorField[]> = {
+	'forecast-accuracy': ['forecast_error_seconds', 'estimate_error_seconds'],
+	'delivery-accuracy': ['delivery_error_seconds'],
+	'forecast-by-model': ['forecast_error_seconds']
+};
+/** The items done, not cancelled, in the report's window: those flai spreads the errors over. */
+export const doneIn = (r: Report) => completedIn(r).filter((i) => i.status === 'done');
+/** Whether an item is of the filter's nature and model. */
+const passes = (i: ItemMetrics, f: ErrorFilter) =>
+	(!f.nature || i.nature === f.nature) && (!f.model || modelOf(i) === f.model);
+/**
+ * The natures and the models of the items done in the window that carry an error a planning chart
+ * plots, in order of name: what its nature and model selects offer.
+ */
+export function errorFacets(
+	report: Report,
+	kind: PlanningKind
+): { natures: string[]; models: string[] } {
+	const items = doneIn(normalise(report)).filter((i) =>
+		ERRORS_OF[kind].some((f) => i[f] !== undefined)
+	);
+	return {
+		natures: [...new Set(items.map((i) => i.nature))].sort(),
+		models: [...new Set(items.map(modelOf))].sort()
+	};
+}
+/** The nearest-rank percentile of values sorted ascending, as flai works it out (rank at least 1). */
+export function percentile(sorted: readonly number[], p: number): number {
+	return sorted[Math.max(1, Math.ceil((p / 100) * sorted.length)) - 1];
+}
+/** The count and the p50 and p85 of the absolute values of errors, as flai spreads them. */
+export function spreadOf(errors: readonly number[]): ErrorSpread {
+	if (errors.length === 0) return { count: 0 };
+	const sorted = errors.map(Math.abs).sort((a, b) => a - b);
+	return {
+		count: sorted.length,
+		p50_seconds: percentile(sorted, 50),
+		p85_seconds: percentile(sorted, 85)
+	};
+}
+/**
+ * The spread of an error under a filter: flai's own, in all, per nature, or per model, so that the
+ * figures match `flai stats --json`; under both, worked out from the errors shown.
+ */
+export function spreadFor(
+	r: Report,
+	which: keyof Forecasts,
+	f: ErrorFilter,
+	shown: readonly number[]
+): ErrorSpread | undefined {
+	const s = r.forecasts?.[which];
+	if (f.nature && f.model) return spreadOf(shown);
+	if (f.nature) return s?.by_nature?.[f.nature];
+	if (f.model) return s?.by_model?.[f.model];
+	return s;
+}
+/** A signed duration for axes and tooltips: later or longer than forecast is positive. */
+export const humanSigned = (seconds: number) =>
+	seconds < 0 ? `-${human(-seconds)}` : `+${human(seconds)}`;
+type ErrorPoint = { value: [string, number]; id: string; title: string };
+/** One point per item that carries the error: x completed, y the error in seconds. */
+const errorPoints = (items: ItemMetrics[], field: ErrorField): ErrorPoint[] =>
+	items.flatMap((i): ErrorPoint[] => {
+		const e = i[field];
+		return e === undefined ? [] : [{ value: [i.completed!, e], id: i.id, title: i.title }];
+	});
+/**
+ * Forecast accuracy (S-0212): one point per story done in the window with a forecast, x completed,
+ * y the forecast error; the estimate error as a second series. The p50 and p85 of the absolute
+ * forecast error are drawn either side of zero, the band in which half and 85% of the errors fall.
+ */
+export function forecastAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt {
+	const items = doneIn(r).filter((i) => passes(i, f));
+	const forecast = errorPoints(items, 'forecast_error_seconds');
+	const estimate = errorPoints(items, 'estimate_error_seconds');
+	const s = spreadFor(r, 'forecast', f, forecast.map((p) => p.value[1]));
+	const at: [string, number | undefined][] = [
+		['p50', s?.p50_seconds],
+		['p85', s?.p85_seconds]
+	];
+	const lines = at.flatMap(([name, v]) =>
+		v === undefined ? [] : [v, -v].map((yAxis) => ({ yAxis, name }))
+	);
+	const scatter = (name: string, color: string, symbol: string, data: ErrorPoint[]) => ({
+		name,
+		type: 'scatter',
+		symbol,
+		symbolSize: 10,
+		itemStyle: { color, borderColor: t.surface, borderWidth: 2 },
+		data
+	});
+	const series = [
+		{
+			...scatter('forecast error', t.series[0], 'circle', forecast),
+			markLine: lines.length > 0 ? refLine(t, lines, '{b}') : undefined
+		},
+		scatter('estimate error', t.series[3], 'triangle', estimate)
+	].filter((x) => x.data.length > 0);
+	return base(t, {
+		legend: marks(t, series.length > 1),
+		tooltip: tooltip(t, {
+			formatter: (p: { seriesName: string; data: ErrorPoint }) =>
+				`${p.data.id} ${p.data.title}<br/>${p.seriesName}: ${humanSigned(p.data.value[1])} · ${p.data.value[0].slice(0, 10)}`
+		}),
+		xAxis: axisX(t, { type: 'time', ...span(r) }),
+		yAxis: axisY(t, {
+			type: 'value',
+			name: 'actual minus forecast',
+			nameTextStyle: { color: t.textSecondary, align: 'left' },
+			axisLabel: { color: t.textSecondary, formatter: humanSigned }
+		}),
+		series
+	});
+}
+/** An empty chart over the report's window. */
+function blank(r: Report, t: Theme): Opt {
+	return base(t, {
+		xAxis: axisX(t, { type: 'time', ...span(r) }),
+		yAxis: axisY(t, { type: 'value' }),
+		series: []
+	});
+}
+
+/** A chart's ECharts option: the planning charts narrowed by the filter, the others by the epic. */
+export function build(
+	kind: Kind,
+	report: Report,
+	t: Theme,
+	epic?: string,
+	filter: ErrorFilter = {}
+): Opt {
 	const r = normalise(report);
 	switch (kind) {
 		case 'cycle-time':
@@ -1058,5 +1241,10 @@ export function build(kind: Kind, report: Report, t: Theme, epic?: string): Opt 
 			return timePerModel(r, t);
 		case 'cost-per-model':
 			return costPerModel(r, t);
+		case 'forecast-accuracy':
+			return forecastAccuracy(r, t, filter);
+		case 'delivery-accuracy':
+		case 'forecast-by-model':
+			return blank(r, t);
 	}
 }
