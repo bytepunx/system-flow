@@ -7,7 +7,7 @@ status: backlog
 parent: E-0017
 owner: alex
 created: 2026-10-06T11:37:08Z
-updated: 2026-10-07T02:10:20Z
+updated: 2026-10-07T02:18:48Z
 transitions: []
 tags: [cli, metrics]
 topics: [automation, conventions]
@@ -17,7 +17,6 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   value: 59.02
   by: planner-E-0017
@@ -28,6 +27,9 @@ forecast:
   basis: "Its own forecast of 40m; 28th in the pull order with an in-progress limit of 3, behind S-0245, S-0269, S-0277, S-0270, S-0271, S-0274, S-0275, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0246, S-0265, S-0279, S-0280, S-0287, S-0288, S-0289, S-0290 and S-0291."
   by: flai
   at: 2026-10-07T02:10:20Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:18:48Z
 ---
 # S-0293 flai stats classifies a story run's tool calls, so the ceremony turns E-0017 removes are measured per story and over time
 
