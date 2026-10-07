@@ -667,10 +667,17 @@ func (m Manifest) TestTiers(fsys fs.FS) ([]TestTier, error) {
 		}
 		return m.Tests, nil
 	}
-	if st, err := fs.Stat(fsys, DefaultTestScript); err != nil || st.IsDir() {
+	if !isFile(fsys, DefaultTestScript) {
 		return nil, nil
 	}
 	return []TestTier{{Name: "test", Command: []string{DefaultTestScript}, Paths: []string{"**"}, Format: FormatPlain}}, nil
+}
+
+// isFile reports whether name is a file in fsys; anything it cannot stat is
+// not.
+func isFile(fsys fs.FS, name string) bool {
+	st, err := fs.Stat(fsys, name)
+	return err == nil && !st.IsDir()
 }
 
 // TestErrors are what is wrong with the tests key, one sentence each, each

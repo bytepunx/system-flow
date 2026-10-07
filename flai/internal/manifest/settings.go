@@ -729,7 +729,7 @@ func valueEnd(lines []string, at, to int) int {
 		}
 		in, l := len(indent(lines[i])), strings.TrimSpace(lines[i])
 		item := l == "-" || strings.HasPrefix(l, "- ")
-		if in < keyIn || in == keyIn && !(items && item) {
+		if in < keyIn || in == keyIn && (!items || !item) {
 			break
 		}
 		end = i + 1
