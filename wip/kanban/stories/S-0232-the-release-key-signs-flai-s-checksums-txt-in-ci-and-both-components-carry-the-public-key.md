@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T19:34:50Z
+updated: 2026-10-07T20:28:28Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -34,10 +34,10 @@ usage:
           cost: 0.0349
 forecast:
   duration: 1h
-  delivery: 2026-10-08T02:25:00Z
-  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 24m; raised to 1h, the median agent time of 19 done feature stories of 4 to 7 criteria, for CI, two languages, and checking cosign and GoReleaser documentation; delivery at flai's cycle factor of 6.85, before the operator's key-generation step"
-  by: planner-E-0015
-  at: 2026-10-07T19:33:51Z
+  delivery: 2026-10-07T21:50:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, behind S-0329 and S-0330."
+  by: flai
+  at: 2026-10-07T20:28:28Z
 ---
 # S-0232 The release key signs flai's checksums.txt in CI and both components carry the public key
 

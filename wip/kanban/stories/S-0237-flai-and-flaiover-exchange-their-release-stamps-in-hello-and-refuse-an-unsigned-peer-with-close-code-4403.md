@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T19:34:55Z
+updated: 2026-10-07T20:28:28Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -20,10 +20,10 @@ agent:
     effort: high
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T21:15:00Z
-  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 22m; raised to 1h30m, half again the 1h median of done feature stories, for a protocol change on both sides with status, UI, and tests on each; delivery played out after S-0235 at a cycle factor of 6.85"
-  by: planner-E-0015
-  at: 2026-10-07T19:33:57Z
+  delivery: 2026-10-08T01:34:00Z
+  basis: "Its own forecast of 1h30m; 6th in the pull order with an in-progress limit of 3, behind S-0329, S-0330, S-0232, S-0233, S-0234, S-0235 and S-0236."
+  by: flai
+  at: 2026-10-07T20:28:28Z
 ---
 # S-0237 flai and flaiover exchange their release stamps in hello and refuse an unsigned peer with close code 4403
 

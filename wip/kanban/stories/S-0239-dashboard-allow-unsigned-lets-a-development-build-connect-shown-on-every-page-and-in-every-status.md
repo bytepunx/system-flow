@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T19:34:58Z
+updated: 2026-10-07T20:28:28Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -20,10 +20,10 @@ agent:
     effort: high
 forecast:
   duration: 1h30m
-  delivery: 2026-10-09T12:40:00Z
-  basis: "flai's 114 s per unit of size gave 27m; raised to 1h30m, half again the 1h median of done feature stories, for a setting through config, manifest, both components, a banner on every page, and three statuses; delivery after S-0238, the later of its two afters, at a cycle factor of 6.85"
-  by: planner-E-0015
-  at: 2026-10-07T19:33:59Z
+  delivery: 2026-10-08T13:33:00Z
+  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 3, behind S-0329, S-0330, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237 and S-0238."
+  by: flai
+  at: 2026-10-07T20:28:28Z
 ---
 # S-0239 dashboard.allow_unsigned lets a development build connect, shown on every page and in every status
 

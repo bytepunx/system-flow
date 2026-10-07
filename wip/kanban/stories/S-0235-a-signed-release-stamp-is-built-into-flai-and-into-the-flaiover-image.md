@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T19:34:53Z
+updated: 2026-10-07T20:28:28Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -20,10 +20,10 @@ agent:
     effort: high
 forecast:
   duration: 1h15m
-  delivery: 2026-10-08T10:58:00Z
-  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 24m; raised to 1h15m, above the 1h median of done feature stories, for a stamp built, verified, and tested in both components and both workflows; delivery played out after S-0232 at a cycle factor of 6.85"
-  by: planner-E-0015
-  at: 2026-10-07T19:33:55Z
+  delivery: 2026-10-07T23:32:00Z
+  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 3, behind S-0329, S-0330, S-0232, S-0233 and S-0234."
+  by: flai
+  at: 2026-10-07T20:28:28Z
 ---
 # S-0235 A signed release stamp is built into flai and into the flaiover image
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-07T19:34:54Z
+updated: 2026-10-07T20:28:28Z
 transitions: []
 tags: [cli]
 topics: [release, security]
@@ -20,10 +20,10 @@ agent:
     effort: high
 forecast:
   duration: 1h15m
-  delivery: 2026-10-08T19:32:00Z
-  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 20m; raised to 1h15m, above the 1h median of done feature stories, for resolution, verification, a cache, and four dashboard subcommands that must keep ADR-0118's chosen release; delivery played out after S-0233 and S-0234 at a cycle factor of 6.85"
-  by: planner-E-0015
-  at: 2026-10-07T19:33:56Z
+  delivery: 2026-10-08T04:40:00Z
+  basis: "Its own forecast of 1h15m; 5th in the pull order with an in-progress limit of 3, behind S-0329, S-0330, S-0232, S-0233, S-0234 and S-0235."
+  by: flai
+  at: 2026-10-07T20:28:28Z
 ---
 # S-0236 flai dashboard resolves the image from the signed digest list and runs it by digest
 

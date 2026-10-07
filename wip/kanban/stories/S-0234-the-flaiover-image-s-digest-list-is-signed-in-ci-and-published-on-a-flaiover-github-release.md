@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T19:34:52Z
+updated: 2026-10-07T20:28:28Z
 transitions: []
 tags: [dashboard]
 topics: [release, security]
@@ -20,10 +20,10 @@ agent:
     effort: high
 forecast:
   duration: 45m
-  delivery: 2026-10-08T07:33:00Z
-  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 16m; raised to 45m, under the 1h median since it is one workflow, but with a RepoDigests check that needs Docker; delivery played out after S-0232 at a cycle factor of 6.85"
-  by: planner-E-0015
-  at: 2026-10-07T19:33:53Z
+  delivery: 2026-10-08T02:59:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0329, S-0330, S-0232 and S-0233."
+  by: flai
+  at: 2026-10-07T20:28:28Z
 ---
 # S-0234 The flaiover image's digest list is signed in CI and published on a flaiover GitHub release
 
