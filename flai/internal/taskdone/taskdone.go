@@ -13,7 +13,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -346,68 +345,18 @@ func (r *run) touches() error {
 	if r.res.Commit == nil {
 		return nil
 	}
-	repo := r.o.Repo
-	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/")
-	if wip == "" {
-		wip = "wip"
-	}
-	var paths []string
-	for _, p := range r.res.Commit.Paths {
-		if !coveredBy(p, []string{wip}) {
-			paths = append(paths, p)
-		}
-	}
-	watch := itemedit.WatchClaim(repo, r.story.ID)
-	var err error
-	if t.Task, err = r.widen(r.task.ID, paths); err != nil {
-		return err
-	}
-	if t.Story, err = r.widen(r.story.ID, paths); err != nil {
-		return err
-	}
-	if len(t.Task)+len(t.Story) == 0 {
-		return nil
-	}
-	told, err := watch.Grown(r.o.Agent, r.o.Now())
+	w, err := itemedit.WidenStory(itemedit.WidenOptions{
+		Repo: r.o.Repo, Story: r.story.ID, Task: r.task.ID, Paths: r.res.Commit.Paths, By: r.o.Agent, Now: r.o.Now,
+	})
+	t.Task, t.Story, t.Overlaps = w.Task, w.Story, w.Overlaps
 	if err != nil {
-		// advisory, as flai touches has it: the touches stand
-		r.logger.Warn("overlap notices not sent", "component", "touches", "item", r.story.ID, "err", err)
+		return err
 	}
-	if told != nil {
-		t.Overlaps = told
+	if w.Untold != nil {
+		// advisory, as flai touches has it: the touches stand
+		r.logger.Warn("overlap notices not sent", "component", "touches", "item", r.story.ID, "err", w.Untold)
 	}
 	return nil
-}
-
-// widen adds to item id's touches the paths they do not cover, and leaves
-// the edit notice flai touches leaves; it returns the paths added.
-func (r *run) widen(id string, paths []string) ([]string, error) {
-	repo := r.o.Repo
-	it, err := repo.Get(id)
-	if err != nil {
-		return nil, fmt.Errorf("read %s to widen its touches: %w", id, err)
-	}
-	covered := workitem.NewHolds(nil, repo.Manifest.Projects).Claim(&workitem.Item{Touches: it.Touches})
-	var missing []string
-	for _, p := range paths {
-		if !coveredBy(p, covered) {
-			missing = append(missing, p)
-		}
-	}
-	add, err := workitem.CleanTouches(missing)
-	if err != nil {
-		return nil, fmt.Errorf("widen %s's touches: %w; add the paths by hand with flai touches %s --add", id, err, id)
-	}
-	if len(add) == 0 {
-		return []string{}, nil
-	}
-	it.Touches = append(slices.Clone(it.Touches), add...)
-	it.Updated = r.o.Now().UTC().Format(workitem.TimeFormat)
-	if err := repo.Save(it); err != nil {
-		return nil, fmt.Errorf("save %s's widened touches: %w", id, err)
-	}
-	itemedit.Record(repo, itemedit.Notice{At: it.Updated, By: r.o.Agent, ID: it.ID, Type: it.Type, Title: it.Title, Changed: []string{"touches"}})
-	return add, nil
 }
 
 // check runs flai check --strict on the worktree, scoped to the story as the
@@ -474,16 +423,6 @@ func lines(out string) []string {
 		}
 	}
 	return paths
-}
-
-// coveredBy says whether path is one of entries or lies below one.
-func coveredBy(path string, entries []string) bool {
-	for _, e := range entries {
-		if path == e || strings.HasPrefix(path, e+"/") {
-			return true
-		}
-	}
-	return false
 }
 
 // orNothing joins paths for a message.
