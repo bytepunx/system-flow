@@ -178,10 +178,47 @@ The `cost_of_delay.value` of an item is what a week of waiting for it costs, in 
 | `items[].cost_of_delay` | Its `value`; absent without one |
 | `items[].cost_of_delay_incurred` | Its value times the seconds it spent in `backlog` or `ready`, up to now, over 604800 (a week) |
 | `cost_of_delay.days[].outstanding` | Per column, `backlog`, `ready`, `in-progress`, and `review`, the sum of the values of the items in it at the end of the day (23:59:59 UTC), every column present |
+| `cost_of_delay.days[].without_value` | Per column, the same four, the number of the items in it at the end of the day that have no value, every column present, 0 when none (S-0213, [ADR-0112](../adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)). The items are those `outstanding` sums over: of the report's type, stories by default and epics with `--type epic`, archived ones included. A task carries no value and is never counted, so with `--type task` every count is 0 |
 | `cost_of_delay.days[].incurred` | Over every item, its value times the seconds of the day it spent in `backlog` or `ready`, over 604800. Today ends at now |
 | `cost_of_delay.weeks[]` | `week`, `start`, and `incurred`, the same over the week's seconds. The window's first week is whole |
+| `cost_of_delay.order` | The ready column's cost of delay projected until each story is pulled, under the pull order, by cost of delay, and by WSJF. Defined below |
 
-Each day point has `date`; each amount is rounded to two decimals once summed. Items without a value add nothing.
+Each day point has `date`; each amount is rounded to two decimals once summed. Items without a value add nothing to the amounts; `without_value` counts them, so their absence shows.
+
+#### What the pull order costs (S-0213)
+
+`cost_of_delay.order` projects what waiting for the stories in `ready` now will cost before each is pulled, under three orders, so the dashboard can show what ordering by cost of delay or by WSJF would save ([ADR-0112](../adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)). It is always of the ready stories, whatever the report's type. It is a projection from now, not a series over the window: the window does not filter it, and its time axis runs from `at` to `horizon` ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md) covers the series over the window).
+
+| Value | Definition |
+|-------|------------|
+| `at` | The report's now, `generated_at`, to the second: the projection's start |
+| `horizon` | The latest pull of any point of the three series; `at` when no story is placed |
+| `series[]` | One entry per order, always all three, in the order `current`, `cod`, `wsjf` |
+| `series[].by` | `current`: the board's pull order of the ready column. `cod`: the `cod` policy order of S-0217, value per week, highest first. `wsjf`: the `wsjf` policy order of S-0217, value over `forecast.duration` in hours, highest first ([flai-cli.md](flai-cli.md), `flai order --by`) |
+| `series[].points[]` | The first point is `{at, incurred: 0}`, with no `id`. Then one point per placed story, `{at, id, incurred}`: `at` its projected pull, and `incurred` the cumulative cost of the stories pulled up to and including it. The points after the first are in order of pull, ties in the order's sequence |
+| `series[].total` | The last point's `incurred`; 0 when no story is placed |
+| `saving` | `current`'s `total` less the lower of `cod`'s and `wsjf`'s. Negative when the pull order is already cheaper than both |
+| `cheaper` | The order with that lower total, `cod` or `wsjf`; `cod` on a tie |
+| `left_out` | The IDs of the ready stories that are not placed, in pull order; `[]` for none |
+
+A story is placed when it has both a `cost_of_delay.value` and a `forecast.duration` that is a positive Go duration. Every order places the same stories, so their totals compare: WSJF needs the duration, and cost of delay needs the value. The ready stories without either are in `left_out` and in no series.
+
+The `cod` and `wsjf` orders are S-0217's policy orders, `flai order --by cod` and `--by wsjf`, applied to the placed stories taken in pull order: ties keep the pull order. A story placed by hand does not keep its place in them (S-0219): they are the policies' own orders.
+
+A story's cost is its value times the seconds from `at` to its pull, over 604800, as `items[].cost_of_delay_incurred` counts it. A story waits only while it is in `backlog` or `ready`, so its cost ends when it is pulled, not when it is delivered.
+
+Each order is played out as `flai forecast` plays out the pull order ([strategic-agents.md § Forecast](strategic-agents.md#forecast)), on lanes, the board's `in-progress` limit:
+
+| Stories | Played out |
+|---------|------------|
+| In progress | Each holds a lane until its start plus its duration times its busy factor, never before now: its own `forecast.duration`, else the duration `flai forecast` works out. More than the limit free a lane only once enough have finished to bring the count under it. A lane no story holds is free at `at` |
+| In review | Hold no lane |
+| Placed, in the order's sequence | Each is pulled when the lane that frees first is free, but not before the delivery, as played out here (its start plus its duration times its cycle factor), of any story in its `after` that is in progress or was placed before it in this order; it holds the lane for its `forecast.duration` times its busy factor |
+| Backlog, and ready stories left out | Not played out |
+
+The busy and cycle factors are those `flai forecast` works out for the story from history, 1 with too little. With no `in-progress` limit, `flai forecast` pulls every story at once, and so does the projection: every pull is at `at`, and every order costs nothing.
+
+Times are UTC, to the second; a pull is rounded up to the second, and its cost counts to the rounded time, so each point can be recomputed from the JSON. The costs are summed unrounded and each `incurred` is rounded to two decimals when written. `saving` is the difference of the written totals, rounded to two decimals, and `cheaper` compares the written totals. With no story placed, each series has only its first point, every `total` and `saving` are 0, and `cheaper` is `cod`.
 
 ### Waiting
 
@@ -247,7 +284,7 @@ A story's commits are those on the main branch and the `story/` branches whose s
 
 ## Charts
 
-Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
+Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166), save `cod-order`, which projects from now ([What the pull order costs](#what-the-pull-order-costs-s-0213)). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
 
 | Chart | Data | Notes |
 |-------|------|-------|
@@ -272,6 +309,9 @@ Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-t
 | Parallelism | Per day of the window, `claims.days[].in_progress`, with `held` as a second series, and a line at `claims.limit` | No limit line when `claims.limit` is absent ([Claims and touches](#claims-and-touches)) |
 | Hold Time | Stacked bar per week of the window, `claims.weeks[].held_seconds` in hours, one series per reason: `overlap`, `after`, and `no-touches`, the empty claim | A hold with more than one reason counts under the one it is named by, so a bar's height is the time held ([ADR-0113](../adrs/0113-flai-stats-reports-held-stories-per-day-held-time-by-reason-per-week-and-the.md)) |
 | Touches Drift | Stacked bar per story of `claims.drift[]` completed in the window, x its `completed` in `items[]`: `outside_count` and `unchanged_count`. On a second axis, `claims.weeks[].exact_share` per week | Cancelled stories left out. A week with no such story has no share, a gap, not 0. Without `claims.drift`, the chart says git could not be read |
+| CoD Outstanding | Stacked area per day of the window, `cost_of_delay.days[].outstanding`, one series per column in board order | Of the report's type. Beside it, the items without a value now, today's `days[].without_value` per column ([ADR-0112](../adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)) |
+| CoD Incurred | Bar per week of the window, `cost_of_delay.weeks[].incurred`, with the running mean per week as a line: the sum from the window's first week to this one over the number of those weeks | Of the report's type. Beside it, the items without a value now, as on CoD Outstanding |
+| CoD by Order | One line per order, `current`, `cod`, and `wsjf`, of `cost_of_delay.order.series[].points`: cumulative projected cost against the projected pull | Its time axis runs from `order.at` to `order.horizon`, not over the window: it is a projection. States `saving` and `cheaper`, and names the ready stories left out, `order.left_out` ([ADR-0112](../adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)) |
 
 ## Precision rules
 
