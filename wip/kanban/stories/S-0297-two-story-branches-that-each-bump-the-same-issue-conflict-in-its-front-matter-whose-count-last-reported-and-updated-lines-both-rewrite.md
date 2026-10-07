@@ -6,7 +6,7 @@ title: Two story branches that each bump the same issue conflict in its front ma
 status: backlog
 owner: alex
 created: 2026-10-06T19:46:46Z
-updated: 2026-10-06T19:46:46Z
+updated: 2026-10-07T02:18:22Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
     by: flai
     at: 2026-10-06T19:46:46Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:18:22Z
 ---
 # S-0297 Two story branches that each bump the same issue conflict in its front matter, whose count, last_reported, and updated lines both rewrite
 
