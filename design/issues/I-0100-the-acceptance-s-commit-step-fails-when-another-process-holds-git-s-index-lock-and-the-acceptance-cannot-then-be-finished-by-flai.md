@@ -2,12 +2,12 @@
 id: I-0100
 title: The acceptance's commit step fails when another process holds git's index lock, and the acceptance cannot then be finished by flai
 class: defect
-status: open
+status: closed
 count: 1
 cost: 2m
 first_reported: 2026-10-06T23:31:35Z
 last_reported: 2026-10-06T23:31:35Z
-updated: 2026-10-07T01:07:13Z
+updated: 2026-10-07T01:57:23Z
 ---
 
 # I-0100 The acceptance's commit step fails when another process holds git's index lock, and the acceptance cannot then be finished by flai
@@ -29,3 +29,4 @@ flai accept S-0299 at 23:03:32Z on 2026-10-06 merged the branch, moved the story
 Directions to weigh: retry the commit a few times when git reports the index lock held, since the other writer is brief; or make an acceptance that is done and archived but whose commit is missing resumable, as one that is done but not archived already is ("completed from step 0 without a second transition"); and record the commit's failure in the journal.
 
 Story S-0307 remediates this issue, created from it at 2026-10-07T01:07:13Z.
+Closed 2026-10-07T01:57:23Z: S-0307 fixed it: flai accept's git add and git commit run through storygit.RunPastIndexLock, which runs them again for about nine seconds while another process holds the index lock and never removes it; a story done and archived whose acceptance commit failed is finished by running flai accept again, which commits it under the usual subject and sends the overlap notices from the story's commits; and a commit that fails even so keeps git's whole output and names flai accept <id>.
