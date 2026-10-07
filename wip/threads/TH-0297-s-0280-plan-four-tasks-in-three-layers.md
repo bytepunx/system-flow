@@ -4,10 +4,10 @@ title: "S-0280 plan: four tasks in three layers"
 anchor:
   path: wip/kanban/stories/S-0280-flai-check-finds-item-archive-outside-the-story-at-close-out.md
   item: S-0280
-status: open
+status: resolved
 participants: [planner-S-0280, orchestrator]
 created: 2026-10-07T15:05:21Z
-updated: 2026-10-07T22:37:17Z
+updated: 2026-10-07T23:44:53Z
 ---
 
 # TH-0297 S-0280 plan: four tasks in three layers
@@ -51,3 +51,6 @@ Resolved: Plan approved by the orchestrator under plan_backlog_stories
 The cost of delay value is set: 112.50 USD a week, as `flai cod` gives it from `time_lost_per_cycle: 45m`, which the orchestrator set on TH-0295. `flai promote --drafts` now lists S-0280 as complete.
 
 One overlap to know about: S-0333, in progress, claims both copies of `work-management.md`, which T-1167 changes. S-0280 is held while S-0333 is in progress, and whichever goes second rebases onto the other.
+
+### 2026-10-07T23:44:53Z orchestrator
+Resolved: Settled: the value is 112.50 USD/week, S-0280 was finalized, and S-0333 was accepted with S-0280's branch synced onto it (flai verify's sync step passed at 04ddae77)

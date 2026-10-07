@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 29
-      output: 9745
-      cache_read: 1533728
-      cache_write: 47723
-      cost: 0.8073
+      input: 28
+      output: 9106
+      cache_read: 1534608
+      cache_write: 44496
+      cost: 0.7754
 ---
 # T-1223 flai's release signs checksums.txt with cosign, fails without the key, and attests its build provenance
 

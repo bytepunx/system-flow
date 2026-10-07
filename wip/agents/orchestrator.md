@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 94.3332
-accrued_seconds: 79087
-tasks_completed: 124
-last_run: 2026-10-07T23:20:41Z
+accrued_cost: 105.3250
+accrued_seconds: 80402
+tasks_completed: 144
+last_run: 2026-10-07T23:42:36Z
 ---
 
 # Orchestrator activity
@@ -879,6 +879,146 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0332
 - Seconds: 214
 - Cost: 1.5361 USD, estimated
+
+### 2026-10-07T23:20:57Z
+
+- Summary: Published under judgement after accepting S-0332: 1 pending, 142.12 USD/week; flai 1.39.0→1.39.1 (flai/v1.39.1), template 1.0.75→1.0.76 (v1.0.76, 10432eb); bundled S-0332; pushed
+- Items: S-0332
+- Seconds: 16
+- Cost: 0.0766 USD, estimated
+
+### 2026-10-07T23:21:03Z
+
+- Summary: Promoted S-0280 to ready, flai promote --candidates rank 1 (forecast 25m), once S-0332's acceptance lifted its overlap hold, and applied the throughput order: S-0280 alone. Left S-0241 (rank 2, 2h) in the backlog pending TH-0333
+- Items: S-0280, S-0241
+- Seconds: 6
+- Cost: 0.1558 USD, estimated
+
+### 2026-10-07T23:23:12Z
+
+- Summary: Recommended an answer on TH-0334, citing design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md § Decision
+- Items: S-0287
+- Seconds: 129
+- Cost: 0.7203 USD, estimated
+
+### 2026-10-07T23:23:16Z
+
+- Summary: Recommended on TH-0334 (planner-S-0287) that the operator take the planner's remedy: sub-agents may write an ADR through flai without committing. Left the thread open: the remedy refines ADR-0060's guard rule, a decision not yet recorded. The plan's 4 tasks, 45m forecast, and 30 USD/week value fit; S-0287 stays a draft meanwhile (source: ADR-0060 § Decision)
+- Items: S-0287
+- Seconds: 4
+- Cost: 0.0820 USD, estimated
+
+### 2026-10-07T23:23:19Z
+
+- Summary: Started the planner for S-0309 under plan_backlog_stories: first story flai plan --candidates lists now that S-0287's planner has ended
+- Items: S-0309
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-07T23:28:25Z
+
+- Summary: Recommended an answer on TH-0335, citing design/adrs/0097-permission-prompt-takes-an-answer-from-the-story-s-owner-or-the-project-s-owner.md § Decision
+- Items: S-0309
+- Seconds: 306
+- Cost: 1.3273 USD, estimated
+
+### 2026-10-07T23:28:28Z
+
+- Summary: Recommended on TH-0335 (planner-S-0309) that the operator take the bounded-wait, open-thread, retry remedy for I-0103. Left the thread open: the remedy refines ADR-0086 and ADR-0097, a decision not yet recorded. The plan's 5 tasks, 35m forecast, and 75 USD/week value fit; S-0309 stays a draft meanwhile (source: ADR-0097 § Decision)
+- Items: S-0309
+- Seconds: 3
+- Cost: 0.0849 USD, estimated
+
+### 2026-10-07T23:28:32Z
+
+- Summary: Started the planner for S-0310 under plan_backlog_stories: first story flai plan --candidates lists now that S-0309's planner has ended
+- Items: S-0310
+- Seconds: 4
+- Cost: 0.1720 USD, estimated
+
+### 2026-10-07T23:31:22Z
+
+- Summary: Answered TH-0336, citing wip/kanban/stories/S-0310-testwaitforworkacrossafolder-fails-under-the-close-out-s-full-go-run-when-the-host-is-loaded.md
+- Items: S-0310
+- Seconds: 170
+- Cost: 1.4779 USD, estimated
+
+### 2026-10-07T23:31:34Z
+
+- Summary: Approved planner-S-0310's plan on TH-0336 and resolved it (test-helper fix, 3 serial tasks, 1h, 25 USD/week; its proposed extra story left to the operator). Finalized S-0310: flai promote --drafts lists it complete and its figures agree with the plan. Promoted it to ready, flai promote --candidates rank 1 (1h), and applied the throughput order: S-0310 alone. S-0241 (rank 2) still waits on TH-0333
+- Items: S-0310
+- Seconds: 12
+- Cost: 0.3615 USD, estimated
+
+### 2026-10-07T23:31:37Z
+
+- Summary: Started the planner for S-0312 under plan_backlog_stories: next story flai plan --candidates lists (S-0322 is a likely duplicate, flagged on TH-0306 earlier)
+- Items: S-0312
+- Seconds: 3
+- Cost: 0.1845 USD, estimated
+
+### 2026-10-07T23:35:50Z
+
+- Summary: Recommended an answer on TH-0337, citing design/adrs/0107-flai-task-done-closes-a-task-in-one-call-commit-sync-move-log-widen-touches.md
+- Items: S-0312
+- Seconds: 253
+- Cost: 1.5840 USD, estimated
+
+### 2026-10-07T23:35:56Z
+
+- Summary: Recommended on TH-0337 (planner-S-0312) that the operator take the remedy of committing only the closing task's paths, plus unclaimed ones. Left the thread open: it refines ADR-0107's commit step. The plan's 4 tasks, 45m, and 25 USD/week fit. Noted that I-0104 now counts 4 occurrences (a 20m input would give 50 USD/week, the operator's to change) and that S-0322 duplicates S-0312. S-0312 stays a draft
+- Items: S-0312, S-0322
+- Seconds: 6
+- Cost: 0.0952 USD, estimated
+
+### 2026-10-07T23:36:01Z
+
+- Summary: Started the planner for S-0313 under plan_backlog_stories: next story flai plan --candidates lists (S-0327 is a likely duplicate of it)
+- Items: S-0313
+- Seconds: 5
+- Cost: 0.0955 USD, estimated
+
+### 2026-10-07T23:40:17Z
+
+- Summary: Answered TH-0338, citing wip/kanban/stories/S-0313-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md
+- Items: S-0313
+- Seconds: 256
+- Cost: 2.6059 USD, estimated
+
+### 2026-10-07T23:40:27Z
+
+- Summary: Approved planner-S-0313's plan on TH-0338 and resolved it, both fixes kept (4 tasks in 2 layers, 45m, 10 USD/week). Finalized S-0313: flai promote --drafts lists it complete and its figures agree with the plan. Not promoted: held on overlap with S-0232 in docs/operators/settings.md. S-0241 stays out pending TH-0333
+- Items: S-0313
+- Seconds: 10
+- Cost: 0.2022 USD, estimated
+
+### 2026-10-07T23:40:32Z
+
+- Summary: Started the planner for S-0314 under plan_backlog_stories: next story flai plan --candidates lists
+- Items: S-0314
+- Seconds: 5
+- Cost: 0.2055 USD, estimated
+
+### 2026-10-07T23:42:22Z
+
+- Summary: Answered TH-0339, citing design/system/dashboard-host-channel.md
+- Items: S-0314
+- Seconds: 110
+- Cost: 1.1378 USD, estimated
+
+### 2026-10-07T23:42:32Z
+
+- Summary: Approved planner-S-0314's plan on TH-0339 and resolved it (3 tasks, 12m, 12.50 USD/week; the fix follows dashboard-host-channel.md's ungated check). Finalized S-0314 and promoted it to ready, flai promote --candidates rank 1 (12m), then applied the throughput order: S-0314 alone. S-0241 (rank 2) waits on TH-0333
+- Items: S-0314
+- Seconds: 10
+- Cost: 0.2112 USD, estimated
+
+### 2026-10-07T23:42:36Z
+
+- Summary: Started the planner for S-0315 under plan_backlog_stories: next story flai plan --candidates lists
+- Items: S-0315
+- Seconds: 4
+- Cost: 0.2117 USD, estimated
 
 ## Refusals
 

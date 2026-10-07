@@ -6,9 +6,11 @@ title: A failed integration tier in the close-out shows only the last lines of g
 status: backlog
 owner: alex
 created: 2026-10-07T14:26:02Z
-updated: 2026-10-07T14:26:02Z
+updated: 2026-10-07T23:40:20Z
 transitions: []
 tags: []
+topics: [testing]
+touches: [flai/internal/verify/parse.go, flai/internal/verify/parse_test.go, scripts/integration.sh, system-flow.yaml, scripts/README.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -20,21 +22,32 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 4
+      seconds: 275
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 3
-          output: 32
-          cache_read: 568691
-          cache_write: 4203
-          cost: 0.1492
-draft: true
+          input: 63
+          output: 1012
+          cache_read: 12323146
+          cache_write: 34177
+          cost: 3.0528
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m
     by: flai
     at: 2026-10-07T14:26:02Z
+  value: 10
+  by: planner-S-0313
+  at: 2026-10-07T23:38:54Z
+forecast:
+  duration: 45m
+  delivery: 2026-10-08T06:37:00Z
+  basis: "flai forecast's 17m (83 s per unit of size over 9 done improvement stories, size 12) raised to 45m because proving the integration tier and the close-out each run the full go test -race suite; delivery moved by the same 28m from flai's 06:09, 20th in the pull order"
+  by: planner-S-0313
+  at: 2026-10-07T23:38:54Z
+finalized:
+  by: orchestrator
+  at: 2026-10-07T23:40:20Z
 ---
 # S-0313 A failed integration tier in the close-out shows only the last lines of go test, so the failing test is not named
 
@@ -47,7 +60,36 @@ This story remediates [I-0113](../../../design/issues/I-0113-a-failed-integratio
 - [ ] I-0113 is closed with `flai issue close I-0113 --reason` saying what fixed it
 
 ## Tasks
+- T-1286 A plain finding names the failures go test printed, not only the last lines
+- T-1287 The integration tier reads go test -json, so its findings name each failing test by file and line
+- T-1288 The manifest and settings docs say what a plain finding keeps
+- T-1289 Close I-0113 with what fixed it
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0113. time_lost_per_cycle 4m: 4m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-07T09:13:42Z, 0.2 days before this story; under one cycle counts as one).
+
+### Planning
+
+Proposed solution, from I-0113's one instance (S-0215). The `integration` tier in `system-flow.yaml` runs `scripts/integration.sh`, a plain `go test -race -count=1 ./...`, under `format: plain`. `plain()` in `flai/internal/verify/parse.go` keeps only the last 20 lines, so the failing package, early in the run, is cut off. Two fixes, one per layer-1 task:
+
+- T-1287: the tier runs the script with `-json` under `format: go-test-json`, the parser the `go-test` tier already uses, so each finding names its test, file, and line.
+- T-1286: a plain finding keeps go test's `--- FAIL`, `FAIL<tab><package>`, and `panic:` lines ahead of the tail. This covers any plain tier that runs go test, the template's `integration` tier among them.
+
+Touches, all files; no folder touch was kept:
+
+| Touch | From |
+|-------|------|
+| `flai/internal/verify/parse.go`, `parse_test.go` | layout: `plain()` and its tests |
+| `scripts/integration.sh`, `system-flow.yaml` | layout: the tier and its script |
+| `scripts/README.md` | layout: its `integration.sh` row |
+| `design/system/project-manifest.md` | design and co-change: says plain "reads only the exit status" |
+| `docs/operators/settings.md` | design: the `tests[].format` row says the same |
+| `docs/users/flai.md` | co-change: `flai test` and `flai verify` describe findings |
+| `design/issues/I-0113-…md`, `design/issues/summary.md` | criterion 2: `flai issue close`; shared paths |
+
+`flai touches suggest` declared nothing, so it ran from `parse.go`, `integration.sh`, and `system-flow.yaml`. Its template and CI co-changes were left out, since the template's tiers do not change.
+
+Forecast: `flai forecast` gave 17m (83 s per unit of size over 9 done improvement stories, size 12). It is raised to 45m: T-1287's check and the close-out each run the full `go test -race` suite. The delivery moves by the same 28m, to 2026-10-08T06:37:00Z.
+
+Cost of delay: `flai cod` gives 10.00 USD a week, from flai's input of 4m lost per 168h cycle at 150 USD an hour. It stands as computed: one occurrence gives no reason to change it.

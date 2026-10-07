@@ -3,38 +3,68 @@ id: S-0310
 type: story
 nature: remediation
 title: TestWaitForWorkAcrossAFolder fails under the close-out's full Go run when the host is loaded
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-07T06:48:45Z
-updated: 2026-10-07T06:48:45Z
-transitions: []
-tags: []
+updated: 2026-10-07T23:40:00Z
+transitions:
+  - to: ready
+    at: 2026-10-07T23:31:30Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T23:31:39Z
+    by: agent-S-0310
+tags: [flai, mcp, tests]
+touches: [flai/internal/mcpserver/folder_test.go, design/issues/I-0102-testwaitforworkacrossafolder-fails-under-the-close-out-s-full-go-run-when-the-host-is-loaded.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 501
+  estimated: true
+  turns:
+    - day: 2026-10-07
+      ceremony: 1
+      hand_edits: 1
+      work: 27
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 378
+      cache_read: 3058735
+      cache_write: 164139
+      cost: 1.4196
   strategic:
     - kind: orchestrator
-      seconds: 3
+      seconds: 189
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 10
-          cache_read: 40633
-          cache_write: 301
-          cost: 0.0105
-draft: true
+          input: 46
+          output: 736
+          cache_read: 8174751
+          cache_write: 29345
+          cost: 2.0219
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-10-07T06:48:45Z
+  value: 25
+  by: planner-S-0310
+  at: 2026-10-07T23:30:59Z
+forecast:
+  duration: 1h
+  delivery: 2026-10-08T06:15:00Z
+  basis: "flai forecast's 12m (134 s per unit of size over 4 done remediation stories, size 5) raised to 1h: reproducing a load-dependent failure takes repeated runs of the mcpserver package, which took 178s under load in I-0102, before the fix and after it; delivery is flai's 05:25 behind 19 stories, moved by the 48m added."
+  by: planner-S-0310
+  at: 2026-10-07T23:30:59Z
+finalized:
+  by: orchestrator
+  at: 2026-10-07T23:31:27Z
 ---
 # S-0310 TestWaitForWorkAcrossAFolder fails under the close-out's full Go run when the host is loaded
 
@@ -43,11 +73,33 @@ cost_of_delay:
 This story remediates [I-0102](../../../design/issues/I-0102-testwaitforworkacrossafolder-fails-under-the-close-out-s-full-go-run-when-the-host-is-loaded.md), "TestWaitForWorkAcrossAFolder fails under the close-out's full Go run when the host is loaded". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0102 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0102 is closed with `flai issue close I-0102 --reason` saying what fixed it
+- [x] The cause I-0102 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0102 is closed with `flai issue close I-0102 --reason` saying what fixed it
 
 ## Tasks
+- T-1279 Surface the tool's error in TestWaitForWorkAcrossAFolder and confirm the cause under load
+- T-1280 Write the story file atomically in readyStoryIn, with a test that reproduces the truncated read
+- T-1281 Close I-0102 with what fixed it
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0102. time_lost_per_cycle 10m: 10m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-07T03:13:07Z, 0.1 days before this story; under one cycle counts as one).
+
+### Planning
+
+Proposed cause, from the instance and the code: `handed over: map[]` is a tool error, not a timeout. `readyStoryIn` in `flai/internal/mcpserver/folder_test.go` rewrites the story with `os.WriteFile`, which truncates first. The wait polls every 20ms, and a poll that reads the truncated file fails the parse in `workitem`'s `store.list`. The hold returns that error, and the test drops it. T-1279 confirms or refutes this before T-1280 fixes it.
+
+Touches, all files, no folder touch:
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/mcpserver/folder_test.go` | design (the issue's instance) | The failing test and its helper `readyStoryIn` |
+| I-0102's file under `design/issues/` | design (criterion 2) | `flai issue close` writes it |
+| `design/issues/summary.md` | layout | `flai issue close` regenerates it |
+
+`flai touches suggest` listed `flai/internal/mcpserver/folder.go` (96% co-change) and `server.go`. They are left out: the fix proposed is in the test helper. Making the held waits tolerate a half-written file is proposed on the plan's thread as a story of its own.
+
+Figures:
+
+- Forecast: flai gave 12m (134 s per unit of size over 4 done remediation stories, size 5). Raised to 1h, because reproducing a failure that needs a loaded host takes repeated runs of the mcpserver package, 178s under load in I-0102, before the fix and after it. Delivery 2026-10-08T06:15:00Z is flai's 05:25, 19th in the pull order, moved by the 48m added.
+- Cost of delay value: 25 USD a week, as `flai cod` gives it from the operator's input, 10m lost per 168h cycle at 150 USD an hour. It stands: one occurrence so far, each costing a re-run of the close-out.

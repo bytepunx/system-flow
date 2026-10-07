@@ -3,34 +3,57 @@ id: S-0280
 type: story
 nature: improvement
 title: "flai check finds `item.archive` outside the story at close-out"
-status: backlog
+status: done
 owner: alex
 created: 2026-10-05T07:09:05Z
-updated: 2026-10-07T23:20:33Z
-transitions: []
+updated: 2026-10-07T23:45:02Z
+transitions:
+  - to: ready
+    at: 2026-10-07T23:21:00Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T23:21:22Z
+    by: agent-S-0280
+  - to: review
+    at: 2026-10-07T23:43:12Z
+    by: agent-S-0280
+  - to: done
+    at: 2026-10-07T23:45:02Z
+    by: orchestrator
 tags: [flai, template]
 topics: [cli, conventions, template]
-touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1334
+  turns:
+    - day: 2026-10-07
+      test_runs: 2
+      hand_edits: 3
+      work: 44
+  models:
+    - model: claude-opus-5-5
+      input: 100
+      output: 26138
+      cache_read: 7400592
+      cache_write: 221333
+      cost: 3.7739
   strategic:
     - kind: orchestrator
-      seconds: 55
+      seconds: 58
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 230
-          cache_read: 1155262
-          cache_write: 108430
-          cost: 0.3119
+          input: 30
+          output: 246
+          cache_read: 1466588
+          cache_write: 113247
+          cost: 0.3898
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 45m
@@ -56,8 +79,8 @@ finalized:
 This story remediates [I-0078](../../../design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md), "flai check finds `item.archive` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0078 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0078 is closed with `flai issue close I-0078 --reason` saying what fixed it
+- [x] The cause I-0078 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0078 is closed with `flai issue close I-0078 --reason` saying what fixed it
 
 ## Tasks
 - T-1164 An ADR refining ADR-0085 and ADR-0115 records the remedy for I-0078, proposed from its instances
@@ -112,3 +135,13 @@ Cost of delay 112.50 USD a week, as `flai cod` gives it.
 - The input is `time_lost_per_cycle: 45m`, set by the orchestrator on the cost thread on S-0280, as recommended there.
 - I-0078 has 38 instances in about two days while S-0250 lingered. At about 1m of agent time and one issue-bump commit each, averaged over weeks with and without a lingering cancelled item, that is 45m per 168h cycle, at 150 USD an hour.
 - The figure stands as computed.
+
+### Accepted by the orchestrator
+
+- Verified: 04ddae77a3de6dca391e8f91e7bde2f00cc21dd8
+- At: 2026-10-07T23:45:02Z
+
+Verdict: meets all criteria (verifier at 04ddae77a3de6dca391e8f91e7bde2f00cc21dd8; flai verify passed every step at that commit). ADR-0122 records the remedy; the I-0079 bump on the branch is the close-out's own record, per continuous-improvement.md.
+
+- 1: flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/adrs/0122-a-close-out-records-no-item-archive-and-a-check-scoped-to-a-story-leaves-out.md
+- 2: design/issues/I-0078-flai-check-finds-item-archive-outside-the-story-at-close-out.md, design/issues/summary.md

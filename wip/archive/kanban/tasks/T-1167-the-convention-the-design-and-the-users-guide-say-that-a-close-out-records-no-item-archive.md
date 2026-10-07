@@ -3,16 +3,36 @@ id: T-1167
 type: task
 nature: improvement
 title: The convention, the design, and the users' guide say that a close-out records no item.archive
-status: backlog
+status: done
 parent: S-0280
 owner: alex
 created: 2026-10-07T15:04:22Z
-updated: 2026-10-07T15:04:22Z
-transitions: []
+updated: 2026-10-07T23:31:11Z
+transitions:
+  - to: ready
+    at: 2026-10-07T23:29:39Z
+    by: agent-S-0280
+  - to: in-progress
+    at: 2026-10-07T23:29:39Z
+    by: agent-S-0280
+  - to: done
+    at: 2026-10-07T23:31:11Z
+    by: agent-S-0280
 stream: S-0280
 tags: [flai, template]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1165]
+usage:
+  source: log
+  seconds: 92
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 5017
+      cache_read: 1420377
+      cache_write: 42480
+      cost: 0.7243
 ---
 # T-1167 The convention, the design, and the users' guide say that a close-out records no item.archive
 

@@ -3,15 +3,35 @@ id: T-1164
 type: task
 nature: improvement
 title: An ADR refining ADR-0085 and ADR-0115 records the remedy for I-0078, proposed from its instances
-status: backlog
+status: done
 parent: S-0280
 owner: alex
 created: 2026-10-07T15:03:25Z
-updated: 2026-10-07T15:03:25Z
-transitions: []
+updated: 2026-10-07T23:24:48Z
+transitions:
+  - to: ready
+    at: 2026-10-07T23:22:49Z
+    by: agent-S-0280
+  - to: in-progress
+    at: 2026-10-07T23:22:50Z
+    by: agent-S-0280
+  - to: done
+    at: 2026-10-07T23:24:48Z
+    by: agent-S-0280
 stream: S-0280
 tags: [flai]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 118
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1545
+      cache_read: 437419
+      cache_write: 13082
+      cost: 0.2231
 ---
 # T-1164 An ADR refining ADR-0085 and ADR-0115 records the remedy for I-0078, proposed from its instances
 

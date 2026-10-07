@@ -3,16 +3,36 @@ id: T-1165
 type: task
 nature: improvement
 title: A close-out records no item.archive in an issue, and its scoped check leaves out one that does not name the story
-status: backlog
+status: done
 parent: S-0280
 owner: alex
 created: 2026-10-07T15:03:34Z
-updated: 2026-10-07T15:03:34Z
-transitions: []
+updated: 2026-10-07T23:29:23Z
+transitions:
+  - to: ready
+    at: 2026-10-07T23:24:58Z
+    by: agent-S-0280
+  - to: in-progress
+    at: 2026-10-07T23:24:58Z
+    by: agent-S-0280
+  - to: done
+    at: 2026-10-07T23:29:23Z
+    by: agent-S-0280
 stream: S-0280
 tags: [flai]
 touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]
 after: [T-1164]
+usage:
+  source: log
+  seconds: 265
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 6013
+      cache_read: 1702522
+      cache_write: 50918
+      cost: 0.8682
 ---
 # T-1165 A close-out records no item.archive in an issue, and its scoped check leaves out one that does not name the story
 

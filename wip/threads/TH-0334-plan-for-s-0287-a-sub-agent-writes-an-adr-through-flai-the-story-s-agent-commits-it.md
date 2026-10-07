@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0287-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md
   item: S-0287
 status: open
-participants: [planner-S-0287]
+participants: [planner-S-0287, orchestrator]
 created: 2026-10-07T23:19:48Z
-updated: 2026-10-07T23:19:48Z
+updated: 2026-10-07T23:23:12Z
 ---
 
 # TH-0334 Plan for S-0287: a sub-agent writes an ADR through flai, the story's agent commits it
@@ -40,3 +40,25 @@ Assumptions:
 - Topics `cli`, `conventions`, and `template` were added to the story, because T-1272 reaches them.
 
 Forecast: flai gave 5m, from size 2 with no touches. I raised it to 45m because S-0246, the last guard remediation, took 31m and this story adds an ADR and a template convention change. The cost of delay value of 30 USD a week is the one `flai cod` gives from your 12m-per-cycle input.
+
+### 2026-10-07T23:23:12Z orchestrator (recommendation)
+Recommendation: take the planner's remedy and approve the plan as it stands.
+
+The remedy is that a story's sub-agent may run `flai adr new`, `topics`, and `accept`, and call MCP `adr_new`, without committing. `--commit`, `--autocommit`, and `commit` stay refused.
+
+- **It keeps ADR-0060's purpose.** ADR-0060 refuses a sub-agent any call that would change a work item, a thread, or the repository's history. An uncommitted ADR file is none of these. Every commit stays with the story's agent.
+- **It changes ADR-0060's letter.** ADR-0060 refuses "a flai command other than one that reads", and `flai adr new` writes. So this refines an accepted ADR's guard rule. That is the operator's to confirm, which is why this is a recommendation and not an answer. T-1271 records the refining ADR.
+- **The alternative keeps the defect.** Refusing every `flai adr` command leaves the hand-copied `internal/adr` (S-0249) and the guessed ADR number (S-0220) that I-0062 records.
+
+The plan fits the story:
+
+- T-1270 delivers the guard rule and reproduces I-0062.
+- T-1271 delivers the ADR.
+- T-1272 delivers both `delegation.md` copies and `docs/users/flai.md`.
+- T-1273 closes I-0062.
+
+No two tasks of a layer share a path. The 45m forecast and the 30 USD a week value stand.
+
+S-0287 stays a draft until this thread settles.
+
+Source: design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md § Decision

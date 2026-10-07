@@ -6,9 +6,11 @@ title: design/issues/summary.md is generated and committed, so a story branch th
 status: backlog
 owner: alex
 created: 2026-10-07T18:59:45Z
-updated: 2026-10-07T18:59:45Z
+updated: 2026-10-07T23:44:33Z
 transitions: []
-tags: []
+tags: [cli]
+topics: [cli, git, continuous-improvement]
+touches: [flai/cmd/stream_sync_test.go, design/issues/I-0089-design-issues-summary-md-is-generated-and-committed-so-a-story-branch-that-records-an-issue-conflicts-with-any-issue-recorded-on-main-meanwhile.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -20,21 +22,30 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 4
+      seconds: 8
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 12
-          cache_read: 64217
-          cache_write: 5433
-          cost: 0.0172
+          input: 6
+          output: 84
+          cache_read: 922395
+          cache_write: 6643
+          cost: 0.2289
 draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
     by: flai
     at: 2026-10-07T18:59:45Z
+  value: 7.5
+  by: planner-S-0315
+  at: 2026-10-07T23:44:33Z
+forecast:
+  duration: 15m
+  delivery: 2026-10-08T06:21:00Z
+  basis: "S-0278's like tasks took 526 s for its sync test with the fix and 224 s to close its issue, so one test reusing its helpers, one close, and the close-out make 15m, over flai's 4m from size 2; delivery is flai's from 21st in the pull order."
+  by: planner-S-0315
+  at: 2026-10-07T23:44:33Z
 ---
 # S-0315 design/issues/summary.md is generated and committed, so a story branch that records an issue conflicts with any issue recorded on main meanwhile
 
@@ -51,7 +62,28 @@ S-0278 built the first direction ([ADR-0098](../adrs/0098-flai-stream-sync-and-f
 - [ ] I-0089 is closed with `flai issue close I-0089 --reason` saying what fixed it
 
 ## Tasks
+- T-1293 A test reproduces I-0089: an issue recorded and one closed on main itself while a story branch records its own, and the sync and the acceptance regenerate design/issues/summary.md
+- T-1294 Close I-0089 saying what fixed it
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0089. time_lost_per_cycle 3m: 3m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-06T10:32:27Z, 1.4 days before this story; under one cycle counts as one).
+
+### Planning
+
+The fix is already on main. S-0278 was accepted at 2026-10-06T20:07Z, after I-0089's only instance (S-0220, 06:07Z and 07:03Z that day). Its regeneration of `summary.md` on a rebase stop ([ADR-0098](../../../design/adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md)) covers I-0089's case too. Its tests reach main only through another story's acceptance, though. So this story adds a test of I-0089's own case (T-1293), then closes the issue (T-1294). It builds no new mechanism. If the test fails, the story's agent adds a fix task in `flai/internal/storygit/sync.go`.
+
+Touches, file by file, none a folder:
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/cmd/stream_sync_test.go` | layout | S-0278's tests of the regeneration are here, with the helpers T-1293 reuses. `flai touches suggest` from it and the summary lists issue files and docs, which this story does not change. |
+| `design/issues/I-0089-…md` | design | Criterion 2 closes it. |
+| `design/issues/summary.md` | design | `flai issue close` regenerates it. |
+
+`design/issues` is in the manifest's `claims.shared`, so the two issue paths hold no story. `flai/cmd/stream_sync_test.go` is also in S-0297's touches (backlog). Whichever of the two is pulled second is held until the first is accepted.
+
+Figures:
+
+- **Forecast: 15m, up from flai's 4m.** flai sized it from 2 criteria and no touches, at 94 s per unit. S-0278's like tasks took longer: T-1012 (its sync test and fix) 526 s, and T-1015 (closing its issue) 224 s. One test reusing its helpers, one close, and the close-out come to about 15m. The delivery stays flai's, 2026-10-08T06:21:00Z. It comes from the story's 21st place in the pull order, which 11 more minutes do not move.
+- **Cost of delay: 7.50 USD a week, as `flai cod` gives it.** That is 3m lost per 168h cycle at 150 USD an hour, from flai's input. It stands. Since S-0278, the conflict costs nothing new; what is left is an open issue with no test of its own case.

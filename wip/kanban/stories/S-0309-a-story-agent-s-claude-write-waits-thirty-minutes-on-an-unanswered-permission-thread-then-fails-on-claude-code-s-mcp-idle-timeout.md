@@ -6,9 +6,11 @@ title: A story agent's .claude/ write waits thirty minutes on an unanswered perm
 status: backlog
 owner: alex
 created: 2026-10-07T06:48:44Z
-updated: 2026-10-07T06:48:44Z
+updated: 2026-10-07T23:28:00Z
 transitions: []
 tags: []
+topics: [cli, agents]
+touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, docs/users/flai.md, design/system/flai-cli.md, design/adrs, design/adrs/README.md, design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -19,22 +21,47 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 296
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 178
+          output: 32
+          cache_read: 1205366
+          cache_write: 89708
+          cost: 0.2551
+        - model: claude-opus-5-5
+          input: 58
+          output: 463
+          cache_read: 2537009
+          cache_write: 106840
+          cost: 1.0999
     - kind: orchestrator
-      seconds: 3
+      seconds: 312
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 0
-          output: 10
-          cache_read: 40633
-          cache_write: 302
-          cost: 0.0105
+          input: 34
+          output: 568
+          cache_read: 5760268
+          cache_write: 12008
+          cost: 1.4227
 draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
     by: flai
     at: 2026-10-07T06:48:44Z
+  value: 75
+  by: planner-S-0309
+  at: 2026-10-07T23:28:00Z
+forecast:
+  duration: 35m
+  delivery: 2026-10-08T05:45:00Z
+  basis: "flai forecast's 17m (78 s per unit over 47 large improvement stories, size 13) raised to 35m from the comparable permission stories S-0299 (31m) and S-0257 (36m): this one adds an ADR, retry logic with tests, the start prompt, and two documents; delivery is flai's 05:25Z plus the 18m added"
+  by: planner-S-0309
+  at: 2026-10-07T23:28:00Z
 ---
 # S-0309 A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout
 
@@ -47,7 +74,37 @@ This story remediates [I-0103](../../../design/issues/I-0103-a-story-agent-s-cla
 - [ ] I-0103 is closed with `flai issue close I-0103 --reason` saying what fixed it
 
 ## Tasks
+- T-1274 Record the remedy for I-0103 in an ADR refining ADR-0086 and ADR-0097
+- T-1275 permission_prompt bounds its wait, keeps an unanswered thread open, and takes its answer on the retry
+- T-1276 The start prompt and delegation.md tell the agent to retry a protected write after its thread is answered
+- T-1277 Document permission_prompt's bounded wait and retry in the user guide and the CLI design
+- T-1278 Close I-0103 with what fixed it
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0103. time_lost_per_cycle 30m: 30m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-07T04:55:43Z, 0.1 days before this story; under one cycle counts as one).
+
+### Planning
+
+Touches, and where each came from:
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/mcpserver/permission.go` | layout | `askOperator` and `awaitAnswer` hold the call with no bound and settle the thread as refused when it ends |
+| `flai/internal/mcpserver/permission_test.go` | co-change | changed in 5 of 5 commits with `permission.go`; the test that reproduces I-0103 goes here |
+| `flai/internal/harness/harness.go` | layout | the start prompt's `.flai-cache/` and `cp` workaround for the thirty-minute wait |
+| `flai/internal/harness/harness_test.go` | layout | checks the prompt's wording on that workaround |
+| `design/conventions/delegation.md` | design | its project additions carry the same workaround |
+| `docs/users/flai.md` | design | § Writes to paths Claude Code protects says the agent waits until you answer |
+| `design/system/flai-cli.md` | design | the `flai mcp` row describes `permission_prompt` |
+| `design/adrs/` | design | the new ADR refining ADR-0086 and ADR-0097; its number and slug are unknown until written |
+| `design/adrs/README.md` | design | the ADR index |
+| `design/issues/I-0103-…md`, `design/issues/summary.md` | criteria | written by `flai issue close` |
+
+`flai touches suggest S-0309` declared nothing, so it ran from `permission.go`; `folder.go` (2 of 5 commits) was left out because the fix does not change how a folder server finds the project.
+
+The one folder touch kept is `design/adrs/`, because the ADR's file name is not known until it is written. The template's `delegation.md` lacks the workaround text, so it is not touched. `wait_for_events`' `endWhy` in `flai/internal/mcpserver/server.go` already counts an open permission thread as the agent's own question, so `server.go` is not touched.
+
+Forecast: flai gave 17m. It is raised to 35m from S-0299 (31m) and S-0257 (36m), the permission stories closest in scope: this one adds an ADR, the bounded wait and the retry with tests, the prompt, and two documents. Delivery moves by the 18m added, to 2026-10-08T05:45Z.
+
+Cost of delay: 75 USD a week as `flai cod` computes it from the operator's input (30m lost per 168h cycle at 150 USD an hour). It stands: one instance so far, but every protected write made while the operator is away hits it.
