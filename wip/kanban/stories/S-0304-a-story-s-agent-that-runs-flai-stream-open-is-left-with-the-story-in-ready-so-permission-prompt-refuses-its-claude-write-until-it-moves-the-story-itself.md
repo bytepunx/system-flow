@@ -6,7 +6,7 @@ title: A story's agent that runs flai stream open is left with the story in read
 status: backlog
 owner: alex
 created: 2026-10-07T01:07:09Z
-updated: 2026-10-07T01:07:09Z
+updated: 2026-10-07T02:18:11Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
     by: flai
     at: 2026-10-07T01:07:09Z
+finalized:
+  by: alex
+  at: 2026-10-07T02:18:11Z
 ---
 # S-0304 A story's agent that runs flai stream open is left with the story in ready, so permission_prompt refuses its .claude/ write until it moves the story itself
 
