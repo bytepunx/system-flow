@@ -6,7 +6,7 @@ title: The acceptance's commit step fails when another process holds git's index
 status: backlog
 owner: alex
 created: 2026-10-07T01:07:13Z
-updated: 2026-10-07T01:07:13Z
+updated: 2026-10-07T01:10:39Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
     by: flai
     at: 2026-10-07T01:07:13Z
+finalized:
+  by: alex
+  at: 2026-10-07T01:10:39Z
 ---
 # S-0307 The acceptance's commit step fails when another process holds git's index lock, and the acceptance cannot then be finished by flai
 
