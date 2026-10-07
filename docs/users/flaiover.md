@@ -249,7 +249,7 @@ The same settings are changed in a shell with `flai manifest set` ([Changing the
 
 ## Charts
 
-Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in two groups: flow, and usage. Pick a window, and the controls the chart offers: an item type, an epic, and on the usage charts over time what a bar or a point covers (an hour, a day, or a week). Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
+Charts plots the flow metrics `flai stats` computes, so the numbers are the same in both places. The charts are listed in three groups: flow, usage, and planning. Pick a window, and the controls the chart offers: an item type, an epic, on the usage charts over time and Forecast Error / Model what a bar or a point covers (an hour, a day, or a week), and on the planning charts a nature and a model. Every chart has a table view under it and follows the light or dark theme. The window sets what each chart shows: its time axis runs from the start of the window to now, and the charts of items and their tables list only the items completed in the window. The window you pick last is kept in this browser, so every chart opens at it, after a reload or a visit to another page too.
 
 | Chart | Shows |
 |-------|-------|
@@ -267,6 +267,9 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | $ / Item | What each item completed in the window cost, stacked by model; an asterisk marks an item whose cost is estimated in part. What the planner spent on an item is stacked on top as its own series, strategic, estimated, and apart from the item's total. An item only the planner spent on shows that alone |
 | Avg. Time / Model | The minutes of agent work an item of the chosen type took on average, over time, one line per model |
 | Avg. Cost / Model | What an item of the chosen type cost on average, over time, one line per model |
+| Forecast Accuracy | One point per story done in the window with a forecast: how much longer or shorter it took than forecast. Triangles show the same against your estimate, where a story has one. The p50 and p85 lines sit either side of zero |
+| Delivery Accuracy | One point per story done in the window with a forecast delivery date: how many days after that date it was done, early below zero, with the p50 and p85 lines. A line on the right-hand axis shows the share delivered on time each week |
+| Forecast Error / Model | How far forecasts were off, over time, one line per model: the p50 of the forecast errors of the stories each model's agents did in each hour, day, or week |
 
 The usage charts read what agents spent on each item: its tokens and cost, which flai records from the logs of the agents `flai serve` starts (see [Tokens and cost](flai.md#tokens-and-cost)). Each model keeps its colour and its mark on every chart. Until items carry usage, they say so and how to fill in stories worked before. An item's page shows its usage, per model, beside its other fields.
 
@@ -284,6 +287,18 @@ Every usage chart but $ / Item lays what was spent out over time.
 The table view lists each hour, day, or week in which items were done, newest first, with every number the charts draw.
 
 These charts need a flai on the host as new as the dashboard. With an older one they say so: upgrade it with `flai self-upgrade`.
+
+### Planning
+
+The planning charts compare the planner's forecasts, and your estimates, with what happened. They show stories that are done; a cancelled story is left out.
+
+- **A positive error is late.** On Forecast Accuracy a point above zero took longer than its forecast duration, and one below took less. On Delivery Accuracy a point above zero was done after its forecast date, and one below was early.
+- **The p50 and p85 lines.** Half the errors fall between the two p50 lines, and 85% between the two p85 lines. The closer together the lines, the better the forecasts. With no filter or one, they are the figures `flai stats --json` gives; with both, they are worked out from the points shown.
+- **The on-time share.** On Delivery Accuracy, each week's point on the right-hand axis is the share of that week's stories with a forecast date that were done on or before it. A week with no such story has no point, and the line breaks there; it does not drop to 0. Weeks start on Monday, UTC.
+- **Filters.** Narrow a chart to one nature or one model. A story's model is its agent's model; a story without one is listed as `(none)`. Forecast Error / Model shows every model, so it offers only the nature.
+- **Which stories appear.** Only stories with a forecast. The planner sets one when it plans a story, or set it yourself with `flai edit <story> --forecast-duration 6h --forecast-delivery 2026-10-09T17:00:00Z` ([Drafts, cost of delay, and forecasts](flai.md#drafts-cost-of-delay-and-forecasts)). Until a story done in the window has one, the chart says so.
+
+The strip above the chart gives how many stories had a forecast, and the p50 and p85 of the forecast and delivery errors. The table view lists each story, newest first: when it was completed, its nature and model, its forecast, how long it took, and its forecast, delivery, and estimate errors.
 
 ## Docs
 
