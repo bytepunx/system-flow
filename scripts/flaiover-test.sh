@@ -7,6 +7,8 @@ if [ ! -x "$ROOT/bin/flai" ] || [ -n "$(find "$ROOT/flai" -name '*.go' -newer "$
   "$ROOT/scripts/flai-build.sh" >&2
 fi
 export FLAI_BIN="$ROOT/bin/flai"
+# none of the steps runs without flaiover's dependencies: install them when missing or stale
+"$ROOT/scripts/flaiover-install.sh" --if-needed
 cd "$ROOT/flaiover"
 echo "prettier + eslint"; pnpm lint
 echo "svelte-check"; pnpm check
