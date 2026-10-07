@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 topics: [cli, conventions]
 ---
@@ -219,6 +219,8 @@ An agent `flai serve` starts with `claude-code` worked its whole story in one co
 |------|------|-------|-------------|
 | `explore` | Searches and reads code, design, and logs; returns what it found, with paths and lines | `Read`, `Grep`, `Glob`; flai's `prime`, `doc_get`, `doc_search`, `item_get`, `thread_get`, `board`, `who_touches` | `prime --role explore` |
 | `verify` | Reads the diff, runs the tests, lint, and `flai check`; returns what fails against the criteria and the conventions | The explorer's, and `Bash` to run them | `prime --role verify` |
+
+As built since S-0270, [ADR-0110](../adrs/0110-a-story-s-agent-runs-the-close-out-which-runs-flai-verify-itself-before-review.md) refines ADR-0059's hand-off: the verifier no longer runs the suite, the lint, `flai check`, or the close-out before review. The story's agent runs the close-out itself; the close-out runs `flai verify S-nnnn --record-issues`, and the agent reads its last line and the failing step's findings and fixes them. The verifier reviews the diff against the acceptance criteria and the conventions, only when the diff is too large to read in the agent's own context, and reads the run's result with `flai verify S-nnnn --last` rather than running it. Under `accept_reviews` the orchestrator reads or runs `flai verify` at the branch's head and hands its verifier the result. The table and the measurements below describe the verifier as ADR-0059 built it.
 
 The template ships them as `.claude/agents/explorer.md` and `verifier.md`. Their `tools` is an allowlist, so neither has `item_move`, `item_edit`, `item_new`, `inbox`, `wait_for_work`, `wait_for_events`, `thread_open`, `thread_reply`, or `thread_resolve`, nor `Edit` or `Write`.
 

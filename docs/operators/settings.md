@@ -304,11 +304,12 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--json` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--keep-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--keep-placed` | [flai order](../users/flai-reference.md#flai-order) |
+| `--last` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
 | `--limit` | [flai doc search](../users/flai-reference.md#flai-doc-search), [flai promote](../users/flai-reference.md#flai-promote), [flai touches suggest](../users/flai-reference.md#flai-touches-suggest) |
 | `--log` | [flai task done](../users/flai-reference.md#flai-task-done) |
-| `--max` | [flai test](../users/flai-reference.md#flai-test) |
+| `--max` | [flai test](../users/flai-reference.md#flai-test), [flai verify](../users/flai-reference.md#flai-verify) |
 | `--max-sessions` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |
 | `--message` | [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |
 | `-m`, `--message` | [flai task done](../users/flai-reference.md#flai-task-done) |
@@ -339,7 +340,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--pull` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--reason` | [flai block](../users/flai-reference.md#flai-block), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai move](../users/flai-reference.md#flai-move), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
 | `--recommend` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |
-| `--record-issues` | [flai check](../users/flai-reference.md#flai-check) |
+| `--record-issues` | [flai check](../users/flai-reference.md#flai-check), [flai verify](../users/flai-reference.md#flai-verify) |
 | `--ref` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new), [flai template push](../users/flai-reference.md#flai-template-push), [flai template show](../users/flai-reference.md#flai-template-show), [flai template use](../users/flai-reference.md#flai-template-use), [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--refines` | [flai adr new](../users/flai-reference.md#flai-adr-new) |
 | `--relock` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |

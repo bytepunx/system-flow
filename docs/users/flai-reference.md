@@ -61,6 +61,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [touches](#flai-touches) | Set what a story or task is working on; flai check warns on overlap |
 | [unblock](#flai-unblock) | Close the open blocked interval on an item |
 | [upgrade](#flai-upgrade) | Bring this project to the latest template version |
+| [verify](#flai-verify) | Run a story's close-out steps and the tiers its branch selects, in its worktree, and answer one result |
 | [version](#flai-version) | Print version, commit, and build date |
 
 ## flai
@@ -131,6 +132,7 @@ Subcommands:
 - [touches](#flai-touches): Set what a story or task is working on; flai check warns on overlap
 - [unblock](#flai-unblock): Close the open blocked interval on an item
 - [upgrade](#flai-upgrade): Bring this project to the latest template version
+- [verify](#flai-verify): Run a story's close-out steps and the tiers its branch selects, in its worktree, and answer one result
 - [version](#flai-version): Print version, commit, and build date
 
 ### flai accept
@@ -3387,6 +3389,51 @@ Flags:
 | `--replace-all` | replace every conflicting project file with the template's |
 | `--template` string | template git URL or local directory (default: the manifest's template.repo) |
 | `--var` stringArray | set a template variable the manifest does not hold, name=value (repeatable); recorded in the lock |
+
+### flai verify
+
+Run a story's close-out steps and the tiers its branch selects, in its worktree, and answer one result.
+
+```text
+flai verify <story> [flags]
+```
+
+Verify a story before it goes to review, in its worktree under .flai-cache/worktrees, from any checkout of the project. The steps run in order, cheapest first, and the run stops at the first that fails; the steps after it are not reached:
+
+```text
+rebase     no rebase is left unfinished in the worktree
+sync       the story's branch contains the main branch
+narrative  the narrative's Current state and Next steps are written
+check      flai check --strict, scoped to the story, passes
+<tier>     each test and lint tier of the worktree's system-flow.yaml that
+           what the branch changed against the main branch selects, run
+           with CLOSE_OUT_STORY set to the story
+```
+
+flai verify commits nothing. The answer is a line for each step, its state and duration, the failing step's first findings under it, at most --max across the run, then the check's findings outside the story, which are notes that do not fail it, and last a line as the close-out ends: "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at &lt;step&gt; (&lt;exit status or state&gt;)". With --json the answer is the report, with the story, the commit and base it was verified at, when it ran, how long it took, passed, stopped\_at, the paths the branch changed, and each step's state, duration, and findings, and the notes.
+
+Each run's report is stored in the project's .flai-cache/verify, whether it passes or not; --last prints the story's stored report and runs nothing, or says there is none (null with --json), and exits 0 whatever it holds.
+
+--record-issues records the notes in design/issues of the story's worktree, as flai check --story --record-issues does: each rule's notes in the open issue whose title names the rule, once per story and notes. The close-out commits them with the story.
+
+The exit status is 0 when every step passed, 1 when a step failed, and 2 when flai verify could not answer: the story has no worktree, the manifest's tiers are not valid, the notes could not be recorded, or the run was stopped before it finished.
+
+Examples:
+
+```bash
+flai verify S-0270
+flai verify S-0270 --json
+flai verify S-0270 --record-issues
+flai verify S-0270 --last --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--last` | print the story's stored last result and run nothing |
+| `--max` int | the most findings to report across the run (default `5`) |
+| `--record-issues` | record the check's findings outside the story in design/issues of its worktree, once per story and findings |
 
 ### flai version
 
