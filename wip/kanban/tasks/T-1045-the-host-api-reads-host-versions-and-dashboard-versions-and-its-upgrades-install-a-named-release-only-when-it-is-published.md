@@ -3,12 +3,18 @@ id: T-1045
 type: task
 nature: improvement
 title: The host API reads host.versions and dashboard.versions, and its upgrades install a named release only when it is published
-status: backlog
+status: in-progress
 parent: S-0298
 owner: alex
 created: 2026-10-06T21:45:25Z
-updated: 2026-10-06T21:45:40Z
-transitions: []
+updated: 2026-10-07T15:00:26Z
+transitions:
+  - to: ready
+    at: 2026-10-07T15:00:26Z
+    by: agent-S-0298
+  - to: in-progress
+    at: 2026-10-07T15:00:26Z
+    by: agent-S-0298
 stream: S-0298
 tags: [cli, dashboard]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]

@@ -17,6 +17,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 4
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 0
+          output: 1
+          cache_read: 133363
+          cache_write: 347
+          cost: 0.0349
 ---
 # S-0232 The release key signs flai's checksums.txt in CI and both components carry the public key
 

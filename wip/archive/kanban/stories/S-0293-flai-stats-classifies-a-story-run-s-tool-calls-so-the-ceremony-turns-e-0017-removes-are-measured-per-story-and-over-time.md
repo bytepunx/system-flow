@@ -3,11 +3,11 @@ id: S-0293
 type: story
 nature: improvement
 title: flai stats classifies a story run's tool calls, so the ceremony turns E-0017 removes are measured per story and over time
-status: in-progress
+status: done
 parent: E-0017
 owner: alex
 created: 2026-10-06T11:37:08Z
-updated: 2026-10-07T14:56:24Z
+updated: 2026-10-07T15:03:53Z
 transitions:
   - to: ready
     at: 2026-10-07T09:19:04Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-07T09:22:20Z
     by: system-flow
+  - to: review
+    at: 2026-10-07T15:03:06Z
+    by: agent-S-0293
+  - to: done
+    at: 2026-10-07T15:03:53Z
+    by: orchestrator
 tags: [cli, metrics]
 topics: [automation, conventions]
 touches: [flai/internal/usage/log.go, flai/internal/usage/usage.go, flai/internal/usage/log_test.go, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, design/system/metrics.md, design/adrs, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/usage/turns.go, flai/internal/usage/turns_test.go, flai/internal/usage/usage_test.go, flai/internal/workitem/fields_test.go, flai/internal/workitem/front-matter-fields.txt, flai/internal/workitem/store_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/metrics/metrics.go, flai/internal/metrics/turns.go, flai/internal/metrics/turns_test.go, design/system/work-hierarchy.md]
@@ -25,14 +31,14 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1854
+  seconds: 2215
   models:
     - model: claude-opus-5-5
-      input: 302
-      output: 141907
-      cache_read: 20133649
-      cache_write: 597302
-      cost: 10.7537
+      input: 364
+      output: 151484
+      cache_read: 30171700
+      cache_write: 939315
+      cost: 15.6892
   strategic:
     - kind: orchestrator
       seconds: 752
@@ -121,3 +127,15 @@ Where the figures differ by more than ten percent, the epic counted something ot
 - Empty wakes: 650 is exactly the number of `wait_for_events` calls of the story agents in those logs, so the epic counted every wait. ADR-0105 counts a wake empty only when it timed out with no events, no changed paths, and no end: 211 calls, 197 turns. The other 439 woke on a change, usually another story's.
 - Hand edits: of the 431, 288 are Python scripts that rewrite a narrative's `## Current state` and `## Next steps` or a story's criteria, and 35 are `sed -i`. The epic's 253 is closer to the Edit and Write calls and `sed -i` alone.
 - Test runs: matching test tools anywhere in a command's text, as a one-off search does, finds about 290 more, which explains the epic's higher figure; but those commands name `make test` or `go test` in a heredoc or a quoted string (a task body, a narrative, a commit message) and run nothing. Of the rest, 47 are close-outs and 11 are `flai test`, which are the commands that replace hand runs.
+
+### Accepted by the orchestrator
+
+- Verified: d483224102818da8bb8f18a75d3d7818f2c5675b
+- At: 2026-10-07T15:03:53Z
+
+Verdict: Pass. All four criteria are met and ticked, with ADR-0116 behind the metrics.md change, verified at d483224102818da8bb8f18a75d3d7818f2c5675b.
+
+- 1: flai/cmd/stats.go, flai/internal/metrics/turns.go, flai/internal/metrics/metrics.go, flai/internal/usage/turns.go, flai/internal/usage/log.go, flai/internal/usage/usage.go, flai/internal/workitem/usage.go, flai/internal/workitem/front-matter-fields.txt
+- 2: design/system/metrics.md, design/adrs/0116-when-flai-measures-a-story-s-usage-from-its-logs-it-classifies-each-turn-of-the.md, design/adrs/README.md, design/system/work-hierarchy.md
+- 3: flai/internal/usage/turns.go, flai/internal/usage/turns_test.go
+- 4: design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md

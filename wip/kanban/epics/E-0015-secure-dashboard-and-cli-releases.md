@@ -44,6 +44,17 @@ usage:
       cache_read: 566139
       cache_write: 128752
       cost: 0.5753
+  strategic:
+    - kind: orchestrator
+      seconds: 4
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 0
+          output: 1
+          cache_read: 133363
+          cache_write: 347
+          cost: 0.0349
 ---
 # E-0015 Secure Dashboard and CLI Releases
 

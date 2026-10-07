@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 11296
-      cache_read: 1602715
-      cache_write: 47548
-      cost: 0.856
+      input: 19
+      output: 7994
+      cache_read: 1592184
+      cache_write: 49568
+      cost: 0.8279
 ---
 # T-1158 flai stats reports the story agents' turns per class, per story and per day of the window, as text and --json
 

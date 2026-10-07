@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 55
-      output: 25949
-      cache_read: 3681573
-      cache_write: 109221
-      cost: 1.9664
+      input: 44
+      output: 18363
+      cache_read: 3657383
+      cache_write: 113863
+      cost: 1.9018
 ---
 # T-1159 metrics.md defines the turn classes with an ADR, and the CLI design and the user guide describe the report
 

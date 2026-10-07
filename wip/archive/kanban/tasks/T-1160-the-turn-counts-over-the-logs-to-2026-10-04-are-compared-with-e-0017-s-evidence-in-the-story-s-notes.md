@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 20479
-      cache_read: 2905493
-      cache_write: 86197
-      cost: 1.5519
+      input: 35
+      output: 14492
+      cache_read: 2886402
+      cache_write: 89860
+      cost: 1.5009
 ---
 # T-1160 The turn counts over the logs to 2026-10-04 are compared with E-0017's evidence in the story's notes
 

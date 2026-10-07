@@ -32,7 +32,7 @@ usage:
       output: 577
       cache_read: 4937606
       cache_write: 155408
-      cost: 2.3083
+      cost: 2.3065
 ---
 # T-1040 flai self-upgrade --list and flai dashboard versions list the published releases, marking the running and the newest
 

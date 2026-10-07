@@ -32,7 +32,7 @@ usage:
       output: 374
       cache_read: 2971654
       cache_write: 109959
-      cost: 1.3967
+      cost: 1.3956
 ---
 # T-1041 The MCP read tool versions lists the published flai and dashboard releases
 

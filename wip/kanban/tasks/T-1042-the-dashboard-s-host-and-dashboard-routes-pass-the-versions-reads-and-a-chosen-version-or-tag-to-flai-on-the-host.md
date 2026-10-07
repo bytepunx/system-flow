@@ -32,7 +32,7 @@ usage:
       output: 356
       cache_read: 2990803
       cache_write: 88192
-      cost: 1.3955
+      cost: 1.3944
 ---
 # T-1042 The dashboard's host and dashboard routes pass the versions reads and a chosen version or tag to flai on the host
 

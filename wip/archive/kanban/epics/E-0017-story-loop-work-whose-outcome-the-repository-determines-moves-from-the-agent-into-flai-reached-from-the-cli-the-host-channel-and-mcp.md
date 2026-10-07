@@ -3,10 +3,10 @@ id: E-0017
 type: epic
 nature: improvement
 title: Story-loop work whose outcome the repository determines moves from the agent into flai, reached from the CLI, the host channel, and MCP
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-05T01:35:27Z
-updated: 2026-10-06T23:51:15Z
+updated: 2026-10-07T15:03:53Z
 transitions:
   - to: ready
     at: 2026-10-06T22:47:57Z
@@ -14,19 +14,25 @@ transitions:
   - to: in-progress
     at: 2026-10-06T23:51:15Z
     by: agent-S-0273
+  - to: review
+    at: 2026-10-07T15:03:06Z
+    by: agent-S-0293
+  - to: done
+    at: 2026-10-07T15:03:53Z
+    by: orchestrator
 tags: [cli, mcp]
 topics: [automation, mcp, hostapi]
 touches: [flai, design/conventions, template]
 usage:
   source: sum
-  seconds: 25890
+  seconds: 26251
   models:
     - model: claude-opus-5-5
-      input: 4900
-      output: 1934229
-      cache_read: 282711272
-      cache_write: 8455578
-      cost: 145.2897
+      input: 4962
+      output: 1943806
+      cache_read: 292749323
+      cache_write: 8797591
+      cost: 150.2252
     - model: claude-sonnet-5-5
       input: 164
       output: 37493
@@ -85,3 +91,5 @@ Drafted with the epic; finalize and order them on the board. Not in the epic bec
 Found by the operator's review of the S-0248 agent log and a classification of every main-agent tool call in the logs under `~/.flai/serve/agents/` on 2026-10-04.
 - 2026-10-06T22:47:57Z: moved to ready: follows S-0269, which moved to ready
 - 2026-10-06T23:51:15Z: moved to in-progress: follows S-0273, which moved to in-progress
+- 2026-10-07T15:03:06Z: moved to review: follows S-0293, which moved to review
+- 2026-10-07T15:03:53Z: moved to done: follows S-0293, which moved to done

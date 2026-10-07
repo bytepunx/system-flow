@@ -31,7 +31,7 @@ usage:
       output: 292
       cache_read: 1960000
       cache_write: 80170
-      cost: 0.9247
+      cost: 0.924
 ---
 # T-1039 selfupgrade lists the published releases for a tag prefix, newest first
 

@@ -24,15 +24,15 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1522
+  seconds: 2060
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 474
-      output: 2578
-      cache_read: 23310819
-      cache_write: 841358
-      cost: 10.9466
+      input: 554
+      output: 2985
+      cache_read: 28629506
+      cache_write: 993280
+      cost: 13.4152
   strategic:
     - kind: orchestrator
       seconds: 298

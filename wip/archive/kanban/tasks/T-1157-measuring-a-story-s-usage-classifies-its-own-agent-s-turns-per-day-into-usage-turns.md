@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 65
-      output: 30380
-      cache_read: 4310255
-      cache_write: 127872
-      cost: 2.3022
+      input: 52
+      output: 21498
+      cache_read: 4281934
+      cache_write: 133307
+      cost: 2.2266
 ---
 # T-1157 Measuring a story's usage classifies its own agent's turns per day into usage.turns
 

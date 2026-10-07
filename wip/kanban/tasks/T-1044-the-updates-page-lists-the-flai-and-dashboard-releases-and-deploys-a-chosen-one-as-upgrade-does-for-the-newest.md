@@ -24,7 +24,7 @@ touches: [flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/compone
 after: [T-1042]
 usage:
   source: log
-  seconds: 482
+  seconds: 483
   estimated: true
   models:
     - model: claude-opus-5-5
@@ -32,7 +32,7 @@ usage:
       output: 320
       cache_read: 3700190
       cache_write: 128918
-      cost: 1.7354
+      cost: 1.734
 ---
 # T-1044 The Updates page lists the flai and dashboard releases and deploys a chosen one, as Upgrade does for the newest
 

@@ -31,7 +31,7 @@ usage:
       output: 403
       cache_read: 3944311
       cache_write: 146706
-      cost: 1.8542
+      cost: 1.8527
 ---
 # T-1038 Record in an ADR and the design that a host action may install a named published release, and name the versions commands
 
