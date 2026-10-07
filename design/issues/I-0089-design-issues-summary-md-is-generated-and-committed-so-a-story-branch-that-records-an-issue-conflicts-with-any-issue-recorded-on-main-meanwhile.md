@@ -2,12 +2,12 @@
 id: I-0089
 title: design/issues/summary.md is generated and committed, so a story branch that records an issue conflicts with any issue recorded on main meanwhile
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 3m
 first_reported: 2026-10-06T10:32:27Z
 last_reported: 2026-10-06T10:32:27Z
-updated: 2026-10-07T18:59:45Z
+updated: 2026-10-07T23:57:27Z
 ---
 
 # I-0089 design/issues/summary.md is generated and committed, so a story branch that records an issue conflicts with any issue recorded on main meanwhile
@@ -29,3 +29,4 @@ Directions to weigh: `flai stream sync` and `flai accept` regenerate `summary.md
 S-0278 built the first direction ([ADR-0098](../adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md)) for I-0074, which has the same cause. The operator chooses at its acceptance whether that closes this issue too.
 
 Story S-0315 remediates this issue, created from it at 2026-10-07T18:59:45Z.
+Closed 2026-10-07T23:57:27Z: Fixed by S-0278's regeneration of design/issues/summary.md when a rebase stops on it alone (ADR-0098), which flai stream sync and flai accept both run. S-0315 adds TestSyncAndAcceptRegenerateTheIssueSummaryChangedOnMainItself in flai/cmd/stream_sync_test.go, which records an issue on a story's branch while main records one and closes another itself, then syncs and accepts the story cleanly; it fails with the regeneration left out.
