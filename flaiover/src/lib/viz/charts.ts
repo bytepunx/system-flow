@@ -741,10 +741,7 @@ function buckets(r: Report, bucket: BucketSize, at: number[]): Opt {
 		return { min: floorTo(w.start, bucket) - size / 2, max: floorTo(w.end, bucket) + size / 2 };
 	return at.length > 0 ? { min: Math.min(...at) - size, max: Math.max(...at) + size } : {};
 }
-/**
- * What the charts over time share: buckets are UTC, so the axis is; it spans the window as
- * `buckets` has it, and its ticks are no finer than a bucket.
- */
+/** The axes of a chart of flai's spend buckets, in the report's bucket. */
 function overTime(
 	t: Theme,
 	r: Report,
@@ -754,23 +751,43 @@ function overTime(
 	per: string
 ) {
 	const bucket = bucketSize(r);
-	const size = BUCKET_MS[bucket];
-	const range = buckets(
+	return bucketAxes(
+		t,
 		r,
 		bucket,
-		series.flatMap((s) => s.data.map((d) => Date.parse(d.value[0])))
+		series.flatMap((s) => s.data.map((d) => Date.parse(d.value[0]))),
+		series.length > 1,
+		name,
+		say,
+		hover(bucket, say, per)
 	);
+}
+/**
+ * What the charts over time share: buckets are UTC, so the axis is; it spans the window as
+ * `buckets` has it, or the moments `at` drawn without one, and its ticks are no finer than a
+ * bucket.
+ */
+function bucketAxes(
+	t: Theme,
+	r: Report,
+	bucket: BucketSize,
+	at: number[],
+	several: boolean,
+	name: string,
+	say: (v: number) => string,
+	formatter: unknown
+) {
 	return {
 		useUTC: true,
 		// room for the legend above the axis name, which a legend of four would run into
 		grid: { left: 64, right: 24, top: 64, bottom: 48, containLabel: false },
-		legend: marks(t, series.length > 1),
+		legend: marks(t, several),
 		tooltip: tooltip(t, {
 			trigger: 'axis',
 			axisPointer: { type: 'line', lineStyle: { color: t.textSecondary, width: 1 } },
-			formatter: hover(bucket, say, per)
+			formatter
 		}),
-		xAxis: axisX(t, { type: 'time', minInterval: size, ...range }),
+		xAxis: axisX(t, { type: 'time', minInterval: BUCKET_MS[bucket], ...buckets(r, bucket, at) }),
 		yAxis: axisY(t, {
 			type: 'value',
 			name,
@@ -1334,13 +1351,109 @@ export function deliveryAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 		series
 	});
 }
-/** An empty chart over the report's window. */
-function blank(r: Report, t: Theme): Opt {
-	return base(t, {
-		xAxis: axisX(t, { type: 'time', ...span(r) }),
-		yAxis: axisY(t, { type: 'value' }),
-		series: []
+/**
+ * A model's p50 absolute forecast error in a bucket, at its start, over the stories done in it;
+ * null, a gap in the line, for a bucket without any.
+ */
+type ModelBucket = { value: [number, number | null]; count: number };
+/** The starts of the buckets from the one holding the window's start to the one holding now. */
+function bucketStarts(w: { start: number; end: number }, bucket: BucketSize): number[] {
+	const at: number[] = [];
+	for (let b = floorTo(w.start, bucket); b <= w.end; b += BUCKET_MS[bucket]) at.push(b);
+	return at;
+}
+/**
+ * Forecast error per model (S-0212): one line per model, with a point per bucket of the report's
+ * size in which stories of that model with a forecast were done in the window, at the p50 of their
+ * absolute forecast error as flai works it out; a bucket without any is a gap, not 0. Narrowed by
+ * nature only: the chart shows every model, each in its fixed colour and mark.
+ */
+export function forecastByModel(r: Report, t: Theme, f: ErrorFilter = {}): Opt {
+	const bucket = bucketSize(r);
+	const byModel = new Map<string, Map<number, number[]>>();
+	for (const i of doneIn(r)) {
+		const e = i.forecast_error_seconds;
+		if (e === undefined || !passes(i, { nature: f.nature })) continue;
+		const at = floorTo(Date.parse(i.completed!), bucket);
+		const of = byModel.get(modelOf(i)) ?? new Map<number, number[]>();
+		of.set(at, [...(of.get(at) ?? []), e]);
+		byModel.set(modelOf(i), of);
+	}
+	const w = windowOf(r);
+	const drawn = [...byModel.values()].flatMap((of) => [...of.keys()]);
+	const starts = w ? bucketStarts(w, bucket) : [...new Set(drawn)].sort((a, b) => a - b);
+	const series = [...byModel.keys()].sort().map((m) => {
+		const of = byModel.get(m)!;
+		const data = starts.map((at): ModelBucket => {
+			const errors = of.get(at) ?? [];
+			return { value: [at, spreadOf(errors).p50_seconds ?? null], count: errors.length };
+		});
+		// a point between two gaps is drawn by its mark alone, so every mark shows
+		return { ...line(t, m, modelColor(t, m), modelSymbol(m), []), showSymbol: true, data };
 	});
+	const noun = (n: number) => (n === 1 ? r.type : plural(r.type));
+	const tip = (ps: { marker?: string; seriesName: string; data: ModelBucket }[]) => {
+		const list = ps.filter((p) => p?.data && p.data.value[1] !== null);
+		if (list.length === 0) return '';
+		const lines = list.map((p) => {
+			const n = p.data.count;
+			return `${p.marker ?? ''}${p.seriesName}: p50 ${human(p.data.value[1]!)} over ${n} ${noun(n)}`;
+		});
+		const at = new Date(list[0].data.value[0]).toISOString();
+		return `${bucketLabel(at, bucket)}<br/>${lines.join('<br/>')}`;
+	};
+	return base(t, {
+		...bucketAxes(
+			t,
+			r,
+			bucket,
+			starts,
+			series.length > 1,
+			'p50 absolute forecast error',
+			human,
+			tip
+		),
+		series
+	});
+}
+/** One story of a planning chart's table: its forecast, its cycle time, and its errors. */
+export type ForecastRow = {
+	id: string;
+	title: string;
+	completed: string;
+	nature: string;
+	model: string;
+	forecast_seconds?: number;
+	cycle_time_seconds?: number;
+	forecast_error_seconds?: number;
+	delivery_error_seconds?: number;
+	estimate_error_seconds?: number;
+};
+const ERROR_FIELDS: readonly ErrorField[] = [
+	'forecast_error_seconds',
+	'delivery_error_seconds',
+	'estimate_error_seconds'
+];
+/**
+ * The rows of a planning chart's table: the stories done in the window with a forecast, delivery,
+ * or estimate error, of the filter's nature and model, newest first.
+ */
+export function forecastRows(report: Report, f: ErrorFilter = {}): ForecastRow[] {
+	return doneIn(normalise(report))
+		.filter((i) => passes(i, f) && ERROR_FIELDS.some((e) => i[e] !== undefined))
+		.sort((a, b) => Date.parse(b.completed!) - Date.parse(a.completed!))
+		.map((i) => ({
+			id: i.id,
+			title: i.title,
+			completed: i.completed!,
+			nature: i.nature,
+			model: modelOf(i),
+			forecast_seconds: i.forecast_seconds,
+			cycle_time_seconds: i.cycle_time_seconds,
+			forecast_error_seconds: i.forecast_error_seconds,
+			delivery_error_seconds: i.delivery_error_seconds,
+			estimate_error_seconds: i.estimate_error_seconds
+		}));
 }
 
 /** A chart's ECharts option: the planning charts narrowed by the filter, the others by the epic. */
@@ -1386,6 +1499,6 @@ export function build(
 		case 'delivery-accuracy':
 			return deliveryAccuracy(r, t, filter);
 		case 'forecast-by-model':
-			return blank(r, t);
+			return forecastByModel(r, t, filter);
 	}
 }

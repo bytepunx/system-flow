@@ -18,6 +18,8 @@ import {
 	doneIn,
 	errorFacets,
 	forecastAccuracy,
+	forecastByModel,
+	forecastRows,
 	human,
 	humanSigned,
 	KINDS,
@@ -304,15 +306,20 @@ const dark = theme(true);
 describe('chart builders', () => {
 	it('every kind builds with one y-axis and a tooltip', () => {
 		for (const k of KINDS) {
-			const o = build(k, report, light) as { yAxis: unknown; tooltip: unknown; series: unknown[] };
+			// the fixture carries no forecasts: the planning charts draw from their own
+			const planning = (PLANNING_KINDS as readonly string[]).includes(k);
+			const o = build(k, planning ? forecasting : report, light) as {
+				yAxis: unknown;
+				tooltip: unknown;
+				series: unknown[];
+			};
 			expect(o.yAxis, k).toBeDefined();
 			// delivery accuracy alone draws its share on time on a second axis
 			if (k === 'delivery-accuracy') expect((o.yAxis as unknown[]).length).toBe(2);
 			else expect(Array.isArray(o.yAxis), `${k} must not use two y-axes`).toBe(false);
 			expect(o.tooltip, k).toBeDefined();
-			// the fixture carries no forecasts: the planning charts have their own
-			if (!(PLANNING_KINDS as readonly string[]).includes(k))
-				expect(o.series.length, k).toBeGreaterThan(0);
+			// whose stories carry no delivery errors: delivery accuracy has its own fixture below
+			if (k !== 'delivery-accuracy') expect(o.series.length, k).toBeGreaterThan(0);
 		}
 	});
 	it("every chart spans the report's window and plots only the items completed in it (S-0166)", () => {
@@ -1069,13 +1076,21 @@ describe('planning charts', () => {
 	it('draws an empty planning chart from a report without forecasts or errors', () => {
 		// the main fixture, as an older flai sends it
 		expect(report.forecasts).toBeUndefined();
+		// the chart by the bucket runs from the day that holds the start to the one that holds now,
+		// half a day either side
+		const spans = {
+			'forecast-accuracy': ['2026-08-02T12:00:00Z', '2026-09-01T12:00:00Z', 0],
+			'delivery-accuracy': ['2026-08-02T12:00:00Z', '2026-09-01T12:00:00Z', 0],
+			'forecast-by-model': ['2026-08-02T00:00:00Z', '2026-09-01T00:00:00Z', 43200e3]
+		} as const;
 		for (const kind of PLANNING_KINDS) {
 			const o = build(kind, report, light) as Accuracy;
+			const [from, to, half] = spans[kind];
 			expect(o.series, kind).toEqual([]);
 			expect(o.xAxis, kind).toMatchObject({
 				type: 'time',
-				min: Date.parse('2026-08-02T12:00:00Z'),
-				max: Date.parse('2026-09-01T12:00:00Z')
+				min: Date.parse(from) - half,
+				max: Date.parse(to) + half
 			});
 		}
 		// errors without the spreads: points, but no lines
@@ -1314,5 +1329,254 @@ describe('planning charts', () => {
 		expect(delivery({}, nulls).series).toEqual([]);
 		expect(onTimeShare(nulls).map((w) => w.count)).toEqual([0, 0, 0, 0, 0, 0]);
 		expect(onTimeShare({ ...delivering, window_start: '' })).toEqual([]);
+	});
+
+	// The stories of `forecasting` and two more by opus in the week of 17 August, laid out by the
+	// week: opus has three stories that week, S-103 (-3h) and S-110 (20m) on 20 August, and S-111
+	// (-4000s) on 21 August.
+	type ModelPoint = { value: [number, number | null]; count: number };
+	type ByModel = {
+		useUTC: boolean;
+		legend: { show: boolean };
+		xAxis: { type: string; min?: number; max?: number; minInterval?: number };
+		yAxis: { name: string; axisLabel: { formatter: (v: number) => string } };
+		tooltip: {
+			trigger: string;
+			formatter: (ps: { marker?: string; seriesName: string; data: ModelPoint }[]) => string;
+		};
+		series: {
+			name: string;
+			type: string;
+			symbol: string;
+			showSymbol: boolean;
+			itemStyle: { color: string };
+			lineStyle: { color: string };
+			data: ModelPoint[];
+		}[];
+	};
+	const inBuckets = (bucket: 'hour' | 'day' | 'week', r: Report = forecasting): Report => ({
+		...r,
+		usage: { ...r.usage!, bucket },
+		items: [
+			...r.items,
+			story('S-110', 'feature', '2026-08-20T12:00:00Z', { forecast_error_seconds: 1200 }),
+			story('S-111', 'improvement', '2026-08-21T00:00:00Z', { forecast_error_seconds: -4000 })
+		]
+	});
+	const weekly = inBuckets('week');
+	const byModel = (r: Report, f: ErrorFilter = {}) =>
+		build('forecast-by-model', r, light, undefined, f) as ByModel;
+	const seriesOf = (o: ByModel, model: string) => o.series.find((s) => s.name === model)!;
+	/** A model's points, the gaps left out: the bucket's day, the p50, and the stories under it. */
+	const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+	const drawn = (o: ByModel, model: string) => {
+		const points = seriesOf(o, model).data.filter((d) => d.value[1] !== null);
+		return points.map((d) => [dayOf(d.value[0]), d.value[1], d.count]);
+	};
+
+	it('forecast by model plots the p50 absolute forecast error per bucket per model', () => {
+		const o = forecastByModel(weekly, light) as ByModel;
+		// a line per model in order of name; S-104, from a flai that sends no model, is (none)
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['(none)', 'line'],
+			[haiku, 'line'],
+			[opus, 'line']
+		]);
+		// nearest rank of the absolute errors, as flai: 1200, 4000, 10800 has 4000 for its p50
+		expect(drawn(o, opus)).toEqual([
+			['2026-08-03', 7200, 1],
+			['2026-08-17', 4000, 3],
+			['2026-08-24', 600, 1]
+		]);
+		expect(drawn(o, haiku)).toEqual([['2026-08-10', 1800, 1]]);
+		expect(drawn(o, '(none)')).toEqual([['2026-08-24', 3600, 1]]);
+		// every week of the window has a place on each line; a week without the model's stories is a
+		// gap, not 0
+		expect(seriesOf(o, opus).data.map((d) => d.value[1])).toEqual([
+			null,
+			7200,
+			null,
+			4000,
+			600,
+			null
+		]);
+		expect(seriesOf(o, opus).data[0]).toEqual({
+			value: [Date.parse('2026-07-27'), null],
+			count: 0
+		});
+		// each model in its fixed colour and mark, every mark shown
+		for (const m of [opus, haiku, '(none)']) {
+			const s = seriesOf(o, m);
+			expect(s.itemStyle.color, m).toBe(light.series[modelSlot(m)]);
+			expect(s.lineStyle.color, m).toBe(light.series[modelSlot(m)]);
+			expect(s.symbol, m).toBe(modelSymbol(m));
+			expect(s.showSymbol, m).toBe(true);
+		}
+		expect(o.legend.show).toBe(true);
+		expect(o.yAxis.name).toBe('p50 absolute forecast error');
+		expect(o.yAxis.axisLabel.formatter(7200)).toBe('2h');
+		// the tooltip names the bucket and each model with a point in it
+		const week = 3;
+		const tip = o.tooltip.formatter([
+			{ marker: '', seriesName: opus, data: seriesOf(o, opus).data[week] },
+			{ marker: '', seriesName: haiku, data: seriesOf(o, haiku).data[week] }
+		]);
+		expect(tip).toBe(`week of 2026-08-17<br/>${opus}: p50 1.1h over 3 stories`);
+		expect(o.tooltip.formatter([{ seriesName: opus, data: seriesOf(o, opus).data[0] }])).toBe('');
+		expect(o.tooltip.trigger).toBe('axis');
+		expect(byModel(weekly).series).toEqual(o.series);
+	});
+	it('forecast by model takes its bucket from the report, as the spend charts do', () => {
+		// by the day, S-103 and S-110 share 20 August: 1200 and 10800 has 1200 for its p50
+		const o = byModel(inBuckets('day'));
+		expect(drawn(o, opus)).toEqual([
+			['2026-08-03', 7200, 1],
+			['2026-08-20', 1200, 2],
+			['2026-08-21', 4000, 1],
+			['2026-08-28', 600, 1]
+		]);
+		// a day per place, 2 August to 1 September
+		expect(seriesOf(o, opus).data.length).toBe(31);
+		expect(o.tooltip.formatter([{ seriesName: haiku, data: seriesOf(o, haiku).data[10] }])).toBe(
+			`2026-08-12<br/>${haiku}: p50 30m over 1 story`
+		);
+		// a report from a flai that names no bucket is by the day
+		const daily = inBuckets('day');
+		const unnamed = { ...daily, usage: { ...daily.usage!, bucket: undefined } };
+		expect(byModel(unnamed).series).toEqual(o.series);
+	});
+	it("forecast by model spans the report's window in its buckets (ADR-0054)", () => {
+		const hour = 3600e3;
+		// from the bucket that holds the window's start to the one that holds now, half a bucket
+		// either side, with ticks no finer than a bucket, in UTC
+		const w = byModel(weekly);
+		expect(w.useUTC).toBe(true);
+		expect(w.xAxis).toMatchObject({
+			type: 'time',
+			minInterval: 168 * hour,
+			min: Date.parse('2026-07-27T00:00:00Z') - 84 * hour,
+			max: Date.parse('2026-08-31T00:00:00Z') + 84 * hour
+		});
+		expect(byModel(inBuckets('day')).xAxis).toMatchObject({
+			minInterval: 24 * hour,
+			min: Date.parse('2026-08-02T00:00:00Z') - 12 * hour,
+			max: Date.parse('2026-09-01T00:00:00Z') + 12 * hour
+		});
+		const hourly = byModel(inBuckets('hour'));
+		expect(hourly.xAxis).toMatchObject({
+			minInterval: hour,
+			min: Date.parse('2026-08-02T12:00:00Z') - hour / 2,
+			max: Date.parse('2026-09-01T12:00:00Z') + hour / 2
+		});
+		expect(drawn(hourly, opus).length).toBe(5);
+		// a narrower window moves the axis and drops S-101, done on 3 August
+		const narrow = byModel({ ...weekly, window_start: '2026-08-10T00:00:00Z' });
+		expect(narrow.xAxis.min).toBe(Date.parse('2026-08-10T00:00:00Z') - 84 * hour);
+		expect(seriesOf(narrow, opus).data.map((d) => d.value[1])).toEqual([null, 4000, 600, null]);
+		// a report without a window has a place per bucket drawn, a bucket either side; S-106, done
+		// before the window, comes back
+		const open = byModel({ ...weekly, window_start: '' });
+		expect(drawn(open, opus)[0]).toEqual(['2026-07-20', 99999, 1]);
+		expect(seriesOf(open, haiku).data.length).toBe(5);
+		expect(open.xAxis).toMatchObject({
+			min: Date.parse('2026-07-20T00:00:00Z') - 168 * hour,
+			max: Date.parse('2026-08-24T00:00:00Z') + 168 * hour
+		});
+	});
+	it('forecast by model narrows by nature and shows every model whatever the model filter', () => {
+		const feature = byModel(weekly, { nature: 'feature' });
+		// S-102, haiku's only story, is an improvement
+		expect(feature.series.map((s) => s.name)).toEqual(['(none)', opus]);
+		expect(drawn(feature, opus)).toEqual([
+			['2026-08-03', 7200, 1],
+			['2026-08-17', 1200, 2]
+		]);
+		expect(byModel(weekly, { model: haiku }).series).toEqual(byModel(weekly).series);
+		expect(byModel(weekly, { nature: 'feature', model: haiku }).series).toEqual(feature.series);
+		expect(byModel(weekly, { nature: 'research' }).series).toEqual([]);
+		const nulls = { ...weekly, items: null } as unknown as Report;
+		expect(byModel(nulls).series).toEqual([]);
+	});
+	it("forecast by model over a single bucket agrees with flai's p50 per model", () => {
+		// the stories of `forecasting` moved into the week of 24 August, the window that week alone
+		const moved: Record<string, string> = {
+			'S-101': '2026-08-24T12:00:00Z',
+			'S-102': '2026-08-25T09:30:00Z',
+			'S-103': '2026-08-26T00:00:00Z',
+			'S-104': '2026-08-27T06:00:00Z',
+			'S-105': '2026-08-28T00:00:00Z',
+			'S-107': '2026-08-26T00:00:00Z'
+		};
+		const oneWeek: Report = {
+			...forecasting,
+			window_start: '2026-08-24T00:00:00Z',
+			generated_at: '2026-08-30T12:00:00Z',
+			usage: { ...forecasting.usage!, bucket: 'week' },
+			items: forecasting.items.map((i) => (i.id in moved ? { ...i, completed: moved[i.id] } : i))
+		};
+		const o = byModel(oneWeek);
+		const flai = forecasting.forecasts!.forecast.by_model;
+		expect(o.series.map((s) => s.name)).toEqual(Object.keys(flai).sort());
+		for (const [m, s] of Object.entries(flai))
+			expect(seriesOf(o, m).data, m).toEqual([
+				{ value: [Date.parse('2026-08-24T00:00:00Z'), s.p50_seconds], count: s.count }
+			]);
+	});
+	it('gives the rows of the planning table: the stories done in the window with an error', () => {
+		// newest first; S-107 has no error, S-106 is done before the window, S-108 is cancelled
+		expect(forecastRows(forecasting).map((row) => row.id)).toEqual([
+			'S-105',
+			'S-104',
+			'S-103',
+			'S-102',
+			'S-101'
+		]);
+		const rows = forecastRows(delivering);
+		expect(rows.find((row) => row.id === 'S-101')).toEqual({
+			id: 'S-101',
+			title: 'Story 101',
+			completed: '2026-08-03T12:00:00Z',
+			nature: 'feature',
+			model: opus,
+			forecast_seconds: 7200,
+			forecast_error_seconds: 7200,
+			delivery_error_seconds: -86400,
+			estimate_error_seconds: -3600
+		});
+		expect(rows.find((row) => row.id === 'S-104')).toMatchObject({
+			model: '(none)',
+			forecast_error_seconds: 3600,
+			delivery_error_seconds: 172800,
+			estimate_error_seconds: 900
+		});
+		// a story with a delivery error alone is a row; its cycle time comes with it
+		const late = {
+			...forecasting,
+			items: forecasting.items.map((i) =>
+				i.id === 'S-107' ? { ...i, delivery_error_seconds: 0, cycle_time_seconds: 86400 } : i
+			)
+		};
+		const s107 = forecastRows(late).find((row) => row.id === 'S-107');
+		expect(s107).toMatchObject({ delivery_error_seconds: 0, cycle_time_seconds: 86400 });
+		expect(forecastRows(late).map((row) => row.id)).toEqual([
+			'S-105',
+			'S-104',
+			'S-103',
+			'S-107',
+			'S-102',
+			'S-101'
+		]);
+		// under the filter, nature and model
+		expect(forecastRows(forecasting, { nature: 'feature' }).map((row) => row.id)).toEqual([
+			'S-104',
+			'S-103',
+			'S-101'
+		]);
+		expect(forecastRows(forecasting, { nature: 'improvement', model: opus })).toEqual([
+			expect.objectContaining({ id: 'S-105' })
+		]);
+		expect(forecastRows(forecasting, { model: '(none)' }).map((row) => row.id)).toEqual(['S-104']);
+		// null lists from an older flai
+		expect(forecastRows({ ...forecasting, items: null } as unknown as Report)).toEqual([]);
 	});
 });
