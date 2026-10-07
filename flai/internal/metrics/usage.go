@@ -31,14 +31,17 @@ type ModelSpend struct {
 // ItemUsage is what agents spent on one item, and apart from that what
 // strategic agents spent on it.
 type ItemUsage struct {
-	Source          string       `json:"source"`
-	Tokens          int64        `json:"tokens"`
-	Cost            float64      `json:"cost"`
-	Seconds         int64        `json:"seconds"`
-	TokensPerMinute *float64     `json:"tokens_per_minute,omitempty"`
-	TokensPerHour   *float64     `json:"tokens_per_hour,omitempty"`
-	Estimated       bool         `json:"estimated,omitempty"`
-	Models          []ModelSpend `json:"models"`
+	Source          string   `json:"source"`
+	Tokens          int64    `json:"tokens"`
+	Cost            float64  `json:"cost"`
+	Seconds         int64    `json:"seconds"`
+	TokensPerMinute *float64 `json:"tokens_per_minute,omitempty"`
+	TokensPerHour   *float64 `json:"tokens_per_hour,omitempty"`
+	Estimated       bool     `json:"estimated,omitempty"`
+	// EmptyWakes is the item's usage's empty wakes, 0 when it has none
+	// (S-0272, ADR-0105).
+	EmptyWakes int          `json:"empty_wakes"`
+	Models     []ModelSpend `json:"models"`
 	// Strategic is what each kind of strategic agent spent on it, never
 	// added to the agents' figures above (ADR-0083).
 	Strategic []ItemStrategic `json:"strategic"`
@@ -151,7 +154,7 @@ func itemUsage(u *usage.Usage) *ItemUsage {
 	if u.Nothing() {
 		return nil
 	}
-	out := &ItemUsage{Source: u.Source, Tokens: u.Tokens(), Cost: u.Cost(), Seconds: u.Seconds, Estimated: u.Estimated, Models: []ModelSpend{}, Strategic: []ItemStrategic{}}
+	out := &ItemUsage{Source: u.Source, Tokens: u.Tokens(), Cost: u.Cost(), Seconds: u.Seconds, Estimated: u.Estimated, EmptyWakes: u.EmptyWakes, Models: []ModelSpend{}, Strategic: []ItemStrategic{}}
 	out.TokensPerMinute, out.TokensPerHour = perMinute(out.Tokens, u.Seconds), perHour(out.Tokens, u.Seconds)
 	for _, m := range u.Models {
 		out.Models = append(out.Models, ModelSpend{Model: m.Model, Tokens: m.Tokens(), Cost: m.Cost,

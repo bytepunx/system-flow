@@ -58,6 +58,10 @@ type Usage struct {
 	// Estimated says some of the cost was not reported by the harness but
 	// estimated or apportioned.
 	Estimated bool `yaml:"estimated,omitempty" json:"estimated,omitempty"`
+	// EmptyWakes counts the wait_for_events calls of the item's agents that
+	// timed out with nothing to report (S-0272, ADR-0105): measured on a
+	// story from its agents' logs, summed on an epic, none on a task.
+	EmptyWakes int `yaml:"empty_wakes,omitempty" json:"empty_wakes,omitempty"`
 	// Models are what each model spent, in order of name.
 	Models []Model `yaml:"models" json:"models"`
 	// Strategic is what strategic agents spent on the item, one entry per
@@ -125,7 +129,8 @@ func (u *Usage) Clone() *Usage {
 // Split is u in n shares that add up to it, in order: its seconds and each
 // model's tokens in whole numbers, the remainder going to the first shares,
 // and each model's cost over n (ADR-0095). Each share keeps u's source and
-// estimate and leaves its Strategic out; n below one gives none.
+// estimate and leaves its Strategic and its empty wakes out, since a call is
+// not apportioned (ADR-0105); n below one gives none.
 func (u *Usage) Split(n int) []*Usage {
 	if u == nil || n < 1 {
 		return nil
@@ -234,12 +239,14 @@ func (u *Usage) AddStrategic(kind string, o *Usage) {
 	u.tidyStrategic()
 }
 
-// Add adds o to u, model by model; o's Strategic is left out.
+// Add adds o to u, model by model, and its empty wakes; o's Strategic is
+// left out.
 func (u *Usage) Add(o *Usage) {
 	if o == nil {
 		return
 	}
 	u.Seconds += o.Seconds
+	u.EmptyWakes += o.EmptyWakes
 	u.Estimated = u.Estimated || o.Estimated
 	for _, m := range o.Models {
 		u.addModel(m)
@@ -351,7 +358,7 @@ func Same(a, b *Usage) bool {
 	if a.Empty() || b.Empty() {
 		return a.Empty() && b.Empty()
 	}
-	return a.Source == b.Source && a.Seconds == b.Seconds && a.Estimated == b.Estimated && slices.Equal(a.Models, b.Models)
+	return a.Source == b.Source && a.Seconds == b.Seconds && a.Estimated == b.Estimated && a.EmptyWakes == b.EmptyWakes && slices.Equal(a.Models, b.Models)
 }
 
 // Summary says in a line what was spent: tokens, cost, time, and where the

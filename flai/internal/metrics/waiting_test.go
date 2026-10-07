@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -155,13 +156,72 @@ func TestWaitingByTheWeek(t *testing.T) {
 	}
 	none := `"orchestrator":{"count":0,"total_seconds":0},"confirmed":{"count":0,"total_seconds":0}`
 	want := `{"weeks":[` +
-		`{"week":"2026-W34","start":"2026-08-17","items":0,"threads":{"total_seconds":0,` + none + `},"review":{"total_seconds":0}},` +
-		`{"week":"2026-W35","start":"2026-08-24","items":6,` +
+		`{"week":"2026-W34","start":"2026-08-17","items":0,"empty_wakes":0,"threads":{"total_seconds":0,` + none + `},"review":{"total_seconds":0}},` +
+		`{"week":"2026-W35","start":"2026-08-24","items":6,"empty_wakes":0,` +
 		`"threads":{"total_seconds":36000,"mean_seconds":6000,` + none + `},"review":{"total_seconds":32400,"mean_seconds":5400}},` +
-		`{"week":"2026-W36","start":"2026-08-31","items":2,` +
-		`"threads":{"total_seconds":7200,"mean_seconds":3600,` + none + `},"review":{"total_seconds":0,"mean_seconds":0}}]}`
+		`{"week":"2026-W36","start":"2026-08-31","items":2,"empty_wakes":0,` +
+		`"threads":{"total_seconds":7200,"mean_seconds":3600,` + none + `},"review":{"total_seconds":0,"mean_seconds":0}}],"empty_wakes":{"count":0}}`
 	if string(data) != want {
 		t.Errorf("waiting =\n%s\nwant\n%s", data, want)
+	}
+}
+
+// S-0272, ADR-0105: the empty wakes of the items done in the window are
+// summed over it and per week, cancelled items and those done before the
+// window or not done left out, and their mean is over those of them that
+// carry agents' usage; each item reports its own, 0 when its usage has none.
+func TestEmptyWakesAreSummedOverTheItemsDoneInTheWindow(t *testing.T) {
+	items := waitItems()
+	measured := func(wakes int) *usage.Usage {
+		return &usage.Usage{Source: usage.SourceLog, Seconds: 60, EmptyWakes: wakes, Models: []usage.Model{{Model: "m", Input: 1}}}
+	}
+	planned := &usage.Usage{Source: usage.SourceSum, Models: []usage.Model{}}
+	planned.AddStrategic("planner", measured(0))
+	for _, it := range items {
+		switch it.ID {
+		case "S-0001": // done in W35
+			it.Usage = measured(3)
+		case "S-0003": // done in W35, with usage and no empty wakes
+			it.Usage = measured(0)
+		case "S-0007": // done in W36
+			it.Usage = measured(2)
+		case "S-0008": // done in W35, only strategic agents spent on it
+			it.Usage = planned
+		case "S-0010", "S-0013", "S-0005": // cancelled, done before the window, in progress
+			it.Usage = measured(40)
+		}
+	}
+	rep := Compute(items, Options{Now: now, Since: tenDays, Threads: waitThreads()})
+	w := rep.Waiting
+	if w.EmptyWakes.Count != 5 || w.EmptyWakes.Mean == nil || !near(*w.EmptyWakes.Mean, 5.0/3) {
+		t.Errorf("empty wakes = %+v, want 5 over the 3 items with agents' usage", w.EmptyWakes)
+	}
+	if got := []int{w.Weeks[0].EmptyWakes, w.Weeks[1].EmptyWakes, w.Weeks[2].EmptyWakes}; got[0] != 0 || got[1] != 3 || got[2] != 2 {
+		t.Errorf("weeks' empty wakes = %v, want 0, 3, 2", got)
+	}
+	for _, m := range rep.Items {
+		switch m.ID {
+		case "S-0001":
+			if m.Usage == nil || m.Usage.EmptyWakes != 3 {
+				t.Errorf("S-0001 usage = %+v, want 3 empty wakes", m.Usage)
+			}
+		case "S-0003":
+			data, _ := json.Marshal(m.Usage)
+			if !strings.Contains(string(data), `"empty_wakes":0`) {
+				t.Errorf("S-0003 usage json lacks empty_wakes 0: %s", data)
+			}
+		case "S-0009":
+			if m.Usage != nil {
+				t.Errorf("S-0009 carries no usage and reports %+v", m.Usage)
+			}
+		}
+	}
+	data, err := json.Marshal(w.EmptyWakes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(data), `{"count":5,"mean":1.666`) {
+		t.Errorf("waiting.empty_wakes = %s", data)
 	}
 }
 
@@ -255,7 +315,7 @@ func TestWaitsTheOrchestratorEndedAreCountedApart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	week := `{"week":"2026-W35","start":"2026-08-24","items":2,` +
+	week := `{"week":"2026-W35","start":"2026-08-24","items":2,"empty_wakes":0,` +
 		`"threads":{"total_seconds":43200,"mean_seconds":21600,` +
 		`"orchestrator":{"count":2,"total_seconds":5400},"confirmed":{"count":1,"total_seconds":10800}},` +
 		`"review":{"total_seconds":0,"mean_seconds":0}}`

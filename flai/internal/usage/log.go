@@ -36,6 +36,13 @@ import (
 // of the sub-agents started for it, wherever they fall in time, and an even
 // share, among the tasks in progress at the time, of every other call made
 // while it was in progress. It is marked estimated.
+//
+// A story's empty wakes (S-0272, ADR-0105) are counted as the logs are read:
+// each call to the flai MCP tool wait_for_events by the session's own agent,
+// a tool_use without parent_tool_use_id, is paired by its ID with its
+// tool_result, and counted when that result is not an error and reports
+// timed_out with no events, no changed paths, and no end. A call whose result
+// is not in the logs is not counted.
 
 // Rates are dollars per token for each model, from what logs reported.
 type Rates map[string]float64
@@ -75,7 +82,15 @@ type Record struct {
 	reported map[string]map[string]Model
 	// started are the sub-agents' starts, by the ID of their tool_use.
 	started map[string]start
+	// waits are the session's own agent's wait_for_events calls whose result
+	// has not been read yet, by the ID of their tool_use.
+	waits map[string]bool
+	// emptyWakes counts those calls whose result was an empty wake.
+	emptyWakes int
 }
+
+// waitTool is the name Claude Code gives the flai MCP tool wait_for_events.
+const waitTool = "mcp__flai__wait_for_events"
 
 // start is what started a sub-agent: its Agent call's description and
 // prompt, or, when the call was not seen, the description its calls carry.
@@ -86,7 +101,7 @@ type start struct {
 // Read reads the logs, oldest run first. A log that is missing is skipped:
 // flai serve may not have written it yet.
 func Read(paths ...string) (*Record, error) {
-	rec := &Record{reported: map[string]map[string]Model{}, started: map[string]start{}}
+	rec := &Record{reported: map[string]map[string]Model{}, started: map[string]start{}, waits: map[string]bool{}}
 	byID := map[string]int{} // message id to its index in calls
 	for _, p := range paths {
 		if err := rec.read(p, byID); err != nil {
@@ -122,6 +137,10 @@ type line struct {
 				Description string `json:"description"`
 				Prompt      string `json:"prompt"`
 			} `json:"input"`
+			// ToolUseID and IsError are a tool_result's: the tool_use it
+			// answers, and whether the call failed.
+			ToolUseID string `json:"tool_use_id"`
+			IsError   bool   `json:"is_error"`
 		} `json:"content"`
 		Usage *struct {
 			Input      int64 `json:"input_tokens"`
@@ -179,7 +198,10 @@ func (rec *Record) read(path string, byID map[string]int) error {
 					model = e.Model
 				case e.Type == "assistant":
 					rec.addStarts(e)
+					rec.addWaits(e)
 					rec.addCall(e, byID)
+				case e.Type == "user":
+					rec.addWakes(e, raw)
 				case e.Type == "result":
 					run.Result = e.Result
 					rec.addResult(e, model)
@@ -223,6 +245,89 @@ func (rec *Record) addStarts(e line) {
 			rec.started[p] = start{description: e.TaskDescription}
 		}
 	}
+}
+
+// addWaits records the wait_for_events calls the session's own agent makes
+// in an event; a sub-agent's are left out.
+func (rec *Record) addWaits(e line) {
+	if e.Message == nil || e.ParentToolUseID != "" {
+		return
+	}
+	for _, b := range e.Message.Content {
+		if b.Type == "tool_use" && b.Name == waitTool && b.ID != "" {
+			rec.waits[b.ID] = true
+		}
+	}
+}
+
+// addWakes pairs the tool_results of an event with the wait_for_events
+// calls waiting for them, and counts those that were empty wakes. Only a
+// result that answers such a call has its content decoded, from raw.
+func (rec *Record) addWakes(e line, raw []byte) {
+	if e.Message == nil || len(rec.waits) == 0 {
+		return
+	}
+	for _, b := range e.Message.Content {
+		if b.Type != "tool_result" || !rec.waits[b.ToolUseID] {
+			continue
+		}
+		delete(rec.waits, b.ToolUseID)
+		if !b.IsError && emptyWake(raw, b.ToolUseID) {
+			rec.emptyWakes++
+		}
+	}
+}
+
+// emptyWake says the tool_result for id in the event raw reports that the
+// wait timed out with no events, no changed paths, and no end. Its content
+// is the tool's JSON as a string, or in a list of text blocks.
+func emptyWake(raw []byte, id string) bool {
+	var e struct {
+		Message struct {
+			Content []struct {
+				Type      string          `json:"type"`
+				ToolUseID string          `json:"tool_use_id"`
+				Content   json.RawMessage `json:"content"`
+			} `json:"content"`
+		} `json:"message"`
+	}
+	if json.Unmarshal(raw, &e) != nil {
+		return false
+	}
+	for _, b := range e.Message.Content {
+		if b.Type != "tool_result" || b.ToolUseID != id {
+			continue
+		}
+		var texts []string
+		var text string
+		var blocks []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		}
+		switch {
+		case json.Unmarshal(b.Content, &text) == nil:
+			texts = []string{text}
+		case json.Unmarshal(b.Content, &blocks) == nil:
+			for _, t := range blocks {
+				if t.Type == "text" {
+					texts = append(texts, t.Text)
+				}
+			}
+		}
+		for _, t := range texts {
+			var r struct {
+				TimedOut bool              `json:"timed_out"`
+				Events   []json.RawMessage `json:"events"`
+				Changed  []json.RawMessage `json:"changed"`
+				End      bool              `json:"end"`
+			}
+			if json.Unmarshal([]byte(t), &r) == nil {
+				return r.TimedOut && len(r.Events) == 0 && len(r.Changed) == 0 && !r.End
+			}
+		}
+		return false
+	}
+	return false
 }
 
 func (rec *Record) addCall(e line, byID map[string]int) {
@@ -295,9 +400,10 @@ func (r Rates) Merge(o Rates) Rates {
 	return out
 }
 
-// Total is everything the record says was spent, with SourceLog; nil when it
-// says nothing. What no result reported is priced at rates, or at the
-// record's own when rates has none for its model.
+// Total is everything the record says was spent, with SourceLog, and the
+// empty wakes its logs hold; nil when it says nothing. What no result
+// reported is priced at rates, or at the record's own when rates has none
+// for its model.
 func (rec *Record) Total(rates Rates) *Usage {
 	rates = rec.Rates().Merge(rates)
 	u := &Usage{Source: SourceLog}
@@ -315,6 +421,7 @@ func (rec *Record) Total(rates Rates) *Usage {
 	for _, run := range rec.Runs {
 		u.Seconds += int64(run.End.Sub(run.Start).Seconds())
 	}
+	u.EmptyWakes = rec.emptyWakes
 	if u.Empty() {
 		return nil
 	}

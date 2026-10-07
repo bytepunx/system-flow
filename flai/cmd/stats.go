@@ -32,7 +32,8 @@ spent on epics, on stories, and on tasks over time, one point per --bucket
 scripts. A bucket of an hour needs a window of 31 days or less. It also
 carries forecasts (forecast, delivery, and estimate error), cost_of_delay
 (outstanding per column and incurred, by the day and week), waiting (on
-threads and in review, by the week), claims (in progress by the day against
+threads and in review, by the week, and the story agents' empty wakes,
+ADR-0105), claims (in progress by the day against
 the limit, and each story's touches against the files its commits changed),
 and strategic_days (the strategic agents' cost and time beside delivery).
 What strategic agents spent on items is reported apart from what agents did,
@@ -168,7 +169,8 @@ func printCostOfDelay(a *app, rep *metrics.Report) {
 }
 
 // printWaiting prints how long the agents of the items completed in the
-// window waited on threads and in review, in all and per item (S-0205).
+// window waited on threads and in review, in all and per item (S-0205), and
+// their empty wakes (S-0272).
 func printWaiting(a *app, w metrics.Waiting) {
 	var items int
 	var threads, review float64
@@ -183,6 +185,12 @@ func printWaiting(a *app, w metrics.Waiting) {
 	fmt.Fprintf(a.out, "\nwaiting, over %d completed:\n", items)
 	fmt.Fprintf(a.out, "  %-12s total %s · mean %s\n", "on threads", metrics.Human(threads), metrics.Human(threads/float64(items)))
 	fmt.Fprintf(a.out, "  %-12s total %s · mean %s\n", "in review", metrics.Human(review), metrics.Human(review/float64(items)))
+	// the empty wakes of their agents (S-0272, ADR-0105)
+	line := fmt.Sprintf("  %-12s total %d", "empty wakes", w.EmptyWakes.Count)
+	if w.EmptyWakes.Mean != nil {
+		line += fmt.Sprintf(" · mean %.1f per item with usage", *w.EmptyWakes.Mean)
+	}
+	fmt.Fprintln(a.out, line)
 }
 
 // printClaims prints the time the stories completed in the window were held

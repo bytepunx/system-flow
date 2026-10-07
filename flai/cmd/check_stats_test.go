@@ -171,6 +171,29 @@ func TestStatsPrintsStrategicUsageApart(t *testing.T) {
 	}
 }
 
+// S-0272, ADR-0105: the waiting section ends with the empty wakes, their
+// mean left out when no item completed carries agents' usage.
+func TestStatsPrintsTheEmptyWakes(t *testing.T) {
+	var out bytes.Buffer
+	a := &app{out: &out}
+	mean := 1.5
+	week := metrics.WaitWeek{Items: 8, Threads: metrics.ThreadWaitTotal{WaitTotal: metrics.WaitTotal{Total: 3600}}, Review: metrics.WaitTotal{Total: 7200}}
+	printWaiting(a, metrics.Waiting{EmptyWakes: metrics.EmptyWakes{Count: 12, Mean: &mean}, Weeks: []metrics.WaitWeek{week}})
+	if want := "  empty wakes  total 12 · mean 1.5 per item with usage\n"; !strings.HasSuffix(out.String(), want) {
+		t.Errorf("printed:\n%s\nwant it to end with:\n%s", out.String(), want)
+	}
+	out.Reset()
+	printWaiting(a, metrics.Waiting{Weeks: []metrics.WaitWeek{week}})
+	if want := "  in review    total 2h · mean 15m\n  empty wakes  total 0\n"; !strings.HasSuffix(out.String(), want) {
+		t.Errorf("printed:\n%s\nwant it to end with:\n%s", out.String(), want)
+	}
+	out.Reset()
+	printWaiting(a, metrics.Waiting{EmptyWakes: metrics.EmptyWakes{Count: 3}, Weeks: []metrics.WaitWeek{{}}})
+	if out.Len() != 0 {
+		t.Errorf("nothing completed printed %q", out.String())
+	}
+}
+
 // ADR-0079: flai stats prints each strategic agent's totals from its
 // activity document, --json carries them and the window's log entries under
 // strategic, and an unreadable document stops stats as an unreadable item
@@ -365,6 +388,8 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 		workitem.Review, "2026-10-01T06:00:00Z", workitem.Done, "2026-10-01T10:00:00Z")
 	done.Forecast = &workitem.Forecast{Duration: "24h", Delivery: "2026-10-01T00:00:00Z"}
 	done.Estimate = "50h"
+	// its agents woke to nothing four times (S-0272)
+	done.Usage = &usage.Usage{Source: usage.SourceLog, Seconds: 3600, EmptyWakes: 4, Models: []usage.Model{{Model: "claude-opus-5-5", Input: 10, Cost: 1}}}
 	waiting := story("Waiting", 50, "2026-09-30T09:00:00Z", workitem.Ready, "2026-09-30T12:00:00Z")
 	for _, it := range []*workitem.Item{done, waiting} {
 		if err := repo.Save(it); err != nil {
@@ -397,6 +422,41 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 			t.Errorf("--json lacks %s", key)
 		}
 	}
+	var wakes struct {
+		Waiting struct {
+			EmptyWakes struct {
+				Count int      `json:"count"`
+				Mean  *float64 `json:"mean"`
+			} `json:"empty_wakes"`
+			Weeks []struct {
+				EmptyWakes int `json:"empty_wakes"`
+			} `json:"weeks"`
+		} `json:"waiting"`
+		Items []struct {
+			ID    string `json:"id"`
+			Usage struct {
+				EmptyWakes *int `json:"empty_wakes"`
+			} `json:"usage"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal([]byte(out), &wakes); err != nil {
+		t.Fatal(err)
+	}
+	if e := wakes.Waiting.EmptyWakes; e.Count != 4 || e.Mean == nil || *e.Mean != 4 {
+		t.Errorf("waiting.empty_wakes = %+v, want 4 over 1 item with usage", e)
+	}
+	weekWakes := 0
+	for _, w := range wakes.Waiting.Weeks {
+		weekWakes += w.EmptyWakes
+	}
+	if weekWakes != 4 {
+		t.Errorf("weeks' empty wakes add up to %d, want 4", weekWakes)
+	}
+	for _, it := range wakes.Items {
+		if it.ID == done.ID && (it.Usage.EmptyWakes == nil || *it.Usage.EmptyWakes != 4) {
+			t.Errorf("%s usage.empty_wakes = %v, want 4", it.ID, it.Usage.EmptyWakes)
+		}
+	}
 	var claims map[string]json.RawMessage
 	if err := json.Unmarshal(rep["claims"], &claims); err != nil || claims["drift"] != nil || string(claims["limit"]) != "2" {
 		t.Errorf("claims outside git: %v %s", err, rep["claims"])
@@ -416,9 +476,9 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 	for _, want := range []string{
 		"\nforecast and estimate error (absolute):\n  forecast     p50 1d · p85 1d (n=1)\n  delivery     p50 10h · p85 10h (n=1)\n  estimate     p50 2h · p85 2h (n=1)\n",
 		"\ncost of delay (per week of waiting):\n  outstanding now  backlog 0.00 · ready 50.00 · in-progress 0.00 · review 0.00\n  incurred in the window 39.57\n",
-		"\nwaiting, over 1 completed:\n  on threads   total 2h · mean 2h\n  in review    total 4h · mean 4h\n",
+		"\nwaiting, over 1 completed:\n  on threads   total 2h · mean 2h\n  in review    total 4h · mean 4h\n  empty wakes  total 4 · mean 4.0 per item with usage\n",
 		"\nclaims:\n  held in ready  total 0m · mean 0m, over 1 completed\n  in progress now 0 of a limit of 2\n",
-		"\nstrategic agents in the window:\n  $0.25 · 1m, beside 1 completed\n",
+		"\nstrategic agents in the window:\n  $0.25 · 1m, beside 1 completed (usage $1.00 per item)\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)

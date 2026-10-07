@@ -16,7 +16,7 @@ item.cost_of_delay: at by inputs value
 item.cost_of_delay.inputs: at by penalty_per_week revenue_per_week time_lost_per_cycle
 item.forecast: at basis by delivery duration
 item.finalized: at by
-item.usage: estimated models seconds source strategic
+item.usage: empty_wakes estimated models seconds source strategic
 item.usage.models: cache_read cache_write cost input model output
 item.usage.strategic: estimated kind models seconds
 item.types: after=story,task agent=story cost_of_delay=epic,story draft=story finalized=story forecast=story topics=epic,story

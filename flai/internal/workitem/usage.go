@@ -28,6 +28,9 @@ func usageBlock(u *usage.Usage) string {
 	if u.Estimated {
 		b.WriteString("  estimated: true\n")
 	}
+	if u.EmptyWakes > 0 {
+		fmt.Fprintf(&b, "  empty_wakes: %d\n", u.EmptyWakes)
+	}
 	modelsBlock(&b, "  ", u.Models)
 	StrategicBlock(&b, u.Strategic)
 	return b.String()
@@ -73,6 +76,9 @@ func usageErrors(u *usage.Usage) []string {
 	}
 	if u.Seconds < 0 {
 		errs = append(errs, "usage.seconds is negative")
+	}
+	if u.EmptyWakes < 0 {
+		errs = append(errs, "usage.empty_wakes is negative")
 	}
 	errs = append(errs, modelErrors("usage", u.Models)...)
 	return append(errs, StrategicErrors(u.Strategic, "an item")...)

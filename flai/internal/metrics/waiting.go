@@ -9,18 +9,30 @@ import (
 )
 
 // Waiting is how long the agents of the items completed in each ISO week
-// waited on threads and in review (S-0205).
+// waited on threads and in review (S-0205), and the empty wakes of the items
+// completed in the window (S-0272).
 type Waiting struct {
-	Weeks []WaitWeek `json:"weeks"`
+	Weeks      []WaitWeek `json:"weeks"`
+	EmptyWakes EmptyWakes `json:"empty_wakes"`
+}
+
+// EmptyWakes is the sum of the empty wakes of the items completed in the
+// window, and its mean over those of them that carry agents' usage, absent
+// when none does (ADR-0105).
+type EmptyWakes struct {
+	Count int      `json:"count"`
+	Mean  *float64 `json:"mean,omitempty"`
 }
 
 // WaitWeek is the waiting of the items completed in one ISO week.
 type WaitWeek struct {
-	Week    string          `json:"week"`
-	Start   string          `json:"start"`
-	Items   int             `json:"items"`
-	Threads ThreadWaitTotal `json:"threads"`
-	Review  WaitTotal       `json:"review"`
+	Week  string `json:"week"`
+	Start string `json:"start"`
+	Items int    `json:"items"`
+	// EmptyWakes is the sum of the items' empty wakes, 0 when none.
+	EmptyWakes int             `json:"empty_wakes"`
+	Threads    ThreadWaitTotal `json:"threads"`
+	Review     WaitTotal       `json:"review"`
 }
 
 // WaitTotal is the seconds waited over a week's items and their mean, absent
@@ -229,9 +241,11 @@ func inProgress(it *workitem.Item, now time.Time) []span {
 
 // waiting lays out the waits of the items done in the window by the ISO week
 // they were completed in, from the one that holds the window's start to this
-// one, with the thread waits of each item by its canonical ID.
+// one, with the thread waits of each item by its canonical ID; and sums their
+// empty wakes, over the window and per week.
 func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[string][]wait, start, now time.Time) Waiting {
 	out := Waiting{Weeks: []WaitWeek{}}
+	measured := 0 // the items that carry agents' usage
 	at := map[string]int{}
 	for m := monday(start); !m.After(now); m = m.AddDate(0, 0, 7) {
 		y, w := m.ISOWeek()
@@ -246,6 +260,12 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 		y, w := done.ISOWeek()
 		b := &out.Weeks[at[weekKey(y, w)]]
 		b.Items++
+		if it.Usage != nil {
+			b.EmptyWakes += it.Usage.EmptyWakes
+		}
+		if agentsSpent(it.Usage) {
+			measured++
+		}
 		m := per[it.ID]
 		b.Threads.Total += orZero(m.WaitThreads)
 		b.Review.Total += orZero(m.WaitReview)
@@ -259,7 +279,9 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 			t, r := b.Threads.Total/float64(b.Items), b.Review.Total/float64(b.Items)
 			b.Threads.Mean, b.Review.Mean = &t, &r
 		}
+		out.EmptyWakes.Count += b.EmptyWakes
 	}
+	out.EmptyWakes.Mean = over(float64(out.EmptyWakes.Count), float64(measured))
 	return out
 }
 

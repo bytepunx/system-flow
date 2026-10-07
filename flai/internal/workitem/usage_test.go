@@ -169,6 +169,106 @@ usage:
 # T-0001 T
 `
 
+// S-0272, ADR-0105: a story's empty wakes are written after estimated, read
+// back the same, and refused when negative; none is written when there are
+// none.
+func TestEmptyWakesAreWrittenAndReadBack(t *testing.T) {
+	parsed, err := ParseItem(wakesDoc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := parsed.Validate(); err != nil {
+		t.Error(err)
+	}
+	if parsed.Usage.EmptyWakes != 14 {
+		t.Errorf("empty wakes = %d, want 14", parsed.Usage.EmptyWakes)
+	}
+	if got := parsed.Marshal(); got != wakesDoc {
+		t.Errorf("round trip:\n%s", got)
+	}
+	parsed.Usage.EmptyWakes = 0
+	if got := parsed.Marshal(); strings.Contains(got, "empty_wakes") {
+		t.Errorf("no empty wakes written as:\n%s", got)
+	}
+	parsed.Usage.EmptyWakes = -1
+	if got := strings.Join(usageErrors(parsed.Usage), "; "); !strings.Contains(got, "usage.empty_wakes is negative") {
+		t.Errorf("errors %q lack the negative empty wakes", got)
+	}
+}
+
+const wakesDoc = `---
+id: S-0001
+type: story
+nature: feature
+title: S
+status: ready
+parent: E-0001
+owner: alex
+created: 2026-09-15T20:00:00Z
+updated: 2026-09-15T20:00:00Z
+transitions:
+  - to: ready
+    at: 2026-09-15T20:00:00Z
+    by: alex
+tags: []
+usage:
+  source: log
+  seconds: 1083
+  estimated: true
+  empty_wakes: 14
+  models:
+    - model: claude-opus-5-5
+      input: 256
+      output: 89342
+      cache_read: 19723140
+      cache_write: 327605
+      cost: 8.1258
+---
+# S-0001 S
+`
+
+// S-0272: an epic's usage carries the sum of its stories' empty wakes; a
+// story summed from its tasks has none.
+func TestAnEpicSumsItsStoriesEmptyWakes(t *testing.T) {
+	r, s, t2 := usageProject(t)
+	old, err := r.Get("S-0002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	old.Usage.EmptyWakes = 5
+	if err := r.Save(old); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.TransitionAll(t2, Done, "test", "", t0, false); err != nil {
+		t.Fatal(err)
+	}
+	story, _ := r.Get(s.ID)
+	if story.Usage.Source != usage.SourceSum || story.Usage.EmptyWakes != 0 {
+		t.Errorf("story usage = %+v, want summed from its tasks without empty wakes", story.Usage)
+	}
+	epic, _ := r.Get("E-0001")
+	if epic.Usage.EmptyWakes != 5 {
+		t.Errorf("epic empty wakes = %d, want the old story's 5", epic.Usage.EmptyWakes)
+	}
+	s, _ = r.Get(s.ID)
+	s.Usage = spent(500, 9, false)
+	s.Usage.EmptyWakes = 2
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.RollUp(s); err != nil {
+		t.Fatal(err)
+	}
+	epic, _ = r.Get("E-0001")
+	if epic.Usage.EmptyWakes != 7 {
+		t.Errorf("epic empty wakes = %d, want the measured story's 2 and the old story's 5", epic.Usage.EmptyWakes)
+	}
+	data, _ := os.ReadFile(epic.Path)
+	if !strings.Contains(string(data), "  seconds: 600\n  empty_wakes: 7\n  models:\n") {
+		t.Errorf("epic front matter:\n%s", data)
+	}
+}
+
 // S-0225: what strategic agents spent is written after the agents' models
 // and read back the same, with or without agents' figures beside it.
 func TestStrategicUsageIsWrittenAndReadBack(t *testing.T) {

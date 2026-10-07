@@ -114,6 +114,46 @@ func TestWithStrategicKeepsAnItemsStrategic(t *testing.T) {
 	}
 }
 
+// S-0272, ADR-0105: a usage's empty wakes are compared, cloned, and summed,
+// kept with a strategic charge, and never apportioned to a share.
+func TestEmptyWakesAreComparedSummedAndKept(t *testing.T) {
+	u := agents(60, Model{Model: "a", Input: 1})
+	u.EmptyWakes = 3
+	plain := agents(60, Model{Model: "a", Input: 1})
+	if Same(u, plain) || Same(plain, u) {
+		t.Error("usage that differs only in its empty wakes is the same")
+	}
+	c := u.Clone()
+	if c.EmptyWakes != 3 || !Same(u, c) {
+		t.Errorf("clone = %+v, want the empty wakes", c)
+	}
+	other := agents(30, Model{Model: "a", Input: 2})
+	other.EmptyWakes = 4
+	if sum := Sum(u, other, plain); sum.EmptyWakes != 7 || sum.Source != SourceSum {
+		t.Errorf("sum = %+v, want 7 empty wakes", sum)
+	}
+	into := agents(0)
+	into.Add(u)
+	if into.EmptyWakes != 3 {
+		t.Errorf("add = %+v, want 3 empty wakes", into)
+	}
+	old := &Usage{Source: SourceSum, Models: []Model{}}
+	old.AddStrategic("planner", agents(5, Model{Model: "a", Input: 1}))
+	if got := WithStrategic(u, old); got.EmptyWakes != 3 || len(got.Strategic) != 1 {
+		t.Errorf("with strategic = %+v, want the empty wakes kept", got)
+	}
+	charged := u.Clone()
+	charged.AddStrategic("planner", u)
+	if charged.EmptyWakes != 3 || len(charged.Strategic) != 1 {
+		t.Errorf("charged = %+v, want its empty wakes as they were", charged)
+	}
+	for i, s := range u.Split(2) {
+		if s.EmptyWakes != 0 {
+			t.Errorf("share %d carries %d empty wakes, want none", i, s.EmptyWakes)
+		}
+	}
+}
+
 // ADR-0095: an orchestrator activity's usage is split evenly between the
 // items it named, in whole tokens and seconds that add up to the whole, the
 // remainder to the first items named, and its cost over the count.

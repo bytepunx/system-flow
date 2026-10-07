@@ -1,6 +1,7 @@
 package usage
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -376,5 +377,83 @@ func TestASubAgentIsNamedByItsPromptOrForNoTask(t *testing.T) {
 		if m := u.Models[0]; m.CacheRead != want.read || diff(m.Cost, want.cost) > 1e-4 {
 			t.Errorf("%s = %+v, want %d read for %.4f", id, m, want.read, want.cost)
 		}
+	}
+}
+
+// waitCall is a call to the flai MCP tool wait_for_events with tool_use id,
+// by the sub-agent parent started, or by the session's own agent without one.
+func waitCall(msg, at, id, parent string) string {
+	return opusCall(msg, at, 100, parent, "", `{"type":"tool_use","id":"`+id+`","name":"mcp__flai__wait_for_events","input":{"timeout_seconds":1800}}`)
+}
+
+// toolResult is the tool_result for the tool_use id, its content given as
+// JSON: a string or a list of text blocks.
+func toolResult(at, id, content string, isError bool) string {
+	return `{"type":"user","timestamp":"` + at + `","session_id":"s","parent_tool_use_id":null,"message":{"role":"user","content":[` +
+		`{"tool_use_id":"` + id + `","type":"tool_result","content":` + content + `,"is_error":` + strconv.FormatBool(isError) + `}]}}`
+}
+
+// quoted is s as a JSON string.
+func quoted(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
+
+const timedOut = `{"changed":[],"events":[],"events_omitted":0,"timed_out":true}`
+
+// S-0272, ADR-0105: an empty wake is a wait_for_events call by the story's
+// agent itself whose result is no error and reports timed_out with no
+// events, no changed paths, and no end; its content is the tool's JSON as a
+// string or in text blocks. Nothing else counts, and no task carries any.
+func TestEmptyWakesAreTheOwnAgentsWaitsThatTimedOutWithNothing(t *testing.T) {
+	rec, err := Read(writeLog(t, "a.log",
+		// counted: the content a string, then a list of text blocks
+		waitCall("m1", "2026-09-29T10:00:00Z", "w1", ""),
+		toolResult("2026-09-29T10:30:00Z", "w1", quoted(timedOut), false),
+		waitCall("m2", "2026-09-29T10:30:01Z", "w2", ""),
+		toolResult("2026-09-29T11:00:00Z", "w2", `[{"type":"text","text":`+quoted(timedOut)+`}]`, false),
+		// a sub-agent's call
+		waitCall("m3", "2026-09-29T11:00:01Z", "w3", "toolu_A"),
+		toolResult("2026-09-29T11:01:00Z", "w3", quoted(timedOut), false),
+		// failed, as when the server went away, or refused
+		waitCall("m4", "2026-09-29T11:01:01Z", "w4", ""),
+		toolResult("2026-09-29T11:01:02Z", "w4", quoted("Connection closed"), true),
+		waitCall("m5", "2026-09-29T11:01:03Z", "w5", ""),
+		toolResult("2026-09-29T11:01:04Z", "w5", quoted(timedOut), true),
+		// something to report: an event, a changed path, an end
+		waitCall("m6", "2026-09-29T11:02:00Z", "w6", ""),
+		toolResult("2026-09-29T11:03:00Z", "w6", quoted(`{"changed":[],"events":[{"id":"S-0001","kind":"moved"}],"timed_out":true}`), false),
+		waitCall("m7", "2026-09-29T11:04:00Z", "w7", ""),
+		toolResult("2026-09-29T11:05:00Z", "w7", quoted(`{"changed":["wip/agents/S-0001.md"],"events":[],"timed_out":true}`), false),
+		waitCall("m8", "2026-09-29T11:06:00Z", "w8", ""),
+		toolResult("2026-09-29T11:06:01Z", "w8", quoted(`{"changed":[],"events":[],"timed_out":true,"end":true,"why":"S-0001 has an open question"}`), false),
+		// answered before the timeout
+		waitCall("m9", "2026-09-29T11:07:00Z", "w9", ""),
+		toolResult("2026-09-29T11:08:00Z", "w9", quoted(`{"changed":[],"events":[],"timed_out":false}`), false),
+		// another tool's result of the same shape, and a result read twice
+		opusCall("m10", "2026-09-29T11:09:00Z", 100, "", "", `{"type":"tool_use","id":"o1","name":"mcp__flai__wait_for_work","input":{}}`),
+		toolResult("2026-09-29T11:10:00Z", "o1", quoted(timedOut), false),
+		toolResult("2026-09-29T11:10:01Z", "w1", quoted(timedOut), false),
+		// the run ended during the last call
+		waitCall("m11", "2026-09-29T11:11:00Z", "w11", ""),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := rec.Total(nil)
+	if u == nil || u.EmptyWakes != 2 {
+		t.Fatalf("total = %+v, want 2 empty wakes", u)
+	}
+	tasks := rec.Tasks(map[string][]Span{"T-0001": {span("2026-09-29T10:00:00Z", "2026-09-29T12:00:00Z")}}, nil)
+	if len(tasks) != 1 || tasks["T-0001"].EmptyWakes != 0 {
+		t.Errorf("tasks = %+v, want T-0001 with no empty wakes", tasks)
+	}
+	// a measurement counts afresh over the logs it reads, never adding
+	again, err := Read(writeLog(t, "b.log", waitCall("m1", "2026-09-29T10:00:00Z", "w1", ""), toolResult("2026-09-29T10:30:00Z", "w1", quoted(timedOut), false)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := again.Total(nil); got == nil || got.EmptyWakes != 1 {
+		t.Errorf("one log's total = %+v, want 1 empty wake", got)
 	}
 }
