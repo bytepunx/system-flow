@@ -38,7 +38,7 @@ func (in ItemNewIn) project() string { return in.Project }
 // a new task grew its story's claim into.
 type ItemNewOut struct {
 	ItemOut
-	Overlaps []itemedit.Overlapping `json:"overlaps,omitempty" jsonschema:"a new task's: the other stories in progress whose claim covers a path its touches added to its story's claim (I-0059); the task stands, and both stories are told as an overlapped change: coordinate with their agents before you change those paths"`
+	Overlaps []itemedit.Overlapping `json:"overlaps,omitempty" jsonschema:"a new task's: the other stories in progress whose claim covers a path its touches added to its story's claim (I-0059); the task stands, and both stories are told as an overlapped change: message their agents with message_send before you change those paths"`
 }
 
 func (s *server) itemNew(ctx context.Context, _ *mcp.CallToolRequest, in ItemNewIn) (*mcp.CallToolResult, ItemNewOut, error) {
@@ -166,7 +166,7 @@ type ItemEditOut struct {
 	Hash      string   `json:"hash"`
 	// Overlaps are the stories in progress whose claims the edit grew its
 	// story's claim into (I-0059).
-	Overlaps []itemedit.Overlapping `json:"overlaps,omitempty" jsonschema:"an edit of touches: the other stories in progress whose claim covers a path it added to its story's claim (I-0059); the edit stands, and both stories are told as an overlapped change: coordinate with their agents before you change those paths"`
+	Overlaps []itemedit.Overlapping `json:"overlaps,omitempty" jsonschema:"an edit of touches: the other stories in progress whose claim covers a path it added to its story's claim (I-0059); the edit stands, and both stories are told as an overlapped change: message their agents with message_send before you change those paths"`
 }
 
 func (s *server) itemEdit(_ context.Context, _ *mcp.CallToolRequest, in ItemEditIn) (*mcp.CallToolResult, ItemEditOut, error) {

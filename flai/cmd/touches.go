@@ -157,7 +157,7 @@ func (a *app) grown(w *itemedit.ClaimWatch, id, by string) []itemedit.Overlappin
 // write grew its story's claim into.
 func printOverlapping(w io.Writer, told []itemedit.Overlapping) {
 	for _, o := range told {
-		fmt.Fprintf(w, "  overlaps %s %s (in progress) on %s: both stories are told; coordinate with its agent before you change them\n", o.Story, o.Title, strings.Join(o.Paths, ", "))
+		fmt.Fprintf(w, "  overlaps %s %s (in progress) on %s: both stories are told; message its agent (flai message send) before you change them\n", o.Story, o.Title, strings.Join(o.Paths, ", "))
 	}
 }
 
