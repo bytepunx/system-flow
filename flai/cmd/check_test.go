@@ -262,6 +262,107 @@ func TestCheckRecordIssuesOpensThenBumpsOncePerStory(t *testing.T) {
 	}
 }
 
+// overlapFixture copies the good fixture, whose S-004 is in progress, gives
+// S-004 the touches s004 when it is not empty, and adds each story of stories
+// in progress under E-001, with its touches, its narrative, and its row in
+// the index, the in-progress limit raised to hold them: a board whose only
+// findings a run scoped to S-004 notes are the wip.overlap ones.
+func overlapFixture(t *testing.T, s004 string, stories map[string]string) string {
+	t.Helper()
+	root := t.TempDir()
+	if err := os.CopyFS(root, os.DirFS("../internal/metrics/testdata/good")); err != nil {
+		t.Fatal(err)
+	}
+	edit := func(rel, old, new string) {
+		t.Helper()
+		p := filepath.Join(root, rel)
+		data, err := os.ReadFile(p)
+		if err != nil || !strings.Contains(string(data), old) {
+			t.Fatalf("%s has no %q: %v", rel, old, err)
+		}
+		if err := os.WriteFile(p, []byte(strings.Replace(string(data), old, new, 1)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	edit("wip/kanban/board.md", "in-progress: 2\n", "in-progress: 5\n")
+	if s004 != "" {
+		edit("wip/kanban/stories/S-004-four.md", "tags: []\n", "tags: []\ntouches: ["+s004+"]\n")
+	}
+	narrative, err := os.ReadFile(filepath.Join(root, "wip/agents/S-004.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	four, err := os.ReadFile(filepath.Join(root, "wip/kanban/stories/S-004-four.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s004 != "" {
+		four = []byte(strings.Replace(string(four), "touches: ["+s004+"]\n", "", 1))
+	}
+	for id, touches := range stories {
+		story := strings.NewReplacer("S-004", id, "- T-003 T3\n", "", "tags: []\n", "tags: []\ntouches: ["+touches+"]\n").Replace(string(four))
+		if err := os.WriteFile(filepath.Join(root, "wip/kanban/stories", id+"-four.md"), []byte(story), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "wip/agents", id+".md"), []byte(strings.ReplaceAll(string(narrative), "S-004", id)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		edit("wip/kanban/epics/E-001-epic.md", "- S-005 Five\n", "- S-005 Five\n- "+id+" Four\n")
+		edit("wip/agents/index.md", "| [S-004](S-004.md) | Four | in-progress | bot | 2026-08-31T10:00:00Z |\n",
+			"| [S-004](S-004.md) | Four | in-progress | bot | 2026-08-31T10:00:00Z |\n| ["+id+"]("+id+".md) | Four | in-progress | bot | 2026-08-31T10:00:00Z |\n")
+	}
+	return root
+}
+
+// I-0076, ADR-0115: two other stories in progress overlap; a close-out of a
+// third neither notes the overlap nor records it in an issue.
+func TestCheckRecordIssuesLeavesOutAnOverlapBetweenTwoOtherStories(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", map[string]string{"S-006": "flai", "S-007": "flai/cmd"})
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, _ := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	if !strings.Contains(out, "warning: wip.overlap: S-006 touches flai, which S-007 (in progress) also touches as flai/cmd\n") {
+		t.Fatalf("unscoped, the run should report the overlap of S-006 and S-007:\n%s%s", out, errOut)
+	}
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int `json:"outside"`
+		Findings []struct {
+			Rule string `json:"rule"`
+		} `json:"findings"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "wip.overlap") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the overlap should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); names != nil {
+		t.Errorf("no issue should be opened or bumped, got %v", names)
+	}
+}
+
+// ADR-0115: an overlap that names the closing story is printed as a note
+// outside it, and is not recorded in an issue.
+func TestCheckRecordIssuesNotesButDoesNotRecordTheStorysOwnOverlap(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "flai", map[string]string{"S-006": "flai/cmd"})
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: gitScript{changed: "wip/kanban/epics/E-001-epic.md"}}, "check", "--strict", "--story", "S-004", "--record-issues")
+	if code != 0 {
+		t.Fatalf("a note should not fail --strict: exit %d\n%s%s", code, out, errOut)
+	}
+	if !strings.Contains(out, "warning: wip.overlap: S-004 touches flai, which S-006 (in progress) also touches as flai/cmd (outside S-004)\n") {
+		t.Errorf("the overlap should be a note outside S-004:\n%s", out)
+	}
+	if strings.Contains(out, "recorded ") {
+		t.Errorf("the overlap should not be recorded:\n%s", out)
+	}
+	if names := issueFiles(t, root); names != nil {
+		t.Errorf("no issue should be opened, got %v", names)
+	}
+}
+
 // S-0227: a finding that quotes a code span is written without backticks,
 // so the issue it is recorded in passes the markdown lint (MD038).
 func TestFindingTextLeavesNoCodeSpanOpen(t *testing.T) {

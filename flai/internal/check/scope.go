@@ -14,8 +14,11 @@ import (
 // inside when its path is the story's item file or one of its tasks', its
 // narrative, a thread anchored on the story or one of its tasks, or one of
 // changed: paths relative to the project root, as git names them, where a
-// path ending in / is a folder. A wip.overlap is always outside: clearing it
-// is the pull hold's business and the other story's (ADR-0019, ADR-0046).
+// path ending in / is a folder. A wip.overlap that names the story in its
+// Stories is outside it, a note: clearing it is the pull hold's business and
+// the other story's (ADR-0019, ADR-0046). One that does not name the story is
+// left out of the scoped result, and the counts it added are taken back
+// (ADR-0115).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	st, err := repo.Get(story)
 	if err != nil {
@@ -56,25 +59,62 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 		}
 		return false
 	}
-	for i := range res.Findings {
-		f := &res.Findings[i]
-		if f.Outside || (f.Rule != "wip.overlap" && inside(f.Path)) {
+	kept := res.Findings[:0]
+	for _, f := range res.Findings {
+		if f.Rule == "wip.overlap" && !namesStory(f, st.ID) {
+			res.drop(f)
 			continue
 		}
-		f.Outside = true
-		res.Outside++
-		switch {
-		case f.Level == Error:
-			res.outsideErrors++
-		case f.advisory:
-			// counted once, as outside: Advisory keeps those inside
-			res.Advisory--
-			res.outsideWarnings++
-		default:
-			res.outsideWarnings++
+		if !f.Outside && (f.Rule == "wip.overlap" || !inside(f.Path)) {
+			f.Outside = true
+			res.Outside++
+			switch {
+			case f.Level == Error:
+				res.outsideErrors++
+			case f.advisory:
+				// counted once, as outside: Advisory keeps those inside
+				res.Advisory--
+				res.outsideWarnings++
+			default:
+				res.outsideWarnings++
+			}
+		}
+		kept = append(kept, f)
+	}
+	clear(res.Findings[len(kept):])
+	res.Findings = kept
+	return nil
+}
+
+// namesStory reports whether f, a wip.overlap, names story in its Stories
+// (ADR-0115); the message is never read.
+func namesStory(f Finding, story string) bool {
+	for _, id := range f.Stories {
+		if workitem.CanonicalID(id) == workitem.CanonicalID(story) {
+			return true
 		}
 	}
-	return nil
+	return false
+}
+
+// drop takes back the counts f added to r, as left out of the result.
+func (r *Result) drop(f Finding) {
+	if f.Level == Error {
+		r.Errors--
+	} else {
+		r.Warnings--
+	}
+	switch {
+	case f.Outside:
+		r.Outside--
+		if f.Level == Error {
+			r.outsideErrors--
+		} else {
+			r.outsideWarnings--
+		}
+	case f.advisory:
+		r.Advisory--
+	}
 }
 
 // storyPaths is the cleaned paths of the files that belong to st: its item

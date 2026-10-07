@@ -32,21 +32,23 @@ With --story S-nnnn, a finding is inside the story when it is on the
 story's item file or one of its tasks', its narrative, a thread anchored on
 the story or one of its tasks, or a path its branch changes against the main
 branch (as flai stream diff reads it), or that is uncommitted in its
-worktree. Every other finding is outside it, and so is every wip.overlap,
-which the pull hold and the other story's agent clear. A finding outside
-keeps its level and is printed with "(outside S-nnnn)"; it is a note that
-neither an error nor --strict fails on, and the summary counts it, as does
-outside in --json. Without --story every finding counts, as the main
-branch's check needs.
+worktree. Every other finding is outside it. A wip.overlap that names the
+story is outside it too, and one between two other stories is left out. A
+finding outside keeps its level and is printed with "(outside S-nnnn)"; it
+is a note that neither an error nor --strict fails on, and the summary
+counts it, as does outside in --json. Without --story every finding counts,
+as the main branch's check needs.
 
 With --record-issues as well, each rule with findings outside the story is
 recorded in design/issues, in the checkout the run reads, which is the
-story's worktree at close-out: in the open issue whose title names the
-rule, as "flai check finds ` + "`wip.overlap`" + ` outside the story at close-out"
-does, opened with class efficiency when none is, with an instance naming
-the story and each finding's path and message. An instance for the same
-story and the same findings is written once, so running the check again
-does not count it again; another story, or other findings, bump the count.
+story's worktree at close-out. A wip.overlap is not recorded: the pull hold
+and the other story's agent clear it. Each rule is recorded in the open
+issue whose title names it, as "flai check finds ` + "`threads.archived`" + ` outside
+the story at close-out" does, opened with class efficiency when none is,
+with an instance naming the story and each finding's path and message. An
+instance for the same story and the same findings is written once, so
+running the check again does not count it again; another story, or other
+findings, bump the count.
 summary.md is regenerated, each issue is printed as opened, bumped, or
 already recorded, and --json lists them in recorded. The run records
 whether or not it passes; a failure to record is an error.`,
@@ -150,11 +152,14 @@ func (r recordedIssue) describe() string {
 
 // recordOutside records each rule's findings outside story in its open issue
 // (issues.RecordOnce), in rule order, and regenerates summary.md when one was
-// opened or bumped.
+// opened or bumped. A wip.overlap is never recorded (ADR-0115 §3): the pull
+// hold, the overlapped change, the report on a growing claim, and the trial
+// merge report it where it can be acted on, and an issue would only count
+// how often stories ran side by side (I-0076).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {
 	byRule := map[string][]string{}
 	for _, f := range res.Findings {
-		if !f.Outside {
+		if !f.Outside || f.Rule == "wip.overlap" {
 			continue
 		}
 		line := findingText(f.Message)

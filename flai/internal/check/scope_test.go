@@ -101,8 +101,8 @@ func TestScopedCheckPassesOverAnotherStorysUnmergedBranch(t *testing.T) {
 }
 
 // S-0249: a finding on what the story owns still fails --strict when the
-// run is scoped to it; a wip.overlap, even on its own file, and an error on
-// another story's file do not.
+// run is scoped to it; a wip.overlap that names it, even on its own file, and
+// an error on another story's file do not (ADR-0115).
 func TestScopedCheckFailsOnlyOnTheStorysOwnFindings(t *testing.T) {
 	const overview = "design/system/overview.md"
 	for _, tc := range []struct {
@@ -139,7 +139,7 @@ func TestScopedCheckFailsOnlyOnTheStorysOwnFindings(t *testing.T) {
 		{name: "a path outside the story's diff", rule: "doc.title", path: overview, changed: []string{"flai/main.go"}, setup: func(t *testing.T, root string) {
 			edit(t, root, overview, "title: Overview\n", "")
 		}},
-		{name: "wip.overlap with another story in progress", rule: "wip.overlap", path: "S-004-four.md", setup: func(t *testing.T, root string) {
+		{name: "wip.overlap naming the story with another in progress", rule: "wip.overlap", path: "S-004-four.md", setup: func(t *testing.T, root string) {
 			edit(t, root, "wip/kanban/stories/S-004-four.md", "tags: []\n", "tags: []\ntouches: [flai]\n")
 			addStory(t, root, "S-006", "E-001", "touches: [flai/cmd]\n")
 		}},
@@ -170,6 +170,43 @@ func TestScopedCheckFailsOnlyOnTheStorysOwnFindings(t *testing.T) {
 				t.Errorf("scoped OK(strict) %v, want %v: %+v", scoped.OK(true), !tc.fails, scoped.Findings)
 			}
 		})
+	}
+}
+
+// I-0076, ADR-0115: scoped to a story, a wip.overlap between two other
+// stories in progress is left out of the result, and its warning is taken
+// back from the counts, so the run neither notes nor records it.
+func TestScopedCheckLeavesOutAnOverlapBetweenTwoOtherStories(t *testing.T) {
+	root := scopeProject(t)
+	addStory(t, root, "S-006", "E-001", "touches: [flai]\n")
+	addStory(t, root, "S-007", "E-001", "touches: [flai/cmd]\n")
+	whole, scoped := runScoped(t, root, nil)
+	var overlaps []Finding
+	for _, f := range whole.Findings {
+		if f.Rule == "wip.overlap" {
+			overlaps = append(overlaps, f)
+		}
+	}
+	if len(overlaps) != 1 || strings.Join(overlaps[0].Stories, " ") != "S-006 S-007" {
+		t.Fatalf("unscoped, the run should report the one overlap of S-006 and S-007: %+v", whole.Findings)
+	}
+	warnings, outside := 0, 0
+	for _, f := range scoped.Findings {
+		if f.Rule == "wip.overlap" {
+			t.Errorf("scoped to S-004, the overlap of two other stories should be left out: %+v", f)
+		}
+		if f.Level == Warning {
+			warnings++
+		}
+		if f.Outside {
+			outside++
+		}
+	}
+	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	}
+	if scoped.Warnings != warnings || scoped.Outside != outside {
+		t.Errorf("counts should match the findings kept: warnings %d outside %d, findings give %d, %d", scoped.Warnings, scoped.Outside, warnings, outside)
 	}
 }
 
