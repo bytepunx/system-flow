@@ -61,6 +61,7 @@ const permission = (name: string, value?: boolean): StrategicSetting => ({
 });
 const ORCHESTRATION = [
 	'orchestration.permissions.plan_backlog_epics',
+	'orchestration.permissions.plan_backlog_stories',
 	'orchestration.permissions.finalize_drafts',
 	'orchestration.permissions.promote_to_ready',
 	'orchestration.permissions.order_ready',
@@ -92,6 +93,7 @@ function settingsGet(editable: boolean): SettingsView {
 				enable: 'flai serve enable settings',
 				settings: [
 					permission('plan_backlog_epics'),
+					permission('plan_backlog_stories'),
 					permission('finalize_drafts'),
 					permission('promote_to_ready', true),
 					permission('order_ready'),
