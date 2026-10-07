@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T20:31:34Z
+updated: 2026-10-07T21:00:01Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -34,10 +34,10 @@ usage:
           cost: 0.0349
 forecast:
   duration: 1h
-  delivery: 2026-10-07T21:50:00Z
-  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, behind S-0329 and S-0330."
+  delivery: 2026-10-07T22:20:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, with nothing ahead of it."
   by: flai
-  at: 2026-10-07T20:28:28Z
+  at: 2026-10-07T21:00:01Z
 ---
 # S-0232 The release key signs flai's checksums.txt in CI and both components carry the public key
 
