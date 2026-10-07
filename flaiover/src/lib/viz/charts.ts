@@ -61,10 +61,6 @@ export type ItemMetrics = {
 	/** The item's agent model, `(none)` without one (ADR-0111); absent from an older flai. */
 	model?: string;
 	age_seconds?: number;
-	/** What its agent waited on its threads while in progress, absent with none (S-0205). */
-	wait_threads_seconds?: number;
-	/** Its time in review, absent if it was never there (S-0205). */
-	wait_review_seconds?: number;
 	usage?: ItemUsage;
 	/** What its agent waited on threads while in progress, and in review (S-0205); absent when none. */
 	wait_threads_seconds?: number;
