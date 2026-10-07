@@ -7,14 +7,21 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
 func TestSelfUpgradeCommand(t *testing.T) {
@@ -182,5 +189,204 @@ func TestTheHostRestartsOnWhatTheUpgradeInstalled(t *testing.T) {
 	}
 	if got := l.installedTo(); got != "/home/me/.flai/bin/flai" {
 		t.Errorf("restarts on %q", got)
+	}
+}
+
+// releasesStandIn answers as GitHub's API does for o/r: the releases given,
+// as JSON, and the refs of the flaiover/v tags given. asked lists the paths
+// requested so far.
+func releasesStandIn(t *testing.T, releases string, flaioverTags ...string) (url string, asked func() []string) {
+	t.Helper()
+	var mu sync.Mutex
+	var paths []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.URL.Path)
+		mu.Unlock()
+		switch r.URL.Path {
+		case "/repos/o/r/releases":
+			fmt.Fprint(w, releases)
+		case "/repos/o/r/git/matching-refs/tags/flaiover/v":
+			refs := make([]string, len(flaioverTags))
+			for i, tag := range flaioverTags {
+				refs[i] = `{"ref":"refs/tags/` + tag + `"}`
+			}
+			fmt.Fprint(w, "["+strings.Join(refs, ",")+"]")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv.URL, func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(paths)
+	}
+}
+
+// listedReleases are four published flai releases, out of order, beside a
+// draft, a prerelease, and a dashboard release, which are not listed.
+const listedReleases = `[
+ {"tag_name":"flai/v1.2.0","published_at":"2026-10-01T09:00:00Z","assets":[{"name":"checksums.txt","url":"/sums"}]},
+ {"tag_name":"flai/v1.10.0","published_at":"2026-10-05T09:00:00Z"},
+ {"tag_name":"flai/v2.0.0","draft":true},
+ {"tag_name":"flai/v1.11.0-rc.1","prerelease":true},
+ {"tag_name":"flaiover/v0.4.0","published_at":"2026-10-02T09:00:00Z"},
+ {"tag_name":"flai/v1.1.0","published_at":"2026-09-20T09:00:00Z"},
+ {"tag_name":"flai/v1.0.0","published_at":"2026-09-01T09:00:00Z"}
+]`
+
+// withMinimum writes a project named name whose flai.minimum is minimum.
+func withMinimum(t *testing.T, name, minimum string) string {
+	t.Helper()
+	root := tempProject(t)
+	m := "version: 1\nname: " + name + "\nkey: k\nlayout:\n  design: design\n  docs: docs\n  wip: wip\nflai:\n  minimum: " + minimum + "\n"
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// S-0298: --list prints the published releases newest first and installs
+// nothing, marking the installed one, the newest, and those below the
+// minimum of the project here and of a project flai serve serves, even one
+// whose minimum is above the running flai.
+func TestSelfUpgradeList(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	t.Setenv("GITHUB_TOKEN", "tok")
+	oldVersion, oldExe := buildinfo.Version, executablePath
+	t.Cleanup(func() { buildinfo.Version, executablePath = oldVersion, oldExe })
+	buildinfo.Version = "1.2.0"
+	installed := filepath.Join(t.TempDir(), "flai")
+	executablePath = func() (string, error) { return installed, nil }
+	here := withMinimum(t, "Here", "1.2.0")
+	other := withMinimum(t, "Other", "1.5.0")
+	if err := serve.DirFor(cfg).Register(serve.Entry{Key: "o", Name: "Other", Root: other, URL: "http://127.0.0.1:1", KeyFile: "k"}); err != nil {
+		t.Fatal(err)
+	}
+	api, asked := releasesStandIn(t, listedReleases)
+
+	out, errOut, code := runIn(t, here, "self-upgrade", "--list", "--repo", "o/r", "--api", api)
+	if code != 0 {
+		t.Fatalf("list: %d %s", code, errOut)
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	var versions []string
+	marks := map[string]string{}
+	for _, l := range lines[1:] {
+		f := strings.Fields(l)
+		versions = append(versions, f[0])
+		marks[f[0]] = strings.Join(f[1:], " ")
+	}
+	if !slices.Equal(versions, []string{"1.10.0", "1.2.0", "1.1.0", "1.0.0"}) {
+		t.Fatalf("newest first, published only: %v\n%s", versions, out)
+	}
+	for v, want := range map[string][]string{
+		"1.10.0": {"2026-10-05", "latest"},
+		"1.2.0":  {"2026-10-01", "installed", "below minimum 1.5.0 of Other"},
+		"1.1.0":  {"below minimum 1.2.0 of Here", "below minimum 1.5.0 of Other"},
+	} {
+		for _, w := range want {
+			if !strings.Contains(marks[v], w) {
+				t.Errorf("%s: want %q in %q", v, w, marks[v])
+			}
+		}
+	}
+	if strings.Contains(marks["1.10.0"], "below") || strings.Contains(marks["1.10.0"], "installed") {
+		t.Errorf("1.10.0 is above every minimum and not installed: %q", marks["1.10.0"])
+	}
+
+	out, errOut, code = runIn(t, here, "self-upgrade", "--list", "--repo", "o/r", "--api", api, "--json")
+	if code != 0 {
+		t.Fatalf("list --json: %d %s", code, errOut)
+	}
+	var listed []struct {
+		Version, Tag string
+		Published    time.Time
+		Installed    bool
+		Latest       bool
+		BelowMinimum []projectMinimum `json:"below_minimum"`
+	}
+	if err := json.Unmarshal([]byte(out), &listed); err != nil || len(listed) != 4 {
+		t.Fatalf("json: %v %s", err, out)
+	}
+	if l := listed[0]; l.Version != "1.10.0" || l.Tag != "flai/v1.10.0" || !l.Latest || l.Installed || len(l.BelowMinimum) != 0 || !l.Published.Equal(time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC)) {
+		t.Errorf("newest: %+v", l)
+	}
+	if l := listed[1]; !l.Installed || l.Latest || !slices.Equal(l.BelowMinimum, []projectMinimum{{Project: "Other", Minimum: "1.5.0"}}) {
+		t.Errorf("installed: %+v", l)
+	}
+	if l := listed[2]; !slices.Equal(l.BelowMinimum, []projectMinimum{{Project: "Here", Minimum: "1.2.0"}, {Project: "Other", Minimum: "1.5.0"}}) {
+		t.Errorf("below both: %+v", l)
+	}
+	if strings.Count(out, `"below_minimum"`) != 3 {
+		t.Errorf("below_minimum is left out when there is none: %s", out)
+	}
+	if _, err := os.Stat(installed); !os.IsNotExist(err) {
+		t.Errorf("--list installs nothing: %v", err)
+	}
+	for _, p := range asked() {
+		if p != "/repos/o/r/releases" {
+			t.Errorf("--list asked for %s", p)
+		}
+	}
+
+	// a dev build is no published release, and says so
+	buildinfo.Version = "dev"
+	out, _, _ = runIn(t, here, "self-upgrade", "--list", "--repo", "o/r", "--api", api)
+	if strings.Contains(out, "installed,") || !strings.Contains(out, "installed at "+installed+": dev, which is not a published release") {
+		t.Errorf("dev build: %s", out)
+	}
+
+	for _, args := range [][]string{{"--version", "1.0.0"}, {"--check"}} {
+		_, errOut, code := runIn(t, here, append([]string{"self-upgrade", "--list", "--repo", "o/r", "--api", api}, args...)...)
+		if code == 0 || !strings.Contains(errOut, "list") {
+			t.Errorf("--list with %v is refused: %d %s", args, code, errOut)
+		}
+	}
+}
+
+// S-0298: a version that is not published is refused, naming the published
+// ones, before anything is downloaded or replaced.
+func TestSelfUpgradeRefusesAnUnpublishedVersion(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("GITHUB_TOKEN", "tok")
+	api, asked := releasesStandIn(t, listedReleases)
+	dir := t.TempDir()
+	_, errOut, code := runIn(t, dir, "self-upgrade", "--version", "1.3.0", "--repo", "o/r", "--api", api, "--dir", dir)
+	if code == 0 || !strings.Contains(errOut, "published are 1.10.0, 1.2.0, 1.1.0, 1.0.0") {
+		t.Fatalf("refused: %d %s", code, errOut)
+	}
+	if got := asked(); !slices.Equal(got, []string{"/repos/o/r/releases"}) {
+		t.Errorf("nothing is downloaded: %v", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "flai")); !os.IsNotExist(err) {
+		t.Errorf("nothing is installed: %v", err)
+	}
+}
+
+// S-0298, ADR-0117 §7: a release below the project's flai.minimum is warned
+// about and installed.
+func TestSelfUpgradeWarnsBelowTheMinimum(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("tar archives are not used on windows")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("GITHUB_TOKEN", "tok")
+	here := withMinimum(t, "Here", "1.2.0")
+	api := fakeRelease(t, "1.1.0")
+	dir := t.TempDir()
+	out, errOut, code := runIn(t, here, "self-upgrade", "--version", "1.1.0", "--repo", "o/r", "--api", api, "--dir", dir)
+	if code != 0 || !strings.Contains(out, "installed flai 1.1.0") {
+		t.Fatalf("installs: %d %s %s", code, out, errOut)
+	}
+	for _, field := range []string{"minimum", "project", "version"} {
+		if !strings.Contains(errOut, `"`+field+`":`) && !strings.Contains(errOut, field+"=") {
+			t.Errorf("warning carries %s: %s", field, errOut)
+		}
+	}
+	if !strings.Contains(errOut, "1.2.0") || !strings.Contains(errOut, "Here") || !strings.Contains(errOut, "WARN") {
+		t.Errorf("warning: %s", errOut)
 	}
 }

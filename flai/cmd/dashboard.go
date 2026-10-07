@@ -145,7 +145,7 @@ when they decide what the shared container is started with.`,
 	f.BoolVar(&noServe, "no-serve", false, "do not register the project with flai serve or start flai host; the dashboard then has no flai on the host to ask (ADR-0029)")
 	f.BoolVar(&build, "build", false, "build the image from flaiover/ in this repository as flaiover:local and run that")
 	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a), newDashboardTokenCmd(a),
-		newDashboardRestartCmd(a), newDashboardCheckCmd(a), newDashboardUpgradeCmd(a))
+		newDashboardRestartCmd(a), newDashboardCheckCmd(a), newDashboardUpgradeCmd(a), newDashboardVersionsCmd(a))
 	return c
 }
 

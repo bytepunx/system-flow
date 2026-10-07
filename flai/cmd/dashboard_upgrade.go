@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -195,26 +196,49 @@ const (
 func newDashboardUpgradeCmd(a *app) *cobra.Command {
 	var image, tag, bind string
 	var port int
+	var published bool
+	var src releaseSource
 	c := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Pull a newer dashboard image and swap to it, only once it answers healthy",
+		Short: "Pull a newer dashboard image, or a chosen release, and swap to it, only once it answers healthy",
 		Long: `Pulls the configured (or --tag) image and, if it differs from what is running,
 starts it as a second, temporary container on a loopback port of its own,
 waits for it to answer /_health, and only then stops the running container
 and starts the new image at the real name and port. The running container is
 never stopped until the replacement has proven healthy: if it does not
 become healthy in time, the temporary container is removed and the running
-one is left exactly as it was, and this reports why.`,
+one is left exactly as it was, and this reports why.
+
+--tag deploys that image tag, an earlier release included, the same way, for
+this container once: dashboard.tag is not changed, so an upgrade without a
+tag uses the configured one again (pin with flai config set dashboard.tag).
+With --published the tag must be a published dashboard release, the bare
+X.Y.Z of a flaiover/vX.Y.Z tag (flai dashboard versions lists them): any
+other is refused, naming the published ones, before anything is pulled.
+Without it a tag is used as it is, such as a mirror's.`,
+		Example: `  flai dashboard upgrade
+  flai dashboard upgrade --published --tag 0.4.0
+  flai dashboard upgrade --tag my-mirror-build`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if published {
+				if tag == "" {
+					return errors.New("--published checks the --tag given against the published dashboard releases: give --tag X.Y.Z with it (flai dashboard versions lists them)")
+				}
+				if err := requirePublishedDashboard(cmd.Context(), src.options(a, ""), tag); err != nil {
+					return err
+				}
+			}
 			return a.runDashboardUpgrade(image, tag, port, bind)
 		},
 	}
 	f := c.Flags()
 	f.StringVar(&image, "image", "", "image name (default: manifest, then config)")
-	f.StringVar(&tag, "tag", "", "image tag to upgrade to (default: manifest, then config)")
+	f.StringVar(&tag, "tag", "", "image tag to upgrade to, for this container once (default: manifest, then config)")
 	f.IntVar(&port, "port", 0, "host port to publish (default: manifest, then config)")
 	f.StringVar(&bind, "bind", "", "host address to publish on (default: manifest, then config, then 0.0.0.0)")
+	f.BoolVar(&published, "published", false, "refuse a --tag that is not a published dashboard release, before anything is pulled")
+	src.register(c, "GitHub repository whose flaiover/vX.Y.Z tags are the published dashboard releases (with --published)")
 	return c
 }
 
