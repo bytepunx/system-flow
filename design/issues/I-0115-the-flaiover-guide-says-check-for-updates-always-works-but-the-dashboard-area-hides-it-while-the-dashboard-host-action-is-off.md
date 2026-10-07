@@ -2,12 +2,12 @@
 id: I-0115
 title: The flaiover guide says Check for updates always works, but the Dashboard area hides it while the dashboard host action is off
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-07T15:11:31Z
 last_reported: 2026-10-07T15:11:31Z
-updated: 2026-10-07T18:59:44Z
+updated: 2026-10-07T23:45:16Z
 ---
 
 # I-0115 The flaiover guide says Check for updates always works, but the Dashboard area hides it while the dashboard host action is off
@@ -24,3 +24,4 @@ Found by T-1046's sub-agent in S-0298: docs/users/flaiover.md (Host) says the Da
 ## Remediation
 
 Story S-0314 remediates this issue, created from it at 2026-10-07T18:59:44Z.
+Closed 2026-10-07T23:45:16Z: fixed by S-0314: HostPanel.svelte shows Check for updates outside the dashboard_enabled gate, beside Versions, as docs/users/flaiover.md says, since dashboard.check is a read the host API does not gate; HostPanel.svelte.test.ts pins the buttons with the action off and a check made with it off, and design/system/flaiover-dashboard.md no longer says the page shows the four actions only once enabled
