@@ -150,4 +150,23 @@ describe('SpendTable', () => {
 		flushSync();
 		expect(cells()[2].slice(0, 3)).toEqual(['week of 2026-08-03', 'task', '4']);
 	});
+
+	it('names an hour in the local zone, and a day by its own date (S-0329)', () => {
+		// 02:00 in UTC is 22:00 the evening before in New York, where the tests run
+		const row = { ...spendRows(report, 'tokens-spent')[0], at: '2026-08-05T02:00:00Z' };
+		component = mount(SpendTable, {
+			target: document.body,
+			props: { rows: [row], bucket: 'hour' }
+		});
+		flushSync();
+		expect(cells()[0][0]).toBe('2026-08-04 22:00 EDT');
+		unmount(component);
+		// flai's UTC day keeps its date, which its start in the local zone does not
+		component = mount(SpendTable, {
+			target: document.body,
+			props: { rows: [{ ...row, at: '2026-08-05T00:00:00Z' }], bucket: 'day' }
+		});
+		flushSync();
+		expect(cells()[0][0]).toBe('2026-08-05');
+	});
 });

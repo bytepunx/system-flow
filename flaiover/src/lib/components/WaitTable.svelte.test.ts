@@ -27,7 +27,8 @@ const rows: LongestWait[] = [
 		seconds: 7200,
 		awaited: 'orchestrator'
 	},
-	{ item: 'S-0009', kind: 'review', started: '2026-09-29T20:30:00Z', seconds: 1800 }
+	// started just after midnight in UTC: the evening before in New York, where the tests run
+	{ item: 'S-0009', kind: 'review', started: '2026-09-30T01:30:00Z', seconds: 1800 }
 ];
 
 describe('WaitTable', () => {
@@ -52,6 +53,7 @@ describe('WaitTable', () => {
 				[row].querySelectorAll('a')
 		].map((a) => a.getAttribute('href'));
 
+	// every time in the local zone, with its name (S-0329)
 	it("lists a thread's wait with its item and its thread linked, and who answered it", () => {
 		show({ rows, type: 'story' });
 		const heads = [...document.querySelectorAll('th')].map((th) => th.textContent?.trim());
@@ -60,8 +62,8 @@ describe('WaitTable', () => {
 			'S-0004',
 			'thread',
 			'TH-0012',
-			'2026-09-28 09:15',
-			'2026-09-28 13:45',
+			'2026-09-28 05:15 EDT',
+			'2026-09-28 09:45 EDT',
 			'4.5h',
 			'alex'
 		]);
@@ -74,8 +76,8 @@ describe('WaitTable', () => {
 			'S-0007',
 			'review',
 			'review',
-			'2026-09-29 10:00',
-			'2026-09-29 12:00',
+			'2026-09-29 06:00 EDT',
+			'2026-09-29 08:00 EDT',
 			'2h',
 			'orchestrator'
 		]);
@@ -89,7 +91,7 @@ describe('WaitTable', () => {
 			'S-0009',
 			'review',
 			'review',
-			'2026-09-29 20:30',
+			'2026-09-29 21:30 EDT',
 			'open',
 			'30m',
 			'—'

@@ -476,6 +476,14 @@ const codReport: Report = {
 
 const light = theme(false);
 const dark = theme(true);
+/**
+ * The local midnight of a date, where a chart draws flai's UTC day or week of that date (S-0329):
+ * in New York, where the tests run, four or five hours after the UTC day starts.
+ */
+const midnight = (date: string) => {
+	const [y, m, d] = date.slice(0, 10).split('-').map(Number);
+	return new Date(y, m - 1, d).getTime();
+};
 
 describe('chart builders', () => {
 	it('every kind builds with one y-axis and a tooltip', () => {
@@ -490,10 +498,13 @@ describe('chart builders', () => {
 						? codReport
 						: report;
 			const o = build(k, fixture, light) as {
+				useUTC?: boolean;
 				yAxis: unknown;
 				tooltip: unknown;
 				series: unknown[];
 			};
+			// every axis and tooltip reads the local zone (S-0329)
+			expect(o.useUTC, k).toBeUndefined();
 			expect(o.yAxis, k).toBeDefined();
 			// delivery accuracy and touches drift alone draw a share on a second axis
 			if (k === 'delivery-accuracy' || k === 'touches-drift')
@@ -511,27 +522,35 @@ describe('chart builders', () => {
 		// the report's own window, 2 August 12:00 to 1 September 12:00
 		const month = Date.parse('2026-08-02T12:00:00Z');
 		expect((cycleTime(report, light) as Axis).xAxis).toMatchObject({ min: month, max: end });
-		// a series by the day starts on the day that holds the window's start
-		const day = Date.parse('2026-08-02T00:00:00Z');
+		// a series by the day starts on the local midnight of the day that holds the window's start,
+		// where its first date is drawn
+		const day = midnight('2026-08-02');
 		expect((burnUp(report, light) as Axis).xAxis).toMatchObject({ min: day, max: end });
 		expect((cfd(report, light) as Axis).xAxis).toMatchObject({ min: day, max: end });
+		// now just after midnight in UTC, the evening before here: the axis runs to the local midnight
+		// of now's UTC day, where that day's point is drawn
+		const late: Report = { ...report, generated_at: '2026-09-01T02:00:00Z' };
+		expect((burnUp(late, light) as Axis).xAxis).toMatchObject({
+			min: day,
+			max: midnight('2026-09-01')
+		});
 		// time in state by the day (S-0168): from the day that holds the start to the one that holds
-		// now, half a day either side
+		// now, each on its date's tick, half a day either side
 		expect((timeInState(report, light) as Axis).xAxis).toMatchObject({
 			type: 'time',
 			min: day - 12 * hour,
-			max: Date.parse('2026-09-01T00:00:00Z') + 12 * hour
+			max: midnight('2026-09-01') + 12 * hour
 		});
 		// spend over time: from the bucket that holds the start to the one that holds now, half a
 		// bucket either side
 		expect((tokensSpent(report, light) as Axis).xAxis).toMatchObject({
 			min: day - 12 * hour,
-			max: Date.parse('2026-09-01T00:00:00Z') + 12 * hour
+			max: midnight('2026-09-01') + 12 * hour
 		});
 		const weekly = { ...report, usage: { ...report.usage!, bucket: 'week' as const } };
 		expect((costSpent(weekly, light) as Axis).xAxis).toMatchObject({
-			min: Date.parse('2026-07-27T00:00:00Z') - 84 * hour,
-			max: Date.parse('2026-08-31T00:00:00Z') + 84 * hour
+			min: midnight('2026-07-27') - 84 * hour,
+			max: midnight('2026-08-31') + 84 * hour
 		});
 
 		// a narrower window moves the axis and drops S-001, completed on 3 August
@@ -541,10 +560,10 @@ describe('chart builders', () => {
 		expect(ct.xAxis).toMatchObject({ min: from, max: end });
 		expect(ct.series.flatMap((s) => s.data.map((d) => d.id))).toEqual(['S-002']);
 		const tis = timeInState(narrow, light) as Axis & { series: { data: { ids: string[] }[] }[] };
-		expect(tis.xAxis.min).toBe(from - 12 * hour);
+		expect(tis.xAxis.min).toBe(midnight('2026-08-10') - 12 * hour);
 		expect(tis.series[0].data.map((d) => d.ids)).toEqual([['S-002']]);
 		expect((cost(narrow, light) as Axis).xAxis.data).toEqual(['S-002*']);
-		expect((tokenRate(narrow, light) as Axis).xAxis.min).toBe(from - 12 * hour);
+		expect((tokenRate(narrow, light) as Axis).xAxis.min).toBe(midnight('2026-08-10') - 12 * hour);
 		expect(completedIn(narrow).map((i) => i.id)).toEqual(['S-002']);
 		expect(withUsage(narrow).map((i) => i.id)).toEqual(['S-002']);
 	});
@@ -578,14 +597,24 @@ describe('chart builders', () => {
 		const c = cfd(report, light) as { series: { stack: string; lineStyle: { color: string } }[] };
 		expect(new Set(c.series.map((s) => s.stack)).size).toBe(1);
 		expect(c.series[0].lineStyle.color).toBe(light.surface);
-		type Bars = { series: { name: string; data: { value: [number, number]; ids: string[] }[] }[] };
+		type Bars = {
+			series: {
+				name: string;
+				data: { value: [number, number]; ids: string[]; day: string }[];
+			}[];
+			tooltip: { formatter: (ps: unknown[]) => string };
+		};
 		const t = timeInState(report, light) as Bars;
-		// a bar per day with items completed, at the day's start in UTC
+		// a bar per UTC day with items completed, on its date's tick: the local midnight of its date
 		expect(t.series[2].name).toBe('in-progress');
 		expect(t.series[2].data).toEqual([
-			{ value: [Date.parse('2026-08-03T00:00:00Z'), 24], ids: ['S-001'] },
-			{ value: [Date.parse('2026-08-12T00:00:00Z'), 10], ids: ['S-002'] }
+			{ value: [midnight('2026-08-03'), 24], ids: ['S-001'], day: '2026-08-03' },
+			{ value: [midnight('2026-08-12'), 10], ids: ['S-002'], day: '2026-08-12' }
 		]);
+		// the tooltip names the bar's own date, not the local one of the moment the UTC day starts
+		expect(
+			t.tooltip.formatter(t.series.map((s) => ({ seriesName: s.name, data: s.data[0] })))
+		).toMatch(/^2026-08-03, mean of 1 story<br\/>S-001<br\/>/);
 		// items completed the same day share a bar: the mean hours per state
 		const sameDay: Report = {
 			...report,
@@ -625,7 +654,8 @@ describe('chart builders', () => {
 			data: { value: [number, number | null]; week: WaitWeek }[];
 		}[];
 	};
-	const monday = (day: string) => Date.parse(`${day}T00:00:00Z`);
+	// a week from its Monday in UTC, drawn on its Monday's tick
+	const monday = midnight;
 	it('agent waiting stacks the hours waited on threads and in review per week, with the mean per story as a line', () => {
 		const o = agentWaiting(report, light) as Waits;
 		expect(o.series.map((s) => [s.name, s.type, s.stack])).toEqual([
@@ -743,17 +773,18 @@ describe('chart builders', () => {
 		stack?: string;
 		itemStyle: { color: string };
 		lineStyle?: { type: string; color: string };
-		data: { value: [string, number]; items: number; estimated?: boolean }[];
+		data: { value: [number, number]; at: string; items: number; estimated?: boolean }[];
 	};
 	type Over = {
 		series: Line[];
 		legend: { show: boolean };
-		useUTC: boolean;
+		useUTC?: boolean;
 		xAxis: { type: string; min?: number; max?: number; minInterval: number };
 		yAxis: { name: string; axisLabel: { formatter: (v: number) => string } };
 		tooltip: { trigger: string; formatter: (p: unknown) => string };
 	};
-	const values = (l: Line) => l.data.map((d) => d.value);
+	// each point by its bucket's start as flai sends it, and its value
+	const values = (l: Line) => l.data.map((d) => [d.at, d.value[1]]);
 	it('token rate is tokens per agent minute over time, per model, with all of them dashed', () => {
 		const o = tokenRate(report, light) as Over;
 		expect(o.series.map((s) => s.name)).toEqual([
@@ -762,11 +793,12 @@ describe('chart builders', () => {
 			'all models'
 		]);
 		expect(o.xAxis.type).toBe('time');
-		// buckets are UTC, and the axis spans the window's days, not the one day drawn (S-0166)
-		expect(o.useUTC).toBe(true);
+		// the axis reads the local zone, each UTC day on its date's tick, and it spans the window's
+		// days, not the one day drawn (S-0166)
+		expect(o.useUTC).toBeUndefined();
 		expect([o.xAxis.min, o.xAxis.max, o.xAxis.minInterval]).toEqual([
-			Date.parse('2026-08-01T12:00:00Z'),
-			Date.parse('2026-09-01T12:00:00Z'),
+			midnight('2026-08-02') - 43200e3,
+			midnight('2026-09-01') + 43200e3,
 			86400e3
 		]);
 		expect(o.yAxis.name).toBe('tokens per agent minute');
@@ -774,6 +806,9 @@ describe('chart builders', () => {
 		// the day with nothing done has no point, and neither has the one with no agent time
 		expect(values(o.series[1])).toEqual([['2026-08-03T00:00:00Z', 27777.8]]);
 		expect(values(o.series[2])).toEqual([['2026-08-03T00:00:00Z', 38888.9]]);
+		// a day's point sits on its date's tick: the local midnight of 3 August, not 20:00 on the 2nd
+		expect(o.series[1].data[0].value[0]).toBe(midnight('2026-08-03'));
+		expect(o.series[1].data[0].value[0]).toBe(Date.parse('2026-08-03T04:00:00Z'));
 		expect(o.series[1].itemStyle.color).toBe(CATEGORICAL.light[0]);
 		expect(o.series[0].itemStyle.color).toBe(CATEGORICAL.light[5]);
 		expect([o.series[0].symbol, o.series[1].symbol]).toEqual(['triangle', 'circle']);
@@ -912,7 +947,11 @@ describe('chart builders', () => {
 		expect(controls('cycle-time').epic).toBe(true);
 	});
 	it('names a bucket as a reader does, and says when a flai sends no spend', () => {
-		expect(bucketLabel('2026-09-29T19:00:00Z', 'hour')).toBe('2026-09-29 19:00 UTC');
+		// an hour in the local zone; a UTC day or week by its own date, which the local one is not
+		expect(bucketLabel('2026-09-29T19:00:00Z', 'hour')).toBe('2026-09-29 15:00 EDT');
+		expect(bucketLabel('2026-09-30T02:00:00Z', 'hour')).toBe('2026-09-29 22:00 EDT');
+		expect(bucketLabel('2026-09-29T19:00:00Z', 'hour')).not.toContain('UTC');
+		expect(bucketLabel('2026-09-29T00:00:00Z', 'day')).toBe('2026-09-29');
 		expect(bucketLabel('2026-09-28T00:00:00Z', 'week')).toBe('week of 2026-09-28');
 		expect(modelSymbol('claude-fable-5-1')).toBe('diamond');
 		expect(modelSymbol('gpt-9')).toBe('roundRect');
@@ -1190,10 +1229,11 @@ describe('chart builders', () => {
 				['2026-09-01', 50]
 			]
 		]);
-		// by the day over the window: from the day that holds its start to its now (ADR-0054)
+		// by the day over the window: from the day that holds its start, on its date's tick, to its
+		// now (ADR-0054)
 		expect([o.xAxis.type, o.xAxis.min, o.xAxis.max]).toEqual([
 			'time',
-			Date.parse('2026-08-23T00:00:00Z'),
+			midnight('2026-08-23'),
 			Date.parse('2026-09-01T12:00:00Z')
 		]);
 		expect(o.yAxis.name).toBe('value per week');
@@ -1217,25 +1257,31 @@ describe('chart builders', () => {
 			['incurred', 'bar'],
 			['mean per week', 'line']
 		]);
-		type P = { value: [string, number] };
+		type P = { value: [number, number]; at: string };
 		const points = (i: number) => (o.series[i].data as P[]).map((d) => d.value);
+		// each week on its Monday's tick
 		expect(points(0)).toEqual([
-			['2026-08-17T00:00:00Z', 150],
-			['2026-08-24T00:00:00Z', 140.5],
-			['2026-08-31T00:00:00Z', 30.25]
+			[midnight('2026-08-17'), 150],
+			[midnight('2026-08-24'), 140.5],
+			[midnight('2026-08-31'), 30.25]
+		]);
+		expect((o.series[0].data as P[]).map((d) => d.at)).toEqual([
+			'2026-08-17T00:00:00Z',
+			'2026-08-24T00:00:00Z',
+			'2026-08-31T00:00:00Z'
 		]);
 		// the sum from the window's first week to this one over the number of those weeks:
 		// 150, 290.5 / 2, 320.75 / 3, to two decimals
 		expect(points(1).map((v) => v[1])).toEqual([150, 145.25, 106.92]);
 		expect(o.series[1].lineStyle.type).toBe('dashed');
 		expect(o.series[0].itemStyle.color).toBe(CATEGORICAL.light[0]);
-		// weeks in UTC over the window: from the week that holds the start to the one that holds now,
-		// half a week either side
+		// UTC weeks over the window on an axis in the local zone: from the week that holds the start
+		// to the one that holds now, half a week either side
 		const halfWeek = 3.5 * 86400e3;
-		expect(o.useUTC).toBe(true);
+		expect(o.useUTC).toBeUndefined();
 		expect([o.xAxis.min, o.xAxis.max, o.xAxis.minInterval]).toEqual([
-			Date.parse('2026-08-17T00:00:00Z') - halfWeek,
-			Date.parse('2026-08-31T00:00:00Z') + halfWeek,
+			midnight('2026-08-17') - halfWeek,
+			midnight('2026-08-31') + halfWeek,
 			7 * 86400e3
 		]);
 		expect(o.legend.show).toBe(true);
@@ -1255,14 +1301,17 @@ describe('chart builders', () => {
 		const o = codOrder(codReport, light) as Cod;
 		expect(o.series.map((s) => s.name)).toEqual(['pull order', 'by cost of delay', 'by WSJF']);
 		expect(o.series.map((s) => s.step)).toEqual(['end', 'end', 'end']);
-		type P = { value: [string, number]; id?: string };
-		const points = (i: number) => (o.series[i].data as P[]).map((d) => [d.id, ...d.value]);
+		type P = { value: [number, number]; at: string; id?: string };
+		const points = (i: number) => (o.series[i].data as P[]).map((d) => [d.id, d.at, d.value[1]]);
 		expect(points(0)).toEqual([
 			[undefined, '2026-09-01T12:00:00Z', 0],
 			['S-012', '2026-09-01T12:00:00Z', 0],
 			['S-010', '2026-09-05T12:00:00Z', 57.14],
 			['S-011', '2026-09-08T12:00:00Z', 107.14]
 		]);
+		// each pull is drawn at its moment
+		for (const d of o.series.flatMap((s) => s.data as P[]))
+			expect(d.value[0]).toBe(Date.parse(d.at));
 		expect(points(1).map((p) => p[2])).toEqual([0, 0, 14.29, 18.58]);
 		expect(points(2).map((p) => p[0])).toEqual([undefined, 'S-011', 'S-010', 'S-012']);
 		// a colour and a mark per order, apart for every pair
@@ -1274,7 +1323,7 @@ describe('chart builders', () => {
 		expect(new Set(o.series.map((s) => s.symbol)).size).toBe(3);
 		// a projection: from its start to its horizon, not over the window (ADR-0112)
 		expect([o.useUTC, o.xAxis.type, o.xAxis.min, o.xAxis.max]).toEqual([
-			true,
+			undefined,
 			'time',
 			Date.parse('2026-09-01T12:00:00Z'),
 			Date.parse('2026-09-08T12:00:00Z')
@@ -1282,10 +1331,10 @@ describe('chart builders', () => {
 		expect(o.yAxis.name).toBe('projected cost');
 		expect(o.legend.show).toBe(true);
 		expect(o.tooltip.formatter({ seriesName: 'pull order', data: o.series[0].data[2] })).toBe(
-			'pull order<br/>S-010 pulled 2026-09-05 12:00 UTC<br/>cumulative 57.14'
+			'pull order<br/>S-010 pulled 2026-09-05 08:00 EDT<br/>cumulative 57.14'
 		);
 		expect(o.tooltip.formatter({ seriesName: 'by WSJF', data: o.series[2].data[0] })).toBe(
-			'by WSJF<br/>now, 2026-09-01 12:00 UTC<br/>cumulative 0'
+			'by WSJF<br/>now, 2026-09-01 08:00 EDT<br/>cumulative 0'
 		);
 		expect(orderSummary(codReport)).toEqual({
 			totals: { current: 107.14, cod: 18.58, wsjf: 17.15 },
@@ -1538,6 +1587,10 @@ describe('planning charts', () => {
 		expect(o.tooltip.formatter({ seriesName: 'forecast error', data: o.series[0].data[1] })).toBe(
 			'S-102 Story 102<br/>forecast error: -30m · 2026-08-12'
 		);
+		// the date of its completion in the local zone: midnight in UTC is the evening before here
+		expect(o.tooltip.formatter({ seriesName: 'forecast error', data: o.series[0].data[2] })).toBe(
+			'S-103 Story 103<br/>forecast error: -3h · 2026-08-19'
+		);
 		expect(o.yAxis.name).toBe('actual minus forecast');
 		expect(o.yAxis.axisLabel.formatter(7200)).toBe('+2h');
 		expect(humanSigned(-10800)).toBe('-3h');
@@ -1624,21 +1677,19 @@ describe('planning charts', () => {
 		// the main fixture, as an older flai sends it
 		expect(report.forecasts).toBeUndefined();
 		// the chart by the bucket runs from the day that holds the start to the one that holds now,
-		// half a day either side
+		// half a day either side, each day on its date's tick
+		const start = Date.parse('2026-08-02T12:00:00Z');
+		const end = Date.parse('2026-09-01T12:00:00Z');
 		const spans = {
-			'forecast-accuracy': ['2026-08-02T12:00:00Z', '2026-09-01T12:00:00Z', 0],
-			'delivery-accuracy': ['2026-08-02T12:00:00Z', '2026-09-01T12:00:00Z', 0],
-			'forecast-by-model': ['2026-08-02T00:00:00Z', '2026-09-01T00:00:00Z', 43200e3]
+			'forecast-accuracy': [start, end, 0],
+			'delivery-accuracy': [start, end, 0],
+			'forecast-by-model': [midnight('2026-08-02'), midnight('2026-09-01'), 43200e3]
 		} as const;
 		for (const kind of FORECAST_KINDS) {
 			const o = build(kind, report, light) as Accuracy;
 			const [from, to, half] = spans[kind];
 			expect(o.series, kind).toEqual([]);
-			expect(o.xAxis, kind).toMatchObject({
-				type: 'time',
-				min: Date.parse(from) - half,
-				max: Date.parse(to) + half
-			});
+			expect(o.xAxis, kind).toMatchObject({ type: 'time', min: from - half, max: to + half });
 		}
 		// errors without the spreads: points, but no lines
 		const older: Report = { ...forecasting, forecasts: undefined };
@@ -1886,9 +1937,9 @@ describe('planning charts', () => {
 	// The stories of `forecasting` and two more by opus in the week of 17 August, laid out by the
 	// week: opus has three stories that week, S-103 (-3h) and S-110 (20m) on 20 August, and S-111
 	// (-4000s) on 21 August.
-	type ModelPoint = { value: [number, number | null]; count: number };
+	type ModelPoint = { value: [number, number | null]; at: string; count: number };
 	type ByModel = {
-		useUTC: boolean;
+		useUTC?: boolean;
 		legend: { show: boolean };
 		xAxis: { type: string; min?: number; max?: number; minInterval?: number };
 		yAxis: { name: string; axisLabel: { formatter: (v: number) => string } };
@@ -1920,10 +1971,9 @@ describe('planning charts', () => {
 		build('forecast-by-model', r, light, undefined, f) as ByModel;
 	const seriesOf = (o: ByModel, model: string) => o.series.find((s) => s.name === model)!;
 	/** A model's points, the gaps left out: the bucket's day, the p50, and the stories under it. */
-	const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 	const drawn = (o: ByModel, model: string) => {
 		const points = seriesOf(o, model).data.filter((d) => d.value[1] !== null);
-		return points.map((d) => [dayOf(d.value[0]), d.value[1], d.count]);
+		return points.map((d) => [d.at.slice(0, 10), d.value[1], d.count]);
 	};
 
 	it('forecast by model plots the p50 absolute forecast error per bucket per model', () => {
@@ -1952,8 +2002,10 @@ describe('planning charts', () => {
 			600,
 			null
 		]);
+		// a week on its Monday's tick
 		expect(seriesOf(o, opus).data[0]).toEqual({
-			value: [Date.parse('2026-07-27'), null],
+			value: [midnight('2026-07-27'), null],
+			at: '2026-07-27T00:00:00.000Z',
 			count: 0
 		});
 		// each model in its fixed colour and mark, every mark shown
@@ -2000,19 +2052,20 @@ describe('planning charts', () => {
 	it("forecast by model spans the report's window in its buckets (ADR-0054)", () => {
 		const hour = 3600e3;
 		// from the bucket that holds the window's start to the one that holds now, half a bucket
-		// either side, with ticks no finer than a bucket, in UTC
+		// either side, with ticks no finer than a bucket, in the local zone: a day or a week on its
+		// date's tick, an hour at its moment
 		const w = byModel(weekly);
-		expect(w.useUTC).toBe(true);
+		expect(w.useUTC).toBeUndefined();
 		expect(w.xAxis).toMatchObject({
 			type: 'time',
 			minInterval: 168 * hour,
-			min: Date.parse('2026-07-27T00:00:00Z') - 84 * hour,
-			max: Date.parse('2026-08-31T00:00:00Z') + 84 * hour
+			min: midnight('2026-07-27') - 84 * hour,
+			max: midnight('2026-08-31') + 84 * hour
 		});
 		expect(byModel(inBuckets('day')).xAxis).toMatchObject({
 			minInterval: 24 * hour,
-			min: Date.parse('2026-08-02T00:00:00Z') - 12 * hour,
-			max: Date.parse('2026-09-01T00:00:00Z') + 12 * hour
+			min: midnight('2026-08-02') - 12 * hour,
+			max: midnight('2026-09-01') + 12 * hour
 		});
 		const hourly = byModel(inBuckets('hour'));
 		expect(hourly.xAxis).toMatchObject({
@@ -2021,9 +2074,15 @@ describe('planning charts', () => {
 			max: Date.parse('2026-09-01T12:00:00Z') + hour / 2
 		});
 		expect(drawn(hourly, opus).length).toBe(5);
+		// an hour at its moment, named in the local zone
+		const first = seriesOf(hourly, opus).data.find((d) => d.value[1] !== null)!;
+		expect(first.value[0]).toBe(Date.parse('2026-08-03T12:00:00Z'));
+		expect(hourly.tooltip.formatter([{ seriesName: opus, data: first }])).toBe(
+			`2026-08-03 08:00 EDT<br/>${opus}: p50 2h over 1 story`
+		);
 		// a narrower window moves the axis and drops S-101, done on 3 August
 		const narrow = byModel({ ...weekly, window_start: '2026-08-10T00:00:00Z' });
-		expect(narrow.xAxis.min).toBe(Date.parse('2026-08-10T00:00:00Z') - 84 * hour);
+		expect(narrow.xAxis.min).toBe(midnight('2026-08-10') - 84 * hour);
 		expect(seriesOf(narrow, opus).data.map((d) => d.value[1])).toEqual([null, 4000, 600, null]);
 		// a report without a window has a place per bucket drawn, a bucket either side; S-106, done
 		// before the window, comes back
@@ -2031,8 +2090,8 @@ describe('planning charts', () => {
 		expect(drawn(open, opus)[0]).toEqual(['2026-07-20', 99999, 1]);
 		expect(seriesOf(open, haiku).data.length).toBe(5);
 		expect(open.xAxis).toMatchObject({
-			min: Date.parse('2026-07-20T00:00:00Z') - 168 * hour,
-			max: Date.parse('2026-08-24T00:00:00Z') + 168 * hour
+			min: midnight('2026-07-20') - 168 * hour,
+			max: midnight('2026-08-24') + 168 * hour
 		});
 	});
 	it('forecast by model narrows by nature and shows every model whatever the model filter', () => {
@@ -2071,7 +2130,11 @@ describe('planning charts', () => {
 		expect(o.series.map((s) => s.name)).toEqual(Object.keys(flai).sort());
 		for (const [m, s] of Object.entries(flai))
 			expect(seriesOf(o, m).data, m).toEqual([
-				{ value: [Date.parse('2026-08-24T00:00:00Z'), s.p50_seconds], count: s.count }
+				{
+					value: [midnight('2026-08-24'), s.p50_seconds],
+					at: '2026-08-24T00:00:00.000Z',
+					count: s.count
+				}
 			]);
 	});
 	it('gives the rows of the planning table: the stories done in the window with an error', () => {
@@ -2246,10 +2309,10 @@ describe('claims charts', () => {
 		expect(heldStories.itemStyle.color).toBe(light.series[3]);
 		expect(o.legend.show).toBe(true);
 		expect((o.yAxis as { name: string }).name).toBe('stories');
-		// a series by the day: from the day that holds the window's start to now
+		// a series by the day: from the day that holds the window's start, on its date's tick, to now
 		expect(o.xAxis).toMatchObject({
 			type: 'time',
-			min: Date.parse('2026-08-02T00:00:00Z'),
+			min: midnight('2026-08-02'),
 			max: end
 		});
 		expect((build('parallelism', claiming, light) as Option).series).toEqual(o.series);
@@ -2274,9 +2337,9 @@ describe('claims charts', () => {
 		expect(hoursOf(o.series[0])).toEqual([0, 2, 0, 0.25, 0, 0]);
 		expect(hoursOf(o.series[1])).toEqual([0, 1, 0, 0, 0, 1.5]);
 		expect(hoursOf(o.series[2])).toEqual([0, 0, 0.5, 0, 0, 0]);
-		// each bar at its week's Monday
+		// each bar on its week's Monday's tick
 		expect(o.series[0].data.map((d) => (d as Bar).value[0])).toEqual(
-			['07-27', '08-03', '08-10', '08-17', '08-24', '08-31'].map((d) => Date.parse(`2026-${d}`))
+			['07-27', '08-03', '08-10', '08-17', '08-24', '08-31'].map((d) => midnight(`2026-${d}`))
 		);
 		// three reasons in three colours apart from each other
 		expect(new Set(o.series.map((s) => s.itemStyle.color)).size).toBe(3);
@@ -2291,10 +2354,10 @@ describe('claims charts', () => {
 		expect(o.xAxis).toMatchObject({
 			type: 'time',
 			minInterval: 7 * day,
-			min: Date.parse('2026-07-27') - 3.5 * day,
-			max: Date.parse('2026-08-31') + 3.5 * day
+			min: midnight('2026-07-27') - 3.5 * day,
+			max: midnight('2026-08-31') + 3.5 * day
 		});
-		expect(o.useUTC).toBe(true);
+		expect(o.useUTC).toBeUndefined();
 		expect((o.yAxis as { name: string }).name).toBe('hours held');
 		expect((build('hold-time', claiming, light) as Option).series).toEqual(o.series);
 	});
@@ -2343,6 +2406,10 @@ describe('claims charts', () => {
 			'S-101 Story 101 · 2026-08-03<br/>outside its touches: 2<br/>flai/cmd/a.go, flai/cmd/b.go'
 		);
 		expect(tip(1, 1)).toBe('S-102 Story 102 · 2026-08-12<br/>touches unchanged: 0');
+		// the date of its completion in the local zone: midnight in UTC is the evening before here
+		expect(tip(0, 2)).toBe(
+			'S-103 Story 103 · 2026-08-19<br/>outside its touches: 1<br/>docs/x.md'
+		);
 		expect(tip(2, 2)).toBe(
 			'week of 2026-08-10 (2026-W33)<br/>1 of 1 story with exact touches (100%)'
 		);
@@ -2374,8 +2441,8 @@ describe('claims charts', () => {
 	});
 	it('draws the claims charts empty over the window from an empty window or an older flai', () => {
 		const spans = {
-			parallelism: [Date.parse('2026-08-02T00:00:00Z'), end],
-			'hold-time': [Date.parse('2026-07-27') - 3.5 * day, Date.parse('2026-08-31') + 3.5 * day],
+			parallelism: [midnight('2026-08-02'), end],
+			'hold-time': [midnight('2026-07-27') - 3.5 * day, midnight('2026-08-31') + 3.5 * day],
 			'touches-drift': [start, end]
 		} as const;
 		for (const r of [{ ...claiming, claims: empty }, forecasting]) {
@@ -2606,13 +2673,13 @@ describe('strategic charts', () => {
 		stack?: string;
 		itemStyle: { color: string };
 		lineStyle?: { type: string };
-		data: { value: [string, number]; items: number; estimated?: boolean }[];
+		data: { value: [number, number]; at: string; items: number; estimated?: boolean }[];
 		markLine?: { data: { name: string; yAxis: number }[] };
 	};
 	type Strategic = {
 		series: Series[];
 		legend: { show: boolean };
-		useUTC: boolean;
+		useUTC?: boolean;
 		xAxis: { type: string; min?: number; max?: number; minInterval: number };
 		yAxis: { name: string; axisLabel: { formatter: (v: number) => string } };
 		tooltip: { formatter: (p: unknown) => string };
@@ -2627,9 +2694,13 @@ describe('strategic charts', () => {
 			['mean per story', 'line']
 		]);
 		expect(new Set(o.series.slice(0, 2).map((s) => s.stack))).toEqual(new Set(['strategic']));
-		// one bar per day of the window, 0 on a day a kind spent nothing
-		const days = o.series[0].data.map((d) => d.value[0]);
-		expect(days).toEqual(strategicDays.map((d) => `${d.date}T00:00:00Z`));
+		// one bar per day of the window, on its date's tick, 0 on a day a kind spent nothing
+		expect(o.series[0].data.map((d) => d.at)).toEqual(
+			strategicDays.map((d) => `${d.date}T00:00:00Z`)
+		);
+		expect(o.series[0].data.map((d) => d.value[0])).toEqual(
+			strategicDays.map((d) => midnight(d.date))
+		);
 		expect(o.series[0].data.map((d) => d.value[1])).toEqual([
 			0, 0, 0, 0, 0, 0, 0, 0, 8.7265, 34.5781, 56.688, 6.682
 		]);
@@ -2643,7 +2714,7 @@ describe('strategic charts', () => {
 			true
 		]);
 		// the agents' cost per story done that day: no point on 26 to 28 September
-		expect(o.series[2].data.map((d) => d.value)).toEqual([
+		expect(o.series[2].data.map((d) => [d.at, d.value[1]])).toEqual([
 			['2026-09-29T00:00:00Z', 5.7092],
 			['2026-09-30T00:00:00Z', 5.2406],
 			['2026-10-01T00:00:00Z', 10.1552],
@@ -2657,12 +2728,12 @@ describe('strategic charts', () => {
 		// one axis, in dollars, over the window by the day, half a day either side
 		expect(o.yAxis.name).toBe('US dollars');
 		expect(o.yAxis.axisLabel.formatter(0.5)).toBe('$0.500');
-		expect(o.useUTC).toBe(true);
+		expect(o.useUTC).toBeUndefined();
 		expect(o.xAxis).toMatchObject({
 			type: 'time',
 			minInterval: 24 * hour,
-			min: Date.parse('2026-09-26T00:00:00Z') - 12 * hour,
-			max: Date.parse('2026-10-07T00:00:00Z') + 12 * hour
+			min: midnight('2026-09-26') - 12 * hour,
+			max: midnight('2026-10-07') + 12 * hour
 		});
 		expect(o.legend.show).toBe(true);
 		expect(
@@ -2768,7 +2839,7 @@ describe('strategic charts', () => {
 		expect(new Set(o.series.slice(0, 2).map((s) => s.stack))).toEqual(new Set(['strategic']));
 		// one bar per day of the window, in hours, 0 on a day a kind worked none, estimated as spent
 		expect(o.series[0].data.map((d) => d.value[0])).toEqual(
-			strategicDays.map((d) => `${d.date}T00:00:00Z`)
+			strategicDays.map((d) => midnight(d.date))
 		);
 		const h = (s: number) => s / 3600;
 		expect(o.series[0].data.map((d) => d.value[1])).toEqual(
@@ -2783,8 +2854,8 @@ describe('strategic charts', () => {
 		);
 		// the lines have a point only on the days a story was done, in hours
 		const at = ['2026-09-26T00:00:00Z', '2026-09-27T00:00:00Z', '2026-09-28T00:00:00Z'];
-		expect(o.series[2].data.map((d) => d.value[0])).toEqual(at);
-		expect(o.series[3].data.map((d) => d.value[0])).toEqual(at);
+		expect(o.series[2].data.map((d) => d.at)).toEqual(at);
+		expect(o.series[3].data.map((d) => d.value[0])).toEqual(at.map(midnight));
 		expect(o.series[2].data.map((d) => d.value[1])).toEqual(
 			[6918.64705882353, 24374, 77352.5].map(h)
 		);
@@ -2794,8 +2865,8 @@ describe('strategic charts', () => {
 		expect(o.xAxis).toMatchObject({
 			type: 'time',
 			minInterval: 24 * hour,
-			min: Date.parse('2026-09-26T00:00:00Z') - 12 * hour,
-			max: Date.parse('2026-10-07T00:00:00Z') + 12 * hour
+			min: midnight('2026-09-26') - 12 * hour,
+			max: midnight('2026-10-07') + 12 * hour
 		});
 		expect(o.legend.show).toBe(true);
 		expect(

@@ -40,7 +40,8 @@ const report = {
 			delivery_error_seconds: -86400,
 			estimate_error_seconds: 1800
 		}),
-		story('S-0002', '2026-09-20T12:00:00Z', {
+		// done just after midnight in UTC: the evening of the 19th in New York, where the tests run
+		story('S-0002', '2026-09-20T02:00:00Z', {
 			nature: 'remediation',
 			forecast_seconds: 14400,
 			cycle_time_seconds: 3600,
@@ -66,6 +67,7 @@ describe('ForecastTable', () => {
 			[...tr.querySelectorAll('td')].map((td) => td.textContent?.replace(/\s+/g, ' ').trim())
 		);
 
+	// each completed on its date in the local zone (S-0329)
 	it('lists the stories with an error, newest first, each linked, with a dash for what it lacks', () => {
 		show(forecastRows(report));
 		expect([...document.querySelectorAll('th')].map((th) => th.textContent?.trim())).toEqual([
@@ -91,7 +93,7 @@ describe('ForecastTable', () => {
 				'-1d',
 				'+30m'
 			],
-			['S-0002 Story S-0002', '2026-09-20', 'remediation', '(none)', '4h', '1h', '-3h', '-', '-'],
+			['S-0002 Story S-0002', '2026-09-19', 'remediation', '(none)', '4h', '1h', '-3h', '-', '-'],
 			['S-0001 Story S-0001', '2026-09-10', 'feature', 'claude-opus-5-5', '-', '-', '-', '-', '-1h']
 		]);
 		expect(

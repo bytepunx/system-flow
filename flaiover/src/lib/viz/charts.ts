@@ -18,6 +18,7 @@ import {
 } from './palette';
 import { amount } from '$lib/planning';
 import { count, dollars } from '$lib/usage';
+import { localDate, localTime } from '$lib/localtime';
 
 export type Distribution = {
 	count: number;
@@ -551,13 +552,26 @@ function floorTo(ms: number, bucket: BucketSize): number {
 	return bucket === 'day' ? day : day - ((new Date(day).getUTCDay() + 6) % 7) * DAY_MS;
 }
 /**
- * A time axis's ends: the report's window (S-0166), whatever the data it holds. A series by the day
- * starts at the day that holds the window's start, so that its first point is on the axis.
+ * Where a bucket's start is drawn on a time axis, which reads the local zone: an hour at its
+ * moment, and a UTC day or week at the local midnight of its own date, so that its mark sits on
+ * that date's tick in any zone.
+ */
+function place(ms: number, bucket: BucketSize): number {
+	if (bucket === 'hour') return ms;
+	const d = new Date(ms);
+	return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).getTime();
+}
+/**
+ * A time axis's ends: the report's window (S-0166), whatever the data it holds. A series by the
+ * day, whose dates are drawn at their local midnights, runs from the day that holds the window's
+ * start to no earlier than the day that holds now, so that its first and last points are on it.
  */
 function span(r: Report, daily = false): Opt {
 	const w = windowOf(r);
 	if (!w) return {};
-	return { min: daily ? floorTo(w.start, 'day') : w.start, max: w.end };
+	if (!daily) return { min: w.start, max: w.end };
+	const day = (ms: number) => place(floorTo(ms, 'day'), 'day');
+	return { min: day(w.start), max: Math.max(w.end, day(w.end)) };
 }
 
 type Opt = Record<string, unknown>;
@@ -661,7 +675,7 @@ export function cycleTime(r: Report, t: Theme, epic?: string): Opt {
 		legend: legend(t, groups.length > 1),
 		tooltip: tooltip(t, {
 			formatter: (p: { data: { id: string; title: string; value: [string, number] } }) =>
-				`${p.data.id} ${p.data.title}<br/>${p.data.value[1]} days · ${p.data.value[0].slice(0, 10)}`
+				`${p.data.id} ${p.data.title}<br/>${p.data.value[1]} days · ${localDate(p.data.value[0])}`
 		}),
 		xAxis: axisX(t, { type: 'time', ...span(r) }),
 		yAxis: axisY(t, { type: 'value', name: 'days', nameTextStyle: { color: t.textSecondary } }),
@@ -733,7 +747,8 @@ export function cfd(r: Report, t: Theme): Opt {
 
 /** The items of a day in time in state: the moment the UTC day starts, and those completed in it. */
 type StateDay = { at: number; items: ItemMetrics[] };
-type StateBar = { value: [number, number]; ids: string[] };
+/** A state's bar of a day, drawn on its date's tick, with that date as flai names the day. */
+type StateBar = { value: [number, number]; ids: string[]; day: string };
 /** How many names a tooltip lists before it counts the rest. */
 const NAMED = 10;
 /** Names for a tooltip: the first NAMED, then how many more. */
@@ -742,7 +757,7 @@ const named = (names: string[]) =>
 	(names.length > NAMED ? ` and ${names.length - NAMED} more` : '');
 /**
  * Time in state (S-0168): one stacked bar per UTC day of the window in which items were completed,
- * the mean hours per state of those items, on a time axis that spans the window.
+ * the mean hours per state of those items, on its date's tick of a time axis that spans the window.
  */
 export function timeInState(r: Report, t: Theme, epic?: string): Opt {
 	const byDay = new Map<number, ItemMetrics[]>();
@@ -762,12 +777,12 @@ export function timeInState(r: Report, t: Theme, epic?: string): Opt {
 		barMaxWidth: 24,
 		itemStyle: { color: colorFor(t, STATE_SLOT, st, 0), borderColor: t.surface, borderWidth: 1 },
 		data: daysDone.map((d): StateBar => ({
-			value: [d.at, mean(d.items, st)],
-			ids: d.items.map((i) => i.id)
+			value: [place(d.at, 'day'), mean(d.items, st)],
+			ids: d.items.map((i) => i.id),
+			day: new Date(d.at).toISOString().slice(0, 10)
 		}))
 	}));
 	return base(t, {
-		useUTC: true,
 		legend: legend(t, true),
 		tooltip: tooltip(t, {
 			trigger: 'axis',
@@ -777,7 +792,7 @@ export function timeInState(r: Report, t: Theme, epic?: string): Opt {
 				if (list.length === 0) return '';
 				const ids = list[0].data.ids;
 				const lines = list.map((p) => `${p.marker ?? ''}${p.seriesName}: ${p.data.value[1]} hours`);
-				return `${new Date(list[0].data.value[0]).toISOString().slice(0, 10)}, mean of ${ids.length} ${ids.length === 1 ? r.type : plural(r.type)}<br/>${named(ids)}<br/>${lines.join('<br/>')}`;
+				return `${list[0].data.day}, mean of ${ids.length} ${ids.length === 1 ? r.type : plural(r.type)}<br/>${named(ids)}<br/>${lines.join('<br/>')}`;
 			}
 		}),
 		xAxis: axisX(t, {
@@ -871,7 +886,7 @@ type WaitPoint = { value: [number, number | null]; week: WaitWeek };
 export function agentWaiting(r: Report, t: Theme): Opt {
 	const weeks = r.waiting?.weeks ?? [];
 	const point = (wk: WaitWeek, seconds: number | null): WaitPoint => ({
-		value: [Date.parse(wk.start), seconds === null ? null : seconds / 3600],
+		value: [place(Date.parse(wk.start), 'week'), seconds === null ? null : seconds / 3600],
 		week: wk
 	});
 	const bar = (name: string, color: string, seconds: (wk: WaitWeek) => number) => ({
@@ -959,10 +974,10 @@ export function bucketsOf(r: Report, type: string = r.type): Bucket[] {
 /** Whether the report carries spend over time at all. */
 export const hasSpend = (r: Report) => r.usage?.spend !== undefined;
 const bucketSize = (r: Report): BucketSize => r.usage?.bucket ?? 'day';
-/** A bucket as a reader names it: the hour, the day, or the week from its Monday, in UTC. */
+/** A bucket as a reader names it: the hour in the local zone, the day or the week by its own date. */
 export function bucketLabel(at: string, bucket: BucketSize): string {
+	if (bucket === 'hour') return localTime(at);
 	const day = at.slice(0, 10);
-	if (bucket === 'hour') return `${day} ${at.slice(11, 16)} UTC`;
 	return bucket === 'week' ? `week of ${day}` : day;
 }
 const share = (b: Bucket, model: string) => (b.models ?? []).find((m) => m.model === model);
@@ -983,8 +998,19 @@ const strategicColor = (t: Theme) => t.series[STRATEGIC_SLOT];
 export const strategicCost = (i: ItemMetrics) =>
 	Math.round((i.usage?.strategic ?? []).reduce((n, s) => n + s.cost, 0) * 1e4) / 1e4;
 
-/** A point's cost is estimated in part, or all of it is, as strategic spend is. */
-type Point = { value: [string, number]; items: number; estimated?: boolean | 'all' };
+/**
+ * A bucket's point, drawn where `place` puts the bucket's start `at`; its cost is estimated in
+ * part, or all of it is, as strategic spend is.
+ */
+type Point = { value: [number, number]; at: string; items: number; estimated?: boolean | 'all' };
+/** A bucket's point of `v`, over `items`, estimated as `estimated` says. */
+const pointAt = (
+	at: string,
+	bucket: BucketSize,
+	v: number,
+	items = 0,
+	estimated?: boolean | 'all'
+): Point => ({ value: [place(Date.parse(at), bucket), v], at, items, estimated });
 type Hover = { marker?: string; seriesName: string; data: Point };
 /** The tooltip of a chart over time: the bucket, then each series with its value and items. */
 function hover(bucket: BucketSize, say: (v: number) => string, per: string) {
@@ -998,7 +1024,7 @@ function hover(bucket: BucketSize, say: (v: number) => string, per: string) {
 				d.estimated === 'all' ? ' (estimated)' : d.estimated ? ' (estimated in part)' : '';
 			return `${p.marker ?? ''}${p.seriesName}: ${say(d.value[1])}${per}${of}${est}`;
 		});
-		return `${bucketLabel(list[0].data.value[0], bucket)}<br/>${lines.join('<br/>')}`;
+		return `${bucketLabel(list[0].data.at, bucket)}<br/>${lines.join('<br/>')}`;
 	};
 }
 const BUCKET_MS: Record<BucketSize, number> = {
@@ -1010,13 +1036,18 @@ const BUCKET_MS: Record<BucketSize, number> = {
  * The ends of a time axis of buckets: the report's window (S-0166), from the bucket that holds its
  * start to the one that holds its now, with half a bucket either side so that the mark of each is
  * whole. A report without a window runs from a bucket before the first drawn to one after the last.
+ * The buckets' starts `at` are flai's; each is drawn where `place` puts it.
  */
 function buckets(r: Report, bucket: BucketSize, at: number[]): Opt {
 	const size = BUCKET_MS[bucket];
 	const w = windowOf(r);
+	const x = (ms: number) => place(ms, bucket);
 	if (w)
-		return { min: floorTo(w.start, bucket) - size / 2, max: floorTo(w.end, bucket) + size / 2 };
-	return at.length > 0 ? { min: Math.min(...at) - size, max: Math.max(...at) + size } : {};
+		return {
+			min: x(floorTo(w.start, bucket)) - size / 2,
+			max: x(floorTo(w.end, bucket)) + size / 2
+		};
+	return at.length > 0 ? { min: x(Math.min(...at)) - size, max: x(Math.max(...at)) + size } : {};
 }
 /** The axes of a chart of flai's spend buckets, in the report's bucket. */
 function overTime(
@@ -1032,7 +1063,7 @@ function overTime(
 		t,
 		r,
 		bucket,
-		series.flatMap((s) => s.data.map((d) => Date.parse(d.value[0]))),
+		series.flatMap((s) => s.data.map((d) => Date.parse(d.at))),
 		series.length > 1,
 		name,
 		say,
@@ -1040,9 +1071,9 @@ function overTime(
 	);
 }
 /**
- * What the charts over time share: buckets are UTC, so the axis is; it spans the window as
- * `buckets` has it, or the moments `at` drawn without one, and its ticks are no finer than a
- * bucket.
+ * What the charts over time share: a time axis in the local zone on which each bucket is drawn
+ * where `place` puts it; it spans the window as `buckets` has it, or the buckets' starts `at` drawn
+ * without one, and its ticks are no finer than a bucket.
  */
 function bucketAxes(
 	t: Theme,
@@ -1055,7 +1086,6 @@ function bucketAxes(
 	formatter: unknown
 ) {
 	return {
-		useUTC: true,
 		// room for the legend above the axis name, which a legend of four would run into
 		grid: { left: 64, right: 24, top: 64, bottom: 48, containLabel: false },
 		legend: marks(t, several),
@@ -1107,13 +1137,12 @@ function perModel(
 ): Opt {
 	const buckets = bucketsOf(r);
 	const names = modelsIn(buckets);
+	const bucket = bucketSize(r);
 	const points = (of: (b: Bucket) => Spend | undefined): Point[] =>
 		buckets.flatMap((b) => {
 			const s = of(b);
 			const v = s && pick(s);
-			return s && v !== undefined
-				? [{ value: [b.at, v] as [string, number], items: s.items, estimated: s.estimated }]
-				: [];
+			return s && v !== undefined ? [pointAt(b.at, bucket, v, s.items, s.estimated)] : [];
 		});
 	const series = names.map((m) =>
 		line(
@@ -1180,7 +1209,7 @@ function spentOverTime(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 			modelColor(t, m),
 			buckets.map((b): Point => {
 				const s = share(b, m);
-				return { value: [b.at, s?.[what] ?? 0], items: s?.items ?? 0, estimated: s?.estimated };
+				return pointAt(b.at, bucket, s?.[what] ?? 0, s?.items ?? 0, s?.estimated);
 			})
 		)
 	);
@@ -1191,11 +1220,7 @@ function spentOverTime(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 				strategicColor(t),
 				buckets.map((b): Point => {
 					const c = b.strategic?.cost ?? 0;
-					return {
-						value: [b.at, c],
-						items: b.strategic?.items ?? 0,
-						estimated: c > 0 ? 'all' : undefined
-					};
+					return pointAt(b.at, bucket, c, b.strategic?.items ?? 0, c > 0 ? 'all' : undefined);
 				})
 			)
 		);
@@ -1204,10 +1229,7 @@ function spentOverTime(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 		`mean per ${bucket}`,
 		t.textSecondary,
 		'none',
-		buckets.map((b) => ({
-			value: [b.at, what === 'tokens' ? b.mean_tokens : b.mean_cost],
-			items: 0
-		})),
+		buckets.map((b) => pointAt(b.at, bucket, what === 'tokens' ? b.mean_tokens : b.mean_cost)),
 		true
 	);
 	const series = buckets.length > 0 ? [...bars, { ...mean, showSymbol: false }] : [];
@@ -1222,6 +1244,7 @@ export const costSpent = (r: Report, t: Theme) => spentOverTime(r, t, 'cost');
 /** What an item took on average in each bucket: one line per item type. */
 function perItem(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 	const pick = (s: Spend) => (what === 'tokens' ? s.tokens_per_item : s.cost_per_item);
+	const bucket = bucketSize(r);
 	const series = TYPES.filter((type) => bucketsOf(r, type).some((b) => b.items > 0)).map((type) =>
 		line(
 			t,
@@ -1230,9 +1253,7 @@ function perItem(r: Report, t: Theme, what: 'tokens' | 'cost'): Opt {
 			TYPE_SYMBOL[type],
 			bucketsOf(r, type).flatMap((b): Point[] => {
 				const v = pick(b);
-				return v !== undefined
-					? [{ value: [b.at, v], items: b.items, estimated: b.estimated }]
-					: [];
+				return v !== undefined ? [pointAt(b.at, bucket, v, b.items, b.estimated)] : [];
 			})
 		)
 	);
@@ -1486,7 +1507,7 @@ export function forecastAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 		legend: marks(t, series.length > 1),
 		tooltip: tooltip(t, {
 			formatter: (p: { seriesName: string; data: ErrorPoint }) =>
-				`${p.data.id} ${p.data.title}<br/>${p.seriesName}: ${humanSigned(p.data.value[1])} · ${p.data.value[0].slice(0, 10)}`
+				`${p.data.id} ${p.data.title}<br/>${p.seriesName}: ${humanSigned(p.data.value[1])} · ${localDate(p.data.value[0])}`
 		}),
 		xAxis: axisX(t, { type: 'time', ...span(r) }),
 		yAxis: axisY(t, {
@@ -1613,7 +1634,7 @@ export function deliveryAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 			formatter: (p: { seriesName: string; data: ErrorPoint | SharePoint }) => {
 				const d = p.data;
 				if (!('week' in d))
-					return `${d.id} ${d.title}<br/>${p.seriesName}: ${humanSigned(d.value[1] * DAY_S)} · ${d.value[0].slice(0, 10)}`;
+					return `${d.id} ${d.title}<br/>${p.seriesName}: ${humanSigned(d.value[1] * DAY_S)} · ${localDate(d.value[0])}`;
 				const of =
 					d.share === undefined
 						? 'no story with a delivery forecast'
@@ -1643,10 +1664,10 @@ export function deliveryAccuracy(r: Report, t: Theme, f: ErrorFilter = {}): Opt 
 	});
 }
 /**
- * A model's p50 absolute forecast error in a bucket, at its start, over the stories done in it;
- * null, a gap in the line, for a bucket without any.
+ * A model's p50 absolute forecast error in a bucket, drawn where `place` puts the bucket's start
+ * `at`, over the stories done in it; null, a gap in the line, for a bucket without any.
  */
-type ModelBucket = { value: [number, number | null]; count: number };
+type ModelBucket = { value: [number, number | null]; at: string; count: number };
 /** The starts of the buckets from the one holding the window's start to the one holding now. */
 function bucketStarts(w: { start: number; end: number }, bucket: BucketSize): number[] {
 	const at: number[] = [];
@@ -1677,7 +1698,11 @@ export function forecastByModel(r: Report, t: Theme, f: ErrorFilter = {}): Opt {
 		const of = byModel.get(m)!;
 		const data = starts.map((at): ModelBucket => {
 			const errors = of.get(at) ?? [];
-			return { value: [at, spreadOf(errors).p50_seconds ?? null], count: errors.length };
+			return {
+				value: [place(at, bucket), spreadOf(errors).p50_seconds ?? null],
+				at: new Date(at).toISOString(),
+				count: errors.length
+			};
 		});
 		// a point between two gaps is drawn by its mark alone, so every mark shows
 		return { ...line(t, m, modelColor(t, m), modelSymbol(m), []), showSymbol: true, data };
@@ -1690,8 +1715,7 @@ export function forecastByModel(r: Report, t: Theme, f: ErrorFilter = {}): Opt {
 			const n = p.data.count;
 			return `${p.marker ?? ''}${p.seriesName}: p50 ${human(p.data.value[1]!)} over ${n} ${noun(n)}`;
 		});
-		const at = new Date(list[0].data.value[0]).toISOString();
-		return `${bucketLabel(at, bucket)}<br/>${lines.join('<br/>')}`;
+		return `${bucketLabel(list[0].data.at, bucket)}<br/>${lines.join('<br/>')}`;
 	};
 	return base(t, {
 		...bucketAxes(
@@ -1810,7 +1834,7 @@ const HOLD_SERIES: Record<HoldReason, { name: string; slot: number }> = {
 	after: { name: 'after', slot: 4 },
 	'no-touches': { name: 'empty claim', slot: 5 }
 };
-/** A reason's hours held in a week, at the week's Monday, with its seconds for the tooltip. */
+/** A reason's hours held in a week, on its Monday's tick, with its seconds for the tooltip. */
 type HoldBar = { value: [number, number]; seconds: number; week: string; start: string };
 /**
  * Hold time (S-0214): one bar per ISO week of the window, the hours stories were held in it,
@@ -1831,7 +1855,7 @@ export function holdTime(r: Report, t: Theme): Opt {
 		data: weeks.map((wk): HoldBar => {
 			const seconds = wk.held_seconds[reason] ?? 0;
 			return {
-				value: [Date.parse(wk.start), seconds / 3600],
+				value: [place(Date.parse(wk.start), 'week'), seconds / 3600],
 				seconds,
 				week: wk.week,
 				start: wk.start
@@ -1839,7 +1863,6 @@ export function holdTime(r: Report, t: Theme): Opt {
 		})
 	}));
 	return base(t, {
-		useUTC: true,
 		legend: legend(t, true),
 		tooltip: tooltip(t, {
 			trigger: 'axis',
@@ -1943,7 +1966,7 @@ export function touchesDrift(r: Report, t: Theme): Opt {
 				const d = p.data;
 				if ('id' in d) {
 					const paths = d.paths.length > 0 ? `<br/>${named(d.paths)}` : '';
-					return `${d.id} ${d.title} · ${d.value[0].slice(0, 10)}<br/>${p.seriesName}: ${d.value[1]}${paths}`;
+					return `${d.id} ${d.title} · ${localDate(d.value[0])}<br/>${p.seriesName}: ${d.value[1]}${paths}`;
 				}
 				const of =
 					d.exact_share === undefined
@@ -1981,7 +2004,7 @@ export const STRATEGIC_AGENTS = ['planner', 'orchestrator', 'analyzer'] as const
  * pair, as the item types' do.
  */
 const AGENT_SLOT: Record<string, number> = { planner: 6, orchestrator: 5, analyzer: 4 };
-/** A strategic day's moment on a time axis: the start of its UTC day. */
+/** A strategic day's moment: the start of its UTC day, drawn on its date's tick. */
 const dayOf = (d: StrategicDay) => `${d.date}T00:00:00Z`;
 /**
  * One bar series per strategic agent with an entry in the window, in their fixed order and colours,
@@ -1996,7 +2019,7 @@ function agentBars(t: Theme, days: StrategicDay[], value: (u: StrategicUse) => n
 		itemStyle: { color: colorFor(t, AGENT_SLOT, k, 0), borderColor: t.surface, borderWidth: 1 },
 		data: days.map((d): Point => {
 			const u = d.agents[k];
-			return { value: [dayOf(d), u ? value(u) : 0], items: 0, estimated: u?.estimated };
+			return pointAt(dayOf(d), 'day', u ? value(u) : 0, 0, u?.estimated);
 		})
 	}));
 }
@@ -2051,7 +2074,7 @@ export function strategicCostByDay(r: Report, t: Theme): Opt {
 		t.text,
 		'circle',
 		days.flatMap((d): Point[] =>
-			d.cost_per_item === undefined ? [] : [{ value: [dayOf(d), d.cost_per_item], items: 0 }]
+			d.cost_per_item === undefined ? [] : [pointAt(dayOf(d), 'day', d.cost_per_item)]
 		)
 	);
 	const ratio = strategicRatio(r);
@@ -2129,7 +2152,7 @@ export function strategicUseByDay(r: Report, t: Theme): Opt {
 			symbol,
 			rows.flatMap((d): Point[] => {
 				const s = of(d);
-				return s === undefined ? [] : [{ value: [dayOf(d), s / 3600], items: 0 }];
+				return s === undefined ? [] : [pointAt(dayOf(d), 'day', s / 3600)];
 			})
 		);
 	const series =
@@ -2264,7 +2287,7 @@ export function codIncurred(r: Report, t: Theme): Opt {
 						type: 'bar',
 						barMaxWidth: 24,
 						itemStyle: { color: t.series[0], borderColor: t.surface, borderWidth: 1 },
-						data: weeks.map((w): Point => ({ value: [at(w), w.incurred], items: 0 }))
+						data: weeks.map((w) => pointAt(at(w), 'week', w.incurred))
 					},
 					{
 						...line(
@@ -2272,14 +2295,13 @@ export function codIncurred(r: Report, t: Theme): Opt {
 							'mean per week',
 							t.textSecondary,
 							'none',
-							weeks.map((w): Point => ({ value: [at(w), w.mean], items: 0 })),
+							weeks.map((w) => pointAt(at(w), 'week', w.mean)),
 							true
 						),
 						showSymbol: false
 					}
 				];
 	return base(t, {
-		useUTC: true,
 		legend: legend(t, series.length > 1),
 		tooltip: tooltip(t, {
 			trigger: 'axis',
@@ -2325,16 +2347,15 @@ export function codOrder(r: Report, t: Theme): Opt {
 			ORDER_LABEL[s.by],
 			colorFor(t, ORDER_SLOT, s.by, 0),
 			ORDER_SYMBOL[s.by],
-			s.points.map((p): Pull => ({ value: [p.at, p.incurred], items: 0, id: p.id }))
+			s.points.map((p): Pull => ({ ...pointAt(p.at, 'hour', p.incurred), id: p.id }))
 		),
 		step: 'end'
 	}));
 	return base(t, {
-		useUTC: true,
 		legend: marks(t, series.length > 1),
 		tooltip: tooltip(t, {
 			formatter: (p: { marker?: string; seriesName: string; data: Pull }) => {
-				const when = bucketLabel(p.data.value[0], 'hour');
+				const when = bucketLabel(p.data.at, 'hour');
 				const what = p.data.id ? `${p.data.id} pulled ${when}` : `now, ${when}`;
 				return `${p.marker ?? ''}${p.seriesName}<br/>${what}<br/>cumulative ${amount(p.data.value[1])}`;
 			}

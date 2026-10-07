@@ -4,10 +4,9 @@
 	// was awaited.
 	import { resolve } from '$app/paths';
 	import { human, type LongestWait } from '$lib/viz/charts';
+	import { localTime } from '$lib/localtime';
 
 	let { rows, type }: { rows: LongestWait[]; type: string } = $props();
-	/** A wait's timestamp to the minute, in UTC as flai records it. */
-	const stamp = (at: string) => at.slice(0, 16).replace('T', ' ');
 </script>
 
 {#if rows.length === 0}
@@ -33,8 +32,8 @@
 								href={resolve('/items/[id]', { id: row.item }) +
 									`?thread=${encodeURIComponent(row.thread)}`}>{row.thread}</a
 							>{:else}review{/if}</td
-					><td class="pr-4 font-mono whitespace-nowrap">{stamp(row.started)}</td><td
-						class="pr-4 font-mono whitespace-nowrap">{row.ended ? stamp(row.ended) : 'open'}</td
+					><td class="pr-4 font-mono whitespace-nowrap">{localTime(row.started)}</td><td
+						class="pr-4 font-mono whitespace-nowrap">{row.ended ? localTime(row.ended) : 'open'}</td
 					><td class="pr-4">{human(row.seconds)}</td><td>{row.awaited ?? '—'}</td></tr
 				>{/each}</tbody
 		>

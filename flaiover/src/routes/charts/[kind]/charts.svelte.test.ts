@@ -124,6 +124,11 @@ const reportIn = (bucket: string) => ({
 });
 
 const answer = (body: unknown) => ({ ok: true, json: async () => body });
+/** The local midnight of a date, where a chart draws flai's UTC day or week of it (S-0329). */
+const midnight = (date: string) => {
+	const [y, m, d] = date.split('-').map(Number);
+	return new Date(y, m - 1, d).getTime();
+};
 const settle = async () => {
 	for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
 	flushSync();
@@ -234,7 +239,8 @@ describe('the charts page (S-0163)', () => {
 		await choose('bucket', 'hour');
 		expect(asked().at(-1)).toBe('/api/stats?since=30d&type=story&bucket=hour');
 		expect(text('h1')).toBe('$ / Hour');
-		expect(text('[data-testid="spend-table"] tbody td')).toBe('2026-09-29 19:00 UTC');
+		// an hour in the local zone, New York's where the tests run (S-0329)
+		expect(text('[data-testid="spend-table"] tbody td')).toBe('2026-09-29 15:00 EDT');
 		const since = document.querySelector<HTMLSelectElement>('label select')!;
 		since.value = '90d';
 		since.dispatchEvent(new Event('change', { bubbles: true }));
@@ -297,7 +303,8 @@ describe('the charts page (S-0163)', () => {
 	});
 
 	it('lists what strategic agents spent apart in the $ / Item table (S-0225)', async () => {
-		const done = '2026-09-29T12:00:00Z';
+		// just after midnight in UTC: the evening before in New York, where the tests run
+		const done = '2026-09-29T02:00:00Z';
 		const planner = { kind: 'planner', tokens: 2000, cost: 0.5, seconds: 60, estimated: true };
 		api.mockImplementation(async (url: string) => {
 			if (url.startsWith('/api/items')) return answer([]);
@@ -330,10 +337,10 @@ describe('the charts page (S-0163)', () => {
 		const rows = [...document.querySelectorAll('[data-testid="usage-table"] tbody tr')].map((tr) =>
 			[...tr.querySelectorAll('td')].map((td) => td.textContent!.trim())
 		);
-		expect(rows.map((r) => [r[0], r[2]])).toEqual([
-			['S-0001', 'claude-opus-5-5'],
-			['S-0001', 'strategic'],
-			['S-0002', 'strategic']
+		expect(rows.map((r) => [r[0], r[1], r[2]])).toEqual([
+			['S-0001', '2026-09-28', 'claude-opus-5-5'],
+			['S-0001', '2026-09-28', 'strategic'],
+			['S-0002', '2026-09-28', 'strategic']
 		]);
 		expect(rows[2][5]).toMatch(/\*$/);
 	});
@@ -492,11 +499,12 @@ describe('the window (S-0166)', () => {
 			await settle();
 			expect(asked()).toEqual(['/api/stats?since=7d&type=story&bucket=day']);
 			expect(document.querySelector<HTMLSelectElement>('[data-testid="window"]')!.value).toBe('7d');
-			// cycle time from the window's start; time in state from half a day before the day that holds it
+			// cycle time from the window's start; time in state from half a day before the day that holds
+			// it, drawn on its date's tick
 			expect(onTime().xAxis.min).toBe(
 				kind === 'cycle-time'
 					? Date.parse('2026-09-22T21:00:00Z')
-					: Date.parse('2026-09-22T00:00:00Z') - 12 * 3600e3
+					: midnight('2026-09-22') - 12 * 3600e3
 			);
 			unmount(c);
 			document.body.innerHTML = '';
@@ -509,13 +517,13 @@ describe('the window (S-0166)', () => {
 		c = mount(ChartsPage, { target: document.body });
 		await settle();
 		const half = 12 * 3600e3;
-		expect(onTime().xAxis.min).toBe(Date.parse('2026-08-30T00:00:00Z') - half);
-		expect(onTime().xAxis.max).toBe(Date.parse('2026-09-29T00:00:00Z') + half);
+		expect(onTime().xAxis.min).toBe(midnight('2026-08-30') - half);
+		expect(onTime().xAxis.max).toBe(midnight('2026-09-29') + half);
 		const days = () =>
 			(onTime().series[0].data as unknown as { ids: string[] }[]).map((d) => d.ids);
 		expect(days()).toEqual([['S-0002'], ['S-0001']]);
 		await choose('window', '7d');
-		expect(onTime().xAxis.min).toBe(Date.parse('2026-09-22T00:00:00Z') - half);
+		expect(onTime().xAxis.min).toBe(midnight('2026-09-22') - half);
 		expect(days()).toEqual([['S-0001']]);
 	});
 
@@ -779,7 +787,8 @@ describe('the claims charts (S-0214)', () => {
 	// it, S-0003 cancelled in it, S-0004 done before it
 	const items = [
 		story('S-0001', 'done', '2026-09-22T12:00:00Z'),
-		story('S-0002', 'done', '2026-09-24T12:00:00Z'),
+		// done just after midnight in UTC: the evening of the 23rd in New York, where the tests run
+		story('S-0002', 'done', '2026-09-24T02:00:00Z'),
 		story('S-0003', 'cancelled', '2026-09-25T12:00:00Z'),
 		story('S-0004', 'done', '2026-08-01T12:00:00Z')
 	];
@@ -932,8 +941,9 @@ describe('the claims charts (S-0214)', () => {
 			s.name,
 			(s.data as { value: [number, number] }[]).map((d) => d.value)
 		]);
-		const w39 = Date.parse('2026-09-21');
-		const w40 = Date.parse('2026-09-28');
+		// each week on its Monday's tick
+		const w39 = midnight('2026-09-21');
+		const w40 = midnight('2026-09-28');
 		expect(bars).toEqual([
 			[
 				'overlap',
@@ -1000,7 +1010,7 @@ describe('the claims charts (S-0214)', () => {
 		]);
 		expect(cells('drift-table')).toEqual([
 			['S-0001 Story S-0001', '2026-09-22', '0', '0'],
-			['S-0002 Story S-0002', '2026-09-24', '2', '1']
+			['S-0002 Story S-0002', '2026-09-23', '2', '1']
 		]);
 		expect(cells('exact-table')).toEqual([
 			['2026-W39', '2026-09-21', '2', '1', '50%'],
@@ -1411,12 +1421,12 @@ describe('the cost of delay charts (S-0213)', () => {
 		// the order states the counts without a value too, beside the stories it left out
 		expect(text('[data-testid="cod-without-value"]')).toMatch(/^Items without a value now/);
 		expect(rows('cod-order-table')).toEqual([
-			['pull order', '2026-09-30 21:00 UTC', 'S-0001', '100'],
-			['pull order', '2026-10-01 21:00 UTC', 'S-0002', '450'],
-			['by cost of delay', '2026-09-30 21:00 UTC', 'S-0002', '250'],
-			['by cost of delay', '2026-10-01 21:00 UTC', 'S-0001', '330'],
-			['by WSJF', '2026-09-30 21:00 UTC', 'S-0001', '100'],
-			['by WSJF', '2026-10-01 21:00 UTC', 'S-0002', '360']
+			['pull order', '2026-09-30 17:00 EDT', 'S-0001', '100'],
+			['pull order', '2026-10-01 17:00 EDT', 'S-0002', '450'],
+			['by cost of delay', '2026-09-30 17:00 EDT', 'S-0002', '250'],
+			['by cost of delay', '2026-10-01 17:00 EDT', 'S-0001', '330'],
+			['by WSJF', '2026-09-30 17:00 EDT', 'S-0001', '100'],
+			['by WSJF', '2026-10-01 17:00 EDT', 'S-0002', '360']
 		]);
 	});
 

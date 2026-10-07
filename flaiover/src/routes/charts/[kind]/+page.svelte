@@ -62,6 +62,7 @@
 	} from '$lib/viz/charts';
 	import { count, dollars } from '$lib/usage';
 	import { amount } from '$lib/planning';
+	import { localDate } from '$lib/localtime';
 	import { theme } from '$lib/viz/palette';
 	import KindChips from '$lib/components/KindChips.svelte';
 	import { themeState } from '$lib/theme.svelte';
@@ -593,7 +594,7 @@
 										>{d.id}</a
 									>
 									{d.title}</td
-								><td class="pr-4 font-mono">{d.completed.slice(0, 10)}</td><td class="pr-4"
+								><td class="pr-4 font-mono">{localDate(d.completed)}</td><td class="pr-4"
 									>{d.outside_count}</td
 								><td>{d.unchanged_count}</td></tr
 							>{/each}</tbody
@@ -628,14 +629,14 @@
 					><tbody
 						>{#each spenders as i (i.id)}{#each i.usage?.models ?? [] as m (m.model)}<tr
 									><td class="pr-4 font-mono">{i.id}</td><td class="pr-4"
-										>{i.completed?.slice(0, 10) ?? '-'}</td
+										>{i.completed ? localDate(i.completed) : '-'}</td
 									><td class="pr-4">{m.model}</td><td class="pr-4">{count(m.tokens)}</td><td
 										class="pr-4">{perMinute(m) !== undefined ? count(perMinute(m)!) : '-'}</td
 									><td>{dollars(m.cost)}{i.usage?.estimated ? '*' : ''}</td></tr
 								>{/each}{#if kind === 'cost' && strategicCost(i) > 0}<tr
 									data-testid="usage-strategic"
 									><td class="pr-4 font-mono">{i.id}</td><td class="pr-4"
-										>{i.completed?.slice(0, 10) ?? '-'}</td
+										>{i.completed ? localDate(i.completed) : '-'}</td
 									><td class="pr-4">strategic</td><td class="pr-4"
 										>{count((i.usage?.strategic ?? []).reduce((n, x) => n + x.tokens, 0))}</td
 									><td class="pr-4">-</td><td>{dollars(strategicCost(i))}*</td></tr
@@ -687,7 +688,7 @@
 						>{#each completed as i (i.id)}<tr
 								><td class="pr-4 font-mono">{i.id}</td><td class="py-0.5 pr-4"
 									><KindChips nature={i.nature} /></td
-								><td class="pr-4">{i.completed?.slice(0, 10)}</td><td class="pr-4"
+								><td class="pr-4">{i.completed ? localDate(i.completed) : ''}</td><td class="pr-4"
 									>{i.cycle_time_seconds !== undefined ? human(i.cycle_time_seconds) : '-'}</td
 								><td class="pr-4"
 									>{i.lead_time_seconds !== undefined ? human(i.lead_time_seconds) : '-'}</td
