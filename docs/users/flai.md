@@ -323,7 +323,7 @@ A project with no default and no story with an agent has no `agent` keys at all,
 flai move S-0001 ready          # needs acceptance criteria; tasks are not required
 flai move S-0001 in-progress    # warns if the WIP limit is exceeded
 flai move T-0001 in-progress    # warns while a task of its after is open
-flai move T-0001 done           # tasks may skip review
+flai move T-0001 done           # tasks may skip review; an agent closes one with flai task done
 flai move S-0001 review         # needs at least one task and nothing uncommitted in the story's worktree
 flai move S-0001 done --by alex # needs every task closed and every criterion checked
 flai move S-0001 in-progress --reason "tests missing"     # from review
@@ -545,17 +545,14 @@ Each has a `--json` form. The dashboard reads the same answers through `flai ser
 
 ```bash
 flai stream open S-0037        # narrative, plus branch story/S-0037 in .flai-cache/worktrees/S-0037
-flai stream sync S-0037        # rebase the branch onto main, then check it against the other open branches; run after committing each task
+flai stream sync S-0037        # rebase the branch onto main, then check it against the other open branches
 flai stream open S-0037 --no-branch
+flai task done T-0121 -m "feat: [S-0037] T-0121 the parser reads tables"   # close a task: commit, sync, move, log, touches, check, inbox
 ```
 
 Each story is worked on its own branch, checked out in a worktree under `.flai-cache/worktrees/`. Code, design, and docs changes land there; `wip/` is always written in the main checkout, so the board and the dashboard stay current whatever branches exist. `flai stream sync` rebases the branch onto the main branch, and is the only way a story's agent rebases it: agents never start a `git rebase` or `git merge` by hand. `flai accept` rebases, fast-forwards the branch into main, and removes the worktree and branch.
 
-A story's agent works through its tasks one at a time, and keeps the branch close to main as it goes:
-
-1. When a task is done, it commits the task's changes, with their docs and work item updates, on `story/S-0037`.
-2. It runs `flai stream sync`, and resolves each conflict sync lists.
-3. It runs the tests for what the task changed with `flai test` on the paths it changed ([Run the tests for what changed](#run-the-tests-for-what-changed)), and commits any fix they need.
+A story's agent works through its tasks one at a time, and keeps the branch close to main as it goes. When a task is done, it closes it with `flai task done`, from the story's worktree ([Closing a task](#closing-a-task)). That commits the task's changes on `story/S-0037`, syncs, and checks. Then it runs the tests for what the task changed with `flai test` on the paths it changed ([Run the tests for what changed](#run-the-tests-for-what-changed)), and closes any fix they need by calling `flai task done` again.
 
 Before it moves the story to review, it commits whatever is outstanding, syncs again, and closes out with `scripts/close-out.sh`, which refuses a branch that does not yet contain the main branch and says to sync.
 
@@ -588,8 +585,35 @@ widen them so that stories that overlap wait: flai touches S-0131 --add flai/int
 ```
 
 - **Conflicts.** Sync merges the two branches in git's object store only (`git merge-tree --write-tree`, git 2.38 or newer; an older git skips it with a warning), so nothing changes in either worktree. It reports only the conflicting paths both stories changed since they left main. A branch that has not synced for a while still has main's older files, so a plain merge of the two would also stop where main has since changed what that story changed. That conflict is with main, not between the two stories, and the story behind settles it when it next rebases. It leaves `design/issues/summary.md` out of a pair's conflicts, since sync and acceptance regenerate it, so a pair whose only conflict is that file is reported clean and gets no thread. For each pair that conflicts, flai opens one thread on the story that synced, titled `S-0130 and S-0131 conflict when merged`, listing the paths. It shows in both stories' agents' MCP `inbox` and in the designer's inbox on the dashboard. Settle it between the two stories: one narrows its change, or names the other in `after:` and waits. A later sync with the same paths adds nothing, new paths add an entry, and flai resolves the thread once the two merge cleanly or the other story is no longer open.
-- **Outside the touches.** Sync lists the files the branch changed since main that the story's claim does not cover: its touches, each folder among them narrowed to the files its tasks name inside it, and its open tasks' touches (see [Touches](#touches)). It prints the `flai touches --add` command that widens them, adding those paths and keeping the rest; when a task changed a file it did not name, widen that task's touches. Touches that are too narrow let a story that overlaps start beside it.
+- **Outside the touches.** Sync lists the files the branch changed since main that the story's claim does not cover: its touches, each folder among them narrowed to the files its tasks name inside it, and its open tasks' touches (see [Touches](#touches)). It prints the `flai touches --add` command that widens them, adding those paths and keeping the rest; when a task changed a file it did not name, widen that task's touches. `flai task done` adds the paths its own commit changed for you ([Closing a task](#closing-a-task)). Touches that are too narrow let a story that overlaps start beside it.
 - Neither check fails the sync. `--json` adds `branches` (each with `story`, `status`, `branch`, `clean`, `conflicts`, and `thread`), `outside_touches`, and `trial_merge_skipped` when git is too old.
+
+#### Closing a task
+
+```bash
+flai task done T-0121 -m "feat: [S-0037] T-0121 the parser reads tables"
+flai task done T-0121 -m "fix: [S-0037] what the tests found" --log "fixed the empty table case"
+flai task done T-0121 -m "docs: [S-0037] the guide" --json
+```
+
+`flai task done` closes a task in one call (S-0269, [ADR-0107](../../design/adrs/0107-flai-task-done-closes-a-task-in-one-call-commit-sync-move-log-widen-touches.md)). It finds the task's story and works in the story's worktree. It runs these steps, in this order:
+
+1. **Commit.** `git add -A` and `git commit` with the message `-m` gives, in the worktree. Nothing to commit is not a failure: there is no commit, and the run goes on.
+2. **Sync.** `flai stream sync` for the story: the rebase onto main, the check against the other open branches, and the paths outside the story's touches, as above.
+3. **Move.** The task to `done`, under `flai move`'s rules, with any story or epic that moves with it. A task already done is not moved again, so the call can be repeated after a stop.
+4. **Log.** An entry in the story's narrative: the message's subject line, or `--log` when given.
+5. **Touches.** The paths the commit changed that the task's touches, or the story's, do not cover are added to each, as `flai touches --add` adds them ([Touches](#touches)).
+6. **Check.** `flai check --strict` scoped to the story, as the close-out scopes it ([Check the repository](#check-the-repository)). A finding in the story stops the run; a finding outside it is a note.
+7. **Inbox.** The agent's inbox, as the MCP tool `inbox` answers it.
+
+The agent is `FLAI_AGENT` and the session `FLAI_SESSION`. The first step that fails stops the run, and the steps after it are not done. It prints a line for each step that ran, then the inbox. `--json` prints the result instead: `commit`, `sync`, `move`, `log`, `touches`, `check`, `inbox`, and `stopped`, the step it stopped at, empty when every step ran. The exit status is 0 when every step ran, 3 when the sync stopped the run, 4 when the check did, and 1 when another step did or the run could not start.
+
+- **A stopped sync.** The commit is made, and the rebase stays stopped in the worktree. Resolve each path it lists there, `git add` it, run `git rebase --continue`, and call `flai task done` again. `git rebase --abort` undoes the rebase instead. While the rebase is unfinished, the commit and the sync refuse.
+- **A failed check.** The task is already done and logged. Fix what the check found and call `flai task done` again: it commits the fix, syncs, and checks, and does not move the task again.
+
+Running the task's tests with `flai test`, fixing what they find, and ticking criteria with `flai criteria tick` stay the agent's ([Ticking acceptance criteria](#ticking-acceptance-criteria)). A story or an epic is refused: a story goes to review with `flai move S-0037 review` after its close-out, and an epic follows its stories.
+
+Over MCP the same call is the tool `task_done`, with `task`, `message`, and `log`. It answers what `--json` prints; a stop is an answer, not a tool error. A dashboard asks for it through the host method `task.done`, with `id`, `message`, and `log`, which runs `flai task done --json`. A stop at the sync is its conflict error, a stop at the check its refused error, and a stop at another step an error in flai's words, each with the result as data.
 
 #### Relative worktree links (opt-in)
 
@@ -851,6 +875,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file, and its `draft`, `cost_of_delay`, and `forecast` with the `currency`; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours. So is moving a draft to ready: finalizing is yours |
 | `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` sets what an item waits for, a story's stories or a task's tasks of the same story (a creation that sets it, or that gives a `body`, is checked as `flai story new --body-stdin` is: a finding the item introduces, such as a missing section or a markdown lint rule, refuses it and leaves nothing), on an edit replacing them, and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. `draft` makes a story a draft, and `draft: false` is refused. `cost_of_delay` and `forecast` set the keys given; `clear_cost_of_delay` and `clear_forecast` remove them, and to remove one amount the agent clears the cost of delay and gives the keys to keep. Neither commits: the agent commits with its work |
 | `criteria_tick` | Tick and untick a story's acceptance criteria by number, `tick` and `untick` naming them as `flai criteria list` does, with the `hash` from `item_get`; returns the criteria after. Nothing is committed. Sub-agents, the planner, and the orchestrator are refused it ([Ticking acceptance criteria](#ticking-acceptance-criteria)) |
+| `task_done` | Close a task in one call, as `flai task done --json` does: `task`, the commit `message`, and `log` for an entry other than its subject line. Commits, syncs, moves the task to done, logs, widens touches, checks the story, and reads the inbox, stopping at the first step that fails; the answer says which in `stopped`, and a stop is an answer, not a tool error ([Closing a task](#closing-a-task)) |
 | `issue_story` | Make a backlog story from an open issue, as `flai issue story` does: a draft carrying the issue's cost of delay inputs, and linking the analysis reports the issue names, named in the issue's Remediation section. `id` is the issue, `epic` puts the story under an epic, and `story` reads the issue from that story's worktree. Returns the story's `id`, `title`, `nature`, `path`, `draft`, and the `issue`. A closed issue, or one an open story already links, is refused, naming that story. Nothing is committed ([Record recurring friction](#record-recurring-friction)) |
 | `issue_new`, `issue_bump` | Record an issue, or another occurrence of one, as `flai issue new` and `flai issue bump` do (S-0224): `title` and `class`, or the issue's `id`, with `cost`, `note`, and `story`; `revenue_per_week`, `penalty_per_week`, `time_lost_per_cycle`, and `evidence` for its `## Impact`; and `report`, the analysis report under `design/analysis/` that found it. With `report`, `issue_new` bumps an open issue of the same title, or leaves one that already names the report. The issue is written in the recording story's worktree when it has one, else in the project, and `summary.md` is regenerated. Returns `id`, `title`, `count`, `path`, `story`, and `outcome` (`opened`, `bumped`, or `already recorded`). Nothing is committed. The analyzer files its findings with them ([Running the analyzer](#running-the-analyzer)) |
 | `doc_get` | A markdown document under the design, docs, or wip folders; nothing else in the repository is served. With `heading`, only that section and the sections below it, with its heading path and line ([Read design on demand](#read-design-on-demand)) |
