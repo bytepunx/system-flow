@@ -6,7 +6,7 @@ title: "flai check finds `item.archive` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-05T07:09:05Z
-updated: 2026-10-07T22:10:05Z
+updated: 2026-10-07T22:25:33Z
 transitions: []
 tags: [flai, template]
 topics: [cli, conventions, template]
@@ -34,10 +34,10 @@ usage:
 draft: true
 forecast:
   duration: 25m
-  delivery: 2026-10-08T06:21:00Z
-  basis: "Its own forecast of 25m; 11th in the pull order with an in-progress limit of 3, behind S-0333, S-0332, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239 and S-0241."
+  delivery: 2026-10-08T06:25:00Z
+  basis: "Its own forecast of 25m; 10th in the pull order with an in-progress limit of 3, behind S-0232, S-0333, S-0332, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239 and S-0241."
   by: flai
-  at: 2026-10-07T22:10:05Z
+  at: 2026-10-07T22:25:33Z
 ---
 # S-0280 flai check finds `item.archive` outside the story at close-out
 
