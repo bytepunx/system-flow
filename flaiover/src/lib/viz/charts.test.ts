@@ -1308,9 +1308,28 @@ describe('chart builders', () => {
 			...Array(3).fill('wsjf')
 		]);
 	});
-	it('the cost of delay charts take the window alone, and are named as the others are', () => {
-		for (const kind of COD_KINDS)
-			expect(controls(kind), kind).toEqual({ type: false, epic: false, bucket: false });
+	it('the cost of delay charts take the window, and the type but on the projection, and are named as the others are', () => {
+		expect(controls('cod-outstanding')).toEqual({
+			type: true,
+			epic: false,
+			bucket: false,
+			nature: false,
+			model: false
+		});
+		expect(controls('cod-incurred')).toEqual({
+			type: true,
+			epic: false,
+			bucket: false,
+			nature: false,
+			model: false
+		});
+		expect(controls('cod-order')).toEqual({
+			type: false,
+			epic: false,
+			bucket: false,
+			nature: false,
+			model: false
+		});
 		expect(COD_KINDS.map((k) => titleOf(k))).toEqual([
 			'CoD Outstanding',
 			'CoD Incurred',

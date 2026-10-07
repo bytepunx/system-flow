@@ -649,7 +649,10 @@ describe('the planning charts (S-0212)', () => {
 			['Forecast Error / Model', '/charts/forecast-by-model'],
 			['Parallelism', '/charts/parallelism'],
 			['Hold Time', '/charts/hold-time'],
-			['Touches Drift', '/charts/touches-drift']
+			['Touches Drift', '/charts/touches-drift'],
+			['CoD Outstanding', '/charts/cod-outstanding'],
+			['CoD Incurred', '/charts/cod-incurred'],
+			['CoD by Order', '/charts/cod-order']
 		]);
 		expect(text('h1')).toBe('Forecast Accuracy');
 		expect(points()).toEqual([
@@ -1235,5 +1238,232 @@ describe('the strategic charts (S-0216)', () => {
 		expect(document.querySelector('[data-testid="strategic-note"]')).toBeNull();
 		expect(document.querySelector('[data-testid="strategic-summary"]')).toBeNull();
 		expect(rows()).toEqual([]);
+	});
+});
+
+describe('the cost of delay charts (S-0213)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const now = '2026-09-29T21:00:00Z';
+	const cols = (backlog: number, ready: number, inProgress: number, review: number) => ({
+		backlog,
+		ready,
+		'in-progress': inProgress,
+		review
+	});
+	const series = (by: string, points: [string, number, string?][]) => ({
+		by,
+		total: points.at(-1)![1],
+		points: points.map(([at, incurred, id]) => (id ? { at, id, incurred } : { at, incurred }))
+	});
+	const order = {
+		at: now,
+		horizon: '2026-10-01T21:00:00Z',
+		series: [
+			series('current', [
+				[now, 0],
+				['2026-09-30T21:00:00Z', 100, 'S-0001'],
+				['2026-10-01T21:00:00Z', 450, 'S-0002']
+			]),
+			series('cod', [
+				[now, 0],
+				['2026-09-30T21:00:00Z', 250, 'S-0002'],
+				['2026-10-01T21:00:00Z', 330, 'S-0001']
+			]),
+			series('wsjf', [
+				[now, 0],
+				['2026-09-30T21:00:00Z', 100, 'S-0001'],
+				['2026-10-01T21:00:00Z', 360, 'S-0002']
+			])
+		],
+		saving: 120,
+		cheaper: 'cod',
+		left_out: ['S-0003', 'S-0004']
+	};
+	const costOfDelay = {
+		days: [
+			{
+				date: '2026-09-28',
+				outstanding: cols(1000, 500, 250, 0),
+				without_value: cols(3, 1, 0, 0),
+				incurred: 120
+			},
+			{
+				date: '2026-09-29',
+				outstanding: cols(1200, 500, 0, 250),
+				without_value: cols(2, 1, 0, 0),
+				incurred: 130.5
+			}
+		],
+		weeks: [
+			{ week: '2026-W39', start: '2026-09-21', incurred: 700 },
+			{ week: '2026-W40', start: '2026-09-28', incurred: 250.5 }
+		],
+		order
+	};
+	/** What flai answers; each test changes the cost of delay it carries. */
+	let cod: unknown;
+	beforeEach(() => {
+		cod = costOfDelay;
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			return answer({ ...reportIn('day'), generated_at: now, cost_of_delay: cod });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+	});
+	const open = async (kind: string) => {
+		at.params.kind = kind;
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+	};
+	const rows = (testid: string) =>
+		[...document.querySelectorAll(`[data-testid="${testid}"] tbody tr`)].map((tr) =>
+			[...tr.querySelectorAll('td')].map((td) => td.textContent!.trim())
+		);
+
+	it('lists the three cost of delay charts under planning, after the forecast and claims charts, with the window and the type to choose', async () => {
+		await open('cod-outstanding');
+		expect(
+			[...document.querySelectorAll('[data-testid="charts-planning"] a')].map((l) => l.textContent)
+		).toEqual([
+			'Forecast Accuracy',
+			'Delivery Accuracy',
+			'Forecast Error / Model',
+			'Parallelism',
+			'Hold Time',
+			'Touches Drift',
+			'CoD Outstanding',
+			'CoD Incurred',
+			'CoD by Order'
+		]);
+		expect(
+			[...document.querySelectorAll('nav')].map((n) => [
+				n.dataset.testid,
+				n.classList.contains('mb-3')
+			])
+		).toEqual([
+			['charts-flow', false],
+			['charts-usage', false],
+			['charts-planning', false],
+			['charts-strategic', true]
+		]);
+		expect(text('h1')).toBe('CoD Outstanding');
+		expect(
+			[...document.querySelectorAll('label')].map((l) => l.textContent!.trim().split(/\s+/)[0])
+		).toEqual(['window', 'type']);
+	});
+
+	it('states the items without a value now per column, and lists each day in the table', async () => {
+		await open('cod-outstanding');
+		expect(text('[data-testid="cod-without-value"]')).toBe(
+			'Items without a value now, which add nothing to this chart: backlog 2 · ready 1 · in-progress 0 · review 0.'
+		);
+		expect(document.querySelector('[data-testid="cod-none"]')).toBeNull();
+		expect(text('[data-testid="cod-day-table"] thead')).toBe(
+			'datebacklogreadyin-progressreviewwithout value'
+		);
+		expect(rows('cod-day-table')).toEqual([
+			['2026-09-29', '1,200', '500', '0', '250', '3'],
+			['2026-09-28', '1,000', '500', '250', '0', '4']
+		]);
+	});
+
+	it('says none is without a value when every item has one', async () => {
+		cod = {
+			...costOfDelay,
+			days: costOfDelay.days.map((d) => ({ ...d, without_value: cols(0, 0, 0, 0) }))
+		};
+		await open('cod-incurred');
+		expect(text('[data-testid="cod-without-value"]')).toBe('Items without a value now: none.');
+	});
+
+	it('lists each week with its incurred cost and running mean', async () => {
+		await open('cod-incurred');
+		expect(text('h1')).toBe('CoD Incurred');
+		expect(text('[data-testid="cod-without-value"]')).toContain('backlog 2 · ready 1');
+		expect(rows('cod-week-table')).toEqual([
+			['2026-W40', '2026-09-28', '250.5', '475.25'],
+			['2026-W39', '2026-09-21', '700', '700']
+		]);
+	});
+
+	it('states what the cheaper order saves, the three totals, the stories left out, and each pull', async () => {
+		await open('cod-order');
+		expect(text('[data-testid="cod-saving"]')).toBe(
+			'Ordering by cost of delay would save 120 on the pull order.'
+		);
+		expect(text('[data-testid="cod-totals"]')).toBe(
+			"Projected from now until each ready story is pulled, in the project's currency: pull order 450 · by cost of delay 330 · by WSJF 360."
+		);
+		expect(text('[data-testid="cod-left-out"]')).toBe(
+			'Ready stories left out, without a value or a forecast duration: S-0003, S-0004.'
+		);
+		// the order states the stories left out in place of the counts without a value
+		expect(document.querySelector('[data-testid="cod-without-value"]')).toBeNull();
+		expect(rows('cod-order-table')).toEqual([
+			['pull order', '2026-09-30 21:00 UTC', 'S-0001', '100'],
+			['pull order', '2026-10-01 21:00 UTC', 'S-0002', '450'],
+			['by cost of delay', '2026-09-30 21:00 UTC', 'S-0002', '250'],
+			['by cost of delay', '2026-10-01 21:00 UTC', 'S-0001', '330'],
+			['by WSJF', '2026-09-30 21:00 UTC', 'S-0001', '100'],
+			['by WSJF', '2026-10-01 21:00 UTC', 'S-0002', '360']
+		]);
+	});
+
+	it('says the pull order is already the cheapest when it saves nothing, and none left out', async () => {
+		cod = { ...costOfDelay, order: { ...order, saving: -30, cheaper: 'wsjf', left_out: [] } };
+		await open('cod-order');
+		expect(text('[data-testid="cod-saving"]')).toBe(
+			'The pull order is already the cheapest of the three.'
+		);
+		expect(text('[data-testid="cod-left-out"]')).toBe(
+			'Ready stories left out, without a value or a forecast duration: none.'
+		);
+	});
+
+	it('says the flai on the host is older when it sends no cost of delay, order, or counts', async () => {
+		const older = (missing: string) =>
+			text('[data-testid="cod-none"]')?.startsWith(`The flai on the host ${missing}`) &&
+			text('[data-testid="cod-none"]')?.endsWith(
+				'it is older than the dashboard. Upgrade it with flai self-upgrade.'
+			);
+		cod = undefined;
+		await open('cod-outstanding');
+		expect(older('sends no cost of delay')).toBe(true);
+		expect(document.querySelector('[data-testid="cod-without-value"]')).toBeNull();
+		expect(rows('cod-day-table')).toEqual([]);
+		unmount(c!);
+		document.body.innerHTML = '';
+
+		cod = { days: costOfDelay.days, weeks: costOfDelay.weeks };
+		await open('cod-order');
+		expect(older('sends no projection of the pull order')).toBe(true);
+		expect(document.querySelector('[data-testid="cod-saving"]')).toBeNull();
+		expect(rows('cod-order-table')).toEqual([]);
+		unmount(c!);
+		document.body.innerHTML = '';
+
+		cod = {
+			...costOfDelay,
+			days: costOfDelay.days.map(({ date, outstanding, incurred }) => ({
+				date,
+				outstanding,
+				incurred
+			}))
+		};
+		await open('cod-incurred');
+		expect(older('does not count the items without a value')).toBe(true);
+		expect(document.querySelector('[data-testid="cod-without-value"]')).toBeNull();
+		expect(rows('cod-week-table').length).toBe(2);
 	});
 });

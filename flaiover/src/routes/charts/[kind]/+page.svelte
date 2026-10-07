@@ -10,7 +10,13 @@
 	import WaitTable from '$lib/components/WaitTable.svelte';
 	import {
 		bucketsFor,
+		bucketLabel,
 		build,
+		COD_COLUMNS,
+		COD_KINDS,
+		codDayRows,
+		codOrderRows,
+		codWeekRows,
 		completedIn,
 		controls,
 		driftedIn,
@@ -18,6 +24,8 @@
 		FLOW_KINDS,
 		forecastRows,
 		hasClaims,
+		hasCostOfDelay,
+		hasOrder,
 		hasSpend,
 		hours,
 		human,
@@ -27,6 +35,9 @@
 		normalise,
 		PLANNING_KINDS,
 		plural,
+		ORDER_LABEL,
+		ORDERS,
+		orderSummary,
 		SPEND_KINDS,
 		spendRows,
 		STRATEGIC_AGENTS,
@@ -39,6 +50,7 @@
 		withUsage,
 		withCost,
 		spreadFor,
+		withoutValueNow,
 		strategicCost,
 		type BucketSize,
 		type ErrorField,
@@ -49,6 +61,7 @@
 		type StrategicUse
 	} from '$lib/viz/charts';
 	import { count, dollars } from '$lib/usage';
+	import { amount } from '$lib/planning';
 	import { theme } from '$lib/viz/palette';
 	import KindChips from '$lib/components/KindChips.svelte';
 	import { themeState } from '$lib/theme.svelte';
@@ -79,7 +92,7 @@
 	const groups = [
 		{ name: 'flow', kinds: FLOW_KINDS },
 		{ name: 'usage', kinds: USAGE_KINDS },
-		{ name: 'planning', kinds: PLANNING_KINDS },
+		{ name: 'planning', kinds: [...PLANNING_KINDS, ...COD_KINDS] },
 		{ name: 'strategic', kinds: STRATEGIC_KINDS }
 	];
 	const filter = $derived<ErrorFilter>({
@@ -132,6 +145,19 @@
 			`forecast error p50 ${p(f?.p50_seconds)} p85 ${p(f?.p85_seconds)}`,
 			`delivery error p50 ${p(d?.p50_seconds)} p85 ${p(d?.p85_seconds)}`
 		].join(' · ');
+	});
+	const codKind = $derived((COD_KINDS as readonly string[]).includes(kind));
+	// what the cost of delay charts state under them (S-0213, ADR-0112)
+	const unvalued = $derived(report ? withoutValueNow(report) : undefined);
+	const ordered = $derived(report ? orderSummary(report) : undefined);
+	/** What the host's flai is missing that this cost of delay chart needs; empty when nothing. */
+	const codMissing = $derived.by(() => {
+		if (!codKind || !report) return '';
+		if (!hasCostOfDelay(report)) return 'sends no cost of delay, which this chart is drawn from';
+		if (kind === 'cod-order' && !hasOrder(report))
+			return 'sends no projection of the pull order, which this chart is drawn from';
+		if (kind !== 'cod-order' && !unvalued) return 'does not count the items without a value';
+		return '';
 	});
 	const buckets = $derived(bucketsFor(since));
 	const title = $derived(titleOf(kind, report?.usage?.bucket ?? bucket));
@@ -341,6 +367,11 @@
 			The flai on the host sends no spend over time, which this chart is drawn from: it is older
 			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
 		</p>
+	{:else if codMissing}
+		<p class="mb-2 text-sm text-muted" data-testid="cod-none">
+			The flai on the host {codMissing}: it is older than the dashboard. Upgrade it with
+			<code>flai self-upgrade</code>.
+		</p>
 	{:else if usageKind && report && !report.items.some((i) => i.usage)}
 		<p class="mb-2 text-sm text-muted" data-testid="usage-none">
 			No {report.type} here carries usage yet. flai serve records the tokens and cost of the agents it
@@ -432,11 +463,84 @@
 			<WaitTable rows={report.waiting.longest ?? []} type={report.type} />
 		</div>
 	{/if}
+	{#if kind === 'cod-order' && ordered}
+		<p class="mt-2 text-sm" data-testid="cod-saving">
+			{#if ordered.saving > 0}Ordering {ORDER_LABEL[ordered.cheaper]} would save {amount(
+					ordered.saving
+				)} on the pull order.{:else}The pull order is already the cheapest of the three.{/if}
+		</p>
+		<p class="text-xs text-muted" data-testid="cod-totals">
+			Projected from now until each ready story is pulled, in the project's currency: {ORDERS.map(
+				(by) => `${ORDER_LABEL[by]} ${amount(ordered.totals[by])}`
+			).join(' · ')}.
+		</p>
+		<p class="text-xs text-muted" data-testid="cod-left-out">
+			Ready stories left out, without a value or a forecast duration: {ordered.left_out.length
+				? ordered.left_out.join(', ')
+				: 'none'}.
+		</p>
+	{:else if codKind && kind !== 'cod-order' && unvalued}
+		<p class="mt-2 text-xs text-muted" data-testid="cod-without-value">
+			{#if COD_COLUMNS.some((col) => unvalued[col] > 0)}Items without a value now, which add nothing
+				to this chart: {COD_COLUMNS.map((col) => `${col} ${unvalued[col]}`).join(
+					' · '
+				)}.{:else}Items without a value now: none.{/if}
+		</p>
+	{/if}
 	<details class="mt-4 text-xs">
 		<summary class="cursor-pointer text-muted">table view</summary>
 		<div class="mt-2 overflow-x-auto">
 			{#if forecastKind}
 				<ForecastTable rows={forecasts} />
+			{:else if kind === 'cod-outstanding' && report}
+				<table class="min-w-full" data-testid="cod-day-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">date</th>{#each COD_COLUMNS as col (col)}<th class="pr-4">{col}</th
+								>{/each}<th>without value</th></tr
+						></thead
+					><tbody
+						>{#each codDayRows(report) as d (d.date)}<tr
+								><td class="pr-4 font-mono">{d.date}</td>{#each COD_COLUMNS as col (col)}<td
+										class="pr-4">{amount(d.outstanding[col] ?? 0)}</td
+									>{/each}<td
+									>{d.without_value
+										? COD_COLUMNS.reduce((n, col) => n + (d.without_value?.[col] ?? 0), 0)
+										: '-'}</td
+								></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'cod-incurred' && report}
+				<table class="min-w-full" data-testid="cod-week-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">incurred</th
+							><th>mean per week</th></tr
+						></thead
+					><tbody
+						>{#each codWeekRows(report) as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
+								><td class="pr-4">{amount(w.incurred)}</td><td>{amount(w.mean)}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'cod-order' && report}
+				<table class="min-w-full" data-testid="cod-order-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">order</th><th class="pr-4">pulled</th><th class="pr-4">story</th><th
+								>cumulative incurred</th
+							></tr
+						></thead
+					><tbody
+						>{#each codOrderRows(report) as p (`${p.by} ${p.id}`)}<tr
+								><td class="pr-4">{ORDER_LABEL[p.by]}</td><td
+									class="pr-4 font-mono whitespace-nowrap">{bucketLabel(p.at, 'hour')}</td
+								><td class="pr-4 font-mono">{p.id}</td><td>{amount(p.incurred)}</td></tr
+							>{/each}</tbody
+					>
+				</table>
 			{:else if kind === 'parallelism' && report}
 				<table class="min-w-full" data-testid="parallelism-table">
 					<thead

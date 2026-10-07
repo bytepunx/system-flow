@@ -497,7 +497,8 @@ export function controls(kind: Kind) {
 	const spend = SPEND_KINDS.includes(kind);
 	const cod = (COD_KINDS as readonly Kind[]).includes(kind);
 	return {
-		type: !cod && !PER_ITEM_KINDS.includes(kind),
+		// the ready column's projection is of stories, whatever the type (ADR-0112)
+		type: cod ? kind !== 'cod-order' : !PER_ITEM_KINDS.includes(kind),
 		epic: !cod && !spend && !['cfd', 'throughput', 'agent-waiting'].includes(kind),
 		bucket: spend,
 		nature: false,
