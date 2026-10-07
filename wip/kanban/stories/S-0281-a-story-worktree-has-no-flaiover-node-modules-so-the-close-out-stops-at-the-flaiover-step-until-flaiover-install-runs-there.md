@@ -6,7 +6,7 @@ title: A story worktree has no flaiover/node_modules, so the close-out stops at 
 status: ready
 owner: alex
 created: 2026-10-05T07:09:06Z
-updated: 2026-10-06T23:59:44Z
+updated: 2026-10-07T00:09:45Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:44Z
@@ -28,10 +28,10 @@ cost_of_delay:
   at: 2026-10-06T22:53:49Z
 forecast:
   duration: 30m
-  delivery: 2026-10-07T09:43:00Z
-  basis: "Its own forecast of 30m; 30th in the pull order with an in-progress limit of 3, behind S-0273, S-0228, S-0269, S-0270, S-0271, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0245, S-0246, S-0251, S-0254, S-0265, S-0272, S-0274, S-0275, S-0277, S-0279 and S-0280."
+  delivery: 2026-10-07T03:10:00Z
+  basis: "Its own forecast of 30m; 8th in the pull order with an in-progress limit of 3, behind S-0228, S-0273, S-0269, S-0270, S-0271, S-0254, S-0272, S-0274 and S-0275."
   by: flai
-  at: 2026-10-06T23:57:14Z
+  at: 2026-10-07T00:09:45Z
 finalized:
   by: alex
   at: 2026-10-06T22:49:26Z
