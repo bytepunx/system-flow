@@ -3,11 +3,11 @@ id: I-0107
 title: Publishing raises the manifest's flai minimum the moment it commits, before the release is built, so the host's flai drops the project until the binaries exist
 class: defect
 status: open
-count: 1
+count: 2
 cost: 30m
 first_reported: 2026-10-07T07:39:30Z
-last_reported: 2026-10-07T07:39:30Z
-updated: 2026-10-07T07:39:30Z
+last_reported: 2026-10-07T15:09:19Z
+updated: 2026-10-07T15:09:19Z
 ---
 
 # I-0107 Publishing raises the manifest's flai minimum the moment it commits, before the release is built, so the host's flai drops the project until the binaries exist
@@ -22,6 +22,9 @@ The same flai that commits the minimum is the one serving the project, so the pu
 
 ### 2026-10-07T07:39:30Z
 On 2026-10-07 the operator pressed Publish at 07:35:59Z. flai release committed the bump of flai.minimum to 1.34.1 and pushed the tags flai/v1.34.1 and flaiover/v0.36.1. At 07:36:01Z, two seconds later, flai serve (the installed flai 1.34.0) re-read system-flow.yaml, found it needs 1.34.1, dropped the project, and killed its own in-flight publish.run, which the journal records as failed with 'flai exited with -1'. The dashboard answered 503 for the project from then on and the host released its MCP server. The release flai workflow then failed at 07:38Z, so flai host upgrade finds nothing newer than 1.34.0 and the project stays unserved. The operator reported it as flai host having crashed.
+
+### 2026-10-07T15:09:19Z
+Again on 2026-10-07 at 15:04Z: a publish raised flai.minimum to 1.35.1 the moment it committed, with the release build for 1.35.1 still running on GitHub. The newest built flai, 1.35.0, which flai self-upgrade installed at 15:05Z, refuses every command in the project, and the running flai serve (1.34.6) dropped system-flow from the dashboard, which went on serving the other seven projects. flai dashboard check and upgrade had to be run from outside the project. The project stays unserved until the build finishes and flai host upgrade runs.
 
 ## Remediation
 
