@@ -6,7 +6,7 @@ title: "flai check finds `threads.archived` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-10-05T04:40:46Z
-updated: 2026-10-07T01:43:45Z
+updated: 2026-10-07T02:03:46Z
 transitions:
   - to: ready
     at: 2026-10-07T01:12:26Z
@@ -29,10 +29,10 @@ cost_of_delay:
   at: 2026-10-07T01:21:57Z
 forecast:
   duration: 45m
-  delivery: 2026-10-07T04:09:00Z
-  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0269, S-0294, S-0307, S-0270, S-0271, S-0274, S-0275 and S-0245."
+  delivery: 2026-10-07T04:14:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0245, S-0269, S-0294, S-0270, S-0271, S-0274 and S-0275."
   by: flai
-  at: 2026-10-07T01:43:45Z
+  at: 2026-10-07T02:03:46Z
 finalized:
   by: alex
   at: 2026-10-07T01:12:18Z

@@ -6,7 +6,7 @@ title: The Host Updates Tab Allows an Operator to Rollback to A Previous Version
 status: backlog
 owner: alex
 created: 2026-10-06T20:53:15Z
-updated: 2026-10-07T01:43:45Z
+updated: 2026-10-07T02:03:46Z
 transitions: []
 tags: [dashboard, cli]
 topics: [release, security]
@@ -26,10 +26,10 @@ cost_of_delay:
   at: 2026-10-06T21:46:33Z
 forecast:
   duration: 1h1m
-  delivery: 2026-10-07T11:14:00Z
-  basis: "Its own forecast of 1h1m; 32nd in the pull order with an in-progress limit of 3, behind S-0269, S-0294, S-0307, S-0270, S-0271, S-0274, S-0275, S-0245, S-0277, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0246, S-0265, S-0279, S-0280, S-0287, S-0288, S-0289, S-0290, S-0291, S-0293 and S-0297."
+  delivery: 2026-10-07T11:17:00Z
+  basis: "Its own forecast of 1h1m; 31st in the pull order with an in-progress limit of 3, behind S-0245, S-0269, S-0294, S-0270, S-0271, S-0274, S-0275, S-0277, S-0212, S-0213, S-0214, S-0215, S-0216, S-0232, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0246, S-0265, S-0279, S-0280, S-0287, S-0288, S-0289, S-0290, S-0291, S-0293 and S-0297."
   by: flai
-  at: 2026-10-07T01:43:45Z
+  at: 2026-10-07T02:03:46Z
 ---
 # S-0298 The Host Updates Tab Allows an Operator to Rollback to A Previous Version
 
