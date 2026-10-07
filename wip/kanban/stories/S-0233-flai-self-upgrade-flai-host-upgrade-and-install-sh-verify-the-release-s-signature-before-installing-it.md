@@ -7,17 +7,23 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-02T12:37:23Z
+updated: 2026-10-07T19:34:51Z
 transitions: []
 tags: [cli]
 topics: [release, security]
-touches: [flai/internal/selfupgrade, flai/cmd/selfupgrade.go, install.sh, docs/users/flai.md, docs/operators, ".github/workflows/system-flow-check.yml"]
+touches: [flai/internal/selfupgrade, flai/cmd/selfupgrade.go, install.sh, docs/users/flai.md, docs/operators, ".github/workflows/system-flow-check.yml", flai/cmd/host.go, flai/cmd/selfupgrade_test.go, scripts/install-test.sh, design/system/flai-cli.md]
 after: [S-0232]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+forecast:
+  duration: 1h15m
+  delivery: 2026-10-08T10:58:00Z
+  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 22m; raised to 1h15m, above the 1h median of done feature stories, for signature checks in Go and in install.sh, two commands, and four test cases; delivery played out after S-0232 at a cycle factor of 6.85"
+  by: planner-E-0015
+  at: 2026-10-07T19:33:52Z
 ---
 # S-0233 flai self-upgrade, flai host upgrade, and install.sh verify the release's signature before installing it
 
@@ -37,3 +43,20 @@ A release is installed only when its `checksums.txt` was signed by a key the ins
 ## Notes
 
 The first release that carries this verification is itself installed by older flais without a signature check; from then on every upgrade is verified. Say so in the release notes.
+
+### Planning
+
+Touches:
+
+- Declared: `flai/internal/selfupgrade`, `flai/cmd/selfupgrade.go`, `install.sh`, `docs/users/flai.md`, `docs/operators`, `.github/workflows/system-flow-check.yml`.
+- Layout: `flai/cmd/host.go`, where `flai host upgrade` lives; `flai/cmd/selfupgrade_test.go`; `scripts/install-test.sh`, which tests `install.sh`.
+- Co-change and design: `design/system/flai-cli.md`, changed with these paths in 65% of their commits, whose self-upgrade section says what is verified.
+- Folder touches kept, as declared: `flai/internal/selfupgrade`, where the verification may be a new file beside `selfupgrade.go`, and the test key pair goes under a new `testdata/`; `docs/operators`, whose install and update runbooks change.
+
+Forecast: 1h15m, delivery 2026-10-08T10:58Z.
+
+- `flai forecast` gave 22m from 116 s per unit of size, over only 3 medium-band feature stories.
+- Done feature stories of this size took a median of about 1h of agent time. This one adds signature checks in Go and in `install.sh`, two commands, and four test cases, so 1h15m.
+- Delivery is played out after S-0232 at flai's cycle factor of 6.85.
+
+Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

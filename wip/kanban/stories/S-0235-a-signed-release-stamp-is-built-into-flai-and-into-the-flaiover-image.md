@@ -7,17 +7,23 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-02T12:37:23Z
+updated: 2026-10-07T19:34:53Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flai/internal/buildinfo, ".github/workflows/release-flaiover.yml", flaiover/Dockerfile, flaiover/src/lib/server/release.ts, docs/operators]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flai/internal/buildinfo, ".github/workflows/release-flaiover.yml", flaiover/Dockerfile, flaiover/src/lib/server/release.ts, docs/operators, flai/cmd/version.go, flai/cmd/serve.go, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/metrics.ts, flaiover/src/lib/server/metrics.test.ts, flaiover/src/hooks.server.ts, design/tech/docker.md]
 after: [S-0232]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+forecast:
+  duration: 1h15m
+  delivery: 2026-10-08T10:58:00Z
+  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 24m; raised to 1h15m, above the 1h median of done feature stories, for a stamp built, verified, and tested in both components and both workflows; delivery played out after S-0232 at a cycle factor of 6.85"
+  by: planner-E-0015
+  at: 2026-10-07T19:33:55Z
 ---
 # S-0235 A signed release stamp is built into flai and into the flaiover image
 
@@ -35,3 +41,20 @@ Each release build carries a statement CI signed with the release key before the
 ## Tasks
 
 ## Notes
+
+### Planning
+
+Touches:
+
+- Declared: `.github/workflows/release-flai.yml`, `flai/.goreleaser.yaml`, `flai/internal/buildinfo`, `.github/workflows/release-flaiover.yml`, `flaiover/Dockerfile`, `flaiover/src/lib/server/release.ts`, `docs/operators`.
+- Layout: `flai/cmd/version.go` for `flai version --json`; `flai/cmd/serve.go`, where flai checks its own stamp at start; `flaiover/src/hooks.server.ts`, where flaiover does; `flaiover/src/lib/server/metrics.ts` and its test for the `signed` label of `flaiover_build_info`; `flaiover/src/lib/server/release.test.ts`.
+- Design: `design/tech/docker.md`, which describes the image.
+- Folder touches kept, as declared: `flai/internal/buildinfo`, which may gain a stamp file beside `buildinfo.go`; `docs/operators`.
+
+Forecast: 1h15m, delivery 2026-10-08T10:58Z.
+
+- `flai forecast` gave 24m from 116 s per unit of size, over only 3 medium-band feature stories.
+- Done feature stories of this size took a median of about 1h of agent time. This one builds, verifies, and tests a stamp in both components and both workflows, so 1h15m.
+- Delivery is played out after S-0232 at flai's cycle factor of 6.85.
+
+Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

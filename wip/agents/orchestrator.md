@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 54.5717
-accrued_seconds: 63441
-tasks_completed: 63
-last_run: 2026-10-07T18:58:10Z
+accrued_cost: 65.2449
+accrued_seconds: 68614
+tasks_completed: 71
+last_run: 2026-10-07T20:25:48Z
 ---
 
 # Orchestrator activity
@@ -453,6 +453,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 14051
 - Cost: 4.1495 USD, estimated
 
+### 2026-10-07T19:00:23Z
+
+- Summary: Published under judgement after the operator accepted S-0298 (TH-0256 practice): 1 pending, 37.5 USD/week; flai 1.35.1→1.35.2 (flai/v1.35.2), flaiover 0.41.0→0.41.1 (flaiover/v0.41.1); bundled S-0298; pushed. Before the acceptance I had verified S-0298: verify passed at head 3c20ae4 and the verifier matched criteria 1–3. The verifier noted that ADR-0118 reads TH-0202's "apply once" as "a chosen dashboard release survives restarts", which the operator may want to confirm. Refused by flai guard: `git tag --sort=-creatordate` (orchestrator never runs git tag); not retried.
+- Items: S-0298
+- Seconds: 123
+- Cost: 0.4606 USD, estimated
+
+### 2026-10-07T19:00:28Z
+
+- Summary: Started on flai 1.35.1 and checked in. No epics to plan (plan --candidates empty). 6 drafts are incomplete (S-0280 lacks a value; S-0287, S-0309, S-0310, S-0312, S-0313 lack touches, forecast, value), and each already has its thread (TH-0252–0255, TH-0288, TH-0289). No promote candidates under throughput (every backlog story lacks a forecast or value; TH-0293 covers it), so ready stays empty with nothing to order. TH-0295 and TH-0297 (planner-S-0280) left to the operator: they are the planner's, not a story agent's, and TH-0295 is a cost of delay input
+- Items: S-0280, S-0287, S-0309, S-0310, S-0312, S-0313
+- Seconds: 5
+- Cost: 0.0246 USD, estimated
+
+### 2026-10-07T19:06:08Z
+
+- Summary: stopped: stopped from the dashboard
+- Items: none
+- Seconds: 340
+- Cost: 0.0499 USD, estimated
+
+### 2026-10-07T19:08:19Z
+
+- Summary: Restarted and checked in. No plan candidates; no promote candidates under throughput (every backlog story lacks a forecast or a value), so ready stays empty with nothing to order; review is empty. Left the 14 new drafts S-0314–S-0327 as drafts and opened one thread on each (TH-0298–TH-0311): flai promote --drafts lists each as lacking touches, a forecast, and a value. Flagged likely duplicates: S-0325 of S-0323, S-0322 of S-0312, S-0327 of S-0313. TH-0295 and TH-0297 (planner-S-0280) left to the operator: not a story agent's, and TH-0295 is a cost of delay input
+- Items: S-0314, S-0315, S-0316, S-0317, S-0318, S-0319, S-0320, S-0321, S-0322, S-0323, S-0324, S-0325, S-0326, S-0327
+- Seconds: 56
+- Cost: 0.2403 USD, estimated
+
+### 2026-10-07T19:35:38Z
+
+- Summary: Applied the throughput order after the operator moved S-0328 to ready: S-0328 alone, rank 1, no forecast duration. Still no promote candidates; E-0015's planner set forecasts and touches on S-0232–S-0239, but their values wait on TH-0312 (cost of delay input, the operator's)
+- Items: S-0328
+- Seconds: 1639
+- Cost: 0.8803 USD, estimated
+
+### 2026-10-07T19:44:30Z
+
+- Summary: Applied the throughput order after the operator moved S-0329 to ready: S-0329 alone, rank 1, no forecast duration. TH-0314 (planner-S-0328, on duplicate tasks and the plan_backlog_stories scope) left to the operator: a planner's thread about my own permissions
+- Items: S-0329
+- Seconds: 532
+- Cost: 1.3076 USD, estimated
+
+### 2026-10-07T20:24:33Z
+
+- Summary: After planner-E-0018 ended, finalized S-0330, S-0331, S-0332, S-0333, S-0335, and S-0337. flai promote --drafts listed each as complete, and its criteria, touches, forecast (36m–55m), and value (93.02–142.12 USD/week) agree with the plan on TH-0318. Left S-0334 a draft with TH-0319: it changes the hold policy from TH-0019/ADR-0046, an unrecorded decision. Left S-0336 a draft with TH-0320: the planner's open split proposal would rewrite its words. Promoted S-0330 to ready, the sole flai promote --candidates candidate (rank 1, 48m), and applied the throughput order: S-0330 alone
+- Items: S-0330, S-0331, S-0332, S-0333, S-0334, S-0335, S-0336, S-0337
+- Seconds: 2403
+- Cost: 7.2387 USD, estimated
+
+### 2026-10-07T20:25:48Z
+
+- Summary: Left S-0328 in review, not accepted: flai accept --dry-run at 99b3335e says only the operator accepts it, because its branch changes .claude/agents/orchestrator.md and the template copy (ADR-0106). flai verify passed every step at that head, and the verifier matched criteria 1–3 to changed files. Recommended on TH-0321 that the operator accept it, noting ADR-0119 item 4 says inputs and value where the code allows inputs only
+- Items: S-0328
+- Seconds: 75
+- Cost: 0.4712 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -483,4 +539,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-07T19:00:04Z
 
 - Call: `git tag --sort=-creatordate`
+- Needs: none
+
+### 2026-10-07T19:07:42Z
+
+- Call: `flai serve status --json 2>/dev/null`
 - Needs: none

@@ -7,17 +7,23 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-02T12:37:24Z
+updated: 2026-10-07T19:34:54Z
 transitions: []
 tags: [cli]
 topics: [release, security]
-touches: [flai/cmd/dashboard.go, flai/internal/selfupgrade, flai/internal/dashboard, docs/operators/settings.md, docs/users/flai.md]
+touches: [flai/cmd/dashboard.go, flai/internal/selfupgrade, flai/internal/dashboard, docs/operators/settings.md, docs/users/flai.md, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_versions.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_test.go, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/docker.md]
 after: [S-0233, S-0234]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+forecast:
+  duration: 1h15m
+  delivery: 2026-10-08T19:32:00Z
+  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 20m; raised to 1h15m, above the 1h median of done feature stories, for resolution, verification, a cache, and four dashboard subcommands that must keep ADR-0118's chosen release; delivery played out after S-0233 and S-0234 at a cycle factor of 6.85"
+  by: planner-E-0015
+  at: 2026-10-07T19:33:56Z
 ---
 # S-0236 flai dashboard resolves the image from the signed digest list and runs it by digest
 
@@ -35,3 +41,20 @@ agent:
 ## Tasks
 
 ## Notes
+
+### Planning
+
+Touches:
+
+- Declared: `flai/cmd/dashboard.go`, `flai/internal/selfupgrade`, `flai/internal/dashboard`, `docs/operators/settings.md`, `docs/users/flai.md`.
+- Layout: `flai/cmd/dashboard_upgrade.go`, which holds `check` and `upgrade`; `flai/cmd/dashboard_versions.go`, which lists dashboard releases (ADR-0117); `flai/cmd/dashboard_watch.go`, whose restart keeps the chosen release (ADR-0118); `flai/cmd/dashboard_test.go`.
+- Design: `design/system/flai-cli.md`, `design/system/flaiover-dashboard.md` § Deploying a chosen release, and `design/tech/docker.md` § Run, which say how the image is chosen and run.
+- Folder touches kept, as declared: `flai/internal/selfupgrade`, which may gain a digest-list file; `flai/internal/dashboard`, a package that does not exist yet, for the resolver and its cache.
+
+Forecast: 1h15m, delivery 2026-10-08T19:32Z.
+
+- `flai forecast` gave 20m from 116 s per unit of size, over only 3 medium-band feature stories.
+- Done feature stories of this size took a median of about 1h of agent time. This one adds resolution, verification, a cache, and four subcommands that must keep ADR-0118's chosen release, so 1h15m.
+- Delivery is played out after S-0233 and S-0234 at flai's cycle factor of 6.85.
+
+Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

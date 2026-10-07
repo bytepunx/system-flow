@@ -7,17 +7,23 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-02T12:37:23Z
+updated: 2026-10-07T19:34:52Z
 transitions: []
 tags: [dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flaiover.yml", design/tech/ci.md, docs/operators]
+touches: [".github/workflows/release-flaiover.yml", design/tech/ci.md, docs/operators, design/tech/docker.md, design/system/release-signing.md]
 after: [S-0232]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+forecast:
+  duration: 45m
+  delivery: 2026-10-08T07:33:00Z
+  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 16m; raised to 45m, under the 1h median since it is one workflow, but with a RepoDigests check that needs Docker; delivery played out after S-0232 at a cycle factor of 6.85"
+  by: planner-E-0015
+  at: 2026-10-07T19:33:53Z
 ---
 # S-0234 The flaiover image's digest list is signed in CI and published on a flaiover GitHub release
 
@@ -35,3 +41,19 @@ Every `flaiover/v*` tag produces a GitHub release `flaiover vX.Y.Z` carrying a d
 ## Tasks
 
 ## Notes
+
+### Planning
+
+Touches:
+
+- Declared: `.github/workflows/release-flaiover.yml`, `design/tech/ci.md`, `docs/operators`.
+- Design: `design/tech/docker.md`, whose Tags row names what `release-flaiover.yml` publishes; `design/system/release-signing.md`, where criterion 4's `RepoDigests` finding is recorded.
+- Folder touch kept, as declared: `docs/operators`, where the update runbook and perhaps a new note on unsigned `latest` builds change.
+
+Forecast: 45m, delivery 2026-10-08T07:33Z.
+
+- `flai forecast` gave 16m from 116 s per unit of size, over only 3 medium-band feature stories.
+- It is one workflow, so under the 1h median of done feature stories. But criterion 4 needs pulls by index and platform digest to be tried with Docker, so 45m.
+- Delivery is played out after S-0232 at flai's cycle factor of 6.85.
+
+Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

@@ -1,0 +1,96 @@
+---
+id: S-0333
+type: story
+nature: feature
+title: Closing a task messages every open story whose claim covers a path the task changed, before either story is accepted
+status: backlog
+parent: E-0018
+owner: alex
+created: 2026-10-07T20:10:50Z
+updated: 2026-10-07T20:24:17Z
+transitions: []
+tags: [flai, template]
+topics: [cli, git, conventions, template]
+touches: [flai/internal/itemedit/covers.go, flai/internal/itemedit/covers_test.go, flai/cmd/accept_overlap.go, flai/cmd/accept_overlap_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, design/system/workflow.md, design/system/agent-narrative.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+after: [S-0331]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 300
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 45
+          output: 819
+          cache_read: 3661515
+          cache_write: 10356
+          cost: 0.9048
+cost_of_delay:
+  value: 113.7
+  by: planner-E-0018
+  at: 2026-10-07T20:22:02Z
+forecast:
+  duration: 44m
+  delivery: 2026-10-08T09:32:00Z
+  basis: "flai forecast: median 114 s per unit of size over 29 done large-band feature stories on claude-opus-5-5, times size 23; 42nd in the pull order."
+  by: planner-E-0018
+  at: 2026-10-07T20:19:21Z
+finalized:
+  by: orchestrator
+  at: 2026-10-07T20:24:17Z
+---
+# S-0333 Closing a task messages every open story whose claim covers a path the task changed, before either story is accepted
+
+## Goal
+
+Tell an agent what another story changed while both are still working, not only when one is accepted. Today an open story learns that an overlapping story changed its paths from the `overlapped` notice at acceptance (S-0132), when its own branch may already rely on the old shape. When `flai task done` commits a task, flai messages each other open story whose claim covers a path the commit changed, with the paths and the commit's subject, so its agent can adjust early or answer that the change breaks it.
+
+## Acceptance criteria
+
+- [ ] `flai task done` and the MCP tool `task_done`, after committing, message each other story in progress or in review whose claim covers a path the commit changed, inside the shared paths too, `about` those paths, naming the task, the commit, and its subject; one conversation per pair of stories, reused when it is open.
+- [ ] A story with an empty claim is told of every path, as the notice at acceptance does.
+- [ ] A commit that changes no path another open story claims sends nothing, and a notice that cannot be sent is logged and does not fail the task's close.
+- [ ] `flai task done --json` and `task_done` return whom they told as `told`.
+- [ ] `design/system/workflow.md` § Branches and collisions, `agent-narrative.md`, and `work-management.md` in both copies say what a story's agent does with such a message.
+
+## Tasks
+
+- T-1199 Who an open story's change reaches is worked out in one place, shared by acceptance and task done
+- T-1200 flai task done and task_done message each open story whose claim covers a path the task's commit changed, and return told
+- T-1201 The workflow, the convention, the template, and the guides say what an agent does with a task's change notice
+
+## Notes
+
+### Planning
+
+Planned by planner-E-0018 on 2026-10-07. It waits for S-0331 (`after`), so the agents it tells can read the message. It does not wait for S-0332; the two touch the same design documents, so the hold runs them one after the other.
+
+This is the early notice of design K in `design/system/agent-coordination.md` (order plus notices, CoAgent and STALE): telling the later agent what the earlier one changed.
+
+Layers:
+
+1. T-1199, moving the coverage test out of `flai/cmd` so `taskdone` can call it, with no change of behaviour.
+2. T-1200, the notice.
+3. T-1201, the docs.
+
+Touches:
+
+- **Declared:** none before planning.
+- **Layout:**
+  - `flai/cmd/accept_overlap.go` and its test: `overlapsOf` and `covered` work out who the notice at acceptance tells.
+  - `flai/internal/itemedit/covers.go` and its test: the new home of that test, beside `claim.go`; T-1199 may pick another file name.
+  - `flai/internal/taskdone/taskdone.go`, `flai/cmd/task_done.go`, `flai/internal/mcpserver/task.go`, and their tests: the close of a task and its two front ends.
+- **Co-change:** `flai touches suggest` from `taskdone.go` and `accept_overlap.go` found nothing changed with them often enough (3 commits).
+- **Design:** `design/system/workflow.md` § Branches and collisions and `agent-narrative.md`; both copies of `work-management.md` and `template/CHANGELOG.md`; `flai-cli.md`, `docs/users/flai.md`, and the generated reference.
+
+Forecast 44m, delivery 2026-10-08T09:32Z: `flai forecast` gave it, 114 s per unit over 29 done large-band feature stories, times size 23. It stands.
+
+Cost of delay 113.70 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 44m of 6h27m. It stands.

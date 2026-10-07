@@ -7,17 +7,23 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-02T12:37:24Z
+updated: 2026-10-07T19:34:57Z
 transitions: []
 tags: [cli]
 topics: [release, security]
-touches: [flai/internal/serve, flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md]
+touches: [flai/internal/serve, flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md]
 after: [S-0236]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+forecast:
+  duration: 1h
+  delivery: 2026-10-09T02:23:00Z
+  basis: "flai's 116 s per unit of size rests on 3 medium-band stories and gave 20m; raised to 1h, the median of done feature stories, for a Docker check before dialling with three statuses and a fake runner; delivery played out after S-0236 at a cycle factor of 6.85"
+  by: planner-E-0015
+  at: 2026-10-07T19:33:58Z
 ---
 # S-0238 flai measures the container's image through Docker before it dials and refuses one no signed list names
 
@@ -35,3 +41,20 @@ Before `flai serve` dials the dashboard, and whenever the connection is opened a
 ## Tasks
 
 ## Notes
+
+### Planning
+
+Touches:
+
+- Declared: `flai/internal/serve`, `flai/cmd/serve.go`, `flai/cmd/dashboard.go`, `docs/operators`, `docs/users/flai.md`.
+- Layout: `flai/cmd/host.go`, which prints `flai host status`.
+- Co-change and design: `design/system/flai-cli.md`, which describes the three statuses.
+- Folder touches kept, as declared: `flai/internal/serve`, where `dashboards.go` dials and the check may be a new file; `docs/operators`. `flai/internal/serve` holds every story that touches `flai serve`; the story's agent should narrow it to files when it writes the tasks.
+
+Forecast: 1h, delivery 2026-10-09T02:23Z.
+
+- `flai forecast` gave 20m from 116 s per unit of size, over only 3 medium-band feature stories.
+- Done feature stories of this size took a median of about 1h of agent time. This one is a Docker check before dialling, three statuses, and a fake runner, so 1h.
+- Delivery is played out after S-0236 at flai's cycle factor of 6.85.
+
+Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

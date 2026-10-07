@@ -7,17 +7,23 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-02T12:37:24Z
+updated: 2026-10-07T19:34:58Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [flai/internal/config, flai/internal/manifest, flai/cmd/dashboard.go, flai/internal/serve, flaiover/src/lib/server/agent.ts, flaiover/src/routes, flaiover/src/lib/components, docs/operators/settings.md, docs/users/flaiover.md]
+touches: [flai/internal/config, flai/internal/manifest, flai/cmd/dashboard.go, flai/internal/serve, flaiover/src/lib/server/agent.ts, flaiover/src/routes, flaiover/src/lib/components, docs/operators/settings.md, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flai/cmd/serve.go, flai/cmd/host.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/contributors/index.md, template/root/docs/operators/index.md.tmpl, template/CHANGELOG.md]
 after: [S-0237, S-0238]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+forecast:
+  duration: 1h30m
+  delivery: 2026-10-09T12:40:00Z
+  basis: "flai's 114 s per unit of size gave 27m; raised to 1h30m, half again the 1h median of done feature stories, for a setting through config, manifest, both components, a banner on every page, and three statuses; delivery after S-0238, the later of its two afters, at a cycle factor of 6.85"
+  by: planner-E-0015
+  at: 2026-10-07T19:33:59Z
 ---
 # S-0239 dashboard.allow_unsigned lets a development build connect, shown on every page and in every status
 
@@ -35,3 +41,21 @@ Unsigned builds are allowed only on purpose: `dashboard.allow_unsigned` in the h
 ## Tasks
 
 ## Notes
+
+### Planning
+
+Touches:
+
+- Declared: `flai/internal/config`, `flai/internal/manifest`, `flai/cmd/dashboard.go`, `flai/internal/serve`, `flaiover/src/lib/server/agent.ts`, `flaiover/src/routes`, `flaiover/src/lib/components`, `docs/operators/settings.md`, `docs/users/flaiover.md`.
+- Layout: `flaiover/src/lib/server/agent.test.ts`; `flai/cmd/serve.go` and `flai/cmd/host.go` for the statuses; `docs/users/flai.md` and the generated `docs/users/flai-reference.md` for `--allow-unsigned`.
+- Design: `design/system/project-manifest.md` for the manifest key; `design/system/flai-cli.md`.
+- Criteria: `docs/contributors/index.md`, this repository's contributor documentation (criterion 4); `template/root/docs/operators/index.md.tmpl` and `template/CHANGELOG.md`, the template's operator documentation and its changelog.
+- Folder touches kept, as declared: `flai/internal/config` and `flai/internal/manifest`, one file and its test each; `flai/internal/serve`; `flaiover/src/routes`, where `+layout.svelte` shows the banner on every page; `flaiover/src/lib/components`, where the banner may be a new component. `flai/internal/serve`, `flaiover/src/routes`, and `flaiover/src/lib/components` are wide; the story's agent should narrow them to files when it writes the tasks.
+
+Forecast: 1h30m, delivery 2026-10-09T12:40Z.
+
+- `flai forecast` gave 27m from 114 s per unit of size, over 29 large-band feature stories.
+- Done feature stories of this size took a median of about 1h of agent time. This one carries a setting through the configuration, the manifest, both components, a banner on every page, and three statuses, so 1h30m.
+- Delivery is played out after S-0238, the later of its two afters, at flai's cycle factor of 6.85.
+
+Cost of delay: no value yet. E-0015 and its stories have no inputs; TH-0312 asks the operator for them.

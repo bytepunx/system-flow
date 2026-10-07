@@ -14,6 +14,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 4
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 12
+          cache_read: 64217
+          cache_write: 5432
+          cost: 0.0172
 draft: true
 ---
 # S-0323 flai check finds `narrative.state` outside the story at close-out
