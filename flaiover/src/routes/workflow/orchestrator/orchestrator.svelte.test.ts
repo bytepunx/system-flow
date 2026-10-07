@@ -1,21 +1,35 @@
-// S-0229: the orchestrator's page shows the orchestration block of settings.get in its settings
-// panel, saves a key through /api/settings and reads the settings again, is read-only while the
-// settings host action is off, and reads the settings again when system-flow.yaml changes.
+// S-0228: the orchestrator's page loads /api/orchestrator, and loads it again when the
+// orchestrator's activity document changes and when flai serve says an orchestrator run started,
+// ended, or was held; a reload that fails says so above what was last shown.
+// S-0229: it shows the orchestration block of settings.get in its settings panel, saves a key
+// through /api/settings and reads the settings again, is read-only while the settings host action is
+// off, and reads the settings again when system-flow.yaml changes.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { SettingsView, StrategicSetting } from '$lib/settings';
+import type { OrchestratorView } from '$lib/strategic';
 import type { Change, ChangeKind } from '$lib/changes';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
+vi.mock('$app/paths', () => ({
+	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id ?? '')
+}));
+// what the page follows, to deliver change and agent events to as flai serve would
 const events = vi.hoisted(() => ({
-	followed: [] as { kinds: string[]; f: (changes: Change[]) => void }[]
+	followed: [] as { kinds: string[]; f: (changes: Change[]) => void }[],
+	agents: [] as ((id: string) => void)[]
 }));
 vi.mock('$lib/events', () => ({
 	follow: (kinds: string[], f: (changes: Change[]) => void) => {
 		events.followed.push({ kinds, f });
 		return () => {};
-	}
+	},
+	listen: (l: { agent?: (id: string) => void }) => {
+		if (l.agent) events.agents.push(l.agent);
+		return () => {};
+	},
+	debounced: (f: () => void) => Object.assign(() => f(), { stop: () => {} })
 }));
 
 import OrchestratorPage from './+page.svelte';
@@ -156,14 +170,38 @@ function settingsGet(editable: boolean): SettingsView {
 }
 const reads = () =>
 	api.mock.calls.filter(([url, init]) => url === '/api/settings' && !init?.method).length;
+const loads = () =>
+	api.mock.calls.filter(([url, init]) => url === '/api/orchestrator' && !init?.method).length;
+const view = (over: Partial<OrchestratorView> = {}): OrchestratorView => ({
+	enabled: true,
+	held: false,
+	activity: {
+		kind: 'orchestrator',
+		accrued_cost: 0,
+		accrued_seconds: 0,
+		tasks_completed: 0,
+		last_run: '',
+		path: 'wip/agents/orchestrator.md',
+		entries: []
+	},
+	run: null,
+	runs: [],
+	...over
+});
+/** Answers /api/orchestrator with o, and every other request with the settings. */
+const backend = (o: OrchestratorView, settings: SettingsView = settingsGet(true)) =>
+	api.mockImplementation(async (url: string) =>
+		answer(200, url === '/api/orchestrator' ? o : settings)
+	);
 
-describe('the orchestrator page (S-0229)', () => {
+describe('the orchestrator page (S-0228)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	afterEach(() => {
 		if (c) unmount(c);
 		c = undefined;
 		api.mockReset();
 		events.followed.length = 0;
+		events.agents.length = 0;
 		document.body.innerHTML = '';
 	});
 	const show = async () => {
@@ -171,14 +209,115 @@ describe('the orchestrator page (S-0229)', () => {
 		await settle();
 	};
 
-	it("says its status comes later and shows the orchestration block's keys, each permission with its risk", async () => {
-		api.mockResolvedValue(answer(200, settingsGet(true)));
+	it('loads the orchestrator and shows it above its settings', async () => {
+		backend(view({ held: true }));
+		await show();
+		expect(api).toHaveBeenCalledWith('/api/orchestrator');
+		expect(document.querySelector('h1')!.textContent).toBe('Orchestrator');
+		expect(document.body.textContent).toContain('wip/agents/orchestrator.md');
+		expect(document.body.textContent).not.toContain('will be shown here');
+		expect(q('orchestrator-action-held')).not.toBeNull();
+		expect(q('orchestrator-current-none')).not.toBeNull();
+		const settings = q('strategic-orchestration')!;
+		expect(
+			q('orchestrator-runs')!.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy();
+	});
+
+	it("loads again when the orchestrator's document changes, and not for another narrative", async () => {
+		backend(view());
+		await show();
+		expect(loads()).toBe(1);
+		changed('wip/agents/S-0001.md', 'narrative');
+		await settle();
+		expect(loads()).toBe(1);
+
+		const decision = 'promoted S-0252: cost of delay 60.81 USD a week, first under policy cod';
+		backend(
+			view({
+				activity: {
+					...view().activity,
+					tasks_completed: 1,
+					entries: [
+						{
+							at: '2026-10-03T10:10:00Z',
+							summary: decision,
+							items: ['S-0252'],
+							seconds: 300,
+							cost: 0.4,
+							estimated: false
+						}
+					]
+				}
+			})
+		);
+		changed('wip/agents/orchestrator.md', 'narrative');
+		await settle();
+		expect(loads()).toBe(2);
+		expect(q('orchestrator-decision-summary')!.textContent).toBe(decision);
+	});
+
+	it('loads again when flai serve says an orchestrator run started, ended, or was held, and not for a story', async () => {
+		backend(view());
+		await show();
+		events.agents.forEach((f) => f('S-0228'));
+		await settle();
+		expect(loads()).toBe(1);
+
+		backend(view({ held: true }));
+		events.agents.forEach((f) => f('orchestrator'));
+		await settle();
+		expect(loads()).toBe(2);
+		expect(q('orchestrator-action-held')).not.toBeNull();
+	});
+
+	it('loads again after a Stop', async () => {
+		const running = {
+			story: '',
+			agent: 'orchestrator',
+			command: 'claude',
+			pid: 42,
+			started: '2026-10-03T10:00:00Z'
+		};
+		api.mockImplementation(async (url: string, init?: { method?: string }) => {
+			if (url === '/api/orchestrator' && init?.method === 'POST')
+				return answer(200, { held: true, orchestrator: { ...running, held: true } });
+			if (url === '/api/orchestrator') return answer(200, view({ run: running, runs: [running] }));
+			if (url === '/api/settings') return answer(200, settingsGet(true));
+			return answer(200, { entries: [], running: true, from: 0, next: 0, size: 0 });
+		});
+		await show();
+		q<HTMLButtonElement>('orchestrator-stop')!.click();
+		await settle();
+		expect(q('orchestrator-said')!.textContent).toContain('held it stopped');
+		expect(loads()).toBe(2);
+	});
+
+	it('keeps what it showed when a reload fails, with the error above it', async () => {
+		backend(view());
+		await show();
+		api.mockImplementation(async (url: string) =>
+			url === '/api/orchestrator'
+				? answer(502, { error: 'flai is away' })
+				: answer(200, settingsGet(true))
+		);
+		changed('wip/agents/orchestrator.md', 'narrative');
+		await settle();
+		expect(document.querySelector('[role="alert"]')!.textContent).toContain('flai is away');
+		expect(q('orchestrator-action')).not.toBeNull();
+
+		backend(view());
+		changed('wip/agents/orchestrator.md', 'narrative');
+		await settle();
+		expect(document.querySelector('[role="alert"]')).toBeNull();
+	});
+
+	// S-0229: the orchestrator's settings, read apart from the orchestrator on arrival, after a save,
+	// and when system-flow.yaml changes.
+	it("shows the orchestration block's keys, each permission with its risk", async () => {
+		backend(view());
 		await show();
 		expect(api).toHaveBeenCalledWith('/api/settings');
-		expect(document.querySelector('h1')!.textContent).toBe('Orchestrator');
-		expect(document.body.textContent).toContain(
-			'Its status, activity log, and runs will be shown here.'
-		);
 		const rows = [...document.querySelectorAll('[data-testid^="row-"]')].map((r) =>
 			r.getAttribute('data-testid')!.slice('row-'.length)
 		);
@@ -193,7 +332,8 @@ describe('the orchestrator page (S-0229)', () => {
 
 	it('saves a changed key, then reads the settings again', async () => {
 		const sent: unknown[] = [];
-		api.mockImplementation(async (_url: string, init?: { method?: string; body?: string }) => {
+		api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
+			if (url === '/api/orchestrator') return answer(200, view());
 			if (init?.method === 'POST') {
 				sent.push(JSON.parse(init.body!));
 				return answer(200, { set: [], unset: [], commit: 'abcdef123456', warnings: [] });
@@ -213,7 +353,7 @@ describe('the orchestrator page (S-0229)', () => {
 	});
 
 	it('is read-only, with the reason, while the settings host action is off', async () => {
-		api.mockResolvedValue(answer(200, settingsGet(false)));
+		backend(view(), settingsGet(false));
 		await show();
 		expect(q('strategic-readonly')!.textContent).toContain('settings host action is off');
 		const inputs = document.querySelectorAll<HTMLInputElement>('[data-testid^="input-"]');
@@ -223,7 +363,7 @@ describe('the orchestrator page (S-0229)', () => {
 	});
 
 	it('reads the settings again when system-flow.yaml changes, and not for another file', async () => {
-		api.mockResolvedValue(answer(200, settingsGet(true)));
+		backend(view());
 		await show();
 		changed('wip/kanban/stories/S-0001-x.md', 'item');
 		await settle();
@@ -236,7 +376,7 @@ describe('the orchestrator page (S-0229)', () => {
 	it('says so when flai gives no settings, and shows an error it gives', async () => {
 		const old = settingsGet(true);
 		delete old.host!.strategic;
-		api.mockResolvedValue(answer(200, old));
+		backend(view(), old);
 		await show();
 		expect(q('strategic-absent')).not.toBeNull();
 		expect(q('strategic-orchestration')).toBeNull();

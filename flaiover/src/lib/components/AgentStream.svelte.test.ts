@@ -129,6 +129,53 @@ describe('AgentStream (S-0142)', () => {
 		expect(api).toHaveBeenLastCalledWith('/api/agent-stream/E-0016?plan&after=100');
 	});
 
+	it("follows a strategic role's newest run with ?role, whatever the path names (S-0228)", async () => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+		api.mockResolvedValueOnce(
+			answer(
+				read({
+					story: '',
+					agent: 'orchestrator',
+					from: 4000,
+					entries: [{ kind: 'text', text: 'Ordering the ready column.' }]
+				})
+			)
+		);
+		c = mount(AgentStream, {
+			target: document.body,
+			props: { story: 'orchestrator', started: '2026-09-29T05:42:53Z', role: 'orchestrate' }
+		});
+		await settle();
+		expect(api).toHaveBeenCalledWith('/api/agent-stream/orchestrator?role=orchestrate');
+		expect(lines()).toEqual([
+			"… earlier entries are in the orchestrator's log on the host",
+			'Ordering the ready column.'
+		]);
+		expect(box().querySelector('ol')!.getAttribute('aria-label')).toBe(
+			'what the orchestrator said and did'
+		);
+
+		api.mockResolvedValueOnce(answer(read({ story: '', from: 100, next: 150, running: false })));
+		await vi.advanceTimersByTimeAsync(2000);
+		await settle();
+		expect(api).toHaveBeenLastCalledWith(
+			'/api/agent-stream/orchestrator?role=orchestrate&after=100'
+		);
+		unmount(c);
+
+		document.body.innerHTML = '';
+		api.mockResolvedValueOnce(answer(read({ story: '', agent: 'analyzer', running: false })));
+		c = mount(AgentStream, {
+			target: document.body,
+			props: { story: 'analyzer', started: '2026-09-29T05:42:53Z', role: 'analyze' }
+		});
+		await settle();
+		expect(api).toHaveBeenLastCalledWith('/api/agent-stream/analyzer?role=analyze');
+		expect(box().querySelector('ol')!.getAttribute('aria-label')).toBe(
+			'what the analyzer said and did'
+		);
+	});
+
 	it('reads on at once while the log has more, and starts over for another run', async () => {
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 		api

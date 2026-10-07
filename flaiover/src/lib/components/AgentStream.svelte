@@ -8,17 +8,21 @@
 	// the reader closes it, so an agent that ends does not shorten the page under the reader (S-0178).
 	// With `plan` it follows the newest planner run for the epic or story named by `story` instead,
 	// as flai serve reads it from the planner's log (S-0259), and with `orchestrator` the project's
-	// newest orchestrator run, whatever `story` names (S-0218).
+	// newest orchestrator run, whatever `story` names (S-0218). With `role` it follows the project's
+	// newest run of that strategic role, the orchestrator's or the analyzer's, whatever `story` names
+	// (S-0228).
 	import { tick, untrack } from 'svelte';
 	import { api } from '$lib/api';
 	import type { AgentStreamEntry, AgentStreamRead } from '$lib/activity';
+	import type { StreamRole } from '$lib/strategic';
 
 	let {
 		story,
 		started,
 		open = true,
 		plan = false,
-		orchestrator = false
+		orchestrator = false,
+		role
 	}: {
 		/** The story whose agent it follows, or with `plan` the epic or story the planner plans. */
 		story: string;
@@ -29,6 +33,8 @@
 		plan?: boolean;
 		/** Follows the project's orchestrator rather than a story's agent (S-0218). */
 		orchestrator?: boolean;
+		/** Follows the project's newest run of a strategic role rather than a story's agent (S-0228). */
+		role?: StreamRole;
 	} = $props();
 
 	// The page passes these from objects it makes anew on every reload. Derived, they change only
@@ -38,6 +44,17 @@
 	const opened = $derived(open);
 	const planner = $derived(plan);
 	const orchestrating = $derived(orchestrator);
+	const byRole = $derived(role);
+	/** Whose stream it is, in the words its label and its note on earlier entries use. */
+	const whose = $derived(
+		byRole === 'analyze'
+			? 'analyzer'
+			: byRole === 'orchestrate' || orchestrating
+				? 'orchestrator'
+				: planner
+					? 'planner'
+					: 'agent'
+	);
 
 	/** Entries kept on the page; older ones are in the log on the host. */
 	const KEEP = 500;
@@ -61,7 +78,7 @@
 
 	async function read(after?: number): Promise<AgentStreamRead> {
 		const query = [
-			orchestrating ? 'orchestrator' : planner ? 'plan' : '',
+			byRole ? `role=${byRole}` : orchestrating ? 'orchestrator' : planner ? 'plan' : '',
 			after === undefined ? '' : `after=${after}`
 		]
 			.filter(Boolean)
@@ -94,6 +111,7 @@
 		void since;
 		void planner;
 		void orchestrating;
+		void byRole;
 		// nothing else read here starts the stream over
 		return untrack(follow);
 	});
@@ -184,19 +202,15 @@
 	<ol
 		bind:this={box}
 		class="mt-1 max-h-72 space-y-0.5 overflow-y-auto rounded border border-line bg-ground p-2 font-mono text-xs"
-		aria-label={orchestrator
-			? 'what the orchestrator said and did'
-			: plan
-				? `what the planner for ${story} said and did`
-				: `what ${story}'s agent said and did`}
+		aria-label={whose === 'planner'
+			? `what the planner for ${story} said and did`
+			: whose === 'agent'
+				? `what ${story}'s agent said and did`
+				: `what the ${whose} said and did`}
 	>
 		{#if earlier}
 			<li class="text-muted">
-				… earlier entries are in the {orchestrator
-					? "orchestrator's"
-					: plan
-						? "planner's"
-						: "agent's"} log on the host
+				… earlier entries are in the {whose}'s log on the host
 			</li>
 		{/if}
 		{#each entries as e, i (i)}
