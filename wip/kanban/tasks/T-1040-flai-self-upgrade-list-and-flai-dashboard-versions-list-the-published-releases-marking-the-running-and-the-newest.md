@@ -3,12 +3,18 @@ id: T-1040
 type: task
 nature: improvement
 title: flai self-upgrade --list and flai dashboard versions list the published releases, marking the running and the newest
-status: backlog
+status: in-progress
 parent: S-0298
 owner: alex
 created: 2026-10-06T21:44:53Z
-updated: 2026-10-06T21:45:36Z
-transitions: []
+updated: 2026-10-07T14:33:12Z
+transitions:
+  - to: ready
+    at: 2026-10-07T14:33:11Z
+    by: agent-S-0298
+  - to: in-progress
+    at: 2026-10-07T14:33:12Z
+    by: agent-S-0298
 stream: S-0298
 tags: [cli]
 touches: [flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go]

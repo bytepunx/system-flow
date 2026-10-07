@@ -3,12 +3,18 @@ id: T-1042
 type: task
 nature: improvement
 title: The dashboard's host and dashboard routes pass the versions reads and a chosen version or tag to flai on the host
-status: backlog
+status: in-progress
 parent: S-0298
 owner: alex
 created: 2026-10-06T21:45:05Z
-updated: 2026-10-06T21:45:05Z
-transitions: []
+updated: 2026-10-07T14:33:12Z
+transitions:
+  - to: ready
+    at: 2026-10-07T14:33:12Z
+    by: agent-S-0298
+  - to: in-progress
+    at: 2026-10-07T14:33:12Z
+    by: agent-S-0298
 stream: S-0298
 tags: [dashboard]
 touches: [flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/routes/api/host/+server.ts, flaiover/src/routes/api/host/host.test.ts, flaiover/src/routes/api/dashboard/+server.ts, flaiover/src/routes/api/dashboard/dashboard.test.ts]
