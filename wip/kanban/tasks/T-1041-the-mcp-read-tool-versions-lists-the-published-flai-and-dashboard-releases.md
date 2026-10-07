@@ -7,12 +7,12 @@ status: backlog
 parent: S-0298
 owner: alex
 created: 2026-10-06T21:44:59Z
-updated: 2026-10-06T21:56:34Z
+updated: 2026-10-07T14:33:03Z
 transitions: []
 stream: S-0298
 tags: [cli]
 touches: [flai/internal/mcpserver/versions.go, flai/internal/mcpserver/versions_test.go, flai/internal/mcpserver/folder.go]
-after: [T-1038, T-1039]
+after: [T-1038, T-1039, T-1040]
 ---
 # T-1041 The MCP read tool versions lists the published flai and dashboard releases
 

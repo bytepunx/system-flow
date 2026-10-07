@@ -3,15 +3,35 @@ id: T-1038
 type: task
 nature: improvement
 title: Record in an ADR and the design that a host action may install a named published release, and name the versions commands
-status: backlog
+status: done
 parent: S-0298
 owner: alex
 created: 2026-10-06T21:44:40Z
-updated: 2026-10-06T21:56:30Z
-transitions: []
+updated: 2026-10-07T14:32:39Z
+transitions:
+  - to: ready
+    at: 2026-10-07T14:26:51Z
+    by: agent-S-0298
+  - to: in-progress
+    at: 2026-10-07T14:26:51Z
+    by: agent-S-0298
+  - to: done
+    at: 2026-10-07T14:32:39Z
+    by: agent-S-0298
 stream: S-0298
 tags: [cli, dashboard]
 touches: [design/adrs, design/adrs/README.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md]
+usage:
+  source: log
+  seconds: 341
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 89
+      output: 400
+      cache_read: 3794985
+      cache_write: 128543
+      cost: 1.7774
 ---
 # T-1038 Record in an ADR and the design that a host action may install a named published release, and name the versions commands
 

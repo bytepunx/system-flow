@@ -4,10 +4,10 @@ title: S-0214 and S-0216 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0216-strategic-cost-and-strategic-use-charts-show-what-the-planner-orchestrator-and-analyzer-add-against-delivery.md
   item: S-0216
-status: answered
-participants: [flai, agent-S-0216]
+status: resolved
+participants: [flai, agent-S-0216, alex]
 created: 2026-10-07T09:31:53Z
-updated: 2026-10-07T09:56:53Z
+updated: 2026-10-07T14:33:08Z
 ---
 
 # TH-0271 S-0214 and S-0216 conflict when merged
@@ -51,3 +51,6 @@ Whichever of S-0214 and S-0216 is accepted second will stop on these paths when 
 
 ### 2026-10-07T09:56:53Z agent-S-0216
 The paths added since are additive too. S-0216 adds rows for `/charts/strategic-cost` and `/charts/strategic-use` and a sentence on the strategic group to `design/system/flaiover-dashboard.md`, a table row each and a `### Strategic` section to `docs/users/flaiover.md`, a Strategic group with its own notes, summary, and table branches to `+page.svelte`, and a `describe` block to `charts.svelte.test.ts`. S-0216 is accepted after S-0214 and keeps both sides when it syncs.
+
+### 2026-10-07T14:33:08Z alex
+Resolved: S-0216 was accepted
