@@ -334,7 +334,7 @@ The strategic charts set what the planner, the orchestrator, and the analyzer co
 - **Strategic Use, in hours.** The bars are the hours each strategic agent worked that day. The two lines cover the items completed that day: their mean cycle time, and their mean waiting time, the time each waited on its threads while in progress plus its time in review ([Waiting](../../design/system/metrics.md#waiting)). A day with nothing completed has no point.
 - **Reading Strategic Use.** The return on the strategic agents' time is the waiting and cycle-time lines falling while their bars rise.
 
-Under each chart a note says how to read it, and on Strategic Cost it states the ratio. The table view lists each day.
+The strip above the chart gives what the strategic agents spent and worked over the window, and the items completed in it. Under each chart a note says how to read it, and on Strategic Cost it states the ratio. The table view lists each day: each agent's cost or hours, the total, the items completed, and the figures of the lines. When the flai on the host is too old to send these figures, the page says so; upgrade it with `flai self-upgrade`.
 
 ## Docs
 

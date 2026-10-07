@@ -19,6 +19,7 @@
 		forecastRows,
 		hasClaims,
 		hasSpend,
+		hours,
 		human,
 		isClaimsKind,
 		isForecastKind,
@@ -28,6 +29,10 @@
 		plural,
 		SPEND_KINDS,
 		spendRows,
+		STRATEGIC_AGENTS,
+		STRATEGIC_KINDS,
+		strategicRatio,
+		strategicRows,
 		titleOf,
 		USAGE_KINDS,
 		WINDOWS,
@@ -40,7 +45,8 @@
 		type ErrorFilter,
 		type ErrorSpread,
 		type Kind,
-		type Report
+		type Report,
+		type StrategicUse
 	} from '$lib/viz/charts';
 	import { count, dollars } from '$lib/usage';
 	import { theme } from '$lib/viz/palette';
@@ -73,7 +79,8 @@
 	const groups = [
 		{ name: 'flow', kinds: FLOW_KINDS },
 		{ name: 'usage', kinds: USAGE_KINDS },
-		{ name: 'planning', kinds: PLANNING_KINDS }
+		{ name: 'planning', kinds: PLANNING_KINDS },
+		{ name: 'strategic', kinds: STRATEGIC_KINDS }
 	];
 	const filter = $derived<ErrorFilter>({
 		nature: (shown.nature && nature) || undefined,
@@ -87,6 +94,7 @@
 	// the forecast charts of the planning group, and the claims charts beside them (S-0214)
 	const forecastKind = $derived(isForecastKind(kind));
 	const claimsKind = $derived(isClaimsKind(kind));
+	const strategicKind = $derived((STRATEGIC_KINDS as readonly string[]).includes(kind));
 	// the planning charts read stories, whichever type was chosen on another chart (S-0212)
 	const asType = $derived(planningKind ? 'story' : type);
 	const facets = $derived(
@@ -161,6 +169,24 @@
 	/** A rate per agent minute; a flai older than S-0163 sends it per hour. */
 	const perMinute = (m: { tokens_per_minute?: number; tokens_per_hour?: number }) =>
 		m.tokens_per_minute ?? (m.tokens_per_hour !== undefined ? m.tokens_per_hour / 60 : undefined);
+	// flai sends a day for every day of the window: none at all is a flai older than S-0205 (S-0216)
+	const strategic = $derived(report && strategicKind ? strategicRows(report) : []);
+	const ratio = $derived(report && strategicKind ? strategicRatio(report) : undefined);
+	/** What the strategic agents spent and worked over the window, and the items completed in it. */
+	const strategicTotal = $derived({
+		cost: strategic.reduce((n, d) => n + d.cost, 0),
+		seconds: strategic.reduce((n, d) => n + d.seconds, 0),
+		completed: strategic.reduce((n, d) => n + d.completed, 0)
+	});
+	const inHours = (seconds: number | undefined) =>
+		seconds === undefined ? '-' : `${hours(seconds)}h`;
+	/** A strategic agent's day in the table: its cost, starred when estimated, or its hours. */
+	const agentDay = (u: StrategicUse | undefined) =>
+		!u
+			? '-'
+			: kind === 'strategic-cost'
+				? dollars(u.cost) + (u.estimated ? '*' : '')
+				: inHours(u.seconds);
 
 	// the latest question asked: an answer to an earlier one, arriving after it, is not drawn
 	let asked = 0;
@@ -207,11 +233,11 @@
 
 {#each groups as group (group.name)}
 	<nav
-		class="flex flex-wrap items-center gap-2 {group.name === 'planning' ? 'mb-3' : 'mb-1'}"
+		class="flex flex-wrap items-center gap-2 {group.name === 'strategic' ? 'mb-3' : 'mb-1'}"
 		aria-label="{group.name} charts"
 		data-testid="charts-{group.name}"
 	>
-		<span class="w-14 text-xs text-muted">{group.name}</span>
+		<span class="w-16 text-xs text-muted">{group.name}</span>
 		{#each group.kinds as k (k)}
 			<a
 				href={resolve('/charts/[kind]', { kind: k })}
@@ -291,6 +317,11 @@
 		<span class="text-xs text-muted" data-testid="planning-summary">{planningSummary}</span>
 	{:else if usageKind && report?.usage && report.usage.items > 0}
 		<span class="text-xs text-muted" data-testid="usage-summary">{usageSummary}</span>
+	{:else if strategicKind && report && strategic.length > 0}
+		<span class="text-xs text-muted" data-testid="strategic-summary"
+			>strategic agents {dollars(strategicTotal.cost)} · {inHours(strategicTotal.seconds)} · {strategicTotal.completed}
+			{strategicTotal.completed === 1 ? report.type : plural(report.type)} completed</span
+		>
 	{:else if s}
 		<span class="text-xs text-muted"
 			>completed {s.completed} · cancelled {s.cancelled} · WIP {s.wip} · throughput {s.throughput_per_week.toFixed(
@@ -342,6 +373,11 @@
 			flai could not read git on the host, which touches drift is drawn from: install git there and
 			check that the project is a git repository. <code>flai stats</code> says why.
 		</p>
+	{:else if strategicKind && strategic.length === 0}
+		<p class="mb-2 text-sm text-muted" data-testid="strategic-older">
+			The flai on the host sends no strategic use per day, which this chart is drawn from: it is
+			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
 	{/if}
 	{#if spendKind && report && hasSpend(report)}
 		<p class="mb-2 text-xs text-muted" data-testid="spend-note">
@@ -356,8 +392,34 @@
 			* estimated in part: a task's share of its story's session, or a run that ended without its
 			totals.
 		</p>
+	{:else if kind === 'strategic-cost'}
+		<p class="mb-2 text-xs text-muted">
+			* estimated in part: an activity of that agent that day carries an estimated cost.
+		</p>
 	{/if}
 	<Chart {option} theme={t} height={380} />
+	{#if kind === 'strategic-cost' && report && strategic.length > 0}
+		<p class="mt-2 text-xs text-muted" data-testid="strategic-note">
+			The bars are what planning, orchestration, and analysis cost each day. The line is what the
+			agents spent per {report.type} completed that day, the strategic agents left out; the dashed line
+			is what the strategic agents add to each {report.type} over the window.
+			{#if ratio}<span data-testid="strategic-ratio"
+					>Over the window they spent {dollars(ratio.cost)} for {ratio.completed}
+					{ratio.completed === 1 ? report.type : plural(report.type)} completed: {dollars(
+						ratio.cost_per_item
+					)} per {report.type}, {Math.round(ratio.share * 100)}% of the {dollars(
+						ratio.agent_cost_per_item
+					)} the agents spent per {report.type}.</span
+				>{:else if strategicTotal.completed === 0}No {plural(report.type)} were completed in the window,
+				so there is no ratio.{:else}The agents spent nothing in the window, so there is no ratio.{/if}
+		</p>
+	{:else if kind === 'strategic-use' && report && strategic.length > 0}
+		<p class="mt-2 text-xs text-muted" data-testid="strategic-note">
+			The bars are the hours the planner, the orchestrator, and the analyzer worked each day. The
+			lines are the mean cycle time and the mean waiting of the {plural(report.type)} completed that day.
+			Waiting or cycle time falling while the strategic agents' hours rise is the return on their time.
+		</p>
+	{/if}
 	{#if kind === 'time-in-state' && report}
 		<h2 class="mt-6 mb-2 text-base font-medium">Share of lead time per state</h2>
 		{#await import('$lib/viz/charts') then m}
@@ -473,6 +535,30 @@
 										>{count((i.usage?.strategic ?? []).reduce((n, x) => n + x.tokens, 0))}</td
 									><td class="pr-4">-</td><td>{dollars(strategicCost(i))}*</td></tr
 								>{/if}{/each}</tbody
+					>
+				</table>
+			{:else if strategicKind && report}
+				<table class="min-w-full" data-testid="strategic-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">day</th>{#each STRATEGIC_AGENTS as a (a)}<th class="pr-4">{a}</th
+								>{/each}<th class="pr-4">total</th><th class="pr-4">completed</th
+							>{#if kind === 'strategic-cost'}<th>mean per {report.type}</th>{:else}<th class="pr-4"
+									>mean cycle time</th
+								><th>mean waiting</th>{/if}</tr
+						></thead
+					><tbody
+						>{#each strategic as d (d.date)}<tr
+								><td class="pr-4 font-mono">{d.date}</td>{#each STRATEGIC_AGENTS as a (a)}<td
+										class="pr-4">{agentDay(d.agents[a])}</td
+									>{/each}<td class="pr-4"
+									>{kind === 'strategic-cost' ? dollars(d.cost) : inHours(d.seconds)}</td
+								><td class="pr-4">{d.completed}</td>{#if kind === 'strategic-cost'}<td
+										>{d.cost_per_item !== undefined ? dollars(d.cost_per_item) : '-'}</td
+									>{:else}<td class="pr-4">{inHours(d.cycle_time_seconds)}</td><td
+										>{inHours(d.wait_seconds)}</td
+									>{/if}</tr
+							>{/each}</tbody
 					>
 				</table>
 			{:else if kind === 'throughput' && report}

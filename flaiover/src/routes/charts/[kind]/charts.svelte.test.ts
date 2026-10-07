@@ -1045,3 +1045,195 @@ describe('the claims charts (S-0214)', () => {
 		expect(notes()).toEqual(['claims-older']);
 	});
 });
+
+describe('the strategic charts (S-0216)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const story = (id: string, completed: string, rest: Record<string, unknown>) => ({
+		id,
+		type: 'story',
+		nature: 'feature',
+		title: `Story ${id}`,
+		status: 'done',
+		created: '2026-09-01T00:00:00Z',
+		started: '2026-09-01T00:00:00Z',
+		completed,
+		blocked_seconds: 0,
+		time_in_state_seconds: {},
+		...rest
+	});
+	// one story done on the 28th that waited an hour, two on the 29th that waited an hour and two
+	const items = [
+		story('S-0001', '2026-09-28T12:00:00Z', {
+			wait_threads_seconds: 1800,
+			wait_review_seconds: 1800
+		}),
+		story('S-0002', '2026-09-29T09:00:00Z', { wait_threads_seconds: 3600 }),
+		story('S-0003', '2026-09-29T15:00:00Z', { wait_review_seconds: 7200 })
+	];
+	// $1.50 over 3 stories: $0.50 a story, a tenth of the agents' $15 over 3
+	const days = [
+		{
+			date: '2026-09-27',
+			agents: { planner: { cost: 0.5, seconds: 1800 } },
+			cost: 0.5,
+			seconds: 1800,
+			completed: 0
+		},
+		{
+			date: '2026-09-28',
+			agents: {
+				planner: { cost: 0.25, seconds: 900, estimated: true },
+				orchestrator: { cost: 0.25, seconds: 1800 }
+			},
+			cost: 0.5,
+			seconds: 2700,
+			completed: 1,
+			cost_per_item: 4,
+			cycle_time_seconds: 7200
+		},
+		{
+			date: '2026-09-29',
+			agents: { analyzer: { cost: 0.5, seconds: 3600 } },
+			cost: 0.5,
+			seconds: 3600,
+			completed: 2,
+			cost_per_item: 5.5,
+			cycle_time_seconds: 10800
+		}
+	];
+	let answered: Record<string, unknown> = {};
+	beforeEach(() => {
+		answered = { items, strategic_days: days };
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			const q = new URL(url, 'http://localhost').searchParams;
+			return answer({ ...reportIn(q.get('bucket') ?? 'day'), type: q.get('type'), ...answered });
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+		chartWindow.set('30d');
+	});
+	const open = async (kind: string) => {
+		at.params.kind = kind;
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+	};
+	const controls = () =>
+		[...document.querySelectorAll('label')].map((l) => l.textContent!.trim().split(/\s+/)[0]);
+	const rows = () =>
+		[...document.querySelectorAll('[data-testid="strategic-table"] tbody tr')].map((tr) =>
+			[...tr.querySelectorAll('td')].map((td) => td.textContent!.trim())
+		);
+	const heads = () =>
+		[...document.querySelectorAll('[data-testid="strategic-table"] th')].map((th) =>
+			th.textContent!.trim()
+		);
+	const series = () =>
+		(setOption.mock.calls.at(-1)![0] as { series: { name: string }[] }).series.map((s) => s.name);
+
+	it('lists the strategic charts as a fourth group and states the ratio on Strategic Cost', async () => {
+		await open('strategic-cost');
+		const links = [...document.querySelectorAll('[data-testid="charts-strategic"] a')];
+		expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
+			['Strategic Cost', '/charts/strategic-cost'],
+			['Strategic Use', '/charts/strategic-use']
+		]);
+		const navs = [...document.querySelectorAll('nav')].map((n) => n.getAttribute('data-testid'));
+		expect(navs).toEqual(['charts-flow', 'charts-usage', 'charts-planning', 'charts-strategic']);
+		expect(text('h1')).toBe('Strategic Cost');
+		expect(controls()).toEqual(['window', 'type']);
+		expect(text('[data-testid="strategic-summary"]')).toBe(
+			'strategic agents $1.50 · 2.3h · 3 stories completed'
+		);
+		expect(text('[data-testid="strategic-note"]')).toContain(
+			'The bars are what planning, orchestration, and analysis cost each day.'
+		);
+		expect(text('[data-testid="strategic-ratio"]')).toBe(
+			'Over the window they spent $1.50 for 3 stories completed: $0.500 per story, 10% of the $5.00 the agents spent per story.'
+		);
+		expect(series()).toEqual(['planner', 'orchestrator', 'analyzer', 'mean per story']);
+		expect(heads()).toEqual([
+			'day',
+			'planner',
+			'orchestrator',
+			'analyzer',
+			'total',
+			'completed',
+			'mean per story'
+		]);
+		expect(rows()).toEqual([
+			['2026-09-27', '$0.500', '-', '-', '$0.500', '0', '-'],
+			['2026-09-28', '$0.250*', '$0.250', '-', '$0.500', '1', '$4.00'],
+			['2026-09-29', '-', '-', '$0.500', '$0.500', '2', '$5.50']
+		]);
+	});
+
+	it('draws Strategic Use in hours against the cycle time and waiting of the type chosen', async () => {
+		await open('strategic-use');
+		expect(text('h1')).toBe('Strategic Use');
+		expect(text('[data-testid="strategic-note"]')).toBe(
+			"The bars are the hours the planner, the orchestrator, and the analyzer worked each day. The lines are the mean cycle time and the mean waiting of the stories completed that day. Waiting or cycle time falling while the strategic agents' hours rise is the return on their time."
+		);
+		expect(document.querySelector('[data-testid="strategic-ratio"]')).toBeNull();
+		expect(series()).toEqual([
+			'planner',
+			'orchestrator',
+			'analyzer',
+			'mean cycle time per story',
+			'mean waiting per story'
+		]);
+		expect(heads().slice(5)).toEqual(['completed', 'mean cycle time', 'mean waiting']);
+		expect(rows()).toEqual([
+			['2026-09-27', '0.5h', '-', '-', '0.5h', '0', '-', '-'],
+			['2026-09-28', '0.3h', '0.5h', '-', '0.8h', '1', '2h', '1h'],
+			['2026-09-29', '-', '-', '1h', '1h', '2', '3h', '1.5h']
+		]);
+		const type = [...document.querySelectorAll('label')]
+			.find((l) => l.textContent!.trim().startsWith('type'))!
+			.querySelector('select')!;
+		type.value = 'task';
+		type.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		expect(api.mock.calls.at(-1)![0]).toBe('/api/stats?since=30d&type=task&bucket=day');
+		expect(text('[data-testid="strategic-note"]')).toContain('of the tasks completed that day');
+	});
+
+	it('says why there is no ratio', async () => {
+		answered = { items: [], strategic_days: days.map((d) => ({ ...d, completed: 0 })) };
+		await open('strategic-cost');
+		expect(document.querySelector('[data-testid="strategic-ratio"]')).toBeNull();
+		expect(text('[data-testid="strategic-note"]')).toContain(
+			'No stories were completed in the window, so there is no ratio.'
+		);
+		unmount(c!);
+		document.body.innerHTML = '';
+		answered = {
+			items,
+			strategic_days: days,
+			usage: { items: 0, tokens: 0, cost: 0, seconds: 0 }
+		};
+		await open('strategic-cost');
+		expect(text('[data-testid="strategic-note"]')).toContain(
+			'The agents spent nothing in the window, so there is no ratio.'
+		);
+	});
+
+	it('says the flai on the host is older when it sends no strategic days', async () => {
+		answered = { items };
+		await open('strategic-use');
+		expect(text('[data-testid="strategic-older"]')).toContain('flai self-upgrade');
+		expect(document.querySelector('[data-testid="strategic-note"]')).toBeNull();
+		expect(document.querySelector('[data-testid="strategic-summary"]')).toBeNull();
+		expect(rows()).toEqual([]);
+	});
+});
