@@ -3,10 +3,10 @@ id: S-0246
 type: story
 nature: improvement
 title: flai guard refuses a sub-agent's shell command whose heredoc text reads like a flai write
-status: review
+status: done
 owner: alex
 created: 2026-10-03T17:49:40Z
-updated: 2026-10-07T09:29:50Z
+updated: 2026-10-07T14:33:22Z
 transitions:
   - to: ready
     at: 2026-10-07T08:20:43Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-07T09:29:50Z
     by: agent-S-0246
+  - to: done
+    at: 2026-10-07T14:33:22Z
+    by: alex
 tags: []
 topics: [cli]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/flai-cli.md, design/system/agent-context.md, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0058-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md, design/issues/summary.md, flai/cmd/guard.go, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/I-0111-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/I-0114-flai-verify-s-integration-tier-keeps-only-the-last-lines-of-go-test-s-output-so-the-failing-test-is-not-named.md]

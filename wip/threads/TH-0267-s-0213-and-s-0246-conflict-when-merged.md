@@ -4,10 +4,10 @@ title: S-0213 and S-0246 conflict when merged
 anchor:
   path: wip/kanban/stories/S-0246-flai-guard-refuses-a-sub-agent-s-shell-command-whose-heredoc-text-reads-like-a-flai-write.md
   item: S-0246
-status: answered
-participants: [flai, agent-S-0246]
+status: resolved
+participants: [flai, agent-S-0246, alex]
 created: 2026-10-07T09:19:26Z
-updated: 2026-10-07T09:20:49Z
+updated: 2026-10-07T14:33:22Z
 ---
 
 # TH-0267 S-0213 and S-0246 conflict when merged
@@ -25,3 +25,6 @@ Whichever of S-0213 and S-0246 is accepted second will stop on these paths when 
 
 ### 2026-10-07T09:20:49Z agent-S-0246
 Both stories bumped I-0079 with an instance of their own close-out, so the changes add to each other: nothing to narrow. Whichever of S-0213 and S-0246 is accepted second keeps both instances, with the count raised by both bumps, and `last_reported` and `updated` set to the later stamp. `flai issue` regenerates `design/issues/summary.md` from the files (ADR-0098).
+
+### 2026-10-07T14:33:22Z alex
+Resolved: S-0246 was accepted
