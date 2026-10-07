@@ -197,7 +197,9 @@ describe('the analyzer panel (S-0228)', () => {
 		const box = one('analyzer-current')!;
 		expect(text(one('analyzer-current-focus'))).toBe('risk');
 		expect(text(box)).toContain('analyzer (claude-code, sonnet)');
-		expect(text(box)).toContain('2026-10-05 10:00 UTC');
+		// S-0329: started at 10:00 UTC, shown in the local zone, New York's under test
+		expect(text(box)).toContain('2026-10-05 06:00 EDT');
+		expect(text(box)).not.toContain('UTC');
 		expect(text(one('analyzer-current-trigger'))).toBe('asked');
 		expect(api).toHaveBeenCalledWith('/api/agent-stream/analyzer?role=analyze');
 		expect(text(box.querySelector('[data-testid="agent-stream"]'))).toContain(
@@ -216,7 +218,7 @@ describe('the analyzer panel (S-0228)', () => {
 		expect(text(one('analyzer-accrued-cost'))).toBe('$3.50');
 		expect(text(one('analyzer-accrued-time'))).toBe('25m');
 		expect(text(one('analyzer-activities'))).toBe('3');
-		expect(text(one('analyzer-last-run'))).toBe('2026-10-04 09:20 UTC');
+		expect(text(one('analyzer-last-run'))).toBe('2026-10-04 05:20 EDT');
 		expect(text(document.querySelector('[data-testid="analyzer-activity"] h2'))).toBe(
 			'Activity in wip/agents/analyzer.md'
 		);
@@ -234,6 +236,12 @@ describe('the analyzer panel (S-0228)', () => {
 			'trigger 0 6 * * 1; items none; took 5m; cost $1.00 (estimated)',
 			'trigger asked; items I-0070; took 5m; cost $0.500'
 		]);
+		expect(all('analyzer-entry').map((e) => text(e).slice(0, 20))).toEqual([
+			'2026-10-04 05:20 EDT',
+			'2026-10-03 04:05 EDT',
+			'2026-10-02 03:10 EDT'
+		]);
+		expect(text(one('analyzer-activity'))).not.toContain('UTC');
 		const reports = all('analyzer-entry-report');
 		expect(reports.map(text)).toEqual([
 			'report design/analysis/2026-10-04-all.md',
@@ -265,6 +273,12 @@ describe('the analyzer panel (S-0228)', () => {
 			'',
 			'ended (exit 0) without writing a report under design/analysis'
 		]);
+		// the Run button shares the rows' test ID
+		const rows = document.querySelectorAll('tr[data-testid="analyzer-run"]');
+		const cells = rows[1].querySelectorAll('td');
+		expect(text(cells[2])).toBe('2026-10-04 05:00 EDT');
+		expect(text(cells[3])).toBe('2026-10-04 05:20 EDT');
+		expect(text(one('analyzer-runs'))).not.toContain('UTC');
 	});
 
 	it('says flai has started no analyzer when it has none', async () => {

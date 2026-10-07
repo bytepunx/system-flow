@@ -149,7 +149,9 @@ describe('the planner panel (S-0259)', () => {
 			'/items/E-0016'
 		);
 		expect(text(box)).toContain('planner (claude-code, opus)');
-		expect(text(box)).toContain('2026-10-03 10:00 UTC');
+		// S-0329: started at 10:00 UTC, shown in the local zone, New York's under test
+		expect(text(box)).toContain('2026-10-03 06:00 EDT');
+		expect(text(box)).not.toContain('UTC');
 		expect(text(one('planner-current-trigger'))).toBe('asked');
 		expect(api).toHaveBeenCalledWith('/api/agent-stream/E-0016?plan');
 		expect(text(box.querySelector('[data-testid="agent-stream"]'))).toContain('Reading the epic.');
@@ -168,9 +170,12 @@ describe('the planner panel (S-0259)', () => {
 		expect(text(one('planner-accrued-cost'))).toBe('$3.50');
 		expect(text(one('planner-accrued-time'))).toBe('1h30m');
 		expect(text(one('planner-activities'))).toBe('2');
-		expect(text(one('planner-last-run'))).toBe('2026-10-02 09:10 UTC');
+		expect(text(one('planner-last-run'))).toBe('2026-10-02 05:10 EDT');
 		expect(all('planner-entry-summary').map(text)).toEqual(['enriched the story', 'drafted tasks']);
 		const [newest, oldest] = all('planner-entry');
+		expect(text(newest)).toContain('2026-10-02 05:10 EDT enriched the story');
+		expect(text(oldest)).toContain('2026-10-01 04:00 EDT drafted tasks');
+		expect(text(one('planner-activity'))).not.toContain('UTC');
 		expect(text(newest.querySelector('[data-testid="planner-entry-trigger"]'))).toBe(
 			'trigger asked'
 		);
@@ -235,7 +240,9 @@ describe('the planner panel (S-0259)', () => {
 			'the harness exited 1',
 			'claude: not found'
 		]);
-		expect(text(rows[1].querySelectorAll('td')[2])).toBe('2026-10-02 09:10 UTC');
+		expect(text(rows[1].querySelectorAll('td')[1])).toBe('2026-10-02 05:00 EDT');
+		expect(text(rows[1].querySelectorAll('td')[2])).toBe('2026-10-02 05:10 EDT');
+		expect(text(one('planner-runs'))).not.toContain('UTC');
 		expect(text(rows[0].querySelectorAll('td')[2])).toBe('—');
 	});
 

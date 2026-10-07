@@ -6,13 +6,14 @@
 	// lifts the hold, each through /api/orchestrator, saying what flai answered, and the page is
 	// asked to load again. Both are disabled, saying why, while the action is off.
 	import { api } from '$lib/api';
+	import { localTime } from '$lib/localtime';
 	import {
 		newestFirst,
 		type OrchestratorAction,
 		type OrchestratorRun,
 		type OrchestratorView
 	} from '$lib/strategic';
-	import StrategicAgentPanel, { at, enableCommand } from './StrategicAgentPanel.svelte';
+	import StrategicAgentPanel, { enableCommand } from './StrategicAgentPanel.svelte';
 
 	let { view, onchanged }: { view: OrchestratorView; onchanged?: () => void } = $props();
 
@@ -101,7 +102,7 @@
 			<ol class="mt-1 space-y-1">
 				{#each decisions as d (d.at + d.summary)}
 					<li data-testid="orchestrator-decision">
-						<span class="font-mono text-xs text-muted">{at(d.at)}</span>
+						<span class="font-mono text-xs text-muted">{localTime(d.at)}</span>
 						<span data-testid="orchestrator-decision-summary">{d.summary}</span>
 					</li>
 				{/each}

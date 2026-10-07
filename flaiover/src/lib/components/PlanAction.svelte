@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { follow, listen } from '$lib/events';
+	import { localTime } from '$lib/localtime';
 	import type { PlanRun } from '$lib/activity';
 
 	let { id, onresult }: { id: string; onresult: (text: string) => void } = $props();
@@ -58,7 +59,6 @@
 		starting = false;
 		await ask(id);
 	}
-	const at = (s: string) => s.replace('T', ' ').replace(/:\d\dZ$/, ' UTC');
 </script>
 
 {#if enabled}
@@ -71,7 +71,7 @@
 	>
 	{#if going && run}
 		<span class="self-center text-xs text-muted" data-testid="item-plan-running"
-			>planner running since {at(run.started)}</span
+			>planner running since {localTime(run.started)}</span
 		>
 	{/if}
 {/if}

@@ -180,7 +180,9 @@ describe('the orchestrator panel (S-0228)', () => {
 		await show(view({ run: running, runs: [running, stopped] }));
 		const box = one('orchestrator-current')!;
 		expect(text(box)).toContain('orchestrator (claude-code, opus)');
-		expect(text(box)).toContain('2026-10-03 10:00 UTC');
+		// S-0329: started at 10:00 UTC, shown in the local zone, New York's under test
+		expect(text(box)).toContain('2026-10-03 06:00 EDT');
+		expect(text(box)).not.toContain('UTC');
 		expect(api).toHaveBeenCalledWith('/api/agent-stream/orchestrator?role=orchestrate');
 		expect(text(box.querySelector('[data-testid="agent-stream"]'))).toContain(
 			'Ordering the ready column.'
@@ -204,8 +206,9 @@ describe('the orchestrator panel (S-0228)', () => {
 			'decision 3: because 3'
 		]);
 		expect(text(all('orchestrator-decision')[0])).toBe(
-			'2026-10-02 09:16 UTC decision 7: because 7'
+			'2026-10-02 05:16 EDT decision 7: because 7'
 		);
+		expect(text(one('orchestrator-decisions'))).not.toContain('UTC');
 		// the whole log follows, every entry with its items, duration, and cost
 		const sections = [...document.querySelectorAll('section')].map((s) =>
 			s.getAttribute('data-testid')
@@ -232,7 +235,7 @@ describe('the orchestrator panel (S-0228)', () => {
 		expect(text(one('orchestrator-accrued-cost'))).toBe('$1.20');
 		expect(text(one('orchestrator-accrued-time'))).toBe('15m');
 		expect(text(one('orchestrator-activities'))).toBe('2');
-		expect(text(one('orchestrator-last-run'))).toBe('2026-10-02 09:30 UTC');
+		expect(text(one('orchestrator-last-run'))).toBe('2026-10-02 05:30 EDT');
 		expect(text(document.querySelector('[data-testid="orchestrator-activity"] h2'))).toBe(
 			'Activity in wip/agents/orchestrator.md'
 		);
@@ -245,7 +248,10 @@ describe('the orchestrator panel (S-0228)', () => {
 		// the stopped run cost the two entries logged within it
 		expect(all('orchestrator-run-cost').map(text)).toEqual(['—', '$1.20 (estimated)', '—']);
 		expect(all('orchestrator-run-why').map(text)).toEqual(['', '', 'the harness exited 1']);
-		expect(text(all('orchestrator-run')[1].querySelectorAll('td')[0])).toBe('2026-10-02 09:00 UTC');
+		const cells = all('orchestrator-run')[1].querySelectorAll('td');
+		expect(text(cells[0])).toBe('2026-10-02 05:00 EDT');
+		expect(text(cells[1])).toBe('2026-10-02 05:30 EDT');
+		expect(text(one('orchestrator-runs'))).not.toContain('UTC');
 	});
 
 	it('says flai has started no orchestrator when it has none', async () => {

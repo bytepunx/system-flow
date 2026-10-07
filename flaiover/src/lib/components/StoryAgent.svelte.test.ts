@@ -77,7 +77,9 @@ describe('StoryAgent (S-0104)', () => {
 	it('shows the agent at work, and asks again when the project changes', async () => {
 		await show({ 'S-0104': { state: 'working', run } });
 		expect(text()).toContain('agent working (claude-code, claude-haiku-4-5)');
-		expect(text()).toContain('agent-S-0104, started 2026-09-23 18:00 UTC');
+		// S-0329: started at 18:00 UTC, shown in the local zone, New York's under test
+		expect(text()).toContain('agent-S-0104, started 2026-09-23 14:00 EDT');
+		expect(text()).not.toContain('UTC');
 		expect(document.querySelector<HTMLElement>('[data-testid="agent-dot"]')!.dataset.state).toBe(
 			'working'
 		);
@@ -173,7 +175,8 @@ describe('StoryAgent (S-0104)', () => {
 		expect(text()).toContain(
 			'agent failed (claude-code, claude-haiku-4-5): ended (exit 1) with S-0104 in in-progress'
 		);
-		expect(text()).toContain('ended 2026-09-23 18:30 UTC (exit 1)');
+		expect(text()).toContain('started 2026-09-23 14:00 EDT, ended 2026-09-23 14:30 EDT (exit 1)');
+		expect(text()).not.toContain('UTC');
 		const failed = document
 			.querySelector('[data-testid="story-agent-failed"]')!
 			.textContent!.replace(/\s+/g, ' ');
@@ -472,7 +475,7 @@ describe('StoryAgent (S-0104)', () => {
 			});
 			expect(start()).toBeNull();
 			expect(retry()).not.toBeNull();
-			expect(text()).toContain('agent-S-0104, started 2026-09-23 18:00 UTC');
+			expect(text()).toContain('agent-S-0104, started 2026-09-23 14:00 EDT');
 		});
 
 		it('hands the hold to the page, and stops showing it once flai says it cleared', async () => {

@@ -6,9 +6,6 @@
 	export type StrategicRun = RunSpan &
 		Pick<AgentRun, 'agent' | 'command' | 'harness' | 'model' | 'why'> & { trigger?: string };
 
-	/** A time as flai writes it, to the minute in UTC. */
-	export const at = (s: string) => s.replace('T', ' ').replace(/:\d\dZ$/, ' UTC');
-
 	/** The words and the command that turn a host action on, for a line that says it is off. */
 	export { enableCommand };
 </script>
@@ -22,6 +19,7 @@
 	// its items, duration, and cost, and sections before the log and after the runs.
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { localTime } from '$lib/localtime';
 	import { dollars, duration } from '$lib/usage';
 	import {
 		currentRun,
@@ -124,7 +122,7 @@
 				<dt class="text-muted">Agent</dt>
 				<dd>{current.agent} ({who(current)})</dd>
 				<dt class="text-muted">Started</dt>
-				<dd>{at(current.started)}</dd>
+				<dd>{localTime(current.started)}</dd>
 				{#if current.trigger}
 					<dt class="text-muted">Trigger</dt>
 					<dd data-testid="{kind}-current-trigger">{current.trigger}</dd>
@@ -151,7 +149,7 @@
 			<dd data-testid="{kind}-activities">{activity.tasks_completed}</dd>
 			<dt class="text-muted">Last run</dt>
 			<dd data-testid="{kind}-last-run">
-				{activity.last_run ? at(activity.last_run) : 'never'}
+				{activity.last_run ? localTime(activity.last_run) : 'never'}
 			</dd>
 		</dl>
 		{#if entries.length}
@@ -159,7 +157,7 @@
 				{#each entries as e (e.at + e.summary)}
 					<li class="rounded border border-line p-2" data-testid="{kind}-entry">
 						<p>
-							<span class="font-mono text-xs text-muted">{at(e.at)}</span>
+							<span class="font-mono text-xs text-muted">{localTime(e.at)}</span>
 							<span data-testid="{kind}-entry-summary">{e.summary}</span>
 						</p>
 						<p class="text-xs text-muted" data-testid="{kind}-entry-details">
@@ -202,8 +200,10 @@
 					{#each past as { run, cost: c }, i (i)}
 						<tr class="border-t border-line" data-testid="{kind}-run">
 							{@render runCells?.(run)}
-							<td class="py-1 pr-4 whitespace-nowrap">{at(run.started)}</td>
-							<td class="py-1 pr-4 whitespace-nowrap">{run.ended ? at(run.ended) : '—'}</td>
+							<td class="py-1 pr-4 whitespace-nowrap">{localTime(run.started)}</td>
+							<td class="py-1 pr-4 whitespace-nowrap"
+								>{run.ended ? localTime(run.ended) : '—'}</td
+							>
 							<td class="py-1 pr-4" data-testid="{kind}-run-outcome">{outcomeWord(run)}</td>
 							<td class="py-1 pr-4" data-testid="{kind}-run-cost"
 								>{c.count ? cost(c.cost, c.estimated) : '—'}</td

@@ -82,7 +82,9 @@ describe('PlanAction (S-0208)', () => {
 
 	it('says when the item’s planner has not ended', async () => {
 		await show({ plan_enabled: true, run });
-		expect(running()!.textContent).toContain('planner running since 2026-10-03 10:00 UTC');
+		// S-0329: started at 10:00 UTC, shown in the local zone, New York's under test
+		expect(running()!.textContent).toContain('planner running since 2026-10-03 06:00 EDT');
+		expect(running()!.textContent).not.toContain('UTC');
 		unmount(c!);
 		c = undefined;
 		await show({ plan_enabled: true, run: { ...run, ended: '2026-10-03T10:05:00Z' } });

@@ -595,7 +595,11 @@ describe('SettingsPanel (S-0105)', () => {
 			expect(text('planning-edits')).toContain('The plan host action is on for this project');
 			expect(text('planning-replan')).toContain('deterministic (default)');
 			expect(text('planning-replan')).toContain('forecast deliveries follow, with no agent');
-			expect(text('planning-schedule')).toContain('0 6 * * 1-5, next run 2026-10-05T06:00:00Z');
+			// S-0329: the expression is read in UTC, and its next run is a time, shown local
+			expect(text('planning-schedule')).toContain('in UTC: 0 6 * * 1-5');
+			expect(text('planning-schedule')).toContain('0 6 * * 1-5, next run 2026-10-05 02:00 EDT');
+			expect(text('planning-schedule')).not.toContain('2026-10-05T06:00:00Z');
+			expect(text('planning-schedule').split('next run')[1]).not.toContain('UTC');
 		});
 
 		it('says none without a schedule, a set policy without (default), and what flai cannot read', async () => {

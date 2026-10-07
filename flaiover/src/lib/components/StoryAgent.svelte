@@ -16,6 +16,7 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import { follow, listen } from '$lib/events';
+	import { localTime } from '$lib/localtime';
 	import { resolve } from '$app/paths';
 	import {
 		activityLine,
@@ -126,7 +127,6 @@
 		acting = null;
 		await ask();
 	}
-	const at = (s: string) => s.replace('T', ' ').replace(/:\d\dZ$/, ' UTC');
 </script>
 
 {#if activity}
@@ -154,8 +154,8 @@
 		{/if}
 		{#if started}
 			<p class="mt-1 text-xs text-muted">
-				{activity.run.agent}, started {at(activity.run.started)}{activity.run.ended
-					? `, ended ${at(activity.run.ended)}`
+				{activity.run.agent}, started {localTime(activity.run.started)}{activity.run.ended
+					? `, ended ${localTime(activity.run.ended)}`
 					: ''}{activity.run.exit !== undefined && activity.run.exit !== null
 					? ` (exit ${activity.run.exit})`
 					: ''}

@@ -49,7 +49,9 @@ describe('HostAgentNotice (S-0079)', () => {
 
 	it('says that an agent was started, for which story, by which command, as whom, and when', async () => {
 		await show({ enabled: true, state: { command: 'claude', running: run } });
-		expect(text()).toContain('Agent started for S-0079 by claude as builder, 2026-09-20 16:00 UTC');
+		// S-0329: started at 16:00 UTC, shown in the local zone, New York's under test
+		expect(text()).toContain('Agent started for S-0079 by claude as builder, 2026-09-20 12:00 EDT');
+		expect(text()).not.toContain('UTC');
 		expect(text()).toContain('Stopping an agent is done on the host; the dashboard cannot');
 		// its one button collapses it; nothing here acts on the agent
 		expect(document.querySelectorAll('button')).toHaveLength(1);
@@ -68,6 +70,8 @@ describe('HostAgentNotice (S-0079)', () => {
 		expect(document.querySelector('[data-testid="host-agent-failed"]')!.textContent).toContain(
 			'executable file not found'
 		);
+		expect(text()).toContain('not found in $PATH (2026-09-20 12:00 EDT)');
+		expect(text()).not.toContain('UTC');
 		expect(text()).toContain('flai serve agent set');
 		expect(document.querySelector('[data-testid="host-agent-waiting"]')!.textContent).toContain(
 			'leaves no room'
@@ -80,7 +84,10 @@ describe('HostAgentNotice (S-0079)', () => {
 			state: { command: 'claude', last: { ...run, ended: '2026-09-20T16:30:00Z', exit: 2 } }
 		});
 		expect(text()).toContain('Agent ended');
-		expect(text()).toContain('ended 2026-09-20 16:30 UTC with exit code 2');
+		expect(text()).toContain(
+			'by claude 2026-09-20 12:00 EDT ended 2026-09-20 12:30 EDT with exit code 2'
+		);
+		expect(text()).not.toContain('UTC');
 	});
 
 	it('says why a ready story waits when no agent has run', async () => {

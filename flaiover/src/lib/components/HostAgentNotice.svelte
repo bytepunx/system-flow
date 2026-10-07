@@ -9,6 +9,7 @@
 	// browser against what the notice says, so a reload keeps it and any change to it opens it again.
 	import { api } from '$lib/api';
 	import type { HostAgent } from '$lib/activity';
+	import { localTime } from '$lib/localtime';
 
 	let { refresh = 0, status: given }: { refresh?: number; status?: HostAgent | null } = $props();
 	let asked = $state<HostAgent | null>(null);
@@ -27,7 +28,6 @@
 		if (given === undefined) void ask();
 	});
 
-	const at = (s: string) => s.replace('T', ' ').replace(/:\d\dZ$/, ' UTC');
 	const st = $derived(status?.enabled ? status.state : undefined);
 
 	const KEY = 'flaiover-host-agent-collapsed';
@@ -86,25 +86,24 @@
 			<p>
 				{@render title('Agent started')}
 				{#if open}for {st.running.story} by
-					<code class="rounded bg-surface px-1">{st.running.command}</code> as {st.running.agent}, {at(
-						st.running.started
-					)}. It is running on the host.{/if}
+					<code class="rounded bg-surface px-1">{st.running.command}</code> as {st.running.agent},
+					{localTime(st.running.started)}. It is running on the host.{/if}
 			</p>
 		{:else if st.last?.error}
 			<p class="text-danger" data-testid="host-agent-failed">
 				{@render title('No agent could be started')}
 				{#if open}for {st.last.story}:
 					<code class="rounded bg-surface px-1">{st.last.command}</code>
-					{st.last.error} ({at(st.last.started)}). The operator sets the command on the host with
-					<code class="rounded bg-surface px-1">flai serve agent set</code>.{/if}
+					{st.last.error} ({localTime(st.last.started)}). The operator sets the command on the host
+					with <code class="rounded bg-surface px-1">flai serve agent set</code>.{/if}
 			</p>
 		{:else if st.last}
 			<p>
 				{@render title('Agent ended')}{#if open}: the one started for {st.last.story} by
 					<code class="rounded bg-surface px-1">{st.last.command}</code>
-					{at(st.last.started)} ended{st.last.ended ? ` ${at(st.last.ended)}` : ''}{st.last.exit
-						? ` with exit code ${st.last.exit}`
-						: ''}.{/if}
+					{localTime(st.last.started)} ended{st.last.ended
+						? ` ${localTime(st.last.ended)}`
+						: ''}{st.last.exit ? ` with exit code ${st.last.exit}` : ''}.{/if}
 			</p>
 		{:else}
 			<p>
