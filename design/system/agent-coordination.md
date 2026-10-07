@@ -1,6 +1,6 @@
 ---
 title: Coordinating stories that run in parallel
-updated: 2026-10-06
+updated: 2026-10-07
 status: active
 topics: [cli, dashboard]
 ---
@@ -14,7 +14,7 @@ The finding of S-0124, for E-0009. The operator drags stories into `ready`, and 
 | Mechanism | Where | Effect |
 |-----------|-------|--------|
 | `touches` on stories and tasks | Front matter, set with `--touches`, `flai touches`, `flai edit`, MCP and hostapi writes ([ADR-0019](../adrs/0019-story-branches-and-touches.md)) | Free strings, paths or component names. Advisory only. |
-| Overlap test | `pathsOverlap` in `flai/internal/check/check.go`: equal, or one is a `/`-bounded prefix of the other | `flai check` warns `wip.overlap` for two in-progress items; the designer's inbox lists it; the MCP `who_touches` tool answers who covers a path. |
+| Overlap test | `PathsOverlap` and `Holds.Overlaps` in `flai/internal/workitem/hold.go`: equal, or one is a `/`-bounded prefix of the other, outside the shared paths | `flai check` warns `wip.overlap` once for each pair of stories in progress whose claims overlap, as the pull hold compares them (S-0279, [ADR-0115](../adrs/0115-a-close-out-records-no-wip-overlap-and-notes-only-an-overlap-naming-its-story.md)); the designer's inbox lists it; the MCP `who_touches` tool answers who covers a path. |
 | Document editor | flaiover `DocEditor.svelte` | The designer's Save is held until they tick "I know" when an in-progress item touches the document. The only gate anywhere, and not on agents. |
 | In-progress limit | `CanPull` in `workitem/boardview.go`, the launcher's `free` in `serve/agents.go` | The only thing that holds a ready story back. `flai move` only warns past it. |
 | Pull order | `order:` in `board.md`, `flai order` (S-0057) | `wait_for_work` offers `Ready[0]`; the launcher starts ready stories in this order. |
