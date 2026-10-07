@@ -30,6 +30,9 @@ func TestGuard(t *testing.T) {
 		{`{"tool_name":"Bash","tool_input":{"command":"make test"},"agent_type":"verifier","agent_id":"a3"}`, 0, ""},
 		{`{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"review"}}`, 0, ""},
 		{`{"tool_name":"Bash","tool_input":{"command":"timeout 9 flai accept S-1"},"agent_type":"verifier","agent_id":"a4"}`, 2, "cannot run \"timeout 9 flai accept S-1\""},
+		// S-0246, I-0058: a heredoc's text is input, unless a shell reads it.
+		{`{"tool_name":"Bash","tool_input":{"command":"python3 - <<'EOF'\nprint(\"it's flai story new x\")\nEOF"},"agent_type":"general-purpose","agent_id":"a5"}`, 0, ""},
+		{`{"tool_name":"Bash","tool_input":{"command":"bash <<'EOF'\nflai move S-1 review\nEOF"},"agent_type":"general-purpose","agent_id":"a6"}`, 2, "cannot run \"flai move S-1 review\""},
 		{`not json`, 0, "hook input is not a tool call"},
 	} {
 		_, errOut, code := runStdin(t, dir, c.in, "guard")

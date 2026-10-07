@@ -825,6 +825,55 @@ func TestCommands(t *testing.T) {
 	}
 }
 
+// S-0246, I-0058: a heredoc's body is input to the command that opens it,
+// not commands, so its text is left out, unless a shell on its line reads
+// it. Each case is the line and the commands it splits into, joined.
+func TestCommandsLeaveOutAHeredocsBody(t *testing.T) {
+	for _, c := range []struct{ line, want string }{
+		{"python3 - <<'EOF'\nprint(\"it's flai move S-1 done\")\nEOF\necho ok", "python3 -; echo ok"},
+		{"cat > f.go <<EOF\n// flai story new x\nEOF", "cat > f.go"},
+		{"cat <<\"EOF\" >> f\n# flai accept --by orchestrator S-1\nEOF", "cat >> f"},
+		{"cat <<\\EOF\nflai move S-1 done\nEOF", "cat"},
+		{"cat << EOF\nflai move S-1 done\nEOF\nls", "cat; ls"},
+		{"cat <<-EOF\n\tflai move S-1 done\n\tEOF\nls", "cat; ls"},
+		{"cat <<A <<B\nflai move\nA\nflai accept\nB\nls", "cat; ls"},
+		{"cat <<EOF\nit's\nEOF\nflai move S-1 done", "cat; flai move S-1 done"},
+		{"cat <<EOF\nflai move S-1 done", "cat"},
+		{"x=$(cat <<EOF\nflai move S-1 done\nEOF\n)\necho y", "x=; cat; echo y"},
+		{"bash <<'EOF'\nflai move S-1 done\nEOF\nls", "bash; flai move S-1 done; ls"},
+		{"cat <<EOF | sh\nflai move S-1 done\nEOF", "cat; sh; flai move S-1 done"},
+		{"sudo /bin/bash -s <<EOF\nflai accept S-1\nEOF", "sudo /bin/bash -s; flai accept S-1"},
+		{"cat <<< 'flai move S-1 done'", "cat <<< flai move S-1 done"},
+		{"echo $((1<<2))\nflai move S-1 done", "echo; 1<<2; flai move S-1 done"},
+		{"echo '<<EOF'\nflai move S-1 done", "echo <<EOF; flai move S-1 done"},
+		{"echo a <<\nflai move S-1 done", "echo a <<; flai move S-1 done"},
+	} {
+		var got []string
+		for _, words := range commands(c.line) {
+			got = append(got, strings.Join(words, " "))
+		}
+		if strings.Join(got, "; ") != c.want {
+			t.Errorf("%q: got %q, want %q", c.line, strings.Join(got, "; "), c.want)
+		}
+	}
+}
+
+// S-0246, I-0058: a sub-agent's heredoc that names a flai write in its text
+// is let through, and one a shell runs is refused.
+func TestSubAgentsHeredocTextIsNotACommand(t *testing.T) {
+	for _, line := range []string{
+		"python3 - <<'EOF'\nimport re\n# written as having spent nothing: flai story new\nEOF",
+		"cat > x_test.go <<'EOF'\n// flai guard records flai accept --by orchestrator S-1\nEOF",
+	} {
+		if why := g.Check(bash("general-purpose", line)); why != "" {
+			t.Errorf("%q refused: %s", line, why)
+		}
+	}
+	if why := g.Check(bash("general-purpose", "bash <<EOF\nflai move S-1 done\nEOF")); !strings.Contains(why, `cannot run "flai move S-1 done"`) {
+		t.Errorf("heredoc a shell runs: %q", why)
+	}
+}
+
 // analyzerIn is a guard in an analyzer session in a project at root, whose
 // reports folder is design/analysis (S-0223).
 func analyzerIn(root string) Guard {
