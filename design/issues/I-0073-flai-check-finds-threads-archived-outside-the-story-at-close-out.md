@@ -2,11 +2,11 @@
 id: I-0073
 title: "flai check finds `threads.archived` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 30
 first_reported: 2026-10-05T01:38:07Z
 last_reported: 2026-10-07T02:16:16Z
-updated: 2026-10-07T02:16:16Z
+updated: 2026-10-07T03:06:42Z
 ---
 
 # I-0073 flai check finds `threads.archived` outside the story at close-out
@@ -186,3 +186,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0277 remediates this issue, created from it at 2026-10-05T04:40:46Z.
+Closed 2026-10-07T03:06:42Z: S-0277: flai accept and flai archive resolve the threads still open or answered on what they archive (ADR-0109), tested in TestAcceptResolvesTheThreadsOnWhatItArchives, TestFinishingAnAcceptanceResolvesTheThreadsLeftOpen, and TestArchiveResolvesTheThreadsOnWhatItArchives; the threads.archived finding names flai thread resolve, and the two left open (TH-0203, TH-0240) are resolved
