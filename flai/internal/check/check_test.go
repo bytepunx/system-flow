@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -728,6 +729,106 @@ func TestUnknownFieldsAreReported(t *testing.T) {
 	}
 	for rule := range want {
 		t.Errorf("%s not reported", rule)
+	}
+}
+
+// S-0271: the narrative of a story in progress or in review has its Current
+// state and Next steps written, as the close-out reads them, and its Next
+// steps as a list; each finding is on the section's heading and advisory, so
+// a narrative just opened fails neither --strict nor flai task done. Stories
+// in other states are not asked.
+func TestNarrativeState(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := mustItem(t, repo, workitem.Story, "One", "")
+	if _, err := repo.OpenStream(s, workitem.StreamOptions{Agent: "a", Now: now}); err != nil {
+		t.Fatal(err)
+	}
+	path := repo.NarrativePath(s.ID)
+	opened, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, _, _ := strings.Cut(string(opened), "## Context")
+	narrative := func(current, next string) string {
+		return head + "## Context\n\n## Current state\n\n" + current + "\n\n## Next steps\n\n" + next + "\n\n## Decisions\n\n## Open questions\n\n## Log\n"
+	}
+	set := func(status string) {
+		t.Helper()
+		s.Status = status
+		if err := repo.Save(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// found is the narrative.state findings, each "line: message".
+	found := func() string {
+		t.Helper()
+		res, err := Run(repo, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for _, f := range res.Findings {
+			if f.Rule != "narrative.state" {
+				continue
+			}
+			if f.Level != Warning || !f.advisory || f.Path != "wip/agents/S-0001.md" {
+				t.Errorf("finding: %+v, want an advisory warning on the narrative", f)
+			}
+			out = append(out, fmt.Sprintf("%d: %s", f.Line, f.Message))
+		}
+		return strings.Join(out, "\n")
+	}
+	const (
+		current = "S-0001 is in-progress and its narrative's ## Current state is empty or the template's placeholder; write what is true now with flai stream state S-0001 --current, or the MCP tool stream_state"
+		next    = "S-0001 is in-progress and its narrative's ## Next steps is empty or the template's placeholder; write them as a list, the very next action first, with flai stream state S-0001 --next, or the MCP tool stream_state"
+		prose   = "S-0001's narrative's ## Next steps is not a list; write them as one, the very next action first, with flai stream state S-0001 --next, or the MCP tool stream_state"
+	)
+
+	set(workitem.InProgress)
+	for _, tc := range []struct {
+		name, doc string
+		want      []string // heading, message, ...: each finding on its heading's line
+	}{
+		{"as flai stream open leaves it", string(opened), []string{"## Current state", current, "## Next steps", next}},
+		{"empty", narrative("", ""), []string{"## Current state", current, "## Next steps", next}},
+		{"bare list markers", narrative("-", "1.\n2."), []string{"## Current state", current, "## Next steps", next}},
+		{"next steps in prose", narrative("T-0001 is done.", "Finish T-0002, then review."), []string{"## Next steps", prose}},
+		{"numbered", narrative("T-0001 is done.", "1. Finish T-0002.\n2. Review."), nil},
+		{"bulleted after prose", narrative("T-0001 is done.", "In order:\n\n- Finish T-0002.\n* Review."), nil},
+	} {
+		if err := os.WriteFile(path, []byte(tc.doc), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		lines := strings.Split(tc.doc, "\n")
+		var want []string
+		for i := 0; i < len(tc.want); i += 2 {
+			want = append(want, fmt.Sprintf("%d: %s", slices.Index(lines, tc.want[i])+1, tc.want[i+1]))
+		}
+		if got := found(); got != strings.Join(want, "\n") {
+			t.Errorf("%s:\n%s\nwant:\n%s", tc.name, got, strings.Join(want, "\n"))
+		}
+	}
+
+	if err := os.WriteFile(path, opened, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	set(workitem.Review)
+	if got := found(); strings.Count(got, "S-0001 is review and") != 2 {
+		t.Errorf("a story in review is asked too:\n%s", got)
+	}
+	for _, status := range []string{workitem.Backlog, workitem.Ready, workitem.Done} {
+		set(status)
+		if got := found(); got != "" {
+			t.Errorf("a story %s is not asked:\n%s", status, got)
+		}
 	}
 }
 

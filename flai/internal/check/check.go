@@ -148,7 +148,8 @@ func (c *checker) add(level, rule, path string, line int, format string, args ..
 }
 
 // advise adds a warning that --strict passes over: one no story's agent can
-// clear, which would otherwise stop every close-out (S-0243).
+// clear, which would otherwise stop every close-out (S-0243), or one every
+// story passes through, such as a narrative not yet written (narrativeState).
 func (c *checker) advise(rule, path string, line int, format string, args ...any) {
 	c.add(Warning, rule, path, line, format, args...)
 	c.res.Findings[len(c.res.Findings)-1].advisory = true
@@ -432,8 +433,6 @@ func (c *checker) history(it *workitem.Item) {
 	}
 }
 
-var narrativeSections = []string{"## Context", "## Current state", "## Next steps", "## Decisions", "## Open questions", "## Log"}
-
 // unaccepted flags stories that are done without having been accepted: still
 // in kanban, or with their story branch still present (S-0046). Done means
 // accepted; flai accept <id> completes them.
@@ -682,10 +681,13 @@ func (c *checker) narratives() {
 		if _, err := time.Parse(workitem.TimeFormat, n.Updated); err != nil {
 			c.add(Warning, "narrative.updated", path, keyLine(path, "updated"), "updated %q is not a UTC timestamp", n.Updated)
 		}
-		for _, sec := range narrativeSections {
-			if !strings.Contains(n.Body, "\n"+sec+"\n") {
-				c.add(Warning, "narrative.section", path, 1, "missing %q section", sec)
+		for _, sec := range workitem.NarrativeSections {
+			if !strings.Contains(n.Body, "\n## "+sec+"\n") {
+				c.add(Warning, "narrative.section", path, 1, "missing %q section", "## "+sec)
 			}
+		}
+		if ok && !story.Archived && (story.Status == workitem.InProgress || story.Status == workitem.Review) {
+			c.narrativeState(path, story)
 		}
 	}
 	indexPath := filepath.Join(dir, "index.md")
@@ -705,6 +707,38 @@ func (c *checker) narratives() {
 		if !active[id[1]] {
 			c.add(Warning, "narrative.index", indexPath, 1, "index.md lists %s which has no narrative in agents/", id[1])
 		}
+	}
+}
+
+// listItem is a line that opens a list item with something in it: a bullet
+// or a number such as "1.", then text.
+var listItem = regexp.MustCompile(`^\s*(?:[-*]|[0-9]+\.)\s+\S`)
+
+// narrativeState flags the narrative at path of story, in progress or in
+// review, whose ## Current state or ## Next steps is not written, by the test
+// the close-out's narrative step applies (Section.Written, as flai verify's
+// Unwritten reads it), or whose ## Next steps is not a list. Each finding is
+// on the section's heading and advisory: a narrative is unwritten from flai
+// stream open until its agent first writes it, and the close-out stops a
+// story that reaches it so; failing --strict too would stop flai task done
+// and the main branch's check in that window. A missing section is
+// narrative.section's.
+func (c *checker) narrativeState(path string, story *workitem.Item) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return // narrative.front-matter has read it already
+	}
+	text := string(data)
+	if s, ok := workitem.NarrativeSection(text, workitem.CurrentState); ok && !s.Written() {
+		c.advise("narrative.state", path, s.Line, "%s is %s and its narrative's ## Current state is empty or the template's placeholder; write what is true now with flai stream state %s --current, or the MCP tool stream_state", story.ID, story.Status, story.ID)
+	}
+	s, ok := workitem.NarrativeSection(text, workitem.NextSteps)
+	switch {
+	case !ok:
+	case !s.Written():
+		c.advise("narrative.state", path, s.Line, "%s is %s and its narrative's ## Next steps is empty or the template's placeholder; write them as a list, the very next action first, with flai stream state %s --next, or the MCP tool stream_state", story.ID, story.Status, story.ID)
+	case !slices.ContainsFunc(strings.Split(s.Text, "\n"), listItem.MatchString):
+		c.advise("narrative.state", path, s.Line, "%s's narrative's ## Next steps is not a list; write them as one, the very next action first, with flai stream state %s --next, or the MCP tool stream_state", story.ID, story.ID)
 	}
 }
 
