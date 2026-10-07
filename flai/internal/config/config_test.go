@@ -181,6 +181,51 @@ func TestHostActions(t *testing.T) {
 	}
 }
 
+// S-0294 (ADR-0107): agent.auto_restarts is 2 while unset, 0 turns the
+// automatic restart off and stays apart from unset through a save and a
+// load, and a negative count is refused when set and when loaded.
+func TestAgentAutoRestarts(t *testing.T) {
+	c := Default()
+	if got := c.Agent.AutoRestartLimit(); got != 2 || c.Agent.AutoRestarts != nil {
+		t.Errorf("unset: limit %d, field %v; want 2 and nil", got, c.Agent.AutoRestarts)
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	for _, n := range []int{0, 3} {
+		agent, err := c.Agent.WithAutoRestarts(n)
+		if err != nil {
+			t.Fatalf("WithAutoRestarts(%d): %v", n, err)
+		}
+		c.Agent = agent
+		if err := Save(path, c); err != nil {
+			t.Fatal(err)
+		}
+		back, _, err := Load(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if back.Agent.AutoRestarts == nil || back.Agent.AutoRestartLimit() != n {
+			t.Errorf("set to %d, loaded back as %v", n, back.Agent.AutoRestarts)
+		}
+	}
+	data, err := json.Marshal(Default())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "auto_restarts") {
+		t.Errorf("unset is not written: %s", data)
+	}
+	if _, err := c.Agent.WithAutoRestarts(-1); err == nil || !strings.Contains(err.Error(), "0 or more") {
+		t.Errorf("a negative count is refused, saying what to give: %v", err)
+	}
+	if _, err := Parse([]byte(`{"agent":{"auto_restarts":-1}}`)); err == nil || !strings.Contains(err.Error(), "agent.auto_restarts is -1") {
+		t.Errorf("a negative count in the file is refused on load: %v", err)
+	}
+	got, err := Parse([]byte(`{"agent":{"auto_restarts":0}}`))
+	if err != nil || got.Agent.AutoRestarts == nil || got.Agent.AutoRestartLimit() != 0 {
+		t.Errorf("0 read from the file is off, not unset: %v %v", got.Agent.AutoRestarts, err)
+	}
+}
+
 // S-0082: checks round-trips as a list of named argument lists, and, like
 // agent, stays out of Keys() and unreachable by flai config set.
 func TestChecksRoundTrip(t *testing.T) {

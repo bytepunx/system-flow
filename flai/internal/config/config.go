@@ -72,6 +72,42 @@ type AgentStart struct {
 	// (S-0104): the program that is run and the arguments that say what the
 	// agent may do. A harness not here runs with its adapter's defaults.
 	Harnesses map[string]HarnessHost `json:"harnesses,omitempty"`
+	// AutoRestarts is how many times flai serve restarts a story's agent on
+	// its own after it ends with its story in progress (ADR-0107). Nil means
+	// DefaultAutoRestarts, 0 turns the restart off, and a negative count is
+	// refused; read it through AutoRestartLimit.
+	AutoRestarts *int `json:"auto_restarts,omitempty"`
+}
+
+// DefaultAutoRestarts is how many times flai serve restarts a story's agent
+// on its own while agent.auto_restarts is unset (ADR-0107).
+const DefaultAutoRestarts = 2
+
+// AutoRestartLimit is how many times flai serve restarts a story's agent on
+// its own: AutoRestarts, or DefaultAutoRestarts while it is unset.
+func (a AgentStart) AutoRestartLimit() int {
+	if a.AutoRestarts == nil {
+		return DefaultAutoRestarts
+	}
+	return *a.AutoRestarts
+}
+
+// WithAutoRestarts returns the settings with AutoRestarts set to n, refusing
+// a negative n.
+func (a AgentStart) WithAutoRestarts(n int) (AgentStart, error) {
+	if err := checkAutoRestarts(n); err != nil {
+		return a, err
+	}
+	a.AutoRestarts = &n
+	return a, nil
+}
+
+// checkAutoRestarts refuses a negative count of automatic restarts.
+func checkAutoRestarts(n int) error {
+	if n < 0 {
+		return fmt.Errorf("agent.auto_restarts is %d: give how many times flai serve restarts a story's agent on its own, 0 or more, with flai serve agent set --auto-restarts <n> (0 turns it off; unset is %d)", n, DefaultAutoRestarts)
+	}
+	return nil
 }
 
 // HarnessHost is the program a harness is and the operator's arguments to it.
@@ -227,13 +263,19 @@ func Load(path string) (cfg Config, created bool, err error) {
 	return cfg, false, nil
 }
 
-// Parse decodes JSON into a Config, rejecting unknown keys.
+// Parse decodes JSON into a Config, rejecting unknown keys and a negative
+// agent.auto_restarts.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	var cfg Config
 	if err := dec.Decode(&cfg); err != nil {
 		return Config{}, err
+	}
+	if n := cfg.Agent.AutoRestarts; n != nil {
+		if err := checkAutoRestarts(*n); err != nil {
+			return Config{}, err
+		}
 	}
 	return cfg, nil
 }

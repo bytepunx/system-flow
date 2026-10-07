@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -333,6 +334,59 @@ func TestServeAgentHarness(t *testing.T) {
 		if _, _, code := runIn(t, root, append([]string{"serve", "agent", "harness"}, bad...)...); code == 0 {
 			t.Errorf("%q was taken", bad)
 		}
+	}
+}
+
+// S-0294 (ADR-0107): --auto-restarts sets how many times flai serve restarts
+// a story's agent on its own, alone without touching the command, the name,
+// or the harnesses; show says it and whether it is the default; a negative
+// count is refused; and clear keeps it.
+func TestServeAgentAutoRestarts(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	root := tempProject(t)
+	if out, _, _ := runIn(t, root, "serve", "agent", "show"); !strings.Contains(out, "automatic restarts: 2 (default)") {
+		t.Errorf("unset, show says the default: %s", out)
+	}
+	runIn(t, root, "serve", "agent", "set", "--name", "builder", "--", "run-agent", "{story}")
+	runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude")
+	saved := func() config.AgentStart {
+		t.Helper()
+		cfg, _, err := config.Load(cfgPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Agent
+	}
+	for _, c := range []struct {
+		n, said string
+		want    int
+	}{{"0", "automatic restarts: 0 (off)", 0}, {"3", "automatic restarts: 3\n", 3}} {
+		out, errOut, code := runIn(t, root, "serve", "agent", "set", "--auto-restarts", c.n)
+		if code != 0 || !strings.Contains(out, c.said) {
+			t.Fatalf("--auto-restarts %s: %d %s %s", c.n, code, out, errOut)
+		}
+		got := saved()
+		if got.AutoRestarts == nil || *got.AutoRestarts != c.want {
+			t.Errorf("--auto-restarts %s is written: %v", c.n, got.AutoRestarts)
+		}
+		if strings.Join(got.Command, " ") != "run-agent {story}" || got.Name != "builder" || got.Harnesses["claude-code"].Program != "/opt/claude" {
+			t.Errorf("--auto-restarts %s alone keeps the command, the name, and the harnesses: %+v", c.n, got)
+		}
+	}
+	if js, _, _ := runIn(t, root, "serve", "agent", "show", "--json"); !strings.Contains(js, `"auto_restarts": 3`) {
+		t.Errorf("show --json: %s", js)
+	}
+	_, errOut, code := runIn(t, root, "serve", "agent", "set", "--auto-restarts", "-1")
+	if code == 0 || !strings.Contains(errOut, "0 or more") {
+		t.Errorf("a negative count is refused, saying what to give: %d %s", code, errOut)
+	}
+	if got := saved(); got.AutoRestarts == nil || *got.AutoRestarts != 3 {
+		t.Errorf("a refused count changes nothing: %v", got.AutoRestarts)
+	}
+	runIn(t, root, "serve", "agent", "clear")
+	if got := saved(); len(got.Command) != 0 || got.AutoRestarts == nil || *got.AutoRestarts != 3 {
+		t.Errorf("clear removes the command and keeps the limit: %+v", got)
 	}
 }
 

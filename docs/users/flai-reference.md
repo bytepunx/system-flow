@@ -2164,11 +2164,11 @@ flai serve agent clear
 
 Subcommands:
 
-- [clear](#flai-serve-agent-clear): Remove the command; a story with a harness is still started with it
+- [clear](#flai-serve-agent-clear): Remove the command and the name; the harnesses and the restart limit stay
 - [commit](#flai-serve-agent-commit): Start an agent to commit what a story in review left uncommitted in its worktree
 - [harness](#flai-serve-agent-harness): Set the program a harness is and the arguments that say what its agent may do
 - [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed, or that has none here
-- [set](#flai-serve-agent-set): Set the command, as an argument list after --, or only the name
+- [set](#flai-serve-agent-set): Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own
 - [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
 - [start](#flai-serve-agent-start): Start a ready story's agent now, whatever flai serve's own rules say about when
 - [stop](#flai-serve-agent-stop): Stop a story's agent: end its process and everything it started
@@ -2177,7 +2177,7 @@ Subcommands:
 
 ##### flai serve agent clear
 
-Remove the command; a story with a harness is still started with it.
+Remove the command and the name; the harnesses and the restart limit stay.
 
 ```text
 flai serve agent clear
@@ -2245,16 +2245,19 @@ It refuses, and says why, while the agent action is off for the project, when th
 
 ##### flai serve agent set
 
-Set the command, as an argument list after --, or only the name.
+Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own.
 
 ```text
-flai serve agent set [--name] [-- <program> [args...]] [flags]
+flai serve agent set [--name] [--auto-restarts <n>] [-- <program> [args...]] [flags]
 ```
+
+Sets what you give and leaves the rest as it was: the command, as an argument list after --; the name the sessions work under; and, with --auto-restarts, how many times flai serve restarts a story's agent on its own after it ends with its story in progress, 2 when unset and 0 for never (ADR-0107). Past that, flai serve opens a thread on the story for you.
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--auto-restarts` int | how many times flai serve restarts a story's agent on its own after it ends with its story in progress; 0 for never (default `2`) |
 | `--name` string | the FLAI\_AGENT the session works under (default agent) |
 
 ##### flai serve agent show

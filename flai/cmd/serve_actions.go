@@ -331,20 +331,26 @@ journal.`,
 		RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() },
 	}
 	var name string
-	var attended int
+	var attended, restarts int
 	set := &cobra.Command{
-		Use:   "set [--name] [-- <program> [args...]]",
-		Short: "Set the command, as an argument list after --, or only the name",
-		Args:  cobra.ArbitraryArgs,
-		RunE: func(_ *cobra.Command, args []string) error {
+		Use:   "set [--name] [--auto-restarts <n>] [-- <program> [args...]]",
+		Short: "Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own",
+		Long: `Sets what you give and leaves the rest as it was: the command, as an
+argument list after --; the name the sessions work under; and, with
+--auto-restarts, how many times flai serve restarts a story's agent on its own
+after it ends with its story in progress, 2 when unset and 0 for never
+(ADR-0107). Past that, flai serve opens a thread on the story for you.`,
+		Args: cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			restartsSet := cmd.Flags().Changed("auto-restarts")
 			if attended > 0 {
 				fmt.Fprintln(a.errOut, "--attended-minutes is retired: nobody attending holds a ready story back any more (ADR-0043), so it does nothing")
-				if len(args) == 0 && name == "" {
+				if len(args) == 0 && name == "" && !restartsSet {
 					return nil
 				}
 			}
-			if len(args) == 0 && name == "" {
-				return fmt.Errorf("nothing to set: give -- <program> [args...] or --name")
+			if len(args) == 0 && name == "" && !restartsSet {
+				return fmt.Errorf("nothing to set: give -- <program> [args...], --name, or --auto-restarts")
 			}
 			if len(args) > 0 && strings.TrimSpace(args[0]) == "" {
 				return fmt.Errorf("the program is empty")
@@ -352,6 +358,11 @@ journal.`,
 			cfg, path, err := a.loadConfig()
 			if err != nil {
 				return err
+			}
+			if restartsSet {
+				if cfg.Agent, err = cfg.Agent.WithAutoRestarts(restarts); err != nil {
+					return err
+				}
 			}
 			if len(args) > 0 {
 				cfg.Agent.Command = args
@@ -366,19 +377,20 @@ journal.`,
 		},
 	}
 	set.Flags().StringVar(&name, "name", "", "the FLAI_AGENT the session works under (default agent)")
+	set.Flags().IntVar(&restarts, "auto-restarts", config.DefaultAutoRestarts, "how many times flai serve restarts a story's agent on its own after it ends with its story in progress; 0 for never")
 	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
 	_ = set.Flags().MarkHidden("attended-minutes")
 	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStopCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
-		&cobra.Command{Use: "clear", Short: "Remove the command; a story with a harness is still started with it", Args: cobra.NoArgs,
+		&cobra.Command{Use: "clear", Short: "Remove the command and the name; the harnesses and the restart limit stay", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error {
 				cfg, path, err := a.loadConfig()
 				if err != nil {
 					return err
 				}
-				cfg.Agent = config.AgentStart{Harnesses: cfg.Agent.Harnesses}
+				cfg.Agent = config.AgentStart{Harnesses: cfg.Agent.Harnesses, AutoRestarts: cfg.Agent.AutoRestarts}
 				if err := config.Save(path, cfg); err != nil {
 					return err
 				}
@@ -407,7 +419,7 @@ func (a *app) showAgentCommand() error {
 		for _, name := range settable() {
 			hosts[name] = a.harnessHost(cfg, name)
 		}
-		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "harnesses": hosts, "enabled_here": enabled})
+		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "harnesses": hosts, "auto_restarts": cfg.Agent.AutoRestartLimit(), "enabled_here": enabled})
 	}
 	if len(cfg.Agent.Command) == 0 {
 		fmt.Fprintln(a.out, "no command is set, so a story that names no harness is not started; flai serve agent set -- <program> [args...]")
@@ -418,6 +430,7 @@ func (a *app) showAgentCommand() error {
 		h := a.harnessHost(cfg, name)
 		fmt.Fprintf(a.out, "harness %s: %s\n", name, quoteArgs(append([]string{h.Program}, h.Args...)))
 	}
+	fmt.Fprintf(a.out, "automatic restarts: %s\n  of a story's agent that ends with its story in progress; set with --auto-restarts\n", autoRestartsSaid(cfg.Agent))
 	if here != "" {
 		if enabled {
 			fmt.Fprintln(a.out, "the agent action is on for this project; flai serve disable agent turns it off")
@@ -426,6 +439,19 @@ func (a *app) showAgentCommand() error {
 		}
 	}
 	return nil
+}
+
+// autoRestartsSaid is the restart limit as show prints it: the count, and
+// whether it is the default or off.
+func autoRestartsSaid(agent config.AgentStart) string {
+	n := agent.AutoRestartLimit()
+	switch {
+	case agent.AutoRestarts == nil:
+		return fmt.Sprintf("%d (default)", n)
+	case n == 0:
+		return "0 (off)"
+	}
+	return strconv.Itoa(n)
 }
 
 // checksConfig is the operator's say about running checks for a story in
