@@ -3,10 +3,10 @@ id: S-0281
 type: story
 nature: improvement
 title: A story worktree has no flaiover/node_modules, so the close-out stops at the flaiover step until flaiover-install runs there
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-05T07:09:06Z
-updated: 2026-10-07T00:55:52Z
+updated: 2026-10-07T00:58:08Z
 transitions:
   - to: ready
     at: 2026-10-06T23:59:44Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-07T00:49:54Z
     by: agent-S-0281
+  - to: review
+    at: 2026-10-07T00:57:32Z
+    by: agent-S-0281
+  - to: done
+    at: 2026-10-07T00:58:08Z
+    by: alex
 tags: []
 touches: [scripts/flaiover-install.sh, scripts/flaiover-test.sh, scripts/flaiover-unit.sh, scripts/README.md, design/system/devex.md, docs/operators/index.md, design/issues/I-0080-a-story-worktree-has-no-flaiover-node-modules-so-the-close-out-stops-at-the-flaiover-step-until-flaiover-install-runs-there.md, design/issues/summary.md]
 agent:
