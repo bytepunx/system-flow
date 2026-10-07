@@ -607,7 +607,10 @@ describe('the planning charts (S-0212)', () => {
 		expect(links.map((l) => [l.textContent, l.getAttribute('href')])).toEqual([
 			['Forecast Accuracy', '/charts/forecast-accuracy'],
 			['Delivery Accuracy', '/charts/delivery-accuracy'],
-			['Forecast Error / Model', '/charts/forecast-by-model']
+			['Forecast Error / Model', '/charts/forecast-by-model'],
+			['Parallelism', '/charts/parallelism'],
+			['Hold Time', '/charts/hold-time'],
+			['Touches Drift', '/charts/touches-drift']
 		]);
 		expect(text('h1')).toBe('Forecast Accuracy');
 		expect(points()).toEqual([
@@ -713,5 +716,293 @@ describe('the planning charts (S-0212)', () => {
 		expect(text('[data-testid="forecasts-older"]')).toContain('flai self-upgrade');
 		expect(document.querySelector('[data-testid="forecast-none"]')).toBeNull();
 		expect(document.querySelector('[data-testid="planning-summary"]')).toBeNull();
+	});
+});
+
+describe('the claims charts (S-0214)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const story = (id: string, status: string, completed: string) => ({
+		id,
+		type: 'story',
+		nature: 'feature',
+		title: `Story ${id}`,
+		status,
+		created: '2026-08-01T00:00:00Z',
+		started: '2026-08-01T00:00:00Z',
+		completed,
+		blocked_seconds: 0,
+		time_in_state_seconds: {}
+	});
+	// in the window of reportIn, 30 August 21:00 to 29 September 21:00: S-0001 and S-0002 done in
+	// it, S-0003 cancelled in it, S-0004 done before it
+	const items = [
+		story('S-0001', 'done', '2026-09-22T12:00:00Z'),
+		story('S-0002', 'done', '2026-09-24T12:00:00Z'),
+		story('S-0003', 'cancelled', '2026-09-25T12:00:00Z'),
+		story('S-0004', 'done', '2026-08-01T12:00:00Z')
+	];
+	const drift = (id: string, outside: string[], unchanged: string[]) => ({
+		id,
+		committed: [...outside, 'flai/cmd/stats.go'].sort(),
+		outside,
+		unchanged,
+		outside_count: outside.length,
+		unchanged_count: unchanged.length
+	});
+	const claims = {
+		limit: 2,
+		days: [
+			{ date: '2026-09-27', in_progress: 1, held: 0 },
+			{ date: '2026-09-28', in_progress: 2, held: 1 },
+			{ date: '2026-09-29', in_progress: 3, held: 2 }
+		],
+		weeks: [
+			{
+				week: '2026-W39',
+				start: '2026-09-21',
+				held_seconds: { overlap: 7200, after: 3600, 'no-touches': 0 },
+				stories: 2,
+				exact: 1,
+				exact_share: 0.5
+			},
+			{
+				week: '2026-W40',
+				start: '2026-09-28',
+				held_seconds: { overlap: 0, after: 0, 'no-touches': 5400 },
+				stories: 0,
+				exact: 0
+			}
+		],
+		drift: [
+			drift('S-0001', [], []),
+			drift('S-0002', ['docs/a.md', 'docs/b.md'], ['flaiover']),
+			drift('S-0003', ['docs/c.md'], []),
+			drift('S-0004', ['docs/d.md'], [])
+		]
+	};
+	let answered: Record<string, unknown> = {};
+	beforeEach(() => {
+		answered = { items, claims };
+		globalThis.ResizeObserver = class {
+			observe() {}
+			disconnect() {}
+			unobserve() {}
+		} as unknown as typeof ResizeObserver;
+		api.mockImplementation(async (url: string) => {
+			if (url.startsWith('/api/items')) return answer([]);
+			const q = new URL(url, 'http://localhost').searchParams;
+			return answer({
+				...reportIn(q.get('bucket') ?? 'day'),
+				type: q.get('type'),
+				...answered
+			});
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		setOption.mockClear();
+		document.body.innerHTML = '';
+		chartWindow.set('30d');
+	});
+	const open = async (kind: string) => {
+		at.params.kind = kind;
+		c = mount(ChartsPage, { target: document.body });
+		await settle();
+	};
+	const go = async (kind: string) => {
+		at.params.kind = kind;
+		at.moved();
+		await settle();
+	};
+	const asked = () =>
+		api.mock.calls.map(([u]) => u as string).filter((u) => u.startsWith('/api/stats'));
+	const controls = () =>
+		[...document.querySelectorAll('label')].map((l) => l.textContent!.trim().split(/\s+/)[0]);
+	type Drawn = { series: { name: string; data: unknown[] }[] };
+	const drawn = () => setOption.mock.calls.at(-1)![0] as Drawn;
+	const cells = (testid: string) =>
+		[...document.querySelectorAll(`[data-testid="${testid}"] tbody tr`)].map((tr) =>
+			[...tr.querySelectorAll('td')].map((td) => td.textContent!.replace(/\s+/g, ' ').trim())
+		);
+	const notes = () =>
+		['forecasts-older', 'forecast-none', 'planning-summary', 'claims-older', 'drift-none'].filter(
+			(id) => document.querySelector(`[data-testid="${id}"]`) !== null
+		);
+
+	it('draws parallelism per day with held and the limit, from stories over the window chosen', async () => {
+		await open('cycle-time');
+		const type = [...document.querySelectorAll('label')]
+			.find((l) => l.textContent!.trim().startsWith('type'))!
+			.querySelector('select')!;
+		type.value = 'task';
+		type.dispatchEvent(new Event('change', { bubbles: true }));
+		await settle();
+		await go('parallelism');
+		expect(text('h1')).toBe('Parallelism');
+		// stories, whichever type was chosen on another chart
+		expect(asked().at(-1)).toBe('/api/stats?since=30d&type=story&bucket=day');
+		expect(controls()).toEqual(['window']);
+		expect(drawn().series.map((s) => [s.name, s.data])).toEqual([
+			[
+				'in progress',
+				[
+					['2026-09-27', 1],
+					['2026-09-28', 2],
+					['2026-09-29', 3]
+				]
+			],
+			[
+				'held',
+				[
+					['2026-09-27', 0],
+					['2026-09-28', 1],
+					['2026-09-29', 2]
+				]
+			],
+			[
+				'limit',
+				[
+					['2026-09-27', 2],
+					['2026-09-28', 2],
+					['2026-09-29', 2]
+				]
+			]
+		]);
+		expect(cells('parallelism-table')).toEqual([
+			['2026-09-27', '1', '0', '2'],
+			['2026-09-28', '2', '1', '2'],
+			['2026-09-29', '3', '2', '2']
+		]);
+		// no forecast note on a chart that is not drawn from forecasts
+		expect(notes()).toEqual([]);
+		await choose('window', '7d');
+		expect(asked().at(-1)).toBe('/api/stats?since=7d&type=story&bucket=day');
+	});
+
+	it('draws hold time per week in hours, stacked by reason', async () => {
+		await open('hold-time');
+		expect(text('h1')).toBe('Hold Time');
+		expect(controls()).toEqual(['window']);
+		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
+		const bars = drawn().series.map((s) => [
+			s.name,
+			(s.data as { value: [number, number] }[]).map((d) => d.value)
+		]);
+		const w39 = Date.parse('2026-09-21');
+		const w40 = Date.parse('2026-09-28');
+		expect(bars).toEqual([
+			[
+				'overlap',
+				[
+					[w39, 2],
+					[w40, 0]
+				]
+			],
+			[
+				'after',
+				[
+					[w39, 1],
+					[w40, 0]
+				]
+			],
+			[
+				'empty claim',
+				[
+					[w39, 0],
+					[w40, 1.5]
+				]
+			]
+		]);
+		expect(cells('hold-time-table')).toEqual([
+			['2026-W39', '2026-09-21', '2h', '1h', '0m', '3h'],
+			['2026-W40', '2026-09-28', '0m', '0m', '1.5h', '1.5h']
+		]);
+		expect(notes()).toEqual([]);
+	});
+
+	it('draws touches drift per story done in the window, with the weekly share of exact touches', async () => {
+		await open('touches-drift');
+		expect(text('h1')).toBe('Touches Drift');
+		expect(controls()).toEqual(['window']);
+		const series = drawn().series;
+		const bars = series
+			.filter((s) => s.name !== 'exact touches per week')
+			.map((s) => [
+				s.name,
+				(s.data as { id: string; value: [string, number] }[]).map((d) => [d.id, d.value[1]])
+			]);
+		// S-0003 cancelled and S-0004 done before the window are left out
+		expect(bars).toEqual([
+			[
+				'outside its touches',
+				[
+					['S-0001', 0],
+					['S-0002', 2]
+				]
+			],
+			[
+				'touches unchanged',
+				[
+					['S-0001', 0],
+					['S-0002', 1]
+				]
+			]
+		]);
+		const line = series.find((s) => s.name === 'exact touches per week')!;
+		// a week without a story done has no share, a gap
+		expect((line.data as { value: [number, number | null] }[]).map((d) => d.value[1])).toEqual([
+			0.5,
+			null
+		]);
+		expect(cells('drift-table')).toEqual([
+			['S-0001 Story S-0001', '2026-09-22', '0', '0'],
+			['S-0002 Story S-0002', '2026-09-24', '2', '1']
+		]);
+		expect(cells('exact-table')).toEqual([
+			['2026-W39', '2026-09-21', '2', '1', '50%'],
+			['2026-W40', '2026-09-28', '0', '0', '-']
+		]);
+		expect(notes()).toEqual([]);
+	});
+
+	it('says git could not be read when flai sends no drift', async () => {
+		answered = {
+			items,
+			claims: {
+				...claims,
+				weeks: claims.weeks.map(({ week, start, held_seconds }) => ({ week, start, held_seconds })),
+				drift: undefined
+			}
+		};
+		await open('touches-drift');
+		expect(notes()).toEqual(['drift-none']);
+		expect(text('[data-testid="drift-none"]')).toContain('could not read git');
+		expect(cells('drift-table')).toEqual([]);
+		expect(cells('exact-table')).toEqual([
+			['2026-W39', '2026-09-21', '-', '-', '-'],
+			['2026-W40', '2026-09-28', '-', '-', '-']
+		]);
+		// hold time is still drawn: the reasons do not need git
+		await go('hold-time');
+		expect(notes()).toEqual([]);
+		expect(cells('hold-time-table').length).toBe(2);
+	});
+
+	it('says the flai on the host is older when it sends no held stories or time held', async () => {
+		const days = claims.days.map(({ date, in_progress }) => ({ date, in_progress }));
+		answered = { items, claims: { limit: 2, days, drift: claims.drift } };
+		await open('parallelism');
+		expect(notes()).toEqual(['claims-older']);
+		expect(text('[data-testid="claims-older"]')).toContain('flai self-upgrade');
+		expect(cells('parallelism-table').map((r) => r[2])).toEqual(['-', '-', '-']);
+		for (const kind of ['hold-time', 'touches-drift']) {
+			await go(kind);
+			expect(notes()).toEqual(['claims-older']);
+		}
+		answered = { items, claims: undefined };
+		await choose('window', '7d');
+		expect(notes()).toEqual(['claims-older']);
 	});
 });

@@ -12,11 +12,15 @@
 		build,
 		completedIn,
 		controls,
+		driftedIn,
 		errorFacets,
 		FLOW_KINDS,
 		forecastRows,
+		hasClaims,
 		hasSpend,
 		human,
+		isClaimsKind,
+		isForecastKind,
 		KINDS,
 		normalise,
 		PLANNING_KINDS,
@@ -35,7 +39,6 @@
 		type ErrorFilter,
 		type ErrorSpread,
 		type Kind,
-		type PlanningKind,
 		type Report
 	} from '$lib/viz/charts';
 	import { count, dollars } from '$lib/usage';
@@ -80,12 +83,15 @@
 	const usageKind = $derived((USAGE_KINDS as readonly string[]).includes(kind));
 	const spendKind = $derived(SPEND_KINDS.includes(kind));
 	const planningKind = $derived((PLANNING_KINDS as readonly string[]).includes(kind));
+	// the forecast charts of the planning group, and the claims charts beside them (S-0214)
+	const forecastKind = $derived(isForecastKind(kind));
+	const claimsKind = $derived(isClaimsKind(kind));
 	// the planning charts read stories, whichever type was chosen on another chart (S-0212)
 	const asType = $derived(planningKind ? 'story' : type);
 	const facets = $derived(
-		report && planningKind ? errorFacets(report, kind as PlanningKind) : { natures: [], models: [] }
+		report && isForecastKind(kind) ? errorFacets(report, kind) : { natures: [], models: [] }
 	);
-	const forecasts = $derived(report && planningKind ? forecastRows(report, filter) : []);
+	const forecasts = $derived(report && forecastKind ? forecastRows(report, filter) : []);
 	/** Whether any story done in the window has a forecast of its duration or its delivery. */
 	const forecastSet = $derived(
 		report !== null &&
@@ -127,6 +133,9 @@
 		report ? (kind === 'cost' ? withCost : withUsage)(report, epic || undefined) : []
 	);
 	const completed = $derived(report ? completedIn(report) : []);
+	// the stories touches drift draws, done in the window, as it draws them (S-0214)
+	const drifted = $derived(report && kind === 'touches-drift' ? driftedIn(report) : []);
+	const share = (v: number | undefined) => (v === undefined ? '-' : `${Math.round(v * 100)}%`);
 	/** What the items done in the window spent, and what that comes to, in a line. */
 	const usageSummary = $derived.by(() => {
 		const u = report?.usage;
@@ -277,7 +286,7 @@
 			></label
 		>
 	{/if}
-	{#if planningKind && planningSummary}
+	{#if forecastKind && planningSummary}
 		<span class="text-xs text-muted" data-testid="planning-summary">{planningSummary}</span>
 	{:else if usageKind && report?.usage && report.usage.items > 0}
 		<span class="text-xs text-muted" data-testid="usage-summary">{usageSummary}</span>
@@ -305,17 +314,27 @@
 			No {report.type} here carries usage yet. flai serve records the tokens and cost of the agents it
 			starts; <code>flai serve agent usage --all --write</code> fills in stories worked before.
 		</p>
-	{:else if planningKind && report && !report.forecasts}
+	{:else if forecastKind && report && !report.forecasts}
 		<p class="mb-2 text-sm text-muted" data-testid="forecasts-older">
 			The flai on the host sends no forecast errors, which this chart is drawn from: it is older
 			than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
 		</p>
-	{:else if planningKind && !forecastSet}
+	{:else if forecastKind && !forecastSet}
 		<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
 			No story done in the window has a forecast. The planner sets one when it plans a story, or set
 			one with <code
 				>flai edit &lt;story&gt; --forecast-duration 6h --forecast-delivery &lt;UTC time&gt;</code
 			>.
+		</p>
+	{:else if claimsKind && report && !hasClaims(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="claims-older">
+			The flai on the host sends no held stories or time held, which this chart is drawn from: it is
+			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'touches-drift' && report?.claims && report.claims.drift === undefined}
+		<p class="mb-2 text-sm text-muted" data-testid="drift-none">
+			flai could not read git on the host, which touches drift is drawn from: install git there and
+			check that the project is a git repository. <code>flai stats</code> says why.
 		</p>
 	{/if}
 	{#if spendKind && report && hasSpend(report)}
@@ -342,8 +361,81 @@
 	<details class="mt-4 text-xs">
 		<summary class="cursor-pointer text-muted">table view</summary>
 		<div class="mt-2 overflow-x-auto">
-			{#if planningKind}
+			{#if forecastKind}
 				<ForecastTable rows={forecasts} />
+			{:else if kind === 'parallelism' && report}
+				<table class="min-w-full" data-testid="parallelism-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">day</th><th class="pr-4">in progress</th><th class="pr-4">held</th
+							><th>limit</th></tr
+						></thead
+					><tbody
+						>{#each report.claims?.days ?? [] as d (d.date)}<tr
+								><td class="pr-4 font-mono">{d.date}</td><td class="pr-4">{d.in_progress}</td><td
+									class="pr-4">{d.held ?? '-'}</td
+								><td>{report.claims?.limit ?? '-'}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'hold-time' && report}
+				<table class="min-w-full" data-testid="hold-time-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">overlap</th><th
+								class="pr-4">after</th
+							><th class="pr-4">empty claim</th><th>held</th></tr
+						></thead
+					><tbody
+						>{#each report.claims?.weeks ?? [] as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
+								><td class="pr-4">{human(w.held_seconds.overlap)}</td><td class="pr-4"
+									>{human(w.held_seconds.after)}</td
+								><td class="pr-4">{human(w.held_seconds['no-touches'])}</td><td
+									>{human(
+										w.held_seconds.overlap + w.held_seconds.after + w.held_seconds['no-touches']
+									)}</td
+								></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'touches-drift' && report}
+				<table class="min-w-full" data-testid="drift-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">story</th><th class="pr-4">completed</th><th class="pr-4"
+								>outside its touches</th
+							><th>touches unchanged</th></tr
+						></thead
+					><tbody
+						>{#each drifted as d (d.id)}<tr
+								><td class="pr-4"
+									><a class="font-mono underline" href={resolve('/items/[id]', { id: d.id })}
+										>{d.id}</a
+									>
+									{d.title}</td
+								><td class="pr-4 font-mono">{d.completed.slice(0, 10)}</td><td class="pr-4"
+									>{d.outside_count}</td
+								><td>{d.unchanged_count}</td></tr
+							>{/each}</tbody
+					>
+				</table>
+				<table class="mt-4 min-w-full" data-testid="exact-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">stories</th><th
+								class="pr-4">exact</th
+							><th>share</th></tr
+						></thead
+					><tbody
+						>{#each report.claims?.weeks ?? [] as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
+								><td class="pr-4">{w.stories ?? '-'}</td><td class="pr-4">{w.exact ?? '-'}</td><td
+									>{share(w.exact_share)}</td
+								></tr
+							>{/each}</tbody
+					>
+				</table>
 			{:else if spendKind && report}
 				<SpendTable rows={spendRows(report, kind)} bucket={report.usage?.bucket ?? bucket} />
 			{:else if usageKind && report}
