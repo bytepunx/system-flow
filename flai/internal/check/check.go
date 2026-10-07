@@ -1029,7 +1029,7 @@ func (c *checker) threads() {
 				c.add(Error, "threads.anchor", th.Path, keyLine(th.Path, "anchor"), "item %s does not exist", th.Anchor.Item)
 				continue
 			case it.Archived && th.Open():
-				c.add(Warning, "threads.archived", th.Path, keyLine(th.Path, "status"), "%s is %s but %s is archived; resolve it or move it", th.ID, th.Status, th.Anchor.Item)
+				c.add(Warning, "threads.archived", th.Path, keyLine(th.Path, "status"), "%s is %s but %s is archived; resolve it with flai thread resolve %s", th.ID, th.Status, th.Anchor.Item, th.ID)
 			}
 			anchorPath = it.Path
 		}

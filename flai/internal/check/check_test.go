@@ -478,6 +478,7 @@ func TestThreadRules(t *testing.T) {
 	_ = os.MkdirAll(filepath.Join(root, "wip/archive/kanban/epics"), 0o755)
 	_ = os.WriteFile(filepath.Join(root, "wip/archive/kanban/epics/E-0001-old.md"), []byte("---\nid: E-0001\ntype: epic\nnature: feature\ntitle: Old\nstatus: done\nowner: a\ncreated: 2026-09-01T12:00:00Z\nupdated: 2026-09-01T12:00:00Z\ntransitions:\n  - to: done\n    at: 2026-09-01T12:00:00Z\n    by: a\ntags: []\n---\n\n# E-0001 Old\n\n## Outcome\nx\n\n## Stories\n\n## Notes\n"), 0o644)
 	w("TH-0006-archived.md", fmt.Sprintf(fm, "TH-0006", "wip/kanban/epics/E-0001-old.md", "  item: E-0001\n", "resolved", "TH-0006"))
+	w("TH-0007-left-open.md", fmt.Sprintf(fm, "TH-0007", "wip/kanban/epics/E-0001-old.md", "  item: E-0001\n", "answered", "TH-0007"))
 	repo, err := workitem.Open(root)
 	if err != nil {
 		t.Fatal(err)
@@ -491,11 +492,16 @@ func TestThreadRules(t *testing.T) {
 		if !strings.Contains(got[f.Rule], filepath.Base(f.Path)) {
 			got[f.Rule] += filepath.Base(f.Path) + " "
 		}
+		// threads have no archive folder: the finding names the command
+		if f.Rule == "threads.archived" && f.Message != "TH-0007 is answered but E-0001 is archived; resolve it with flai thread resolve TH-0007" {
+			t.Errorf("threads.archived message: %q", f.Message)
+		}
 	}
 	for rule, want := range map[string]string{
 		"threads.anchor":       "TH-0002-gone.md TH-0004-item.md",
 		"threads.heading":      "TH-0003-heading.md",
 		"threads.front-matter": "TH-0005-bad.md",
+		"threads.archived":     "TH-0007-left-open.md",
 	} {
 		if strings.TrimSpace(got[rule]) != want {
 			t.Errorf("%s: got %q want %q", rule, got[rule], want)
