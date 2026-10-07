@@ -226,11 +226,14 @@ Record an architecture decision. The number is one more than the highest NNNN-\*
 
 The body below the heading is the project's 0000-template.md sections, or standard input with --body-stdin. flai check runs with everything in place: if it reports anything the ADR introduces, every file is put back, the findings are printed, and the exit code is 4. --autocommit commits the new file, the index, and any superseded ADRs on their own, unless the project sets dashboard.autocommit: false. Nothing is pushed. --print-body prints the template's sections and creates nothing.
 
+--commit, run in a story's worktree, instead commits what was written, the new file, the index, and any superseded ADRs, and nothing else, on the story's branch as "docs: [S-nnnn] ADR-nnnn &lt;title&gt;", with each --trailer, and adds them to the story's touches in the main checkout. The story is FLAI\_STORY, else the one in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out. The output then says what was committed and what the touches gained; --json adds commit (null when nothing changed), which takes the place of --autocommit's, and touches\_added. Where the story's branch is not checked out, or no story resolves, --commit is refused and nothing is written; so is --commit with --autocommit.
+
 Examples:
 
 ```bash
 flai adr new "Dashboards authenticate with a project token" --status accepted --refines 16
 flai adr new "Replace the SPA with server rendering" --supersedes 7 --body-stdin --autocommit < decision.md
+flai adr new "Issues are committed on the story's branch" --body-stdin --commit --json < decision.md
 flai adr new --print-body
 ```
 
@@ -240,11 +243,12 @@ Flags:
 |------|---------|
 | `--autocommit` | commit what was written on its own, unless dashboard.autocommit is false |
 | `--body-stdin` | read the body below the heading from standard input |
+| `--commit` | commit what was written on the story's branch, checked out here in its worktree, as docs: [S-nnnn] ..., and add it to the story's touches; refused, with nothing written, where no story's branch is checked out |
 | `--print-body` | print the template's sections and create nothing |
 | `--refines` strings | ADR this one refines (repeatable) |
 | `--status` string | proposed or accepted (default `proposed`) |
 | `--supersedes` strings | ADR this one supersedes (repeatable): 7, 0007, or ADR-0007 |
-| `--trailer` stringArray | trailer line for the commit (repeatable) |
+| `--trailer` stringArray | trailer line for the commit, --autocommit's or --commit's (repeatable) |
 
 #### flai adr topics
 
@@ -1402,17 +1406,26 @@ Record another occurrence of an issue: its count, last reported, average cost, a
 
 --revenue-per-week, --penalty-per-week, and --time-lost-per-cycle replace those figures in the issue's Impact section, which is added when it has none, and keep the others; --evidence adds the words behind them. --report links the analysis report under design/analysis that found it, as flai issue new --report does, for a finding the analyzer judged the same as this issue under another title. A bad amount, duration, or report path is refused and nothing is written.
 
+--commit, run in a story's worktree, commits what was written, the issue's file and summary.md, and nothing else, on the story's branch as "docs: [S-nnnn] bump I-nnnn &lt;title&gt;", with each --trailer, and adds them to the story's touches in the main checkout. The output then says what was committed and what the touches gained; --json adds commit (null when nothing changed) and touches\_added. Where the story's branch is not checked out, or no story resolves, --commit is refused and nothing is written.
+
+--autocommit commits what was written, the issue's file and summary.md, on their own in the checkout the command ran in, as "docs: bump I-nnnn &lt;title&gt;", with each --trailer, unless the project sets dashboard.autocommit: false. Nothing is pushed and no story's touches change. The output then says the commit, or why nothing was committed; --json adds committed, commit, and commit\_error, as flai adr new --autocommit does. --commit with --autocommit is refused and nothing is written.
+
 Examples:
 
 ```bash
 flai issue bump I-0007 --cost 10m --note "again in the release dry run"
 flai issue bump I-0007 --report design/analysis/2026-10-06-risk.md --penalty-per-week 300 --evidence "two releases slipped"
+flai issue bump I-0007 --cost 5m --note "again while closing the story out" --commit --json
+flai issue bump I-0007 --story S-0212 --note "seen again on the board" --autocommit \
+  --trailer "Co-Authored-By: flaiover <flaiover@localhost>"
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--autocommit` | commit the issue's file and summary.md on their own in this checkout, unless dashboard.autocommit is false |
+| `--commit` | commit what was written on the story's branch, checked out here in its worktree, as docs: [S-nnnn] ..., and add it to the story's touches; refused, with nothing written, where no story's branch is checked out |
 | `--cost` string | wall-clock cost of this occurrence; the average is updated |
 | `--evidence` string | Impact: the evidence for the figures, in any words |
 | `--note` string | what happened this time |
@@ -1421,6 +1434,7 @@ Flags:
 | `--revenue-per-week` string | Impact: the revenue lost each week it stays open, an amount of zero or more in planning.currency |
 | `--story` string | the story this occurrence belongs to (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
 | `--time-lost-per-cycle` string | Impact: the time it loses each planning cycle, a duration longer than zero, e.g. 4h |
+| `--trailer` stringArray | trailer line for the commit, --commit's or --autocommit's (repeatable) |
 
 #### flai issue close
 
@@ -1430,11 +1444,29 @@ Close an issue with a reason.
 flai issue close <id> [flags]
 ```
 
+Close an issue: its status is closed and its body ends with the reason.
+
+--commit, run in a story's worktree, commits what was written, the issue's file and summary.md, and nothing else, on the story's branch as "docs: [S-nnnn] close I-nnnn &lt;title&gt;", with each --trailer, and adds them to the story's touches in the main checkout. The output then says what was committed and what the touches gained; --json adds commit (null when nothing changed) and touches\_added. Where the story's branch is not checked out, or no story resolves, --commit is refused and nothing is written. The story is FLAI\_STORY, else the one in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out.
+
+--autocommit commits what was written, the issue's file and summary.md, on their own in the checkout the command ran in, as "docs: close I-nnnn &lt;title&gt;", with each --trailer, unless the project sets dashboard.autocommit: false. Nothing is pushed and no story's touches change. The output then says the commit, or why nothing was committed; --json adds committed, commit, and commit\_error, as flai adr new --autocommit does. --commit with --autocommit is refused and nothing is written.
+
+Examples:
+
+```bash
+flai issue close I-0007 --reason "fixed by S-0275"
+flai issue close I-0007 --reason "fixed by S-0275" --commit
+flai issue close I-0007 --reason "no longer seen since S-0212" --autocommit \
+  --trailer "Co-Authored-By: flaiover <flaiover@localhost>" --json
+```
+
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--autocommit` | commit the issue's file and summary.md on their own in this checkout, unless dashboard.autocommit is false |
+| `--commit` | commit what was written on the story's branch, checked out here in its worktree, as docs: [S-nnnn] ..., and add it to the story's touches; refused, with nothing written, where no story's branch is checked out |
 | `--reason` string | what closed it (a story ID, a fix, or why it no longer applies) |
+| `--trailer` stringArray | trailer line for the commit, --commit's or --autocommit's (repeatable) |
 
 #### flai issue list
 
@@ -1467,6 +1499,12 @@ Record a new issue with count 1. Its number is one past the highest issue on mai
 
 --report names the analysis report under design/analysis that found it (the analyzer's finding). The instance says "Report: &lt;path&gt;." and the Remediation section links the report. With --report an open issue of the same title is bumped, with the report, impact, and note, rather than a second one opened, and left as it is when an instance already names that report; the output says which happened, and --json gives it as outcome: opened, bumped, or already recorded. A path that is not a markdown file under design/analysis is refused and nothing is written.
 
+--commit, run in a story's worktree, commits what was written, the issue's file and summary.md, and nothing else, on the story's branch as "docs: [S-nnnn] record I-nnnn &lt;title&gt;", with each --trailer, and adds them to the story's touches in the main checkout. The output then says what was committed and what the touches gained; --json adds commit (null when nothing changed) and touches\_added. Where the story's branch is not checked out, or no story resolves, --commit is refused and nothing is written.
+
+--autocommit commits what was written, the issue's file and summary.md, on their own in the checkout the command ran in, as "docs: record I-nnnn &lt;title&gt;", with each --trailer, unless the project sets dashboard.autocommit: false. Nothing is pushed and no story's touches change. The output then says the commit, or why nothing was committed; --json adds committed, commit, and commit\_error, as flai adr new --autocommit does. --commit with --autocommit is refused and nothing is written.
+
+With either, a bumped issue's commit says bump; one already recorded from the report commits nothing.
+
 Examples:
 
 ```bash
@@ -1474,13 +1512,19 @@ flai issue new "golangci-lint on the host is v1 but the config is v2" --class ef
 flai issue new "Fixture under bin/ was git-ignored" --class defect --cost 15m --note "found by the release dry run"
 flai issue new "Review waits a day for the operator" --class efficiency --time-lost-per-cycle 6h \
   --evidence "12 stories waited 18h on average in review" --report design/analysis/2026-10-06-bottlenecks.md --json
+flai issue new "The lint cache is shared between worktrees" --class defect --cost 10m --commit \
+  --trailer "Co-Authored-By: Claude <noreply@anthropic.com>"
+flai issue new "The board is slow to load" --class efficiency --story S-0212 --autocommit \
+  --trailer "Co-Authored-By: flaiover <flaiover@localhost>" --json
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--autocommit` | commit the issue's file and summary.md on their own in this checkout, unless dashboard.autocommit is false |
 | `--class` string | one of defect, blocker, efficiency, impression |
+| `--commit` | commit what was written on the story's branch, checked out here in its worktree, as docs: [S-nnnn] ..., and add it to the story's touches; refused, with nothing written, where no story's branch is checked out |
 | `--cost` string | wall-clock cost of this occurrence, e.g. 20m |
 | `--evidence` string | Impact: the evidence for the figures, in any words |
 | `--note` string | what happened, recorded as the first instance |
@@ -1489,6 +1533,7 @@ Flags:
 | `--revenue-per-week` string | Impact: the revenue lost each week it stays open, an amount of zero or more in planning.currency |
 | `--story` string | the story this occurrence belongs to (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
 | `--time-lost-per-cycle` string | Impact: the time it loses each planning cycle, a duration longer than zero, e.g. 4h |
+| `--trailer` stringArray | trailer line for the commit, --commit's or --autocommit's (repeatable) |
 
 #### flai issue story
 
