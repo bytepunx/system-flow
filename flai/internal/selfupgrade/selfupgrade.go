@@ -1,5 +1,6 @@
-// Package selfupgrade installs a flai release over the running binary: it
-// resolves the newest flai/v* GitHub release (or a pinned version), downloads
+// Package selfupgrade lists the published flai releases and dashboard tags,
+// and installs a flai release over the running binary: it resolves the newest
+// published flai/v* GitHub release (or a pinned published one), downloads
 // the archive for the platform and checksums.txt through the release asset
 // API (which works for private repositories with a token), verifies the
 // SHA-256, and replaces the executable atomically. install.sh at the
@@ -22,7 +23,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 )
 
 // TagPrefix is the monorepo tag prefix for flai releases.
@@ -39,11 +44,13 @@ type Options struct {
 	Client  *http.Client // default http.DefaultClient
 }
 
-// Release is a resolved flai release.
+// Release is a published release: a flai GitHub release with its assets, or
+// a dashboard tag, which has neither assets nor a publish date.
 type Release struct {
-	Tag     string  `json:"tag"`
-	Version string  `json:"version"`
-	Assets  []Asset `json:"assets"`
+	Tag       string    `json:"tag"`
+	Version   string    `json:"version"`
+	Published time.Time `json:"published,omitzero"`
+	Assets    []Asset   `json:"assets,omitempty"`
 }
 
 // Asset is one downloadable file of a release.
@@ -53,10 +60,15 @@ type Asset struct {
 }
 
 type ghRelease struct {
-	TagName    string    `json:"tag_name"`
-	Draft      bool      `json:"draft"`
-	Prerelease bool      `json:"prerelease"`
-	Assets     []ghAsset `json:"assets"`
+	TagName     string    `json:"tag_name"`
+	Draft       bool      `json:"draft"`
+	Prerelease  bool      `json:"prerelease"`
+	PublishedAt time.Time `json:"published_at"`
+	Assets      []ghAsset `json:"assets"`
+}
+
+type ghRef struct {
+	Ref string `json:"ref"`
 }
 
 type ghAsset struct {
@@ -91,37 +103,123 @@ func ArchiveName(version, goos, goarch string) string {
 	return fmt.Sprintf("flai_%s_%s_%s%s", version, goos, goarch, ext)
 }
 
-// Resolve finds the newest non-draft flai release, or the pinned version.
+// shownVersions is how many published versions a refused pin names.
+const shownVersions = 10
+
+// Resolve finds the newest published flai release, or the pinned version when
+// it is published.
 func Resolve(ctx context.Context, opt Options) (*Release, error) {
 	opt.defaults()
-	if opt.Version != "" {
-		v := strings.TrimPrefix(strings.TrimPrefix(opt.Version, TagPrefix), "v")
-		tag := TagPrefix + v
-		var rel ghRelease
-		if err := opt.getJSON(ctx, fmt.Sprintf("%s/repos/%s/releases/tags/%s", opt.APIBase, opt.Repo, strings.ReplaceAll(tag, "/", "%2F")), &rel); err != nil {
-			return nil, fmt.Errorf("release %s: %w", tag, err)
+	published, err := List(ctx, opt, TagPrefix)
+	if err != nil {
+		return nil, err
+	}
+	if len(published) == 0 {
+		return nil, fmt.Errorf("no published flai release in %s: no release tagged %sX.Y.Z that is neither a draft nor a prerelease; check the repository the releases come from", opt.Repo, TagPrefix)
+	}
+	if opt.Version == "" {
+		return &published[0], nil
+	}
+	v := strings.TrimPrefix(strings.TrimPrefix(opt.Version, TagPrefix), "v")
+	for i := range published {
+		if published[i].Version == v {
+			return &published[i], nil
 		}
-		return toRelease(rel), nil
 	}
-	var list []ghRelease
-	if err := opt.getJSON(ctx, fmt.Sprintf("%s/repos/%s/releases?per_page=50", opt.APIBase, opt.Repo), &list); err != nil {
-		return nil, fmt.Errorf("list releases of %s: %w", opt.Repo, err)
-	}
-	for _, rel := range list {
-		if rel.Draft || rel.Prerelease || !strings.HasPrefix(rel.TagName, TagPrefix) {
-			continue
-		}
-		return toRelease(rel), nil
-	}
-	return nil, fmt.Errorf("no flai release found in %s", opt.Repo)
+	return nil, fmt.Errorf("resolve flai %s: %s has no published release tagged %s%s (drafts and prereleases are not published); published are %s: choose one of them, or give no version for the newest", v, opt.Repo, TagPrefix, v, versionList(published))
 }
 
-func toRelease(rel ghRelease) *Release {
-	out := &Release{Tag: rel.TagName, Version: strings.TrimPrefix(rel.TagName, TagPrefix)}
-	for _, a := range rel.Assets {
-		out.Assets = append(out.Assets, Asset(a))
+// versionList names the newest published versions, and how many older ones
+// it leaves out.
+func versionList(published []Release) string {
+	names := make([]string, 0, shownVersions)
+	for i := 0; i < len(published) && i < shownVersions; i++ {
+		names = append(names, published[i].Version)
+	}
+	out := strings.Join(names, ", ")
+	if more := len(published) - len(names); more > 0 {
+		out += fmt.Sprintf(" and %d older", more)
 	}
 	return out
+}
+
+// List answers the published GitHub releases of opt.Repo whose tag is prefix
+// followed by a plain X.Y.Z, without drafts or prereleases, newest first.
+func List(ctx context.Context, opt Options, prefix string) ([]Release, error) {
+	opt.defaults()
+	var out []Release
+	for url := fmt.Sprintf("%s/repos/%s/releases?per_page=100", opt.APIBase, opt.Repo); url != ""; {
+		var page []ghRelease
+		next, err := opt.getPage(ctx, url, &page)
+		if err != nil {
+			return nil, fmt.Errorf("list the %s releases of %s: %w", prefix, opt.Repo, err)
+		}
+		for _, rel := range page {
+			v, ok := plainVersion(rel.TagName, prefix)
+			if !ok || rel.Draft || rel.Prerelease {
+				continue
+			}
+			r := Release{Tag: rel.TagName, Version: v, Published: rel.PublishedAt}
+			for _, a := range rel.Assets {
+				r.Assets = append(r.Assets, Asset(a))
+			}
+			out = append(out, r)
+		}
+		url = next
+	}
+	newestFirst(out)
+	return out, nil
+}
+
+// ListTags answers the git tags of opt.Repo that are prefix followed by a
+// plain X.Y.Z, newest first, without a publish date: dashboard releases are
+// tags with no GitHub release.
+func ListTags(ctx context.Context, opt Options, prefix string) ([]Release, error) {
+	opt.defaults()
+	var out []Release
+	for url := fmt.Sprintf("%s/repos/%s/git/matching-refs/tags/%s", opt.APIBase, opt.Repo, prefix); url != ""; {
+		var page []ghRef
+		next, err := opt.getPage(ctx, url, &page)
+		if err != nil {
+			return nil, fmt.Errorf("list the %s tags of %s: %w", prefix, opt.Repo, err)
+		}
+		for _, ref := range page {
+			tag := strings.TrimPrefix(ref.Ref, "refs/tags/")
+			if v, ok := plainVersion(tag, prefix); ok {
+				out = append(out, Release{Tag: tag, Version: v})
+			}
+		}
+		url = next
+	}
+	newestFirst(out)
+	return out, nil
+}
+
+// plainVersion is the X.Y.Z after prefix in tag, refusing a suffix, a second
+// v, or leading zeros.
+func plainVersion(tag, prefix string) (string, bool) {
+	rest, ok := strings.CutPrefix(tag, prefix)
+	if !ok {
+		return "", false
+	}
+	n, ok := buildinfo.Semver(rest)
+	if !ok || fmt.Sprintf("%d.%d.%d", n[0], n[1], n[2]) != rest {
+		return "", false
+	}
+	return rest, true
+}
+
+// newestFirst orders releases by semver, the newest first.
+func newestFirst(rels []Release) {
+	slices.SortStableFunc(rels, func(a, b Release) int {
+		switch {
+		case buildinfo.Below(b.Version, a.Version):
+			return -1
+		case buildinfo.Below(a.Version, b.Version):
+			return 1
+		}
+		return 0
+	})
 }
 
 // Asset returns the named asset of the release.
@@ -286,13 +384,34 @@ func (o Options) request(ctx context.Context, url, accept string) (*http.Respons
 	return resp, nil
 }
 
-func (o Options) getJSON(ctx context.Context, url string, v any) error {
+// getPage decodes one page of a list into v and answers the URL of the next
+// page from the Link header, "" on the last.
+func (o Options) getPage(ctx context.Context, url string, v any) (string, error) {
 	resp, err := o.request(ctx, url, "application/vnd.github+json")
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	return json.NewDecoder(resp.Body).Decode(v)
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		return "", fmt.Errorf("read %s: %w", url, err)
+	}
+	return nextLink(resp.Header.Get("Link")), nil
+}
+
+// nextLink is the rel="next" URL of a Link header, "" when there is none.
+func nextLink(header string) string {
+	for _, part := range strings.Split(header, ",") {
+		target, params, ok := strings.Cut(part, ";")
+		if !ok {
+			continue
+		}
+		for _, p := range strings.Split(params, ";") {
+			if strings.TrimSpace(p) == `rel="next"` {
+				return strings.Trim(strings.TrimSpace(target), "<>")
+			}
+		}
+	}
+	return ""
 }
 
 func (o Options) getBytes(ctx context.Context, url string) ([]byte, error) {
