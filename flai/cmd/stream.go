@@ -3,11 +3,14 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -19,7 +22,7 @@ func newStreamCmd(a *app) *cobra.Command {
 		Long: `A stream is the narrative for one story. Set FLAI_AGENT and FLAI_SESSION
 so entries record who wrote them.`,
 	}
-	c.AddCommand(newStreamDiffCmd(a), newStreamOpenCmd(a), newStreamLogCmd(a), newStreamSyncCmd(a), newStreamAnswerCmd(a))
+	c.AddCommand(newStreamDiffCmd(a), newStreamOpenCmd(a), newStreamLogCmd(a), newStreamStateCmd(a), newStreamSyncCmd(a), newStreamAnswerCmd(a))
 	return c
 }
 
@@ -223,6 +226,95 @@ func newStreamLogCmd(a *app) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func newStreamStateCmd(a *app) *cobra.Command {
+	var current, next string
+	c := &cobra.Command{
+		Use:   "state <story-id> [--current \"<text>\"] [--next \"<text>\"]",
+		Short: "Replace a story's narrative's Current state and Next steps",
+		Long: `Replaces what is under the story's narrative's ## Current state with the
+--current text and what is under ## Next steps with the --next text. Either
+may be left out, and its section is left as it was; giving neither is an
+error. A value of - reads that text from standard input, so text of several
+lines needs no quoting; only one of the two may be -.
+
+Every other section of the narrative is left as it was, and nothing is
+appended to its log: write the log with flai stream log. The narrative's
+updated stamp, agent, and session are written as flai stream log writes them,
+and wip/agents/index.md is written again. The same text again writes nothing.
+
+A story not in progress or in review is refused, as is one with no narrative,
+and text the project's markdown lint rejects; each refusal exits 4 and writes
+nothing, and with --json prints {"refused": {...}}. A text holding a # or ##
+heading, which would end its section, is an error.`,
+		Example: `  flai stream state S-0271 --current "T-1055 is done; T-1056 is next."
+  flai stream state S-0271 --next - < next-steps.md
+  flai stream state S-0271 --current "Reviewing." --next "1. Answer the review." --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			given := cmd.Flags().Changed("current") || cmd.Flags().Changed("next")
+			if !given {
+				return fmt.Errorf("give --current, --next, or both: the text to write under ## Current state and ## Next steps")
+			}
+			if current == "-" && next == "-" {
+				return fmt.Errorf("only one of --current and --next can be read from standard input; give the other as text")
+			}
+			for _, text := range []*string{&current, &next} {
+				if *text == "-" {
+					data, err := io.ReadAll(cmd.InOrStdin())
+					if err != nil {
+						return err
+					}
+					*text = string(data)
+				}
+			}
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			agent, session := agentIdentity()
+			res, err := repo.SetStreamState(args[0], current, next, workitem.StreamOptions{Agent: agent, Session: session, Now: a.now()})
+			if refused := streamRefusal(repo.MainRoot, err); refused != nil {
+				if a.jsonOut {
+					_ = a.printJSON(map[string]any{"refused": refused})
+				}
+				return &exitError{code: exitDocRefused, msg: err.Error()}
+			}
+			if err != nil {
+				return err
+			}
+			res.Path = relPath(repo.MainRoot, res.Path)
+			if a.jsonOut {
+				return a.printJSON(res)
+			}
+			sections := strings.Join(res.Written, " and ")
+			if !res.Changed {
+				fmt.Fprintf(a.out, "%s: unchanged; %s already holds the %s given\n", res.Stream, res.Path, sections)
+				return nil
+			}
+			fmt.Fprintf(a.out, "%s: wrote %s in %s at %s\n", res.Stream, sections, res.Path, res.Updated)
+			return nil
+		},
+	}
+	c.Flags().StringVar(&current, "current", "", "the text for ## Current state, or - to read it from standard input")
+	c.Flags().StringVar(&next, "next", "", "the text for ## Next steps, or - to read it from standard input")
+	return c
+}
+
+// streamRefusal is what flai stream state prints under "refused" when err is
+// a refusal, or nil when it is not: the story's state with the reason, or the
+// lint's findings with the narrative's path relative to root.
+func streamRefusal(root string, err error) any {
+	var refused *workitem.StreamRefusedError
+	if errors.As(err, &refused) {
+		return refused
+	}
+	var lint *mdlint.Error
+	if errors.As(err, &lint) {
+		return map[string]any{"path": relPath(root, lint.Path), "reason": lint.Error(), "findings": lint.Findings}
+	}
+	return nil
 }
 
 func newStreamAnswerCmd(a *app) *cobra.Command {
