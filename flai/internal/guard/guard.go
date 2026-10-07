@@ -150,7 +150,9 @@ const MCPPrefix = "mcp__flai__"
 
 // MCPReads are flai's MCP tools a sub-agent may call: they read and use no
 // agent's identity.
-var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", "test", "thread_get", "who_touches"}
+// verify runs a story's checks and stores its last result in flai's cache,
+// which is neither a work item, a thread, nor history (S-0270).
+var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_policy", "prime", "promote_candidates", "release_evaluate", "shared_paths", "test", "thread_get", "verify", "who_touches"}
 
 // cliReads are the flai commands a sub-agent may run, each with the
 // subcommands it may run; nil allows the command whatever follows it, and ""
@@ -180,8 +182,10 @@ var cliReads = map[string][]string{
 // any flag that makes them write, and in the form form allows when it is
 // set. flai order --by computes an order and --apply writes it; flai order
 // that names a story places it; flai release without --evaluate releases;
-// and flai plan without --candidates starts the planner, which with it takes
-// no item.
+// flai plan without --candidates starts the planner, which with it takes
+// no item; and flai verify --record-issues writes issues, which without it
+// it does not (S-0270). A command with no with flags reads in any form
+// without its without flags.
 var flagReads = map[string]struct {
 	with    []string
 	without []string
@@ -191,6 +195,7 @@ var flagReads = map[string]struct {
 	"plan":    {with: []string{"--candidates"}},
 	"promote": {with: []string{"--candidates", "--drafts"}},
 	"release": {with: []string{"--evaluate"}},
+	"verify":  {without: []string{"--record-issues"}},
 }
 
 // orderValues are the flags of flai order, flai's own among them, that take
@@ -749,7 +754,7 @@ func finalizesOnly(words []string) bool {
 // flai only reads.
 func reads(cmd, sub string, rest []string) bool {
 	if f, ok := flagReads[cmd]; ok {
-		return slices.ContainsFunc(f.with, func(w string) bool { return given(rest, w) }) &&
+		return (len(f.with) == 0 || slices.ContainsFunc(f.with, func(w string) bool { return given(rest, w) })) &&
 			!slices.ContainsFunc(f.without, func(w string) bool { return named(rest, w) }) &&
 			(f.form == nil || f.form(rest))
 	}

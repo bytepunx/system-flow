@@ -349,7 +349,7 @@ func TestAStorysAgentEndsOnAnOpenQuestion(t *testing.T) {
 // give a sub-agent, and to verify before review; the operator's command gets
 // no prompt, and an answered or commit run is not told again.
 func TestThePromptHandsNoisyWorkToSubAgents(t *testing.T) {
-	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then have one fresh verifier", "check the diff against the acceptance criteria and the conventions"}
+	want := []string{"hand noisy work to sub-agents with the Agent tool", "to the explorer", "to the verifier", "the worktree's path, S-0104 and the task's ID, the question", "a summary with paths and lines, not raw output", "a question it returns for the designer is yours to ask with thread_open", "Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then run the close-out yourself", "check the diff against the acceptance criteria and the conventions"}
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	st, err := (claudeCode{}).Start(r, Host{})
 	if err != nil {
@@ -425,20 +425,37 @@ func TestThePromptSaysTheOperatorTurnsIssuesIntoStories(t *testing.T) {
 	}
 }
 
-// S-0189: the story's agent runs only the tests for what it changed, leaves
-// the whole suite, lint, and check to one verifier before review and one
-// more after its fixes, and fixes what a verifier finds itself.
-func TestThePromptLeavesTheWholeSuiteToTheVerifier(t *testing.T) {
+// S-0189, S-0270: the story's agent runs only the tests for what it changed
+// while it works, and before review runs the close-out, which runs flai
+// verify, itself, fixing what it finds and running it again; the verifier is
+// kept for the review of a large diff against the criteria and the
+// conventions, which reads flai verify --last rather than running the suite.
+func TestThePromptRunsTheCloseOutItselfAndKeepsTheVerifierForTheReview(t *testing.T) {
 	p := Prompt(req(&manifest.Agent{Harness: ClaudeCode}))
 	for _, w := range []string{
 		"run only the tests for what you changed",
-		"Leave the whole suite, the whole lint, and flai check to the verifier rather than running them yourself as well",
-		"have one fresh verifier run the whole suite, the lint, and flai check in the worktree, through the project's close-out script where it has one",
-		"Fix what it finds yourself, never through a sub-agent, commit, and have one more fresh verifier run the same and confirm the fixes",
-		"A verifier's passing run is the story's run before review: do not repeat it",
+		"Leave the whole suite, the whole lint, and flai check to the close-out before review",
+		"then run the close-out yourself, once, in the worktree: the project's close-out script where it has one, which runs flai verify S-0104 --record-issues and then commits",
+		"or flai verify S-0104 (the flai MCP tool verify) where it has none",
+		"When it stops, fix what it names yourself, commit, and run it again; never hand the run to a sub-agent",
+		"Its passing run is the story's run before review: do not repeat it, and read it again with flai verify S-0104 --last",
+		"Hand that review to one fresh verifier only when the diff is too large to read here: tell it the run passed, and at which commit, and to read the result with flai verify S-0104 --last rather than running the suite",
+		"Fix what it finds yourself, never through a sub-agent, commit, and run the close-out again",
+		"the review of a large diff against the acceptance criteria and the conventions to the verifier",
 	} {
 		if !strings.Contains(p, w) {
 			t.Errorf("prompt lacks %q:\n%s", w, p)
+		}
+	}
+	for _, old := range []string{
+		"Leave the whole suite, the whole lint, and flai check to the verifier",
+		"have one fresh verifier run the whole suite",
+		"have one more fresh verifier run the same and confirm the fixes",
+		"A verifier's passing run",
+		"runs of the whole suite, the whole lint, and flai check, and long logs, to the verifier",
+	} {
+		if strings.Contains(p, old) {
+			t.Errorf("prompt still hands the run before review to the verifier (%q):\n%s", old, p)
 		}
 	}
 }
@@ -446,7 +463,7 @@ func TestThePromptLeavesTheWholeSuiteToTheVerifier(t *testing.T) {
 // S-0273: the story's agent runs the tests for what it changed itself, with
 // flai test or the MCP tool test on the paths it changed, not the test and
 // lint tools by hand and not through a sub-agent; the whole suite and lint
-// stay the verifier's.
+// stay the close-out's (S-0270).
 func TestThePromptRunsTheTestsForWhatChangedWithFlaiTest(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
@@ -456,8 +473,7 @@ func TestThePromptRunsTheTestsForWhatChangedWithFlaiTest(t *testing.T) {
 			"run only the tests for what you changed, yourself, with flai test and the paths you changed, or the flai MCP tool test with them",
 			"it runs the test and lint tiers the manifest's tests declare that those paths select, cheapest first, and answers pass or the first findings",
 			"Do not run go test, vitest, golangci-lint, or gofmt by hand and read their logs, and do not hand that run to a sub-agent",
-			"runs of the whole suite, the whole lint, and flai check, and long logs, to the verifier",
-			"Leave the whole suite, the whole lint, and flai check to the verifier rather than running them yourself as well",
+			"Leave the whole suite, the whole lint, and flai check to the close-out before review",
 		} {
 			if !strings.Contains(p, w) {
 				t.Errorf("prompt lacks %q:\n%s", w, p)
@@ -476,21 +492,20 @@ func TestThePromptRunsTheTestsForWhatChangedWithFlaiTest(t *testing.T) {
 	}
 }
 
-// S-0266: the story's agent has the verifier run the close-out once, in one
-// command without a pipe or a file, and read its last line, and names in the
-// verifier's prompt any step it already knows will stop; an answered or
+// S-0266, S-0270: the story's agent runs the close-out itself, once, in one
+// command with the longest timeout and without a pipe or a file, reads its
+// last line, and fixes what it names before running it again; an answered or
 // commit run is not told again.
-func TestThePromptSaysHowTheVerifierRunsTheCloseOut(t *testing.T) {
+func TestThePromptSaysHowTheAgentRunsTheCloseOut(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
 	restarted.Restart = "ended (exit 1)"
 	want := []string{
-		"through the project's close-out script where it has one",
-		"Tell it to run the close-out once, in one command and without a pipe or a file",
-		"read its last line, which names the outcome and the step it stopped at",
-		"name in its prompt any step you already know will stop, and why",
-		"so that it reports that stop and checks the steps after it rather than running the close-out again",
-		"Fix what it finds yourself",
+		"then run the close-out yourself, once, in the worktree: the project's close-out script where it has one",
+		`Run it as one Bash call with a timeout of 600000 ms, its exit status echoed after it, such as scripts/close-out.sh S-0104 -m "<message>"; echo "exit $?", never piping its output or redirecting it into a file`,
+		"read its last line, which names the outcome and the step it stopped at, and the findings of the step that failed",
+		"When it stops, fix what it names yourself, commit, and run it again",
+		"Then check the diff against the acceptance criteria and the conventions, naming the criteria it meets by number",
 	}
 	for _, p := range []string{Prompt(r), Prompt(restarted)} {
 		at := 0
@@ -506,8 +521,8 @@ func TestThePromptSaysHowTheVerifierRunsTheCloseOut(t *testing.T) {
 	answered, commit := r, r
 	answered.Answered, commit.Commit = "TH-0001", "/w"
 	for _, p := range []string{Prompt(answered), Prompt(commit)} {
-		if strings.Contains(p, "run the close-out once") {
-			t.Errorf("told how the verifier runs the close-out again:\n%s", p)
+		if strings.Contains(p, "run the close-out yourself") {
+			t.Errorf("told how to run the close-out again:\n%s", p)
 		}
 	}
 }
@@ -642,8 +657,8 @@ func TestThePromptSaysThePerTaskCycle(t *testing.T) {
 			"When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again",
 			"when the check stops, fix what it found and call it again",
 			"Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again",
-			"Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then have one fresh verifier",
-			"through the project's close-out script where it has one (it refuses a branch that does not contain the main branch)",
+			"Before you move S-0104 to review, commit everything, run flai stream sync S-0104 again and resolve what it lists, then run the close-out yourself",
+			"the project's close-out script where it has one, which runs flai verify S-0104 --record-issues and then commits (it refuses a branch that does not contain the main branch)",
 		}
 		at := 0
 		for _, w := range cycle {
@@ -1165,9 +1180,11 @@ func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 	}
 }
 
-// S-0221: while accept_reviews is on, the orchestrator hands a story in
-// review's worktree to its verifier, reads flai accept --dry-run's blockers
-// at the commit verified, and accepts with --verified and evidence for every
+// S-0221, S-0270: while accept_reviews is on, the orchestrator reads the
+// story's last flai verify result, or runs flai verify when it did not pass
+// or is not at the branch's head, hands the worktree and the result to its
+// verifier, which checks the diff against each criterion without running the
+// suite, reads flai accept --dry-run's blockers at the commit verified, and accepts with --verified and evidence for every
 // criterion, passed on standard input since it cannot write a file, logging
 // the acceptance; otherwise it leaves the story in review and says on a
 // thread what is missing. It never moves a story to done with item_move. No
@@ -1176,10 +1193,13 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 	p := Prompt(orchestrateReq(nil))
 	for _, w := range []string{
 		"While accept_reviews is on, take each story in review in turn",
+		// flai verify at the branch's head
+		"Verify it at the head of its branch, story/<S-nnnn>: read its last result with flai verify <S-nnnn> --last --json",
+		"when it did not pass or its commit is not the branch's head (git rev-parse story/<S-nnnn>), run flai verify <S-nnnn> --json, or the flai MCP tool verify",
+		"A run that did not pass is a blocker",
 		// the verifier
-		"Hand its worktree, /p/flow/.flai-cache/worktrees/<S-nnnn>, to the verifier with the Agent tool",
-		"it runs the tests, the lint, and flai check --strict, or the project's close-out script where it has one",
-		"checks the diff against each acceptance criterion, naming for each the changed files that meet it, and names the commit it verified",
+		"Then hand its worktree, /p/flow/.flai-cache/worktrees/<S-nnnn>, and that result to the verifier with the Agent tool",
+		"it reads the result with flai verify <S-nnnn> --last rather than running the suite, checks the diff against each acceptance criterion, naming for each the changed files that meet it, and names the commit it verified",
 		// the preview
 		"Run flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run with that commit, and read the blockers",
 		// the acceptance and its evidence

@@ -1,6 +1,6 @@
 ---
 title: Code quality
-updated: 2026-10-03
+updated: 2026-10-07
 audience: agent
 order: 60
 status: active
@@ -39,7 +39,7 @@ How to write maintainable code, and how it is tested.
   - A story is not done until all three suites pass.
   - New or changed behavior gets a test that fails without it; a fixed bug gets a test that reproduces it.
   - While working, run only the tests for what you changed, for quick feedback.
-  - Before moving to review, a verifier runs the whole suite, as `delegation.md` says; do not run it yourself as well. Where the harness has no verifier, run it yourself.
+  - Before moving to review, run the whole suite yourself through the close-out, which runs `flai verify`, as `delegation.md` says; do not hand that run to a sub-agent.
 - Lint clean. Run the project's linter as configured; fix findings rather than suppressing them. A suppression needs a comment saying why.
 - Report test and lint results as they are. "Tests pass" means you ran them and saw them pass in this environment.
 - Keep changes small and reviewable:

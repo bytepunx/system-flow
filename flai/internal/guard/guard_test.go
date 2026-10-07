@@ -12,7 +12,7 @@ import (
 )
 
 // g knows flai's commands as the cmd package gives them.
-var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "test", "thread", "touches", "unblock", "version"}}
+var g = Guard{Commands: []string{"accept", "adr", "archive", "block", "board", "check", "cod", "criteria", "doc", "edit", "epic", "forecast", "guard", "help", "issue", "move", "order", "prime", "promote", "push", "release", "show", "stats", "story", "stream", "task", "test", "thread", "touches", "unblock", "verify", "version"}}
 
 func bash(agent, cmd string) Event {
 	e := Event{ToolName: "Bash", AgentType: agent}
@@ -299,6 +299,34 @@ func TestTheOrchestrationReadsPassAndTheirWritesDoNot(t *testing.T) {
 		if why := planGuard.Check(bash("", c)); !strings.Contains(why, "the planner cannot run") {
 			t.Errorf("planner %q: %q", c, why)
 		}
+	}
+}
+
+// S-0270: a sub-agent reads a story's last verification and runs flai verify
+// when asked, which stores only flai's cache, but never records the notes as
+// issues; the MCP tool verify records none.
+func TestASubAgentRunsFlaiVerifyButRecordsNoIssues(t *testing.T) {
+	for _, c := range []string{
+		"flai verify S-0001 --last",
+		"flai verify S-0001 --last --json",
+		"scripts/flai.sh verify S-0001",
+		"flai --json verify S-0001 --max 3",
+	} {
+		if why := g.Check(bash("verifier", c)); why != "" {
+			t.Errorf("sub-agent %q refused: %s", c, why)
+		}
+	}
+	for _, c := range []string{
+		"flai verify S-0001 --record-issues",
+		"flai verify S-0001 --record-issues=false",
+		"flai verify S-0001 --last; flai verify S-0001 --record-issues",
+	} {
+		if why := g.Check(bash("verifier", c)); !strings.Contains(why, "a sub-agent (verifier) cannot run") {
+			t.Errorf("sub-agent %q: %q", c, why)
+		}
+	}
+	if why := g.Check(Event{ToolName: MCPPrefix + "verify", AgentID: "a1", AgentType: "verifier"}); why != "" {
+		t.Errorf("sub-agent verify refused: %s", why)
 	}
 }
 
