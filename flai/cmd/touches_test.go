@@ -98,6 +98,58 @@ func TestTouchesTakesADotPathAndRefusesOneOutside(t *testing.T) {
 	}
 }
 
+// I-0067: paths given alone replace an item's touches, as the help says;
+// --add adds to them and --remove takes out, leaving the rest. --remove of a
+// path the item does not touch, either flag with no path, and two of the
+// flags together are refused, writing nothing.
+func TestTouchesAddsRemovesAndReplaces(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	for _, step := range [][]string{{"epic", "new", "E"}, {"story", "new", "S", "--epic", "E-0001", "--touches", "a,b"}} {
+		if _, errOut, code := runIn(t, root, step...); code != 0 {
+			t.Fatalf("%v: %s", step, errOut)
+		}
+	}
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--add", "c", "a", "d/"}, "S-0001 touches a, b, c, d\n"},
+		{[]string{"--remove", "b", "d"}, "S-0001 touches a, c\n"},
+		{[]string{"x", "y"}, "S-0001 touches x, y\n"},
+		{[]string{"--remove", "x", "y"}, "S-0001 touches nothing\n"},
+	} {
+		if out, errOut, code := runIn(t, root, append([]string{"touches", "S-0001"}, c.args...)...); code != 0 || out != c.want {
+			t.Errorf("%v: %d %q %s", c.args, code, out, errOut)
+		}
+	}
+	if _, errOut, code := runIn(t, root, "touches", "S-0001", "a"); code != 0 {
+		t.Fatal(errOut)
+	}
+	file := filepath.Join(root, "wip/kanban/stories/S-0001-s.md")
+	before := read(t, file)
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--remove", "z"}, "S-0001 does not touch z; it touches a"},
+		{[]string{"--add"}, "--add and --remove need the paths to change"},
+		{[]string{"--remove"}, "--add and --remove need the paths to change"},
+		{[]string{"--add", "--remove", "b"}, "none of the others can be"},
+		{[]string{"--add", "--clear", "b"}, "none of the others can be"},
+	} {
+		if _, errOut, code := runIn(t, root, append([]string{"touches", "S-0001"}, c.args...)...); code == 0 || !strings.Contains(errOut, c.want) {
+			t.Errorf("%v: %d %s", c.args, code, errOut)
+		}
+	}
+	if read(t, file) != before {
+		t.Error("no refusal wrote anything")
+	}
+	if out, _, code := runIn(t, root, "touches", "--help"); code != 0 || !strings.Contains(out, "given alone replace the item's touches") {
+		t.Errorf("the help says paths alone replace:\n%s", out)
+	}
+}
+
 // S-0210: the seeds are the story's touches, its own and its tasks' not
 // cancelled, a component named by a tag read as its path, and the paths
 // given; the files changed with them on the main branch are counted.

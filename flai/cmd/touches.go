@@ -18,15 +18,23 @@ import (
 // touches sets the advisory list of paths or components a story or task is
 // working on (ADR-0019); flai check warns when in-progress items overlap.
 func newTouchesCmd(a *app) *cobra.Command {
-	var clear bool
+	var clear, add, remove bool
 	c := &cobra.Command{
 		Use:   "touches <id> [path-or-component...]",
 		Short: "Set what a story or task is working on; flai check warns on overlap",
-		Example: `  flai touches S-0037 flai/internal/workitem flaiover/src/routes/docs
+		Long: `Paths or components given alone replace the item's touches: name every one
+it keeps. --add adds those given to the list and --remove takes them out of it,
+leaving the rest; --clear empties it. With no path, the touches are shown.`,
+		Example: `  flai touches S-0037 flai/internal/workitem flaiover/src/routes/docs   # replace
+  flai touches S-0037 --add docs/users/flai.md
+  flai touches S-0037 --remove flaiover/src/routes/docs
   flai touches T-0121 --clear
   flai touches S-0037            # show`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if (add || remove) && len(args) == 1 {
+				return fmt.Errorf("--add and --remove need the paths to change: flai touches %s --add <path>...", args[0])
+			}
 			repo, err := a.project()
 			if err != nil {
 				return err
@@ -42,7 +50,11 @@ func newTouchesCmd(a *app) *cobra.Command {
 			if clear || len(args) > 1 {
 				before := slices.Clone(it.Touches)
 				watch := itemedit.WatchClaim(repo, it.ID)
-				if it.Touches, err = workitem.CleanTouches(args[1:]); err != nil {
+				given, err := workitem.CleanTouches(args[1:])
+				if err != nil {
+					return err
+				}
+				if it.Touches, err = changedTouches(it, given, add, remove); err != nil {
 					return err
 				}
 				it.Updated = a.now().UTC().Format(workitem.TimeFormat)
@@ -74,8 +86,50 @@ func newTouchesCmd(a *app) *cobra.Command {
 		},
 	}
 	c.Flags().BoolVar(&clear, "clear", false, "remove the list")
+	c.Flags().BoolVar(&add, "add", false, "add the paths given to the list rather than replace it")
+	c.Flags().BoolVar(&remove, "remove", false, "take the paths given out of the list rather than replace it")
+	c.MarkFlagsMutuallyExclusive("clear", "add", "remove")
 	c.AddCommand(newTouchesSuggestCmd(a))
 	return c
+}
+
+// changedTouches is the item's touches after the paths given: those paths alone, the
+// list with them added, or the list with them taken out (I-0067). Removing a
+// path the item does not touch is refused, so that a mistyped one is not
+// taken for done.
+func changedTouches(it *workitem.Item, given []string, add, remove bool) ([]string, error) {
+	switch {
+	case add:
+		out := slices.Clone(it.Touches)
+		for _, p := range given {
+			if !slices.Contains(out, p) {
+				out = append(out, p)
+			}
+		}
+		return out, nil
+	case remove:
+		for _, p := range given {
+			if !slices.Contains(it.Touches, p) {
+				return nil, fmt.Errorf("%s does not touch %s; it touches %s", it.ID, p, touchesList(it.Touches))
+			}
+		}
+		var out []string
+		for _, p := range it.Touches {
+			if !slices.Contains(given, p) {
+				out = append(out, p)
+			}
+		}
+		return out, nil
+	}
+	return given, nil
+}
+
+// touchesList is touches joined for a message, or nothing when there are none.
+func touchesList(touches []string) string {
+	if len(touches) == 0 {
+		return "nothing"
+	}
+	return strings.Join(touches, ", ")
 }
 
 // writer is who writes an item, as agents are told: FLAI_AGENT, else the

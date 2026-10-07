@@ -224,7 +224,7 @@ func printSyncChecks(w io.Writer, story *workitem.Item, c syncChecks) {
 	}
 	if len(c.Outside) > 0 {
 		fmt.Fprintf(w, "%s changed %s outside %s's touches: %s\n", mine, plural(len(c.Outside), "path"), story.ID, strings.Join(c.Outside, ", "))
-		fmt.Fprintf(w, "widen them so that stories that overlap wait: flai touches %s %s\n", story.ID, strings.Join(append(append([]string{}, story.Touches...), c.Outside...), " "))
+		fmt.Fprintf(w, "widen them so that stories that overlap wait: flai touches %s --add %s\n", story.ID, strings.Join(c.Outside, " "))
 	}
 }
 

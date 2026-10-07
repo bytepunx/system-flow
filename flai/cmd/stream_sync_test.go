@@ -313,7 +313,7 @@ func TestSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
 	}
 	for _, want := range []string{
 		"story/S-0001 changed 2 paths outside S-0001's touches: README.md, docs/other.md",
-		"flai touches S-0001 docs/guide.md README.md docs/other.md",
+		"flai touches S-0001 --add README.md docs/other.md",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("sync output lacks %q:\n%s", want, out)
@@ -328,7 +328,7 @@ func TestSyncListsPathsChangedOutsideTheClaim(t *testing.T) {
 	}
 
 	// widened as sync says, nothing is outside
-	if _, errOut, code := runIn(t, root, "touches", "S-0001", "docs/guide.md", "README.md", "docs/other.md"); code != 0 {
+	if _, errOut, code := runIn(t, root, "touches", "S-0001", "--add", "README.md", "docs/other.md"); code != 0 {
 		t.Fatal(errOut)
 	}
 	if out, _, _ := runIn(t, wt, "stream", "sync", "S-0001"); strings.Contains(out, "outside") {
