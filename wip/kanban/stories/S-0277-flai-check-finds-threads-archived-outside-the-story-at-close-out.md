@@ -6,7 +6,7 @@ title: "flai check finds `threads.archived` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-05T04:40:46Z
-updated: 2026-10-05T04:40:46Z
+updated: 2026-10-07T01:12:18Z
 transitions: []
 tags: []
 agent:
@@ -14,7 +14,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-07T01:12:18Z
 ---
 # S-0277 flai check finds `threads.archived` outside the story at close-out
 
