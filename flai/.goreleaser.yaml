@@ -52,6 +52,26 @@ archives:
 checksum:
   name_template: checksums.txt
 
+# The release key signs checksums.txt, which names every archive by its
+# SHA-256; the signature is published as checksums.txt.sig (S-0232). cosign v3
+# with a key pair from the environment and no Rekor upload: the three flags
+# keep v2's single base64 signature (design/system/release-signing.md).
+# Snapshot builds are not signed: scripts/flai-snapshot.sh passes --skip=sign.
+signs:
+  - id: checksums
+    artifacts: checksum
+    cmd: cosign
+    signature: "${artifact}.sig"
+    args:
+      - sign-blob
+      - --key=env://COSIGN_PRIVATE_KEY
+      - --use-signing-config=false
+      - --new-bundle-format=false
+      - --tlog-upload=false
+      - --output-signature=${signature}
+      - --yes
+      - ${artifact}
+
 snapshot:
   version_template: '{{ with index .Env "FLAI_LOCAL_VERSION" }}{{ . }}{{ else }}0.0.0-{{ .ShortCommit }}{{ end }}'
 
