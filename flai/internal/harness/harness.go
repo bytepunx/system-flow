@@ -57,6 +57,11 @@ type Request struct {
 	// Restart says how the story's last agent ended, when the operator has
 	// had a new one started for it (S-0116); empty when it entered ready.
 	Restart string
+	// AutoRestart says which automatic restart this is, such as "1 of 2",
+	// when flai serve, not the operator, started the agent again after the
+	// last one ended with its story in progress (S-0294, ADR-0108); empty
+	// otherwise.
+	AutoRestart string
 	// Commit is the story's worktree, when the operator has had an agent
 	// started to commit what it holds and nothing else (S-0140); empty
 	// otherwise.
@@ -246,6 +251,8 @@ If a change cannot be committed without the designer deciding something, ask wit
 	switch {
 	case r.Begun != nil:
 		why = fmt.Sprintf("because the operator started it here, and this host has had no agent for it: it was begun %[1]s. Its branch and worktree may not be on this host, and what was not committed and pushed there is not here. Reconcile before you do anything else: run flai stream open %[2]s, which keeps the narrative and checks out story/%[2]s from this clone, else from the remote, else new from the main branch, and says which; read the narrative's Current state, Next steps, and log, and the story's tasks; compare them with what is committed on the branch; and go on from what is committed rather than starting over, doing again what the narrative says was done and is not there. Log what you found with flai stream log %[2]s.%[3]s", r.Begun.Said(), r.Story, answeredSince(r.Begun))
+	case r.Restart != "" && r.AutoRestart != "":
+		why = fmt.Sprintf("because its last agent %s, and flai serve started it again on its own, automatic restart %s; at the limit it asks the operator instead. The story is in progress, with a narrative, a branch, and a worktree: read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and go on from there rather than starting over.", r.Restart, r.AutoRestart)
 	case r.Restart != "":
 		why = fmt.Sprintf("because the operator restarted it: its last agent %s. The story may already be in progress, with a narrative, a branch, and a worktree: if so, read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and go on from there rather than starting over.", r.Restart)
 	case r.Started && len(r.Past) > 0:

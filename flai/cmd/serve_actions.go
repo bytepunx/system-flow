@@ -493,14 +493,15 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	}
 	self, _ := os.Executable()
 	return serve.AgentConfig{
-		Flai:        self,
-		Enabled:     cfg.ActionEnabled(hostapi.ActionAgent, root),
-		Plan:        cfg.ActionEnabled(hostapi.ActionPlan, root),
-		Orchestrate: cfg.ActionEnabled(hostapi.ActionOrchestrate, root),
-		Analyze:     cfg.ActionEnabled(hostapi.ActionAnalyze, root),
-		Command:     cfg.Agent.Command,
-		Harnesses:   hosts,
-		Name:        cfg.Agent.Name,
+		Flai:         self,
+		Enabled:      cfg.ActionEnabled(hostapi.ActionAgent, root),
+		Plan:         cfg.ActionEnabled(hostapi.ActionPlan, root),
+		Orchestrate:  cfg.ActionEnabled(hostapi.ActionOrchestrate, root),
+		Analyze:      cfg.ActionEnabled(hostapi.ActionAnalyze, root),
+		Command:      cfg.Agent.Command,
+		Harnesses:    hosts,
+		Name:         cfg.Agent.Name,
+		AutoRestarts: cfg.Agent.AutoRestartLimit(),
 	}
 }
 

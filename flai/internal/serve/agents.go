@@ -79,6 +79,10 @@ type AgentConfig struct {
 	// Flai is this flai's executable: the agents reach flai's MCP server
 	// through it.
 	Flai string
+	// AutoRestarts is how many times in a row flai serve restarts a story's
+	// agent that ended with its story in progress, on its own; 0 never does
+	// (S-0294, ADR-0108).
+	AutoRestarts int
 }
 
 // host is what harness name runs with: the operator's, or for the command
@@ -165,6 +169,14 @@ type AgentRun struct {
 	// the orchestrator stopped (S-0228): flai serve does not start it again
 	// until they start it, or turn the orchestrate action off and on.
 	Held bool `json:"held,omitempty"`
+	// AutoRestarts is how many automatic restarts in a row led to this run
+	// (S-0294, ADR-0108): flai serve's restart on its own carries its last
+	// run's count and one more, and any other start begins again at 0.
+	AutoRestarts int `json:"auto_restarts,omitempty"`
+	// LimitThread is the thread flai serve opened to the operator when this
+	// run ended at the limit of automatic restarts, so that it opens one
+	// (S-0294, ADR-0108).
+	LimitThread string `json:"limit_thread,omitempty"`
 }
 
 // same says whether r and o are one run: the same start of the same
@@ -353,6 +365,10 @@ type launcher struct {
 	// none of these changes a file of the project, so flai serve says so to
 	// the dashboard (S-0154). Nil tells no one.
 	changed func(run *AgentRun)
+	// untold are the runs at the limit of automatic restarts whose thread
+	// could not be opened, by story and start: warned of once, not at every
+	// look (S-0294).
+	untold map[string]bool
 }
 
 // told records a run in the host's state and tells changed.
@@ -418,7 +434,11 @@ type readyStory struct {
 	// Begun says where a story in progress that this host has had no agent
 	// for was begun, when the operator has one started here (S-0177).
 	Begun *harness.Begun
-	item  *workitem.Item
+	// AutoRestarts is how many automatic restarts in a row this start makes,
+	// counting it, when flai serve restarts the story's agent on its own
+	// (S-0294, ADR-0108); 0 for any other start.
+	AutoRestarts int
+	item         *workitem.Item
 }
 
 // readyStories are the ready stories in pull order, the claims of the open
@@ -513,6 +533,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	cfg := l.config(l.entry.Root)
 	if cfg.Enabled {
 		l.resume(ctx, cfg, repo)
+		l.restartEnded(ctx, cfg, repo)
 	}
 	var sk skips
 	defer func() { l.say(sk) }()
@@ -702,6 +723,107 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 	}
 }
 
+// restartEnded starts again, as flai serve agent restart does, the agent of
+// each story in progress and not blocked whose newest run started and ended
+// failed, neither asking nor stopped by the operator: in a new session, told
+// how the last one ended and that flai serve started it on its own. It does
+// so up to cfg.AutoRestarts times in a row; a run that ends at the limit gets
+// one thread to the operator instead (S-0294, ADR-0108). A story that nothing
+// can start, which flai serve agent restart refuses, is left alone.
+func (l *launcher) restartEnded(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
+	st := l.dir.AgentStates()[l.entry.Root]
+	for _, id := range slices.Sorted(maps.Keys(st.Stories)) {
+		run := st.Stories[id]
+		if !endedEarly(run) {
+			continue
+		}
+		it, err := repo.Get(id)
+		if err != nil || it.Status != workitem.InProgress || it.IsBlocked() {
+			continue
+		}
+		if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+			continue
+		}
+		if run.AutoRestarts >= cfg.AutoRestarts {
+			l.stopRestarting(repo, cfg, run)
+			continue
+		}
+		n := run.AutoRestarts + 1
+		l.log("agent restarted on its own", "story", id, "restart", n, "limit", cfg.AutoRestarts)
+		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, AutoRestarts: n, Restart: restartWhy(run)})
+	}
+}
+
+// autoRestart is which automatic restart n is of limit, as the agent's
+// prompt says it, such as "1 of 2"; empty for a start that is not one.
+func autoRestart(n, limit int) string {
+	if n == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d of %d", n, limit)
+}
+
+// endedEarly says whether run is one flai serve restarts on its own: it
+// started, ended failed rather than asking or stopped by the operator, and
+// has had no thread opened for it at the limit.
+func endedEarly(run *AgentRun) bool {
+	return run != nil && run.Started != "" && !run.live() && run.Error == "" && run.Outcome == OutcomeFailed && run.Stopped == "" && run.LimitThread == ""
+}
+
+// limitAuthor is who the thread flai serve opens at the limit of automatic
+// restarts is by.
+const limitAuthor = "flai serve"
+
+// stopRestarting opens a thread to the operator on run's story, which ended
+// once more than flai serve restarts it on its own, and records it on run so
+// that it is opened once. When the thread cannot be opened, it warns once
+// and tries again at the next look of a flai serve started since.
+func (l *launcher) stopRestarting(repo *workitem.Repo, cfg AgentConfig, run *AgentRun) {
+	key := run.Story + " " + run.Started
+	if l.untold[key] {
+		return
+	}
+	ends := run.AutoRestarts + 1
+	times := fmt.Sprintf("%d times", ends)
+	if ends == 1 {
+		times = "once"
+	}
+	limit := "flai serve does not restart a story's agent on its own on this host (agent.auto_restarts is 0)"
+	if cfg.AutoRestarts > 0 {
+		limit = fmt.Sprintf("flai serve has restarted it on its own %d %s, as many as agent.auto_restarts allows on this host, and restarts it no more", cfg.AutoRestarts, oneOrMany(cfg.AutoRestarts, "time", "times"))
+	}
+	text := fmt.Sprintf("%[1]s's agent has ended %[2]s in a row with %[1]s in progress, and %[3]s: the story has no agent now. Its last run %[4]s.\n\n"+
+		"flai serve agent restart %[1]s, or Retry on the story's page, starts it again, and its count again from 0. flai serve agent set --auto-restarts <n> changes how many times flai serve restarts a story's agent on its own.",
+		run.Story, times, limit, restartWhy(run))
+	at := l.now().UTC()
+	entry := hostapi.Entry{At: at.Format(time.RFC3339), Action: hostapi.ActionAgent, Method: "serve.agent", Project: l.entry.Key, Root: l.entry.Root, By: limitAuthor}
+	th, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("%s's agent ended %s with the story in progress; restart it when it should go on", run.Story, times), On: run.Story, Author: limitAuthor, Text: text, Now: at})
+	if err != nil {
+		if l.untold == nil {
+			l.untold = map[string]bool{}
+		}
+		l.untold[key] = true
+		entry.Outcome, entry.Detail = "failed", fmt.Sprintf("could not open a thread on %s, whose agent ended %s in progress: %v", run.Story, times, err)
+		if l.record != nil {
+			l.record(entry)
+		}
+		l.warn("thread on the restart limit not opened", "story", run.Story, "err", err.Error())
+		return
+	}
+	l.dir.updateAgent(l.entry.Root, func(s *AgentState) {
+		for _, r := range []*AgentRun{s.Stories[run.Story], s.Last} {
+			if r.same(run) {
+				r.LimitThread = th.ID
+			}
+		}
+	})
+	entry.Outcome, entry.Detail = "done", fmt.Sprintf("opened %s: %s's agent ended %s in progress, and flai serve restarts it no more", th.ID, run.Story, times)
+	if l.record != nil {
+		l.record(entry)
+	}
+	l.log("agent not restarted: at the limit", "story", run.Story, "ended", ends, "thread", th.ID)
+}
+
 // asked says whether run ended asking a question on a thread.
 func asked(run *AgentRun) bool {
 	return run != nil && run.Outcome == OutcomeAsked && run.Thread != ""
@@ -732,7 +854,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	if name == "" {
 		name = "agent"
 	}
-	run := &AgentRun{Story: story.ID, Agent: name + "-" + story.ID, Started: now.Format(time.RFC3339), Session: newSession()}
+	run := &AgentRun{Story: story.ID, Agent: name + "-" + story.ID, Started: now.Format(time.RFC3339), Session: newSession(), AutoRestarts: story.AutoRestarts}
 	if len(after) > 0 && after[0] != nil {
 		run.Agent, run.Answered = after[0].Agent, after[0].Thread
 		if after[0].Session != "" {
@@ -768,7 +890,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 		return fail(err)
 	}
 	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
-		Session: run.Session, Answered: run.Answered, Restart: story.Restart, Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun}, cfg.host(name))
+		Session: run.Session, Answered: run.Answered, Restart: story.Restart, AutoRestart: autoRestart(story.AutoRestarts, cfg.AutoRestarts), Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun}, cfg.host(name))
 	if err != nil {
 		return fail(err)
 	}
@@ -789,6 +911,9 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory,
 	}
 	if story.Begun != nil {
 		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s on the operator's word, begun %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, story.Begun.Said(), run.PID, run.Log)
+	}
+	if story.AutoRestarts > 0 {
+		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s on its own, automatic restart %d of %d, its last agent having ended in progress (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, story.AutoRestarts, cfg.AutoRestarts, run.PID, run.Log)
 	}
 	if l.record != nil {
 		l.record(entry)

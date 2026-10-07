@@ -1192,3 +1192,232 @@ func TestTheOrchestratorsAndTheAnalyzersEarlierRunsAreKeptNewestFirst(t *testing
 		t.Errorf("newest orchestrator run = %+v, want pid %d ended", s.Orchestrator, pastRuns+2)
 	}
 }
+
+// S-0294, ADR-0108, I-0084: a story's agent that ends with its story in
+// progress, unblocked and asking nothing, is restarted at the next look, in
+// a new session, as the same agent, told that flai serve restarted it on its
+// own.
+func TestAgentRestartedAfterEndingInProgress(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.cfg.AutoRestarts = 2
+	lab.cfg.Command = nil
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+	lab.hold()
+	id := lab.readyWith("Ends early", &manifest.Agent{Harness: harness.ClaudeCode})
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	lab.move(id, workitem.InProgress) // its agent pulled it
+	first := lab.run(id)
+	// claude -p ends it while its story is in progress (I-0084)
+	lab.release(id)
+	waitFor(t, "it ends in progress", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeFailed })
+
+	lab.l.look(ctx, false)
+	waitFor(t, "another agent is started", func() bool { return lab.run(id).Session != first.Session })
+	again := lab.run(id)
+	if again.Agent != first.Agent || again.AutoRestarts != 1 || again.Answered != "" || again.PID == 0 || first.AutoRestarts != 0 {
+		t.Errorf("the same agent, in a new session, restart 1: %+v, first %+v", again, first)
+	}
+	if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "again for "+id+" as "+first.Agent+" on its own, automatic restart 1 of 2") {
+		t.Errorf("journal: %+v", j)
+	}
+	waitFor(t, "it ends again", func() bool { return !lab.run(id).live() })
+	got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+	for _, want := range []string{"its last agent ended (exit 0) with " + id + " in in-progress", "flai serve started it again on its own, automatic restart 1 of 2"} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("the agent was told\n%s\nwithout %q", got, want)
+		}
+	}
+	if strings.Contains(string(got), "the operator restarted it") {
+		t.Errorf("the agent was told the operator restarted it:\n%s", got)
+	}
+}
+
+// limitThreads are the threads flai serve opened on story at the limit of
+// automatic restarts.
+func (lab *agentLab) limitThreads(story string) []*threads.Thread {
+	lab.t.Helper()
+	all, err := threads.List(lab.repo)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	var out []*threads.Thread
+	for _, th := range all {
+		if th.Opener() == limitAuthor && threads.StoryOf(lab.repo, th) == story {
+			out = append(out, th)
+		}
+	}
+	return out
+}
+
+// S-0294, ADR-0108: flai serve restarts a story's agent up to the limit,
+// then opens one thread to the operator, and restarts it no more; the
+// operator's restart starts the count again from 0.
+func TestAgentRestartsStopAtTheLimitWithOneThread(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.cfg.AutoRestarts = 2
+	lab.hold()
+	id := lab.ready("Ends every time")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	lab.move(id, workitem.InProgress)
+	lab.release(id) // every agent for it ends at once
+	for n := 1; n <= 2; n++ {
+		waitFor(t, "it ends", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeFailed })
+		was := lab.run(id).Session
+		lab.l.look(ctx, false)
+		waitFor(t, "it is restarted", func() bool { return lab.run(id).Session != was })
+		if r := lab.run(id); r.AutoRestarts != n {
+			t.Fatalf("restart %d: %+v", n, r)
+		}
+	}
+	waitFor(t, "it ends a third time", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeFailed })
+	last := lab.run(id)
+	lab.l.look(ctx, false)
+	lab.l.look(ctx, false)
+	r := lab.run(id)
+	if r.Session != last.Session || r.live() || r.AutoRestarts != 2 {
+		t.Fatalf("restarted past the limit: %+v", r)
+	}
+	ths := lab.limitThreads(id)
+	if len(ths) != 1 {
+		t.Fatalf("%d threads at the limit, want 1", len(ths))
+	}
+	th := ths[0]
+	if r.LimitThread != th.ID || !strings.Contains(th.Title, id+"'s agent ended 3 times") {
+		t.Errorf("thread %s %q, run %+v", th.ID, th.Title, r)
+	}
+	text := th.Entries()[0].Text
+	for _, want := range []string{"ended 3 times in a row", "restarted it on its own 2 times", "Its last run ended (exit 0) with " + id + " in in-progress", "flai serve agent restart " + id, "Retry", "--auto-restarts"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the thread says\n%s\nwithout %q", text, want)
+		}
+	}
+	started := 0
+	for _, e := range lab.entries() {
+		if strings.HasPrefix(e.Detail, "started ") {
+			started++
+		}
+	}
+	if started != 3 {
+		t.Errorf("%d agents started, want 3: %+v", started, lab.entries())
+	}
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityFailed {
+		t.Errorf("at the limit it reads failed: %+v", a)
+	}
+
+	// the operator restarts it: a run of the count 0, with no thread
+	run, err := Restart(ctx, lab.o, Entry{Key: "t", Name: "t", Root: lab.root}, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.AutoRestarts != 0 || run.LimitThread != "" || run.Session == last.Session {
+		t.Fatalf("the operator's restart: %+v", run)
+	}
+	// it ends in progress, as seen at a look: restarted on its own again, as the first of 2
+	ended := *run
+	ended.PID, ended.Ended, ended.Outcome, ended.Why = 0, time.Now().UTC().Format(time.RFC3339), OutcomeFailed, "ended (exit 0) with "+id+" in in-progress"
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.put(&ended) })
+	lab.l.look(ctx, false)
+	waitFor(t, "it is restarted on its own", func() bool { return lab.run(id).Session != run.Session })
+	if r := lab.run(id); r.AutoRestarts != 1 {
+		t.Errorf("the count starts again from 0: %+v", r)
+	}
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
+// putEnded makes a story in progress whose agent's run ended as run says,
+// with its story, agent, and times filled in.
+func (lab *agentLab) putEnded(title string, run AgentRun) string {
+	lab.t.Helper()
+	id := lab.ready(title)
+	lab.move(id, workitem.InProgress)
+	now := time.Now().UTC().Format(time.RFC3339)
+	run.Story, run.Agent, run.Started, run.Ended, run.Session = id, "builder-"+id, now, now, "earlier"
+	if run.Why == "" && run.Outcome == OutcomeFailed {
+		run.Why = "ended (exit 0) with " + id + " in in-progress"
+	}
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.put(&run) })
+	return id
+}
+
+// S-0294, ADR-0108: with agent.auto_restarts 0, an agent that ends in
+// progress is not restarted, and the thread is opened at once, once.
+func TestAgentRestartsOffOpensTheThreadAtTheFirstEnd(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.cfg.AutoRestarts = 0
+	id := lab.putEnded("Ends with restarts off", AgentRun{Outcome: OutcomeFailed})
+	lab.l.look(ctx, false)
+	lab.l.look(ctx, false)
+	r := lab.run(id)
+	ths := lab.limitThreads(id)
+	if r.Session != "earlier" || len(ths) != 1 || r.LimitThread != ths[0].ID {
+		t.Fatalf("run %+v, threads %d", r, len(ths))
+	}
+	if text := ths[0].Entries()[0].Text; !strings.Contains(text, "ended once in a row") || !strings.Contains(text, "agent.auto_restarts is 0") {
+		t.Errorf("the thread says\n%s", text)
+	}
+	if j := lab.entries(); len(j) != 1 || j[0].Outcome != "done" || !strings.Contains(j[0].Detail, "opened "+ths[0].ID) {
+		t.Errorf("journal: %+v", j)
+	}
+}
+
+// S-0294, ADR-0108: what flai serve does not restart on its own, and opens
+// no thread for.
+func TestAnEndedAgentIsNotRestartedOnItsOwnWhenItShouldNotBe(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name string
+		run  AgentRun
+		set  func(lab *agentLab, id string)
+	}{
+		{"its story is blocked", AgentRun{Outcome: OutcomeFailed}, func(lab *agentLab, id string) {
+			st, _ := lab.repo.Get(id)
+			if err := workitem.BlockItem(st, "the API key", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+			if err := lab.repo.Save(st); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"the operator stopped it", AgentRun{Outcome: OutcomeStopped, Stopped: "2026-10-06T00:00:00Z"}, nil},
+		{"it could not be started", AgentRun{Outcome: OutcomeFailed, Error: "no such program"}, nil},
+		{"it ended asking, unanswered", AgentRun{Outcome: OutcomeAsked}, func(lab *agentLab, id string) {
+			th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: "builder-" + id, Text: "Eight or nine?", Now: time.Now()})
+			if err != nil {
+				lab.t.Fatal(err)
+			}
+			lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.Stories[id].Thread = th.ID })
+		}},
+		{"it ended in ready", AgentRun{Outcome: OutcomeFailed}, func(lab *agentLab, id string) {
+			st, _ := lab.repo.Get(id)
+			if _, err := lab.repo.Transition(st, workitem.Ready, "alex", "not yet", lab.now); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"the agent action is off", AgentRun{Outcome: OutcomeFailed}, func(lab *agentLab, _ string) { lab.cfg.Enabled = false }},
+		{"its thread at the limit is open", AgentRun{Outcome: OutcomeFailed, AutoRestarts: 2, LimitThread: "TH-0001"}, nil},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			lab.cfg.AutoRestarts = 2
+			id := lab.putEnded("Ended", c.run)
+			if c.set != nil {
+				c.set(lab, id)
+			}
+			lab.l.look(ctx, false)
+			if r := lab.run(id); r.Session != "earlier" || r.live() {
+				t.Errorf("restarted: %+v", r)
+			}
+			if j := lab.entries(); len(j) != 0 {
+				t.Errorf("journal: %+v", j)
+			}
+			if ths := lab.limitThreads(id); len(ths) != 0 {
+				t.Errorf("%d threads opened", len(ths))
+			}
+		})
+	}
+}
