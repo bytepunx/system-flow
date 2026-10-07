@@ -3,10 +3,10 @@ id: I-0076
 title: "flai check finds `wip.overlap` outside the story at close-out"
 class: efficiency
 status: open
-count: 9
+count: 10
 first_reported: 2026-10-05T03:24:33Z
-last_reported: 2026-10-06T23:21:51Z
-updated: 2026-10-06T23:21:51Z
+last_reported: 2026-10-07T00:07:32Z
+updated: 2026-10-07T00:07:32Z
 ---
 
 # I-0076 flai check finds `wip.overlap` outside the story at close-out
@@ -72,6 +72,17 @@ Story: S-0261.
 flai check found outside the story:
 `wip/kanban/stories/S-0261-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md`: S-0261 touches docs/operators/settings.md, which S-0301 (in progress) also touches as docs/operators/settings.md
 `wip/kanban/stories/S-0261-the-mcp-prime-pack-for-a-story-is-larger-than-claude-code-s-tool-result-limit-so-the-agent-reads-it-back-from-a-saved-file.md`: S-0261 touches flai/internal/mcpserver, which S-0300 (in progress) also touches as flai/internal/mcpserver/plan.go
+
+### 2026-10-07T00:07:32Z
+Story: S-0251.
+flai check found outside the story:
+`wip/kanban/stories/S-0228-the-workflow-menu-has-orchestrator-and-analyzer-pages-showing-their-status-activity-log-and-runs.md`: S-0228 touches design/system/dashboard-host-channel.md, which S-0273 (in progress) also touches as design/system/dashboard-host-channel.md
+`wip/kanban/stories/S-0228-the-workflow-menu-has-orchestrator-and-analyzer-pages-showing-their-status-activity-log-and-runs.md`: S-0228 touches flai/internal/hostapi, which S-0273 (in progress) also touches as flai/internal/hostapi/hostapi.go
+`wip/kanban/stories/S-0228-the-workflow-menu-has-orchestrator-and-analyzer-pages-showing-their-status-activity-log-and-runs.md`: S-0228 touches flai/internal/hostapi, which S-0273 (in progress) also touches as flai/internal/hostapi/writes.go
+`wip/kanban/stories/S-0228-the-workflow-menu-has-orchestrator-and-analyzer-pages-showing-their-status-activity-log-and-runs.md`: S-0228 touches flai/internal/hostapi, which S-0273 (in progress) also touches as flai/internal/hostapi/writes_test.go
+`wip/kanban/stories/S-0273-flai-test-runs-the-project-s-test-and-lint-tiers-for-a-path-or-a-package-and-answers-pass-or-the-first-failures-as-findings.md`: S-0273 touches flai/internal/hostapi/hostapi.go, which T-0917 (in progress) also touches as flai/internal/hostapi
+`wip/kanban/stories/S-0273-flai-test-runs-the-project-s-test-and-lint-tiers-for-a-path-or-a-package-and-answers-pass-or-the-first-failures-as-findings.md`: S-0273 touches flai/internal/hostapi/writes.go, which T-0917 (in progress) also touches as flai/internal/hostapi
+`wip/kanban/stories/S-0273-flai-test-runs-the-project-s-test-and-lint-tiers-for-a-path-or-a-package-and-answers-pass-or-the-first-failures-as-findings.md`: S-0273 touches flai/internal/hostapi/writes_test.go, which T-0917 (in progress) also touches as flai/internal/hostapi
 
 ## Remediation
 

@@ -3,10 +3,10 @@ id: I-0073
 title: "flai check finds `threads.archived` outside the story at close-out"
 class: efficiency
 status: open
-count: 21
+count: 22
 first_reported: 2026-10-05T01:38:07Z
-last_reported: 2026-10-06T23:54:55Z
-updated: 2026-10-06T23:54:55Z
+last_reported: 2026-10-07T00:07:32Z
+updated: 2026-10-07T00:07:32Z
 ---
 
 # I-0073 flai check finds `threads.archived` outside the story at close-out
@@ -128,6 +128,12 @@ flai check found outside the story:
 
 ### 2026-10-06T23:54:55Z
 Story: S-0303.
+flai check found outside the story:
+`wip/threads/TH-0194-a-note-for-the-agent-that-starts-this-story-from-the-board-watch-no-answer-needed.md`: TH-0194 is open but S-0227 is archived; resolve it or move it
+`wip/threads/TH-0203-s-0229-accept-adr-0101-the-dashboard-edits-the-strategic-agents-settings-behind-the-settings-action.md`: TH-0203 is answered but S-0229 is archived; resolve it or move it
+
+### 2026-10-07T00:07:32Z
+Story: S-0251.
 flai check found outside the story:
 `wip/threads/TH-0194-a-note-for-the-agent-that-starts-this-story-from-the-board-watch-no-answer-needed.md`: TH-0194 is open but S-0227 is archived; resolve it or move it
 `wip/threads/TH-0203-s-0229-accept-adr-0101-the-dashboard-edits-the-strategic-agents-settings-behind-the-settings-action.md`: TH-0203 is answered but S-0229 is archived; resolve it or move it
