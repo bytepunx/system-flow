@@ -885,3 +885,192 @@ func TestTheOrchestratorsThreadRepliesAreLoggedWithTheirSource(t *testing.T) {
 		t.Errorf("logged\n  %+v\nwant\n  %+v", got, want)
 	}
 }
+
+// endFixture is the server of an agent flai serve started with FLAI_STORY
+// set to story, as it starts a story's agent (S-0272), and role as FLAI_ROLE;
+// the test passes its deadlines. An empty story is a session without
+// FLAI_STORY, as a hand-run agent's is.
+func endFixture(t *testing.T, story, role string) (*fixture, *deadlines) {
+	t.Helper()
+	// the server reads them when it starts; the fixture's story is the
+	// first story of its repository, S-0001, and FLAI_STORY is trimmed
+	t.Setenv("FLAI_STORY", story)
+	t.Setenv("FLAI_ROLE", role)
+	d := newDeadlines()
+	f := setupWith(t, func(o *Options) { o.After = d.after })
+	if f.story.ID != "S-0001" {
+		t.Fatalf("the fixture's story is %s, not S-0001", f.story.ID)
+	}
+	return f, d
+}
+
+// storysAgent is endFixture for the fixture's story's agent.
+func storysAgent(t *testing.T) (*fixture, *deadlines) {
+	t.Helper()
+	return endFixture(t, " S-0001\n", "")
+}
+
+// ask opens a thread on id as the agent and sets the agent's cursor after
+// it, so that a wait starts with nothing behind the cursor.
+func (f *fixture) ask(t *testing.T, id string) *threads.Thread {
+	t.Helper()
+	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which way?", On: id, Author: "claude", Text: "A or B?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	return th
+}
+
+// endsAtOnce calls wait_for_events and wants it to answer end without
+// holding: no deadline is armed.
+func (f *fixture) endsAtOnce(t *testing.T, d *deadlines) map[string]any {
+	t.Helper()
+	start := time.Now()
+	out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 1800})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["end"] != true || out["timed_out"] == true || time.Since(start) > 2*time.Second {
+		t.Fatalf("a story's agent with only its question pending ends at once: %v after %s", out, time.Since(start))
+	}
+	select {
+	case got := <-d.armed:
+		t.Errorf("a wait told to end armed a deadline of %s", got)
+	default:
+	}
+	return out
+}
+
+// holds calls wait_for_events and wants it to hold until its time passes,
+// with end false and no why.
+func (f *fixture) holds(t *testing.T, d *deadlines) {
+	t.Helper()
+	done := make(chan map[string]any, 1)
+	go func() {
+		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 60})
+		done <- out
+	}()
+	select {
+	case <-d.armed:
+	case out := <-done:
+		t.Fatalf("the wait should hold, answered at once: %v", out)
+	case <-time.After(5 * time.Second):
+		t.Fatal("the wait never armed a deadline")
+	}
+	d.advance(time.Minute)
+	select {
+	case out := <-done:
+		if out["timed_out"] != true || out["end"] != false || out["why"] != nil {
+			t.Errorf("a held wait times out with end false: %v", out)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the wait never answered once its time passed")
+	}
+}
+
+// S-0272: a story's agent whose story has its question open to the designer
+// and no task in progress is told to end, with why naming the thread, at
+// once rather than held: flai serve starts it again on the answer.
+func TestWaitForEventsEndsAStorysAgentWithOnlyItsQuestionPending(t *testing.T) {
+	f, d := storysAgent(t)
+	th := f.ask(t, f.story.ID)
+	out := f.endsAtOnce(t, d)
+	why, _ := out["why"].(string)
+	if !strings.Contains(why, th.ID) || !strings.Contains(why, f.story.ID) || !strings.Contains(why, "no task in progress") {
+		t.Errorf("why names the story, the thread, and the reason: %q", why)
+	}
+	if events, ok := out["events"].([]any); !ok || len(events) != 0 {
+		t.Errorf("events is an empty list: %v", out["events"])
+	}
+	// the tool and the server's instructions say so
+	res, err := f.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range res.Tools {
+		if tool.Name == "wait_for_events" && !strings.Contains(tool.Description, "flai serve starts it again when the question is answered") {
+			t.Errorf("wait_for_events's description does not say when it ends: %s", tool.Description)
+		}
+	}
+	if in := f.cs.InitializeResult().Instructions; !strings.Contains(in, "gets end and why from wait_for_events") {
+		t.Errorf("the instructions do not say when wait_for_events ends: %s", in)
+	}
+}
+
+// Events already behind the cursor come with end, so none is lost.
+func TestWaitForEventsReportsWhatIsBehindTheCursorWithEnd(t *testing.T) {
+	f, d := storysAgent(t)
+	f.ask(t, f.story.ID)
+	*f.clock = t0.Add(10 * time.Minute)
+	s := f.readyStory(t, "While it asked", t0.Add(5*time.Minute))
+	out := f.endsAtOnce(t, d)
+	if got := changeSummaries(out, "events"); len(got) != 1 || !strings.Contains(got[0], s.ID) {
+		t.Errorf("events behind the cursor come with end: %v", got)
+	}
+}
+
+// A question on one of the story's tasks counts, as serve counts it.
+func TestWaitForEventsEndsOnAQuestionOnAStorysTask(t *testing.T) {
+	f, d := storysAgent(t)
+	th := f.ask(t, f.task.ID)
+	if why, _ := f.endsAtOnce(t, d)["why"].(string); !strings.Contains(why, th.ID) {
+		t.Errorf("why names the thread on the task: %q", why)
+	}
+}
+
+// A recommendation on the agent's question awaits the operator's
+// confirmation and is no answer yet (ADR-0090): the agent still ends.
+func TestWaitForEventsEndsWhileARecommendationAwaitsConfirmation(t *testing.T) {
+	f, d := storysAgent(t)
+	th := f.ask(t, f.story.ID)
+	if _, err := threads.ReplyWith(f.repo, th.ID, "orchestrator", "B.", t0.Add(time.Minute), threads.Marks{Recommendation: true}); err != nil {
+		t.Fatal(err)
+	}
+	if why, _ := f.endsAtOnce(t, d)["why"].(string); !strings.Contains(why, th.ID) {
+		t.Errorf("why names the thread: %q", why)
+	}
+}
+
+// With a task of the story in progress the agent has work in hand: it holds.
+func TestWaitForEventsHoldsAStorysAgentWithATaskInProgress(t *testing.T) {
+	f, d := storysAgent(t)
+	for _, to := range []string{workitem.Ready, workitem.InProgress} {
+		task, _ := f.repo.Get(f.task.ID)
+		if _, err := f.repo.Transition(task, to, "claude", "", t0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.ask(t, f.story.ID)
+	f.holds(t, d)
+}
+
+// An answered question awaits nothing: the agent holds rather than end on
+// the answer it waited for, and so does it once the thread is resolved.
+func TestWaitForEventsHoldsOnceTheQuestionIsAnswered(t *testing.T) {
+	f, d := storysAgent(t)
+	th := f.ask(t, f.story.ID)
+	if _, err := threads.Reply(f.repo, th.ID, "alex", "B.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	f.holds(t, d)
+	if _, err := threads.Resolve(f.repo, th.ID, "alex", "B it is", t0.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	f.holds(t, d)
+}
+
+// Without FLAI_STORY (a hand-run agent) wait_for_events holds as before,
+// whatever its threads; with a role (the planner, the orchestrator, the
+// analyzer) too.
+func TestWaitForEventsHoldsOutsideAStorysAgent(t *testing.T) {
+	for name, env := range map[string][2]string{"no FLAI_STORY": {"", ""}, "a role": {"S-0001", "plan"}} {
+		t.Run(name, func(t *testing.T) {
+			f, d := endFixture(t, env[0], env[1])
+			f.ask(t, f.story.ID)
+			f.holds(t, d)
+		})
+	}
+}
