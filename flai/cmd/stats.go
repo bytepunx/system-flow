@@ -33,9 +33,10 @@ scripts. A bucket of an hour needs a window of 31 days or less. It also
 carries forecasts (forecast, delivery, and estimate error), cost_of_delay
 (outstanding per column and incurred, by the day and week), waiting (on
 threads and in review, by the week, and the story agents' empty wakes,
-ADR-0105), claims (in progress by the day against
-the limit, and each story's touches against the files its commits changed),
-and strategic_days (the strategic agents' cost and time beside delivery).
+ADR-0105), claims (in progress and held by the day
+against the limit; under claims.weeks the time held by reason and the share of
+stories with exact touches, by the week; and each story's touches against the
+files its commits changed, ADR-0113), and strategic_days (the strategic agents' cost and time beside delivery).
 What strategic agents spent on items is reported apart from what agents did,
 under usage.strategic and each item's usage.strategic, beside the project's
 usage.cost_per_agent_hour and each item's expected_cost (ADR-0083). Each
@@ -44,7 +45,8 @@ what the issues carry that no story does, and the project total (ADR-0095);
 strategic_issues lists each issue that carries strategic usage. An issue's
 usage counts until a story made from it carries it, then counts as the
 story's (S-0227).
-Touches drift needs git; without it flai stats warns and leaves it out.`,
+Touches drift and the exact touches need git; without it flai stats warns and
+leaves them out.`,
 		Example: `  flai stats
   flai stats --since 90d --by nature
   flai stats --type task --json
@@ -195,7 +197,8 @@ func printWaiting(a *app, w metrics.Waiting) {
 
 // printClaims prints the time the stories completed in the window were held
 // in ready, the items in progress now against the limit, and the touches
-// drift when git could be read (S-0205).
+// drift when git could be read (S-0205); and the time held by reason over the
+// window's weeks and the share of stories with exact touches (S-0214).
 func printClaims(a *app, rep *metrics.Report) {
 	var lines []string
 	start, _ := time.Parse(workitem.TimeFormat, rep.WindowStart)
@@ -213,6 +216,9 @@ func printClaims(a *app, rep *metrics.Report) {
 		lines = append(lines, fmt.Sprintf("  held in ready  total %s · mean %s, over %d completed", metrics.Human(held), metrics.Human(held/float64(stories)), stories))
 	}
 	c := rep.Claims
+	if line := heldByReason(c.Weeks); line != "" {
+		lines = append(lines, line)
+	}
 	busy := false
 	for _, d := range c.Days {
 		busy = busy || d.InProgress > 0
@@ -232,11 +238,48 @@ func printClaims(a *app, rep *metrics.Report) {
 		}
 		lines = append(lines, fmt.Sprintf("  touches drift  %d stories with commits · %d files outside their touches · %d touches unchanged", len(*c.Drift), outside, unchanged))
 	}
+	if line := exactTouches(c.Weeks); line != "" {
+		lines = append(lines, line)
+	}
 	if len(lines) == 0 {
 		return
 	}
 	fmt.Fprintln(a.out, "\nclaims:")
 	fmt.Fprintln(a.out, strings.Join(lines, "\n"))
+}
+
+// heldByReason says how long stories were held under each reason over the
+// window's weeks, or nothing when none was held.
+func heldByReason(weeks []metrics.ClaimWeek) string {
+	var h metrics.HeldByCode
+	for _, w := range weeks {
+		h.Overlap += w.HeldSeconds.Overlap
+		h.After += w.HeldSeconds.After
+		h.NoTouches += w.HeldSeconds.NoTouches
+	}
+	if h.Overlap+h.After+h.NoTouches == 0 {
+		return ""
+	}
+	return fmt.Sprintf("  held by reason  overlap %s · after %s · no-touches %s, every story over the window's weeks",
+		metrics.Human(h.Overlap), metrics.Human(h.After), metrics.Human(h.NoTouches))
+}
+
+// exactTouches says how many of the stories with commits completed in the
+// window had exact touches, or nothing when git could not be read or none was
+// completed.
+func exactTouches(weeks []metrics.ClaimWeek) string {
+	var stories, exact int
+	for _, w := range weeks {
+		if w.Stories == nil || w.Exact == nil {
+			continue
+		}
+		stories += *w.Stories
+		exact += *w.Exact
+	}
+	if stories == 0 {
+		return ""
+	}
+	return fmt.Sprintf("  exact touches  %d of %d completed with commits (%.0f%%)", exact, stories, float64(exact)/float64(stories)*100)
 }
 
 // printStrategicDays prints what the strategic agents spent over the window

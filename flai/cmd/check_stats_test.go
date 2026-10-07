@@ -461,6 +461,30 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 	if err := json.Unmarshal(rep["claims"], &claims); err != nil || claims["drift"] != nil || string(claims["limit"]) != "2" {
 		t.Errorf("claims outside git: %v %s", err, rep["claims"])
 	}
+	// Waiting was held for want of touches the 18 hours Done was in progress
+	// beside it; outside git no week counts exact touches (S-0214)
+	var weeks []map[string]json.RawMessage
+	if err := json.Unmarshal(claims["weeks"], &weeks); err != nil || len(weeks) == 0 {
+		t.Fatalf("claims.weeks: %v %s", err, claims["weeks"])
+	}
+	var heldTotal metrics.HeldByCode
+	for _, w := range weeks {
+		var h metrics.HeldByCode
+		if err := json.Unmarshal(w["held_seconds"], &h); err != nil {
+			t.Fatalf("claims.weeks[].held_seconds: %v %s", err, w["held_seconds"])
+		}
+		heldTotal.Overlap += h.Overlap
+		heldTotal.After += h.After
+		heldTotal.NoTouches += h.NoTouches
+		for _, key := range []string{"stories", "exact", "exact_share"} {
+			if w[key] != nil {
+				t.Errorf("claims.weeks[].%s outside git: %s", key, w[key])
+			}
+		}
+	}
+	if heldTotal != (metrics.HeldByCode{NoTouches: 18 * 3600}) {
+		t.Errorf("claims.weeks held_seconds add up to %+v, want 18h of no-touches", heldTotal)
+	}
 	warned := false
 	for _, line := range strings.Split(errOut, "\n") {
 		var ev map[string]any
@@ -477,18 +501,51 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 		"\nforecast and estimate error (absolute):\n  forecast     p50 1d · p85 1d (n=1)\n  delivery     p50 10h · p85 10h (n=1)\n  estimate     p50 2h · p85 2h (n=1)\n",
 		"\ncost of delay (per week of waiting):\n  outstanding now  backlog 0.00 · ready 50.00 · in-progress 0.00 · review 0.00\n  incurred in the window 39.57\n",
 		"\nwaiting, over 1 completed:\n  on threads   total 2h · mean 2h\n  in review    total 4h · mean 4h\n  empty wakes  total 4 · mean 4.0 per item with usage\n",
-		"\nclaims:\n  held in ready  total 0m · mean 0m, over 1 completed\n  in progress now 0 of a limit of 2\n",
+		"\nclaims:\n  held in ready  total 0m · mean 0m, over 1 completed\n  held by reason  overlap 0m · after 0m · no-touches 18h, every story over the window's weeks\n  in progress now 0 of a limit of 2\n",
 		"\nstrategic agents in the window:\n  $0.25 · 1m, beside 1 completed (usage $1.00 per item)\n",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
 		}
 	}
-	if code != 0 || strings.Contains(out, "touches drift") {
+	if code != 0 || strings.Contains(out, "touches drift") || strings.Contains(out, "exact touches") {
 		t.Errorf("text outside git: %d\n%s", code, out)
 	}
 	// the dashboard's read answers the same and warns the same
 	if _, rerr := sameAnswer(t, root, hostapi.Host{}, "stats.get", `{}`, "stats"); rerr != nil {
 		t.Errorf("stats.get outside git: %+v", rerr)
+	}
+}
+
+// S-0214: the claims print the time held by reason over the window's weeks
+// and how many stories with commits completed in them had exact touches; a
+// week git could not be read for, or with none completed, adds nothing.
+func TestStatsPrintsHeldByReasonAndExactTouches(t *testing.T) {
+	n := func(v int) *int { return &v }
+	drift := []metrics.TouchDrift{{ID: "S-0001"}, {ID: "S-0002", OutsideCount: 1}, {ID: "S-0003"}}
+	rep := &metrics.Report{WindowStart: "2026-09-01T00:00:00Z", Claims: metrics.Claims{
+		Drift: &drift,
+		Weeks: []metrics.ClaimWeek{
+			{Week: "2026-W36", HeldSeconds: metrics.HeldByCode{Overlap: 3 * 3600, NoTouches: 1800}, Stories: n(2), Exact: n(1)},
+			{Week: "2026-W37", HeldSeconds: metrics.HeldByCode{After: 26 * 3600}, Stories: n(0), Exact: n(0)},
+			{Week: "2026-W38", Stories: n(1), Exact: n(1)},
+		},
+	}}
+	var out bytes.Buffer
+	printClaims(&app{out: &out}, rep)
+	want := "\nclaims:\n" +
+		"  held by reason  overlap 3h · after 1d2h · no-touches 30m, every story over the window's weeks\n" +
+		"  touches drift  3 stories with commits · 1 files outside their touches · 0 touches unchanged\n" +
+		"  exact touches  2 of 3 completed with commits (67%)\n"
+	if out.String() != want {
+		t.Errorf("claims:\n%q\nwant\n%q", out.String(), want)
+	}
+
+	// outside git and with nothing held, neither line
+	rep.Claims = metrics.Claims{Weeks: []metrics.ClaimWeek{{Week: "2026-W36"}}}
+	out.Reset()
+	printClaims(&app{out: &out}, rep)
+	if out.Len() != 0 {
+		t.Errorf("claims with nothing held, outside git:\n%s", out.String())
 	}
 }
