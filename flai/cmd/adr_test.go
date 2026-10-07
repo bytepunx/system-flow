@@ -359,3 +359,86 @@ func TestDocSaveTakesTopicsAloneOnAnAcceptedAdr(t *testing.T) {
 		}
 	}
 }
+
+// S-0275: flai adr new --commit, in a story's worktree, commits the new ADR,
+// the index, and the ADR it supersedes, and nothing else, on the story's
+// branch with the story's prefix, and widens the story's touches in the
+// main checkout to them, in JSON and in text.
+func TestAdrNewCommitsOnTheStoryBranch(t *testing.T) {
+	root, wt := storyCommitProject(t)
+	out, errOut, code := runStdin(t, wt, decision, "adr", "new", "Issues are committed on the story branch", "--supersedes", "2", "--body-stdin", "--commit", "--json")
+	if code != 0 {
+		t.Fatalf("adr new --commit: %d %s %s", code, out, errOut)
+	}
+	var res struct {
+		ID           string   `json:"id"`
+		Committed    bool     `json:"committed"`
+		TouchesAdded []string `json:"touches_added"`
+		Commit       *struct {
+			Hash, Subject string
+			Paths         []string
+		} `json:"commit"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("json: %v\n%s", err, out)
+	}
+	file := "design/adrs/0008-issues-are-committed-on-the-story-branch.md"
+	written := "design/adrs/0002-second.md," + file + ",design/adrs/README.md"
+	subject := "docs: [S-0001] ADR-0008 Issues are committed on the story branch"
+	if res.ID != "ADR-0008" || res.Committed || res.Commit == nil || res.Commit.Subject != subject || res.Commit.Hash != gitIn(t, wt, "rev-parse", "HEAD") ||
+		strings.Join(res.Commit.Paths, ",") != written || strings.Join(res.TouchesAdded, ",") != written {
+		t.Errorf("json: %s", out)
+	}
+	if got := storyCommits(t, wt); len(got) != 1 || got[0] != subject {
+		t.Errorf("one commit on story/S-0001: %q", got)
+	}
+	if got := strings.Join(committedFiles(t, wt), ","); got != written {
+		t.Errorf("the commit holds what adr new wrote only: %s", got)
+	}
+	leftAlone(t, wt)
+	if got := strings.Join(storyTouches(t, root), ","); got != written {
+		t.Errorf("S-0001's touches in the main checkout: %s", got)
+	}
+
+	out, errOut, code = runIn(t, wt, "adr", "new", "Second decision", "--commit", "--trailer", "Co-Authored-By: T <t@t>")
+	if code != 0 {
+		t.Fatalf("adr new --commit: %d %s %s", code, out, errOut)
+	}
+	for _, want := range []string{
+		"ADR-0009 Second decision (proposed)\n  design/adrs/0009-second-decision.md\n",
+		"commit: " + short(gitIn(t, wt, "rev-parse", "HEAD")) + " docs: [S-0001] ADR-0009 Second decision\n",
+		"touches: added to S-0001: design/adrs/0009-second-decision.md\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if msg := gitIn(t, wt, "log", "-1", "--format=%B"); !strings.HasSuffix(msg, "\n\nCo-Authored-By: T <t@t>") {
+		t.Errorf("the trailer ends the message: %q", msg)
+	}
+	leftAlone(t, wt)
+}
+
+// S-0275: flai adr new --commit is refused, with nothing written, outside a
+// story's worktree and together with --autocommit.
+func TestAdrNewCommitRefusals(t *testing.T) {
+	root, wt := storyCommitProject(t)
+	head, before := gitIn(t, wt, "rev-parse", "HEAD"), gitIn(t, wt, "status", "--porcelain")
+	if _, errOut, code := runIn(t, wt, "adr", "new", "X", "--commit", "--autocommit"); code == 0 || !strings.Contains(errOut, "--commit and --autocommit cannot be given together") {
+		t.Errorf("--commit with --autocommit: %d %s", code, errOut)
+	}
+	if gitIn(t, wt, "status", "--porcelain") != before || gitIn(t, wt, "rev-parse", "HEAD") != head {
+		t.Errorf("a refused --commit --autocommit leaves the worktree as it was")
+	}
+	head = gitIn(t, root, "rev-parse", "HEAD")
+	if _, errOut, code := runIn(t, root, "adr", "new", "X", "--commit"); code == 0 || !strings.Contains(errOut, "no story resolves") || !strings.Contains(errOut, "nothing was written") {
+		t.Errorf("--commit in the main checkout: %d %s", code, errOut)
+	}
+	t.Setenv("FLAI_STORY", "S-0001")
+	if _, errOut, code := runIn(t, root, "adr", "new", "X", "--commit"); code == 0 || !strings.Contains(errOut, "has main checked out, not story/S-0001") {
+		t.Errorf("--commit for S-0001 in the main checkout: %d %s", code, errOut)
+	}
+	if st := gitIn(t, root, "status", "--porcelain"); st != "" || gitIn(t, root, "rev-parse", "HEAD") != head {
+		t.Errorf("a refused --commit leaves the main checkout as it was: %q", st)
+	}
+}

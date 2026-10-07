@@ -91,9 +91,70 @@ type issueFiled struct {
 	Outcome issues.Outcome `json:"outcome"`
 }
 
+// issueCommitFlags adds --commit and --trailer to issue new, bump, and close
+// (S-0275).
+func issueCommitFlags(c *cobra.Command, commit *bool, trailers *[]string) {
+	c.Flags().BoolVar(commit, "commit", false, commitFlagHelp)
+	c.Flags().StringArrayVar(trailers, "trailer", nil, "trailer line for the --commit commit (repeatable)")
+}
+
+// issueCommitHelp is what --commit does, for the Long help of issue new,
+// bump, and close.
+const issueCommitHelp = `--commit, run in a story's worktree, commits what was written, the issue's
+file and summary.md, and nothing else, on the story's branch as
+"docs: [S-nnnn] %s I-nnnn <title>", with each --trailer, and adds them to the
+story's touches in the main checkout. The output then says what was committed and what the
+touches gained; --json adds commit (null when nothing changed) and
+touches_added. Where the story's branch is not checked out, or no story
+resolves, --commit is refused and nothing is written.`
+
+// printIssueJSON prints an issue as --json gives it, with what --commit did
+// when it was given; outcome is printed when withOutcome.
+func (a *app) printIssueJSON(is *issues.Issue, outcome issues.Outcome, withOutcome bool, done *storyCommitted) error {
+	if done == nil {
+		if withOutcome {
+			return a.printJSON(issueFiled{Issue: is, Outcome: outcome})
+		}
+		return a.printJSON(is)
+	}
+	out := issueCommitted{Issue: is, Commit: done.commit, TouchesAdded: done.touches.Story}
+	if withOutcome {
+		out.Outcome = outcome
+	}
+	return a.printJSON(out)
+}
+
+// commitIssue commits what an issue command wrote, when --commit was given,
+// as "<verb> I-nnnn <title>"; nil when it was not.
+func (a *app) commitIssue(sc *storyCommit, repo *workitem.Repo, is *issues.Issue, verb string) (*storyCommitted, error) {
+	if sc == nil {
+		return nil, nil
+	}
+	paths, err := issueWritten(repo, is)
+	if err != nil {
+		return nil, err
+	}
+	done, err := a.commitForStory(sc, verb+" "+is.ID+" "+is.Title, paths)
+	if err != nil {
+		return nil, err
+	}
+	return &done, nil
+}
+
+// beginIssueCommit is beginStoryCommit for an issue command, nil when
+// --commit was not given.
+func (a *app) beginIssueCommit(repo *workitem.Repo, commit bool, story string, trailers []string) (*storyCommit, error) {
+	if !commit {
+		return nil, nil
+	}
+	return a.beginStoryCommit(repo, story, false, trailers)
+}
+
 func newIssueNewCmd(a *app) *cobra.Command {
 	var class, cost, note, story, report string
 	var impact issues.Impact
+	var commit bool
+	var trailers []string
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
 		Short: "Record a new issue (count 1), or a report's finding",
@@ -115,14 +176,23 @@ bumped, with the report, impact, and note, rather than a second one opened,
 and left as it is when an instance already names that report; the output
 says which happened, and --json gives it as outcome: opened, bumped, or
 already recorded. A path that is not a markdown file under design/analysis is
-refused and nothing is written.`,
+refused and nothing is written.
+
+` + fmt.Sprintf(issueCommitHelp, "record") + ` A bumped issue's
+commit says bump; one already recorded from the report commits nothing.`,
 		Example: `  flai issue new "golangci-lint on the host is v1 but the config is v2" --class efficiency --cost 5m
   flai issue new "Fixture under bin/ was git-ignored" --class defect --cost 15m --note "found by the release dry run"
   flai issue new "Review waits a day for the operator" --class efficiency --time-lost-per-cycle 6h \
-    --evidence "12 stories waited 18h on average in review" --report design/analysis/2026-10-06-bottlenecks.md --json`,
+    --evidence "12 stories waited 18h on average in review" --report design/analysis/2026-10-06-bottlenecks.md --json
+  flai issue new "The lint cache is shared between worktrees" --class defect --cost 10m --commit \
+    --trailer "Co-Authored-By: Claude <noreply@anthropic.com>"`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			sc, err := a.beginIssueCommit(repo, commit, story, trailers)
 			if err != nil {
 				return err
 			}
@@ -134,11 +204,16 @@ refused and nothing is written.`,
 			if _, err := issues.WriteSummary(repo, a.now()); err != nil {
 				return err
 			}
+			verb := "record"
+			if outcome == issues.Bumped {
+				verb = "bump"
+			}
+			done, err := a.commitIssue(sc, repo, is, verb)
+			if err != nil {
+				return err
+			}
 			if a.jsonOut {
-				if report == "" {
-					return a.printJSON(is)
-				}
-				return a.printJSON(issueFiled{Issue: is, Outcome: outcome})
+				return a.printIssueJSON(is, outcome, report != "", done)
 			}
 			fmt.Fprintf(a.out, "%s %s\n  %s\n", is.ID, is.Title, relPath(repo.Root, is.Path))
 			if report != "" {
@@ -151,6 +226,9 @@ refused and nothing is written.`,
 					fmt.Fprintln(a.out, "  opened")
 				}
 			}
+			if done != nil {
+				done.print(a)
+			}
 			return nil
 		},
 	}
@@ -159,6 +237,7 @@ refused and nothing is written.`,
 	c.Flags().StringVar(&note, "note", "", "what happened, recorded as the first instance")
 	c.Flags().StringVar(&story, "story", "", storyHelp)
 	issueImpactFlags(c, &impact, &report)
+	issueCommitFlags(c, &commit, &trailers)
 	_ = c.MarkFlagRequired("class")
 	return c
 }
@@ -166,6 +245,8 @@ refused and nothing is written.`,
 func newIssueBumpCmd(a *app) *cobra.Command {
 	var cost, note, story, report string
 	var impact issues.Impact
+	var commit bool
+	var trailers []string
 	c := &cobra.Command{
 		Use:   "bump <id>",
 		Short: "Record another occurrence of an issue",
@@ -178,12 +259,19 @@ and keep the others; --evidence adds the words behind them. --report links
 the analysis report under design/analysis that found it, as flai issue new
 --report does, for a finding the analyzer judged the same as this issue under
 another title. A bad amount, duration, or report path is refused and nothing
-is written.`,
+is written.
+
+` + fmt.Sprintf(issueCommitHelp, "bump"),
 		Example: `  flai issue bump I-0007 --cost 10m --note "again in the release dry run"
-  flai issue bump I-0007 --report design/analysis/2026-10-06-risk.md --penalty-per-week 300 --evidence "two releases slipped"`,
+  flai issue bump I-0007 --report design/analysis/2026-10-06-risk.md --penalty-per-week 300 --evidence "two releases slipped"
+  flai issue bump I-0007 --cost 5m --note "again while closing the story out" --commit --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			sc, err := a.beginIssueCommit(repo, commit, story, trailers)
 			if err != nil {
 				return err
 			}
@@ -197,10 +285,17 @@ is written.`,
 			if _, err := issues.WriteSummary(repo, a.now()); err != nil {
 				return err
 			}
+			done, err := a.commitIssue(sc, repo, is, "bump")
+			if err != nil {
+				return err
+			}
 			if a.jsonOut {
-				return a.printJSON(is)
+				return a.printIssueJSON(is, "", false, done)
 			}
 			fmt.Fprintf(a.out, "%s count %d, avg cost %s\n", is.ID, is.Count, orDefault(is.Cost, "-"))
+			if done != nil {
+				done.print(a)
+			}
 			return nil
 		},
 	}
@@ -208,17 +303,31 @@ is written.`,
 	c.Flags().StringVar(&note, "note", "", "what happened this time")
 	c.Flags().StringVar(&story, "story", "", storyHelp)
 	issueImpactFlags(c, &impact, &report)
+	issueCommitFlags(c, &commit, &trailers)
 	return c
 }
 
 func newIssueCloseCmd(a *app) *cobra.Command {
 	var reason string
+	var commit bool
+	var trailers []string
 	c := &cobra.Command{
 		Use:   "close <id>",
 		Short: "Close an issue with a reason",
-		Args:  cobra.ExactArgs(1),
+		Long: `Close an issue: its status is closed and its body ends with the reason.
+
+` + fmt.Sprintf(issueCommitHelp, "close") + ` The story is
+FLAI_STORY, else the one in FLAI_AGENT of the form agent-S-nnnn, else the
+story branch checked out.`,
+		Example: `  flai issue close I-0007 --reason "fixed by S-0275"
+  flai issue close I-0007 --reason "fixed by S-0275" --commit`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			sc, err := a.beginIssueCommit(repo, commit, "", trailers)
 			if err != nil {
 				return err
 			}
@@ -232,14 +341,22 @@ func newIssueCloseCmd(a *app) *cobra.Command {
 			if _, err := issues.WriteSummary(repo, a.now()); err != nil {
 				return err
 			}
+			done, err := a.commitIssue(sc, repo, is, "close")
+			if err != nil {
+				return err
+			}
 			if a.jsonOut {
-				return a.printJSON(is)
+				return a.printIssueJSON(is, "", false, done)
 			}
 			fmt.Fprintf(a.out, "%s closed\n", is.ID)
+			if done != nil {
+				done.print(a)
+			}
 			return nil
 		},
 	}
 	c.Flags().StringVar(&reason, "reason", "", "what closed it (a story ID, a fix, or why it no longer applies)")
+	issueCommitFlags(c, &commit, &trailers)
 	_ = c.MarkFlagRequired("reason")
 	return c
 }

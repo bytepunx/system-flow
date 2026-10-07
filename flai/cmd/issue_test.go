@@ -569,3 +569,116 @@ func TestIssueNewAndBumpWithImpactAndReport(t *testing.T) {
 		}
 	}
 }
+
+// S-0275: flai issue new, bump, and close --commit, in a story's worktree,
+// each commit the issue's file and summary.md, and nothing else, on the
+// story's branch with the story's prefix and widen the story's touches in
+// the main checkout to them, in text and in JSON.
+func TestIssueCommandsCommitOnTheStoryBranch(t *testing.T) {
+	root, wt := storyCommitProject(t)
+	const title = "Lint cache is shared between worktrees"
+
+	out, errOut, code := runIn(t, wt, "issue", "new", title, "--class", "defect", "--cost", "10m", "--commit", "--trailer", "Co-Authored-By: T <t@t>")
+	if code != 0 {
+		t.Fatalf("issue new --commit: %d %s %s", code, out, errOut)
+	}
+	file := "design/issues/I-0001-lint-cache-is-shared-between-worktrees.md"
+	subject := "docs: [S-0001] record I-0001 " + title
+	for _, want := range []string{
+		"I-0001 " + title + "\n",
+		"commit: " + short(gitIn(t, wt, "rev-parse", "HEAD")) + " " + subject + "\n",
+		"touches: added to S-0001: " + file + ", design/issues/summary.md\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if got := storyCommits(t, wt); len(got) != 1 || got[0] != subject {
+		t.Errorf("one commit on story/S-0001: %q", got)
+	}
+	if got := strings.Join(committedFiles(t, wt), ","); got != file+",design/issues/summary.md" {
+		t.Errorf("the commit holds the issue and the summary only: %s", got)
+	}
+	if msg := gitIn(t, wt, "log", "-1", "--format=%B"); !strings.HasSuffix(msg, "\n\nCo-Authored-By: T <t@t>") {
+		t.Errorf("the trailer ends the message: %q", msg)
+	}
+	leftAlone(t, wt)
+	if got := strings.Join(storyTouches(t, root), ","); got != file+",design/issues/summary.md" {
+		t.Errorf("S-0001's touches in the main checkout: %s", got)
+	}
+
+	type committed struct {
+		ID           string   `json:"id"`
+		Count        int      `json:"count"`
+		Status       string   `json:"status"`
+		Outcome      *string  `json:"outcome"`
+		TouchesAdded []string `json:"touches_added"`
+		Commit       *struct {
+			Hash, Subject string
+			Paths         []string
+		} `json:"commit"`
+	}
+	for _, c := range []struct {
+		args         []string
+		verb, status string
+		count, made  int
+	}{
+		{[]string{"issue", "bump", "I-0001", "--cost", "20m", "--commit", "--json"}, "bump", "open", 2, 2},
+		{[]string{"issue", "close", "I-0001", "--reason", "fixed by S-0001", "--commit", "--json"}, "close", "closed", 2, 3},
+	} {
+		out, errOut, code := runIn(t, wt, c.args...)
+		if code != 0 {
+			t.Fatalf("%v: %d %s %s", c.args, code, out, errOut)
+		}
+		var res committed
+		if err := json.Unmarshal([]byte(out), &res); err != nil {
+			t.Fatalf("%v: %v\n%s", c.args, err, out)
+		}
+		want := "docs: [S-0001] " + c.verb + " I-0001 " + title
+		if res.ID != "I-0001" || res.Count != c.count || res.Status != c.status || res.Outcome != nil || res.Commit == nil || res.Commit.Subject != want ||
+			res.Commit.Hash != gitIn(t, wt, "rev-parse", "HEAD") || strings.Join(res.Commit.Paths, ",") != file+",design/issues/summary.md" {
+			t.Errorf("%v: %s", c.args, out)
+		}
+		if res.TouchesAdded == nil || len(res.TouchesAdded) != 0 {
+			t.Errorf("%v: the touches cover the issue already, so touches_added is []: %s", c.args, out)
+		}
+		if got := storyCommits(t, wt); len(got) != c.made || got[0] != want {
+			t.Errorf("%v: commits on story/S-0001: %q", c.args, got)
+		}
+	}
+	leftAlone(t, wt)
+
+	// without --commit the JSON is as it was, and nothing is committed
+	out, _, code = runIn(t, wt, "issue", "new", "Another", "--class", "defect", "--json")
+	if code != 0 || strings.Contains(out, "touches_added") || strings.Contains(out, `"commit"`) || len(storyCommits(t, wt)) != 3 {
+		t.Errorf("issue new without --commit: %d %s", code, out)
+	}
+}
+
+// S-0275: --commit outside a story's worktree is refused before anything is
+// written, whether no story resolves or the story's branch is not the one
+// checked out.
+func TestIssueCommitRefusedOutsideTheStorysWorktree(t *testing.T) {
+	root, _ := storyCommitProject(t)
+	head := gitIn(t, root, "rev-parse", "HEAD")
+	for _, c := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"issue", "new", "X", "--class", "defect", "--commit"}, "no story resolves"},
+		{[]string{"issue", "new", "X", "--class", "defect", "--commit", "--story", "S-0001"}, "has main checked out, not story/S-0001"},
+		{[]string{"issue", "bump", "I-0001", "--commit", "--story", "S-0001"}, "has main checked out, not story/S-0001"},
+		{[]string{"issue", "close", "I-0001", "--reason", "r", "--commit"}, "no story resolves"},
+	} {
+		_, errOut, code := runIn(t, root, c.args...)
+		if code == 0 || !strings.Contains(errOut, c.want) || !strings.Contains(errOut, "nothing was written") {
+			t.Errorf("%v: %d %s, want %q", c.args, code, errOut, c.want)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "design", "issues")); !os.IsNotExist(err) {
+		t.Errorf("a refused --commit writes nothing: %v", err)
+	}
+	if st := gitIn(t, root, "status", "--porcelain"); st != "" || gitIn(t, root, "rev-parse", "HEAD") != head {
+		t.Errorf("a refused --commit leaves the main checkout as it was: %q", st)
+	}
+}

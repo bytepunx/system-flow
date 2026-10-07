@@ -75,7 +75,7 @@ func (a *app) printADR(res *adr.Result, verb string) error {
 func newAdrNewCmd(a *app) *cobra.Command {
 	var opt adr.Options
 	var supersedes, refines []string
-	var bodyStdin, printBody bool
+	var bodyStdin, printBody, commit bool
 	c := &cobra.Command{
 		Use:   "new \"<title>\"",
 		Short: "Record a new ADR: number, file, front matter, and index row are supplied",
@@ -93,9 +93,21 @@ if it reports anything the ADR introduces, every file is put back, the
 findings are printed, and the exit code is 4. --autocommit commits the new
 file, the index, and any superseded ADRs on their own, unless the project
 sets dashboard.autocommit: false. Nothing is pushed. --print-body prints the
-template's sections and creates nothing.`,
+template's sections and creates nothing.
+
+--commit, run in a story's worktree, instead commits what was written, the
+new file, the index, and any superseded ADRs, and nothing else, on the
+story's branch as "docs: [S-nnnn] ADR-nnnn <title>", with each --trailer, and
+adds them to the story's touches in the main checkout. The story is
+FLAI_STORY, else the one in FLAI_AGENT of the form agent-S-nnnn, else the
+story branch checked out. The output then says what was committed and what
+the touches gained; --json adds commit (null when nothing changed), which
+takes the place of --autocommit's, and touches_added. Where the story's
+branch is not checked out, or no story resolves, --commit is refused and
+nothing is written; so is --commit with --autocommit.`,
 		Example: `  flai adr new "Dashboards authenticate with a project token" --status accepted --refines 16
   flai adr new "Replace the SPA with server rendering" --supersedes 7 --body-stdin --autocommit < decision.md
+  flai adr new "Issues are committed on the story's branch" --body-stdin --commit --json < decision.md
   flai adr new --print-body`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if printBody {
@@ -133,6 +145,12 @@ template's sections and creates nothing.`,
 				}
 				opt.Body = string(data)
 			}
+			var sc *storyCommit
+			if commit {
+				if sc, err = a.beginStoryCommit(repo, "", opt.Autocommit, opt.Trailers); err != nil {
+					return err
+				}
+			}
 			res, err := adr.New(repo, a.runner, opt)
 			if rerr, ok := a.refusedADR(err); ok {
 				return rerr
@@ -140,16 +158,31 @@ template's sections and creates nothing.`,
 			if err != nil {
 				return err
 			}
-			return a.printADR(res, "recorded")
+			if sc == nil {
+				return a.printADR(res, "recorded")
+			}
+			done, err := a.commitForStory(sc, res.ID+" "+res.Title, res.Changed)
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(adrCommitted{Result: res, Commit: done.commit, TouchesAdded: done.touches.Story})
+			}
+			if err := a.printADR(res, "recorded"); err != nil {
+				return err
+			}
+			done.print(a)
+			return nil
 		},
 	}
 	f := c.Flags()
+	f.BoolVar(&commit, "commit", false, commitFlagHelp)
 	f.StringVar(&opt.Status, "status", "proposed", "proposed or accepted")
 	f.StringSliceVar(&supersedes, "supersedes", nil, "ADR this one supersedes (repeatable): 7, 0007, or ADR-0007")
 	f.StringSliceVar(&refines, "refines", nil, "ADR this one refines (repeatable)")
 	f.BoolVar(&bodyStdin, "body-stdin", false, "read the body below the heading from standard input")
 	f.BoolVar(&opt.Autocommit, "autocommit", false, "commit what was written on its own, unless dashboard.autocommit is false")
-	f.StringArrayVar(&opt.Trailers, "trailer", nil, "trailer line for the commit (repeatable)")
+	f.StringArrayVar(&opt.Trailers, "trailer", nil, "trailer line for the commit, --autocommit's or --commit's (repeatable)")
 	f.BoolVar(&printBody, "print-body", false, "print the template's sections and create nothing")
 	return c
 }
