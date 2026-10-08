@@ -3,11 +3,11 @@ id: I-0079
 title: TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
 class: defect
 status: open
-count: 9
+count: 10
 cost: 5m
 first_reported: 2026-10-05T05:55:58Z
-last_reported: 2026-10-08T04:24:20Z
-updated: 2026-10-08T04:24:20Z
+last_reported: 2026-10-08T08:17:30Z
+updated: 2026-10-08T08:17:30Z
 ---
 
 # I-0079 TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
@@ -52,6 +52,10 @@ S-0317's close-out stopped at the integration tier: flai/internal/workitem faile
 ### 2026-10-08T04:24:20Z
 Story: S-0316.
 S-0316's close-out at 04:19Z failed integration in flai/internal/workitem, which S-0316 does not touch. The kept output was the body of S-0326's story, the planning notes S-0326's planner was writing in the main checkout during the run. The close-out showed only the last lines, so the failing test is not named (I-0113). Run again.
+
+### 2026-10-08T08:17:30Z
+Story: S-0321.
+S-0321's close-out failed its integration tier in flai/internal/workitem while agent-S-0291 moved T-1340 to ready and in-progress in the main checkout (08:14:03Z to 08:14:04Z). The test passed on a rerun with the same branch head.
 
 ## Remediation
 
