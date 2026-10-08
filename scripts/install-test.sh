@@ -27,8 +27,14 @@ TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
 SCRATCH_HOME="$ROOT/.flai-cache/install-test-home"
 rm -rf "$SCRATCH_HOME"
 OUT="$ROOT/.flai-cache/install-test-home.log"
-env -i HOME="$SCRATCH_HOME" PATH="$PATH" GITHUB_TOKEN="$TOKEN" \
-  sh "$ROOT/install.sh" >"$OUT" 2>&1
+# Its exit is caught so that, under set -e, a failure prints install.sh's own
+# error rather than ending the script with no cause (I-0086).
+if ! env -i HOME="$SCRATCH_HOME" PATH="$PATH" GITHUB_TOKEN="$TOKEN" \
+  sh "$ROOT/install.sh" >"$OUT" 2>&1; then
+  echo "install-test: install.sh with no FLAI_INSTALL_DIR failed; its output:" >&2
+  cat "$OUT" >&2
+  exit 1
+fi
 [ -x "$SCRATCH_HOME/.flai/bin/flai" ] || { echo "install-test: default install did not land at \$HOME/.flai/bin" >&2; cat "$OUT" >&2; exit 1; }
 "$SCRATCH_HOME/.flai/bin/flai" version | grep -q '^flai [0-9]' || { echo "install-test: default-path binary does not report a version" >&2; exit 1; }
 grep -q 'export PATH=' "$OUT" || { echo "install-test: install.sh did not print a PATH line" >&2; cat "$OUT" >&2; exit 1; }
