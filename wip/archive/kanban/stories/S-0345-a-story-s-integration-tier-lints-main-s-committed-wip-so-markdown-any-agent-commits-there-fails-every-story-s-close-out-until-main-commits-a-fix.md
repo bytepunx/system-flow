@@ -3,10 +3,10 @@ id: S-0345
 type: story
 nature: remediation
 title: A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-08T08:08:19Z
-updated: 2026-10-08T09:08:32Z
+updated: 2026-10-08T09:18:44Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:14Z
@@ -14,18 +14,35 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:08:32Z
     by: agent-S-0345
+  - to: review
+    at: 2026-10-08T09:17:47Z
+    by: agent-S-0345
+  - to: done
+    at: 2026-10-08T09:18:44Z
+    by: orchestrator
 tags: [flai]
 topics: [testing]
-touches: [flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/repo_test.go, scripts/lint-md.sh, scripts/README.md, design/system/flai-cli.md, design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/summary.md]
+touches: [flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/repo_test.go, scripts/lint-md.sh, scripts/README.md, design/system/flai-cli.md, design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/summary.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 566
+  turns:
+    - day: 2026-10-08
+      test_runs: 3
+      hand_edits: 1
+      work: 29
+  models:
+    - model: claude-opus-5-5
+      input: 106
+      output: 33675
+      cache_read: 5740005
+      cache_write: 303885
+      cost: 3.9535
   strategic:
     - kind: orchestrator
       seconds: 63
@@ -62,8 +79,8 @@ finalized:
 This story remediates [I-0117](../../../design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md), "A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0117 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0117 is closed with `flai issue close I-0117 --reason` saying what fixed it
+- [x] The cause I-0117 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0117 is closed with `flai issue close I-0117 --reason` saying what fixed it
 
 ## Tasks
 - T-1363 TestRepositoryLintsClean scopes itself to the story in a close-out, so main's committed wip is a note, not a failure
@@ -101,3 +118,12 @@ Touches, file by file; no folder touch was kept:
 Forecast: `flai forecast` gave 17m, from 110 s per unit of size times size 9. Adjusted to 30m. Four close-out scoping stories like this one, S-0279, S-0280, S-0318, and S-0323, took 12 to 49 minutes of agent time, median about 24m. This change also runs the integration and smoke tiers at close-out because it changes `flai/`. The delivery is flai's, 2026-10-08T13:51Z, moved by the 13m added.
 
 Cost of delay: 180 USD a week, as `flai cod` worked it out from the operator's input of 1h12m lost per 168h cycle at 150 USD an hour. It stands. Every story that changes `flai/` can meet this failure while any agent writes to `wip/` on main, so the input may undercount, but it is the operator's to change.
+
+### Accepted by the orchestrator
+
+- Verified: 9859fa3ec6b6acaad1db2cf8f3f7df6e78c63ec2
+- At: 2026-10-08T09:18:44Z
+
+Verdict: accept. flai verify passed every step at the branch head 9859fa3e, and the verifier matched both criteria to the diff. Without CLOSE_OUT_STORY the full lint still counts every file, so CI and make lint-md are not weakened.
+- 1: flai/internal/mdlint/repo_test.go, flai/internal/mdlint/mdlint_test.go, scripts/lint-md.sh, scripts/README.md, design/system/flai-cli.md
+- 2: design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/summary.md

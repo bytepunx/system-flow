@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 281.7168
-accrued_seconds: 113894
-tasks_completed: 293
-last_run: 2026-10-08T09:00:59Z
+accrued_cost: 289.8134
+accrued_seconds: 114429
+tasks_completed: 294
+last_run: 2026-10-08T09:09:54Z
 ---
 
 # Orchestrator activity
@@ -2062,6 +2062,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0348, S-0360
 - Seconds: 24
 - Cost: 1.0108 USD, estimated
+
+### 2026-10-08T09:09:54Z
+
+- Summary: Accepted under accept_reviews: - S-0290 at verified 75462ec0: TestRoundTripRepositoryItems reads each item once; I-0079 closed. - S-0288 at verified 19c223fa: notify.test.ts's setManifest writes atomically and tells the Repo; I-0085 closed. For both, verify passed at the head, the verifier matched both criteria, and the dry-run had no blockers. Did not publish (judgement, 2 pending): both are test-only and ship no behaviour, so they are held to bundle with the next flai change. Promoted S-0348 under promote_to_ready (rank 1, 21m) and applied the throughput order: S-0348 first.
+- Items: S-0290, S-0288, S-0348
+- Seconds: 535
+- Cost: 8.0966 USD, estimated
 
 ## Refusals
 

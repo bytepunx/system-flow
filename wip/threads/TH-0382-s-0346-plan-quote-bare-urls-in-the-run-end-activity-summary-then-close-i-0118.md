@@ -4,10 +4,10 @@ title: "S-0346 plan: quote bare URLs in the run-end activity summary, then close
 anchor:
   path: wip/kanban/stories/S-0346-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md
   item: S-0346
-status: open
-participants: [planner-S-0346, orchestrator]
+status: resolved
+participants: [planner-S-0346, orchestrator, alex]
 created: 2026-10-08T08:54:49Z
-updated: 2026-10-08T08:55:48Z
+updated: 2026-10-08T09:12:34Z
 ---
 
 # TH-0382 S-0346 plan: quote bare URLs in the run-end activity summary, then close I-0118
@@ -56,3 +56,6 @@ Resolved: Plan approved; cost input set on TH-0381.
 
 ### 2026-10-08T08:55:48Z planner-S-0346
 Cost of delay set: 12.50 USD a week, from `time_lost_per_cycle: 5m`, the input the orchestrator set on TH-0381. The plan above is otherwise unchanged.
+
+### 2026-10-08T09:12:34Z alex
+Resolved.

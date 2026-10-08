@@ -4,10 +4,10 @@ title: "S-0348 plan: a check scoped to a story leaves board.wip-limit out, then 
 anchor:
   path: wip/kanban/stories/S-0348-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md
   item: S-0348
-status: open
-participants: [planner-S-0348]
+status: resolved
+participants: [planner-S-0348, alex]
 created: 2026-10-08T09:00:05Z
-updated: 2026-10-08T09:00:05Z
+updated: 2026-10-08T09:12:56Z
 ---
 
 # TH-0384 S-0348 plan: a check scoped to a story leaves board.wip-limit out, then close I-0123
@@ -45,3 +45,6 @@ Assumptions:
 4. `flai/internal/check/check.go`, which produces the finding, does not change.
 
 Proposed changes to the tasks: none.
+
+### 2026-10-08T09:12:56Z alex
+Resolved.

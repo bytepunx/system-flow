@@ -3,11 +3,11 @@ id: T-1363
 type: task
 nature: remediation
 title: TestRepositoryLintsClean scopes itself to the story in a close-out, so main's committed wip is a note, not a failure
-status: in-progress
+status: done
 parent: S-0345
 owner: alex
 created: 2026-10-08T08:39:49Z
-updated: 2026-10-08T09:09:24Z
+updated: 2026-10-08T09:12:40Z
 transitions:
   - to: ready
     at: 2026-10-08T09:09:24Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:09:24Z
     by: agent-S-0345
+  - to: done
+    at: 2026-10-08T09:12:40Z
+    by: agent-S-0345
 stream: S-0345
 tags: [flai]
-touches: [flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/repo_test.go]
+touches: [flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/repo_test.go, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md]
+usage:
+  source: log
+  seconds: 196
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 8941
+      cache_read: 1524058
+      cache_write: 80686
+      cost: 1.0497
 ---
 # T-1363 TestRepositoryLintsClean scopes itself to the story in a close-out, so main's committed wip is a note, not a failure
 

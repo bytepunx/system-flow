@@ -7,11 +7,11 @@ status: backlog
 parent: S-0344
 owner: alex
 created: 2026-10-08T08:35:44Z
-updated: 2026-10-08T08:35:44Z
+updated: 2026-10-08T09:10:56Z
 transitions: []
 stream: S-0344
 tags: [flai, dashboard]
-touches: [flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go]
+touches: [flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go]
 after: [T-1360]
 ---
 # T-1361 flai host's watch restarts the dashboard from the image ID it recorded, not the tag

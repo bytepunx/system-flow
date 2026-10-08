@@ -3,11 +3,11 @@ id: T-1364
 type: task
 nature: remediation
 title: lint-md.sh's whole-repository run leaves main's wip out in a close-out and lints only the wip files the story changes
-status: in-progress
+status: done
 parent: S-0345
 owner: alex
 created: 2026-10-08T08:39:56Z
-updated: 2026-10-08T09:09:25Z
+updated: 2026-10-08T09:12:12Z
 transitions:
   - to: ready
     at: 2026-10-08T09:09:24Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:09:25Z
     by: agent-S-0345
+  - to: done
+    at: 2026-10-08T09:12:11Z
+    by: agent-S-0345
 stream: S-0345
 tags: [flai]
-touches: [scripts/lint-md.sh]
+touches: [scripts/lint-md.sh, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/repo_test.go]
+usage:
+  source: log
+  seconds: 166
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2887
+      cache_read: 492134
+      cache_write: 26054
+      cost: 0.339
 ---
 # T-1364 lint-md.sh's whole-repository run leaves main's wip out in a close-out and lints only the wip files the story changes
 

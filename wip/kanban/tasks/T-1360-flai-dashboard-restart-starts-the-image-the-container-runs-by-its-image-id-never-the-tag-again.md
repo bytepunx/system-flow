@@ -3,12 +3,18 @@ id: T-1360
 type: task
 nature: remediation
 title: flai dashboard restart starts the image the container runs, by its image ID, never the tag again
-status: backlog
+status: in-progress
 parent: S-0344
 owner: alex
 created: 2026-10-08T08:35:35Z
-updated: 2026-10-08T08:35:35Z
-transitions: []
+updated: 2026-10-08T09:10:57Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:10:56Z
+    by: agent-S-0344
+  - to: in-progress
+    at: 2026-10-08T09:10:57Z
+    by: agent-S-0344
 stream: S-0344
 tags: [flai, dashboard]
 touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md]

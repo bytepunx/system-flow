@@ -3,16 +3,36 @@ id: T-1366
 type: task
 nature: remediation
 title: Close I-0117 with the reason that names the scoped lint test and lint-md.sh
-status: backlog
+status: done
 parent: S-0345
 owner: alex
 created: 2026-10-08T08:40:07Z
-updated: 2026-10-08T08:40:07Z
-transitions: []
+updated: 2026-10-08T09:13:24Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:12:55Z
+    by: agent-S-0345
+  - to: in-progress
+    at: 2026-10-08T09:12:56Z
+    by: agent-S-0345
+  - to: done
+    at: 2026-10-08T09:13:24Z
+    by: agent-S-0345
 stream: S-0345
 tags: [flai]
 touches: [design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/summary.md]
 after: [T-1363, T-1364]
+usage:
+  source: log
+  seconds: 28
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 4510
+      cache_read: 768818
+      cache_write: 40702
+      cost: 0.5295
 ---
 # T-1366 Close I-0117 with the reason that names the scoped lint test and lint-md.sh
 
