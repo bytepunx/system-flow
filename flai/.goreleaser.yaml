@@ -56,7 +56,8 @@ checksum:
 # SHA-256; the signature is published as checksums.txt.sig (S-0232). cosign v3
 # with a key pair from the environment and no Rekor upload: the three flags
 # keep v2's single base64 signature (design/system/release-signing.md).
-# Snapshot builds are not signed: scripts/flai-snapshot.sh passes --skip=sign.
+# --snapshot does not skip signing: a build without cosign and the key passes
+# --skip=sign, as scripts/flai-snapshot.sh does from S-0340.
 signs:
   - id: checksums
     artifacts: checksum
