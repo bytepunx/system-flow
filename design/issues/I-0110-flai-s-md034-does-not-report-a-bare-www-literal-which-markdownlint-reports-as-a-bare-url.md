@@ -3,11 +3,11 @@ id: I-0110
 title: "flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL"
 class: defect
 status: closed
-count: 2
-cost: 8m
+count: 3
+cost: 10m
 first_reported: 2026-10-07T08:55:00Z
-last_reported: 2026-10-08T00:36:53Z
-updated: 2026-10-08T00:36:53Z
+last_reported: 2026-10-08T04:14:53Z
+updated: 2026-10-08T04:14:53Z
 ---
 
 # I-0110 flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL
@@ -24,6 +24,10 @@ Found while making MD034 take bare email addresses (S-0265): flai/internal/mdlin
 ### 2026-10-08T00:36:53Z
 Story: S-0316.
 S-0316's close-out stopped at smoke: markdownlint-cli2 reported MD034 at wip/kanban/stories/S-0324-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md:66, the task list line `T-1317 flai's MD034 reports a bare www. literal`, which reached main past flai's own lint. The main checkout already holds the fix uncommitted (the literal in a code span); the close-out runs again once it is committed. The run cost about ten minutes.
+
+### 2026-10-08T04:14:53Z
+Story: S-0316.
+S-0316's own thread TH-0355 carried a bare `www.` in its title, which the MCP server's flai 1.38.1 let through, and flai mirrored the title into wip/agents/S-0316.md. S-0315's acceptance committed both to main. S-0316's close-out then failed smoke on them, S-0324's failed integration on them, and S-0316's own bump note on this issue failed its markdown tier the same way. The quoted fix sits uncommitted in the main checkout, and with review empty no acceptance can land it.
 
 ## Remediation
 
