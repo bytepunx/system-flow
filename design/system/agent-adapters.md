@@ -562,3 +562,14 @@ The five questions at the end of [Recommendation](#recommendation) were put to t
 | 5, a paid trial | Begin with OpenRouter. Its integration and smoke tests run only where an OpenRouter key is configured, and do nothing where it is not, so that no close-out and no CI run without the key fails for want of it | none; the epic's criteria |
 
 What the answer to question 2 leaves of the recommendation: the epic builds A alone. The two facts the spike was to settle, whether each gateway forwards what Claude Code sends and what the gateway's spend log says beside `total_cost_usd`, are checked by the epic's first story against OpenRouter, with the key the operator configures, before the contracts are fixed; LiteLLM follows OpenRouter. ADR-0130's contracts are built inside the Claude Code adapter, and Codex CLI stays the harness the finding recommends when a non-Claude model is wanted, as a later epic.
+
+## Epic
+
+E-0019, Agent adapters for LiteLLM and OpenRouter, in `wip/kanban/epics`, carries the outcome as acceptance criteria, one per decision above, the operator's answers in its notes, and no stories: the planner drafts them from this document. The planner reads first, in this order:
+
+1. [Abstractions](#abstractions), for the harness, provider, and model split, the contract per concern, and the settings each adds, then [Decision](#decision) for what was chosen.
+2. [ADR-0129](../adrs/0129-a-story-s-agent-names-a-provider-beside-its-harness-and-model-and-the-providers.md), [ADR-0130](../adrs/0130-every-harness-meets-flai-through-neutral-contracts-an-adapter-s-capabilities-a.md), [ADR-0131](../adrs/0131-a-harness-without-a-guard-hook-runs-a-story-s-agent-but-none-of-its-roles.md), and [ADR-0132](../adrs/0132-a-story-s-cost-comes-from-its-provider-s-spend-log-when-it-has-a-provider-from.md).
+3. The two gateway subsections of [LiteLLM and OpenRouter](#litellm-and-openrouter) and its list of what the documentation does not settle, which the epic's first story checks against OpenRouter.
+4. [Today](#today), for the code each concern lives in: `flai/internal/harness/adapters.go`, `flai/internal/guard/guard.go`, `flai/internal/mcpserver/permission.go`, `flai/internal/usage/log.go`, `flai/internal/manifest/agent.go`, `flai/internal/protected/protected.go`.
+
+The order the epic builds in: the provider split and OpenRouter, the first story settling the open checks; the neutral contracts inside the Claude Code adapter; LiteLLM; cost from the spend log and `priced_by`; documentation and the template with each story. Codex CLI, OpenCode, Goose, and a loop of flai's own are not in E-0019.
