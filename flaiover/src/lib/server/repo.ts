@@ -57,6 +57,30 @@ export type Thread = {
 	entries: ThreadEntry[];
 };
 
+/** One dated contribution to a conversation; story is empty on the entry that closes it. */
+export type ConversationEntry = { at: string; author: string; story: string; text: string };
+/**
+ * A conversation between two stories (S-0336), as flai's messages.View shapes it: closed and its
+ * reason are read from the file and the two stories' states, and awaiting names the story whose
+ * reply it waits for while open, empty once closed.
+ */
+export type Conversation = {
+	id: string;
+	title: string;
+	from: string;
+	to: string;
+	about: string[];
+	status: 'open' | 'closed';
+	closed: boolean;
+	closed_reason: string;
+	awaiting: string;
+	participants: string[];
+	created: string;
+	updated: string;
+	path: string; // repo-relative
+	entries: ConversationEntry[];
+};
+
 export type Item = {
 	id: string;
 	type: 'epic' | 'story' | 'task';
@@ -292,6 +316,22 @@ export class Repo extends EventEmitter {
 		return this.remember<Thread[]>(`threads:${want}`, 'threads.list', { on: want, all: true });
 	}
 
+	/** Every conversation between stories, closed ones included, sorted by ID, as flai reads them (S-0336). */
+	async messages(): Promise<Conversation[]> {
+		const raw = await this.remember<FlaiConversation[]>('messages', 'messages.list', { all: true });
+		return raw.map(fromFlaiConversation);
+	}
+
+	/** The conversations a story is one of the two sides of, closed ones included, its ID in any padding. */
+	async messagesFor(story: string): Promise<Conversation[]> {
+		const want = story.trim();
+		const raw = await this.remember<FlaiConversation[]>(`messages:${want}`, 'messages.list', {
+			story: want,
+			all: true
+		});
+		return raw.map(fromFlaiConversation);
+	}
+
 	/** The board as flai lays it out, epics and tasks included (board.ts gives it its shape). */
 	async boardView<T>(): Promise<T> {
 		return this.remember<T>('board', 'board.get', { all: true });
@@ -394,6 +434,8 @@ export class Repo extends EventEmitter {
  * change of another kind leaves it kept. project.info is read from the manifest alone, which
  * forgets everything; a thread's view names its story, read from the items; docs.tree carries
  * every file's front matter under the three folders. doc:<path> is read from its own file only.
+ * A conversation's file under the wip folder's messages is a document, and whether it reads as
+ * closed follows its two stories' states, read from the items.
  */
 const READS: Record<string, ChangeKind[]> = {
 	project: [],
@@ -402,6 +444,7 @@ const READS: Record<string, ChangeKind[]> = {
 	item: ['item'],
 	stats: ['item'],
 	threads: ['thread', 'item'],
+	messages: ['document', 'item'],
 	inbox: ['item', 'thread', 'narrative'],
 	activity: ['item', 'narrative'],
 	adrs: ['adr'],
@@ -456,6 +499,13 @@ function fromFlai(it: FlaiItem): Item {
 		tags: it.tags ?? undefined,
 		touches: it.touches ?? undefined
 	};
+}
+
+/** A conversation as flai marshals it: participants is null when its front matter names none. */
+type FlaiConversation = Omit<Conversation, 'participants'> & { participants: string[] | null };
+
+function fromFlaiConversation(c: FlaiConversation): Conversation {
+	return { ...c, participants: c.participants ?? [] };
 }
 
 const repos = new Map<string, Repo>();
