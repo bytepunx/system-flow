@@ -6,7 +6,7 @@ title: The close-out's last check that the branch contains main fails when flai 
 status: backlog
 owner: alex
 created: 2026-10-08T08:08:22Z
-updated: 2026-10-08T08:08:22Z
+updated: 2026-10-08T08:39:51Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
     by: flai
     at: 2026-10-08T08:08:22Z
+finalized:
+  by: alex
+  at: 2026-10-08T08:39:51Z
 ---
 # S-0347 The close-out's last check that the branch contains main fails when flai commits wip on main during its run
 
