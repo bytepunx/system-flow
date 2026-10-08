@@ -3,12 +3,15 @@ id: S-0334
 type: story
 nature: feature
 title: A story held on overlap is asked about by message, and starts when the holding story's agent shares the paths or narrows its claim
-status: backlog
+status: ready
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:04Z
-updated: 2026-10-08T08:51:23Z
-transitions: []
+updated: 2026-10-08T08:51:29Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:51:25Z
+    by: alex
 tags: [flai, template]
 topics: [cli, conventions, template]
 touches: [design/adrs, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 308
+      seconds: 336
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 49
-          output: 866
-          cache_read: 5726151
-          cache_write: 14682
-          cost: 1.4145
+          input: 62
+          output: 1085
+          cache_read: 9400333
+          cache_write: 18351
+          cost: 2.3207
 cost_of_delay:
   value: 288.04
   by: planner-E-0018
   at: 2026-10-08T04:33:20Z
 forecast:
   duration: 53m
-  delivery: 2026-10-08T14:04:00Z
-  basis: "Its own forecast of 53m; 21st in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341, S-0288, S-0344, S-0345, S-0290, S-0342, S-0343, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0297, S-0304, S-0305, S-0306 and S-0313."
+  delivery: 2026-10-08T10:45:00Z
+  basis: "Its own forecast of 53m; 6th in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341, S-0288, S-0344, S-0345, S-0290 and S-0342."
   by: flai
-  at: 2026-10-08T08:42:40Z
+  at: 2026-10-08T08:51:29Z
 finalized:
   by: alex
   at: 2026-10-08T08:51:23Z

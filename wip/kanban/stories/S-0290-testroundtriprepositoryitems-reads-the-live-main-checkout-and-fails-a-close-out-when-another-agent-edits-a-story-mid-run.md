@@ -6,7 +6,7 @@ title: TestRoundTripRepositoryItems reads the live main checkout and fails a clo
 status: ready
 owner: alex
 created: 2026-10-06T09:56:52Z
-updated: 2026-10-08T08:42:40Z
+updated: 2026-10-08T08:51:29Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:35Z
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-10-08T08:42:37Z
 forecast:
   duration: 30m
-  delivery: 2026-10-08T09:39:00Z
+  delivery: 2026-10-08T09:42:00Z
   basis: "Its own forecast of 30m; 4th in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341, S-0288, S-0344 and S-0345."
   by: flai
-  at: 2026-10-08T08:42:40Z
+  at: 2026-10-08T08:51:29Z
 finalized:
   by: alex
   at: 2026-10-07T02:19:37Z
@@ -83,7 +83,7 @@ Touches, all files, none a folder:
 
 `flai touches suggest` from the test file listed `work-hierarchy.md`, `docs/users/flai.md`, and `item.go` as co-changes. They are left out because the fix changes only a test, not the item format or a command. No design document names the test. Both `design/issues` paths are in `claims.shared`. S-0321, in progress, also touches the I-0079 file.
 
-Forecast: `flai forecast` gave 14m (size 5). It is raised to 30m because the close-out runs the whole integration tier, which is where the race showed, and the story adds a reproduction test. Delivery moves by the same 16m, to 09:44Z.
+Forecast: `flai forecast` gave 14m (size 5). It is raised to 30m because the close-out runs the whole integration tier, which is where the race showed, and the story adds a reproduction test. flai placed the delivery from the 30m and the pull order.
 
 Cost of delay: `flai cod` gives 15 USD a week from the input of 6m a cycle. That input counted one occurrence when the story was made. The value is set to 268 USD a week, from I-0079 as it stands:
 
@@ -92,4 +92,4 @@ Cost of delay: `flai cod` gives 15 USD a week from the input of 6m a cycle. That
 45m x 168h / 70.5h = 107m a week, about 1.79h x 150 USD = 268 USD a week
 ```
 
-The input is left as it is because it is the operator's. TH on S-0290 recommends raising it to 1h47m, which makes `flai cod` agree.
+The input is left as it is because it is the operator's. TH-0377 recommends raising it to 1h47m, which makes `flai cod` agree.

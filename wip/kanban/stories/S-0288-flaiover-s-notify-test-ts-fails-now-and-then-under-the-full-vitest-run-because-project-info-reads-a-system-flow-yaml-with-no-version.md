@@ -6,7 +6,7 @@ title: flaiover's notify.test.ts fails now and then under the full vitest run be
 status: ready
 owner: alex
 created: 2026-10-06T09:56:51Z
-updated: 2026-10-08T08:49:21Z
+updated: 2026-10-08T08:51:29Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:50Z
@@ -24,45 +24,45 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 125
+      seconds: 187
       estimated: true
       models:
         - model: claude-haiku-4-5-20251001
-          input: 88
-          output: 27
-          cache_read: 563577
-          cache_write: 40634
-          cost: 0.1201
+          input: 274
+          output: 68
+          cache_read: 1510375
+          cache_write: 103716
+          cost: 0.3211
         - model: claude-opus-5-5
-          input: 114
-          output: 16583
-          cache_read: 6069445
-          cache_write: 168164
-          cost: 3.4444
+          input: 144
+          output: 21541
+          cache_read: 8495734
+          cache_write: 270812
+          cost: 5.1771
     - kind: orchestrator
-      seconds: 55
+      seconds: 172
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 291
-          cache_read: 4347064
-          cache_write: 3097
-          cost: 1.0718
+          input: 83
+          output: 1558
+          cache_read: 22604263
+          cache_write: 16434
+          cost: 5.5734
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: alex
     at: 2026-10-08T08:49:21Z
-  value: 12.5
+  value: 37.5
   by: planner-S-0288
-  at: 2026-10-08T08:42:17Z
+  at: 2026-10-08T08:50:18Z
 forecast:
   duration: 20m
-  delivery: 2026-10-08T09:03:00Z
+  delivery: 2026-10-08T09:12:00Z
   basis: "Its own forecast of 20m; 1st in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340 and S-0341."
   by: flai
-  at: 2026-10-08T08:42:40Z
+  at: 2026-10-08T08:51:29Z
 finalized:
   by: alex
   at: 2026-10-07T02:20:05Z
@@ -98,13 +98,13 @@ Touches:
 
 | Touch | Source | Why |
 |-------|--------|-----|
-| `flaiover/src/lib/server/notify.test.ts` | layout | The flaky test, its `setManifest` helper, and the reproducing test. |
-| `design/issues/I-0085-…md` | design | Criterion 2 closes the issue. |
-| `design/issues/summary.md` | design | `flai issue close` regenerates it. |
+| `flaiover/src/lib/server/notify.test.ts` | declared (layout) | The flaky test, its `setManifest` helper, and the reproducing test. |
+| `design/issues/I-0085-…md` | declared (design) | Criterion 2 closes the issue. |
+| `design/issues/summary.md` | declared (design) | `flai issue close` regenerates it. |
 
-`flai touches suggest` listed nothing: the story declared no touches. No folder touch is kept. `design/issues` is in the manifest's `claims.shared`, so the two issue paths hold no story.
+`flai touches suggest` lists co-change from the three declared paths, all of it from other issues, `flai-cli.md`, and user docs that this test-only fix does not change, so none is added. No folder touch is kept. `design/issues` is in the manifest's `claims.shared`, so the two issue paths hold no story.
 
 Figures:
 
-- Forecast 20m, adjusted from flai's 6m: the 6m is the median of small remediations, but this one must show a race gone, which means a deterministic reproduction and several full flaiover vitest runs. Delivery moved by the same 14m to 2026-10-08T09:39:00Z.
-- Cost of delay 12.50 USD a week, as `flai cod` worked it out from the inputs (5m lost per 168h cycle at 150 USD an hour). It stands, though I-0085 now has three instances in two days, each a stopped close-out: the inputs were set before the second and third, so they understate it. The inputs are the operator's; the plan thread says so.
+- Forecast 20m, adjusted from flai's 14m (median 160 s per unit of size over 5 small remediations, size 5): this one must show a race gone, which means a deterministic reproduction and five full flaiover vitest runs. Delivery 2026-10-08T09:10:00Z, flai's 09:04 moved by the same 6m.
+- Cost of delay 37.50 USD a week, as `flai cod` works it out from the operator's inputs (15m lost per 168h cycle at 150 USD an hour). The operator raised the input from 5m to 15m on TH-0378, for I-0085's three stopped close-outs in two days; the value follows it unadjusted.
