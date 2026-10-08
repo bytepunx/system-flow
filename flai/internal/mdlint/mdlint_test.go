@@ -310,6 +310,26 @@ func TestBareEmailOfI0056(t *testing.T) {
 	}
 }
 
+// I-0110: mdlint skipped a bare www. literal, which markdownlint-cli2 0.20.0
+// reports as MD034, so a thread entry carrying one passed flai and failed a
+// close-out. A thread entry that brings one is now refused; one in a code
+// span or link text is not.
+func TestBareWwwOfI0110(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".markdownlint.yaml"), []byte("default: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before := "# TH-0300\n\n## Entries\n\n### 2026-10-07T08:55:00Z agent\n\nThe docs are at:\n"
+	err := Guard(dir, "wip/threads/TH-0300.md", before, before+"www.example.com, mirrored at [www.example.org](https://www.example.org).\n")
+	var le *Error
+	if !errors.As(err, &le) || len(le.Findings) != 1 || !strings.Contains(err.Error(), "line 8: MD034/no-bare-urls") {
+		t.Errorf("guard: %v", err)
+	}
+	if err := Guard(dir, "wip/threads/TH-0300.md", before, before+"`www.example.com`, mirrored at [www.example.org](https://www.example.org).\n"); err != nil {
+		t.Errorf("a code span and link text are not bare: %v", err)
+	}
+}
+
 // I-0070: TH-0101's entry quoted step 3 of a list as "> 3.", which
 // markdownlint-cli2 0.20.0 reports as MD029, and it reached main because
 // mdlint did not parse blockquotes. A thread entry that brings one is now

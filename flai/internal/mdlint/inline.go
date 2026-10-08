@@ -234,6 +234,60 @@ func bareURL(t string, i int) int {
 	return trimURL(s[:end])
 }
 
+// bareWww returns the length of a GFM literal www autolink at i, as
+// micromark takes it for markdownlint, or 0: www. in any case, at from or
+// after a space or one of (*_~[], with anything after it, then a domain up
+// to a space or punctuation other than - . _, with no underscore in its last
+// two dot-separated segments. A . or _ that only trailing punctuation
+// follows ends the domain.
+func bareWww(t string, i, from int) int {
+	if len(t)-i <= 4 || !strings.EqualFold(t[i:i+4], "www.") || i > from && !strings.ContainsRune(" \t\n(*_~[]", before(t, i)) {
+		return 0
+	}
+	under, underLast := false, false
+	for j := i; j < len(t); {
+		r, size := utf8.DecodeRuneInString(t[j:])
+		if r == '.' || r == '_' {
+			if trail(t, j) {
+				break
+			}
+			if r == '_' {
+				under = true
+			} else {
+				under, underLast = false, under
+			}
+		} else if unicode.IsSpace(r) || r != '-' && isPunct(r) {
+			break
+		}
+		j += size
+	}
+	if under || underLast {
+		return 0
+	}
+	end := i + 4
+	for end < len(t) && !unicode.IsSpace(rune(t[end])) && t[end] != '<' {
+		end++
+	}
+	return trimURL(t[i:end])
+}
+
+// trail reports whether only the punctuation GFM leaves out of an autolink
+// follows from j to a space, a <, or the end.
+func trail(t string, j int) bool {
+	for ; j < len(t); j++ {
+		switch c := t[j]; {
+		case strings.IndexByte("!\"',.:;?_~", c) >= 0:
+		case c == ']':
+			if j+1 == len(t) || strings.IndexByte(" \t\n([", t[j+1]) >= 0 {
+				return true
+			}
+		default:
+			return c == '<' || unicode.IsSpace(rune(c))
+		}
+	}
+	return true
+}
+
 // bareEmail returns the length of a GFM extended email autolink at i, as
 // micromark takes it for markdownlint, or 0: atext (alphanumerics and
 // +-._) after anything but atext or a slash, then @, then a domain of
@@ -414,14 +468,10 @@ func parseRange(seg *segment, from, to int, pair, link bool, out *inlineOut, inf
 			out.urls = append(out.urls, [2]int{l, col})
 			info.other++
 			i += n
-		case c == 'w' && strings.HasPrefix(t[i:to], "www.") && (i == from || strings.ContainsRune(" \t\n(*_~[]", before(t, i))):
-			n := 4
-			for i+n < to && !unicode.IsSpace(rune(t[i+n])) && t[i+n] != '<' {
-				n++
-			}
-			if k := trimURL(t[i : i+n]); k > 0 {
-				n = k
-			}
+		case (c == 'w' || c == 'W') && !link && !unclosed && bareWww(t[:to], i, from) > 0:
+			n := bareWww(t[:to], i, from)
+			l, col := seg.where(i)
+			out.urls = append(out.urls, [2]int{l, col})
 			info.other++
 			i += n
 		default:
