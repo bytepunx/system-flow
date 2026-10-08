@@ -2,12 +2,12 @@
 id: I-0086
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
 class: efficiency
-status: open
+status: closed
 count: 7
 cost: 7m
 first_reported: 2026-10-06T10:22:10Z
 last_reported: 2026-10-08T07:15:27Z
-updated: 2026-10-08T07:15:27Z
+updated: 2026-10-08T08:25:32Z
 ---
 
 # I-0086 The close-out's install smoke test failed once and passed when run alone, with no cause in its output
@@ -52,3 +52,4 @@ S-0326's close-out passed every tier through integration, then smoke failed in i
 ## Remediation
 
 Story S-0291 remediates this issue, created from it at 2026-10-06T10:31:55Z.
+Closed 2026-10-08T08:25:32Z: S-0291. The cause was GitHub dropping the connection partway through install.sh's 1 MB `releases?per_page=50` listing, with curl (92) or (56), and nothing tried it again. install.sh now makes up to three attempts at a call the network drops, two seconds apart, and never retries an HTTP error. It resolves the latest release from pages of ten. flai self-upgrade's page reads and downloads do the same, with three attempts a second apart. Tests that cut the response off mid-body reproduce the drop: flai/cmd/installsh_test.go (TestInstallShRetriesAListingTheNetworkDrops) and flai/internal/selfupgrade/selfupgrade_test.go (TestDroppedAnswerIsAskedAgain). Each fails without the retry. The hidden install.sh output in scripts/install-test.sh is left to S-0340's rewrite of that script, as agreed on MS-0013.
