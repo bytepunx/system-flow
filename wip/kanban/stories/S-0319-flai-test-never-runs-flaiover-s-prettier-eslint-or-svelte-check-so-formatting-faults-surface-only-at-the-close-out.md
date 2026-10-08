@@ -6,7 +6,7 @@ title: flai test never runs flaiover's prettier, eslint, or svelte-check, so for
 status: ready
 owner: alex
 created: 2026-10-07T18:59:50Z
-updated: 2026-10-08T00:29:58Z
+updated: 2026-10-08T00:31:19Z
 transitions:
   - to: ready
     at: 2026-10-08T00:16:14Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T00:15:45Z
 forecast:
   duration: 30m
-  delivery: 2026-10-08T01:14:00Z
-  basis: "Its own forecast of 30m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0317, S-0324, S-0318 and S-0320."
+  delivery: 2026-10-08T01:15:00Z
+  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318 and S-0320."
   by: flai
-  at: 2026-10-08T00:29:58Z
+  at: 2026-10-08T00:31:19Z
 finalized:
   by: orchestrator
   at: 2026-10-08T00:16:10Z
