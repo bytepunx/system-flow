@@ -6,7 +6,7 @@ title: flai verify's integration tier keeps only the last lines of go test's out
 status: backlog
 owner: alex
 created: 2026-10-07T18:59:59Z
-updated: 2026-10-07T18:59:59Z
+updated: 2026-10-08T04:38:17Z
 transitions: []
 tags: []
 agent:
@@ -44,7 +44,7 @@ This story remediates [I-0114](../../../design/issues/I-0114-flai-verify-s-integ
 
 ## Acceptance criteria
 - [ ] The cause I-0114 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0114 is closed with `flai issue close I-0114 --reason` saying what fixed it
+- [x] I-0114 is closed with `flai issue close I-0114 --reason` saying what fixed it
 
 ## Tasks
 
