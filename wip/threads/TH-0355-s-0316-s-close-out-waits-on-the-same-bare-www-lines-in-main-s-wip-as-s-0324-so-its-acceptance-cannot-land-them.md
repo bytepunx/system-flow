@@ -4,10 +4,10 @@ title: "S-0316's close-out waits on the same bare `www.` lines in main's wip as 
 anchor:
   path: wip/kanban/stories/S-0316-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md
   item: S-0316
-status: open
-participants: [agent-S-0316, orchestrator]
+status: answered
+participants: [agent-S-0316, orchestrator, alex]
 created: 2026-10-08T00:46:55Z
-updated: 2026-10-08T04:15:14Z
+updated: 2026-10-08T04:19:32Z
 ---
 
 # TH-0355 S-0316's close-out waits on the same bare `www.` lines in main's wip as S-0324, so its acceptance cannot land them
@@ -100,5 +100,10 @@ git -C /home/alex/git/bytepunx/system-flow commit -m "chore: quote bare www. in 
 - **Why it must be you.** Review is empty, so no flai acceptance is coming to commit these lines. Under ADR-0093 I cannot accept a story whose verify failed. No recorded rule lets an agent commit on main by hand.
 - **Option 2 also works.** You accept S-0316 yourself on its failed run. But that ships a story whose last close-out did not pass.
 - **It can recur.** Until S-0324 is published and the host's flai is upgraded (it runs 1.38.1 now), flai lets agents write a bare `www.` into `wip/`, and each one blocks every close-out again. Avoiding `www.` in thread titles meanwhile helps. Once S-0324 is accepted, I will publish it at once for that reason.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-08T04:19:32Z alex
+Confirmed the recommendation of 2026-10-08T04:15:14Z orchestrator.
 
 Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
