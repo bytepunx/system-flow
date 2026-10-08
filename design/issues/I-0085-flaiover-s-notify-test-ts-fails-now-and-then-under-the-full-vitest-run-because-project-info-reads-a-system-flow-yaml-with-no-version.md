@@ -2,12 +2,12 @@
 id: I-0085
 title: flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
 class: defect
-status: open
+status: closed
 count: 3
 cost: 4m
 first_reported: 2026-10-06T07:08:02Z
 last_reported: 2026-10-08T06:20:59Z
-updated: 2026-10-08T06:20:59Z
+updated: 2026-10-08T09:06:54Z
 ---
 
 # I-0085 flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
@@ -32,3 +32,4 @@ T-1212's `flai test` on flaiover's repo and the new /api/messages route failed o
 ## Remediation
 
 Story S-0288 remediates this issue, created from it at 2026-10-06T09:56:51Z.
+Closed 2026-10-08T09:06:54Z: S-0288 fixed it in the test's setup, not in Repo. notify.test.ts's setManifest truncated system-flow.yaml with writeFile and never reported the change, so a manifest read that an earlier repo.changed had started could see the file empty ("version is required") or cache it without notify_url (startNotifier returned null). setManifest now writes a temporary file, renames it over the manifest, and calls repo.changed('system-flow.yaml') as flai on the host does. A new test, "reads the notify_url set after a change was reported and the manifest read", reproduces the stale cached read and failed against the old setManifest; the whole flaiover vitest suite then passed five runs in a row.
