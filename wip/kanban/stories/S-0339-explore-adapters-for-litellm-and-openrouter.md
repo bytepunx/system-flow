@@ -3,14 +3,17 @@ id: S-0339
 type: story
 nature: research
 title: Explore Adapters for LiteLLM and OpenRouter
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-08T07:17:16Z
-updated: 2026-10-08T07:21:53Z
+updated: 2026-10-08T07:39:13Z
 transitions:
   - to: ready
     at: 2026-10-08T07:17:18Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T07:39:13Z
+    by: agent-S-0339
 tags: []
 topics: [cli, template]
 touches: [design/system/agent-adapters.md, design/system/README.md, design/adrs, design/adrs/README.md]
@@ -24,6 +27,22 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 276
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 122
+          output: 6214
+          cache_read: 816973
+          cache_write: 90009
+          cost: 0.2254
+        - model: claude-opus-5-5
+          input: 60
+          output: 18971
+          cache_read: 2831261
+          cache_write: 123558
+          cost: 1.9344
     - kind: orchestrator
       seconds: 173
       estimated: true

@@ -23,15 +23,15 @@ tags: [cli, flai, guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go]
 usage:
   source: log
-  seconds: 361
+  seconds: 367
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 216
-      cache_read: 2246001
-      cache_write: 127752
-      cost: 1.0596
+      input: 40
+      output: 13152
+      cache_read: 2633766
+      cache_write: 102873
+      cost: 1.5004
 ---
 # T-1270 flai guard lets a sub-agent run flai adr new, topics, and accept, and adr_new, without a commit
 

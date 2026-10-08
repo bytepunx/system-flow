@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 7
-      output: 29
-      cache_read: 498026
-      cache_write: 11849
-      cost: 0.2276
+      input: 8
+      output: 2484
+      cache_read: 497526
+      cache_write: 19433
+      cost: 0.2834
 ---
 # T-1271 An ADR refining ADR-0060 records that a sub-agent writes an ADR but never commits it, and agent-context.md says so
 

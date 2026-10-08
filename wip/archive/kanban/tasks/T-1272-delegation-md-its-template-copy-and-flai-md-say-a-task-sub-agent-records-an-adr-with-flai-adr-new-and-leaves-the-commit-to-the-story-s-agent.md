@@ -3,16 +3,36 @@ id: T-1272
 type: task
 nature: remediation
 title: delegation.md, its template copy, and flai.md say a task sub-agent records an ADR with flai adr new and leaves the commit to the story's agent
-status: backlog
+status: done
 parent: S-0287
 owner: alex
 created: 2026-10-07T23:19:23Z
-updated: 2026-10-07T23:19:23Z
-transitions: []
+updated: 2026-10-08T07:22:43Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:22:19Z
+    by: agent-S-0287
+  - to: in-progress
+    at: 2026-10-08T07:22:19Z
+    by: agent-S-0287
+  - to: done
+    at: 2026-10-08T07:22:43Z
+    by: agent-S-0287
 stream: S-0287
 tags: [conventions, docs, template]
-touches: [design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md]
+touches: [design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, template/CHANGELOG.md]
 after: [T-1270, T-1271]
+usage:
+  source: log
+  seconds: 24
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1858
+      cache_read: 371992
+      cache_write: 14530
+      cost: 0.2119
 ---
 # T-1272 delegation.md, its template copy, and flai.md say a task sub-agent records an ADR with flai adr new and leaves the commit to the story's agent
 

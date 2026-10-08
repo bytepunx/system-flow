@@ -6,7 +6,7 @@ title: flai verify --record-issues opens an issue on the story branch that anoth
 status: in-progress
 owner: alex
 created: 2026-10-07T18:59:58Z
-updated: 2026-10-08T07:15:27Z
+updated: 2026-10-08T07:38:52Z
 transitions:
   - to: ready
     at: 2026-10-08T04:21:11Z
@@ -74,8 +74,8 @@ finalized:
 This story remediates [I-0112](../../../design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md), "flai verify --record-issues opens an issue on the story branch that another branch opened under the same title meanwhile". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0112 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0112 is closed with `flai issue close I-0112 --reason` saying what fixed it
+- [x] The cause I-0112 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0112 is closed with `flai issue close I-0112 --reason` saying what fixed it
 
 ## Tasks
 - T-1319 An ADR refining ADR-0085 and ADR-0098 records the remedy for I-0112, proposed from its instance

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 202.8544
-accrued_seconds: 107878
-tasks_completed: 245
-last_run: 2026-10-08T07:20:43Z
+accrued_cost: 204.2591
+accrued_seconds: 107963
+tasks_completed: 246
+last_run: 2026-10-08T07:22:08Z
 ---
 
 # Orchestrator activity
@@ -1726,6 +1726,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0320
 - Seconds: 107
 - Cost: 0.0587 USD, estimated
+
+### 2026-10-08T07:22:08Z
+
+- Summary: The operator accepted S-0320 at 07:21:53Z (99109af5). My TH-0362 was settled once TH-0361 closed, and TH-0364, which asked for a sync after verify at head 629ce175 stopped at sync 2 commits behind, was moot and is resolved. Did not publish (judgement, 1 pending, 25 USD/week): S-0320 changes only a test and issue files and ships no behaviour, so it is held to bundle with the next flai change, as earlier test-only stories were.
+- Items: S-0320
+- Seconds: 85
+- Cost: 1.4047 USD, estimated
 
 ## Refusals
 

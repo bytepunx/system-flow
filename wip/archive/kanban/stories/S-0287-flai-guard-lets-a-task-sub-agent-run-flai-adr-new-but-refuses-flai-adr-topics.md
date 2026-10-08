@@ -3,10 +3,10 @@ id: S-0287
 type: story
 nature: remediation
 title: flai guard lets a task sub-agent run flai adr new but refuses flai adr topics
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T09:56:50Z
-updated: 2026-10-08T07:14:37Z
+updated: 2026-10-08T07:40:40Z
 transitions:
   - to: ready
     at: 2026-10-08T04:24:25Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-08T07:13:23Z
     by: agent-S-0287
+  - to: review
+    at: 2026-10-08T07:39:01Z
+    by: agent-S-0287
+  - to: done
+    at: 2026-10-08T07:40:40Z
+    by: orchestrator
 tags: [cli, flai, guard]
 topics: [cli, conventions, template]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/agent-context.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md, design/issues/summary.md, design/adrs/0127-flai-guard-lets-a-story-s-sub-agent-write-an-adr-with-flai-adr-new-topics-and.md, design/adrs/README.md]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/agent-context.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md, design/issues/summary.md, design/adrs/0127-flai-guard-lets-a-story-s-sub-agent-write-an-adr-with-flai-adr-new-topics-and.md, design/adrs/README.md, template/CHANGELOG.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,18 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 409
-  estimated: true
+  seconds: 1551
   turns:
     - day: 2026-10-08
-      work: 19
+      ceremony: 1
+      hand_edits: 1
+      work: 39
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 379
-      cache_read: 3786169
-      cache_write: 256400
-      cost: 1.8045
+      input: 128
+      output: 41759
+      cache_read: 8362712
+      cache_write: 326641
+      cost: 4.764
   strategic:
     - kind: orchestrator
       seconds: 213
@@ -72,8 +79,8 @@ finalized:
 This story remediates [I-0062](../../../design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md), "flai guard lets a task sub-agent run flai adr new but refuses flai adr topics". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0062 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0062 is closed with `flai issue close I-0062 --reason` saying what fixed it
+- [x] The cause I-0062 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0062 is closed with `flai issue close I-0062 --reason` saying what fixed it
 
 ## Tasks
 - T-1270 flai guard lets a sub-agent run flai adr new, topics, and accept, and adr_new, without a commit
@@ -106,3 +113,12 @@ The new ADR and its row in `design/adrs/README.md` are not declared: the story's
 Forecast: flai gave 5m (134 s per unit of size times size 2, from two criteria and no touches). It is raised to 45m: S-0246, the last guard remediation with a rule, tests, design, and docs, took 1845 s (31m), and this story adds an ADR and a template convention change. Delivery is flai's 2026-10-08T04:25Z, tenth in the pull order, pushed back by the 40m difference.
 
 Cost of delay: 30 USD a week, as `flai cod` worked it out from the operator's input (12m lost per 168h cycle at 150 USD an hour). It stands: the three instances in four days match the input's rate.
+
+### Accepted by the orchestrator
+
+- Verified: 11306f0ab167d2364c5933632541668e54d2ed54
+- At: 2026-10-08T07:40:40Z
+
+Verdict: accept. flai verify passed every step at the branch head 11306f0a, and the verifier matched both criteria to the diff. The commit flags stay refused to a sub-agent in every form tested.
+- 1: flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/adrs/0127-flai-guard-lets-a-story-s-sub-agent-write-an-adr-with-flai-adr-new-topics-and.md, design/adrs/README.md, design/system/agent-context.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, template/CHANGELOG.md, docs/users/flai.md
+- 2: design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md, design/issues/summary.md

@@ -3,12 +3,18 @@ id: T-1333
 type: task
 nature: research
 title: Record where flai is tied to Anthropic and Claude Code today
-status: backlog
+status: in-progress
 parent: S-0339
 owner: alex
 created: 2026-10-08T07:20:27Z
-updated: 2026-10-08T07:20:27Z
-transitions: []
+updated: 2026-10-08T07:39:56Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:39:55Z
+    by: agent-S-0339
+  - to: in-progress
+    at: 2026-10-08T07:39:56Z
+    by: agent-S-0339
 stream: S-0339
 tags: [research, agents]
 touches: [design/system/agent-adapters.md, design/system/README.md]
