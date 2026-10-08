@@ -3,12 +3,18 @@ id: T-1317
 type: task
 nature: remediation
 title: flai's MD034 reports a bare www. literal as markdownlint does
-status: backlog
+status: in-progress
 parent: S-0324
 owner: alex
 created: 2026-10-08T00:29:29Z
-updated: 2026-10-08T00:29:29Z
-transitions: []
+updated: 2026-10-08T00:31:34Z
+transitions:
+  - to: ready
+    at: 2026-10-08T00:31:34Z
+    by: agent-S-0324
+  - to: in-progress
+    at: 2026-10-08T00:31:34Z
+    by: agent-S-0324
 stream: S-0324
 tags: [mdlint]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/www.md, flai/internal/mdlint/testdata/cases/expected.txt]
