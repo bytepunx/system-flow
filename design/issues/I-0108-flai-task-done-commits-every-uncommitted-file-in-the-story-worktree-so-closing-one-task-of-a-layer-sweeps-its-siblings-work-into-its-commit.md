@@ -27,7 +27,7 @@ S-0309's layer 2 ran T-1275, T-1276, and T-1277 together in the story's worktree
 
 ### 2026-10-08T09:12:30Z
 Story: S-0345.
-S-0345 ran T-1363 and T-1364 together in one worktree. I committed T-1364's `scripts/lint-md.sh` by hand first, then called `flai task done T-1364`. It found T-1363's uncommitted `flai/internal/mdlint` test files and committed them under T-1364's message. It also widened T-1364's touches to them. I reworded the commit and narrowed the touches by hand.
+S-0345 ran T-1363 and T-1364 together in one worktree. I committed T-1364's `scripts/lint-md.sh` by hand first, then called `flai task done T-1364`. It found T-1363's uncommitted `flai/internal/mdlint` test files and committed them under T-1364's message. It also widened T-1364's touches to them. I reworded the commit. The touches could not be narrowed, because flai refuses to edit a task that is done.
 
 ## Remediation
 
