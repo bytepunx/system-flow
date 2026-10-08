@@ -3,7 +3,7 @@ id: I-0086
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
 class: efficiency
 status: open
-count: 6
+count: 7
 cost: 7m
 first_reported: 2026-10-06T10:22:10Z
 last_reported: 2026-10-08T06:55:19Z
@@ -20,6 +20,10 @@ The close-out's install smoke test failed once and passed when run alone, with n
 ### 2026-10-06T10:22:10Z
 Story: S-0283.
 S-0283's close-out stopped at smoke's last sub-step, scripts/install-test.sh, after gofmt, vet, lint, the full go test -race, the template render and check, and the markdown lint passed; its output showed self-upgrade --check reaching GitHub for release 1.31.4 but no failure reason. The verifier ran scripts/install-test.sh alone once: exit 0 after over five minutes. Likely the network or a timeout; the cause is not confirmed.
+
+### 2026-10-08T05:36:43Z
+Story: S-0320.
+S-0320's close-out failed smoke at `install-test: install.sh with an explicit FLAI_INSTALL_DIR`. This time the output names the cause: `curl: (56) OpenSSL SSL_read: ... unexpected eof while reading`, then `could not list releases of bytepunx/system-flow`. A transient network failure reaching GitHub's API fails the whole close-out after the integration tier has passed.
 
 ### 2026-10-08T05:40:46Z
 Story: S-0318.
