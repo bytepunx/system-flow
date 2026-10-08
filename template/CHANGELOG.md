@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.82 - 2026-10-08
+
+- S-0348 A close-out records no `board.wip-limit` (patch, ADR-0133): `work-management.md` says that a `board.wip-limit`, a column of the board over its limit, is left out of a close-out's check, as an `item.archive` is, since the board counts the main checkout's stories, which no story branch changes, and only the operator's acceptances, cancellations, or a raised limit clear it. It needs a flai that has it; an older flai still records every `board.wip-limit` at close-out.
+
 ## 1.0.81 - 2026-10-08
 
 - S-0322 flai task done commits every uncommitted file in the story worktree, so closing one task of a layer sweeps its siblings' work into its commit (patch).
