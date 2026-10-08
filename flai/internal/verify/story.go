@@ -116,6 +116,9 @@ type Step struct {
 	ExitCode *int     `json:"exit_code,omitempty"`
 	// ReusedFrom is when the run that ran a Reused tier began.
 	ReusedFrom *time.Time `json:"reused_from,omitempty"`
+	// CoveredBy names the tier that covers a skipped tier, as TierResult
+	// has it (S-0342).
+	CoveredBy string `json:"covered_by,omitempty"`
 }
 
 // Reused counts the report's reused tiers and answers the earliest run they
@@ -150,10 +153,11 @@ type Note struct {
 // Current state and Next steps are written, flai check --strict scoped to the
 // story passes, and then each tier the branch's changes select (SelectStory)
 // passes, run with CLOSE_OUT_STORY set to the story. It stops at the first
-// step that fails; the steps after it are not reached. When the story's last
-// report has the same head, base commit, and fingerprint, and Fresh is not
-// set, the tiers before the first it shows failed or not reached are not run
-// again but reported Reused, with the time of the run that ran them; the
+// step that fails; the steps after it are not reached, but for a tier that
+// another selected tier covers, which is skipped either way. When the story's
+// last report has the same head, base commit, and fingerprint, and Fresh is
+// not set, the tiers before the first it shows failed or not reached are not
+// run again but reported Reused, with the time of the run that ran them; the
 // steps before the tiers always run (S-0341). It commits nothing and records
 // no issue. The report, whole, is stored as the story's last (SaveReport)
 // whether it passes or not. It returns an error, with no report, when the
@@ -326,7 +330,11 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		}
 	} else {
 		for _, s := range selected {
-			rep.Steps = append(rep.Steps, Step{Name: s.Tier.Name, Tier: true, State: NotReached, Command: s.Argv, Dir: s.Tier.Dir})
+			step := Step{Name: s.Tier.Name, Tier: true, State: NotReached, Command: s.Argv, Dir: s.Tier.Dir}
+			if s.CoveredBy != "" {
+				step.State, step.CoveredBy = Skipped, s.CoveredBy
+			}
+			rep.Steps = append(rep.Steps, step)
 		}
 	}
 	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
@@ -464,12 +472,14 @@ func tierStep(tr TierResult) Step {
 	return Step{
 		Name: tr.Name, Tier: true, State: tr.State, DurationMS: tr.DurationMS, Duration: tr.Duration,
 		Findings: tr.Findings, Omitted: tr.Omitted, Command: tr.Command, Dir: tr.Dir, ExitCode: tr.ExitCode,
+		CoveredBy: tr.CoveredBy,
 	}
 }
 
 // reusable is the steps of the selected tiers that the story's last report
 // lets this run reuse, in order: those before the first it shows failed or
-// not reached, each Reused with the time of the run that ran it. It is none
+// not reached, each Reused with the time of the run that ran it, but for a
+// tier another selected tier covers, which stays Skipped. It is none
 // with Fresh, with no last report, or when the report's head, base commit,
 // fingerprint, or tiers differ from this run's; every tier, when it passed
 // them all.
@@ -492,7 +502,17 @@ func (v *storyRun) reusable(fp string, selected []Selected) []Step {
 	}
 	var out []Step
 	for i, s := range tiers {
-		if s.Name != selected[i].Tier.Name || (s.State != Passed && s.State != Reused) {
+		if s.Name != selected[i].Tier.Name {
+			break
+		}
+		// A tier another selected tier covers ran nothing, so it neither
+		// stops the reuse nor is reused: it stays Skipped (S-0342).
+		if s.State == Skipped && selected[i].CoveredBy != "" {
+			s.CoveredBy = selected[i].CoveredBy
+			out = append(out, s)
+			continue
+		}
+		if s.State != Passed && s.State != Reused {
 			break
 		}
 		from := last.RanAt.UTC()

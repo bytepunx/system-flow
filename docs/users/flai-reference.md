@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-08
+updated: 2026-10-12
 status: active
 ---
 
@@ -3523,9 +3523,9 @@ flai test [path|package]... [flags]
 
 Run the project's test and lint tiers, the tests list in system-flow.yaml, for the files and folders given, in the checkout of the working directory: a story's worktree or the main checkout. A Go package is given as its folder. With no argument the files are those the checkout changed against the main branch, committed or not. --all runs every tier, all\_only ones too, for the whole checkout.
 
-The tiers whose paths select a file run in the manifest's order, cheapest first, and the run stops at the first that fails. The answer is pass, or the failing tier's first findings, never its whole output: each as path:line name: message, at most --max across the run, with how many were left out. A manifest without tests runs scripts/test.sh as its one tier. Each tier runs with FLAI\_ROLE=verify whatever role ran flai test, so a test that runs flai's writes is not refused as the orchestrator (S-0311).
+The tiers whose paths select a file run in the manifest's order, cheapest first, and the run stops at the first that fails. The answer is pass, or the failing tier's first findings, never its whole output: each as path:line name: message, at most --max across the run, with how many were left out. A selected tier that another selected tier covers, by the covers key, is not run: it is listed as "skipped &lt;tier&gt;: covered by &lt;tier&gt;" (S-0342). A manifest without tests runs scripts/test.sh as its one tier. Each tier runs with FLAI\_ROLE=verify whatever role ran flai test, so a test that runs flai's writes is not refused as the orchestrator (S-0311).
 
-The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could not answer: an argument outside the checkout, tiers the manifest does not declare validly, or a run stopped before it finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with its state, command, duration, and findings.
+The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could not answer: an argument outside the checkout, tiers the manifest does not declare validly, or a run stopped before it finished. With --json the answer is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with its state, command, duration, and findings, and a skipped tier with covered\_by.
 
 Examples:
 
@@ -3790,12 +3790,15 @@ check      flai check --strict, scoped to the story, passes
            what the branch changed against the main branch selects, run
            with CLOSE_OUT_STORY set to the story and FLAI_ROLE=verify,
            whatever role ran flai verify, so a test that runs flai's
-           writes is not refused as the orchestrator (S-0311)
+           writes is not refused as the orchestrator (S-0311); a tier
+           that another selected tier covers is not run but listed as
+           "skipped tier <name>: covered by <tier>", even after a step
+           before it failed (S-0342)
 ```
 
 When the story's last run was at the same head and base commit, and the tiers, their commands, and those the branch selects are the same, the steps before the tiers run again but the tiers before the first the last run showed failed or not reached do not: each is reported reused, with the time of the run that ran it, and the run goes on from the tier that failed. Any change makes the run full; --fresh forces one (S-0341).
 
-flai verify commits nothing. The answer is a line for each step, its state and duration, the failing step's first findings under it, at most --max across the run, then the check's findings outside the story, which are notes that do not fail it, and last a line as the close-out ends: "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at &lt;step&gt; (&lt;exit status or state&gt;)", either followed by " (reused N tiers from &lt;time&gt;)" when tiers were reused, the earliest run they come from. With --json the answer is the report, with the story, the commit and base it was verified at and the base's commit, when it ran, how long it took, passed, stopped\_at, the paths the branch changed, and each step's state, duration, and findings, a reused tier's reused\_from, and the notes.
+flai verify commits nothing. The answer is a line for each step, its state and duration, the failing step's first findings under it, at most --max across the run, then the check's findings outside the story, which are notes that do not fail it, and last a line as the close-out ends: "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at &lt;step&gt; (&lt;exit status or state&gt;)", either followed by " (reused N tiers from &lt;time&gt;)" when tiers were reused, the earliest run they come from. With --json the answer is the report, with the story, the commit and base it was verified at and the base's commit, when it ran, how long it took, passed, stopped\_at, the paths the branch changed, and each step's state, duration, and findings, a reused tier's reused\_from, a skipped tier's covered\_by, and the notes.
 
 Each run's report is stored in the project's .flai-cache/verify, whether it passes or not; --last prints the story's stored report and runs nothing, or says there is none (null with --json), and exits 0 whatever it holds.
 

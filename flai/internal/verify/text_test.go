@@ -5,6 +5,7 @@ import "testing"
 func TestTextIsALineForEachTierAndFinding(t *testing.T) {
 	r := Result{Tiers: []TierResult{
 		{Name: "vet", State: Passed, Duration: "1.5s"},
+		{Name: "short", State: Skipped, CoveredBy: "test"},
 		{Name: "test", State: Failed, Duration: "42ms", Omitted: 3, Findings: []Finding{
 			{Name: "TestAdd", Path: "fx/calc/calc_test.go", Line: 7, Message: "Add(2, 3) = -1, want 5\nthe sum is wrong"},
 			{Name: "gofmt", Path: "fx/a.go", Message: "not gofmt-formatted"},
@@ -14,6 +15,7 @@ func TestTextIsALineForEachTierAndFinding(t *testing.T) {
 		{Name: "lint", State: NotReached},
 	}}
 	want := `passed vet (1.5s)
+skipped short: covered by test
 failed test (42ms)
 fx/calc/calc_test.go:7 TestAdd: Add(2, 3) = -1, want 5
     the sum is wrong

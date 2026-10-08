@@ -7,17 +7,21 @@ import (
 )
 
 // Text is the result as flai test prints it: a line for each tier, its
-// state, name, and duration, then each finding as path:line name: message,
-// a message's further lines indented under it.
+// state, name, and duration, or for a skipped tier the tier that covers it,
+// then each finding as path:line name: message, a message's further lines
+// indented under it.
 func (r Result) Text() string {
 	if len(r.Tiers) == 0 {
 		return "no tier selects these paths\n"
 	}
 	var b strings.Builder
 	for _, t := range r.Tiers {
-		if t.State == NotReached {
+		switch t.State {
+		case NotReached:
 			fmt.Fprintf(&b, "%s %s\n", t.State, t.Name)
-		} else {
+		case Skipped:
+			fmt.Fprintf(&b, "%s %s: covered by %s\n", t.State, t.Name, t.CoveredBy)
+		default:
 			fmt.Fprintf(&b, "%s %s (%s)\n", t.State, t.Name, t.Duration)
 		}
 		for _, f := range t.Findings {

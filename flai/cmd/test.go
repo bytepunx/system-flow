@@ -40,6 +40,8 @@ The tiers whose paths select a file run in the manifest's order, cheapest
 first, and the run stops at the first that fails. The answer is pass, or the
 failing tier's first findings, never its whole output: each as path:line
 name: message, at most --max across the run, with how many were left out.
+A selected tier that another selected tier covers, by the covers key, is not
+run: it is listed as "skipped <tier>: covered by <tier>" (S-0342).
 A manifest without tests runs scripts/test.sh as its one tier. Each tier runs
 with FLAI_ROLE=verify whatever role ran flai test, so a test that runs flai's
 writes is not refused as the orchestrator (S-0311).
@@ -48,7 +50,8 @@ The exit status is 0 on pass, 1 when a tier fails, and 2 when flai test could
 not answer: an argument outside the checkout, tiers the manifest does not
 declare validly, or a run stopped before it finished. With --json the answer
 is the result, {"passed": ..., "paths": [...], "tiers": [...]}, each tier with
-its state, command, duration, and findings.`,
+its state, command, duration, and findings, and a skipped tier with
+covered_by.`,
 		Example: `  flai test flai/internal/manifest
   flai test flaiover/src/lib/board.ts --json
   flai test                # what this checkout changed against the main branch

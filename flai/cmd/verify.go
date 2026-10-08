@@ -45,7 +45,10 @@ after it are not reached:
              what the branch changed against the main branch selects, run
              with CLOSE_OUT_STORY set to the story and FLAI_ROLE=verify,
              whatever role ran flai verify, so a test that runs flai's
-             writes is not refused as the orchestrator (S-0311)
+             writes is not refused as the orchestrator (S-0311); a tier
+             that another selected tier covers is not run but listed as
+             "skipped tier <name>: covered by <tier>", even after a step
+             before it failed (S-0342)
 
 When the story's last run was at the same head and base commit, and the
 tiers, their commands, and those the branch selects are the same, the steps
@@ -64,7 +67,7 @@ when tiers were reused, the earliest run they come from. With --json the
 answer is the report, with the story, the commit and base it was verified at
 and the base's commit, when it ran, how long it took, passed, stopped_at, the
 paths the branch changed, and each step's state, duration, and findings, a
-reused tier's reused_from, and the notes.
+reused tier's reused_from, a skipped tier's covered_by, and the notes.
 
 Each run's report is stored in the project's .flai-cache/verify, whether it
 passes or not; --last prints the story's stored report and runs nothing, or
@@ -266,7 +269,8 @@ func (a *app) printLastVerify(repo *workitem.Repo, story string, maxNotes int) e
 
 // verifyText is the report as flai verify prints it: a line for each step,
 // its state, name, and duration, a tier's name after "tier", a reused tier's
-// time of the run it comes from in place of its duration, a passing step's
+// time of the run it comes from in place of its duration, a skipped tier's
+// line naming the tier that covers it in place of a duration, a passing step's
 // note and the failing step's findings indented under it, then at most
 // maxNotes of the notes outside the story, the issues they were recorded in,
 // and last the outcome as the close-out's last line has it.
@@ -280,6 +284,8 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 		switch {
 		case s.State == verify.NotReached:
 			fmt.Fprintf(&b, "%s %s\n", s.State, name)
+		case s.State == verify.Skipped:
+			fmt.Fprintf(&b, "%s %s: covered by %s\n", s.State, name, s.CoveredBy)
 		case s.State == verify.Reused && s.ReusedFrom != nil:
 			fmt.Fprintf(&b, "%s %s (from %s)\n", s.State, name, s.ReusedFrom.UTC().Format(time.RFC3339))
 		default:

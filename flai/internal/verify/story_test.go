@@ -95,10 +95,11 @@ func newVerifyFixture(t *testing.T) *verifyFixture {
 	}}
 }
 
-// edit rewrites a file of the fixture, failing the test when old is not in
-// it.
-func (f *verifyFixture) edit(t *testing.T, rel, old, new string) {
+// editNarrative rewrites the story's narrative in the fixture, failing the
+// test when old is not in it.
+func (f *verifyFixture) editNarrative(t *testing.T, old, new string) {
 	t.Helper()
+	rel := "wip/agents/S-004.md"
 	p := filepath.Join(f.root, rel)
 	data, err := os.ReadFile(p)
 	if err != nil {
@@ -220,7 +221,7 @@ func TestVerifyStopsAtTheFirstStepThatFails(t *testing.T) {
 			delete(f.git.out, "diff --no-renames --name-only HEAD...main")
 		}, want: Finding{Name: "sync", Message: "cannot tell whether the branch contains main: list what main changed since the checkout left it: fatal: not a git repository; check that main is a branch of the repository"}},
 		{name: "an empty Next steps", stopped: 2, setup: func(t *testing.T, f *verifyFixture) {
-			f.edit(t, "wip/agents/S-004.md", "## Next steps\n1. n\n", "## Next steps\n1.\n\n")
+			f.editNarrative(t, "## Next steps\n1. n\n", "## Next steps\n1.\n\n")
 		}, want: Finding{Name: "narrative", Path: "wip/agents/S-004.md", Line: 17, Message: "## Next steps is empty; write it, then verify again"}},
 		{name: "no narrative", stopped: 2, setup: func(t *testing.T, f *verifyFixture) {
 			if err := os.Remove(filepath.Join(f.root, "wip/agents/S-004.md")); err != nil {
@@ -228,7 +229,7 @@ func TestVerifyStopsAtTheFirstStepThatFails(t *testing.T) {
 			}
 		}, want: Finding{Name: "narrative", Path: "wip/agents/S-004.md"}},
 		{name: "a check warning on the story's own narrative", stopped: 3, setup: func(t *testing.T, f *verifyFixture) {
-			f.edit(t, "wip/agents/S-004.md", "\n## Open questions\n", "\n")
+			f.editNarrative(t, "\n## Open questions\n", "\n")
 		}, want: Finding{Name: "narrative.section", Path: "wip/agents/S-004.md", Line: 1, Message: `warning: missing "## Open questions" section`}},
 		{name: "a failing tier", stopped: 4, setup: func(_ *testing.T, f *verifyFixture) {
 			f.proc.steps["go"] = step{stdout: "--- FAIL: TestX\n", exit: 1}
@@ -267,6 +268,53 @@ func TestVerifyStopsAtTheFirstStepThatFails(t *testing.T) {
 			}
 			if s := rep.Steps[len(rep.Steps)-1]; !s.Tier || !reflect.DeepEqual(s.Command, []string{"smoke.sh"}) {
 				t.Errorf("a tier not reached does not say what it would run: %+v", s)
+			}
+		})
+	}
+}
+
+// S-0342: a tier that another selected tier covers is skipped, naming it,
+// whether the steps before the tiers pass or one of them fails, and the
+// stored report keeps what covers it.
+func TestVerifySkipsATierThatASelectedTierCovers(t *testing.T) {
+	covering := slices.Clone(storyTiers)
+	covering[2].Covers = []string{"go-test"}
+	skipped := Step{Name: "go-test", Tier: true, State: Skipped, Command: []string{"go", "test", "./internal/x"}, Dir: "flai", CoveredBy: "integration"}
+	for _, tc := range []struct {
+		name  string
+		setup func(t *testing.T, f *verifyFixture)
+		want  []string
+		ran   []string
+	}{
+		{name: "every step passes", setup: func(*testing.T, *verifyFixture) {},
+			want: []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:skipped", "integration:passed", "smoke:passed"},
+			ran:  []string{"go test ./...", "smoke.sh"}},
+		{name: "the check fails", setup: func(t *testing.T, f *verifyFixture) {
+			f.editNarrative(t, "\n## Open questions\n", "\n")
+		}, want: []string{"rebase:passed", "sync:passed", "narrative:passed", "check:failed", "go-test:skipped", "integration:not-reached", "smoke:not-reached"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newVerifyFixture(t)
+			f.opts.Tiers = covering
+			tc.setup(t, f)
+			rep, err := Verify(context.Background(), f.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(states(rep), tc.want) || rep.Passed != (tc.ran != nil) {
+				t.Fatalf("passed %v, steps %v, want %v", rep.Passed, states(rep), tc.want)
+			}
+			if !reflect.DeepEqual(f.proc.ran, tc.ran) {
+				t.Errorf("ran %q, want %q", f.proc.ran, tc.ran)
+			}
+			if got := rep.Steps[4]; !reflect.DeepEqual(got, skipped) {
+				t.Errorf("go-test step\n%+v\nwant\n%+v", got, skipped)
+			}
+			if rep.Steps[5].CoveredBy != "" {
+				t.Errorf("integration step %+v names a tier that covers it", rep.Steps[5])
+			}
+			if last, ok, err := LastReport(f.opts.Project, "S-004"); err != nil || !ok || !reflect.DeepEqual(last.Steps[4], skipped) {
+				t.Errorf("stored go-test step %+v, %v, %v", last.Steps, ok, err)
 			}
 		})
 	}
@@ -426,7 +474,7 @@ func TestSyncOnlyPassesOverWipCommitsOnMainDuringACloseOut(t *testing.T) {
 
 func TestVerifyCapsTheFailingStepsFindings(t *testing.T) {
 	f := newVerifyFixture(t)
-	f.edit(t, "wip/agents/S-004.md", "## Current state\ns\n\n## Next steps\n1. n\n", "## Current state\n\n## Next steps\n-\n")
+	f.editNarrative(t, "## Current state\ns\n\n## Next steps\n1. n\n", "## Current state\n\n## Next steps\n-\n")
 	f.opts.Max = 1
 	rep, err := Verify(context.Background(), f.opts)
 	if err != nil {
@@ -540,6 +588,34 @@ func TestVerifyResumesAtTheTierTheLastRunFailed(t *testing.T) {
 		if s.ReusedFrom == nil || !s.ReusedFrom.Equal(wantFrom) {
 			t.Errorf("%s reused from %v, want the run that ran it at %v", s.Name, s.ReusedFrom, wantFrom)
 		}
+	}
+}
+
+// S-0341, S-0342: a tier another selected tier covers does not stop a resumed
+// run from reusing the tiers after it, and stays skipped rather than reused.
+func TestVerifyResumesPastATierASelectedTierCovers(t *testing.T) {
+	f := newVerifyFixture(t)
+	f.opts.Tiers = slices.Clone(storyTiers)
+	f.opts.Tiers[2].Covers = []string{"go-test"}
+	f.proc.steps["smoke.sh"] = step{exit: 1}
+	if first, err := Verify(context.Background(), f.opts); err != nil || first.StoppedAt != "smoke" {
+		t.Fatalf("first run %+v, %v", first, err)
+	}
+	f.proc.steps["smoke.sh"] = step{}
+	f.proc.ran = nil
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:skipped", "integration:reused", "smoke:passed"}
+	if !rep.Passed || !reflect.DeepEqual(states(rep), want) || !reflect.DeepEqual(f.proc.ran, []string{"smoke.sh"}) {
+		t.Fatalf("steps %v, ran %q", states(rep), f.proc.ran)
+	}
+	if s := rep.Steps[4]; s.CoveredBy != "integration" || s.ReusedFrom != nil {
+		t.Errorf("go-test step %+v", s)
+	}
+	if n, _ := rep.Reused(); n != 1 {
+		t.Errorf("reused %d tiers, want 1", n)
 	}
 }
 

@@ -228,6 +228,33 @@ func TestVerifyStopsAtAFailingStepWithItsFindingsAndExitsOne(t *testing.T) {
 	}
 }
 
+// S-0342: a tier that another selected tier covers is skipped, its line
+// naming the tier that covers it, in the text, in --json, and in --last.
+func TestVerifySkipsATierThatASelectedTierCovers(t *testing.T) {
+	root, worktree := verifyFixture(t, "exit 0")
+	manifest := filepath.Join(worktree, "system-flow.yaml")
+	data, err := os.ReadFile(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	whole := "  - name: whole\n    command: [sh, -c, 'exit 0']\n    paths: [\"docs/**\"]\n    covers: [unit]\n"
+	if err := os.WriteFile(manifest, append(data, whole...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
+	if code != 0 || !strings.Contains(out, "\nskipped tier unit: covered by whole\npassed tier whole (") || lastLine(out) != "verify: S-004 passed every step" {
+		t.Errorf("exit %d, want 0 and unit skipped, covered by whole\n%s%s", code, out, errOut)
+	}
+	for _, args := range [][]string{{"S-004"}, {"S-004", "--last"}} {
+		rep := verifyReport(t, root, 0, args...)
+		want := "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:skipped,tier whole:passed"
+		if got := stepStates(rep); got != want || !rep.Passed || rep.Steps[4].CoveredBy != "whole" || rep.Steps[4].Duration != "" || rep.Steps[5].CoveredBy != "" {
+			t.Errorf("verify %v: steps %s, want %s; unit %+v, whole %+v", args, got, want, rep.Steps[4], rep.Steps[5])
+		}
+	}
+}
+
 // S-0249: the check's findings outside the story are notes that do not fail
 // it, given after the steps and in --json.
 func TestVerifyGivesTheNotesOutsideTheStory(t *testing.T) {
