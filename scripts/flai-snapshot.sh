@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
-# GoReleaser snapshot build of flai into flai/dist (no publish).
+# GoReleaser snapshot build of flai into flai/dist (no publish). Unsigned:
+# --snapshot does not skip signing, and only the release workflow has cosign
+# and the release key.
 set -eu
 . "$(dirname "$0")/env.sh"
 
@@ -65,4 +67,4 @@ if [ "$#" -gt 0 ]; then
   exit 0
 fi
 cd "$ROOT/flai"
-goreleaser release --snapshot --clean --skip=publish
+goreleaser release --snapshot --clean --skip=publish,sign

@@ -57,7 +57,7 @@ checksum:
 # with a key pair from the environment and no Rekor upload: the three flags
 # keep v2's single base64 signature (design/system/release-signing.md).
 # --snapshot does not skip signing: a build without cosign and the key passes
-# --skip=sign, as scripts/flai-snapshot.sh does from S-0340.
+# --skip=sign, as scripts/flai-snapshot.sh does in both its modes.
 signs:
   - id: checksums
     artifacts: checksum
