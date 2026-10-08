@@ -3,16 +3,36 @@ id: T-1302
 type: task
 nature: improvement
 title: The convention, the design, and the users' guide say that a close-out leaves out a markdown finding on another open story's narrative
-status: backlog
+status: done
 parent: S-0318
 owner: alex
 created: 2026-10-08T00:10:44Z
-updated: 2026-10-08T00:10:44Z
-transitions: []
+updated: 2026-10-08T04:46:55Z
+transitions:
+  - to: ready
+    at: 2026-10-08T04:45:24Z
+    by: agent-S-0318
+  - to: in-progress
+    at: 2026-10-08T04:45:25Z
+    by: agent-S-0318
+  - to: done
+    at: 2026-10-08T04:46:55Z
+    by: agent-S-0318
 stream: S-0318
 tags: [flai, template]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1301]
+usage:
+  source: log
+  seconds: 3
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 24
+      cache_read: 178562
+      cache_write: 1354
+      cost: 0.0802
 ---
 # T-1302 The convention, the design, and the users' guide say that a close-out leaves out a markdown finding on another open story's narrative
 

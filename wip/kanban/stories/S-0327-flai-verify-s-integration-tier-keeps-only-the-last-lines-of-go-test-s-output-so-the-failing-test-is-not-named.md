@@ -3,11 +3,14 @@ id: S-0327
 type: story
 nature: improvement
 title: flai verify's integration tier keeps only the last lines of go test's output, so the failing test is not named
-status: backlog
+status: cancelled
 owner: alex
 created: 2026-10-07T18:59:59Z
-updated: 2026-10-08T04:38:20Z
-transitions: []
+updated: 2026-10-08T04:38:46Z
+transitions:
+  - to: cancelled
+    at: 2026-10-08T04:38:46Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
@@ -51,3 +54,4 @@ This story remediates [I-0114](../../../design/issues/I-0114-flai-verify-s-integ
 ## Notes
 
 Cost of delay inputs set by flai from I-0114. time_lost_per_cycle 15m: 15m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-07T09:20:56Z, 0.4 days before this story; under one cycle counts as one).
+- 2026-10-08T04:38:46Z: moved to cancelled: Duplicate of 313

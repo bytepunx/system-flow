@@ -3,15 +3,35 @@ id: T-1307
 type: task
 nature: remediation
 title: TestTheOrchestratorIsStartedAgainWhenItEnds sets the lab's clock from the failed run's recorded end, not from the host's clock plus a margin
-status: backlog
+status: done
 parent: S-0320
 owner: alex
 created: 2026-10-08T00:17:55Z
-updated: 2026-10-08T00:17:55Z
-transitions: []
+updated: 2026-10-08T04:44:13Z
+transitions:
+  - to: ready
+    at: 2026-10-08T04:43:56Z
+    by: agent-S-0320
+  - to: in-progress
+    at: 2026-10-08T04:43:57Z
+    by: agent-S-0320
+  - to: done
+    at: 2026-10-08T04:44:13Z
+    by: agent-S-0320
 stream: S-0320
 tags: [flai, serve, tests]
 touches: [flai/internal/serve/orchestrate_test.go]
+usage:
+  source: log
+  seconds: 16
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 32
+      cache_read: 245007
+      cache_write: 841
+      cost: 0.1096
 ---
 # T-1307 TestTheOrchestratorIsStartedAgainWhenItEnds sets the lab's clock from the failed run's recorded end, not from the host's clock plus a margin
 

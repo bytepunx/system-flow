@@ -4,10 +4,10 @@ title: "Plan: S-0322 waits for S-0312's fix, tests I-0108's three-task case, and
 anchor:
   path: wip/kanban/stories/S-0322-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md
   item: S-0322
-status: open
+status: resolved
 participants: [planner-S-0322, orchestrator]
 created: 2026-10-08T04:33:28Z
-updated: 2026-10-08T04:33:54Z
+updated: 2026-10-08T04:36:37Z
 ---
 
 # TH-0356 Plan: S-0322 waits for S-0312's fix, tests I-0108's three-task case, and closes I-0108
@@ -77,3 +77,20 @@ Why it matters: S-0322's plan builds no fix. It waits for S-0312 (`after: S-0312
 If you meant to keep S-0322 instead: say so here. The planner then needs to fold S-0312's four tasks into S-0322, with your confirmed remedy from TH-0337, and drop its `after`. I would ask it to replan.
 
 Source: design/adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md § Decision
+
+### 2026-10-08T04:35:05Z orchestrator (recommendation)
+Recommendation: run `flai plan S-0322` (or Plan on the dashboard) so the planner replans it as the story that carries the fix. I cannot start it: `flai plan --candidates` does not list S-0322, because it already has tasks.
+
+You kept S-0322 and added I-0104 to its criteria. Its plan still assumes S-0312 does the fix:
+
+- `after: S-0312` points at a cancelled story. promotion waits for every story in `after` to be done, so S-0322 would be held for good.
+- T-1328 and T-1329 only add a test and close I-0108. Nothing changes `flai/internal/taskdone/taskdone.go`, and nothing closes I-0104.
+
+The replan should drop the `after`. It should take over S-0312's four tasks with the remedy you confirmed on TH-0337: an ADR refining ADR-0107, a commit of only the closing task's paths, the CLI and MCP changes, and the docs. It should add the I-0104 close, and set the touches, forecast, and value again. I will approve that plan and finalize S-0322 when it comes back.
+
+Separately, criterion 2 shows `flai issue close I-0104 --reason` without the backticks criteria 1 and 3 use. That is cosmetic.
+
+Source: wip/kanban/stories/S-0322-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md
+
+### 2026-10-08T04:36:37Z orchestrator
+Resolved: Settled by the operator: S-0312 cancelled, S-0322 kept and widened to I-0104, and replanned on TH-0358 to carry the fix

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 19
-      output: 5423
-      cache_read: 1173681
-      cache_write: 52239
-      cost: 0.7212
+      input: 16
+      output: 4129
+      cache_read: 1185153
+      cache_write: 35663
+      cost: 0.5796
 ---
 # T-1296 Say in the operator docs and the design how the upgrade waits for the name and falls back, and close I-0094
 

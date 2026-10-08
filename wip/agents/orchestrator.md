@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 174.5545
-accrued_seconds: 97914
-tasks_completed: 216
-last_run: 2026-10-08T04:34:36Z
+accrued_cost: 187.7511
+accrued_seconds: 98228
+tasks_completed: 224
+last_run: 2026-10-08T04:39:50Z
 ---
 
 # Orchestrator activity
@@ -1523,6 +1523,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0324
 - Seconds: 38
 - Cost: 1.1022 USD, estimated
+
+### 2026-10-08T04:34:48Z
+
+- Summary: Published under judgement after accepting S-0324: 2 pending, 20 USD/week; flai 1.39.3→1.39.4 (flai/v1.39.4); bundled S-0315 and S-0324; pushed. The host's flai, 1.38.1, still lets agents write bare www. into wip until it is upgraded to 1.39.4
+- Items: S-0324, S-0315
+- Seconds: 12
+- Cost: 0.4296 USD, estimated
+
+### 2026-10-08T04:35:05Z
+
+- Summary: Recommended an answer on TH-0356, citing wip/kanban/stories/S-0322-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md
+- Items: S-0322
+- Seconds: 17
+- Cost: 0.6484 USD, estimated
+
+### 2026-10-08T04:35:07Z
+
+- Summary: The operator kept S-0322 and widened it to close I-0104. Recommended on TH-0356 that they run `flai plan S-0322`: its plan still waits on the cancelled S-0312 (held for good) and builds no fix, and it is not a plan candidate I can start. Re-applied the throughput order after S-0318 went in progress: S-0320 (25m), S-0319 (30m), S-0309 (35m), S-0326, S-0287 (45m)
+- Items: S-0322
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T04:35:31Z
+
+- Summary: After planner-E-0018 split S-0336 as the operator chose (TH-0357), finalized S-0336 (40m, 217.39 USD/week) and S-0338 (40m, 217.39 USD/week): flai promote --drafts lists both complete. Resolved my TH-0320. Promoted S-0336 to ready (flai promote --candidates rank 1, 40m); S-0338 is held by after on S-0334 and S-0336. Applied the throughput order: S-0320, S-0319, S-0309, S-0336, S-0326, S-0287. S-0334 stays a draft pending TH-0319
+- Items: S-0336, S-0338, S-0334
+- Seconds: 24
+- Cost: 1.5292 USD, estimated
+
+### 2026-10-08T04:36:35Z
+
+- Summary: Answered TH-0358, citing wip/kanban/stories/S-0322-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md
+- Items: S-0322
+- Seconds: 64
+- Cost: 2.2032 USD, estimated
+
+### 2026-10-08T04:36:49Z
+
+- Summary: Approved planner-S-0322's replan on TH-0358 (S-0312's confirmed fix carried over, `after` on the cancelled S-0312 dropped; 4 tasks, 50m, 12.50 USD/week) and resolved TH-0358, TH-0356, and TH-0306. Finalized S-0322 and promoted it to ready (flai promote --candidates rank 1, 50m). Applied the throughput order: S-0320, S-0319, S-0309, S-0336, S-0326, S-0287, S-0322
+- Items: S-0322
+- Seconds: 14
+- Cost: 0.6753 USD, estimated
+
+### 2026-10-08T04:39:46Z
+
+- Summary: Answered TH-0359, citing wip/kanban/stories/S-0322-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md
+- Items: S-0322
+- Seconds: 177
+- Cost: 7.7109 USD, estimated
+
+### 2026-10-08T04:39:50Z
+
+- Summary: Approved planner-S-0322's revisit on TH-0359 and resolved it: T-1331 also frees the host method task.done, within TH-0337's confirmed remedy; forecast 55m, value 12.50 USD/week. Re-applied the throughput order: S-0320 (25m), S-0319 (30m), S-0309 (35m), S-0336 (40m), S-0326, S-0287 (45m), S-0322 (55m)
+- Items: S-0322
+- Seconds: 4
+- Cost: 0.0000 USD
 
 ## Refusals
 

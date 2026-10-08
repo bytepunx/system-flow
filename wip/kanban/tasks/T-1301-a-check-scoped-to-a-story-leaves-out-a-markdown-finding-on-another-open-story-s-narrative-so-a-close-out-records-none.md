@@ -3,16 +3,36 @@ id: T-1301
 type: task
 nature: improvement
 title: A check scoped to a story leaves out a markdown finding on another open story's narrative, so a close-out records none
-status: backlog
+status: done
 parent: S-0318
 owner: alex
 created: 2026-10-08T00:10:38Z
-updated: 2026-10-08T00:10:38Z
-transitions: []
+updated: 2026-10-08T04:43:31Z
+transitions:
+  - to: ready
+    at: 2026-10-08T04:35:38Z
+    by: agent-S-0318
+  - to: in-progress
+    at: 2026-10-08T04:35:38Z
+    by: agent-S-0318
+  - to: done
+    at: 2026-10-08T04:43:31Z
+    by: agent-S-0318
 stream: S-0318
 tags: [flai]
 touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]
 after: [T-1300]
+usage:
+  source: log
+  seconds: 473
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 231
+      cache_read: 1646620
+      cache_write: 80602
+      cost: 0.7702
 ---
 # T-1301 A check scoped to a story leaves out a markdown finding on another open story's narrative, so a close-out records none
 

@@ -3,14 +3,17 @@ id: S-0320
 type: story
 nature: remediation
 title: flai serve's test that the orchestrator is started again when it ends fails under the close-out's full integration run
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:51Z
-updated: 2026-10-08T04:38:47Z
+updated: 2026-10-08T04:42:15Z
 transitions:
   - to: ready
     at: 2026-10-08T00:18:40Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T04:42:15Z
+    by: agent-S-0320
 tags: [flai, serve, tests]
 topics: [continuous-improvement]
 touches: [flai/internal/serve/orchestrate_test.go, design/issues/I-0106-flai-serve-s-test-that-the-orchestrator-is-started-again-when-it-ends-fails-under-the-close-out-s-full-integration-run.md, design/issues/summary.md]
@@ -20,9 +23,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 134
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      ceremony: 1
+      hand_edits: 1
+      work: 17
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 231
+      cache_read: 1971780
+      cache_write: 119906
+      cost: 0.9327
   strategic:
     - kind: orchestrator
       seconds: 149

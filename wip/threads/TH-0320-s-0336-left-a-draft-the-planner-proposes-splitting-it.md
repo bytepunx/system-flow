@@ -4,10 +4,10 @@ title: "S-0336 left a draft: the planner proposes splitting it"
 anchor:
   path: wip/kanban/stories/S-0336-the-dashboard-shows-the-messages-between-stories-agents-on-each-story-s-page-and-in-a-messages-view.md
   item: S-0336
-status: open
-participants: [orchestrator, alex]
+status: resolved
+participants: [orchestrator, alex, planner-E-0018]
 created: 2026-10-07T20:24:26Z
-updated: 2026-10-08T04:29:27Z
+updated: 2026-10-08T04:35:23Z
 ---
 
 # TH-0320 S-0336 left a draft: the planner proposes splitting it
@@ -28,3 +28,9 @@ take the recommendation for the split
 
 ### 2026-10-08T04:29:27Z orchestrator
 Follow-up: I cannot make the split myself. It needs a new story, which only the planner or you can create, and `flai plan --candidates` no longer lists S-0336 or E-0018, so I cannot start the planner on them. To split it, run `flai plan E-0018` (or Plan on the dashboard) and ask for the split TH-0318 proposed: the reads, the Messages view, and the story page after S-0330 only; the held-card part after S-0334. When the planner's thread comes back I will approve the plan and finalize both drafts. Until then S-0336 stays a draft.
+
+### 2026-10-08T04:35:15Z planner-E-0018
+Split done, as accepted. S-0336 now holds the host reads, the Messages view, and the story page, and waits only for S-0330, which is done. The held card's part is the new draft S-0338, after S-0334 and S-0336. Both drafts have tasks, touches, a forecast, and a value. The plan is on TH-0357.
+
+### 2026-10-08T04:35:23Z orchestrator
+Resolved: Split as the operator chose: planner-E-0018 narrowed S-0336 (after S-0330) and drafted S-0338 for the held card (TH-0357); the orchestrator finalized both

@@ -3,10 +3,10 @@ id: S-0316
 type: story
 nature: remediation
 title: The dashboard upgrade stops the old container and cannot start the new one, because the name flaiover is still in use
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T18:59:46Z
-updated: 2026-10-08T04:24:20Z
+updated: 2026-10-08T04:49:57Z
 transitions:
   - to: ready
     at: 2026-10-07T23:55:54Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-07T23:59:51Z
     by: agent-S-0316
+  - to: review
+    at: 2026-10-08T04:42:08Z
+    by: agent-S-0316
+  - to: done
+    at: 2026-10-08T04:49:57Z
+    by: orchestrator
 tags: []
-touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md, design/issues/summary.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md]
+touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md, design/issues/summary.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,22 +29,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3293
+  seconds: 4656
   turns:
     - day: 2026-10-07
       work: 4
     - day: 2026-10-08
-      ceremony: 7
-      test_runs: 4
-      hand_edits: 1
-      work: 50
+      ceremony: 9
+      test_runs: 6
+      hand_edits: 2
+      work: 73
   models:
     - model: claude-opus-5-5
-      input: 204
-      output: 56984
-      cache_read: 12333404
-      cache_write: 548941
-      cost: 7.5787
+      input: 262
+      output: 68329
+      cache_read: 19614682
+      cache_write: 590241
+      cost: 9.5925
   strategic:
     - kind: orchestrator
       seconds: 12792
@@ -108,3 +114,13 @@ Touches, file by file; no folder touch is kept.
 Forecast: `flai forecast` gave 16m, 94 s per unit of size over 17 done remediation stories in the medium band, times size 10 (2 criteria, 8 touches). Raised to 30m. `fakeRunner` has no notion of a name held after `stop`, so the reproducing test needs new fixture behaviour; the fix changes both `upgrade` and `restart` and adds a rollback path. Delivery is flai's, 2026-10-08T06:40Z, moved by the 14m added.
 
 Cost of delay: `flai cod` gives 30.00 USD a week, from the inputs flai set (12m lost per 168h cycle at 150 USD an hour). It stands. The issue's own text counts four occurrences in the journal against the two in its `count`, so the inputs understate the loss. They are the operator's to raise.
+
+### Accepted by the orchestrator
+
+- Verified: cf8169d9f498e5bbaa3f29f3a4cf147408fd566e
+- At: 2026-10-08T04:49:57Z
+
+Verdict: accept; both criteria met (verifier at cf8169d9f498e5bbaa3f29f3a4cf147408fd566e; flai verify passed every step at that commit). Minor: I-0094's close reason cites 66f2113e, a pre-rebase hash of the fix (003bd05a on the branch). The issue bumps on the branch are the close-outs' own records, all within the touches.
+
+- 1: flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, design/system/flai-cli.md, docs/operators/index.md, docs/operators/runbooks/update.md, docs/users/flai-reference.md
+- 2: design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md, design/issues/summary.md

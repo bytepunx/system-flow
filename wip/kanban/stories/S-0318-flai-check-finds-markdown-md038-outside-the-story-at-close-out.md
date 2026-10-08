@@ -6,7 +6,7 @@ title: "flai check finds `markdown.MD038` outside the story at close-out"
 status: in-progress
 owner: alex
 created: 2026-10-07T18:59:49Z
-updated: 2026-10-08T04:34:02Z
+updated: 2026-10-08T04:46:45Z
 transitions:
   - to: ready
     at: 2026-10-08T00:11:45Z
@@ -23,9 +23,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 689
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      hand_edits: 1
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 457
+      cache_read: 3663863
+      cache_write: 235173
+      cost: 1.7386
   strategic:
     - kind: orchestrator
       seconds: 133
@@ -62,8 +73,8 @@ finalized:
 This story remediates [I-0096](../../../design/issues/I-0096-flai-check-finds-markdown-md038-outside-the-story-at-close-out.md), "flai check finds `markdown.MD038` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0096 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0096 is closed with `flai issue close I-0096 --reason` saying what fixed it
+- [x] The cause I-0096 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0096 is closed with `flai issue close I-0096 --reason` saying what fixed it
 
 ## Tasks
 - T-1300 An ADR refining ADR-0085 and ADR-0122 records the remedy for I-0096, proposed from its instance

@@ -3,15 +3,35 @@ id: T-1300
 type: task
 nature: improvement
 title: An ADR refining ADR-0085 and ADR-0122 records the remedy for I-0096, proposed from its instance
-status: backlog
+status: done
 parent: S-0318
 owner: alex
 created: 2026-10-08T00:10:28Z
-updated: 2026-10-08T00:10:28Z
-transitions: []
+updated: 2026-10-08T04:35:27Z
+transitions:
+  - to: ready
+    at: 2026-10-08T04:34:44Z
+    by: agent-S-0318
+  - to: in-progress
+    at: 2026-10-08T04:34:44Z
+    by: agent-S-0318
+  - to: done
+    at: 2026-10-08T04:35:27Z
+    by: agent-S-0318
 stream: S-0318
 tags: [flai]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 43
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 113
+      cache_read: 786343
+      cache_write: 9476
+      cost: 0.3549
 ---
 # T-1300 An ADR refining ADR-0085 and ADR-0122 records the remedy for I-0096, proposed from its instance
 
