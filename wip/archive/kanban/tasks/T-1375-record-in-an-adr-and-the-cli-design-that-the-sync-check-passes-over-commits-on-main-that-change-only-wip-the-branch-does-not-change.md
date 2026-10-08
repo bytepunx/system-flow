@@ -3,15 +3,35 @@ id: T-1375
 type: task
 nature: improvement
 title: Record in an ADR and the CLI design that the sync check passes over commits on main that change only wip the branch does not change
-status: backlog
+status: done
 parent: S-0347
 owner: alex
 created: 2026-10-08T08:43:52Z
-updated: 2026-10-08T08:43:52Z
-transitions: []
+updated: 2026-10-08T10:31:07Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:29:59Z
+    by: agent-S-0347
+  - to: in-progress
+    at: 2026-10-08T10:30:00Z
+    by: agent-S-0347
+  - to: done
+    at: 2026-10-08T10:31:07Z
+    by: agent-S-0347
 stream: S-0347
 tags: [cli, docs]
 touches: [design/adrs/0133-the-close-out-s-sync-check-passes-over-commits-on-main-that-change-only-wip.md, design/adrs/README.md, design/system/flai-cli.md, design/system/devex.md]
+usage:
+  source: log
+  seconds: 67
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 5995
+      cache_read: 979793
+      cache_write: 31548
+      cost: 0.5224
 ---
 # T-1375 Record in an ADR and the CLI design that the sync check passes over commits on main that change only wip the branch does not change
 

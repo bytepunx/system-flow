@@ -3,16 +3,36 @@ id: T-1381
 type: task
 nature: improvement
 title: flai verify --sync-only runs the rebase and sync steps alone and stores no record
-status: backlog
+status: done
 parent: S-0347
 owner: alex
 created: 2026-10-08T08:44:19Z
-updated: 2026-10-08T08:44:19Z
-transitions: []
+updated: 2026-10-08T10:41:26Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:36:29Z
+    by: agent-S-0347
+  - to: in-progress
+    at: 2026-10-08T10:36:29Z
+    by: agent-S-0347
+  - to: done
+    at: 2026-10-08T10:41:26Z
+    by: agent-S-0347
 stream: S-0347
 tags: [cli, docs]
-touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1377]
+usage:
+  source: log
+  seconds: 297
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 16153
+      cache_read: 2639870
+      cache_write: 84999
+      cost: 1.4075
 ---
 # T-1381 flai verify --sync-only runs the rebase and sync steps alone and stores no record
 

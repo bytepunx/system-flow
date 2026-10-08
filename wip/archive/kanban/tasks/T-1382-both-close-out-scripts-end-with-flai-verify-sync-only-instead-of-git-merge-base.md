@@ -3,16 +3,36 @@ id: T-1382
 type: task
 nature: improvement
 title: Both close-out scripts end with flai verify --sync-only instead of git merge-base
-status: backlog
+status: done
 parent: S-0347
 owner: alex
 created: 2026-10-08T08:44:29Z
-updated: 2026-10-08T08:44:29Z
-transitions: []
+updated: 2026-10-08T10:43:59Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:43:05Z
+    by: agent-S-0347
+  - to: in-progress
+    at: 2026-10-08T10:43:05Z
+    by: agent-S-0347
+  - to: done
+    at: 2026-10-08T10:43:58Z
+    by: agent-S-0347
 stream: S-0347
 tags: [template]
-touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md]
+touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md, flai/cmd/verify_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]
 after: [T-1381, T-1379]
+usage:
+  source: log
+  seconds: 53
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 11890
+      cache_read: 1943197
+      cache_write: 62567
+      cost: 1.036
 ---
 # T-1382 Both close-out scripts end with flai verify --sync-only instead of git merge-base
 

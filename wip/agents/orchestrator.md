@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 321.1557
-accrued_seconds: 117520
-tasks_completed: 302
-last_run: 2026-10-08T10:01:26Z
+accrued_cost: 331.9006
+accrued_seconds: 119195
+tasks_completed: 304
+last_run: 2026-10-08T10:29:21Z
 ---
 
 # Orchestrator activity
@@ -2125,6 +2125,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0297
 - Seconds: 549
 - Cost: 2.3643 USD, estimated
+
+### 2026-10-08T10:29:15Z
+
+- Summary: Accepted S-0334 under accept_reviews at verified commit 1eeef480. flai verify passed at the head, and the verifier matched all six criteria (ADR-0134: ask about holds, share paths, a share lifts the hold, matching the operator's TH-0318 decision). The dry-run had no blockers. Published under judgement (2 pending, 300.54 USD/week): S-0334 with the held S-0297, as flai 1.39.16→1.40.0 (flai/v1.40.0, minor) and template 1.0.82→1.0.83 (a6cb3b7), pushed. Promoted S-0347 under promote_to_ready (rank 1, 1h30m, its overlap with S-0334 gone) and applied the throughput order: S-0342, S-0337, S-0347, S-0343.
+- Items: S-0334, S-0297, S-0347
+- Seconds: 1669
+- Cost: 10.3151 USD, estimated
+
+### 2026-10-08T10:29:21Z
+
+- Summary: S-0338 and S-0347 left ready for in-progress. Applied the throughput order: S-0342, S-0337, S-0343. The only promote candidate is the blocked S-0241.
+- Items: S-0338, S-0347
+- Seconds: 6
+- Cost: 0.4298 USD, estimated
 
 ## Refusals
 

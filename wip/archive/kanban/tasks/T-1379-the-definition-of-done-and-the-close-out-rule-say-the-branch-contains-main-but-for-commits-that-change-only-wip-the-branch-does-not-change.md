@@ -3,16 +3,36 @@ id: T-1379
 type: task
 nature: improvement
 title: The definition of done and the close-out rule say the branch contains main but for commits that change only wip the branch does not change
-status: backlog
+status: done
 parent: S-0347
 owner: alex
 created: 2026-10-08T08:44:10Z
-updated: 2026-10-08T08:44:47Z
-transitions: []
+updated: 2026-10-08T10:36:05Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:31:19Z
+    by: agent-S-0347
+  - to: in-progress
+    at: 2026-10-08T10:31:19Z
+    by: agent-S-0347
+  - to: done
+    at: 2026-10-08T10:36:05Z
+    by: agent-S-0347
 stream: S-0347
 tags: [template, docs]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]
 after: [T-1375]
+usage:
+  source: log
+  seconds: 286
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 5089
+      cache_read: 831681
+      cache_write: 26779
+      cost: 0.4434
 ---
 # T-1379 The definition of done and the close-out rule say the branch contains main but for commits that change only wip the branch does not change
 

@@ -3,15 +3,35 @@ id: T-1325
 type: task
 nature: feature
 title: The Messages component shows a conversation's share and its split
-status: backlog
+status: done
 parent: S-0338
 owner: alex
 created: 2026-10-08T04:32:02Z
-updated: 2026-10-08T04:32:02Z
-transitions: []
+updated: 2026-10-08T10:39:14Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:30:13Z
+    by: agent-S-0338
+  - to: in-progress
+    at: 2026-10-08T10:30:14Z
+    by: agent-S-0338
+  - to: done
+    at: 2026-10-08T10:39:14Z
+    by: agent-S-0338
 stream: S-0338
 tags: [flaiover]
 touches: [flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts]
+usage:
+  source: log
+  seconds: 540
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 236
+      cache_read: 2527533
+      cache_write: 73177
+      cost: 1.1648
 ---
 # T-1325 The Messages component shows a conversation's share and its split
 

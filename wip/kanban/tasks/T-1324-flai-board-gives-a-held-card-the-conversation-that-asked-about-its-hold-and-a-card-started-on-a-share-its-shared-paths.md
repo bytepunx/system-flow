@@ -3,15 +3,35 @@ id: T-1324
 type: task
 nature: feature
 title: flai board gives a held card the conversation that asked about its hold, and a card started on a share its shared paths
-status: backlog
+status: done
 parent: S-0338
 owner: alex
 created: 2026-10-08T04:31:58Z
-updated: 2026-10-08T04:31:58Z
-transitions: []
+updated: 2026-10-08T10:38:57Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:30:13Z
+    by: agent-S-0338
+  - to: in-progress
+    at: 2026-10-08T10:30:13Z
+    by: agent-S-0338
+  - to: done
+    at: 2026-10-08T10:38:57Z
+    by: agent-S-0338
 stream: S-0338
 tags: [flai]
-touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go]
+touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flaiover/src/lib/activity.test.ts, flaiover/src/lib/activity.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts]
+usage:
+  source: log
+  seconds: 524
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 257
+      cache_read: 3026420
+      cache_write: 111901
+      cost: 1.4056
 ---
 # T-1324 flai board gives a held card the conversation that asked about its hold, and a card started on a share its shared paths
 

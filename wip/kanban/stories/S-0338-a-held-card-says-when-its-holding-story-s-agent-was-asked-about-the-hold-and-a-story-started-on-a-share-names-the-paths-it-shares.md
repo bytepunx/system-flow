@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-08T04:31:41Z
-updated: 2026-10-08T10:28:46Z
+updated: 2026-10-08T10:50:52Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:43Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0338
 tags: [flai, flaiover]
 topics: [dashboard, cli]
-touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, design/system/flai-cli.md]
+touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, design/system/flai-cli.md, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flaiover/src/lib/server/board.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md, design/issues/summary.md, design/issues/I-0128-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md, flai/cmd/story_start_test.go]
 after: [S-0334, S-0336]
 agent:
   harness: claude-code
@@ -25,20 +25,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 775
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      hand_edits: 1
+      work: 56
+  models:
+    - model: claude-opus-5-5
+      input: 238
+      output: 1257
+      cache_read: 13273314
+      cache_write: 537991
+      cost: 6.1857
   strategic:
     - kind: orchestrator
-      seconds: 17
+      seconds: 20
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 251
-          cache_read: 5486762
-          cache_write: 6966
-          cost: 1.3535
+          input: 19
+          output: 267
+          cache_read: 6355421
+          cache_write: 10487
+          cost: 1.5684
 cost_of_delay:
   value: 217.39
   by: planner-E-0018

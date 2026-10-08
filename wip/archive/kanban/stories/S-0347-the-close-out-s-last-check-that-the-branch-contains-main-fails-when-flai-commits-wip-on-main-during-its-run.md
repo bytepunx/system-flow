@@ -3,10 +3,10 @@ id: S-0347
 type: story
 nature: improvement
 title: The close-out's last check that the branch contains main fails when flai commits wip on main during its run
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-08T08:08:22Z
-updated: 2026-10-08T10:29:15Z
+updated: 2026-10-08T10:52:25Z
 transitions:
   - to: ready
     at: 2026-10-08T10:29:09Z
@@ -14,18 +14,35 @@ transitions:
   - to: in-progress
     at: 2026-10-08T10:29:15Z
     by: agent-S-0347
+  - to: review
+    at: 2026-10-08T10:51:15Z
+    by: agent-S-0347
+  - to: done
+    at: 2026-10-08T10:52:25Z
+    by: orchestrator
 tags: [cli, template]
 topics: [testing, git]
-touches: [design/adrs/0133-the-close-out-s-sync-check-passes-over-commits-on-main-that-change-only-wip.md, design/adrs/README.md, design/system/flai-cli.md, design/system/devex.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/paths.go, flai/internal/verify/paths_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, docs/users/flai.md, docs/users/flai-reference.md, scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md, design/issues/summary.md]
+touches: [design/adrs/0133-the-close-out-s-sync-check-passes-over-commits-on-main-that-change-only-wip.md, design/adrs/README.md, design/system/flai-cli.md, design/system/devex.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/paths.go, flai/internal/verify/paths_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, docs/users/flai.md, docs/users/flai-reference.md, scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md, design/issues/summary.md, design/adrs/0135-the-sync-step-of-flai-verify-and-the-close-out-s-last-check-pass-over-commits.md, design/issues/I-0126-flai-task-done-commits-the-changed-paths-of-another-open-task-of-the-same-layer.md, docs/operators/settings.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1334
+  turns:
+    - day: 2026-10-08
+      ceremony: 1
+      hand_edits: 2
+      work: 52
+  models:
+    - model: claude-opus-5-5
+      input: 234
+      output: 81878
+      cache_read: 13381562
+      cache_write: 430862
+      cost: 7.1344
   strategic:
     - kind: orchestrator
       seconds: 851
@@ -68,8 +85,8 @@ finalized:
 This story remediates [I-0119](../../../design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md), "The close-out's last check that the branch contains main fails when flai commits wip on main during its run". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0119 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0119 is closed with `flai issue close I-0119 --reason` saying what fixed it
+- [x] The cause I-0119 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0119 is closed with `flai issue close I-0119 --reason` saying what fixed it
 
 ## Tasks
 - T-1375 Record in an ADR and the CLI design that the sync check passes over commits on main that change only wip the branch does not change
@@ -110,3 +127,12 @@ Figures:
 
 - Forecast 1h30m, raised from flai's 30m (78 s per unit of size × 23). S-0341, the nearest story, is forecast 1h30m in the same package and script; S-0326 and S-0270 on `flai verify` took 81 and 100 min. This one has six tasks in five layers across an ADR, Go, two shell scripts, the template, and docs. Delivery moves out by the same hour, to 2026-10-08T15:28:00Z.
 - Cost of delay 75.00 USD a week, as `flai cod` gives it from flai's input of 30m lost per cycle, at 150 USD an hour and one 168h cycle a week. It stands: the input is the issue's three occurrences at 10m each, and the instances describe four to ten minutes each.
+
+### Accepted by the orchestrator
+
+- Verified: 9b15341e2318357ac21cb072508495e8ae88621d
+- At: 2026-10-08T10:52:25Z
+
+Verdict: accept. flai verify passed every step at the branch head 9b15341e, and the verifier matched both criteria to the diff. Only wip-only main commits are passed over, the manifest's wip folder is used, and --sync-only stores no record. Minor gap noted: a wip path the branch deleted is not counted as shared; the acceptance rebase still catches such a conflict.
+- 1: flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, design/adrs/README.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/devex.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md
+- 2: design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md, design/issues/summary.md

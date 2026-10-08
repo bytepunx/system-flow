@@ -3,16 +3,36 @@ id: T-1383
 type: task
 nature: remediation
 title: Close I-0119 with the reason that names the sync step's wip rule and the close-out's flai verify --sync-only
-status: backlog
+status: done
 parent: S-0347
 owner: alex
 created: 2026-10-08T08:44:35Z
-updated: 2026-10-08T08:44:35Z
-transitions: []
+updated: 2026-10-08T10:45:49Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:45:45Z
+    by: agent-S-0347
+  - to: in-progress
+    at: 2026-10-08T10:45:46Z
+    by: agent-S-0347
+  - to: done
+    at: 2026-10-08T10:45:49Z
+    by: agent-S-0347
 stream: S-0347
 tags: [docs]
 touches: [design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md, design/issues/summary.md]
 after: [T-1382]
+usage:
+  source: log
+  seconds: 3
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 1366
+      cache_read: 223252
+      cache_write: 7188
+      cost: 0.119
 ---
 # T-1383 Close I-0119 with the reason that names the sync step's wip rule and the close-out's flai verify --sync-only
 

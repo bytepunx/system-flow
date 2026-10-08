@@ -3,16 +3,36 @@ id: T-1377
 type: task
 nature: improvement
 title: flai verify's sync step passes when the commits the branch lacks change only wip paths the branch does not change
-status: backlog
+status: done
 parent: S-0347
 owner: alex
 created: 2026-10-08T08:44:02Z
-updated: 2026-10-08T08:44:44Z
-transitions: []
+updated: 2026-10-08T10:36:09Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:31:18Z
+    by: agent-S-0347
+  - to: in-progress
+    at: 2026-10-08T10:31:18Z
+    by: agent-S-0347
+  - to: done
+    at: 2026-10-08T10:35:55Z
+    by: agent-S-0347
 stream: S-0347
 tags: [cli]
 touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/paths.go, flai/internal/verify/paths_test.go]
 after: [T-1375]
+usage:
+  source: log
+  seconds: 277
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 12065
+      cache_read: 1971748
+      cache_write: 63487
+      cost: 1.0512
 ---
 # T-1377 flai verify's sync step passes when the commits the branch lacks change only wip paths the branch does not change
 
