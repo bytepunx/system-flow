@@ -3,11 +3,14 @@ id: S-0344
 type: story
 nature: remediation
 title: flai dashboard restart starts the container's tag again, so a newer image a check pulled under a floating tag is started without an upgrade
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-08T08:08:17Z
-updated: 2026-10-08T08:37:06Z
-transitions: []
+updated: 2026-10-08T08:38:58Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:38:55Z
+    by: alex
 tags: [flai, dashboard]
 touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/summary.md]
 agent:
@@ -40,10 +43,10 @@ cost_of_delay:
   at: 2026-10-08T08:36:23Z
 forecast:
   duration: 30m
-  delivery: 2026-10-08T13:53:00Z
-  basis: "Its own forecast of 30m; 23rd in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0342, S-0341, S-0343, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0297, S-0304, S-0305, S-0306, S-0313, S-0334, S-0337 and S-0338."
+  delivery: 2026-10-08T09:13:00Z
+  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340 and S-0341."
   by: flai
-  at: 2026-10-08T08:37:06Z
+  at: 2026-10-08T08:38:58Z
 finalized:
   by: orchestrator
   at: 2026-10-08T08:36:52Z
