@@ -1,0 +1,62 @@
+---
+id: S-0342
+type: story
+nature: improvement
+title: A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite
+status: ready
+owner: alex
+created: 2026-10-08T07:59:14Z
+updated: 2026-10-08T07:59:30Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:59:30Z
+    by: system-flow
+tags: [cli]
+topics: [testing]
+touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, template/root/system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 22
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 102
+          cache_read: 925166
+          cache_write: 2462
+          cost: 0.2286
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 1m
+    by: alex
+    at: 2026-10-08T07:59:14Z
+---
+# S-0342 A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite
+
+## Goal
+
+When a story's diff touches `flai/`, `flai verify` selects both the `go-test` tier, `go test -race -short` on the changed packages, and the `integration` tier, `go test -race -count=1 ./...` over everything. The second contains the first: every short test of every package runs again inside it. In S-0287's verify record go-test took 1 min 7 s and integration 3 min 6 s; the first minute bought nothing. The same holds for `flai test --all`.
+
+The manifest can say which tier covers which: a tier that names `covers:` another is selected in its place when both would run, and verify reports the covered tier as skipped with the reason. Run alone, as `flai test` runs it on a few paths, the cheaper tier still runs.
+
+## Acceptance criteria
+
+- [ ] A tier in the manifest's `tests` may carry `covers: [<tier name>...]`; `flai manifest` validation refuses a name that is not a tier or a cycle, and `design/system/project-manifest.md` documents the key.
+- [ ] When the tiers verify selects, or `flai test --all` runs, include a tier and one that covers it, the covered tier is not run and the result lists it as `skipped: covered by <tier>`, in the text and in `--json`; when only the covered tier is selected it runs as before.
+- [ ] This repository's `system-flow.yaml` marks `integration` as covering `go-test`, and the template's manifest does the same for its `test` and `integration` tiers where they overlap, so a story's close-out that touches `flai/` runs the Go tests once.
+- [ ] Tests cover the selection with and without the covering tier, the validation, and the reported skip; `docs/users/flai.md` and `design/system/flai-cli.md` describe it.
+
+## Tasks
+
+## Notes
+
+S-0287's record on 2026-10-08: go-test 1 min 7 s, integration 3 min 6 s, smoke 11 min 25 s. This story takes the first minute off every close-out that touches `flai/`; the smoke minutes are the subject of the local release server story filed with it.
