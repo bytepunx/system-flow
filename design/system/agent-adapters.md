@@ -294,3 +294,257 @@ What the documentation does not settle:
 - Which `wire_api` Codex should use against each gateway, and whether OpenCode's Anthropic provider accepts a custom base URL.
 - Whether aider's current release is an MCP client; its own documentation does not say.
 - What any harness reports as cost over a gateway: Claude Code and OpenCode price from their own tables, Codex and Goose report tokens only. Only the gateway knows what was charged: OpenRouter's `usage.cost` and `/api/v1/generation`, LiteLLM's `x-litellm-response-cost` and `/spend/logs`.
+
+## Abstractions
+
+What flai needs from any agent, stated without Anthropic's or OpenAI's API in it. Each subsection gives the contract, how each harness in [LiteLLM and OpenRouter](#litellm-and-openrouter) could meet it, and what flai must refuse or degrade when one cannot. Nothing here is built; the shapes are proposals for the epic.
+
+### Harness, provider, and model
+
+A story's `agent` runs three things together today: `harness`, the program that runs the agent loop with its tools and sub-agents; the provider its model calls go to, which is nowhere in flai, since `claude` sends them to Anthropic unless the environment `flai serve` happens to run in says otherwise; and `model`, a name flai passes through unread (`flai/internal/manifest/agent.go`). Over a gateway the three come apart: the same harness, a different provider, and a model name that means something only on that provider (`anthropic/claude-opus-5-5` on LiteLLM, `~anthropic/claude-opus-latest` on OpenRouter).
+
+| Thing | What it is | Today | Proposed |
+|-------|------------|-------|----------|
+| Harness | The program running the loop, its tools, its sub-agents | `agent.harness`, a name `harness.For` knows | Unchanged; more adapters |
+| Provider | Where the model calls go: Anthropic direct, a LiteLLM proxy, OpenRouter | The harness's own default | `agent.provider`, the name of an entry in a `providers` map; absent means the harness's own default |
+| Model | The model's name on that provider | `agent.model`, pattern-checked only | Unchanged; its meaning is the provider's |
+
+The provider entry holds what a harness needs to reach the gateway and nothing secret:
+
+```yaml
+providers:
+  litellm:
+    api: anthropic-messages      # anthropic-messages | openai-chat | openai-responses
+    base_url: http://127.0.0.1:4000
+    key_env: LITELLM_VIRTUAL_KEY # the NAME of the variable holding the key; never the key
+    models:                      # optional: the harness's aliases on this provider
+      haiku: anthropic/claude-haiku-4-5
+      sonnet: anthropic/claude-sonnet-5
+      opus: anthropic/claude-opus-5-5
+```
+
+The key stays in the operator's environment under the name `key_env` gives. `flai serve` reads that variable when it starts the agent and sets the harness's own variable in the child's environment, logging neither; the harness's `Start` record keeps the name, not the value. `flai serve` refuses a start whose provider names a variable that is unset, as it refuses an unknown harness.
+
+Where each piece belongs follows how `Host` works today: the story names, the host says what the name is ([ADR-0038](../adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md)).
+
+| Level | Holds | Why |
+|-------|-------|-----|
+| Host, `~/.flai/config.json` | `agent.harnesses.<name>.program` and `.args` (today); `agent.providers.<name>` with `api`, `base_url`, `key_env`, `models` (new), set with `flai serve agent provider <name>` and `settings.provider` | What runs on this host and where its network goes are the operator's; whoever edits a story in the dashboard must not choose them |
+| Manifest, `system-flow.yaml` | `agent.harness`, `agent.provider`, `agent.model`, `agent.config`, `agent.roles`; the same under `planning`, `orchestration`, `analysis` | The project's default, copied into stories ([ADR-0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)) |
+| Story front matter | The same fields | The story's own; changing it restarts a ready story's agent |
+
+An alternative is a `providers` map in the manifest, committed, so a clone carries it. Base URLs are host-bound (`127.0.0.1:4000`) and so is the key's variable name, which is why the host is recommended; a manifest entry would be a default the host overrides, as `agent.harnesses` has no manifest half today. **To decide** by the operator.
+
+What each adapter derives from the provider:
+
+| Harness | Derived from `providers.<name>` |
+|---------|---------------------------------|
+| `claude-code` | Requires `api: anthropic-messages`. `ANTHROPIC_BASE_URL=<base_url>`, `ANTHROPIC_AUTH_TOKEN=$<key_env>`, `ANTHROPIC_API_KEY=` set empty, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, and `CLAUDE_CODE_SUBAGENT_MODEL` from `models`; `--model <model>`; `--fallback-model` must be a provider name. With no provider, nothing: today's behaviour |
+| Codex | Requires `api: openai-chat` or `openai-responses`. `-c model_providers.<name>.base_url=<base_url> -c model_providers.<name>.env_key=<key_env> -c model_providers.<name>.wire_api=chat\|responses -c model_provider=<name> -c model=<model>`; Codex reads the key itself from `env_key`, so flai sets nothing secret |
+| OpenCode | A generated configuration file named by `OPENCODE_CONFIG`: `provider.<name>.npm` from `api` (`@ai-sdk/openai-compatible`, `@ai-sdk/openai`, or `@ai-sdk/anthropic`, the last **to check**), `options.baseURL`, `options.apiKey: "{env:<key_env>}"`; `--model <name>/<model>` |
+| Goose | `GOOSE_PROVIDER` from `api` and `base_url` (`litellm` with `LITELLM_HOST`, `openrouter`, `openai` with `OPENAI_HOST`, `anthropic` with `ANTHROPIC_HOST`), the provider's key variable set from `$<key_env>`, `GOOSE_MODEL=<model>` |
+| `command` | `FLAI_PROVIDER`, `FLAI_PROVIDER_API`, `FLAI_PROVIDER_BASE_URL`, `FLAI_PROVIDER_KEY_ENV`, and `{provider}` in its arguments; the command reads the key itself |
+| flai's own loop | Calls `base_url` in the `api` shape with the key from `$<key_env>` |
+
+### Starting and resuming an agent
+
+The contract is today's `Adapter` with two additions: the provider, and a statement of what the harness can do, so `flai serve` refuses or degrades before a story is started rather than after it fails.
+
+```go
+type Adapter interface {
+    DefaultHost() Host
+    Capabilities() Capabilities      // what flai serve may count on
+    Start(req Request, host Host, prov *Provider) (Start, error)
+    Reader() usage.Reader            // reads this harness's log; see Usage and cost
+}
+type Capabilities struct{ Resume, Guard, Permission, RoleModels, StrategicAgents, Cost bool }
+```
+
+| Harness | Start | Resume after a thread is answered |
+|---------|-------|-----------------------------------|
+| Claude Code | `claude -p`, `--session-id <uuid>` flai makes | `--resume <uuid>` (today) |
+| Codex | `codex exec "<prompt>"` | `codex exec resume <id>`; the ID comes from the `thread.started` event, so flai reads it from the log rather than choosing it |
+| OpenCode | `opencode run --session <id>` | `--session <id>` again, or `--continue` |
+| Goose | `goose run -n <name>` | `-r -n <name>` |
+| aider | `aider --message` | None |
+| flai's loop | Its own session store | Its own |
+
+What a harness without resume loses: `flai serve` starts a fresh session with the answered thread named in the prompt, as `FLAI_ANSWERED` tells the `command` harness today. The agent primes again and has lost its context; the work goes on at a higher cost. Degrade, do not refuse.
+
+### Refusing a sub-agent's write
+
+Today `flai guard` is a hook whose input is Claude Code's JSON ([ADR-0060](../adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md)). The contract is the decision under it: before each tool call, given who calls and what, allow or refuse with a reason.
+
+```go
+type Call struct {
+    Session  string
+    Subagent bool              // a sub-agent's call, not the session's own agent's
+    Role     string            // FLAI_ROLE: plan, orchestrate, analyze, or empty
+    Kind     CallKind          // Shell, FileWrite, FlaiTool
+    Command  string            // Shell: the line, split and judged as today
+    Path     string            // FileWrite
+    Tool     string            // FlaiTool: the tool's name without the harness's prefix
+    Args     map[string]any
+}
+func Decide(c Call, running SubagentRecord) Verdict
+```
+
+`flai guard` keeps one `Decide` and gains one input reader per harness, each mapping the harness's tool names to `Kind` and its sub-agent sign to `Subagent`.
+
+| Harness | Hook | Sub-agent sign | Registration |
+|---------|------|----------------|--------------|
+| Claude Code | `PreToolUse`, exit 2 | `agent_id` | `.claude/settings.json` (today) |
+| Codex | `PreToolUse`, exit 2 or `permissionDecision: deny` | None in the input; a record from `SubagentStart` and `SubagentStop`, as ADR-0092 keeps, **to check** | `.codex/hooks.json`; needs hook trust, `--dangerously-bypass-hook-trust` or a managed hook |
+| OpenCode | A plugin's `tool.execute.before` throws | **To check** | `.opencode/plugins/flai-guard.js`, a few lines that exec `flai guard` |
+| Goose | `PreToolUse` in `hooks.json`, exit 2 or `decision: block` | None; every call looks like the agent's own | `.agents/plugins/flai/hooks/hooks.json` |
+| aider | None | | |
+| flai's loop | `Decide` called before each tool | The loop knows | None |
+
+A second line the hook does not need: `flai mcp` could refuse a sub-agent itself if it knew the caller. It does not: a sub-agent shares its parent's MCP connection in every harness above. Shell and file writes never reach flai at all. The hook, or the loop, is the only place.
+
+What a harness without a hook loses: flai cannot tell a sub-agent's write from the agent's. The story's agent may run; its roles may not. Refuse a role on such a harness, as a role on another harness is refused today, unless the operator sets `agent.harnesses.<name>.guard: none` on the host and takes the risk. Goose, until its hooks carry a sub-agent sign, is such a harness.
+
+### Asking the owner before a protected write
+
+Today Claude Code calls `permission_prompt` as its permission handler ([ADR-0086](../adrs/0086-flai-serve-gives-a-claude-code-agent-flai-s-permission-prompt-as-its-permission.md)). The contract: when the policy says ask, hold the call, put the question to the story's owner or the project's owner on a thread ([ADR-0097](../adrs/0097-permission-prompt-takes-an-answer-from-the-story-s-owner-or-the-project-s-owner.md)), and answer allow or deny within a bound ([ADR-0124](../adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-then-refuses-it-and-leaves.md)); operations `Ask(call) (allow|deny, reason)` and the bound.
+
+| Harness | Way to ask | Bound |
+|---------|------------|-------|
+| Claude Code | `--permission-prompt-tool` (today), or the `PreToolUse` hook holding the call | The MCP idle timeout, four minutes; a hook's own timeout |
+| Codex | No external approver. A `PreToolUse` hook that holds the call and returns `allow` or `deny` itself: `flai guard --ask` | The hook timeout, **to check** |
+| OpenCode | A plugin's `tool.execute.before` awaiting the answer | **To check** |
+| Goose | A `PreToolUse` hook that holds | **To check** |
+| flai's loop | `Ask` called by the loop | flai's own |
+
+The common form is the guard holding the call and asking, with the MCP tool as Claude Code's variant of it. The four-minute bound becomes the harness's. The protected list stays flai's policy (`flai/internal/protected/protected.go`) and grows one entry per harness: the files that change what the harness's agent may do, `.codex/`, `.opencode/`, `.agents/plugins/`, `AGENTS.md`, beside `.claude/` and `.mcp.json`.
+
+What a harness without a hook loses: a protected write is denied outright by the harness's own permission map, or allowed outright under its `--auto` or `danger-full-access`. Refuse to start a story's agent on such a harness unless `auto-approve` is on for the project or the host's arguments deny those paths in the harness's own vocabulary; say which in the refusal.
+
+### A model per sub-agent role
+
+The contract is [ADR-0065](../adrs/0065-a-story-s-agent-carries-a-model-per-sub-agent-role-and-claude-code-runs-each.md)'s: `roles.<role>.model` laid over the role's definition, on the story's provider. A role's model is a name on that provider; the provider's `models` aliases resolve `haiku` and `sonnet`.
+
+| Harness | How the role's model reaches it | Per role |
+|---------|-------------------------------|----------|
+| Claude Code | `--agents` JSON with `model` (today) | Yes |
+| Codex | A TOML definition with `model`, written to `.codex/agents/<role>.toml` in the worktree, or a `CODEX_HOME` flai prepares; `-c agents.default_subagent_model` for the rest | Yes, **to check** |
+| OpenCode | `agent.<role>.model` in the generated configuration | Yes |
+| Goose | `GOOSE_SUBAGENT_MODEL`, one for every sub-agent; a recipe per role for more | One model for all roles |
+| flai's loop | A nested loop with its own model | Yes |
+
+What a harness without it loses: the role's model is ignored. Refuse the start when a story's role names a model the harness cannot honour, as today, rather than run the story on a model the story did not name.
+
+### Definitions and the instructions file
+
+A role definition is a name, a description, a prompt, a tool allowlist, and a model. Today the five live in `.claude/agents/` in Claude Code's format and vocabulary. Options:
+
+| Option | Source | Cost |
+|--------|--------|------|
+| 1 | Keep `.claude/agents/*.md` as the source; each adapter translates at start into its own format (`--agents` JSON, `.codex/agents/*.toml`, OpenCode `agent.<name>`), with a tool-name table per harness (`Read`, `Grep`, `Glob`, `Bash`, `mcp__flai__*` to each harness's names) | One table per harness; the files stay where Claude Code reads them unchanged |
+| 2 | Move the source to a neutral folder in the template and generate each harness's files with `flai upgrade` | A new folder in every project; `.claude/agents/` becomes generated and must not be hand-edited |
+| 3 | A hand-kept copy per harness | Three copies that drift |
+
+The instructions file: Codex, OpenCode, and Goose read `AGENTS.md`, and Codex (`project_doc_fallback_filenames`) and Goose (`CONTEXT_FILE_NAMES`) can be told to read `CLAUDE.md`; OpenCode falls back to it on its own. Keep `CLAUDE.md` the map and point each harness at it from the adapter, as [agent-context.md](agent-context.md) already leans; add `AGENTS.md` only if a harness that cannot be pointed is adopted.
+
+What a harness without definitions loses: no roles, and the strategic agents run from flai's `Prompt` alone, which already carries the role (`FLAI_ROLE`), without the definition's tool allowlist. Refuse roles; let a strategic agent run only where the guard holds it to its role.
+
+### Usage and cost
+
+The contract is a reader per harness producing neutral events the measurement in `flai/internal/usage` already works from, and a source of price.
+
+```go
+type Reader interface{ Read(line []byte) (Event, bool) }
+type Event struct {
+    Kind       EventKind // SessionStart, Call, ToolResult, End
+    Session    string
+    Model      string
+    Tokens     Tokens    // In, Out, CacheRead, CacheWrite
+    CostUSD    *float64  // nil when the harness reports none
+    ParentCall string    // the call that started this sub-agent; empty for the agent's own
+    Tool, Description string
+}
+```
+
+| Harness | Tokens per call | Per model | Cost | Sub-agent attribution |
+|---------|-----------------|-----------|------|-----------------------|
+| Claude Code | yes | yes | its own estimate from Anthropic's prices | `parent_tool_use_id` |
+| Codex | `turn.completed` | no | none | **To check** |
+| OpenCode | `step_finish` | **to check** | its own table, **to check** | **To check** |
+| Goose | session store, `stream-json` **to check** | no | none | none |
+| flai's loop | yes | yes | the gateway's | the loop's own |
+
+Where a price comes from when the log gives none, or gives an estimate from the wrong price list:
+
+| Source | How | Fits |
+|--------|-----|------|
+| The harness | `total_cost_usd`, OpenCode's `cost` | Today's `result`; wrong over a gateway |
+| The gateway, per call | LiteLLM `x-litellm-response-cost`; OpenRouter `usage.cost` | Only flai's own loop sees the response |
+| The gateway, after the fact | LiteLLM `/spend/logs` by virtual key; OpenRouter `/api/v1/key` and `/api/v1/generation` | A key per project, or per agent, joins spend to a story: a `spend` reader per provider `api`; per-call joining needs the gateway to keep a session tag, LiteLLM's reading of `x-claude-code-session-id` **to check** |
+| A price table | LiteLLM's public model cost map, or flai's own | ADR-0051 chose measured over tabulated; a table dates |
+| Estimated | `Rates` from reported totals (today) | Nothing to rate when no run ever reported a cost |
+
+Recommended: tokens and attribution from the harness's reader; cost from the gateway's spend log when the story has a provider, from the harness when it has none, estimated otherwise, with the source named on the item's `usage` (`priced_by: harness | gateway | estimate`). That changes `design/system/metrics.md` and needs an ADR. What a harness that logs tokens only loses: cost stays estimated, marked so as today, and nothing when no rate exists.
+
+### Settings each option adds
+
+| Option | Host | Manifest and story | Also |
+|--------|------|--------------------|------|
+| All | `agent.providers.<name>.api`, `.base_url`, `.key_env`, `.models.<alias>`; `agent.harnesses.<name>.guard` | `agent.provider`, and under `planning`, `orchestration`, `analysis` | `settings.provider` in the host API; the Settings page |
+| A, Claude Code over a gateway | None more | `fallback_model` and role models as provider names | |
+| B, Codex | `agent.harnesses.codex.program` (default `codex`), `.args` (default sandbox and approval policy) | `config` keys the adapter takes, such as `reasoning_effort` | `.codex/hooks.json` in the template |
+| C, OpenCode | `agent.harnesses.opencode.program`, `.args` | `config` keys | `.opencode/plugins/flai-guard.js` in the template |
+| D, Goose | `agent.harnesses.goose.program`, `.args` | `config` keys | `.agents/plugins/flai/hooks/hooks.json` in the template |
+| E, flai's loop | Tool and turn limits | `config` keys | New dependencies in `design/tech/` |
+
+No key is stored anywhere: `key_env` is a name. Documentation each changes: `docs/operators/settings.md`, one row per key, and its test `TestSettingsIndexIsComplete` in `flai/cmd/settings_doc_test.go`; `docs/operators/index.md` under authentication, naming the key variable; `docs/users/flai.md`, "Starting an agent", "Sub-agents", and "Writes to paths Claude Code protects", the last renamed; `docs/users/flai-reference.md` through `make flai-reference`; `design/system/flai-cli.md`.
+
+### Options compared
+
+| Option | Met now | Partial | To build | Effort | Unlocks | Risk | ADRs |
+|--------|---------|---------|----------|--------|---------|------|------|
+| A, Claude Code over a gateway | Start, resume, guard, permission, roles, definitions | Cost (estimate, not the bill) | Provider split; gateway spend reader | Small | Self-hosted LiteLLM in front of Anthropic, Bedrock, Vertex; OpenRouter credits; one key per project | Beta headers dropped by LiteLLM's unified endpoint; Claude models only | Refines 0037, 0038, 0051 |
+| B, Codex CLI | Start, resume, roles, MCP | Guard (sub-agent sign), cost (tokens only) | Adapter, JSONL reader, hooks.json, hold-and-ask in the guard, TOML definitions, hook trust | Medium | OpenAI models and anything OpenAI-shaped through either gateway, self-hosted included | Hook trust in headless runs; `ask` with no approver | Refines 0060, 0065, 0086, 0092, 0106, 0124 |
+| C, OpenCode | Start, resume, roles, MCP, cost | Guard (plugin), permission | Adapter, JSONL reader, plugin, definitions | Medium | Any model either gateway serves | Plugin API stability; sub-agent sign unknown | As B |
+| D, Goose | Start, resume, MCP | Roles (one model), guard (no sub-agent sign), cost (tokens) | Adapter, reader, hooks, provider mapping | Medium | Both gateways natively | No sub-agent sign: roles refused | As B, and 0071 |
+| E, flai's loop | None | | Everything: MCP client, tool loop, session store, compaction, guard as a function, nested loops, pricing | Large | Any model, any API, exact gateway cost per call | Rebuilds a harness; loses Claude Code's prompt, caching, tools | Supersedes 0060 and 0086 for its own harness |
+
+### Recommendation
+
+Build in this order:
+
+1. **A spike story first**: run `claude -p` with the adapter's own arguments through LiteLLM's unified `/v1/messages`, its `/anthropic` pass-through, and OpenRouter's `/api/v1/messages`, with `permission_prompt` and `flai guard` on, as `claudecheck.go` already does against Anthropic. It settles the beta-header question, what `total_cost_usd` says against the gateway's spend log, and whether the aliases resolve. One or two days; every later story depends on its answers.
+2. **A, the provider split and Claude Code over a gateway.** The smallest change that reaches both gateways, and every concern stays met. It adds `providers` on the host, `agent.provider` on the manifest and story, the environment the adapter derives, and a `spend` reader per gateway API. Claude models only, which is what every project runs today.
+3. **The neutral contracts, inside A**: `Capabilities`, `Reader`, `Call` and `Decide`, the guard's hold-and-ask, and the protected list per harness. They cost little while one adapter exists and make the next one an adapter, not a rewrite.
+4. **B, Codex CLI.** The harness nearest Claude Code in shape: headless exec and resume, `PreToolUse` with `SubagentStart` and `SubagentStop`, MCP in configuration, sub-agent definitions with a model. It unlocks every OpenAI-shaped model either gateway serves, self-hosted ones included. Its open items, hook trust and the sub-agent sign, are checked in its first story.
+5. **C, OpenCode**, if a second non-Anthropic harness is wanted; it reports cost and reads `CLAUDE.md`, but its guard is a plugin and its permission handling is less known.
+6. **Not now**: D, Goose, until its hooks can tell a sub-agent's call, since without that no role may run; E, flai's own loop, which rebuilds what every harness gives and is justified only if B and C cannot hold the guard.
+
+What the recommendation does to the current ADRs:
+
+| ADR | Fate | Why |
+|-----|------|-----|
+| [0037](../adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md) | Refined | `agent` gains `provider`; the copy and merge rules stand |
+| [0038](../adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md) | Refined | The host gains `providers` beside `harnesses`; adapters declare capabilities; what runs stays the operator's |
+| [0051](../adrs/0051-work-items-record-the-tokens-and-cost-their-agents-spent-measured-from-the.md) | Refined | Cost may be read from the gateway's spend log; `usage` names its price source; still measured, never tabulated |
+| [0059](../adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md) | Untouched | The roles and their work are the same on any harness |
+| [0060](../adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md) | Refined by A and B; superseded by E for its harness | The policy stands; the input shapes and registrations multiply; a loop calls `Decide` with no hook |
+| [0065](../adrs/0065-a-story-s-agent-carries-a-model-per-sub-agent-role-and-claude-code-runs-each.md) | Refined | Each adapter lays the role's model over the definition in its own format; a role's model is a provider name |
+| [0071](../adrs/0071-a-task-s-usage-is-the-calls-of-the-sub-agents-started-for-it-and-an-even-share.md) | Untouched by A and B; refined by D | Attribution needs a parent call and the task's ID in the sub-agent's start; Goose has neither |
+| [0086](../adrs/0086-flai-serve-gives-a-claude-code-agent-flai-s-permission-prompt-as-its-permission.md) | Refined | The MCP permission tool becomes Claude Code's form of the guard's hold-and-ask |
+| [0092](../adrs/0092-a-story-s-agent-waits-for-a-sub-agent-by-launching-it-in-the-foreground-and.md) | Refined by B | The running-sub-agent record comes from each harness's start and stop events |
+| [0097](../adrs/0097-permission-prompt-takes-an-answer-from-the-story-s-owner-or-the-project-s-owner.md) | Untouched | Who answers does not depend on the harness |
+| [0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md) | Untouched | The rule applies through whichever guard runs |
+| [0105](../adrs/0105-a-story-s-empty-wakes-the-wait-for-events-calls-of-its-agents-that-timed-out.md) | Untouched | An empty wake is a tool name and a result, both in the neutral event |
+| [0106](../adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md) | Refined | The protected list becomes flai's, with each harness's own files in it |
+| [0116](../adrs/0116-when-flai-measures-a-story-s-usage-from-its-logs-it-classifies-each-turn-of-the.md) | Untouched | Turn classes come from tool names and shell commands the reader maps |
+| [0124](../adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-then-refuses-it-and-leaves.md) | Refined | The bound is Claude Code's MCP idle timeout; each harness has its own |
+| [0082](../adrs/0082-flai-serve-starts-the-planner-for-an-epic-or-a-story-behind-the-plan-host.md), [0087](../adrs/0087-flai-serve-runs-one-orchestrator-per-project-behind-the-orchestrate-host-action.md), [0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md) | Untouched by A; refined by B and C | A strategic agent is started from its definition with `--agent`; Codex's and OpenCode's equivalents are **to check** |
+| [0108](../adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md), [0064](../adrs/0064-a-story-in-ready-or-in-progress-with-no-agent-run-on-this-host-is-started-here.md) | Untouched | Restarts and begun-elsewhere starts are about outcomes, not harnesses |
+
+Questions only the operator can answer, each with the recommended answer first:
+
+1. **The split.** Add `provider` beside `harness` and `model`, with the `providers` map on the host; or put `providers` in the manifest with a host override. Recommended: the host, as `harnesses` is.
+2. **Which adapters, in what order.** Recommended: the spike, then A with the neutral contracts, then B; C on demand; D and E not now.
+3. **A harness without a guard hook or a permission handler.** May it run a story's agent, and with what limits? Recommended: the story's agent may run, its roles may not, unless `agent.harnesses.<name>.guard: none` is set on the host; a protected write on such a harness is refused unless `auto-approve` is on.
+4. **Cost when a harness logs none.** The gateway's spend log, a price table, or an estimate. Recommended: the gateway's spend log per provider, keyed by a virtual key per project, named on `usage` as its source; a price table is not added.
+5. **A paid trial before the epic.** The spike needs a LiteLLM proxy, free, and an OpenRouter key with a few dollars of credit. Recommended: yes, both, in the spike story.
