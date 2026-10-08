@@ -2,6 +2,7 @@ package guard
 
 import (
 	"cmp"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -227,6 +228,92 @@ func TestASubAgentReadsMessagesButSendsNone(t *testing.T) {
 		}
 		if why := gr.Check(bash("", sends[0])); why == "" {
 			t.Errorf("the %s's %q let through", who, sends[0])
+		}
+	}
+}
+
+// I-0062, S-0287, ADR-0127: a sub-agent writes an ADR with flai adr new,
+// topics, and accept, or adr_new, in any form flai's commands are found in,
+// and is refused the commit, in any form, which is the story's agent's. The
+// story's agent runs them all; the planner, the orchestrator, and the
+// analyzer are refused flai adr new and adr_new as before.
+func TestASubAgentWritesAnADRButDoesNotCommitIt(t *testing.T) {
+	sub := func(commit any) Event {
+		e := Event{ToolName: MCPPrefix + ADRNew, AgentID: "a1", AgentType: "general-purpose"}
+		in := map[string]any{"decision": "x"}
+		if commit != nil {
+			in["commit"] = commit
+		}
+		data, _ := json.Marshal(in)
+		if err := json.Unmarshal(data, &e.ToolInput); err != nil {
+			t.Fatal(err)
+		}
+		return e
+	}
+	writes := []string{`flai adr new "x"`, `flai adr new --print-body "x"`, "flai adr topics 7 cli", "flai adr accept 7"}
+	var allowed, commits []string
+	for _, c := range writes {
+		allowed = append(allowed, c, strings.Replace(c, "flai", "scripts/flai.sh", 1), "bash -c '"+c+"'")
+		for _, f := range []string{"--commit", "--commit=true", "--autocommit", "--autocommit=false"} {
+			commits = append(commits, c+" "+f)
+		}
+	}
+	allowed = append(allowed,
+		"flai --config c.json adr new 'x' --body-stdin --refines 60 --supersedes ADR-0007 --status accepted --trailer 'Co-Authored-By: a <b>' < d.md",
+		"cd /w && scripts/flai.sh adr topics ADR-0127 cli,template && scripts/flai.sh adr accept 127 && git status",
+	)
+	commits = append(commits, "scripts/flai.sh adr new --commit --body-stdin 'x' < d.md", "bash -c 'flai adr topics 7 cli --autocommit'")
+	for _, c := range allowed {
+		if why := g.Check(bash("general-purpose", c)); why != "" {
+			t.Errorf("a sub-agent's %q refused: %s", c, why)
+		}
+	}
+	for _, c := range commits {
+		why := g.Check(bash("general-purpose", c))
+		for _, want := range []string{"a sub-agent (general-purpose) cannot run", "the commit is the story's agent's", "widens the story's touches", "leave the files uncommitted for the story's agent to review and commit", "(ADR-0060, ADR-0127)", "final message"} {
+			if !strings.Contains(why, want) {
+				t.Errorf("a sub-agent's %q: %q lacks %q", c, why, want)
+			}
+		}
+	}
+	for _, c := range []string{"flai adr", "flai adr supersede 7", "flai adr list"} {
+		if why := g.Check(bash("general-purpose", c)); !strings.Contains(why, "a sub-agent (general-purpose) cannot run") || !strings.Contains(why, "(ADR-0060)") {
+			t.Errorf("a sub-agent's %q: %q", c, why)
+		}
+	}
+	for _, commit := range []any{nil, false} {
+		if why := g.Check(sub(commit)); why != "" {
+			t.Errorf("a sub-agent's adr_new, commit %v, refused: %s", commit, why)
+		}
+	}
+	why := g.Check(sub(true))
+	for _, want := range []string{"a sub-agent (general-purpose) cannot call adr_new with commit true", "the commit is the story's agent's", "call it without commit", "(ADR-0060, ADR-0127)", "final message"} {
+		if !strings.Contains(why, want) {
+			t.Errorf("a sub-agent's adr_new, commit true: %q lacks %q", why, want)
+		}
+	}
+
+	own := []Event{itemOf(ADRNew, "", "")}
+	own[0].ToolInput.Commit = true
+	for _, c := range append(append([]string{}, allowed...), commits...) {
+		own = append(own, bash("", c))
+	}
+	for _, gr := range []Guard{g, {Commands: g.Commands, Story: "S-0287", Served: true}} {
+		for _, e := range own {
+			if why := gr.Check(e); why != "" {
+				t.Errorf("the story's agent's %s %q refused: %s", e.ToolName, e.ToolInput.Command, why)
+			}
+		}
+	}
+	roles := map[string]Guard{"planner": planGuard, "orchestrator": orchestrator(allOn), "analyzer": analyzerIn(t.TempDir())}
+	for who, gr := range roles {
+		if why := gr.Check(itemOf(ADRNew, "", "")); !strings.Contains(why, "cannot call "+ADRNew) {
+			t.Errorf("the %s's %s: %q", who, ADRNew, why)
+		}
+		for _, c := range writes {
+			if why := gr.Check(bash("", c)); !strings.Contains(why, "cannot run") {
+				t.Errorf("the %s's %q: %q", who, c, why)
+			}
 		}
 	}
 }

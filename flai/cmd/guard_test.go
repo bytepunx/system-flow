@@ -42,6 +42,45 @@ func TestGuard(t *testing.T) {
 	}
 }
 
+// I-0062, S-0287, ADR-0127: a task sub-agent that records a decision is let
+// run flai adr new and then flai adr topics on the ADR it made, so that it no
+// longer copies what flai writes by hand or guesses the number; with --commit,
+// or adr_new with commit, it is refused with exit 2, and what it wrote stays
+// uncommitted for the story's agent.
+func TestGuardLetsASubAgentWriteAnADRButNotCommitIt(t *testing.T) {
+	root := adrProject(t)
+	hook := func(tool string, input map[string]any) string {
+		in, _ := json.Marshal(map[string]any{"tool_name": tool, "tool_input": input, "agent_type": "general-purpose", "agent_id": "a1"})
+		return string(in)
+	}
+	bash := func(command string) string { return hook("Bash", map[string]any{"command": command}) }
+	guarded := func(in string, code int, err string) {
+		t.Helper()
+		if _, errOut, got := runStdin(t, root, in, "guard"); got != code || (err == "" && errOut != "") || !strings.Contains(errOut, err) {
+			t.Errorf("%s: code %d, stderr %q", in, got, errOut)
+		}
+	}
+
+	guarded(bash(`scripts/flai.sh adr new "A decision"`), 0, "")
+	if out, errOut, code := runIn(t, root, "adr", "new", "A decision"); code != 0 || !strings.HasPrefix(out, "ADR-0008 A decision") {
+		t.Fatalf("adr new: %d %s %s", code, out, errOut)
+	}
+	guarded(bash("scripts/flai.sh adr topics 8 all"), 0, "")
+	if out, errOut, code := runIn(t, root, "adr", "topics", "8", "all"); code != 0 {
+		t.Fatalf("adr topics: %d %s %s", code, out, errOut)
+	}
+	guarded(bash("scripts/flai.sh adr accept 8"), 0, "")
+	guarded(hook("mcp__flai__adr_new", map[string]any{"decision": "Another", "commit": false}), 0, "")
+
+	guarded(bash(`scripts/flai.sh adr new "A decision" --commit`), 2, `a sub-agent (general-purpose) cannot run "scripts/flai.sh adr new A decision --commit": the commit is the story's agent's`)
+	guarded(bash("scripts/flai.sh adr topics 8 all --autocommit"), 2, "leave the files uncommitted for the story's agent to review and commit (ADR-0060, ADR-0127)")
+	guarded(hook("mcp__flai__adr_new", map[string]any{"decision": "Another", "commit": true}), 2, "a sub-agent (general-purpose) cannot call adr_new with commit true")
+
+	if st := gitIn(t, root, "status", "--porcelain"); !strings.Contains(st, "design/adrs/0008-a-decision.md") || !strings.Contains(st, "design/adrs/README.md") {
+		t.Errorf("the ADR and its index row are left uncommitted for the story's agent: %q", st)
+	}
+}
+
 // S-0208: in a session flai serve starts with FLAI_ROLE=plan, flai guard
 // holds the planner's own calls to planning.
 func TestGuardHoldsThePlannerToPlanning(t *testing.T) {

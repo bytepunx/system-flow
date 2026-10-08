@@ -10,6 +10,13 @@
 // carelessly, not one that sets out to hide a command (a backslash inside a
 // name, a command held in a variable).
 //
+// A sub-agent may write an ADR, a document like the design and the code it
+// edits, with flai adr new, topics, and accept, or the MCP tool adr_new, but
+// not commit it (S-0287, ADR-0127): with --commit or --autocommit, or
+// adr_new's commit, they are refused, since a commit writes history and
+// widens the story's touches, which are the story's agent's. Every other
+// flai adr command is refused it as before.
+//
 // A sub-agent does not write a file in a .claude/ folder, with Edit,
 // MultiEdit, Write, or NotebookEdit, unless the operator enabled the
 // project's auto-approve host action (S-0299): Claude Code asks for each such
@@ -126,12 +133,15 @@ type Event struct {
 // cost_of_delay, each key it gives with its value as given, so that an edit
 // that gives a story cost of delay inputs is told from one that sets a value
 // or removes one (S-0328); it is nil when cost_of_delay is not an object.
+// Commit is adr_new's commit, which a sub-agent may not give true (S-0287,
+// ADR-0127).
 type Input struct {
 	Command        string                     `json:"command"`
 	ID             string                     `json:"id"`
 	To             string                     `json:"to"`
 	Type           string                     `json:"type"`
 	Draft          bool                       `json:"draft"`
+	Commit         bool                       `json:"commit"`
 	Recommendation bool                       `json:"recommendation"`
 	Source         string                     `json:"source"`
 	FilePath       string                     `json:"file_path"`
@@ -178,6 +188,25 @@ var MCPReads = []string{"board", "doc_get", "doc_search", "item_get", "order_by_
 // message_escalate, which write a conversation, and the last a thread too
 // (ADR-0121), are the story's agent's alone.
 var MCPStoryReads = []string{"message_get"}
+
+// ADRNew is flai's MCP tool that records an ADR, which a sub-agent may call
+// without commit (S-0287, ADR-0127).
+const ADRNew = "adr_new"
+
+// adrWrites are the flai adr subcommands a sub-agent may run, without
+// adrCommits, the flags with which they commit what they wrote (S-0287,
+// ADR-0127). The planner, the orchestrator, and the analyzer run none.
+var (
+	adrWrites  = []string{"accept", "new", "topics"}
+	adrCommits = []string{"--autocommit", "--commit"}
+)
+
+// Why a sub-agent writes an ADR but does not commit it, and what it does
+// instead (S-0287, ADR-0127).
+const (
+	commitsADR    = "the commit is the story's agent's, since it writes history and widens the story's touches"
+	leavesADRToIt = "and leave the files uncommitted for the story's agent to review and commit (ADR-0060, ADR-0127)"
+)
 
 // cliReads are the flai commands a sub-agent may run, each with the
 // subcommands it may run; nil allows the command whatever follows it, and ""
@@ -534,16 +563,24 @@ type rules struct {
 	git  func(cmd string) string
 }
 
-// subAgent are a sub-agent's rules: flai's reads and git's.
+// subAgent are a sub-agent's rules: flai's reads, the flai adr commands that
+// write an ADR without committing it (S-0287, ADR-0127), and git's reads.
+// Each refusal cites its ADRs.
 var subAgent = rules{
 	flai: func(cmd, sub string, rest []string) (string, string) {
-		if reads(cmd, sub, rest) {
+		switch {
+		case reads(cmd, sub, rest):
+			return "", ""
+		case cmd == "adr" && slices.Contains(adrWrites, sub):
+			if slices.ContainsFunc(adrCommits, func(f string) bool { return named(rest, f) }) {
+				return commitsADR + "; run it without --commit or --autocommit " + leavesADRToIt, ""
+			}
 			return "", ""
 		}
-		return "flai commands that change work items, threads, conversations between stories, narratives, or releases are the story's agent's", ""
+		return "flai commands that change work items, threads, conversations between stories, narratives, or releases are the story's agent's (ADR-0060)", ""
 	},
 	git: func(string) string {
-		return "git commands that change the worktree, the index, branches, or history are the story's agent's"
+		return "git commands that change the worktree, the index, branches, or history are the story's agent's (ADR-0060)"
 	},
 }
 
@@ -977,7 +1014,10 @@ func (g Guard) Decide(e Event) Refusal {
 		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot use %s on %s: a path Claude Code protects, such as a file in a .claude/ folder or .mcp.json, is written only with the operator's approval on a thread, which would hold this call, and the layer with it, until they answer (ADR-0086, ADR-0106). Put the file's whole new content in your final message; the story's agent writes it.", who, e.ToolName, file)}
 	}
 	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
-		if slices.Contains(MCPReads, tool) || slices.Contains(MCPStoryReads, tool) {
+		switch {
+		case tool == ADRNew && e.ToolInput.Commit:
+			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot call %s with commit true: %s; call it without commit %s. Put what you need done in your final message; the story's agent does it.", who, tool, commitsADR, leavesADRToIt)}
+		case slices.Contains(MCPReads, tool), slices.Contains(MCPStoryReads, tool), tool == ADRNew:
 			return Refusal{}
 		}
 		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot call %s: it reads, and only the story's agent changes work items, threads, and conversations with other stories or reads the inbox (ADR-0059). Put what you need done, or the question for the designer, in your final message.", who, tool)}
@@ -987,7 +1027,7 @@ func (g Guard) Decide(e Event) Refusal {
 	}
 	for _, words := range commands(e.ToolInput.Command) {
 		if why, _ := g.refuse(words, subAgent); why != "" {
-			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot run %q: %s (ADR-0060). Put what you need done in your final message; the story's agent does it.", who, strings.Join(words, " "), why)}
+			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. Put what you need done in your final message; the story's agent does it.", who, strings.Join(words, " "), why)}
 		}
 	}
 	return Refusal{}
