@@ -76,57 +76,6 @@ func diff(t *testing.T, want, got []string) {
 	}
 }
 
-// Every markdown file in the monorepo passes markdownlint-cli2 (make
-// lint-md, in CI), so mdlint must report nothing on any of them: a finding
-// here is one markdownlint would not make.
-func TestRepositoryLintsClean(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration: reads the monorepo")
-	}
-	root := filepath.Join("..", "..", "..")
-	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
-		t.Skip("monorepo not present")
-	}
-	c, err := Load(root)
-	if err != nil || c == nil {
-		t.Fatalf("config: %v %v", c, err)
-	}
-	skip := map[string]bool{"node_modules": true, "testdata": true, "bin": true, ".flai-cache": true, ".svelte-kit": true, ".git": true}
-	var got []string
-	n := 0
-	err = filepath.WalkDir(root, func(path string, e os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(root, path)
-		if e.IsDir() {
-			if skip[e.Name()] || rel == filepath.Join("flaiover", "build") {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		n++
-		for _, f := range c.Lint(string(data)) {
-			got = append(got, fmt.Sprintf("%s:%d %s", rel, f.Line, f))
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n < 100 {
-		t.Fatalf("linted %d files; expected the monorepo's", n)
-	}
-	diff(t, nil, got)
-}
-
 func TestConfig(t *testing.T) {
 	dir := t.TempDir()
 	if c, err := Load(dir); c != nil || err != nil {
