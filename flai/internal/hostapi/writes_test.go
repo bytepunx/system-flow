@@ -140,10 +140,11 @@ var refused = map[string][]string{
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1.5],` + rid + `}`,
 		`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","tick":[1]}`,
 	},
-	// S-0269: a task closed in one call, with a message, never a story's ID
+	// S-0269: a task closed in one call, never a story's ID; its message is
+	// optional (ADR-0128), but text when given
 	"task.done": {
 		`{"id":"S-0001","message":"m",` + rid + `}`, `{"id":"E-0001","message":"m",` + rid + `}`, `{"id":"--help","message":"m",` + rid + `}`,
-		`{"id":"T-0001 --log=x","message":"m",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"T-0001","message":" \n ",` + rid + `}`,
+		`{"id":"T-0001 --log=x","message":"m",` + rid + `}`, `{"message":"m",` + rid + `}`,
 		`{"id":"T-0001","message":["m"],` + rid + `}`, `{"id":"T-0001","message":"m"}`,
 	},
 	// S-0274: a story started in one call, by its ID, with a budget that is a size
@@ -2277,7 +2278,8 @@ func TestStreamStateWritesTheTextsGiven(t *testing.T) {
 // result. A stop at the sync is a conflict and one at the check a refusal,
 // each with the result as data; a stop at another step is an error with the
 // result as data, a rule when a workflow rule refused it; a run that could not
-// start is flai's error; and a story's ID never reaches the command line.
+// start is flai's error; a message is passed only when one is given; and a
+// story's ID never reaches the command line.
 func TestTaskDoneAnswersFlaiTaskDonesResult(t *testing.T) {
 	p := channel.Project{Key: "harbour", Root: "/p"}
 	done := func(ran Ran, params string) (any, *channel.Error, string) {
@@ -2306,8 +2308,14 @@ func TestTaskDoneAnswersFlaiTaskDonesResult(t *testing.T) {
 	if _, e, args := done(Ran{Stdout: []byte(ran)}, `{"id":"T-0021","message":"--amend","log":" parsed  tables ",`+rid+`}`); e != nil || args != "task done T-0021 --message=--amend --log=parsed tables --json" {
 		t.Errorf("a close with --log: %+v %q", e, args)
 	}
-	if _, e, args := done(Ran{}, `{"id":"T-0021","log":"x",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || !strings.HasPrefix(e.Message, "message is required") || args != "" {
-		t.Errorf("no message: %+v %q", e, args)
+	// ADR-0128: the message is needed only when there is something to
+	// commit, which flai task done judges, so none, or a blank one, is not
+	// passed
+	if _, e, args := done(Ran{Stdout: []byte(ran)}, `{"id":"T-0021","log":"x",`+rid+`}`); e != nil || args != "task done T-0021 --log=x --json" {
+		t.Errorf("a close without a message: %+v %q", e, args)
+	}
+	if _, e, args := done(Ran{Stdout: []byte(ran)}, `{"id":"T-0021","message":" \n ",`+rid+`}`); e != nil || args != "task done T-0021 --json" {
+		t.Errorf("a close with a blank message: %+v %q", e, args)
 	}
 	if _, e, args := done(Ran{}, `{"id":"S-0004","message":"m",`+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams || !strings.HasPrefix(e.Message, "S-0004 is not a task") || args != "" {
 		t.Errorf("a story: %+v %q", e, args)

@@ -3305,14 +3305,19 @@ Subcommands:
 Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen touches, check, and read the inbox.
 
 ```text
-flai task done <task> -m "<message>" [flags]
+flai task done <task> [-m "<message>"] [flags]
 ```
 
 Close a task in one call (ADR-0107). flai finds the task's story and works in the story's worktree. The steps run in this order, and the first that fails stops the run; the steps after it are not done.
 
 ```text
-1. Commit: git add -A and git commit -m in the story's worktree. Nothing to
-   commit is not a failure.
+1. Commit (ADR-0128): of the paths changed in the story's worktree, those the
+   task's touches cover and those no other open task of the story covers are
+   committed with -m, and nothing else in the worktree is staged or
+   committed. A path only another open task covers is left uncommitted for
+   that task's close and listed as left; it is not a failure. -m is needed
+   only when there is something to commit; nothing to commit is not a
+   failure.
 2. Tell: a message to each other story in progress or in review whose claim
    covers a path the commit changed, the shared paths included, about those
    paths, naming the task, the commit, and its subject; on the conversation
@@ -3321,14 +3326,16 @@ Close a task in one call (ADR-0107). flai finds the task's story and works in th
 3. Sync: flai stream sync for the story. It rebases the branch onto the main
    branch, trial-merges it with the other open story branches, and lists
    what it changed outside the story's touches. A refusal or a stop on
-   conflicts stops the run.
+   conflicts stops the run, save a refusal for the paths left alone: the
+   run goes on, and the close that leaves none syncs the branch.
 4. Move: the task to done, under flai move's rules, with any story or epic
    that follows it. A task already done is not moved again, so the call can
    be repeated after a stop.
 5. Log: an entry in the story's narrative: --log when given, else the
-   message's subject line.
+   message's subject line, else "Closed T-nnnn: <title>".
 6. Touches: the paths the commit changed that the task's touches, or the
    story's, do not cover are added to each, as flai touches records them.
+   A path left is never added.
 7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note.
 8. Inbox: the agent's inbox, as the MCP tool inbox answers it.
@@ -3340,7 +3347,7 @@ While a rebase is unfinished in the worktree, the commit and the sync refuse. Re
 
 Running the task's tests with flai test, fixing what they find, and ticking criteria with flai criteria tick stay the agent's. Close a fix by calling flai task done again: it commits the fix, syncs, and checks.
 
-The output is a line for each step that ran, then the inbox. --json prints the result as the MCP tool task\_done answers it.
+The output is a line for each step that ran, with the paths left after the commit's, then the inbox. --json prints the result as the MCP tool task\_done answers it, the paths left as left.
 
 Exit codes: 0 when every step ran, 3 when the sync stopped the run, 4 when the check did, and 1 when another step did or the run could not start.
 
@@ -3352,6 +3359,7 @@ Examples:
 flai task done T-0021 -m "feat: [S-0004] T-0021 the parser reads tables"
 flai task done T-0021 -m "fix: [S-0004] what the tests found" --log "fixed the empty table case"
 flai task done T-0021 -m "docs: [S-0004] the guide" --json
+flai task done T-0021 --log "nothing left to commit"
 ```
 
 Flags:
@@ -3359,7 +3367,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--log` string | the narrative log entry, in place of the message's subject line |
-| `-m`, `--message` string | the commit message; its subject line is the log entry unless --log is given |
+| `-m`, `--message` string | the commit message, needed only when there is something to commit; its subject line is the log entry unless --log is given |
 
 #### flai task new
 

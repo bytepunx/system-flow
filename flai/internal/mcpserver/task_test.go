@@ -134,6 +134,81 @@ func TestTaskDoneClosesATaskInOneCall(t *testing.T) {
 	}
 }
 
+// sibling creates a second in-progress task of S-004, Second, touching
+// touches, sets T-003's touches to mine, and returns the new task's ID.
+func sibling(t *testing.T, repo *workitem.Repo, mine, touches []string) string {
+	t.Helper()
+	t003, err := repo.Get("T-003")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t003.Touches = mine
+	if err := repo.Save(t003); err != nil {
+		t.Fatal(err)
+	}
+	it, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Second", Parent: "S-004", Touches: touches, Now: closeClock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{workitem.Ready, workitem.InProgress} {
+		if _, err := repo.TransitionAll(it, to, "agent", "", closeClock, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return it.ID
+}
+
+// I-0108, ADR-0128: with two open tasks' files in the worktree, task_done
+// on one commits its own file alone, answers the other's in left, leaves it
+// uncommitted, and goes on past the sync it refuses.
+func TestTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
+	repo, wt := closeProject(t)
+	sibling(t, repo, []string{"README.md"}, []string{"src/two.go"})
+	writeIn(t, wt, "README.md", "# good\n\nT-003's.\n")
+	writeIn(t, wt, "src/two.go", "package two\n")
+
+	out, failed := closer(t, repo).call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["stopped"] != "" {
+		t.Fatalf("stopped at %v: %v", out["stopped"], out["error"])
+	}
+	if paths, _ := field(out, "commit.paths").([]any); len(paths) != 1 || paths[0] != "README.md" {
+		t.Errorf("commit: %v", out["commit"])
+	}
+	if left, _ := out["left"].([]any); len(left) != 1 || left[0] != "src/two.go" {
+		t.Errorf("left: %v", out["left"])
+	}
+	if field(out, "sync.synced") != false || field(out, "sync.stopped") != storygit.StopUncommitted || field(out, "move.state") != workitem.Done {
+		t.Errorf("sync %v, move %v", out["sync"], out["move"])
+	}
+	if untracked := gitIn(t, wt, "ls-files", "--others", "--exclude-standard"); untracked != "src/two.go" {
+		t.Errorf("untracked: %q", untracked)
+	}
+}
+
+// ADR-0128: task_done with nothing to commit needs no message: it runs to
+// the end, answers no commit and left empty, and logs that the task was
+// closed.
+func TestTaskDoneClosesWithNothingToCommitAndNoMessage(t *testing.T) {
+	repo, _ := closeProject(t)
+
+	out, failed := closer(t, repo).call(t, "task_done", map[string]any{"task": "T-003"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["stopped"] != "" || out["commit"] != nil {
+		t.Fatalf("stopped at %v: %v; commit %v", out["stopped"], out["error"], out["commit"])
+	}
+	if left, ok := out["left"].([]any); !ok || len(left) != 0 {
+		t.Errorf("left: %v", out["left"])
+	}
+	if field(out, "log.entry") != "Closed T-003: T3" || field(out, "move.state") != workitem.Done {
+		t.Errorf("log %v, move %v", out["log"], out["move"])
+	}
+}
+
 // A sync that stops on a conflict is the answer, not a tool error: stopped
 // names the sync, which lists the conflicting path, and the task is not
 // moved.
@@ -245,8 +320,9 @@ func canonical(t *testing.T, v any, root string) string {
 }
 
 // task_done refuses, as a tool error and before any step, what it cannot
-// close: no message, an item that is not a task, and a task whose story has
-// no worktree. It runs no git.
+// close: an item that is not a task, and a task whose story has no worktree,
+// with a message or without one, which the schema does not require
+// (ADR-0128). It runs no git.
 func TestTaskDoneRefusesWhatItCannotStart(t *testing.T) {
 	repo, err := workitem.Open(closeFixture(t))
 	if err != nil {
@@ -258,25 +334,21 @@ func TestTaskDoneRefusesWhatItCannotStart(t *testing.T) {
 		args map[string]any
 		want string
 	}{
-		{"a blank message", map[string]any{"task": "T-003", "message": " "}, "a commit message is needed"},
 		{"a story", map[string]any{"task": "S-004", "message": "m"}, "S-004 is a story"},
 		{"no worktree", map[string]any{"task": "T-003", "message": "m"}, "S-004 has no worktree"},
+		{"no worktree, no message", map[string]any{"task": "T-003"}, "S-004 has no worktree"},
+		{"no worktree, a blank message", map[string]any{"task": "T-003", "message": " "}, "S-004 has no worktree"},
 	} {
 		if out, failed := f.call(t, "task_done", tc.args); !strings.Contains(failed, tc.want) {
 			t.Errorf("%s: answered %v, failed %q, want %q", tc.name, out, failed, tc.want)
 		}
-	}
-	// a call without a message is refused by the tool's schema
-	res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "task_done", Arguments: map[string]any{"task": "T-003"}})
-	if err == nil && !res.IsError {
-		t.Errorf("a call without a message was answered: %+v", res.StructuredContent)
 	}
 	if st := t003(t, repo); st != workitem.InProgress {
 		t.Errorf("T-003 is %s", st)
 	}
 }
 
-// The tool is advertised with task and message required, and the server's
+// The tool is advertised with task alone required (ADR-0128), and the server's
 // instructions send the agent to it at every task transition.
 func TestTaskDoneIsAdvertisedAndInstructed(t *testing.T) {
 	f := setup(t)
@@ -297,7 +369,7 @@ func TestTaskDoneIsAdvertisedAndInstructed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(schema), `"required":["task","message"]`) {
+	if !strings.Contains(string(schema), `"required":["task"]`) {
 		t.Errorf("schema: %s", schema)
 	}
 	if in := f.cs.InitializeResult().Instructions; !strings.Contains(in, "At every task transition, close the task with task_done") {

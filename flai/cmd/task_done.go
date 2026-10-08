@@ -10,24 +10,30 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/taskdone"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// flai task done closes a task in one call through taskdone.Run (ADR-0107)
-// and prints what each step did.
+// flai task done closes a task in one call through taskdone.Run (ADR-0107,
+// ADR-0128) and prints what each step did.
 
 func newTaskDoneCmd(a *app) *cobra.Command {
 	var message, logEntry string
 	c := &cobra.Command{
-		Use:   "done <task> -m \"<message>\"",
+		Use:   "done <task> [-m \"<message>\"]",
 		Short: "Close a task in one call: commit, tell overlapping stories, sync, move to done, log, widen touches, check, and read the inbox",
 		Long: `Close a task in one call (ADR-0107). flai finds the task's story and works
 in the story's worktree. The steps run in this order, and the first that
 fails stops the run; the steps after it are not done.
 
-1. Commit: git add -A and git commit -m in the story's worktree. Nothing to
-   commit is not a failure.
+1. Commit (ADR-0128): of the paths changed in the story's worktree, those the
+   task's touches cover and those no other open task of the story covers are
+   committed with -m, and nothing else in the worktree is staged or
+   committed. A path only another open task covers is left uncommitted for
+   that task's close and listed as left; it is not a failure. -m is needed
+   only when there is something to commit; nothing to commit is not a
+   failure.
 2. Tell: a message to each other story in progress or in review whose claim
    covers a path the commit changed, the shared paths included, about those
    paths, naming the task, the commit, and its subject; on the conversation
@@ -36,14 +42,16 @@ fails stops the run; the steps after it are not done.
 3. Sync: flai stream sync for the story. It rebases the branch onto the main
    branch, trial-merges it with the other open story branches, and lists
    what it changed outside the story's touches. A refusal or a stop on
-   conflicts stops the run.
+   conflicts stops the run, save a refusal for the paths left alone: the
+   run goes on, and the close that leaves none syncs the branch.
 4. Move: the task to done, under flai move's rules, with any story or epic
    that follows it. A task already done is not moved again, so the call can
    be repeated after a stop.
 5. Log: an entry in the story's narrative: --log when given, else the
-   message's subject line.
+   message's subject line, else "Closed T-nnnn: <title>".
 6. Touches: the paths the commit changed that the task's touches, or the
    story's, do not cover are added to each, as flai touches records them.
+   A path left is never added.
 7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note.
 8. Inbox: the agent's inbox, as the MCP tool inbox answers it.
@@ -58,8 +66,9 @@ Running the task's tests with flai test, fixing what they find, and ticking
 criteria with flai criteria tick stay the agent's. Close a fix by calling
 flai task done again: it commits the fix, syncs, and checks.
 
-The output is a line for each step that ran, then the inbox. --json prints
-the result as the MCP tool task_done answers it.
+The output is a line for each step that ran, with the paths left after the
+commit's, then the inbox. --json prints the result as the MCP tool
+task_done answers it, the paths left as left.
 
 Exit codes: 0 when every step ran, 3 when the sync stopped the run, 4 when
 the check did, and 1 when another step did or the run could not start.
@@ -68,7 +77,8 @@ A story or an epic is refused: a story goes to review with flai move
 S-nnnn review after its close-out, and an epic follows its stories.`,
 		Example: `  flai task done T-0021 -m "feat: [S-0004] T-0021 the parser reads tables"
   flai task done T-0021 -m "fix: [S-0004] what the tests found" --log "fixed the empty table case"
-  flai task done T-0021 -m "docs: [S-0004] the guide" --json`,
+  flai task done T-0021 -m "docs: [S-0004] the guide" --json
+  flai task done T-0021 --log "nothing left to commit"`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := refuseNotATask(args[0]); err != nil {
@@ -99,9 +109,8 @@ S-nnnn review after its close-out, and an epic follows its stories.`,
 			return nil
 		},
 	}
-	c.Flags().StringVarP(&message, "message", "m", "", "the commit message; its subject line is the log entry unless --log is given")
+	c.Flags().StringVarP(&message, "message", "m", "", "the commit message, needed only when there is something to commit; its subject line is the log entry unless --log is given")
 	c.Flags().StringVar(&logEntry, "log", "", "the narrative log entry, in place of the message's subject line")
-	_ = c.MarkFlagRequired("message")
 	return c
 }
 
@@ -127,6 +136,9 @@ func (a *app) printTaskDone(res taskdone.Result) {
 	} else if res.Stopped != taskdone.StepCommit {
 		fmt.Fprintln(w, "commit: nothing to commit")
 	}
+	if len(res.Left) > 0 {
+		fmt.Fprintf(w, "left for the other open tasks: %s\n", strings.Join(res.Left, ", "))
+	}
 	for _, t := range res.Told {
 		fmt.Fprintf(w, "told: %s (%s) of %s\n", t.Story, t.Conversation, strings.Join(t.Paths, ", "))
 	}
@@ -135,6 +147,9 @@ func (a *app) printTaskDone(res taskdone.Result) {
 		case s.Synced:
 			fmt.Fprintf(w, "sync: %s is rebased onto %s\n", s.Branch, s.Base)
 			printSyncChecks(w, &workitem.Item{ID: res.Story}, *s)
+		case s.Stopped == storygit.StopUncommitted && res.Stopped != taskdone.StepSync:
+			// refused for the paths left alone, which stops nothing (ADR-0128)
+			fmt.Fprintf(w, "sync: %s was not synced: %s\n", s.Branch, s.Continue)
 		case s.Stopped != "":
 			fmt.Fprint(w, "sync: "+syncStoppedFrom(*s).Report())
 		}

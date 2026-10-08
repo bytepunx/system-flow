@@ -1179,8 +1179,9 @@ func itemSpecs() map[string]spec {
 
 		// task.done: a task closed in one call, as flai task done closes it
 		// (ADR-0107): commit, sync, move, log, widen touches, check, and inbox,
-		// stopping at the first step that fails. The answer is flai task done
-		// --json's result. A stop at the sync (exit 3) is a conflict and one at
+		// stopping at the first step that fails, with a message needed only
+		// when there is something to commit (ADR-0128). The answer is flai
+		// task done --json's result. A stop at the sync (exit 3) is a conflict and one at
 		// the check (exit 4) a refusal, each with the result as data, as the
 		// ADR maps them; a stop at another step (exit 1 with the result) is
 		// taskStopped's error, with the result as data too, so the dashboard
@@ -1198,11 +1199,13 @@ func itemSpecs() map[string]spec {
 			if e := needTask(in.ID); e != nil {
 				return nil, "", e
 			}
-			// the message is the commit's, body and all, so its lines are kept
-			if strings.TrimSpace(in.Message) == "" {
-				return nil, "", bad("message is required: the commit message for what the task changed")
+			// the message is the commit's, body and all, so its lines are kept;
+			// it is needed only when there is something to commit, which flai
+			// task done judges, so a blank one is not passed (ADR-0128)
+			args := []string{"task", "done", in.ID}
+			if strings.TrimSpace(in.Message) != "" {
+				args = append(args, "--message="+in.Message)
 			}
-			args := []string{"task", "done", in.ID, "--message=" + in.Message}
 			if entry := text(in.Log); entry != "" {
 				args = append(args, "--log="+entry)
 			}

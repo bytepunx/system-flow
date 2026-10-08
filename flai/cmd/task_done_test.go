@@ -226,9 +226,9 @@ func TestTaskDoneStopsAtAFailedCheck(t *testing.T) {
 	}
 }
 
-// -m is required, and a story or an epic is refused with what moves it on
-// instead; neither needs a project.
-func TestTaskDoneRefusesWithoutAMessageOrATask(t *testing.T) {
+// A story or an epic is refused with what moves it on instead, with no
+// project needed.
+func TestTaskDoneRefusesAStoryOrAnEpic(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	dir := t.TempDir()
 	for _, tc := range []struct {
@@ -236,7 +236,6 @@ func TestTaskDoneRefusesWithoutAMessageOrATask(t *testing.T) {
 		args []string
 		want []string
 	}{
-		{"no message", []string{"T-3"}, []string{"required flag(s)", "message", "not set"}},
 		{"a story", []string{"S-4", "-m", "m"}, []string{"S-0004 is a story", "flai move S-0004 review after its close-out"}},
 		{"an epic", []string{"E-1", "-m", "m"}, []string{"E-0001 is an epic", "follows its stories"}},
 	} {
@@ -249,5 +248,115 @@ func TestTaskDoneRefusesWithoutAMessageOrATask(t *testing.T) {
 				t.Errorf("%s: error lacks %q: %s", tc.name, want, errOut)
 			}
 		}
+	}
+}
+
+// sibling creates a second in-progress task of S-004, Second, touching
+// touches, in the main checkout, sets T-003's touches to mine, and returns
+// the new task's ID.
+func sibling(t *testing.T, root string, mine, touches []string) string {
+	t.Helper()
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t003, err := repo.Get("T-003")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t003.Touches = mine
+	if err := repo.Save(t003); err != nil {
+		t.Fatal(err)
+	}
+	it, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Second", Parent: "S-004", Touches: touches, Now: taskDoneClock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{workitem.Ready, workitem.InProgress} {
+		if _, err := repo.TransitionAll(it, to, "agent", "", taskDoneClock, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return it.ID
+}
+
+// I-0108, ADR-0128: with two open tasks' files in the worktree, closing one
+// commits its own file alone, leaves the other's uncommitted and names it,
+// says the sync waits for it, and exits 0; the other's close, with --json,
+// commits it, leaves none, and syncs.
+func TestTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
+	root, wt := taskDoneProject(t)
+	second := sibling(t, root, []string{"README.md"}, []string{"src/two.go"})
+	writeIn(t, wt, "README.md", "# good\n\nT-003's.\n")
+	writeIn(t, wt, "src/two.go", "package two\n")
+
+	out, errOut, code := taskDone(t, wt, "T-003", "-m", "docs: [S-004] T-003 the readme")
+	if code != 0 {
+		t.Fatalf("task done: %d\n%s\n%s", code, out, errOut)
+	}
+	head := gitIn(t, wt, "rev-parse", "HEAD")
+	for _, want := range []string{
+		"commit: " + short(head) + " docs: [S-004] T-003 the readme\nleft for the other open tasks: src/two.go\n",
+		"sync: story/S-004 was not synced: the uncommitted paths wait for the close of the open tasks that cover them; the close that leaves none syncs story/S-004\n",
+		"move: T-003 → done\n",
+		"check: passed",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "stopped at") || strings.Contains(out, "To continue") {
+		t.Errorf("output:\n%s", out)
+	}
+	if got := gitIn(t, wt, "show", "--name-only", "--format=", "HEAD"); got != "README.md" {
+		t.Errorf("the commit changed %q", got)
+	}
+	if untracked := gitIn(t, wt, "ls-files", "--others", "--exclude-standard"); untracked != "src/two.go" {
+		t.Errorf("untracked: %q", untracked)
+	}
+
+	out, errOut, code = taskDone(t, wt, "--json", second, "-m", "feat: [S-004] "+second+" two")
+	if code != 0 {
+		t.Fatalf("task done %s: %d\n%s\n%s", second, code, out, errOut)
+	}
+	var res taskdone.Result
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "src/two.go" || res.Left == nil || len(res.Left) != 0 || res.Sync == nil || !res.Sync.Synced {
+		t.Errorf("json: commit %+v, left %v, sync %+v", res.Commit, res.Left, res.Sync)
+	}
+	if !strings.Contains(out, `"left": []`) {
+		t.Errorf("json lacks an empty left:\n%s", out)
+	}
+	if dirty := gitIn(t, wt, "status", "--porcelain"); dirty != "" {
+		t.Errorf("the worktree is not clean: %s", dirty)
+	}
+}
+
+// ADR-0128: a close with nothing to commit needs no -m: it runs to the end
+// and logs that the task was closed; one with something to commit and no -m
+// stops at the commit step asking for one.
+func TestTaskDoneNeedsAMessageOnlyToCommit(t *testing.T) {
+	root, wt := taskDoneProject(t)
+	second := sibling(t, root, nil, []string{"src/two.go"})
+
+	out, errOut, code := taskDone(t, wt, "T-003")
+	if code != 0 {
+		t.Fatalf("task done: %d\n%s\n%s", code, out, errOut)
+	}
+	for _, want := range []string{"commit: nothing to commit\n", "move: T-003 → done\n", ": Closed T-003: T3\n", "check: passed"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if st := taskStatus(t, root); st != workitem.Done {
+		t.Errorf("T-003 is %s", st)
+	}
+
+	writeIn(t, wt, "src/two.go", "package two\n")
+	out, errOut, code = taskDone(t, wt, second)
+	if code != 1 || !strings.Contains(out, "stopped at commit: a commit message is needed to commit src/two.go: flai task done "+second+` -m "<message>"`) {
+		t.Errorf("task done %s without -m: %d\n%s\n%s", second, code, out, errOut)
 	}
 }
