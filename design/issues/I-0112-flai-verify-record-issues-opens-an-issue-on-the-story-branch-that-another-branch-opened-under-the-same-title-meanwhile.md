@@ -2,12 +2,12 @@
 id: I-0112
 title: flai verify --record-issues opens an issue on the story branch that another branch opened under the same title meanwhile
 class: defect
-status: open
+status: closed
 count: 2
 cost: 8m
 first_reported: 2026-10-07T09:09:31Z
 last_reported: 2026-10-08T04:54:40Z
-updated: 2026-10-08T04:54:40Z
+updated: 2026-10-08T07:09:52Z
 ---
 
 # I-0112 flai verify --record-issues opens an issue on the story branch that another branch opened under the same title meanwhile
@@ -28,3 +28,4 @@ S-0318's close-out bumped I-0118 (markdown.MD034 on wip/agents/orchestrator.md) 
 ## Remediation
 
 Story S-0326 remediates this issue, created from it at 2026-10-07T18:59:58Z.
+Closed 2026-10-08T07:09:52Z: S-0326 (ADR-0126): the rebase in flai stream sync, flai task done, and flai accept merges an issue file both sides changed by its instances, and folds an open issue the branch added into the main branch's open issue of the same title, committing the fold on the branch; tests in flai/cmd/stream_sync_test.go reproduce both instances.
