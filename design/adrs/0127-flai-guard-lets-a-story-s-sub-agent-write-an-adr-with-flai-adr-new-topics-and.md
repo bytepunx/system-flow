@@ -6,6 +6,7 @@ date: 2026-10-08
 supersedes: []
 superseded_by: []
 refines: [ADR-0060]
+topics: [cli, conventions, template]
 ---
 
 # ADR-0127 flai guard lets a story's sub-agent write an ADR with flai adr new, topics, and accept, or adr_new, and refuses it the commit, which stays the story's agent's
