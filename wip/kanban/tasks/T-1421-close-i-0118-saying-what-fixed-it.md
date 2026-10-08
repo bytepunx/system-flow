@@ -3,12 +3,15 @@ id: T-1421
 type: task
 nature: remediation
 title: Close I-0118 saying what fixed it
-status: backlog
+status: ready
 parent: S-0346
 owner: alex
 created: 2026-10-08T08:54:11Z
-updated: 2026-10-08T08:54:11Z
-transitions: []
+updated: 2026-10-08T09:30:52Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:30:52Z
+    by: agent-S-0346
 stream: S-0346
 tags: [issues]
 touches: [design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/summary.md]

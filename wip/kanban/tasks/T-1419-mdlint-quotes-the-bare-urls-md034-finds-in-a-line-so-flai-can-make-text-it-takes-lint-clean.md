@@ -3,12 +3,18 @@ id: T-1419
 type: task
 nature: improvement
 title: mdlint quotes the bare URLs md034 finds in a line, so flai can make text it takes lint clean
-status: backlog
+status: in-progress
 parent: S-0346
 owner: alex
 created: 2026-10-08T08:53:52Z
-updated: 2026-10-08T08:53:52Z
-transitions: []
+updated: 2026-10-08T09:30:51Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:30:51Z
+    by: agent-S-0346
+  - to: in-progress
+    at: 2026-10-08T09:30:51Z
+    by: agent-S-0346
 stream: S-0346
 tags: [flai, mdlint]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go]

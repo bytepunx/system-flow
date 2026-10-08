@@ -3,12 +3,15 @@ id: T-1420
 type: task
 nature: remediation
 title: A strategic run's end entry quotes the bare URLs in the summary flai takes from its final text, instead of being refused and lost
-status: backlog
+status: ready
 parent: S-0346
 owner: alex
 created: 2026-10-08T08:54:03Z
-updated: 2026-10-08T08:54:03Z
-transitions: []
+updated: 2026-10-08T09:30:52Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:30:52Z
+    by: agent-S-0346
 stream: S-0346
 tags: [flai, serve]
 touches: [flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, design/system/agent-narrative.md]

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-08T09:18:44Z
+updated: 2026-10-08T09:30:45Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T22:50:03Z
 forecast:
   duration: 1h
-  delivery: 2026-10-08T11:43:00Z
-  basis: "Its own forecast of 1h; 10th in the pull order with an in-progress limit of 5, behind S-0232, S-0322, S-0341, S-0344, S-0348, S-0338, S-0346, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233 and S-0234."
+  delivery: 2026-10-08T11:46:00Z
+  basis: "Its own forecast of 1h; 9th in the pull order with an in-progress limit of 5, behind S-0232, S-0341, S-0344, S-0346, S-0348, S-0338, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233 and S-0234."
   by: flai
-  at: 2026-10-08T09:18:44Z
+  at: 2026-10-08T09:30:45Z
 ---
 # S-0235 A signed release stamp is built into flai and into the flaiover image
 
