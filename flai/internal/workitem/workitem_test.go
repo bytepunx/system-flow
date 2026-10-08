@@ -1,6 +1,9 @@
 package workitem
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -74,20 +77,98 @@ func TestRoundTripRepositoryItems(t *testing.T) {
 	if len(items) < 20 {
 		t.Fatalf("expected the bootstrapped items, got %d", len(items))
 	}
-	for _, it := range items {
-		if err := it.Validate(); err != nil {
-			t.Errorf("%s: %v", it.Path, err)
-		}
-		orig, _ := os.ReadFile(it.Path)
-		if got := it.Marshal(); got != string(orig) {
-			t.Errorf("%s: marshal differs from file\n--- got ---\n%s\n--- want ---\n%s", it.Path, got, orig)
-		}
+	for _, p := range roundTripProblems(items) {
+		t.Error(p)
 	}
 	for _, typ := range Types {
 		id, _ := r.NextID(typ)
 		if !regexp.MustCompile(`^` + strings.ToUpper(typ[:1]) + `-\d{3,}$`).MatchString(id) {
 			t.Errorf("NextID(%s) = %s", typ, id)
 		}
+	}
+}
+
+// roundTripProblems checks that each listed item's file survives parse and
+// marshal byte for byte. It parses and compares one read of each file, since
+// in a worktree wip/ is the live main checkout, where agents rewrite items
+// while the test runs (I-0079): Save writes atomically, so one read is one
+// whole version. A file gone since the list was archived or removed, and is
+// skipped.
+func roundTripProblems(items []*Item) []string {
+	var problems []string
+	for _, listed := range items {
+		data, err := os.ReadFile(listed.Path)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("%s: %v", listed.Path, err))
+			continue
+		}
+		it, err := ParseItem(string(data))
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("%s: %v", listed.Path, err))
+			continue
+		}
+		if err := it.Validate(); err != nil {
+			problems = append(problems, fmt.Sprintf("%s: %v", listed.Path, err))
+		}
+		if got := it.Marshal(); got != string(data) {
+			problems = append(problems, fmt.Sprintf("%s: marshal differs from file\n--- got ---\n%s\n--- want ---\n%s", listed.Path, got, data))
+		}
+	}
+	return problems
+}
+
+// TestRoundTripItemsRewrittenSinceTheList reproduces I-0079: an item rewritten
+// and another removed between the list and the check. The old check compared
+// the listed item's marshal with a second read of its file, so it reported
+// the rewritten item as "marshal differs from file" and ignored the error of
+// the removed one.
+func TestRoundTripItemsRewrittenSinceTheList(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Story, "Rewritten mid-run", "")
+	mustCreate(t, r, Story, "Archived mid-run", "")
+	mustCreate(t, r, Story, "Left alone", "")
+	items, err := r.List(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 3 {
+		t.Fatalf("listed %d items, want 3", len(items))
+	}
+	rewritten, err := ReadItem(items[0].Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rewritten.Updated = "2026-09-16T08:00:00Z"
+	rewritten.Tags = append(rewritten.Tags, "planned")
+	if err := r.Save(rewritten); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(items[1].Path); err != nil {
+		t.Fatal(err)
+	}
+	if problems := roundTripProblems(items); len(problems) > 0 {
+		t.Errorf("round trip reported %d problems, want none:\n%s", len(problems), strings.Join(problems, "\n"))
+	}
+}
+
+func TestRoundTripReportsAnUnreadableFile(t *testing.T) {
+	r := newProject(t)
+	mustCreate(t, r, Story, "Turned into a folder", "")
+	items, err := r.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(items[0].Path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(items[0].Path, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if problems := roundTripProblems(items); len(problems) != 1 {
+		t.Errorf("round trip reported %q, want one problem for the unreadable file", problems)
 	}
 }
 
