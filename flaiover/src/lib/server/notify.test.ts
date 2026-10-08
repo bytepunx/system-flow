@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -21,7 +21,11 @@ describe('inbox webhook', () => {
 	const setManifest = async (extra: string) => {
 		const p = join(dir, 'system-flow.yaml');
 		const base = (await readFile(p, 'utf8')).replace(/\ndashboard:[\s\S]*$/, '\n');
-		await writeFile(p, base + extra);
+		// renamed into place, so that no read in flight sees it empty (I-0085).
+		await writeFile(`${p}.tmp`, base + extra);
+		await rename(`${p}.tmp`, p);
+		// flai on the host reports a manifest change too, which drops the cached answer.
+		repo.changed('system-flow.yaml');
 	};
 	const addQuestion = async (q: string) => {
 		const p = join(dir, 'wip/agents/S-004.md');
@@ -99,6 +103,14 @@ describe('inbox webhook', () => {
 		await new Promise((r) => setTimeout(r, 600));
 		await notifier!.idle();
 		expect(received).toHaveLength(1);
+	});
+
+	it('reads the notify_url set after a change was reported and the manifest read', async () => {
+		repo.changed('wip/agents/S-004.md');
+		await repo.manifest();
+		await setManifest(`dashboard:\n  notify_url: "${url()}"\n`);
+		notifier = await startNotifier(repo, 20);
+		expect(notifier).not.toBeNull();
 	});
 
 	it('logs a failed post and carries on', async () => {
