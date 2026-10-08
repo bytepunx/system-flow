@@ -3,14 +3,17 @@ id: S-0341
 type: story
 nature: improvement
 title: flai verify resumes at the tier that failed when the branch head and its base are unchanged, so a retry re-runs the failure and not the tiers that passed
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-08T07:59:12Z
-updated: 2026-10-08T08:08:17Z
+updated: 2026-10-08T08:37:17Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
     by: system-flow
+  - to: in-progress
+    at: 2026-10-08T08:37:17Z
+    by: agent-S-0341
 tags: [cli]
 topics: [testing]
 touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, scripts/close-out.sh, docs/users/flai.md, design/system/flai-cli.md, flai/internal/verify/verify.go, docs/users/flai-reference.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, docs/users/flaiover.md]
@@ -44,10 +47,10 @@ cost_of_delay:
   at: 2026-10-08T08:04:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T10:26:00Z
-  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0321, S-0339, S-0342, S-0322 and S-0291."
+  delivery: 2026-10-08T10:13:00Z
+  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340 and S-0342."
   by: flai
-  at: 2026-10-08T08:08:17Z
+  at: 2026-10-08T08:37:06Z
 ---
 # S-0341 flai verify resumes at the tier that failed when the branch head and its base are unchanged, so a retry re-runs the failure and not the tiers that passed
 
