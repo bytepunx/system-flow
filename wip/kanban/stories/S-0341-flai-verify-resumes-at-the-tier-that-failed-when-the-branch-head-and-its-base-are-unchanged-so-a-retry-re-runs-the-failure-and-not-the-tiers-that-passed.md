@@ -6,7 +6,7 @@ title: flai verify resumes at the tier that failed when the branch head and its 
 status: ready
 owner: alex
 created: 2026-10-08T07:59:12Z
-updated: 2026-10-08T08:05:06Z
+updated: 2026-10-08T08:07:59Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T08:04:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T10:24:00Z
-  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0321, S-0339, S-0322 and S-0291."
+  delivery: 2026-10-08T10:25:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0321, S-0339, S-0342, S-0322 and S-0291."
   by: flai
-  at: 2026-10-08T08:04:55Z
+  at: 2026-10-08T08:07:59Z
 ---
 # S-0341 flai verify resumes at the tier that failed when the branch head and its base are unchanged, so a retry re-runs the failure and not the tiers that passed
 
@@ -67,6 +67,10 @@ A verify run at the same branch head, against the same main commit, with the sam
 
 ## Tasks
 - T-1343 flai verify resumes a story's run from its last record when the head, the base, and the tiers are unchanged
+- T-1344 flai verify takes --fresh and prints reused tiers and a last line that says it resumed
+- T-1346 The review page shows a reused tier with the time of the run it comes from
+- T-1347 The close-out's last line says when flai verify reused tiers
+- T-1351 The user guide, the dashboard guide, and the CLI design say when flai verify resumes and how to force a full run
 
 ## Notes
 

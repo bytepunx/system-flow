@@ -6,7 +6,7 @@ title: The close-out's install smoke test failed once and passed when run alone,
 status: ready
 owner: alex
 created: 2026-10-06T10:31:55Z
-updated: 2026-10-08T08:04:55Z
+updated: 2026-10-08T08:07:59Z
 transitions:
   - to: ready
     at: 2026-10-08T07:57:14Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 1122
+      seconds: 1123
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 58
-          output: 999
-          cache_read: 8865412
-          cache_write: 19526
-          cost: 2.1893
+          input: 59
+          output: 1011
+          cache_read: 9044665
+          cache_write: 20285
+          cost: 2.2337
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T08:01:29Z
 forecast:
   duration: 1h
-  delivery: 2026-10-08T09:46:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 3, behind S-0232, S-0321, S-0339 and S-0322."
+  delivery: 2026-10-08T09:51:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0321, S-0339, S-0342 and S-0322."
   by: flai
-  at: 2026-10-08T08:04:55Z
+  at: 2026-10-08T08:07:59Z
 finalized:
   by: alex
   at: 2026-10-07T02:19:00Z

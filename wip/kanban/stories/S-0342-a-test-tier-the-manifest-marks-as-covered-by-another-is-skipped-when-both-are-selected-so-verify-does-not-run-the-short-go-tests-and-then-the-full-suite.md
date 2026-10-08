@@ -6,14 +6,14 @@ title: A test tier the manifest marks as covered by another is skipped when both
 status: ready
 owner: alex
 created: 2026-10-08T07:59:14Z
-updated: 2026-10-08T07:59:30Z
+updated: 2026-10-08T08:07:59Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:30Z
     by: system-flow
 tags: [cli]
 topics: [testing]
-touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, template/root/system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, template/root/system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/text.go, flai/internal/verify/text_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, docs/operators/settings.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,20 +25,29 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 22
+      seconds: 25
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 102
-          cache_read: 925166
-          cache_write: 2462
-          cost: 0.2286
+          input: 8
+          output: 146
+          cache_read: 1288467
+          cache_write: 6039
+          cost: 0.319
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1m
     by: alex
     at: 2026-10-08T07:59:14Z
+  value: 2.5
+  by: planner-S-0342
+  at: 2026-10-08T08:07:48Z
+forecast:
+  duration: 41m
+  delivery: 2026-10-08T08:52:00Z
+  basis: "Its own forecast of 41m; 1st in the pull order with an in-progress limit of 3, behind S-0232, S-0321 and S-0339."
+  by: flai
+  at: 2026-10-08T08:07:59Z
 ---
 # S-0342 A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite
 
@@ -56,6 +65,12 @@ The manifest can say which tier covers which: a tier that names `covers:` anothe
 - [ ] Tests cover the selection with and without the covering tier, the validation, and the reported skip; `docs/users/flai.md` and `design/system/flai-cli.md` describe it.
 
 ## Tasks
+- T-1345 A test tier may carry covers, and the manifest's validation refuses an unknown name, the tier itself, and a cycle
+- T-1349 A selected tier that another selected tier covers is skipped, not run, with state skipped and the covering tier named
+- T-1353 This repository's manifest marks integration as covering go-test, and the template's manifest shows the key
+- T-1355 flai test and flai verify list a covered tier as skipped: covered by its tier, in the text and in --json
+- T-1358 The review page shows a covered tier as skipped, covered by its tier
+- T-1359 The manifest, flai test, and flai verify documents describe covers and the skipped tier
 
 ## Notes
 
