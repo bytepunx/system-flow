@@ -23,7 +23,7 @@ S-0324 makes flai's MD034 report a bare `www.` literal. `TestRepositoryLintsClea
 
 ### 2026-10-08T05:00:45Z
 Story: S-0320.
-S-0316's acceptance (cc4acf4f) committed an orchestrator log entry to `wip/agents/orchestrator.md` whose line 1529 reads "still lets agents write bare www. into wip". S-0320's first close-out passed integration while that line was still uncommitted on main. After the sync brought cc4acf4f into the branch, the integration tier failed twice in a row. The failing package is not named (I-0113), but every package from `internal/protected` on passed, `internal/mdlint` sorts before it, and the close-out's check flags exactly that line as MD034. S-0320 cannot pass its close-out until main commits that line quoted.
+S-0316's acceptance (cc4acf4f) committed an orchestrator log entry to `wip/agents/orchestrator.md` whose line 1529 reads "still lets agents write bare `www.` into wip". S-0320's first close-out passed integration while that line was still uncommitted on main. After the sync brought cc4acf4f into the branch, the integration tier failed twice in a row. The failing package is not named (I-0113), but every package from `internal/protected` on passed, `internal/mdlint` sorts before it, and the close-out's check flags exactly that line as MD034. S-0320 cannot pass its close-out until main commits that line quoted.
 
 ### 2026-10-08T05:00:50Z
 Story: S-0318.
