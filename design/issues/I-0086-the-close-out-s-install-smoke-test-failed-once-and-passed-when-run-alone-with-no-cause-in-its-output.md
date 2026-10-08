@@ -3,11 +3,11 @@ id: I-0086
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
 class: efficiency
 status: open
-count: 4
+count: 5
 cost: 6m
 first_reported: 2026-10-06T10:22:10Z
-last_reported: 2026-10-08T06:04:47Z
-updated: 2026-10-08T06:04:47Z
+last_reported: 2026-10-08T06:40:55Z
+updated: 2026-10-08T06:40:55Z
 ---
 
 # I-0086 The close-out's install smoke test failed once and passed when run alone, with no cause in its output
@@ -32,6 +32,10 @@ S-0319's close-out failed its smoke tier in install-test's explicit FLAI_INSTALL
 ### 2026-10-08T06:04:47Z
 Story: S-0319.
 S-0319's second close-out failed its smoke tier in install-test's default-path case, with no cause in the tier's output. `.flai-cache/install-test-home.log` held it: the same curl (92) "HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)" while listing releases. Two runs in a row each lost one of install-test's GitHub calls. That points at curl's HTTP/2 to the GitHub API on this host, which install.sh could retry or ask for with --http1.1.
+
+### 2026-10-08T06:40:55Z
+Story: S-0336.
+S-0336's close-out stopped at the smoke tier in `install-test: install.sh with no FLAI_INSTALL_DIR installs under a fresh HOME/.flai/bin, without sudo`, with `exit status 1` and no cause printed, after the explicit FLAI_INSTALL_DIR case had installed flai 1.39.8. S-0336 changes no installer or script; every earlier tier, integration included, passed.
 
 ## Remediation
 
