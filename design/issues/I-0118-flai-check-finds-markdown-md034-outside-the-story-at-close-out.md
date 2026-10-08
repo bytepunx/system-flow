@@ -3,7 +3,7 @@ id: I-0118
 title: "flai check finds `markdown.MD034` outside the story at close-out"
 class: efficiency
 status: open
-count: 4
+count: 5
 first_reported: 2026-10-08T04:23:40Z
 last_reported: 2026-10-08T05:31:18Z
 updated: 2026-10-08T05:31:18Z
@@ -23,6 +23,11 @@ flai check found outside the story:
 
 ### 2026-10-08T04:40:57Z
 Story: S-0316.
+flai check found outside the story:
+`wip/agents/orchestrator.md`: MD034/no-bare-urls Bare URL used
+
+### 2026-10-08T04:48:49Z
+Story: S-0320.
 flai check found outside the story:
 `wip/agents/orchestrator.md`: MD034/no-bare-urls Bare URL used
 
