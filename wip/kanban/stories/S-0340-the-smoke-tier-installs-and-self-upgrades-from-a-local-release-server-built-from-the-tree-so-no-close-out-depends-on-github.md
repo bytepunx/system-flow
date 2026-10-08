@@ -6,7 +6,7 @@ title: The smoke tier installs and self-upgrades from a local release server bui
 status: ready
 owner: alex
 created: 2026-10-08T07:59:11Z
-updated: 2026-10-08T08:07:59Z
+updated: 2026-10-08T08:08:17Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-10-08T08:07:07Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T11:19:00Z
+  delivery: 2026-10-08T11:20:00Z
   basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 3, behind S-0232, S-0321, S-0339, S-0342, S-0322, S-0291 and S-0341."
   by: flai
-  at: 2026-10-08T08:07:59Z
+  at: 2026-10-08T08:08:17Z
 ---
 # S-0340 The smoke tier installs and self-upgrades from a local release server built from the tree, so no close-out depends on GitHub
 

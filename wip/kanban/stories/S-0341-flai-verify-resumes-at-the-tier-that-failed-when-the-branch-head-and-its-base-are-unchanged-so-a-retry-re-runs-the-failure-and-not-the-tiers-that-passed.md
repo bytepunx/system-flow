@@ -6,7 +6,7 @@ title: flai verify resumes at the tier that failed when the branch head and its 
 status: ready
 owner: alex
 created: 2026-10-08T07:59:12Z
-updated: 2026-10-08T08:07:59Z
+updated: 2026-10-08T08:08:17Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T08:04:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T10:25:00Z
+  delivery: 2026-10-08T10:26:00Z
   basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0321, S-0339, S-0342, S-0322 and S-0291."
   by: flai
-  at: 2026-10-08T08:07:59Z
+  at: 2026-10-08T08:08:17Z
 ---
 # S-0341 flai verify resumes at the tier that failed when the branch head and its base are unchanged, so a retry re-runs the failure and not the tiers that passed
 
