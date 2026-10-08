@@ -25,7 +25,7 @@ const exitVerifyUnusable = 2
 // newVerifyCmd runs a story's close-out steps and the tiers its branch
 // selects in its worktree and answers one report (S-0270).
 func newVerifyCmd(a *app) *cobra.Command {
-	var record, last bool
+	var record, last, syncOnly bool
 	var maxFindings int
 	c := &cobra.Command{
 		Use:   "verify <story>",
@@ -36,7 +36,9 @@ order, cheapest first, and the run stops at the first that fails; the steps
 after it are not reached:
 
   rebase     no rebase is left unfinished in the worktree
-  sync       the story's branch contains the main branch
+  sync       the story's branch contains the main branch, but for commits
+             that change only paths under the wip folder that the branch
+             does not change, which a note under the step names
   narrative  the narrative's Current state and Next steps are written
   check      flai check --strict, scoped to the story, passes
   <tier>     each test and lint tier of the worktree's system-flow.yaml that
@@ -59,6 +61,11 @@ Each run's report is stored in the project's .flai-cache/verify, whether it
 passes or not; --last prints the story's stored report and runs nothing, or
 says there is none (null with --json), and exits 0 whatever it holds.
 
+--sync-only runs the rebase and sync steps alone, prints and exits as a full
+run does, and stores no report, so the stored one stays the last full run's.
+The close-out's last check runs it after its commit. It is refused with
+--last and with --record-issues.
+
 --record-issues records the notes in design/issues of the story's worktree,
 as flai check --story --record-issues does: each rule's notes in the open
 issue whose title names the rule, once per story and notes. The close-out
@@ -71,7 +78,8 @@ it finished.`,
 		Example: `  flai verify S-0270
   flai verify S-0270 --json
   flai verify S-0270 --record-issues
-  flai verify S-0270 --last --json`,
+  flai verify S-0270 --last --json
+  flai verify S-0270 --sync-only`,
 		Args: func(_ *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return &exitError{code: exitVerifyUnusable, msg: "name the story to verify: flai verify S-nnnn"}
@@ -85,6 +93,12 @@ it finished.`,
 			if last && record {
 				return &exitError{code: exitVerifyUnusable, msg: "--last prints the stored result and runs nothing, so it records nothing; drop --record-issues, or --last to run the story again"}
 			}
+			if syncOnly && last {
+				return &exitError{code: exitVerifyUnusable, msg: "--sync-only runs the rebase and sync steps and --last runs nothing; drop one of them"}
+			}
+			if syncOnly && record {
+				return &exitError{code: exitVerifyUnusable, msg: "--sync-only runs no check, so it has no notes to record; drop --record-issues, or --sync-only to run every step"}
+			}
 			repo, err := a.project()
 			if err != nil {
 				return &exitError{code: exitVerifyUnusable, msg: err.Error()}
@@ -92,7 +106,7 @@ it finished.`,
 			if last {
 				return a.printLastVerify(repo, args[0], maxFindings)
 			}
-			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, max: maxFindings})
+			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, max: maxFindings})
 		},
 	}
 	c.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
@@ -100,6 +114,7 @@ it finished.`,
 	})
 	c.Flags().BoolVar(&record, "record-issues", false, "record the check's findings outside the story in design/issues of its worktree, once per story and findings")
 	c.Flags().BoolVar(&last, "last", false, "print the story's stored last result and run nothing")
+	c.Flags().BoolVar(&syncOnly, "sync-only", false, "run only the rebase and sync steps, and store no result")
 	c.Flags().IntVar(&maxFindings, "max", verify.DefaultMax, "the most findings to report across the run")
 	return c
 }
@@ -107,7 +122,10 @@ it finished.`,
 // verifyOptions are flai verify's flags for a run.
 type verifyOptions struct {
 	record bool
-	max    int
+	// syncOnly runs only the rebase and sync steps and stores no report
+	// (ADR-0135).
+	syncOnly bool
+	max      int
 }
 
 // verifyRecorded is flai verify --json with --record-issues: the report,
@@ -117,27 +135,34 @@ type verifyRecorded struct {
 	Recorded []recordedIssue `json:"recorded"`
 }
 
-// verifyStory runs verify.Verify for the story in its worktree, records its
-// notes when asked, prints the report, and answers the exit status.
+// verifyStory runs verify.Verify for the story in its worktree, or with
+// --sync-only verify.SyncOnly, records its notes when asked, prints the
+// report, and answers the exit status.
 func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string, o verifyOptions) error {
 	id, worktree, err := storyWorktree(repo, story)
 	if err != nil {
 		return &exitError{code: exitVerifyUnusable, msg: err.Error()}
 	}
-	tiers, err := verify.CheckoutTiers(worktree)
-	if err != nil {
-		return &exitError{code: exitVerifyUnusable, msg: fmt.Sprintf("verify %s: %v", id, err)}
-	}
-	ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-	rep, err := verify.Verify(ctx, verify.StoryOptions{
-		Story: id, Project: repo, Worktree: worktree, Tiers: tiers, Git: a.runner,
+	opts := verify.StoryOptions{
+		Story: id, Project: repo, Worktree: worktree, Git: a.runner,
 		RunOptions: verify.RunOptions{Max: o.max, Now: a.now},
-	})
+	}
+	var rep verify.Report
+	stopped := false
+	if o.syncOnly {
+		rep, err = verify.SyncOnly(opts)
+	} else {
+		if opts.Tiers, err = verify.CheckoutTiers(worktree); err != nil {
+			return &exitError{code: exitVerifyUnusable, msg: fmt.Sprintf("verify %s: %v", id, err)}
+		}
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		rep, err = verify.Verify(ctx, opts)
+		stopped = err != nil && ctx.Err() != nil
+	}
 	if err != nil && rep.Story == "" {
 		return &exitError{code: exitVerifyUnusable, msg: err.Error()}
 	}
-	stopped := err != nil && ctx.Err() != nil
 	a.logger().Debug("story verified", "component", "cmd", "story", rep.Story, "steps", len(rep.Steps), "notes", len(rep.Notes), "passed", rep.Passed)
 	var recorded []recordedIssue
 	if o.record {
@@ -227,10 +252,10 @@ func (a *app) printLastVerify(repo *workitem.Repo, story string, maxNotes int) e
 }
 
 // verifyText is the report as flai verify prints it: a line for each step,
-// its state, name, and duration, a tier's name after "tier", the failing
-// step's findings indented under it, then at most maxNotes of the notes
-// outside the story, the issues they were recorded in, and last the
-// outcome as the close-out's last line has it.
+// its state, name, and duration, a tier's name after "tier", a passing
+// step's note and the failing step's findings indented under it, then at
+// most maxNotes of the notes outside the story, the issues they were
+// recorded in, and last the outcome as the close-out's last line has it.
 func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNotes int) string {
 	var b strings.Builder
 	for _, s := range rep.Steps {
@@ -242,6 +267,9 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 			fmt.Fprintf(&b, "%s %s\n", s.State, name)
 		} else {
 			fmt.Fprintf(&b, "%s %s (%s)\n", s.State, name, s.Duration)
+		}
+		if s.Note != "" {
+			b.WriteString("    " + strings.Join(strings.Fields(s.Note), " ") + "\n")
 		}
 		b.WriteString(stepFindings(s))
 	}

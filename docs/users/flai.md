@@ -571,7 +571,7 @@ Each story is worked on its own branch, checked out in a worktree under `.flai-c
 
 A story's agent starts a ready story with `flai story start`, which moves it to in-progress, opens its narrative and its branch in its worktree, primes it, and reads the inbox in one call ([Starting a story](#starting-a-story)). It works through its tasks one at a time, and keeps the branch close to main as it goes. When a task is done, it closes it with `flai task done`, from the story's worktree ([Closing a task](#closing-a-task)). That commits the task's changes on `story/S-0037`, syncs, and checks. Then it runs the tests for what the task changed with `flai test` on the paths it changed ([Run the tests for what changed](#run-the-tests-for-what-changed)), and closes any fix they need by calling `flai task done` again.
 
-Before it moves the story to review, it commits whatever is outstanding, syncs again, and closes out itself with `scripts/close-out.sh S-0037 -m "<message>"` in the story's worktree ([ADR-0110](../../design/adrs/0110-a-story-s-agent-runs-the-close-out-which-runs-flai-verify-itself-before-review.md)). The close-out runs `flai verify S-0037 --record-issues` for every check ([Verify a story before review](#verify-a-story-before-review)), so it refuses a branch that does not yet contain the main branch and says to sync. Then it commits what is outstanding, checks again that the branch contains the main branch, and checks that the worktree is clean.
+Before it moves the story to review, it commits whatever is outstanding, syncs again, and closes out itself with `scripts/close-out.sh S-0037 -m "<message>"` in the story's worktree ([ADR-0110](../../design/adrs/0110-a-story-s-agent-runs-the-close-out-which-runs-flai-verify-itself-before-review.md)). The close-out runs `flai verify S-0037 --record-issues` for every check ([Verify a story before review](#verify-a-story-before-review)), so it refuses a branch that does not yet contain the main branch and says to sync. Then it commits what is outstanding, checks again with `flai verify S-0037 --sync-only` that the branch contains the main branch, and checks that the worktree is clean.
 
 Every run of `scripts/close-out.sh` ends with one line naming the story, the outcome, and the step it stopped at, such as `close-out: S-0037 passed every step; ready to move to review`, or `close-out: S-0037 stopped at flai verify (exit 1)` under flai verify's own last line, `verify: S-0037 stopped at markdown (exit 1)`, and the findings of the step that failed. A run that stops never needs running again to learn why. The agent runs it once, as one command without a pipe or a file, reads those lines, fixes what they name, commits, and runs it again. It never hands the run to a sub-agent. A project with no close-out script runs `flai verify S-0037` instead.
 
@@ -1192,6 +1192,7 @@ flai verify S-0037                   # run every step, cheapest first
 flai verify S-0037 --json            # the result as JSON
 flai verify S-0037 --last            # the stored result of the last run; runs nothing
 flai verify S-0037 --record-issues   # also record the notes outside the story as issues, as the close-out does
+flai verify S-0037 --sync-only       # only the rebase and sync steps; stores nothing
 ```
 
 The steps run in this order, and the run stops at the first that fails. The steps after it are `not-reached`.
@@ -1199,18 +1200,21 @@ The steps run in this order, and the run stops at the first that fails. The step
 | Step | Passes when |
 |------|-------------|
 | `rebase` | No rebase is left unfinished in the worktree |
-| `sync` | The story's branch contains the main branch; otherwise run `flai stream sync` |
+| `sync` | The story's branch contains the main branch, but for commits that change only `wip/` paths the branch does not change; otherwise run `flai stream sync` |
 | `narrative` | The narrative's `## Current state` and `## Next steps` are written; otherwise write them with `flai stream state` |
 | `check` | `flai check --strict`, scoped to the story, finds nothing in it ([Check the repository](#check-the-repository)) |
 | each tier | A test or lint tier that what the branch changed against the main branch selects passes |
 
 The tiers are those `flai test` would run for the files the branch changed, and each `all_only` tier whose `paths` select one of those files, or that has no `paths` ([Run the tests for what changed](#run-the-tests-for-what-changed)). In this repository a change under `flai/` runs integration and smoke too, a change under `template/` the template's render and check, and a change under `flaiover/` its lint, type check, and unit tests. A story that changes only documents runs the markdown lint. The tiers run with `CLOSE_OUT_STORY` set to the story, so the checks inside them count only what is the story's. They run with `FLAI_ROLE=verify` too, whatever role ran `flai verify`, so the orchestrator verifying a story in review does not have the story's tests refused as the orchestrator (S-0311).
 
-The answer is a line per step, the failing step's findings under it, at most `--max` across the run (5 by default), then the check's findings outside the story, which are notes and do not fail it. The last line names the outcome:
+flai commits `wip/` on the main branch all the time: replans, edits of work items, the moves of other stories. A story's branch does not change `wip/`, and acceptance merges those commits like any other, so the `sync` step passes over them ([ADR-0135](../../design/adrs/0135-the-sync-step-of-flai-verify-and-the-close-out-s-last-check-pass-over-commits.md)). It looks at what the main branch changed since the branch left it. When every path is under `wip/` and the branch changes none of them, the step passes with a note under it that names how many commits it passed over and their short hashes. Any other change fails the step: an acceptance, a release, or a `wip/` commit to a path the branch changes too, such as its narrative. The note is not a check note, and `--record-issues` records nothing for it.
+
+The answer is a line per step, a passing step's note and the failing step's findings under it, at most `--max` across the run (5 by default), then the check's findings outside the story, which are notes and do not fail it. The last line names the outcome:
 
 ```text
 passed rebase (8ms)
 passed sync (21ms)
+    passed over 2 commits of main that change only wip/ paths the branch does not change: 305964d, 764e155
 passed narrative (2ms)
 passed check (1.4s)
 passed tier gofmt (190ms)
@@ -1220,9 +1224,11 @@ not-reached tier markdown
 verify: S-0037 stopped at go-test (exit 1)
 ```
 
-With `--json` the answer is the report: `story`, the `commit` and `base` it verified, `ran_at`, `duration_ms`, `passed`, `stopped_at`, the `paths` the branch changed, `steps` (each with `name`, `tier`, `state`, `duration_ms`, `findings`, and `omitted`, and a tier's `command` and `exit_code`), and `notes`. With `--record-issues` it adds `recorded`: the issues the notes were recorded in, in the story's worktree, as `flai check --record-issues` records them.
+With `--json` the answer is the report: `story`, the `commit` and `base` it verified, `ran_at`, `duration_ms`, `passed`, `stopped_at`, the `paths` the branch changed, `steps` (each with `name`, `tier`, `state`, `duration_ms`, `findings`, and `omitted`, a passing step's `note`, and a tier's `command` and `exit_code`), and `notes`. With `--record-issues` it adds `recorded`: the issues the notes were recorded in, in the story's worktree, as `flai check --record-issues` records them.
 
 Every run stores its report, passed or not, in the project's `.flai-cache/verify/`. `--last` prints the story's stored report and runs nothing; with `--json` it prints `null` when there is none. The story's review page on the dashboard shows the same report ([Reviewing a story](flaiover.md#reviewing-a-story)).
+
+`--sync-only` runs the `rebase` and `sync` steps and nothing else. It prints them and exits as a full run does, and it stores no report, so the stored one stays the last full run's. The close-out's last check, after its commit, is `flai verify S-0037 --sync-only`, so the close-out and `flai verify` agree on whether the branch contains the main branch. `--sync-only` is refused with `--last`, which runs nothing, and with `--record-issues`, since it runs no check.
 
 flai verify commits nothing. The exit status is 0 when every step passed and 1 when a step failed. It is 2 when flai verify could not answer: the story has no worktree, the manifest's `tests` are not valid, the notes could not be recorded, or the run was stopped before it finished.
 

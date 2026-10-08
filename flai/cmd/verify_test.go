@@ -17,12 +17,15 @@ import (
 )
 
 // verifyGit answers the git commands flai verify runs for a story whose
-// branch changed docs/README.md, contains main, has nothing uncommitted, and
-// has no rebase left, and refuses every other, as git refuses a repository
-// it is not run in.
-type verifyGit struct{}
+// branch changed docs/README.md, has nothing uncommitted, and has no rebase
+// left, and refuses every other, as git refuses a repository it is not run
+// in. The branch contains main but for commits, the commits of main it
+// lacks, which changed paths since the branch left it; none when they are "".
+type verifyGit struct {
+	commits, paths string
+}
 
-func (verifyGit) Run(_, _ string, args ...string) (string, error) {
+func (g verifyGit) Run(_, _ string, args ...string) (string, error) {
 	switch strings.Join(args, " ") {
 	case "rev-parse --abbrev-ref HEAD":
 		return "main", nil
@@ -32,8 +35,10 @@ func (verifyGit) Run(_, _ string, args ...string) (string, error) {
 		return "docs/README.md\n", nil
 	case "status --porcelain --untracked-files=all":
 		return "", nil
-	case "rev-list --count HEAD..main":
-		return "0", nil
+	case "diff --no-renames --name-only HEAD...main":
+		return g.paths, nil
+	case "rev-list --abbrev-commit HEAD..main":
+		return g.commits, nil
 	}
 	return "", errors.New("fatal: not a git repository")
 }
@@ -407,6 +412,8 @@ func TestVerifyRefusesAStoryWithNoWorktree(t *testing.T) {
 		"no such story":    {[]string{"verify", "S-099"}, "name a story of this project"},
 		"no story named":   {[]string{"verify"}, "name the story to verify"},
 		"a cap of nothing": {[]string{"verify", "S-004", "--max", "0"}, "--max 0 is not a count of findings"},
+		"sync-only last":   {[]string{"verify", "S-004", "--sync-only", "--last"}, "--sync-only runs the rebase and sync steps and --last runs nothing; drop one of them"},
+		"sync-only record": {[]string{"verify", "S-004", "--sync-only", "--record-issues"}, "--sync-only runs no check, so it has no notes to record; drop --record-issues"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -418,5 +425,73 @@ func TestVerifyRefusesAStoryWithNoWorktree(t *testing.T) {
 	}
 	if _, err := os.Stat(verify.ReportPath(openProject(t, root), "S-004")); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("a refused run should store no report: %v", err)
+	}
+}
+
+// I-0119, ADR-0135: the close-out's last check, flai verify --sync-only,
+// passes over commits flai made on main's wip/ while the close-out ran, and
+// says so under the sync step; a commit outside wip/ still fails it, naming
+// flai stream sync. Neither touches the stored report.
+func TestVerifySyncOnlyPassesOverWipCommitsAndStoresNoReport(t *testing.T) {
+	root, _ := verifyFixture(t, "exit 3")
+	report := verify.ReportPath(openProject(t, root), "S-004")
+	replan := verifyGit{commits: "a1a1a1a", paths: "wip/kanban/board.md"}
+	note := "\npassed sync (0s)\n    passed over 1 commit of main that change only wip/ paths the branch does not change: a1a1a1a\n"
+
+	out, errOut, code := runVerify(t, root, replan, "verify", "S-004", "--sync-only")
+	if code != 0 || !strings.HasPrefix(out, "passed rebase (") || !strings.Contains(out, note) || lastLine(out) != "verify: S-004 passed every step" {
+		t.Errorf("a branch behind main by a replan: exit %d, want 0 and the note %q\n%s%s", code, note, out, errOut)
+	}
+	if strings.Contains(out, "narrative") || strings.Contains(out, "tier unit") {
+		t.Errorf("--sync-only ran more than the rebase and sync steps:\n%s", out)
+	}
+	if _, err := os.Stat(report); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("--sync-only stored a report where there was none: %v", err)
+	}
+
+	// a full run, whose unit tier fails, stores the report --sync-only keeps
+	if out, errOut, code = runVerify(t, root, replan, "verify", "S-004"); code != 1 || !strings.Contains(out, note) {
+		t.Fatalf("a full run: exit %d, want 1 and the note %q\n%s%s", code, note, out, errOut)
+	}
+	stored, err := os.ReadFile(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, code = runVerify(t, root, replan, "--json", "verify", "S-004", "--sync-only")
+	var rep verify.Report
+	if err := json.Unmarshal([]byte(out), &rep); err != nil || code != 0 {
+		t.Fatalf("as data: exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if !rep.Passed || stepStates(rep) != "rebase:passed,sync:passed" || !strings.HasSuffix(rep.Steps[1].Note, ": a1a1a1a") {
+		t.Errorf("report %+v", rep)
+	}
+
+	release := verifyGit{commits: "b2b2b2b\na1a1a1a", paths: "flai/go.mod\nwip/kanban/board.md"}
+	out, errOut, code = runVerify(t, root, release, "verify", "S-004", "--sync-only")
+	if code != 1 || !strings.Contains(out, "\nfailed sync (") || !strings.Contains(out, "\n    ") || !strings.Contains(out, "outside wip/: flai/go.mod; run flai stream sync S-004") ||
+		strings.Contains(out, "passed over") || lastLine(out) != "verify: S-004 stopped at sync (failed)" {
+		t.Errorf("a branch behind main by a release: exit %d, want 1 naming flai stream sync\n%s%s", code, out, errOut)
+	}
+	if again, err := os.ReadFile(report); err != nil || !bytes.Equal(again, stored) {
+		t.Errorf("--sync-only changed the stored report: %v\n%s\nwas\n%s", err, again, stored)
+	}
+}
+
+// A step's note is printed indented under its line, on one line, as a
+// failing step's findings are; --last prints it with the same text.
+func TestVerifyTextPrintsAStepsNoteUnderIt(t *testing.T) {
+	rep := verify.Report{Story: "S-004", Passed: true, Steps: []verify.Step{
+		{Name: verify.StepRebase, State: verify.Passed, Duration: "0s"},
+		{Name: verify.StepSync, State: verify.Passed, Duration: "1ms", Note: "passed over 2 commits of main that change only wip/\npaths the branch does not change: b2b2b2b, a1a1a1a"},
+		{Name: verify.StepNarrative, State: verify.Passed, Duration: "0s"},
+	}}
+	want := "passed rebase (0s)\n" +
+		"passed sync (1ms)\n" +
+		"    passed over 2 commits of main that change only wip/ paths the branch does not change: b2b2b2b, a1a1a1a\n" +
+		"passed narrative (0s)\n" +
+		"verify: S-004 passed every step\n"
+	if got := verifyText(rep, nil, false, verify.DefaultMax); got != want {
+		t.Errorf("text\n%s\nwant\n%s", got, want)
 	}
 }

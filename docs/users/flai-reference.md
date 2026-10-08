@@ -3781,7 +3781,9 @@ Verify a story before it goes to review, in its worktree under .flai-cache/workt
 
 ```text
 rebase     no rebase is left unfinished in the worktree
-sync       the story's branch contains the main branch
+sync       the story's branch contains the main branch, but for commits
+           that change only paths under the wip folder that the branch
+           does not change, which a note under the step names
 narrative  the narrative's Current state and Next steps are written
 check      flai check --strict, scoped to the story, passes
 <tier>     each test and lint tier of the worktree's system-flow.yaml that
@@ -3795,6 +3797,8 @@ flai verify commits nothing. The answer is a line for each step, its state and d
 
 Each run's report is stored in the project's .flai-cache/verify, whether it passes or not; --last prints the story's stored report and runs nothing, or says there is none (null with --json), and exits 0 whatever it holds.
 
+--sync-only runs the rebase and sync steps alone, prints and exits as a full run does, and stores no report, so the stored one stays the last full run's. The close-out's last check runs it after its commit. It is refused with --last and with --record-issues.
+
 --record-issues records the notes in design/issues of the story's worktree, as flai check --story --record-issues does: each rule's notes in the open issue whose title names the rule, once per story and notes. The close-out commits them with the story.
 
 The exit status is 0 when every step passed, 1 when a step failed, and 2 when flai verify could not answer: the story has no worktree, the manifest's tiers are not valid, the notes could not be recorded, or the run was stopped before it finished.
@@ -3806,6 +3810,7 @@ flai verify S-0270
 flai verify S-0270 --json
 flai verify S-0270 --record-issues
 flai verify S-0270 --last --json
+flai verify S-0270 --sync-only
 ```
 
 Flags:
@@ -3815,6 +3820,7 @@ Flags:
 | `--last` | print the story's stored last result and run nothing |
 | `--max` int | the most findings to report across the run (default `5`) |
 | `--record-issues` | record the check's findings outside the story in design/issues of its worktree, once per story and findings |
+| `--sync-only` | run only the rebase and sync steps, and store no result |
 
 ### flai version
 
