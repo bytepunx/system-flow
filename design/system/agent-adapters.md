@@ -147,3 +147,150 @@ The files a session reads are Claude Code's. `CLAUDE.md` at the root is the map 
 | Sub-agents and strategic agents | The roles and their prompts | `.claude/agents/` front matter; `tools` and `model` vocabularies; the Agent tool, `description`, `run_in_background`, the fork; `--agent`; `parent_tool_use_id` |
 | Usage and cost | The `usage` schema, the hierarchy sums, the metrics, the turn classes | Every stream-json field; `result`, `modelUsage`, `costUSD`; the repeated-message quirk; `Agent`/`Task` names |
 | Model names and files | The model pattern; `flai prime`; `.mcp.json` as MCP | Example and placeholder names; `haiku` for the check; chart colours by family; `CLAUDE.md`; `.claude/`; the commit trailer |
+
+## LiteLLM and OpenRouter
+
+What each gateway offers and which harnesses can run a story's agent over it, from the vendors' and harnesses' public documentation read on 2026-10-08. Every claim links its page. A claim the documentation does not settle is marked **to check**.
+
+### LiteLLM
+
+LiteLLM is two things: a Python SDK and a self-hosted proxy, which its documentation calls the AI gateway ([docs.litellm.ai](https://docs.litellm.ai/docs/)). Both are open source; the proxy runs from Docker or `litellm --config config.yaml`.
+
+| Concern | SDK | Proxy (AI gateway) |
+|---------|-----|--------------------|
+| Hosting | A library in the caller's Python process | Self-hosted; an enterprise tier adds features, the gateway itself is free ([simple_proxy](https://docs.litellm.ai/docs/simple_proxy)) |
+| APIs served | `completion()` and `responses()` in Python, OpenAI message shape in and out | OpenAI `/chat/completions`; OpenAI Responses API at `/v1/responses`, bridged to `/chat/completions` for providers without a native one, with `previous_response_id` for multi-turn ([response_api](https://docs.litellm.ai/docs/response_api)); an Anthropic-compatible `/v1/messages` that reaches every provider LiteLLM supports, `openai`, `anthropic`, `bedrock`, `vertex_ai`, `gemini`, `azure` and so on ([anthropic_unified](https://docs.litellm.ai/docs/anthropic_unified)); a pass-through `/anthropic/v1/messages` forwarded to Anthropic untranslated, Anthropic models only ([anthropic pass-through](https://docs.litellm.ai/docs/pass_through/anthropic_completion)) |
+| Streaming | `stream=True` | `"stream": true` on every endpoint above, server-sent events; a WebSocket mode for the Responses API |
+| Model names | `<provider>/<model>`: `anthropic/claude-sonnet-5`, `openai/gpt-5.6-terra`, `bedrock/us.anthropic.claude-sonnet-5`, `openrouter/anthropic/claude-sonnet-4` ([openrouter provider](https://docs.litellm.ai/docs/providers/openrouter)) | The names in `config.yaml`'s `model_list`: a `model_name` the caller sends, mapped to one or more `litellm_params.model` deployments in the SDK's form; `aliases` on a key map one name to another ([virtual_keys](https://docs.litellm.ai/docs/proxy/virtual_keys)) |
+| Routing and fallbacks | `Router` with retries and fallbacks across deployments | `router_settings`: `fallbacks: [{"model-a": ["model-b"]}]`, `context_window_fallbacks`, `content_policy_fallbacks`, `num_retries`, `allowed_fails`, `cooldown_time`; load balancing across deployments of one `model_name`; `disable_fallbacks` per request or key ([reliability](https://docs.litellm.ai/docs/proxy/reliability)) |
+| Tool calls | OpenAI `tools` and `tool_choice` translated to each provider | Passed through on every endpoint; on `/v1/messages` Anthropic's `tools` and `stop_reason: tool_use` ([anthropic_unified](https://docs.litellm.ai/docs/anthropic_unified)) |
+| MCP | None | An MCP gateway: servers registered in `config.yaml` or the UI over streamable HTTP, SSE, or `transport: stdio` with `command` and `args`; clients reach them at `/mcp/` with `x-litellm-api-key` and per-server `x-mcp-<alias>-<header>` headers; with `require_approval: never` the proxy calls MCP tools itself inside a `/chat/completions` request ([mcp](https://docs.litellm.ai/docs/mcp)) |
+| Authentication | Provider keys in the process environment, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY` | A master key, `LITELLM_MASTER_KEY` or `general_settings.master_key`, `sk-` prefixed; virtual keys from `POST /key/generate` with `models`, `max_budget`, `tpm_limit`, `rpm_limit`, `budget_duration`; provider keys stay in `config.yaml` as `litellm_params.api_key` or `os.environ/ANTHROPIC_API_KEY`; the caller sends its virtual key as `Authorization: Bearer` or `x-api-key` ([virtual_keys](https://docs.litellm.ai/docs/proxy/virtual_keys)) |
+| Usage and cost | `usage` in the response; `completion_cost()` prices it from LiteLLM's model cost map | `usage` in the body; headers `x-litellm-response-cost`, `x-litellm-key-spend`, `x-litellm-call-id`, `x-litellm-model-id`, `x-litellm-attempted-fallbacks` ([response_headers](https://docs.litellm.ai/docs/proxy/response_headers)); every call written to `LiteLLM_SpendLogs` with key, user, team, model, tokens, and spend, read at `/spend/logs`, `/spend/logs/v2` (filters `api_key`, `user_id`, `model`), `/key/info`, `/user/daily/activity`; custom prices per deployment in `model_info` ([cost_tracking](https://docs.litellm.ai/docs/proxy/cost_tracking)) |
+
+LiteLLM documents Claude Code against the proxy: `ANTHROPIC_BASE_URL` at the proxy root for the unified `/v1/messages`, or at `<proxy>/anthropic` for the pass-through, and `ANTHROPIC_AUTH_TOKEN` a master or virtual key, which bounds the models Claude Code may name; Bedrock upstreams want `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1`, and non-Anthropic base URLs fill the context with MCP tools unless `ENABLE_TOOL_SEARCH=true` ([claude_responses_api](https://docs.litellm.ai/docs/tutorials/claude_responses_api)).
+
+### OpenRouter
+
+OpenRouter is a hosted service at `https://openrouter.ai/api/v1`; nothing runs on the operator's host ([quickstart](https://openrouter.ai/docs/quickstart)).
+
+| Concern | OpenRouter |
+|---------|------------|
+| Hosting | Hosted only. Credits are bought up front; a 5.5% fee on credit purchases, and the provider's per-token rate ([Claude Code tutorial](https://openrouter.ai/blog/tutorials/claude-code-openrouter/)) |
+| APIs served | OpenAI `/api/v1/chat/completions` and `/api/v1/completions`; an OpenAI-shaped Responses API at `/api/v1/responses` ([create a response](https://www.openrouter.ai/docs/api/api-reference/responses/create-a-response)); an Anthropic Messages endpoint at `/api/v1/messages` that takes any model on OpenRouter, with `models` and `fallbacks` arrays ([create a message](https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-a-message)); `/api/v1/models`, `/api/v1/generation`, `/api/v1/key` |
+| Streaming | `"stream": true` on each; server-sent events ending in `[DONE]`; usage in the final chunk ([usage accounting](https://openrouter.ai/docs/use-cases/usage-accounting)) |
+| Model names | `<author>/<model>`: `anthropic/claude-sonnet-4`, `openai/gpt-5`; `~anthropic/claude-sonnet-latest` with a tilde is an alias that follows the family's newest version; suffixes `:nitro` (throughput) and `:floor` (price) ([provider routing](https://openrouter.ai/docs/features/provider-routing)) |
+| Routing and fallbacks | A `provider` object per request: `order`, `allow_fallbacks` (default true), `only`, `ignore`, `sort` (`price`, `throughput`, `latency`), `require_parameters`, `data_collection`, `zdr`, `quantizations`; a `models` array for model fallbacks; BYOK endpoints are tried first ([provider routing](https://openrouter.ai/docs/features/provider-routing)) |
+| Tool calls | OpenAI `tools` and `tool_choice`, passed to the provider; Anthropic `tools` on `/api/v1/messages` |
+| MCP | None server-side. OpenRouter is a model API; the client connects to MCP servers and converts their tool definitions to OpenAI tools, by hand or with the `@openrouter/mcp` package ([MCP servers](https://openrouter.ai/docs/guides/coding-agents/mcp-servers)). A separate OpenRouter MCP server exposes OpenRouter's own data, models, prices, credits, to an editor ([mcp-server](https://openrouter.ai/docs/mcp-server)) |
+| Authentication | `Authorization: Bearer <OPENROUTER_API_KEY>`; keys made at `openrouter.ai/keys` with a name and a credit limit ([authentication](https://openrouter.ai/docs/api-reference/authentication)). Provider keys, when the operator brings their own, live in OpenRouter's workspace integrations settings, not on the host; BYOK requests cost 5% of OpenRouter's list price for the same call, after a monthly allowance ([BYOK](https://openrouter.ai/docs/use-cases/byok)) |
+| Usage and cost | Every response carries `usage` with `prompt_tokens`, `completion_tokens`, `total_tokens`, `cost` (credits charged), `cost_details.upstream_inference_cost` (BYOK only), `prompt_tokens_details.cached_tokens` and `cache_write_tokens`, `completion_tokens_details.reasoning_tokens`; the `usage: {include: true}` opt-in is deprecated because usage is now always included. `GET /api/v1/generation?id=<id>` returns the same after the fact. On `/api/v1/messages`, Anthropic's `input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens` plus OpenRouter's `cost` and `cost_details` ([usage accounting](https://openrouter.ai/docs/use-cases/usage-accounting), [create a message](https://openrouter.ai/docs/api/api-reference/anthropic-messages/create-a-message)). `GET /api/v1/key` returns the key's `limit`, `limit_remaining`, `usage`, `usage_daily`, `usage_weekly`, `usage_monthly` ([limits](https://openrouter.ai/docs/api-reference/limits)) |
+
+OpenRouter documents Claude Code and the Agent SDK against its Anthropic endpoint: `ANTHROPIC_BASE_URL="https://openrouter.ai/api"`, `ANTHROPIC_AUTH_TOKEN` the OpenRouter key, `ANTHROPIC_API_KEY=""` set empty rather than unset so Claude Code does not fall back to Anthropic, and `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL` naming OpenRouter slugs such as `~anthropic/claude-opus-latest`. It says the integration "is only guaranteed to work with the Anthropic first-party provider"; non-Anthropic models are not supported through Claude Code ([Claude Code tutorial](https://openrouter.ai/blog/tutorials/claude-code-openrouter/), [Anthropic Agent SDK](https://openrouter.ai/docs/guides/community/anthropic-agent-sdk)).
+
+### Claude Code over a gateway
+
+Claude Code speaks the Anthropic Messages format to whatever `ANTHROPIC_BASE_URL` names, calling `/v1/messages?beta=true` and, optionally, `/v1/messages/count_tokens`; it also accepts a gateway in Bedrock's format (`ANTHROPIC_BEDROCK_BASE_URL`, `CLAUDE_CODE_USE_BEDROCK=1`, `CLAUDE_CODE_SKIP_BEDROCK_AUTH=1`), Vertex's (`ANTHROPIC_VERTEX_BASE_URL`, `CLAUDE_CODE_USE_VERTEX=1`, `CLAUDE_CODE_SKIP_VERTEX_AUTH=1`), and Foundry's (`ANTHROPIC_FOUNDRY_BASE_URL`, `ANTHROPIC_FOUNDRY_API_KEY`) ([gateway compatibility guide](https://code.claude.com/docs/en/llm-gateway-protocol), [connect to a gateway](https://code.claude.com/docs/en/llm-gateway-connect)). The credential goes in `ANTHROPIC_AUTH_TOKEN` (`Authorization: Bearer`), `ANTHROPIC_API_KEY` (`x-api-key`), or an `apiKeyHelper` command in settings (both headers, cached five minutes). A gateway must forward `anthropic-beta` and `anthropic-version` unchanged and the streaming events as they come; it may consume `x-claude-code-session-id`, `x-claude-code-agent-id`, and `x-claude-code-parent-agent-id`, which attribute a request to a session and a sub-agent. Anthropic "doesn't support routing Claude Code to non-Claude models through any gateway" ([other LLM gateways](https://code.claude.com/docs/en/llm-gateway)). Gateway model discovery, `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1`, reads `/v1/models` and keeps only IDs containing `claude` or `anthropic`.
+
+| Concern | Claude Code |
+|---------|-------------|
+| Headless, resume | `claude -p "<prompt>"`, `--session-id`, `--resume <id>`, `--continue`; `--bare` skips hooks, `.mcp.json`, agents, and `CLAUDE.md`, loading only what flags name ([run programmatically](https://code.claude.com/docs/en/headless)) |
+| MCP | `--mcp-config <file-or-json>` with stdio servers, `--strict-mcp-config`; `system/init` reports `mcp_servers` and `mcp_server_errors` |
+| Sub-agents, own model | `.claude/agents/*.md` or `--agents <json>`; `model` is `haiku`, `sonnet`, `opus`, `fable`, a full ID, or `inherit`; `CLAUDE_CODE_SUBAGENT_MODEL` sets the default ([subagents](https://code.claude.com/docs/en/sub-agents)) |
+| Tool-refusal hook | `PreToolUse` in `settings.json`: exit 2, or JSON `hookSpecificOutput.permissionDecision: deny`; input has `session_id`, `tool_name`, `tool_input`, `agent_id`; `SubagentStart` and `SubagentStop` ([hooks](https://code.claude.com/docs/en/hooks)) |
+| Permission handler | `--permission-prompt-tool mcp__<server>__<tool>`, `--permission-mode`, `--allowedTools`, `--permission-prompts none` for unattended runs; `permissionDecision: ask` from a hook escalates |
+| Usage stream | `--output-format stream-json --verbose`: `assistant` events with `message.usage`, `parent_tool_use_id`; `result` with `total_cost_usd` and `modelUsage`; "client-side estimates" that can differ from the bill ([run programmatically](https://code.claude.com/docs/en/headless)) |
+| Instruction files | `CLAUDE.md` at the root and in `~/.claude/`; agents in `.claude/agents/` |
+
+What changes over a gateway: the model names in `--model`, the role models, and `--fallback-model` must be names the gateway serves, and `haiku`, `sonnet`, `opus` resolve only through the `ANTHROPIC_DEFAULT_*_MODEL` variables; `total_cost_usd` is Claude Code's own estimate from Anthropic's prices, not what LiteLLM or OpenRouter charged; and the models stay Claude.
+
+### OpenAI Codex CLI
+
+Codex talks to any OpenAI-shaped endpoint through `[model_providers.<id>]` in `~/.codex/config.toml` or `.codex/config.toml`: `base_url`, `env_key` naming the environment variable that holds the key, `wire_api = "chat"` or `"responses"`, `http_headers`, `env_http_headers`, `request_max_retries`; the session picks it with `model_provider` and `model` ([config](https://learn.chatgpt.com/docs/config-file/config-advanced)). LiteLLM's `/v1/responses` or `/chat/completions` and OpenRouter's `/api/v1/responses` or `/api/v1/chat/completions` both fit; which `wire_api` each gateway serves well is **to check**. Codex has no Anthropic-format client.
+
+| Concern | Codex |
+|---------|-------|
+| Headless, resume | `codex exec "<prompt>"` or stdin; `codex exec resume <SESSION_ID>` or `--last`; `--sandbox read-only`, `workspace-write`, `danger-full-access`; `-c key=value` overrides; `--output-last-message`, `--output-schema`; a required MCP server that fails to start ends the run ([non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)) |
+| MCP | `[mcp_servers.<name>]` with `command`, `args`, `env` (stdio) or `url`, `bearer_token_env_var`; `enabled`, `startup_timeout_sec`, `tool_timeout_sec`, `enabled_tools`, `disabled_tools`, `default_tools_approval_mode`; `codex mcp add <name> -- <command>` ([MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)) |
+| Sub-agents, own model | On by default; built-in `default`, `worker`, `explorer`; custom agents as TOML in `.codex/agents/` or `~/.codex/agents/` with `name`, `description`, `developer_instructions`, and optional `model`, `model_reasoning_effort`, `sandbox_mode`, `mcp_servers`; `agents.default_subagent_model`, `agents.max_concurrent_threads_per_session` ([subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)) |
+| Tool-refusal hook | `PreToolUse` in `hooks.json` (`~/.codex/`, `.codex/`) or `[hooks]` in `config.toml`; covers Bash, `apply_patch` edits, and MCP tools; denies by exit 2 or `"permissionDecision": "deny"`, with `allow` and `ask`; input `session_id`, `tool_name`, `tool_input`, `cwd`; also `SubagentStart`, `SubagentStop`. Non-managed hooks need trust via `/hooks` or `--dangerously-bypass-hook-trust` ([hooks](https://learn.chatgpt.com/docs/hooks)) |
+| Permission handler | `approval_policy`: `never`, `on-request`, `untrusted`, `on-failure`, or a `granular` table; headless, approvals follow the sandbox and policy, with no documented hook into an external approver. `ask` from a `PreToolUse` hook in `codex exec` is **to check** |
+| Usage stream | `--json`: JSONL with `thread.started`, `turn.started`, `item.started`, `item.completed`, `turn.completed` carrying `usage` with `input_tokens`, `output_tokens`, `cached_input_tokens`, `turn.failed`, `error`. Tokens, no cost, no per-model split |
+| Instruction files | `AGENTS.md` from the repository root down, `AGENTS.override.md`, `~/.codex/AGENTS.md`; `project_doc_fallback_filenames` can add `CLAUDE.md`; 32 KiB cap `project_doc_max_bytes` ([AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md)) |
+
+### OpenCode
+
+OpenCode reaches a gateway through `provider.<id>` in `opencode.json`: `npm: "@ai-sdk/openai-compatible"` for `/v1/chat/completions`, `npm: "@ai-sdk/openai"` for `/v1/responses`, `options.baseURL`, `options.apiKey` with `{env:VAR}`, `options.headers`, and a `models` map; OpenRouter is a first-class provider with per-model `provider.order` and `allow_fallbacks` options; models are named `provider/model` ([providers](https://opencode.ai/docs/providers/), [config](https://opencode.ai/docs/config/)). An Anthropic-compatible provider entry exists through the `@ai-sdk/anthropic` package; whether it accepts a custom `baseURL` toward LiteLLM's `/v1/messages` is **to check**.
+
+| Concern | OpenCode |
+|---------|----------|
+| Headless, resume | `opencode run "<prompt>"`, `--session <id>`, `--continue`, `--fork`, `--agent`, `--model provider/model`, `--format json`, `--auto`; `--attach` to a running server avoids MCP startup on each call ([CLI](https://opencode.ai/docs/cli/)) |
+| MCP | `mcp.<name>` with `type: "local"`, `command: [...]`, `environment`, `cwd`, `timeout`, or `type: "remote"` with `url`, `headers`, `oauth` ([MCP servers](https://opencode.ai/docs/mcp-servers/)) |
+| Sub-agents, own model | `agent.<name>` in `opencode.json` or markdown in `.opencode/agents/` and `~/.config/opencode/agents/`; `mode: subagent`, `model`, `prompt`, `tools`, `permission`, `steps`; a subagent without `model` inherits the caller's; the Task tool gated by `permission.task` ([agents](https://opencode.ai/docs/agents/)) |
+| Tool-refusal hook | A plugin in `.opencode/plugins/` or `~/.config/opencode/plugins/`: `tool.execute.before` throws to block the call; `permission.asked` and `permission.replied` are events ([plugins](https://opencode.ai/docs/plugins/)). Whether a plugin can tell a sub-agent's call from the primary's is **to check** |
+| Permission handler | `permission` map: `allow`, `ask`, `deny` per tool, with glob rules per command or path, and per agent; `opencode run --auto` approves whatever is not denied, otherwise an `ask` in headless mode has no answerer ([permissions](https://opencode.ai/docs/permissions/)). No documented external approval callback for the CLI; the server API may offer one, **to check** |
+| Usage stream | `--format json`: JSONL with `step_start`, `text`, `tool_use`, `step_finish`; `step_finish` carries tokens (input, output, reasoning, cache read and write) and `cost` in USD, priced from OpenCode's own model table (third-party write-ups; the official page lists only the formats, so the fields are **to check**) |
+| Instruction files | `AGENTS.md` up the tree and `~/.config/opencode/AGENTS.md`; falls back to `CLAUDE.md` and `~/.claude/CLAUDE.md`; `instructions` in `opencode.json` adds paths, globs, or URLs ([rules](https://opencode.ai/docs/rules/)) |
+
+### Goose (Block)
+
+Goose has providers for both gateways: `GOOSE_PROVIDER=litellm` with `LITELLM_HOST`, `LITELLM_BASE_PATH`, `LITELLM_API_KEY`, `LITELLM_CUSTOM_HEADERS`; `GOOSE_PROVIDER=openrouter` with `OPENROUTER_API_KEY`; `openai` with `OPENAI_HOST` for any OpenAI-compatible endpoint; `anthropic` with `ANTHROPIC_HOST`; and declarative JSON providers for OpenAI-, Anthropic-, or Ollama-shaped APIs; `GOOSE_MODEL` names the model ([providers](https://goose-docs.ai/docs/getting-started/providers)).
+
+| Concern | Goose |
+|---------|-------|
+| Headless, resume | `goose run -t "<text>"` or `-i <file>` (`-` for stdin), `--recipe`, `-n <name>`, `-r` to resume the named session, `--no-session`, `--max-turns`, `--quiet`, `--provider`, `--model` ([running tasks](https://goose-docs.ai/docs/guides/running-tasks), [man page](https://www.mankier.com/1/goose-run)). Sessions are named, not UUIDs |
+| MCP | `--with-extension "ENV=value <command> <args>"` adds a stdio server for the run; `--with-streamable-http-extension <url>`; `--with-builtin` |
+| Sub-agents, own model | Subagents spawned on request or by recipe; `GOOSE_SUBAGENT_PROVIDER` and `GOOSE_SUBAGENT_MODEL` set defaults, a recipe's `settings` override them; extensions inherited from the parent unless restricted ([subagents](https://goose-docs.ai/docs/guides/context-engineering/subagents)) |
+| Tool-refusal hook | Hooks in `hooks/hooks.json` under `~/.agents/plugins/<name>/` or `<project>/.agents/plugins/<name>/`, the Open Plugins specification: `PreToolUse`, `BeforeShellExecution`, `PostToolUse` and others; stdin JSON with `event`, `session_id`, `tool_name`, `tool_input`; deny by exit 2 or `{"decision":"block","reason":"..."}` ([hooks](https://goose-docs.ai/docs/guides/context-engineering/hooks/)). No `agent_id`: whether a hook can tell a subagent's call is **to check** |
+| Permission handler | `GOOSE_MODE`: `auto`, `approve`, `smart_approve`, `chat`; per-tool permissions in `permission.yaml`. What `approve` does under `goose run` with no terminal is **to check** ([permissions](https://goose-docs.ai/docs/guides/managing-tools/goose-permissions)) |
+| Usage stream | `--output-format json` (one document at the end) or `stream-json` (events as they happen); token totals in the session store `~/.local/share/goose/sessions/sessions.db` and `goose session export`; no cost ([logs](https://goose-docs.ai/docs/guides/logs)). The event fields are **to check** |
+| Instruction files | `AGENTS.md` then `.goosehints` at each directory level, `~/.config/goose/.goosehints` globally; `CONTEXT_FILE_NAMES` (default `["AGENTS.md", ".goosehints"]`) can add `CLAUDE.md` ([goosehints](https://goose-docs.ai/docs/guides/context-engineering/using-goosehints)) |
+
+### aider
+
+aider calls models through the LiteLLM Python SDK, so every LiteLLM model name works: `openrouter/anthropic/claude-sonnet-4` with `OPENROUTER_API_KEY`, or `openai/<model>` with `OPENAI_API_BASE` and `OPENAI_API_KEY` against a LiteLLM proxy or OpenRouter's `/api/v1` ([other LLMs](https://aider.chat/docs/llms/other.html), [OpenRouter](https://aider.chat/docs/llms/openrouter.html), [OpenAI compatible](https://aider.chat/docs/llms/openai-compat.html)).
+
+| Concern | aider |
+|---------|-------|
+| Headless, resume | `aider --message "<text>"` or `--message-file`, `--yes-always`, `--no-auto-commits`, `--dry-run`; `--restore-chat-history` reloads the chat history file, not a session by ID ([scripting](https://aider.chat/docs/scripting.html), [options](https://aider.chat/docs/config/options.html)) |
+| MCP | Not in aider's documentation. Third-party pages describe an `mcp-server` list in `.aider.conf.yml` with `command`, `args`, `env`; **to check** against the current release |
+| Sub-agents, own model | None. `--weak-model` and `--editor-model` give one session a second and third model for commit messages and edits, not sub-agents |
+| Tool-refusal hook | None. aider's tools are its own edit formats and shell suggestions, not a tool loop |
+| Permission handler | `--yes-always` or the interactive confirmation; nothing an external process answers |
+| Usage stream | `/tokens` reports the context's size; `--llm-history-file` logs the raw exchange; the per-message token and cost line aider prints is **to check**; no structured event stream ([commands](https://aider.chat/docs/usage/commands.html)) |
+| Instruction files | None by default; `--read CONVENTIONS.md` or `read:` in `.aider.conf.yml` ([conventions](https://aider.chat/docs/usage/conventions.html)) |
+
+### An agent loop of flai's own
+
+A Go loop in flai calling the gateway's OpenAI-compatible (`/chat/completions` or `/v1/responses`) or Anthropic-compatible (`/v1/messages`) API, with flai's MCP tools and a few file and shell tools, would make every concern flai's to decide, and flai's to build:
+
+- An MCP client over stdio and streamable HTTP, listing tools and calling them, with `flai mcp` as one server among the project's.
+- The tool loop: tool definitions in each API's shape, streamed responses parsed for `tool_use` or `tool_calls`, results appended, a turn budget, and context compaction when the window fills.
+- A session store, so a run can be resumed by ID after a thread is answered, and a log in a shape `flai/internal/usage` can read.
+- A guard and permission handler as function calls, not hooks: the loop asks the policy before each tool, and asks `permission_prompt` on a thread when the policy says ask.
+- Sub-agents as nested loops with their own model and tool allowlist, tagged in the log so usage is apportioned.
+- Pricing: `usage` from the gateway, plus `cost` from OpenRouter's body or LiteLLM's `x-litellm-response-cost` header, so no price table of its own.
+- Instruction loading, `CLAUDE.md` or `AGENTS.md` and `flai prime`, and the system prompt that Claude Code supplies today.
+
+What it would not get: Claude Code's prompt caching defaults, system prompt, built-in tools, and the years of harness behaviour the conventions assume.
+
+### Harnesses against the concerns
+
+| Harness | Start/resume headless | MCP (stdio) | Sub-agents with own model | Tool-refusal hook | Permission handler | Usage stream | Instruction file |
+|---------|-----------------------|-------------|---------------------------|-------------------|--------------------|--------------|------------------|
+| Claude Code over a gateway | yes, `--session-id`, `--resume` | yes, `--mcp-config` | yes, `.claude/agents`, `--agents` | yes, `PreToolUse` with `agent_id` | yes, `--permission-prompt-tool` | yes, stream-json with cost (estimate) | `CLAUDE.md` |
+| Codex CLI | yes, `exec`, `exec resume` | yes, `[mcp_servers]` | yes, `.codex/agents/*.toml` | yes, `PreToolUse`, needs hook trust | partial, `approval_policy`; no external approver | partial, JSONL tokens, no cost | `AGENTS.md` |
+| OpenCode | yes, `run --session` | yes, `mcp.<name>` local | yes, `.opencode/agents` | partial, plugin `tool.execute.before` throws | partial, `permission` map, `--auto`; no external approver | yes, JSONL tokens and cost (**to check**) | `AGENTS.md`, falls back to `CLAUDE.md` |
+| Goose | yes, `run -n`, `-r` | yes, `--with-extension` | yes, `GOOSE_SUBAGENT_*`, recipes | yes, `PreToolUse` hook; no sub-agent ID | partial, `GOOSE_MODE`; headless `approve` **to check** | partial, json/stream-json tokens, no cost | `AGENTS.md`, `.goosehints` |
+| aider | partial, `--message`; no session ID | no (**to check**) | no | no | no | no | `--read` |
+| flai's own loop | to build | to build | to build | to build (a function, not a hook) | to build | to build, cost from the gateway | to build |
+
+What the documentation does not settle:
+
+- Whether OpenRouter's or LiteLLM's `/v1/messages` carries every beta header and body field Claude Code sends, which the compatibility guide says a gateway must forward byte for byte; LiteLLM's unified endpoint translates, so some fields may be dropped. **To check** by running one `claude -p` through each.
+- Whether Codex's `PreToolUse` `ask` and OpenCode's `permission.asked` can be answered by an outside process in a headless run, as `permission_prompt` is answered on a thread today.
+- Whether Codex's and Goose's hooks tell a sub-agent's tool call from the main agent's, as Claude Code's `agent_id` does; Codex has `SubagentStart` and `SubagentStop`, Goose has neither.
+- The exact fields of OpenCode's `step_finish` and Goose's `stream-json` events, read only from third-party write-ups.
+- Which `wire_api` Codex should use against each gateway, and whether OpenCode's Anthropic provider accepts a custom base URL.
+- Whether aider's current release is an MCP client; its own documentation does not say.
+- What any harness reports as cost over a gateway: Claude Code and OpenCode price from their own tables, Codex and Goose report tokens only. Only the gateway knows what was charged: OpenRouter's `usage.cost` and `/api/v1/generation`, LiteLLM's `x-litellm-response-cost` and `/spend/logs`.
