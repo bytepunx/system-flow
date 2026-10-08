@@ -3,11 +3,14 @@ id: S-0323
 type: story
 nature: improvement
 title: "flai check finds `narrative.state` outside the story at close-out"
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-07T18:59:54Z
-updated: 2026-10-08T05:53:30Z
-transitions: []
+updated: 2026-10-08T05:54:06Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:54:04Z
+    by: orchestrator
 tags: [flai, template]
 topics: [cli, conventions, template]
 touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -23,15 +26,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 296
+      seconds: 314
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 86
-          output: 1322
-          cache_read: 31073758
-          cache_write: 40746
-          cost: 7.666
+          input: 88
+          output: 1334
+          cache_read: 31178287
+          cache_write: 44197
+          cost: 7.6926
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-10-08T00:27:28Z
 forecast:
   duration: 24m
-  delivery: 2026-10-08T13:13:00Z
-  basis: "Its own forecast of 24m; 23rd in the pull order with an in-progress limit of 3, behind S-0232, S-0309, S-0319, S-0336, S-0326, S-0287, S-0321, S-0322, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306 and S-0313."
+  delivery: 2026-10-08T06:20:00Z
+  basis: "Its own forecast of 24m; 1st in the pull order with an in-progress limit of 3, behind S-0232, S-0309 and S-0319."
   by: flai
-  at: 2026-10-08T05:53:30Z
+  at: 2026-10-08T05:54:06Z
 finalized:
   by: orchestrator
   at: 2026-10-08T00:27:54Z
