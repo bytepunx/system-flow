@@ -575,7 +575,7 @@ A story's agent starts a ready story with `flai story start`, which moves it to 
 
 Before it moves the story to review, it commits whatever is outstanding, syncs again, and closes out itself with `scripts/close-out.sh S-0037 -m "<message>"` in the story's worktree ([ADR-0110](../../design/adrs/0110-a-story-s-agent-runs-the-close-out-which-runs-flai-verify-itself-before-review.md)). The close-out runs `flai verify S-0037 --record-issues` for every check ([Verify a story before review](#verify-a-story-before-review)), so it refuses a branch that does not yet contain the main branch and says to sync. Then it commits what is outstanding, checks again with `flai verify S-0037 --sync-only` that the branch contains the main branch, and checks that the worktree is clean.
 
-Every run of `scripts/close-out.sh` ends with one line naming the story, the outcome, and the step it stopped at, such as `close-out: S-0037 passed every step; ready to move to review`, or `close-out: S-0037 stopped at flai verify (exit 1)` under flai verify's own last line, `verify: S-0037 stopped at markdown (exit 1)`, and the findings of the step that failed. A run that stops never needs running again to learn why. The agent runs it once, as one command without a pipe or a file, reads those lines, fixes what they name, commits, and runs it again. It never hands the run to a sub-agent. A project with no close-out script runs `flai verify S-0037` instead.
+Every run of `scripts/close-out.sh` ends with one line naming the story, the outcome, and the step it stopped at, such as `close-out: S-0037 passed every step; ready to move to review`, or `close-out: S-0037 stopped at flai verify (exit 1)` under flai verify's own last line, `verify: S-0037 stopped at markdown (exit 1)`, and the findings of the step that failed. When flai verify reused tiers, a pass or a stop at flai verify ends with the same note as verify's last line, such as `close-out: S-0037 passed every step; ready to move to review (reused 2 tiers from 2026-10-08T09:12:40Z)`. A run that stops never needs running again to learn why. The agent runs it once, as one command without a pipe or a file, reads those lines, fixes what they name, commits, and runs it again. It never hands the run to a sub-agent. A project with no close-out script runs `flai verify S-0037` instead.
 
 Sync never stashes, so it never has your work in hand when something goes wrong:
 
@@ -1194,6 +1194,7 @@ flai verify S-0037                   # run every step, cheapest first
 flai verify S-0037 --json            # the result as JSON
 flai verify S-0037 --last            # the stored result of the last run; runs nothing
 flai verify S-0037 --record-issues   # also record the notes outside the story as issues, as the close-out does
+flai verify S-0037 --fresh           # run every tier, reusing none from the last run
 flai verify S-0037 --sync-only       # only the rebase and sync steps; stores nothing
 ```
 
@@ -1226,15 +1227,42 @@ not-reached tier markdown
 verify: S-0037 stopped at go-test (exit 1)
 ```
 
-With `--json` the answer is the report: `story`, the `commit` and `base` it verified, `ran_at`, `duration_ms`, `passed`, `stopped_at`, the `paths` the branch changed, `steps` (each with `name`, `tier`, `state`, `duration_ms`, `findings`, and `omitted`, a passing step's `note`, and a tier's `command` and `exit_code`), and `notes`. With `--record-issues` it adds `recorded`: the issues the notes were recorded in, in the story's worktree, as `flai check --record-issues` records them.
+With `--json` the answer is the report: `story`, the `commit` and `base` it verified, the `base_commit` the main branch had, the `fingerprint` of its tiers, `ran_at`, `duration_ms`, `passed`, `stopped_at`, the `paths` the branch changed, `steps` (each with `name`, `tier`, `state`, `duration_ms`, `findings`, and `omitted`, a passing step's `note`, a tier's `command` and `exit_code`, and a reused tier's `reused_from`), and `notes`. With `--record-issues` it adds `recorded`: the issues the notes were recorded in, in the story's worktree, as `flai check --record-issues` records them.
 
 Every run stores its report, passed or not, in the project's `.flai-cache/verify/`. `--last` prints the story's stored report and runs nothing; with `--json` it prints `null` when there is none. The story's review page on the dashboard shows the same report ([Reviewing a story](flaiover.md#reviewing-a-story)).
 
 `--sync-only` runs the `rebase` and `sync` steps and nothing else. It prints them and exits as a full run does, and it stores no report, so the stored one stays the last full run's. The close-out's last check, after its commit, is `flai verify S-0037 --sync-only`, so the close-out and `flai verify` agree on whether the branch contains the main branch. `--sync-only` is refused with `--last`, which runs nothing, and with `--record-issues`, since it runs no check.
 
+A run resumes from the stored report when nothing that decides the tiers has changed since (S-0341). It needs all three of these to match the run before:
+
+| The report's | Is | A run is full after |
+|--------------|----|---------------------|
+| `commit` | The branch's head | A commit on the branch |
+| `base_commit` | The main branch's commit | A commit on main, or a `flai stream sync` that takes one |
+| `fingerprint` | A hash of the manifest's `tests` and of the selected tiers' names, directories, and commands | An edit to `tests`, or a change that selects other tiers |
+
+The four steps before the tiers always run. The tiers before the first one the last run showed `failed` or `not-reached` do not: each is `reused`, with the command, exit code, and duration of the run that ran it, and the run goes on from the tier that failed. A last run that stopped before the tiers reuses none; one that passed every tier reuses them all. A report from an older flai, with no `fingerprint` or `base_commit`, gives a full run. `--fresh` forces a full run. `flai test` never resumes.
+
+A reused tier's line gives, in place of its duration, when the run that ran it began. The last line counts the reused tiers and gives the earliest such time:
+
+```text
+passed rebase (7ms)
+passed sync (19ms)
+passed narrative (2ms)
+passed check (1.3s)
+reused tier gofmt (from 2026-10-08T09:12:40Z)
+passed tier go-test (15.1s)
+passed tier markdown (2.2s)
+verify: S-0037 passed every step (reused 1 tier from 2026-10-08T09:12:40Z)
+```
+
+In `--json` a reused tier has `state` `reused` and `reused_from`, that time in UTC. A tier reused a second time keeps the time of the run that ran it. The report a resumed run stores holds every step, the reused ones too.
+
+The close-out runs `flai verify --record-issues` without `--fresh`, so a second close-out at the same head resumes, and its last line ends with the same `(reused N tiers from <time>)`. A close-out that commits moves the head, so the run after it is full.
+
 flai verify commits nothing. The exit status is 0 when every step passed and 1 when a step failed. It is 2 when flai verify could not answer: the story has no worktree, the manifest's `tests` are not valid, the notes could not be recorded, or the run was stopped before it finished.
 
-Over MCP, the tool `verify` takes `story` and `max` and answers what `flai verify --json` prints; a failing step is an answer, not an error. It records no issues. A dashboard runs it through the host method `verify.run` while you have the `checks` host action on, and reads the stored report with `verify.status`, which needs no host action. Sub-agents and the orchestrator may run `flai verify` and call the tool `verify`: `flai guard` lets them, but not with `--record-issues`, which writes issues.
+Over MCP, the tool `verify` takes `story` and `max` and answers what `flai verify --json` prints; a failing step is an answer, not an error. It records no issues. A dashboard runs it through the host method `verify.run` while you have the `checks` host action on, and reads the stored report with `verify.status`, which needs no host action. The tool and `verify.run` resume as `flai verify` does; neither can force a full run. Sub-agents and the orchestrator may run `flai verify` and call the tool `verify`: `flai guard` lets them, but not with `--record-issues`, which writes issues.
 
 ## Flow metrics
 
