@@ -27,17 +27,22 @@ shift
 # the step it stopped at, so nobody runs it again to learn why it stopped
 # (S-0266). Set once the story is known: a usage error prints only the usage.
 # The trap reads $? before anything else can change it, and exits with it.
+# A pass or a stop at flai verify carries the tiers verify reused (S-0341).
 step="the worktree check"
 hint=""
 signal=""
+reused=""
+tmp=""
 finish() {
   code="$1"
+  [ -z "$tmp" ] || rm -rf "$tmp" || :
+  [ "$step" = "flai verify" ] || [ "$code" -eq 0 ] || reused=""
   if [ -n "$signal" ]; then
     echo "close-out: $story stopped at $step ($signal)"
   elif [ "$code" -eq 0 ]; then
-    echo "close-out: $story passed every step; ready to move to review"
+    echo "close-out: $story passed every step; ready to move to review$reused"
   else
-    echo "close-out: $story stopped at $step (exit $code)$hint"
+    echo "close-out: $story stopped at $step (exit $code)$reused$hint"
   fi
   exit "$code"
 }
@@ -54,7 +59,18 @@ branch="$(git rev-parse --abbrev-ref HEAD)"
 step="flai verify"
 hint="; flai verify's last line above names the step it stopped at, or why it could not run"
 echo "close-out: $step $story --record-issues"
-"$ROOT/scripts/flai.sh" verify "$story" --record-issues
+# Without --fresh, a second run at an unchanged head and base resumes at the
+# tier that failed, and verify's last line ends "(reused N tiers from <time>)".
+# Its output shows as it comes and is kept to read that line; its status goes
+# through a file, which the pipe would otherwise hide.
+tmp="$(mktemp -d)"
+{ rc=0; "$ROOT/scripts/flai.sh" verify "$story" --record-issues || rc=$?; echo "$rc" >"$tmp/status"; } | tee "$tmp/out"
+rc="$(cat "$tmp/status")"
+last="$(tail -n 1 "$tmp/out")"
+case "$last" in
+  "verify: $story "*" (reused "[0-9]*" tier"*")") reused=" (${last##*" ("}" ;;
+esac
+[ "$rc" -eq 0 ] || exit "$rc"
 hint=""
 
 step="commit"
