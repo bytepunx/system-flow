@@ -6,7 +6,7 @@ title: flai task done commits every uncommitted file in the story worktree, so c
 status: ready
 owner: alex
 created: 2026-10-07T18:59:53Z
-updated: 2026-10-08T04:39:25Z
+updated: 2026-10-08T04:49:57Z
 transitions:
   - to: ready
     at: 2026-10-08T04:36:45Z
@@ -53,10 +53,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:13Z
 forecast:
   duration: 55m
-  delivery: 2026-10-08T06:43:00Z
-  basis: "flai forecast gave 26m (size 20 at 78 s per unit); raised to 55m because S-0312's same plan was raised to 45m for an ADR first and files S-0333 (38m) and S-0269 (69m) changed, this story adds I-0108's three-task test and a second issue close, and T-1331 now also changes the host method task.done."
-  by: planner-S-0322
-  at: 2026-10-08T04:39:25Z
+  delivery: 2026-10-08T06:46:00Z
+  basis: "Its own forecast of 55m; 6th in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326 and S-0287."
+  by: flai
+  at: 2026-10-08T04:49:57Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:36:42Z
