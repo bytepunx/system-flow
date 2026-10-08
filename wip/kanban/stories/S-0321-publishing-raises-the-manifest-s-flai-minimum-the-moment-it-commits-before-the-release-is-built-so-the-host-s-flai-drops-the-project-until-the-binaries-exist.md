@@ -3,11 +3,14 @@ id: S-0321
 type: story
 nature: remediation
 title: Publishing raises the manifest's flai minimum the moment it commits, before the release is built, so the host's flai drops the project until the binaries exist
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-07T18:59:52Z
-updated: 2026-10-08T04:49:57Z
-transitions: []
+updated: 2026-10-08T05:02:40Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:02:36Z
+    by: orchestrator
 tags: [flai, release, serve]
 topics: [release]
 touches: [flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/release.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0107-publishing-raises-the-manifest-s-flai-minimum-the-moment-it-commits-before-the-release-is-built-so-the-host-s-flai-drops-the-project-until-the-binaries-exist.md, design/issues/summary.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 384
+      seconds: 411
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 70
-          output: 1181
-          cache_read: 20786680
-          cache_write: 31138
-          cost: 5.1292
+          input: 88
+          output: 1305
+          cache_read: 21321424
+          cache_write: 45137
+          cost: 5.2644
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T00:24:08Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T12:27:00Z
-  basis: "Its own forecast of 45m; 24th in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326, S-0287, S-0322, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306 and S-0313."
+  delivery: 2026-10-08T06:38:00Z
+  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326 and S-0287."
   by: flai
-  at: 2026-10-08T04:49:57Z
+  at: 2026-10-08T05:02:40Z
 finalized:
   by: orchestrator
   at: 2026-10-08T00:24:59Z

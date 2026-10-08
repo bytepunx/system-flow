@@ -6,7 +6,7 @@ title: flai task done commits every uncommitted file in the story worktree, so c
 status: ready
 owner: alex
 created: 2026-10-07T18:59:53Z
-updated: 2026-10-08T04:49:57Z
+updated: 2026-10-08T05:02:40Z
 transitions:
   - to: ready
     at: 2026-10-08T04:36:45Z
@@ -34,15 +34,15 @@ usage:
           cache_write: 411856
           cost: 5.3736
     - kind: orchestrator
-      seconds: 545
+      seconds: 546
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 195
-          output: 3083
-          cache_read: 84436078
-          cache_write: 73059
-          cost: 20.8212
+          input: 196
+          output: 3100
+          cache_read: 84909446
+          cache_write: 75366
+          cost: 20.9384
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -53,10 +53,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:13Z
 forecast:
   duration: 55m
-  delivery: 2026-10-08T06:46:00Z
-  basis: "Its own forecast of 55m; 6th in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326 and S-0287."
+  delivery: 2026-10-08T07:17:00Z
+  basis: "Its own forecast of 55m; 7th in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326, S-0287 and S-0321."
   by: flai
-  at: 2026-10-08T04:49:57Z
+  at: 2026-10-08T05:02:40Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:36:42Z

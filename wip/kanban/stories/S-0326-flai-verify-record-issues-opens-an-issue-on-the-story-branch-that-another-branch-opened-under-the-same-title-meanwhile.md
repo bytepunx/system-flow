@@ -6,7 +6,7 @@ title: flai verify --record-issues opens an issue on the story branch that anoth
 status: ready
 owner: alex
 created: 2026-10-07T18:59:58Z
-updated: 2026-10-08T04:49:57Z
+updated: 2026-10-08T05:02:40Z
 transitions:
   - to: ready
     at: 2026-10-08T04:21:11Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 248
+      seconds: 249
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 61
-          output: 1015
-          cache_read: 21144830
-          cache_write: 38019
-          cost: 5.2191
+          input: 62
+          output: 1032
+          cache_read: 21618198
+          cache_write: 40327
+          cost: 5.3363
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T00:34:49Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T06:11:00Z
+  delivery: 2026-10-08T06:24:00Z
   basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320, S-0319, S-0309 and S-0336."
   by: flai
-  at: 2026-10-08T04:49:57Z
+  at: 2026-10-08T05:02:40Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:21:07Z

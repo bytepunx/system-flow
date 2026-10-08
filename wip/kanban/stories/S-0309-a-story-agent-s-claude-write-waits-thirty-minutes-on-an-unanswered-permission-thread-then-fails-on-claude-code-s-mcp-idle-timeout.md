@@ -6,7 +6,7 @@ title: A story agent's .claude/ write waits thirty minutes on an unanswered perm
 status: ready
 owner: alex
 created: 2026-10-07T06:48:44Z
-updated: 2026-10-08T04:34:30Z
+updated: 2026-10-08T05:02:40Z
 transitions:
   - to: ready
     at: 2026-10-08T04:23:09Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 106840
           cost: 1.0999
     - kind: orchestrator
-      seconds: 430
+      seconds: 432
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 46
-          output: 764
-          cache_read: 10542864
-          cache_write: 20543
-          cost: 2.6031
+          input: 47
+          output: 782
+          cache_read: 11016232
+          cache_write: 22851
+          cost: 2.7203
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-10-07T23:28:00Z
 forecast:
   duration: 35m
-  delivery: 2026-10-08T05:37:00Z
-  basis: "Its own forecast of 35m; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0318, S-0320 and S-0319."
+  delivery: 2026-10-08T05:40:00Z
+  basis: "Its own forecast of 35m; 2nd in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320 and S-0319."
   by: flai
-  at: 2026-10-08T04:34:30Z
+  at: 2026-10-08T05:02:40Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:23:05Z
