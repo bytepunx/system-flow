@@ -3,8 +3,8 @@ id: I-0117
 title: A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
 class: blocker
 status: open
-count: 3
-cost: 17m
+count: 4
+cost: 18m
 first_reported: 2026-10-08T04:12:50Z
 last_reported: 2026-10-08T05:31:34Z
 updated: 2026-10-08T05:31:34Z
@@ -20,6 +20,10 @@ A story's integration tier lints main's committed wip, so markdown any agent com
 ### 2026-10-08T04:12:50Z
 Story: S-0324.
 S-0324 makes flai's MD034 report a bare `www.` literal. `TestRepositoryLintsClean` in flai/internal/mdlint lints every markdown file the story branch holds, `wip/` included. A story branch holds `wip/` only as main last committed it. The close-out's integration tier failed twice on bare `www.` lines in that copy. The first time it was four lines (TH-0354), the second two lines of TH-0355's title, which S-0315's acceptance had just committed. Each time the lines were fixed in the main checkout within minutes, but the story could not go on until a later commit on main, such as an acceptance, took the fix. The installed flai (1.38.1) lacks the rule until this fix is published, so agents keep writing such lines. markdownlint-cli2 reports the same lines, so `make lint-md` on main fails on them too.
+
+### 2026-10-08T05:00:45Z
+Story: S-0320.
+S-0316's acceptance (cc4acf4f) committed an orchestrator log entry to `wip/agents/orchestrator.md` whose line 1529 reads "still lets agents write bare www. into wip". S-0320's first close-out passed integration while that line was still uncommitted on main. After the sync brought cc4acf4f into the branch, the integration tier failed twice in a row. The failing package is not named (I-0113), but every package from `internal/protected` on passed, `internal/mdlint` sorts before it, and the close-out's check flags exactly that line as MD034. S-0320 cannot pass its close-out until main commits that line quoted.
 
 ### 2026-10-08T05:00:50Z
 Story: S-0318.
