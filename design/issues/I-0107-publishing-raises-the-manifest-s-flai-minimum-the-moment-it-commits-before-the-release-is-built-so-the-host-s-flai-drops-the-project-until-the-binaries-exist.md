@@ -2,12 +2,12 @@
 id: I-0107
 title: Publishing raises the manifest's flai minimum the moment it commits, before the release is built, so the host's flai drops the project until the binaries exist
 class: defect
-status: open
+status: closed
 count: 2
 cost: 30m
 first_reported: 2026-10-07T07:39:30Z
 last_reported: 2026-10-07T15:09:19Z
-updated: 2026-10-07T18:59:52Z
+updated: 2026-10-08T08:11:37Z
 ---
 
 # I-0107 Publishing raises the manifest's flai minimum the moment it commits, before the release is built, so the host's flai drops the project until the binaries exist
@@ -31,3 +31,4 @@ Again on 2026-10-07 at 15:04Z: a publish raised flai.minimum to 1.35.1 the momen
 Directions to weigh: have `flai release` raise `flai.minimum` only after the release's binaries are published, in a later commit, or have the publish leave the bump for the first run of the upgraded flai; or have `flai serve` keep serving a project whose manifest newly demands a minimum above its own version, with the warning it already logs for a flai older than the project, and refuse only the writes that touch fields it does not know. Either way the publish should not cancel its own `publish.run`: the journal recorded it as failed with `flai exited with -1` although the tags had been pushed. A test that publishes a release raising the minimum against a running `flai serve` of the older version, and expects the project to stay served, would pin it. The release build's own failure that day (a duplicated `## 1.0.67` heading in `template/CHANGELOG.md`, which `TestRepositoryLintsClean` rejects, since `flai release` prepended a second section with the heading the stories had already written) is a separate defect and made the outage last longer.
 
 Story S-0321 remediates this issue, created from it at 2026-10-07T18:59:52Z.
+Closed 2026-10-08T08:11:37Z: S-0321: a publish raises flai.minimum only to a flai release no newer than the flai that publishes, so the minimum always names a release whose binaries exist and a newer raise waits for a publish from the upgraded flai (release.RaiseMinimum, TestRaiseMinimum reproduces the instance). A served project whose manifest stops loading now refuses new requests and lets those in flight answer, for up to five minutes, before flai serve drops it, so a publish is no longer killed mid-run (TestAProjectThatStopsLoadingAnswersItsRequestInFlightBeforeItIsDropped).
