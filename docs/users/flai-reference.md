@@ -916,7 +916,7 @@ Stop and start the dashboard container again, with whatever image it is already 
 flai dashboard restart [flags]
 ```
 
-Cycles the shared dashboard container's process without changing its image: if it is running, this stops it and starts it again from the exact image reference it was running, never a fresh pull, so a floating tag such as latest cannot silently upgrade it; flai dashboard upgrade does that deliberately. If it is not running, this starts it, the same as flai dashboard. Every project registered with flai serve keeps its registration: only the container's process restarts.
+Cycles the shared dashboard container's process without changing its image: if it is running, this stops it and starts again the exact image it was running, by its image ID, never a fresh pull and never what its tag names now, so a floating tag such as latest cannot silently upgrade it, even after flai dashboard check pulled a newer one; flai dashboard upgrade does that deliberately. It still names the tag the image was started for. If it is not running, this starts it, the same as flai dashboard. Every project registered with flai serve keeps its registration: only the container's process restarts.
 
 Flags:
 

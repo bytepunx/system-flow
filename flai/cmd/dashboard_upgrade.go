@@ -13,25 +13,53 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// dashboardRefLabel is the label every dashboard container carries naming the
+// image reference it was started for, such as ghcr.io/bytepunx/flaiover:latest:
+// a container started from an image ID, as a restart starts one (I-0116),
+// has that ID as its {{.Config.Image}}, and this keeps the tag to show.
+const dashboardRefLabel = "io.bytepunx.flai.ref"
+
 // containerArgs is the docker run argument list every dashboard container
 // shares: a port publish, the two secrets (ADR-0031), and, off Windows,
 // running as this user so the secrets (readable by this user only) can be
 // read. publish is a full --publish value: a fixed host port for the real
 // container, or "127.0.0.1::<port>" for an upgrade's temporary one, which
-// docker assigns an ephemeral port for.
-func containerArgs(dir, name, publish, ref string) []string {
+// docker assigns an ephemeral port for. It runs image, a reference or an
+// image ID, and labels the container with ref, the reference to show for it.
+func containerArgs(dir, name, publish, image, ref string) []string {
 	args := []string{"run", "--detach", "--rm", "--name", name, "--publish", publish}
 	args = append(args, tokenArgs(dir)...)
 	args = append(args, agentKeyArgs(dir)...)
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}
-	args = append(args, ref)
+	args = append(args, "--label", dashboardRefLabel+"="+ref, image)
 	return args
 }
 
+// startContainer runs a dashboard container from ref, labelled with ref.
 func (a *app) startContainer(dir, name, publish, ref string) (string, error) {
-	return a.runner.Run("", "docker", containerArgs(dir, name, publish, ref)...)
+	return a.startContainerImage(dir, name, publish, ref, ref)
+}
+
+// startContainerImage runs a dashboard container from image, labelled with
+// ref, the reference to show for it.
+func (a *app) startContainerImage(dir, name, publish, image, ref string) (string, error) {
+	return a.runner.Run("", "docker", containerArgs(dir, name, publish, image, ref)...)
+}
+
+// startDashboardImage is startDashboard for an image other than the
+// reference it shows, such as the image ID a restart keeps (I-0116): it runs
+// image labelled with ref, and records image, what docker ran, for flai
+// host's watch to start again.
+func (a *app) startDashboardImage(dir string, s dashboardSettings, image, ref string) (string, error) {
+	publish := fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)
+	id, err := a.startContainerImage(dir, s.Name, publish, image, ref)
+	if err != nil {
+		return id, err
+	}
+	a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: image, Publish: publish})
+	return id, nil
 }
 
 // imageID is the local image ID (docker image inspect's {{.Id}}) of ref,
@@ -55,9 +83,11 @@ func newDashboardRestartCmd(a *app) *cobra.Command {
 		Use:   "restart",
 		Short: "Stop and start the dashboard container again, with whatever image it is already running",
 		Long: `Cycles the shared dashboard container's process without changing its image: if it
-is running, this stops it and starts it again from the exact image reference
-it was running, never a fresh pull, so a floating tag such as latest cannot
-silently upgrade it; flai dashboard upgrade does that deliberately. If it is
+is running, this stops it and starts again the exact image it was running, by
+its image ID, never a fresh pull and never what its tag names now, so a
+floating tag such as latest cannot silently upgrade it, even after flai
+dashboard check pulled a newer one; flai dashboard upgrade does that
+deliberately. It still names the tag the image was started for. If it is
 not running, this starts it, the same as flai dashboard. Every project
 registered with flai serve keeps its registration: only the container's
 process restarts.`,
@@ -92,24 +122,31 @@ func (a *app) runDashboardRestart(image, tag string, port int, bind string) erro
 		return err
 	}
 	ref := s.ref()
+	runImage := ref
 	if wasRunning {
+		// The image ID, not the tag: flai dashboard check may have pulled a
+		// newer image under the tag since the container started (I-0116).
 		if running, _ := a.containerInfo(s.Name); running != "" {
 			ref = running
 		}
-		a.logger().Info("stopping dashboard for restart", "component", "dashboard", "container", s.Name)
+		runImage = ref
+		if current, _ := a.containerImageID(s.Name); current != "" {
+			runImage = current
+		}
+		a.logger().Info("stopping dashboard for restart", "component", "dashboard", "container", s.Name, "image", runImage)
 		if err := a.stopAndRelease(s.Name); err != nil {
 			return err
 		}
 	}
-	id, err := a.startDashboard(dir, s, ref)
+	id, err := a.startDashboardImage(dir, s, runImage, ref)
 	if err != nil {
 		if wasRunning {
-			return fmt.Errorf("restart %s: it stopped but did not start again from %s: %w; the dashboard is down: run flai dashboard to start it", s.Name, ref, err)
+			return fmt.Errorf("restart %s: it stopped but did not start again from %s: %w; the dashboard is down: run flai dashboard to start it", s.Name, refAndImage(ref, runImage), err)
 		}
 		return err
 	}
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"container": s.Name, "was_running": wasRunning, "ref": ref, "id": short(id), "url": s.url()})
+		return a.printJSON(map[string]any{"container": s.Name, "was_running": wasRunning, "ref": ref, "image": runImage, "id": short(id), "url": s.url()})
 	}
 	verb := "started"
 	if wasRunning {
@@ -117,6 +154,15 @@ func (a *app) runDashboardRestart(image, tag string, port int, bind string) erro
 	}
 	fmt.Fprintf(a.out, "%s %s (%s) at %s\n", verb, s.Name, ref, s.url())
 	return nil
+}
+
+// refAndImage names what a restart ran: the reference, and the image ID when
+// it ran one other than the reference.
+func refAndImage(ref, image string) string {
+	if image == ref {
+		return ref
+	}
+	return fmt.Sprintf("%s (image %s)", ref, image)
 }
 
 func newDashboardCheckCmd(a *app) *cobra.Command {
@@ -341,7 +387,7 @@ func (a *app) restorePreviousDashboard(dir string, s dashboardSettings, previous
 	shown := orDefault(previousRef, previousImage)
 	a.logger().Warn("new image did not start, starting the previous one again", "component", "dashboard", "container", s.Name, "image", previousImage)
 	a.releaseName(s.Name) // a failed docker run can leave a created container holding the name
-	if _, err := a.startDashboard(dir, s, previousImage); err != nil {
+	if _, err := a.startDashboardImage(dir, s, previousImage, shown); err != nil {
 		return fmt.Errorf("%w; starting the previous image %s again failed too: %w; the dashboard is down: run flai dashboard to start it", failed, shown, err)
 	}
 	return fmt.Errorf("%w; %s runs the previous image %s again", failed, s.Name, shown)

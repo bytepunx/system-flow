@@ -28,7 +28,8 @@ type fakeRunner struct {
 	mounts   string // mount destinations of a running container, one per line
 
 	imageIDs       map[string]string // ref -> the image ID a pull or inspect of it reports now; default sha256:<ref>
-	containerRef   map[string]string // container name -> the ref it was last started with
+	containerRef   map[string]string // container name -> the ref it was last started with: docker run's image argument, its {{.Config.Image}}
+	containerLabel map[string]string // container name -> its dashboardRefLabel; none for a container an older flai started
 	containerImage map[string]string // container name -> the image ID it was started from (a snapshot, not re-derived, so a later change to imageIDs is a real difference a check can find)
 	probeAddr      string            // host:port `docker port` reports for the upgrade probe container; default 127.0.0.1:19999
 	health         map[string]string // container name -> docker's HEALTHCHECK verdict; default none
@@ -163,7 +164,16 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		if f.containerImage == nil {
 			f.containerImage = map[string]string{}
 		}
+		if f.containerLabel == nil {
+			f.containerLabel = map[string]string{}
+		}
 		f.containerRef[name] = ref
+		delete(f.containerLabel, name)
+		for i, arg := range args[:len(args)-1] {
+			if v, ok := strings.CutPrefix(args[i+1], dashboardRefLabel+"="); arg == "--label" && ok {
+				f.containerLabel[name] = v
+			}
+		}
 		f.containerImage[name] = f.idFor(ref)
 		if strings.HasPrefix(ref, "sha256:") {
 			f.containerImage[name] = ref // started from an image ID, not a tag
@@ -192,10 +202,14 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		if strings.Contains(strings.Join(args, " "), ".Config.Env") {
 			return f.env[args[len(args)-1]], nil
 		}
-		if ref, ok := f.containerRef[args[len(args)-1]]; ok {
-			return ref + " 5555", nil
+		if len(args) >= 3 && args[1] == "--format" && args[2] == containerInfoFormat {
+			name := args[len(args)-1]
+			if ref, ok := f.containerRef[name]; ok {
+				return ref + "|5555|" + f.containerLabel[name], nil
+			}
+			return "ghcr.io/bytepunx/flaiover:0.2.0|5555|", nil
 		}
-		return "ghcr.io/bytepunx/flaiover:0.2.0 5555", nil
+		return "", nil
 	case "stop":
 		delete(f.running, args[1])
 		if f.removeDelay > 0 {
@@ -289,6 +303,7 @@ func TestDashboardLifecycle(t *testing.T) {
 		"--mount type=bind,source=" + filepath.Join(serveDir, "dashboard.token") + ",target=/run/secrets/flaiover_token,readonly",
 		"--env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token",
 		"--user " + fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
+		"--label " + dashboardRefLabel + "=ghcr.io/bytepunx/flaiover:0.2.0 ghcr.io/bytepunx/flaiover:0.2.0",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing %q in calls:\n%s", want, joined)
@@ -550,7 +565,7 @@ func TestDashboardRestartCyclesTheRunningContainerWithoutChangingItsImage(t *tes
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
-	ranRef := f.containerRef["flaiover"]
+	ranImage := f.containerImage["flaiover"]
 	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"} // a newer build under the same tag
 	f.calls = nil                                                                      // only the restart's own calls matter below
 	out, errOut, code := runWith(t, root, f, "dashboard", "restart")
@@ -560,14 +575,112 @@ func TestDashboardRestartCyclesTheRunningContainerWithoutChangingItsImage(t *tes
 	if !strings.Contains(out, "restarted flaiover") {
 		t.Errorf("output: %s", out)
 	}
-	if f.containerRef["flaiover"] != ranRef {
-		t.Errorf("restart used %s, want the ref it was already running, %s (a plain restart must never silently upgrade)", f.containerRef["flaiover"], ranRef)
+	if f.containerImage["flaiover"] != ranImage {
+		t.Errorf("restart runs %s, want the image it was already running, %s (a plain restart must never silently upgrade)", f.containerImage["flaiover"], ranImage)
 	}
 	joined := strings.Join(f.calls, "\n")
 	if strings.Count(joined, "docker pull") != 0 {
 		t.Errorf("restart pulled; it should reuse the local image:\n%s", joined)
 	}
 }
+
+// I-0116: flai dashboard check pulls the tag the dashboard runs, so after a
+// newer latest is pulled the tag names another image than the one that runs.
+// A restart starts the image that runs, by its ID, and still names the tag.
+func TestDashboardRestartRunsTheImageIDNotWhatTheTagNamesNow(t *testing.T) {
+	root := dashboardProject(t)
+	tag := "ghcr.io/bytepunx/flaiover:latest"
+	f := &fakeRunner{images: map[string]bool{tag: true}, running: map[string]bool{}, imageIDs: map[string]string{tag: "sha256:old"}}
+	if _, errOut, code := runWith(t, root, f, "dashboard"); code != 0 || f.containerImage["flaiover"] != "sha256:old" {
+		t.Fatalf("start: %d %s", code, errOut)
+	}
+	f.imageIDs[tag] = "sha256:new" // what the pull of a newer latest leaves
+	if out, errOut, code := runWith(t, root, f, "dashboard", "check", "--json"); code != 0 || !strings.Contains(out, `"upgrade_available": true`) {
+		t.Fatalf("check: %d %s %s", code, out, errOut)
+	}
+	for _, again := range []string{"first", "second"} {
+		f.calls = nil
+		out, errOut, code := runWith(t, root, f, "dashboard", "restart", "--json")
+		if code != 0 {
+			t.Fatalf("%s restart: %d %s", again, code, errOut)
+		}
+		var runs []string
+		for _, c := range f.calls {
+			if strings.HasPrefix(c, "docker run ") {
+				runs = append(runs, c)
+			}
+		}
+		if len(runs) != 1 || !strings.HasSuffix(runs[0], " sha256:old") || !strings.Contains(runs[0], " --label "+dashboardRefLabel+"="+tag+" ") {
+			t.Errorf("%s restart runs the image that ran, by its ID, labelled with its tag:\n%s", again, strings.Join(f.calls, "\n"))
+		}
+		if joined := strings.Join(f.calls, "\n"); strings.Contains(joined, "docker pull") {
+			t.Errorf("%s restart pulled:\n%s", again, joined)
+		}
+		if !strings.Contains(out, `"ref": "`+tag+`"`) || !strings.Contains(out, `"image": "sha256:old"`) || f.containerImage["flaiover"] != "sha256:old" {
+			t.Errorf("%s restart: runs %s, says %s", again, f.containerImage["flaiover"], out)
+		}
+	}
+	out, _, _ := runWith(t, root, f, "dashboard", "restart")
+	if !strings.Contains(out, "restarted flaiover ("+tag+")") {
+		t.Errorf("restart names the tag, not the image ID: %s", out)
+	}
+	out, _, _ = runWith(t, root, f, "dashboard", "status")
+	if !strings.Contains(out, "("+tag+")") || strings.Contains(out, "sha256:") {
+		t.Errorf("status names the tag, not the image ID: %s", out)
+	}
+}
+
+// A running dashboard whose image ID docker does not say is started again
+// from the reference it shows, as before I-0116.
+func TestDashboardRestartFallsBackToTheRefWhenTheImageIDIsUnknown(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{"flaiover": true}}
+	out, errOut, code := runWith(t, root, f, "dashboard", "restart")
+	if code != 0 || !strings.Contains(out, "restarted flaiover (ghcr.io/bytepunx/flaiover:0.2.0)") || f.containerRef["flaiover"] != "ghcr.io/bytepunx/flaiover:0.2.0" || f.containerLabel["flaiover"] != "ghcr.io/bytepunx/flaiover:0.2.0" {
+		t.Errorf("restart: %d %s %s\n%s", code, out, errOut, strings.Join(f.calls, "\n"))
+	}
+}
+
+// containerInfo names the reference the label records, which a container
+// started from an image ID needs, and a container an older flai started
+// without the label by its {{.Config.Image}}.
+func TestContainerInfoPrefersTheRefLabel(t *testing.T) {
+	f := &fakeRunner{
+		containerRef:   map[string]string{"labelled": "sha256:abc", "older": "ghcr.io/bytepunx/flaiover:0.1.0"},
+		containerLabel: map[string]string{"labelled": "ghcr.io/bytepunx/flaiover:latest"},
+	}
+	a := &app{runner: f}
+	if image, url := a.containerInfo("labelled"); image != "ghcr.io/bytepunx/flaiover:latest" || url != "http://localhost:5555" {
+		t.Errorf("labelled: %q %q", image, url)
+	}
+	if image, url := a.containerInfo("older"); image != "ghcr.io/bytepunx/flaiover:0.1.0" || url != "http://localhost:5555" {
+		t.Errorf("no label: %q %q", image, url)
+	}
+}
+
+// containerInfo reads its fields by position, so an empty one, such as a
+// container that publishes no port, does not shift the others.
+func TestContainerInfoReadsEmptyFields(t *testing.T) {
+	a := &app{runner: &answerRunner{out: "ghcr.io/bytepunx/flaiover:0.1.0||ghcr.io/bytepunx/flaiover:latest\n"}}
+	if image, url := a.containerInfo("flaiover"); image != "ghcr.io/bytepunx/flaiover:latest" || url != "" {
+		t.Errorf("no port: %q %q", image, url)
+	}
+	a = &app{runner: &answerRunner{out: "ghcr.io/bytepunx/flaiover:0.1.0\n"}}
+	if image, url := a.containerInfo("flaiover"); image != "ghcr.io/bytepunx/flaiover:0.1.0" || url != "" {
+		t.Errorf("one field: %q %q", image, url)
+	}
+}
+
+// answerRunner answers every command with out.
+type answerRunner struct{ out string }
+
+func (r *answerRunner) Run(string, string, ...string) (string, error) { return r.out, nil }
+
+func (r *answerRunner) RunInput(string, string, string, ...string) (string, error) {
+	return r.out, nil
+}
+
+func (r *answerRunner) LookPath(name string) (string, error) { return "/usr/bin/" + name, nil }
 
 func TestDashboardCheckReportsNotRunningPlainly(t *testing.T) {
 	root := dashboardProject(t)
@@ -796,6 +909,9 @@ func TestDashboardUpgradeStartsThePreviousImageAgainWhenTheNewOneFailsToStart(t 
 	if !f.running["flaiover"] || f.containerImage["flaiover"] != previous {
 		t.Errorf("flaiover should run the previous image %s again (by its ID, as the pull moved the tag), runs %s", previous, f.containerImage["flaiover"])
 	}
+	if f.containerLabel["flaiover"] != "ghcr.io/bytepunx/flaiover:latest" {
+		t.Errorf("the previous image is labelled with the tag it ran as, so status names that: %q", f.containerLabel["flaiover"])
+	}
 }
 
 func TestDashboardUpgradeSaysTheDashboardIsDownWhenThePreviousImageFailsToStartToo(t *testing.T) {
@@ -827,9 +943,10 @@ func TestDashboardRestartSaysTheDashboardIsDownWhenItDoesNotStartAgain(t *testin
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
-	f.runFails = map[string]bool{"flaiover ghcr.io/bytepunx/flaiover:latest": true}
+	ran := f.containerImage["flaiover"]
+	f.runFails = map[string]bool{"flaiover " + ran: true}
 	_, errOut, code := runWith(t, root, f, "dashboard", "restart")
-	if code == 0 || !strings.Contains(errOut, "restart flaiover: it stopped but did not start again from ghcr.io/bytepunx/flaiover:latest") || !strings.Contains(errOut, "the dashboard is down: run flai dashboard to start it") {
+	if code == 0 || !strings.Contains(errOut, "restart flaiover: it stopped but did not start again from ghcr.io/bytepunx/flaiover:latest (image "+ran+")") || !strings.Contains(errOut, "the dashboard is down: run flai dashboard to start it") {
 		t.Errorf("restart: %d %s", code, errOut)
 	}
 }

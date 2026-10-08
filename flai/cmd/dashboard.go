@@ -455,19 +455,29 @@ func (a *app) containerRunning(name string) (bool, error) {
 	return strings.TrimSpace(out) != "", nil
 }
 
+// containerInfoFormat is the docker inspect template containerInfo reads: the
+// image docker ran, the host port, and the dashboardRefLabel, separated by |
+// (which no reference or port holds) so that an empty field, such as the
+// label of a container an older flai started, shifts none of the others.
+const containerInfoFormat = `{{.Config.Image}}|{{range $p, $b := .HostConfig.PortBindings}}{{(index $b 0).HostPort}}{{end}}|{{index .Config.Labels "` + dashboardRefLabel + `"}}`
+
 // containerInfo reads the running container's image and host port, so
 // status reflects what is actually running rather than the configuration.
+// The image is the reference its dashboardRefLabel names, which a container
+// started from an image ID needs (I-0116), or else its {{.Config.Image}}, for
+// one an older flai started without the label.
 func (a *app) containerInfo(name string) (image, url string) {
-	out, err := a.runner.Run("", "docker", "inspect", "--format", "{{.Config.Image}} {{range $p, $b := .HostConfig.PortBindings}}{{(index $b 0).HostPort}}{{end}}", name)
+	out, err := a.runner.Run("", "docker", "inspect", "--format", containerInfoFormat, name)
 	if err != nil {
 		return "", ""
 	}
-	parts := strings.Fields(strings.TrimSpace(out))
-	if len(parts) >= 1 {
-		image = parts[0]
+	parts := strings.SplitN(strings.TrimSpace(out), "|", 3)
+	image = strings.TrimSpace(parts[0])
+	if len(parts) >= 2 && strings.TrimSpace(parts[1]) != "" {
+		url = "http://localhost:" + strings.TrimSpace(parts[1])
 	}
-	if len(parts) >= 2 {
-		url = "http://localhost:" + parts[1]
+	if len(parts) >= 3 && strings.TrimSpace(parts[2]) != "" {
+		image = strings.TrimSpace(parts[2])
 	}
 	return image, url
 }
