@@ -2,12 +2,12 @@
 id: I-0104
 title: flai task done commits everything in the worktree, so two tasks of one layer cannot be closed apart
 class: efficiency
-status: open
+status: closed
 count: 5
 cost: 3m
 first_reported: 2026-10-07T07:17:53Z
 last_reported: 2026-10-07T23:45:13Z
-updated: 2026-10-07T23:45:13Z
+updated: 2026-10-08T08:32:41Z
 ---
 
 # I-0104 flai task done commits everything in the worktree, so two tasks of one layer cannot be closed apart
@@ -40,3 +40,4 @@ T-1290's flai task done committed T-1291's design edit to design/system/flaiover
 ## Remediation
 
 Story S-0312 remediates this issue, created from it at 2026-10-07T14:26:01Z.
+Closed 2026-10-08T08:32:41Z: Fixed by S-0322 (ADR-0128): flai task done commits only the changed paths the closing task's touches cover and those no other open task covers, and leaves and lists the paths only another open task covers, so two tasks of one layer close apart, each with its own commit and touches. The commit step is in flai/internal/taskdone/taskdone.go; TestRunClosesTwoTasksOfOneStoryApart reproduces I-0104's two tasks, and -m is needed only when there is something to commit.

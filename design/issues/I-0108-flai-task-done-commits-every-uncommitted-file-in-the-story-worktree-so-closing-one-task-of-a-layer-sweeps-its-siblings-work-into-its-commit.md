@@ -2,7 +2,7 @@
 id: I-0108
 title: flai task done commits every uncommitted file in the story worktree, so closing one task of a layer sweeps its siblings' work into its commit
 class: efficiency
-status: open
+status: closed
 count: 3
 cost: 4m
 first_reported: 2026-10-07T08:06:26Z
@@ -32,3 +32,4 @@ S-0345 ran T-1363 and T-1364 together in one worktree. I committed T-1364's `scr
 ## Remediation
 
 Story S-0322 remediates this issue, created from it at 2026-10-07T18:59:53Z.
+Closed 2026-10-08T08:32:41Z: Fixed by S-0322 (ADR-0128): flai task done no longer runs git add -A; it commits the changed paths the closing task's touches cover and those no other open task covers, and leaves the paths only another open task covers for that task's close, so closing one task of a layer no longer sweeps its siblings' work into its commit. The commit step is in flai/internal/taskdone/taskdone.go; TestRunClosesALayerOfThreeTasksInACommitEach reproduces S-0274's layer of three tasks.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.81 - 2026-10-08
+
+- S-0322 Closing a task commits only the task's own paths, so the tasks of one layer close apart (patch, ADR-0128): `git.md` says that `flai task done`, or `task_done`, commits the changed paths the task's `touches` cover and those no other open task covers. It leaves a path only another open task covers for that task's close, lists it, and goes on, and the close that leaves none syncs the branch. `-m` is needed only when there is something to commit. It needs a flai that has it; an older flai commits every uncommitted file in the worktree and needs `-m` on every close.
+
 ## 1.0.80 - 2026-10-08
 
 - S-0287 flai guard lets a task sub-agent run flai adr new but refuses flai adr topics (patch).

@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-10-07
+updated: 2026-10-08
 audience: agent
 order: 70
 status: active
@@ -16,7 +16,7 @@ How history is made in this repository.
 
 - Each story is worked on its branch, `story/S-nnnn`, in the worktree `flai stream open` creates under `.flai-cache/worktrees/`. Story commits land there; `wip/` is written in the main checkout and committed by `flai accept`.
 - Use `flai stream sync` for the branch's git operations, never start a `git rebase` or `git merge` by hand: it rebases the story's branch onto `main`, and refuses a worktree with uncommitted changes. When it stops on conflicts, finishing that rebase is part of the sync: resolve each path it lists in the worktree, `git add` it, and run `git rebase --continue`, or `git rebase --abort` to put the branch back as it was.
-- Close each task when it is done with `flai task done T-nnnn -m "<message>"` in the story's worktree, or the MCP tool `task_done`, with the task's documentation and work item updates in the change. It commits on `story/S-nnnn`, runs `flai stream sync`, moves the task to `done`, logs it in the narrative, adds the paths the commit changed to the task's and the story's `touches`, runs `flai check --strict` scoped to the story, and answers the inbox, stopping at the first step that fails:
+- Close each task when it is done with `flai task done T-nnnn -m "<message>"` in the story's worktree, or the MCP tool `task_done`, with the task's documentation and work item updates in the change. It commits the task's own paths on `story/S-nnnn`: the changed paths its `touches` cover, and those no other open task covers. It leaves a path only another open task covers for that task's close, lists it, and goes on, so the tasks of one layer close apart. `-m` is needed only when there is something to commit. It then runs `flai stream sync`, moves the task to `done`, logs it in the narrative, adds the paths the commit changed to the task's and the story's `touches`, runs `flai check --strict` scoped to the story, and answers the inbox, stopping at the first step that fails:
   - when the sync stops on conflicts, resolve each path it lists in the worktree, `git add` it, run `git rebase --continue`, and call it again
   - when the check stops, fix what it found and call it again
   - then run the tests for what the task changed with `flai test` on those paths, and close any fix they need by calling it again
