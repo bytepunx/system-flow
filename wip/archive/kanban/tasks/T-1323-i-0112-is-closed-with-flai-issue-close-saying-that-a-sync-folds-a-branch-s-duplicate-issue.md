@@ -24,15 +24,15 @@ touches: [design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-s
 after: [T-1321, T-1322]
 usage:
   source: log
-  seconds: 8
+  seconds: 9
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 48
-      cache_read: 498983
-      cache_write: 2687
-      cost: 0.2238
+      input: 8
+      output: 3226
+      cache_read: 489928
+      cache_write: 20122
+      cost: 0.2807
 ---
 # T-1323 I-0112 is closed with flai issue close, saying that a sync folds a branch's duplicate issue
 

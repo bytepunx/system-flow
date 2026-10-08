@@ -3,10 +3,10 @@ id: S-0326
 type: story
 nature: remediation
 title: flai verify --record-issues opens an issue on the story branch that another branch opened under the same title meanwhile
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T18:59:58Z
-updated: 2026-10-08T07:38:52Z
+updated: 2026-10-08T08:08:17Z
 transitions:
   - to: ready
     at: 2026-10-08T04:21:11Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T06:23:31Z
     by: agent-S-0326
+  - to: review
+    at: 2026-10-08T07:58:08Z
+    by: alex
+  - to: done
+    at: 2026-10-08T08:08:17Z
+    by: alex
 tags: [cli]
 topics: [cli, git, continuous-improvement]
 touches: [design/adrs/README.md, flai/internal/issues/fold.go, flai/internal/issues/fold_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/internal/taskdone/taskdone.go, flai/cmd/stream_sync_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md, design/issues/summary.md, design/adrs/0126-a-rebase-of-a-story-branch-merges-an-issue-file-both-sides-changed-by-its.md, flai/internal/issues/merge.go, flai/internal/issues/merge_test.go, flai/internal/issues/generated.go, flai/cmd/stream_sync.go, docs/users/flai-reference.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
@@ -24,31 +30,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2789
-  estimated: true
+  seconds: 4846
   turns:
     - day: 2026-10-08
-      ceremony: 4
-      hand_edits: 1
-      work: 44
+      ceremony: 6
+      hand_edits: 2
+      work: 62
   models:
     - model: claude-opus-5-5
-      input: 296
-      output: 1872
-      cache_read: 16147709
-      cache_write: 888512
-      cost: 7.6016
+      input: 348
+      output: 147401
+      cache_read: 22386203
+      cache_write: 919412
+      cost: 12.8239
   strategic:
     - kind: orchestrator
-      seconds: 249
+      seconds: 311
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 62
-          output: 1032
-          cache_read: 21618198
-          cache_write: 40327
-          cost: 5.3363
+          input: 80
+          output: 1285
+          cache_read: 24288705
+          cache_write: 45911
+          cost: 5.9957
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 124
-      output: 777
-      cache_read: 7083403
-      cache_write: 463976
-      cost: 3.3676
+      input: 115
+      output: 48533
+      cache_read: 7370796
+      cache_write: 302722
+      cost: 4.2223
 ---
 # T-1321 A sync, a task's close, and an acceptance fold the branch's duplicate issue after the rebase, with a test that reproduces I-0112
 

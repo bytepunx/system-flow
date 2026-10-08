@@ -23,9 +23,25 @@ agent:
   config:
     effort: medium
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1543
+  turns:
+    - day: 2026-10-08
+      hand_edits: 2
+      work: 17
+  models:
+    - model: claude-fable-5-1
+      input: 1501
+      output: 96177
+      cache_read: 5410330
+      cache_write: 590352
+      cost: 14.9684
+    - model: claude-haiku-4-5-20251001
+      input: 853006
+      output: 55817
+      cache_read: 3654023
+      cache_write: 260277
+      cost: 2.0628
   strategic:
     - kind: planner
       seconds: 276
@@ -44,15 +60,15 @@ usage:
           cache_write: 123558
           cost: 1.9344
     - kind: orchestrator
-      seconds: 173
+      seconds: 328
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 300
-          cache_read: 2063512
-          cache_write: 8086
-          cost: 0.5105
+          input: 38
+          output: 545
+          cache_read: 5349287
+          cache_write: 20566
+          cost: 1.3231
 cost_of_delay:
   inputs:
     penalty_per_week: 500

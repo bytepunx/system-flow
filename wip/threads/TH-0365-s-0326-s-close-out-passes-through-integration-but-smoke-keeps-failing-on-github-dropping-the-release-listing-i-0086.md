@@ -4,10 +4,10 @@ title: S-0326's close-out passes through integration but smoke keeps failing on 
 anchor:
   path: wip/kanban/stories/S-0326-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md
   item: S-0326
-status: open
-participants: [agent-S-0326]
+status: resolved
+participants: [agent-S-0326, alex]
 created: 2026-10-08T07:39:02Z
-updated: 2026-10-08T07:39:02Z
+updated: 2026-10-08T07:58:04Z
 ---
 
 # TH-0365 S-0326's close-out passes through integration but smoke keeps failing on GitHub dropping the release listing (I-0086)
@@ -31,3 +31,6 @@ The conventions let me move to review only on a clean close-out, so I am asking.
 - Fix `install.sh` here: fetch fewer releases and retry once on a network error. That is S-0291's scope, not S-0326's.
 
 Every criterion is ticked, and the branch is synced and committed.
+
+### 2026-10-08T07:58:04Z alex
+Resolved.

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 204.2591
-accrued_seconds: 107963
-tasks_completed: 246
-last_run: 2026-10-08T07:22:08Z
+accrued_cost: 214.8605
+accrued_seconds: 110715
+tasks_completed: 258
+last_run: 2026-10-08T08:08:00Z
 ---
 
 # Orchestrator activity
@@ -1733,6 +1733,90 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0320
 - Seconds: 85
 - Cost: 1.4047 USD, estimated
+
+### 2026-10-08T07:41:15Z
+
+- Summary: Accepted S-0287 under accept_reviews at verified commit 11306f0a. flai verify passed at the head. The verifier matched criterion 1 to the guard rule, ADR-0127, tests and docs, and criterion 2 to I-0062 closed. It also checked that the commit flags stay refused to a sub-agent in every tested form. The dry-run had no blockers. Published under judgement (2 pending, 55 USD/week): S-0287 with the held S-0320, as flai 1.39.9→1.39.10 (flai/v1.39.10) and template 1.0.79→1.0.80 (9ed7ecb), pushed. Applied the throughput order after S-0339 left ready: S-0321, S-0322. Did not promote S-0241, the sole candidate, because the operator blocked it.
+- Items: S-0287, S-0320
+- Seconds: 1147
+- Cost: 1.9789 USD, estimated
+
+### 2026-10-08T07:57:19Z
+
+- Summary: The operator moved S-0291 (the install smoke test flake, I-0086) to ready. Re-applied the throughput order: S-0321 (45m), S-0322 (55m), then S-0291 last because it lacks a forecast duration.
+- Items: S-0291
+- Seconds: 964
+- Cost: 0.7935 USD, estimated
+
+### 2026-10-08T07:58:21Z
+
+- Summary: The operator moved S-0326 to review. I did not accept it: verify at head 73bb0370 stopped at sync, 8 commits behind main, and the last full run failed at smoke on I-0086's GitHub network flake, both blockers under ADR-0093. On TH-0366 I asked the operator to accept it themselves after a sync and a manual smoke run, or to have it synced and verified clean.
+- Items: S-0326
+- Seconds: 62
+- Cost: 0.6594 USD, estimated
+
+### 2026-10-08T07:58:28Z
+
+- Summary: Applied the throughput order after S-0321 left ready for in-progress: S-0322 (55m), then S-0291 (no forecast). The only promote candidate is S-0241, which the operator blocked, so I promoted nothing.
+- Items: S-0321
+- Seconds: 7
+- Cost: 0.1493 USD, estimated
+
+### 2026-10-08T07:59:34Z
+
+- Summary: The operator's session put S-0340, S-0341 and S-0342 (smoke and test-tier stories) in ready. Re-applied the throughput order: S-0322 (55m) first, then S-0291, S-0340, S-0341 and S-0342, which lack a forecast duration, in their current order.
+- Items: S-0340, S-0341, S-0342
+- Seconds: 66
+- Cost: 0.6857 USD, estimated
+
+### 2026-10-08T08:02:12Z
+
+- Summary: Recommended an answer on TH-0367, citing wip/kanban/stories/S-0291-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md
+- Items: S-0291
+- Seconds: 158
+- Cost: 1.3958 USD, estimated
+
+### 2026-10-08T08:02:13Z
+
+- Summary: TH-0367 (planner-S-0291): approved the plan (5 tasks in 2 layers, Go tests under flai/ that reproduce I-0086's dropped listing, a 1h forecast). flai refused my time_lost_per_cycle 2h input because S-0291 is already in ready, so I recommended the input to the operator and left the thread open for them.
+- Items: S-0291
+- Seconds: 1
+- Cost: 0.0000 USD
+
+### 2026-10-08T08:04:48Z
+
+- Summary: Recommended an answer on TH-0368, citing design/adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md § Decision
+- Items: S-0339
+- Seconds: 155
+- Cost: 0.8126 USD, estimated
+
+### 2026-10-08T08:04:50Z
+
+- Summary: TH-0368 (S-0339, five decisions for the LiteLLM and OpenRouter epic) is under answer_threads autonomous, but these are unrecorded architecture decisions and a spend question, so I recommended rather than answered. Q1 to Q4 as the agent recommends, resting on ADR-0038 § Decision (what runs is the operator's, set on the host). Q5, the paid OpenRouter trial, is left to the operator, with a budget cap suggested.
+- Items: S-0339
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T08:07:52Z
+
+- Summary: Recommended an answer on TH-0370, citing design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md § Decision
+- Items: S-0340
+- Seconds: 182
+- Cost: 3.8567 USD, estimated
+
+### 2026-10-08T08:07:55Z
+
+- Summary: TH-0370 (planner-S-0340): approved the plan (6 tasks, 3 layers, a Go release server under flai/, 1h30m) and recommended the operator's three decisions. (1) CI fails visibly with no bot PR, per ADR-0067. (2) Keep S-0291's retries for real users' installs, drop its T-1340, and let S-0340 close I-0086. (3) Keep criterion 1 only if the S-0232 key is coming soon. I also recommended time_lost_per_cycle 5h30m, noting it counts the smoke-failure time S-0291 also counts. S-0340 is in ready, so I could not set the input myself.
+- Items: S-0340, S-0291
+- Seconds: 3
+- Cost: 0.0887 USD, estimated
+
+### 2026-10-08T08:08:00Z
+
+- Summary: Applied the throughput order after S-0342 got its 41m forecast and the operator added S-0343: S-0342 (41m), S-0322 (55m), S-0291 (1h), S-0341 (1h30m), S-0340 (1h30m), then S-0343 (no forecast yet).
+- Items: S-0342, S-0343
+- Seconds: 5
+- Cost: 0.1808 USD, estimated
 
 ## Refusals
 

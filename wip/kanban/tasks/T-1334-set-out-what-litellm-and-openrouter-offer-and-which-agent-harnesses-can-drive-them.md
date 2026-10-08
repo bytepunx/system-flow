@@ -3,16 +3,36 @@ id: T-1334
 type: task
 nature: research
 title: Set out what LiteLLM and OpenRouter offer and which agent harnesses can drive them
-status: backlog
+status: done
 parent: S-0339
 owner: alex
 created: 2026-10-08T07:20:39Z
-updated: 2026-10-08T07:20:39Z
-transitions: []
+updated: 2026-10-08T07:57:29Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:48:44Z
+    by: agent-S-0339
+  - to: in-progress
+    at: 2026-10-08T07:48:44Z
+    by: agent-S-0339
+  - to: done
+    at: 2026-10-08T07:57:29Z
+    by: agent-S-0339
 stream: S-0339
 tags: [research, agents]
 touches: [design/system/agent-adapters.md]
 after: [T-1333]
+usage:
+  source: log
+  seconds: 525
+  estimated: true
+  models:
+    - model: claude-fable-5-1
+      input: 428
+      output: 27434
+      cache_read: 1543271
+      cache_write: 168395
+      cost: 4.2697
 ---
 # T-1334 Set out what LiteLLM and OpenRouter offer and which agent harnesses can drive them
 

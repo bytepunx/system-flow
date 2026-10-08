@@ -3,14 +3,17 @@ id: S-0321
 type: story
 nature: remediation
 title: Publishing raises the manifest's flai minimum the moment it commits, before the release is built, so the host's flai drops the project until the binaries exist
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:52Z
-updated: 2026-10-08T07:40:40Z
+updated: 2026-10-08T07:58:14Z
 transitions:
   - to: ready
     at: 2026-10-08T05:02:36Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T07:58:14Z
+    by: agent-S-0321
 tags: [flai, release, serve]
 topics: [release]
 touches: [flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/release.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0107-publishing-raises-the-manifest-s-flai-minimum-the-moment-it-commits-before-the-release-is-built-so-the-host-s-flai-drops-the-project-until-the-binaries-exist.md, design/issues/summary.md]
@@ -20,20 +23,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 515
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      hand_edits: 1
+      work: 16
+  models:
+    - model: claude-opus-5-5
+      input: 140
+      output: 818
+      cache_read: 5329464
+      cache_write: 312189
+      cost: 2.5254
   strategic:
     - kind: orchestrator
-      seconds: 411
+      seconds: 418
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 88
-          output: 1305
-          cache_read: 21321424
-          cache_write: 45137
-          cost: 5.2644
+          input: 92
+          output: 1359
+          cache_read: 21924595
+          cache_write: 47805
+          cost: 5.4137
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h

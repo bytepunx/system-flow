@@ -3,15 +3,35 @@ id: T-1310
 type: task
 nature: remediation
 title: flai serve lets a project's requests in flight finish when its manifest stops loading
-status: backlog
+status: done
 parent: S-0321
 owner: alex
 created: 2026-10-08T00:23:22Z
-updated: 2026-10-08T00:23:22Z
-transitions: []
+updated: 2026-10-08T08:07:05Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:58:42Z
+    by: agent-S-0321
+  - to: in-progress
+    at: 2026-10-08T07:58:43Z
+    by: agent-S-0321
+  - to: done
+    at: 2026-10-08T08:07:05Z
+    by: agent-S-0321
 stream: S-0321
 tags: [flai, serve]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go]
+usage:
+  source: log
+  seconds: 484
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 243
+      cache_read: 2288749
+      cache_write: 113449
+      cost: 1.0753
 ---
 # T-1310 flai serve lets a project's requests in flight finish when its manifest stops loading
 

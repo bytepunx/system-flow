@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 171
-      cache_read: 1521472
-      cache_write: 101072
-      cost: 0.724
+      input: 25
+      output: 10434
+      cache_read: 1584589
+      cache_write: 65080
+      cost: 0.9077
 ---
 # T-1332 issues.Merge merges an issue file both sides of a stopped rebase changed, keeping the instances of both
 

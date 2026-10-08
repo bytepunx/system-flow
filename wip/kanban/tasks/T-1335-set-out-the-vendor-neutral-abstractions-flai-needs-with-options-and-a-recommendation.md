@@ -3,16 +3,36 @@ id: T-1335
 type: task
 nature: research
 title: Set out the vendor-neutral abstractions flai needs, with options and a recommendation
-status: backlog
+status: done
 parent: S-0339
 owner: alex
 created: 2026-10-08T07:20:49Z
-updated: 2026-10-08T07:20:49Z
-transitions: []
+updated: 2026-10-08T08:03:59Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:57:39Z
+    by: agent-S-0339
+  - to: in-progress
+    at: 2026-10-08T07:57:39Z
+    by: agent-S-0339
+  - to: done
+    at: 2026-10-08T08:03:59Z
+    by: agent-S-0339
 stream: S-0339
 tags: [research, agents]
 touches: [design/system/agent-adapters.md]
 after: [T-1334]
+usage:
+  source: log
+  seconds: 380
+  estimated: true
+  models:
+    - model: claude-fable-5-1
+      input: 204
+      output: 13050
+      cache_read: 734095
+      cache_write: 80101
+      cost: 2.031
 ---
 # T-1335 Set out the vendor-neutral abstractions flai needs, with options and a recommendation
 

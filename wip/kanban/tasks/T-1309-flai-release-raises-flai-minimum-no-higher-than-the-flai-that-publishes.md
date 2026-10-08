@@ -3,15 +3,35 @@ id: T-1309
 type: task
 nature: remediation
 title: flai release raises flai.minimum no higher than the flai that publishes
-status: backlog
+status: done
 parent: S-0321
 owner: alex
 created: 2026-10-08T00:23:14Z
-updated: 2026-10-08T00:23:14Z
-transitions: []
+updated: 2026-10-08T08:06:47Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:58:42Z
+    by: agent-S-0321
+  - to: in-progress
+    at: 2026-10-08T07:58:42Z
+    by: agent-S-0321
+  - to: done
+    at: 2026-10-08T08:06:47Z
+    by: agent-S-0321
 stream: S-0321
 tags: [flai, release]
 touches: [flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/release.go]
+usage:
+  source: log
+  seconds: 485
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 357
+      cache_read: 2175146
+      cache_write: 97496
+      cost: 1.0173
 ---
 # T-1309 flai release raises flai.minimum no higher than the flai that publishes
 

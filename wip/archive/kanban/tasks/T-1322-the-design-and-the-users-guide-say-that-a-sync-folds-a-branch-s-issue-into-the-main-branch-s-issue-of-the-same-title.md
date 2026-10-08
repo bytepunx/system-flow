@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 201
-      cache_read: 1634278
-      cache_write: 77784
-      cost: 0.7639
+      input: 26
+      output: 11009
+      cache_read: 1672013
+      cache_write: 68670
+      cost: 0.9578
 ---
 # T-1322 The design and the users' guide say that a sync folds a branch's issue into the main branch's issue of the same title
 

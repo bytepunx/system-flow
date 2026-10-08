@@ -3,11 +3,11 @@ id: T-1333
 type: task
 nature: research
 title: Record where flai is tied to Anthropic and Claude Code today
-status: in-progress
+status: done
 parent: S-0339
 owner: alex
 created: 2026-10-08T07:20:27Z
-updated: 2026-10-08T07:39:56Z
+updated: 2026-10-08T07:48:34Z
 transitions:
   - to: ready
     at: 2026-10-08T07:39:55Z
@@ -15,9 +15,29 @@ transitions:
   - to: in-progress
     at: 2026-10-08T07:39:56Z
     by: agent-S-0339
+  - to: done
+    at: 2026-10-08T07:48:34Z
+    by: agent-S-0339
 stream: S-0339
 tags: [research, agents]
 touches: [design/system/agent-adapters.md, design/system/README.md]
+usage:
+  source: log
+  seconds: 518
+  estimated: true
+  models:
+    - model: claude-fable-5-1
+      input: 492
+      output: 31502
+      cache_read: 1772090
+      cache_write: 193363
+      cost: 4.9027
+    - model: claude-haiku-4-5-20251001
+      input: 853006
+      output: 55817
+      cache_read: 3654023
+      cache_write: 260277
+      cost: 2.0628
 ---
 # T-1333 Record where flai is tied to Anthropic and Claude Code today
 
