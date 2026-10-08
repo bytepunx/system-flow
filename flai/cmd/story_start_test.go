@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -240,7 +241,7 @@ func TestStoryStartRefusesAHeldStory(t *testing.T) {
 		t.Fatalf("not JSON: %v\n%s", err, out)
 	}
 	r := got.Refused
-	if r.Story != "S-0004" || r.Status != workitem.Ready || r.Hold == nil || *r.Hold != *hold || !strings.Contains(r.Reason, hold.Reason) {
+	if r.Story != "S-0004" || r.Status != workitem.Ready || r.Hold == nil || !reflect.DeepEqual(*r.Hold, *hold) || !strings.Contains(r.Reason, hold.Reason) {
 		t.Errorf("refused: %+v", r)
 	}
 	storyStartUnchanged(t, root, before)
