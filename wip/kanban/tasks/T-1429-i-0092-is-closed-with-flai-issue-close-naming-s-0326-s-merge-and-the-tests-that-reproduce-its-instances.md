@@ -3,16 +3,36 @@ id: T-1429
 type: task
 nature: improvement
 title: I-0092 is closed with flai issue close, naming S-0326's merge and the tests that reproduce its instances
-status: backlog
+status: done
 parent: S-0297
 owner: alex
 created: 2026-10-08T09:44:11Z
-updated: 2026-10-08T09:44:11Z
-transitions: []
+updated: 2026-10-08T09:50:02Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:49:42Z
+    by: agent-S-0297
+  - to: in-progress
+    at: 2026-10-08T09:49:42Z
+    by: agent-S-0297
+  - to: done
+    at: 2026-10-08T09:50:02Z
+    by: agent-S-0297
 stream: S-0297
 tags: []
 touches: [design/issues/I-0092-two-story-branches-that-each-bump-the-same-issue-conflict-in-its-front-matter-whose-count-last-reported-and-updated-lines-both-rewrite.md, design/issues/summary.md]
 after: [T-1428]
+usage:
+  source: log
+  seconds: 20
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 16
+      cache_read: 163911
+      cache_write: 1265
+      cost: 0.0742
 ---
 
 # T-1429 I-0092 is closed with flai issue close, naming S-0326's merge and the tests that reproduce its instances

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:04Z
-updated: 2026-10-08T09:41:58Z
+updated: 2026-10-08T09:48:40Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:25Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0334
 tags: [flai, template]
 topics: [cli, conventions, template]
-touches: [design/adrs, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/adrs, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go]
 after: [S-0332]
 agent:
   harness: claude-code
@@ -25,9 +25,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 404
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      hand_edits: 1
+      work: 24
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 377
+      cache_read: 3708158
+      cache_write: 246187
+      cost: 1.7771
   strategic:
     - kind: orchestrator
       seconds: 341

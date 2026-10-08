@@ -3,10 +3,10 @@ id: S-0344
 type: story
 nature: remediation
 title: flai dashboard restart starts the container's tag again, so a newer image a check pulled under a floating tag is started without an upgrade
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-08T08:08:17Z
-updated: 2026-10-08T09:39:39Z
+updated: 2026-10-08T09:52:00Z
 transitions:
   - to: ready
     at: 2026-10-08T08:38:55Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:08:24Z
     by: agent-S-0344
+  - to: review
+    at: 2026-10-08T09:51:16Z
+    by: agent-S-0344
+  - to: done
+    at: 2026-10-08T09:52:00Z
+    by: orchestrator
 tags: [flai, dashboard]
 touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/summary.md]
 agent:
@@ -118,3 +124,12 @@ Tasks, in three layers:
 1. T-1360: restart from the image ID, with its test.
 2. T-1361, after T-1360: the watch from the recorded image ID.
 3. T-1362, after T-1360 and T-1361: the documents, and closing I-0116.
+
+### Accepted by the orchestrator
+
+- Verified: e16424dd192e6297904045ef681643b7e12e345d
+- At: 2026-10-08T09:52:00Z
+
+Verdict: accept. flai verify passed every step at the branch head e16424dd, and the verifier matched both criteria to the diff. Status still names the tag, and an explicit upgrade still moves to the new image.
+- 1: flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md
+- 2: design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/summary.md

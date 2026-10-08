@@ -3,12 +3,18 @@ id: T-1203
 type: task
 nature: feature
 title: flai message share and the MCP tool message_share record a share of paths with a held story, and flai can ask about a hold
-status: backlog
+status: in-progress
 parent: S-0334
 owner: alex
 created: 2026-10-07T20:16:02Z
-updated: 2026-10-08T09:44:27Z
-transitions: []
+updated: 2026-10-08T09:49:11Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:49:11Z
+    by: agent-S-0334
+  - to: in-progress
+    at: 2026-10-08T09:49:11Z
+    by: agent-S-0334
 stream: S-0334
 tags: [flai]
 touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/messages/share.go, flai/internal/messages/share_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]

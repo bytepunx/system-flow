@@ -3,11 +3,11 @@ id: T-1202
 type: task
 nature: feature
 title: An ADR refining ADR-0046 and ADR-0096 lets the holding story's agent share overlapping paths, so the overlap no longer holds
-status: in-progress
+status: done
 parent: S-0334
 owner: alex
 created: 2026-10-07T20:15:50Z
-updated: 2026-10-08T09:43:49Z
+updated: 2026-10-08T09:45:01Z
 transitions:
   - to: ready
     at: 2026-10-08T09:43:49Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:43:49Z
     by: agent-S-0334
+  - to: done
+    at: 2026-10-08T09:45:01Z
+    by: agent-S-0334
 stream: S-0334
 tags: [flai]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 72
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 110
+      cache_read: 1216320
+      cache_write: 12762
+      cost: 0.5524
 ---
 # T-1202 An ADR refining ADR-0046 and ADR-0096 lets the holding story's agent share overlapping paths, so the overlap no longer holds
 
