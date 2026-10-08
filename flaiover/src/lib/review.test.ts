@@ -198,6 +198,30 @@ describe('verifyView (S-0270)', () => {
 		]);
 	});
 
+	it('shows a covered tier as skipped, covered by the tier, with no duration (S-0342)', () => {
+		const v = verifyView({
+			...failing,
+			passed: true,
+			stopped_at: undefined,
+			steps: [
+				{ name: 'integration', tier: true, state: 'passed', duration_ms: 61000, duration: '1m1s' },
+				{
+					name: 'go-short',
+					tier: true,
+					state: 'skipped',
+					covered_by: 'integration',
+					duration_ms: 0
+				},
+				{ name: 'old', tier: true, state: 'skipped', duration_ms: 0 }
+			]
+		});
+		expect(v.rows.map((r) => [r.name, r.state, r.label, r.duration])).toEqual([
+			['integration', 'passed', 'passed', '1m1s'],
+			['go-short', 'skipped', 'skipped: covered by integration', ''],
+			['old', 'skipped', 'skipped', '']
+		]);
+	});
+
 	it('says a passing report passed every step, with no findings and no notes', () => {
 		const v = verifyView({
 			...failing,

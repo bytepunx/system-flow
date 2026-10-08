@@ -97,8 +97,8 @@ export async function readNdjson(
 	emit(pending + decoder.decode());
 }
 
-/** Where a step of flai verify got to (S-0270); a reused tier passed in an earlier run of the same head (S-0341). */
-export type VerifyState = 'passed' | 'failed' | 'not-reached' | 'reused';
+/** Where a step of flai verify got to (S-0270); a reused tier passed in an earlier run of the same head (S-0341), and a tier another selected tier covers is skipped (S-0342). */
+export type VerifyState = 'passed' | 'failed' | 'not-reached' | 'reused' | 'skipped';
 /** What a failed step found: a test, a check, or a linter's complaint, where it is, and what it says. */
 export type VerifyFinding = { name?: string; path?: string; line?: number; message?: string };
 /** One step of flai verify: one of its own, or a test or lint tier when `tier` is set. */
@@ -106,6 +106,8 @@ export type VerifyStep = {
 	name: string;
 	tier?: boolean;
 	state: VerifyState;
+	/** The tier that covers a skipped one. */
+	covered_by?: string;
 	duration_ms: number;
 	duration?: string;
 	findings?: VerifyFinding[];
@@ -168,8 +170,18 @@ const STATE_LABEL: Record<VerifyState, string> = {
 	passed: 'passed',
 	failed: 'failed',
 	'not-reached': 'not reached',
-	reused: 'reused'
+	reused: 'reused',
+	skipped: 'skipped'
 };
+
+/** A step's state in words: a skipped step names the tier that covers it, when the report does. */
+function label(s: VerifyStep): string {
+	if (s.state === 'skipped' && s.covered_by) return `skipped: covered by ${s.covered_by}`;
+	return STATE_LABEL[s.state] ?? s.state;
+}
+
+/** A step not reached or skipped ran nothing, so it has no duration. */
+const RAN_NOTHING: VerifyState[] = ['not-reached', 'skipped'];
 
 /** A duration in milliseconds as flai writes one when the report carries none: 340ms, 5.1s. */
 function took(ms: number): string {
@@ -182,25 +194,25 @@ function where(path?: string, line?: number, name?: string): string {
 	return [loc, name ?? ''].filter((s) => s).join(' ');
 }
 
-/** A step's duration as its row shows it: none when not reached, and for a reused tier the run it comes from. */
+/** A step's duration as its row shows it: none when not reached or skipped, and for a reused tier the run it comes from. */
 function rowDuration(s: VerifyStep): string {
-	if (s.state === 'not-reached') return '';
+	if (RAN_NOTHING.includes(s.state)) return '';
 	if (s.state === 'reused' && s.reused_from) return `from ${localTime(s.reused_from)}`;
 	return s.duration ?? took(s.duration_ms);
 }
 
 /**
  * A report as rows for the review page (S-0270): a row per step in the order flai ran them, with
- * the findings under the step that failed only; a step not reached has no duration, and a reused
- * tier shows, in its place, when the run it comes from began (S-0341). The notes from outside the
- * story are apart, since they do not fail it.
+ * the findings under the step that failed only; a step not reached or skipped has no duration, and
+ * a reused tier shows, in its place, when the run it comes from began (S-0341). The notes from
+ * outside the story are apart, since they do not fail it.
  */
 export function verifyView(report: VerifyReport): VerifyView {
 	const rows = report.steps.map((s): VerifyRow => ({
 		name: s.name,
 		tier: s.tier === true,
 		state: s.state,
-		label: STATE_LABEL[s.state] ?? s.state,
+		label: label(s),
 		duration: rowDuration(s),
 		findings:
 			s.state === 'failed'
