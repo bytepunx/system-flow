@@ -3,17 +3,20 @@ id: S-0340
 type: story
 nature: remediation
 title: The smoke tier installs and self-upgrades from a local release server built from the tree, so no close-out depends on GitHub
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-08T07:59:11Z
-updated: 2026-10-08T08:08:17Z
+updated: 2026-10-08T08:22:05Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
     by: system-flow
+  - to: in-progress
+    at: 2026-10-08T08:14:33Z
+    by: alex
 tags: [cli]
 topics: [ci, testing, release]
-touches: [scripts/install-test.sh, scripts/smoke.sh, scripts/flai-snapshot.sh, scripts/release-server.sh, install.sh, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, ".github/workflows/system-flow-check.yml", design/tech/ci.md, design/system/devex.md, docs/users/flai.md, flai/.goreleaser.yaml, flai/internal/releaseserver/releaseserver.go, flai/internal/releaseserver/releaseserver_test.go, flai/internal/releaseserver/serve/main.go, scripts/install-published-test.sh, ".github/workflows/install-published.yml", Makefile, scripts/README.md, design/system/flai-cli.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/summary.md]
+touches: [scripts/install-test.sh, scripts/smoke.sh, scripts/flai-snapshot.sh, scripts/release-server.sh, install.sh, ".github/workflows/system-flow-check.yml", design/tech/ci.md, design/system/devex.md, docs/users/flai.md, flai/.goreleaser.yaml, flai/internal/releaseserver/releaseserver.go, flai/internal/releaseserver/releaseserver_test.go, flai/internal/releaseserver/serve/main.go, scripts/install-published-test.sh, ".github/workflows/install-published.yml", Makefile, scripts/README.md, design/system/flai-cli.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -41,20 +44,20 @@ usage:
           cache_write: 390113
           cost: 5.4075
     - kind: orchestrator
-      seconds: 206
+      seconds: 567
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 97
-          output: 1721
-          cache_read: 16733186
-          cache_write: 26861
-          cost: 4.1297
+          input: 177
+          output: 3000
+          cache_read: 32800705
+          cache_write: 42557
+          cost: 8.0924
 cost_of_delay:
   inputs:
-    time_lost_per_cycle: 15m
+    time_lost_per_cycle: 5h30m
     by: alex
-    at: 2026-10-08T07:59:11Z
+    at: 2026-10-08T08:22:05Z
   value: 800
   by: planner-S-0340
   at: 2026-10-08T08:07:07Z
