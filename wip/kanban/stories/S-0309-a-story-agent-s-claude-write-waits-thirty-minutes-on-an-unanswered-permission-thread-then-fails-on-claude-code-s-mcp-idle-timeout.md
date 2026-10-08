@@ -6,7 +6,7 @@ title: A story agent's .claude/ write waits thirty minutes on an unanswered perm
 status: backlog
 owner: alex
 created: 2026-10-07T06:48:44Z
-updated: 2026-10-08T00:31:19Z
+updated: 2026-10-08T04:07:34Z
 transitions: []
 tags: []
 topics: [cli, agents]
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-10-07T23:28:00Z
 forecast:
   duration: 35m
-  delivery: 2026-10-08T07:13:00Z
+  delivery: 2026-10-08T10:49:00Z
   basis: "Its own forecast of 35m; 21st in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305 and S-0306."
   by: flai
-  at: 2026-10-08T00:31:19Z
+  at: 2026-10-08T04:07:34Z
 ---
 # S-0309 A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout
 

@@ -6,7 +6,7 @@ title: flai verify --record-issues opens an issue on the story branch that anoth
 status: backlog
 owner: alex
 created: 2026-10-07T18:59:58Z
-updated: 2026-10-08T00:34:49Z
+updated: 2026-10-08T04:07:34Z
 transitions: []
 tags: [cli]
 topics: [cli, git, continuous-improvement]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-08T00:34:49Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T08:44:00Z
-  basis: "flai forecast's 20m (73 s per unit of size over 17 done large remediation stories, size 16) raised to 45m: five tasks with an ADR, a new fold function, a hook through three rebase callers, and a two-branch reproduction test, against S-0315's 17m for two tasks in the same area; delivery is flai's 08:19 plus the 25m added."
-  by: planner-S-0326
-  at: 2026-10-08T00:34:49Z
+  delivery: 2026-10-08T12:20:00Z
+  basis: "Its own forecast of 45m; 28th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0309, S-0312, S-0313, S-0321, S-0322, S-0323 and S-0325."
+  by: flai
+  at: 2026-10-08T04:07:34Z
 ---
 # S-0326 flai verify --record-issues opens an issue on the story branch that another branch opened under the same title meanwhile
 

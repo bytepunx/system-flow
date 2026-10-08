@@ -6,7 +6,7 @@ title: flai task done commits everything in the worktree, so two tasks of one la
 status: backlog
 owner: alex
 created: 2026-10-07T14:26:01Z
-updated: 2026-10-08T00:31:19Z
+updated: 2026-10-08T04:07:34Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-07T23:35:29Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T07:26:00Z
+  delivery: 2026-10-08T11:02:00Z
   basis: "Its own forecast of 45m; 22nd in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306 and S-0309."
   by: flai
-  at: 2026-10-08T00:31:19Z
+  at: 2026-10-08T04:07:34Z
 ---
 # S-0312 flai task done commits everything in the worktree, so two tasks of one layer cannot be closed apart
 
