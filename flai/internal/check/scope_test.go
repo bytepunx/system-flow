@@ -336,6 +336,72 @@ func TestScopedCheckNotesEveryOtherMarkdownFindingOutsideTheStory(t *testing.T) 
 	}
 }
 
+// I-0109, ADR-0125: scoped to a story, the narrative.state findings on the
+// narrative of another story just started, whose Current state and Next steps
+// still hold the template's placeholder as S-0265's did, are left out of the
+// result and their warnings taken back from the counts, so the run neither
+// notes nor records them: that story's own close-out stops on them. Unscoped,
+// they are reported as before, and the story's own stay inside it.
+func TestScopedCheckLeavesOutNarrativeStateOnAnotherOpenStorysNarrative(t *testing.T) {
+	root := scopeProject(t)
+	addStory(t, root, "S-006", "E-001", "")
+	unwriteState(t, root, "wip/agents/S-006.md")
+	whole, scoped := runScoped(t, root, nil)
+	if got := stateFindings(whole); len(got) != 2 || filepath.ToSlash(got[0].Path) != "wip/agents/S-006.md" {
+		t.Fatalf("unscoped, the run should report S-006's unwritten Current state and Next steps: %+v", whole.Findings)
+	}
+	if got := stateFindings(scoped); len(got) != 0 {
+		t.Errorf("scoped to S-004, the narrative.state on S-006's narrative should be left out: %+v", got)
+	}
+	if len(scoped.Findings) != len(whole.Findings)-2 || scoped.Warnings != whole.Warnings-2 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-2, whole.Warnings-2, whole.Errors)
+	}
+	assertCountsMatch(t, scoped)
+
+	unwriteState(t, root, "wip/agents/S-004.md")
+	_, scoped = runScoped(t, root, nil)
+	if got := stateFindings(scoped); len(got) != 2 || got[0].Outside || got[1].Outside || filepath.ToSlash(got[0].Path) != "wip/agents/S-004.md" {
+		t.Errorf("scoped to S-004, its own unwritten narrative should be inside it: %+v", got)
+	}
+}
+
+// ADR-0125 §2: another rule's finding on another open story's narrative stays
+// a note, as a narrative.section for a section its agent removed.
+func TestScopedCheckNotesAnotherNarrativeRuleOnAnotherOpenStorysNarrative(t *testing.T) {
+	root := scopeProject(t)
+	addStory(t, root, "S-006", "E-001", "")
+	edit(t, root, "wip/agents/S-006.md", "## Open questions\n", "")
+	_, scoped := runScoped(t, root, nil)
+	var got []Finding
+	for _, f := range scoped.Findings {
+		if f.Rule == "narrative.section" {
+			got = append(got, f)
+		}
+	}
+	if len(got) != 1 || !got[0].Outside || filepath.ToSlash(got[0].Path) != "wip/agents/S-006.md" {
+		t.Errorf("scoped to S-004, the narrative.section on S-006's narrative should be a note outside it: %+v", got)
+	}
+	assertCountsMatch(t, scoped)
+}
+
+// unwriteState puts back the template's placeholders under a fixture
+// narrative's Current state and Next steps, as flai stream open writes them.
+func unwriteState(t *testing.T, root, rel string) {
+	t.Helper()
+	edit(t, root, rel, "## Current state\ns\n\n## Next steps\n1. n\n", "## Current state\n\n## Next steps\n1.\n")
+}
+
+// stateFindings is res's narrative.state findings.
+func stateFindings(res *Result) []Finding {
+	var out []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "narrative.state" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
 // lintMarkdown gives the project a markdownlint configuration, so the wip
 // markdown is linted (S-0179).
 func lintMarkdown(t *testing.T, root string) {

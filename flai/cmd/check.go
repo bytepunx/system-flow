@@ -35,12 +35,12 @@ branch (as flai stream diff reads it), or that is uncommitted in its
 worktree. Every other finding is outside it. A wip.overlap that names the
 story is outside it too, and one between two other stories is left out, as
 is an item.archive outside the story, which only flai archive in the main
-checkout clears, and a markdown finding on the narrative of another story
-that is neither done nor cancelled, which that story's own close-out finds. A
-finding outside keeps its level and is printed with "(outside S-nnnn)"; it
-is a note that neither an error nor --strict fails on, and the summary
-counts it, as does outside in --json. Without --story every finding counts,
-as the main branch's check needs.
+checkout clears, and a markdown or narrative.state finding on the narrative
+of another story that is neither done nor cancelled, which that story's own
+close-out finds. A finding outside keeps its level and is printed with
+"(outside S-nnnn)"; it is a note that neither an error nor --strict fails
+on, and the summary counts it, as does outside in --json. Without --story
+every finding counts, as the main branch's check needs.
 
 With --record-issues as well, each rule with findings outside the story is
 recorded in design/issues, in the checkout the run reads, which is the
@@ -160,7 +160,8 @@ func (r recordedIssue) describe() string {
 // merge report it where it can be acted on, and an issue would only count
 // how often stories ran side by side (I-0076). An item.archive outside the
 // story never reaches it: the scoped check leaves it out (ADR-0122), as it
-// does a markdown finding on another open story's narrative (ADR-0123).
+// does a markdown or narrative.state finding on another open story's
+// narrative (ADR-0123, ADR-0125).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {
 	byRule := map[string][]string{}
 	for _, f := range res.Findings {

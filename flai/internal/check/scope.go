@@ -22,8 +22,9 @@ import (
 // (ADR-0115). So is an item.archive outside the story: the item waits for
 // the operator's flai archive in the main checkout, which no story branch
 // clears, and it never names a story in progress (ADR-0122, I-0078). So is a
-// markdown finding on the narrative of another story that is neither done nor
-// cancelled: that story's own close-out finds it (ADR-0123, I-0096).
+// markdown or narrative.state finding on the narrative of another story that
+// is neither done nor cancelled: that story's own close-out finds it
+// (ADR-0123, I-0096; ADR-0125, I-0109).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	st, err := repo.Get(story)
 	if err != nil {
@@ -74,7 +75,7 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if (f.Rule == "wip.overlap" && !namesStory(f, st.ID)) || (f.Rule == "item.archive" && !inside(f.Path)) ||
-			(strings.HasPrefix(f.Rule, "markdown.") && others[resolve(f.Path)]) {
+			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)
 			continue
 		}
@@ -131,7 +132,7 @@ func (r *Result) drop(f Finding) {
 }
 
 // openNarratives is the cleaned paths of the narratives of the stories other
-// than story whose status is neither done nor cancelled (ADR-0123).
+// than story whose status is neither done nor cancelled (ADR-0123, ADR-0125).
 func openNarratives(repo *workitem.Repo, story string) (map[string]bool, error) {
 	items, err := repo.List(true)
 	if err != nil {
