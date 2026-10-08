@@ -3,7 +3,7 @@ id: I-0108
 title: flai task done commits every uncommitted file in the story worktree, so closing one task of a layer sweeps its siblings' work into its commit
 class: efficiency
 status: closed
-count: 3
+count: 4
 cost: 4m
 first_reported: 2026-10-07T08:06:26Z
 last_reported: 2026-10-08T09:12:30Z
@@ -24,6 +24,10 @@ S-0274 ran layer 3 and layer 4 tasks in one worktree (T-1109 with T-1111; T-1115
 ### 2026-10-08T06:02:11Z
 Story: S-0309.
 S-0309's layer 2 ran T-1275, T-1276, and T-1277 together in the story's worktree. Closing T-1275 with flai task done committed all three tasks' edits in one commit (1df150d5). T-1276 and T-1277 then closed with nothing to commit, and their log entries had to name T-1275's commit.
+
+### 2026-10-08T08:50:09Z
+Story: S-0341.
+S-0341 layer 2: T-1344 and T-1346 ran together in one worktree. The story's agent committed T-1346's three flaiover files by hand, then called `flai task done T-1346`. That call committed T-1344's still-uncommitted CLI files (5ccb156) under T-1346's subject, widened T-1346's touches to them, and told S-0232 and S-0322 that T-1346 changed them. The touches were corrected with `flai touches --remove/--add`, and the message to S-0232 was corrected on MS-0022.
 
 ### 2026-10-08T09:12:30Z
 Story: S-0345.
