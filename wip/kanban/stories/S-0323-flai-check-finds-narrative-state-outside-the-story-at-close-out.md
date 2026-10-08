@@ -6,7 +6,7 @@ title: "flai check finds `narrative.state` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-07T18:59:54Z
-updated: 2026-10-08T04:25:41Z
+updated: 2026-10-08T04:26:53Z
 transitions: []
 tags: [flai, template]
 topics: [cli, conventions, template]
@@ -59,6 +59,7 @@ This story remediates [I-0109](../../../design/issues/I-0109-flai-check-finds-na
 ## Acceptance criteria
 - [ ] The cause I-0109 describes no longer occurs, with a test that reproduces it where one fits
 - [ ] I-0109 is closed with `flai issue close I-0109 --reason` saying what fixed it
+- [ ] I-0111 is closed with `flai issue close I-0109 --reason` saying what fixed it
 
 ## Tasks
 - T-1313 An ADR refining ADR-0085 and S-0318's ADR records the remedy for I-0109, proposed from its instances
