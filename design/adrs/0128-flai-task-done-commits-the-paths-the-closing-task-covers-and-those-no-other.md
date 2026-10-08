@@ -32,11 +32,11 @@ The operator confirmed the remedy below on TH-0337, when it was planned for S-03
    - A path that only another open task covers is left uncommitted.
 
    The step stages and commits the paths as `storygit.CommitPaths` does, with `git add -A -- <paths>` and `git commit -- <paths>`, and leaves everything else in the worktree as it was.
-2. **Paths left.** The answer lists the paths left uncommitted, so the agent sees what waits for another task's close. A path left is not a failure: the run goes on.
+2. **Paths left.** The answer lists the paths left uncommitted, so the agent sees what waits for another task's close. A path left is not a failure: the run goes on. The sync refuses a worktree with uncommitted changes; when those changes are only the paths left, its refusal does not stop the run, and the branch is synced by the close that leaves none.
 3. **Message.** `-m` is needed only when there is something to commit. With nothing to commit the close goes on without it. The narrative log entry is then `--log` when given, and otherwise says the task was closed: `Closed T-nnnn: <title>`. The MCP tool `task_done` and the host method `task.done` take the message on the same terms, and `task.done` passes it to `flai task done` only when one is given.
 4. **Touches.** The touches step widens the task's and the story's touches with the committed paths only. A path left never reaches the closing task's touches.
 
-Every other step of ADR-0107, and its order, stands.
+Every other step of ADR-0107, and its order, stands, the sync's refusal for the paths left aside.
 
 ## Consequences
 

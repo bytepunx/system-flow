@@ -182,7 +182,7 @@ func TestRunClosesATaskInOneCall(t *testing.T) {
 	if _, err := os.Stat(messages.Dir(repo)); !os.IsNotExist(err) {
 		t.Errorf("a conversation was written: %v", err)
 	}
-	for _, want := range []string{`"stopped":""`, `"told":[]`, `"followed":[]`, `"warnings":[]`, `"overlaps":[]`, `"notes":[`} {
+	for _, want := range []string{`"stopped":""`, `"left":[]`, `"told":[]`, `"followed":[]`, `"warnings":[]`, `"overlaps":[]`, `"notes":[`} {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("json lacks %s: %s", want, data)
 		}
@@ -299,8 +299,8 @@ func TestRunStopsAtAFailedCheckAfterTheMoveAndTheLog(t *testing.T) {
 	}
 }
 
-// Run refuses, before any step, what it cannot close: no message, an item
-// that is not a task, and a task whose story has no worktree.
+// Run refuses, before any step, what it cannot close: an item that is not a
+// task, and a task whose story has no worktree.
 func TestRunRefusesWhatItCannotStart(t *testing.T) {
 	repo, err := workitem.Open(copyFixture(t))
 	if err != nil {
@@ -309,7 +309,6 @@ func TestRunRefusesWhatItCannotStart(t *testing.T) {
 	for _, tc := range []struct {
 		name, task, message, want string
 	}{
-		{"no message", "T-003", " ", "a commit message is needed"},
 		{"a story", "S-004", "m", "S-004 is a story"},
 		{"no worktree", "T-003", "m", "S-004 has no worktree at .flai-cache/worktrees/S-004; open one with flai stream open S-004"},
 	} {
@@ -335,6 +334,222 @@ func TestExitCode(t *testing.T) {
 		if got := (Result{Stopped: stopped}).ExitCode(); got != want {
 			t.Errorf("stopped at %q: %d, want %d", stopped, got, want)
 		}
+	}
+}
+
+// newTask creates an in-progress task of S-004 in the main checkout whose
+// touches are touches, and returns its ID.
+func newTask(t *testing.T, repo *workitem.Repo, title string, touches ...string) string {
+	t.Helper()
+	it, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: title, Parent: "S-004", Touches: touches, Now: clock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, to := range []string{workitem.Ready, workitem.InProgress} {
+		if _, err := repo.TransitionAll(it, to, "agent", "", clock, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return it.ID
+}
+
+// setTouches sets id's touches in the main checkout.
+func setTouches(t *testing.T, repo *workitem.Repo, id string, touches ...string) {
+	t.Helper()
+	it := get(t, repo, id)
+	it.Touches = touches
+	if err := repo.Save(it); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// committed is the paths the commit hash changed, joined with commas.
+func committed(t *testing.T, dir, hash string) string {
+	t.Helper()
+	return strings.ReplaceAll(git(t, dir, "show", "--name-only", "--no-renames", "--format=", hash), "\n", ",")
+}
+
+// I-0104, ADR-0128: two open tasks of one story, each with its own touches
+// and its own changes in the worktree, close apart. The first close commits
+// its own paths, a staged deletion among them, leaves the second's
+// uncommitted and lists them, goes on past the sync they refuse, and does
+// not widen any touches with them; the second close commits the rest and
+// syncs.
+func TestRunClosesTwoTasksOfOneStoryApart(t *testing.T) {
+	repo, wt := project(t)
+	setTouches(t, repo, "T-003", "src/one", "docs")
+	second := newTask(t, repo, "Second", "src/two.go", "README.md")
+	write(t, wt, "src/one/a.go", "package one\n")
+	git(t, wt, "rm", "-q", "docs/README.md")
+	write(t, wt, "src/two.go", "package two\n")
+	write(t, wt, "README.md", "# good\n\nThe second task's.\n")
+
+	res, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 one"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.ExitCode() != 0 {
+		t.Fatalf("stopped at %q: %s; sync %+v, check %+v", res.Stopped, res.Error, res.Sync, res.Check)
+	}
+	if res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "docs/README.md,src/one/a.go" || committed(t, wt, res.Commit.Hash) != "docs/README.md,src/one/a.go" {
+		t.Fatalf("commit: %+v", res.Commit)
+	}
+	if strings.Join(res.Left, ",") != "README.md,src/two.go" {
+		t.Errorf("left: %v", res.Left)
+	}
+	if modified, untracked := git(t, wt, "diff", "--name-only"), git(t, wt, "ls-files", "--others", "--exclude-standard"); modified != "README.md" || untracked != "src/two.go" {
+		t.Errorf("uncommitted: modified %q, untracked %q", modified, untracked)
+	}
+	if res.Sync == nil || res.Sync.Synced || res.Sync.Stopped != storygit.StopUncommitted || !strings.Contains(res.Sync.Continue, "the close that leaves none syncs story/S-004") {
+		t.Errorf("sync: %+v", res.Sync)
+	}
+	if res.Move == nil || res.Move.State != workitem.Done || res.Log == nil || res.Log.Entry != "feat: [S-004] T-003 one" {
+		t.Errorf("move %+v, log %+v", res.Move, res.Log)
+	}
+	if res.Touches == nil || len(res.Touches.Task) != 0 || strings.Join(res.Touches.Story, ",") != "docs/README.md,src/one/a.go" {
+		t.Errorf("touches: %+v", res.Touches)
+	}
+	if got := get(t, repo, "T-003").Touches; strings.Join(got, ",") != "src/one,docs" {
+		t.Errorf("T-003 touches %v", got)
+	}
+	data, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"left":["README.md","src/two.go"]`) {
+		t.Errorf("json: %s", data)
+	}
+
+	o := options(repo, "feat: [S-004] second")
+	o.Task = second
+	res, err = Run(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "README.md,src/two.go" || len(res.Left) != 0 {
+		t.Fatalf("second: stopped at %q: %s, commit %+v, left %v", res.Stopped, res.Error, res.Commit, res.Left)
+	}
+	if res.Sync == nil || !res.Sync.Synced {
+		t.Errorf("second: sync %+v", res.Sync)
+	}
+	if dirty := git(t, wt, "status", "--porcelain"); dirty != "" {
+		t.Errorf("the worktree is not clean: %s", dirty)
+	}
+	if got := get(t, repo, second).Touches; strings.Join(got, ",") != "src/two.go,README.md" {
+		t.Errorf("%s touches %v", second, got)
+	}
+}
+
+// I-0108, ADR-0128: three open tasks of one layer, each with its file in the
+// worktree, close in turn, each in a commit of its own file alone under its
+// own message, and no task's touches widen with another's file.
+func TestRunClosesALayerOfThreeTasksInACommitEach(t *testing.T) {
+	repo, wt := project(t)
+	setTouches(t, repo, "T-003", "src/a.go")
+	ids := []string{"T-003", newTask(t, repo, "B", "src/b.go"), newTask(t, repo, "C", "src/c.go")}
+	files := []string{"src/a.go", "src/b.go", "src/c.go"}
+	for _, f := range files {
+		write(t, wt, f, "package src\n")
+	}
+	base := git(t, wt, "rev-parse", "HEAD")
+
+	var subjects []string
+	for i, id := range ids {
+		o := options(repo, "feat: [S-004] "+id+" its file")
+		o.Task = id
+		res, err := Run(context.Background(), o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Stopped != "" {
+			t.Fatalf("%s: stopped at %q: %s", id, res.Stopped, res.Error)
+		}
+		if res.Commit == nil || strings.Join(res.Commit.Paths, ",") != files[i] || committed(t, wt, res.Commit.Hash) != files[i] {
+			t.Errorf("%s: commit %+v", id, res.Commit)
+		}
+		if strings.Join(res.Left, ",") != strings.Join(files[i+1:], ",") {
+			t.Errorf("%s: left %v", id, res.Left)
+		}
+		if got := get(t, repo, id).Touches; strings.Join(got, ",") != files[i] {
+			t.Errorf("%s touches %v", id, got)
+		}
+		subjects = append([]string{o.Message}, subjects...)
+	}
+	if log := git(t, wt, "log", "--format=%s", base+"..HEAD"); log != strings.Join(subjects, "\n") {
+		t.Errorf("the branch's commits:\n%s", log)
+	}
+}
+
+// ADR-0128: a changed file no task declares goes with the task closed first,
+// whichever it is, and widens that task's touches.
+func TestRunCommitsAnUndeclaredFileWithTheTaskClosedFirst(t *testing.T) {
+	repo, wt := project(t)
+	setTouches(t, repo, "T-003", "src/a.go")
+	second := newTask(t, repo, "B", "src/b.go")
+	for _, f := range []string{"src/a.go", "src/b.go", "src/extra.go"} {
+		write(t, wt, f, "package src\n")
+	}
+
+	o := options(repo, "feat: [S-004] B")
+	o.Task = second
+	res, err := Run(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "src/b.go,src/extra.go" || strings.Join(res.Left, ",") != "src/a.go" {
+		t.Fatalf("stopped at %q: %s, commit %+v, left %v", res.Stopped, res.Error, res.Commit, res.Left)
+	}
+	if got := get(t, repo, second).Touches; strings.Join(got, ",") != "src/b.go,src/extra.go" {
+		t.Errorf("%s touches %v", second, got)
+	}
+	if got := get(t, repo, "T-003").Touches; strings.Join(got, ",") != "src/a.go" {
+		t.Errorf("T-003 touches %v", got)
+	}
+}
+
+// ADR-0128: a close with nothing to commit needs no message: it runs to the
+// end and logs that the task was closed.
+func TestRunClosesWithNothingToCommitAndNoMessage(t *testing.T) {
+	repo, _ := project(t)
+
+	res, err := Run(context.Background(), options(repo, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit != nil || res.Left == nil || len(res.Left) != 0 {
+		t.Fatalf("stopped at %q: %s, commit %+v, left %v", res.Stopped, res.Error, res.Commit, res.Left)
+	}
+	if res.Move == nil || res.Move.State != workitem.Done || res.Log == nil || res.Log.Entry != "Closed T-003: T3" {
+		t.Errorf("move %+v, log %+v", res.Move, res.Log)
+	}
+	if !strings.Contains(narrative(t, repo), "\nClosed T-003: T3\n") {
+		t.Error("the close was not logged")
+	}
+}
+
+// ADR-0128: a close with something to commit and no message stops at the
+// commit step, asking for one, and leaves the worktree, its index, and the
+// task as they were.
+func TestRunStopsForAMessageWhenThereIsSomethingToCommit(t *testing.T) {
+	repo, wt := project(t)
+	write(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
+	head := git(t, wt, "rev-parse", "HEAD")
+
+	res, err := Run(context.Background(), options(repo, " "))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StepCommit || res.ExitCode() != 1 || !strings.Contains(res.Error, `a commit message is needed to commit README.md: flai task done T-003 -m "<message>"`) {
+		t.Fatalf("stopped at %q: %s", res.Stopped, res.Error)
+	}
+	if res.Commit != nil || res.Sync != nil || res.Move != nil || res.Log != nil {
+		t.Errorf("steps ran: %+v", res)
+	}
+	if git(t, wt, "rev-parse", "HEAD") != head || git(t, wt, "diff", "--name-only") != "README.md" || git(t, wt, "diff", "--cached", "--name-only") != "" {
+		t.Error("the worktree changed")
+	}
+	if st := get(t, repo, "T-003").Status; st != workitem.InProgress {
+		t.Errorf("T-003 is %s", st)
 	}
 }
 

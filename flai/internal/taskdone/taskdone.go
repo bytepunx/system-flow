@@ -1,10 +1,12 @@
 // Package taskdone closes a task in one call (ADR-0107): it commits the
-// story's worktree, tells the other open stories whose claim covers what the
-// commit changed, syncs the story's branch, moves the task to done, logs the
-// narrative, widens the touches, checks the story, and reads the agent's
-// inbox, in that order, stopping at the first step that fails. flai task
-// done, the MCP tool task_done, and the host channel's task.done answer its
-// Result.
+// paths changed in the story's worktree that the task covers and those no
+// other open task of the story covers, leaving those only another open task
+// covers for that task's close (ADR-0128), tells the other open stories
+// whose claim covers what the commit changed, syncs the story's branch,
+// moves the task to done, logs the narrative, widens the touches, checks the
+// story, and reads the agent's inbox, in that order, stopping at the first
+// step that fails. flai task done, the MCP tool task_done, and the host
+// channel's task.done answer its Result.
 package taskdone
 
 import (
@@ -14,6 +16,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -47,8 +50,8 @@ type Options struct {
 	Repo   *workitem.Repo
 	Runner execx.Runner
 	Task   string // the task's ID, in any zero padding
-	// Message is the commit message; its subject line is the log entry
-	// when LogEntry is empty.
+	// Message is the commit message, needed only when there is something
+	// to commit; its subject line is the log entry when LogEntry is empty.
 	Message  string
 	LogEntry string
 	// Agent is who closes the task: the move's actor, the narrative's
@@ -63,9 +66,12 @@ type Options struct {
 // Result is what each step did, nil for a step not reached, and the step
 // the run stopped at.
 type Result struct {
-	Task    string               `json:"task"`
-	Story   string               `json:"story"`
-	Commit  *Commit              `json:"commit"`
+	Task   string  `json:"task"`
+	Story  string  `json:"story"`
+	Commit *Commit `json:"commit"`
+	// Left is the changed paths only another open task of the story covers,
+	// left uncommitted for that task's close (ADR-0128).
+	Left    []string             `json:"left"`
 	Told    []Told               `json:"told"`
 	Sync    *storygit.SyncResult `json:"sync"`
 	Move    *Move                `json:"move"`
@@ -146,11 +152,11 @@ func (r Result) ExitCode() int {
 }
 
 // Run closes the task as ADR-0107 orders it. It returns an error only when
-// it could not start: no message, or a task, story, or worktree it cannot
-// find. Once the commit step has begun, a step that fails, whether refused
-// or unable to run, is the Result's Stopped and Error, alongside what the
-// steps before it did: they have changed the repository, and the caller
-// reports them either way.
+// it could not start: a task, story, or worktree it cannot find. Once the
+// commit step has begun, a step that fails, whether refused or unable to
+// run, is the Result's Stopped and Error, alongside what the steps before it
+// did: they have changed the repository, and the caller reports them either
+// way.
 func Run(ctx context.Context, o Options) (Result, error) {
 	r, err := start(o)
 	if err != nil {
@@ -197,9 +203,6 @@ func start(o Options) (*run, error) {
 	if o.Repo == nil || o.Runner == nil {
 		return nil, errors.New("taskdone needs a project and a runner")
 	}
-	if strings.TrimSpace(o.Message) == "" {
-		return nil, fmt.Errorf("a commit message is needed: flai task done %s -m \"<message>\"", o.Task)
-	}
 	if o.Agent == "" {
 		o.Agent = "agent"
 	}
@@ -244,10 +247,14 @@ func (r *run) again() string { return "flai task done " + r.task.ID }
 // git runs git in the story's worktree.
 func (r *run) git(args ...string) (string, error) { return r.o.Runner.Run(r.wt, "git", args...) }
 
-// commit stages everything in the worktree and commits it with the message;
-// nothing to commit leaves Result.Commit nil. It refuses while a rebase is
-// unfinished, as the sync does.
+// commit commits, with the message, the paths changed in the worktree that
+// the task's touches cover and those no other open task of the story covers,
+// and leaves in Result.Left, uncommitted, those only another open task
+// covers (ADR-0128); everything else in the worktree, staged or not, stays
+// as it was. Nothing to commit leaves Result.Commit nil and needs no
+// message. It refuses while a rebase is unfinished, as the sync does.
 func (r *run) commit() error {
+	r.res.Left = []string{}
 	if storygit.RebaseInProgress(r.o.Runner, r.wt) {
 		waiting := ""
 		if c := storygit.Conflicts(r.o.Runner, r.wt); len(c) > 0 {
@@ -255,19 +262,47 @@ func (r *run) commit() error {
 		}
 		return fmt.Errorf("a rebase is unfinished in %s%s: resolve each conflicting path, git add it, and run git rebase --continue there, or undo it with git rebase --abort; then run %s again", r.rel(r.wt), waiting, r.again())
 	}
-	if _, err := r.git("add", "-A"); err != nil {
-		return fmt.Errorf("stage the changes in %s: %w", r.rel(r.wt), err)
-	}
-	staged, err := r.git("-c", "core.quotePath=false", "diff", "--cached", "--name-only", "--no-renames")
+	changed, untracked, err := r.changed()
 	if err != nil {
-		return fmt.Errorf("list the changes staged in %s: %w", r.rel(r.wt), err)
+		return err
 	}
-	paths := lines(staged)
+	if len(changed) == 0 {
+		return nil
+	}
+	mine, others, err := r.coverage()
+	if err != nil {
+		return err
+	}
+	var paths []string
+	for _, p := range changed {
+		if !covers(mine, p) && covers(others, p) {
+			r.res.Left = append(r.res.Left, p)
+			continue
+		}
+		paths = append(paths, p)
+	}
 	if len(paths) == 0 {
 		return nil
 	}
-	if _, err := r.git("commit", "-q", "-m", r.o.Message); err != nil {
-		return fmt.Errorf("commit on %s in %s: %w; fix what git says and run %s again", storygit.Branch(r.story.ID), r.rel(r.wt), err, r.again())
+	if strings.TrimSpace(r.o.Message) == "" {
+		return fmt.Errorf("a commit message is needed to commit %s: %s -m \"<message>\"", strings.Join(paths, ", "), r.again())
+	}
+	// git commit with paths takes each from the worktree, a deletion
+	// included, and leaves the rest of the index as it was; only a path git
+	// does not know yet is staged first.
+	var add []string
+	for _, p := range paths {
+		if slices.Contains(untracked, p) {
+			add = append(add, p)
+		}
+	}
+	if len(add) > 0 {
+		if _, err := storygit.RunPastIndexLock(r.o.Runner, r.wt, append([]string{"--literal-pathspecs", "add", "--"}, add...)...); err != nil {
+			return fmt.Errorf("stage %s in %s: %w; fix what git says and run %s again", strings.Join(add, ", "), r.rel(r.wt), err, r.again())
+		}
+	}
+	if _, err := storygit.RunPastIndexLock(r.o.Runner, r.wt, append([]string{"--literal-pathspecs", "commit", "-q", "-m", r.o.Message, "--"}, paths...)...); err != nil {
+		return fmt.Errorf("commit %s on %s in %s: %w; fix what git says and run %s again", strings.Join(paths, ", "), storygit.Branch(r.story.ID), r.rel(r.wt), err, r.again())
 	}
 	hash, err := r.git("rev-parse", "HEAD")
 	if err != nil {
@@ -275,6 +310,49 @@ func (r *run) commit() error {
 	}
 	r.res.Commit = &Commit{Hash: strings.TrimSpace(hash), Subject: subject(r.o.Message), Paths: paths}
 	return nil
+}
+
+// changed is the paths whose content in the worktree differs from the
+// commit checked out there, tracked and untracked, relative to the
+// worktree's root and sorted, and which of them git does not know yet.
+func (r *run) changed() (changed, untracked []string, err error) {
+	tracked, err := r.git("diff", "--name-only", "--no-renames", "-z", "HEAD")
+	if err != nil {
+		return nil, nil, fmt.Errorf("list the changes in %s: %w", r.rel(r.wt), err)
+	}
+	others, err := r.git("ls-files", "--others", "--exclude-standard", "-z")
+	if err != nil {
+		return nil, nil, fmt.Errorf("list the untracked files in %s: %w", r.rel(r.wt), err)
+	}
+	untracked = nulSeparated(others)
+	changed = append(nulSeparated(tracked), untracked...)
+	slices.Sort(changed)
+	return slices.Compact(changed), untracked, nil
+}
+
+// coverage is the task's touches and those of the story's other open tasks,
+// each as a path, a component's name or tag read as its path, as flai
+// touches compares them.
+func (r *run) coverage() (mine, others []string, err error) {
+	items, err := r.o.Repo.List(false)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read %s's tasks to sort the changes in %s by their touches: %w", r.story.ID, r.rel(r.wt), err)
+	}
+	holds := workitem.NewHolds(nil, r.o.Repo.Manifest.Projects)
+	mine = holds.Claim(&workitem.Item{Touches: r.task.Touches})
+	story, task := workitem.CanonicalID(r.story.ID), workitem.CanonicalID(r.task.ID)
+	for _, it := range items {
+		if it.Type != workitem.Task || workitem.CanonicalID(it.Parent) != story || workitem.CanonicalID(it.ID) == task || it.Closed() {
+			continue
+		}
+		others = append(others, holds.Claim(&workitem.Item{Touches: it.Touches})...)
+	}
+	return mine, others, nil
+}
+
+// covers says whether an entry of touches names path or a folder above it.
+func covers(touches []string, path string) bool {
+	return slices.ContainsFunc(touches, func(t string) bool { return workitem.PathsOverlap(path, t) })
 }
 
 // tell messages each other story in progress or in review whose claim covers
@@ -324,7 +402,10 @@ func (r *run) notice(cov itemedit.Covered) string {
 }
 
 // sync is the story's flai stream sync; a refusal or a stop on conflicts
-// stops the run with how to continue.
+// stops the run with how to continue. A refusal for uncommitted paths the
+// commit step left, and nothing else, does not: those paths are not a
+// failure (ADR-0128), and the branch is synced by the close that leaves
+// nothing.
 func (r *run) sync() error {
 	res, err := storygit.Sync(storygit.SyncOptions{
 		Runner: r.o.Runner, Repo: r.o.Repo, Story: r.story, Now: r.o.Now(),
@@ -338,11 +419,30 @@ func (r *run) sync() error {
 	case "":
 		return nil
 	case storygit.StopUncommitted:
+		if r.leftOnly(res.Uncommitted) {
+			res.Continue = fmt.Sprintf("the uncommitted paths wait for the close of the open tasks that cover them; the close that leaves none syncs %s", res.Branch)
+			return nil
+		}
 		return fmt.Errorf("the sync refused %s: it has uncommitted changes in %s; %s", res.Worktree, strings.Join(res.Uncommitted, ", "), res.Continue)
 	case storygit.StopRebaseInProgress:
 		return fmt.Errorf("the sync refused %s: a rebase waits there on %s; %s, or %s", res.Worktree, orNothing(res.Conflicts), res.Continue, res.Abort)
 	}
 	return fmt.Errorf("the rebase of %s onto %s stopped on conflicts in %s; %s, or %s", res.Branch, res.Base, orNothing(res.Conflicts), res.Continue, res.Abort)
+}
+
+// leftOnly says whether the commit step left paths and the uncommitted paths
+// a sync refused, an untracked folder named whole among them, hold nothing
+// else.
+func (r *run) leftOnly(uncommitted []string) bool {
+	if len(r.res.Left) == 0 {
+		return false
+	}
+	for _, p := range uncommitted {
+		if !covers(r.res.Left, p) {
+			return false
+		}
+	}
+	return true
 }
 
 // move moves the task to done under flai move's rules, with what follows it,
@@ -374,12 +474,16 @@ func (r *run) move() error {
 	return nil
 }
 
-// log appends the log entry, or the message's subject line, to the story's
-// narrative and writes the narratives' index again.
+// log appends the log entry, or the message's subject line, or with neither
+// "Closed T-nnnn: <title>" (ADR-0128), to the story's narrative and writes
+// the narratives' index again.
 func (r *run) log() error {
 	entry := strings.TrimSpace(r.o.LogEntry)
 	if entry == "" {
 		entry = subject(r.o.Message)
+	}
+	if entry == "" {
+		entry = fmt.Sprintf("Closed %s: %s", r.task.ID, r.task.Title)
 	}
 	now := r.o.Now()
 	n, err := r.o.Repo.LogStream(r.story.ID, entry, workitem.StreamOptions{Agent: r.o.Agent, Session: r.o.Session, Now: now})
@@ -399,7 +503,8 @@ func (r *run) log() error {
 
 // touches adds the paths the commit changed that the task's touches do not
 // cover to the task, and those the story's do not cover to the story, as
-// flai touches --add records them; the wip folder is flai's and is left out.
+// flai touches --add records them; the wip folder is flai's and is left out,
+// and so is each path the commit step left for another task (ADR-0128).
 func (r *run) touches() error {
 	t := &Touches{Task: []string{}, Story: []string{}, Overlaps: []itemedit.Overlapping{}}
 	r.res.Touches = t
@@ -496,12 +601,13 @@ func code(s string) string {
 	return fence + s + fence
 }
 
-// lines is git's output, one path a line, without empty lines.
-func lines(out string) []string {
+// nulSeparated is git's -z output, one path ended by a NUL each, as written,
+// without empty entries.
+func nulSeparated(out string) []string {
 	var paths []string
-	for _, l := range strings.Split(out, "\n") {
-		if l = strings.TrimSpace(l); l != "" {
-			paths = append(paths, l)
+	for _, p := range strings.Split(out, "\x00") {
+		if p != "" {
+			paths = append(paths, p)
 		}
 	}
 	return paths
