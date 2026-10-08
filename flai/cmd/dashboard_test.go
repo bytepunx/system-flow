@@ -34,6 +34,14 @@ type fakeRunner struct {
 	health         map[string]string // container name -> docker's HEALTHCHECK verdict; default none
 	env            map[string]string // container name -> its environment, one VAR=value per line
 
+	// removeDelay stands in for a --rm container Docker is still removing
+	// after docker stop: the name stays listed by that many `docker ps --all`
+	// queries, and a docker run under it meanwhile fails with exit 125 and a
+	// name conflict (I-0094). lingering counts what is left of it per name.
+	removeDelay int
+	lingering   map[string]int
+	runFails    map[string]bool // "name ref" -> docker run of that container from that ref fails
+
 	daemonPlatform string            // what `docker version` reports the server runs; default linux/amd64
 	imagePlatforms map[string]string // ref -> the os/arch of the local image; default the daemon's
 	published      []string          // platforms the registry has an image for; default any
@@ -142,6 +150,12 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		return "sha256:built", nil
 	case "run":
 		name, ref := args[4], args[len(args)-1]
+		if f.lingering[name] > 0 {
+			return "", fmt.Errorf("docker %s: exit status 125\ndocker: Error response from daemon: Conflict. The container name \"/%s\" is already in use by container \"0123456789abcdef\". You have to remove (or rename) that container to be able to reuse that name.", strings.Join(args, " "), name)
+		}
+		if f.runFails[name+" "+ref] {
+			return "", fmt.Errorf("docker %s: exit status 125\ndocker: Error response from daemon: driver failed programming external connectivity on endpoint %s", strings.Join(args, " "), name)
+		}
 		f.running[name] = true
 		if f.containerRef == nil {
 			f.containerRef = map[string]string{}
@@ -151,10 +165,17 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		}
 		f.containerRef[name] = ref
 		f.containerImage[name] = f.idFor(ref)
+		if strings.HasPrefix(ref, "sha256:") {
+			f.containerImage[name] = ref // started from an image ID, not a tag
+		}
 		return "0123456789abcdef", nil
 	case "ps":
 		name := strings.TrimSuffix(strings.TrimPrefix(args[len(args)-1], "name=^/"), "$")
 		if f.running[name] {
+			return "0123456789ab", nil
+		}
+		if slices.Contains(args, "--all") && f.lingering[name] > 0 {
+			f.lingering[name]--
 			return "0123456789ab", nil
 		}
 		return "", nil
@@ -177,9 +198,16 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		return "ghcr.io/bytepunx/flaiover:0.2.0 5555", nil
 	case "stop":
 		delete(f.running, args[1])
+		if f.removeDelay > 0 {
+			if f.lingering == nil {
+				f.lingering = map[string]int{}
+			}
+			f.lingering[args[1]] = f.removeDelay
+		}
 		return args[1], nil
 	case "rm":
 		delete(f.running, args[len(args)-1])
+		delete(f.lingering, args[len(args)-1])
 		return "", nil
 	case "port":
 		if f.probeAddr != "" {
@@ -672,5 +700,136 @@ func TestDashboardUpgradeLeavesThePreviousContainerRunningWhenTheNewOneNeverAnsw
 	}
 	if f.running[dashboardUpgradeProbeName] {
 		t.Error("the temporary container should have been cleaned up")
+	}
+}
+
+// I-0094: the dashboard runs with --rm, so after docker stop Docker still
+// holds its name until it has removed it, and a docker run under that name
+// at once fails with a conflict. An upgrade waits for the name first.
+func TestDashboardUpgradeSwapsWhileDockerStillRemovesTheStoppedContainer(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	f.removeDelay = 3
+	f.calls = nil
+	out, errOut, code := runWith(t, root, f, "dashboard", "upgrade")
+	if code != 0 {
+		t.Fatalf("upgrade: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, "upgraded flaiover") || !f.running["flaiover"] || f.containerImage["flaiover"] != "sha256:newer" {
+		t.Errorf("not upgraded: %s", out)
+	}
+	if slices.Contains(f.calls, "docker rm -f flaiover") {
+		t.Errorf("a name Docker releases in time is not removed by force:\n%s", strings.Join(f.calls, "\n"))
+	}
+}
+
+func TestDashboardRestartWaitsWhileDockerStillRemovesTheStoppedContainer(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	f.removeDelay = 3
+	out, errOut, code := runWith(t, root, f, "dashboard", "restart")
+	if code != 0 {
+		t.Fatalf("restart: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, "restarted flaiover") || !f.running["flaiover"] {
+		t.Errorf("not restarted: %s", out)
+	}
+}
+
+func TestDashboardUpgradeRemovesANameDockerNeverReleases(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	f.removeDelay = nameReleaseAttempts + 5 // still listed when the wait gives up
+	f.calls = nil
+	slept := 0
+	a := &app{cwd: root, runner: f, sleep: func(time.Duration) { slept++ }}
+	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
+	if code != 0 {
+		t.Fatalf("upgrade: %d %s", code, errOut)
+	}
+	if !strings.Contains(out, "upgraded flaiover") || f.containerImage["flaiover"] != "sha256:newer" {
+		t.Errorf("not upgraded: %s", out)
+	}
+	asked := 0
+	for _, c := range f.calls {
+		if c == "docker ps --all --quiet --filter name=^/flaiover$" {
+			asked++
+		}
+	}
+	if asked != nameReleaseAttempts || slept != nameReleaseAttempts-1 {
+		t.Errorf("asked docker %d times and slept %d, want %d and %d", asked, slept, nameReleaseAttempts, nameReleaseAttempts-1)
+	}
+	if n := len(f.calls); f.calls[n-2] != "docker rm -f flaiover" || !strings.HasPrefix(f.calls[n-1], "docker run ") {
+		t.Errorf("the name is removed by force, then the new image started:\n%s", strings.Join(f.calls, "\n"))
+	}
+}
+
+func TestDashboardUpgradeStartsThePreviousImageAgainWhenTheNewOneFailsToStart(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	previous := f.containerImage["flaiover"]
+	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	f.runFails = map[string]bool{"flaiover ghcr.io/bytepunx/flaiover:latest": true}
+	out, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--json")
+	if code == 0 {
+		t.Fatalf("the upgrade failed, so it exits non-zero, --json or not: %s", out)
+	}
+	for _, want := range []string{"upgrade to ghcr.io/bytepunx/flaiover:latest failed", "did not start after flaiover stopped", "driver failed programming", "flaiover runs the previous image ghcr.io/bytepunx/flaiover:latest again"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("missing %q in: %s", want, errOut)
+		}
+	}
+	if !f.running["flaiover"] || f.containerImage["flaiover"] != previous {
+		t.Errorf("flaiover should run the previous image %s again (by its ID, as the pull moved the tag), runs %s", previous, f.containerImage["flaiover"])
+	}
+}
+
+func TestDashboardUpgradeSaysTheDashboardIsDownWhenThePreviousImageFailsToStartToo(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	previous := f.containerImage["flaiover"]
+	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	f.runFails = map[string]bool{"flaiover ghcr.io/bytepunx/flaiover:latest": true, "flaiover " + previous: true}
+	_, errOut, code := runWith(t, root, f, "dashboard", "upgrade")
+	if code == 0 {
+		t.Fatal("upgrade should have failed")
+	}
+	for _, want := range []string{"upgrade to ghcr.io/bytepunx/flaiover:latest failed", "starting the previous image ghcr.io/bytepunx/flaiover:latest again failed too", "the dashboard is down: run flai dashboard to start it"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("missing %q in: %s", want, errOut)
+		}
+	}
+	if f.running["flaiover"] {
+		t.Error("nothing started, so nothing runs")
+	}
+}
+
+func TestDashboardRestartSaysTheDashboardIsDownWhenItDoesNotStartAgain(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatal("start")
+	}
+	f.runFails = map[string]bool{"flaiover ghcr.io/bytepunx/flaiover:latest": true}
+	_, errOut, code := runWith(t, root, f, "dashboard", "restart")
+	if code == 0 || !strings.Contains(errOut, "restart flaiover: it stopped but did not start again from ghcr.io/bytepunx/flaiover:latest") || !strings.Contains(errOut, "the dashboard is down: run flai dashboard to start it") {
+		t.Errorf("restart: %d %s", code, errOut)
 	}
 }

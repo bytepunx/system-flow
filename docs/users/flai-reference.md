@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-07
+updated: 2026-10-08
 status: active
 ---
 
@@ -970,7 +970,7 @@ Pull a newer dashboard image, or a chosen release, and swap to it, only once it 
 flai dashboard upgrade [flags]
 ```
 
-Pulls the configured (or --tag) image and, if it differs from what is running, starts it as a second, temporary container on a loopback port of its own, waits for it to answer /\_health, and only then stops the running container and starts the new image at the real name and port. The running container is never stopped until the replacement has proven healthy: if it does not become healthy in time, the temporary container is removed and the running one is left exactly as it was, and this reports why.
+Pulls the configured (or --tag) image and, if it differs from what is running, starts it as a second, temporary container on a loopback port of its own, waits for it to answer /\_health, and only then stops the running container and starts the new image at the real name and port. The running container is never stopped until the replacement has proven healthy: if it does not become healthy in time, the temporary container is removed and the running one is left exactly as it was, and this reports why. Should the new image then fail to start at the real name, the previous image is started there again, and this still fails, saying so.
 
 --tag deploys that image tag, an earlier release included, the same way, for this container once: dashboard.tag is not changed, so an upgrade without a tag uses the configured one again (pin with flai config set dashboard.tag). With --published the tag must be a published dashboard release, the bare X.Y.Z of a flaiover/vX.Y.Z tag (flai dashboard versions lists them): any other is refused, naming the published ones, before anything is pulled. Without it a tag is used as it is, such as a mirror's.
 

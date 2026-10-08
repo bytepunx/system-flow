@@ -97,12 +97,15 @@ func (a *app) runDashboardRestart(image, tag string, port int, bind string) erro
 			ref = running
 		}
 		a.logger().Info("stopping dashboard for restart", "component", "dashboard", "container", s.Name)
-		if _, err := a.runner.Run("", "docker", "stop", s.Name); err != nil {
-			return fmt.Errorf("stop %s: %w", s.Name, err)
+		if err := a.stopAndRelease(s.Name); err != nil {
+			return err
 		}
 	}
 	id, err := a.startDashboard(dir, s, ref)
 	if err != nil {
+		if wasRunning {
+			return fmt.Errorf("restart %s: it stopped but did not start again from %s: %w; the dashboard is down: run flai dashboard to start it", s.Name, ref, err)
+		}
 		return err
 	}
 	if a.jsonOut {
@@ -193,6 +196,15 @@ const (
 	upgradeProbeInterval = 500 * time.Millisecond
 )
 
+// nameReleaseAttempts and nameReleaseInterval bound how long a restart or an
+// upgrade waits, after stopping the dashboard, for Docker to finish removing
+// the --rm container and release its name (I-0094): about five seconds, a
+// count of tries like the health probe's.
+const (
+	nameReleaseAttempts = 10
+	nameReleaseInterval = 500 * time.Millisecond
+)
+
 func newDashboardUpgradeCmd(a *app) *cobra.Command {
 	var image, tag, bind string
 	var port int
@@ -207,7 +219,9 @@ waits for it to answer /_health, and only then stops the running container
 and starts the new image at the real name and port. The running container is
 never stopped until the replacement has proven healthy: if it does not
 become healthy in time, the temporary container is removed and the running
-one is left exactly as it was, and this reports why.
+one is left exactly as it was, and this reports why. Should the new image
+then fail to start at the real name, the previous image is started there
+again, and this still fails, saying so.
 
 --tag deploys that image tag, an earlier release included, the same way, for
 this container once: dashboard.tag is not changed, so an upgrade without a
@@ -305,14 +319,72 @@ func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) erro
 
 	a.logger().Info("new image is healthy, swapping", "component", "dashboard", "container", s.Name)
 	previousRef, _ := a.containerInfo(s.Name)
-	if _, err := a.runner.Run("", "docker", "stop", s.Name); err != nil {
-		return fmt.Errorf("stop %s: %w", s.Name, err)
+	if err := a.stopAndRelease(s.Name); err != nil {
+		return err
 	}
 	id, err := a.startDashboard(dir, s, s.ref())
 	if err != nil {
-		return fmt.Errorf("the previous image stopped but the new one failed to start: %w (run flai dashboard to recover)", err)
+		// The image ID, not the tag: the pull may have moved a floating tag
+		// such as latest to the new image this just failed to start.
+		return a.restorePreviousDashboard(dir, s, previousRef, orDefault(current, previousRef), err)
 	}
 	return a.printUpgradeResult(s, "upgraded", previousRef, s.ref(), id)
+}
+
+// restorePreviousDashboard starts the image the dashboard ran before an
+// upgrade stopped it, under the real name and port, after the new image
+// failed to start there. It always returns an error, with --json too, as the
+// upgrade failed either way: one that says the previous image runs again, or,
+// when it does not start either, that the dashboard is down.
+func (a *app) restorePreviousDashboard(dir string, s dashboardSettings, previousRef, previousImage string, startErr error) error {
+	failed := fmt.Errorf("upgrade to %s failed: the new image did not start after %s stopped: %w", s.ref(), s.Name, startErr)
+	shown := orDefault(previousRef, previousImage)
+	a.logger().Warn("new image did not start, starting the previous one again", "component", "dashboard", "container", s.Name, "image", previousImage)
+	a.releaseName(s.Name) // a failed docker run can leave a created container holding the name
+	if _, err := a.startDashboard(dir, s, previousImage); err != nil {
+		return fmt.Errorf("%w; starting the previous image %s again failed too: %w; the dashboard is down: run flai dashboard to start it", failed, shown, err)
+	}
+	return fmt.Errorf("%w; %s runs the previous image %s again", failed, s.Name, shown)
+}
+
+// stopAndRelease stops the named container and waits until Docker has
+// released its name, so a container can be started under it again at once.
+func (a *app) stopAndRelease(name string) error {
+	if _, err := a.runner.Run("", "docker", "stop", name); err != nil {
+		return fmt.Errorf("stop %s: %w", name, err)
+	}
+	a.releaseName(name)
+	return nil
+}
+
+// releaseName waits until Docker no longer lists a container by this name in
+// any state: docker stop returns before Docker has removed a --rm container,
+// and a docker run under the name meanwhile fails with a conflict (I-0094).
+// When nameReleaseAttempts is spent it removes the container by force; if
+// that fails too, the start that follows fails and says why.
+func (a *app) releaseName(name string) {
+	for i := 0; i < nameReleaseAttempts; i++ {
+		if listed, err := a.containerListed(name); err == nil && !listed {
+			return
+		}
+		if i < nameReleaseAttempts-1 {
+			a.sleep(nameReleaseInterval)
+		}
+	}
+	a.logger().Warn("container name not released after stop, removing it", "component", "dashboard", "container", name)
+	if _, err := a.runner.Run("", "docker", "rm", "-f", name); err != nil {
+		a.logger().Warn("container not removed", "component", "dashboard", "container", name, "err", err.Error())
+	}
+}
+
+// containerListed reports whether docker lists a container by this exact
+// name in any state, stopped and being removed included.
+func (a *app) containerListed(name string) (bool, error) {
+	out, err := a.runner.Run("", "docker", "ps", "--all", "--quiet", "--filter", "name=^/"+name+"$")
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) != "", nil
 }
 
 func (a *app) printUpgradeResult(s dashboardSettings, outcome, from, to string, id string) error {
