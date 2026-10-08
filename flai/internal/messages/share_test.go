@@ -256,6 +256,25 @@ func TestShareLiftsTheHold(t *testing.T) {
 	}
 }
 
+// ADR-0134, ADR-0121: a share changes no claim, so once the held story has
+// started, a trial-merge conflict between the two still reaches them, in the
+// conversation the ask began, and the share stays on it.
+func TestAConflictAfterAShareJoinsTheirConversation(t *testing.T) {
+	r := shareProject(t)
+	ask(t, r, t0.Add(time.Hour))
+	if _, err := Share(r, ShareOptions{ID: "ms-1", Story: "S-0001", Author: "agent-S-0001", Paths: []string{"flai/internal/workitem/hold.go"}, Split: "S-0001 changes holdBy; S-0005 adds a function below it.", Now: t0.Add(2 * time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	setStatus(t, r, "S-0005", workitem.InProgress)
+	c, err := Notify(r, SendOptions{From: "S-0005", To: "S-0001", Author: "flai", Text: "story/S-0005 and story/S-0001 conflict when merged.", About: []string{"flai/internal/workitem/hold.go"}, Now: t0.Add(3 * time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ID != "MS-0001" || len(c.Shares) != 1 || workitem.CanonicalID(c.Awaiting()) != "S-0001" {
+		t.Errorf("the conflict should join MS-0001, keep its share, and await S-0001: %s, %+v, awaiting %s", c.ID, c.Shares, c.Awaiting())
+	}
+}
+
 func sameShare(a, b workitem.Share) bool {
 	return a.Holder == b.Holder && a.Held == b.Held && strings.Join(a.Paths, ",") == strings.Join(b.Paths, ",") && a.Split == b.Split && a.By == b.By && a.At == b.At
 }
