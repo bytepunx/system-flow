@@ -3,11 +3,11 @@ id: I-0086
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
 class: efficiency
 status: open
-count: 5
-cost: 6m
+count: 6
+cost: 7m
 first_reported: 2026-10-06T10:22:10Z
-last_reported: 2026-10-08T06:40:55Z
-updated: 2026-10-08T06:40:55Z
+last_reported: 2026-10-08T06:55:19Z
+updated: 2026-10-08T06:55:19Z
 ---
 
 # I-0086 The close-out's install smoke test failed once and passed when run alone, with no cause in its output
@@ -36,6 +36,10 @@ S-0319's second close-out failed its smoke tier in install-test's default-path c
 ### 2026-10-08T06:40:55Z
 Story: S-0336.
 S-0336's close-out stopped at the smoke tier in `install-test: install.sh with no FLAI_INSTALL_DIR installs under a fresh HOME/.flai/bin, without sudo`, with `exit status 1` and no cause printed, after the explicit FLAI_INSTALL_DIR case had installed flai 1.39.8. S-0336 changes no installer or script; every earlier tier, integration included, passed.
+
+### 2026-10-08T06:55:19Z
+Story: S-0336.
+S-0336's second close-out stopped at the same step. Cause found: run by hand with the same fresh HOME, `install.sh` printed `curl: (56) OpenSSL SSL_read: OpenSSL/3.5.4: error:0A000126:SSL routines::unexpected eof while reading` and `x could not list releases of bytepunx/system-flow`, exit 1; a run straight after installed flai 1.39.8. So the step fails on a dropped connection to GitHub. `scripts/install-test.sh` writes install.sh's output to `.flai-cache/install-test-home.log` and, under `set -e`, exits as install.sh fails, before the `cat "$OUT"` that would show it: the remedy is to print the log when install.sh itself exits non-zero, and to retry the release listing once on a network error.
 
 ## Remediation
 
