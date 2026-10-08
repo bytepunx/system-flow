@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 55
-      cache_read: 818223
-      cache_write: 9292
-      cost: 0.3651
+      input: 15
+      output: 3172
+      cache_read: 784664
+      cache_write: 42849
+      cost: 0.5632
 ---
 # T-1293 A test reproduces I-0089: an issue recorded and one closed on main itself while a story branch records its own, and the sync and the acceptance regenerate design/issues/summary.md
 

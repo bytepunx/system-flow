@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 111.1321
-accrued_seconds: 81204
-tasks_completed: 155
-last_run: 2026-10-07T23:56:01Z
+accrued_cost: 136.3368
+accrued_seconds: 83246
+tasks_completed: 183
+last_run: 2026-10-08T00:30:03Z
 ---
 
 # Orchestrator activity
@@ -1096,6 +1096,202 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0317
 - Seconds: 3
 - Cost: 0.0000 USD
+
+### 2026-10-08T00:00:23Z
+
+- Summary: Accepted S-0310 at 0118f54c: flai verify passed every step at the branch head, the verifier matched both criteria to changed files (all within touches, no .claude/ path), and the dry-run listed no blockers. The reproduction test characterizes the server on a truncated file; criterion 1's "where one fits" covers that. Merged, archived, committed; told S-0315 and S-0316 of design/issues/summary.md
+- Items: S-0310
+- Seconds: 262
+- Cost: 2.0774 USD, estimated
+
+### 2026-10-08T00:00:30Z
+
+- Summary: Did not publish after accepting S-0310, under judgement: 1 pending, 25 USD/week, but S-0310 changes only flai/internal/mcpserver/folder_test.go and issue files, so a release would ship no change to users. It will go out with the next acceptance's release
+- Items: S-0310
+- Seconds: 7
+- Cost: 0.1272 USD, estimated
+
+### 2026-10-08T00:05:03Z
+
+- Summary: Answered TH-0342, citing design/issues/I-0095-an-agent-that-ended-to-wait-for-an-answer-is-recorded-as-failed-and-never-started-again-when-the-answer-comes-before-flai-serve-s-next-look.md
+- Items: S-0317
+- Seconds: 273
+- Cost: 2.1887 USD, estimated
+
+### 2026-10-08T00:05:16Z
+
+- Summary: Approved planner-S-0317's plan on TH-0342 and resolved it (applies the existing asked rule to an early answer, I-0095's first direction; 3 tasks, 25m, 2.50 USD/week). Finalized S-0317, resolved my draft thread TH-0301, and promoted it to ready, flai promote --candidates rank 1 (25m); applied the throughput order: S-0317 alone
+- Items: S-0317
+- Seconds: 13
+- Cost: 0.3952 USD, estimated
+
+### 2026-10-08T00:05:18Z
+
+- Summary: Started the planner for S-0318 under plan_backlog_stories: next story flai plan --candidates lists
+- Items: S-0318
+- Seconds: 2
+- Cost: 0.1321 USD, estimated
+
+### 2026-10-08T00:06:24Z
+
+- Summary: Answered TH-0343, citing no source
+- Items: S-0318
+- Seconds: 66
+- Cost: 0.5305 USD, estimated
+
+### 2026-10-08T00:06:26Z
+
+- Summary: Settled planner-S-0318's TH-0343 under plan_backlog_stories: set time_lost_per_cycle 15m on S-0318, the planner's recommended input (no reason given for 30m or 5m), and resolved the thread
+- Items: S-0318
+- Seconds: 2
+- Cost: 0.1330 USD, estimated
+
+### 2026-10-08T00:10:53Z
+
+- Summary: Left S-0315 in review for the operator, not accepted: its goal reserves for the operator whether ADR-0098 closes I-0089. flai verify passed at 37ad9152, the verifier matched both criteria, and the dry-run listed no blockers. Recommended acceptance on TH-0344
+- Items: S-0315
+- Seconds: 267
+- Cost: 2.3159 USD, estimated
+
+### 2026-10-08T00:11:29Z
+
+- Summary: Answered TH-0345, citing wip/kanban/stories/S-0318-flai-check-finds-markdown-md038-outside-the-story-at-close-out.md
+- Items: S-0318
+- Seconds: 36
+- Cost: 1.0903 USD, estimated
+
+### 2026-10-08T00:11:50Z
+
+- Summary: Approved planner-S-0318's plan on TH-0345 and resolved it (leave out markdown.* on another open story's narrative, the S-0280/ADR-0115 pattern; 4 tasks, 25m, 37.5 USD/week). Raised the planner's S-0323/S-0325 merge proposal to the operator on TH-0346 (recommended: cancel S-0325 as a duplicate). Finalized S-0318, resolved my draft thread TH-0302, promoted it to ready (flai promote --candidates rank 1, 25m), and applied the throughput order: S-0318 alone
+- Items: S-0318, S-0323, S-0325
+- Seconds: 21
+- Cost: 0.6982 USD, estimated
+
+### 2026-10-08T00:11:53Z
+
+- Summary: Started the planner for S-0319 under plan_backlog_stories: next story flai plan --candidates lists
+- Items: S-0319
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-08T00:16:07Z
+
+- Summary: Answered TH-0347, citing design/conventions/tooling.md
+- Items: S-0319
+- Seconds: 254
+- Cost: 1.5501 USD, estimated
+
+### 2026-10-08T00:16:18Z
+
+- Summary: Approved planner-S-0319's plan on TH-0347 and resolved it (a per-file flaiover-lint tier via flai manifest set; 3 tasks, 30m, 25 USD/week; I-0105's 2 occurrences against a 10m input noted for the operator). Finalized S-0319, resolved my draft thread TH-0303, and promoted it to ready (flai promote --candidates rank 1, 30m). Applied the throughput order: S-0318 (25m), then S-0319 (30m)
+- Items: S-0319, S-0318
+- Seconds: 11
+- Cost: 0.2880 USD, estimated
+
+### 2026-10-08T00:16:23Z
+
+- Summary: Started the planner for S-0320 under plan_backlog_stories: next story flai plan --candidates lists
+- Items: S-0320
+- Seconds: 5
+- Cost: 0.2888 USD, estimated
+
+### 2026-10-08T00:18:32Z
+
+- Summary: Answered TH-0348, citing design/issues/I-0106-flai-serve-s-test-that-the-orchestrator-is-started-again-when-it-ends-fails-under-the-close-out-s-full-integration-run.md
+- Items: S-0320
+- Seconds: 129
+- Cost: 3.0535 USD, estimated
+
+### 2026-10-08T00:18:44Z
+
+- Summary: Approved planner-S-0320's plan on TH-0348 and resolved it (test-only fix pinning the clock to the recorded end; 2 tasks, 25m, 25 USD/week). Finalized S-0320, resolved my draft thread TH-0304, and promoted it to ready (flai promote --candidates rank 1, 25m). Applied the throughput order: S-0318 (25m), S-0320 (25m), S-0319 (30m)
+- Items: S-0320, S-0318, S-0319
+- Seconds: 12
+- Cost: 0.2966 USD, estimated
+
+### 2026-10-08T00:18:47Z
+
+- Summary: Started the planner for S-0321 under plan_backlog_stories: next story flai plan --candidates lists
+- Items: S-0321
+- Seconds: 3
+- Cost: 0.2974 USD, estimated
+
+### 2026-10-08T00:24:55Z
+
+- Summary: Answered TH-0349, citing design/issues/I-0107-publishing-raises-the-manifest-s-flai-minimum-the-moment-it-commits-before-the-release-is-built-so-the-host-s-flai-drops-the-project-until-the-binaries-exist.md
+- Items: S-0321
+- Seconds: 368
+- Cost: 4.6598 USD, estimated
+
+### 2026-10-08T00:25:04Z
+
+- Summary: Approved planner-S-0321's plan on TH-0349 and resolved it, both code tasks kept (cap flai.minimum at the publishing flai, plus a drain; living-design change along I-0107's directions; 4 tasks, 45m, 150 USD/week). Noted the untracked CHANGELOG heading defect for the operator. Finalized S-0321 and resolved my draft thread TH-0305. Not promoted: held on overlap with S-0316 in docs/operators/index.md
+- Items: S-0321
+- Seconds: 9
+- Cost: 0.1548 USD, estimated
+
+### 2026-10-08T00:25:20Z
+
+- Summary: Started the planner for S-0323 under plan_backlog_stories. Skipped S-0322, which flai plan --candidates lists first: it duplicates S-0312, and I recommended cancelling it on TH-0337. S-0325 (TH-0346) and S-0327 (duplicate of S-0313) are held back the same way until the operator decides
+- Items: S-0323, S-0322, S-0325, S-0327
+- Seconds: 16
+- Cost: 0.3105 USD, estimated
+
+### 2026-10-08T00:26:16Z
+
+- Summary: Answered TH-0350, citing no source
+- Items: S-0323
+- Seconds: 56
+- Cost: 0.4673 USD, estimated
+
+### 2026-10-08T00:26:18Z
+
+- Summary: Settled planner-S-0323's TH-0350 under plan_backlog_stories: set time_lost_per_cycle 15m on S-0323, the planner's recommended input (30m rests on the undecided S-0325 merge; nothing supports 10m), and resolved the thread
+- Items: S-0323
+- Seconds: 2
+- Cost: 0.1562 USD, estimated
+
+### 2026-10-08T00:27:49Z
+
+- Summary: Answered TH-0351, citing wip/kanban/stories/S-0323-flai-check-finds-narrative-state-outside-the-story-at-close-out.md
+- Items: S-0323
+- Seconds: 91
+- Cost: 1.8881 USD, estimated
+
+### 2026-10-08T00:27:56Z
+
+- Summary: Approved planner-S-0323's plan on TH-0351 and resolved it (narrative.state leave-out after S-0318; 4 tasks, 24m, 37.5 USD/week). Finalized S-0323 and resolved my draft thread TH-0307; the S-0325 merge stays on TH-0346 for the operator. S-0323 waits for S-0318 (after), so it is not a promote candidate
+- Items: S-0323
+- Seconds: 7
+- Cost: 0.1605 USD, estimated
+
+### 2026-10-08T00:28:01Z
+
+- Summary: Started the planner for S-0324 under plan_backlog_stories: next story flai plan --candidates lists after the held-back duplicate S-0322
+- Items: S-0324
+- Seconds: 5
+- Cost: 0.1609 USD, estimated
+
+### 2026-10-08T00:29:48Z
+
+- Summary: Answered TH-0352, citing design/adrs/0061-flai-lints-the-markdown-it-writes-in-wip-with-its-own-implementation-of-the.md
+- Items: S-0324
+- Seconds: 107
+- Cost: 1.2914 USD, estimated
+
+### 2026-10-08T00:30:00Z
+
+- Summary: Approved planner-S-0324's plan on TH-0352 and resolved it (MD034 www. fix per ADR-0061; 2 tasks, 12m, 12.50 USD/week). Finalized S-0324, resolved my draft thread TH-0308, and promoted it to ready (flai promote --candidates rank 1, 12m). Applied the throughput order: S-0324 (12m), S-0318 (25m), S-0320 (25m), S-0319 (30m)
+- Items: S-0324, S-0318, S-0320, S-0319
+- Seconds: 12
+- Cost: 0.3280 USD, estimated
+
+### 2026-10-08T00:30:03Z
+
+- Summary: Started the planner for S-0326 under plan_backlog_stories: next non-duplicate story flai plan --candidates lists
+- Items: S-0326
+- Seconds: 3
+- Cost: 0.1643 USD, estimated
 
 ## Refusals
 

@@ -3,16 +3,36 @@ id: T-1296
 type: task
 nature: remediation
 title: Say in the operator docs and the design how the upgrade waits for the name and falls back, and close I-0094
-status: backlog
+status: done
 parent: S-0316
 owner: alex
 created: 2026-10-07T23:55:23Z
-updated: 2026-10-07T23:55:23Z
-transitions: []
+updated: 2026-10-08T00:11:16Z
+transitions:
+  - to: ready
+    at: 2026-10-08T00:09:37Z
+    by: agent-S-0316
+  - to: in-progress
+    at: 2026-10-08T00:09:38Z
+    by: agent-S-0316
+  - to: done
+    at: 2026-10-08T00:11:16Z
+    by: agent-S-0316
 stream: S-0316
 tags: [docs, dashboard]
 touches: [docs/operators/index.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md, design/issues/summary.md]
 after: [T-1295]
+usage:
+  source: log
+  seconds: 98
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 306
+      cache_read: 1156085
+      cache_write: 55828
+      cost: 0.5353
 ---
 # T-1296 Say in the operator docs and the design how the upgrade waits for the name and falls back, and close I-0094
 

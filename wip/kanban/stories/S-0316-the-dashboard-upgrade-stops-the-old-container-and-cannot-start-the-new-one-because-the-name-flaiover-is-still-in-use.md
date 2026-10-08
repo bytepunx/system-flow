@@ -6,7 +6,7 @@ title: The dashboard upgrade stops the old container and cannot start the new on
 status: in-progress
 owner: alex
 created: 2026-10-07T18:59:46Z
-updated: 2026-10-07T23:59:51Z
+updated: 2026-10-08T00:21:15Z
 transitions:
   - to: ready
     at: 2026-10-07T23:55:54Z
@@ -15,16 +15,30 @@ transitions:
     at: 2026-10-07T23:59:51Z
     by: agent-S-0316
 tags: []
-touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md, design/issues/summary.md]
+touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md, design/issues/summary.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 687
+  estimated: true
+  turns:
+    - day: 2026-10-07
+      work: 4
+    - day: 2026-10-08
+      ceremony: 3
+      hand_edits: 1
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 118
+      output: 868
+      cache_read: 4359466
+      cache_write: 260673
+      cost: 2.0404
   strategic:
     - kind: orchestrator
       seconds: 155
@@ -63,8 +77,8 @@ This story remediates [I-0094](../../../design/issues/I-0094-the-dashboard-upgra
 Directions to weigh: after stopping the old container, wait until Docker no longer lists the name before running the new one, with a short limit; or run the new container under a temporary name and rename it; and when the start fails, start the previous image again so that the operator is not left without a dashboard. A test with a stand-in for docker that keeps the name for a moment after `stop` would reproduce it.
 
 ## Acceptance criteria
-- [ ] The cause I-0094 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0094 is closed with `flai issue close I-0094 --reason` saying what fixed it
+- [x] The cause I-0094 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0094 is closed with `flai issue close I-0094 --reason` saying what fixed it
 
 ## Tasks
 - T-1295 Wait for the container name to be released before the swap, and start the previous image again when the new one fails

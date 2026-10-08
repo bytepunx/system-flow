@@ -20,15 +20,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 4
+      seconds: 15
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 11
-          cache_read: 64217
-          cache_write: 5432
-          cost: 0.0172
+          input: 6
+          output: 46
+          cache_read: 1319746
+          cache_write: 9510
+          cost: 0.3275
 draft: true
 ---
 # S-0325 flai check finds `narrative.state` outside the story at close-out

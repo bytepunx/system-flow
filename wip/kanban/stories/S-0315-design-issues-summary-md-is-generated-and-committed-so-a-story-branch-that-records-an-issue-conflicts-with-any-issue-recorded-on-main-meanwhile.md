@@ -3,16 +3,19 @@ id: S-0315
 type: story
 nature: improvement
 title: design/issues/summary.md is generated and committed, so a story branch that records an issue conflicts with any issue recorded on main meanwhile
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-07T18:59:45Z
-updated: 2026-10-07T23:57:31Z
+updated: 2026-10-08T00:10:16Z
 transitions:
   - to: ready
     at: 2026-10-07T23:53:23Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-07T23:53:29Z
+    by: agent-S-0315
+  - to: review
+    at: 2026-10-08T00:10:16Z
     by: agent-S-0315
 tags: [cli]
 topics: [cli, git, continuous-improvement]
@@ -24,31 +27,38 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 242
-  estimated: true
+  seconds: 1017
   turns:
     - day: 2026-10-07
       test_runs: 3
       hand_edits: 1
-      work: 18
+      work: 20
+    - day: 2026-10-08
+      work: 2
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 290
-      cache_read: 1954796
-      cache_write: 128956
-      cost: 0.9194
+      input: 54
+      output: 11089
+      cache_read: 2743156
+      cache_write: 149800
+      cost: 1.969
   strategic:
     - kind: orchestrator
-      seconds: 242
+      seconds: 509
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 239
-          cache_read: 3718756
-          cache_write: 28110
-          cost: 0.9232
+          input: 52
+          output: 748
+          cache_read: 12969229
+          cache_write: 38992
+          cost: 3.205
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 40
+          cache_read: 11859
+          cache_write: 27642
+          cost: 0.0341
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m

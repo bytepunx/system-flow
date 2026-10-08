@@ -3,11 +3,11 @@ id: T-1295
 type: task
 nature: remediation
 title: Wait for the container name to be released before the swap, and start the previous image again when the new one fails
-status: in-progress
+status: done
 parent: S-0316
 owner: alex
 created: 2026-10-07T23:55:15Z
-updated: 2026-10-08T00:00:17Z
+updated: 2026-10-08T00:07:48Z
 transitions:
   - to: ready
     at: 2026-10-08T00:00:16Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T00:00:17Z
     by: agent-S-0316
+  - to: done
+    at: 2026-10-08T00:07:48Z
+    by: agent-S-0316
 stream: S-0316
 tags: [flai, dashboard]
 touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 451
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 228
+      cache_read: 1564781
+      cache_write: 101652
+      cost: 0.7359
 ---
 # T-1295 Wait for the container name to be released before the swap, and start the previous image again when the new one fails
 

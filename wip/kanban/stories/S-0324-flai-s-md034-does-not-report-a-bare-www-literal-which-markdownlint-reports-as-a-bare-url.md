@@ -3,14 +3,17 @@ id: S-0324
 type: story
 nature: remediation
 title: "flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:55Z
-updated: 2026-10-08T00:29:58Z
+updated: 2026-10-08T00:30:39Z
 transitions:
   - to: ready
     at: 2026-10-08T00:29:56Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T00:30:39Z
+    by: agent-S-0324
 tags: []
 topics: [cli]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/www.md, flai/internal/mdlint/testdata/cases/expected.txt, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/summary.md]
