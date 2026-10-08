@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-08T08:59:49Z
+updated: 2026-10-08T09:08:56Z
 transitions: []
 tags: [dashboard]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T22:13:41Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T11:08:00Z
-  basis: "Its own forecast of 45m; 11th in the pull order with an in-progress limit of 5, behind S-0232, S-0288, S-0321, S-0322, S-0341, S-0290, S-0344, S-0345, S-0338, S-0342, S-0337, S-0334, S-0343, S-0297 and S-0233."
+  delivery: 2026-10-08T11:15:00Z
+  basis: "Its own forecast of 45m; 9th in the pull order with an in-progress limit of 5, behind S-0232, S-0322, S-0341, S-0344, S-0345, S-0338, S-0346, S-0342, S-0337, S-0334, S-0343, S-0297 and S-0233."
   by: flai
-  at: 2026-10-08T08:59:49Z
+  at: 2026-10-08T09:08:56Z
 ---
 # S-0234 The flaiover image's digest list is signed in CI and published on a flaiover GitHub release
 

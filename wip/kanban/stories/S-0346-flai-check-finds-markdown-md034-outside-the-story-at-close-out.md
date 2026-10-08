@@ -6,7 +6,7 @@ title: "flai check finds `markdown.MD034` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-10-08T08:08:21Z
-updated: 2026-10-08T08:59:57Z
+updated: 2026-10-08T09:08:56Z
 transitions:
   - to: ready
     at: 2026-10-08T08:59:57Z
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-10-08T08:55:44Z
 forecast:
   duration: 40m
-  delivery: 2026-10-08T14:13:00Z
-  basis: "Its own forecast of 40m; 24th in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341, S-0288, S-0344, S-0290, S-0345, S-0338, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0304, S-0305, S-0306 and S-0313."
+  delivery: 2026-10-08T09:52:00Z
+  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 5, behind S-0232, S-0322, S-0341, S-0344, S-0345 and S-0338."
   by: flai
-  at: 2026-10-08T08:53:22Z
+  at: 2026-10-08T09:08:56Z
 finalized:
   by: orchestrator
   at: 2026-10-08T08:55:53Z

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-08T09:00:17Z
+updated: 2026-10-08T09:08:56Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T22:13:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T13:38:00Z
-  basis: "Its own forecast of 1h30m; 15th in the pull order with an in-progress limit of 5, behind S-0232, S-0288, S-0322, S-0341, S-0290, S-0344, S-0345, S-0338, S-0346, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233, S-0234, S-0235 and S-0236."
+  delivery: 2026-10-08T13:27:00Z
+  basis: "Its own forecast of 1h30m; 12th in the pull order with an in-progress limit of 5, behind S-0232, S-0322, S-0341, S-0344, S-0345, S-0338, S-0346, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233, S-0234, S-0235 and S-0236."
   by: flai
-  at: 2026-10-08T09:00:17Z
+  at: 2026-10-08T09:08:56Z
 ---
 # S-0237 flai and flaiover exchange their release stamps in hello and refuse an unsigned peer with close code 4403
 
