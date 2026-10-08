@@ -2,6 +2,8 @@ package verify
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -55,6 +57,9 @@ type StoryOptions struct {
 	Tiers []Tier
 	// Git runs git; nil is execx.System.
 	Git execx.Runner
+	// Fresh runs every selected tier, whatever the story's last report
+	// would let the run reuse.
+	Fresh bool
 	// RunOptions are the tiers' run's; FS is the worktree, read for the
 	// tiers' packages, and Now times every step and stamps the report.
 	RunOptions
@@ -65,9 +70,16 @@ type Report struct {
 	Story string `json:"story"`
 	// Commit is the worktree's HEAD when it was verified.
 	Commit string `json:"commit"`
-	// Base is the main branch the story was verified against.
-	Base  string    `json:"base"`
-	RanAt time.Time `json:"ran_at"`
+	// Base is the main branch the story was verified against, and
+	// BaseCommit the commit it had then; "" when git could not read it.
+	Base       string `json:"base"`
+	BaseCommit string `json:"base_commit,omitempty"`
+	// Fingerprint hashes what selects and runs the tiers: the project's
+	// tiers and the selected ones' commands. A later run at the same Commit
+	// and BaseCommit with the same Fingerprint reuses the tiers this one
+	// passed (S-0341).
+	Fingerprint string    `json:"fingerprint,omitempty"`
+	RanAt       time.Time `json:"ran_at"`
 	// DurationMS and Duration are how long the whole run took.
 	DurationMS int64  `json:"duration_ms"`
 	Duration   string `json:"duration,omitempty"`
@@ -102,6 +114,24 @@ type Step struct {
 	Command  []string `json:"command,omitempty"`
 	Dir      string   `json:"dir,omitempty"`
 	ExitCode *int     `json:"exit_code,omitempty"`
+	// ReusedFrom is when the run that ran a Reused tier began.
+	ReusedFrom *time.Time `json:"reused_from,omitempty"`
+}
+
+// Reused counts the report's reused tiers and answers the earliest run they
+// come from; 0 and the zero time when it ran every tier it reached.
+func (r Report) Reused() (int, time.Time) {
+	n, from := 0, time.Time{}
+	for _, s := range r.Steps {
+		if s.State != Reused {
+			continue
+		}
+		n++
+		if s.ReusedFrom != nil && (from.IsZero() || s.ReusedFrom.Before(from)) {
+			from = *s.ReusedFrom
+		}
+	}
+	return n, from
 }
 
 // Note is a check finding outside the story.
@@ -120,8 +150,12 @@ type Note struct {
 // Current state and Next steps are written, flai check --strict scoped to the
 // story passes, and then each tier the branch's changes select (SelectStory)
 // passes, run with CLOSE_OUT_STORY set to the story. It stops at the first
-// step that fails; the steps after it are not reached. It commits nothing
-// and records no issue. The report is stored as the story's last (SaveReport)
+// step that fails; the steps after it are not reached. When the story's last
+// report has the same head, base commit, and fingerprint, and Fresh is not
+// set, the tiers before the first it shows failed or not reached are not run
+// again but reported Reused, with the time of the run that ran them; the
+// steps before the tiers always run (S-0341). It commits nothing and records
+// no issue. The report, whole, is stored as the story's last (SaveReport)
 // whether it passes or not. It returns an error, with no report, when the
 // story, its worktree, or its changes cannot be read, and, with the report
 // so far, when ctx ends during a tier or the report cannot be stored.
@@ -161,9 +195,11 @@ type storyRun struct {
 	worktree string
 	base     string
 	max      int
-	// commit and paths are the worktree's HEAD and what it changed.
-	commit string
-	paths  []string
+	// commit and paths are the worktree's HEAD and what it changed, and
+	// baseCommit the commit base has, "" when git cannot read it.
+	commit     string
+	baseCommit string
+	paths      []string
 	// note is what the step running says about what it passed over, which
 	// runSteps puts on its result.
 	note string
@@ -212,6 +248,10 @@ func newStoryRun(opts StoryOptions) (*storyRun, error) {
 		return nil, fmt.Errorf("verify %s: read the commit its worktree %s has checked out: %w", v.story, v.worktree, err)
 	}
 	v.commit = strings.TrimSpace(commit)
+	// a base git cannot read fails the sync step, and leaves nothing to resume
+	if base, err := opts.Git.Run(v.worktree, "git", "rev-parse", "--verify", "--quiet", v.base+"^{commit}"); err == nil {
+		v.baseCommit = strings.TrimSpace(base)
+	}
 	if v.paths, err = ChangedPaths(opts.Git, v.worktree, v.base); err != nil {
 		return nil, fmt.Errorf("verify %s: %w", v.story, err)
 	}
@@ -233,7 +273,7 @@ func (v *storyRun) syncSteps() []storyStep {
 
 // newReport is a report begun at start that has passed so far.
 func (v *storyRun) newReport(start time.Time) Report {
-	return Report{Story: v.story, Commit: v.commit, Base: v.base, RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{}}
+	return Report{Story: v.story, Commit: v.commit, Base: v.base, BaseCommit: v.baseCommit, RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{}}
 }
 
 // runSteps runs steps in order onto rep; once one fails, those after it are
@@ -269,12 +309,15 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		storyStep{StepCheck, func() []Finding { return v.check(&rep) }},
 	))
 	selected := SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
+	rep.Fingerprint = fingerprint(v.opts.Tiers, selected)
 	var runErr error
 	if rep.Passed {
+		reused := v.reusable(rep.Fingerprint, selected)
+		rep.Steps = append(rep.Steps, reused...)
 		ro := v.opts.RunOptions
 		ro.Env = append(append([]string{}, ro.Env...), StoryEnv+"="+v.story)
 		var res Result
-		res, runErr = Run(ctx, v.worktree, selected, ro)
+		res, runErr = Run(ctx, v.worktree, selected[len(reused):], ro)
 		for _, tr := range res.Tiers {
 			rep.Steps = append(rep.Steps, tierStep(tr))
 			if tr.State == Failed && rep.Passed {
@@ -422,6 +465,69 @@ func tierStep(tr TierResult) Step {
 		Name: tr.Name, Tier: true, State: tr.State, DurationMS: tr.DurationMS, Duration: tr.Duration,
 		Findings: tr.Findings, Omitted: tr.Omitted, Command: tr.Command, Dir: tr.Dir, ExitCode: tr.ExitCode,
 	}
+}
+
+// reusable is the steps of the selected tiers that the story's last report
+// lets this run reuse, in order: those before the first it shows failed or
+// not reached, each Reused with the time of the run that ran it. It is none
+// with Fresh, with no last report, or when the report's head, base commit,
+// fingerprint, or tiers differ from this run's; every tier, when it passed
+// them all.
+func (v *storyRun) reusable(fp string, selected []Selected) []Step {
+	if v.opts.Fresh || v.baseCommit == "" || fp == "" {
+		return nil
+	}
+	last, ok, err := LastReport(v.opts.Project, v.story)
+	if err != nil || !ok || last.Commit != v.commit || last.BaseCommit != v.baseCommit || last.Fingerprint != fp {
+		return nil
+	}
+	var tiers []Step
+	for _, s := range last.Steps {
+		if s.Tier {
+			tiers = append(tiers, s)
+		}
+	}
+	if len(tiers) != len(selected) {
+		return nil
+	}
+	var out []Step
+	for i, s := range tiers {
+		if s.Name != selected[i].Tier.Name || (s.State != Passed && s.State != Reused) {
+			break
+		}
+		from := last.RanAt.UTC()
+		if s.State == Reused && s.ReusedFrom != nil {
+			from = s.ReusedFrom.UTC()
+		}
+		s.State, s.ReusedFrom = Reused, &from
+		out = append(out, s)
+	}
+	return out
+}
+
+// fingerprint hashes the project's tiers as declared and the selected ones'
+// names, directories, and commands: a change to any changes what a story's
+// tiers would run.
+func fingerprint(tiers []Tier, selected []Selected) string {
+	type sel struct {
+		Name string   `json:"name"`
+		Dir  string   `json:"dir"`
+		Argv []string `json:"argv"`
+	}
+	in := struct {
+		Tiers    []Tier `json:"tiers"`
+		Selected []sel  `json:"selected"`
+	}{Tiers: tiers, Selected: []sel{}}
+	for _, s := range selected {
+		in.Selected = append(in.Selected, sel{Name: s.Tier.Name, Dir: s.Tier.Dir, Argv: s.Argv})
+	}
+	data, err := json.Marshal(in)
+	if err != nil {
+		// nothing to compare, so nothing is reused
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }
 
 // took is d as a report gives it: whole milliseconds, and as a person

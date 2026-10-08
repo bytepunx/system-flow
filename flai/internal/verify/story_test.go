@@ -76,6 +76,7 @@ func newVerifyFixture(t *testing.T) *verifyFixture {
 	}
 	git := &scriptGit{out: map[string]string{
 		"rev-parse HEAD": "0123abc\n",
+		"rev-parse --verify --quiet main^{commit}":     "fedcba9\n",
 		"diff --name-only --diff-filter=d main...HEAD": "flai/internal/x/x.go",
 		"status --porcelain --untracked-files=all":     "",
 		"rev-parse --git-path rebase-merge":            ".git/rebase-merge",
@@ -485,6 +486,138 @@ func TestVerifyStoresTheLastReportForTheStory(t *testing.T) {
 	}
 	if _, _, err := LastReport(f.opts.Project, "S-004"); err == nil || !strings.Contains(err.Error(), "delete it and verify again") {
 		t.Errorf("a report that does not read: %v", err)
+	}
+}
+
+// S-0341: a run at the same head, base, and tiers as the last one runs the
+// steps before the tiers and then only from the tier that failed, and a run
+// after that names the run that ran each tier it reuses.
+func TestVerifyResumesAtTheTierTheLastRunFailed(t *testing.T) {
+	f := newVerifyFixture(t)
+	f.proc.steps["smoke.sh"] = step{stdout: "network down\n", exit: 1, took: time.Second}
+	first, err := Verify(context.Background(), f.opts)
+	if err != nil || first.StoppedAt != "smoke" || first.BaseCommit != "fedcba9" || first.Fingerprint == "" {
+		t.Fatalf("first run %+v, %v", first, err)
+	}
+	if n, _ := first.Reused(); n != 0 {
+		t.Errorf("a first run reused %d tiers", n)
+	}
+	f.proc.steps["smoke.sh"] = step{took: time.Second}
+	f.proc.ran, f.proc.now = nil, f.proc.now.Add(time.Minute)
+	second, err := Verify(context.Background(), f.opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:reused", "integration:reused", "smoke:passed"}
+	if !second.Passed || !reflect.DeepEqual(states(second), want) || !reflect.DeepEqual(f.proc.ran, []string{"smoke.sh"}) {
+		t.Fatalf("second run steps %v, ran %q", states(second), f.proc.ran)
+	}
+	zero := 0
+	if got := second.Steps[4]; !reflect.DeepEqual(got, Step{Name: "go-test", Tier: true, State: Reused, DurationMS: 2000, Duration: "2s",
+		Command: []string{"go", "test", "./internal/x"}, Dir: "flai", ExitCode: &zero, ReusedFrom: &first.RanAt}) {
+		t.Errorf("reused step %+v", got)
+	}
+	if n, from := second.Reused(); n != 2 || !from.Equal(first.RanAt) {
+		t.Errorf("reused %d from %v, want 2 from %v", n, from, first.RanAt)
+	}
+	if last, _, err := LastReport(f.opts.Project, "S-004"); err != nil || !reflect.DeepEqual(last, second) {
+		t.Errorf("the stored report is not the whole run: %+v, %v", last, err)
+	}
+	f.proc.ran = nil
+	third, err := Verify(context.Background(), f.opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want = []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:reused", "integration:reused", "smoke:reused"}
+	if !third.Passed || !reflect.DeepEqual(states(third), want) || len(f.proc.ran) != 0 {
+		t.Fatalf("third run steps %v, ran %q", states(third), f.proc.ran)
+	}
+	for _, s := range third.Steps[4:] {
+		wantFrom := first.RanAt
+		if s.Name == "smoke" {
+			wantFrom = second.RanAt
+		}
+		if s.ReusedFrom == nil || !s.ReusedFrom.Equal(wantFrom) {
+			t.Errorf("%s reused from %v, want the run that ran it at %v", s.Name, s.ReusedFrom, wantFrom)
+		}
+	}
+}
+
+// S-0341: a run reuses nothing when what its tiers read or run may differ
+// from the last run's, or when it is told not to.
+func TestVerifyRunsEveryTierWhenTheLastRunIsNotTheSame(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(t *testing.T, f *verifyFixture)
+	}{
+		{"a new head", func(_ *testing.T, f *verifyFixture) { f.git.out["rev-parse HEAD"] = "4567def\n" }},
+		{"a new base commit", func(_ *testing.T, f *verifyFixture) {
+			f.git.out["rev-parse --verify --quiet main^{commit}"] = "9abcdef\n"
+		}},
+		{"a base git cannot read", func(_ *testing.T, f *verifyFixture) { delete(f.git.out, "rev-parse --verify --quiet main^{commit}") }},
+		{"other tiers selected", func(_ *testing.T, f *verifyFixture) {
+			f.git.out["diff --name-only --diff-filter=d main...HEAD"] = "flai/internal/x/x.go\ndocs/a.md"
+		}},
+		{"a new tier in the manifest", func(_ *testing.T, f *verifyFixture) {
+			f.opts.Tiers = append(slices.Clone(storyTiers), Tier{Name: "vitest", Paths: []string{"flaiover/**"}, Command: []string{"vitest"}})
+		}},
+		{"a tier's new command", func(_ *testing.T, f *verifyFixture) {
+			f.opts.Tiers = slices.Clone(storyTiers)
+			f.opts.Tiers[0].Command = []string{"go", "test", "-race", "{packages}"}
+		}},
+		{"a report without a fingerprint", func(t *testing.T, f *verifyFixture) {
+			last, _, err := LastReport(f.opts.Project, "S-004")
+			if err != nil {
+				t.Fatal(err)
+			}
+			last.Fingerprint = ""
+			if err := SaveReport(f.opts.Project, last); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{"fresh", func(_ *testing.T, f *verifyFixture) { f.opts.Fresh = true }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newVerifyFixture(t)
+			f.proc.steps["smoke.sh"] = step{exit: 1}
+			if first, err := Verify(context.Background(), f.opts); err != nil || first.StoppedAt != "smoke" {
+				t.Fatalf("first run %+v, %v", first, err)
+			}
+			tc.change(t, f)
+			f.proc.steps["smoke.sh"] = step{}
+			f.proc.ran = nil
+			rep, err := Verify(context.Background(), f.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, s := range rep.Steps {
+				if s.State == Reused || s.ReusedFrom != nil {
+					t.Errorf("reused %s: %+v", s.Name, s)
+				}
+			}
+			if len(f.proc.ran) < 3 || !strings.HasPrefix(f.proc.ran[0], "go test") {
+				t.Errorf("ran %q, not every tier", f.proc.ran)
+			}
+		})
+	}
+}
+
+// S-0341: a run that stopped before the tiers leaves nothing to reuse.
+func TestVerifyResumedAfterAStepBeforeTheTiersRunsEveryTier(t *testing.T) {
+	f := newVerifyFixture(t)
+	f.git.out["diff --no-renames --name-only HEAD...main"] = "flai/internal/y/y.go"
+	f.git.out["rev-list --abbrev-commit HEAD..main"] = "a1a1a1a"
+	if first, err := Verify(context.Background(), f.opts); err != nil || first.StoppedAt != "sync" {
+		t.Fatalf("first run %+v, %v", first, err)
+	}
+	f.git.out["diff --no-renames --name-only HEAD...main"] = ""
+	f.git.out["rev-list --abbrev-commit HEAD..main"] = ""
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil || !rep.Passed {
+		t.Fatalf("report %+v, %v", rep, err)
+	}
+	if n, _ := rep.Reused(); n != 0 || !reflect.DeepEqual(f.proc.ran, []string{"go test ./internal/x", "go test ./...", "smoke.sh"}) {
+		t.Errorf("reused %d, ran %q", n, f.proc.ran)
 	}
 }
 

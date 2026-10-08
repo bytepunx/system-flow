@@ -72,11 +72,13 @@ type Finding struct {
 // State is where a tier got to in a run.
 type State string
 
-// The states of a tier in a run.
+// The states of a tier in a run. Reused is a story's tier that passed in its
+// last run at the same head, base, and tiers, and was not run again (S-0341).
 const (
 	Passed     State = "passed"
 	Failed     State = "failed"
 	NotReached State = "not-reached"
+	Reused     State = "reused"
 )
 
 // TierResult is what one tier did in a run.
