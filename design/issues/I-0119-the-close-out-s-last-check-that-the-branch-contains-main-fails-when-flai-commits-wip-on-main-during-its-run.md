@@ -7,7 +7,7 @@ count: 3
 cost: 10m
 first_reported: 2026-10-08T04:29:28Z
 last_reported: 2026-10-08T04:55:54Z
-updated: 2026-10-08T04:55:54Z
+updated: 2026-10-08T08:08:22Z
 ---
 
 # I-0119 The close-out's last check that the branch contains main fails when flai commits wip on main during its run
@@ -30,3 +30,5 @@ Story: S-0320.
 S-0320's first close-out passed every verify step, then stopped at its last check that the branch contains main: S-0316 was accepted and flai 1.39.5 published on main during the run. The sync that followed conflicted on I-0118, which S-0316 and this close-out had each bumped. Resolving that by hand and running the close-out again cost about ten minutes.
 
 ## Remediation
+
+Story S-0347 remediates this issue, created from it at 2026-10-08T08:08:22Z.
