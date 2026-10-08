@@ -3,11 +3,11 @@ id: I-0110
 title: "flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL"
 class: defect
 status: closed
-count: 1
-cost: 5m
+count: 2
+cost: 8m
 first_reported: 2026-10-07T08:55:00Z
-last_reported: 2026-10-07T08:55:00Z
-updated: 2026-10-08T00:33:50Z
+last_reported: 2026-10-08T00:36:53Z
+updated: 2026-10-08T00:36:53Z
 ---
 
 # I-0110 flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL
@@ -20,6 +20,10 @@ flai's MD034 does not report a bare `www.` literal, which markdownlint reports a
 ### 2026-10-07T08:55:00Z
 Story: S-0265.
 Found while making MD034 take bare email addresses (S-0265): flai/internal/mdlint/inline.go's parseRange skips a GFM `www.` literal (the c == 'w' case) without adding it to out.urls, so md034 never reports it, while markdownlint-cli2 0.20.0's micromark takes it as a literalAutolink and MD034 reports it. A thread entry or work item with a bare `www.example.com` would pass flai check and fail a close-out's markdown lint, as I-0056 did for email addresses. Left out of S-0265 to keep it to I-0056; the fix is to record the literal's position as the http case does, gated the same way on link text and an unclosed [, with a `www.` line in the email.md fixture or one of its own.
+
+### 2026-10-08T00:36:53Z
+Story: S-0316.
+S-0316's close-out stopped at smoke: markdownlint-cli2 reported MD034 at wip/kanban/stories/S-0324-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md:66, the task list line "T-1317 flai's MD034 reports a bare www. literal", which reached main past flai's own lint. The main checkout already holds the fix uncommitted (the literal in a code span); the close-out runs again once it is committed. The run cost about ten minutes.
 
 ## Remediation
 
