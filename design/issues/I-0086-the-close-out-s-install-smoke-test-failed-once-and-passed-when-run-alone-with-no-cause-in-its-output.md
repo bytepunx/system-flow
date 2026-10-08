@@ -3,10 +3,10 @@ id: I-0086
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
 class: efficiency
 status: closed
-count: 7
+count: 8
 cost: 7m
 first_reported: 2026-10-06T10:22:10Z
-last_reported: 2026-10-08T07:15:27Z
+last_reported: 2026-10-08T08:22:57Z
 updated: 2026-10-08T08:25:32Z
 ---
 
@@ -48,6 +48,10 @@ S-0336's second close-out stopped at the same step. Cause found: run by hand wit
 ### 2026-10-08T07:15:27Z
 Story: S-0326.
 S-0326's close-out passed every tier through integration, then smoke failed in install-test: `curl: (92) HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)` while resolving the latest release, reported as "could not list releases of bytepunx/system-flow (private repository?)". A network fault, not the code; the close-out was run again and failed the same way. Five fetches of the listing `install.sh` asks for (`releases?per_page=50`, about 1 MB) on this host: two ended with `curl: (56) OpenSSL SSL_read: ... unexpected eof while reading`, three returned 200; `per_page=5` returned 200 three times out of three. A smaller listing, or a retry on a network error, would avoid it. A third close-out passed the first install case and failed the fresh-HOME case silently; `.flai-cache/install-test-home.log` held the same `unexpected eof while reading`.
+
+### 2026-10-08T08:22:57Z
+Story: S-0321.
+S-0321's close-out smoke tier failed at install.sh with an explicit FLAI_INSTALL_DIR: "curl: (92) HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)" and "could not list releases of bytepunx/system-flow". Every other tier passed.
 
 ## Remediation
 
