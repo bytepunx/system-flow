@@ -28,7 +28,7 @@ tests: # the test tiers, cheapest first, that flai test runs for the paths each 
     command: [scripts/test.sh]
     paths: ["**"]
     format: plain
-  - name: integration
+  - name: integration # when scripts/integration.sh runs the behaviour tests too, add covers: [test], so flai verify runs them once
     command: [scripts/integration.sh]
     format: plain
     all_only: true

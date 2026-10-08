@@ -94,11 +94,13 @@ tests:
     paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**"]
     format: plain
     all_only: true
+    covers: [flaiover-lint, vitest]
   - name: integration
     command: [scripts/integration.sh]
     paths: ["flai/**"]
     format: plain
     all_only: true
+    covers: [go-test]
   - name: smoke
     command: [scripts/smoke.sh]
     paths: ["flai/**"]

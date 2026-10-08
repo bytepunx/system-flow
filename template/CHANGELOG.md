@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.85 - 2026-10-08
+
+- S-0342 A test tier may name the tiers it covers (patch): a tier in the manifest's `tests` may carry `covers: [<tier>...]`, the tiers it runs everything of, and when `flai verify` or `flai test --all` selects it with one it covers, the covered tier is skipped and reported `skipped: covered by <tier>`. The template's `system-flow.yaml` covers nothing, since its `test` and `integration` scripts run different things; a comment on its `integration` tier says to add `covers: [test]` when that script runs the behaviour tests too. It needs a flai that has it; an older flai ignores `covers` and runs both tiers.
+
 ## 1.0.84 - 2026-10-08
 
 - S-0347 The close-out's last check that the branch contains main fails when flai commits wip on main during its run (patch).
