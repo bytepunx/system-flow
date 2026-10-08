@@ -2,12 +2,12 @@
 id: I-0110
 title: "flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL"
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-07T08:55:00Z
 last_reported: 2026-10-07T08:55:00Z
-updated: 2026-10-07T18:59:55Z
+updated: 2026-10-08T00:33:50Z
 ---
 
 # I-0110 flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL
@@ -24,3 +24,4 @@ Found while making MD034 take bare email addresses (S-0265): flai/internal/mdlin
 ## Remediation
 
 Story S-0324 remediates this issue, created from it at 2026-10-07T18:59:55Z.
+Closed 2026-10-08T00:33:50Z: S-0324: parseRange in flai/internal/mdlint/inline.go records a bare www. literal in out.urls through bareWww, as micromark takes it for markdownlint-cli2 0.20.0 (any case of www., at the start or after a space or one of (*_~[], a domain with no underscore in its last two segments, outside link text and after no unclosed [), so md034 reports it. The www.md fixture settles the edges against markdownlint-cli2, and TestBareWwwOfI0110 reproduces the issue.
