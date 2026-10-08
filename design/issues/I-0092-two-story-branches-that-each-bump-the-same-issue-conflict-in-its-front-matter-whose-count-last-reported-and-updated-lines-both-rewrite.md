@@ -2,12 +2,12 @@
 id: I-0092
 title: Two story branches that each bump the same issue conflict in its front matter, whose count, last_reported, and updated lines both rewrite
 class: efficiency
-status: open
+status: closed
 count: 3
 cost: 7m
 first_reported: 2026-10-06T19:46:45Z
 last_reported: 2026-10-07T09:16:07Z
-updated: 2026-10-07T09:16:07Z
+updated: 2026-10-08T09:49:58Z
 ---
 
 # I-0092 Two story branches that each bump the same issue conflict in its front matter, whose count, last_reported, and updated lines both rewrite
@@ -32,3 +32,4 @@ S-0275 bumped I-0079, I-0058, and I-0111 while S-0213 and S-0246 bumped or close
 ## Remediation
 
 Story S-0297 remediates this issue, created from it at 2026-10-06T19:46:46Z.
+Closed 2026-10-08T09:49:58Z: S-0326 (ADR-0126): the rebase in flai stream sync, flai task done, and flai accept merges an issue file both sides changed by its instances, adding up the count and taking the later last_reported and updated, and the trial merge leaves issue files out. S-0297 confirmed it covers every instance; tests in flai/cmd/stream_sync_test.go reproduce each: TestSyncMergesAnIssueBothSidesBumped and TestSyncTrialMergeLeavesOutIssueFiles (S-0278, S-0221), TestAcceptMergesAnIssueBothSidesBumped (S-0254, S-0228), and TestSyncMergesABumpIntoTheIssueMainClosed (S-0275).
