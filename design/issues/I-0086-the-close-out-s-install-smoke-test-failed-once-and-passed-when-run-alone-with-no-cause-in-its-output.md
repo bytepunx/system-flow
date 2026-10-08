@@ -6,8 +6,8 @@ status: open
 count: 7
 cost: 7m
 first_reported: 2026-10-06T10:22:10Z
-last_reported: 2026-10-08T06:55:19Z
-updated: 2026-10-08T06:55:19Z
+last_reported: 2026-10-08T07:15:27Z
+updated: 2026-10-08T07:15:27Z
 ---
 
 # I-0086 The close-out's install smoke test failed once and passed when run alone, with no cause in its output
@@ -44,6 +44,10 @@ S-0336's close-out stopped at the smoke tier in `install-test: install.sh with n
 ### 2026-10-08T06:55:19Z
 Story: S-0336.
 S-0336's second close-out stopped at the same step. Cause found: run by hand with the same fresh HOME, `install.sh` printed `curl: (56) OpenSSL SSL_read: OpenSSL/3.5.4: error:0A000126:SSL routines::unexpected eof while reading` and `x could not list releases of bytepunx/system-flow`, exit 1; a run straight after installed flai 1.39.8. So the step fails on a dropped connection to GitHub. `scripts/install-test.sh` writes install.sh's output to `.flai-cache/install-test-home.log` and, under `set -e`, exits as install.sh fails, before the `cat "$OUT"` that would show it: the remedy is to print the log when install.sh itself exits non-zero, and to retry the release listing once on a network error.
+
+### 2026-10-08T07:15:27Z
+Story: S-0326.
+S-0326's close-out passed every tier through integration, then smoke failed in install-test: `curl: (92) HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)` while resolving the latest release, reported as "could not list releases of bytepunx/system-flow (private repository?)". A network fault, not the code; the close-out was run again.
 
 ## Remediation
 
