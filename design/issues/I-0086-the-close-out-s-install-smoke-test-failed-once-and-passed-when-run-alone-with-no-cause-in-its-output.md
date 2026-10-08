@@ -3,11 +3,11 @@ id: I-0086
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
 class: efficiency
 status: closed
-count: 8
+count: 9
 cost: 7m
 first_reported: 2026-10-06T10:22:10Z
-last_reported: 2026-10-08T08:22:57Z
-updated: 2026-10-08T08:25:32Z
+last_reported: 2026-10-08T08:44:37Z
+updated: 2026-10-08T08:44:37Z
 ---
 
 # I-0086 The close-out's install smoke test failed once and passed when run alone, with no cause in its output
@@ -52,6 +52,10 @@ S-0326's close-out passed every tier through integration, then smoke failed in i
 ### 2026-10-08T08:22:57Z
 Story: S-0321.
 S-0321's close-out smoke tier failed at install.sh with an explicit FLAI_INSTALL_DIR: "curl: (92) HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)" and "could not list releases of bytepunx/system-flow". Every other tier passed.
+
+### 2026-10-08T08:44:37Z
+Story: S-0321.
+S-0321's close-out smoke tier failed again at install.sh with an explicit FLAI_INSTALL_DIR: "curl: (56) OpenSSL SSL_read ... unexpected eof while reading" and "could not list releases". Every other tier passed. This was S-0321's third GitHub-caused or race-caused rerun of a 13-minute close-out.
 
 ## Remediation
 
