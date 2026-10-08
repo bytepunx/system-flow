@@ -76,8 +76,10 @@ type Manifest struct {
 // Requirement is the oldest flai that may read the project.
 type Requirement struct {
 	// Minimum is a flai release, X.Y.Z: one that knows every front-matter
-	// field the project's items carry. Publishing a flai release whose
-	// front-matter fields changed raises it (release.RaiseMinimum).
+	// field the project's items carry. A publish raises it to the newest
+	// flai release whose front-matter fields changed, no newer than the flai
+	// doing the publish, so it names only a release that can be installed
+	// (release.RaiseMinimum, I-0107).
 	Minimum string `yaml:"minimum,omitempty" json:"minimum,omitempty"`
 }
 

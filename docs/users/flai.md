@@ -440,7 +440,7 @@ E-0016 cost of delay 1500.00 USD a week
 10h of time lost per 168h cycle at 150 USD an hour, 1.00 cycles a week: 1500.00 USD a week.
 ```
 
-A flai older than the one that brought these fields reads past them with a warning and does not act on them, so it would let a draft go to ready. Publishing that release raises `flai.minimum`, so upgrade the flai on your host (`flai self-upgrade`) first.
+A flai older than the one that brought these fields reads past them with a warning and does not act on them, so it would let a draft go to ready. Upgrade the flai on your host (`flai self-upgrade`) to that release: the first publish from it, or from a newer flai, raises `flai.minimum` to it, so an older flai then stops before it reads any item. A publish never raises the minimum past the flai that publishes.
 
 ### Tokens and cost
 
@@ -816,7 +816,7 @@ T-0681 is waiting (after): waits for T-0679 (in progress) and T-0680 (ready); re
 
 `flai task new --after` and `flai edit --after` run `flai check` with the change in place, and a finding refuses the change and leaves nothing written (exit 4). `flai check` reports (`task.after`) an entry that names no task, a task of another story, the task itself, or a story, and every cycle among a story's tasks (`T-0677` waits for `T-0678`, which waits for `T-0677`), once. The MCP `item_new` and `item_edit` tools set it too.
 
-A flai older than the one that brought a task's `after` reports every task that carries one as an error, so upgrade the flai on your host first. A release with it raises `flai.minimum`, so an older flai stops before it reads any item.
+A flai older than the one that brought a task's `after` reports every task that carries one as an error, so upgrade the flai on your host first. The first publish from that release, or a newer one, raises `flai.minimum` to it, so an older flai then stops before it reads any item.
 
 ### A story's topics
 
@@ -1711,6 +1711,8 @@ flai release --pending                      # tags again and pushes
 When the rebase or merge conflicts, the conflicts are worked through threads: one with you on each accepted story whose changes conflict, naming the paths, resolved as the thread settles. A push that fails for any other reason (credentials, a hook, an unreachable remote) keeps its tags, and running `flai release --pending` again finishes the push.
 
 When the remote cannot be reached, `--dry-run` still shows the plan with a warning that it was not checked, and publishing waits until the remote can be reached, since it pushes there anyway. A clone with no remote publishes locally as before.
+
+A publish also raises `flai.minimum` when a flai release changed the front-matter fields flai reads, but never past the flai doing the publish, so the minimum always names a release you can install (S-0321). It says what it did: `flai.minimum raised`, with the upgrade command; `flai.minimum raise waits`, when the release that changed the fields is newer than your flai, so upgrade and the next publish raises it; or `flai.minimum not raised`, a warning, when the flai publishing is not a release build, such as one built from source. The minimum never falls.
 
 `flai push --pending` and the `auto-publish` host action are kept as the operator's own shell tools, outside the workflow: no agent is told to run them, and the dashboard neither offers a push nor shows `auto-publish`. `flai push --pending` pushes the branch and any tags already made when the commits ahead include an acceptance or a release tag; ordinary commits are yours to push with git. It never forces, and refuses when the remote has commits this clone lacks. It releases nothing unless `auto-publish` is on for the project (`flai serve enable auto-publish`, off by default, S-0144): then it first tags whatever has accumulated, as `flai release --pending` would, and refuses as it does.
 
