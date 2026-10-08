@@ -4,6 +4,7 @@
 	import { themeState } from '$lib/theme.svelte';
 	import { api } from '$lib/api';
 	import Threads from '$lib/components/Threads.svelte';
+	import Messages from '$lib/components/Messages.svelte';
 	import OpenQuestions from '$lib/components/OpenQuestions.svelte';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
@@ -493,6 +494,8 @@
 				select={page.url.searchParams.get('thread') ?? undefined}
 				agent={item.type === 'story' ? activity : undefined}
 			/>
+			<!-- Its conversations with other stories' agents, read only (S-0336). -->
+			{#if item.type === 'story'}<Messages story={item.id} />{/if}
 		</div>
 		<aside class="space-y-4 text-sm">
 			{#if item.type === 'story'}<StoryAgent

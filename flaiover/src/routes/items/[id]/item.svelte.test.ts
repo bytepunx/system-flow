@@ -810,6 +810,80 @@ describe('the item page (S-0154)', () => {
 		});
 	});
 
+	// S-0336: a story's page lists its conversations with other stories' agents under its threads
+	describe("a story's conversations (S-0336)", () => {
+		const conversation = {
+			id: 'MS-0003',
+			title: 'Who owns the port?',
+			from: 'S-0154',
+			to: 'S-0155',
+			about: ['flaiover/src/lib/server/port.ts'],
+			status: 'open',
+			closed: false,
+			closed_reason: '',
+			awaiting: 'S-0155',
+			participants: ['agent-S-0154'],
+			created: '2026-09-29T07:10:00Z',
+			updated: '2026-09-29T07:10:00Z',
+			path: 'wip/messages/MS-0003-who-owns-the-port.md',
+			entries: [
+				{
+					at: '2026-09-29T07:10:00Z',
+					author: 'agent-S-0154',
+					story: 'S-0154',
+					text: 'Do you change the port?'
+				}
+			]
+		};
+		const show = async (item: Record<string, unknown>, conversations: unknown[] = []) => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item, children: [] });
+				if (url === '/api/board') return answer({ writable: false });
+				if (url.startsWith('/api/threads')) return answer([]);
+				if (url.startsWith('/api/messages')) return answer(conversations);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+		};
+		const section = () => document.querySelector('section[data-messages]');
+
+		it('lists them after its threads, each with the other story linked and its entries', async () => {
+			await show(story, [conversation]);
+			expect(asked('/api/messages?story=S-0154')).toBe(1);
+			expect(section()!.getAttribute('data-messages')).toBe('S-0154');
+			const threads = document.querySelector('section[data-threads="S-0154"]')!;
+			expect(threads.nextElementSibling).toBe(section());
+			const li = section()!.querySelector('[data-conversation="MS-0003"]')!;
+			expect(li.textContent).toContain('Who owns the port?');
+			expect(li.querySelector('[data-with]')!.textContent!.replace(/\s+/g, ' ')).toBe('to S-0155');
+			expect(li.querySelector('a[data-story="S-0155"]')!.getAttribute('href')).toBe(
+				'/items/S-0155'
+			);
+			expect(li.querySelector('[data-entry="S-0154"]')!.textContent).toContain(
+				'Do you change the port?'
+			);
+		});
+
+		it('says so when the story has none', async () => {
+			await show(story);
+			expect(section()!.querySelector('[data-empty]')!.textContent).toContain(
+				'No open conversations here.'
+			);
+			expect(section()!.querySelector('[data-conversation]')).toBeNull();
+		});
+
+		it("is not on an epic's or a task's page", async () => {
+			await show({ ...story, id: 'E-0013', type: 'epic' }, [conversation]);
+			expect(section()).toBeNull();
+			unmount(c!);
+			document.body.innerHTML = '';
+			await show({ ...story, id: 'T-0606', type: 'task', parent: 'S-0154' }, [conversation]);
+			expect(section()).toBeNull();
+			expect(api.mock.calls.some(([u]) => String(u).startsWith('/api/messages'))).toBe(false);
+		});
+	});
+
 	it('stops following the project once it is left', async () => {
 		serve(story);
 		c = mount(ItemPage, { target: document.body });

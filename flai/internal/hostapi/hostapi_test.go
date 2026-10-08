@@ -254,11 +254,9 @@ func TestThreadsList(t *testing.T) {
 	}
 }
 
-// talking is harbour with S-0001 in progress, S-0002 in review, and a new
-// S-0004 in progress, a file to talk about, and three conversations: MS-0001
-// from S-0001 to S-0002 about that file, answered, so it awaits S-0001;
-// MS-0002 from S-0002 to S-0001, closed; and MS-0003 from S-0002 to S-0004.
-func talking(t *testing.T) channel.Project {
+// quiet is harbour with S-0001 in progress, S-0002 in review, a new S-0004 in
+// progress, and a file to talk about: talking before its conversations.
+func quiet(t *testing.T) channel.Project {
 	t.Helper()
 	p := harbour(t)
 	repo, err := workitem.Open(p.Root)
@@ -282,6 +280,19 @@ func talking(t *testing.T) channel.Project {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(p.Root, "design/system/quay.md"), []byte("# Quay\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// talking is quiet with three conversations: MS-0001 from S-0001 to S-0002
+// about its file, answered, so it awaits S-0001; MS-0002 from S-0002 to
+// S-0001, closed; and MS-0003 from S-0002 to S-0004, which awaits S-0004.
+func talking(t *testing.T) channel.Project {
+	t.Helper()
+	p := quiet(t)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
 		t.Fatal(err)
 	}
 	send := func(from, to, text string, about ...string) *messages.Conversation {
@@ -388,6 +399,39 @@ func TestMessagesGet(t *testing.T) {
 	for _, params := range []string{`{}`, `{"id":""}`, `{"id":"../../etc/passwd"}`, `{"id":"MS-*"}`, `{"id":"TH-0001"}`, `{"id":7}`} {
 		if err := call(t, p, "messages.get", params, &c); err == nil || err.Code != channel.CodeInvalidParams {
 			t.Errorf("messages.get %s: %+v", params, err)
+		}
+	}
+}
+
+// TestInboxDesignerCountsNoMessage: the operator's inbox, and its badge, which
+// is its total, count no conversation between stories (S-0336): with
+// conversations open that await either side, it answers as it did on the same
+// project before they were written, and none of its entries is a message.
+func TestInboxDesignerCountsNoMessage(t *testing.T) {
+	answer := func(p channel.Project) (DesignerInbox, string) {
+		t.Helper()
+		var in DesignerInbox
+		if err := call(t, p, "inbox.designer", `{}`, &in); err != nil {
+			t.Fatal(err)
+		}
+		data, err := json.Marshal(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return in, string(data)
+	}
+	before, beforeJSON := answer(quiet(t))
+	after, afterJSON := answer(talking(t))
+	// S-0002 in review: an inbox with something in it (olive wrote the thread last)
+	if before.Total != 1 || before.Counts["review"] != 1 {
+		t.Fatalf("before the conversations: %s", beforeJSON)
+	}
+	if afterJSON != beforeJSON {
+		t.Errorf("the conversations changed the inbox\nbefore %s\nafter  %s", beforeJSON, afterJSON)
+	}
+	for _, e := range after.Entries {
+		if _, counted := before.Counts[e.Kind]; !counted || strings.Contains(e.Key+e.Title+e.Path+e.Detail, "MS-") || strings.Contains(e.Path, "wip/messages") {
+			t.Errorf("an entry from a conversation: %+v", e)
 		}
 	}
 }
