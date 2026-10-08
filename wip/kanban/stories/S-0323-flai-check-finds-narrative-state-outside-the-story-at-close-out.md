@@ -3,17 +3,20 @@ id: S-0323
 type: story
 nature: improvement
 title: "flai check finds `narrative.state` outside the story at close-out"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:54Z
-updated: 2026-10-08T05:54:06Z
+updated: 2026-10-08T06:12:33Z
 transitions:
   - to: ready
     at: 2026-10-08T05:54:04Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T06:11:40Z
+    by: agent-S-0323
 tags: [flai, template]
 topics: [cli, conventions, template]
-touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0111-flai-check-finds-narrative-state-outside-the-story-at-close-out.md]
 after: [S-0318]
 agent:
   harness: claude-code

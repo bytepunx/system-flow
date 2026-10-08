@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 196.2607
-accrued_seconds: 102649
-tasks_completed: 235
-last_run: 2026-10-08T05:53:33Z
+accrued_cost: 196.3139
+accrued_seconds: 102685
+tasks_completed: 236
+last_run: 2026-10-08T05:54:09Z
 ---
 
 # Orchestrator activity
@@ -1656,6 +1656,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0318
 - Seconds: 62
 - Cost: 0.3584 USD, estimated
+
+### 2026-10-08T05:54:09Z
+
+- Summary: Published under judgement, after evaluating 1 pending story worth 37.5 USD/week: S-0318, a complete remedy for I-0096 with ADR-0123. Released flai 1.39.5→1.39.6 (tag flai/v1.39.6) and template 1.0.77→1.0.78 (f2f383e), pushed. Promoted S-0323 under promote_to_ready (rank 1, 24m; its after on S-0318 is now done) and applied the throughput order, which put S-0323 first.
+- Items: S-0318, S-0323
+- Seconds: 36
+- Cost: 0.0532 USD, estimated
 
 ## Refusals
 

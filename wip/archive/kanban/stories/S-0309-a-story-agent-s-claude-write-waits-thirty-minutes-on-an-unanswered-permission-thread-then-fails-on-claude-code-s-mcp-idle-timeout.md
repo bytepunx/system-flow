@@ -3,10 +3,10 @@ id: S-0309
 type: story
 nature: improvement
 title: A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T06:48:44Z
-updated: 2026-10-08T05:52:20Z
+updated: 2026-10-08T06:12:43Z
 transitions:
   - to: ready
     at: 2026-10-08T04:23:09Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-08T05:52:20Z
     by: agent-S-0309
+  - to: review
+    at: 2026-10-08T06:11:28Z
+    by: agent-S-0309
+  - to: done
+    at: 2026-10-08T06:12:43Z
+    by: orchestrator
 tags: []
 topics: [cli, agents]
-touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, docs/users/flai.md, design/system/flai-cli.md, design/adrs, design/adrs/README.md, design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, docs/users/flai.md, design/system/flai-cli.md, design/adrs, design/adrs/README.md, design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md, design/issues/summary.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,18 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 51
-  estimated: true
+  seconds: 1160
   turns:
     - day: 2026-10-08
-      work: 13
+      ceremony: 1
+      hand_edits: 1
+      work: 35
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 198
-      cache_read: 1148743
-      cache_write: 119006
-      cost: 0.5652
+      input: 200
+      output: 62366
+      cache_read: 8819149
+      cache_write: 402844
+      cost: 5.6425
   strategic:
     - kind: planner
       seconds: 296
@@ -88,8 +95,8 @@ finalized:
 This story remediates [I-0103](../../../design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md), "A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0103 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0103 is closed with `flai issue close I-0103 --reason` saying what fixed it
+- [x] The cause I-0103 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0103 is closed with `flai issue close I-0103 --reason` saying what fixed it
 
 ## Tasks
 - T-1274 Record the remedy for I-0103 in an ADR refining ADR-0086 and ADR-0097
@@ -126,3 +133,12 @@ The one folder touch kept is `design/adrs/`, because the ADR's file name is not 
 Forecast: flai gave 17m. It is raised to 35m from S-0299 (31m) and S-0257 (36m), the permission stories closest in scope: this one adds an ADR, the bounded wait and the retry with tests, the prompt, and two documents. Delivery moves by the 18m added, to 2026-10-08T05:45Z.
 
 Cost of delay: 75 USD a week as `flai cod` computes it from the operator's input (30m lost per 168h cycle at 150 USD an hour). It stands: one instance so far, but every protected write made while the operator is away hits it.
+
+### Accepted by the orchestrator
+
+- Verified: 32badc936063f9af700e0359241115a1210d6d3e
+- At: 2026-10-08T06:12:43Z
+
+Verdict: accept. flai verify passed every step at the branch head 32badc93, and the verifier matched both criteria to the diff.
+- 1: design/adrs/0124-permission-prompt-holds-a-write-at-most-four-minutes-then-refuses-it-and-leaves.md, design/adrs/README.md, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, docs/users/flai.md, design/system/flai-cli.md
+- 2: design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md, design/issues/summary.md

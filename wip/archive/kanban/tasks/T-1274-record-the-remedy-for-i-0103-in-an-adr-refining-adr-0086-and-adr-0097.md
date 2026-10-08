@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 6
-      cache_read: 258018
-      cache_write: 5134
-      cost: 0.1173
+      input: 6
+      output: 1821
+      cache_read: 257558
+      cache_write: 11765
+      cost: 0.1648
 ---
 # T-1274 Record the remedy for I-0103 in an ADR refining ADR-0086 and ADR-0097
 

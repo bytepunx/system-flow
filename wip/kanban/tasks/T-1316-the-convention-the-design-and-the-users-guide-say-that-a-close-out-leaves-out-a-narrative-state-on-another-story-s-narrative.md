@@ -3,12 +3,15 @@ id: T-1316
 type: task
 nature: improvement
 title: The convention, the design, and the users' guide say that a close-out leaves out a narrative.state on another story's narrative
-status: backlog
+status: ready
 parent: S-0323
 owner: alex
 created: 2026-10-08T00:27:05Z
-updated: 2026-10-08T00:27:05Z
-transitions: []
+updated: 2026-10-08T06:12:28Z
+transitions:
+  - to: ready
+    at: 2026-10-08T06:12:28Z
+    by: agent-S-0323
 stream: S-0323
 tags: [flai, template]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md]

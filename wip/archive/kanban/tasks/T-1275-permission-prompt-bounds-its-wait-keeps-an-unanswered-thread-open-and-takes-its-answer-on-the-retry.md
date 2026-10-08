@@ -3,11 +3,11 @@ id: T-1275
 type: task
 nature: improvement
 title: permission_prompt bounds its wait, keeps an unanswered thread open, and takes its answer on the retry
-status: in-progress
+status: done
 parent: S-0309
 owner: alex
 created: 2026-10-07T23:27:25Z
-updated: 2026-10-08T05:53:19Z
+updated: 2026-10-08T05:59:43Z
 transitions:
   - to: ready
     at: 2026-10-08T05:53:18Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-08T05:53:19Z
     by: agent-S-0309
+  - to: done
+    at: 2026-10-08T05:59:43Z
+    by: agent-S-0309
 stream: S-0309
 tags: [mcp, permission-prompt]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go]
 after: [T-1274]
+usage:
+  source: log
+  seconds: 384
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 10517
+      cache_read: 1487157
+      cache_write: 67931
+      cost: 0.9515
 ---
 # T-1275 permission_prompt bounds its wait, keeps an unanswered thread open, and takes its answer on the retry
 

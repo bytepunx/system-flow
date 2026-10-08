@@ -3,10 +3,10 @@ id: S-0319
 type: story
 nature: improvement
 title: flai test never runs flaiover's prettier, eslint, or svelte-check, so formatting faults surface only at the close-out
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-07T18:59:50Z
-updated: 2026-10-08T05:51:57Z
+updated: 2026-10-08T06:12:42Z
 transitions:
   - to: ready
     at: 2026-10-08T00:16:14Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T05:51:57Z
     by: agent-S-0319
+  - to: review
+    at: 2026-10-08T06:12:42Z
+    by: agent-S-0319
 tags: []
 topics: [testing]
-touches: [scripts/flaiover-lint.sh, system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0105-flai-test-never-runs-flaiover-s-prettier-eslint-or-svelte-check-so-formatting-faults-surface-only-at-the-close-out.md, design/issues/summary.md]
+touches: [scripts/flaiover-lint.sh, system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0105-flai-test-never-runs-flaiover-s-prettier-eslint-or-svelte-check-so-formatting-faults-surface-only-at-the-close-out.md, design/issues/summary.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,19 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 80
+  seconds: 192
   estimated: true
   turns:
     - day: 2026-10-08
-      test_runs: 2
-      work: 16
+      test_runs: 3
+      work: 34
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 227
-      cache_read: 1739772
-      cache_write: 118688
-      cost: 0.8285
+      input: 74
+      output: 503
+      cache_read: 4624588
+      cache_write: 156830
+      cost: 2.1315
   strategic:
     - kind: orchestrator
       seconds: 276
@@ -73,8 +76,8 @@ finalized:
 This story remediates [I-0105](../../../design/issues/I-0105-flai-test-never-runs-flaiover-s-prettier-eslint-or-svelte-check-so-formatting-faults-surface-only-at-the-close-out.md), "flai test never runs flaiover's prettier, eslint, or svelte-check, so formatting faults surface only at the close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0105 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0105 is closed with `flai issue close I-0105 --reason` saying what fixed it
+- [x] The cause I-0105 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0105 is closed with `flai issue close I-0105 --reason` saying what fixed it
 
 ## Tasks
 - T-1304 scripts/flaiover-lint.sh runs prettier --check and eslint on the flaiover files it is given

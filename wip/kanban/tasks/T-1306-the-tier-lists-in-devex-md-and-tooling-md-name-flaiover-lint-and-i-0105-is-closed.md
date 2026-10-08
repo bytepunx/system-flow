@@ -3,16 +3,36 @@ id: T-1306
 type: task
 nature: improvement
 title: The tier lists in devex.md and tooling.md name flaiover-lint, and I-0105 is closed
-status: backlog
+status: done
 parent: S-0319
 owner: alex
 created: 2026-10-08T00:15:16Z
-updated: 2026-10-08T00:15:16Z
-transitions: []
+updated: 2026-10-08T05:55:07Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:54:48Z
+    by: agent-S-0319
+  - to: in-progress
+    at: 2026-10-08T05:54:49Z
+    by: agent-S-0319
+  - to: done
+    at: 2026-10-08T05:55:07Z
+    by: agent-S-0319
 stream: S-0319
 tags: [docs, testing, issues]
 touches: [design/system/devex.md, design/conventions/tooling.md, design/issues/I-0105-flai-test-never-runs-flaiover-s-prettier-eslint-or-svelte-check-so-formatting-faults-surface-only-at-the-close-out.md, design/issues/summary.md]
 after: [T-1305]
+usage:
+  source: log
+  seconds: 18
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 45
+      cache_read: 671003
+      cache_write: 4876
+      cost: 0.3013
 ---
 # T-1306 The tier lists in devex.md and tooling.md name flaiover-lint, and I-0105 is closed
 
