@@ -1865,6 +1865,7 @@ flai dashboard --bind 127.0.0.1  # this host only (default: every interface)
 flai dashboard status          # running, not answering, or gone, from a probe of /_health
 flai dashboard logs [-f]
 flai dashboard stop
+flai dashboard restart         # start the image that runs again, never a newer one a check pulled
 flai dashboard token           # print the token and login link
 flai dashboard token --rotate  # new token; a running dashboard restarts
 flai dashboard --no-serve      # do not register with flai serve, or start flai host
