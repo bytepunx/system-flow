@@ -2,12 +2,12 @@
 id: I-0105
 title: flai test never runs flaiover's prettier, eslint, or svelte-check, so formatting faults surface only at the close-out
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 8m
 first_reported: 2026-10-07T07:23:32Z
 last_reported: 2026-10-07T20:41:40Z
-updated: 2026-10-07T20:41:40Z
+updated: 2026-10-08T05:55:03Z
 ---
 
 # I-0105 flai test never runs flaiover's prettier, eslint, or svelte-check, so formatting faults surface only at the close-out
@@ -28,3 +28,4 @@ S-0329's close-out stopped at the flaiover tier on prettier in four files (HostA
 ## Remediation
 
 Story S-0319 remediates this issue, created from it at 2026-10-07T18:59:50Z.
+Closed 2026-10-08T05:55:03Z: S-0319: system-flow.yaml's tests gain a `flaiover-lint` tier, outside `--all` and before vitest, that runs `scripts/flaiover-lint.sh` (prettier `--check --ignore-unknown` and eslint `--no-warn-ignored`) on the changed files under `flaiover/`, so `flai test` finds a formatting or lint fault in a flaiover file before the close-out. svelte-check takes no file list and stays in the `--all` `flaiover` tier. `TestRepositoryManifestLintsChangedFlaioverFiles` in `flai/internal/verify/select_test.go` fails without the tier.

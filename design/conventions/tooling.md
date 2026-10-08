@@ -1,6 +1,6 @@
 ---
 title: Tooling
-updated: 2026-10-07
+updated: 2026-10-08
 audience: agent
 order: 90
 status: active
@@ -41,6 +41,6 @@ Use the project's tools for the project's data. The tools keep the standard true
 
 ## Project additions
 - `make check`, `make flai`, `make test`, `make integration`, `make smoke`, `make flai-test` (all tiers plus lint), `make flai-snapshot`, and `make install-tools` call the scripts in `scripts/`.
-- `flai test`, run as `scripts/flai.sh test` or `bin/flai test`, runs the tiers in `system-flow.yaml`'s `tests` for the paths given: gofmt, vet, golangci-lint, the short Go tests, vitest, and the markdown lint, then, under `--all` only, integration and smoke. Use it between tasks; the whole run stays `make flai-test` and the close-out.
+- `flai test`, run as `scripts/flai.sh test` or `bin/flai test`, runs the tiers in `system-flow.yaml`'s `tests` for the paths given: gofmt, vet, golangci-lint, the short Go tests, prettier and eslint on the changed flaiover files (`flaiover-lint`), vitest, and the markdown lint, then, under `--all` only, svelte-check with the whole `flaiover` tier, integration, and smoke. Use it between tasks; the whole run stays `make flai-test` and the close-out.
 - No cluster: flaiover runs as a single Docker container via `flai dashboard`; k3d and `bytepunx/kluster` are not used here.
 - The dashboard does not exist yet (E-0003); until then `flai board` and `flai stats` are the views.
