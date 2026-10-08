@@ -297,6 +297,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--forecast-basis` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--forecast-delivery` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--forecast-duration` | [flai edit](../users/flai-reference.md#flai-edit) |
+| `--fresh` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai message escalate](../users/flai-reference.md#flai-message-escalate), [flai message reply](../users/flai-reference.md#flai-message-reply), [flai message send](../users/flai-reference.md#flai-message-send), [flai message share](../users/flai-reference.md#flai-message-share), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--grace-seconds` | [flai checks cancel](../users/flai-reference.md#flai-checks-cancel) |
 | `--harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |

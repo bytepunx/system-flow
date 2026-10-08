@@ -3793,7 +3793,9 @@ check      flai check --strict, scoped to the story, passes
            writes is not refused as the orchestrator (S-0311)
 ```
 
-flai verify commits nothing. The answer is a line for each step, its state and duration, the failing step's first findings under it, at most --max across the run, then the check's findings outside the story, which are notes that do not fail it, and last a line as the close-out ends: "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at &lt;step&gt; (&lt;exit status or state&gt;)". With --json the answer is the report, with the story, the commit and base it was verified at, when it ran, how long it took, passed, stopped\_at, the paths the branch changed, and each step's state, duration, and findings, and the notes.
+When the story's last run was at the same head and base commit, and the tiers, their commands, and those the branch selects are the same, the steps before the tiers run again but the tiers before the first the last run showed failed or not reached do not: each is reported reused, with the time of the run that ran it, and the run goes on from the tier that failed. Any change makes the run full; --fresh forces one (S-0341).
+
+flai verify commits nothing. The answer is a line for each step, its state and duration, the failing step's first findings under it, at most --max across the run, then the check's findings outside the story, which are notes that do not fail it, and last a line as the close-out ends: "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at &lt;step&gt; (&lt;exit status or state&gt;)", either followed by " (reused N tiers from &lt;time&gt;)" when tiers were reused, the earliest run they come from. With --json the answer is the report, with the story, the commit and base it was verified at and the base's commit, when it ran, how long it took, passed, stopped\_at, the paths the branch changed, and each step's state, duration, and findings, a reused tier's reused\_from, and the notes.
 
 Each run's report is stored in the project's .flai-cache/verify, whether it passes or not; --last prints the story's stored report and runs nothing, or says there is none (null with --json), and exits 0 whatever it holds.
 
@@ -3809,6 +3811,7 @@ Examples:
 flai verify S-0270
 flai verify S-0270 --json
 flai verify S-0270 --record-issues
+flai verify S-0270 --fresh
 flai verify S-0270 --last --json
 flai verify S-0270 --sync-only
 ```
@@ -3817,6 +3820,7 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--fresh` | force a full run: run every selected tier even when the last run at the same head, base, and tiers passed some |
 | `--last` | print the story's stored last result and run nothing |
 | `--max` int | the most findings to report across the run (default `5`) |
 | `--record-issues` | record the check's findings outside the story in design/issues of its worktree, once per story and findings |

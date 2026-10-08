@@ -25,7 +25,7 @@ const exitVerifyUnusable = 2
 // newVerifyCmd runs a story's close-out steps and the tiers its branch
 // selects in its worktree and answers one report (S-0270).
 func newVerifyCmd(a *app) *cobra.Command {
-	var record, last, syncOnly bool
+	var record, last, syncOnly, fresh bool
 	var maxFindings int
 	c := &cobra.Command{
 		Use:   "verify <story>",
@@ -47,15 +47,24 @@ after it are not reached:
              whatever role ran flai verify, so a test that runs flai's
              writes is not refused as the orchestrator (S-0311)
 
+When the story's last run was at the same head and base commit, and the
+tiers, their commands, and those the branch selects are the same, the steps
+before the tiers run again but the tiers before the first the last run showed
+failed or not reached do not: each is reported reused, with the time of the
+run that ran it, and the run goes on from the tier that failed. Any change
+makes the run full; --fresh forces one (S-0341).
+
 flai verify commits nothing. The answer is a line for each step, its state
 and duration, the failing step's first findings under it, at most --max
 across the run, then the check's findings outside the story, which are notes
 that do not fail it, and last a line as the close-out ends:
 "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at <step>
-(<exit status or state>)". With --json the answer is the report, with the
-story, the commit and base it was verified at, when it ran, how long it took,
-passed, stopped_at, the paths the branch changed, and each step's state,
-duration, and findings, and the notes.
+(<exit status or state>)", either followed by " (reused N tiers from <time>)"
+when tiers were reused, the earliest run they come from. With --json the
+answer is the report, with the story, the commit and base it was verified at
+and the base's commit, when it ran, how long it took, passed, stopped_at, the
+paths the branch changed, and each step's state, duration, and findings, a
+reused tier's reused_from, and the notes.
 
 Each run's report is stored in the project's .flai-cache/verify, whether it
 passes or not; --last prints the story's stored report and runs nothing, or
@@ -78,6 +87,7 @@ it finished.`,
 		Example: `  flai verify S-0270
   flai verify S-0270 --json
   flai verify S-0270 --record-issues
+  flai verify S-0270 --fresh
   flai verify S-0270 --last --json
   flai verify S-0270 --sync-only`,
 		Args: func(_ *cobra.Command, args []string) error {
@@ -106,13 +116,14 @@ it finished.`,
 			if last {
 				return a.printLastVerify(repo, args[0], maxFindings)
 			}
-			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, max: maxFindings})
+			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, fresh: fresh, max: maxFindings})
 		},
 	}
 	c.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
 		return &exitError{code: exitVerifyUnusable, msg: err.Error()}
 	})
 	c.Flags().BoolVar(&record, "record-issues", false, "record the check's findings outside the story in design/issues of its worktree, once per story and findings")
+	c.Flags().BoolVar(&fresh, "fresh", false, "force a full run: run every selected tier even when the last run at the same head, base, and tiers passed some")
 	c.Flags().BoolVar(&last, "last", false, "print the story's stored last result and run nothing")
 	c.Flags().BoolVar(&syncOnly, "sync-only", false, "run only the rebase and sync steps, and store no result")
 	c.Flags().IntVar(&maxFindings, "max", verify.DefaultMax, "the most findings to report across the run")
@@ -125,7 +136,9 @@ type verifyOptions struct {
 	// syncOnly runs only the rebase and sync steps and stores no report
 	// (ADR-0135).
 	syncOnly bool
-	max      int
+	// fresh runs every selected tier, reusing none from the last run.
+	fresh bool
+	max   int
 }
 
 // verifyRecorded is flai verify --json with --record-issues: the report,
@@ -144,7 +157,7 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 		return &exitError{code: exitVerifyUnusable, msg: err.Error()}
 	}
 	opts := verify.StoryOptions{
-		Story: id, Project: repo, Worktree: worktree, Git: a.runner,
+		Story: id, Project: repo, Worktree: worktree, Git: a.runner, Fresh: o.fresh,
 		RunOptions: verify.RunOptions{Max: o.max, Now: a.now},
 	}
 	var rep verify.Report
@@ -252,10 +265,11 @@ func (a *app) printLastVerify(repo *workitem.Repo, story string, maxNotes int) e
 }
 
 // verifyText is the report as flai verify prints it: a line for each step,
-// its state, name, and duration, a tier's name after "tier", a passing
-// step's note and the failing step's findings indented under it, then at
-// most maxNotes of the notes outside the story, the issues they were
-// recorded in, and last the outcome as the close-out's last line has it.
+// its state, name, and duration, a tier's name after "tier", a reused tier's
+// time of the run it comes from in place of its duration, a passing step's
+// note and the failing step's findings indented under it, then at most
+// maxNotes of the notes outside the story, the issues they were recorded in,
+// and last the outcome as the close-out's last line has it.
 func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNotes int) string {
 	var b strings.Builder
 	for _, s := range rep.Steps {
@@ -263,9 +277,12 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 		if s.Tier {
 			name = "tier " + s.Name
 		}
-		if s.State == verify.NotReached {
+		switch {
+		case s.State == verify.NotReached:
 			fmt.Fprintf(&b, "%s %s\n", s.State, name)
-		} else {
+		case s.State == verify.Reused && s.ReusedFrom != nil:
+			fmt.Fprintf(&b, "%s %s (from %s)\n", s.State, name, s.ReusedFrom.UTC().Format(time.RFC3339))
+		default:
 			fmt.Fprintf(&b, "%s %s (%s)\n", s.State, name, s.Duration)
 		}
 		if s.Note != "" {
@@ -317,8 +334,15 @@ func noteText(n verify.Note) string {
 }
 
 // verifyOutcome is the report's last line, in the close-out's form: the
-// story passed every step, or the step it stopped at and why.
+// story passed every step, or the step it stopped at and why, and then the
+// tiers it reused and the earliest run they come from, if any.
 func verifyOutcome(rep verify.Report, stopped bool) string {
+	return verifyResult(rep, stopped) + reusedText(rep)
+}
+
+// verifyResult is the last line's outcome: the story passed every step, or
+// the step it stopped at and why.
+func verifyResult(rep verify.Report, stopped bool) string {
 	if rep.Passed && !stopped {
 		return fmt.Sprintf("verify: %s passed every step", rep.Story)
 	}
@@ -339,6 +363,24 @@ func verifyOutcome(rep verify.Report, stopped bool) string {
 		step = "an unfinished step"
 	}
 	return fmt.Sprintf("verify: %s stopped at %s (%s)", rep.Story, step, reason)
+}
+
+// reusedText is " (reused N tiers from <time>)" for a report that reused
+// tiers, the time the earliest run they come from began, in UTC; "" for one
+// that ran every tier it reached.
+func reusedText(rep verify.Report) string {
+	n, from := rep.Reused()
+	if n == 0 {
+		return ""
+	}
+	tiers := "tiers"
+	if n == 1 {
+		tiers = "tier"
+	}
+	if from.IsZero() {
+		return fmt.Sprintf(" (reused %d %s)", n, tiers)
+	}
+	return fmt.Sprintf(" (reused %d %s from %s)", n, tiers, from.UTC().Format(time.RFC3339))
 }
 
 // shortCommit is a commit's first seven characters, as git abbreviates it.

@@ -495,3 +495,142 @@ func TestVerifyTextPrintsAStepsNoteUnderIt(t *testing.T) {
 		t.Errorf("text\n%s\nwant\n%s", got, want)
 	}
 }
+
+// resumeGit is verifyGit with the main branch's commit answered as well, so
+// a story's run can resume from its last record.
+type resumeGit struct{ verifyGit }
+
+func (g resumeGit) Run(dir, name string, args ...string) (string, error) {
+	if strings.Join(args, " ") == "rev-parse --verify --quiet main^{commit}" {
+		return "89abcdef0123\n", nil
+	}
+	return g.verifyGit.Run(dir, name, args...)
+}
+
+func (g resumeGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+// resumeFixture is verifyFixture with two tiers for docs/: unit, which
+// passes, then lint, which fails with exit 4 until the file marker exists.
+func resumeFixture(t *testing.T) (root, marker string) {
+	t.Helper()
+	root, worktree := verifyFixture(t, "exit 0")
+	marker = filepath.Join(t.TempDir(), "lint-passes")
+	path := filepath.Join(worktree, "system-flow.yaml")
+	manifest, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lint := "  - name: lint\n    command: [sh, -c, 'test -f \"" + marker + "\" || { echo \"docs/README.md does not lint\" >&2; exit 4; }', lint, \"{files}\"]\n    paths: [\"docs/**\"]\n"
+	if err := os.WriteFile(path, []byte(string(manifest)+lint), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root, marker
+}
+
+// resumeReport runs flai verify --json in dir with resumeGit and decodes its
+// answer, and answers it raw too.
+func resumeReport(t *testing.T, dir string, wantCode int, args ...string) (verify.Report, string) {
+	t.Helper()
+	out, errOut, code := runVerify(t, dir, resumeGit{}, append([]string{"verify", "--json"}, args...)...)
+	if code != wantCode {
+		t.Fatalf("flai verify %v: exit %d, want %d\n%s%s", args, code, wantCode, out, errOut)
+	}
+	var rep verify.Report
+	if err := json.Unmarshal([]byte(out), &rep); err != nil {
+		t.Fatalf("flai verify %v: not JSON: %v\n%s", args, err, out)
+	}
+	return rep, out
+}
+
+// S-0341: a run at the same head, base, and tiers as the story's last
+// resumes at the tier that failed, prints the tiers it reused with the time
+// of the run they come from, and says so on its last line.
+func TestVerifyResumesAtTheTierThatFailedAndSaysWhatItReused(t *testing.T) {
+	root, marker := resumeFixture(t)
+
+	out, errOut, code := runVerify(t, root, resumeGit{}, "verify", "S-004")
+	if code != 1 || lastLine(out) != "verify: S-004 stopped at lint (exit 4)" {
+		t.Fatalf("first run: exit %d\n%s%s", code, out, errOut)
+	}
+	// the first run began an hour before the clock runVerify gives
+	project := openProject(t, root)
+	first, ok, err := verify.LastReport(project, "S-004")
+	if err != nil || !ok {
+		t.Fatalf("no stored report: %v", err)
+	}
+	first.RanAt = time.Date(2026, 9, 17, 0, 0, 0, 0, time.UTC)
+	if err := verify.SaveReport(project, first); err != nil {
+		t.Fatal(err)
+	}
+
+	// lint fails again: unit is reused, and the stop says so
+	out, errOut, code = runVerify(t, root, resumeGit{}, "verify", "S-004")
+	if code != 1 {
+		t.Fatalf("second run: exit %d\n%s%s", code, out, errOut)
+	}
+	for _, want := range []string{"\npassed check (", "\nreused tier unit (from 2026-09-17T00:00:00Z)\n", "\nfailed tier lint (", "docs/README.md does not lint"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("second run's text lacks %q:\n%s", want, out)
+		}
+	}
+	if got := lastLine(out); got != "verify: S-004 stopped at lint (exit 4) (reused 1 tier from 2026-09-17T00:00:00Z)" {
+		t.Errorf("second run's last line %q:\n%s", got, out)
+	}
+
+	// lint passes: unit is still reused from the first run
+	if err := os.WriteFile(marker, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runVerify(t, root, resumeGit{}, "verify", "S-004")
+	if code != 0 || !strings.Contains(out, "\nreused tier unit (from 2026-09-17T00:00:00Z)\n") || !strings.Contains(out, "\npassed tier lint (") {
+		t.Fatalf("third run: exit %d\n%s%s", code, out, errOut)
+	}
+	if got := lastLine(out); got != "verify: S-004 passed every step (reused 1 tier from 2026-09-17T00:00:00Z)" {
+		t.Errorf("third run's last line %q:\n%s", got, out)
+	}
+
+	// every tier passed: both are reused, and --json carries it
+	out, errOut, code = runVerify(t, root, resumeGit{}, "verify", "S-004")
+	if got := lastLine(out); code != 0 || got != "verify: S-004 passed every step (reused 2 tiers from 2026-09-17T00:00:00Z)" {
+		t.Errorf("fourth run: exit %d, last line %q\n%s%s", code, got, out, errOut)
+	}
+	rep, raw := resumeReport(t, root, 0, "S-004")
+	if want := "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:reused,tier lint:reused"; stepStates(rep) != want {
+		t.Errorf("steps %s, want %s", stepStates(rep), want)
+	}
+	if !strings.Contains(raw, `"state": "reused"`) || !strings.Contains(raw, `"reused_from": "2026-09-17T00:00:00Z"`) || !strings.Contains(raw, `"reused_from": "2026-09-17T01:00:00Z"`) {
+		t.Errorf("--json should carry the reused states and when each tier ran:\n%s", raw)
+	}
+	if rep.BaseCommit != "89abcdef0123" {
+		t.Errorf("base commit %q", rep.BaseCommit)
+	}
+}
+
+// --fresh reaches the story's run: it runs every selected tier where a run
+// without it reuses them.
+func TestVerifyFreshRunsEveryTier(t *testing.T) {
+	root, marker := resumeFixture(t)
+	if err := os.WriteFile(marker, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if rep, _ := resumeReport(t, root, 0, "S-004"); stepStates(rep) != "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:passed,tier lint:passed" {
+		t.Fatalf("first run: steps %s", stepStates(rep))
+	}
+
+	// lint would fail now, but a run without --fresh does not run it
+	if err := os.Remove(marker); err != nil {
+		t.Fatal(err)
+	}
+	if rep, _ := resumeReport(t, root, 0, "S-004"); stepStates(rep) != "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:reused,tier lint:reused" {
+		t.Errorf("without --fresh: steps %s", stepStates(rep))
+	}
+	out, errOut, code := runVerify(t, root, resumeGit{}, "verify", "S-004", "--fresh")
+	if code != 1 || !strings.Contains(out, "\npassed tier unit (") || strings.Contains(out, "reused") {
+		t.Errorf("--fresh: exit %d, want 1 with every tier run\n%s%s", code, out, errOut)
+	}
+	if got := lastLine(out); got != "verify: S-004 stopped at lint (exit 4)" {
+		t.Errorf("--fresh: last line %q:\n%s", got, out)
+	}
+}
