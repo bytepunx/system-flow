@@ -17,7 +17,7 @@ import (
 
 // orchestrateLab is an agentLab whose command is an orchestrator stub, with
 // the project's orchestrator on the lab's launcher and a clock of its own,
-// later than the launcher's by shift. The stub prints stream-orchestrator as
+// later than the launcher's by shift, or pinned to at when at is set. The stub prints stream-orchestrator as
 // its output when there is one, then writes what it was given to
 // orchestrator-<pid>.txt, so that once given has read it, the run's usage is
 // in its log and a stop cannot come before it (I-0090). It then waits while
@@ -28,6 +28,7 @@ type orchestrateLab struct {
 	*agentLab
 	orch  *orchestrator
 	shift time.Duration
+	at    time.Time
 }
 
 func newOrchestrateLab(t *testing.T) *orchestrateLab {
@@ -48,7 +49,12 @@ func newOrchestrateLab(t *testing.T) *orchestrateLab {
 	}
 	lab.cfg.Command = []string{stub, "story={story}"}
 	o := lab.o
-	o.Now = func() time.Time { return time.Now().Add(lab.shift) }
+	o.Now = func() time.Time {
+		if !lab.at.IsZero() {
+			return lab.at
+		}
+		return time.Now().Add(lab.shift)
+	}
 	lab.orch = newOrchestrator(o, Entry{Key: "t", Name: "t", Root: lab.root}, lab.l)
 	return lab
 }
@@ -170,15 +176,21 @@ func TestTheOrchestratorIsStartedAgainWhenItEnds(t *testing.T) {
 	if failed.Outcome != OutcomeFailed || failed.Exit == nil || *failed.Exit != 3 || failed.Why != "ended (exit 3)" {
 		t.Fatalf("second = %+v, want failed with exit 3", failed)
 	}
+	// the looks around the retry take their time from the recorded end, which
+	// is to the second, not from the host's clock, so neither depends on how
+	// long the host took to get there (I-0106)
+	ended, err := time.Parse(time.RFC3339, failed.Ended)
+	if err != nil {
+		t.Fatalf("the failed run's end %q: %v", failed.Ended, err)
+	}
+	lab.at = ended
 	lab.look()
-	// well short of the retry: the lab's clock is the host's plus the shift, and a loaded host
-	// adds seconds of its own between the failure and this look (I-0102)
-	lab.shift = orchestrateRetry - 20*time.Second
+	lab.at = ended.Add(orchestrateRetry - time.Second)
 	lab.look()
 	if r := lab.orchestrator(); r.Session != second.Session {
 		t.Fatalf("started again within a minute of a failure: %+v", r)
 	}
-	lab.shift = orchestrateRetry + time.Second
+	lab.at = ended.Add(orchestrateRetry)
 	lab.look()
 	third := lab.orchestrator()
 	if third.Session == second.Session {
