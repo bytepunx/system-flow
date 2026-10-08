@@ -3,15 +3,18 @@ id: S-0338
 type: story
 nature: feature
 title: A held card says when its holding story's agent was asked about the hold, and a story started on a share names the paths it shares
-status: ready
+status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-08T04:31:41Z
-updated: 2026-10-08T09:44:32Z
+updated: 2026-10-08T10:28:46Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:43Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T10:28:46Z
+    by: agent-S-0338
 tags: [flai, flaiover]
 topics: [dashboard, cli]
 touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, design/system/flai-cli.md]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:24Z
 forecast:
   duration: 40m
-  delivery: 2026-10-08T11:39:00Z
-  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 5, behind S-0232, S-0297, S-0334 and S-0344."
+  delivery: 2026-10-08T11:16:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 5, behind S-0232."
   by: flai
-  at: 2026-10-08T09:44:32Z
+  at: 2026-10-08T10:28:37Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:35:22Z

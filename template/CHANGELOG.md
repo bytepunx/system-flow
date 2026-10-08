@@ -2,6 +2,7 @@
 
 ## 1.0.83 - 2026-10-08
 
+- S-0334 A story held on overlap is asked about by message, and starts when the holding story's agent shares the paths or narrows its claim (patch).
 - S-0334 A story held on overlap is asked about by message, and starts when the holding story's agent shares the paths or narrows its claim (patch, ADR-0134): `work-management.md` says that when a message by `flai` asks about a ready story your story holds on overlap, you answer it before you go on with its paths: narrow your `touches` with `flai touches` if your story will not change them, share them with `flai message share <MS-nnnn> --paths <path> "<split>"`, or `message_share`, saying who changes what, if the two stories can change them apart, so the ready story can start, or reply saying why the hold stands. When `flai serve` starts your story on a share, its prompt names the conversation, the shared paths, and the split: you keep to your side of the split and say so in the conversation when it no longer fits. It needs a flai that has it; an older flai never asks about a hold, has no `flai message share`, and ignores a conversation's `shares`, so the overlap holds as before.
 
 ## 1.0.82 - 2026-10-08
