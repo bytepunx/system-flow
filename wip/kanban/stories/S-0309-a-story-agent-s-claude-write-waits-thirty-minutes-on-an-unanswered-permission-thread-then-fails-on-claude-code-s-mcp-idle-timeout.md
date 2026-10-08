@@ -3,11 +3,14 @@ id: S-0309
 type: story
 nature: improvement
 title: A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-07T06:48:44Z
-updated: 2026-10-08T04:07:34Z
-transitions: []
+updated: 2026-10-08T04:23:11Z
+transitions:
+  - to: ready
+    at: 2026-10-08T04:23:09Z
+    by: orchestrator
 tags: []
 topics: [cli, agents]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, docs/users/flai.md, design/system/flai-cli.md, design/adrs, design/adrs/README.md, design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md, design/issues/summary.md]
@@ -38,16 +41,15 @@ usage:
           cache_write: 106840
           cost: 1.0999
     - kind: orchestrator
-      seconds: 312
+      seconds: 430
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 34
-          output: 568
-          cache_read: 5760268
-          cache_write: 12008
-          cost: 1.4227
-draft: true
+          input: 46
+          output: 764
+          cache_read: 10542864
+          cache_write: 20543
+          cost: 2.6031
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -58,10 +60,13 @@ cost_of_delay:
   at: 2026-10-07T23:28:00Z
 forecast:
   duration: 35m
-  delivery: 2026-10-08T10:49:00Z
-  basis: "Its own forecast of 35m; 21st in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305 and S-0306."
+  delivery: 2026-10-08T05:26:00Z
+  basis: "Its own forecast of 35m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320 and S-0319."
   by: flai
-  at: 2026-10-08T04:07:34Z
+  at: 2026-10-08T04:23:11Z
+finalized:
+  by: orchestrator
+  at: 2026-10-08T04:23:05Z
 ---
 # S-0309 A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout
 

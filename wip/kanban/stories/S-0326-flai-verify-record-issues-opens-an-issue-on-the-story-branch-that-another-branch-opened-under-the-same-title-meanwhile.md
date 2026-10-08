@@ -3,11 +3,14 @@ id: S-0326
 type: story
 nature: remediation
 title: flai verify --record-issues opens an issue on the story branch that another branch opened under the same title meanwhile
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-07T18:59:58Z
-updated: 2026-10-08T04:07:34Z
-transitions: []
+updated: 2026-10-08T04:23:11Z
+transitions:
+  - to: ready
+    at: 2026-10-08T04:21:11Z
+    by: orchestrator
 tags: [cli]
 topics: [cli, git, continuous-improvement]
 touches: [design/adrs, design/adrs/README.md, flai/internal/issues/fold.go, flai/internal/issues/fold_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/internal/taskdone/taskdone.go, flai/cmd/stream_sync_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md, design/issues/summary.md]
@@ -22,16 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 199
+      seconds: 248
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 51
-          output: 858
-          cache_read: 17205385
-          cache_write: 23162
-          cost: 4.2448
-draft: true
+          input: 61
+          output: 1015
+          cache_read: 21144830
+          cache_write: 38019
+          cost: 5.2191
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -42,10 +44,13 @@ cost_of_delay:
   at: 2026-10-08T00:34:49Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T12:20:00Z
-  basis: "Its own forecast of 45m; 28th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0309, S-0312, S-0313, S-0321, S-0322, S-0323 and S-0325."
+  delivery: 2026-10-08T05:44:00Z
+  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0309 and S-0312."
   by: flai
-  at: 2026-10-08T04:07:34Z
+  at: 2026-10-08T04:23:11Z
+finalized:
+  by: orchestrator
+  at: 2026-10-08T04:21:07Z
 ---
 # S-0326 flai verify --record-issues opens an issue on the story branch that another branch opened under the same title meanwhile
 

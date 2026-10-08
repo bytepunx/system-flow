@@ -6,7 +6,7 @@ title: "flai check finds `narrative.state` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-07T18:59:54Z
-updated: 2026-10-08T04:07:34Z
+updated: 2026-10-08T04:23:11Z
 transitions: []
 tags: [flai, template]
 topics: [cli, conventions, template]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-08T00:27:28Z
 forecast:
   duration: 24m
-  delivery: 2026-10-08T11:29:00Z
-  basis: "Its own forecast of 24m; 26th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0309, S-0312, S-0313, S-0321 and S-0322."
+  delivery: 2026-10-08T12:05:00Z
+  basis: "Its own forecast of 24m; 27th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0309, S-0312, S-0326, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0313, S-0321 and S-0322."
   by: flai
-  at: 2026-10-08T04:07:34Z
+  at: 2026-10-08T04:23:11Z
 finalized:
   by: orchestrator
   at: 2026-10-08T00:27:54Z
