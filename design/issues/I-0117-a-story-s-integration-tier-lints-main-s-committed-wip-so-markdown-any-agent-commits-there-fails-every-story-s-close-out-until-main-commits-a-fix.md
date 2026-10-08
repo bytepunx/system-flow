@@ -7,7 +7,7 @@ count: 4
 cost: 18m
 first_reported: 2026-10-08T04:12:50Z
 last_reported: 2026-10-08T05:31:34Z
-updated: 2026-10-08T05:31:34Z
+updated: 2026-10-08T08:08:19Z
 ---
 
 # I-0117 A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
@@ -34,3 +34,5 @@ Story: S-0318.
 After main took the orchestrator.md fix, S-0318's close-out, now on a flai with the `www.` rule, stopped at check on a bare `www.` in TH-0360's title and its mirror in wip/agents/S-0318.md. The installed flai 1.39.3 behind the MCP server wrote that title without complaint. Quoted both by hand in the main checkout.
 
 ## Remediation
+
+Story S-0345 remediates this issue, created from it at 2026-10-08T08:08:19Z.
