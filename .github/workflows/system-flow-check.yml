@@ -26,7 +26,14 @@ jobs:
       - name: Build flai
         run: go build -o /usr/local/bin/flai .
         working-directory: flai
+      # The smoke tier's install test builds releases from the tree with
+      # GoReleaser and serves them on 127.0.0.1, so it needs no token. The
+      # version is the one scripts/install-tools.sh pins.
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: v2.18.1
+          install-only: true
       - name: Smoke tests
         run: scripts/smoke.sh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
