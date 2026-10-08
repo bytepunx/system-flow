@@ -3,11 +3,11 @@ id: I-0085
 title: flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
 class: defect
 status: open
-count: 2
-cost: 5m
+count: 3
+cost: 4m
 first_reported: 2026-10-06T07:08:02Z
-last_reported: 2026-10-06T19:28:59Z
-updated: 2026-10-06T19:28:59Z
+last_reported: 2026-10-08T06:20:59Z
+updated: 2026-10-08T06:20:59Z
 ---
 
 # I-0085 flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
@@ -24,6 +24,10 @@ S-0220's second close-out stopped at vitest on one test, flaiover/src/lib/server
 ### 2026-10-06T19:28:59Z
 Story: S-0295.
 S-0295's close-out stopped at the flaiover step on notify.test.ts:78 (expected null not to be null); it passed alone and the whole flaiover suite passed on the next run
+
+### 2026-10-08T06:20:59Z
+Story: S-0336.
+T-1212's `flai test` on flaiover's repo and the new /api/messages route failed once in `flaiover/src/lib/server/notify.test.ts:78` ("inbox webhook posts an entry that appears after it started…: expected null not to be null"), a file the task did not touch, then passed on three runs straight after.
 
 ## Remediation
 
