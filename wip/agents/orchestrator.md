@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 315.0037
-accrued_seconds: 116555
-tasks_completed: 300
-last_run: 2026-10-08T09:45:21Z
+accrued_cost: 318.7914
+accrued_seconds: 116971
+tasks_completed: 301
+last_run: 2026-10-08T09:52:17Z
 ---
 
 # Orchestrator activity
@@ -2111,6 +2111,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0348, S-0346
 - Seconds: 107
 - Cost: 2.1701 USD, estimated
+
+### 2026-10-08T09:52:17Z
+
+- Summary: Accepted S-0344 under accept_reviews at verified commit e16424dd. flai verify passed at the head, and the verifier matched both criteria: restart and the watch start the running image by ID, with fallbacks tested, and I-0116 is closed. The dry-run had no blockers. Published under judgement (1 pending, 12.50 USD/week) as flai 1.39.15→1.39.16 (flai/v1.39.16), pushed. The ready order is unchanged. The only promote candidate is S-0241, which the operator blocked.
+- Items: S-0344
+- Seconds: 416
+- Cost: 3.7877 USD, estimated
 
 ## Refusals
 

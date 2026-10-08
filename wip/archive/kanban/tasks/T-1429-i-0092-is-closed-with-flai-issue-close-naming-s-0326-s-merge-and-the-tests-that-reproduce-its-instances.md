@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 16
-      cache_read: 163911
-      cache_write: 1265
-      cost: 0.0742
+      input: 3
+      output: 723
+      cache_read: 160096
+      cache_write: 6972
+      cost: 0.0966
 ---
 
 # T-1429 I-0092 is closed with flai issue close, naming S-0326's merge and the tests that reproduce its instances

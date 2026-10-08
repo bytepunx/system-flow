@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 249
-      cache_read: 987805
-      cache_write: 68681
-      cost: 0.4749
+      input: 19
+      output: 4627
+      cache_read: 1024008
+      cache_write: 44592
+      cost: 0.6178
 ---
 
 # T-1428 Tests reproduce I-0092's instances not yet covered: an acceptance whose rebase meets main's bump of the same issue, and a sync whose bump meets main's close of it
