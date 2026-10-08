@@ -860,9 +860,11 @@
 								<span
 									class={row.state === 'passed'
 										? 'text-good'
-										: row.state === 'failed'
-											? 'font-medium text-danger'
-											: 'text-muted'}>{row.label}</span
+										: row.state === 'reused'
+											? 'text-good opacity-70'
+											: row.state === 'failed'
+												? 'font-medium text-danger'
+												: 'text-muted'}>{row.label}</span
 								>
 								<span class="font-medium">{row.name}</span>
 								{#if row.tier}<span class="text-xs text-muted">tier</span>{/if}

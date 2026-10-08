@@ -1,5 +1,7 @@
 // Pure helpers for the review page (S-0041).
 
+import { localTime } from './localtime';
+
 export type Criterion = { text: string; checked: boolean };
 
 /** The checkboxes under "## Acceptance criteria" in a story body. */
@@ -95,8 +97,8 @@ export async function readNdjson(
 	emit(pending + decoder.decode());
 }
 
-/** Where a step of flai verify got to (S-0270). */
-export type VerifyState = 'passed' | 'failed' | 'not-reached';
+/** Where a step of flai verify got to (S-0270); a reused tier passed in an earlier run of the same head (S-0341). */
+export type VerifyState = 'passed' | 'failed' | 'not-reached' | 'reused';
 /** What a failed step found: a test, a check, or a linter's complaint, where it is, and what it says. */
 export type VerifyFinding = { name?: string; path?: string; line?: number; message?: string };
 /** One step of flai verify: one of its own, or a test or lint tier when `tier` is set. */
@@ -111,6 +113,8 @@ export type VerifyStep = {
 	command?: string[];
 	dir?: string;
 	exit_code?: number;
+	/** When the run that ran a reused tier began, in UTC. */
+	reused_from?: string;
 };
 /** A finding of flai check outside the story: it does not fail the story (S-0249). */
 export type VerifyNote = {
@@ -137,7 +141,7 @@ export type VerifyReport = {
 
 /** A finding or a note as a page shows it: where, as path:line and a name, and what it says. */
 export type VerifyLine = { where: string; message: string };
-/** A step as a row: its state in words, its duration, and the findings when it failed. */
+/** A step as a row: its state in words, its duration or a reused tier's origin, and the findings when it failed. */
 export type VerifyRow = {
 	name: string;
 	tier: boolean;
@@ -163,7 +167,8 @@ export type VerifyView = {
 const STATE_LABEL: Record<VerifyState, string> = {
 	passed: 'passed',
 	failed: 'failed',
-	'not-reached': 'not reached'
+	'not-reached': 'not reached',
+	reused: 'reused'
 };
 
 /** A duration in milliseconds as flai writes one when the report carries none: 340ms, 5.1s. */
@@ -177,10 +182,18 @@ function where(path?: string, line?: number, name?: string): string {
 	return [loc, name ?? ''].filter((s) => s).join(' ');
 }
 
+/** A step's duration as its row shows it: none when not reached, and for a reused tier the run it comes from. */
+function rowDuration(s: VerifyStep): string {
+	if (s.state === 'not-reached') return '';
+	if (s.state === 'reused' && s.reused_from) return `from ${localTime(s.reused_from)}`;
+	return s.duration ?? took(s.duration_ms);
+}
+
 /**
  * A report as rows for the review page (S-0270): a row per step in the order flai ran them, with
- * the findings under the step that failed only; a step not reached has no duration. The notes from
- * outside the story are apart, since they do not fail it.
+ * the findings under the step that failed only; a step not reached has no duration, and a reused
+ * tier shows, in its place, when the run it comes from began (S-0341). The notes from outside the
+ * story are apart, since they do not fail it.
  */
 export function verifyView(report: VerifyReport): VerifyView {
 	const rows = report.steps.map((s): VerifyRow => ({
@@ -188,7 +201,7 @@ export function verifyView(report: VerifyReport): VerifyView {
 		tier: s.tier === true,
 		state: s.state,
 		label: STATE_LABEL[s.state] ?? s.state,
-		duration: s.state === 'not-reached' ? '' : (s.duration ?? took(s.duration_ms)),
+		duration: rowDuration(s),
 		findings:
 			s.state === 'failed'
 				? (s.findings ?? []).map((f) => ({

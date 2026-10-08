@@ -213,4 +213,43 @@ describe('verifyView (S-0270)', () => {
 		expect(v.rows[0].findings).toEqual([]);
 		expect(v.notes).toEqual([]);
 	});
+
+	it('shows a reused tier with the time of the run it comes from in place of its duration, and no findings (S-0341)', () => {
+		const v = verifyView({
+			...failing,
+			passed: false,
+			steps: [
+				{ name: 'rebase', state: 'passed', duration_ms: 3, duration: '3ms' },
+				{
+					name: 'flai',
+					tier: true,
+					state: 'reused',
+					duration_ms: 61000,
+					duration: '1m1s',
+					reused_from: '2026-10-08T11:41:07Z',
+					findings: [{ message: 'from the earlier run' }],
+					omitted: 2,
+					command: ['go', 'test', './...'],
+					dir: 'flai',
+					exit_code: 0
+				},
+				{ name: 'flaiover', tier: true, state: 'failed', duration_ms: 40000, duration: '40s' }
+			]
+		});
+		expect(v.rows.map((r) => [r.name, r.tier, r.state, r.label, r.duration])).toEqual([
+			['rebase', false, 'passed', 'passed', '3ms'],
+			['flai', true, 'reused', 'reused', 'from 2026-10-08 07:41 EDT'],
+			['flaiover', true, 'failed', 'failed', '40s']
+		]);
+		expect(v.rows[1].findings).toEqual([]);
+		expect(v.rows[1].omitted).toBe(0);
+	});
+
+	it('falls back to a reused tier’s duration when it does not say where it comes from', () => {
+		const v = verifyView({
+			...failing,
+			steps: [{ name: 'flai', tier: true, state: 'reused', duration_ms: 1500 }]
+		});
+		expect(v.rows[0]).toMatchObject({ label: 'reused', duration: '1.5s', findings: [] });
+	});
 });
