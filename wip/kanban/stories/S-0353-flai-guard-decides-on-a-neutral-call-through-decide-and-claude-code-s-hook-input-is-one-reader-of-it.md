@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:46:31Z
-updated: 2026-10-08T08:59:49Z
+updated: 2026-10-08T09:00:21Z
 transitions: []
 tags: [cli]
 topics: [agents]
@@ -19,9 +19,9 @@ agent:
   config:
     effort: high
 cost_of_delay:
-  value: 57.87
+  value: 55.31
   by: planner-E-0019
-  at: 2026-10-08T08:56:18Z
+  at: 2026-10-08T09:00:21Z
 forecast:
   duration: 50m
   delivery: 2026-10-08T21:51:00Z

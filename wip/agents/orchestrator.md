@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 279.7175
-accrued_seconds: 113838
-tasks_completed: 290
-last_run: 2026-10-08T09:00:03Z
+accrued_cost: 280.2098
+accrued_seconds: 113853
+tasks_completed: 291
+last_run: 2026-10-08T09:00:18Z
 ---
 
 # Orchestrator activity
@@ -2041,6 +2041,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0340, S-0346
 - Seconds: 95
 - Cost: 2.0028 USD, estimated
+
+### 2026-10-08T09:00:18Z
+
+- Summary: The operator moved S-0321 to review. Its stored verify is at 3a1c0fc2, not the head 12771d32, and the branch is 10 commits behind main, including S-0340's code. Both are blockers under ADR-0093. I left it in review and asked on TH-0384 for a sync and a fresh verify.
+- Items: S-0321
+- Seconds: 15
+- Cost: 0.4923 USD, estimated
 
 ## Refusals
 

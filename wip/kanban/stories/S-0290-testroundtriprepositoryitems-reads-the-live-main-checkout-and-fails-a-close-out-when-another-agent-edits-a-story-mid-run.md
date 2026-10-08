@@ -3,14 +3,17 @@ id: S-0290
 type: story
 nature: remediation
 title: TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T09:56:52Z
-updated: 2026-10-08T08:59:49Z
+updated: 2026-10-08T09:00:23Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:35Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T09:00:23Z
+    by: agent-S-0290
 tags: [flai, tests]
 touches: [flai/internal/workitem/workitem_test.go, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/summary.md]
 agent:
