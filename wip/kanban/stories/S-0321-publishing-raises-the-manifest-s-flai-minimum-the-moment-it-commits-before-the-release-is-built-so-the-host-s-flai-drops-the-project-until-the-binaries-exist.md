@@ -6,7 +6,7 @@ title: Publishing raises the manifest's flai minimum the moment it commits, befo
 status: ready
 owner: alex
 created: 2026-10-07T18:59:52Z
-updated: 2026-10-08T05:54:06Z
+updated: 2026-10-08T06:12:43Z
 transitions:
   - to: ready
     at: 2026-10-08T05:02:36Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T00:24:08Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T07:49:00Z
-  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0232, S-0309, S-0319, S-0323, S-0336, S-0326 and S-0287."
+  delivery: 2026-10-08T07:44:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0323, S-0336, S-0326 and S-0287."
   by: flai
-  at: 2026-10-08T05:54:06Z
+  at: 2026-10-08T06:12:43Z
 finalized:
   by: orchestrator
   at: 2026-10-08T00:24:59Z

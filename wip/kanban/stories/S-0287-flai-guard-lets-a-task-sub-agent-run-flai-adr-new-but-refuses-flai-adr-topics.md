@@ -6,7 +6,7 @@ title: flai guard lets a task sub-agent run flai adr new but refuses flai adr to
 status: ready
 owner: alex
 created: 2026-10-06T09:56:50Z
-updated: 2026-10-08T05:53:30Z
+updated: 2026-10-08T06:12:43Z
 transitions:
   - to: ready
     at: 2026-10-08T04:24:25Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-07T23:18:54Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T07:18:00Z
-  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0309, S-0319, S-0336 and S-0326."
+  delivery: 2026-10-08T07:26:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0323, S-0336 and S-0326."
   by: flai
-  at: 2026-10-08T05:53:30Z
+  at: 2026-10-08T06:12:43Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:24:21Z

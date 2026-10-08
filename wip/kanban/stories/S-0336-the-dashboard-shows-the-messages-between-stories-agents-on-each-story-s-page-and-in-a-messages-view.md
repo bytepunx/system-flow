@@ -3,15 +3,18 @@ id: S-0336
 type: story
 nature: feature
 title: The dashboard shows the messages between stories' agents on each story's page and in a Messages view
-status: ready
+status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:22Z
-updated: 2026-10-08T05:54:06Z
+updated: 2026-10-08T06:12:50Z
 transitions:
   - to: ready
     at: 2026-10-08T04:35:26Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T06:12:50Z
+    by: agent-S-0336
 tags: [flai, flaiover]
 topics: [dashboard, cli]
 touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/routes/api/messages/+server.ts, flaiover/src/routes/api/messages/messages.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, flaiover/src/routes/messages/+page.svelte, flaiover/src/routes/messages/messages.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:21Z
 forecast:
   duration: 40m
-  delivery: 2026-10-08T07:06:00Z
-  basis: "Its own forecast of 40m; 2nd in the pull order with an in-progress limit of 3, behind S-0232, S-0309, S-0319 and S-0323."
+  delivery: 2026-10-08T07:00:00Z
+  basis: "Its own forecast of 40m; 1st in the pull order with an in-progress limit of 3, behind S-0232 and S-0323."
   by: flai
-  at: 2026-10-08T05:54:06Z
+  at: 2026-10-08T06:12:43Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:35:22Z
