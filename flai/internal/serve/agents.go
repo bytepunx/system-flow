@@ -501,6 +501,8 @@ const agentStarted = "its agent started"
 // on a conversation after the run started and has had no reply: a reply that
 // came before the end was judged, which would otherwise leave the agent
 // waiting on what has come, so that it is started again at once to read it.
+// So, too, when the question it wrote on a thread of the story after the run
+// started was answered before the end was judged (I-0095).
 func judgeRun(root string, run *AgentRun, exit *int) {
 	run.Outcome, run.Why, run.Thread, run.Conversations, run.WaitsOn = OutcomeFailed, "", "", nil, nil
 	code := "an exit code nobody saw"
@@ -523,11 +525,18 @@ func judgeRun(root string, run *AgentRun, exit *int) {
 		return
 	}
 	th := asking(repo, run.Story, run.Agent)
+	var since *threads.Thread
+	if th == nil {
+		since = askedAnswered(repo, run)
+	}
 	waits, unread := awaitingOther(repo, run.Story), unanswered(repo, run.Story, run.Started)
-	if th != nil || len(waits) > 0 || len(unread) > 0 {
-		run.Outcome, run.Why = OutcomeAsked, waitWhy(th, waits, unread, run.Story)
+	if th != nil || since != nil || len(waits) > 0 || len(unread) > 0 {
+		run.Outcome, run.Why = OutcomeAsked, waitWhy(th, since, waits, unread, run.Story)
 		if th != nil {
 			run.Thread = th.ID
+		}
+		if since != nil {
+			run.Thread = since.ID
 		}
 		run.Conversations, run.WaitsOn = conversationIDs(slices.Concat(waits, unread)), others(waits, run.Story)
 		return
@@ -576,9 +585,10 @@ func owesReply(c *messages.Conversation, story string) bool {
 
 // waitWhy says what a story's agent waits for: an answer to th, its question
 // to the operator, when there is one; the reply of the other story's agent on
-// each of waits; and, for a run that has ended, a message on each of unread
+// each of waits; and, for a run that has ended, the answer to its question on
+// since that came before the end was judged and a message on each of unread
 // that it left unanswered.
-func waitWhy(th *threads.Thread, waits, unread []*messages.Conversation, story string) string {
+func waitWhy(th, since *threads.Thread, waits, unread []*messages.Conversation, story string) string {
 	var on, why []string
 	if th != nil {
 		on = append(on, "an answer to "+th.ID+": "+th.Title)
@@ -588,6 +598,9 @@ func waitWhy(th *threads.Thread, waits, unread []*messages.Conversation, story s
 	}
 	if len(on) > 0 {
 		why = append(why, "waiting for "+strings.Join(on, "; and for "))
+	}
+	if since != nil {
+		why = append(why, "ended asking on "+since.ID+", answered before the end was judged: "+since.Title)
 	}
 	for _, c := range unread {
 		why = append(why, "ended with a message from "+c.Other(story)+"'s agent on "+c.ID+" unanswered: "+c.Title)
@@ -1328,7 +1341,7 @@ func runActivity(repo *workitem.Repo, st AgentState) map[string]StoryActivity {
 			a.State = ActivityWorking
 			th, waits := asked[id], awaitingOther(repo, id)
 			if th != nil || len(waits) > 0 {
-				a.State, a.Why = ActivityWaiting, waitWhy(th, waits, nil, id)
+				a.State, a.Why = ActivityWaiting, waitWhy(th, nil, waits, nil, id)
 				if th != nil {
 					a.Thread = th.ID
 				}
@@ -1424,6 +1437,36 @@ func awaitsAnswer(th *threads.Thread, agent string) bool {
 		return true
 	}
 	return th.PendingRecommendation() != nil && th.Opener() == agent
+}
+
+// askedAnswered is the thread on run's story on which its agent wrote after
+// the run started and whose question has an answer now, as threadAnswered
+// reads one, or nil: an answer that came before the end was judged (I-0095).
+// An entry from before the second the run started, or in it, is no such
+// question: it can be the last run's, which was started again for its answer.
+func askedAnswered(repo *workitem.Repo, run *AgentRun) *threads.Thread {
+	started, err := time.Parse(time.RFC3339, run.Started)
+	if err != nil {
+		return nil
+	}
+	all, err := threads.List(repo)
+	if err != nil {
+		return nil
+	}
+	wrote := func(e threads.Entry) bool {
+		at, err := time.Parse(time.RFC3339, e.At)
+		return e.Author == run.Agent && err == nil && at.After(started)
+	}
+	for _, th := range all {
+		e := th.Entries()
+		if len(e) == 0 || e[len(e)-1].Author == run.Agent || th.PendingRecommendation() != nil {
+			continue
+		}
+		if slices.ContainsFunc(e, wrote) && threads.StoryOf(repo, th) == run.Story {
+			return th
+		}
+	}
+	return nil
 }
 
 // answered is what answers a run that ended asking, or "" while nothing does:

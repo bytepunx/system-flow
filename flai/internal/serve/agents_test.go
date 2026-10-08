@@ -1084,6 +1084,114 @@ func TestAReplyBeforeTheEndIsJudgedStartsTheAgentAgain(t *testing.T) {
 	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
 }
 
+// S-0317, I-0095: an answer to the question an agent ended waiting on that
+// comes before the end of its run is judged leaves no question open: the run
+// ended asking on that thread, which answers it at once, and the next look
+// starts it again in its session. A question asked before the run started
+// is no such question, and the run started again for its answer, writing on
+// it no more, ends failed rather than asking on it once more.
+func TestAnAnswerBeforeTheEndIsJudgedStartsTheAgentAgain(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	id := lab.inProgress("Asks")
+	agent := "builder-" + id
+	started := time.Now().UTC().Add(-time.Minute)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: id, Author: agent, Text: "Eight or nine?", Now: started.Add(10 * time.Second)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ended := time.Now().UTC()
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", ended); err != nil {
+		t.Fatal(err)
+	}
+	later := AgentRun{Story: id, Agent: agent, Started: ended.Add(time.Minute).Format(time.RFC3339)}
+	if judgeRun(lab.root, &later, new(int)); later.Outcome != OutcomeFailed || later.Thread != "" {
+		t.Errorf("a run started after the question: %+v", later)
+	}
+
+	run := AgentRun{Story: id, Agent: agent, Started: started.Format(time.RFC3339), Ended: ended.Format(time.RFC3339), Session: "earlier"}
+	judgeRun(lab.root, &run, new(int))
+	if run.Outcome != OutcomeAsked || run.Thread != th.ID || len(run.Conversations) != 0 ||
+		run.Why != "ended asking on "+th.ID+", answered before the end was judged: "+th.Title {
+		t.Fatalf("judged: %+v", run)
+	}
+	if got := answered(lab.repo, &run); got != th.ID {
+		t.Errorf("answered at once by %q", got)
+	}
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.put(&run) })
+	if a := Activity(lab.root, lab.state())[id]; a.State != ActivityWaiting || a.Thread != th.ID {
+		t.Errorf("activity: %+v", a)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again", func() bool { r := lab.run(id); return r.Answered == th.ID })
+	if again := lab.run(id); again.Agent != agent || again.Session != "earlier" {
+		t.Errorf("the same agent, in its session: %+v", again)
+	}
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	if r := lab.run(id); r.Outcome != OutcomeFailed || r.Thread != "" {
+		t.Errorf("asked again on the answer it was started for: %+v", r)
+	}
+}
+
+// S-0317, I-0095: which thread on its story answers the question a run's
+// agent wrote after the second the run started.
+func TestAskedAnswered(t *testing.T) {
+	lab := newAgentLab(t)
+	id, other := lab.inProgress("Asks"), lab.inProgress("Other")
+	agent := "builder-" + id
+	started := time.Now().UTC().Add(-time.Hour).Truncate(time.Second)
+	run := AgentRun{Story: id, Agent: agent, Started: started.Format(time.RFC3339)}
+	ask := func(on string, at time.Time) *threads.Thread {
+		t.Helper()
+		th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: on, Author: agent, Text: "Eight or nine?", Now: at})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return th
+	}
+	check := func(what string, want *threads.Thread) {
+		t.Helper()
+		got := askedAnswered(lab.repo, &run)
+		if want == nil && got != nil || want != nil && (got == nil || got.ID != want.ID) {
+			t.Errorf("%s: answered by %+v, want %+v", what, got, want)
+		}
+	}
+	during, then := started.Add(time.Second), started.Add(time.Minute)
+
+	// in the second the run started, the last run's question, maybe
+	before := ask(id, started)
+	if _, err := threads.Reply(lab.repo, before.ID, "alex", "Nine.", then); err != nil {
+		t.Fatal(err)
+	}
+	elsewhere := ask(other, during)
+	if _, err := threads.Reply(lab.repo, elsewhere.ID, "alex", "Nine.", then); err != nil {
+		t.Fatal(err)
+	}
+	unanswered := ask(id, during)
+	recommended := ask(id, during)
+	if _, err := threads.ReplyWith(lab.repo, recommended.ID, "planner", "Nine.", then, threads.Marks{Recommendation: true}); err != nil {
+		t.Fatal(err)
+	}
+	selfResolved := ask(id, during)
+	if _, err := threads.Resolve(lab.repo, selfResolved.ID, agent, "found it", then); err != nil {
+		t.Fatal(err)
+	}
+	check("asked as the run started, on another story, unanswered, recommended, or resolved by itself", nil)
+
+	if _, err := threads.Confirm(lab.repo, recommended.ID, "alex", then); err != nil {
+		t.Fatal(err)
+	}
+	check("a recommendation confirmed", recommended)
+	if _, err := threads.Resolve(lab.repo, recommended.ID, agent, "done", then); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := threads.Resolve(lab.repo, unanswered.ID, "alex", "use nine", then); err != nil {
+		t.Fatal(err)
+	}
+	check("resolved by the operator", unanswered)
+}
+
 // S-0335: a message written in the second a run ended, after it was judged,
 // is new to it; one its story answered in that second, or one from before,
 // is not.
