@@ -5,6 +5,11 @@
 # derives the version with `trimprefix .Tag "flai/v"` instead of `.Version`,
 # and the workflow runs with --skip=validate so the non-semver tag is
 # accepted. Snapshot builds (no tag) get 0.0.0-<short commit>.
+#
+# A local snapshot (scripts/flai-snapshot.sh --local X.Y.Z, for the smoke
+# test's local release server) sets FLAI_LOCAL_VERSION=X.Y.Z: the snapshot is
+# versioned X.Y.Z and its archive named as a release tagged flai/vX.Y.Z is, so
+# install.sh and flai self-upgrade accept it. The script narrows the targets.
 version: 2
 project_name: flai
 
@@ -26,14 +31,14 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Version={{ if .IsSnapshot }}0.0.0-{{ .ShortCommit }}{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}
+      - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Version={{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}
       - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Commit={{ .ShortCommit }}
       - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Date={{ .Date }}
 
 archives:
   - id: flai
     formats: [tar.gz]
-    name_template: '{{ .ProjectName }}_{{ if .IsSnapshot }}snapshot{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}_{{ .Os }}_{{ .Arch }}'
+    name_template: '{{ .ProjectName }}_{{ if .IsSnapshot }}{{ with index .Env "FLAI_LOCAL_VERSION" }}{{ . }}{{ else }}snapshot{{ end }}{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}_{{ .Os }}_{{ .Arch }}'
     format_overrides:
       - goos: windows
         formats: [zip]
@@ -48,7 +53,7 @@ checksum:
   name_template: checksums.txt
 
 snapshot:
-  version_template: "0.0.0-{{ .ShortCommit }}"
+  version_template: '{{ with index .Env "FLAI_LOCAL_VERSION" }}{{ . }}{{ else }}0.0.0-{{ .ShortCommit }}{{ end }}'
 
 git:
   ignore_tags:
