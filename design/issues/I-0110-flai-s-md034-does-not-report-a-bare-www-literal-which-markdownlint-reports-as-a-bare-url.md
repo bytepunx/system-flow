@@ -23,7 +23,7 @@ Found while making MD034 take bare email addresses (S-0265): flai/internal/mdlin
 
 ### 2026-10-08T00:36:53Z
 Story: S-0316.
-S-0316's close-out stopped at smoke: markdownlint-cli2 reported MD034 at wip/kanban/stories/S-0324-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md:66, the task list line "T-1317 flai's MD034 reports a bare www. literal", which reached main past flai's own lint. The main checkout already holds the fix uncommitted (the literal in a code span); the close-out runs again once it is committed. The run cost about ten minutes.
+S-0316's close-out stopped at smoke: markdownlint-cli2 reported MD034 at wip/kanban/stories/S-0324-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md:66, the task list line `T-1317 flai's MD034 reports a bare www. literal`, which reached main past flai's own lint. The main checkout already holds the fix uncommitted (the literal in a code span); the close-out runs again once it is committed. The run cost about ten minutes.
 
 ## Remediation
 
