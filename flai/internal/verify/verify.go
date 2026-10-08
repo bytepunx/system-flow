@@ -54,6 +54,9 @@ type Tier struct {
 	// AllCommand is the argv run when every tier runs; without it Command
 	// runs with {packages} as ./... and {files} as the directory itself.
 	AllCommand []string `json:"all_command,omitempty"`
+	// Covers names the tiers this one runs everything of: when it is
+	// selected with them, they are skipped rather than run (S-0342).
+	Covers []string `json:"covers,omitempty"`
 }
 
 // Finding is one failure a tier's output names.
@@ -74,11 +77,13 @@ type State string
 
 // The states of a tier in a run. Reused is a story's tier that passed in its
 // last run at the same head, base, and tiers, and was not run again (S-0341).
+// Skipped is a tier that a tier selected with it covers (S-0342).
 const (
 	Passed     State = "passed"
 	Failed     State = "failed"
 	NotReached State = "not-reached"
 	Reused     State = "reused"
+	Skipped    State = "skipped"
 )
 
 // TierResult is what one tier did in a run.
@@ -95,6 +100,8 @@ type TierResult struct {
 	Findings   []Finding `json:"findings,omitempty"`
 	// Omitted counts the findings past the run's cap.
 	Omitted int `json:"omitted,omitempty"`
+	// CoveredBy names the tier that covers a skipped one.
+	CoveredBy string `json:"covered_by,omitempty"`
 }
 
 // Result is the answer to a run: pass, or the tier that failed and why.

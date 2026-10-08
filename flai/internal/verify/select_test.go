@@ -190,6 +190,73 @@ func TestSelectStoryAddsTheAllOnlyTiersThePathsSelectOrThatHaveNone(t *testing.T
 	}
 }
 
+// coverage is each selected tier's name, with " covered by " and the tier
+// that covers it when one does.
+func coverage(selected []Selected) []string {
+	var out []string
+	for _, s := range selected {
+		if s.CoveredBy != "" {
+			out = append(out, s.Tier.Name+" covered by "+s.CoveredBy)
+		} else {
+			out = append(out, s.Tier.Name)
+		}
+	}
+	return out
+}
+
+// S-0342: a tier selected with one that covers it is marked covered by it,
+// with all and in a story's close-out; selected alone, as Select for paths
+// leaves it without the all_only tier, it runs.
+func TestSelectMarksATierCoveredByASelectedTier(t *testing.T) {
+	tiers := []Tier{
+		{Name: "go-test", Dir: "flai", Paths: []string{"flai", "!flai/**/*.md"}, Command: []string{"go", "test", "-short", "{packages}"}},
+		{Name: "integration", AllOnly: true, Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"go", "test", "{packages}"}, Covers: []string{" go-test "}},
+	}
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
+	for _, tc := range []struct {
+		name string
+		got  []Selected
+		want []string
+	}{
+		{"Select with all", Select(fsys, tiers, nil, true), []string{"go-test covered by integration", "integration"}},
+		{"SelectStory with the covering tier", SelectStory(fsys, tiers, []string{"flai/main.go"}), []string{"go-test covered by integration", "integration"}},
+		{"SelectStory without the covering tier", SelectStory(fsys, tiers, []string{"flai/go.mod"}), []string{"go-test"}},
+		{"Select for paths, which leaves the all_only tier out", Select(fsys, tiers, []string{"flai/main.go"}, false), []string{"go-test"}},
+	} {
+		if got := coverage(tc.got); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: selected %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// S-0342: covers chain, so a covered tier names the nearest covering tier
+// that runs, through tiers that were not selected too; a tier only an
+// unselected tier covers runs.
+func TestSelectResolvesAChainOfCoversToTheTierThatRuns(t *testing.T) {
+	tiers := []Tier{
+		{Name: "a", Paths: []string{"x/**"}, Command: []string{"a"}, Covers: []string{"b"}},
+		{Name: "b", Paths: []string{"y/**"}, Command: []string{"b"}, Covers: []string{"c"}},
+		{Name: "c", Paths: []string{"**"}, Command: []string{"c"}},
+		{Name: "d", Paths: []string{"w/**"}, Command: []string{"d"}, Covers: []string{"c"}},
+	}
+	for _, tc := range []struct {
+		name  string
+		paths []string
+		all   bool
+		want  []string
+	}{
+		{name: "all three of a chain resolve to its head", paths: []string{"x/1", "y/1"}, want: []string{"a", "b covered by a", "c covered by a"}},
+		{name: "a chain passes through a tier not selected", paths: []string{"x/1"}, want: []string{"a", "c covered by a"}},
+		{name: "a covering tier that runs is nearer than one that is covered", all: true, want: []string{"a", "b covered by a", "c covered by d", "d"}},
+		{name: "a tier only an unselected tier covers runs", paths: []string{"y/1"}, want: []string{"b", "c covered by b"}},
+		{name: "alone a covered tier runs", paths: []string{"z/1"}, want: []string{"c"}},
+	} {
+		if got := coverage(Select(fstest.MapFS{}, tiers, tc.paths, tc.all)); !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: selected %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
 // I-0105: this repository's manifest has flai test check a changed flaiover
 // file's format and lint with flaiover-lint, outside --all and before vitest,
 // rather than leaving prettier and eslint to the close-out's flaiover tier.

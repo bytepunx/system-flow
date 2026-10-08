@@ -33,8 +33,11 @@ type Proc interface {
 // stops at the first that fails: one that exits non-zero, cannot start, or,
 // for gofmt-list, lists a file. The tiers after it are not reached. The
 // failing tier's output is parsed into findings, capped across the run at
-// opts.Max. With nothing selected the run passes. When ctx ends the tier
-// running is stopped and failed, and Run returns ctx's error with the result.
+// opts.Max. A tier that Select marked covered is not run: it is skipped,
+// naming the tier that covers it, in its place in the list, whether or not a
+// tier before it failed, and never fails the run. With nothing selected the
+// run passes. When ctx ends the tier running is stopped and failed, and Run
+// returns ctx's error with the result.
 func Run(ctx context.Context, root string, selected []Selected, opts RunOptions) (Result, error) {
 	if opts.FS == nil {
 		opts.FS = os.DirFS(root)
@@ -52,7 +55,10 @@ func Run(ctx context.Context, root string, selected []Selected, opts RunOptions)
 	res := Result{Passed: true, Tiers: make([]TierResult, 0, len(selected))}
 	for _, s := range selected {
 		tr := TierResult{Name: s.Tier.Name, Command: s.Argv, Dir: s.Tier.Dir, State: NotReached}
-		if !res.Passed {
+		if s.CoveredBy != "" {
+			tr.State, tr.CoveredBy = Skipped, s.CoveredBy
+		}
+		if tr.State == Skipped || !res.Passed {
 			res.Tiers = append(res.Tiers, tr)
 			continue
 		}

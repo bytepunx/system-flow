@@ -74,6 +74,69 @@ func TestRunStopsAtTheFirstFailingTier(t *testing.T) {
 	}
 }
 
+// S-0342: a covered tier is skipped in its place, naming the tier that
+// covers it, without its command started, before and after a failure, and
+// never fails the run.
+func TestRunSkipsACoveredTierWithoutStartingIt(t *testing.T) {
+	covered := sel("short", "flai", "short")
+	covered.CoveredBy = "full"
+	proc := &fakeProc{steps: map[string]step{}}
+	res, err := Run(context.Background(), "/repo", []Selected{sel("vet", "", "vet"), covered, sel("full", "flai", "full")}, RunOptions{Proc: proc, Now: proc.clock, FS: fstest.MapFS{}})
+	if err != nil || !res.Passed || !reflect.DeepEqual(proc.ran, []string{"vet", "full"}) {
+		t.Fatalf("run %+v, %v, ran %q", res, err, proc.ran)
+	}
+	zero := 0
+	want := []TierResult{
+		{Name: "vet", Command: []string{"vet"}, State: Passed, ExitCode: &zero, Duration: "0s"},
+		{Name: "short", Command: []string{"short"}, Dir: "flai", State: Skipped, CoveredBy: "full"},
+		{Name: "full", Command: []string{"full"}, Dir: "flai", State: Passed, ExitCode: &zero, Duration: "0s"},
+	}
+	if !reflect.DeepEqual(res.Tiers, want) {
+		t.Errorf("tiers\n%+v\nwant\n%+v", res.Tiers, want)
+	}
+
+	proc = &fakeProc{steps: map[string]step{"vet": {exit: 1}}}
+	res, _ = Run(context.Background(), "/repo", []Selected{sel("vet", "", "vet"), covered, sel("full", "flai", "full")}, RunOptions{Proc: proc, FS: fstest.MapFS{}})
+	var states []State
+	for _, tr := range res.Tiers {
+		states = append(states, tr.State)
+	}
+	if res.Passed || !reflect.DeepEqual(states, []State{Failed, Skipped, NotReached}) || res.Tiers[1].CoveredBy != "full" {
+		t.Errorf("after a failure: %+v", res)
+	}
+}
+
+// S-0342: with integration covering go-test, flai test --all and a story's
+// close-out for a Go file report go-test skipped and run only integration;
+// for paths alone go-test runs.
+func TestIntegrationCoveringGoTestSkipsIt(t *testing.T) {
+	tiers := []Tier{
+		{Name: "go-test", Dir: "flai", Paths: []string{"flai"}, Command: []string{"go-short", "{packages}"}},
+		{Name: "integration", AllOnly: true, Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"go-full", "{packages}"}, Covers: []string{"go-test"}},
+	}
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
+	for _, tc := range []struct {
+		name     string
+		selected []Selected
+		ran      []string
+		skipped  bool
+	}{
+		{"all", Select(fsys, tiers, nil, true), []string{"go-full ./..."}, true},
+		{"a story's close-out", SelectStory(fsys, tiers, []string{"flai/main.go"}), []string{"go-full ./..."}, true},
+		{"paths alone", Select(fsys, tiers, []string{"flai/main.go"}, false), []string{"go-short ."}, false},
+	} {
+		proc := &fakeProc{steps: map[string]step{}}
+		res, err := Run(context.Background(), "/repo", tc.selected, RunOptions{Proc: proc, FS: fsys})
+		if err != nil || !res.Passed || !reflect.DeepEqual(proc.ran, tc.ran) {
+			t.Errorf("%s: ran %q, want %q: %+v, %v", tc.name, proc.ran, tc.ran, res, err)
+			continue
+		}
+		if got := res.Tiers[0]; got.Name != "go-test" || (got.State == Skipped) != tc.skipped || tc.skipped && got.CoveredBy != "integration" {
+			t.Errorf("%s: go-test %+v", tc.name, got)
+		}
+	}
+}
+
 func TestRunPassesWhenEveryTierDoesOrNoneIsSelected(t *testing.T) {
 	proc := &fakeProc{steps: map[string]step{}}
 	res, err := Run(context.Background(), "/repo", []Selected{sel("a", "", "a"), sel("b", "", "b")}, RunOptions{Proc: proc, FS: fstest.MapFS{}})

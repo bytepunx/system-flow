@@ -19,6 +19,9 @@ const (
 type Selected struct {
 	Tier Tier
 	Argv []string
+	// CoveredBy names the selected tier that covers this one, which Run
+	// skips rather than runs; "" when it runs.
+	CoveredBy string
 }
 
 // Select chooses the tiers, in list order, that the root-relative paths
@@ -27,7 +30,13 @@ type Selected struct {
 // and none of its ! patterns does, and is left out when a placeholder in its
 // command comes to nothing, as {packages} does for files no Go package
 // holds. fsys is the checkout, read for the directories that hold .go files.
+// A selected tier that another selected tier covers is marked CoveredBy.
 func Select(fsys fs.FS, tiers []Tier, paths []string, all bool) []Selected {
+	return cover(tiers, selectTiers(fsys, tiers, paths, all))
+}
+
+// selectTiers is Select before the covered tiers are marked.
+func selectTiers(fsys fs.FS, tiers []Tier, paths []string, all bool) []Selected {
 	var out []Selected
 	for _, t := range tiers {
 		if all {
@@ -47,8 +56,14 @@ func Select(fsys fs.FS, tiers []Tier, paths []string, all bool) []Selected {
 // SelectStory chooses the tiers, in list order, that a story's close-out
 // runs for the paths its branch changed: those Select chooses without all,
 // and the AllOnly tiers that the paths select or that have no Paths, which
-// run as they do with all. Verify runs them.
+// run as they do with all, each tier another of them covers marked as Select
+// marks it. Verify runs them.
 func SelectStory(fsys fs.FS, tiers []Tier, paths []string) []Selected {
+	return cover(tiers, selectStoryTiers(fsys, tiers, paths))
+}
+
+// selectStoryTiers is SelectStory before the covered tiers are marked.
+func selectStoryTiers(fsys fs.FS, tiers []Tier, paths []string) []Selected {
 	var out []Selected
 	for _, t := range tiers {
 		if !t.AllOnly {
@@ -62,6 +77,74 @@ func SelectStory(fsys fs.FS, tiers []Tier, paths []string) []Selected {
 		}
 	}
 	return out
+}
+
+// cover marks each selected tier that another selected tier covers, by
+// naming it in Covers or through a chain of tiers that name the next, as
+// covered by the nearest such tier that is not covered itself, so that it
+// names the tier that runs in its place: nearest in links of the chain, then
+// first in list order. A chain may pass through tiers that were not
+// selected, as tiers holds them all; a tier that only unselected tiers cover
+// is left to run. Names are matched trimmed, each the first tier of it.
+func cover(tiers []Tier, selected []Selected) []Selected {
+	first := map[string]int{}
+	for i, t := range tiers {
+		name := strings.TrimSpace(t.Name)
+		if _, ok := first[name]; !ok {
+			first[name] = i
+		}
+	}
+	// coverers[j] are the tiers that name tier j in Covers, in list order
+	coverers := make([][]int, len(tiers))
+	for i, t := range tiers {
+		for _, c := range t.Covers {
+			if j, ok := first[strings.TrimSpace(c)]; ok && j != i {
+				coverers[j] = append(coverers[j], i)
+			}
+		}
+	}
+	at := make([]int, len(selected))
+	chosen := map[int]bool{}
+	for n, s := range selected {
+		at[n] = -1
+		if i, ok := first[strings.TrimSpace(s.Tier.Name)]; ok {
+			at[n], chosen[i] = i, true
+		}
+	}
+	// above[n] are the tiers that cover selected[n], directly or through a
+	// chain, nearest first
+	above := make([][]int, len(selected))
+	covered := map[int]bool{}
+	for n, i := range at {
+		if i < 0 {
+			continue
+		}
+		seen := map[int]bool{i: true}
+		for next := slices.Clone(coverers[i]); len(next) > 0; next = next[1:] {
+			k := next[0]
+			if seen[k] {
+				continue
+			}
+			seen[k] = true
+			above[n] = append(above[n], k)
+			next = append(next, coverers[k]...)
+			if chosen[k] {
+				covered[i] = true
+			}
+		}
+	}
+	for n, i := range at {
+		if !covered[i] {
+			continue
+		}
+		for _, k := range above[n] {
+			if chosen[k] && !covered[k] {
+				selected[n].CoveredBy = tiers[k].Name
+				break
+			}
+		}
+	}
+	return selected
 }
 
 // selectByPaths is the tier with its placeholders filled for the paths it
