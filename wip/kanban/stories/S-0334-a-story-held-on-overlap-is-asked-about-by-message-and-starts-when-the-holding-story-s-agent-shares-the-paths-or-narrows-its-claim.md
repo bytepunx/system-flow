@@ -7,7 +7,7 @@ status: backlog
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:04Z
-updated: 2026-10-08T05:02:40Z
+updated: 2026-10-08T05:53:30Z
 transitions: []
 tags: [flai, template]
 topics: [cli, conventions, template]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:20Z
 forecast:
   duration: 53m
-  delivery: 2026-10-08T13:24:00Z
-  basis: "Its own forecast of 53m; 26th in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326, S-0287, S-0321, S-0322, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0313 and S-0323."
+  delivery: 2026-10-08T14:13:00Z
+  basis: "Its own forecast of 53m; 24th in the pull order with an in-progress limit of 3, behind S-0232, S-0309, S-0319, S-0336, S-0326, S-0287, S-0321, S-0322, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0313 and S-0323."
   by: flai
-  at: 2026-10-08T05:02:40Z
+  at: 2026-10-08T05:53:30Z
 ---
 # S-0334 A story held on overlap is asked about by message, and starts when the holding story's agent shares the paths or narrows its claim
 
