@@ -6,7 +6,7 @@ title: flaiover's notify.test.ts fails now and then under the full vitest run be
 status: ready
 owner: alex
 created: 2026-10-06T09:56:51Z
-updated: 2026-10-08T08:42:40Z
+updated: 2026-10-08T08:49:21Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:50Z
@@ -23,6 +23,22 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 125
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 88
+          output: 27
+          cache_read: 563577
+          cache_write: 40634
+          cost: 0.1201
+        - model: claude-opus-5-5
+          input: 114
+          output: 16583
+          cache_read: 6069445
+          cache_write: 168164
+          cost: 3.4444
     - kind: orchestrator
       seconds: 55
       estimated: true
@@ -35,9 +51,9 @@ usage:
           cost: 1.0718
 cost_of_delay:
   inputs:
-    time_lost_per_cycle: 5m
-    by: flai
-    at: 2026-10-06T09:56:51Z
+    time_lost_per_cycle: 15m
+    by: alex
+    at: 2026-10-08T08:49:21Z
   value: 12.5
   by: planner-S-0288
   at: 2026-10-08T08:42:17Z
