@@ -47,7 +47,7 @@ S-0336's second close-out stopped at the same step. Cause found: run by hand wit
 
 ### 2026-10-08T07:15:27Z
 Story: S-0326.
-S-0326's close-out passed every tier through integration, then smoke failed in install-test: `curl: (92) HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)` while resolving the latest release, reported as "could not list releases of bytepunx/system-flow (private repository?)". A network fault, not the code; the close-out was run again.
+S-0326's close-out passed every tier through integration, then smoke failed in install-test: `curl: (92) HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)` while resolving the latest release, reported as "could not list releases of bytepunx/system-flow (private repository?)". A network fault, not the code; the close-out was run again and failed the same way. Five fetches of the listing `install.sh` asks for (`releases?per_page=50`, about 1 MB) on this host: two ended with `curl: (56) OpenSSL SSL_read: ... unexpected eof while reading`, three returned 200; `per_page=5` returned 200 three times out of three. A smaller listing, or a retry on a network error, would avoid it.
 
 ## Remediation
 
