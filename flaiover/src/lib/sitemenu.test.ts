@@ -7,7 +7,17 @@ describe('the site menu (S-0172)', () => {
 		expect(SITE_MENU.map((g) => [g.label, g.pages.map((p) => p.label)])).toEqual([
 			[
 				'Workflow',
-				['Overview', 'Board', 'Inbox', 'Threads', 'Activity', 'Planner', 'Orchestrator', 'Analyzer']
+				[
+					'Overview',
+					'Board',
+					'Inbox',
+					'Threads',
+					'Messages',
+					'Activity',
+					'Planner',
+					'Orchestrator',
+					'Analyzer'
+				]
 			],
 			['Status', ['Charts', 'ADRs', 'Docs', 'Search']],
 			['Host', ['Updates', 'Settings', 'License']]
@@ -18,6 +28,7 @@ describe('the site menu (S-0172)', () => {
 		expect(locate('/')).toEqual({ group: 'workflow', page: 'overview' });
 		expect(locate('/inbox')).toEqual({ group: 'workflow', page: 'inbox' });
 		expect(locate('/threads')).toEqual({ group: 'workflow', page: 'threads' });
+		expect(locate('/messages')).toEqual({ group: 'workflow', page: 'messages' });
 		expect(locate('/workflow/planner')).toEqual({ group: 'workflow', page: 'planner' });
 		expect(locate('/workflow/orchestrator')).toEqual({ group: 'workflow', page: 'orchestrator' });
 		expect(locate('/workflow/analyzer')).toEqual({ group: 'workflow', page: 'analyzer' });
@@ -38,7 +49,7 @@ describe('the site menu (S-0172)', () => {
 		expect(locate('/boards')).toEqual({ group: null, page: null });
 	});
 
-	it('gives a group the indicators of its pages', () => {
+	it('gives a group the indicators of its pages, Messages none (S-0336)', () => {
 		expect(SITE_MENU.map((g) => groupBadges(g))).toEqual([['inbox'], [], []]);
 	});
 });

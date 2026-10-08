@@ -18,6 +18,7 @@
 		board: resolve('/board'),
 		inbox: resolve('/inbox'),
 		threads: resolve('/threads'),
+		messages: resolve('/messages'),
 		activity: resolve('/activity'),
 		planner: resolve('/workflow/planner'),
 		orchestrator: resolve('/workflow/orchestrator'),
