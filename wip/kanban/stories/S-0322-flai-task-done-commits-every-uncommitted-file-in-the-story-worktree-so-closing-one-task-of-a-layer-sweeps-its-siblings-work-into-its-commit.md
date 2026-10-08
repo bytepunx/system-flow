@@ -6,7 +6,7 @@ title: flai task done commits every uncommitted file in the story worktree, so c
 status: ready
 owner: alex
 created: 2026-10-07T18:59:53Z
-updated: 2026-10-08T07:40:40Z
+updated: 2026-10-08T08:04:55Z
 transitions:
   - to: ready
     at: 2026-10-08T04:36:45Z
@@ -53,10 +53,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:13Z
 forecast:
   duration: 55m
-  delivery: 2026-10-08T08:40:00Z
-  basis: "Its own forecast of 55m; 2nd in the pull order with an in-progress limit of 3, behind S-0232, S-0326, S-0339 and S-0321."
+  delivery: 2026-10-08T09:04:00Z
+  basis: "Its own forecast of 55m; 1st in the pull order with an in-progress limit of 3, behind S-0232, S-0321 and S-0339."
   by: flai
-  at: 2026-10-08T07:40:40Z
+  at: 2026-10-08T08:04:55Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:36:42Z
