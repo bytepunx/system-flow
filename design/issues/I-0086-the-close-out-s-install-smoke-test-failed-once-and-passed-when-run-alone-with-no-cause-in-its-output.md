@@ -3,11 +3,11 @@ id: I-0086
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
 class: efficiency
 status: open
-count: 3
+count: 4
 cost: 6m
 first_reported: 2026-10-06T10:22:10Z
-last_reported: 2026-10-08T05:59:18Z
-updated: 2026-10-08T05:59:18Z
+last_reported: 2026-10-08T06:04:47Z
+updated: 2026-10-08T06:04:47Z
 ---
 
 # I-0086 The close-out's install smoke test failed once and passed when run alone, with no cause in its output
@@ -28,6 +28,10 @@ S-0318's close-out failed its smoke tier in install-test's default-path case. Th
 ### 2026-10-08T05:59:18Z
 Story: S-0319.
 S-0319's close-out failed its smoke tier in install-test's explicit FLAI_INSTALL_DIR case: curl (92) "HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)" while install.sh listed the releases, reported as "could not list releases of bytepunx/system-flow (private repository?)". Same transient network fault as S-0318's; S-0319 changes nothing install.sh or the smoke tier runs. The close-out was run again.
+
+### 2026-10-08T06:04:47Z
+Story: S-0319.
+S-0319's second close-out failed its smoke tier in install-test's default-path case, with no cause in the tier's output. `.flai-cache/install-test-home.log` held it: the same curl (92) "HTTP/2 stream 1 was not closed cleanly: CANCEL (err 8)" while listing releases. Two runs in a row each lost one of install-test's GitHub calls. That points at curl's HTTP/2 to the GitHub API on this host, which install.sh could retry or ask for with --http1.1.
 
 ## Remediation
 
