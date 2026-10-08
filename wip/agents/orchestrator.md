@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 190.7745
-accrued_seconds: 98839
-tasks_completed: 225
-last_run: 2026-10-08T04:50:03Z
+accrued_cost: 195.2068
+accrued_seconds: 99598
+tasks_completed: 232
+last_run: 2026-10-08T05:02:42Z
 ---
 
 # Orchestrator activity
@@ -1526,7 +1526,7 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 ### 2026-10-08T04:34:48Z
 
-- Summary: Published under judgement after accepting S-0324: 2 pending, 20 USD/week; flai 1.39.3→1.39.4 (flai/v1.39.4); bundled S-0315 and S-0324; pushed. The host's flai, 1.38.1, still lets agents write bare www. into wip until it is upgraded to 1.39.4
+- Summary: Published under judgement after accepting S-0324: 2 pending, 20 USD/week; flai 1.39.3→1.39.4 (flai/v1.39.4); bundled S-0315 and S-0324; pushed. The host's flai, 1.38.1, still lets agents write bare `www.` into wip until it is upgraded to 1.39.4
 - Items: S-0324, S-0315
 - Seconds: 12
 - Cost: 0.4296 USD, estimated
@@ -1587,6 +1587,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 611
 - Cost: 3.0234 USD, estimated
 
+### 2026-10-08T04:50:17Z
+
+- Summary: Published under judgement after accepting S-0316: 1 pending, 30 USD/week; flai 1.39.4→1.39.5 (flai/v1.39.5); bundled S-0316; pushed
+- Items: S-0316
+- Seconds: 14
+- Cost: 0.2321 USD, estimated
+
+### 2026-10-08T04:50:25Z
+
+- Summary: Re-applied the throughput order after S-0320 left ready for in-progress: S-0319 (30m), S-0309 (35m), S-0336 (40m), S-0326, S-0287 (45m), S-0322 (55m). In progress: S-0232, S-0318, S-0320
+- Items: S-0319, S-0309, S-0336, S-0326, S-0287, S-0322
+- Seconds: 8
+- Cost: 0.7032 USD, estimated
+
+### 2026-10-08T05:02:00Z
+
+- Summary: Recommended an answer on TH-0360, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0318
+- Seconds: 695
+- Cost: 3.3329 USD, estimated
+
+### 2026-10-08T05:02:04Z
+
+- Summary: TH-0360 (S-0318): recommended that the operator hand-commit the code-span fix for my own bare `www.` summary on line 1529 of the orchestrator log. No story is in review, so under ADR-0093 no acceptance can land it, and it blocks the close-outs of S-0318 and S-0320.
+- Items: S-0318, S-0320
+- Seconds: 4
+- Cost: 0.0077 USD, estimated
+
+### 2026-10-08T05:02:13Z
+
+- Summary: Recommended an answer on TH-0361, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0320
+- Seconds: 9
+- Cost: 0.0212 USD, estimated
+
+### 2026-10-08T05:02:15Z
+
+- Summary: TH-0361 (S-0320): recommended the same single main commit as TH-0360. The code-span fix is already in the working copy, and committing my pending log entries with it is fine under ADR-0019.
+- Items: S-0320
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T05:02:42Z
+
+- Summary: Promoted S-0321 to ready under promote_to_ready: rank 1 on flai promote --candidates, forecast 45m, throughput. Skipped S-0241 (rank 2), which waits on the operator on TH-0333. Applied the throughput order; S-0321 is 6th at 45m. Installed flai 1.39.3 lists no plan candidates (the planners of S-0288–S-0306 ran and the stories are unchanged since).
+- Items: S-0321
+- Seconds: 27
+- Cost: 0.1352 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -1632,4 +1681,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-08T04:27:07Z
 
 - Call: `thread_reply TH-0346 source wip/kanban/stories/S-0323-flai-check-finds-narrative-state-outside-the-story-at-close-out.md`
+- Needs: none
+
+### 2026-10-08T05:02:37Z
+
+- Call: `flai order --by throughput --apply --json 2>`
 - Needs: none
