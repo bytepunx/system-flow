@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 183
-      cache_read: 1618822
-      cache_write: 9421
-      cost: 0.7258
+      input: 23
+      output: 4332
+      cache_read: 1587236
+      cache_write: 41007
+      cost: 0.7322
 ---
 # T-1305 A flaiover-lint tier runs on changed flaiover files, and a test shows flai test selects it
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 197.2730
-accrued_seconds: 103804
-tasks_completed: 237
-last_run: 2026-10-08T06:12:49Z
+accrued_cost: 197.3408
+accrued_seconds: 103817
+tasks_completed: 238
+last_run: 2026-10-08T06:13:02Z
 ---
 
 # Orchestrator activity
@@ -1670,6 +1670,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0309
 - Seconds: 1119
 - Cost: 0.9591 USD, estimated
+
+### 2026-10-08T06:13:02Z
+
+- Summary: Published under judgement, after evaluating 1 pending story worth 75 USD/week: S-0309, a complete remedy for I-0103 with ADR-0124. Released flai 1.39.6→1.39.7 (tag flai/v1.39.7), pushed. Applied the throughput order after S-0323 and S-0336 left ready: S-0326, S-0287 and S-0321 at 45m, then S-0322 at 55m. No promote candidate besides S-0241, which waits on TH-0333.
+- Items: S-0309
+- Seconds: 13
+- Cost: 0.0678 USD, estimated
 
 ## Refusals
 

@@ -3,11 +3,11 @@ id: T-1313
 type: task
 nature: improvement
 title: An ADR refining ADR-0085 and S-0318's ADR records the remedy for I-0109, proposed from its instances
-status: in-progress
+status: done
 parent: S-0323
 owner: alex
 created: 2026-10-08T00:26:26Z
-updated: 2026-10-08T06:12:29Z
+updated: 2026-10-08T06:13:10Z
 transitions:
   - to: ready
     at: 2026-10-08T06:12:27Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T06:12:29Z
     by: agent-S-0323
+  - to: done
+    at: 2026-10-08T06:13:10Z
+    by: agent-S-0323
 stream: S-0323
 tags: [flai]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 41
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 69
+      cache_read: 797336
+      cache_write: 6974
+      cost: 0.3588
 ---
 # T-1313 An ADR refining ADR-0085 and S-0318's ADR records the remedy for I-0109, proposed from its instances
 

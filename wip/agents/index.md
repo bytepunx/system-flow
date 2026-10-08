@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-08T06:12:43Z
+updated: 2026-10-08T06:13:49Z
 ---
 
 # Active streams
@@ -8,9 +8,8 @@ updated: 2026-10-08T06:12:43Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0232](S-0232.md) | The release key signs flai's checksums.txt in CI and both components carry the public key | in-progress | agent-S-0232 | 2026-10-07T23:22:58Z |
-| [S-0319](S-0319.md) | flai test never runs flaiover's prettier, eslint, or svelte-check, so formatting faults surface only at the close-out | review | agent-S-0319 | 2026-10-08T06:12:22Z |
 | [S-0320](S-0320.md) | flai serve's test that the orchestrator is started again when it ends fails under the close-out's full integration run | review | agent-S-0320 | 2026-10-08T05:51:49Z |
-| [S-0323](S-0323.md) | flai check finds `narrative.state` outside the story at close-out | in-progress | agent-S-0323 | 2026-10-08T06:12:41Z |
+| [S-0323](S-0323.md) | flai check finds `narrative.state` outside the story at close-out | in-progress | agent-S-0323 | 2026-10-08T06:13:10Z |
 | [S-0336](S-0336.md) | The dashboard shows the messages between stories' agents on each story's page and in a Messages view | in-progress | agent-S-0336 | 2026-10-08T06:12:50Z |
 
 ## Strategic agents
@@ -18,4 +17,4 @@ updated: 2026-10-08T06:12:43Z
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 59 | 168.8830 USD | 21335 | 2026-10-08T04:39:43Z |
-| [orchestrator](orchestrator.md) | 237 | 197.2730 USD | 103804 | 2026-10-08T06:12:49Z |
+| [orchestrator](orchestrator.md) | 238 | 197.3408 USD | 103817 | 2026-10-08T06:13:02Z |

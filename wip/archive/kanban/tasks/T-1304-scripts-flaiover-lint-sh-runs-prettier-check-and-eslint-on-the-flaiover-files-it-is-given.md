@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 20
-      cache_read: 386117
-      cache_write: 6796
-      cost: 0.1751
+      input: 5
+      output: 1045
+      cache_read: 383018
+      cache_write: 9895
+      cost: 0.1767
 ---
 # T-1304 scripts/flaiover-lint.sh runs prettier --check and eslint on the flaiover files it is given
 

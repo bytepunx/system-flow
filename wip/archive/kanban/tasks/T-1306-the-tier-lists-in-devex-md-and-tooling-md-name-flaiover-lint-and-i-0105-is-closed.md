@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 45
-      cache_read: 671003
-      cache_write: 4876
-      cost: 0.3013
+      input: 9
+      output: 1798
+      cache_read: 658856
+      cache_write: 17022
+      cost: 0.3039
 ---
 # T-1306 The tier lists in devex.md and tooling.md name flaiover-lint, and I-0105 is closed
 
