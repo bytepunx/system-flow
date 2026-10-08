@@ -3,10 +3,10 @@ id: I-0079
 title: TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
 class: defect
 status: closed
-count: 11
+count: 13
 cost: 5m
 first_reported: 2026-10-05T05:55:58Z
-last_reported: 2026-10-08T08:27:55Z
+last_reported: 2026-10-08T09:00:35Z
 updated: 2026-10-08T09:02:45Z
 ---
 
@@ -60,6 +60,14 @@ S-0321's close-out failed its integration tier in flai/internal/workitem while a
 ### 2026-10-08T08:27:55Z
 Story: S-0321.
 S-0321's next close-out failed integration in flai/internal/workitem again, while agent-S-0291 cancelled T-1340 in the main checkout at 08:24:52Z. The package passed run alone with -race straight after (go test -race ./internal/workitem, 7.3s).
+
+### 2026-10-08T08:53:52Z
+Story: S-0322.
+S-0322's second close-out failed the integration tier in flai/internal/workitem while a planner wrote a story drafted from S-0339 (its T-1405, usage priced_by) in the main checkout; the failure printed that story's body mid-write. S-0322 touches nothing in workitem; every other tier passed, and the first close-out, at the commit before the sync, passed integration and smoke.
+
+### 2026-10-08T09:00:35Z
+Story: S-0322.
+S-0322's third close-out failed the same way, and two runs of the test alone failed on other stories each time (S-0313, S-0349, S-0355, S-0346, S-0239): flai's forecast replan was rewriting every ready story's forecast and updated stamp in the main checkout while several stories were accepted and reordered, so the file changed between the test's read and its compare.
 
 ## Remediation
 
