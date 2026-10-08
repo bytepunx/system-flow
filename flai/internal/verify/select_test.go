@@ -1,6 +1,8 @@
 package verify
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -185,5 +187,33 @@ func TestSelectStoryAddsTheAllOnlyTiersThePathsSelectOrThatHaveNone(t *testing.T
 				}
 			}
 		})
+	}
+}
+
+// I-0105: this repository's manifest has flai test check a changed flaiover
+// file's format and lint with flaiover-lint, outside --all and before vitest,
+// rather than leaving prettier and eslint to the close-out's flaiover tier.
+func TestRepositoryManifestLintsChangedFlaioverFiles(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: reads the monorepo")
+	}
+	root := filepath.Join("..", "..", "..")
+	if _, err := os.Stat(filepath.Join(root, "system-flow.yaml")); err != nil {
+		t.Skip("monorepo not present")
+	}
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, s := range Select(os.DirFS(root), tiers, []string{"flaiover/src/routes/+page.svelte", "flaiover/package.json"}, false) {
+		got = append(got, s.Tier.Name+" "+strings.Join(s.Argv, " "))
+	}
+	want := []string{
+		"flaiover-lint ../scripts/flaiover-lint.sh package.json src/routes/+page.svelte",
+		"vitest ../scripts/flaiover-unit.sh related --run --reporter=json src/routes/+page.svelte",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("selected %q, want %q", got, want)
 	}
 }

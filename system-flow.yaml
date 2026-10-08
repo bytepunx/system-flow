@@ -68,6 +68,11 @@ tests:
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: go-test-json
+  - name: flaiover-lint
+    command: ["../scripts/flaiover-lint.sh", "{files}"]
+    dir: flaiover
+    paths: ["flaiover/**", "!flaiover/node_modules/**", "!flaiover/build/**", "!flaiover/.svelte-kit/**"]
+    format: plain
   - name: vitest
     command: ["../scripts/flaiover-unit.sh", related, "--run", "--reporter=json", "{files}"]
     dir: flaiover
