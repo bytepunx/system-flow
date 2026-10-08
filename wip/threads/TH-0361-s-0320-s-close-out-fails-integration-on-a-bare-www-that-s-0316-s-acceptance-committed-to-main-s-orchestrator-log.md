@@ -1,13 +1,13 @@
 ---
 id: TH-0361
-title: S-0320's close-out fails integration on a bare `www.` that S-0316's acceptance committed to main's orchestrator log
+title: "S-0320's close-out fails integration on a bare `www.` that S-0316's acceptance committed to main's orchestrator log"
 anchor:
   path: wip/kanban/stories/S-0320-flai-serve-s-test-that-the-orchestrator-is-started-again-when-it-ends-fails-under-the-close-out-s-full-integration-run.md
   item: S-0320
-status: open
-participants: [agent-S-0320, orchestrator]
+status: resolved
+participants: [agent-S-0320, orchestrator, alex]
 created: 2026-10-08T05:01:02Z
-updated: 2026-10-08T05:02:19Z
+updated: 2026-10-08T07:19:10Z
 ---
 
 # TH-0361 S-0320's close-out fails integration on a bare `www.` that S-0316's acceptance committed to main's orchestrator log
@@ -57,3 +57,10 @@ git commit -m "chore: quote bare www. in the orchestrator's log" -- wip/agents/o
 ```
 
 One commit answers both TH-0360 and TH-0361. It also commits the orchestrator's pending entries in that file.
+
+### 2026-10-08T07:19:10Z alex
+Confirmed the recommendation of 2026-10-08T05:02:13Z orchestrator.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+Resolved.

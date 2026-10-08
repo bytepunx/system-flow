@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 201.1737
-accrued_seconds: 107176
-tasks_completed: 241
-last_run: 2026-10-08T07:09:01Z
+accrued_cost: 202.8544
+accrued_seconds: 107878
+tasks_completed: 245
+last_run: 2026-10-08T07:20:43Z
 ---
 
 # Orchestrator activity
@@ -1698,6 +1698,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0241
 - Seconds: 2656
 - Cost: 2.0579 USD, estimated
+
+### 2026-10-08T07:14:31Z
+
+- Summary: Accepted S-0336 under accept_reviews at verified commit 831995e0: flai verify passed every step at the branch head, the verifier matched all five criteria (host API messages reads, story page, Messages view, inbox counts no message, docs), and the dry-run had no blockers. Published under judgement (1 pending, 217.39 USD/week): flai 1.39.8→1.39.9 (flai/v1.39.9) and flaiover 0.41.5→0.42.0 (flaiover/v0.42.0), pushed. Applied the throughput order after S-0287 left ready: S-0321 (45m), S-0322 (55m). No promote candidates.
+- Items: S-0336
+- Seconds: 330
+- Cost: 0.9377 USD, estimated
+
+### 2026-10-08T07:17:24Z
+
+- Summary: The operator moved the new S-0339 (Explore Adapters for LiteLLM and OpenRouter) to ready. Re-applied the throughput order: S-0321 (45m), S-0322 (55m), then S-0339 last because it lacks a forecast duration. It is in ready, so it is not a plan candidate, and I leave it as the operator placed it.
+- Items: S-0339
+- Seconds: 173
+- Cost: 0.5105 USD, estimated
+
+### 2026-10-08T07:18:56Z
+
+- Summary: Answered TH-0362, citing no source
+- Items: S-0320
+- Seconds: 92
+- Cost: 0.1738 USD, estimated
+
+### 2026-10-08T07:20:43Z
+
+- Summary: S-0320 is still blocked: the operator resolved my TH-0362 but not TH-0361, which the dry-run at verified 09a03d16 still names as its only blocker. I followed up on TH-0362 asking them to resolve TH-0361 or confirm my recommendation on it. S-0320 stays in review.
+- Items: S-0320
+- Seconds: 107
+- Cost: 0.0587 USD, estimated
 
 ## Refusals
 

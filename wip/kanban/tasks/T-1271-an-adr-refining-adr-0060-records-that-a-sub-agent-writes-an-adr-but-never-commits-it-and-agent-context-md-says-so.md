@@ -3,11 +3,11 @@ id: T-1271
 type: task
 nature: remediation
 title: An ADR refining ADR-0060 records that a sub-agent writes an ADR but never commits it, and agent-context.md says so
-status: in-progress
+status: done
 parent: S-0287
 owner: alex
 created: 2026-10-07T23:19:16Z
-updated: 2026-10-08T07:14:09Z
+updated: 2026-10-08T07:20:09Z
 transitions:
   - to: ready
     at: 2026-10-08T07:14:08Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T07:14:09Z
     by: agent-S-0287
+  - to: done
+    at: 2026-10-08T07:20:09Z
+    by: agent-S-0287
 stream: S-0287
 tags: [adr, design, guard]
-touches: [design/system/agent-context.md]
+touches: [design/system/agent-context.md, design/adrs/0127-flai-guard-lets-a-story-s-sub-agent-write-an-adr-with-flai-adr-new-topics-and.md]
+usage:
+  source: log
+  seconds: 360
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 29
+      cache_read: 498026
+      cache_write: 11849
+      cost: 0.2276
 ---
 # T-1271 An ADR refining ADR-0060 records that a sub-agent writes an ADR but never commits it, and agent-context.md says so
 

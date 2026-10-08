@@ -3,11 +3,11 @@ id: T-1270
 type: task
 nature: remediation
 title: flai guard lets a sub-agent run flai adr new, topics, and accept, and adr_new, without a commit
-status: in-progress
+status: done
 parent: S-0287
 owner: alex
 created: 2026-10-07T23:19:09Z
-updated: 2026-10-08T07:14:08Z
+updated: 2026-10-08T07:20:15Z
 transitions:
   - to: ready
     at: 2026-10-08T07:14:07Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T07:14:08Z
     by: agent-S-0287
+  - to: done
+    at: 2026-10-08T07:20:15Z
+    by: agent-S-0287
 stream: S-0287
 tags: [cli, flai, guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go]
+usage:
+  source: log
+  seconds: 361
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 216
+      cache_read: 2246001
+      cache_write: 127752
+      cost: 1.0596
 ---
 # T-1270 flai guard lets a sub-agent run flai adr new, topics, and accept, and adr_new, without a commit
 

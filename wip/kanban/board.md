@@ -7,8 +7,13 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
+  - S-0339
   - S-0321
   - S-0322
+placed:
+  S-0339:
+    by: flaiover
+    at: 2026-10-08T07:20:35Z
 ---
 
 # Board

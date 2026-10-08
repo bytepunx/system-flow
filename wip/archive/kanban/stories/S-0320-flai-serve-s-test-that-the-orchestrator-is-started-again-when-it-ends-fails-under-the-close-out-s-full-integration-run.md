@@ -3,10 +3,10 @@ id: S-0320
 type: story
 nature: remediation
 title: flai serve's test that the orchestrator is started again when it ends fails under the close-out's full integration run
-status: review
+status: done
 owner: alex
 created: 2026-10-07T18:59:51Z
-updated: 2026-10-08T05:51:50Z
+updated: 2026-10-08T07:21:53Z
 transitions:
   - to: ready
     at: 2026-10-08T00:18:40Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-08T05:51:50Z
     by: agent-S-0320
+  - to: done
+    at: 2026-10-08T07:21:53Z
+    by: alex
 tags: [flai, serve, tests]
 topics: [continuous-improvement]
 touches: [flai/internal/serve/orchestrate_test.go, design/issues/I-0106-flai-serve-s-test-that-the-orchestrator-is-started-again-when-it-ends-fails-under-the-close-out-s-full-integration-run.md, design/issues/summary.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md, design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
@@ -27,30 +30,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2435
+  seconds: 2517
   turns:
     - day: 2026-10-08
-      ceremony: 4
+      ceremony: 7
+      test_runs: 2
       hand_edits: 4
-      work: 71
+      work: 88
   models:
     - model: claude-opus-5-5
-      input: 168
-      output: 32421
-      cache_read: 13499524
-      cache_write: 205976
-      cost: 4.9968
+      input: 214
+      output: 39695
+      cache_read: 14716569
+      cache_write: 266015
+      cost: 5.8662
   strategic:
     - kind: orchestrator
-      seconds: 2295
+      seconds: 2494
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 105
-          output: 1610
-          cache_read: 16706962
-          cache_write: 64899
-          cost: 4.1327
+          input: 113
+          output: 1658
+          cache_read: 17644277
+          cache_write: 71220
+          cost: 4.3652
         - model: claude-sonnet-5-5
           input: 6
           output: 44

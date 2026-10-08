@@ -6,7 +6,7 @@ title: flai guard lets a task sub-agent run flai adr new but refuses flai adr to
 status: in-progress
 owner: alex
 created: 2026-10-06T09:56:50Z
-updated: 2026-10-08T07:13:23Z
+updated: 2026-10-08T07:14:37Z
 transitions:
   - to: ready
     at: 2026-10-08T04:24:25Z
@@ -16,16 +16,26 @@ transitions:
     by: agent-S-0287
 tags: [cli, flai, guard]
 topics: [cli, conventions, template]
-touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/agent-context.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md, design/issues/summary.md]
+touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/agent-context.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md, design/issues/summary.md, design/adrs/0127-flai-guard-lets-a-story-s-sub-agent-write-an-adr-with-flai-adr-new-topics-and.md, design/adrs/README.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 409
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 379
+      cache_read: 3786169
+      cache_write: 256400
+      cost: 1.8045
   strategic:
     - kind: orchestrator
       seconds: 213
