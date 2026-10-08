@@ -3,11 +3,11 @@ id: T-1343
 type: task
 nature: improvement
 title: flai verify resumes a story's run from its last record when the head, the base, and the tiers are unchanged
-status: in-progress
+status: done
 parent: S-0341
 owner: alex
 created: 2026-10-08T08:05:06Z
-updated: 2026-10-08T08:38:35Z
+updated: 2026-10-08T08:42:54Z
 transitions:
   - to: ready
     at: 2026-10-08T08:38:35Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T08:38:35Z
     by: agent-S-0341
+  - to: done
+    at: 2026-10-08T08:42:54Z
+    by: agent-S-0341
 stream: S-0341
 tags: [cli]
 touches: [flai/internal/verify/verify.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go]
+usage:
+  source: log
+  seconds: 259
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 208
+      cache_read: 2170706
+      cache_write: 29819
+      cost: 0.9932
 ---
 # T-1343 flai verify resumes a story's run from its last record when the head, the base, and the tiers are unchanged
 

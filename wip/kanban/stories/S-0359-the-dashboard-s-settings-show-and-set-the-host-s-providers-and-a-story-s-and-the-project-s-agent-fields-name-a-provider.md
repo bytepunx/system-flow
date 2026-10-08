@@ -7,17 +7,27 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:52:44Z
-updated: 2026-10-08T08:52:58Z
+updated: 2026-10-08T08:59:08Z
 transitions: []
 tags: [cli, dashboard]
 topics: [agents]
-touches: [flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/components/AgentFields.svelte, flaiover/src/lib/agent.ts, flaiover/src/lib/agent.test.ts, design/system/flaiover-dashboard.md]
+touches: [flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/components/AgentFields.svelte, flaiover/src/lib/components/ItemEditor.svelte, flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/agent.ts, flaiover/src/lib/agent.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [S-0349]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 42.82
+  by: planner-E-0019
+  at: 2026-10-08T08:56:27Z
+forecast:
+  duration: 37m
+  delivery: 2026-10-08T19:54:00Z
+  basis: "flai forecast: median 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 22 (6 criteria, 16 touches); kept as given."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:53Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:58Z
@@ -39,8 +49,29 @@ S-0349 puts providers on the host and `provider` on an agent, set from a shell. 
 
 ## Tasks
 
-Drafted by the planner; see the children.
+- T-1415 settings.get carries the host's providers, settings.provider sets them, and the agent writes accept provider
+- T-1416 The Settings page has a Providers section that shows, adds, saves, and resets the host's providers
+- T-1417 AgentFields has a provider field, with the project's default as its placeholder, sent only when typed
+- T-1418 The dashboard's design document describes the Providers section and the provider field
 
 ## Notes
 
 - Whether the key's variable is set is a yes or no, so that the page can say why a start would be refused without holding the key.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept. Three layers: flai's read and writes (T-1415); then the Providers section (T-1416) and the agent field (T-1417) together, with no file in common; then the documents (T-1418).
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/cmd/serve_actions.go`, `serve_actions_test.go` | layout | `hostSettings` builds `settings.get`'s `host` (T-1415) |
+| `flai/internal/hostapi/settings.go`, `writes.go`, `writes_test.go` | layout | `settings.harness` and the agent writes live here; `writes.go` co-changes 11% with S-0349's files (T-1415) |
+| `flaiover/src/lib/settings.ts`, `flaiover/src/lib/server/agent.ts`, `flaiover/src/lib/components/SettingsPanel.svelte`, `SettingsPanel.svelte.test.ts` | layout, co-change (14%) | The settings types, the methods the dashboard may call, and the page (T-1416) |
+| `flaiover/src/lib/components/AgentFields.svelte`, `ItemEditor.svelte`, `NewItemForm.svelte`, `flaiover/src/lib/agent.ts`, `agent.test.ts` | layout | The agent field and the two other forms that bind it (T-1417) |
+| `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md` | design, co-change (48%) | The pages' design and their users' guide (T-1418) |
+
+`touches suggest` also listed `design/system/flai-cli.md` and `docs/users/flai.md`. Neither is taken: S-0349 describes the commands.
+
+Forecast: 37m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 22. It stands.
+
+Cost of delay: 42.82 USD a week, as `flai cod` works it out: 37m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.

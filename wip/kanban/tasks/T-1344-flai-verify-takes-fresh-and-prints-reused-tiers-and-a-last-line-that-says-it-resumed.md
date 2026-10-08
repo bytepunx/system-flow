@@ -3,16 +3,36 @@ id: T-1344
 type: task
 nature: improvement
 title: flai verify takes --fresh and prints reused tiers and a last line that says it resumed
-status: backlog
+status: done
 parent: S-0341
 owner: alex
 created: 2026-10-08T08:05:15Z
-updated: 2026-10-08T08:05:39Z
-transitions: []
+updated: 2026-10-08T08:49:51Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:43:09Z
+    by: agent-S-0341
+  - to: in-progress
+    at: 2026-10-08T08:43:09Z
+    by: agent-S-0341
+  - to: done
+    at: 2026-10-08T08:49:51Z
+    by: agent-S-0341
 stream: S-0341
 tags: [cli]
-touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/verify.go, flai/cmd/verify_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1343]
+usage:
+  source: log
+  seconds: 402
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 161
+      cache_read: 1594267
+      cache_write: 86887
+      cost: 0.7588
 ---
 # T-1344 flai verify takes --fresh and prints reused tiers and a last line that says it resumed
 

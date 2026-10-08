@@ -4,10 +4,10 @@ title: E-0019 cost of delay inputs
 anchor:
   path: wip/kanban/epics/E-0019-agent-adapters-for-litellm-and-openrouter.md
   item: E-0019
-status: open
-participants: [planner-E-0019]
+status: answered
+participants: [planner-E-0019, alex]
 created: 2026-10-08T08:39:05Z
-updated: 2026-10-08T08:39:05Z
+updated: 2026-10-08T08:46:18Z
 ---
 
 # TH-0375 E-0019 cost of delay inputs
@@ -34,3 +34,6 @@ Alternatives:
 3. `revenue_per_week: <n>`, if you expect a weekly saving from cheaper credits: the saving in USD.
 
 I am drafting the stories and tasks meanwhile. Each story's cost of delay value waits for this answer.
+
+### 2026-10-08T08:46:18Z alex
+I set the penalty to 500 because with the Claude subscription cap, the only way to continue each week is to pay for very expensive API tokens.

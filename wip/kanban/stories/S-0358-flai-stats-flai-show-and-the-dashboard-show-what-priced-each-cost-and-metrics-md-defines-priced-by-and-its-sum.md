@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:51:30Z
-updated: 2026-10-08T08:52:51Z
+updated: 2026-10-08T08:58:57Z
 transitions: []
 tags: [cli, dashboard]
 topics: [usage, metrics]
@@ -18,6 +18,16 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 34.72
+  by: planner-E-0019
+  at: 2026-10-08T08:56:26Z
+forecast:
+  duration: 30m
+  delivery: 2026-10-08T22:29:00Z
+  basis: "flai forecast: median 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 18 (4 criteria, 14 touches); kept as given."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:52Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:51Z
@@ -37,7 +47,6 @@ S-0357 records `priced_by` on each item's usage. [ADR-0132](../../../design/adrs
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1411 metrics.md defines priced_by, its sum, how an older item reads, and the cost per source
 - T-1412 flai stats reports priced_by and the cost per source, and flai stats and flai show print the source beside a cost
 - T-1413 The dashboard's usage lines and spend table show the source beside each cost
@@ -46,3 +55,21 @@ Drafted by the planner; see the children.
 ## Notes
 
 - `metrics.md` changes under ADR-0132, which names this consequence; no further ADR is needed.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept. Three layers: the contract (T-1411), then flai's side (T-1412), then the dashboard (T-1413) and the user guide (T-1414) together.
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `design/system/metrics.md` | design | The contract between `flai stats` and the dashboard (T-1411) |
+| `flai/internal/metrics/usage.go`, `usage_test.go`, `spend.go`, `spend_test.go` | layout | The usage totals and spend over time (T-1412) |
+| `flai/internal/usage/usage.go`, `usage_test.go`, `flai/cmd/stats.go`, `flai/cmd/items.go` | layout | `Summary()` prints `(estimated)` today, used by `flai stats` and `flai show` (T-1412) |
+| `flaiover/src/lib/usage.ts`, `usage.test.ts`, `flaiover/src/lib/components/SpendTable.svelte`, `SpendTable.svelte.test.ts` | layout | Where the dashboard prints a cost's mark (T-1413) |
+| `docs/users/flai.md` | design | What each source means (T-1414) |
+
+`touches suggest` listed `design/system/flai-cli.md`, `docs/users/flai-reference.md`, and the dashboard's documents. None is taken: no command or flag changes, and the dashboard's design names no cost mark.
+
+Forecast: 30m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 18. It stands.
+
+Cost of delay: 34.72 USD a week, as `flai cod` works it out: 30m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.

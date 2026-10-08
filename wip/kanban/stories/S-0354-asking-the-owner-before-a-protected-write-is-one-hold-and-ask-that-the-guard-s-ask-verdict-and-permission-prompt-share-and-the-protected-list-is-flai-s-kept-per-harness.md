@@ -7,17 +7,27 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:47:53Z
-updated: 2026-10-08T08:52:09Z
+updated: 2026-10-08T08:58:05Z
 transitions: []
 tags: [cli]
 topics: [agents]
-touches: [flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, docs/users/flai.md, design/system/flai-cli.md]
+touches: [flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, docs/users/flai.md, docs/operators/settings.md, design/system/flai-cli.md]
 after: [S-0353]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 40.51
+  by: planner-E-0019
+  at: 2026-10-08T08:56:20Z
+forecast:
+  duration: 35m
+  delivery: 2026-10-08T19:34:00Z
+  basis: "flai forecast gave 23m (78 s per unit over 51 improvement stories, size 17); raised to 35m for moving permission.go's 465 lines of thread handling into a new package with its tests unchanged."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:47Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:09Z
@@ -37,7 +47,6 @@ finalized:
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1394 The hold-and-ask moves out of permission_prompt into flai/internal/ask, with the bound passed by the caller
 - T-1395 The protected list keeps its paths per harness, Claude Code's as today, and Path and Changed answer for the union
 - T-1396 guard.Decide returns ask for a story agent's protected write, Claude Code's reader passes it on, and guard.Hold asks for a reader that holds
@@ -47,3 +56,22 @@ Drafted by the planner; see the children.
 
 - No other harness is adopted in E-0019, so the list holds Claude Code's paths only. `.codex/`, `.opencode/`, `.agents/plugins/`, and `AGENTS.md` come with their harness's adapter, as ADR-0130 has it, rather than now: adding them here would leave a story changing `AGENTS.md` to the operator's acceptance alone.
 - The `claude --version` check in `claudecheck.go` stays Claude Code's.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept; `flai/internal/ask` is a new package of two files. Three layers: T-1394 and T-1395 together, in different packages; then T-1396, which calls both; then T-1397.
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/ask/ask.go`, `ask_test.go` | design | ADR-0130's hold-and-ask, out of `permission.go` (T-1394) |
+| `flai/internal/mcpserver/permission.go`, `permission_test.go` | layout | Today's `askOperator`, `awaitAnswer`, and the rest (T-1394) |
+| `flai/internal/protected/protected.go`, `protected_test.go` | design | The list per harness (T-1395) |
+| `flai/internal/guard/call.go`, `call_test.go`, `claudecode.go`, `claudecode_test.go` | design | S-0353's files: the `ask` verdict and `Hold` (T-1396) |
+| `docs/users/flai.md`, `docs/operators/settings.md` | layout | The renamed section, and the one link to its anchor outside it (T-1397) |
+| `design/system/flai-cli.md` | design | ADR-0130's consequences (T-1397) |
+
+`flai/internal/preview/accept.go` reads `protected.Changed` and is left out: T-1395 keeps its signature and meaning. `touches suggest` listed generic documents; none else is taken.
+
+Forecast: 35m. `flai forecast` gave 23m, 78 s per unit over 51 improvement stories, size 17. It is raised for moving `permission.go`'s 465 lines of thread handling into a new package with its tests unchanged.
+
+Cost of delay: 40.51 USD a week, as `flai cod` works it out: 35m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.

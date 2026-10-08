@@ -6,7 +6,7 @@ title: flai verify resumes at the tier that failed when the branch head and its 
 status: in-progress
 owner: alex
 created: 2026-10-08T07:59:12Z
-updated: 2026-10-08T08:37:17Z
+updated: 2026-10-08T08:52:08Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
@@ -16,16 +16,29 @@ transitions:
     by: agent-S-0341
 tags: [cli]
 topics: [testing]
-touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, scripts/close-out.sh, docs/users/flai.md, design/system/flai-cli.md, flai/internal/verify/verify.go, docs/users/flai-reference.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, docs/users/flaiover.md]
+touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, scripts/close-out.sh, docs/users/flai.md, design/system/flai-cli.md, flai/internal/verify/verify.go, docs/users/flai-reference.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, docs/users/flaiover.md, docs/operators/settings.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1325
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      ceremony: 4
+      test_runs: 1
+      hand_edits: 2
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 206
+      output: 1166
+      cache_read: 9708178
+      cache_write: 436903
+      cost: 4.5791
   strategic:
     - kind: orchestrator
       seconds: 25
@@ -62,10 +75,10 @@ A verify run at the same branch head, against the same main commit, with the sam
 
 ## Acceptance criteria
 
-- [ ] `flai verify S-nnnn` reads the story's last record and, when the branch head, the main commit it was verified against, and the selected tiers are the same, re-runs the rebase, sync, narrative, and check steps and then only the tiers from the first one the record shows as failed or not reached; a tier it did not run is reported as `reused` with the time of the run it comes from, in the text and in `--json`.
-- [ ] Any change to the head, the base, the selected tiers, the manifest's `tests`, or a tier's command makes the next run a full run, and `--fresh` forces one; the record written by a resumed run holds every tier's state, reused ones included, so `--last` and the review page show a whole result.
+- [x] `flai verify S-nnnn` reads the story's last record and, when the branch head, the main commit it was verified against, and the selected tiers are the same, re-runs the rebase, sync, narrative, and check steps and then only the tiers from the first one the record shows as failed or not reached; a tier it did not run is reported as `reused` with the time of the run it comes from, in the text and in `--json`.
+- [x] Any change to the head, the base, the selected tiers, the manifest's `tests`, or a tier's command makes the next run a full run, and `--fresh` forces one; the record written by a resumed run holds every tier's state, reused ones included, so `--last` and the review page show a whole result.
 - [ ] `scripts/close-out.sh` runs `flai verify` as it does, so a second close-out at an unchanged head after a smoke failure reaches smoke within the cheap checks' time; the close-out's last line says when tiers were reused.
-- [ ] Tests cover a resumed run, each condition that forces a full run, and `--fresh`.
+- [x] Tests cover a resumed run, each condition that forces a full run, and `--fresh`.
 - [ ] `docs/users/flai.md` and `design/system/flai-cli.md` describe when a run resumes and how to force a full one.
 
 ## Tasks

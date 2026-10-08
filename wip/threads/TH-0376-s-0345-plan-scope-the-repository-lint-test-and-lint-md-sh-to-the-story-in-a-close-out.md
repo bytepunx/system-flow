@@ -4,10 +4,10 @@ title: "S-0345 plan: scope the repository lint test and lint-md.sh to the story 
 anchor:
   path: wip/kanban/stories/S-0345-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md
   item: S-0345
-status: open
-participants: [planner-S-0345]
+status: resolved
+participants: [planner-S-0345, alex]
 created: 2026-10-08T08:41:16Z
-updated: 2026-10-08T08:41:16Z
+updated: 2026-10-08T08:47:06Z
 ---
 
 # TH-0376 S-0345 plan: scope the repository lint test and lint-md.sh to the story in a close-out
@@ -48,3 +48,6 @@ The two tasks in each layer share no path, so each pair can run together.
 ## Proposal (not drafted)
 
 Projects made from the template have the same cause in a broader form. `template/root/system-flow.yaml.tmpl`'s markdown tier runs `template/root/scripts/lint-md.sh` over every file on every close-out, `wip/` included. I would make that a story of its own rather than grow this one.
+
+### 2026-10-08T08:47:06Z alex
+Resolved.

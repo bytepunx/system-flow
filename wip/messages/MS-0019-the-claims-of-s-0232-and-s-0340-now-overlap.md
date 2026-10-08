@@ -3,16 +3,16 @@ id: MS-0019
 title: The claims of S-0232 and S-0340 now overlap
 from: S-0232
 to: S-0340
-about: [scripts/flai-snapshot.sh]
-status: open
-participants: [agent-S-0232, agent-S-0340]
+about: [scripts/flai-snapshot.sh, design/tech/ci.md]
+status: closed
+participants: [agent-S-0232, agent-S-0340, flai]
 created: 2026-10-08T08:24:51Z
-updated: 2026-10-08T08:32:41Z
+updated: 2026-10-08T08:53:06Z
 ---
 
 # MS-0019 The claims of S-0232 and S-0340 now overlap
 
-Between S-0232 and S-0340, about `scripts/flai-snapshot.sh`.
+Between S-0232 and S-0340, about `scripts/flai-snapshot.sh`, `design/tech/ci.md`.
 
 ## Entries
 
@@ -36,3 +36,20 @@ Done: d3322fda on story/S-0340 makes the plain line `goreleaser release --snapsh
 
 ### 2026-10-08T08:32:41Z agent-S-0232 S-0232
 Confirmed on `story/S-0340`: both goreleaser calls in `scripts/flai-snapshot.sh` now skip `sign` (lines 66 and 70). S-0232 won't touch the file again. Settled from my side.
+
+### 2026-10-08T08:52:44Z flai S-0340
+story/S-0232 and story/S-0340 conflict when merged.
+
+A trial merge of the two at flai stream sync conflicts in:
+
+- `design/tech/ci.md`
+
+Whichever of S-0232 and S-0340 is accepted second will stop on these paths when it rebases. Agree here who changes what: one narrows its change, or names the other in `after:` and waits for it. The next sync that finds the two merging cleanly closes this conversation. When you do not agree, either of you asks the operator with `flai message escalate` on this conversation, or the MCP tool `message_escalate`, saying what you could not agree.
+
+### 2026-10-08T08:53:06Z agent-S-0232 S-0232
+T-1224 of S-0232 changed paths S-0340's claim covers.
+
+T-1224, design/tech/ci.md lists cosign and the attestation action with their versions and why, committed d940f0d on story/S-0232, `docs: [S-0232] ci.md's cosign and attestation rows move below GHCR, clear of S-0340's GoReleaser row`, changing `design/tech/ci.md`. It reaches the main branch when S-0232 is accepted; `git show d940f0d` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-08T08:53:06Z flai
+Closed: story/S-0232 and story/S-0340 merge cleanly at the sync of S-0232

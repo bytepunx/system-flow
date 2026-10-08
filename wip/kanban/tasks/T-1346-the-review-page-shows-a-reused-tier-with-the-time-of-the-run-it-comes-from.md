@@ -3,16 +3,36 @@ id: T-1346
 type: task
 nature: improvement
 title: The review page shows a reused tier with the time of the run it comes from
-status: backlog
+status: done
 parent: S-0341
 owner: alex
 created: 2026-10-08T08:05:24Z
-updated: 2026-10-08T08:05:24Z
-transitions: []
+updated: 2026-10-08T08:49:40Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:43:09Z
+    by: agent-S-0341
+  - to: in-progress
+    at: 2026-10-08T08:43:10Z
+    by: agent-S-0341
+  - to: done
+    at: 2026-10-08T08:49:13Z
+    by: agent-S-0341
 stream: S-0341
 tags: [flaiover]
 touches: [flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte]
 after: [T-1343]
+usage:
+  source: log
+  seconds: 363
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 137
+      cache_read: 642654
+      cache_write: 47307
+      cost: 0.3115
 ---
 # T-1346 The review page shows a reused tier with the time of the run it comes from
 

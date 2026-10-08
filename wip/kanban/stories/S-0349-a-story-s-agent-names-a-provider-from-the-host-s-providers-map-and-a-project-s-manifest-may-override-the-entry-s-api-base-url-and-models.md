@@ -7,16 +7,26 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:42:40Z
-updated: 2026-10-08T08:51:54Z
+updated: 2026-10-08T08:56:57Z
 transitions: []
 tags: [cli, template]
 topics: [agents]
-touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/agent.go, flai/cmd/agent_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/internal/itemedit/itemedit.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, docs/users/flai.md, design/system/project-manifest.md, design/system/work-hierarchy.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
+touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/agent.go, flai/cmd/agent_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/internal/itemedit/itemedit.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/work-hierarchy.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 63.66
+  by: planner-E-0019
+  at: 2026-10-08T08:56:10Z
+forecast:
+  duration: 55m
+  delivery: 2026-10-08T15:21:00Z
+  basis: "flai forecast: median 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 33 (6 criteria, 27 touches); kept as given."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:41Z
 finalized:
   by: alex
   at: 2026-10-08T08:51:54Z
@@ -38,7 +48,6 @@ A story's `agent` names the harness and the model today, and where the model's c
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1371 The manifest's agent takes provider, the manifest's providers map overrides api, base_url, and models, and one resolver merges it with the host's entry
 - T-1372 The host's configuration holds agent.providers, set and reset with flai serve agent provider
 - T-1373 flai agent, flai edit, flai manifest set, and the MCP item_new and item_edit agent take provider
@@ -48,3 +57,23 @@ Drafted by the planner; see the children.
 
 - Nothing here starts an agent through a provider: the next story derives the harness's environment from the resolved entry.
 - The dashboard's settings for providers are their own story, after this one.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept. The tasks run in four layers, one each: T-1371, then T-1372, then T-1373, then T-1374. They are chained because each of the first three adds rows to `docs/operators/settings.md`, whose index test must pass in every task.
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/manifest/provider.go`, `provider_test.go` | design | ADR-0129's entry, its validation, and the resolver, a new file (T-1371) |
+| `flai/internal/manifest/agent.go`, `agent_test.go`, `manifest.go`, `manifest_test.go` | design, layout | `Agent.Provider` and `Manifest.Providers` (T-1371) |
+| `flai/internal/config/config.go`, `config_test.go`, `flai/cmd/serve_actions.go`, `serve_actions_test.go` | layout | `AgentStart` holds `Harnesses` beside which `Providers` goes; `flai serve agent` lives in `serve_actions.go` (T-1372) |
+| `flai/cmd/agent.go`, `agent_test.go`, `edit.go`, `edit_test.go`, `flai/internal/itemedit/itemedit.go`, `flai/internal/manifest/settings.go`, `settings_test.go`, `flai/internal/mcpserver/items_write.go`, `items_write_test.go` | layout | Every way an agent is set today (T-1373) |
+| `docs/operators/settings.md` | design | The index test fails on a key without a row (T-1371 to T-1373) |
+| `docs/users/flai-reference.md` | co-change (25%) | The new flags regenerate it with `make flai-reference` (T-1372, T-1373) |
+| `docs/users/flai.md`, `design/system/project-manifest.md`, `design/system/work-hierarchy.md`, `design/system/flai-cli.md`, `template/root/system-flow.yaml.tmpl`, `template/CHANGELOG.md` | design | ADR-0129's consequences and the epic's last criterion (T-1374) |
+
+`touches suggest` also listed `docs/operators/index.md`, `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`, and `flai/internal/hostapi/writes.go`. None is taken: the operator's guide changes with S-0350 and the dashboard with S-0359.
+
+Forecast: 55m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 33. It stands: four tasks of plain schema and command work.
+
+Cost of delay: 63.66 USD a week, as `flai cod` works it out: this story's 55m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands. The value of the epic arrives with this story, S-0350, and S-0351, which their `after` already put first.

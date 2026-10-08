@@ -7,17 +7,27 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:48:54Z
-updated: 2026-10-08T08:52:24Z
+updated: 2026-10-08T08:59:40Z
 transitions: []
 tags: [cli, dashboard]
 topics: [agents]
-touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/operators/settings.md, docs/users/flai.md, design/system/flai-cli.md]
-after: [S-0352]
+touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
+after: [S-0352, S-0359]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 39.35
+  by: planner-E-0019
+  at: 2026-10-08T08:56:22Z
+forecast:
+  duration: 34m
+  delivery: 2026-10-08T19:51:00Z
+  basis: "flai forecast: median 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 20 (6 criteria, 14 touches); kept as given."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:48Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:24Z
@@ -39,7 +49,6 @@ With S-0352 each adapter states whether its harness runs the guard and can hold 
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1398 The host's harness entry takes guard none and deny_protected, set with flai serve agent harness
 - T-1399 flai serve reads the adapter's capabilities before a story's start and refuses roles without the guard and a start without asking, naming what lifts each
 - T-1400 settings.harness and the Settings page show and set a harness's guard and deny_protected
@@ -49,3 +58,22 @@ Drafted by the planner; see the children.
 
 - `deny_protected` is the host's say that its arguments for the harness already deny the protected paths in the harness's own vocabulary (ADR-0131's last rule). flai cannot read another harness's arguments, so the operator states it; see the plan's thread.
 - The planner, the orchestrator, and the analyzer are outside ADR-0131's decision and start as today.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept. Three layers: the settings (T-1398); then the refusals (T-1399) and the dashboard (T-1400) together, with no file in common; then the documents (T-1401).
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/config/config.go`, `config_test.go` | design, layout | `HarnessHost` gains `Guard` and `DenyProtected` (T-1398) |
+| `flai/cmd/serve_actions.go`, `serve_actions_test.go` | layout | `flai serve agent harness` (T-1398), and `agentConfig`, which hands them to `flai serve` (T-1399) |
+| `docs/operators/settings.md`, `docs/users/flai-reference.md` | design | ADR-0131's consequences; the new flags regenerate both (T-1398) |
+| `flai/internal/serve/agents.go`, `agents_test.go` | layout | The story's start, where the checks go (T-1399) |
+| `flai/internal/hostapi/settings.go`, `writes_test.go`, `flaiover/src/lib/components/SettingsPanel.svelte`, `SettingsPanel.svelte.test.ts` | layout | `settings.harness` and each harness's box (T-1400) |
+| `docs/users/flai.md`, `design/system/flai-cli.md` | design | ADR-0131's consequences (T-1401) |
+
+`touches suggest` listed `flai/internal/hostapi/writes.go`, `flaiover/src/lib/server/agent.ts`, and `flai/internal/mcpserver/server.go`. None is taken: `settings.harness` is already a method the dashboard may call, and no MCP tool changes. `StoryAgent.svelte` already shows why a start failed, so the story page needs no change.
+
+Forecast: 34m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 20. It stands.
+
+Cost of delay: 39.35 USD a week, as `flai cod` works it out: 34m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.

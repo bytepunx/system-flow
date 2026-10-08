@@ -7,17 +7,27 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:43:50Z
-updated: 2026-10-08T08:51:57Z
+updated: 2026-10-08T08:57:10Z
 transitions: []
 tags: [cli]
 topics: [agents]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/cmd/serve_actions.go, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md]
 after: [S-0349]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 33.56
+  by: planner-E-0019
+  at: 2026-10-08T08:56:12Z
+forecast:
+  duration: 29m
+  delivery: 2026-10-08T15:58:00Z
+  basis: "flai forecast: median 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 17 (5 criteria, 12 touches); kept as given."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:42Z
 finalized:
   by: alex
   at: 2026-10-08T08:51:57Z
@@ -38,7 +48,6 @@ With S-0349 a story's agent names a provider and flai can resolve it, but nothin
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1376 The claude-code and command adapters derive their environment from a resolved provider and name the key's variable without reading it
 - T-1378 flai serve resolves the agent's provider at every start, refuses an unset key variable, and copies the key into the child alone
 - T-1380 The user, operator, and design documents say what a provider sets at start, what it refuses, and where its key's variable must be
@@ -47,3 +56,21 @@ Drafted by the planner; see the children.
 
 - Only Claude models work through Claude Code over a gateway (agent-adapters.md § Claude Code over a gateway). flai does not check the model: its meaning is the provider's.
 - `claudecheck.go` still checks each new `claude` version against Anthropic direct. Running it through a provider is left out; see the plan's thread.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept. Three layers, one task each: the adapters (T-1376), then `flai serve`'s start (T-1378), which fills what the adapters read, then the documents (T-1380).
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/harness/harness.go`, `adapters.go`, `harness_test.go` | design, layout | `Request`, `Start`, and the two adapters (T-1376) |
+| `flai/internal/serve/agents.go`, `agents_test.go` | layout | `AgentConfig`, the story's start, and `spawn` (T-1378) |
+| `flai/internal/serve/plan.go`, `orchestrate.go`, `analyze.go` | layout | Each calls `harness.For` and `adapter.Start` for its own start (T-1378) |
+| `flai/cmd/serve_actions.go` | layout | `agentConfig` builds `serve.AgentConfig` from the host's configuration at every look (T-1378) |
+| `docs/users/flai.md`, `docs/operators/index.md`, `design/system/flai-cli.md` | design | The start and where the key must be (T-1380) |
+
+`touches suggest` listed `design/system/flaiover-dashboard.md`, `docs/users/flai-reference.md`, `docs/operators/settings.md`, and `flai/internal/hostapi/writes.go`. None is taken: no flag or setting is added, and the dashboard is S-0359.
+
+Forecast: 29m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 17. It stands.
+
+Cost of delay: 33.56 USD a week, as `flai cod` works it out: 29m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.

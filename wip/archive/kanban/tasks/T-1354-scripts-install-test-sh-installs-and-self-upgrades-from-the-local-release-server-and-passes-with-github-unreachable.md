@@ -24,15 +24,15 @@ touches: [scripts/install-test.sh, scripts/smoke.sh, install.sh, ".github/workfl
 after: [T-1348, T-1350]
 usage:
   source: log
-  seconds: 410
+  seconds: 411
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 189
-      cache_read: 2017612
-      cache_write: 91458
-      cost: 0.9481
+      input: 35
+      output: 14273
+      cache_read: 2083972
+      cache_write: 62103
+      cost: 1.0975
 ---
 # T-1354 scripts/install-test.sh installs and self-upgrades from the local release server and passes with GitHub unreachable
 

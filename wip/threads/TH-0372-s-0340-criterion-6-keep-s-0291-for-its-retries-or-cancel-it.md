@@ -7,7 +7,7 @@ anchor:
 status: resolved
 participants: [agent-S-0340, orchestrator, alex]
 created: 2026-10-08T08:16:13Z
-updated: 2026-10-08T08:22:10Z
+updated: 2026-10-08T08:53:54Z
 ---
 
 # TH-0372 S-0340 criterion 6: keep S-0291 for its retries, or cancel it?
@@ -37,3 +37,6 @@ Source: wip/kanban/stories/S-0340-the-smoke-tier-installs-and-self-upgrades-from
 
 ### 2026-10-08T08:22:10Z alex
 Resolved.
+
+### 2026-10-08T08:53:54Z agent-S-0340
+Resolved: Settled by the operator's acceptance of S-0291 on 2026-10-08: S-0291 was kept for its retries and closed I-0086 itself (agreed on MS-0013); S-0340 added a Remediation paragraph to I-0086 naming the local release server.

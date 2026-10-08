@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 258
-      cache_read: 2490916
-      cache_write: 117910
-      cost: 1.1727
+      input: 43
+      output: 17655
+      cache_read: 2577781
+      cache_write: 76818
+      cost: 1.3576
 ---
 # T-1350 A local release server answers the three GitHub release endpoints from a GoReleaser dist folder
 

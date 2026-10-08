@@ -7,17 +7,27 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:46:31Z
-updated: 2026-10-08T08:52:06Z
+updated: 2026-10-08T08:57:52Z
 transitions: []
 tags: [cli]
 topics: [agents]
-touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, design/system/flai-cli.md]
+touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/flai-cli.md]
 after: [S-0351]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 57.87
+  by: planner-E-0019
+  at: 2026-10-08T08:56:18Z
+forecast:
+  duration: 50m
+  delivery: 2026-10-08T19:10:00Z
+  basis: "flai forecast gave 26m (78 s per unit over 51 improvement stories, size 20); raised to 50m because guard.go is 1,550 lines with a 1,289-line test, every rule moved with its text unchanged."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:46Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:06Z
@@ -33,12 +43,11 @@ finalized:
 - [ ] `guard.Call` carries the session, whether a sub-agent made the call, the role from `FLAI_ROLE`, the story from `FLAI_STORY`, the kind (`Shell`, `FileWrite`, `FlaiTool`, `Other`), the shell line, the path, the flai tool's name without any harness prefix, and its arguments; `guard.Verdict` is allow, deny with a reason, or ask with a reason.
 - [ ] `guard.Decide(Call, running)` holds every rule `guard.go` applies today, for a story's agent, its sub-agents, the planner, the orchestrator, and the analyzer, and no rule reads a Claude Code field or tool name.
 - [ ] A Claude Code reader maps the hook's `hook_event_name`, `session_id`, `tool_name`, `tool_input`, `agent_id`, and `agent_type` onto a `Call`, including `SubagentStart` and `SubagentStop` onto the running sub-agent record, and maps a verdict back onto exit 2 and the reason on standard error; input it cannot read still passes, as today.
-- [ ] `flai guard` takes `--harness <name>`, default `claude-code`, and refuses a harness with no reader, naming the ones it has; every existing test in `flai/internal/guard` and `flai/cmd` passes with its expectations unchanged.
+- [ ] `flai guard` takes `--harness <name>`, default `claude-code`; a harness with no reader passes the call with a warning on standard error naming the readers there are, as the guard fails open on input it cannot read (ADR-0060); every existing test in `flai/internal/guard` and `flai/cmd` passes with its expectations unchanged.
 - [ ] `design/system/flai-cli.md` describes `Call`, `Decide`, and the reader per harness.
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1391 guard.Call, guard.Verdict, and guard.Decide hold every rule of flai guard with no Claude Code field in them
 - T-1392 A Claude Code reader maps the hook's input onto a Call and the verdict onto its exit, and flai guard takes --harness
 - T-1393 flai-cli.md describes the guard's Call, Decide, and one reader per harness
@@ -47,3 +56,22 @@ Drafted by the planner; see the children.
 
 - No rule returns `ask` yet. Today Claude Code itself sends a protected write to `permission_prompt`; the next story makes that the guard's hold-and-ask and fills in the protected list.
 - No change to `.claude/settings.json` or the template: the hook command stays `flai guard`, and `--harness` defaults to `claude-code`.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept; `call.go`, `claudecode.go`, and their tests are new. Three layers, one task each: `Decide` (T-1391), the reader (T-1392), which replaces T-1391's inline mapping in `guard.go`, and the document (T-1393).
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/guard/call.go`, `call_test.go` | design | ADR-0130's `Call`, `Verdict`, and `Decide` (T-1391) |
+| `flai/internal/guard/guard.go`, `guard_test.go`, `shared.go`, `shared_test.go` | layout | The rules and the shell-line splitting live here (T-1391) |
+| `flai/internal/guard/claudecode.go`, `claudecode_test.go`, `subagents.go`, `subagents_test.go` | design, layout | Claude Code's reader, and the running sub-agent record its start and stop feed (T-1392) |
+| `flai/cmd/guard.go`, `guard_test.go` | layout | `--harness` (T-1392) |
+| `docs/operators/settings.md`, `docs/users/flai-reference.md` | layout | `--harness` is a new flag: `make flai-reference` regenerates both (T-1392) |
+| `design/system/flai-cli.md` | design | ADR-0130's consequences (T-1393) |
+
+`touches suggest` listed the user and operator guides and the dashboard's design. None is taken beyond the generated two: nothing a user does changes.
+
+Forecast: 50m. `flai forecast` gave 26m, 78 s per unit over 51 improvement stories, size 20. It is raised because `guard.go` is 1,550 lines with a 1,289-line test, and every rule moves with its refusal text unchanged.
+
+Cost of delay: 57.87 USD a week, as `flai cod` works it out: 50m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.

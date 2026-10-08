@@ -3,14 +3,17 @@ id: S-0288
 type: story
 nature: remediation
 title: flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T09:56:51Z
-updated: 2026-10-08T08:53:22Z
+updated: 2026-10-08T08:58:41Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:50Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T08:58:41Z
+    by: agent-S-0288
 tags: [flaiover, tests]
 touches: [flaiover/src/lib/server/notify.test.ts, design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md, design/issues/summary.md]
 agent:

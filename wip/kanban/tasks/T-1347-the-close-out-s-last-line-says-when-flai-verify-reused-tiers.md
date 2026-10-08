@@ -3,16 +3,36 @@ id: T-1347
 type: task
 nature: improvement
 title: The close-out's last line says when flai verify reused tiers
-status: backlog
+status: done
 parent: S-0341
 owner: alex
 created: 2026-10-08T08:05:32Z
-updated: 2026-10-08T08:05:32Z
-transitions: []
+updated: 2026-10-08T08:59:15Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:52:09Z
+    by: agent-S-0341
+  - to: in-progress
+    at: 2026-10-08T08:52:10Z
+    by: agent-S-0341
+  - to: done
+    at: 2026-10-08T08:59:15Z
+    by: agent-S-0341
 stream: S-0341
 tags: [cli]
 touches: [scripts/close-out.sh]
 after: [T-1344]
+usage:
+  source: log
+  seconds: 425
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 168
+      cache_read: 1633349
+      cache_write: 59872
+      cost: 0.7642
 ---
 # T-1347 The close-out's last line says when flai verify reused tiers
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 239.0268
-accrued_seconds: 112705
-tasks_completed: 275
-last_run: 2026-10-08T08:41:10Z
+accrued_cost: 277.7147
+accrued_seconds: 113743
+tasks_completed: 289
+last_run: 2026-10-08T08:58:28Z
 ---
 
 # Orchestrator activity
@@ -1936,6 +1936,104 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0344, S-0345, S-0290, S-0288
 - Seconds: 223
 - Cost: 4.2873 USD, estimated
+
+### 2026-10-08T08:42:17Z
+
+- Summary: The operator accepted S-0291 (install.sh and self-upgrade retry dropped GitHub calls), which also closed my TH-0374. Published under judgement (1 pending, 300 USD/week) as flai 1.39.11→1.39.12 (flai/v1.39.12), pushed: users' installs and upgrades gain the retries only once released.
+- Items: S-0291
+- Seconds: 67
+- Cost: 2.1217 USD, estimated
+
+### 2026-10-08T08:45:45Z
+
+- Summary: Recommended an answer on TH-0379, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0347
+- Seconds: 208
+- Cost: 7.3219 USD, estimated
+
+### 2026-10-08T08:45:47Z
+
+- Summary: TH-0379 (planner-S-0347): recommended the operator approve the plan (6 tasks, 5 layers, 1h30m, 75 USD/week, the sync step passing over wip-only main commits). I flagged that it changes the definition of done in the template's baseline convention, a decision not yet recorded, so I left the thread open for the operator's confirmation. S-0320's acceptance today shows the need.
+- Items: S-0347
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T08:48:34Z
+
+- Summary: Resolved planner-S-0347's TH-0379 after the operator confirmed my recommendation, including the definition-of-done change. Started the planner for S-0346 (MD034 outside the story at close-out), the first story flai plan --candidates lists. S-0348 follows.
+- Items: S-0347, S-0346
+- Seconds: 167
+- Cost: 3.1955 USD, estimated
+
+### 2026-10-08T08:50:31Z
+
+- Summary: Answered TH-0380, citing wip/kanban/stories/S-0288-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md
+- Items: S-0288
+- Seconds: 117
+- Cost: 4.5016 USD, estimated
+
+### 2026-10-08T08:50:35Z
+
+- Summary: Settled planner-S-0288's replan thread TH-0380 under plan_backlog_stories: the tasks are unchanged and the value is now 37.50 USD/week from the operator's 15m input. I approved and resolved it. Re-applied the throughput order: S-0288 (20m) first, then S-0344, S-0345, S-0290, S-0342, S-0343.
+- Items: S-0288
+- Seconds: 4
+- Cost: 0.0000 USD
+
+### 2026-10-08T08:51:31Z
+
+- Summary: The operator finalized S-0334 and moved it to ready, and TH-0319 is already resolved. Re-applied the throughput order: S-0288, S-0344, S-0345, S-0290, S-0342, S-0334 (53m), then S-0343 and S-0297, which lack forecasts.
+- Items: S-0334, S-0297
+- Seconds: 56
+- Cost: 1.8123 USD, estimated
+
+### 2026-10-08T08:51:49Z
+
+- Summary: The operator moved S-0337 and S-0338 (E-0018) to ready. Re-applied the throughput order: S-0288, S-0344, S-0345, S-0290, S-0338, S-0342, S-0337, S-0334, then S-0343 and S-0297, which lack forecasts. flai's after-holds still apply to S-0337 and S-0338 until S-0334 is done.
+- Items: S-0337, S-0338
+- Seconds: 18
+- Cost: 1.6876 USD, estimated
+
+### 2026-10-08T08:55:00Z
+
+- Summary: Answered TH-0381, citing wip/kanban/stories/S-0346-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md
+- Items: S-0346
+- Seconds: 191
+- Cost: 11.4140 USD, estimated
+
+### 2026-10-08T08:55:03Z
+
+- Summary: Answered TH-0382, citing wip/kanban/stories/S-0346-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md
+- Items: S-0346
+- Seconds: 3
+- Cost: 0.1488 USD, estimated
+
+### 2026-10-08T08:55:12Z
+
+- Summary: Settled planner-S-0346's threads under plan_backlog_stories. On TH-0381 I set time_lost_per_cycle 5m, the planner's recommended input, since nothing argued for 15m or none. On TH-0382 I approved the plan: 3 tasks, 40m, quoting bare URLs in the run-end summary flai takes from a strategic run, then closing I-0118. I resolved both. S-0348's planner waits until S-0346's ends.
+- Items: S-0346
+- Seconds: 9
+- Cost: 0.3009 USD, estimated
+
+### 2026-10-08T08:56:04Z
+
+- Summary: Finalized S-0346 under finalize_drafts: complete per flai promote --drafts, 40m, its value from the 5m input. Started the planner for S-0348 (board.wip-limit outside the story). S-0346 is now rank 1 on flai promote --candidates (40m), but flai refused my move to ready because the ready column is at its WIP limit (10 of 10). I promote it when a slot opens. Re-applied the throughput order, which keeps the operator's placement of S-0290.
+- Items: S-0346, S-0348
+- Seconds: 52
+- Cost: 1.5181 USD, estimated
+
+### 2026-10-08T08:58:27Z
+
+- Summary: Answered TH-0383, citing wip/kanban/stories/S-0348-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md
+- Items: S-0348
+- Seconds: 143
+- Cost: 4.5086 USD, estimated
+
+### 2026-10-08T08:58:28Z
+
+- Summary: Settled planner-S-0348's TH-0383 under plan_backlog_stories: set time_lost_per_cycle 5m on S-0348, the planner's recommended input, since nothing argued for 15m or none and it matches S-0346's input for the same kind of finding. Resolved the thread.
+- Items: S-0348
+- Seconds: 1
+- Cost: 0.1569 USD, estimated
 
 ## Refusals
 

@@ -3,11 +3,14 @@ id: S-0297
 type: story
 nature: improvement
 title: Two story branches that each bump the same issue conflict in its front matter, whose count, last_reported, and updated lines both rewrite
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T19:46:46Z
-updated: 2026-10-07T02:19:43Z
-transitions: []
+updated: 2026-10-08T08:50:34Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:50:34Z
+    by: alex
 tags: [cli]
 topics: [cli, git, continuous-improvement]
 touches: [flai/internal/issues/merge.go, flai/internal/issues/merge_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/branch.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, design/adrs, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0092-two-story-branches-that-each-bump-the-same-issue-conflict-in-its-front-matter-whose-count-last-reported-and-updated-lines-both-rewrite.md, design/issues/summary.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 5
+      seconds: 33
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1
-          output: 2
-          cache_read: 133364
-          cache_write: 348
-          cost: 0.0349
+          input: 14
+          output: 221
+          cache_read: 3807545
+          cache_write: 4016
+          cost: 0.9411
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 276
-      cache_read: 1645173
-      cache_write: 74267
-      cost: 0.773
+      input: 28
+      output: 11636
+      cache_read: 1698993
+      cache_write: 50630
+      cost: 0.8948
 ---
 # T-1348 scripts/flai-snapshot.sh builds a host-only release with a plain version for the local release server
 

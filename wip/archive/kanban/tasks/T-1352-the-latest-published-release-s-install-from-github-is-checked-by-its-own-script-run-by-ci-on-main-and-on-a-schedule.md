@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 83
-      output: 339
-      cache_read: 3534321
-      cache_write: 117451
-      cost: 1.6416
+      input: 60
+      output: 24713
+      cache_read: 3608318
+      cache_write: 107528
+      cost: 1.9003
 ---
 # T-1352 The latest published release's install from GitHub is checked by its own script, run by CI on main and on a schedule
 

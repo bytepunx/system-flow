@@ -6,7 +6,7 @@ title: Agent adapters for LiteLLM and OpenRouter
 status: ready
 owner: alex
 created: 2026-10-08T08:33:28Z
-updated: 2026-10-08T08:45:23Z
+updated: 2026-10-08T08:59:39Z
 transitions:
   - to: ready
     at: 2026-10-08T08:38:12Z
@@ -34,6 +34,9 @@ cost_of_delay:
     penalty_per_week: 500
     by: alex
     at: 2026-10-08T08:45:23Z
+  value: 500
+  by: planner-E-0019
+  at: 2026-10-08T08:56:09Z
 ---
 # E-0019 Agent adapters for LiteLLM and OpenRouter
 
@@ -57,6 +60,15 @@ To be drafted by the planner from the finding. Order: the provider split and Ope
 - S-0349 A story's agent names a provider from the host's providers map, and a project's manifest may override the entry's api, base_url, and models
 - S-0350 flai serve starts a claude-code agent through its provider, with the key read from the variable the host names and never written down
 - S-0351 A claude-code agent runs through OpenRouter with the guard and permission_prompt on, checked by tests that run only where its key is set, and what OpenRouter forwards and charges is recorded
+- S-0352 Each adapter states its capabilities and reads its harness's log into neutral usage events, and flai measures usage from those events
+- S-0353 flai guard decides on a neutral call through Decide, and Claude Code's hook input is one reader of it
+- S-0354 Asking the owner before a protected write is one hold-and-ask that the guard's ask verdict and permission_prompt share, and the protected list is flai's, kept per harness
+- S-0355 A harness that cannot run the guard or hold a call to ask runs a story's agent but none of its roles, unless the host sets guard none for it, and each refusal names what lifts it
+- S-0356 A claude-code agent runs through a LiteLLM proxy as it does through OpenRouter, checked by tests that run only where the proxy and its key are set, and what LiteLLM forwards and logs is recorded
+- S-0357 A story's agent run through a provider is priced from the gateway's spend log, and an item's usage records priced_by, summed up the hierarchy as its least certain source
+- S-0358 flai stats, flai show, and the dashboard show what priced each cost, and metrics.md defines priced_by and its sum
+- S-0359 The dashboard's settings show and set the host's providers, and a story's and the project's agent fields name a provider
+- S-0360 flai serve checks each new claude version through the provider a project's agents name, so a host that reaches Claude only through a gateway is not reported failing
 
 ## Notes
 

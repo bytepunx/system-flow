@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:45:35Z
-updated: 2026-10-08T08:52:03Z
+updated: 2026-10-08T08:57:38Z
 transitions: []
 tags: [cli]
 topics: [agents, usage]
@@ -18,6 +18,16 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 52.08
+  by: planner-E-0019
+  at: 2026-10-08T08:56:16Z
+forecast:
+  duration: 45m
+  delivery: 2026-10-08T19:09:00Z
+  basis: "flai forecast gave 25m (78 s per unit over 51 improvement stories, size 19); raised to 45m because it moves the 1,070 lines of log.go and turns.go onto events with every expectation unchanged."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:45Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:03Z
@@ -38,7 +48,6 @@ finalized:
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1387 usage.Event and usage.Reader are defined, and a Claude Code reader turns stream-json into them
 - T-1388 Each adapter states its capabilities, claude-code all of them and command none
 - T-1389 Each adapter gives its reader, and usage.Read, the task shares, empty wakes, and turns are measured from events
@@ -48,3 +57,21 @@ Drafted by the planner; see the children.
 
 - `flai/internal/serve/stream.go`, which shows the live stream on the dashboard, keeps reading stream-json: it is display, not measurement, and moving it is not in ADR-0130.
 - The metrics change is the wording of two definitions, under ADR-0130; no figure changes.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept; `event.go`, `claudecode.go`, and its test are new. Three layers: T-1387 and T-1388 together, since one is in `usage` and the other in `harness`; then T-1389, which joins them; then T-1390.
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/usage/event.go`, `claudecode.go`, `claudecode_test.go` | design | ADR-0130's `Reader` and event, and Claude Code's reader (T-1387) |
+| `flai/internal/harness/harness.go`, `adapters.go`, `harness_test.go` | design, layout | `Capabilities()` and `Reader()` on the adapter (T-1388, T-1389) |
+| `flai/internal/usage/log.go`, `log_test.go`, `turns.go`, `turns_test.go` | layout | Every stream-json field read today is in these two (T-1389) |
+| `flai/internal/serve/usage.go`, `usage_test.go` | layout | Where `flai serve` measures a story's runs (T-1389) |
+| `design/system/metrics.md`, `design/system/flai-cli.md` | design | ADR-0130's consequences: the empty wake and the turn are defined on stream-json fields today (T-1390) |
+
+`touches suggest` listed the user and operator guides and the dashboard's design. None is taken: nothing a user sees changes.
+
+Forecast: 45m. `flai forecast` gave 25m, 78 s per unit over 51 improvement stories, size 19. It is raised because the story moves the 1,070 lines of `log.go` and `turns.go` onto events with every test's expectations unchanged.
+
+Cost of delay: 52.08 USD a week, as `flai cod` works it out: 45m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.

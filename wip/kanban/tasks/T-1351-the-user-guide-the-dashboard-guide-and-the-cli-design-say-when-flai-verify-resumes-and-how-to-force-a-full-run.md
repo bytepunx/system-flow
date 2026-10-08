@@ -3,16 +3,36 @@ id: T-1351
 type: task
 nature: improvement
 title: The user guide, the dashboard guide, and the CLI design say when flai verify resumes and how to force a full run
-status: backlog
+status: done
 parent: S-0341
 owner: alex
 created: 2026-10-08T08:05:45Z
-updated: 2026-10-08T08:05:45Z
-transitions: []
+updated: 2026-10-08T08:59:29Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:52:10Z
+    by: agent-S-0341
+  - to: in-progress
+    at: 2026-10-08T08:52:11Z
+    by: agent-S-0341
+  - to: done
+    at: 2026-10-08T08:59:29Z
+    by: agent-S-0341
 stream: S-0341
 tags: [cli, docs]
 touches: [docs/users/flai.md, design/system/flai-cli.md, docs/users/flaiover.md]
 after: [T-1344, T-1346]
+usage:
+  source: log
+  seconds: 424
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 306
+      cache_read: 2223978
+      cache_write: 68953
+      cost: 1.035
 ---
 # T-1351 The user guide, the dashboard guide, and the CLI design say when flai verify resumes and how to force a full run
 

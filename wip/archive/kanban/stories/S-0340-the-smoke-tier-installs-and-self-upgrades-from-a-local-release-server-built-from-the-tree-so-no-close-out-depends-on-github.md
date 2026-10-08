@@ -3,10 +3,10 @@ id: S-0340
 type: story
 nature: remediation
 title: The smoke tier installs and self-upgrades from a local release server built from the tree, so no close-out depends on GitHub
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-08T07:59:11Z
-updated: 2026-10-08T08:22:05Z
+updated: 2026-10-08T08:59:48Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T08:14:33Z
     by: alex
+  - to: review
+    at: 2026-10-08T08:58:34Z
+    by: agent-S-0340
+  - to: done
+    at: 2026-10-08T08:59:48Z
+    by: orchestrator
 tags: [cli]
 topics: [ci, testing, release]
 touches: [scripts/install-test.sh, scripts/smoke.sh, scripts/flai-snapshot.sh, scripts/release-server.sh, install.sh, ".github/workflows/system-flow-check.yml", design/tech/ci.md, design/system/devex.md, docs/users/flai.md, flai/.goreleaser.yaml, flai/internal/releaseserver/releaseserver.go, flai/internal/releaseserver/releaseserver_test.go, flai/internal/releaseserver/serve/main.go, scripts/install-published-test.sh, ".github/workflows/install-published.yml", Makefile, scripts/README.md, design/system/flai-cli.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/summary.md]
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1007
-  estimated: true
+  seconds: 2615
   turns:
     - day: 2026-10-08
-      ceremony: 5
-      hand_edits: 1
-      work: 32
+      ceremony: 7
+      test_runs: 2
+      hand_edits: 4
+      work: 60
   models:
     - model: claude-opus-5-5
-      input: 266
-      output: 1202
-      cache_read: 11450762
-      cache_write: 538997
-      cost: 5.3898
+      input: 392
+      output: 161439
+      cache_read: 23571414
+      cache_write: 702432
+      cost: 12.4136
   strategic:
     - kind: planner
       seconds: 343
@@ -92,12 +98,12 @@ The behaviour under test is the installer's and self-upgrade's own: resolving a 
 
 ## Acceptance criteria
 
-- [ ] `scripts/install-test.sh` builds a release from the tree with `scripts/flai-snapshot.sh` and serves it from a local HTTP server that answers the three GitHub endpoints the installer and self-upgrade use (the release listing, a release by tag, and an asset download) with that build's archives and `checksums.txt`; `install.sh` and `flai self-upgrade` are pointed at it and at a stand-in repository name, and the script makes no request to `api.github.com` or `github.com`.
-- [ ] The smoke tier passes with no GitHub token and with GitHub unreachable, shown by a run with `FLAI_API` pointed at the local server and network access to `api.github.com` refused (an unroutable `https_proxy` is enough), and `scripts/smoke.sh` and `system-flow-check.yml` no longer need `GITHUB_TOKEN` for it.
-- [ ] Every check the script makes today is kept against the local server: an explicit `FLAI_INSTALL_DIR`, the default `HOME/.flai/bin` install without sudo and with the `PATH` line printed, `self-upgrade --check`, `self-upgrade --dir`, the resolution of the binary's own path outside a project, and the resolution to `HOME/.flai/bin` inside one; the installed binary reports the snapshot's version.
-- [ ] The check that the latest published release installs from GitHub is kept as its own script, run by CI on main and on a schedule but by no story's close-out, and a failure of it opens or bumps an issue through `flai issue` rather than failing a story.
-- [ ] `docs/users/flai.md`, `design/tech/ci.md`, and `design/system/devex.md` say what the smoke tier installs from, what the GitHub check covers, and how to run each by hand.
-- [ ] I-0086 is closed with `flai issue close I-0086 --reason` saying what fixed it, and S-0291 is cancelled or closed as taken over, as the operator decides.
+- [x] `scripts/install-test.sh` builds a release from the tree with `scripts/flai-snapshot.sh` and serves it from a local HTTP server that answers the three GitHub endpoints the installer and self-upgrade use (the release listing, a release by tag, and an asset download) with that build's archives and `checksums.txt`; `install.sh` and `flai self-upgrade` are pointed at it and at a stand-in repository name, and the script makes no request to `api.github.com` or `github.com`.
+- [x] The smoke tier passes with no GitHub token and with GitHub unreachable, shown by a run with `FLAI_API` pointed at the local server and network access to `api.github.com` refused (an unroutable `https_proxy` is enough), and `scripts/smoke.sh` and `system-flow-check.yml` no longer need `GITHUB_TOKEN` for it.
+- [x] Every check the script makes today is kept against the local server: an explicit `FLAI_INSTALL_DIR`, the default `HOME/.flai/bin` install without sudo and with the `PATH` line printed, `self-upgrade --check`, `self-upgrade --dir`, the resolution of the binary's own path outside a project, and the resolution to `HOME/.flai/bin` inside one; the installed binary reports the snapshot's version.
+- [x] The check that the latest published release installs from GitHub is kept as its own script, run by CI on main and on a schedule but by no story's close-out, and a failure of it opens or bumps an issue through `flai issue` rather than failing a story.
+- [x] `docs/users/flai.md`, `design/tech/ci.md`, and `design/system/devex.md` say what the smoke tier installs from, what the GitHub check covers, and how to run each by hand.
+- [x] I-0086 is closed with `flai issue close I-0086 --reason` saying what fixed it, and S-0291 is cancelled or closed as taken over, as the operator decides.
 
 ## Tasks
 - T-1348 scripts/flai-snapshot.sh builds a host-only release with a plain version for the local release server
@@ -157,3 +163,22 @@ Cost of delay: `flai cod` gave 37.50 USD a week from the operator's input of 15m
 - That is about 5.5h a week at 150 USD an hour, or 825 USD, rounded down to 800.
 
 The input is the operator's and is left as it is. The plan's thread recommends raising it to about 5h30m.
+
+### Delivery
+
+- Criterion 2: the smoke tier's steps passed on squatchship on 2026-10-08 with `GITHUB_TOKEN` and `GH_TOKEN` unset and `https_proxy` and `HTTPS_PROXY` at `http://127.0.0.1:9`, which nothing answers. They ran one by one, `scripts/flai.sh check --strict --story S-0340` in place of `scripts/check.sh`, because an unscoped `check.sh` fails on board warnings outside the story (WIP limit, overlaps). `install-test.sh` took 11 s. `lint-md.sh` took 480 s under the dead proxy, and 8 s without it: it is npm, not GitHub, that waits on the proxy.
+- Criterion 4: on a host, a failure of `scripts/install-published-test.sh` opens or bumps the issue "The latest published flai release does not install from GitHub" through `flai issue`, uncommitted; this was shown in a scratch clone with `FLAI_API` at a dead address, where it opened I-0120 there. In CI it records nothing and the failed run is the record, as TH-0370 settled (ADR-0067).
+- Criterion 6: S-0291 closed I-0086 with `flai issue close --reason`, as agreed with its agent on MS-0013, and the operator accepted S-0291 on 2026-10-08, so it was kept for its retries rather than cancelled. S-0340 added a paragraph to I-0086's Remediation naming the local release server and the separate GitHub check.
+
+### Accepted by the orchestrator
+
+- Verified: 9f19cc9ea2b398b684abfa880326e16aa90d4bf0
+- At: 2026-10-08T08:59:48Z
+
+Verdict: accept. flai verify passed every step at the branch head 9f19cc9e, and the verifier matched all six criteria to the diff. Note: S-0232 overlaps on flai/.goreleaser.yaml, design/tech/ci.md and scripts/flai-snapshot.sh, so expect a conflict when it syncs.
+- 1: scripts/install-test.sh, scripts/flai-snapshot.sh, scripts/release-server.sh, flai/.goreleaser.yaml, flai/internal/releaseserver/releaseserver.go, flai/internal/releaseserver/serve/main.go, flai/internal/releaseserver/releaseserver_test.go
+- 2: scripts/install-test.sh, scripts/smoke.sh, .github/workflows/system-flow-check.yml
+- 3: scripts/install-test.sh
+- 4: scripts/install-published-test.sh, .github/workflows/install-published.yml, Makefile
+- 5: docs/users/flai.md, design/tech/ci.md, design/system/devex.md, design/system/flai-cli.md, scripts/README.md
+- 6: design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/summary.md

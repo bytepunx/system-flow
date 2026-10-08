@@ -3,16 +3,36 @@ id: T-1356
 type: task
 nature: remediation
 title: flai.md, ci.md, devex.md, flai-cli.md, and scripts/README.md say what the smoke tier installs from and what the GitHub check covers
-status: backlog
+status: done
 parent: S-0340
 owner: alex
 created: 2026-10-08T08:06:17Z
-updated: 2026-10-08T08:06:17Z
-transitions: []
+updated: 2026-10-08T08:52:45Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:50:11Z
+    by: agent-S-0340
+  - to: in-progress
+    at: 2026-10-08T08:50:12Z
+    by: agent-S-0340
+  - to: done
+    at: 2026-10-08T08:52:45Z
+    by: agent-S-0340
 stream: S-0340
 tags: [cli]
-touches: [docs/users/flai.md, design/tech/ci.md, design/system/devex.md, design/system/flai-cli.md, scripts/README.md]
+touches: [docs/users/flai.md, design/tech/ci.md, design/system/devex.md, design/system/flai-cli.md, scripts/README.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
 after: [T-1354, T-1352]
+usage:
+  source: log
+  seconds: 153
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 15227
+      cache_read: 2223228
+      cache_write: 66253
+      cost: 1.1708
 ---
 # T-1356 flai.md, ci.md, devex.md, flai-cli.md, and scripts/README.md say what the smoke tier installs from and what the GitHub check covers
 

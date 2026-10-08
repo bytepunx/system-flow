@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 28361
-      cache_read: 6254431
-      cache_write: 185088
-      cost: 3.1126
+      input: 81
+      output: 24301
+      cache_read: 6272592
+      cache_write: 154002
+      cost: 2.8222
 ---
 # T-1221 release-signing.md's cosign, GoReleaser, and attestation claims are checked against their current documentation and corrected
 

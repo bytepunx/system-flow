@@ -7,17 +7,27 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:50:22Z
-updated: 2026-10-08T08:52:43Z
+updated: 2026-10-08T08:58:48Z
 transitions: []
 tags: [cli]
 topics: [agents, usage]
-touches: [flai/internal/usage/spend.go, flai/internal/usage/spend_test.go, flai/internal/usage/openrouter.go, flai/internal/usage/openrouter_test.go, flai/internal/usage/litellm.go, flai/internal/usage/litellm_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, docs/operators/settings.md, design/system/flai-cli.md]
+touches: [flai/internal/usage/spend.go, flai/internal/usage/spend_test.go, flai/internal/usage/openrouter.go, flai/internal/usage/openrouter_test.go, flai/internal/usage/litellm.go, flai/internal/usage/litellm_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/flai-cli.md]
 after: [S-0352, S-0356]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+cost_of_delay:
+  value: 48.61
+  by: planner-E-0019
+  at: 2026-10-08T08:56:24Z
+forecast:
+  duration: 42m
+  delivery: 2026-10-08T21:52:00Z
+  basis: "flai forecast: median 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 25 (6 criteria, 19 touches); kept as given."
+  by: planner-E-0019
+  at: 2026-10-08T08:55:51Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:43Z
@@ -39,7 +49,6 @@ Over a gateway, Claude Code's `total_cost_usd` is its own estimate at Anthropic'
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1405 usage carries priced_by in the front matter and sums it up the hierarchy as the least certain source
 - T-1406 usage.Spend is the spend reader's contract, and OpenRouter's reads a run's cost from /api/v1/generation or /api/v1/key
 - T-1407 LiteLLM's spend reader reads a run's cost from /spend/logs by key and window, or by session where the proxy keeps it
@@ -51,3 +60,23 @@ Drafted by the planner; see the children.
 
 - No price table is added (ADR-0132).
 - How a run's calls join the gateway's records is what S-0351 and S-0356 record; the readers follow their finding, and this story's agent reads `agent-adapters.md`'s two check sections before it writes them.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept; `spend.go`, `openrouter.go`, `litellm.go`, and their tests are new. Four layers: T-1405, T-1406, and T-1408 together, with no file in common; then T-1407, which implements T-1406's contract; then T-1409, which joins them all; then T-1410.
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/usage/usage.go`, `usage_test.go`, `flai/internal/workitem/usage.go`, `usage_test.go` | design, layout | `priced_by` on `Usage`, its sum, and its front matter (T-1405) |
+| `flai/internal/usage/spend.go`, `spend_test.go`, `openrouter.go`, `openrouter_test.go` | design | ADR-0132's reader per gateway, OpenRouter first (T-1406) |
+| `flai/internal/usage/litellm.go`, `litellm_test.go` | design | LiteLLM's reader (T-1407) |
+| `flai/internal/manifest/provider.go`, `provider_test.go`, `flai/cmd/serve_actions.go`, `serve_actions_test.go` | design | ADR-0132's consequences: the entry names the spend key where it differs (T-1408) |
+| `docs/operators/settings.md`, `docs/users/flai-reference.md` | design | The new key and flag; `make flai-reference` regenerates both (T-1408) |
+| `flai/internal/serve/usage.go`, `usage_test.go` | layout | Where a story's runs are measured (T-1409) |
+| `design/system/flai-cli.md` | design | How usage is measured (T-1410) |
+
+`touches suggest` listed `docs/users/flai.md`, the dashboard's documents, and `flai/internal/hostapi/writes.go`. None is taken: what a user sees changes in S-0358.
+
+Forecast: 42m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 25. It stands: the readers are tested against recorded responses, with no live call.
+
+Cost of delay: 48.61 USD a week, as `flai cod` works it out: 42m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.
