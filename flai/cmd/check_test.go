@@ -404,6 +404,42 @@ func TestCheckRecordIssuesLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
 	}
 }
 
+// I-0123, ADR-0133: in progress is over its limit on the main checkout's
+// board, as at S-0321's and S-0339's close-outs; a close-out of S-004 neither
+// notes the board.wip-limit nor records it in an issue, while the unscoped
+// check still warns on it and fails --strict.
+func TestCheckRecordIssuesLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", map[string]string{"S-006": "docs", "S-007": "template"})
+	board := filepath.Join(root, "wip/kanban/board.md")
+	data, err := os.ReadFile(board)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(board, []byte(strings.Replace(string(data), "in-progress: 5\n", "in-progress: 2\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict")
+	if code == 0 || !strings.Contains(out, "warning: board.wip-limit: 3 stories in in-progress, limit 2\n") {
+		t.Fatalf("unscoped, the run should warn on the board's in-progress limit and fail --strict: exit %d\n%s%s", code, out, errOut)
+	}
+	out, errOut, code = runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "board.wip-limit") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the board.wip-limit should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); names != nil {
+		t.Errorf("no issue should be opened or bumped, got %v", names)
+	}
+}
+
 // I-0096, ADR-0123: another story in progress leaves a code span ending in a
 // space in its narrative, as S-0229 did; a close-out of S-004 neither notes
 // its markdown.MD038 nor records it in an issue, while the unscoped check

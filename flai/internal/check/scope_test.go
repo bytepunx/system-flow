@@ -187,6 +187,7 @@ func TestScopedCheckFailsOnlyOnTheStorysOwnFindings(t *testing.T) {
 // back from the counts, so the run neither notes nor records it.
 func TestScopedCheckLeavesOutAnOverlapBetweenTwoOtherStories(t *testing.T) {
 	root := scopeProject(t)
+	edit(t, root, "wip/kanban/board.md", "in-progress: 2\n", "in-progress: 5\n")
 	addStory(t, root, "S-006", "E-001", "touches: [flai]\n")
 	addStory(t, root, "S-007", "E-001", "touches: [flai/cmd]\n")
 	whole, scoped := runScoped(t, root, nil)
@@ -253,6 +254,74 @@ func TestScopedCheckLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
 	}
 	if scoped.Warnings != warnings || scoped.Outside != outside {
 		t.Errorf("counts should match the findings kept: warnings %d outside %d, findings give %d, %d", scoped.Warnings, scoped.Outside, warnings, outside)
+	}
+}
+
+// I-0123, ADR-0133: scoped to a story, a board.wip-limit on the main
+// checkout's board, in progress over its limit as at S-0321's and S-0339's
+// close-outs or review over it, advisory, is left out of the result, and its
+// counts are taken back, advisory included, so the run neither notes nor
+// records it. Unscoped, it is reported as before.
+func TestScopedCheckLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		message  string
+		advisory bool
+		setup    func(t *testing.T, root string)
+	}{
+		{"in progress over its limit", "3 stories in in-progress, limit 2", false, func(t *testing.T, root string) {
+			addStory(t, root, "S-006", "E-001", "")
+			addStory(t, root, "S-007", "E-001", "")
+		}},
+		{"review over its limit", "2 stories in review, limit 1", true, func(t *testing.T, root string) {
+			edit(t, root, "wip/kanban/board.md", "review: 3\n", "review: 1\n")
+			for _, id := range []string{"S-006", "S-007"} {
+				addStory(t, root, id, "E-001", "")
+				rel := "wip/kanban/stories/" + id + "-six.md"
+				edit(t, root, rel, "status: in-progress\n", "status: review\n")
+				edit(t, root, rel, "    by: agent\ntags: []\n", "    by: agent\n  - to: review\n    at: 2026-08-31T10:00:00Z\n    by: agent\ntags: []\n")
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := scopeProject(t)
+			tc.setup(t, root)
+			whole, scoped := runScoped(t, root, nil)
+			var limits []Finding
+			for _, f := range whole.Findings {
+				if f.Rule == "board.wip-limit" {
+					limits = append(limits, f)
+				}
+			}
+			if len(limits) != 1 || limits[0].Message != tc.message || limits[0].advisory != tc.advisory ||
+				!strings.HasSuffix(filepath.ToSlash(limits[0].Path), "wip/kanban/board.md") {
+				t.Fatalf("unscoped, the run should report %q on the board: %+v", tc.message, whole.Findings)
+			}
+			if !tc.advisory && whole.OK(true) {
+				t.Errorf("unscoped, in progress over its limit should fail --strict: %+v", whole)
+			}
+			for _, f := range scoped.Findings {
+				if f.Rule == "board.wip-limit" {
+					t.Errorf("scoped to S-004, the board.wip-limit should be left out: %+v", f)
+				}
+			}
+			if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+				t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+			}
+			assertCountsMatch(t, scoped)
+			advisory := 0
+			for _, f := range scoped.Findings {
+				if f.advisory && !f.Outside {
+					advisory++
+				}
+			}
+			if scoped.Advisory != advisory {
+				t.Errorf("scoped advisory %d, the findings kept give %d", scoped.Advisory, advisory)
+			}
+			if !scoped.OK(true) {
+				t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
+			}
+		})
 	}
 }
 
