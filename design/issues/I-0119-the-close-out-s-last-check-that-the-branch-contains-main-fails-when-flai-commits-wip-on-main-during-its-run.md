@@ -3,7 +3,7 @@ id: I-0119
 title: The close-out's last check that the branch contains main fails when flai commits wip on main during its run
 class: efficiency
 status: closed
-count: 7
+count: 8
 cost: 9m
 first_reported: 2026-10-08T04:29:28Z
 last_reported: 2026-10-08T09:55:20Z
@@ -40,6 +40,10 @@ S-0341's close-out: flai verify passed every step, about 8 minutes with integrat
 ### 2026-10-08T09:16:38Z
 Story: S-0322.
 S-0322's sixth close-out passed every step of flai verify, then stopped at the last check that the branch contains main: flai had committed `chore: replan forecasts after accepted S-0288` (wip only) on main during the run. Its first and fifth close-outs stopped at the same check after stories were accepted meanwhile.
+
+### 2026-10-08T09:16:44Z
+Story: S-0341.
+S-0341's close-out lost two more runs. One started 1 commit behind main, a wip commit landed between the sync and verify. One passed every step at d4aec94d, then found main had taken S-0288's acceptance (a9c88c6e) and a forecast replan (320965da) during the run.
 
 ### 2026-10-08T09:55:20Z
 Story: S-0297.
