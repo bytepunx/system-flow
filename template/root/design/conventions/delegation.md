@@ -1,6 +1,6 @@
 ---
 title: Delegation
-updated: 2026-10-07
+updated: 2026-10-08
 audience: agent
 order: 130
 status: active
@@ -83,6 +83,7 @@ When and how the agent working a story hands work to a sub-agent and what it may
 - Run only the tests for what you changed, with `flai test` on the paths you changed or the MCP tool `test`, rather than running the test and lint tools by hand; leave the whole suite, the whole lint, and `flai check` to the story's agent.
 - When a build or test fails in a path your task does not touch, another task's edit may be half done: do not fix it. Wait a minute and run it again, and say in your final message what failed, when, and for how long.
 - Do not commit, stage, or otherwise write to git. Do not move, create, or edit work items, write to threads or send messages, read the inbox, wait for events or work, or sync the stream; the guard refuses them, and you do not work around it.
+- Record a decision your task makes as an ADR through flai, never by copying what it writes or guessing a number: `flai adr new`, or the MCP tool `adr_new`, numbers it, names the file, and adds its index row, and `flai adr topics` sets its topics. Give none of them `--commit` or `--autocommit`, nor `adr_new` its `commit`: the guard refuses those, and the story's agent commits the ADR with the rest of your task ([ADR-0127](../adrs/0127-flai-guard-lets-a-story-s-sub-agent-write-an-adr-with-flai-adr-new-topics-and.md)).
 - When you need the designer to decide something, stop and put the question in your final message, with your recommended answer first.
 - Your final message is all the story's agent sees. Lead with done or not done, then the files you changed, the story's acceptance criteria your task's work meets, by their numbers in `flai criteria list`, the tests you ran and their results, the decisions a reader could have made differently, and what is left. You do not tick them; the story's agent does after its review.
 

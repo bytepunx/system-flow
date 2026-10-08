@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.80 - 2026-10-08
+
+- S-0287 A task sub-agent records an ADR with flai and leaves the commit to the story's agent (patch, ADR-0127): `delegation.md` § As a task sub-agent says to record a decision with `flai adr new` or `adr_new`, and set its topics with `flai adr topics`, never by copying what flai writes or guessing a number, and never with `--commit`, `--autocommit`, or `adr_new`'s `commit`, which `flai guard` refuses. It needs a flai that has it; an older flai's guard still refuses a sub-agent every `flai adr` command and `adr_new`.
+
 ## 1.0.79 - 2026-10-08
 
 - S-0323 flai check finds `narrative.state` outside the story at close-out (patch).
