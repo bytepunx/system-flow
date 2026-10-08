@@ -30,5 +30,6 @@ Living documents describing system-flow as it currently is. Read them in this or
 | [agent-context.md](agent-context.md) | The finding of S-0125: what an agent loads at session start, what a story says about what it needs, how others choose context, the ranked designs, and the designer's decision |
 | [server-performance.md](server-performance.md) | The finding of S-0152: how a request's time is measured beneath its transport, what the dashboard's methods and the MCP tools take on this repository, and the seven causes of the pauses, each with a story |
 | [release-signing.md](release-signing.md) | The finding of S-0193: how flai and flaiover are released, upgraded, and connected today, the ways to sign a release and verify it at upgrade and at image run, what each side can verify about the other at connection time, the recommendation, and the operator's decision |
+| [agent-adapters.md](agent-adapters.md) | The finding of S-0339: where flai is tied to Anthropic and Claude Code today, what LiteLLM and OpenRouter offer and the harnesses that drive them, the abstractions that free flai's intent from a vendor and the recommendation, and the operator's decision and the epic |
 | [devex.md](devex.md) | Developer experience and operations components shipped by the template |
 | [brief.md](brief.md) | The original brief, kept verbatim for reference |
