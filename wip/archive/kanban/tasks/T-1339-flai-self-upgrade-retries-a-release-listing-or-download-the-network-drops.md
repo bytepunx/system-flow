@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 120
-      cache_read: 886445
-      cache_write: 64319
-      cost: 0.4271
+      input: 17
+      output: 6264
+      cache_read: 929428
+      cache_write: 37498
+      cost: 0.5677
 ---
 # T-1339 flai self-upgrade retries a release listing or download the network drops
 

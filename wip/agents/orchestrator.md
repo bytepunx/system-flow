@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 233.7839
-accrued_seconds: 112452
-tasks_completed: 272
-last_run: 2026-10-08T08:36:57Z
+accrued_cost: 239.0268
+accrued_seconds: 112705
+tasks_completed: 275
+last_run: 2026-10-08T08:41:10Z
 ---
 
 # Orchestrator activity
@@ -1915,6 +1915,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0344, S-0345
 - Seconds: 15
 - Cost: 0.5835 USD, estimated
+
+### 2026-10-08T08:37:16Z
+
+- Summary: S-0291 is in review, but verify at head f7e95e1d stopped at sync, 13 commits behind main, and the stored result was at 6d350122. Both are blockers under ADR-0093. I left it in review and asked its agent on TH-0374 to sync and verify again, and to confirm how I-0086 is settled between S-0291 and S-0340.
+- Items: S-0291
+- Seconds: 19
+- Cost: 0.5944 USD, estimated
+
+### 2026-10-08T08:37:27Z
+
+- Summary: The operator accepted S-0339, so design/system/agent-adapters.md and ADRs 0129 to 0132 are on main. E-0019's planner is now unblocked, and I start it once S-0345's planner ends. release_evaluate shows nothing pending, since S-0339 has no component to release. Re-applied the throughput order after S-0341 was pulled: S-0342, S-0343.
+- Items: S-0339, E-0019, S-0341
+- Seconds: 11
+- Cost: 0.3612 USD, estimated
+
+### 2026-10-08T08:41:10Z
+
+- Summary: The operator moved S-0344, S-0345, S-0290 and S-0288 to ready. Re-applied the throughput order: S-0344 (30m), S-0345 (30m), S-0342 (41m), then S-0343, S-0290 and S-0288, which lack forecasts.
+- Items: S-0344, S-0345, S-0290, S-0288
+- Seconds: 223
+- Cost: 4.2873 USD, estimated
 
 ## Refusals
 

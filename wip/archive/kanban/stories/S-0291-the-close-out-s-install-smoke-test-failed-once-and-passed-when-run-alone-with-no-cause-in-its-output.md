@@ -3,10 +3,10 @@ id: S-0291
 type: story
 nature: improvement
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
-status: review
+status: done
 owner: alex
 created: 2026-10-06T10:31:55Z
-updated: 2026-10-08T08:37:05Z
+updated: 2026-10-08T08:42:00Z
 transitions:
   - to: ready
     at: 2026-10-08T07:57:14Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-08T08:37:02Z
     by: agent-S-0291
+  - to: done
+    at: 2026-10-08T08:42:00Z
+    by: alex
 tags: []
 topics: [release]
 touches: [install.sh, flai/cmd/installsh_test.go, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/summary.md, design/issues/I-0122-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md]
@@ -27,31 +30,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 719
-  estimated: true
+  seconds: 1420
   turns:
     - day: 2026-10-08
-      ceremony: 2
+      ceremony: 3
       hand_edits: 1
-      work: 25
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 597
-      cache_read: 5186840
-      cache_write: 291446
-      cost: 2.4611
+      input: 146
+      output: 53395
+      cache_read: 7923083
+      cache_write: 319658
+      cost: 4.8392
   strategic:
     - kind: orchestrator
-      seconds: 1261
+      seconds: 1280
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 80
-          output: 1318
-          cache_read: 13128694
-          cache_write: 30112
-          cost: 3.2424
+          input: 90
+          output: 1416
+          cache_read: 15537612
+          cache_write: 33678
+          cost: 3.8368
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m

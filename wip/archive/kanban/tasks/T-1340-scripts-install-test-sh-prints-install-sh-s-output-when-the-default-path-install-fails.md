@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 54
-      cache_read: 807568
-      cache_write: 30559
-      cost: 0.3765
+      input: 15
+      output: 5521
+      cache_read: 819306
+      cache_write: 33055
+      cost: 0.5004
 ---
 # T-1340 scripts/install-test.sh prints install.sh's output when the default-path install fails
 

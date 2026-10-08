@@ -3,12 +3,18 @@ id: T-1343
 type: task
 nature: improvement
 title: flai verify resumes a story's run from its last record when the head, the base, and the tiers are unchanged
-status: backlog
+status: in-progress
 parent: S-0341
 owner: alex
 created: 2026-10-08T08:05:06Z
-updated: 2026-10-08T08:05:06Z
-transitions: []
+updated: 2026-10-08T08:38:35Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:38:35Z
+    by: agent-S-0341
+  - to: in-progress
+    at: 2026-10-08T08:38:35Z
+    by: agent-S-0341
 stream: S-0341
 tags: [cli]
 touches: [flai/internal/verify/verify.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go]

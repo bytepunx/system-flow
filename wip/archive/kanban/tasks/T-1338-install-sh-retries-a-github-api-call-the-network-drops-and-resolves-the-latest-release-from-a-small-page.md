@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 181
-      cache_read: 1279857
-      cache_write: 70404
-      cost: 0.6066
+      input: 24
+      output: 8895
+      cache_read: 1319965
+      cache_write: 53254
+      cost: 0.8062
 ---
 # T-1338 install.sh retries a GitHub API call the network drops and resolves the latest release from a small page
 

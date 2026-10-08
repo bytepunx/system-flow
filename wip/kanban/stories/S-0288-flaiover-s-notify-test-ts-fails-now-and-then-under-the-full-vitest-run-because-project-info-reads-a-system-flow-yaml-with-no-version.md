@@ -3,17 +3,35 @@ id: S-0288
 type: story
 nature: remediation
 title: flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T09:56:51Z
-updated: 2026-10-07T02:20:05Z
-transitions: []
+updated: 2026-10-08T08:40:50Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:40:50Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 55
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 17
+          output: 291
+          cache_read: 4347064
+          cache_write: 3097
+          cost: 1.0718
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

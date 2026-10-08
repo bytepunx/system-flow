@@ -3,11 +3,14 @@ id: E-0019
 type: epic
 nature: feature
 title: Agent adapters for LiteLLM and OpenRouter
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-08T08:33:28Z
-updated: 2026-10-08T08:33:28Z
-transitions: []
+updated: 2026-10-08T08:38:12Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:38:12Z
+    by: alex
 tags: [cli, template]
 topics: [cli, agents]
 touches: [flai/internal/harness, flai/internal/serve, flai/internal/guard, flai/internal/usage, flai/internal/mcpserver/permission.go, flai/internal/protected/protected.go, flai/internal/manifest/agent.go, flai/internal/hostapi/settings.go, design/system/metrics.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md]
@@ -17,15 +20,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 274
+      seconds: 278
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 62
-          output: 1096
-          cache_read: 13430540
-          cache_write: 10655
-          cost: 3.3118
+          input: 64
+          output: 1111
+          cache_read: 13917152
+          cache_write: 12708
+          cost: 3.4322
 ---
 # E-0019 Agent adapters for LiteLLM and OpenRouter
 

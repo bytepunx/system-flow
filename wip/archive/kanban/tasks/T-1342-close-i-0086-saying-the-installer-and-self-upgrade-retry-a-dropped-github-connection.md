@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 182313
-      cache_write: 830
-      cost: 0.0823
+      input: 3
+      output: 1207
+      cache_read: 179030
+      cache_write: 7223
+      cost: 0.1093
 ---
 # T-1342 Close I-0086 saying the installer and self-upgrade retry a dropped GitHub connection
 
