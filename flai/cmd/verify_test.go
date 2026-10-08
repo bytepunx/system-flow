@@ -436,7 +436,7 @@ func TestVerifySyncOnlyPassesOverWipCommitsAndStoresNoReport(t *testing.T) {
 	root, _ := verifyFixture(t, "exit 3")
 	report := verify.ReportPath(openProject(t, root), "S-004")
 	replan := verifyGit{commits: "a1a1a1a", paths: "wip/kanban/board.md"}
-	note := "\npassed sync (0s)\n    passed over 1 commit of main that change only wip/ paths the branch does not change: a1a1a1a\n"
+	note := "\npassed sync (0s)\n    passed over 1 commit of main that changes only wip/ paths the branch does not change: a1a1a1a\n"
 
 	out, errOut, code := runVerify(t, root, replan, "verify", "S-004", "--sync-only")
 	if code != 0 || !strings.HasPrefix(out, "passed rebase (") || !strings.Contains(out, note) || lastLine(out) != "verify: S-004 passed every step" {

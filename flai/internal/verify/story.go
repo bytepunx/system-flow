@@ -327,13 +327,17 @@ func (v *storyRun) sync() []Finding {
 	}
 	behind := fmt.Sprintf("the branch does not contain %s, %s behind it", v.base, plural(len(commits), "commit"))
 	fix := fmt.Sprintf("run flai stream sync %s, resolve what it reports, and verify again", v.story)
+	change := "change"
+	if len(commits) == 1 {
+		change = "changes"
+	}
 	switch {
 	case len(outside) > 0:
-		return []Finding{{Name: StepSync, Message: fmt.Sprintf("%s, which change paths outside %s: %s; %s", behind, wip, few(outside, 3), fix)}}
+		return []Finding{{Name: StepSync, Message: fmt.Sprintf("%s, which %s paths outside %s: %s; %s", behind, change, wip, few(outside, 3), fix)}}
 	case len(shared) > 0:
-		return []Finding{{Name: StepSync, Message: fmt.Sprintf("%s, which change %s paths the branch changes too: %s; %s", behind, wip, few(shared, 3), fix)}}
+		return []Finding{{Name: StepSync, Message: fmt.Sprintf("%s, which %s %s paths the branch changes too: %s; %s", behind, change, wip, few(shared, 3), fix)}}
 	}
-	v.note = fmt.Sprintf("passed over %s of %s that change only %s paths the branch does not change: %s", plural(len(commits), "commit"), v.base, wip, few(commits, 10))
+	v.note = fmt.Sprintf("passed over %s of %s that %s only %s paths the branch does not change: %s", plural(len(commits), "commit"), v.base, change, wip, few(commits, 10))
 	return nil
 }
 

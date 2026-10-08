@@ -68,16 +68,14 @@ if [ -n "$status" ]; then
 fi
 
 # The branch still contains the main branch flai verify checked it against,
-# the branch the main checkout has, which may have moved while the tiers ran.
+# which may have moved while the tiers ran: flai verify --sync-only asks again
+# at the new head, and passes over commits on the main branch that change only
+# wip paths the branch does not change, such as flai's replans (ADR-0135).
 step="the sync check"
-base="$(git -C "$CACHE_ROOT" rev-parse --abbrev-ref HEAD)"
-rc=0
-git merge-base --is-ancestor "$base" HEAD || rc=$?
-case "$rc" in
-  0) echo "close-out: the branch contains $base" ;;
-  1) echo "close-out: the branch does not contain $base; run flai stream sync $story, resolve what it reports, and run this again" >&2; exit 1 ;;
-  *) echo "close-out: cannot tell whether the branch contains $base" >&2; exit 1 ;;
-esac
+hint="; run flai stream sync $story, resolve what it reports, and run this again"
+echo "close-out: flai verify $story --sync-only"
+"$ROOT/scripts/flai.sh" verify "$story" --sync-only
+hint=""
 
 step="the clean worktree check"
 status="$(git status --porcelain)"

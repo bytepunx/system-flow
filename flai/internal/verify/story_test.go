@@ -284,18 +284,18 @@ func TestVerifySyncPassesOverCommitsThatChangeOnlyWipPathsTheBranchDoesNotChange
 		message                     string
 	}{
 		{name: "one replan", diff: "wip/kanban/stories/S-009-nine.md", commits: "a1a1a1a", passed: true,
-			message: "passed over 1 commit of main that change only wip/ paths the branch does not change: a1a1a1a"},
+			message: "passed over 1 commit of main that changes only wip/ paths the branch does not change: a1a1a1a"},
 		{name: "twelve commits, a rename, a deletion", diff: "wip/archive/kanban/stories/S-009-nine.md\nwip/kanban/board.md\nwip/kanban/stories/S-009-nine.md",
 			commits: strings.Join(twelve, "\n"), passed: true,
 			message: "passed over 12 commits of main that change only wip/ paths the branch does not change: " + strings.Join(twelve[:10], ", ") + " and 2 more"},
 		{name: "commits whose changes undo each other", commits: "b2b2b2b\na1a1a1a", passed: true,
 			message: "passed over 2 commits of main that change only wip/ paths the branch does not change: b2b2b2b, a1a1a1a"},
 		{name: "an acceptance", diff: "flai/a.go\nflai/b.go\nflai/c.go\nflai/d.go\nwip/kanban/board.md", commits: "a1a1a1a",
-			message: "the branch does not contain main, 1 commit behind it, which change paths outside wip/: flai/a.go, flai/b.go, flai/c.go and 1 more; run flai stream sync S-004, resolve what it reports, and verify again"},
+			message: "the branch does not contain main, 1 commit behind it, which changes paths outside wip/: flai/a.go, flai/b.go, flai/c.go and 1 more; run flai stream sync S-004, resolve what it reports, and verify again"},
 		{name: "a path with the folder's name but outside it", diff: "wipe.md", commits: "a1a1a1a",
-			message: "the branch does not contain main, 1 commit behind it, which change paths outside wip/: wipe.md; run flai stream sync S-004, resolve what it reports, and verify again"},
+			message: "the branch does not contain main, 1 commit behind it, which changes paths outside wip/: wipe.md; run flai stream sync S-004, resolve what it reports, and verify again"},
 		{name: "a wip path the branch has not committed", diff: "wip/kanban/board.md\nwip/agents/S-004.md", commits: "a1a1a1a", status: "M wip/agents/S-004.md",
-			message: "the branch does not contain main, 1 commit behind it, which change wip/ paths the branch changes too: wip/agents/S-004.md; run flai stream sync S-004, resolve what it reports, and verify again"},
+			message: "the branch does not contain main, 1 commit behind it, which changes wip/ paths the branch changes too: wip/agents/S-004.md; run flai stream sync S-004, resolve what it reports, and verify again"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newVerifyFixture(t)
