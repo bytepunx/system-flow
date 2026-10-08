@@ -90,6 +90,31 @@ describe('Messages (S-0336)', () => {
 		expect(m.querySelector('form, textarea, input:not([type="checkbox"])')).toBeNull();
 	});
 
+	// S-0338: a board card links a conversation by its ID, so each is an anchor, and the first load
+	// scrolls to the one the address names, which the browser could not find before the list came
+	it('anchors each conversation by its ID and scrolls to the one the address names', async () => {
+		const scrolled: string[] = [];
+		const was = Element.prototype.scrollIntoView;
+		Element.prototype.scrollIntoView = function (this: Element) {
+			scrolled.push(this.id);
+		};
+		history.replaceState(null, '', '#MS-0002');
+		try {
+			api.mockResolvedValue(answer([conversation('MS-0001'), conversation('MS-0002')]));
+			c = mount(Messages, { target: document.body });
+			await settle();
+			expect(shown().map((m) => m.id)).toEqual(['MS-0001', 'MS-0002']);
+			expect(scrolled).toEqual(['MS-0002']);
+			// a later load, on a change, leaves the reader where they are
+			events.heard.forEach((l) => l.f());
+			await settle();
+			expect(scrolled).toEqual(['MS-0002']);
+		} finally {
+			history.replaceState(null, '', location.pathname);
+			Element.prototype.scrollIntoView = was;
+		}
+	});
+
 	it('says a closed conversation is closed and why, with its entries on request', async () => {
 		api.mockResolvedValue(
 			answer([
@@ -170,6 +195,60 @@ describe('Messages (S-0336)', () => {
 		expect(m.querySelector('[data-closed]')).toBeNull();
 		expect(m.querySelector('blockquote')?.textContent).toContain('who keeps it');
 		expect(plain.querySelector('[data-escalated]')).toBeNull();
+	});
+
+	// S-0338: a share the holding story made with the story it held on overlap (S-0334).
+	const share = {
+		holder: 'S-0001',
+		held: 'S-0002',
+		paths: ['flaiover/src/lib/sitemenu.ts', 'flai/cmd/board.go'],
+		split: 'S-0001 changes `locate`; S-0002 **only** adds the menu entry.',
+		by: 'agent-S-0001',
+		at: '2026-10-08T08:00:00Z'
+	};
+	const expectShare = (m: HTMLElement) => {
+		const s = m.querySelector('[data-share]') as HTMLElement;
+		expect(s.dataset.share).toBe('S-0001');
+		expect([...s.querySelectorAll('[data-story]')].map((a) => a.getAttribute('href'))).toEqual([
+			'/items/S-0001',
+			'/items/S-0002'
+		]);
+		expect([...s.querySelectorAll('[data-shared]')].map((p) => p.textContent)).toEqual(share.paths);
+		const at = s.querySelector('[data-share-at]')!;
+		expect(at.textContent).toBe('by agent-S-0001 2h ago');
+		expect(at.getAttribute('title')).toBe('2026-10-08 04:00 EDT');
+		const split = s.querySelector('[data-split]')!;
+		expect(split.querySelector('code')?.textContent).toBe('locate');
+		expect(split.querySelector('strong')?.textContent).toBe('only');
+	};
+
+	it("shows a conversation's share: its paths, its two stories, by whom and when, and its split", async () => {
+		api.mockResolvedValue(
+			answer([conversation('MS-0005', { shares: [share] }), conversation('MS-0001')])
+		);
+		c = mount(Messages, { target: document.body });
+		await settle();
+
+		const [m, plain] = shown();
+		expect(m.querySelectorAll('[data-share]')).toHaveLength(1);
+		expectShare(m);
+		expect(plain.querySelector('[data-share]')).toBeNull();
+	});
+
+	it("shows a conversation's share on a story's page too", async () => {
+		api.mockResolvedValue(
+			answer([
+				conversation('MS-0005', { awaiting: 'S-0001', shares: [share] }),
+				conversation('MS-0001', { shares: [] })
+			])
+		);
+		c = mount(Messages, { target: document.body, props: { story: 'S-0002' } });
+		await settle();
+
+		expect(api).toHaveBeenCalledWith('/api/messages?story=S-0002');
+		const [m, none] = shown();
+		expectShare(m);
+		expect(none.querySelector('[data-share]')).toBeNull();
 	});
 
 	it('says when there is no open conversation, and when there is none at all', async () => {

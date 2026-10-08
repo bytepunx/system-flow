@@ -483,3 +483,85 @@ describe('the type filter (S-0303)', () => {
 		expect(document.querySelector('input[type="checkbox"][data-type]')).toBeNull();
 	});
 });
+
+// S-0338: the board hands a card the shares it was started on, from the board, and its hold with
+// the holders asked about it, from the agents' activity.
+describe('a card started on a share, and a hold asked about (S-0338)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const card = (id: string, status: string, shared?: unknown[]) => ({
+		id,
+		type: 'story',
+		title: id,
+		nature: 'feature',
+		status,
+		blocked: false,
+		age_seconds: 0,
+		...(shared ? { shared } : {})
+	});
+	const share = {
+		holder: 'S-0232',
+		held: 'S-0338',
+		paths: ['flaiover/src/lib/activity.ts'],
+		split: 'S-0338 changes the hold types',
+		by: 'agent-S-0232',
+		at: '2026-10-08T09:10:00Z',
+		conversation: 'MS-0012'
+	};
+	const hold = {
+		code: 'overlap',
+		reason: 'held (overlap): starts when S-0232 is accepted, cancelled, or sent back',
+		asked: [{ by: 'S-0232', conversation: 'MS-0013', at: '2026-10-08T09:00:00Z' }]
+	};
+	beforeEach(() => {
+		resetForTests();
+		vi.stubGlobal('EventSource', FakeEventSource);
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/board')
+				return answer({
+					...board,
+					columns: {
+						ready: [card('S-0340', 'ready')],
+						'in-progress': [card('S-0232', 'in-progress'), card('S-0338', 'in-progress', [share])]
+					}
+				});
+			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
+			return answer({
+				enabled: false,
+				state: {
+					command: '',
+					stories: {
+						'S-0340': {
+							state: 'waiting',
+							why: hold.reason,
+							run: { story: 'S-0340', command: '', agent: '', started: '' },
+							hold
+						}
+					}
+				}
+			});
+		});
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+	});
+
+	it('names the shared paths on the card started on them, and the holder asked on the held card', async () => {
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+		const line = (id: string, hook: string) =>
+			document
+				.querySelector(`[data-card="${id}"] [data-testid="${hook}"]`)
+				?.textContent?.replace(/\s+/g, ' ')
+				.trim();
+		expect(line('S-0338', 'shared')).toBe(
+			'shares flaiover/src/lib/activity.ts with S-0232 in MS-0012'
+		);
+		expect(line('S-0232', 'shared')).toBeUndefined();
+		expect(line('S-0340', 'asked')).toBe('asked S-0232 in MS-0013');
+		expect(line('S-0338', 'asked')).toBeUndefined();
+	});
+});

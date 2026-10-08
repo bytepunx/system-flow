@@ -71,11 +71,33 @@ export type AgentStreamRead = {
 };
 
 /**
+ * A holding story in progress whose agent flai asked about a hold on overlap (S-0334, S-0338): the
+ * story, the conversation it was asked in, and when.
+ */
+export type Asked = { by: string; conversation: string; at: string };
+
+/**
  * Why a story in ready waits for another's claim (S-0128, ADR-0046): `overlap` or `no-touches`, or
  * for a story it names in after: (`after`, S-0130), and flai's reason, which names every story that
- * holds it and says what clears it.
+ * holds it and says what clears it. An overlap hold names the holders whose agents were asked about
+ * it in `asked` (S-0338).
  */
-export type Hold = { code: string; reason: string };
+export type Hold = { code: string; reason: string; asked?: Asked[] };
+
+/**
+ * A share in force on a story started on it, or freed by it (S-0334, S-0338): the holding story, the
+ * held one, the paths both may change, the split of who changes what, who shared them and when, and
+ * the conversation it was agreed in.
+ */
+export type Share = {
+	holder: string;
+	held: string;
+	paths: string[];
+	split: string;
+	by: string;
+	at: string;
+	conversation?: string;
+};
 
 /**
  * Where a story in progress that this host has had no agent for was begun (S-0177, ADR-0064): who
@@ -197,6 +219,27 @@ export function holdWaitsFor(h: Hold): string[] {
 export function holdLine(h: Hold): string {
 	const ids = holdWaitsFor(h);
 	return `held (${h.code})${ids.length ? `: ${ids.join(', ')}` : ''}`;
+}
+
+/** The card's short line for a holder asked about a hold, before the link to its conversation. */
+export function askedLine(a: Asked): string {
+	return `asked ${a.by}`;
+}
+
+/** The asked line's title: whose agent was asked, in which conversation, and when. */
+export function askedTitle(a: Asked): string {
+	return `the agent of ${a.by} was asked about the hold in ${a.conversation} at ${a.at}`;
+}
+
+/** The card's short line for a share: the paths it shares and the story it shares them with. */
+export function shareLine(s: Share): string {
+	return `shares ${s.paths.join(', ')} with ${s.holder}`;
+}
+
+/** The share line's title: who shared the paths, when, in which conversation, and the split. */
+export function shareTitle(s: Share): string {
+	const where = s.conversation ? ` in ${s.conversation}` : '';
+	return `${s.holder} shares ${s.paths.join(', ')} with ${s.held}, by ${s.by} at ${s.at}${where}: ${s.split}`;
 }
 
 /** A hold's reason cut into text and the story IDs in it, so each ID can be a link. */

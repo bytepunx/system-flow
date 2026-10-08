@@ -5,11 +5,24 @@
 	// is tinted by nature and the left edge striped by type (S-0055); the text stays. A held story
 	// says why it waits after BLOCKED: the hold's code and the stories it waits for (S-0129). A story
 	// with tasks counts them by state, with its plan's layers (S-0176). A draft story, one an agent
-	// wrote that the operator has not finalized, says DRAFT after BLOCKED (S-0201).
+	// wrote that the operator has not finalized, says DRAFT after BLOCKED (S-0201). A held story
+	// whose holding stories' agents were asked about the hold names each of them, and a story
+	// started on a share names the shared paths and the holder, each with a link to its conversation
+	// on the messages page (S-0338). Those lines sit in a row under the card's link, drawn as part of
+	// the card, since a link cannot hold another.
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
 	import { stripeFor, tintFor } from '$lib/cardcolour';
-	import { elsewhereLine, holdLine, type StoryActivity } from '$lib/activity';
+	import {
+		askedLine,
+		askedTitle,
+		elsewhereLine,
+		holdLine,
+		shareLine,
+		shareTitle,
+		type Share,
+		type StoryActivity
+	} from '$lib/activity';
 	import { tasksLine, tasksTitle, type TaskSummary } from '$lib/taskplan';
 	import AgentDot from './AgentDot.svelte';
 
@@ -25,6 +38,7 @@
 		draft?: boolean;
 		age_seconds: number;
 		tasks?: TaskSummary;
+		shared?: Share[];
 	};
 
 	let {
@@ -55,6 +69,11 @@
 	const parentLabel = $derived(
 		card.parent ? (card.parent_title ? `${card.parent} ${card.parent_title}` : card.parent) : ''
 	);
+	const asked = $derived(activity?.hold?.asked ?? []);
+	const shared = $derived(card.type === 'story' ? (card.shared ?? []) : []);
+	const talks = $derived(asked.length > 0 || shared.length > 0);
+	// Messages.svelte gives each conversation its ID as an anchor.
+	const conversation = (id: string) => `${resolve('/messages')}#${id}`;
 </script>
 
 <a
@@ -68,7 +87,9 @@
 	data-id={card.id}
 	data-nature={card.nature}
 	data-type={card.type}
-	class="mb-2 block rounded border border-line p-2 text-xs hover:border-t-line-strong hover:border-r-line-strong hover:border-b-line-strong {tintFor(
+	class="{talks
+		? 'rounded-t'
+		: 'mb-2 rounded'} block border border-line p-2 text-xs hover:border-t-line-strong hover:border-r-line-strong hover:border-b-line-strong {tintFor(
 		card.nature
 	)} {stripeFor(card.type)} {card.blocked ? 'ring-1 ring-danger' : ''} {dragging
 		? 'border-dashed opacity-50'
@@ -119,3 +140,29 @@
 		{/if}
 	</div>
 </a>
+{#if talks}
+	<div
+		class="mb-2 flex flex-col gap-0.5 rounded-b border border-t-0 border-line px-2 pb-2 text-xs text-muted {tintFor(
+			card.nature
+		)} {stripeFor(card.type)} {dragging ? 'border-dashed opacity-50' : ''}"
+		data-testid="talks"
+	>
+		<!-- eslint-disable svelte/no-navigation-without-resolve -- conversation() resolve()s the page; the rule does not follow the anchor added to it -->
+		{#each asked as a (a.by)}<span data-testid="asked" title={askedTitle(a)}
+				>{askedLine(a)} in
+				<a
+					class="font-mono underline"
+					href={conversation(a.conversation)}
+					data-conversation={a.conversation}>{a.conversation}</a
+				></span
+			>{/each}
+		{#each shared as s, i (i)}<span class="break-all" data-testid="shared" title={shareTitle(s)}
+				>{shareLine(s)}{s.conversation ? ' in ' : ''}{#if s.conversation}<a
+						class="font-mono underline"
+						href={conversation(s.conversation)}
+						data-conversation={s.conversation}>{s.conversation}</a
+					>{/if}</span
+			>{/each}
+		<!-- eslint-enable svelte/no-navigation-without-resolve -->
+	</div>
+{/if}

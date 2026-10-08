@@ -3,7 +3,8 @@ import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
 import BoardCard from './BoardCard.svelte';
 
 vi.mock('$app/paths', () => ({
-	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id)
+	resolve: (route: string, params: Record<string, string>) =>
+		route.replace('[id]', params?.id ?? '')
 }));
 
 const base = {
@@ -261,6 +262,109 @@ describe('BoardCard', () => {
 		unmount(component);
 		component = render(base, { activity: { ...activity, hold: undefined } });
 		expect(held()).toBeNull();
+	});
+
+	// S-0338: a held story whose holder's agent was asked about the hold says so, under the card's
+	// link, with a link to the conversation
+	it('names each holder asked about a hold and links its conversation, under the card’s link', () => {
+		const hold = {
+			code: 'overlap',
+			reason:
+				'held (overlap): touches flaiover, which S-0232 (in progress) touches; starts when S-0232 is accepted, cancelled, or sent back'
+		};
+		const activity = {
+			state: 'waiting' as const,
+			why: hold.reason,
+			run: { story: 'S-0338', command: '', agent: '', started: '' },
+			hold: {
+				...hold,
+				asked: [
+					{ by: 'S-0232', conversation: 'MS-0012', at: '2026-10-08T09:00:00Z' },
+					{ by: 'S-0240', conversation: 'MS-0013', at: '2026-10-08T09:05:00Z' }
+				]
+			}
+		};
+		const asked = () => document.querySelectorAll<HTMLElement>('[data-testid="asked"]');
+		component = render({ ...base, id: 'S-0338', parent: 'E-0018' }, { activity });
+		expect([...asked()].map((e) => e.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+			'asked S-0232 in MS-0012',
+			'asked S-0240 in MS-0013'
+		]);
+		expect(asked()[0].getAttribute('title')).toBe(
+			'the agent of S-0232 was asked about the hold in MS-0012 at 2026-10-08T09:00:00Z'
+		);
+		const link = asked()[0].querySelector('a')!;
+		expect(link.getAttribute('href')).toBe('/messages#MS-0012');
+		// the row is the card's, beside its link and never in it
+		const card = document.querySelector('a[data-id="S-0338"]')!;
+		expect(card.contains(link)).toBe(false);
+		expect(card.querySelectorAll('a')).toHaveLength(0);
+		expect(card.nextElementSibling).toBe(document.querySelector('[data-testid="talks"]'));
+		expect(card.className).not.toMatch(/\bmb-2\b/);
+		expect(document.querySelector('[data-testid="held"]')!.textContent).toBe(
+			'held (overlap): S-0232'
+		);
+		// a hold whose holder was not asked says only the hold, and the card keeps its margin
+		unmount(component);
+		component = render(base, { activity: { ...activity, hold } });
+		expect(document.querySelector('[data-testid="held"]')).not.toBeNull();
+		expect(asked()).toHaveLength(0);
+		expect(document.querySelector('[data-testid="talks"]')).toBeNull();
+		expect(document.querySelectorAll('a')).toHaveLength(1);
+		expect(document.querySelector('a')!.className).toMatch(/\bmb-2\b/);
+		unmount(component);
+		component = render(base, { activity: { ...activity, hold: { ...hold, asked: [] } } });
+		expect(document.querySelector('[data-testid="talks"]')).toBeNull();
+	});
+
+	// S-0338: a story started on a share names the shared paths and the holder, and links the
+	// conversation
+	it('names the shared paths and the holder of a story started on a share, and links the conversation', () => {
+		const shared = [
+			{
+				holder: 'S-0232',
+				held: 'S-0338',
+				paths: ['flaiover/src/lib/activity.ts'],
+				split: 'S-0338 changes the hold types',
+				by: 'agent-S-0232',
+				at: '2026-10-08T09:10:00Z',
+				conversation: 'MS-0012'
+			}
+		];
+		const line = () => document.querySelectorAll<HTMLElement>('[data-testid="shared"]');
+		component = render({ ...base, id: 'S-0338', parent: 'E-0018', shared });
+		expect(line()).toHaveLength(1);
+		expect(line()[0].textContent?.replace(/\s+/g, ' ').trim()).toBe(
+			'shares flaiover/src/lib/activity.ts with S-0232 in MS-0012'
+		);
+		expect(line()[0].getAttribute('title')).toBe(
+			'S-0232 shares flaiover/src/lib/activity.ts with S-0338, by agent-S-0232 at 2026-10-08T09:10:00Z in MS-0012: S-0338 changes the hold types'
+		);
+		expect(line()[0].querySelector('a')!.getAttribute('href')).toBe('/messages#MS-0012');
+		expect(document.querySelector('a[data-id="S-0338"]')!.contains(line()[0])).toBe(false);
+		expect(details()!.lastElementChild).toBe(parent());
+		unmount(component);
+		component = render({
+			...base,
+			shared: [
+				...shared,
+				{ ...shared[0], holder: 'S-0240', paths: ['a', 'b'], conversation: undefined }
+			]
+		});
+		expect([...line()].map((e) => e.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+			'shares flaiover/src/lib/activity.ts with S-0232 in MS-0012',
+			'shares a, b with S-0240'
+		]);
+		expect(line()[1].querySelector('a')).toBeNull();
+	});
+
+	// S-0338: a card neither asked about nor started on a share shows neither line
+	it('shows no asked or shared line on a card with neither', () => {
+		component = render({ ...base, parent: 'E-0018' });
+		expect(document.querySelector('[data-testid="talks"]')).toBeNull();
+		expect(document.querySelector('[data-testid="asked"]')).toBeNull();
+		expect(document.querySelector('[data-testid="shared"]')).toBeNull();
+		expect([...details()!.children].map((c) => c.textContent)).toEqual(['improvement', 'E-0018']);
 	});
 
 	// S-0176: a story with tasks counts them by state, with its plan's layers

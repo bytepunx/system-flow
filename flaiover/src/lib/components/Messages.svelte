@@ -6,12 +6,22 @@
 	import { api } from '$lib/api';
 	import { render } from '$lib/markdown';
 	import { resolve } from '$app/paths';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { follow } from '$lib/events';
 	import { localTime } from '$lib/localtime';
 	import { age } from '$lib/age';
 
 	type Entry = { at: string; author: string; story: string; text: string };
+	/** Paths the holding story shared with the ready story it held on overlap (S-0334), and the split. */
+	type Share = {
+		holder: string;
+		held: string;
+		paths: string[];
+		/** Who changes what, markdown. */
+		split: string;
+		by: string;
+		at: string;
+	};
 	type Conversation = {
 		id: string;
 		title: string;
@@ -28,6 +38,8 @@
 		updated: string;
 		path: string;
 		entries: Entry[];
+		/** Absent from a flai older than S-0334's: none. */
+		shares?: Share[];
 	};
 
 	let {
@@ -56,7 +68,14 @@
 		notice = null;
 		conversations = await r.json();
 		now = Date.now();
+		const first = !loaded;
 		loaded = true;
+		// A board card links a conversation by its ID (S-0338): the list arrives after the page, so
+		// the browser's own jump to the anchor finds nothing, and the first load makes it.
+		if (first && location.hash) {
+			await tick();
+			document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView();
+		}
 	}
 	$effect(() => {
 		void story;
@@ -106,7 +125,7 @@
 		<ul class="mt-3 space-y-3">
 			{#each conversations as c (c.id)}
 				{@const raised = escalation(c)}
-				<li class="rounded border border-line bg-surface p-3" data-conversation={c.id}>
+				<li id={c.id} class="rounded border border-line bg-surface p-3" data-conversation={c.id}>
 					<header class="flex flex-wrap items-center gap-2">
 						<span class="font-mono text-xs text-muted">{c.id}</span>
 						<span class="font-medium">{c.title}</span>
@@ -145,6 +164,27 @@
 							{#each c.about as p (p)}<li><code data-about>{p}</code></li>{/each}
 						</ul>
 					{/if}
+					{#each c.shares ?? [] as s, i (i)}
+						<div
+							class="mt-2 rounded border border-line bg-raised px-3 py-2 text-xs"
+							data-share={s.holder}
+						>
+							<p class="flex flex-wrap items-center gap-x-1 text-muted">
+								{@render storyLink(s.holder)} shared
+								{#each s.paths as p (p)}<code class="text-ink" data-shared>{p}</code>{/each}
+								with {@render storyLink(s.held)},
+								<span title={localTime(s.at)} data-share-at>by {s.by} {since(s.at)} ago</span>
+							</p>
+							<!-- The split is markdown, as an entry's text is. -->
+							<div
+								class="prose prose-sm mt-1 max-w-none [&>:first-child]:mt-0 [&>:last-child]:mb-0"
+								data-split
+							>
+								<!-- eslint-disable-next-line svelte/no-at-html-tags -- repository markdown, rendered client side as every document is -->
+								{@html render(s.split, '')}
+							</div>
+						</div>
+					{/each}
 					<!-- An open conversation's entries are shown, a closed one's on request. -->
 					<details class="mt-2" open={!c.closed}>
 						<summary class="cursor-pointer text-xs text-muted"

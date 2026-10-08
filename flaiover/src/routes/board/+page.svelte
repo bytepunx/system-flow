@@ -17,7 +17,13 @@
 	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
 	import { boardNatures } from '$lib/boardnatures.svelte';
 	import HostAgentNotice from '$lib/components/HostAgentNotice.svelte';
-	import { anyRunning, storyActivity, type HostAgent, type PlanRun } from '$lib/activity';
+	import {
+		anyRunning,
+		storyActivity,
+		type HostAgent,
+		type PlanRun,
+		type Share
+	} from '$lib/activity';
 	import PublishBanner from '$lib/components/PublishBanner.svelte';
 	import { doneLane, type RemoteTags, type Unplanned } from '$lib/publish';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
@@ -48,6 +54,7 @@
 		age_seconds: number;
 		archived?: boolean;
 		tasks?: TaskSummary;
+		shared?: Share[];
 	};
 	type Board = {
 		wip_limits: Record<string, number>;

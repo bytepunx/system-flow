@@ -22,7 +22,9 @@ import (
 // sections or new files. An overlap between a ready story and the story in
 // progress that holds it, on paths that story's agent shared with it in their
 // conversation, holds nothing while the share is in force (ADR-0134, share.go).
-// The operator's own moves only warn.
+// A hold on overlap alone names each holding story whose agent flai asked
+// about it in their open conversation since the ready story last entered
+// ready (S-0338). The operator's own moves only warn.
 
 // Hold reason codes.
 const (
@@ -36,6 +38,18 @@ const (
 type Hold struct {
 	Code   string `json:"code"`
 	Reason string `json:"reason"`
+	// Asked is, on a hold on overlap alone, each holding story whose agent
+	// flai asked about the hold since the story last entered ready, in ID
+	// order (S-0338).
+	Asked []HoldAsk `json:"asked,omitempty"`
+}
+
+// HoldAsk is the newest message by flai that asked a holding story's agent
+// about a hold (S-0338).
+type HoldAsk struct {
+	By           string `json:"by"`           // the story in progress whose agent was asked
+	Conversation string `json:"conversation"` // the conversation it was asked in
+	At           string `json:"at"`           // when, in TimeFormat
 }
 
 // Holds judges ready stories against the stories open at one reading of the
@@ -44,6 +58,7 @@ type Holds struct {
 	projects []manifest.Project
 	shared   manifest.Claims    // an overlap wholly inside these holds nothing
 	shares   []Share            // shares in force, IDs canonical (ADR-0134)
+	asks     []Ask              // messages by flai asking about a hold, IDs canonical (S-0338)
 	tasks    map[string][]*Item // tasks by story, cancelled ones left out
 	open     []openClaim
 	stories  map[string]*Item // every story given, archived ones included
@@ -80,9 +95,10 @@ func NewHolds(items []*Item, projects []manifest.Project) *Holds {
 }
 
 // Holds judges ready stories against items, as NewHolds does, with the
-// manifest's shared paths as SharedClaims reads them and the shares in force
-// of the open conversations (ADR-0134), and finds a story named in after: or
-// in a share in the archive when items do not hold it.
+// manifest's shared paths as SharedClaims reads them, and the shares in force
+// of the open conversations (ADR-0134) and their asks about a hold (S-0338),
+// as Conversations reads them, and finds a story named in after: or in a
+// share in the archive when items do not hold it.
 func (r *Repo) Holds(items []*Item) *Holds {
 	h := NewHolds(items, r.Manifest.Projects).WithShared(r.SharedClaims())
 	h.lookup = func(id string) *Item {
@@ -91,7 +107,8 @@ func (r *Repo) Holds(items []*Item) *Holds {
 		}
 		return nil
 	}
-	return h.WithShares(r.Shares())
+	shares, asks := r.Conversations()
+	return h.WithShares(shares).WithAsks(asks)
 }
 
 // SharedClaims is the manifest's claims as system-flow.yaml has them now,
@@ -230,8 +247,18 @@ func (h *Holds) path(entry string) string {
 
 // Of is why story is held, or nil when it is not. Every story that holds it
 // is named, in ID order. A story held both by after: and by an overlap is
-// held (after), and its reason says both.
+// held (after), and its reason says both. A hold on overlap alone names each
+// holding story whose agent was asked about it (S-0338).
 func (h *Holds) Of(story *Item) *Hold {
+	hold := h.of(story)
+	if hold != nil && hold.Code == HoldOverlap && len(h.asks) > 0 {
+		hold.Asked = h.asked(story, h.overlapsBy(story, hold))
+	}
+	return hold
+}
+
+// of is Of without the asks.
+func (h *Holds) of(story *Item) *Hold {
 	after, overlap := h.after(story), h.overlap(story)
 	switch {
 	case after == nil:

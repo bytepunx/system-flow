@@ -3,6 +3,7 @@ package workitem
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -15,6 +16,8 @@ import (
 // changes what. The share is kept in the front matter of the two stories'
 // conversation under wip/messages, and while it is in force an overlap
 // between the two whose narrower path lies inside a shared path does not hold.
+// The board names, on a held card, the conversation in which flai asked about
+// the hold, and on a card started on a share, the share (S-0338).
 
 // messagesFolder is where conversations are kept under layout.wip; package
 // messages, which imports this one, names it too.
@@ -29,40 +32,93 @@ type Share struct {
 	Split  string   `yaml:"split" json:"split"`   // who changes what
 	By     string   `yaml:"by" json:"by"`         // who shared
 	At     string   `yaml:"at" json:"at"`         // when, in TimeFormat
+	// Conversation is the ID of the conversation that keeps the share, which
+	// Repo.Conversations fills from its id for the board (S-0338); it is never
+	// written to the front matter.
+	Conversation string `yaml:"-" json:"conversation,omitempty"`
 }
 
-// shareFrontMatter is what Shares reads of a conversation's front matter.
-type shareFrontMatter struct {
+// Ask is one message by flai asking the agent of a story in progress about
+// its hold on a ready story, as an open conversation between the two keeps
+// it (S-0338).
+type Ask struct {
+	Conversation string // the conversation's ID
+	Held         string // the ready story the message was written for
+	Holder       string // the conversation's other story, whose agent was asked
+	At           string // when, in TimeFormat
+}
+
+// askAuthor is the author of the message that asks about a hold; package
+// messages names it too, as AskAuthor.
+const askAuthor = "flai"
+
+// askHeading is the heading of an entry by flai for a story, as package
+// messages writes an entry's: "### <time> <author> <story>".
+var askHeading = regexp.MustCompile(`(?m)^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) ` + askAuthor + ` (S-\d{3,})$`)
+
+// conversationFrontMatter is what Repo.Conversations reads of a
+// conversation's front matter.
+type conversationFrontMatter struct {
+	ID     string  `yaml:"id"`
+	From   string  `yaml:"from"`
+	To     string  `yaml:"to"`
 	Status string  `yaml:"status"`
 	Shares []Share `yaml:"shares"`
 }
 
 // Shares is every share kept in a conversation stored open under
-// <layout.wip>/messages, in file order. A conversation that cannot be read
-// or parsed is skipped, so that holds never fail on one.
+// <layout.wip>/messages, in file order, as Conversations reads them.
 func (r *Repo) Shares() []Share {
+	shares, _ := r.Conversations()
+	return shares
+}
+
+// Conversations reads the conversations stored open under
+// <layout.wip>/messages once, in file order, for the shares each keeps, each
+// naming the conversation, and for each message by flai asking about a hold
+// (S-0338): one written for one of the conversation's two stories, the held,
+// whose holder is the other. A conversation that cannot be read or parsed is
+// skipped, so that holds never fail on one.
+func (r *Repo) Conversations() ([]Share, []Ask) {
 	files, err := filepath.Glob(filepath.Join(r.WipDir(), messagesFolder, "MS-*.md"))
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	sort.Strings(files)
-	var out []Share
+	var shares []Share
+	var asks []Ask
 	for _, f := range files {
 		data, err := os.ReadFile(f)
 		if err != nil {
 			continue
 		}
-		fm, _, err := SplitFrontMatter(string(data))
+		fm, body, err := SplitFrontMatter(string(data))
 		if err != nil {
 			continue
 		}
-		var c shareFrontMatter
+		var c conversationFrontMatter
 		if err := yaml.Unmarshal([]byte(fm), &c); err != nil || c.Status != "open" {
 			continue
 		}
-		out = append(out, c.Shares...)
+		for _, s := range c.Shares {
+			s.Conversation = c.ID
+			shares = append(shares, s)
+		}
+		from, to := CanonicalID(c.From), CanonicalID(c.To)
+		for _, m := range askHeading.FindAllStringSubmatch(body, -1) {
+			held, holder := CanonicalID(m[2]), ""
+			switch held {
+			case from:
+				holder = to
+			case to:
+				holder = from
+			}
+			if holder != "" && holder != held {
+				asks = append(asks, Ask{Conversation: c.ID, Held: held, Holder: holder, At: m[1]})
+			}
+		}
 	}
-	return out
+	return shares, asks
 }
 
 // WithShares has h treat an overlap that a share in force clears as no
@@ -141,7 +197,11 @@ type Overlap struct {
 // each holding pair of entries the narrower, the path both stories change,
 // in the ready story's claim order, without duplicates. Otherwise nil.
 func (h *Holds) OverlapsBy(story *Item) []Overlap {
-	hold := h.Of(story)
+	return h.overlapsBy(story, h.of(story))
+}
+
+// overlapsBy is OverlapsBy with hold, story's as of judges it.
+func (h *Holds) overlapsBy(story *Item, hold *Hold) []Overlap {
 	if hold == nil || hold.Code != HoldOverlap {
 		return nil
 	}
@@ -165,4 +225,72 @@ func (h *Holds) OverlapsBy(story *Item) []Overlap {
 		}
 	}
 	return out
+}
+
+// SharesWith is the shares in force whose held story is id, in the order they
+// were given: what the board shows on the card of a story started on a share
+// (S-0338).
+func (h *Holds) SharesWith(id string) []Share {
+	id = CanonicalID(id)
+	var out []Share
+	for _, s := range h.shares {
+		if s.Held == id {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// WithAsks gives h the messages by flai that asked about a hold, which a hold
+// on overlap names (S-0338), and returns h.
+func (h *Holds) WithAsks(asks []Ask) *Holds {
+	h.asks = nil
+	for _, a := range asks {
+		a.Held, a.Holder = CanonicalID(a.Held), CanonicalID(a.Holder)
+		h.asks = append(h.asks, a)
+	}
+	return h
+}
+
+// asked is, for each story in overlaps that holds story, in their order, the
+// newest message by flai that asked its agent about the hold since story
+// last entered ready, as package messages judges an ask; a holder not asked
+// is left out, and nil when none was.
+func (h *Holds) asked(story *Item, overlaps []Overlap) []HoldAsk {
+	if len(h.asks) == 0 {
+		return nil
+	}
+	since := readySince(story)
+	var out []HoldAsk
+	for _, o := range overlaps {
+		var newest *Ask
+		var newestAt time.Time
+		for i, a := range h.asks {
+			if a.Held != story.ID || a.Holder != o.By {
+				continue
+			}
+			at, err := time.Parse(TimeFormat, a.At)
+			if err != nil || at.Before(since) || (newest != nil && at.Before(newestAt)) {
+				continue
+			}
+			newest, newestAt = &h.asks[i], at
+		}
+		if newest != nil {
+			out = append(out, HoldAsk{By: o.By, Conversation: newest.Conversation, At: newest.At})
+		}
+	}
+	return out
+}
+
+// readySince is when story last entered ready, else when it was created; a
+// time that does not parse reads as the zero time.
+func readySince(story *Item) time.Time {
+	for i := len(story.Transitions) - 1; i >= 0; i-- {
+		if story.Transitions[i].To == Ready {
+			t, _ := time.Parse(TimeFormat, story.Transitions[i].At)
+			return t
+		}
+	}
+	t, _ := time.Parse(TimeFormat, story.Created)
+	return t
 }

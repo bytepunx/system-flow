@@ -3,6 +3,8 @@ import {
 	activityLine,
 	agentAction,
 	anyRunning,
+	askedLine,
+	askedTitle,
 	dotClass,
 	elsewhereLine,
 	holdLine,
@@ -11,6 +13,8 @@ import {
 	orchestratorRunning,
 	reasonParts,
 	retryable,
+	shareLine,
+	shareTitle,
 	startable,
 	startableHere,
 	stoppable,
@@ -138,6 +142,47 @@ describe('a held story (S-0129)', () => {
 		);
 		expect(storyActivity(null)).toEqual({});
 		expect(storyActivity({ enabled: false })).toEqual({});
+	});
+});
+
+// S-0338: a held story's holders whose agents were asked about the hold, and a story started on a
+// share
+describe('a hold asked about, and a share', () => {
+	const asked = [
+		{ by: 'S-0232', conversation: 'MS-0012', at: '2026-10-08T09:00:00Z' },
+		{ by: 'S-0240', conversation: 'MS-0013', at: '2026-10-08T09:05:00Z' }
+	];
+	const share = {
+		holder: 'S-0232',
+		held: 'S-0338',
+		paths: ['flaiover/src/lib/activity.ts', 'flai/cmd/serve.go'],
+		split: 'S-0338 changes the hold types; S-0232 leaves them alone',
+		by: 'agent-S-0232',
+		at: '2026-10-08T09:10:00Z',
+		conversation: 'MS-0012'
+	};
+
+	it('names the holder asked on the card', () => {
+		expect(askedLine(asked[0])).toBe('asked S-0232');
+		expect(askedLine(asked[1])).toBe('asked S-0240');
+	});
+	it('says in the title whose agent was asked, where, and when', () => {
+		expect(askedTitle(asked[0])).toBe(
+			'the agent of S-0232 was asked about the hold in MS-0012 at 2026-10-08T09:00:00Z'
+		);
+	});
+	it('names the shared paths and the holder on the card', () => {
+		expect(shareLine(share)).toBe(
+			'shares flaiover/src/lib/activity.ts, flai/cmd/serve.go with S-0232'
+		);
+	});
+	it('says in the title who shared, when, in which conversation, and the split', () => {
+		expect(shareTitle(share)).toBe(
+			'S-0232 shares flaiover/src/lib/activity.ts, flai/cmd/serve.go with S-0338, by agent-S-0232 at 2026-10-08T09:10:00Z in MS-0012: S-0338 changes the hold types; S-0232 leaves them alone'
+		);
+		expect(shareTitle({ ...share, conversation: undefined })).toBe(
+			'S-0232 shares flaiover/src/lib/activity.ts, flai/cmd/serve.go with S-0338, by agent-S-0232 at 2026-10-08T09:10:00Z: S-0338 changes the hold types; S-0232 leaves them alone'
+		);
 	});
 });
 

@@ -1,6 +1,7 @@
 // The board, as flai on the host lays it out (S-0073).
 import type { Item, Repo } from './repo';
 import type { TaskSummary } from '$lib/taskplan';
+import type { Share } from '$lib/activity';
 
 export const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'] as const;
 
@@ -22,6 +23,8 @@ export type Card = {
 	age_seconds: number;
 	/** A story's tasks by state and its plan's layers (S-0176); absent when it has no tasks. */
 	tasks?: TaskSummary;
+	/** The shares in force on a story started on or freed by them (S-0338); absent when none. */
+	shared?: Share[];
 };
 
 export type Board = {
@@ -32,9 +35,10 @@ export type Board = {
 };
 
 /** A card as flai's board.get gives it (internal/workitem BoardCard). */
-type FlaiCard = Omit<Card, 'age_seconds' | 'tasks'> & {
+type FlaiCard = Omit<Card, 'age_seconds' | 'tasks' | 'shared'> & {
 	age_in_column_seconds: number;
 	tasks?: TaskSummary | null;
+	shared?: Share[] | null;
 };
 type FlaiBoard = {
 	columns: Record<string, FlaiCard[] | null>;
@@ -66,7 +70,8 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 			...(c.archived ? { archived: true } : {}),
 			entered_at: c.entered_at,
 			age_seconds: Math.max(0, Math.round((now.getTime() - Date.parse(c.entered_at)) / 1000)),
-			...(c.tasks ? { tasks: c.tasks } : {})
+			...(c.tasks ? { tasks: c.tasks } : {}),
+			...(c.shared?.length ? { shared: c.shared } : {})
 		}));
 	}
 	return {

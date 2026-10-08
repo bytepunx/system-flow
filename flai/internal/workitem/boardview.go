@@ -28,8 +28,13 @@ type BoardCard struct {
 	// (S-0087): the dashboard leaves it out while the clone's release tags
 	// lag the remote's, when pending cannot be told from published (S-0174).
 	Archived bool `json:"archived,omitempty"`
-	// Held is why a ready story is not started or offered (S-0128).
+	// Held is why a ready story is not started or offered (S-0128), and on a
+	// hold on overlap alone, whose agent flai asked about it (S-0338).
 	Held *Hold `json:"held,omitempty"`
+	// Shared is, for a story ready, in progress, or in review, each share in
+	// force on which it is the held story: the paths the story that held it
+	// shared, the split, and the conversation (S-0338).
+	Shared []Share `json:"shared,omitempty"`
 	// Tasks is a story's task plan in counts, when it has tasks (S-0176).
 	Tasks *TaskSummary `json:"tasks,omitempty"`
 	// Draft marks a story an agent wrote that the operator has not finalized,
@@ -55,7 +60,9 @@ type BoardView struct {
 // NewBoardView lays the active items out by column. Stories only unless all.
 // A ready story that holds judges held is marked so (S-0128): Repo.Holds of
 // the same items, which reads the manifest's sub-projects and shared paths
-// (ADR-0096); nil judges with neither.
+// (ADR-0096), the shares in force, and the asks about a hold (S-0338); nil
+// judges with none of them. A story ready, in progress, or in review carries
+// the shares in force on which it is the held story (S-0338).
 // A story with tasks carries its task plan in counts (S-0176).
 // Acceptance archives a story the moment it merges (S-0087); pendingPublish
 // names the stories a release has not yet covered, so a done, archived story
@@ -96,6 +103,9 @@ func NewBoardView(items []*Item, board *Board, now time.Time, all bool, pendingP
 		}
 		if it.Type == Story && it.Status == Ready && !it.Archived {
 			card.Held = holds.Of(it)
+		}
+		if it.Type == Story && !it.Archived && (it.Status == Ready || it.Status == InProgress || it.Status == Review) {
+			card.Shared = holds.SharesWith(it.ID)
 		}
 		if it.Type == Story {
 			if p := PlanOf(tasks[it.ID], it.ID); p != nil {
