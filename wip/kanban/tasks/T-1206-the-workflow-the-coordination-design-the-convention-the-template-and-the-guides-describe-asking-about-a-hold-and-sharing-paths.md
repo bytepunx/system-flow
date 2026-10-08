@@ -18,7 +18,7 @@ after: [T-1203]
 
 ## Work
 
-Describe what T-1203 to T-1205 built. It waits for T-1204 and T-1205, so the words match the behaviour.
+Describe what T-1203 to T-1205 build. It waits for T-1203, after which the commands and the hold rules are fixed, so the words match the behaviour; it shares no path with T-1205 and runs beside it.
 
 - `design/system/workflow.md` § Branches and collisions: a **Shared by agreement** entry beside **Shared paths** and **Held**, and the request flai serve sends.
 - `design/system/agent-coordination.md` § Decision: the ADR as a refinement.
