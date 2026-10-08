@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-07
+updated: 2026-10-08
 status: active
 ---
 
@@ -170,7 +170,7 @@ flai serve disable dashboard
 
 Since S-0298 it also lets the Updates page deploy a chosen published dashboard release, an earlier one included, from its Versions list. The dashboard names only a bare `X.Y.Z`, never an image, and flai refuses a tag that is not a published `flaiover/vX.Y.Z` release before anything is pulled ([ADR-0117](../../design/adrs/0117-the-host-api-installs-a-release-the-dashboard-names-only-when-flai-lists-it-as.md)). The chosen release keeps running through restarts until the next upgrade without a tag ([update runbook](runbooks/update.md#flaiover)).
 
-**An upgrade never touches the running container until the new one has proven itself.** `flai dashboard upgrade` pulls the configured image and, if it differs from what is running, starts it as a second, temporary container of its own and waits for it to answer healthy; only then does it stop the running container and start the new image in its place. If the new image never answers healthy, the temporary container is removed and the one you already had keeps running, unchanged — the same command run by hand (`flai dashboard upgrade`, `flai dashboard check` to look without changing anything, `flai dashboard restart` to cycle the process without a pull) behaves identically, on or off the board.
+**An upgrade never touches the running container until the new one has proven itself.** `flai dashboard upgrade` pulls the configured image and, if it differs from what is running, starts it as a second, temporary container of its own and waits for it to answer healthy; only then does it stop the running container and start the new image in its place. Between the stop and the start it waits for Docker to release the container's name, as `flai dashboard restart` does. If the new image still fails to start in its place, it starts the image you had again and fails, saying so. If the new image never answers healthy, the temporary container is removed and the one you already had keeps running, unchanged — the same command run by hand (`flai dashboard upgrade`, `flai dashboard check` to look without changing anything, `flai dashboard restart` to cycle the process without a pull) behaves identically, on or off the board.
 
 ### The checks host action (S-0082)
 

@@ -1,6 +1,6 @@
 ---
 title: "Runbook: update"
-updated: 2026-10-07
+updated: 2026-10-08
 status: active
 ---
 
@@ -80,7 +80,7 @@ A `flai` that runs from inside a system-flow project, such as a checkout's own `
    flai dashboard upgrade
    ```
 
-   It pulls the configured image and tag and, when it differs from what runs, starts it beside the running container, waits for it to answer healthy, and only then replaces the running one. If the new one never answers healthy, the running container is left as it was and the command says why. From the dashboard, its own Upgrade button does the same once the `dashboard` host action is on.
+   It pulls the configured image and tag and, when it differs from what runs, starts it beside the running container, waits for it to answer healthy, and only then replaces the running one. If the new one never answers healthy, the running container is left as it was and the command says why. If it answers healthy but then fails to start in the running one's place, the command starts the previous image again and fails with an error ending `<name> runs the previous image <ref> again`. Only if that fails too does the error end `the dashboard is down: run flai dashboard to start it`; run `flai dashboard`. From the dashboard, its own Upgrade button does the same once the `dashboard` host action is on.
 3. Check it: `flai dashboard status`, and the dashboard's `/metrics` reports the release in `flaiover_build_info`. Browser sessions survive: the login token did not change.
 
 ### To go back, or to a chosen release
