@@ -48,20 +48,6 @@ func (a *app) startContainerImage(dir, name, publish, image, ref string) (string
 	return a.runner.Run("", "docker", containerArgs(dir, name, publish, image, ref)...)
 }
 
-// startDashboardImage is startDashboard for an image other than the
-// reference it shows, such as the image ID a restart keeps (I-0116): it runs
-// image labelled with ref, and records image, what docker ran, for flai
-// host's watch to start again.
-func (a *app) startDashboardImage(dir string, s dashboardSettings, image, ref string) (string, error) {
-	publish := fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)
-	id, err := a.startContainerImage(dir, s.Name, publish, image, ref)
-	if err != nil {
-		return id, err
-	}
-	a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: image, Publish: publish})
-	return id, nil
-}
-
 // imageID is the local image ID (docker image inspect's {{.Id}}) of ref,
 // which must already be pulled.
 func (a *app) imageID(ref string) (string, error) {

@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -119,21 +122,22 @@ func TestDashboardRecordsWhatFlaiHostRestarts(t *testing.T) {
 	}
 
 	// one an older flai started, already running, is recorded as it runs
-	older := &fakeRunner{images: map[string]bool{}, running: map[string]bool{"flaiover": true}, containerRef: map[string]string{"flaiover": "ghcr.io/bytepunx/flaiover:0.1.0"}}
+	older := &fakeRunner{images: map[string]bool{}, running: map[string]bool{"flaiover": true}, containerRef: map[string]string{"flaiover": "ghcr.io/bytepunx/flaiover:0.1.0"}, containerImage: map[string]string{"flaiover": "sha256:v010"}}
 	if _, errOut, code := runWith(t, root, older, "dashboard"); code != 0 {
 		t.Fatalf("already running: %s", errOut)
 	}
-	if r, _ = readDashboardRecord(dir); r.Ref != "ghcr.io/bytepunx/flaiover:0.1.0" {
+	if r, _ = readDashboardRecord(dir); r.Ref != "ghcr.io/bytepunx/flaiover:0.1.0" || r.Image != "sha256:v010" {
 		t.Errorf("record of a running container: %+v", r)
 	}
 }
 
 // S-0184: the host's look is off without a record or with
-// dashboard.no_restart, and a restart starts the recorded image again.
+// dashboard.no_restart, and a restart starts the recorded image again, by its
+// image ID (I-0116).
 func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
 	root := dashboardProject(t)
 	answers := true
-	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	f := &fakeRunner{images: map[string]bool{"sha256:v020": true}, running: map[string]bool{}, imageIDs: map[string]string{"ghcr.io/bytepunx/flaiover:0.2.0": "sha256:v020"}}
 	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { return answers }}
 	if _, _, code := runWithApp(t, a, "dashboard", "--tag", "0.2.0"); code != 0 {
 		t.Fatal("start")
@@ -157,7 +161,7 @@ func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
 		t.Fatalf("restart: %v", err)
 	}
 	calls := strings.Join(f.calls[before:], "\n")
-	if !strings.Contains(calls, "docker rm -f flaiover") || !strings.Contains(calls, "--publish 0.0.0.0:5555:3000") || !strings.HasSuffix(calls, "ghcr.io/bytepunx/flaiover:0.2.0") || strings.Contains(calls, "docker pull") {
+	if !strings.Contains(calls, "docker rm -f flaiover") || !strings.Contains(calls, "--publish 0.0.0.0:5555:3000") || !strings.HasSuffix(calls, "--label "+dashboardRefLabel+"=ghcr.io/bytepunx/flaiover:0.2.0 sha256:v020") || strings.Contains(calls, "docker pull") {
 		t.Errorf("restart calls:\n%s", calls)
 	}
 	if !f.running["flaiover"] {
@@ -174,5 +178,123 @@ func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
 	forgetDashboard(string(a.serveDir()))
 	if err := w.Restart(ctx); err == nil {
 		t.Error("nothing recorded, nothing to restart")
+	}
+}
+
+// lastRun is the last docker run among calls, "" when there is none.
+func lastRun(calls []string) string {
+	for i := len(calls) - 1; i >= 0; i-- {
+		if strings.HasPrefix(calls[i], "docker run ") {
+			return calls[i]
+		}
+	}
+	return ""
+}
+
+// I-0116: the watch starts the image ID the dashboard ran, labelled with its
+// tag, never what the tag names now, so a newer image flai dashboard check
+// pulled under a floating tag is not started without an upgrade.
+func TestDashboardWatchRestartsTheImageIDNotWhatItsTagNamesNow(t *testing.T) {
+	root := dashboardProject(t)
+	const latest = "ghcr.io/bytepunx/flaiover:latest"
+	f := &fakeRunner{images: map[string]bool{"sha256:old": true}, running: map[string]bool{}, imageIDs: map[string]string{latest: "sha256:old"}}
+	a := &app{cwd: root, runner: f}
+	if _, errOut, code := runWithApp(t, a, "dashboard"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	if r, _ := readDashboardRecord(string(a.serveDir())); r.Ref != latest || r.Image != "sha256:old" {
+		t.Errorf("record after start: %+v", r)
+	}
+
+	f.imageIDs[latest], f.images["sha256:new"] = "sha256:new", true // a check pulled a newer latest
+	delete(f.running, "flaiover")
+	before := len(f.calls)
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+	run := lastRun(f.calls[before:])
+	if !strings.HasSuffix(run, " sha256:old") || !strings.Contains(run, "--label "+dashboardRefLabel+"="+latest+" ") || strings.Contains(strings.Join(f.calls[before:], "\n"), "docker pull") {
+		t.Errorf("the watch restarts the image ID it recorded, labelled with its tag: %q", run)
+	}
+}
+
+// I-0116: a record an older flai wrote has no image ID, and the watch starts
+// its reference as before.
+func TestDashboardWatchRestartsAnOlderRecordFromItsRef(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	a := &app{cwd: root, runner: f}
+	dir := string(a.serveDir())
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	older := `{"name": "flaiover", "ref": "ghcr.io/bytepunx/flaiover:0.1.0", "publish": "0.0.0.0:5555:3000"}`
+	if err := os.WriteFile(filepath.Join(dir, dashboardRecordFile), []byte(older), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if r, ok := readDashboardRecord(dir); !ok || r.Ref != "ghcr.io/bytepunx/flaiover:0.1.0" || r.Image != "" {
+		t.Fatalf("an older record is read: %+v %v", r, ok)
+	}
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+	if run := lastRun(f.calls); !strings.HasSuffix(run, " ghcr.io/bytepunx/flaiover:0.1.0") || !strings.Contains(run, "--publish 0.0.0.0:5555:3000") {
+		t.Errorf("an older record restarts from its ref: %q", run)
+	}
+}
+
+// I-0116: an image ID that is no longer a local image, as after docker image
+// prune, cannot be started: the watch says so at warn and starts the
+// reference, and records the ID that now runs.
+func TestDashboardWatchStartsTheRefWhenTheRecordedImageIsGone(t *testing.T) {
+	root := dashboardProject(t)
+	const ref = "ghcr.io/bytepunx/flaiover:0.2.0"
+	f := &fakeRunner{images: map[string]bool{ref: true}, running: map[string]bool{}, imageIDs: map[string]string{ref: "sha256:v020"}}
+	var logged bytes.Buffer
+	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&logged, nil))}
+	dir := string(a.serveDir())
+	if err := writeDashboardRecord(dir, dashboardRecord{Name: "flaiover", Ref: ref, Image: "sha256:pruned", Publish: "0.0.0.0:5555:3000"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil {
+		t.Fatalf("restart: %v", err)
+	}
+	if run := lastRun(f.calls); !strings.HasSuffix(run, " "+ref) || !strings.Contains(run, "--label "+dashboardRefLabel+"="+ref+" ") {
+		t.Errorf("a gone image restarts from its ref: %q", run)
+	}
+	if log := logged.String(); !strings.Contains(log, "level=WARN") || !strings.Contains(log, "recorded dashboard image is gone") || !strings.Contains(log, "image=sha256:pruned") {
+		t.Errorf("a gone image is logged at warn: %s", log)
+	}
+	if r, _ := readDashboardRecord(dir); r.Ref != ref || r.Image != "sha256:v020" {
+		t.Errorf("the record names the image that runs now: %+v", r)
+	}
+}
+
+// I-0116: flai dashboard restart starts the image ID and records the tag it
+// shows beside it, so the watch's restart after it is labelled with the tag,
+// not the ID.
+func TestDashboardRestartRecordsTheTagAndTheImageID(t *testing.T) {
+	root := dashboardProject(t)
+	const latest = "ghcr.io/bytepunx/flaiover:latest"
+	f := &fakeRunner{images: map[string]bool{"sha256:old": true}, running: map[string]bool{}, imageIDs: map[string]string{latest: "sha256:old"}}
+	a := &app{cwd: root, runner: f}
+	if _, errOut, code := runWithApp(t, a, "dashboard"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	f.imageIDs[latest], f.images["sha256:new"] = "sha256:new", true
+	if _, errOut, code := runWithApp(t, a, "dashboard", "restart"); code != 0 {
+		t.Fatalf("restart: %s", errOut)
+	}
+	if r, _ := readDashboardRecord(string(a.serveDir())); r.Ref != latest || r.Image != "sha256:old" {
+		t.Errorf("record after flai dashboard restart: %+v", r)
+	}
+
+	delete(f.running, "flaiover")
+	before := len(f.calls)
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil {
+		t.Fatalf("watch restart: %v", err)
+	}
+	if run := lastRun(f.calls[before:]); !strings.HasSuffix(run, " sha256:old") || !strings.Contains(run, "--label "+dashboardRefLabel+"="+latest+" ") {
+		t.Errorf("the watch after a restart: %q", run)
 	}
 }

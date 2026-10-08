@@ -394,10 +394,10 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	var id string
 	if already {
 		// a container an older flai started has no record: keep it as it runs,
-		// so that flai host watches it too (S-0184)
+		// by its image ID too (I-0116), so that flai host watches it (S-0184)
 		if _, ok := readDashboardRecord(dir); !ok {
 			if ref, _ := a.containerInfo(s.Name); ref != "" {
-				a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Publish: fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)})
+				a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Image: a.runningImageID(s.Name, ref), Publish: fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)})
 			}
 		}
 	} else {

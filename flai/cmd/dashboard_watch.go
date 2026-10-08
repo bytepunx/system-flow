@@ -58,10 +58,15 @@ func probeHost(addr string) string {
 
 // dashboardRecord is the shared container as flai dashboard last started it,
 // kept beside its token so that flai host can start it again as it was: the
-// image reference it ran, never a fresh pull (S-0184).
+// image it ran, never a fresh pull (S-0184). Image is the image ID the
+// container runs, so that a newer image pulled under a floating tag such as
+// latest is not started without an upgrade (I-0116), and Ref the reference
+// to show for it. Image is empty in a record an older flai wrote, or when
+// docker could not say the ID, and the watch then starts Ref.
 type dashboardRecord struct {
 	Name    string `json:"name"`
 	Ref     string `json:"ref"`
+	Image   string `json:"image,omitempty"`
 	Publish string `json:"publish"`
 }
 
@@ -100,13 +105,35 @@ func forgetDashboard(dir string) {
 // startDashboard starts the shared container from ref, published as s says,
 // and records it for flai host's watch.
 func (a *app) startDashboard(dir string, s dashboardSettings, ref string) (string, error) {
+	return a.startDashboardImage(dir, s, ref, ref)
+}
+
+// startDashboardImage starts the shared container from image, a reference or
+// an image ID such as the one a restart keeps (I-0116), labelled with ref, the
+// reference to show for it, and published as s says. It records ref and the
+// image ID the container runs, for flai host's watch to start again.
+func (a *app) startDashboardImage(dir string, s dashboardSettings, image, ref string) (string, error) {
 	publish := fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)
-	id, err := a.startContainer(dir, s.Name, publish, ref)
+	id, err := a.startContainerImage(dir, s.Name, publish, image, ref)
 	if err != nil {
 		return id, err
 	}
-	a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Publish: publish})
+	a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Image: a.runningImageID(s.Name, image), Publish: publish})
 	return id, nil
+}
+
+// runningImageID is the image ID the named container runs, started from
+// image: image itself when it is an ID, what docker says otherwise, and ""
+// when docker cannot say.
+func (a *app) runningImageID(name, image string) string {
+	if strings.HasPrefix(image, "sha256:") {
+		return image
+	}
+	id, err := a.containerImageID(name)
+	if err != nil {
+		return ""
+	}
+	return id
 }
 
 func (a *app) recordDashboard(dir string, r dashboardRecord) {
@@ -141,7 +168,12 @@ func (a *app) lookDashboard(context.Context) string {
 }
 
 // restartDashboard removes the recorded container, if anything is left of it,
-// and starts it again from the image and publish it was recorded with.
+// and starts it again with the publish it was recorded with, from the image
+// ID it ran, labelled with its reference: never what the reference names now,
+// which a check may have pulled a newer image under (I-0116). It starts the
+// reference instead when the record has no image ID, as one an older flai
+// wrote has not, or when that image is no longer here, and then records the
+// image ID that runs.
 func (a *app) restartDashboard(context.Context) error {
 	dir := string(a.serveDir())
 	r, ok := readDashboardRecord(dir)
@@ -149,8 +181,20 @@ func (a *app) restartDashboard(context.Context) error {
 		return errors.New("no dashboard is recorded; flai dashboard starts one")
 	}
 	_, _ = a.runner.Run("", "docker", "rm", "-f", r.Name) // a container that does not answer is still there
-	if _, err := a.startContainer(dir, r.Name, r.Publish, r.Ref); err != nil {
-		return fmt.Errorf("start %s from %s: %w", r.Name, r.Ref, err)
+	image := r.Ref
+	if r.Image != "" {
+		if id, err := a.imageID(r.Image); err == nil && id != "" {
+			image = r.Image
+		} else {
+			a.logger().Warn("recorded dashboard image is gone, starting its reference", "component", "dashboard", "container", r.Name, "image", r.Image, "ref", r.Ref)
+		}
+	}
+	if _, err := a.startContainerImage(dir, r.Name, r.Publish, image, r.Ref); err != nil {
+		return fmt.Errorf("start %s from %s: %w", r.Name, refAndImage(r.Ref, image), err)
+	}
+	if image != r.Image {
+		r.Image = a.runningImageID(r.Name, image)
+		a.recordDashboard(dir, r)
 	}
 	return nil
 }

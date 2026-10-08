@@ -883,7 +883,8 @@ func TestDashboardUpgradeRemovesANameDockerNeverReleases(t *testing.T) {
 	if asked != nameReleaseAttempts || slept != nameReleaseAttempts-1 {
 		t.Errorf("asked docker %d times and slept %d, want %d and %d", asked, slept, nameReleaseAttempts, nameReleaseAttempts-1)
 	}
-	if n := len(f.calls); f.calls[n-2] != "docker rm -f flaiover" || !strings.HasPrefix(f.calls[n-1], "docker run ") {
+	// the start is followed only by reading the image ID it recorded (I-0116)
+	if n := len(f.calls); f.calls[n-3] != "docker rm -f flaiover" || !strings.HasPrefix(f.calls[n-2], "docker run ") || f.calls[n-1] != "docker inspect --format {{.Image}} flaiover" {
 		t.Errorf("the name is removed by force, then the new image started:\n%s", strings.Join(f.calls, "\n"))
 	}
 }
