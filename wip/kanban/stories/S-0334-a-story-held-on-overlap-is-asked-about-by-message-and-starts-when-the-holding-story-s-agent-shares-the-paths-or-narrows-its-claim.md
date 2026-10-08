@@ -7,7 +7,7 @@ status: backlog
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:04Z
-updated: 2026-10-08T04:34:30Z
+updated: 2026-10-08T04:38:47Z
 transitions: []
 tags: [flai, template]
 topics: [cli, conventions, template]
@@ -24,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 300
+      seconds: 308
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 45
-          output: 819
-          cache_read: 3661515
-          cache_write: 10356
-          cost: 0.9048
+          input: 49
+          output: 866
+          cache_read: 5726151
+          cache_write: 14682
+          cost: 1.4145
 draft: true
 cost_of_delay:
   value: 288.04
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:20Z
 forecast:
   duration: 53m
-  delivery: 2026-10-08T12:53:00Z
-  basis: "Its own forecast of 53m; 27th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0318, S-0320, S-0319, S-0309, S-0326, S-0287, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0313, S-0321, S-0322, S-0323 and S-0327."
+  delivery: 2026-10-08T13:08:00Z
+  basis: "Its own forecast of 53m; 27th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326, S-0287, S-0322, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0313, S-0321 and S-0323."
   by: flai
-  at: 2026-10-08T04:34:30Z
+  at: 2026-10-08T04:38:47Z
 ---
 # S-0334 A story held on overlap is asked about by message, and starts when the holding story's agent shares the paths or narrows its claim
 

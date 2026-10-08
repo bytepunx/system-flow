@@ -6,7 +6,7 @@ title: flai verify --record-issues opens an issue on the story branch that anoth
 status: ready
 owner: alex
 created: 2026-10-07T18:59:58Z
-updated: 2026-10-08T04:34:30Z
+updated: 2026-10-08T04:38:47Z
 transitions:
   - to: ready
     at: 2026-10-08T04:21:11Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T00:34:49Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T05:50:00Z
-  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0318, S-0320, S-0319 and S-0309."
+  delivery: 2026-10-08T05:59:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0318, S-0320, S-0319, S-0309 and S-0336."
   by: flai
-  at: 2026-10-08T04:34:30Z
+  at: 2026-10-08T04:38:47Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:21:07Z

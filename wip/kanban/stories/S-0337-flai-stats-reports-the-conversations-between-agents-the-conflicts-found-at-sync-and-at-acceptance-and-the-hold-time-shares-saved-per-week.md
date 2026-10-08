@@ -7,7 +7,7 @@ status: backlog
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:31Z
-updated: 2026-10-08T04:33:38Z
+updated: 2026-10-08T04:38:47Z
 transitions: []
 tags: [flai, flaiover]
 topics: [cli, dashboard, git]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:22Z
 forecast:
   duration: 51m
-  delivery: 2026-10-08T13:52:00Z
-  basis: "Its own forecast of 51m; 30th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0309, S-0326, S-0287, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0313, S-0321, S-0322, S-0323, S-0327, S-0334 and S-0336."
+  delivery: 2026-10-08T14:08:00Z
+  basis: "Its own forecast of 51m; 28th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326, S-0287, S-0322, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0313, S-0321, S-0323 and S-0334."
   by: flai
-  at: 2026-10-08T04:33:38Z
+  at: 2026-10-08T04:38:47Z
 finalized:
   by: orchestrator
   at: 2026-10-07T20:24:19Z
@@ -73,7 +73,7 @@ Measure whether E-0018 does what it set out to: more stories running at once wit
 
 ### Planning
 
-Planned by planner-E-0018 on 2026-10-07. It waits for S-0332, S-0333, and S-0334 (`after`), whose conversations, notices, and shares it counts. `metrics.md` is the contract with the dashboard and changes only with an ADR, so T-1216 comes first.
+Planned by planner-E-0018 on 2026-10-07, revisited on 2026-10-08. It waits for S-0332, S-0333, and S-0334 (`after`), whose conversations, notices, and shares it counts; S-0332 and S-0333 are done, so S-0334 alone holds it. It does not wait for S-0336 or S-0338: it reads the message files, not the dashboard's views of them. `metrics.md` is the contract with the dashboard and changes only with an ADR, so T-1216 comes first.
 
 Layers, one task each, since each reads what the one before writes:
 
@@ -85,18 +85,18 @@ Layers, one task each, since each reads what the one before writes:
 
 Touches:
 
-- **Declared:** none before planning.
+- **Declared:** all kept.
 - **Layout:**
   - `flai/internal/storygit/conflicts.go` and its test: a new log beside `sync.go`; `sync.go`, `flai/cmd/accept.go`, and their conflict tests write it.
   - `flai/internal/statsread/statsread.go` and its test: `Read` loads the threads and activities for `flai stats` and the host API's `stats.get`, so it loads the messages and the conflict log too.
   - `flai/internal/metrics/coordination.go` and its test, as `waiting.go` and `claims.go` are; `metrics.go` gathers them.
   - `flai/cmd/stats.go` and `check_stats_test.go`: the printed and JSON stats.
   - `flaiover/src/lib/viz/charts.ts`, `flaiover/src/routes/charts/[kind]/+page.svelte`, and their tests: the charts.
-- **Co-change:** `flai touches suggest` from `waiting.go`, `claims.go`, and `stats.go` gave `check_stats_test.go` and `metrics.go` (57%), `docs/users/flai.md` (48%), `design/system/metrics.md` (43%), `docs/users/flai-reference.md` (38%), and `statsread.go` (14%).
+- **Co-change:** `flai touches suggest` from `waiting.go`, `claims.go`, and `stats.go` gave `check_stats_test.go` and `metrics.go` (57%), `docs/users/flai.md` (48%), `design/system/metrics.md` (43%), `docs/users/flai-reference.md` (38%), and `statsread.go` (14%). Run again on 2026-10-08 over the whole claim, it gave `design/system/flai-cli.md` (41%), which describes `flai stats`; added to the story and to T-1220.
 - **Design:** `design/system/metrics.md` § Planning, waiting, and claims and `design/system/flaiover-dashboard.md`.
-- **Folder touch kept:** `design/adrs`, for T-1216's ADR. Inside `claims.shared`.
-- **Not taken:** `flai/internal/hostapi/reads.go` (14%): `stats.get` returns what `statsread.Read` and `metrics` compute, so it needs no change. `flaiover/src/lib/server/stats.ts` may need the type; T-1219 widens its touches if so.
+- **Folder touch kept:** `design/adrs`, for T-1216's ADR, whose file name no task can know before it is written. Inside `claims.shared`, so it holds nothing.
+- **Not taken:** `flai/internal/hostapi/reads.go` and `writes.go`: `stats.get` returns what `statsread.Read` and `metrics` compute, so it needs no change. `design/system/workflow.md` (11%): the values are defined in `metrics.md`. `flaiover/src/lib/server/stats.ts` may need the type; T-1219 widens its touches if so.
 
-Forecast 54m, delivery 2026-10-08T12:08Z: `flai forecast` gave it, 114 s per unit over 29 done large-band feature stories, times size 28 (5 criteria, 23 touches). It stands.
+Forecast 51m: `flai forecast` gave it on 2026-10-08, 104 s per unit over 33 done large-band feature stories, times size 29 (5 criteria, 24 touches). It stands; the 54m of the first plan came from 114 s per unit over 29 stories.
 
-Cost of delay 139.53 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 54m of 6h27m. It stands.
+Cost of delay 277.17 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 51m of the 3h4m forecast over the four open stories (S-0334, S-0336, S-0337, S-0338). It stands.

@@ -3,12 +3,15 @@ id: S-0336
 type: story
 nature: feature
 title: The dashboard shows the messages between stories' agents on each story's page and in a Messages view
-status: backlog
+status: ready
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:22Z
-updated: 2026-10-08T04:34:14Z
-transitions: []
+updated: 2026-10-08T04:38:47Z
+transitions:
+  - to: ready
+    at: 2026-10-08T04:35:26Z
+    by: orchestrator
 tags: [flai, flaiover]
 topics: [dashboard, cli]
 touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/routes/api/messages/+server.ts, flaiover/src/routes/api/messages/messages.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, flaiover/src/routes/messages/+page.svelte, flaiover/src/routes/messages/messages.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md]
@@ -24,26 +27,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 435
+      seconds: 443
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 56
-          output: 909
-          cache_read: 8224154
-          cache_write: 15794
-          cost: 2.0303
-draft: true
+          input: 61
+          output: 957
+          cache_read: 10288790
+          cache_write: 20121
+          cost: 2.54
 cost_of_delay:
   value: 217.39
   by: planner-E-0018
   at: 2026-10-08T04:33:21Z
 forecast:
   duration: 40m
-  delivery: 2026-10-08T12:42:00Z
-  basis: "flai forecast: median 104 s per unit over 33 done large-band feature stories on claude-opus-5-5, times size 23 (5 criteria, 18 touches), once the held card went to S-0338."
-  by: planner-E-0018
-  at: 2026-10-08T04:34:14Z
+  delivery: 2026-10-08T05:51:00Z
+  basis: "Its own forecast of 40m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0318, S-0320, S-0319 and S-0309."
+  by: flai
+  at: 2026-10-08T04:38:47Z
+finalized:
+  by: orchestrator
+  at: 2026-10-08T04:35:22Z
 ---
 # S-0336 The dashboard shows the messages between stories' agents on each story's page and in a Messages view
 

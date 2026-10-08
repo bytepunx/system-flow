@@ -6,7 +6,7 @@ title: flai task done commits every uncommitted file in the story worktree, so c
 status: ready
 owner: alex
 created: 2026-10-07T18:59:53Z
-updated: 2026-10-08T04:37:18Z
+updated: 2026-10-08T04:38:47Z
 transitions:
   - to: ready
     at: 2026-10-08T04:36:45Z
@@ -53,10 +53,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:13Z
 forecast:
   duration: 50m
-  delivery: 2026-10-08T12:42:00Z
-  basis: "flai forecast gave 26m (size 20 at 78 s per unit); raised to 50m because S-0312's same plan was raised to 45m for an ADR first and files S-0333 (38m) and S-0269 (69m) changed, and this story adds I-0108's three-task test and a second issue close."
-  by: planner-S-0322
-  at: 2026-10-08T04:36:08Z
+  delivery: 2026-10-08T06:38:00Z
+  basis: "Its own forecast of 50m; 7th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326 and S-0287."
+  by: flai
+  at: 2026-10-08T04:38:47Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:36:42Z
@@ -76,7 +76,7 @@ This story remediates [I-0108](../../../design/issues/I-0108-flai-task-done-comm
 - T-1328 flai task done commits only the closing task's paths, with tests that reproduce I-0104's two tasks and I-0108's three
 - T-1329 Document what flai task done commits, and close I-0104 and I-0108
 - T-1330 Record what flai task done commits, in an ADR refining ADR-0107
-- T-1331 flai task done and the MCP tool task_done take -m only when there is something to commit, and print the paths left
+- T-1331 flai task done, the MCP tool task_done, and the host method task.done take a message only when there is something to commit, and print the paths left
 
 ## Notes
 
