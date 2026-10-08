@@ -29,7 +29,7 @@ import (
 // allow a write to a protected path without asking the operator.
 type AutoApprove func(root string) bool
 
-const permissionPromptDescription = "Claude Code calls this tool itself, through --permission-prompt-tool mcp__flai__permission_prompt, when a tool call would otherwise ask a person: the model need not call it. It approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects inside an in-progress story's worktree, such as a file in a .claude/ folder or .mcp.json, which Claude Code refuses without a person's approval; it never approves a path in .git. Unless the host auto-approves such writes, it opens a thread on the story showing the change and waits until the operator replies: allow lets the write through, anything else refuses it with the operator's words as the reason. Everything else is refused at once. It answers {\"behavior\":\"allow\",\"updatedInput\":...} or {\"behavior\":\"deny\",\"message\":...} as Claude Code expects."
+const permissionPromptDescription = "Claude Code calls this tool itself, through --permission-prompt-tool mcp__flai__permission_prompt, when a tool call would otherwise ask a person: the model need not call it. It approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects inside an in-progress story's worktree, such as a file in a .claude/ folder or .mcp.json, which Claude Code refuses without a person's approval; it never approves a path in .git. Unless the host auto-approves such writes, it opens a thread on the story showing the change and waits at most four minutes for the operator's reply: allow lets the write through, anything else refuses it with the operator's words as the reason. Unanswered by then, it refuses the write naming the thread, which stays open; the same write made again takes the answer given on it since, or waits again. Everything else is refused at once. It answers {\"behavior\":\"allow\",\"updatedInput\":...} or {\"behavior\":\"deny\",\"message\":...} as Claude Code expects."
 
 // permissionScope is what every refusal of a request outside the tool's remit says.
 const permissionScope = "permission_prompt approves only an Edit, Write, MultiEdit, or NotebookEdit of a path Claude Code protects, other than .git, inside an in-progress story's worktree; anything else the session's permissions do not allow is refused, as before"
@@ -37,6 +37,11 @@ const permissionScope = "permission_prompt approves only an Edit, Write, MultiEd
 // permissionPoll is how often a held permission_prompt reads its thread for
 // the operator's answer; tests shorten it.
 var permissionPoll = time.Second
+
+// permissionWait is the longest a permission_prompt call waits for an answer
+// (ADR-0124): below Claude Code's idle timeout for an MCP call, 30 minutes
+// over stdio and 5 over HTTP (I-0103). Tests shorten it.
+var permissionWait = 4 * time.Minute
 
 // permissionWords are the first words of an answer that allow the write.
 var permissionWords = []string{"allow", "yes", "approve", "approved", "ok"}
@@ -216,29 +221,39 @@ func orQuoted(name string) string {
 	return name
 }
 
-// askOperator opens a thread on the story showing the change, waits for an
-// answer from the story's owner or the project's owner (ADR-0097; anyone but
-// the agent when neither is named), and resolves the thread with what was
-// decided. The agent's own entry and another agent's are not answers.
+// askOperator asks on a thread on the story showing the change for an answer
+// from the story's owner or the project's owner (ADR-0097; anyone but the
+// agent when neither is named), and resolves the thread with what was
+// decided. The agent's own entry and another agent's are not answers. It asks
+// on the open thread in which the agent asked the same request before, and
+// opens one only when there is none, so an answer given after an earlier
+// call stopped waiting is taken (ADR-0124). Unanswered within permissionWait,
+// or when the session ends, it refuses the write and leaves the thread open.
 func (s *server) askOperator(ctx context.Context, story *workitem.Item, in PermissionIn, rel string) PermissionOut {
-	th, err := threads.New(s.repo, threads.NewOptions{
-		Title:  fmt.Sprintf("Allow %s %s?", in.ToolName, rel),
-		On:     story.ID,
-		Author: s.agent,
-		Text:   permissionRequest(s.agent, story.ID, story.Owner, s.repo.Manifest.Owner, in, rel),
-		Now:    s.now(),
-	})
+	request := permissionRequest(s.agent, story.ID, story.Owner, s.repo.Manifest.Owner, in, rel)
+	th, asked, err := s.askedBefore(story.ID, request)
 	if err != nil {
-		return deny("could not ask the operator on a thread: %v", err)
+		return deny("could not read %s's threads for an earlier ask of this write: %v", story.ID, err)
 	}
-	_ = s.mirror(th)
-	// Only entries after the opening one can answer: the content shown may
-	// itself hold lines that read as entries.
-	asked := len(th.Entries())
+	if th == nil {
+		th, err = threads.New(s.repo, threads.NewOptions{
+			Title:  fmt.Sprintf("Allow %s %s?", in.ToolName, rel),
+			On:     story.ID,
+			Author: s.agent,
+			Text:   request,
+			Now:    s.now(),
+		})
+		if err != nil {
+			return deny("could not ask the operator on a thread: %v", err)
+		}
+		_ = s.mirror(th)
+		// Only entries after the opening one can answer: the content shown may
+		// itself hold lines that read as entries.
+		asked = len(th.Entries())
+	}
 	answer, ok := s.awaitAnswer(ctx, th.ID, asked, answerers(story.Owner, s.repo.Manifest.Owner))
 	if !ok {
-		s.settle(th.ID, fmt.Sprintf("refused: no answer before the session ended, so %s was not written", rel))
-		return deny("no answer from the operator before the session ended")
+		return deny("No answer on %s yet, so %s was not written. The thread stays open, and the owner's answer is taken when you make the same write again. Go on with work that does not need this write. When nothing else is left, write your narrative's Current state and Next steps naming %s, and end: flai serve starts you again when it is answered.", th.ID, rel, th.ID)
 	}
 	if allowed(answer.Text) {
 		s.settle(th.ID, fmt.Sprintf("allowed by %s: %s may %s %s", answer.Author, s.agent, in.ToolName, rel))
@@ -260,31 +275,79 @@ func answerers(owner, projectOwner string) []string {
 	return who
 }
 
-// awaitAnswer reads the thread until an entry after the first asked ones is
-// by one of who, never the agent (by anyone but the agent when who is
-// empty), or the session ends.
+// askedBefore is the open thread on the story whose opening entries are the
+// agent's request, the same tool, path, and input, and how many entries that
+// request reads as; nil when the agent has not asked it.
+func (s *server) askedBefore(storyID, request string) (*threads.Thread, int, error) {
+	all, err := threads.For(s.repo, storyID)
+	if err != nil {
+		return nil, 0, err
+	}
+	for _, th := range all {
+		if !th.Open() {
+			continue
+		}
+		opening := openingEntries(th.Created, s.agent, request)
+		if entries := th.Entries(); len(entries) >= len(opening) && sameEntries(entries[:len(opening)], opening) {
+			return th, len(opening), nil
+		}
+	}
+	return nil, 0, nil
+}
+
+// openingEntries are the entries a thread that author opened at created with
+// text reads as, its body opening as threads.New writes it: one, unless the
+// content shown holds lines that read as entries.
+func openingEntries(created, author, text string) []threads.Entry {
+	body := fmt.Sprintf("### %s %s\n%s\n", created, author, strings.TrimSpace(text))
+	return (&threads.Thread{Body: body}).Entries()
+}
+
+func sameEntries(a, b []threads.Entry) bool {
+	return slices.EqualFunc(a, b, func(x, y threads.Entry) bool {
+		return x.At == y.At && x.Author == y.Author && x.Text == y.Text && x.Recommendation == y.Recommendation
+	})
+}
+
+// awaitAnswer reads the thread, at once and then every permissionPoll, until
+// an entry after the first asked ones is by one of who, never the agent (by
+// anyone but the agent when who is empty), the session ends, or
+// permissionWait passes.
 func (s *server) awaitAnswer(ctx context.Context, id string, asked int, who []string) (threads.Entry, bool) {
+	bound := time.NewTimer(permissionWait)
+	defer bound.Stop()
 	tick := time.NewTicker(permissionPoll)
 	defer tick.Stop()
 	for {
+		// An error is the thread being written, or gone for a moment: it is
+		// read again on the next tick.
+		if th, err := threads.Get(s.repo, id); err == nil {
+			if answer, ok := s.answerOn(th, asked, who); ok {
+				return answer, true
+			}
+		}
 		select {
 		case <-ctx.Done():
 			return threads.Entry{}, false
 		case <-s.closing: // nil, and so never ready, unless the server was given one
 			return threads.Entry{}, false
+		case <-bound.C:
+			return threads.Entry{}, false
 		case <-tick.C:
-			th, err := threads.Get(s.repo, id)
-			if err != nil {
-				continue // being written, or gone for a moment: read it again
-			}
-			entries := th.Entries()
-			for i := asked; i < len(entries); i++ {
-				if a := entries[i].Author; a != s.agent && (len(who) == 0 || slices.Contains(who, a)) {
-					return entries[i], true
-				}
-			}
 		}
 	}
+}
+
+// answerOn is the first entry after the first asked ones by one of who, never
+// the agent (by anyone but the agent when who is empty).
+func (s *server) answerOn(th *threads.Thread, asked int, who []string) (threads.Entry, bool) {
+	entries := th.Entries()
+	for i := asked; i < len(entries); i++ {
+		if a := entries[i].Author; a != s.agent && (len(who) == 0 || slices.Contains(who, a)) {
+			return entries[i], true
+		}
+	}
+	return threads.Entry{}, false
 }
 
 // settle resolves the thread as the agent, unless the operator resolved it.

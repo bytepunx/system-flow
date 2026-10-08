@@ -681,11 +681,14 @@ func TestThePromptAsksForThePlan(t *testing.T) {
 	}
 }
 
-// S-0299, I-0093: the story's agent is told before it launches a layer that
-// a write under a .claude/ folder is never a sub-agent's, that it makes such
-// writes itself once the layer is back, and that it leaves them in
-// .flai-cache/ with the cp commands on a thread when the operator may be
-// away; an answered or commit run is not told again.
+// S-0299, I-0093, S-0309, I-0103, ADR-0124: the story's agent is told before
+// it launches a layer that a write under a .claude/ folder is never a
+// sub-agent's, that it makes such writes itself once the layer is back, that
+// permission_prompt refuses one unanswered after at most four minutes and
+// leaves its thread open, and that it goes on, makes the same write again once
+// the thread is answered, and ends when nothing else is left; it is no longer
+// told to stage the files in .flai-cache/ with cp commands. An answered or
+// commit run is not told again.
 func TestThePromptKeepsClaudeWritesFromSubAgents(t *testing.T) {
 	r := req(&manifest.Agent{Harness: ClaudeCode})
 	restarted := r
@@ -694,11 +697,25 @@ func TestThePromptKeepsClaudeWritesFromSubAgents(t *testing.T) {
 		for _, w := range []string{
 			"A write to a path Claude Code protects, such as a file in a .claude/ folder or .mcp.json, is never a sub-agent's: flai guard refuses it unless the operator has turned on auto-approve",
 			"say so in the prompt of every sub-agent whose task changes such a file, and ask it to return the file's whole new content in its final message",
-			"Make those writes yourself once the layer's sub-agents are back, never while a layer runs: permission_prompt opens a thread on S-0104 and holds the call until the operator answers",
-			"write each whole file into the worktree's ignored .flai-cache/ folder instead, on a path with no .claude folder along it, open one thread on S-0104 with the exact cp commands that put each in place, and end rather than wait",
+			"Make those writes yourself once the layer's sub-agents are back, never while a layer runs: permission_prompt opens a thread on S-0104 and holds the write at most four minutes, then refuses it, naming the thread, which stays open",
+			"Go on with the work that does not need the write, and once the thread is answered make the same write again, with the same content: an allow lets it through, a refusal refuses it, and with no answer yet it holds the write at most four minutes again",
+			"When nothing is left but the answer, write the narrative's Current state and Next steps with flai stream state, naming the thread, and end",
 		} {
 			if !strings.Contains(p, w) {
 				t.Errorf("prompt lacks %q:\n%s", w, p)
+			}
+		}
+		// ADR-0124 retired the staging workaround: no file is left in
+		// .flai-cache/ for the operator to copy in, and the call no longer
+		// waits for as long as the operator is away.
+		for _, w := range []string{
+			"ignored .flai-cache/ folder",
+			"cp commands",
+			"holds the call until the operator answers",
+			"end rather than wait",
+		} {
+			if strings.Contains(p, w) {
+				t.Errorf("prompt still says %q:\n%s", w, p)
 			}
 		}
 		// Told before the agent launches anything: ahead of the review
