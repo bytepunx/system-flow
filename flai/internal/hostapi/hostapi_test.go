@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -250,6 +251,144 @@ func TestThreadsList(t *testing.T) {
 	_ = call(t, p, "threads.list", `{"on":"S-1"}`, &list)
 	if len(list) != 1 {
 		t.Errorf("threads on the story in short padding: %+v", list)
+	}
+}
+
+// talking is harbour with S-0001 in progress, S-0002 in review, and a new
+// S-0004 in progress, a file to talk about, and three conversations: MS-0001
+// from S-0001 to S-0002 about that file, answered, so it awaits S-0001;
+// MS-0002 from S-0002 to S-0001, closed; and MS-0003 from S-0002 to S-0004.
+func talking(t *testing.T) channel.Project {
+	t.Helper()
+	p := harbour(t)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Buoys", Parent: "E-0001", Owner: "olive", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	for id, state := range map[string]string{"S-0001": workitem.InProgress, "S-0002": workitem.Review, "S-0004": workitem.InProgress} {
+		it, err := repo.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Status = state
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.MkdirAll(filepath.Join(p.Root, "design/system"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(p.Root, "design/system/quay.md"), []byte("# Quay\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	send := func(from, to, text string, about ...string) *messages.Conversation {
+		c, err := messages.Send(repo, messages.SendOptions{From: from, To: to, Author: "agent-" + from, Text: text, About: about, Now: t0})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	first := send("S-0001", "S-0002", "Which berth?", "design/system/quay.md")
+	if _, err := messages.Reply(repo, first.ID, "S-0002", "agent-S-0002", "The north one.", t0.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	second := send("S-0002", "S-0001", "Done with the crane?")
+	if _, err := messages.Close(repo, second.ID, "olive", "settled on the quay", t0.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	send("S-0002", "S-0004", "Buoy colours?")
+	return p
+}
+
+type conversationView struct {
+	ID, Title, From, To, Status, Awaiting, Path string
+	About                                       []string
+	Closed                                      bool
+	ClosedReason                                string `json:"closed_reason"`
+	Entries                                     []messages.Entry
+}
+
+func conversationIDs(list []conversationView) string {
+	var out []string
+	for _, c := range list {
+		out = append(out, c.ID)
+	}
+	return strings.Join(out, " ")
+}
+
+// TestMessagesList: messages.list serves the open conversations of the
+// project, or of one story named in any padding, and the closed ones too with
+// all.
+func TestMessagesList(t *testing.T) {
+	p := talking(t)
+	for params, want := range map[string]string{
+		`{}`:                            "MS-0001 MS-0003",
+		`{"all":true}`:                  "MS-0001 MS-0002 MS-0003",
+		`{"story":"S-0001"}`:            "MS-0001",
+		`{"story":"s-1","all":true}`:    "MS-0001 MS-0002",
+		`{"story":"S-04"}`:              "MS-0003",
+		`{"story":"S-0003","all":true}`: "",
+	} {
+		var list []conversationView
+		if err := call(t, p, "messages.list", params, &list); err != nil {
+			t.Fatalf("%s: %+v", params, err)
+		}
+		if list == nil {
+			t.Errorf("%s: null, not a list", params)
+		}
+		if got := conversationIDs(list); got != want {
+			t.Errorf("%s: %q, want %q", params, got, want)
+		}
+	}
+	var list []conversationView
+	_ = call(t, p, "messages.list", `{"all":true}`, &list)
+	if c := list[1]; !c.Closed || c.ClosedReason != "settled on the quay" || c.Awaiting != "" || c.Status != "closed" {
+		t.Errorf("a closed conversation: %+v", c)
+	}
+	if c := list[0]; c.Closed || c.Awaiting != "S-0001" || len(c.About) != 1 || c.About[0] != "design/system/quay.md" || len(c.Entries) != 2 {
+		t.Errorf("an open conversation: %+v", c)
+	}
+	for _, params := range []string{`{"story":"../../etc"}`, `{"story":"T-0001"}`, `{"story":7}`} {
+		if err := call(t, p, "messages.list", params, &list); err == nil || err.Code != channel.CodeInvalidParams {
+			t.Errorf("messages.list %s: %+v", params, err)
+		}
+	}
+}
+
+// TestMessagesGet: messages.get serves one conversation in any padding with
+// its entries, its about paths, and its state, and refuses an ID that is
+// missing, malformed, or of no conversation.
+func TestMessagesGet(t *testing.T) {
+	p := talking(t)
+	var c conversationView
+	for _, id := range []string{"MS-0001", "ms-1", "1"} {
+		c = conversationView{}
+		if err := call(t, p, "messages.get", `{"id":"`+id+`"}`, &c); err != nil || c.ID != "MS-0001" {
+			t.Fatalf("messages.get %s: %+v %+v", id, err, c)
+		}
+	}
+	if c.From != "S-0001" || c.To != "S-0002" || c.Status != "open" || c.Closed || c.Awaiting != "S-0001" ||
+		!strings.HasPrefix(c.Path, "wip/messages/MS-0001-") || len(c.About) != 1 || c.About[0] != "design/system/quay.md" {
+		t.Errorf("messages.get: %+v", c)
+	}
+	if len(c.Entries) != 2 || c.Entries[0].Story != "S-0001" || c.Entries[0].Text != "Which berth?" ||
+		c.Entries[1].Author != "agent-S-0002" || c.Entries[1].Text != "The north one." {
+		t.Errorf("entries: %+v", c.Entries)
+	}
+	c = conversationView{}
+	if err := call(t, p, "messages.get", `{"id":"MS-0002"}`, &c); err != nil || !c.Closed || c.ClosedReason != "settled on the quay" || c.Awaiting != "" || c.About == nil {
+		t.Errorf("a closed conversation: %+v %+v", err, c)
+	}
+	if err := call(t, p, "messages.get", `{"id":"MS-0099"}`, &c); err == nil || err.Code != NotFound {
+		t.Errorf("an unknown conversation: %+v", err)
+	}
+	for _, params := range []string{`{}`, `{"id":""}`, `{"id":"../../etc/passwd"}`, `{"id":"MS-*"}`, `{"id":"TH-0001"}`, `{"id":7}`} {
+		if err := call(t, p, "messages.get", params, &c); err == nil || err.Code != channel.CodeInvalidParams {
+			t.Errorf("messages.get %s: %+v", params, err)
+		}
 	}
 }
 

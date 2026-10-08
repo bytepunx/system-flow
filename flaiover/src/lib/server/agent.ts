@@ -57,6 +57,8 @@ export const REQUIRED_METHODS = [
 	'items.count',
 	'item.get',
 	'threads.list',
+	'messages.list',
+	'messages.get',
 	'docs.tree',
 	'doc.get',
 	'adrs.list',

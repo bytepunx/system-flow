@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
@@ -89,6 +90,10 @@ var (
 	storyID  = regexp.MustCompile(`^S-\d{3,}$`)
 	planID   = regexp.MustCompile(`^[ES]-\d{3,}$`)
 )
+
+// conversationID is a conversation's ID once messages.CanonicalID has padded
+// it; anything else would reach the messages folder's glob as a pattern.
+var conversationID = regexp.MustCompile(`^MS-\d{4,}$`)
 
 // ErrNoAgent is what Host.AgentStream returns for a story flai serve has
 // started no agent for, Host.PlanStream, wrapped, for an item it has started
@@ -452,6 +457,71 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 				}
 			}
 			return out, nil
+		},
+
+		// messages.list: as flai message list --json; story is one story's, in any padding, all adds the closed.
+		"messages.list": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			var in struct {
+				Story string `json:"story"`
+				All   bool   `json:"all"`
+			}
+			if e := params(raw, &in); e != nil {
+				return nil, e
+			}
+			story := workitem.CanonicalID(in.Story)
+			if in.Story != "" && !storyID.MatchString(story) {
+				return nil, bad("%q is not a story's ID", in.Story)
+			}
+			repo, e := open(ctx, p)
+			if e != nil {
+				return nil, e
+			}
+			var list []*messages.Conversation
+			var err error
+			done := perf.Track(ctx, "messages.read")
+			if story != "" {
+				list, err = messages.For(repo, story)
+			} else {
+				list, err = messages.List(repo)
+			}
+			done()
+			if err != nil {
+				return nil, failed(err)
+			}
+			defer perf.Track(ctx, "messages.view")()
+			out := []map[string]any{}
+			for _, c := range list {
+				if closed, _ := c.Closed(repo); in.All || !closed {
+					out = append(out, messages.View(repo, c))
+				}
+			}
+			return out, nil
+		},
+
+		// messages.get: as flai message show --json; one conversation in any padding, with its entries.
+		"messages.get": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			var in struct {
+				ID string `json:"id"`
+			}
+			if e := params(raw, &in); e != nil {
+				return nil, e
+			}
+			id := messages.CanonicalID(in.ID)
+			if !conversationID.MatchString(id) {
+				return nil, bad("%q is not a conversation's ID, such as MS-0001", in.ID)
+			}
+			repo, e := open(ctx, p)
+			if e != nil {
+				return nil, e
+			}
+			done := perf.Track(ctx, "messages.read")
+			c, err := messages.Get(repo, id)
+			done()
+			if err != nil {
+				return nil, &channel.Error{Code: NotFound, Message: err.Error()}
+			}
+			defer perf.Track(ctx, "messages.view")()
+			return messages.View(repo, c), nil
 		},
 	}
 	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), readMethods(now), writeMethods(Commands, now, host)} {
