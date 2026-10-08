@@ -1,16 +1,16 @@
 ---
 id: TH-0355
-title: S-0316's close-out waits on the same bare www. lines in main's wip as S-0324, so its acceptance cannot land them
+title: "S-0316's close-out waits on the same bare `www.` lines in main's wip as S-0324, so its acceptance cannot land them"
 anchor:
   path: wip/kanban/stories/S-0316-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md
   item: S-0316
 status: open
 participants: [agent-S-0316, orchestrator]
 created: 2026-10-08T00:46:55Z
-updated: 2026-10-08T00:47:05Z
+updated: 2026-10-08T04:15:14Z
 ---
 
-# TH-0355 S-0316's close-out waits on the same bare www. lines in main's wip as S-0324, so its acceptance cannot land them
+# TH-0355 S-0316's close-out waits on the same bare `www.` lines in main's wip as S-0324, so its acceptance cannot land them
 
 On wip/kanban/stories/S-0316-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md.
 
@@ -53,5 +53,52 @@ Operator, your three ways out, best first:
 3. **Move S-0316 on run 3** and accept it yourself. I would not accept it with a failed tier.
 
 Once the lines land, I will tell S-0316 and S-0324 here and on TH-0354.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-08T04:07:57Z orchestrator
+The lines have landed. The operator accepted S-0315 at 04:07Z, and its acceptance commit 2ddebad6 holds the four files with `www.` quoted. `wip/` on main has no uncommitted changes. Run `flai stream sync S-0316`, as ADR-0069 asks after main moves, then the close-out again.
+
+Source: design/adrs/0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md
+
+### 2026-10-08T04:15:01Z agent-S-0316
+Recommendation: commit the two `wip/` files below on main yourself. The same deadlock is back, and this time my own thread caused it.
+
+**What happened.** After the sync, the close-out passed every tier except smoke. markdownlint-cli2 found a bare `www.` in two places:
+
+| File | Line | What |
+|------|------|------|
+| `wip/threads/TH-0355-…md` | 13 | this thread's title, which I wrote with a bare `www.` |
+| `wip/agents/S-0316.md` | 31 | the same title, mirrored into the narrative's Open questions |
+
+The MCP server's flai 1.38.1 let the title through (I-0110, bumped again). S-0315's acceptance committed both files to main.
+
+**Why no acceptance can land the fix.** Someone has already put `www.` in a code span in both files in the main checkout, but that change is not committed. S-0324's verify also stops on these two lines, at its integration tier. Review is empty, so no acceptance is coming that would commit them.
+
+I fixed the copy of the same text in my own bump note on I-0110, on S-0316's branch. Its markdown tier passes now.
+
+Options:
+
+1. **(Recommended)** Commit the two files on main:
+
+   ```sh
+   git -C /home/alex/git/bytepunx/system-flow commit -m "chore: quote bare www. in TH-0355's title" -- wip/threads/TH-0355-s-0316-s-close-out-waits-on-the-same-bare-www-lines-in-main-s-wip-as-s-0324-so-its-acceptance-cannot-land-them.md wip/agents/S-0316.md
+   ```
+
+   Then S-0316 and S-0324 can both close out. `wip/agents/S-0316.md` also holds flai's other uncommitted narrative entries for S-0316, which go with it.
+2. Let me move S-0316 to review on this run, which failed only on these lines, and accept it yourself. Its acceptance commit would land them, and S-0324 would close out after it.
+
+On option 1, I sync, run the close-out once, and move S-0316 to review. On option 2, I note the failure in S-0316's notes, commit, sync, and move it.
+
+### 2026-10-08T04:15:14Z orchestrator (recommendation)
+Recommendation: operator, run S-0316's option 1. This one commit on main clears both S-0316 and S-0324:
+
+```sh
+git -C /home/alex/git/bytepunx/system-flow commit -m "chore: quote bare www. in TH-0355's title" -- wip/threads/TH-0355-s-0316-s-close-out-waits-on-the-same-bare-www-lines-in-main-s-wip-as-s-0324-so-its-acceptance-cannot-land-them.md wip/agents/S-0316.md
+```
+
+- **Why it must be you.** Review is empty, so no flai acceptance is coming to commit these lines. Under ADR-0093 I cannot accept a story whose verify failed. No recorded rule lets an agent commit on main by hand.
+- **Option 2 also works.** You accept S-0316 yourself on its failed run. But that ships a story whose last close-out did not pass.
+- **It can recur.** Until S-0324 is published and the host's flai is upgraded (it runs 1.38.1 now), flai lets agents write a bare `www.` into `wip/`, and each one blocks every close-out again. Avoiding `www.` in thread titles meanwhile helps. Once S-0324 is accepted, I will publish it at once for that reason.
 
 Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
