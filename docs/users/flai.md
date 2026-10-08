@@ -23,6 +23,8 @@ The script detects the OS and architecture, resolves the newest `flai/v*` releas
 | `FLAI_INSTALL_DIR` | Install somewhere else, for example `/usr/local/bin` (needs write access there already; the script does not use `sudo`) |
 | `FLAI_VERSION` | Pin a release, for example `1.0.3` |
 | `GITHUB_TOKEN` or `GH_TOKEN` | Authenticate against the GitHub API. While the repository is private one of these, or a `gh auth login` session, is required; the script borrows `gh auth token` when it can |
+| `FLAI_API` | Another source of releases that answers as GitHub's releases API does, such as a mirror (default `https://api.github.com`) |
+| `FLAI_REPO` | The repository whose releases to install (default `bytepunx/system-flow`) |
 
 ### Upgrade
 
@@ -39,6 +41,17 @@ flai self-upgrade --dir /some/other/directory
 `--list` prints the published releases, newest first, with their dates (S-0298). It marks the installed one, the newest, and any below the `flai.minimum` of the project in this folder or of a project `flai serve` serves; `--json` gives the same as a list. `--version` installs any published release, an earlier one included, the way the newest is installed. A version that is not published is refused, naming the published ones, before anything is downloaded. One below a project's `flai.minimum` is installed with a warning: a flai below it will not read that project. Through the host, `flai host versions` and `flai host upgrade --version` do the same ([flai host](#flai-host-the-process-that-runs-flai-serve-and-the-mcp-servers)).
 
 `FLAI_RELEASES_API` points it at another source of releases that answers as GitHub's releases API does, such as a mirror. `flai host check`, `versions`, and `upgrade`, `flai dashboard versions`, the MCP tool `versions`, and the dashboard's Check for upgrade, Versions, and Upgrade buttons, which ask the host, follow it too.
+
+To test the installer or `self-upgrade` against a mirror or a build of your own, point both at it: `install.sh` with `FLAI_API` and `FLAI_REPO`, and `flai self-upgrade` with `FLAI_RELEASES_API` and `--repo`. In a checkout of this repository, `scripts/flai-snapshot.sh --local X.Y.Z` builds a release of the tree for this machine, and `scripts/release-server.sh` serves it on `127.0.0.1` as GitHub's releases API does:
+
+```bash
+scripts/flai-snapshot.sh --local 9.9.9
+URL=$(scripts/release-server.sh --owner $$ --repo local/flai flai/dist)
+FLAI_API="$URL" FLAI_REPO=local/flai FLAI_INSTALL_DIR=/tmp/flai sh install.sh
+FLAI_RELEASES_API="$URL" flai self-upgrade --check --repo local/flai
+```
+
+The server stops when the shell that started it exits. `make install-test` does all of this and checks every install and upgrade, with no token and no request to GitHub. `make install-published-test` installs the latest published release from GitHub the same way, and needs a token.
 
 ### Other ways
 
