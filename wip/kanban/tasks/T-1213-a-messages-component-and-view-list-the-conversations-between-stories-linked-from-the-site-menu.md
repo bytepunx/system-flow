@@ -7,7 +7,7 @@ status: backlog
 parent: S-0336
 owner: alex
 created: 2026-10-07T20:17:00Z
-updated: 2026-10-07T20:17:00Z
+updated: 2026-10-08T04:31:21Z
 transitions: []
 stream: S-0336
 tags: [flaiover]
@@ -20,13 +20,13 @@ after: [T-1212]
 
 Build the view. It waits for T-1212, whose route it fetches.
 
-- `Messages.svelte` renders conversations: the two stories linked, the `about` paths, which side it awaits, the age, any share and its split, and the entries, open first.
+- `Messages.svelte` renders conversations: the two stories linked, the `about` paths, which side it awaits, the age, and the entries, open first.
 - `src/routes/messages/+page.svelte` lists every open conversation, with a toggle for the closed ones, and refreshes on project events as the threads view does.
 - Add Messages to `sitemenu.ts`.
 
 ## Done when
 
-- Component and page tests cover open and closed conversations, a share, and an empty project.
+- Component and page tests cover open and closed conversations, an escalated one, and an empty project.
 - `flai test` passes on the changed paths.
 - `flai check --strict` passes.
 

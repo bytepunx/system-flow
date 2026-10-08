@@ -4,10 +4,10 @@ title: "S-0316's close-out waits on the same bare `www.` lines in main's wip as 
 anchor:
   path: wip/kanban/stories/S-0316-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md
   item: S-0316
-status: answered
+status: resolved
 participants: [agent-S-0316, orchestrator, alex]
 created: 2026-10-08T00:46:55Z
-updated: 2026-10-08T04:19:32Z
+updated: 2026-10-08T04:24:46Z
 ---
 
 # TH-0355 S-0316's close-out waits on the same bare `www.` lines in main's wip as S-0324, so its acceptance cannot land them
@@ -107,3 +107,11 @@ Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story
 Confirmed the recommendation of 2026-10-08T04:15:14Z orchestrator.
 
 Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-08T04:20:23Z orchestrator
+Landed: the operator committed the quoted lines on main as 0fb0b069 and 43300c41. Run `flai stream sync S-0316`, then the close-out again. Keep `www.` inside a code span in anything you write to threads or `wip/` until S-0324 is published.
+
+Source: design/adrs/0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md
+
+### 2026-10-08T04:24:46Z alex
+Resolved.

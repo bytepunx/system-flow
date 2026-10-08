@@ -4,10 +4,10 @@ title: S-0324's close-out waits for main to commit four wip lines its fix now fl
 anchor:
   path: wip/kanban/stories/S-0324-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md
   item: S-0324
-status: answered
-participants: [agent-S-0324, orchestrator]
+status: resolved
+participants: [agent-S-0324, orchestrator, alex]
 created: 2026-10-08T00:44:06Z
-updated: 2026-10-08T00:47:10Z
+updated: 2026-10-08T04:22:00Z
 ---
 
 # TH-0354 S-0324's close-out waits for main to commit four wip lines its fix now flags
@@ -63,3 +63,39 @@ Source: design/adrs/0019-story-branches-and-touches.md § Decision
 Correction to my recommendation above: S-0316's acceptance cannot land these lines. Its own close-out fails on them, and under ADR-0093 I accept only a story whose verify passed at the branch head, so the two would wait on each other (TH-0355). The way out is the operator's: accept S-0315 (TH-0344), or run your option 1 commit. I have asked on TH-0355, and I will reply here when the lines land on main.
 
 Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-08T04:07:59Z orchestrator
+The lines have landed. The operator accepted S-0315 at 04:07Z, and its acceptance commit 2ddebad6 holds the four files with `www.` quoted. `wip/` on main has no uncommitted changes. Run `flai stream sync S-0324`, as ADR-0069 asks after main moves, then the close-out again.
+
+Source: design/adrs/0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md
+
+### 2026-10-08T04:12:59Z agent-S-0324
+Synced. The four lines are gone, but the close-out failed integration again on two new lines of the same kind. They are TH-0355's title, `the same bare www. lines`, and its mirror in `wip/agents/S-0316.md`. S-0315's acceptance committed both to main.
+
+I quoted `www.` in the main checkout, and `flai check --strict` is clean there. They need one more commit on main:
+
+```sh
+git -C /home/alex/git/bytepunx/system-flow commit -m "chore: [S-0324] quote bare www. in TH-0355" -- wip/agents/S-0316.md wip/threads/TH-0355-s-0316-s-close-out-waits-on-the-same-bare-www-lines-in-main-s-wip-as-s-0324-so-its-acceptance-cannot-land-them.md
+```
+
+Or let flai's next `wip/` commit on main take them. Reply here once either has landed, and I sync and run the close-out again.
+
+This can recur until S-0324 is published, because the installed flai lets agents write such lines. I recorded it as I-0117 on the branch.
+
+### 2026-10-08T04:15:16Z orchestrator (recommendation)
+Recommendation: the operator commits the two files on main with the command on TH-0355, which covers the same two files as yours. One commit clears both S-0316 and S-0324. No flai acceptance can land them: review is empty, and I accept only a verified story (ADR-0093). I will tell you here when it lands.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-08T04:20:12Z alex
+Confirmed the recommendation of 2026-10-08T04:15:16Z orchestrator.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-08T04:20:21Z orchestrator
+Landed: the operator committed the quoted lines on main as 0fb0b069 and 43300c41. Run `flai stream sync S-0324`, then the close-out again. Keep `www.` inside a code span in anything you write to threads or `wip/` until S-0324 is published.
+
+Source: design/adrs/0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md
+
+### 2026-10-08T04:22:00Z alex
+Resolved.

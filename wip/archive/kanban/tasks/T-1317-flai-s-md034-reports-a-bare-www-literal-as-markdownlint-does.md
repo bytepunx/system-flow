@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 6310
-      cache_read: 1340525
-      cache_write: 31236
-      cost: 0.6443
+      input: 16
+      output: 4579
+      cache_read: 1335330
+      cache_write: 36435
+      cost: 0.6502
 ---
 # T-1317 flai's MD034 reports a bare `www.` literal as markdownlint does
 

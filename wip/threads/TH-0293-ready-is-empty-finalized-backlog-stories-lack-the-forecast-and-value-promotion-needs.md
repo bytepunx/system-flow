@@ -3,10 +3,10 @@ id: TH-0293
 title: "Ready is empty: finalized backlog stories lack the forecast and value promotion needs"
 anchor:
   path: wip/kanban/board.md
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T14:58:21Z
-updated: 2026-10-07T14:58:21Z
+updated: 2026-10-08T04:32:20Z
 ---
 
 # TH-0293 Ready is empty: finalized backlog stories lack the forecast and value promotion needs
@@ -32,3 +32,6 @@ What each lacks:
 | S-0233 to S-0239 | forecast, value | `after` S-0232 |
 
 The drafts S-0280, S-0287, S-0309, S-0310, S-0312, and S-0313 have their own threads (TH-0252 to TH-0255, TH-0288, TH-0289).
+
+### 2026-10-08T04:32:20Z alex
+Resolved.

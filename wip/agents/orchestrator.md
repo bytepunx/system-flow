@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 144.4115
-accrued_seconds: 84275
-tasks_completed: 193
-last_run: 2026-10-08T00:47:15Z
+accrued_cost: 173.4523
+accrued_seconds: 97876
+tasks_completed: 215
+last_run: 2026-10-08T04:33:56Z
 ---
 
 # Orchestrator activity
@@ -1363,6 +1363,160 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 5
 - Cost: 0.1799 USD, estimated
 
+### 2026-10-08T04:07:57Z
+
+- Summary: Answered TH-0355, citing design/adrs/0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md
+- Items: S-0316
+- Seconds: 12042
+- Cost: 1.6251 USD, estimated
+
+### 2026-10-08T04:07:59Z
+
+- Summary: Answered TH-0354, citing design/adrs/0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md
+- Items: S-0324
+- Seconds: 2
+- Cost: 0.1818 USD, estimated
+
+### 2026-10-08T04:08:03Z
+
+- Summary: After the operator accepted S-0315 (04:07Z), confirmed its commit 2ddebad6 carried the four quoted wip lines and told S-0316 (TH-0355) and S-0324 (TH-0354) to sync and close out again. Did not publish under judgement: 1 pending, 7.5 USD/week, but S-0315 changes only flai/cmd/stream_sync_test.go and issue files. It goes out with the next release
+- Items: S-0315, S-0316, S-0324
+- Seconds: 4
+- Cost: 0.1831 USD, estimated
+
+### 2026-10-08T04:15:14Z
+
+- Summary: Recommended an answer on TH-0355, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0316
+- Seconds: 431
+- Cost: 2.3995 USD, estimated
+
+### 2026-10-08T04:15:16Z
+
+- Summary: Recommended an answer on TH-0354, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0324
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T04:15:21Z
+
+- Summary: The bare-www deadlock recurred: TH-0355's own title, committed on main by S-0315's acceptance, now fails S-0316's and S-0324's close-outs. Recommended on TH-0355 and TH-0354 that the operator commit the two quoted files on main; with review empty, no flai acceptance can land them, and ADR-0093 bars me from accepting an unverified story. Will publish S-0324 promptly once accepted, since the host's flai 1.38.1 lets agents write such lines. Resolved TH-0352 (S-0324's plan thread, reopened only by a progress note)
+- Items: S-0316, S-0324
+- Seconds: 5
+- Cost: 0.0000 USD
+
+### 2026-10-08T04:15:53Z
+
+- Summary: After the operator confirmed my TH-0337 recommendation, resolved TH-0337 and my draft thread TH-0288 and finalized S-0312: flai promote --drafts lists it complete. Promoted it to ready (flai promote --candidates rank 1, 45m) and applied the throughput order: S-0318 (25m), S-0320 (25m), S-0319 (30m), S-0312 (45m)
+- Items: S-0312
+- Seconds: 32
+- Cost: 1.7104 USD, estimated
+
+### 2026-10-08T04:20:21Z
+
+- Summary: Answered TH-0354, citing design/adrs/0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md
+- Items: S-0324
+- Seconds: 268
+- Cost: 0.9590 USD, estimated
+
+### 2026-10-08T04:20:23Z
+
+- Summary: Answered TH-0355, citing design/adrs/0069-agents-commit-each-task-on-the-story-branch-after-flai-stream-sync-and-never.md
+- Items: S-0316
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T04:20:26Z
+
+- Summary: The operator confirmed my recommendations on TH-0354 and TH-0355 and committed the quoted wip lines on main (0fb0b069, 43300c41). Told S-0316 and S-0324 to sync and close out again, keeping `www.` in code spans until S-0324 is published
+- Items: S-0316, S-0324
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-08T04:21:15Z
+
+- Summary: After the operator confirmed my TH-0353 recommendation, resolved TH-0353 and my draft thread TH-0310 and finalized S-0326: flai promote --drafts lists it complete. Promoted it to ready (flai promote --candidates rank 1, 45m) and applied the throughput order: S-0318, S-0320 (25m), S-0319 (30m), S-0312, S-0326 (45m)
+- Items: S-0326
+- Seconds: 49
+- Cost: 0.9743 USD, estimated
+
+### 2026-10-08T04:23:13Z
+
+- Summary: After the operator confirmed my TH-0335 recommendation, resolved TH-0335 and TH-0254 and finalized S-0309: flai promote --drafts lists it complete. Promoted it to ready (flai promote --candidates rank 1, 35m) and applied the throughput order: S-0318, S-0320 (25m), S-0319 (30m), S-0309 (35m), S-0312, S-0326 (45m)
+- Items: S-0309
+- Seconds: 118
+- Cost: 1.1804 USD, estimated
+
+### 2026-10-08T04:24:29Z
+
+- Summary: After the operator confirmed my TH-0334 recommendation, resolved TH-0334 and TH-0253 and finalized S-0287: flai promote --drafts lists it complete. Promoted it to ready (flai promote --candidates rank 1, 45m) and applied the throughput order: S-0318, S-0320 (25m), S-0319 (30m), S-0309 (35m), S-0312, S-0326, S-0287 (45m)
+- Items: S-0287
+- Seconds: 76
+- Cost: 3.9843 USD, estimated
+
+### 2026-10-08T04:25:44Z
+
+- Summary: The operator cancelled S-0325 as recommended on TH-0346. Left TH-0346 open: widening S-0323 to also close I-0111 is the operator's to make
+- Items: S-0325, S-0323
+- Seconds: 75
+- Cost: 1.0087 USD, estimated
+
+### 2026-10-08T04:27:10Z
+
+- Summary: Answered TH-0346, citing no source
+- Items: S-0323
+- Seconds: 86
+- Cost: 4.0592 USD, estimated
+
+### 2026-10-08T04:27:14Z
+
+- Summary: The operator widened S-0323 with a third criterion for I-0111. Followed up on my TH-0346: criterion 3's command names I-0109 instead of I-0111 (the operator's to correct), and S-0323 still needs the I-0111 close task planner-S-0323 proposed. flai guard refused my first follow-up for carrying a source ("on a thread it opened it only follows up, with neither recommendation nor source"); it passed without one
+- Items: S-0323
+- Seconds: 4
+- Cost: 0.0000 USD
+
+### 2026-10-08T04:29:27Z
+
+- Summary: Answered TH-0320, citing no source
+- Items: S-0336
+- Seconds: 133
+- Cost: 1.0227 USD, estimated
+
+### 2026-10-08T04:29:31Z
+
+- Summary: Resolved my TH-0346 after the operator merged S-0325 into S-0323, noting criterion 3's I-0109/I-0111 slip for S-0323's agent. On TH-0320 the operator chose to split S-0336. Followed up that I cannot create stories and the planner is not a candidate for S-0336 or E-0018, so the split needs `flai plan E-0018` from the operator. S-0336 stays a draft
+- Items: S-0323, S-0336
+- Seconds: 4
+- Cost: 0.2056 USD, estimated
+
+### 2026-10-08T04:33:36Z
+
+- Summary: Recommended an answer on TH-0356, citing wip/kanban/stories/S-0312-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md
+- Items: S-0322
+- Seconds: 245
+- Cost: 8.9134 USD, estimated
+
+### 2026-10-08T04:33:38Z
+
+- Summary: Recommended on TH-0356 (planner-S-0322) that the operator cancel S-0322 as a duplicate of S-0312 and have S-0312's T-1285 close I-0108 too. Left the thread open: cancelling and rewording S-0312's task are scope changes. Its fallback plan (2 tasks, after S-0312, 20m, 12.50 USD/week) fits if kept; S-0322 stays a draft
+- Items: S-0322, S-0312
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T04:33:54Z
+
+- Summary: Recommended an answer on TH-0356, citing design/adrs/0055-a-story-moves-back-one-column-from-ready-in-progress-review-or-cancelled-and.md § Decision
+- Items: S-0322
+- Seconds: 16
+- Cost: 0.4219 USD, estimated
+
+### 2026-10-08T04:33:56Z
+
+- Summary: The operator cancelled S-0312 (with T-1282–T-1285) at 04:33Z, not S-0322 as recommended on TH-0356. S-0322 builds no fix and waits on S-0312, so nothing now fixes I-0104/I-0108. Recommended on TH-0356 reopening S-0312 (ADR-0055) and cancelling S-0322, or replanning S-0322 to carry S-0312's tasks. Re-applied the throughput order: S-0318, S-0320 (25m), S-0319 (30m), S-0309 (35m), S-0326, S-0287 (45m)
+- Items: S-0312, S-0322
+- Seconds: 2
+- Cost: 0.2114 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -1403,4 +1557,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-08T00:47:07Z
 
 - Call: `thread_reply TH-0354`
+- Needs: none
+
+### 2026-10-08T04:27:07Z
+
+- Call: `thread_reply TH-0346 source wip/kanban/stories/S-0323-flai-check-finds-narrative-state-outside-the-story-at-close-out.md`
 - Needs: none

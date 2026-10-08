@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 1254
-      cache_read: 266510
-      cache_write: 6210
-      cost: 0.1281
+      input: 3
+      output: 910
+      cache_read: 265477
+      cache_write: 7244
+      cost: 0.1293
 ---
 # T-1318 Close I-0110 with what fixed it
 

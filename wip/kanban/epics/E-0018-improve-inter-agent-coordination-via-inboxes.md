@@ -6,7 +6,7 @@ title: Improve Inter-Agent Coordination Via Inboxes
 status: in-progress
 owner: alex
 created: 2026-10-07T20:05:16Z
-updated: 2026-10-07T20:24:33Z
+updated: 2026-10-08T04:31:41Z
 transitions:
   - to: ready
     at: 2026-10-07T20:05:17Z
@@ -49,15 +49,15 @@ usage:
           cache_write: 339947
           cost: 35.112
     - kind: orchestrator
-      seconds: 8029
+      seconds: 8164
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 600
-          output: 10323
-          cache_read: 63975929
-          cache_write: 208747
-          cost: 15.8155
+          input: 611
+          output: 10414
+          cache_read: 68538569
+          cache_write: 214186
+          cost: 16.941
         - model: claude-sonnet-5-5
           input: 76
           output: 444
@@ -94,6 +94,7 @@ The ultimate goal here is to allow for greater system-wide throughput without in
 - S-0335 A story's agent that waits only on another agent's reply ends, and flai serve starts it again when the reply or a new message to its story comes
 - S-0336 The dashboard shows the messages between stories' agents on each story's page and in a Messages view
 - S-0337 flai stats reports the conversations between agents, the conflicts found at sync and at acceptance, and the hold time shares saved, per week
+- S-0338 A held card says when its holding story's agent was asked about the hold, and a story started on a share names the paths it shares
 
 ## Notes
 

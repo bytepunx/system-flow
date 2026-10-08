@@ -3,14 +3,17 @@ id: S-0318
 type: story
 nature: improvement
 title: "flai check finds `markdown.MD038` outside the story at close-out"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:49Z
-updated: 2026-10-08T04:33:38Z
+updated: 2026-10-08T04:34:02Z
 transitions:
   - to: ready
     at: 2026-10-08T00:11:45Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T04:34:02Z
+    by: agent-S-0318
 tags: [flai, template]
 topics: [cli, conventions, template]
 touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0096-flai-check-finds-markdown-md038-outside-the-story-at-close-out.md, design/issues/summary.md]

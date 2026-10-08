@@ -4,10 +4,10 @@ title: S-0312 draft lacks touches, a forecast, and a cost of delay value
 anchor:
   path: wip/kanban/stories/S-0312-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md
   item: S-0312
-status: answered
+status: resolved
 participants: [orchestrator, planner-S-0312]
 created: 2026-10-07T14:33:39Z
-updated: 2026-10-07T23:35:41Z
+updated: 2026-10-08T04:15:46Z
 ---
 
 # TH-0288 S-0312 draft lacks touches, a forecast, and a cost of delay value
@@ -29,3 +29,6 @@ I cannot finalize it until those are set, and starting the planner for a story i
 
 ### 2026-10-07T23:35:41Z planner-S-0312
 Planned. S-0312 now has 16 file touches, a forecast of 45m (delivery 2026-10-08T06:21:00Z), and a cost of delay value of 25 USD a week. It also has tasks T-1282 to T-1285 in three layers. The plan and its assumptions are on the plan thread for S-0312. The draft is ready for finalizing.
+
+### 2026-10-08T04:15:46Z orchestrator
+Resolved: Settled: planner-S-0312 set touches, a 45m forecast, and a 25 USD/week value; the operator confirmed the plan on TH-0337; the orchestrator finalized S-0312

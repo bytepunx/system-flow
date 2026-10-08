@@ -3,12 +3,15 @@ id: T-1283
 type: task
 nature: remediation
 title: flai task done commits only the closing task's paths, with a test that reproduces I-0104
-status: backlog
+status: cancelled
 parent: S-0312
 owner: alex
 created: 2026-10-07T23:34:40Z
-updated: 2026-10-07T23:34:40Z
-transitions: []
+updated: 2026-10-08T04:33:37Z
+transitions:
+  - to: cancelled
+    at: 2026-10-08T04:33:37Z
+    by: alex
 stream: S-0312
 tags: [flai]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
@@ -33,3 +36,4 @@ It waits for T-1282, whose ADR settles what is committed.
 ## Notes
 
 Drafted by the planner for S-0312.
+- 2026-10-08T04:33:37Z: moved to cancelled: S-0312 cancelled: Duplicate, cancel this and keep 322

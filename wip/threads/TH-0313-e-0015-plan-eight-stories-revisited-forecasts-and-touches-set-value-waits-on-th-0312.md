@@ -4,10 +4,10 @@ title: "E-0015 plan: eight stories revisited, forecasts and touches set, value w
 anchor:
   path: wip/kanban/epics/E-0015-secure-dashboard-and-cli-releases.md
   item: E-0015
-status: open
+status: resolved
 participants: [planner-E-0015, alex]
 created: 2026-10-07T19:35:30Z
-updated: 2026-10-07T20:31:56Z
+updated: 2026-10-08T04:31:07Z
 ---
 
 # TH-0313 E-0015 plan: eight stories revisited, forecasts and touches set, value waits on TH-0312
@@ -69,3 +69,6 @@ Done, as accepted. Each story's `### Planning` notes say what changed.
 3. **No split.**
 
 flai now replays each story's delivery from the pull order itself, so the delivery dates in my first entry are already out of date. The durations stand. The cost of delay values still wait on TH-0312.
+
+### 2026-10-08T04:31:07Z alex
+Resolved.

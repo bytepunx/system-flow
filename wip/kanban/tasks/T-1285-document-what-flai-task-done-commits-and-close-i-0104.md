@@ -3,12 +3,15 @@ id: T-1285
 type: task
 nature: improvement
 title: Document what flai task done commits and close I-0104
-status: backlog
+status: cancelled
 parent: S-0312
 owner: alex
 created: 2026-10-07T23:34:54Z
-updated: 2026-10-07T23:35:01Z
-transitions: []
+updated: 2026-10-08T04:33:37Z
+transitions:
+  - to: cancelled
+    at: 2026-10-08T04:33:37Z
+    by: alex
 stream: S-0312
 tags: [flai]
 touches: [docs/users/flai.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md]
@@ -33,3 +36,4 @@ It waits for T-1283, so the issue closes on a fix that exists. It shares no path
 ## Notes
 
 Drafted by the planner for S-0312.
+- 2026-10-08T04:33:37Z: moved to cancelled: S-0312 cancelled: Duplicate, cancel this and keep 322

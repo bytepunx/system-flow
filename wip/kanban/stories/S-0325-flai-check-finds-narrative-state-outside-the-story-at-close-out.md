@@ -3,11 +3,14 @@ id: S-0325
 type: story
 nature: improvement
 title: "flai check finds `narrative.state` outside the story at close-out"
-status: backlog
+status: cancelled
 owner: alex
 created: 2026-10-07T18:59:57Z
-updated: 2026-10-07T18:59:57Z
-transitions: []
+updated: 2026-10-08T04:25:40Z
+transitions:
+  - to: cancelled
+    at: 2026-10-08T04:25:40Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
@@ -20,15 +23,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 15
+      seconds: 53
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 46
-          cache_read: 1319746
-          cache_write: 9510
-          cost: 0.3275
+          input: 11
+          output: 143
+          cache_read: 3365716
+          cache_write: 10641
+          cost: 0.8319
 draft: true
 ---
 # S-0325 flai check finds `narrative.state` outside the story at close-out
@@ -44,3 +47,4 @@ This story remediates [I-0111](../../../design/issues/I-0111-flai-check-finds-na
 ## Tasks
 
 ## Notes
+- 2026-10-08T04:25:40Z: moved to cancelled: duplicate of S-0323

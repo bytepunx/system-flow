@@ -7,7 +7,7 @@ status: backlog
 parent: S-0336
 owner: alex
 created: 2026-10-07T20:16:52Z
-updated: 2026-10-07T20:16:52Z
+updated: 2026-10-08T04:31:18Z
 transitions: []
 stream: S-0336
 tags: [flai]
@@ -19,7 +19,7 @@ touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.g
 
 Serve messages to the dashboard, read-only. It waits for nothing in this story.
 
-- `messages.list` with an optional `story` and `all`, and `messages.get` with an `id`, beside `threads.list` in `hostapi.go`: each conversation with its two stories, `about` paths, state, which side it awaits, any share, and its entries.
+- `messages.list` with an optional `story` and `all`, and `messages.get` with an `id`, beside `threads.list` in `hostapi.go`: each conversation with its two stories, `about` paths, state, which side it awaits, and its entries. Shape each with `messages.View`, so the reads carry whatever a conversation holds, a share included once S-0334 adds one.
 - No write: messages are the agents'.
 - Add both to the contract test's list of reads.
 

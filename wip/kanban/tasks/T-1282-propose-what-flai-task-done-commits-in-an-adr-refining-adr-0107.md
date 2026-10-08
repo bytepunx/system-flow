@@ -3,12 +3,15 @@ id: T-1282
 type: task
 nature: improvement
 title: Propose what flai task done commits, in an ADR refining ADR-0107
-status: backlog
+status: cancelled
 parent: S-0312
 owner: alex
 created: 2026-10-07T23:34:31Z
-updated: 2026-10-07T23:34:31Z
-transitions: []
+updated: 2026-10-08T04:33:37Z
+transitions:
+  - to: cancelled
+    at: 2026-10-08T04:33:37Z
+    by: alex
 stream: S-0312
 tags: [flai]
 touches: [design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md]
@@ -39,3 +42,4 @@ It waits for nothing: it is the first layer, and the code tasks wait for it.
 ## Notes
 
 Drafted by the planner for S-0312.
+- 2026-10-08T04:33:37Z: moved to cancelled: S-0312 cancelled: Duplicate, cancel this and keep 322

@@ -3,12 +3,15 @@ id: T-1284
 type: task
 nature: improvement
 title: flai task done and the MCP tool task_done take -m only when there is something to commit, and print the paths left
-status: backlog
+status: cancelled
 parent: S-0312
 owner: alex
 created: 2026-10-07T23:34:48Z
-updated: 2026-10-07T23:34:48Z
-transitions: []
+updated: 2026-10-08T04:33:37Z
+transitions:
+  - to: cancelled
+    at: 2026-10-08T04:33:37Z
+    by: alex
 stream: S-0312
 tags: [flai]
 touches: [flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, docs/users/flai-reference.md]
@@ -33,3 +36,4 @@ It waits for T-1283, whose `Result` fields and message rule it prints.
 ## Notes
 
 Drafted by the planner for S-0312.
+- 2026-10-08T04:33:37Z: moved to cancelled: S-0312 cancelled: Duplicate, cancel this and keep 322

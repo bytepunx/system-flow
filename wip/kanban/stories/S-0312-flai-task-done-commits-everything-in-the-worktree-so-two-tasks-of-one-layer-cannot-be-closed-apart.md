@@ -3,14 +3,17 @@ id: S-0312
 type: story
 nature: improvement
 title: flai task done commits everything in the worktree, so two tasks of one layer cannot be closed apart
-status: ready
+status: cancelled
 owner: alex
 created: 2026-10-07T14:26:01Z
-updated: 2026-10-08T04:25:41Z
+updated: 2026-10-08T04:33:37Z
 transitions:
   - to: ready
     at: 2026-10-08T04:15:49Z
     by: orchestrator
+  - to: cancelled
+    at: 2026-10-08T04:33:37Z
+    by: alex
 tags: [flai]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, docs/users/flai-reference.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md]
 agent:
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 297
+      seconds: 298
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 60
-          output: 925
-          cache_read: 14852317
-          cache_write: 33686
-          cost: 3.6757
+          input: 61
+          output: 937
+          cache_read: 15280633
+          cache_write: 34446
+          cost: 3.7814
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -98,3 +101,4 @@ Tasks, in three layers:
 1. T-1282, the ADR and design.
 2. T-1283, the commit step and the reproduction test, after T-1282.
 3. T-1284, CLI and MCP, and T-1285, docs and closing I-0104, both after T-1283. They share no path and run together.
+- 2026-10-08T04:33:37Z: moved to cancelled: Duplicate, cancel this and keep 322

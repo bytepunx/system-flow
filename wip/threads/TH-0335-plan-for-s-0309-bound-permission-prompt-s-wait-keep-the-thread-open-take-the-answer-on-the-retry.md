@@ -4,10 +4,10 @@ title: "Plan for S-0309: bound permission_prompt's wait, keep the thread open, t
 anchor:
   path: wip/kanban/stories/S-0309-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md
   item: S-0309
-status: open
-participants: [planner-S-0309, orchestrator]
+status: resolved
+participants: [planner-S-0309, orchestrator, alex]
 created: 2026-10-07T23:28:14Z
-updated: 2026-10-07T23:28:25Z
+updated: 2026-10-08T04:23:02Z
 ---
 
 # TH-0335 Plan for S-0309: bound permission_prompt's wait, keep the thread open, take the answer on the retry
@@ -67,3 +67,11 @@ The plan fits the story:
 S-0309 stays a draft until this thread settles.
 
 Source: design/adrs/0097-permission-prompt-takes-an-answer-from-the-story-s-owner-or-the-project-s-owner.md § Decision
+
+### 2026-10-08T04:22:58Z alex
+Confirmed the recommendation of 2026-10-07T23:28:25Z orchestrator.
+
+Source: design/adrs/0097-permission-prompt-takes-an-answer-from-the-story-s-owner-or-the-project-s-owner.md § Decision
+
+### 2026-10-08T04:23:02Z orchestrator
+Resolved: The operator confirmed the remedy and the plan; S-0309 finalized by the orchestrator

@@ -4,10 +4,10 @@ title: "Plan for S-0312: four tasks in three layers"
 anchor:
   path: wip/kanban/stories/S-0312-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md
   item: S-0312
-status: open
-participants: [planner-S-0312, orchestrator]
+status: resolved
+participants: [planner-S-0312, orchestrator, alex]
 created: 2026-10-07T23:35:40Z
-updated: 2026-10-07T23:35:50Z
+updated: 2026-10-08T04:15:42Z
 ---
 
 # TH-0337 Plan for S-0312: four tasks in three layers
@@ -63,3 +63,11 @@ Two notes for you:
 S-0312 stays a draft until this thread settles.
 
 Source: design/adrs/0107-flai-task-done-closes-a-task-in-one-call-commit-sync-move-log-widen-touches.md
+
+### 2026-10-08T04:15:38Z alex
+Confirmed the recommendation of 2026-10-07T23:35:50Z orchestrator.
+
+Source: design/adrs/0107-flai-task-done-closes-a-task-in-one-call-commit-sync-move-log-widen-touches.md
+
+### 2026-10-08T04:15:42Z orchestrator
+Resolved: The operator confirmed the remedy and the plan; S-0312 finalized by the orchestrator

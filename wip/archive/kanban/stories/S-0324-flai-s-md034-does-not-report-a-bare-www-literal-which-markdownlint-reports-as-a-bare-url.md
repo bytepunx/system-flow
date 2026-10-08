@@ -3,10 +3,10 @@ id: S-0324
 type: story
 nature: remediation
 title: "flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T18:59:55Z
-updated: 2026-10-08T00:43:55Z
+updated: 2026-10-08T04:34:30Z
 transitions:
   - to: ready
     at: 2026-10-08T00:29:56Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-08T00:30:39Z
     by: agent-S-0324
+  - to: review
+    at: 2026-10-08T04:33:46Z
+    by: agent-S-0324
+  - to: done
+    at: 2026-10-08T04:34:30Z
+    by: orchestrator
 tags: []
 topics: [cli]
-touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/www.md, flai/internal/mdlint/testdata/cases/expected.txt, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/summary.md, design/issues/I-0114-flai-verify-s-integration-tier-keeps-only-the-last-lines-of-go-test-s-output-so-the-failing-test-is-not-named.md]
+touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/www.md, flai/internal/mdlint/testdata/cases/expected.txt, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/summary.md, design/issues/I-0114-flai-verify-s-integration-tier-keeps-only-the-last-lines-of-go-test-s-output-so-the-failing-test-is-not-named.md, design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,31 +30,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 825
+  seconds: 1963
   turns:
     - day: 2026-10-08
-      ceremony: 4
-      test_runs: 7
-      hand_edits: 3
-      work: 40
+      ceremony: 8
+      test_runs: 9
+      hand_edits: 5
+      work: 64
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 34812
-      cache_read: 7396068
-      cache_write: 172339
-      cost: 3.5546
+      input: 182
+      output: 51721
+      cache_read: 15083094
+      cache_write: 411547
+      cost: 7.3441
   strategic:
     - kind: orchestrator
-      seconds: 669
+      seconds: 940
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 40
-          output: 568
-          cache_read: 12950083
-          cache_write: 41678
-          cost: 3.201
+          input: 52
+          output: 664
+          cache_read: 17821630
+          cache_write: 48104
+          cost: 4.4028
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -107,3 +113,13 @@ Forecast: flai gave 6m. It is raised to 12m because S-0265, the same kind of fix
 Cost of delay: flai cod gave 12.50 USD a week from the operator's input of 5m lost per 168h cycle at 150 USD an hour. The value stands: one occurrence, no penalty, no revenue.
 
 Topics: `cli` was added, the topic of S-0265, the story that changed the same lint.
+
+### Accepted by the orchestrator
+
+- Verified: 54ec667e6884ed00d8f24573bce3cf4a00ef92ec
+- At: 2026-10-08T04:34:30Z
+
+Verdict: accept; both criteria met (verifier at 54ec667e6884ed00d8f24573bce3cf4a00ef92ec; flai verify passed every step at that commit). The I-0114 bump and the new I-0117, I-0118, I-0119 are the close-outs' own records, all within the touches.
+
+- 1: flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/www.md, flai/internal/mdlint/testdata/cases/expected.txt
+- 2: design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/summary.md

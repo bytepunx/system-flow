@@ -4,10 +4,10 @@ title: S-0287 draft lacks touches, a forecast, and a cost of delay value
 anchor:
   path: wip/kanban/stories/S-0287-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md
   item: S-0287
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T08:20:33Z
-updated: 2026-10-07T08:20:33Z
+updated: 2026-10-08T04:24:22Z
 ---
 
 # TH-0253 S-0287 draft lacks touches, a forecast, and a cost of delay value
@@ -26,3 +26,9 @@ flai promote --drafts lists this draft as incomplete. It lacks:
 - a cost of delay value
 
 I cannot finalize it until those are set, and starting the planner for a story is not mine to do. I leave the draft as it is.
+
+### 2026-10-08T04:24:22Z alex
+Resolved.
+
+### 2026-10-08T04:24:22Z orchestrator
+Resolved: Settled: planner-S-0287 set touches, a 45m forecast, and a 30 USD/week value; the operator confirmed the plan on TH-0334; the orchestrator finalized S-0287

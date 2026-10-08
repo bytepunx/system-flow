@@ -7,7 +7,7 @@ status: backlog
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:22Z
-updated: 2026-10-08T04:33:38Z
+updated: 2026-10-08T04:34:14Z
 transitions: []
 tags: [flai, flaiover]
 topics: [dashboard, cli]
@@ -41,15 +41,15 @@ cost_of_delay:
 forecast:
   duration: 40m
   delivery: 2026-10-08T12:42:00Z
-  basis: "Its own forecast of 40m; 29th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0309, S-0326, S-0287, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0313, S-0321, S-0322, S-0323, S-0327 and S-0334."
-  by: flai
-  at: 2026-10-08T04:33:38Z
+  basis: "flai forecast: median 104 s per unit over 33 done large-band feature stories on claude-opus-5-5, times size 23 (5 criteria, 18 touches), once the held card went to S-0338."
+  by: planner-E-0018
+  at: 2026-10-08T04:34:14Z
 ---
 # S-0336 The dashboard shows the messages between stories' agents on each story's page and in a Messages view
 
 ## Goal
 
-Let the operator see how the agents are coordinating without being asked. Messages are kept apart from the operator's threads and inbox, so today they are visible only through `flai message list`. Serve them read-only through the host API and show them on each story's page and in a Messages view across the project. The conversations S-0330 to S-0335 already write are enough: this story waits for nothing still open. What a held card says about a hold request or a share is the story split from this one, which waits for S-0334.
+Let the operator see how the agents are coordinating without being asked. Messages are kept apart from the operator's threads and inbox, so today they are visible only through `flai message list`. Serve them read-only through the host API and show them on each story's page and in a Messages view across the project. The conversations S-0330 to S-0335 already write are enough: this story waits for nothing still open. What a held card says about a hold request or a share is S-0338, split from this one, which waits for S-0334.
 
 ## Acceptance criteria
 
@@ -71,7 +71,7 @@ Let the operator see how the agents are coordinating without being asked. Messag
 
 ### Planning
 
-Planned by planner-E-0018 on 2026-10-07, and split on 2026-10-08 as the operator accepted on TH-0320: the held card's part went to its own draft story, which waits for S-0334 and for this one. This story now waits only for S-0330 (`after`), which is done, so it can be pulled as soon as it is finalized.
+Planned by planner-E-0018 on 2026-10-07, and split on 2026-10-08 as the operator accepted on TH-0320: the held card's part went to S-0338, which waits for S-0334 and for this story. This story now waits only for S-0330 (`after`), which is done, so it can be pulled as soon as it is finalized.
 
 Layers, one task each, since each builds on the one before:
 
@@ -83,14 +83,16 @@ Layers, one task each, since each builds on the one before:
 
 Touches:
 
-- **Declared:** kept, less the two `BoardCard.svelte` files, which went with the held card.
+- **Declared:** kept, less the two `BoardCard.svelte` files, which went to S-0338.
 - **Layout:**
   - `flai/internal/hostapi/hostapi.go`, its test, and `contract_test.go`: `threads.list` is served there, and the contract lists every read. No `messages.*` read exists yet; `messages.View` in `flai/internal/messages/messages.go` already shapes a conversation for output.
   - `flaiover/src/lib/server/repo.ts` and its test: `threads()` and `threadsFor()`.
   - `flaiover/src/routes/api/messages/+server.ts` and its test, as `routes/api/threads` is.
   - `flaiover/src/lib/components/Messages.svelte`, `flaiover/src/routes/messages/+page.svelte`, and their tests, as `Threads.svelte` and `routes/threads` are; `flaiover/src/lib/sitemenu.ts` and its test for the menu.
-- **Co-change:** `flai touches suggest` from the threads view and the story page gave `design/system/flaiover-dashboard.md` (50%), `docs/users/flaiover.md` (40%), `item.svelte.test.ts` (36%), and `repo.ts` (21%).
-- **Not taken:** `flaiover/src/routes/board/+page.svelte` (29%) and `StoryAgent.svelte` (14%): the board is the split story's, and S-0335 already changed the agent's state.
+- **Co-change:** `flai touches suggest` gave `design/system/flaiover-dashboard.md` (50%), `docs/users/flaiover.md` (40%), `item.svelte.test.ts` (36%), and `repo.ts` (21%) at the first plan; at the split it gave `design/system/flai-cli.md` (37%), which lists the host API's reads beside `threads.list`, so T-1215 and the story now touch it.
+- **Not taken:** `docs/users/flai.md` (34%) and `docs/operators/index.md` (27%): no command and no setting changes. `flai/internal/hostapi/writes.go` (10%): the reads write nothing. `flaiover/src/routes/board/+page.svelte` and `StoryAgent.svelte`: the board is S-0338's, and S-0335 already changed the agent's state.
 - No folder touch.
 
-Forecast and cost of delay: see the figures below, rewritten at the split.
+Forecast 40m: `flai forecast` gave it, 104 s per unit over 33 done large-band feature stories, times size 23 (5 criteria, 18 touches). It stands; the split took 8m off the 48m of the first plan.
+
+Cost of delay 217.39 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 40m of the 3h4m forecast over the four open stories (S-0334, S-0336, S-0337, S-0338). It stands. It is the first of them that can be pulled, since it waits for nothing open.

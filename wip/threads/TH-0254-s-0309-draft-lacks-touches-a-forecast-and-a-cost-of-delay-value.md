@@ -4,10 +4,10 @@ title: S-0309 draft lacks touches, a forecast, and a cost of delay value
 anchor:
   path: wip/kanban/stories/S-0309-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md
   item: S-0309
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-07T08:20:35Z
-updated: 2026-10-07T08:20:35Z
+updated: 2026-10-08T04:23:06Z
 ---
 
 # TH-0254 S-0309 draft lacks touches, a forecast, and a cost of delay value
@@ -26,3 +26,9 @@ flai promote --drafts lists this draft as incomplete. It lacks:
 - a cost of delay value
 
 I cannot finalize it until those are set, and starting the planner for a story is not mine to do. I leave the draft as it is.
+
+### 2026-10-08T04:23:05Z alex
+Resolved.
+
+### 2026-10-08T04:23:06Z orchestrator
+Resolved: Settled: planner-S-0309 set touches, a 35m forecast, and a 75 USD/week value; the operator confirmed the plan on TH-0335; the orchestrator finalized S-0309

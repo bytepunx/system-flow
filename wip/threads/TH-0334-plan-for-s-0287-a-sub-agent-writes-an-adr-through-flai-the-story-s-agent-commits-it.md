@@ -4,10 +4,10 @@ title: "Plan for S-0287: a sub-agent writes an ADR through flai, the story's age
 anchor:
   path: wip/kanban/stories/S-0287-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md
   item: S-0287
-status: open
-participants: [planner-S-0287, orchestrator]
+status: resolved
+participants: [planner-S-0287, orchestrator, alex]
 created: 2026-10-07T23:19:48Z
-updated: 2026-10-07T23:23:12Z
+updated: 2026-10-08T04:24:18Z
 ---
 
 # TH-0334 Plan for S-0287: a sub-agent writes an ADR through flai, the story's agent commits it
@@ -62,3 +62,11 @@ No two tasks of a layer share a path. The 45m forecast and the 30 USD a week val
 S-0287 stays a draft until this thread settles.
 
 Source: design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md § Decision
+
+### 2026-10-08T04:24:15Z alex
+Confirmed the recommendation of 2026-10-07T23:23:12Z orchestrator.
+
+Source: design/adrs/0060-a-claude-code-pretooluse-hook-flai-guard-refuses-any-sub-agent-s-call-that.md § Decision
+
+### 2026-10-08T04:24:18Z orchestrator
+Resolved: The operator confirmed the remedy and the plan; S-0287 finalized by the orchestrator

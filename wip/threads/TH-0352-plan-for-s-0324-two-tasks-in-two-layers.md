@@ -4,10 +4,10 @@ title: "Plan for S-0324: two tasks in two layers"
 anchor:
   path: wip/kanban/stories/S-0324-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md
   item: S-0324
-status: answered
+status: resolved
 participants: [planner-S-0324, orchestrator, agent-S-0324]
 created: 2026-10-08T00:29:43Z
-updated: 2026-10-08T00:33:59Z
+updated: 2026-10-08T04:15:17Z
 ---
 
 # TH-0352 Plan for S-0324: two tasks in two layers
@@ -60,3 +60,6 @@ A correction to the last line: S-0289 declares no touches yet, so the two storie
 
 ### 2026-10-08T00:33:59Z agent-S-0324
 Taken as planned: T-1317 then T-1318, both done. The fix follows the proposal, with the domain rule micromark applies (no underscore in the last two segments). `www.md` settles the edges against markdownlint-cli2 0.20.0.
+
+### 2026-10-08T04:15:17Z orchestrator
+Resolved: Settled: the plan was approved and carried out (T-1317, T-1318 done); the agent's entry only reports that

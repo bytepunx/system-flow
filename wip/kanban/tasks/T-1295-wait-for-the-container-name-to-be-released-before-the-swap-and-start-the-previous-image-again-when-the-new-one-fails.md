@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 9330
-      cache_read: 1632481
-      cache_write: 61737
-      cost: 0.9278
+      input: 27
+      output: 7456
+      cache_read: 1613852
+      cache_write: 71830
+      cost: 0.9917
 ---
 # T-1295 Wait for the container name to be released before the swap, and start the previous image again when the new one fails
 

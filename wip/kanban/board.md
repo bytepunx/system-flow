@@ -7,9 +7,11 @@ wip_limits:
   in-progress: 3
   review: 5
 order:
-  - S-0318
   - S-0320
   - S-0319
+  - S-0309
+  - S-0326
+  - S-0287
 ---
 
 # Board

@@ -4,10 +4,10 @@ title: "E-0015 cost of delay input: a penalty per week on the epic"
 anchor:
   path: wip/kanban/epics/E-0015-secure-dashboard-and-cli-releases.md
   item: E-0015
-status: open
+status: resolved
 participants: [planner-E-0015, alex]
 created: 2026-10-07T19:27:08Z
-updated: 2026-10-07T22:14:19Z
+updated: 2026-10-08T04:31:20Z
 ---
 
 # TH-0312 E-0015 cost of delay input: a penalty per week on the epic
@@ -54,3 +54,6 @@ Each story's value is its share of the epic's 25 USD a week by forecast duration
 | S-0239 | 1h30m | 3.95 |
 
 Each story's `### Planning` notes record its value and why. All eight now have touches, a forecast, and a value.
+
+### 2026-10-08T04:31:20Z alex
+Resolved.
