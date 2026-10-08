@@ -6,7 +6,7 @@ title: "flai check finds `board.wip-limit` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-10-08T08:37:06Z
-updated: 2026-10-08T09:09:03Z
+updated: 2026-10-08T09:09:50Z
 transitions:
   - to: ready
     at: 2026-10-08T09:09:03Z
@@ -41,15 +41,21 @@ usage:
           cache_write: 159138
           cost: 3.3654
     - kind: orchestrator
-      seconds: 182
+      seconds: 360
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 76
-          output: 1303
-          cache_read: 24040222
-          cache_write: 27600
-          cost: 5.93
+          input: 106
+          output: 1800
+          cache_read: 34819572
+          cache_write: 39129
+          cost: 8.5887
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 35
+          cache_read: 29103
+          cache_write: 17518
+          cost: 0.0402
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -60,10 +66,10 @@ cost_of_delay:
   at: 2026-10-08T08:59:43Z
 forecast:
   duration: 21m
-  delivery: 2026-10-08T13:55:00Z
-  basis: "Its own forecast of 21m; 25th in the pull order with an in-progress limit of 5, behind S-0232, S-0288, S-0322, S-0341, S-0290, S-0344, S-0345, S-0338, S-0346, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0304, S-0305, S-0306, S-0313 and S-0347."
+  delivery: 2026-10-08T09:33:00Z
+  basis: "Its own forecast of 21m; 1st in the pull order with an in-progress limit of 5, behind S-0232, S-0322, S-0341, S-0344 and S-0345."
   by: flai
-  at: 2026-10-08T09:00:17Z
+  at: 2026-10-08T09:09:50Z
 finalized:
   by: orchestrator
   at: 2026-10-08T09:00:47Z
