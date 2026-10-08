@@ -2,12 +2,12 @@
 id: I-0117
 title: A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
 class: blocker
-status: open
+status: closed
 count: 4
 cost: 18m
 first_reported: 2026-10-08T04:12:50Z
 last_reported: 2026-10-08T05:31:34Z
-updated: 2026-10-08T08:08:19Z
+updated: 2026-10-08T09:13:22Z
 ---
 
 # I-0117 A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
@@ -36,3 +36,4 @@ After main took the orchestrator.md fix, S-0318's close-out, now on a flai with 
 ## Remediation
 
 Story S-0345 remediates this issue, created from it at 2026-10-08T08:08:19Z.
+Closed 2026-10-08T09:13:22Z: S-0345: in a close-out (`CLOSE_OUT_STORY` set), `TestRepositoryLintsClean` (now in `flai/internal/mdlint/repo_test.go`) and `scripts/lint-md.sh` leave out the markdown under `wip/` that the story does not change. They do so as `TestMonorepoIsClean` and `scripts/check.sh` scope `flai check` (ADR-0085). A line another agent commits to main's `wip/` is a logged note in the integration tier and is left out of smoke's whole-repository lint. A `wip/` file the story changes, and every file outside `wip/`, still fails. `TestMainsWipOutsideTheStoryOfI0117` reproduces the case. `make lint-md` and CI do not set the variable, so they still lint all of main's `wip/`.
