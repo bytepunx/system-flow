@@ -7,7 +7,7 @@ status: backlog
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:04Z
-updated: 2026-10-08T04:33:38Z
+updated: 2026-10-08T04:34:37Z
 transitions: []
 tags: [flai, template]
 topics: [cli, conventions, template]
@@ -72,9 +72,9 @@ Raise throughput by letting the agent that holds a story decide whether the hold
 
 ### Planning
 
-Planned by planner-E-0018 on 2026-10-07. It waits for S-0332 (`after`): its ADR refines S-0332's, and a share leans on the conflict conversation to catch a split that did not hold.
+Planned by planner-E-0018 on 2026-10-07, revisited on 2026-10-08. It waits for S-0332 (`after`), now done: its ADR-0121 is the one this story's ADR refines, and a share leans on the conflict conversation to catch a split that did not hold. S-0338, split from S-0336 on TH-0320, waits for this story to show the ask and the share on the board's card.
 
-This is the throughput lever of E-0018: a hold the holding agent judges needless ends while that agent is still working, not when it reaches review. It refines ADR-0046 and ADR-0096, so T-1202 records it first.
+This is the throughput lever of E-0018: a hold the holding agent judges needless ends while that agent is still working, not when it reaches review. It refines ADR-0046 and ADR-0096, so T-1202 records it first. The operator's decision on TH-0319, whether a share lifts a hold on its own or waits for their confirmation, is still open; the story as written lifts it on the share.
 
 Layers:
 
@@ -85,16 +85,16 @@ Layers:
 
 Touches:
 
-- **Declared:** none before planning.
+- **Declared:** all kept.
 - **Layout:**
-  - The messages package, `flai/cmd/message.go`, `flai/internal/mcpserver/messages.go`, and their tests: the share; `flai/internal/guard/guard.go` and its test, so a sub-agent cannot share.
+  - The messages package, `flai/cmd/message.go`, `flai/internal/mcpserver/messages.go`, and their tests: the share; `flai/internal/guard/guard.go` and its test, so a sub-agent cannot share. `messages.sendable` refuses a story that is not open today, so T-1203 lets the held story, in ready, be one side.
   - `flai/internal/workitem/hold.go` and its test: `NewHolds` and `WithShared` judge overlaps; `boardview.go` builds the holds the board, `inbox`, and `wait_for_work` read.
   - `flai/internal/serve/agents.go` and its test: the launcher's look; `flai/internal/harness/harness.go` and its test: the prompt a started agent gets.
-- **Co-change:** `flai touches suggest` from `hold.go` and `agents.go` gave `agents_test.go` (48%), `flai/internal/serve/start.go` (17%), `harness.go` and its test (14 to 17%), and `hold_test.go` (12%).
+- **Co-change:** `flai touches suggest` from `hold.go` and `agents.go` gave `agents_test.go` (48%), `flai/internal/serve/start.go` (17%), `harness.go` and its test (14 to 17%), and `hold_test.go` (12%). Run again on 2026-10-08 over the whole claim, it gave nothing above 17% outside it: `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` (14 to 16%) are S-0338's, and `docs/operators/index.md` and `settings.md` change only with a setting, which this story adds none of.
 - **Design:** `design/system/workflow.md` § Branches and collisions and `agent-coordination.md` § Decision; both copies of `work-management.md` and `template/CHANGELOG.md`; `flai-cli.md`, `docs/users/flai.md`, and the generated reference.
-- **Folder touch kept:** `design/adrs`, for T-1202's ADR. Inside `claims.shared`.
-- **Not taken:** `flai/cmd/serve_actions.go` (50%), `flai/internal/hostapi/writes.go` (24%), and `flai/internal/serve/restart.go` (24%): no host action, host write, or restart changes. `flai/internal/serve/start.go` and `flai/internal/mcpserver/work.go` may need the shares passed in; T-1204 widens its touches to each caller it changes.
+- **Folder touch kept:** `design/adrs`, for T-1202's ADR, whose file name no task can know before it is written. Inside `claims.shared`, so it holds nothing.
+- **Not taken:** `flai/cmd/serve_actions.go`, `flai/internal/hostapi/writes.go`, and `flai/internal/serve/restart.go`: no host action, host write, or restart changes. `flai/internal/serve/start.go` and `flai/internal/mcpserver/work.go` may need the shares passed in; T-1204 widens its touches to each caller it changes.
 
-Forecast 58m, delivery 2026-10-08T10:47Z: `flai forecast` gave it, 114 s per unit over 29 done large-band feature stories, times size 30 (6 criteria, 24 touches). It stands.
+Forecast 53m: `flai forecast` gave it on 2026-10-08, 104 s per unit over 33 done large-band feature stories, times size 30 (6 criteria, 24 touches). It stands; the 58m of the first plan came from 114 s per unit over 29 stories.
 
-Cost of delay 149.87 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 58m of 6h27m. It stands; this story is where the epic's throughput comes from, but no input prices that apart.
+Cost of delay 288.04 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 53m of the 3h4m forecast over the four open stories (S-0334, S-0336, S-0337, S-0338). It stands; this story is where the epic's throughput comes from, but no input prices that apart.
