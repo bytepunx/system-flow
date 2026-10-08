@@ -434,7 +434,7 @@ func md031(c *Config, d *doc, _ *inlineOut, add adder) {
 
 func md034(_ *Config, _ *doc, in *inlineOut, add adder) {
 	for _, u := range in.urls {
-		add(u[0], "", "")
+		add(u.line, "", "")
 	}
 }
 

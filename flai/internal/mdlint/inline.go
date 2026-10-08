@@ -82,10 +82,14 @@ type codeSpan struct {
 type inlineOut struct {
 	emphs     []emph
 	leftovers []leftover
-	urls      [][2]int // line, col of each bare URL or email address
+	urls      []bare // each bare URL or email address
 	codes     []codeSpan
 	groups    int
 }
+
+// bare is a bare URL or email address: its line, its byte column in that
+// line's raw text, and its length.
+type bare struct{ line, col, n int }
 
 // segInfo is what parsing one segment found, for no-emphasis-as-heading.
 type segInfo struct {
@@ -442,7 +446,7 @@ func parseRange(seg *segment, from, to int, pair, link bool, out *inlineOut, inf
 		case !link && !unclosed && isAtext(c) && bareEmail(t[:to], i) > 0:
 			n := bareEmail(t[:to], i)
 			l, col := seg.where(i)
-			out.urls = append(out.urls, [2]int{l, col})
+			out.urls = append(out.urls, bare{l, col, n})
 			info.other++
 			i += n
 		case c == '*' || c == '_':
@@ -465,13 +469,13 @@ func parseRange(seg *segment, from, to int, pair, link bool, out *inlineOut, inf
 		case c == 'h' && !link && !unclosed && bareURL(t[:to], i) > 0:
 			n := bareURL(t[:to], i)
 			l, col := seg.where(i)
-			out.urls = append(out.urls, [2]int{l, col})
+			out.urls = append(out.urls, bare{l, col, n})
 			info.other++
 			i += n
 		case (c == 'w' || c == 'W') && !link && !unclosed && bareWww(t[:to], i, from) > 0:
 			n := bareWww(t[:to], i, from)
 			l, col := seg.where(i)
-			out.urls = append(out.urls, [2]int{l, col})
+			out.urls = append(out.urls, bare{l, col, n})
 			info.other++
 			i += n
 		default:
