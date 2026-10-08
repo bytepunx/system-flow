@@ -1102,6 +1102,86 @@ func TestSyncTrialMergeLeavesOutIssueFiles(t *testing.T) {
 	}
 }
 
+// sharedFriction is the issue file bumpStories records on main.
+const sharedFriction = "design/issues/I-0001-shared-friction.md"
+
+// stopsOnSharedFriction fails t unless git's merge of story/S-0002 onto main
+// conflicts in the issue file, so that a rebase without the merge would stop.
+func stopsOnSharedFriction(t *testing.T, root string) {
+	t.Helper()
+	raw, err := storygit.TrialMerge(execx.System{}, root, "main", "story/S-0002")
+	if err != nil || !slices.Contains(raw, sharedFriction) {
+		t.Fatalf("git's merge onto main: %v %q", err, raw)
+	}
+}
+
+// I-0092's second instance, as S-0254 and S-0228 met it: two stories bump one
+// issue on their branches. Once the first is accepted, the second's
+// acceptance stopped on the issue file and the summary until the instances
+// were merged by hand; its rebase now merges them, adding up the count, and
+// writes the summary again (ADR-0126).
+func TestAcceptMergesAnIssueBothSidesBumped(t *testing.T) {
+	root, _ := bumpStories(t)
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+	if _, errOut, code := runInAt(t, root, issueClock.Add(3*time.Hour), "accept", "S-0001"); code != 0 {
+		t.Fatalf("acceptance of S-0001: %d %s", code, errOut)
+	}
+	stopsOnSharedFriction(t, root)
+	issueStoryInReview(t, root, "S-0002", "T-0002")
+
+	if _, errOut, code := runInAt(t, root, issueClock.Add(4*time.Hour), "accept", "S-0002"); code != 0 {
+		t.Fatalf("acceptance stopped on the issue both sides bumped: %d %s", code, errOut)
+	}
+	is, err := issues.Parse(gitIn(t, root, "show", "main:"+sharedFriction))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if is.Status != "open" || is.Count != 3 {
+		t.Fatalf("main's issue after the acceptance: %+v", is)
+	}
+	hasInstances(t, is, 0, 1, 2)
+	summary := gitIn(t, root, "show", "main:design/issues/summary.md")
+	if !strings.Contains(summary, "[I-0001]") || strings.Contains(summary, strings.Repeat("<", 7)) || strings.Contains(summary, strings.Repeat(">", 7)) {
+		t.Errorf("main's summary is not written from the merged issue:\n%s", summary)
+	}
+}
+
+// I-0092's third instance, as S-0275 met it beside S-0213 and S-0246: a
+// branch bumps an issue that main closes meanwhile. The sync's rebase stopped
+// on the issue file and the branch dropped its bump; it now merges them into
+// a closed issue that holds the bump and counts it, and writes the summary
+// again without it (ADR-0126).
+func TestSyncMergesABumpIntoTheIssueMainClosed(t *testing.T) {
+	root, b := bumpStories(t)
+	if _, errOut, code := runInAt(t, root, issueClock.Add(3*time.Hour), "issue", "close", "I-0001", "--reason", "fixed on main"); code != 0 {
+		t.Fatal(errOut)
+	}
+	gitIn(t, root, "add", "design")
+	gitIn(t, root, "commit", "-q", "-m", "docs: close shared friction")
+	stopsOnSharedFriction(t, root)
+
+	res := syncIssuesJSON(t, b)
+	if strings.Join(res.Merged, ",") != sharedFriction || len(res.Folded) != 0 {
+		t.Errorf("merged %v, folded %+v", res.Merged, res.Folded)
+	}
+	is := issuesIn(t, b)["I-0001-shared-friction.md"]
+	if is == nil {
+		t.Fatal("the merged issue is missing")
+	}
+	at := func(h int) string { return issueClock.Add(time.Duration(h) * time.Hour).Format(workitem.TimeFormat) }
+	if is.Status != "closed" || is.Count != 2 || is.LastReported != at(2) || is.Updated != at(3) {
+		t.Errorf("closed, counting the branch's bump: %+v", is)
+	}
+	hasInstances(t, is, 0, 2)
+	if !strings.Contains(is.Body, "Closed "+at(3)+": fixed on main") || strings.Contains(is.Body, "### "+at(1)) {
+		t.Errorf("the merged issue lacks main's close or holds S-0001's bump:\n%s", is.Body)
+	}
+	summary := gitIn(t, b, "show", "HEAD:design/issues/summary.md")
+	if strings.Contains(summary, "[I-0001]") || strings.Contains(summary, strings.Repeat("<", 7)) || strings.Contains(summary, strings.Repeat(">", 7)) {
+		t.Errorf("the summary is not written from the closed issue:\n%s", summary)
+	}
+}
+
 // The issue files a rebase merges are the I-nnnn files directly in the
 // issues folder, not summary.md or README.md (ADR-0126).
 func TestSyncFilesMergeTheIssueFiles(t *testing.T) {
