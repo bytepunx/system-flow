@@ -147,7 +147,7 @@ func nonNil(l []string) []string {
 // a *syncStopped, with the conflicting paths when there are any.
 func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conflicts []string, err error) {
 	// the rebase reads only the story's ID
-	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Generated: issues.Generated(repo, id, a.now), Log: a.logger()})
+	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Files: issues.SyncFiles(repo, id, a.runner, a.now), Log: a.logger()})
 	if err != nil {
 		return res.Base, nil, err
 	}

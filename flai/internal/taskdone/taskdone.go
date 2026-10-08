@@ -328,7 +328,7 @@ func (r *run) notice(cov itemedit.Covered) string {
 func (r *run) sync() error {
 	res, err := storygit.Sync(storygit.SyncOptions{
 		Runner: r.o.Runner, Repo: r.o.Repo, Story: r.story, Now: r.o.Now(),
-		Generated: issues.Generated(r.o.Repo, r.story.ID, r.o.Now), Again: r.again(), Log: r.logger,
+		Files: issues.SyncFiles(r.o.Repo, r.story.ID, r.o.Runner, r.o.Now), Again: r.again(), Log: r.logger,
 	})
 	r.res.Sync = &res
 	if err != nil {

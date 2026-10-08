@@ -2,6 +2,7 @@ package storygit
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -173,7 +174,7 @@ func openStory(t *testing.T, repo *workitem.Repo, id string, touches ...string) 
 
 // syncOptions are the options to sync story with, its generated files gen.
 func syncOptions(repo *workitem.Repo, story *workitem.Item, gen ...GeneratedFile) SyncOptions {
-	return SyncOptions{Runner: execx.System{}, Repo: repo, Story: story, Now: syncClock, Generated: gen}
+	return SyncOptions{Runner: execx.System{}, Repo: repo, Story: story, Now: syncClock, Files: Files{Generated: gen}}
 }
 
 // A clean sync rebases the branch onto main and lists what it changed
@@ -294,6 +295,158 @@ func TestSyncRegeneratesGeneratedFilesItStopsOnAlone(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(filepath.Join(wt, "docs", "gen.md")); string(got) != "regenerated\n" {
 		t.Errorf("docs/gen.md: %q", got)
+	}
+}
+
+// mergedFiles merges docs/m.md, at a stop, into its three versions in turn,
+// read from the index of the worktree wt.
+func mergedFiles(t *testing.T, wt string) MergedFiles {
+	t.Helper()
+	return MergedFiles{
+		Match: func(p string) bool { return p == "docs/m.md" },
+		Merge: func(p string) error {
+			base, ours, theirs, err := Stages(execx.System{}, wt, p)
+			if err != nil {
+				return err
+			}
+			return os.WriteFile(filepath.Join(wt, filepath.FromSlash(p)), []byte(base+ours+theirs), 0o644)
+		},
+	}
+}
+
+// ADR-0126: a stop on a file flai merges and a generated file is continued:
+// the file is merged from the stop's three versions, and then every generated
+// file is written again, the one that did not conflict too, from the merge.
+func TestSyncMergesTheFilesItMergesAndRegeneratesFromThem(t *testing.T) {
+	repo := syncProject(t)
+	commitFiles(t, repo.MainRoot, "docs: base", "docs/m.md")
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] ours", "docs/m.md")
+	commitFiles(t, repo.MainRoot, "docs: main's", "docs/m.md")
+	gen := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
+		m, err := os.ReadFile(filepath.Join(wt, "docs", "m.md"))
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(wt, "docs", "gen.md"), []byte("from "+string(m)), 0o644)
+	}}
+	o := syncOptions(repo, story, gen)
+	o.Files.Merged = mergedFiles(t, wt)
+
+	res, err := Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || strings.Join(res.Merged, ",") != "docs/m.md" || strings.Join(res.Regenerated, ",") != "docs/gen.md" {
+		t.Fatalf("result: %+v", res)
+	}
+	merged := "docs: base\ndocs: main's\nfeat: [S-0001] ours\n"
+	if got, _ := (execx.System{}).Run(wt, "git", "show", "HEAD:docs/m.md"); got+"\n" != merged {
+		t.Errorf("docs/m.md: %q", got)
+	}
+	if got, _ := (execx.System{}).Run(wt, "git", "show", "HEAD:docs/gen.md"); got+"\n" != "from "+merged {
+		t.Errorf("docs/gen.md is not written from the merge: %q", got)
+	}
+	if st, _ := Uncommitted(execx.System{}, wt); len(st) != 0 {
+		t.Errorf("the worktree is not clean: %v", st)
+	}
+	data, _ := json.Marshal(res)
+	if !strings.Contains(string(data), `"merged":["docs/m.md"]`) || !strings.Contains(string(data), `"folded":[]`) {
+		t.Errorf("json: %s", data)
+	}
+}
+
+// A merge that fails leaves the stop to the agent, as a stop on any other
+// path is.
+func TestSyncLeavesAStopWhoseMergeFailsToTheAgent(t *testing.T) {
+	repo := syncProject(t)
+	commitFiles(t, repo.MainRoot, "docs: base", "docs/m.md")
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] ours", "docs/m.md")
+	commitFiles(t, repo.MainRoot, "docs: main's", "docs/m.md")
+	o := syncOptions(repo, story)
+	o.Files.Merged = MergedFiles{Match: func(p string) bool { return p == "docs/m.md" }, Merge: func(string) error { return errors.New("not merged") }}
+
+	res, err := Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Synced || res.Stopped != StopConflicts || strings.Join(res.Conflicts, ",") != "docs/m.md" || len(res.Merged) != 0 {
+		t.Fatalf("result: %+v", res)
+	}
+	if !RebaseInProgress(execx.System{}, wt) {
+		t.Error("the rebase is not left waiting")
+	}
+}
+
+// ADR-0126: after a clean rebase the fold runs with the base branch; what it
+// folds is committed on the branch with the generated files written again,
+// a deleted file included.
+func TestSyncCommitsTheFoldAfterACleanRebase(t *testing.T) {
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] dup", "docs/dup.md")
+	commitFiles(t, repo.MainRoot, "docs: main's keep", "docs/keep.md")
+	gen := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
+		return os.WriteFile(filepath.Join(wt, "docs", "gen.md"), []byte("after the fold\n"), 0o644)
+	}}
+	o := syncOptions(repo, story, gen)
+	var gotBase string
+	o.Files.Fold = func(base string) ([]Folded, []string, error) {
+		gotBase = base
+		if err := os.Remove(filepath.Join(wt, "docs", "dup.md")); err != nil {
+			return nil, nil, err
+		}
+		if err := os.WriteFile(filepath.Join(wt, "docs", "keep.md"), []byte("kept both\n"), 0o644); err != nil {
+			return nil, nil, err
+		}
+		return []Folded{{From: "I-0002", Into: "I-0001"}, {From: "I-0003", Into: "I-0001"}}, []string{"docs/keep.md", "docs/dup.md"}, nil
+	}
+
+	res, err := Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || gotBase != "main" || len(res.Folded) != 2 || res.Folded[0] != (Folded{From: "I-0002", Into: "I-0001"}) {
+		t.Fatalf("result: %+v, base %q", res, gotBase)
+	}
+	r := execx.System{}
+	if got, _ := r.Run(wt, "git", "log", "-1", "--format=%s"); got != "docs: [S-0001] fold I-0002 into I-0001, I-0003 into I-0001" {
+		t.Errorf("the fold's commit: %q", got)
+	}
+	if got, _ := r.Run(wt, "git", "show", "--name-status", "--format=", "HEAD"); got != "D\tdocs/dup.md\nA\tdocs/gen.md\nM\tdocs/keep.md" {
+		t.Errorf("the fold's commit changed:\n%s", got)
+	}
+	if st, _ := Uncommitted(r, wt); len(st) != 0 {
+		t.Errorf("the worktree is not clean: %v", st)
+	}
+	data, _ := json.Marshal(res)
+	if !strings.Contains(string(data), `"folded":[{"from":"I-0002","into":"I-0001"},{"from":"I-0003","into":"I-0001"}]`) {
+		t.Errorf("json: %s", data)
+	}
+}
+
+// A fold that fails is logged and the sync stands, with nothing committed;
+// one that folds nothing commits nothing.
+func TestSyncStandsWhenTheFoldFailsOrFoldsNothing(t *testing.T) {
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] guide", "docs/guide.md")
+	r := execx.System{}
+	head, _ := r.Run(wt, "git", "rev-parse", "HEAD")
+	for _, fold := range []FoldFunc{
+		func(string) ([]Folded, []string, error) { return nil, nil, errors.New("unreadable") },
+		func(string) ([]Folded, []string, error) { return []Folded{}, []string{}, nil },
+	} {
+		o := syncOptions(repo, story)
+		o.Files.Fold = fold
+		res, err := Sync(o)
+		if err != nil || !res.Synced || len(res.Folded) != 0 {
+			t.Fatalf("result: %+v %v", res, err)
+		}
+		if now, _ := r.Run(wt, "git", "rev-parse", "HEAD"); now != head {
+			t.Errorf("a commit was made: %s, was %s", now, head)
+		}
 	}
 }
 

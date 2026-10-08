@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -923,5 +924,217 @@ func issueStoryInReview(t *testing.T, root, id, task string) {
 		if _, errOut, code := runIn(t, root, args...); code != 0 {
 			t.Fatalf("flai %v: %s", args, errOut)
 		}
+	}
+}
+
+// issueSync is what flai stream sync --json says of the issue files its
+// rebase merged and the issues it folded (ADR-0126).
+type issueSync struct {
+	OK     bool              `json:"ok"`
+	Merged []string          `json:"merged"`
+	Folded []storygit.Folded `json:"folded"`
+}
+
+// syncIssuesJSON syncs S-0002 from its worktree wt with --json, at issueClock
+// and four hours, and returns what it says.
+func syncIssuesJSON(t *testing.T, wt string) issueSync {
+	t.Helper()
+	js, errOut, code := runInAt(t, wt, issueClock.Add(4*time.Hour), "--json", "stream", "sync", "S-0002")
+	if code != 0 {
+		t.Fatalf("sync stopped: %d %s %s", code, js, errOut)
+	}
+	var res issueSync
+	if err := json.Unmarshal([]byte(js), &res); err != nil {
+		t.Fatalf("%v: %s", err, js)
+	}
+	if !res.OK || res.Merged == nil || res.Folded == nil {
+		t.Errorf("sync --json: %s", js)
+	}
+	if storygit.RebaseInProgress(execx.System{}, wt) {
+		t.Fatal("the rebase is left in progress")
+	}
+	if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean after the sync: %s", st)
+	}
+	return res
+}
+
+// issuesIn reads the issue files in the checkout dir, by base name.
+func issuesIn(t *testing.T, dir string) map[string]*issues.Issue {
+	t.Helper()
+	matches, _ := filepath.Glob(filepath.Join(dir, "design", "issues", "I-*.md"))
+	out := map[string]*issues.Issue{}
+	for _, m := range matches {
+		is, err := issues.Read(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out[filepath.Base(m)] = is
+	}
+	return out
+}
+
+// hasInstances fails t unless the issue holds an instance at each of the
+// hours after issueClock, and no conflict markers.
+func hasInstances(t *testing.T, is *issues.Issue, hours ...int) {
+	t.Helper()
+	for _, h := range hours {
+		if heading := "### " + issueClock.Add(time.Duration(h)*time.Hour).Format(workitem.TimeFormat); !strings.Contains(is.Body, heading) {
+			t.Errorf("%s lacks the instance %q:\n%s", is.ID, heading, is.Body)
+		}
+	}
+	if strings.Contains(is.Body, strings.Repeat("<", 7)) || strings.Contains(is.Body, strings.Repeat(">", 7)) {
+		t.Errorf("%s carries conflict markers:\n%s", is.ID, is.Body)
+	}
+}
+
+// I-0112, as S-0275 and S-0265 met it: two branches open an issue under one
+// title, each its own number. Once the first is on main, the second's sync
+// folds its issue into main's, so that one issue of the title holds both
+// occurrences, and commits the fold on the branch (ADR-0126).
+func TestSyncFoldsTheBranchsIssueIntoMainsOfTheSameTitle(t *testing.T) {
+	root := syncProject(t)
+	if _, errOut, code := runInAt(t, root, issueClock, "issue", "summary"); code != 0 {
+		t.Fatal(errOut)
+	}
+	gitIn(t, root, "add", "design")
+	gitIn(t, root, "commit", "-q", "-m", "docs: issue summary")
+	a := openSyncStory(t, root, 1, "design,docs")
+	b := openSyncStory(t, root, 2, "design,docs")
+	recordIssueIn(t, a, issueClock.Add(time.Hour), "The same friction", nil)
+	recordIssueIn(t, b, issueClock.Add(2*time.Hour), "The same friction", nil)
+	if got := issuesIn(t, b); got["I-0002-the-same-friction.md"] == nil {
+		t.Fatalf("the second branch's issue is not I-0002: %v", got)
+	}
+	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
+
+	res := syncIssuesJSON(t, b)
+	if len(res.Folded) != 1 || res.Folded[0] != (storygit.Folded{From: "I-0002", Into: "I-0001"}) {
+		t.Errorf("folded: %+v", res.Folded)
+	}
+	got := issuesIn(t, b)
+	if len(got) != 1 {
+		t.Fatalf("the branch holds %d issue files, want 1: %v", len(got), got)
+	}
+	is := got["I-0001-the-same-friction.md"]
+	if is == nil || is.Status != "open" || is.Count != 2 {
+		t.Fatalf("main's issue after the fold: %+v", is)
+	}
+	hasInstances(t, is, 1, 2)
+	if subject := gitIn(t, b, "log", "-1", "--format=%s"); subject != "docs: [S-0002] fold I-0002 into I-0001" {
+		t.Errorf("the fold's commit: %q", subject)
+	}
+	if tracked := gitIn(t, b, "ls-files", "design/issues"); strings.Contains(tracked, "I-0002") {
+		t.Errorf("the folded issue is still committed:\n%s", tracked)
+	}
+	summary := gitIn(t, b, "show", "HEAD:design/issues/summary.md")
+	if !strings.Contains(summary, "[I-0001]") || strings.Contains(summary, "I-0002") {
+		t.Errorf("the summary is not written after the fold:\n%s", summary)
+	}
+}
+
+// bumpStories records an issue on main, then makes S-0001 and S-0002 in
+// progress, each of whose branches bumps it at its own time, an hour and two
+// after it was recorded. It returns the main checkout and S-0002's worktree.
+func bumpStories(t *testing.T) (root, b string) {
+	t.Helper()
+	root = syncProject(t)
+	if _, errOut, code := runInAt(t, root, issueClock, "issue", "new", "Shared friction", "--class", "efficiency"); code != 0 {
+		t.Fatal(errOut)
+	}
+	gitIn(t, root, "add", "design")
+	gitIn(t, root, "commit", "-q", "-m", "docs: record shared friction")
+	a := openSyncStory(t, root, 1, "design,docs")
+	b = openSyncStory(t, root, 2, "design,docs")
+	for i, wt := range []string{a, b} {
+		id := fmt.Sprintf("S-%04d", i+1)
+		if _, errOut, code := runInAt(t, wt, issueClock.Add(time.Duration(i+1)*time.Hour), "issue", "bump", "I-0001", "--story", id, "--note", "Again in "+id+"."); code != 0 {
+			t.Fatal(errOut)
+		}
+		gitIn(t, wt, "add", "-A")
+		gitIn(t, wt, "commit", "-q", "-m", "chore: bump I-0001 in "+id)
+	}
+	return root, b
+}
+
+// I-0112, as S-0318 and S-0316 met it: two branches bump one issue. Once the
+// first is on main, the second's sync stopped on the issue file and the
+// summary; it now merges the issue by its instances, keeping both and adding
+// up the count, writes the summary again, and goes on (ADR-0126).
+func TestSyncMergesAnIssueBothSidesBumped(t *testing.T) {
+	root, b := bumpStories(t)
+	gitIn(t, root, "merge", "-q", "--no-edit", "story/S-0001")
+
+	res := syncIssuesJSON(t, b)
+	if strings.Join(res.Merged, ",") != "design/issues/I-0001-shared-friction.md" || len(res.Folded) != 0 {
+		t.Errorf("merged %v, folded %+v", res.Merged, res.Folded)
+	}
+	is := issuesIn(t, b)["I-0001-shared-friction.md"]
+	if is == nil || is.Count != 3 {
+		t.Fatalf("the merged issue: %+v", is)
+	}
+	hasInstances(t, is, 0, 1, 2)
+	if got := gitIn(t, b, "log", "--format=%s", "main..HEAD"); got != "chore: bump I-0001 in S-0002" {
+		t.Errorf("story/S-0002's commits on main:\n%s", got)
+	}
+	summary := gitIn(t, b, "show", "HEAD:design/issues/summary.md")
+	if !strings.Contains(summary, "[I-0001]") || strings.Contains(summary, strings.Repeat("<", 7)) {
+		t.Errorf("the summary is not written from the merged issue:\n%s", summary)
+	}
+}
+
+// Two open branches that bump one issue conflict in its file and the summary
+// alone, which a rebase merges and writes again, so the trial merge counts
+// the pair clean and tells it nothing (ADR-0126).
+func TestSyncTrialMergeLeavesOutIssueFiles(t *testing.T) {
+	root, b := bumpStories(t)
+	raw, err := storygit.TrialMerge(execx.System{}, root, "story/S-0002", "story/S-0001")
+	if err != nil || !slices.Contains(raw, "design/issues/I-0001-shared-friction.md") {
+		t.Fatalf("git's trial merge: %v %q", err, raw)
+	}
+
+	out, branches, _, convs := trialSync(t, root, b)
+	if len(branches) != 1 || !branches[0].Clean || len(branches[0].Conflicts) != 0 {
+		t.Errorf("branches: %+v", branches)
+	}
+	if !strings.Contains(out, "story/S-0002 merges cleanly with story/S-0001") || len(convs) != 0 {
+		t.Errorf("sync output:\n%s\nconversations: %d", out, len(convs))
+	}
+}
+
+// The issue files a rebase merges are the I-nnnn files directly in the
+// issues folder, not summary.md or README.md (ADR-0126).
+func TestSyncFilesMergeTheIssueFiles(t *testing.T) {
+	repo, err := workitem.Open(tempProject(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := issues.SyncFiles(repo, "S-0001", execx.System{}, time.Now)
+	for p, want := range map[string]bool{
+		"design/issues/I-0118-the-sync-stops.md": true,
+		"design/issues/summary.md":               false,
+		"design/issues/README.md":                false,
+		"design/issues/old/I-0001-moved.md":      false,
+		"docs/I-0001-elsewhere.md":               false,
+		"design/issues/I-0118-notes.txt":         false,
+	} {
+		if got := f.Merged.Match(p); got != want {
+			t.Errorf("merges %s: %v, want %v", p, got, want)
+		}
+	}
+	if len(f.Generated) != 1 || f.Generated[0].Path != "design/issues/summary.md" || f.Fold == nil {
+		t.Errorf("files: %+v", f)
+	}
+}
+
+// The text report names each issue file merged and each issue folded.
+func TestPrintSyncChecksNamesTheMergedFilesAndTheFolds(t *testing.T) {
+	var out strings.Builder
+	printSyncChecks(&out, &workitem.Item{ID: "S-0002"}, storygit.SyncResult{
+		Merged: []string{"design/issues/I-0118-the-sync-stops.md"},
+		Folded: []storygit.Folded{{From: "I-0112", Into: "I-0111"}},
+	})
+	if want := "merged design/issues/I-0118-the-sync-stops.md: kept both sides' instances\nfolded I-0112 into I-0111\n"; out.String() != want {
+		t.Errorf("report:\n%s\nwant:\n%s", out.String(), want)
 	}
 }

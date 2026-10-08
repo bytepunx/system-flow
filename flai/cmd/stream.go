@@ -139,14 +139,26 @@ rebase --abort in the worktree, which puts the branch back as it was before
 the sync). It exits non-zero; with --json it prints uncommitted, conflicts,
 rebase_in_progress, continue, and abort, with ok false.
 
-A stop whose only conflicting path is a generated file, which today is
-design/issues/summary.md alone, does not wait for you (ADR-0098). Sync writes
-the file again from the issue files in the worktree at that stop, git adds
-it, and continues the rebase, until the rebase finishes or stops on another
-path. A stop where other paths conflict too is left for you, and lists them
-all, summary.md included; once the others are resolved, flai issue summary
-run in the worktree writes it. flai accept syncs the same way. A rebase
-already in progress is never continued for you.
+A stop whose only conflicting paths are generated files, which today is
+design/issues/summary.md alone, and issue files under design/issues does not
+wait for you (ADR-0098, ADR-0126). Sync merges each issue file from the stop's
+three versions by its instances, keeping the instances both sides added and
+adding up the count, then writes summary.md again from the issue files in the
+worktree at that stop, git adds them, and continues the rebase, until the
+rebase finishes or stops on another path. An issue file both sides changed
+some other way, its title or description, say, is not merged: the stop is
+left for you. A stop where other paths conflict too is left for you, and
+lists them all, summary.md included; once the others are resolved, flai issue
+summary run in the worktree writes it. flai accept syncs the same way. A
+rebase already in progress is never continued for you.
+
+Once the rebase is clean, each open issue the branch added whose title an open
+issue on the main branch has too is folded into that issue: its instances,
+count, and cost move into it, the branch's file is deleted, summary.md is
+written again, and the fold is committed on the branch as
+"docs: [S-nnnn] fold I-x into I-y". flai accept folds the same way. The report
+names each issue file merged and each issue folded; with --json, merged lists
+the files and folded each fold's from and into.
 
 After a clean rebase it trial-merges the branch with the branch of every other
 story in progress or in review (git merge-tree --write-tree, git 2.38 or
@@ -154,8 +166,9 @@ newer), writing nothing to any worktree, and lists each branch it conflicts
 with and the conflicting paths. A pair's conflicts are the paths both branches
 changed since they left the main branch, not what the main branch brought
 since: a path where main has since changed what a branch behind it did is
-that story's own rebase to settle (I-0064). Generated files are left out, so a pair
-whose only conflict is summary.md counts as clean. A conflict is told to both
+that story's own rebase to settle (I-0064). Generated files and issue files are
+left out, so a pair whose only conflicts are summary.md and issue files counts
+as clean. A conflict is told to both
 stories in their conversation, not a thread (ADR-0121): flai messages the other
 story from the one that synced, about the conflicting paths, and sync names
 the pair's conversation. A later sync with the same paths adds nothing, and one
@@ -177,7 +190,7 @@ so that they are widened with flai touches.`,
 			if err != nil {
 				return err
 			}
-			res, err := storygit.Sync(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: it, Now: a.now(), Generated: issues.Generated(repo, it.ID, a.now), Log: a.logger()})
+			res, err := storygit.Sync(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: it, Now: a.now(), Files: issues.SyncFiles(repo, it.ID, a.runner, a.now), Log: a.logger()})
 			// conflicts is null here unless the rebase waits, as it always was
 			if err != nil {
 				if a.jsonOut {
@@ -198,6 +211,7 @@ so that they are widened with flai touches.`,
 			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": true,
+					"merged": res.Merged, "folded": res.Folded,
 					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "outside_touches": res.Outside})
 			}
 			fmt.Fprintf(a.out, "%s is rebased onto %s\n", res.Branch, res.Base)

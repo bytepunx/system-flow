@@ -100,6 +100,83 @@ type GeneratedFile struct {
 	Regenerate func() error
 }
 
+// MergedFiles is the committed files flai merges itself from a stopped
+// rebase's three versions, as it merges an issue file by its instances
+// (ADR-0126). The zero value merges none.
+type MergedFiles struct {
+	// Match says whether flai merges the path, as git names it.
+	Match func(path string) bool
+	// Merge writes the path merged in the story's worktree from the stop's
+	// three index stages; an error leaves the stop to the agent.
+	Merge func(path string) error
+}
+
+// Folded is an issue the branch added that a sync folded into the main
+// branch's issue of the same title (ADR-0126).
+type Folded struct {
+	From string `json:"from"` // the branch's issue, I-nnnn, now gone
+	Into string `json:"into"` // the main branch's issue it went into
+}
+
+// FoldFunc folds what the branch added into what the base branch has once a
+// rebase onto base is clean, in the story's worktree, and returns the folds
+// and the paths it wrote or deleted, as git names them.
+type FoldFunc func(base string) ([]Folded, []string, error)
+
+// Files is the committed files a rebase of a story's branch resolves itself:
+// the generated files it writes again, the files it merges, and the fold
+// after a clean rebase (ADR-0098, ADR-0126).
+type Files struct {
+	// Generated is every generated file: a stop on them and merged files
+	// alone is continued, and the trial merge leaves them out of a pair's
+	// conflicts.
+	Generated []GeneratedFile
+	// Merged is the files a stop on them and generated files alone merges,
+	// which the trial merge leaves out of a pair's conflicts too.
+	Merged MergedFiles
+	// Fold runs after a clean rebase; nil folds nothing.
+	Fold FoldFunc
+}
+
+// merges says whether path is one of the files flai merges.
+func (f Files) merges(path string) bool { return f.Merged.Match != nil && f.Merged.Match(path) }
+
+// resolves says whether a stop on path is flai's to resolve: a generated
+// file, or one it merges.
+func (f Files) resolves(path string) bool {
+	return f.merges(path) || slices.ContainsFunc(f.Generated, func(g GeneratedFile) bool { return g.Path == path })
+}
+
+// generatedPaths is the generated files' paths.
+func (f Files) generatedPaths() []string {
+	out := make([]string, 0, len(f.Generated))
+	for _, g := range f.Generated {
+		out = append(out, g.Path)
+	}
+	return out
+}
+
+// Stages reads the three versions of path, as git names it, that the rebase
+// stopped in the worktree at dir holds in its index: the merge base's (stage
+// 1), ours, the branch being rebased onto (stage 2), and theirs, the commit
+// being replayed (stage 3). The runner trims what it reads, so each version
+// is given back ending in one newline, as a text file does. A stage the index
+// lacks, as when one side deleted the path, is an error.
+func Stages(r execx.Runner, dir, path string) (base, ours, theirs string, err error) {
+	var v [3]string
+	for i := range v {
+		out, err := r.Run(dir, "git", "show", fmt.Sprintf(":%d:%s", i+1, path))
+		if err != nil {
+			return "", "", "", fmt.Errorf("read stage %d of %s in %s: %w; resolve %s by hand", i+1, path, dir, err, path)
+		}
+		if out != "" {
+			out += "\n"
+		}
+		v[i] = out
+	}
+	return v[0], v[1], v[2], nil
+}
+
 // SyncOptions is what Sync works with.
 type SyncOptions struct {
 	Runner execx.Runner
@@ -108,9 +185,9 @@ type SyncOptions struct {
 	// Now dates the conflict messages Sync writes and the conversations and
 	// old conflict threads it closes.
 	Now time.Time
-	// Generated is every generated file: a stop on them alone is continued,
-	// and the trial merge leaves them out of a pair's conflicts.
-	Generated []GeneratedFile
+	// Files is what the rebase resolves itself: the generated files, the
+	// files it merges, and the fold after a clean rebase.
+	Files Files
 	// Again is the command a stop tells the agent to run once it is
 	// resolved; flai stream sync <story> when empty.
 	Again string
@@ -152,6 +229,12 @@ type SyncResult struct {
 	// Regenerated is the generated files written again to continue the
 	// rebase, once for each stop on them alone.
 	Regenerated []string `json:"regenerated"`
+	// Merged is the files merged to continue the rebase, once for each stop
+	// on them (ADR-0126).
+	Merged []string `json:"merged"`
+	// Folded is what the fold after the clean rebase folded and committed on
+	// the branch (ADR-0126).
+	Folded []Folded `json:"folded"`
 	// Branches is the trial merge with every other open story's branch.
 	Branches []BranchCheck `json:"branches"`
 	// TrialMergeSkipped says why the trial merge did not run, when it did not.
@@ -169,11 +252,14 @@ func (s SyncResult) RebaseInProgress() bool {
 // Sync rebases the story's branch onto the main branch inside its worktree,
 // without stashing (ADR-0069), as flai stream sync does. It refuses, touching
 // nothing, a worktree with uncommitted changes or with a rebase already in
-// progress. A stop whose conflicts are all generated files it resolves and
-// continues (ADR-0098); on any other conflict the rebase is left in progress
-// for the agent. A refusal or a stop is a result, with how to continue and
-// abort; an error is a sync that could not be tried, or a rebase git failed
-// without stopping. After a clean rebase it trial-merges the branch with
+// progress. A stop whose conflicts are all generated files and files flai
+// merges it resolves and continues (ADR-0098, ADR-0126); on any other
+// conflict the rebase is left in progress for the agent. A refusal or a stop
+// is a result, with how to continue and abort; an error is a sync that could
+// not be tried, a rebase git failed without stopping, or a fold written but
+// not committed. After a clean rebase it folds what the branch added into
+// what the main branch has, committing the fold on the branch, then
+// trial-merges the branch with
 // every other open story's, telling each conflicting pair in its
 // conversation (ADR-0121), and lists what the branch changed outside the
 // story's claim; a check that fails then is logged, the sync stands, and the
@@ -200,8 +286,8 @@ func Sync(o SyncOptions) (SyncResult, error) {
 	return res, nil
 }
 
-// Rebase is Sync's rebase without the checks after it, as flai accept
-// runs it before merging the branch.
+// Rebase is Sync's rebase and fold without the checks after them, as flai
+// accept runs it before merging the branch.
 func Rebase(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
@@ -209,7 +295,7 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 	repo, id := o.Repo, o.Story.ID
 	path := repo.WorktreePath(id)
 	res := SyncResult{Story: id, Branch: Branch(id), Worktree: relPath(repo.MainRoot, path),
-		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Branches: []BranchCheck{}, Outside: []string{}}
+		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Merged: []string{}, Folded: []Folded{}, Branches: []BranchCheck{}, Outside: []string{}}
 	if _, err := os.Stat(path); err != nil {
 		return res, fmt.Errorf("%s has no worktree at %s; open one with flai stream open %s", id, res.Worktree, id)
 	}
@@ -243,7 +329,63 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		}
 	}
 	res.Synced = true
-	return res, nil
+	return res, fold(o, path, &res)
+}
+
+// fold runs the fold after the clean rebase in the story's worktree at path
+// (ADR-0126): when it folds anything, it writes the generated files again,
+// stages what the fold wrote or deleted and them, commits them on the branch,
+// and sets res.Folded. A fold that fails is logged and the sync stands; a
+// fold whose files are written but not committed is an error saying what to
+// commit.
+func fold(o SyncOptions, path string, res *SyncResult) error {
+	if o.Files.Fold == nil {
+		return nil
+	}
+	id := o.Story.ID
+	folds, paths, err := o.Files.Fold(res.Base)
+	if err != nil {
+		o.Log.Warn("issues not folded after the rebase; the sync stands", "component", "git", "story", id, "err", err)
+		return nil
+	}
+	if len(folds) == 0 {
+		return nil
+	}
+	paths = append(paths, o.Files.generatedPaths()...)
+	undone := func(step string, err error) error {
+		return fmt.Errorf("%s the fold of %s on %s: %w; in %s, git add -A -- %s, commit it as %q, and run %s again",
+			step, foldList(folds), res.Branch, err, res.Worktree, strings.Join(paths, " "), foldSubject(id, folds), again(o))
+	}
+	for _, f := range o.Files.Generated {
+		if err := f.Regenerate(); err != nil {
+			return undone("write "+f.Path+" again after", err)
+		}
+	}
+	if _, err := o.Runner.Run(path, "git", append([]string{"add", "-A", "--"}, paths...)...); err != nil {
+		return undone("stage", err)
+	}
+	if _, err := o.Runner.Run(path, "git", "commit", "-q", "-m", foldSubject(id, folds)); err != nil {
+		return undone("commit", err)
+	}
+	res.Folded = folds
+	for _, f := range folds {
+		o.Log.Info("issue folded into the main branch's of its title", "component", "git", "story", id, "from", f.From, "into", f.Into)
+	}
+	return nil
+}
+
+// foldSubject is the subject of the commit of folds on story's branch.
+func foldSubject(story string, folds []Folded) string {
+	return fmt.Sprintf("docs: [%s] fold %s", story, foldList(folds))
+}
+
+// foldList names each fold, "I-x into I-y", comma-separated.
+func foldList(folds []Folded) string {
+	parts := make([]string, len(folds))
+	for i, f := range folds {
+		parts[i] = f.From + " into " + f.Into
+	}
+	return strings.Join(parts, ", ")
 }
 
 // again is the command a stop tells the agent to run once it is resolved.
@@ -270,18 +412,28 @@ func stopped(o SyncOptions, res SyncResult, why string, conflicts []string) Sync
 }
 
 // continueOverGenerated continues the rebase stopped in the story's worktree
-// at path for as long as every path of each stop is a generated file,
-// writing each again as the worktree is at that stop, staging it, and
-// continuing (ADR-0098); it adds each file it writes to res.Regenerated. It
-// reports whether the rebase is left waiting for the agent, and that stop's
-// conflicts.
+// at path for as long as every path of each stop is a generated file or a
+// file flai merges: it merges each of those first (ADR-0126), then writes
+// the generated files again as the worktree is at that stop, so that they
+// are written from the merged files, stages them all, and continues
+// (ADR-0098). It adds each file it merges to res.Merged and each it writes
+// again to res.Regenerated. It reports whether the rebase is left waiting
+// for the agent, and that stop's conflicts.
 func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (conflicts []string, waits bool, err error) {
 	id := o.Story.ID
 	for RebaseInProgress(o.Runner, path) {
 		conflicts = Conflicts(o.Runner, path)
-		regen, ok := onlyGenerated(conflicts, o.Generated)
+		merge, regen, ok := resolvable(conflicts, o.Files)
 		if !ok {
 			return conflicts, true, nil
+		}
+		for _, p := range merge {
+			if err := o.Files.Merged.Merge(p); err != nil {
+				o.Log.Warn("file not merged; the rebase is left for the agent", "component", "git", "story", id, "path", p, "err", err)
+				return conflicts, true, nil
+			}
+			res.Merged = append(res.Merged, p)
+			o.Log.Info("file merged to continue the rebase", "component", "git", "story", id, "path", p)
 		}
 		for _, f := range regen {
 			if err := f.Regenerate(); err != nil {
@@ -291,8 +443,14 @@ func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (conflic
 			res.Regenerated = append(res.Regenerated, f.Path)
 			o.Log.Info("generated file regenerated to continue the rebase", "component", "git", "story", id, "path", f.Path)
 		}
-		if _, err := o.Runner.Run(path, "git", append([]string{"add", "--"}, conflicts...)...); err != nil {
-			o.Log.Warn("generated files not staged; the rebase is left for the agent", "component", "git", "story", id, "paths", conflicts, "err", err)
+		staged := slices.Clone(conflicts)
+		for _, f := range regen {
+			if !slices.Contains(staged, f.Path) {
+				staged = append(staged, f.Path)
+			}
+		}
+		if _, err := o.Runner.Run(path, "git", append([]string{"add", "--"}, staged...)...); err != nil {
+			o.Log.Warn("resolved files not staged; the rebase is left for the agent", "component", "git", "story", id, "paths", staged, "err", err)
 			return conflicts, true, nil
 		}
 		if err := ContinueRebase(o.Runner, path); err != nil && !RebaseInProgress(o.Runner, path) {
@@ -302,18 +460,26 @@ func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (conflic
 	return nil, false, nil
 }
 
-// onlyGenerated returns the generated files among conflicts, and whether
-// they are all of them; a stop with no conflicts is not one of these.
-func onlyGenerated(conflicts []string, files []GeneratedFile) ([]GeneratedFile, bool) {
-	var regen []GeneratedFile
+// resolvable returns, when every one of conflicts is a generated file or one
+// flai merges, those it merges and the generated files to write again: the
+// conflicting ones, or every one when it merges any, since they are written
+// from the merged files. It reports false otherwise, and for a stop with no
+// conflicts.
+func resolvable(conflicts []string, files Files) (merge []string, regen []GeneratedFile, ok bool) {
 	for _, c := range conflicts {
-		i := slices.IndexFunc(files, func(f GeneratedFile) bool { return f.Path == c })
-		if i < 0 {
-			return nil, false
+		if !files.resolves(c) {
+			return nil, nil, false
 		}
-		regen = append(regen, files[i])
+		if files.merges(c) {
+			merge = append(merge, c)
+		}
 	}
-	return regen, len(regen) > 0
+	for _, f := range files.Generated {
+		if len(merge) > 0 || slices.Contains(conflicts, f.Path) {
+			regen = append(regen, f)
+		}
+	}
+	return merge, regen, len(conflicts) > 0
 }
 
 // relPath is p relative to root, or p when it is not below it.
@@ -333,10 +499,10 @@ func relPath(root, p string) string {
 // awaits the other story's agent; the two agents settle it between them, and
 // either escalates to the operator only when they do not agree (ADR-0121).
 // Conflict threads, which earlier syncs wrote, are only resolved now. The
-// generated files are left out of a pair's conflicts: the rebase writes them
-// again when it stops on them
-// alone, so a pair whose only conflict is one merges cleanly as far as the
-// check is concerned (ADR-0098). A pair's conflicts are the paths both
+// generated files and the files flai merges are left out of a pair's
+// conflicts: the rebase writes them again or merges them when it stops on
+// them alone, so a pair whose only conflicts are those merges cleanly as far
+// as the check is concerned (ADR-0098, ADR-0126). A pair's conflicts are the paths both
 // stories changed since each left the main branch: the trial merge's base is
 // where the two branches meet, which is the other branch's old base when it
 // is stale, so it also stops where main has since changed what the other
@@ -377,10 +543,6 @@ func checkSync(o SyncOptions, res *SyncResult) error {
 		o.Log.Warn("git is too old to trial-merge story branches, skipping", "component", "git", "git", have, "needs", gitver.MergeTree.String())
 		return nil
 	}
-	generated := make([]string, 0, len(o.Generated))
-	for _, f := range o.Generated {
-		generated = append(generated, f.Path)
-	}
 	for _, other := range others {
 		conflicts, err := TrialMerge(r, repo.MainRoot, res.Branch, Branch(other.ID))
 		if err != nil {
@@ -390,19 +552,20 @@ func checkSync(o SyncOptions, res *SyncResult) error {
 		if err != nil {
 			return err
 		}
-		conflicts = changedByBoth(withoutGenerated(conflicts, generated), mine, theirs)
+		conflicts = changedByBoth(withoutResolved(conflicts, o.Files), mine, theirs)
 		res.Branches = append(res.Branches, BranchCheck{Story: other.ID, Status: other.Status, Branch: Branch(other.ID), Clean: len(conflicts) == 0, Conflicts: conflicts})
 	}
 	return nil
 }
 
-// withoutGenerated is conflicts less the generated files, which sync and
-// acceptance write again when a rebase stops on them alone, so no agent
-// settles them (ADR-0098).
-func withoutGenerated(conflicts, generated []string) []string {
+// withoutResolved is conflicts less the generated files and the files flai
+// merges, which sync and acceptance write again or merge when a rebase stops
+// on them alone, so no agent settles them (ADR-0098, ADR-0126).
+func withoutResolved(conflicts []string, files Files) []string {
+	generated := files.generatedPaths()
 	out := []string{}
 	for _, p := range conflicts {
-		if !coveredBy(p, generated) {
+		if !coveredBy(p, generated) && !files.merges(p) {
 			out = append(out, p)
 		}
 	}
