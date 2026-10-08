@@ -6,7 +6,7 @@ title: flai verify resumes at the tier that failed when the branch head and its 
 status: in-progress
 owner: alex
 created: 2026-10-08T07:59:12Z
-updated: 2026-10-08T09:00:36Z
+updated: 2026-10-08T09:09:18Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0341
 tags: [cli]
 topics: [testing]
-touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, scripts/close-out.sh, docs/users/flai.md, design/system/flai-cli.md, flai/internal/verify/verify.go, docs/users/flai-reference.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, docs/users/flaiover.md, docs/operators/settings.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md]
+touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, scripts/close-out.sh, docs/users/flai.md, design/system/flai-cli.md, flai/internal/verify/verify.go, docs/users/flai-reference.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, docs/users/flaiover.md, docs/operators/settings.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5

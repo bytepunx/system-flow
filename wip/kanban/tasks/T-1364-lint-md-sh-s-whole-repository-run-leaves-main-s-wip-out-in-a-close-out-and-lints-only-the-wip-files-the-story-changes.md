@@ -3,12 +3,18 @@ id: T-1364
 type: task
 nature: remediation
 title: lint-md.sh's whole-repository run leaves main's wip out in a close-out and lints only the wip files the story changes
-status: backlog
+status: in-progress
 parent: S-0345
 owner: alex
 created: 2026-10-08T08:39:56Z
-updated: 2026-10-08T08:39:56Z
-transitions: []
+updated: 2026-10-08T09:09:25Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:09:24Z
+    by: agent-S-0345
+  - to: in-progress
+    at: 2026-10-08T09:09:25Z
+    by: agent-S-0345
 stream: S-0345
 tags: [flai]
 touches: [scripts/lint-md.sh]

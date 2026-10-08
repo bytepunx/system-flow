@@ -3,11 +3,14 @@ id: S-0348
 type: story
 nature: improvement
 title: "flai check finds `board.wip-limit` outside the story at close-out"
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-08T08:37:06Z
-updated: 2026-10-08T09:00:47Z
-transitions: []
+updated: 2026-10-08T09:09:03Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:09:03Z
+    by: orchestrator
 tags: [flai, check]
 topics: [cli, conventions, template]
 touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0123-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md, design/issues/summary.md]

@@ -3,12 +3,18 @@ id: T-1363
 type: task
 nature: remediation
 title: TestRepositoryLintsClean scopes itself to the story in a close-out, so main's committed wip is a note, not a failure
-status: backlog
+status: in-progress
 parent: S-0345
 owner: alex
 created: 2026-10-08T08:39:49Z
-updated: 2026-10-08T08:39:49Z
-transitions: []
+updated: 2026-10-08T09:09:24Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:09:24Z
+    by: agent-S-0345
+  - to: in-progress
+    at: 2026-10-08T09:09:24Z
+    by: agent-S-0345
 stream: S-0345
 tags: [flai]
 touches: [flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/repo_test.go]

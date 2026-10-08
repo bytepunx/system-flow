@@ -3,10 +3,10 @@ id: S-0288
 type: story
 nature: remediation
 title: flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
-status: review
+status: done
 owner: alex
 created: 2026-10-06T09:56:51Z
-updated: 2026-10-08T09:08:25Z
+updated: 2026-10-08T09:09:50Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:50Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-08T09:08:25Z
     by: agent-S-0288
+  - to: done
+    at: 2026-10-08T09:09:50Z
+    by: orchestrator
 tags: [flaiover, tests]
 touches: [flaiover/src/lib/server/notify.test.ts, design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md, design/issues/summary.md]
 agent:
@@ -125,3 +128,12 @@ Figures:
 
 - Forecast 20m, adjusted from flai's 14m (median 160 s per unit of size over 5 small remediations, size 5): this one must show a race gone, which means a deterministic reproduction and five full flaiover vitest runs. Delivery 2026-10-08T09:10:00Z, flai's 09:04 moved by the same 6m.
 - Cost of delay 37.50 USD a week, as `flai cod` works it out from the operator's inputs (15m lost per 168h cycle at 150 USD an hour). The operator raised the input from 5m to 15m on TH-0378, for I-0085's three stopped close-outs in two days; the value follows it unadjusted.
+
+### Accepted by the orchestrator
+
+- Verified: 19c223faebfd347c66dd215cc54b180250ba31a4
+- At: 2026-10-08T09:09:50Z
+
+Verdict: accept. flai verify passed every step at the branch head 19c223fa, and the verifier matched both criteria to the diff (repo.ts and notify.ts unchanged, the fix is in the test's setup).
+- 1: flaiover/src/lib/server/notify.test.ts
+- 2: design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md, design/issues/summary.md
