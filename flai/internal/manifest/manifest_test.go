@@ -722,6 +722,10 @@ func TestTestErrors(t *testing.T) {
 		f(&tier)
 		return tier
 	}
+	named := func(name string, covers ...string) TestTier {
+		return with(func(x *TestTier) { x.Name, x.Covers = name, covers })
+	}
+	cycle := []TestTier{named("a", "c"), named("b", "a"), named("c", "b"), named("d", "a")}
 	for _, c := range []struct {
 		name  string
 		tiers []TestTier
@@ -742,6 +746,10 @@ func TestTestErrors(t *testing.T) {
 		{"only exclusions", []TestTier{with(func(x *TestTier) { x.Paths = []string{"!flai/testdata"} })}, "has no pattern that selects a path"},
 		{"a bad pattern", []TestTier{with(func(x *TestTier) { x.Paths = []string{"flai/**", "!../x"} })}, `tests[0].paths (tier "unit") pattern "!../x" has a .. segment`},
 		{"a bad format", []TestTier{with(func(x *TestTier) { x.Format = "junit" })}, `tests[0].format (tier "unit") "junit" is not a format flai reads; write go-test-json, vitest-json, golangci-json, gofmt-list, plain`},
+		{"covers no tier", []TestTier{named("unit", "lint")}, `tests[0].covers (tier "unit") "lint" names no tier`},
+		{"covers itself", []TestTier{named("unit", "unit")}, `tests[0].covers (tier "unit") names the tier itself`},
+		{"covers a tier twice", []TestTier{named("unit", "lint", "lint"), named("lint")}, `tests[0].covers (tier "unit") names "lint" twice`},
+		{"covers in a cycle", cycle, `tests[0].covers (tier "a") makes a cycle through the tiers "a", "b", "c", which cover one another`},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			errs := Manifest{Tests: c.tiers}.TestErrors()
@@ -762,6 +770,13 @@ func TestTestErrors(t *testing.T) {
 		if errs := (Manifest{Tests: []TestTier{tier}}).TestErrors(); len(errs) != 0 {
 			t.Errorf("%+v refused: %v", tier, errs)
 		}
+	}
+	if errs := (Manifest{Tests: cycle}).TestErrors(); len(errs) != 1 {
+		t.Errorf("a cycle is reported once: %q", errs)
+	}
+	chain := []TestTier{named("a", "b"), named("b", "c"), named("c")}
+	if errs := (Manifest{Tests: chain}).TestErrors(); len(errs) != 0 {
+		t.Errorf("a chain refused: %v", errs)
 	}
 }
 

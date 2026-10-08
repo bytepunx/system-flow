@@ -94,6 +94,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `tests[].format` | `plain` | How its output becomes findings: `go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`, which reads only the exit status |
 | `tests[].all_only` | `false` | Run the tier only under `flai test --all`, as integration and smoke tests are |
 | `tests[].all_command` | `command` | The argument list run instead of `command` under `--all`; it takes no placeholder |
+| `tests[].covers` | none | The tiers this one runs everything of, by name, which are skipped when it is selected with them |
 | `agent.harness` | none | The harness every new story gets, such as `claude-code` ([Starting an agent](index.md#starting-an-agent-when-a-story-becomes-ready)) |
 | `agent.model` | none | The model every new story gets |
 | `prime.budget` | `80KB` | The size a story's context pack fits, for `flai prime --story` and the MCP `prime` tool; bytes, or a number with `KB` or `MB`; `--budget` overrides it for one run ([Prime a session](../users/flai.md#prime-a-session)). It bounds the pack's text, not one tool result: the MCP `prime` tool returns the pack in parts of at most 40,000 bytes whatever the budget ([ADR-0104](../../design/adrs/0104-the-mcp-prime-tool-returns-a-context-pack-in-parts-of-at-most-40-000-bytes-of.md)) |

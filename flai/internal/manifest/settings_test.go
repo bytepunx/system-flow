@@ -350,6 +350,36 @@ func TestEditSettingsWritesTests(t *testing.T) {
 	}
 }
 
+// S-0342: a tier's covers is written as a list on one line and read back as
+// given, and a list of tiers that differs only in it is not the same.
+func TestEditSettingsWritesCovers(t *testing.T) {
+	value := `[{"name":"short","command":["go","test","-short"],"paths":["**"]},{"name":"full","command":["go","test"],"paths":["**"],"covers":["short"]}]`
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"tests", value}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "tests:\n" +
+		"  - name: short\n" +
+		"    command: [go, test, \"-short\"]\n" +
+		"    paths: [\"**\"]\n" +
+		"  - name: full\n" +
+		"    command: [go, test]\n" +
+		"    paths: [\"**\"]\n" +
+		"    covers: [short]\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if len(m.Tests) != 2 || m.Tests[0].Covers != nil || !slices.Equal(m.Tests[1].Covers, []string{"short"}) {
+		t.Errorf("reads back: %+v", m.Tests)
+	}
+	uncovered := slices.Clone(m.Tests)
+	uncovered[1].Covers = nil
+	if sameTiers(m.Tests, uncovered) {
+		t.Error("tiers that differ in covers are the same")
+	}
+}
+
 // S-0273: a value that is not a list of tiers, and a tier the manifest's
 // validation refuses, are refused with the field and the reason, and nothing
 // is written.

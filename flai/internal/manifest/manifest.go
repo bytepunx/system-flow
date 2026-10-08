@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -618,6 +619,9 @@ type TestTier struct {
 	// AllCommand, when set, runs instead of Command when every tier is asked
 	// for. It takes no placeholders.
 	AllCommand []string `yaml:"all_command,omitempty" json:"all_command,omitempty"`
+	// Covers are the names of the tiers this one runs everything of, so that
+	// when it is selected with them only this one runs (S-0342).
+	Covers []string `yaml:"covers,omitempty" json:"covers,omitempty"`
 }
 
 // The placeholders a tier's command may hold, each as an argument of its own.
@@ -695,15 +699,17 @@ func isFile(fsys fs.FS, name string) bool {
 // when every tier is valid.
 func (m Manifest) TestErrors() []string {
 	var errs []string
+	tiers := map[string]int{}
+	for i, t := range m.Tests {
+		if name := strings.TrimSpace(t.Name); name != "" {
+			if _, ok := tiers[name]; !ok {
+				tiers[name] = i
+			}
+		}
+	}
 	seen := map[string]int{}
 	for i, t := range m.Tests {
-		at := func(field string) string {
-			s := fmt.Sprintf("tests[%d].%s", i, field)
-			if name := strings.TrimSpace(t.Name); name != "" && field != "name" {
-				s += fmt.Sprintf(" (tier %q)", name)
-			}
-			return s
-		}
+		at := func(field string) string { return testField(i, t, field) }
 		name := strings.TrimSpace(t.Name)
 		if name == "" {
 			errs = append(errs, at("name")+" is empty; give the tier a name, such as test or unit")
@@ -742,8 +748,83 @@ func (m Manifest) TestErrors() []string {
 		if f := t.FormatOrDefault(); !slices.Contains(TestFormats, f) {
 			errs = append(errs, fmt.Sprintf("%s %q is not a format flai reads; write %s, or remove it for plain", at("format"), t.Format, strings.Join(TestFormats, ", ")))
 		}
+		named := map[string]bool{}
+		for _, c := range t.Covers {
+			covered := strings.TrimSpace(c)
+			switch _, ok := tiers[covered]; {
+			case named[covered]:
+				errs = append(errs, fmt.Sprintf("%s names %q twice; name each tier it covers once", at("covers"), c))
+			case !ok:
+				errs = append(errs, fmt.Sprintf("%s %q names no tier; write the name of another tier, or remove it", at("covers"), c))
+			case covered == name:
+				errs = append(errs, fmt.Sprintf("%s names the tier itself; name only other tiers, or remove %q", at("covers"), c))
+			}
+			named[covered] = true
+		}
+	}
+	for _, cycle := range coverCycles(m.Tests, tiers) {
+		names := make([]string, len(cycle))
+		for k, i := range cycle {
+			names[k] = strconv.Quote(strings.TrimSpace(m.Tests[i].Name))
+		}
+		first := cycle[0]
+		errs = append(errs, fmt.Sprintf("%s makes a cycle through the tiers %s, which cover one another; remove a name from one of their covers, so that no tier covers one that covers it", testField(first, m.Tests[first], "covers"), strings.Join(names, ", ")))
 	}
 	return errs
+}
+
+// testField is a tier's field as TestErrors names it, such as tests[1].format
+// (tier "unit"), with the tier's name when it has one.
+func testField(i int, t TestTier, field string) string {
+	s := fmt.Sprintf("tests[%d].%s", i, field)
+	if name := strings.TrimSpace(t.Name); name != "" && field != "name" {
+		s += fmt.Sprintf(" (tier %q)", name)
+	}
+	return s
+}
+
+// coverCycles are the groups of tiers that cover one another through covers,
+// each the tiers' indexes in list order and each group once; tiers maps a
+// name to the index of the first tier with it. A tier naming itself is not a
+// cycle here, as TestErrors refuses it on its own.
+func coverCycles(list []TestTier, tiers map[string]int) [][]int {
+	covers := make([][]int, len(list))
+	for i, t := range list {
+		for _, c := range t.Covers {
+			if j, ok := tiers[strings.TrimSpace(c)]; ok && j != i {
+				covers[i] = append(covers[i], j)
+			}
+		}
+	}
+	reaches := make([][]bool, len(list))
+	for i := range list {
+		reaches[i] = make([]bool, len(list))
+		next := slices.Clone(covers[i])
+		for len(next) > 0 {
+			j := next[len(next)-1]
+			next = next[:len(next)-1]
+			if !reaches[i][j] {
+				reaches[i][j] = true
+				next = append(next, covers[j]...)
+			}
+		}
+	}
+	var cycles [][]int
+	reported := make([]bool, len(list))
+	for i := range list {
+		if reported[i] || !reaches[i][i] {
+			continue
+		}
+		var cycle []int
+		for j := range list {
+			if reaches[i][j] && reaches[j][i] {
+				cycle = append(cycle, j)
+				reported[j] = true
+			}
+		}
+		cycles = append(cycles, cycle)
+	}
+	return cycles
 }
 
 // commandProblems are what is wrong with a tier's argument list, each
