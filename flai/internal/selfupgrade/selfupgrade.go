@@ -383,10 +383,46 @@ func Replace(dest string, bin []byte) error {
 	return nil
 }
 
-func (o Options) request(ctx context.Context, url, accept string) (*http.Response, error) {
+// attempts is how many times a request is made before its failure is
+// answered: GitHub sometimes drops a connection mid-body (I-0086).
+const attempts = 3
+
+// retryPause is the wait between attempts; tests set it to zero.
+var retryPause = time.Second
+
+// statusError is a non-2xx answer, which asking again does not change.
+type statusError struct{ msg string }
+
+func (e *statusError) Error() string { return e.msg }
+
+// get answers the body and headers of url, asking again after retryPause
+// when the connection fails or drops mid-body, up to attempts times; a non-2xx
+// answer fails at once.
+func (o Options) get(ctx context.Context, url, accept string) ([]byte, http.Header, error) {
+	for attempt := 1; ; attempt++ {
+		body, header, err := o.fetch(ctx, url, accept)
+		var status *statusError
+		if err == nil || errors.As(err, &status) || ctx.Err() != nil {
+			return body, header, err
+		}
+		if attempt == attempts {
+			return nil, nil, fmt.Errorf("%w (gave up after %d attempts; check the connection and run it again)", err, attempts)
+		}
+		pause := time.NewTimer(retryPause)
+		select {
+		case <-ctx.Done():
+			pause.Stop()
+			return nil, nil, fmt.Errorf("%w (stopped after %d attempts: %w)", err, attempt, ctx.Err())
+		case <-pause.C:
+		}
+	}
+}
+
+// fetch makes one request for url and reads its whole body.
+func (o Options) fetch(ctx context.Context, url, accept string) ([]byte, http.Header, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.Header.Set("Accept", accept)
 	req.Header.Set("User-Agent", "flai-self-upgrade")
@@ -395,32 +431,35 @@ func (o Options) request(ctx context.Context, url, accept string) (*http.Respons
 	}
 	resp, err := o.Client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode/100 != 2 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
-		_ = resp.Body.Close()
 		hint := ""
 		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnauthorized {
 			hint = " (private repository? set GITHUB_TOKEN or run gh auth login)"
 		}
-		return nil, fmt.Errorf("%s: %s%s: %s", url, resp.Status, hint, strings.TrimSpace(string(body)))
+		return nil, nil, &statusError{fmt.Sprintf("%s: %s%s: %s", url, resp.Status, hint, strings.TrimSpace(string(body)))}
 	}
-	return resp, nil
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read %s: %w", url, err)
+	}
+	return body, resp.Header, nil
 }
 
 // getPage decodes one page of a list into v and answers the URL of the next
 // page from the Link header, "" on the last.
 func (o Options) getPage(ctx context.Context, url string, v any) (string, error) {
-	resp, err := o.request(ctx, url, "application/vnd.github+json")
+	body, header, err := o.get(ctx, url, "application/vnd.github+json")
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
-		return "", fmt.Errorf("read %s: %w", url, err)
+	if err := json.Unmarshal(body, v); err != nil {
+		return "", fmt.Errorf("decode %s: %w", url, err)
 	}
-	return nextLink(resp.Header.Get("Link")), nil
+	return nextLink(header.Get("Link")), nil
 }
 
 // nextLink is the rel="next" URL of a Link header, "" when there is none.
@@ -440,10 +479,6 @@ func nextLink(header string) string {
 }
 
 func (o Options) getBytes(ctx context.Context, url string) ([]byte, error) {
-	resp, err := o.request(ctx, url, "application/octet-stream")
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	return io.ReadAll(resp.Body)
+	body, _, err := o.get(ctx, url, "application/octet-stream")
+	return body, err
 }

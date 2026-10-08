@@ -7,12 +7,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -37,8 +39,14 @@ func tarball(t *testing.T, name string, content []byte) []byte {
 // release. It serves the flaiover tags over two pages of matching refs.
 func fakeGitHub(t *testing.T, archive, sums []byte, wantToken string) *httptest.Server {
 	t.Helper()
+	return fakeGitHubBehind(t, archive, sums, wantToken, func(h http.Handler) http.Handler { return h })
+}
+
+// fakeGitHubBehind is fakeGitHub with front standing before its handler.
+func fakeGitHubBehind(t *testing.T, archive, sums []byte, wantToken string, front func(http.Handler) http.Handler) *httptest.Server {
+	t.Helper()
 	var srv *httptest.Server
-	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv = httptest.NewServer(front(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if wantToken != "" && r.Header.Get("Authorization") != "Bearer "+wantToken {
 			http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
 			return
@@ -74,9 +82,60 @@ func fakeGitHub(t *testing.T, archive, sums []byte, wantToken string) *httptest.
 		default:
 			http.NotFound(w, r)
 		}
-	}))
+	})))
 	t.Cleanup(srv.Close)
 	return srv
+}
+
+// dropping stands in front of fakeGitHub: it cuts the first answers to a path
+// off mid-body, as GitHub sometimes does (I-0086), and counts the requests
+// for each path.
+type dropping struct {
+	t     *testing.T
+	next  http.Handler
+	mu    sync.Mutex
+	drops map[string]int // answers still to cut, by path
+	asked map[string]int
+}
+
+func dropFirst(t *testing.T, drops map[string]int) (*dropping, func(http.Handler) http.Handler) {
+	d := &dropping{t: t, drops: drops, asked: map[string]int{}}
+	return d, func(h http.Handler) http.Handler { d.next = h; return d }
+}
+
+func (d *dropping) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	d.mu.Lock()
+	d.asked[r.URL.Path]++
+	drop := d.drops[r.URL.Path] > 0
+	if drop {
+		d.drops[r.URL.Path]--
+	}
+	d.mu.Unlock()
+	if !drop {
+		d.next.ServeHTTP(w, r)
+		return
+	}
+	conn, buf, err := w.(http.Hijacker).Hijack()
+	if err != nil {
+		d.t.Errorf("hijack %s: %v", r.URL.Path, err)
+		return
+	}
+	_, _ = buf.WriteString("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 4096\r\n\r\n[{\"tag_name\":\"flai/v1.")
+	_ = buf.Flush()
+	_ = conn.Close()
+}
+
+func (d *dropping) count(path string) int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.asked[path]
+}
+
+// pauseFor sets the wait between attempts for one test.
+func pauseFor(t *testing.T, pause time.Duration) {
+	old := retryPause
+	retryPause = pause
+	t.Cleanup(func() { retryPause = old })
 }
 
 func versions(rels []Release) string {
@@ -221,5 +280,75 @@ func TestVerifyAndNames(t *testing.T) {
 	}
 	if err := Verify([]byte("y"), "a.tar.gz", ok); err == nil {
 		t.Error("mismatch should fail")
+	}
+}
+
+func TestDroppedAnswerIsAskedAgain(t *testing.T) {
+	pauseFor(t, 0)
+	content := []byte("#!/bin/sh\necho new\n")
+	archive := tarball(t, "flai", content)
+	sum := sha256.Sum256(archive)
+	sums := []byte(hex.EncodeToString(sum[:]) + "  flai_1.10.0_linux_amd64.tar.gz\n")
+	d, front := dropFirst(t, map[string]int{"/repos/o/r/releases": 2, "/assets/archive": 1, "/assets/sums": 1})
+	srv := fakeGitHubBehind(t, archive, sums, "tok", front)
+	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", OS: "linux", Arch: "amd64"}
+
+	rel, err := Resolve(context.Background(), opt)
+	if err != nil || rel.Version != "1.10.0" {
+		t.Fatalf("the first page dropped twice mid-body still resolves the newest: %+v %v", rel, err)
+	}
+	if got := d.count("/repos/o/r/releases"); got != 4 {
+		t.Errorf("three attempts at the first page and one at the second, got %d requests", got)
+	}
+	bin, err := Download(context.Background(), opt, rel)
+	if err != nil || !bytes.Equal(bin, content) {
+		t.Fatalf("an archive and checksums dropped once mid-body still download: %v", err)
+	}
+	if d.count("/assets/archive") != 2 || d.count("/assets/sums") != 2 {
+		t.Errorf("each download asked twice: archive %d, sums %d", d.count("/assets/archive"), d.count("/assets/sums"))
+	}
+}
+
+func TestDroppedAnswerIsAskedThreeTimes(t *testing.T) {
+	pauseFor(t, 0)
+	d, front := dropFirst(t, map[string]int{"/repos/o/r/releases": 3})
+	srv := fakeGitHubBehind(t, nil, nil, "", front)
+
+	_, err := List(context.Background(), Options{Repo: "o/r", APIBase: srv.URL}, TagPrefix)
+	if err == nil || !strings.Contains(err.Error(), "unexpected EOF") || !strings.Contains(err.Error(), "gave up after 3 attempts") {
+		t.Errorf("the last attempt's error, saying how many were made: %v", err)
+	}
+	if got := d.count("/repos/o/r/releases"); got != 3 {
+		t.Errorf("three attempts, got %d requests", got)
+	}
+}
+
+func TestFailedAnswerIsNotAskedAgain(t *testing.T) {
+	pauseFor(t, 0)
+	d, front := dropFirst(t, nil)
+	srv := fakeGitHubBehind(t, nil, nil, "tok", front)
+
+	_, err := List(context.Background(), Options{Repo: "o/r", APIBase: srv.URL}, TagPrefix)
+	if err == nil || !strings.Contains(err.Error(), "404 Not Found (private repository?") || strings.Contains(err.Error(), "attempts") {
+		t.Errorf("a 404 fails at once with its hint: %v", err)
+	}
+	if got := d.count("/repos/o/r/releases"); got != 1 {
+		t.Errorf("a 404 is asked once, got %d requests", got)
+	}
+}
+
+func TestCancelStopsTheWaitToAskAgain(t *testing.T) {
+	pauseFor(t, time.Hour)
+	d, front := dropFirst(t, map[string]int{"/repos/o/r/releases": 1})
+	srv := fakeGitHubBehind(t, nil, nil, "", front)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	_, err := List(ctx, Options{Repo: "o/r", APIBase: srv.URL}, TagPrefix)
+	if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "unexpected EOF") {
+		t.Errorf("the deadline and the dropped answer: %v", err)
+	}
+	if got := d.count("/repos/o/r/releases"); got != 1 {
+		t.Errorf("no attempt after the deadline, got %d requests", got)
 	}
 }
