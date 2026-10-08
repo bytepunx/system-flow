@@ -7,7 +7,7 @@ status: backlog
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:31Z
-updated: 2026-10-08T08:38:58Z
+updated: 2026-10-08T08:41:08Z
 transitions: []
 tags: [flai, flaiover]
 topics: [cli, dashboard, git]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-08T04:33:22Z
 forecast:
   duration: 51m
-  delivery: 2026-10-08T14:48:00Z
-  basis: "Its own forecast of 51m; 21st in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341, S-0344, S-0342, S-0343, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0288, S-0289, S-0290, S-0297, S-0304, S-0305, S-0306, S-0313 and S-0334."
+  delivery: 2026-10-08T14:59:00Z
+  basis: "Its own forecast of 51m; 22nd in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341, S-0344, S-0345, S-0342, S-0343, S-0290, S-0288, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0297, S-0304, S-0305, S-0306, S-0313 and S-0334."
   by: flai
-  at: 2026-10-08T08:38:58Z
+  at: 2026-10-08T08:41:08Z
 finalized:
   by: orchestrator
   at: 2026-10-07T20:24:19Z

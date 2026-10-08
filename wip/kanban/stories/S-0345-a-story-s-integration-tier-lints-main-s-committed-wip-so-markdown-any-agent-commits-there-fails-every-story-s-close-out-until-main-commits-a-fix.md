@@ -3,11 +3,14 @@ id: S-0345
 type: story
 nature: remediation
 title: A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-08T08:08:19Z
-updated: 2026-10-08T08:40:10Z
-transitions: []
+updated: 2026-10-08T08:41:08Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:40:14Z
+    by: alex
 tags: [flai]
 topics: [testing]
 touches: [flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/repo_test.go, scripts/lint-md.sh, scripts/README.md, design/system/flai-cli.md, design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/summary.md]
@@ -22,20 +25,29 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 7
+      seconds: 63
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 39
-          cache_read: 1177495
-          cache_write: 6618
-          cost: 0.2918
+          input: 23
+          output: 330
+          cache_read: 5524560
+          cache_write: 9716
+          cost: 1.3636
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h12m
     by: flai
     at: 2026-10-08T08:08:19Z
+  value: 180
+  by: planner-S-0345
+  at: 2026-10-08T08:41:04Z
+forecast:
+  duration: 30m
+  delivery: 2026-10-08T09:17:00Z
+  basis: "Its own forecast of 30m; 2nd in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341 and S-0344."
+  by: flai
+  at: 2026-10-08T08:41:08Z
 finalized:
   by: alex
   at: 2026-10-08T08:40:10Z
@@ -59,3 +71,30 @@ This story remediates [I-0117](../../../design/issues/I-0117-a-story-s-integrati
 ## Notes
 
 Cost of delay inputs set by flai from I-0117. time_lost_per_cycle 1h12m: 18m per occurrence × 4 occurrences ÷ 1 cycle of 168h (first reported 2026-10-08T04:12:50Z, 0.2 days before this story; under one cycle counts as one).
+
+### Planning
+
+Proposed fix, from I-0117's instances: the two whole-repository markdown checks a close-out runs scope themselves to the story when `CLOSE_OUT_STORY` is set, as `TestMonorepoIsClean` and `scripts/check.sh` already do (S-0249, [ADR-0085](../../../design/adrs/0085-a-close-out-s-flai-check-reports-findings-outside-the-story-as-notes-and.md)). A finding in a `wip/` file the story does not change is a note, not a failure. Without the variable, as in `make lint-md` and CI, every file still counts, so main's `wip/` stays linted there. The two checks:
+
+- `TestRepositoryLintsClean` in `flai/internal/mdlint`, which the integration tier runs: the failure in all four instances.
+- `scripts/lint-md.sh` with no files, which `scripts/smoke.sh` runs right after integration: it lints main's `wip/` the same way, and failed close-outs on it under I-0027.
+
+`flai check` in the close-out is already scoped, and `flai test`'s markdown tier lints only the files the branch changes, so neither needs a change.
+
+Touches, file by file; no folder touch was kept:
+
+| Touch | From | Why |
+|-------|------|-----|
+| `flai/internal/mdlint/mdlint_test.go` | design (I-0117 names the test) | holds `TestRepositoryLintsClean` today |
+| `flai/internal/mdlint/repo_test.go` | layout | new external test package: `workitem` imports `mdlint`, so the internal test cannot import `storygit` |
+| `scripts/lint-md.sh` | layout | smoke's whole-repository lint |
+| `scripts/README.md` | layout | documents `lint-md.sh`; S-0340 also touches it, so this story is held while S-0340 is in progress |
+| `design/system/flai-cli.md` | co-change, design | the `flai verify` row names the checks that read `CLOSE_OUT_STORY`; a shared path |
+| `design/issues/I-0117-…md` | criterion 2 | closed by `flai issue close` |
+| `design/issues/summary.md` | criterion 2, co-change | regenerated when the issue closes |
+
+`flai touches suggest` found no paths before these were declared. Seeded with them, it lists mostly `docs/users/flai.md` (33%), operator and dashboard docs, and other issues. `docs/users/flai.md` already says the tiers' checks count only what is the story's, and the rest are not this change, so none was added. `scripts/smoke.sh` was left out on purpose: S-0340 changes it, and the variable reaches `lint-md.sh` through the environment.
+
+Forecast: `flai forecast` gave 17m, from 110 s per unit of size times size 9. Adjusted to 30m. Four close-out scoping stories like this one, S-0279, S-0280, S-0318, and S-0323, took 12 to 49 minutes of agent time, median about 24m. This change also runs the integration and smoke tiers at close-out because it changes `flai/`. The delivery is flai's, 2026-10-08T13:51Z, moved by the 13m added.
+
+Cost of delay: 180 USD a week, as `flai cod` worked it out from the operator's input of 1h12m lost per 168h cycle at 150 USD an hour. It stands. Every story that changes `flai/` can meet this failure while any agent writes to `wip/` on main, so the input may undercount, but it is the operator's to change.
