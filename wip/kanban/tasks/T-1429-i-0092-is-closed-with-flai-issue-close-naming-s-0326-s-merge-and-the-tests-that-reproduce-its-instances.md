@@ -19,6 +19,10 @@ after: [T-1428]
 
 ## Work
 
+Close I-0092 with `flai issue close I-0092 --reason ... --commit` in the story's worktree, naming S-0326 (ADR-0126) and the tests in `flai/cmd/stream_sync_test.go` that reproduce each instance. Waits for T-1428, whose tests the reason names.
+
 ## Done when
+
+- I-0092 is closed on `story/S-0297` and `design/issues/summary.md` no longer lists it as open.
 
 ## Notes

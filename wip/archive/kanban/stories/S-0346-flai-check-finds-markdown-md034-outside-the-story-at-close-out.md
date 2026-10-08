@@ -3,10 +3,10 @@ id: S-0346
 type: story
 nature: improvement
 title: "flai check finds `markdown.MD034` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-10-08T08:08:21Z
-updated: 2026-10-08T09:42:18Z
+updated: 2026-10-08T09:44:45Z
 transitions:
   - to: ready
     at: 2026-10-08T08:59:57Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-08T09:42:18Z
     by: agent-S-0346
+  - to: done
+    at: 2026-10-08T09:44:45Z
+    by: orchestrator
 tags: [flai, mdlint, serve]
 topics: [markdown, planning]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, design/system/agent-narrative.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/summary.md, flai/internal/mdlint/rules.go]
@@ -124,3 +127,12 @@ Assumptions:
 
 - Agent-written `activity_log` summaries stay refused on a finding, as `tooling.md` says. Only the text flai takes from a run is quoted.
 - `threads.MirrorNarrative` writes a narrative's `## Open questions` without `LintGuard`. The titles it copies were already linted in the thread file, and a close-out leaves out findings on another open story's narrative (ADR-0123). So it is out of scope.
+
+### Accepted by the orchestrator
+
+- Verified: 0375ee8133ede0b34f109cb0f9be69d542976b4e
+- At: 2026-10-08T09:44:45Z
+
+Verdict: accept. flai verify passed every step at the branch head 0375ee81, and the verifier matched both criteria to the diff. The agent-facing activity_log still refuses a finding. Minor gap: no test pins that refusal.
+- 1: flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go, flai/internal/mdlint/inline.go, flai/internal/mdlint/rules.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, design/system/agent-narrative.md
+- 2: design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/summary.md

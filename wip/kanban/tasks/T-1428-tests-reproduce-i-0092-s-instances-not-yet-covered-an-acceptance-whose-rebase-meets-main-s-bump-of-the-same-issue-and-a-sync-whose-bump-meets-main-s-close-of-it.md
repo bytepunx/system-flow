@@ -3,12 +3,18 @@ id: T-1428
 type: task
 nature: improvement
 title: "Tests reproduce I-0092's instances not yet covered: an acceptance whose rebase meets main's bump of the same issue, and a sync whose bump meets main's close of it"
-status: backlog
+status: in-progress
 parent: S-0297
 owner: alex
 created: 2026-10-08T09:44:05Z
-updated: 2026-10-08T09:44:05Z
-transitions: []
+updated: 2026-10-08T09:44:41Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:44:41Z
+    by: agent-S-0297
+  - to: in-progress
+    at: 2026-10-08T09:44:41Z
+    by: agent-S-0297
 stream: S-0297
 tags: []
 touches: [flai/cmd/stream_sync_test.go]
