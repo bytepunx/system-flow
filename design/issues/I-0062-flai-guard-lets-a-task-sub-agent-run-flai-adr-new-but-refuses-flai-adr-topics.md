@@ -2,12 +2,12 @@
 id: I-0062
 title: flai guard lets a task sub-agent run flai adr new but refuses flai adr topics
 class: defect
-status: open
+status: closed
 count: 3
 cost: 4m
 first_reported: 2026-10-03T07:27:30Z
 last_reported: 2026-10-06T06:06:28Z
-updated: 2026-10-06T09:56:50Z
+updated: 2026-10-08T07:22:52Z
 ---
 
 # I-0062 flai guard lets a task sub-agent run flai adr new but refuses flai adr topics
@@ -32,3 +32,4 @@ T-0894: the guard refused the task sub-agent's flai adr new, even with --print-b
 ## Remediation
 
 Story S-0287 remediates this issue, created from it at 2026-10-06T09:56:50Z.
+Closed 2026-10-08T07:22:52Z: S-0287 fixed it (ADR-0127): flai guard now lets a sub-agent run flai adr new, flai adr topics, and flai adr accept, and call adr_new, so a task sub-agent records its ADR through flai rather than copying internal/adr by hand or guessing the number. It refuses only --commit, --autocommit, and adr_new's commit, since the commit stays the story's agent's; TestGuardLetsASubAgentWriteAnADRButNotCommitIt in flai/cmd/guard_test.go reproduces the instances. delegation.md and its template copy say so.
