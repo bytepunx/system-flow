@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 107.8134
-accrued_seconds: 80784
-tasks_completed: 147
-last_run: 2026-10-07T23:49:01Z
+accrued_cost: 111.1321
+accrued_seconds: 81204
+tasks_completed: 155
+last_run: 2026-10-07T23:56:01Z
 ---
 
 # Orchestrator activity
@@ -1040,6 +1040,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0314
 - Seconds: 218
 - Cost: 1.2848 USD, estimated
+
+### 2026-10-07T23:49:17Z
+
+- Summary: Published under judgement after accepting S-0314: 1 pending, 12.5 USD/week; flaiover 0.41.4→0.41.5 (flaiover/v0.41.5); bundled S-0314; pushed
+- Items: S-0314
+- Seconds: 16
+- Cost: 0.3376 USD, estimated
+
+### 2026-10-07T23:49:33Z
+
+- Summary: Resolved my own draft threads TH-0255 (S-0310) and TH-0289 (S-0313), settled once both were planned and finalized, so they no longer block acceptance
+- Items: S-0310, S-0313
+- Seconds: 16
+- Cost: 0.1137 USD, estimated
+
+### 2026-10-07T23:53:16Z
+
+- Summary: Answered TH-0340, citing design/adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md
+- Items: S-0315
+- Seconds: 223
+- Cost: 0.4584 USD, estimated
+
+### 2026-10-07T23:53:27Z
+
+- Summary: Approved planner-S-0315's plan on TH-0340 and resolved it (a test of I-0089's case against ADR-0098, then close; 15m, 7.50 USD/week; acceptance left to the operator, as the goal reserves whether ADR-0098 closes I-0089). Finalized S-0315 and resolved my draft thread TH-0299. Promoted S-0315 to ready, flai promote --candidates rank 1 (15m), and applied the throughput order: S-0315 alone
+- Items: S-0315
+- Seconds: 11
+- Cost: 0.2359 USD, estimated
+
+### 2026-10-07T23:53:29Z
+
+- Summary: Started the planner for S-0316 under plan_backlog_stories: next story flai plan --candidates lists
+- Items: S-0316
+- Seconds: 2
+- Cost: 0.1191 USD, estimated
+
+### 2026-10-07T23:55:47Z
+
+- Summary: Answered TH-0341, citing design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md
+- Items: S-0316
+- Seconds: 138
+- Cost: 1.5592 USD, estimated
+
+### 2026-10-07T23:55:58Z
+
+- Summary: Approved planner-S-0316's plan on TH-0341 and resolved it (wait for the name with a limit and roll back, the direction I-0094 recommends; 2 tasks, 30m, 30 USD/week). Finalized S-0316, resolved my draft thread TH-0300, and promoted it to ready, flai promote --candidates rank 1 (30m); applied the throughput order: S-0316 alone. In-progress is full (3/3)
+- Items: S-0316
+- Seconds: 11
+- Cost: 0.4948 USD, estimated
+
+### 2026-10-07T23:56:01Z
+
+- Summary: Started the planner for S-0317 under plan_backlog_stories: next story flai plan --candidates lists
+- Items: S-0317
+- Seconds: 3
+- Cost: 0.0000 USD
 
 ## Refusals
 

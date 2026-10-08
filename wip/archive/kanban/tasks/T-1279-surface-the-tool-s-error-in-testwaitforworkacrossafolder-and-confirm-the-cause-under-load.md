@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 72
-      cache_read: 979173
-      cache_write: 14377
-      cost: 0.4376
+      input: 14
+      output: 3824
+      cache_read: 962438
+      cache_write: 31114
+      cost: 0.5179
 ---
 # T-1279 Surface the tool's error in TestWaitForWorkAcrossAFolder and confirm the cause under load
 

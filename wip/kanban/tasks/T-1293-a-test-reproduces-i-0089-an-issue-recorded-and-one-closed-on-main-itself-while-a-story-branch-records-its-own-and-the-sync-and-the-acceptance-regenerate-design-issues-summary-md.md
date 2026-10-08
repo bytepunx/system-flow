@@ -3,15 +3,35 @@ id: T-1293
 type: task
 nature: remediation
 title: "A test reproduces I-0089: an issue recorded and one closed on main itself while a story branch records its own, and the sync and the acceptance regenerate design/issues/summary.md"
-status: backlog
+status: done
 parent: S-0315
 owner: alex
 created: 2026-10-07T23:43:55Z
-updated: 2026-10-07T23:43:55Z
-transitions: []
+updated: 2026-10-07T23:57:18Z
+transitions:
+  - to: ready
+    at: 2026-10-07T23:54:13Z
+    by: agent-S-0315
+  - to: in-progress
+    at: 2026-10-07T23:54:14Z
+    by: agent-S-0315
+  - to: done
+    at: 2026-10-07T23:57:18Z
+    by: agent-S-0315
 stream: S-0315
 tags: [cli]
 touches: [flai/cmd/stream_sync_test.go]
+usage:
+  source: log
+  seconds: 184
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 55
+      cache_read: 818223
+      cache_write: 9292
+      cost: 0.3651
 ---
 # T-1293 A test reproduces I-0089: an issue recorded and one closed on main itself while a story branch records its own, and the sync and the acceptance regenerate design/issues/summary.md
 

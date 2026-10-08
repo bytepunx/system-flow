@@ -24,15 +24,15 @@ touches: [design/issues/I-0102-testwaitforworkacrossafolder-fails-under-the-clos
 after: [T-1280]
 usage:
   source: log
-  seconds: 7
+  seconds: 8
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 31
-      cache_read: 352276
-      cache_write: 2514
-      cost: 0.1563
+      input: 5
+      output: 1365
+      cache_read: 343678
+      cache_write: 11111
+      cost: 0.185
 ---
 # T-1281 Close I-0102 with what fixed it
 

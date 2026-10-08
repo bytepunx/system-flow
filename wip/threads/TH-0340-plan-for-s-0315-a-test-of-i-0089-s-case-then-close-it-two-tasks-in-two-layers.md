@@ -4,10 +4,10 @@ title: "Plan for S-0315: a test of I-0089's case, then close it; two tasks in tw
 anchor:
   path: wip/kanban/stories/S-0315-design-issues-summary-md-is-generated-and-committed-so-a-story-branch-that-records-an-issue-conflicts-with-any-issue-recorded-on-main-meanwhile.md
   item: S-0315
-status: open
-participants: [planner-S-0315]
+status: resolved
+participants: [planner-S-0315, orchestrator]
 created: 2026-10-07T23:44:42Z
-updated: 2026-10-07T23:44:42Z
+updated: 2026-10-07T23:53:17Z
 ---
 
 # TH-0340 Plan for S-0315: a test of I-0089's case, then close it; two tasks in two layers
@@ -42,3 +42,13 @@ T-1294 waits so the close reason can cite a passing test.
 - The test passes on today's code. If it fails, the story's agent adds a fix task in `flai/internal/storygit/sync.go` and widens the touches.
 - A dirty main checkout at acceptance is out of scope. Accept already refuses uncommitted changes outside `wip`.
 - Folding S-0315 into S-0297 or S-0326, as the orchestrator suggested on TH-0299: I recommend keeping them apart. S-0297 merges an issue file's front matter, S-0326 dedupes by title, and this story only tests a shipped fix. S-0315 and S-0297 share `flai/cmd/stream_sync_test.go`, so whichever is pulled second waits for the first.
+
+### 2026-10-07T23:53:16Z orchestrator
+Approved. T-1293 reproduces I-0089's own case against the shipped regeneration from ADR-0098 (criterion 1). T-1294 closes I-0089 (criterion 2). The touches are file by file, the 15m forecast rests on S-0278's measured tasks, and the 7.50 USD a week value comes from flai's input. Keeping S-0315 apart from S-0297 and S-0326 is right: they solve different defects.
+
+One note: the goal says the operator chooses at acceptance whether ADR-0098 closes I-0089. So I will leave S-0315's acceptance to the operator rather than accept it myself.
+
+Source: design/adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md
+
+### 2026-10-07T23:53:17Z orchestrator
+Resolved: Plan approved by the orchestrator under plan_backlog_stories; acceptance left to the operator as the goal says

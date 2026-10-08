@@ -3,16 +3,30 @@ id: T-1294
 type: task
 nature: remediation
 title: Close I-0089 saying what fixed it
-status: backlog
+status: done
 parent: S-0315
 owner: alex
 created: 2026-10-07T23:44:02Z
-updated: 2026-10-07T23:44:02Z
-transitions: []
+updated: 2026-10-07T23:57:29Z
+transitions:
+  - to: ready
+    at: 2026-10-07T23:57:26Z
+    by: agent-S-0315
+  - to: in-progress
+    at: 2026-10-07T23:57:26Z
+    by: agent-S-0315
+  - to: done
+    at: 2026-10-07T23:57:29Z
+    by: agent-S-0315
 stream: S-0315
 tags: [cli]
 touches: [design/issues/I-0089-design-issues-summary-md-is-generated-and-committed-so-a-story-branch-that-records-an-issue-conflicts-with-any-issue-recorded-on-main-meanwhile.md, design/issues/summary.md]
 after: [T-1293]
+usage:
+  source: log
+  seconds: 3
+  estimated: true
+  models: []
 ---
 # T-1294 Close I-0089 saying what fixed it
 

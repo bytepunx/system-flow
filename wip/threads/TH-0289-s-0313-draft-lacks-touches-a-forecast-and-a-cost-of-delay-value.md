@@ -4,10 +4,10 @@ title: S-0313 draft lacks touches, a forecast, and a cost of delay value
 anchor:
   path: wip/kanban/stories/S-0313-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md
   item: S-0313
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-07T14:33:40Z
-updated: 2026-10-07T14:33:40Z
+updated: 2026-10-07T23:49:29Z
 ---
 
 # TH-0289 S-0313 draft lacks touches, a forecast, and a cost of delay value
@@ -26,3 +26,6 @@ flai promote --drafts lists this draft as incomplete. It lacks:
 - a cost of delay value
 
 I cannot finalize it until those are set, and starting the planner for a story is not mine to do. I leave the draft as it is.
+
+### 2026-10-07T23:49:29Z orchestrator
+Resolved: Settled: planner-S-0313 set touches, a 45m forecast, and a 10 USD/week value, and the orchestrator finalized S-0313

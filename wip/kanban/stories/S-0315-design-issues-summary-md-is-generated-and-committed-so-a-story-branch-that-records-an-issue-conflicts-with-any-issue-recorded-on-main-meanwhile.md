@@ -3,11 +3,17 @@ id: S-0315
 type: story
 nature: improvement
 title: design/issues/summary.md is generated and committed, so a story branch that records an issue conflicts with any issue recorded on main meanwhile
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:45Z
-updated: 2026-10-07T23:47:55Z
-transitions: []
+updated: 2026-10-07T23:57:31Z
+transitions:
+  - to: ready
+    at: 2026-10-07T23:53:23Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-07T23:53:29Z
+    by: agent-S-0315
 tags: [cli]
 topics: [cli, git, continuous-improvement]
 touches: [flai/cmd/stream_sync_test.go, design/issues/I-0089-design-issues-summary-md-is-generated-and-committed-so-a-story-branch-that-records-an-issue-conflicts-with-any-issue-recorded-on-main-meanwhile.md, design/issues/summary.md]
@@ -17,21 +23,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 242
+  estimated: true
+  turns:
+    - day: 2026-10-07
+      test_runs: 3
+      hand_edits: 1
+      work: 18
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 290
+      cache_read: 1954796
+      cache_write: 128956
+      cost: 0.9194
   strategic:
     - kind: orchestrator
-      seconds: 8
+      seconds: 242
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 84
-          cache_read: 922395
-          cache_write: 6643
-          cost: 0.2289
-draft: true
+          input: 18
+          output: 239
+          cache_read: 3718756
+          cache_write: 28110
+          cost: 0.9232
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
@@ -46,6 +63,9 @@ forecast:
   basis: "Its own forecast of 15m; 21st in the pull order with an in-progress limit of 3, behind S-0232, S-0310, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0309, S-0312 and S-0313."
   by: flai
   at: 2026-10-07T23:47:55Z
+finalized:
+  by: orchestrator
+  at: 2026-10-07T23:53:18Z
 ---
 # S-0315 design/issues/summary.md is generated and committed, so a story branch that records an issue conflicts with any issue recorded on main meanwhile
 
@@ -58,8 +78,8 @@ Directions to weigh: `flai stream sync` and `flai accept` regenerate `summary.md
 S-0278 built the first direction ([ADR-0098](../adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md)) for I-0074, which has the same cause. The operator chooses at its acceptance whether that closes this issue too.
 
 ## Acceptance criteria
-- [ ] The cause I-0089 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0089 is closed with `flai issue close I-0089 --reason` saying what fixed it
+- [x] The cause I-0089 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0089 is closed with `flai issue close I-0089 --reason` saying what fixed it
 
 ## Tasks
 - T-1293 A test reproduces I-0089: an issue recorded and one closed on main itself while a story branch records its own, and the sync and the acceptance regenerate design/issues/summary.md

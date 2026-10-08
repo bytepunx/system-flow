@@ -3,10 +3,10 @@ id: S-0310
 type: story
 nature: remediation
 title: TestWaitForWorkAcrossAFolder fails under the close-out's full Go run when the host is loaded
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T06:48:45Z
-updated: 2026-10-07T23:40:00Z
+updated: 2026-10-08T00:00:19Z
 transitions:
   - to: ready
     at: 2026-10-07T23:31:30Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-07T23:31:39Z
     by: agent-S-0310
+  - to: review
+    at: 2026-10-07T23:59:45Z
+    by: agent-S-0310
+  - to: done
+    at: 2026-10-08T00:00:19Z
+    by: orchestrator
 tags: [flai, mcp, tests]
-touches: [flai/internal/mcpserver/folder_test.go, design/issues/I-0102-testwaitforworkacrossafolder-fails-under-the-close-out-s-full-go-run-when-the-host-is-loaded.md, design/issues/summary.md]
+touches: [flai/internal/mcpserver/folder_test.go, design/issues/I-0102-testwaitforworkacrossafolder-fails-under-the-close-out-s-full-go-run-when-the-host-is-loaded.md, design/issues/summary.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,31 +29,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 501
-  estimated: true
+  seconds: 1700
   turns:
     - day: 2026-10-07
-      ceremony: 1
+      ceremony: 3
       hand_edits: 1
-      work: 27
+      work: 39
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 378
-      cache_read: 3058735
-      cache_write: 164139
-      cost: 1.4196
+      input: 88
+      output: 24161
+      cache_read: 6081113
+      cache_write: 196594
+      cost: 3.2725
   strategic:
     - kind: orchestrator
-      seconds: 189
+      seconds: 197
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 46
-          output: 736
-          cache_read: 8174751
-          cache_write: 29345
-          cost: 2.0219
+          input: 47
+          output: 770
+          cache_read: 8403441
+          cache_write: 31429
+          cost: 2.0788
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -103,3 +108,13 @@ Figures:
 
 - Forecast: flai gave 12m (134 s per unit of size over 4 done remediation stories, size 5). Raised to 1h, because reproducing a failure that needs a loaded host takes repeated runs of the mcpserver package, 178s under load in I-0102, before the fix and after it. Delivery 2026-10-08T06:15:00Z is flai's 05:25, 19th in the pull order, moved by the 48m added.
 - Cost of delay value: 25 USD a week, as `flai cod` gives it from the operator's input, 10m lost per 168h cycle at 150 USD an hour. It stands: one occurrence so far, each costing a re-run of the close-out.
+
+### Accepted by the orchestrator
+
+- Verified: 0118f54c7c7b5d624c38a7f4aa8169737fc3cda9
+- At: 2026-10-08T00:00:19Z
+
+Verdict: meets both criteria (verifier at 0118f54c7c7b5d624c38a7f4aa8169737fc3cda9; flai verify passed every step at that commit). The reproduction test characterizes the server's failure on a truncated story file; a race test of the helper itself does not fit, as the narrative records. The I-0079 bump is the close-out's own record.
+
+- 1: flai/internal/mcpserver/folder_test.go
+- 2: design/issues/I-0102-testwaitforworkacrossafolder-fails-under-the-close-out-s-full-go-run-when-the-host-is-loaded.md, design/issues/summary.md

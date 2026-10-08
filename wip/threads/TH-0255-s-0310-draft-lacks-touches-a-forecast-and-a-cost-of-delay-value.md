@@ -4,10 +4,10 @@ title: S-0310 draft lacks touches, a forecast, and a cost of delay value
 anchor:
   path: wip/kanban/stories/S-0310-testwaitforworkacrossafolder-fails-under-the-close-out-s-full-go-run-when-the-host-is-loaded.md
   item: S-0310
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-07T08:20:36Z
-updated: 2026-10-07T08:20:36Z
+updated: 2026-10-07T23:49:28Z
 ---
 
 # TH-0255 S-0310 draft lacks touches, a forecast, and a cost of delay value
@@ -26,3 +26,6 @@ flai promote --drafts lists this draft as incomplete. It lacks:
 - a cost of delay value
 
 I cannot finalize it until those are set, and starting the planner for a story is not mine to do. I leave the draft as it is.
+
+### 2026-10-07T23:49:28Z orchestrator
+Resolved: Settled: planner-S-0310 set touches, a 1h forecast, and a 25 USD/week value, and the orchestrator finalized S-0310

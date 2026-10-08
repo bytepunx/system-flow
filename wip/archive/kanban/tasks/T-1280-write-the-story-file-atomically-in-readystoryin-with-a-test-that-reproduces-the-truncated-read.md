@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 16
-      cache_read: 305018
-      cache_write: 2900
-      cost: 0.1356
+      output: 1185
+      cache_read: 298275
+      cache_write: 9643
+      cost: 0.1605
 ---
 # T-1280 Write the story file atomically in readyStoryIn, with a test that reproduces the truncated read
 
