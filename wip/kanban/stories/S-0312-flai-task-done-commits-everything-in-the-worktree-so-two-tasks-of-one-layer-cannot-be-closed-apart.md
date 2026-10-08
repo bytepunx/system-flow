@@ -6,7 +6,7 @@ title: flai task done commits everything in the worktree, so two tasks of one la
 status: ready
 owner: alex
 created: 2026-10-07T14:26:01Z
-updated: 2026-10-08T04:23:11Z
+updated: 2026-10-08T04:25:41Z
 transitions:
   - to: ready
     at: 2026-10-08T04:15:49Z
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-10-07T23:35:29Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T05:37:00Z
+  delivery: 2026-10-08T05:39:00Z
   basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319 and S-0309."
   by: flai
-  at: 2026-10-08T04:23:11Z
+  at: 2026-10-08T04:25:41Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:15:45Z

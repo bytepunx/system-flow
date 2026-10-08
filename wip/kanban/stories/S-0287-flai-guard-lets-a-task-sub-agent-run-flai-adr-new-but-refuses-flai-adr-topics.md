@@ -3,11 +3,14 @@ id: S-0287
 type: story
 nature: remediation
 title: flai guard lets a task sub-agent run flai adr new but refuses flai adr topics
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-06T09:56:50Z
-updated: 2026-10-08T04:23:11Z
-transitions: []
+updated: 2026-10-08T04:25:41Z
+transitions:
+  - to: ready
+    at: 2026-10-08T04:24:25Z
+    by: orchestrator
 tags: [cli, flai, guard]
 topics: [cli, conventions, template]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/agent-context.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md, design/issues/summary.md]
@@ -22,16 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 136
+      seconds: 212
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 187
-          cache_read: 3284903
-          cache_write: 12627
-          cost: 0.8128
-draft: true
+          input: 62
+          output: 939
+          cache_read: 19442604
+          cache_write: 26355
+          cost: 4.7971
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
@@ -42,10 +44,13 @@ cost_of_delay:
   at: 2026-10-07T23:18:54Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T10:41:00Z
-  basis: "Its own forecast of 45m; 15th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0309, S-0312, S-0326, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239 and S-0241."
+  delivery: 2026-10-08T06:15:00Z
+  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320, S-0319, S-0309, S-0312 and S-0326."
   by: flai
-  at: 2026-10-08T04:23:11Z
+  at: 2026-10-08T04:25:41Z
+finalized:
+  by: orchestrator
+  at: 2026-10-08T04:24:21Z
 ---
 # S-0287 flai guard lets a task sub-agent run flai adr new but refuses flai adr topics
 
