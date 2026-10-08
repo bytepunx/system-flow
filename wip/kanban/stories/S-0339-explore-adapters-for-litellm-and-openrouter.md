@@ -6,7 +6,7 @@ title: Explore Adapters for LiteLLM and OpenRouter
 status: ready
 owner: alex
 created: 2026-10-08T07:17:16Z
-updated: 2026-10-08T07:21:43Z
+updated: 2026-10-08T07:21:53Z
 transitions:
   - to: ready
     at: 2026-10-08T07:17:18Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T07:21:19Z
 forecast:
   duration: 1h
-  delivery: 2026-10-08T09:45:00Z
-  basis: "flai forecast's 39m (median 332 s per unit of size over 4 done research stories, size 7), raised to 1h for two vendors, several harnesses, ADRs, and an epic against S-0193's 35m for one topic, with delivery after flai's 09:06Z plus that and the operator's decision wait on T-1336."
-  by: planner-S-0339
-  at: 2026-10-08T07:21:19Z
+  delivery: 2026-10-08T09:06:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 3, behind S-0232, S-0287 and S-0326."
+  by: flai
+  at: 2026-10-08T07:21:53Z
 ---
 # S-0339 Explore Adapters for LiteLLM and OpenRouter
 
