@@ -548,3 +548,17 @@ Questions only the operator can answer, each with the recommended answer first:
 3. **A harness without a guard hook or a permission handler.** May it run a story's agent, and with what limits? Recommended: the story's agent may run, its roles may not, unless `agent.harnesses.<name>.guard: none` is set on the host; a protected write on such a harness is refused unless `auto-approve` is on.
 4. **Cost when a harness logs none.** The gateway's spend log, a price table, or an estimate. Recommended: the gateway's spend log per provider, keyed by a virtual key per project, named on `usage` as its source; a price table is not added.
 5. **A paid trial before the epic.** The spike needs a LiteLLM proxy, free, and an OpenRouter key with a few dollars of credit. Recommended: yes, both, in the spike story.
+
+## Decision
+
+The five questions at the end of [Recommendation](#recommendation) were put to the operator on TH-0368 on 2026-10-08, recommendation first. The first four are drafted as proposed ADRs, to be accepted as the operator answers; the fifth, the paid trial, is spend and the operator's alone, recorded in the epic.
+
+| Question | ADR | Status |
+|----------|-----|--------|
+| 1, the harness, provider, and model split, with `providers` on the host | [ADR-0129](../adrs/0129-a-story-s-agent-names-a-provider-beside-its-harness-and-model-and-the-providers.md) | proposed |
+| 2, the neutral contracts every harness meets flai through | [ADR-0130](../adrs/0130-every-harness-meets-flai-through-neutral-contracts-an-adapter-s-capabilities-a.md) | proposed |
+| 3, a harness without a guard hook or a permission handler | [ADR-0131](../adrs/0131-a-harness-without-a-guard-hook-runs-a-story-s-agent-but-none-of-its-roles.md) | proposed |
+| 4, where a story's cost comes from, `priced_by` on `usage` | [ADR-0132](../adrs/0132-a-story-s-cost-comes-from-its-provider-s-spend-log-when-it-has-a-provider-from.md) | proposed |
+| 5, a paid trial in the spike story | none; the epic's notes | awaiting the operator |
+
+The order the epic builds in, question 2, is the recommendation's: the spike, then Claude Code over a gateway with the provider split and the neutral contracts, then Codex CLI; OpenCode on demand; Goose and a loop of flai's own not now.
