@@ -3,15 +3,35 @@ id: T-1304
 type: task
 nature: improvement
 title: scripts/flaiover-lint.sh runs prettier --check and eslint on the flaiover files it is given
-status: backlog
+status: done
 parent: S-0319
 owner: alex
 created: 2026-10-08T00:14:59Z
-updated: 2026-10-08T00:14:59Z
-transitions: []
+updated: 2026-10-08T05:53:15Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:52:39Z
+    by: agent-S-0319
+  - to: in-progress
+    at: 2026-10-08T05:52:39Z
+    by: agent-S-0319
+  - to: done
+    at: 2026-10-08T05:53:15Z
+    by: agent-S-0319
 stream: S-0319
 tags: [flaiover, testing, scripts]
 touches: [scripts/flaiover-lint.sh]
+usage:
+  source: log
+  seconds: 36
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 20
+      cache_read: 386117
+      cache_write: 6796
+      cost: 0.1751
 ---
 # T-1304 scripts/flaiover-lint.sh runs prettier --check and eslint on the flaiover files it is given
 

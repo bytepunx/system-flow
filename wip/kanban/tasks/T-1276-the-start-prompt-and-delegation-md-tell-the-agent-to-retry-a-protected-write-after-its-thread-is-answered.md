@@ -3,12 +3,18 @@ id: T-1276
 type: task
 nature: improvement
 title: The start prompt and delegation.md tell the agent to retry a protected write after its thread is answered
-status: backlog
+status: in-progress
 parent: S-0309
 owner: alex
 created: 2026-10-07T23:27:31Z
-updated: 2026-10-07T23:27:31Z
-transitions: []
+updated: 2026-10-08T05:53:19Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:53:19Z
+    by: agent-S-0309
+  - to: in-progress
+    at: 2026-10-08T05:53:19Z
+    by: agent-S-0309
 stream: S-0309
 tags: [harness, conventions, permission-prompt]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md]

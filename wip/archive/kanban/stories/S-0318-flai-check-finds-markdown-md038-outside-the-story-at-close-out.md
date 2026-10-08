@@ -3,10 +3,10 @@ id: S-0318
 type: story
 nature: improvement
 title: "flai check finds `markdown.MD038` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T18:59:49Z
-updated: 2026-10-08T04:46:45Z
+updated: 2026-10-08T05:53:29Z
 transitions:
   - to: ready
     at: 2026-10-08T00:11:45Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-08T04:34:02Z
     by: agent-S-0318
+  - to: review
+    at: 2026-10-08T05:52:14Z
+    by: agent-S-0318
+  - to: done
+    at: 2026-10-08T05:53:29Z
+    by: orchestrator
 tags: [flai, template]
 topics: [cli, conventions, template]
-touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0096-flai-check-finds-markdown-md038-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0096-flai-check-finds-markdown-md038-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md, design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,30 +30,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 689
-  estimated: true
+  seconds: 2932
   turns:
     - day: 2026-10-08
-      hand_edits: 1
-      work: 21
+      ceremony: 3
+      hand_edits: 2
+      work: 69
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 457
-      cache_read: 3663863
-      cache_write: 235173
-      cost: 1.7386
+      input: 224
+      output: 58494
+      cache_read: 16979764
+      cache_write: 370306
+      cost: 7.1677
   strategic:
     - kind: orchestrator
-      seconds: 133
+      seconds: 1684
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 40
-          output: 573
-          cache_read: 10410875
-          cache_write: 29479
-          cost: 2.5724
+          input: 91
+          output: 1393
+          cache_read: 24634947
+          cache_write: 59122
+          cost: 6.0844
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -106,3 +112,12 @@ Figures:
 
 - Forecast: 25m, delivery 2026-10-08T06:54:00Z. `flai forecast` gave 21m (78 s per unit of size times 16). Raised to 25m because S-0280 and S-0279, the same shape of remedy, took 22m and 26m, and this one must also tell an open story's narrative from a closed one's.
 - Cost of delay: 37.5 USD a week, from `flai cod` on the input `time_lost_per_cycle: 15m`. The orchestrator set that input on TH-0343, as recommended there: one instance, against 45m for S-0279's 18 and S-0280's 38. Left as `flai cod` gives it.
+
+### Accepted by the orchestrator
+
+- Verified: 670bd2a2eb76f84aa126d9228c7f5f8dfabf84da
+- At: 2026-10-08T05:53:29Z
+
+Verdict: accept. flai verify passed every step at the branch head 670bd2a2, and the verifier matched both criteria to the diff.
+- 1: design/adrs/0123-a-close-out-records-no-markdown-finding-on-another-open-story-s-narrative-and-a.md, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md
+- 2: design/issues/I-0096-flai-check-finds-markdown-md038-outside-the-story-at-close-out.md, design/issues/summary.md

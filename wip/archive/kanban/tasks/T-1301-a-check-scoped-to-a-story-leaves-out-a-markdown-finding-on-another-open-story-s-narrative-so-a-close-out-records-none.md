@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 231
-      cache_read: 1646620
-      cache_write: 80602
-      cost: 0.7702
+      input: 22
+      output: 5866
+      cache_read: 1702897
+      cache_write: 37138
+      cost: 0.7188
 ---
 # T-1301 A check scoped to a story leaves out a markdown finding on another open story's narrative, so a close-out records none
 

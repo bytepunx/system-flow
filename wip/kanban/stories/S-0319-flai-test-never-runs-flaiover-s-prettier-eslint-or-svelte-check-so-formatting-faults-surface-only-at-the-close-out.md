@@ -3,14 +3,17 @@ id: S-0319
 type: story
 nature: improvement
 title: flai test never runs flaiover's prettier, eslint, or svelte-check, so formatting faults surface only at the close-out
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:50Z
-updated: 2026-10-08T05:02:40Z
+updated: 2026-10-08T05:51:57Z
 transitions:
   - to: ready
     at: 2026-10-08T00:16:14Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T05:51:57Z
+    by: agent-S-0319
 tags: []
 topics: [testing]
 touches: [scripts/flaiover-lint.sh, system-flow.yaml, flai/internal/verify/select_test.go, design/system/devex.md, design/conventions/tooling.md, design/issues/I-0105-flai-test-never-runs-flaiover-s-prettier-eslint-or-svelte-check-so-formatting-faults-surface-only-at-the-close-out.md, design/issues/summary.md]
@@ -20,9 +23,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 80
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      test_runs: 2
+      work: 16
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 227
+      cache_read: 1739772
+      cache_write: 118688
+      cost: 0.8285
   strategic:
     - kind: orchestrator
       seconds: 276

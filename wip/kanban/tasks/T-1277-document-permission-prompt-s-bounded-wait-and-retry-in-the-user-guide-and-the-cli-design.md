@@ -3,12 +3,18 @@ id: T-1277
 type: task
 nature: improvement
 title: Document permission_prompt's bounded wait and retry in the user guide and the CLI design
-status: backlog
+status: in-progress
 parent: S-0309
 owner: alex
 created: 2026-10-07T23:27:35Z
-updated: 2026-10-07T23:27:35Z
-transitions: []
+updated: 2026-10-08T05:53:20Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:53:20Z
+    by: agent-S-0309
+  - to: in-progress
+    at: 2026-10-08T05:53:20Z
+    by: agent-S-0309
 stream: S-0309
 tags: [docs, permission-prompt]
 touches: [docs/users/flai.md, design/system/flai-cli.md]

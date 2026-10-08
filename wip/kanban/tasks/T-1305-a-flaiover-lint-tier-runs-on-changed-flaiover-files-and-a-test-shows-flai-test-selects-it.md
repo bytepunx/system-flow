@@ -3,12 +3,18 @@ id: T-1305
 type: task
 nature: improvement
 title: A flaiover-lint tier runs on changed flaiover files, and a test shows flai test selects it
-status: backlog
+status: in-progress
 parent: S-0319
 owner: alex
 created: 2026-10-08T00:15:08Z
-updated: 2026-10-08T00:15:08Z
-transitions: []
+updated: 2026-10-08T05:53:24Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:53:24Z
+    by: agent-S-0319
+  - to: in-progress
+    at: 2026-10-08T05:53:24Z
+    by: agent-S-0319
 stream: S-0319
 tags: [flai, flaiover, testing, manifest]
 touches: [system-flow.yaml, flai/internal/verify/select_test.go]

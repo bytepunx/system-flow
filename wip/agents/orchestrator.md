@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 195.2068
-accrued_seconds: 99598
-tasks_completed: 232
-last_run: 2026-10-08T05:02:42Z
+accrued_cost: 195.9023
+accrued_seconds: 102587
+tasks_completed: 234
+last_run: 2026-10-08T05:52:31Z
 ---
 
 # Orchestrator activity
@@ -1635,6 +1635,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0321
 - Seconds: 27
 - Cost: 0.1352 USD, estimated
+
+### 2026-10-08T05:31:10Z
+
+- Summary: The operator committed the code-span log fix on main (387bc06f) and confirmed TH-0360. S-0318 and S-0320 can now sync and close out. Awaiting their review.
+- Items: S-0318, S-0320
+- Seconds: 1708
+- Cost: 0.3503 USD, estimated
+
+### 2026-10-08T05:52:31Z
+
+- Summary: S-0320 is in review. Verify passed at head 09a03d16, and the verifier matched both criteria (orchestrate_test.go; I-0106 closed). The dry-run is blocked only by open TH-0361, whose fix landed in 387bc06f. Left S-0320 in review and asked the operator on TH-0362 to confirm or resolve TH-0361.
+- Items: S-0320
+- Seconds: 1281
+- Cost: 0.3452 USD, estimated
 
 ## Refusals
 

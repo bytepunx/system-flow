@@ -3,10 +3,10 @@ id: S-0320
 type: story
 nature: remediation
 title: flai serve's test that the orchestrator is started again when it ends fails under the close-out's full integration run
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-07T18:59:51Z
-updated: 2026-10-08T04:42:15Z
+updated: 2026-10-08T05:51:50Z
 transitions:
   - to: ready
     at: 2026-10-08T00:18:40Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T04:42:15Z
     by: agent-S-0320
+  - to: review
+    at: 2026-10-08T05:51:50Z
+    by: agent-S-0320
 tags: [flai, serve, tests]
 topics: [continuous-improvement]
-touches: [flai/internal/serve/orchestrate_test.go, design/issues/I-0106-flai-serve-s-test-that-the-orchestrator-is-started-again-when-it-ends-fails-under-the-close-out-s-full-integration-run.md, design/issues/summary.md]
+touches: [flai/internal/serve/orchestrate_test.go, design/issues/I-0106-flai-serve-s-test-that-the-orchestrator-is-started-again-when-it-ends-fails-under-the-close-out-s-full-integration-run.md, design/issues/summary.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md, design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,31 +27,36 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 134
-  estimated: true
+  seconds: 2435
   turns:
     - day: 2026-10-08
-      ceremony: 1
-      hand_edits: 1
-      work: 17
+      ceremony: 4
+      hand_edits: 4
+      work: 71
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 231
-      cache_read: 1971780
-      cache_write: 119906
-      cost: 0.9327
+      input: 168
+      output: 32421
+      cache_read: 13499524
+      cache_write: 205976
+      cost: 4.9968
   strategic:
     - kind: orchestrator
-      seconds: 149
+      seconds: 2295
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 52
-          output: 896
-          cache_read: 14800338
-          cache_write: 22170
-          cost: 3.6521
+          input: 105
+          output: 1610
+          cache_read: 16706962
+          cache_write: 64899
+          cost: 4.1327
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 44
+          cache_read: 39191
+          cache_write: 36122
+          cost: 0.0649
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -74,8 +82,8 @@ finalized:
 This story remediates [I-0106](../../../design/issues/I-0106-flai-serve-s-test-that-the-orchestrator-is-started-again-when-it-ends-fails-under-the-close-out-s-full-integration-run.md), "flai serve's test that the orchestrator is started again when it ends fails under the close-out's full integration run". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0106 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0106 is closed with `flai issue close I-0106 --reason` saying what fixed it
+- [x] The cause I-0106 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0106 is closed with `flai issue close I-0106 --reason` saying what fixed it
 
 ## Tasks
 - T-1307 TestTheOrchestratorIsStartedAgainWhenItEnds sets the lab's clock from the failed run's recorded end, not from the host's clock plus a margin

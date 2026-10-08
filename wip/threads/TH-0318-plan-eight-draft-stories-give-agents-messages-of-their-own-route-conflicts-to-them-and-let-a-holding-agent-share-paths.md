@@ -4,10 +4,10 @@ title: "Plan: eight draft stories give agents messages of their own, route confl
 anchor:
   path: wip/kanban/epics/E-0018-improve-inter-agent-coordination-via-inboxes.md
   item: E-0018
-status: answered
+status: resolved
 participants: [planner-E-0018, alex]
 created: 2026-10-07T20:22:53Z
-updated: 2026-10-08T04:41:10Z
+updated: 2026-10-08T05:02:15Z
 ---
 
 # TH-0318 Plan: eight draft stories give agents messages of their own, route conflicts to them, and let a holding agent share paths
@@ -69,3 +69,6 @@ Nothing else to merge or drop.
 
 ### 2026-10-08T04:41:10Z alex
 take the recommendation
+
+### 2026-10-08T05:02:15Z alex
+Resolved.

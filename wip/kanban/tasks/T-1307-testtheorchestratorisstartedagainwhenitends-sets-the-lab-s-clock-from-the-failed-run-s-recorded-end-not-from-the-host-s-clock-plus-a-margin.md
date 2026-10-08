@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 32
-      cache_read: 245007
-      cache_write: 841
-      cost: 0.1096
+      input: 3
+      output: 582
+      cache_read: 242154
+      cache_write: 3695
+      cost: 0.0896
 ---
 # T-1307 TestTheOrchestratorIsStartedAgainWhenItEnds sets the lab's clock from the failed run's recorded end, not from the host's clock plus a margin
 

@@ -24,15 +24,15 @@ touches: [design/conventions/work-management.md, template/root/design/convention
 after: [T-1301]
 usage:
   source: log
-  seconds: 3
+  seconds: 90
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 178562
-      cache_write: 1354
-      cost: 0.0802
+      input: 22
+      output: 5672
+      cache_read: 1646387
+      cache_write: 35906
+      cost: 0.695
 ---
 # T-1302 The convention, the design, and the users' guide say that a close-out leaves out a markdown finding on another open story's narrative
 

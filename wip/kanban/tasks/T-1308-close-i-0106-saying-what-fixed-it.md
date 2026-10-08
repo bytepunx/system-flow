@@ -24,15 +24,15 @@ touches: [design/issues/I-0106-flai-serve-s-test-that-the-orchestrator-is-starte
 after: [T-1307]
 usage:
   source: log
-  seconds: 7
+  seconds: 8
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 48
-      cache_read: 265320
-      cache_write: 999
-      cost: 0.1188
+      input: 3
+      output: 630
+      cache_read: 262317
+      cache_write: 4002
+      cost: 0.0971
 ---
 # T-1308 Close I-0106 saying what fixed it
 

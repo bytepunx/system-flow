@@ -3,14 +3,17 @@ id: S-0309
 type: story
 nature: improvement
 title: A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T06:48:44Z
-updated: 2026-10-08T05:02:40Z
+updated: 2026-10-08T05:52:20Z
 transitions:
   - to: ready
     at: 2026-10-08T04:23:09Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T05:52:20Z
+    by: agent-S-0309
 tags: []
 topics: [cli, agents]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/delegation.md, docs/users/flai.md, design/system/flai-cli.md, design/adrs, design/adrs/README.md, design/issues/I-0103-a-story-agent-s-claude-write-waits-thirty-minutes-on-an-unanswered-permission-thread-then-fails-on-claude-code-s-mcp-idle-timeout.md, design/issues/summary.md]
@@ -20,9 +23,19 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 51
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      work: 13
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 198
+      cache_read: 1148743
+      cache_write: 119006
+      cost: 0.5652
   strategic:
     - kind: planner
       seconds: 296

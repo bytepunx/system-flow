@@ -3,15 +3,35 @@ id: T-1274
 type: task
 nature: improvement
 title: Record the remedy for I-0103 in an ADR refining ADR-0086 and ADR-0097
-status: backlog
+status: done
 parent: S-0309
 owner: alex
 created: 2026-10-07T23:27:16Z
-updated: 2026-10-07T23:27:16Z
-transitions: []
+updated: 2026-10-08T05:53:09Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:52:46Z
+    by: agent-S-0309
+  - to: in-progress
+    at: 2026-10-08T05:52:46Z
+    by: agent-S-0309
+  - to: done
+    at: 2026-10-08T05:53:09Z
+    by: agent-S-0309
 stream: S-0309
 tags: [adr, permission-prompt]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 23
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 6
+      cache_read: 258018
+      cache_write: 5134
+      cost: 0.1173
 ---
 # T-1274 Record the remedy for I-0103 in an ADR refining ADR-0086 and ADR-0097
 

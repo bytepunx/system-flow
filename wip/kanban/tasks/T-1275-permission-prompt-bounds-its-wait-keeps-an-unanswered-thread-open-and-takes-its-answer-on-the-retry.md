@@ -3,12 +3,18 @@ id: T-1275
 type: task
 nature: improvement
 title: permission_prompt bounds its wait, keeps an unanswered thread open, and takes its answer on the retry
-status: backlog
+status: in-progress
 parent: S-0309
 owner: alex
 created: 2026-10-07T23:27:25Z
-updated: 2026-10-07T23:27:25Z
-transitions: []
+updated: 2026-10-08T05:53:19Z
+transitions:
+  - to: ready
+    at: 2026-10-08T05:53:18Z
+    by: agent-S-0309
+  - to: in-progress
+    at: 2026-10-08T05:53:19Z
+    by: agent-S-0309
 stream: S-0309
 tags: [mcp, permission-prompt]
 touches: [flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go]
