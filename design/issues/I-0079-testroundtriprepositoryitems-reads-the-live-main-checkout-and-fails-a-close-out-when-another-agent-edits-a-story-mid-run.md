@@ -2,12 +2,12 @@
 id: I-0079
 title: TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
 class: defect
-status: open
+status: closed
 count: 11
 cost: 5m
 first_reported: 2026-10-05T05:55:58Z
 last_reported: 2026-10-08T08:27:55Z
-updated: 2026-10-08T08:27:55Z
+updated: 2026-10-08T09:02:45Z
 ---
 
 # I-0079 TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
@@ -64,3 +64,4 @@ S-0321's next close-out failed integration in flai/internal/workitem again, whil
 ## Remediation
 
 Story S-0290 remediates this issue, created from it at 2026-10-06T09:56:52Z.
+Closed 2026-10-08T09:02:45Z: Fixed by S-0290 (T-1367): TestRoundTripRepositoryItems now parses, validates, and compares one read of each listed item file, so an item another agent rewrites in the main checkout during a close-out is compared with itself; Save writes atomically, so one read is one whole version. A file gone since the list is skipped. TestRoundTripItemsRewrittenSinceTheList reproduces the race, and fails against the old two-read check.
