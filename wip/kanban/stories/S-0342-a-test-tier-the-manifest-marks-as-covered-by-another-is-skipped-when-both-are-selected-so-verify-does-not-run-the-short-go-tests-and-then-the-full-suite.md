@@ -6,7 +6,7 @@ title: A test tier the manifest marks as covered by another is skipped when both
 status: ready
 owner: alex
 created: 2026-10-08T07:59:14Z
-updated: 2026-10-08T09:52:01Z
+updated: 2026-10-08T10:01:20Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:30Z
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-10-08T08:24:19Z
 forecast:
   duration: 41m
-  delivery: 2026-10-08T10:36:00Z
-  basis: "Its own forecast of 41m; 2nd in the pull order with an in-progress limit of 5, behind S-0232, S-0297, S-0334 and S-0338."
+  delivery: 2026-10-08T10:45:00Z
+  basis: "Its own forecast of 41m; 2nd in the pull order with an in-progress limit of 5, behind S-0232, S-0334 and S-0338."
   by: flai
-  at: 2026-10-08T09:52:01Z
+  at: 2026-10-08T10:01:20Z
 ---
 # S-0342 A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite
 

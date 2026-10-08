@@ -6,7 +6,7 @@ title: A failed integration tier in the close-out shows only the last lines of g
 status: backlog
 owner: alex
 created: 2026-10-07T14:26:02Z
-updated: 2026-10-08T09:52:01Z
+updated: 2026-10-08T10:01:20Z
 transitions: []
 tags: []
 topics: [testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-07T23:38:54Z
 forecast:
   duration: 45m
-  delivery: 2026-10-08T14:09:00Z
-  basis: "Its own forecast of 45m; 17th in the pull order with an in-progress limit of 5, behind S-0232, S-0297, S-0334, S-0338, S-0342, S-0337, S-0343, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0304, S-0305 and S-0306."
+  delivery: 2026-10-08T14:19:00Z
+  basis: "Its own forecast of 45m; 17th in the pull order with an in-progress limit of 5, behind S-0232, S-0334, S-0338, S-0342, S-0337, S-0343, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0304, S-0305 and S-0306."
   by: flai
-  at: 2026-10-08T09:52:01Z
+  at: 2026-10-08T10:01:20Z
 finalized:
   by: orchestrator
   at: 2026-10-07T23:40:20Z
