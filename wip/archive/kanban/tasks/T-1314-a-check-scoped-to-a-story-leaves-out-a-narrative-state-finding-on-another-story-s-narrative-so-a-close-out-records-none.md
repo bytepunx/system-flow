@@ -3,11 +3,11 @@ id: T-1314
 type: task
 nature: improvement
 title: A check scoped to a story leaves out a narrative.state finding on another story's narrative, so a close-out records none
-status: in-progress
+status: done
 parent: S-0323
 owner: alex
 created: 2026-10-08T00:26:35Z
-updated: 2026-10-08T06:13:16Z
+updated: 2026-10-08T06:16:16Z
 transitions:
   - to: ready
     at: 2026-10-08T06:12:28Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-08T06:13:16Z
     by: agent-S-0323
+  - to: done
+    at: 2026-10-08T06:16:16Z
+    by: agent-S-0323
 stream: S-0323
 tags: [flai]
 touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]
 after: [T-1313]
+usage:
+  source: log
+  seconds: 180
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 5139
+      cache_read: 1527478
+      cache_write: 47473
+      cost: 0.7881
 ---
 # T-1314 A check scoped to a story leaves out a narrative.state finding on another story's narrative, so a close-out records none
 

@@ -3,15 +3,35 @@ id: T-1211
 type: task
 nature: feature
 title: The host API reads messages.list and messages.get serve the conversations of a project or a story
-status: backlog
+status: done
 parent: S-0336
 owner: alex
 created: 2026-10-07T20:16:52Z
-updated: 2026-10-08T04:31:18Z
-transitions: []
+updated: 2026-10-08T06:17:27Z
+transitions:
+  - to: ready
+    at: 2026-10-08T06:14:00Z
+    by: agent-S-0336
+  - to: in-progress
+    at: 2026-10-08T06:14:01Z
+    by: agent-S-0336
+  - to: done
+    at: 2026-10-08T06:17:27Z
+    by: agent-S-0336
 stream: S-0336
 tags: [flai]
-touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go]
+touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/agent.ts]
+usage:
+  source: log
+  seconds: 206
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 247
+      cache_read: 1427881
+      cache_write: 77528
+      cost: 0.6716
 ---
 # T-1211 The host API reads messages.list and messages.get serve the conversations of a project or a story
 

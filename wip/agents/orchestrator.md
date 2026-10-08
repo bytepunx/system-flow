@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 197.3408
-accrued_seconds: 103817
-tasks_completed: 238
-last_run: 2026-10-08T06:13:02Z
+accrued_cost: 197.6257
+accrued_seconds: 103872
+tasks_completed: 239
+last_run: 2026-10-08T06:13:57Z
 ---
 
 # Orchestrator activity
@@ -1677,6 +1677,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0309
 - Seconds: 13
 - Cost: 0.0678 USD, estimated
+
+### 2026-10-08T06:13:57Z
+
+- Summary: Accepted S-0319 under accept_reviews at verified commit 488d1437. flai verify passed at the head. The verifier matched criterion 1 to scripts/flaiover-lint.sh, the flaiover-lint tier in system-flow.yaml and select_test.go, and criterion 2 to I-0105 closed. The dry-run had no blockers. The evidence notes a minor gap: scripts/README.md does not list flaiover-lint.sh. Did not publish (judgement, 1 pending story worth 25 USD/week): S-0319 ships no flai code (a repo script, a manifest tier, a test), so it takes effect on main at once and is held to bundle with the next flai change. No promote candidate besides S-0241 (TH-0333).
+- Items: S-0319
+- Seconds: 55
+- Cost: 0.2849 USD, estimated
 
 ## Refusals
 

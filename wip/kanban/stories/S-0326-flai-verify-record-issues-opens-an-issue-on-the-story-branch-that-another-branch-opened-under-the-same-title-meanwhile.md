@@ -3,14 +3,17 @@ id: S-0326
 type: story
 nature: remediation
 title: flai verify --record-issues opens an issue on the story branch that another branch opened under the same title meanwhile
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:58Z
-updated: 2026-10-08T06:13:49Z
+updated: 2026-10-08T06:23:31Z
 transitions:
   - to: ready
     at: 2026-10-08T04:21:11Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T06:23:31Z
+    by: agent-S-0326
 tags: [cli]
 topics: [cli, git, continuous-improvement]
 touches: [design/adrs, design/adrs/README.md, flai/internal/issues/fold.go, flai/internal/issues/fold_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/internal/taskdone/taskdone.go, flai/cmd/stream_sync_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md, design/issues/summary.md]

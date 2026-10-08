@@ -3,19 +3,36 @@ id: T-1316
 type: task
 nature: improvement
 title: The convention, the design, and the users' guide say that a close-out leaves out a narrative.state on another story's narrative
-status: ready
+status: done
 parent: S-0323
 owner: alex
 created: 2026-10-08T00:27:05Z
-updated: 2026-10-08T06:12:28Z
+updated: 2026-10-08T06:16:58Z
 transitions:
   - to: ready
     at: 2026-10-08T06:12:28Z
+    by: agent-S-0323
+  - to: in-progress
+    at: 2026-10-08T06:16:22Z
+    by: agent-S-0323
+  - to: done
+    at: 2026-10-08T06:16:58Z
     by: agent-S-0323
 stream: S-0323
 tags: [flai, template]
 touches: [design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1314]
+usage:
+  source: log
+  seconds: 36
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1460
+      cache_read: 434109
+      cache_write: 13492
+      cost: 0.224
 ---
 # T-1316 The convention, the design, and the users' guide say that a close-out leaves out a narrative.state on another story's narrative
 

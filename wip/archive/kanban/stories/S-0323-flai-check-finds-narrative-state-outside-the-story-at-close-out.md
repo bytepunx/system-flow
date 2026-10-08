@@ -3,10 +3,10 @@ id: S-0323
 type: story
 nature: improvement
 title: "flai check finds `narrative.state` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T18:59:54Z
-updated: 2026-10-08T06:12:33Z
+updated: 2026-10-08T06:24:05Z
 transitions:
   - to: ready
     at: 2026-10-08T05:54:04Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T06:11:40Z
     by: agent-S-0323
+  - to: review
+    at: 2026-10-08T06:23:18Z
+    by: agent-S-0323
+  - to: done
+    at: 2026-10-08T06:24:05Z
+    by: orchestrator
 tags: [flai, template]
 topics: [cli, conventions, template]
 touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0111-flai-check-finds-narrative-state-outside-the-story-at-close-out.md]
@@ -25,20 +31,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 96
-  estimated: true
+  seconds: 715
   turns:
     - day: 2026-10-08
-      ceremony: 1
+      ceremony: 2
       hand_edits: 1
-      work: 15
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 276
-      cache_read: 1749699
-      cache_write: 124275
-      cost: 0.8361
+      input: 84
+      output: 20375
+      cache_read: 6056560
+      cache_write: 188233
+      cost: 3.125
   strategic:
     - kind: orchestrator
       seconds: 314
@@ -75,9 +80,9 @@ finalized:
 This story remediates [I-0109](../../../design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md), "flai check finds `narrative.state` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0109 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0109 is closed with `flai issue close I-0109 --reason` saying what fixed it
-- [ ] I-0111 is closed with `flai issue close I-0109 --reason` saying what fixed it
+- [x] The cause I-0109 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0109 is closed with `flai issue close I-0109 --reason` saying what fixed it
+- [x] I-0111 is closed with `flai issue close I-0109 --reason` saying what fixed it
 
 ## Tasks
 - T-1313 An ADR refining ADR-0085 and S-0318's ADR records the remedy for I-0109, proposed from its instances
@@ -111,3 +116,13 @@ Figures:
 
 - Forecast: 24m, delivery 2026-10-08T07:48:00Z. `flai forecast` gave 21m (78 s per unit of size times 16). Raised to 24m, the mean of S-0280's 22m and S-0279's 26m, the same shape of remedy.
 - Cost of delay: 37.5 USD a week, from `flai cod` on the input `time_lost_per_cycle: 15m`, which the orchestrator set as recommended on TH-0350. Left as `flai cod` gives it.
+
+### Accepted by the orchestrator
+
+- Verified: 21d6b776dbf24c12a28ef4a5d526666e7bbcb6be
+- At: 2026-10-08T06:24:05Z
+
+Verdict: accept. flai verify passed every step at the branch head 21d6b776, and the verifier matched all three criteria to the diff (criterion 3's I-0109 is the known typo for I-0111).
+- 1: design/adrs/0125-a-close-out-records-no-narrative-state-finding-on-another-open-story-s.md, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md
+- 2: design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/summary.md
+- 3: design/issues/I-0111-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/summary.md

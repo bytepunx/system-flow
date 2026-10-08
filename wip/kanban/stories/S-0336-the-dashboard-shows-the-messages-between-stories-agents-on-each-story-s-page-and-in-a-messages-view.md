@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:22Z
-updated: 2026-10-08T06:12:50Z
+updated: 2026-10-08T06:20:59Z
 transitions:
   - to: ready
     at: 2026-10-08T04:35:26Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0336
 tags: [flai, flaiover]
 topics: [dashboard, cli]
-touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/routes/api/messages/+server.ts, flaiover/src/routes/api/messages/messages.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, flaiover/src/routes/messages/+page.svelte, flaiover/src/routes/messages/messages.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md]
+touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/routes/api/messages/+server.ts, flaiover/src/routes/api/messages/messages.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, flaiover/src/routes/messages/+page.svelte, flaiover/src/routes/messages/messages.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md, flaiover/src/lib/server/agent.ts, design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md, design/issues/summary.md]
 after: [S-0330]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 495
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      ceremony: 1
+      hand_edits: 1
+      work: 25
+  models:
+    - model: claude-opus-5-5
+      input: 124
+      output: 655
+      cache_read: 4868683
+      cache_write: 271961
+      cost: 2.2934
   strategic:
     - kind: orchestrator
       seconds: 444
@@ -61,7 +73,7 @@ Let the operator see how the agents are coordinating without being asked. Messag
 
 ## Acceptance criteria
 
-- [ ] The host API reads `messages.list` and `messages.get` serve the conversations of the project or of one story, with their entries, their `about` paths, and their state.
+- [x] The host API reads `messages.list` and `messages.get` serve the conversations of the project or of one story, with their entries, their `about` paths, and their state.
 - [ ] A story's page lists its conversations, open first, each with the other story linked and its entries.
 - [ ] A Messages view, linked from the navigation, lists every open conversation with its two stories, its paths, which side it awaits, and its age, and the closed ones on request.
 - [ ] The operator's inbox badge and inbox view count no message.

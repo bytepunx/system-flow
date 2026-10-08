@@ -3,12 +3,18 @@ id: T-1213
 type: task
 nature: feature
 title: A Messages component and view list the conversations between stories, linked from the site menu
-status: backlog
+status: in-progress
 parent: S-0336
 owner: alex
 created: 2026-10-07T20:17:00Z
-updated: 2026-10-08T04:31:21Z
-transitions: []
+updated: 2026-10-08T06:21:08Z
+transitions:
+  - to: ready
+    at: 2026-10-08T06:21:08Z
+    by: agent-S-0336
+  - to: in-progress
+    at: 2026-10-08T06:21:08Z
+    by: agent-S-0336
 stream: S-0336
 tags: [flaiover]
 touches: [flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, flaiover/src/routes/messages/+page.svelte, flaiover/src/routes/messages/messages.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts]
