@@ -2,11 +2,11 @@
 id: I-0109
 title: "flai check finds `narrative.state` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 5
 first_reported: 2026-10-07T08:48:03Z
 last_reported: 2026-10-08T00:36:35Z
-updated: 2026-10-08T00:36:35Z
+updated: 2026-10-08T06:17:02Z
 ---
 
 # I-0109 flai check finds `narrative.state` outside the story at close-out
@@ -49,3 +49,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0323 remediates this issue, created from it at 2026-10-07T18:59:54Z.
+Closed 2026-10-08T06:17:02Z: S-0323 (ADR-0125): a check scoped to a story now leaves out a narrative.state finding on the narrative of another story neither done nor cancelled, as it does a markdown finding there, so a close-out no longer records the placeholder Current state and Next steps of a story just started; that story's own close-out stops on them.

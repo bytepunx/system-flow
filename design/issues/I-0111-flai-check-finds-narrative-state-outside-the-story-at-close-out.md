@@ -2,11 +2,11 @@
 id: I-0111
 title: "flai check finds `narrative.state` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 3
 first_reported: 2026-10-07T08:55:19Z
 last_reported: 2026-10-07T09:24:19Z
-updated: 2026-10-07T18:59:57Z
+updated: 2026-10-08T06:17:03Z
 ---
 
 # I-0111 flai check finds `narrative.state` outside the story at close-out
@@ -37,3 +37,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0325 remediates this issue, created from it at 2026-10-07T18:59:57Z.
+Closed 2026-10-08T06:17:03Z: S-0323 (ADR-0125), which closed I-0109, the same issue opened twice: a check scoped to a story now leaves out a narrative.state finding on the narrative of another story neither done nor cancelled, so a close-out no longer records it.
