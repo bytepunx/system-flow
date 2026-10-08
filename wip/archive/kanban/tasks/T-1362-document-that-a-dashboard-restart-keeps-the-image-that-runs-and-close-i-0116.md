@@ -24,15 +24,15 @@ touches: [docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md
 after: [T-1360, T-1361]
 usage:
   source: log
-  seconds: 76
+  seconds: 77
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 74
-      cache_read: 1279885
-      cache_write: 12041
-      cost: 0.5803
+      input: 21
+      output: 7530
+      cache_read: 1267143
+      cache_write: 48383
+      cost: 0.7248
 ---
 # T-1362 Document that a dashboard restart keeps the image that runs, and close I-0116
 

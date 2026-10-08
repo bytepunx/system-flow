@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 331
-      cache_read: 2254115
-      cache_write: 117669
-      cost: 1.0654
+      input: 38
+      output: 13824
+      cache_read: 2326315
+      cache_write: 88826
+      cost: 1.3307
 ---
 # T-1360 flai dashboard restart starts the image the container runs, by its image ID, never the tag again
 

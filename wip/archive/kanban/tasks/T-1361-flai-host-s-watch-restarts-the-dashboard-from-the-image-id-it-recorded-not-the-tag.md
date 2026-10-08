@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 347
-      cache_read: 1909615
-      cache_write: 97503
-      cost: 0.9017
+      input: 32
+      output: 11699
+      cache_read: 1968642
+      cache_write: 75169
+      cost: 1.1261
 ---
 # T-1361 flai host's watch restarts the dashboard from the image ID it recorded, not the tag
 
