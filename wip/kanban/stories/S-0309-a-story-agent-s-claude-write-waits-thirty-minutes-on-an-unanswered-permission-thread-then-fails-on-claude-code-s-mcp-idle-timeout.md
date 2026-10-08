@@ -6,7 +6,7 @@ title: A story agent's .claude/ write waits thirty minutes on an unanswered perm
 status: ready
 owner: alex
 created: 2026-10-07T06:48:44Z
-updated: 2026-10-08T04:25:41Z
+updated: 2026-10-08T04:33:38Z
 transitions:
   - to: ready
     at: 2026-10-08T04:23:09Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-10-07T23:28:00Z
 forecast:
   duration: 35m
-  delivery: 2026-10-08T05:29:00Z
+  delivery: 2026-10-08T05:36:00Z
   basis: "Its own forecast of 35m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0324, S-0318, S-0320 and S-0319."
   by: flai
-  at: 2026-10-08T04:25:41Z
+  at: 2026-10-08T04:33:38Z
 finalized:
   by: orchestrator
   at: 2026-10-08T04:23:05Z
