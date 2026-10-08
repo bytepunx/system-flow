@@ -93,6 +93,29 @@ func ChangedPaths(r execx.Runner, dir, base string) ([]string, error) {
 	return paths, nil
 }
 
+// BaseChanges are what base changed since the checkout at dir left it: the
+// paths changed from their merge base to base, sorted, a rename as both of
+// its paths and a deletion among them, and the short hashes of the commits
+// of base that dir lacks, newest first (ADR-0135).
+func BaseChanges(r execx.Runner, dir, base string) (paths, commits []string, err error) {
+	out, err := r.Run(dir, "git", "diff", "--no-renames", "--name-only", "HEAD..."+base)
+	if err != nil {
+		return nil, nil, fmt.Errorf("list what %s changed since the checkout left it: %w", base, err)
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if p := unquote(line); p != "" {
+			paths = append(paths, p)
+		}
+	}
+	slices.Sort(paths)
+	out, err = r.Run(dir, "git", "rev-list", "--abbrev-commit", "HEAD.."+base)
+	if err != nil {
+		return nil, nil, fmt.Errorf("list the commits of %s the checkout lacks: %w", base, err)
+	}
+	commits = strings.Fields(out)
+	return slices.Compact(paths), commits, nil
+}
+
 // statusEntry is a git status --porcelain line's two status letters and the
 // path it is now at. The runner trims its output, which takes the leading
 // space from the first line's " M path", so a line whose third character is

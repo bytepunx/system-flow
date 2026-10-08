@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.84 - 2026-10-08
+
+- S-0347 A close-out passes over flai's `wip/` commits on the main branch during its run (patch, ADR-0135): `work-management.md` says that a story's branch at review may lack commits on the main branch that change only `wip/` paths it does not change, such as flai's replans, and that the close-out's last check is `flai verify S-nnnn --sync-only`. Both of the close-out's checks that the branch contains the main branch pass over such commits; any other commit the branch lacks, such as an acceptance, still stops it, and needs `flai stream sync` and another run. The template's `scripts/close-out.sh` runs `flai verify "$story" --sync-only` for its last check, in place of `git merge-base --is-ancestor`. It needs a flai that has `--sync-only`; an older flai refuses the flag, so the close-out stops at its last check.
+
 ## 1.0.83 - 2026-10-08
 
 - S-0334 A story held on overlap is asked about by message, and starts when the holding story's agent shares the paths or narrows its claim (patch).

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -91,6 +92,10 @@ type Step struct {
 	DurationMS int64     `json:"duration_ms"`
 	Duration   string    `json:"duration,omitempty"`
 	Findings   []Finding `json:"findings,omitempty"`
+	// Note is what a step that passed says about what it passed over, as
+	// sync names the commits of Base it did not need (ADR-0135); it is the
+	// step's own, not a check note, and nothing records it as an issue.
+	Note string `json:"note,omitempty"`
 	// Omitted counts the findings past the run's cap.
 	Omitted int `json:"omitted,omitempty"`
 	// Command, Dir, and ExitCode are a tier's, as TierResult has them.
@@ -110,7 +115,8 @@ type Note struct {
 }
 
 // Verify runs a story's close-out checks in its worktree and answers one
-// report: no rebase is unfinished, the branch contains Base, the narrative's
+// report: no rebase is unfinished, the branch contains Base but for commits
+// that change only wip paths the branch does not change, the narrative's
 // Current state and Next steps are written, flai check --strict scoped to the
 // story passes, and then each tier the branch's changes select (SelectStory)
 // passes, run with CLOSE_OUT_STORY set to the story. It stops at the first
@@ -131,6 +137,23 @@ func Verify(ctx context.Context, opts StoryOptions) (Report, error) {
 	return rep, runErr
 }
 
+// SyncOnly runs only Verify's rebase and sync steps for a story, in its
+// worktree, and answers their report, which it does not store, so the
+// story's last report stays the last full run's: what flai verify
+// --sync-only answers (ADR-0135). It returns an error, with no report, when
+// the story, its worktree, or its changes cannot be read.
+func SyncOnly(opts StoryOptions) (Report, error) {
+	v, err := newStoryRun(opts)
+	if err != nil {
+		return Report{}, err
+	}
+	start := v.opts.Now()
+	rep := v.newReport(start)
+	v.runSteps(&rep, v.syncSteps())
+	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
+	return rep, nil
+}
+
 // storyRun is one Verify call with its options resolved.
 type storyRun struct {
 	opts     StoryOptions
@@ -141,6 +164,9 @@ type storyRun struct {
 	// commit and paths are the worktree's HEAD and what it changed.
 	commit string
 	paths  []string
+	// note is what the step running says about what it passed over, which
+	// runSteps puts on its result.
+	note string
 }
 
 // newStoryRun resolves opts: the story's canonical ID, its worktree, the
@@ -192,37 +218,56 @@ func newStoryRun(opts StoryOptions) (*storyRun, error) {
 	return v, nil
 }
 
-// run runs the steps in order and stops at the first that fails. It returns
-// ctx's error, with the report, when ctx ends during a tier.
-func (v *storyRun) run(ctx context.Context) (Report, error) {
-	start := v.opts.Now()
-	rep := Report{Story: v.story, Commit: v.commit, Base: v.base, RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{}}
-	steps := []struct {
-		name string
-		run  func() []Finding
-	}{
-		{StepRebase, v.rebase},
-		{StepSync, v.sync},
-		{StepNarrative, v.narrative},
-		{StepCheck, func() []Finding { return v.check(&rep) }},
-	}
+// storyStep is a step of Verify before the tiers: its name, and what finds
+// why it fails, none when it passes.
+type storyStep struct {
+	name string
+	run  func() []Finding
+}
+
+// syncSteps are the steps that say whether the branch is ready to verify:
+// no rebase left unfinished, and the main branch contained.
+func (v *storyRun) syncSteps() []storyStep {
+	return []storyStep{{StepRebase, v.rebase}, {StepSync, v.sync}}
+}
+
+// newReport is a report begun at start that has passed so far.
+func (v *storyRun) newReport(start time.Time) Report {
+	return Report{Story: v.story, Commit: v.commit, Base: v.base, RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{}}
+}
+
+// runSteps runs steps in order onto rep; once one fails, those after it are
+// not reached.
+func (v *storyRun) runSteps(rep *Report, steps []storyStep) {
 	for _, s := range steps {
 		if !rep.Passed {
 			rep.Steps = append(rep.Steps, Step{Name: s.name, State: NotReached})
 			continue
 		}
 		began := v.opts.Now()
+		v.note = ""
 		found := s.run()
-		step := Step{Name: s.name, State: Passed}
+		step := Step{Name: s.name, State: Passed, Note: v.note}
 		step.DurationMS, step.Duration = took(v.opts.Now().Sub(began))
 		if len(found) > 0 {
-			step.State = Failed
+			step.State, step.Note = Failed, ""
 			n := min(v.max, len(found))
 			step.Findings, step.Omitted = found[:n], len(found)-n
 			rep.Passed, rep.StoppedAt = false, s.name
 		}
 		rep.Steps = append(rep.Steps, step)
 	}
+}
+
+// run runs the steps in order and stops at the first that fails. It returns
+// ctx's error, with the report, when ctx ends during a tier.
+func (v *storyRun) run(ctx context.Context) (Report, error) {
+	start := v.opts.Now()
+	rep := v.newReport(start)
+	v.runSteps(&rep, append(v.syncSteps(),
+		storyStep{StepNarrative, v.narrative},
+		storyStep{StepCheck, func() []Finding { return v.check(&rep) }},
+	))
 	selected := SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
 	var runErr error
 	if rep.Passed {
@@ -253,21 +298,59 @@ func (v *storyRun) rebase() []Finding {
 	return []Finding{{Name: StepRebase, Message: "a rebase is in progress; finish it with git rebase --continue, or undo it with git rebase --abort, then verify again"}}
 }
 
-// sync finds the commits of the main branch that the story's branch does
-// not contain.
+// sync finds that the story's branch lacks commits of the main branch,
+// unless what they changed since the branch left it is only paths under the
+// manifest's wip folder that the branch does not change; then it passes
+// over them, and its note names them (ADR-0135).
 func (v *storyRun) sync() []Finding {
-	out, err := v.opts.Git.Run(v.worktree, "git", "rev-list", "--count", "HEAD.."+v.base)
+	paths, commits, err := BaseChanges(v.opts.Git, v.worktree, v.base)
 	if err != nil {
 		return []Finding{{Name: StepSync, Message: fmt.Sprintf("cannot tell whether the branch contains %s: %v; check that %s is a branch of the repository", v.base, err, v.base)}}
 	}
-	n, err := strconv.Atoi(strings.TrimSpace(out))
-	if err != nil {
-		return []Finding{{Name: StepSync, Message: fmt.Sprintf("cannot tell whether the branch contains %s: git rev-list answered %q", v.base, out)}}
-	}
-	if n == 0 {
+	if len(commits) == 0 {
 		return nil
 	}
-	return []Finding{{Name: StepSync, Message: fmt.Sprintf("the branch does not contain %s, %d commits behind it; run flai stream sync %s, resolve what it reports, and verify again", v.base, n, v.story)}}
+	root := mainRoot(v.opts.Project)
+	wip, err := filepath.Rel(root, v.opts.Project.WipDir())
+	if err != nil {
+		return []Finding{{Name: StepSync, Message: fmt.Sprintf("cannot tell which paths are under the wip folder %s: %v; check the layout in the project's manifest", v.opts.Project.WipDir(), err)}}
+	}
+	wip = filepath.ToSlash(wip) + "/"
+	var outside, shared []string
+	for _, p := range paths {
+		switch {
+		case !strings.HasPrefix(p, wip):
+			outside = append(outside, p)
+		case slices.Contains(v.paths, p):
+			shared = append(shared, p)
+		}
+	}
+	behind := fmt.Sprintf("the branch does not contain %s, %s behind it", v.base, plural(len(commits), "commit"))
+	fix := fmt.Sprintf("run flai stream sync %s, resolve what it reports, and verify again", v.story)
+	switch {
+	case len(outside) > 0:
+		return []Finding{{Name: StepSync, Message: fmt.Sprintf("%s, which change paths outside %s: %s; %s", behind, wip, few(outside, 3), fix)}}
+	case len(shared) > 0:
+		return []Finding{{Name: StepSync, Message: fmt.Sprintf("%s, which change %s paths the branch changes too: %s; %s", behind, wip, few(shared, 3), fix)}}
+	}
+	v.note = fmt.Sprintf("passed over %s of %s that change only %s paths the branch does not change: %s", plural(len(commits), "commit"), v.base, wip, few(commits, 10))
+	return nil
+}
+
+// plural is n and the noun, plural but for one.
+func plural(n int, noun string) string {
+	if n == 1 {
+		return "1 " + noun
+	}
+	return strconv.Itoa(n) + " " + noun + "s"
+}
+
+// few lists the first limit of items and says how many more there are.
+func few(items []string, limit int) string {
+	if len(items) <= limit {
+		return strings.Join(items, ", ")
+	}
+	return fmt.Sprintf("%s and %d more", strings.Join(items[:limit], ", "), len(items)-limit)
 }
 
 // narrative finds the narrative's sections that are not written, in the
