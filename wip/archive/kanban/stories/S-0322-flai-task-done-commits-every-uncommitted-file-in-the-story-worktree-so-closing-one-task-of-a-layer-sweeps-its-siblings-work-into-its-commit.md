@@ -3,10 +3,10 @@ id: S-0322
 type: story
 nature: improvement
 title: flai task done commits every uncommitted file in the story worktree, so closing one task of a layer sweeps its siblings' work into its commit
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T18:59:53Z
-updated: 2026-10-08T09:16:44Z
+updated: 2026-10-08T09:30:45Z
 transitions:
   - to: ready
     at: 2026-10-08T04:36:45Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T08:13:36Z
     by: agent-S-0322
+  - to: review
+    at: 2026-10-08T09:29:18Z
+    by: agent-S-0322
+  - to: done
+    at: 2026-10-08T09:30:45Z
+    by: orchestrator
 tags: [flai]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md, design/adrs/0128-flai-task-done-commits-the-paths-the-closing-task-covers-and-those-no-other.md, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md]
 agent:
@@ -23,20 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1136
-  estimated: true
+  seconds: 4558
   turns:
     - day: 2026-10-08
-      ceremony: 2
-      hand_edits: 2
-      work: 32
+      ceremony: 10
+      test_runs: 5
+      hand_edits: 3
+      work: 97
   models:
     - model: claude-opus-5-5
-      input: 258
-      output: 1499
-      cache_read: 11678857
-      cache_write: 530477
-      cost: 5.4886
+      input: 426
+      output: 135935
+      cache_read: 32144017
+      cache_write: 628927
+      cost: 13.1392
   strategic:
     - kind: planner
       seconds: 369
@@ -132,3 +138,13 @@ Tasks, in three layers:
 1. T-1330, the ADR and design.
 2. T-1328, the commit step and the I-0104 and I-0108 reproduction tests, after T-1330.
 3. T-1331, CLI, MCP, and the host method, and T-1329, docs and closing both issues, both after T-1328. They share no path and run together.
+
+### Accepted by the orchestrator
+
+- Verified: 8c6b475bcd61e58973bf74e6250198bd9ec57ed9
+- At: 2026-10-08T09:30:45Z
+
+Verdict: accept. flai verify passed every step at the branch head 8c6b475b, and the verifier matched all three criteria to the diff, with no regression found: the last open task commits everything left.
+- 1: flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/adrs/README.md, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md
+- 2: design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/summary.md
+- 3: design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md

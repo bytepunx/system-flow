@@ -3,15 +3,35 @@ id: T-1422
 type: task
 nature: improvement
 title: Record in an ADR that a close-out records no board.wip-limit and a check scoped to a story leaves it out
-status: backlog
+status: done
 parent: S-0348
 owner: alex
 created: 2026-10-08T08:58:51Z
-updated: 2026-10-08T08:58:51Z
-transitions: []
+updated: 2026-10-08T09:19:35Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:19:02Z
+    by: agent-S-0348
+  - to: in-progress
+    at: 2026-10-08T09:19:05Z
+    by: agent-S-0348
+  - to: done
+    at: 2026-10-08T09:19:35Z
+    by: agent-S-0348
 stream: S-0348
 tags: [flai, check, adr]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 30
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 15
+      cache_read: 380951
+      cache_write: 5628
+      cost: 0.1738
 ---
 # T-1422 Record in an ADR that a close-out records no board.wip-limit and a check scoped to a story leaves it out
 

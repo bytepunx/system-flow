@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 493
-      cache_read: 4202905
-      cache_write: 135088
-      cost: 1.9501
+      input: 57
+      output: 18201
+      cache_read: 4304028
+      cache_write: 84212
+      cost: 1.7593
 ---
 # T-1328 flai task done commits only the closing task's paths, with tests that reproduce I-0104's two tasks and I-0108's three
 

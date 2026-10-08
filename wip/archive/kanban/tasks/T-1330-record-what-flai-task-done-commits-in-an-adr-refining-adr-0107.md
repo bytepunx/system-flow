@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 225
-      cache_read: 1731700
-      cache_write: 72615
-      cost: 0.8111
+      input: 24
+      output: 7571
+      cache_read: 1790199
+      cache_write: 35027
+      cost: 0.7318
 ---
 # T-1330 Record what flai task done commits, in an ADR refining ADR-0107
 

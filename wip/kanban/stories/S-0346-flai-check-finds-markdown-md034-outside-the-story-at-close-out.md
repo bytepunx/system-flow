@@ -3,14 +3,17 @@ id: S-0346
 type: story
 nature: improvement
 title: "flai check finds `markdown.MD034` outside the story at close-out"
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-08T08:08:21Z
-updated: 2026-10-08T09:18:44Z
+updated: 2026-10-08T09:29:30Z
 transitions:
   - to: ready
     at: 2026-10-08T08:59:57Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T09:29:30Z
+    by: agent-S-0346
 tags: [flai, mdlint, serve]
 topics: [markdown, planning]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, design/system/agent-narrative.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/summary.md]

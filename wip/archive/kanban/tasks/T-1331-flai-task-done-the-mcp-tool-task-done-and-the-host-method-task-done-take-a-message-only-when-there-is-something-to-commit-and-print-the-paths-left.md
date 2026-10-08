@@ -24,15 +24,15 @@ touches: [flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpse
 after: [T-1328]
 usage:
   source: log
-  seconds: 409
+  seconds: 410
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 75
-      output: 447
-      cache_read: 3594678
-      cache_write: 124157
-      cost: 1.6718
+      input: 49
+      output: 15604
+      cache_read: 3689724
+      cache_write: 72193
+      cost: 1.5082
 ---
 # T-1331 flai task done, the MCP tool task_done, and the host method task.done take a message only when there is something to commit, and print the paths left
 

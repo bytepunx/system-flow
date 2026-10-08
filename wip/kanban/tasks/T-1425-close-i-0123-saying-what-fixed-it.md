@@ -3,16 +3,36 @@ id: T-1425
 type: task
 nature: improvement
 title: Close I-0123 saying what fixed it
-status: backlog
+status: done
 parent: S-0348
 owner: alex
 created: 2026-10-08T08:59:12Z
-updated: 2026-10-08T08:59:12Z
-transitions: []
+updated: 2026-10-08T09:29:52Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:19:05Z
+    by: agent-S-0348
+  - to: in-progress
+    at: 2026-10-08T09:29:45Z
+    by: agent-S-0348
+  - to: done
+    at: 2026-10-08T09:29:52Z
+    by: agent-S-0348
 stream: S-0348
 tags: [issues]
 touches: [design/issues/I-0123-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-1423, T-1424]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 24
+      cache_read: 201732
+      cache_write: 633
+      cost: 0.091
 ---
 # T-1425 Close I-0123 saying what fixed it
 

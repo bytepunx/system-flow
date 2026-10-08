@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 7
-      output: 2171
-      cache_read: 610404
-      cache_write: 13437
-      cost: 0.2601
+      output: 2069
+      cache_read: 610825
+      cache_write: 12744
+      cost: 0.2534
 ---
 # T-1224 design/tech/ci.md lists cosign and the attestation action with their versions and why
 

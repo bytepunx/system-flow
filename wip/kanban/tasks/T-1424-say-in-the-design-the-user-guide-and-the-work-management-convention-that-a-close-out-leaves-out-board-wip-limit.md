@@ -3,16 +3,36 @@ id: T-1424
 type: task
 nature: improvement
 title: Say in the design, the user guide, and the work-management convention that a close-out leaves out board.wip-limit
-status: backlog
+status: done
 parent: S-0348
 owner: alex
 created: 2026-10-08T08:59:07Z
-updated: 2026-10-08T08:59:07Z
-transitions: []
+updated: 2026-10-08T09:27:58Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:19:04Z
+    by: agent-S-0348
+  - to: in-progress
+    at: 2026-10-08T09:20:10Z
+    by: agent-S-0348
+  - to: done
+    at: 2026-10-08T09:27:58Z
+    by: agent-S-0348
 stream: S-0348
 tags: [docs, conventions, template]
 touches: [design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]
 after: [T-1422]
+usage:
+  source: log
+  seconds: 468
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 147
+      cache_read: 1093244
+      cache_write: 64621
+      cost: 0.5206
 ---
 # T-1424 Say in the design, the user guide, and the work-management convention that a close-out leaves out board.wip-limit
 

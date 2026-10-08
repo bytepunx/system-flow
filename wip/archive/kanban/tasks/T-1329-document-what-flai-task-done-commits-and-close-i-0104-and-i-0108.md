@@ -24,15 +24,15 @@ touches: [docs/users/flai.md, design/conventions/git.md, template/root/design/co
 after: [T-1328]
 usage:
   source: log
-  seconds: 408
+  seconds: 424
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 125
-      cache_read: 1016759
-      cache_write: 57292
-      cost: 0.4828
+      input: 22
+      output: 7057
+      cache_read: 1668846
+      cache_write: 32653
+      cost: 0.6822
 ---
 # T-1329 Document what flai task done commits, and close I-0104 and I-0108
 

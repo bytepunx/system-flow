@@ -8,7 +8,6 @@ wip_limits:
   review: 5
 order:
   - S-0338
-  - S-0346
   - S-0342
   - S-0337
   - S-0334

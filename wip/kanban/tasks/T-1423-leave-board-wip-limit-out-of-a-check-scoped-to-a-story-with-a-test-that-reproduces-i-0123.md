@@ -3,16 +3,36 @@ id: T-1423
 type: task
 nature: improvement
 title: Leave board.wip-limit out of a check scoped to a story, with a test that reproduces I-0123
-status: backlog
+status: done
 parent: S-0348
 owner: alex
 created: 2026-10-08T08:59:00Z
-updated: 2026-10-08T08:59:00Z
-transitions: []
+updated: 2026-10-08T09:27:52Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:19:03Z
+    by: agent-S-0348
+  - to: in-progress
+    at: 2026-10-08T09:20:09Z
+    by: agent-S-0348
+  - to: done
+    at: 2026-10-08T09:27:52Z
+    by: agent-S-0348
 stream: S-0348
 tags: [flai, check]
 touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]
 after: [T-1422]
+usage:
+  source: log
+  seconds: 463
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 237
+      cache_read: 1348570
+      cache_write: 75405
+      cost: 0.6402
 ---
 # T-1423 Leave board.wip-limit out of a check scoped to a story, with a test that reproduces I-0123
 

@@ -6,7 +6,7 @@ title: "flai check finds `board.wip-limit` outside the story at close-out"
 status: in-progress
 owner: alex
 created: 2026-10-08T08:37:06Z
-updated: 2026-10-08T09:18:00Z
+updated: 2026-10-08T09:29:56Z
 transitions:
   - to: ready
     at: 2026-10-08T09:09:03Z
@@ -23,9 +23,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 720
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      hand_edits: 1
+      work: 26
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 740
+      cache_read: 4996606
+      cache_write: 306387
+      cost: 2.3842
   strategic:
     - kind: planner
       seconds: 250
@@ -44,15 +55,15 @@ usage:
           cache_write: 159138
           cost: 3.3654
     - kind: orchestrator
-      seconds: 360
+      seconds: 368
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 106
-          output: 1800
-          cache_read: 34819572
-          cache_write: 39129
-          cost: 8.5887
+          input: 108
+          output: 1846
+          cache_read: 35576119
+          cache_write: 42232
+          cost: 8.7759
         - model: claude-sonnet-5-5
           input: 4
           output: 35
@@ -84,8 +95,8 @@ finalized:
 This story remediates [I-0123](../../../design/issues/I-0123-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md), "flai check finds `board.wip-limit` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0123 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0123 is closed with `flai issue close I-0123 --reason` saying what fixed it
+- [x] The cause I-0123 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0123 is closed with `flai issue close I-0123 --reason` saying what fixed it
 
 ## Tasks
 - T-1422 Record in an ADR that a close-out records no board.wip-limit and a check scoped to a story leaves it out

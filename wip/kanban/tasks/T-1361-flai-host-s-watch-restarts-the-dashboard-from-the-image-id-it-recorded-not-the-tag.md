@@ -3,12 +3,18 @@ id: T-1361
 type: task
 nature: remediation
 title: flai host's watch restarts the dashboard from the image ID it recorded, not the tag
-status: backlog
+status: in-progress
 parent: S-0344
 owner: alex
 created: 2026-10-08T08:35:44Z
-updated: 2026-10-08T09:10:56Z
-transitions: []
+updated: 2026-10-08T09:24:22Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:24:22Z
+    by: agent-S-0344
+  - to: in-progress
+    at: 2026-10-08T09:24:22Z
+    by: agent-S-0344
 stream: S-0344
 tags: [flai, dashboard]
 touches: [flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go]

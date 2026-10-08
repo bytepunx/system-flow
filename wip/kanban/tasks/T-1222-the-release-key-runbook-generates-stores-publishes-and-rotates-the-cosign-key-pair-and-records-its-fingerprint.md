@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 4666
-      cache_read: 1311957
-      cache_write: 28880
-      cost: 0.5591
+      input: 15
+      output: 4446
+      cache_read: 1312861
+      cache_write: 27392
+      cost: 0.5446
 ---
 # T-1222 The release-key runbook generates, stores, publishes, and rotates the cosign key pair, and records its fingerprint
 
