@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-07
+updated: 2026-10-08
 status: active
 ---
 
@@ -701,7 +701,7 @@ You can still start it yourself: `flai move S-0130 in-progress` and `flai serve 
 
 An agent that ended asking you a question is started again when you answer, in its own session, while its story is in progress or in review. When the orchestrator recommends an answer, the agent waits on: it starts again when you confirm the recommendation (`flai thread confirm`) or answer otherwise. If you send the story back to ready before answering, it waits for its hold and the limit like any other ready story once you answer.
 
-Since S-0272 such an agent does not sit waiting for you. It asks on a thread, goes on with whatever does not need the answer, then writes its narrative's `## Current state` and `## Next steps` with `flai stream state` and ends. When you answer, `flai serve` starts it again in the same session, and the first `inbox` it calls holds your answer. If it calls `wait_for_events` while its question is all that is left, the tool tells it to end at once (`end: true`, with `why` naming the thread) rather than wait. An agent you run by hand is not started again, so it keeps waiting on `wait_for_events` until you answer.
+Since S-0272 such an agent does not sit waiting for you. It asks on a thread, goes on with whatever does not need the answer, then writes its narrative's `## Current state` and `## Next steps` with `flai stream state` and ends. When you answer, `flai serve` starts it again in the same session, and the first `inbox` it calls holds your answer. Since S-0317 that holds when you answer before `flai serve` notices the agent ended, up to a minute later: it is started again at once, told the thread was answered, rather than counted as failed. If it calls `wait_for_events` while its question is all that is left, the tool tells it to end at once (`end: true`, with `why` naming the thread) rather than wait. An agent you run by hand is not started again, so it keeps waiting on `wait_for_events` until you answer.
 
 Since S-0335 an agent ends the same way when all it waits on is the reply of another story's agent to a message it sent ([Messages between stories](#messages-between-stories)). `wait_for_events` tells it to end, with `why` naming the conversation and the story it waits on, but not while a message to its own story awaits its reply. `flai serve` starts it again in its session when that agent replies or a new message to its story comes, even while a question to you is still open, and its first `inbox` lists the conversation under `messages`. Until then the story's agent reads as waiting, such as `waiting for S-0004's agent to reply on MS-0002: <title>`, and `flai serve agent start`, `restart`, and `commit` refuse it, saying it starts again when the reply comes. An agent you run by hand holds `wait_for_events` until the reply comes.
 
