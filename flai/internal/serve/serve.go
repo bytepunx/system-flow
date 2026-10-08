@@ -203,19 +203,45 @@ type Options struct {
 	// Git asks git what a story's worktree holds, for flai serve agent
 	// commit (S-0140); the system's git when nil.
 	Git execx.Runner
+	// DrainGrace is how long a project whose manifest stopped loading has to
+	// answer the requests in flight before its connection ends (I-0107);
+	// DefaultDrainGrace when zero.
+	DrainGrace time.Duration
 }
+
+// DefaultDrainGrace is how long a dropped project's requests in flight may
+// run on. A publish commits, tags, and pushes in well under a minute, and
+// it is the request that raises flai.minimum and so drops the project; five
+// minutes covers a slow push without keeping a project that no longer loads
+// half-served for long.
+const DefaultDrainGrace = 5 * time.Minute
 
 type running struct {
 	entry  Entry
 	client *channel.Client
-	stop   context.CancelFunc
-	done   chan struct{}
+	// stop ends everything the project runs; stopLooks only its looks and
+	// watcher, leaving its connection open for a drain.
+	stop      context.CancelFunc
+	stopLooks context.CancelFunc
+	done      chan struct{}
 }
 
 // halt stops the project's client and waits for it.
 func (r *running) halt() {
 	r.stop()
 	<-r.done
+}
+
+// drain stops the project's looks at once, lets the requests in flight be
+// answered for at most grace, then stops its client; it returns how many
+// were left unanswered.
+func (r *running) drain(ctx context.Context, grace time.Duration, why string) int {
+	r.stopLooks()
+	dctx, cancel := context.WithTimeout(ctx, grace)
+	defer cancel()
+	left := r.client.Drain(dctx, why)
+	r.halt()
+	return left
 }
 
 // gitOf is the runner that asks git, the system's when the options name none.
@@ -239,6 +265,9 @@ func Run(ctx context.Context, o Options) error {
 	if o.Logger == nil {
 		o.Logger = slog.New(slog.DiscardHandler)
 	}
+	if o.DrainGrace <= 0 {
+		o.DrainGrace = DefaultDrainGrace
+	}
 	if o.NewClient == nil {
 		o.NewClient = func(e Entry, key []byte) *channel.Client {
 			return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
@@ -250,6 +279,11 @@ func Run(ctx context.Context, o Options) error {
 	}
 	started := o.Now().UTC().Format(time.RFC3339)
 	clients := map[string]*running{}
+	// A project dropped because it stopped loading answers its requests in
+	// flight before its client stops (I-0107): it waits here, by root, and is
+	// not served again until its drain is over.
+	draining := map[string]*running{}
+	var drains sync.WaitGroup
 	offered := &offers{o: o, running: map[string]*running{}}
 	unavailable := map[string]string{}
 	var mu sync.Mutex
@@ -280,6 +314,7 @@ func Run(ctx context.Context, o Options) error {
 		for _, r := range clients {
 			r.halt()
 		}
+		drains.Wait() // each drain's bound is within ctx, which has ended
 		_ = os.Remove(o.Dir.status())
 	}()
 
@@ -310,29 +345,68 @@ func Run(ctx context.Context, o Options) error {
 		}
 		unavailable = gone
 		for root, r := range clients {
-			if e, ok := want[root]; !ok || e != r.entry {
-				// A project that left the registry, or is served under another
-				// key, is said to be removed first, so that the dashboard drops
-				// it rather than show it as waiting for flai (S-0121).
-				if _, unavailable := gone[root]; (!ok && !unavailable) || (ok && e.Key != r.entry.Key) {
-					r.client.Notify(Removed, map[string]string{"project": r.entry.Key})
+			e, ok := want[root]
+			if ok && e == r.entry {
+				continue
+			}
+			delete(clients, root)
+			// A project that stopped loading, its manifest raised past this
+			// flai by the very publish it is answering, say, takes no new
+			// request and answers those in flight before it stops (I-0107).
+			if why, lost := gone[root]; lost && !ok {
+				draining[root] = r
+				drains.Add(1)
+				go func() {
+					defer drains.Done()
+					left := r.drain(ctx, o.DrainGrace, why)
+					mu.Lock()
+					delete(draining, root)
+					mu.Unlock()
+					level := slog.LevelInfo
+					if left > 0 {
+						level = slog.LevelWarn
+					}
+					o.Logger.Log(ctx, level, "project dropped", "component", "serve", "root", root, "reason", why, "unanswered", left)
+				}()
+				continue
+			}
+			// A project that left the registry, or is served under another
+			// key, is said to be removed first, so that the dashboard drops
+			// it rather than show it as waiting for flai (S-0121).
+			why := "its registry entry changed"
+			if !ok || e.Key != r.entry.Key {
+				r.client.Notify(Removed, map[string]string{"project": r.entry.Key})
+				why = "it left the registry"
+				if ok {
+					why = "it is served under another key"
 				}
-				r.halt()
-				delete(clients, root)
-				o.Logger.Info("project dropped", "component", "serve", "root", root)
+			}
+			r.halt()
+			o.Logger.Info("project dropped", "component", "serve", "root", root, "reason", why)
+		}
+		for root, r := range draining {
+			// one removed while it drains stops at once, as any removed project does
+			_, back := want[root]
+			if _, still := gone[root]; !back && !still {
+				r.client.Notify(Removed, map[string]string{"project": r.entry.Key})
+				r.stop()
 			}
 		}
 		for root, e := range want {
 			if _, ok := clients[root]; ok {
 				continue
 			}
+			if _, busy := draining[root]; busy {
+				continue // served again once its drain is over
+			}
 			key, err := os.ReadFile(e.KeyFile)
 			if err != nil || strings.TrimSpace(string(key)) == "" {
 				o.Logger.Warn("agent credential unreadable", "component", "serve", "root", root, "file", e.KeyFile)
 				continue
 			}
-			cctx, stop := context.WithCancel(ctx)
-			r := &running{entry: e, client: o.NewClient(e, []byte(strings.TrimSpace(string(key)))), stop: stop, done: make(chan struct{})}
+			clientCtx, stop := context.WithCancel(ctx)
+			cctx, stopLooks := context.WithCancel(clientCtx)
+			r := &running{entry: e, client: o.NewClient(e, []byte(strings.TrimSpace(string(key)))), stop: stop, stopLooks: stopLooks, done: make(chan struct{})}
 			clients[root] = r
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
 			starter := newLauncher(o, e)
@@ -396,7 +470,7 @@ func Run(ctx context.Context, o Options) error {
 						analyst.look(cctx)
 					}
 				})
-				r.client.Run(cctx)
+				r.client.Run(clientCtx)
 				close(r.done)
 			}()
 			o.Logger.Info("project served", "component", "serve", "root", root, "key", e.Key, "dashboard", e.URL)

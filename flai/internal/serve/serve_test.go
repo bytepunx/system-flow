@@ -1,14 +1,18 @@
 package serve
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/channel/channeltest"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
@@ -133,6 +137,114 @@ func TestServesRegisteredProjectsAndFollowsTheRegistry(t *testing.T) {
 	}
 	if _, still := st.Connections[rootA]; still {
 		t.Errorf("an unregistered project is still served: %+v", st.Connections)
+	}
+}
+
+// I-0107: a publish that raises flai.minimum past the flai serving the
+// project makes its manifest stop loading while the publish is still being
+// answered. The publish finishes and answers what it did, and only then is
+// the project dropped, said once, with why.
+func TestAProjectThatStopsLoadingAnswersItsRequestInFlightBeforeItIsDropped(t *testing.T) {
+	was := buildinfo.Version
+	buildinfo.Version = "1.2.0"
+	t.Cleanup(func() { buildinfo.Version = was }) // the first cleanup registered runs last, once Run has ended
+	dash := channeltest.New(t, "s3cret")
+	dir := DirFor(filepath.Join(t.TempDir(), "config.json"))
+	root, key := scratchProject(t, "harbour")
+	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: root, URL: dash.URL, KeyFile: key}); err != nil {
+		t.Fatal(err)
+	}
+	logs := &syncBuffer{}
+	dropped := func() []map[string]any {
+		var out []map[string]any
+		lines := bufio.NewScanner(strings.NewReader(logs.String()))
+		for lines.Scan() {
+			var ev map[string]any
+			if json.Unmarshal(lines.Bytes(), &ev) == nil && ev["msg"] == "project dropped" && ev["root"] == root {
+				out = append(out, ev)
+			}
+		}
+		return out
+	}
+
+	var droppedBeforeAnswer atomic.Int32
+	publish := func(ctx context.Context, _ channel.Project, _ json.RawMessage) (any, *channel.Error) {
+		// what flai release does: commit a minimum above the flai that serves the project
+		f, err := os.OpenFile(filepath.Join(root, "system-flow.yaml"), os.O_APPEND|os.O_WRONLY, 0)
+		if err != nil {
+			return nil, &channel.Error{Code: channel.CodeInternal, Message: err.Error()}
+		}
+		_, err = f.WriteString("flai:\n  minimum: 1.2.1\n")
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
+		if err != nil {
+			return nil, &channel.Error{Code: channel.CodeInternal, Message: err.Error()}
+		}
+		// and then push, which takes a while: flai serve sees the manifest
+		// no longer loads, and a few looks more go by
+		deadline := time.Now().Add(4 * time.Second)
+		for st, _ := dir.ReadStatus(time.Now()); st.Unavailable[root] == ""; st, _ = dir.ReadStatus(time.Now()) {
+			if time.Now().After(deadline) {
+				return nil, &channel.Error{Code: channel.CodeInternal, Message: "flai serve never found the project unavailable"}
+			}
+			select {
+			case <-ctx.Done():
+				return nil, &channel.Error{Code: channel.CodeInternal, Message: "cancelled: " + ctx.Err().Error()}
+			case <-time.After(10 * time.Millisecond):
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return nil, &channel.Error{Code: channel.CodeInternal, Message: "cancelled: " + ctx.Err().Error()}
+		case <-time.After(100 * time.Millisecond):
+		}
+		droppedBeforeAnswer.Store(int32(len(dropped())))
+		return map[string]string{"published": "1.2.1"}, nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Dir: dir, Version: "1.2.0", Every: 20 * time.Millisecond, WatchEvery: time.Hour, DrainGrace: 10 * time.Second,
+			Logger: slog.New(slog.NewJSONHandler(logs, nil)),
+			NewClient: func(e Entry, key []byte) *channel.Client {
+				methods := hostapi.Methods("test", nil)
+				methods["test.publish"] = publish
+				// the test dashboard answers no ping: none is sent while the test runs
+				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+					Methods: methods, Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+			}})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+
+	conn := dash.Wait(t)
+	res, rerr := conn.Ask(t, "test.publish", `{"project":"harbour"}`)
+	if rerr != nil || string(res) != `{"published":"1.2.1"}` {
+		t.Fatalf("the publish in flight answered %s %+v, want its own result", res, rerr)
+	}
+	if n := droppedBeforeAnswer.Load(); n != 0 {
+		t.Errorf("the project was dropped %d times before the publish in flight answered", n)
+	}
+	if got := conn.Last(t); len(got) != 0 {
+		t.Errorf("a project that stopped loading sent %v before its connection ended, want nothing: it is not removed", got)
+	}
+	waitFor(t, "the project is dropped", func() bool { return len(dropped()) > 0 })
+	time.Sleep(100 * time.Millisecond) // a few looks more, which say nothing again
+	said := dropped()
+	if len(said) != 1 {
+		t.Fatalf("said %d times that the project was dropped, want once:\n%s", len(said), logs.String())
+	}
+	if why, _ := said[0]["reason"].(string); !strings.Contains(why, "needs flai 1.2.1") || said[0]["unanswered"] != float64(0) {
+		t.Errorf("the drop said %v, want why (the manifest needs flai 1.2.1) and no request unanswered", said[0])
+	}
+	if st, _ := dir.ReadStatus(time.Now()); st.Connections[root].Connected {
+		t.Errorf("a project that no longer loads is still served: %+v", st.Connections)
 	}
 }
 

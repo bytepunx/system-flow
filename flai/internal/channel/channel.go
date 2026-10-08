@@ -138,6 +138,68 @@ type Client struct {
 	mu     sync.Mutex
 	state  State
 	notify func(method string, params any) error // set while a proven connection is open
+	// A draining client answers no new request, saying why, and counts the
+	// requests in flight down to idle, which closes when none is left.
+	draining bool
+	drainWhy string
+	active   int
+	idle     chan struct{}
+}
+
+// Drain refuses every request from now on, saying why, and waits until the
+// requests in flight are answered or ctx ends; it returns how many were left
+// unanswered. A draining client does not dial again once its connection ends.
+func (c *Client) Drain(ctx context.Context, why string) int {
+	c.mu.Lock()
+	if !c.draining {
+		c.draining, c.drainWhy = true, why
+	}
+	if c.active == 0 {
+		c.mu.Unlock()
+		return 0
+	}
+	if c.idle == nil {
+		c.idle = make(chan struct{})
+	}
+	idle := c.idle
+	c.mu.Unlock()
+	select {
+	case <-idle:
+		return 0
+	case <-ctx.Done():
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return c.active
+	}
+}
+
+// begin counts a request in, or returns the refusal to answer it with while
+// the client drains.
+func (c *Client) begin() *Error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.draining {
+		return &Error{Code: CodeUnknownProject, Message: fmt.Sprintf("flai no longer serves project %q: %s", c.Project.Key, c.drainWhy)}
+	}
+	c.active++
+	return nil
+}
+
+// end counts an answered request out.
+func (c *Client) end() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.active--
+	if c.active == 0 && c.idle != nil {
+		close(c.idle)
+		c.idle = nil
+	}
+}
+
+func (c *Client) isDraining() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.draining
 }
 
 // Notify sends a notification to the dashboard when one is connected, and
@@ -202,7 +264,7 @@ func (c *Client) Run(ctx context.Context) {
 	c.setState(func(s *State) { s.URL = c.URL })
 	backoff := c.MinBackoff
 	lastLogged := "\x00"
-	for ctx.Err() == nil {
+	for ctx.Err() == nil && !c.isDraining() {
 		started := c.Now()
 		err := c.serveOnce(ctx)
 		held := errors.Is(err, ErrHeld)
@@ -215,7 +277,7 @@ func (c *Client) Run(ctx context.Context) {
 				s.LastError += "; trying again in " + c.HeldBackoff.String()
 			}
 		})
-		if ctx.Err() != nil {
+		if ctx.Err() != nil || c.isDraining() {
 			return
 		}
 		wait := jitter(backoff)
@@ -455,6 +517,12 @@ func (c *Client) serveOnce(ctx context.Context) error {
 				}
 			}
 		case m.Method != "" && m.ID != nil:
+			if refused := c.begin(); refused != nil {
+				if err := send(message{ID: m.ID, Error: refused}); err != nil {
+					return err
+				}
+				continue
+			}
 			rctx, stop := context.WithCancel(ctx)
 			id := m.ID
 			rctx = WithProgress(rctx, func(value any) {
@@ -464,7 +532,8 @@ func (c *Client) serveOnce(ctx context.Context) error {
 			})
 			inflight.Store(string(m.ID), stop)
 			go func(m message) {
-				defer func() { stop(); inflight.Delete(string(m.ID)) }()
+				// counted out once its answer is sent, so that a drain waits for the answer
+				defer func() { stop(); inflight.Delete(string(m.ID)); c.end() }()
 				// timed from here, after the message was read and before it
 				// is written: what the dashboard waits beyond it is the transport
 				tctx, rec := perf.StartAt(rctx, c.Now)
