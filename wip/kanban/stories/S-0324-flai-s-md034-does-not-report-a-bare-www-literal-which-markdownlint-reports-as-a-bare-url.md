@@ -6,7 +6,7 @@ title: "flai's MD034 does not report a bare `www.` literal, which markdownlint r
 status: in-progress
 owner: alex
 created: 2026-10-07T18:59:55Z
-updated: 2026-10-08T00:30:39Z
+updated: 2026-10-08T00:43:55Z
 transitions:
   - to: ready
     at: 2026-10-08T00:29:56Z
@@ -16,27 +16,39 @@ transitions:
     by: agent-S-0324
 tags: []
 topics: [cli]
-touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/www.md, flai/internal/mdlint/testdata/cases/expected.txt, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/summary.md]
+touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/testdata/cases/www.md, flai/internal/mdlint/testdata/cases/expected.txt, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md, design/issues/summary.md, design/issues/I-0114-flai-verify-s-integration-tier-keeps-only-the-last-lines-of-go-test-s-output-so-the-failing-test-is-not-named.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 825
+  turns:
+    - day: 2026-10-08
+      ceremony: 4
+      test_runs: 7
+      hand_edits: 3
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 34812
+      cache_read: 7396068
+      cache_write: 172339
+      cost: 3.5546
   strategic:
     - kind: orchestrator
-      seconds: 119
+      seconds: 669
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 21
-          output: 366
-          cache_read: 6281483
-          cache_write: 15464
-          cost: 1.5515
+          input: 40
+          output: 568
+          cache_read: 12950083
+          cache_write: 41678
+          cost: 3.201
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -62,11 +74,11 @@ finalized:
 This story remediates [I-0110](../../../design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md), "flai's MD034 does not report a bare `www.` literal, which markdownlint reports as a bare URL". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0110 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0110 is closed with `flai issue close I-0110 --reason` saying what fixed it
+- [x] The cause I-0110 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0110 is closed with `flai issue close I-0110 --reason` saying what fixed it
 
 ## Tasks
-- T-1317 flai's MD034 reports a bare www. literal as markdownlint does
+- T-1317 flai's MD034 reports a bare `www.` literal as markdownlint does
 - T-1318 Close I-0110 with what fixed it
 
 ## Notes

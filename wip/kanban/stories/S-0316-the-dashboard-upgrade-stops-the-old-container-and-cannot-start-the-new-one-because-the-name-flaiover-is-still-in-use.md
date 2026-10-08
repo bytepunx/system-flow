@@ -6,7 +6,7 @@ title: The dashboard upgrade stops the old container and cannot start the new on
 status: in-progress
 owner: alex
 created: 2026-10-07T18:59:46Z
-updated: 2026-10-08T00:21:15Z
+updated: 2026-10-08T00:36:53Z
 transitions:
   - to: ready
     at: 2026-10-07T23:55:54Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-10-07T23:59:51Z
     by: agent-S-0316
 tags: []
-touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md, design/issues/summary.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md]
+touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/issues/I-0094-the-dashboard-upgrade-stops-the-old-container-and-cannot-start-the-new-one-because-the-name-flaiover-is-still-in-use.md, design/issues/summary.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/I-0109-flai-check-finds-narrative-state-outside-the-story-at-close-out.md, design/issues/I-0110-flai-s-md034-does-not-report-a-bare-www-literal-which-markdownlint-reports-as-a-bare-url.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,33 +23,33 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 687
-  estimated: true
+  seconds: 2844
   turns:
     - day: 2026-10-07
       work: 4
     - day: 2026-10-08
-      ceremony: 3
+      ceremony: 7
+      test_runs: 3
       hand_edits: 1
-      work: 21
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 118
-      output: 868
-      cache_read: 4359466
-      cache_write: 260673
-      cost: 2.0404
+      input: 168
+      output: 49380
+      cache_read: 8639653
+      cache_write: 326731
+      cost: 4.9101
   strategic:
     - kind: orchestrator
-      seconds: 155
+      seconds: 318
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 38
-          output: 604
-          cache_read: 8860350
-          cache_write: 29400
-          cost: 2.1903
+          input: 43
+          output: 635
+          cache_read: 10546457
+          cache_write: 32706
+          cost: 2.6066
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m

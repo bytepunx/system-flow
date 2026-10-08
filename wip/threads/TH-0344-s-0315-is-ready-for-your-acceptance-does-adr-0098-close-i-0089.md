@@ -4,10 +4,10 @@ title: "S-0315 is ready for your acceptance: does ADR-0098 close I-0089?"
 anchor:
   path: wip/kanban/stories/S-0315-design-issues-summary-md-is-generated-and-committed-so-a-story-branch-that-records-an-issue-conflicts-with-any-issue-recorded-on-main-meanwhile.md
   item: S-0315
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-08T00:10:50Z
-updated: 2026-10-08T00:10:50Z
+updated: 2026-10-08T04:07:34Z
 ---
 
 # TH-0344 S-0315 is ready for your acceptance: does ADR-0098 close I-0089?
@@ -28,3 +28,6 @@ I verified it but did not accept it, because its goal leaves this choice to you:
 - **Not confirmed:** the close reason says the test fails with the regeneration left out. The verifier did not run that, so it rests on the agent's word.
 
 If you would rather keep I-0089 open, send S-0315 back to in-progress, and its agent reopens the issue.
+
+### 2026-10-08T04:07:34Z alex
+Resolved: S-0315 was accepted

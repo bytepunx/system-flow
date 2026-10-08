@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 137.7204
-accrued_seconds: 83327
-tasks_completed: 184
-last_run: 2026-10-08T00:31:27Z
+accrued_cost: 144.4115
+accrued_seconds: 84275
+tasks_completed: 193
+last_run: 2026-10-08T00:47:15Z
 ---
 
 # Orchestrator activity
@@ -1281,7 +1281,7 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 ### 2026-10-08T00:30:00Z
 
-- Summary: Approved planner-S-0324's plan on TH-0352 and resolved it (MD034 www. fix per ADR-0061; 2 tasks, 12m, 12.50 USD/week). Finalized S-0324, resolved my draft thread TH-0308, and promoted it to ready (flai promote --candidates rank 1, 12m). Applied the throughput order: S-0324 (12m), S-0318 (25m), S-0320 (25m), S-0319 (30m)
+- Summary: Approved planner-S-0324's plan on TH-0352 and resolved it (MD034 `www.` fix per ADR-0061; 2 tasks, 12m, 12.50 USD/week). Finalized S-0324, resolved my draft thread TH-0308, and promoted it to ready (flai promote --candidates rank 1, 12m). Applied the throughput order: S-0324 (12m), S-0318 (25m), S-0320 (25m), S-0319 (30m)
 - Items: S-0324, S-0318, S-0320, S-0319
 - Seconds: 12
 - Cost: 0.3280 USD, estimated
@@ -1299,6 +1299,69 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0317
 - Seconds: 81
 - Cost: 1.3836 USD, estimated
+
+### 2026-10-08T00:31:58Z
+
+- Summary: Published under judgement after accepting S-0317: 2 pending, 27.5 USD/week; flai 1.39.2→1.39.3 (flai/v1.39.3); bundled S-0310 and S-0317; pushed
+- Items: S-0317, S-0310
+- Seconds: 31
+- Cost: 0.1669 USD, estimated
+
+### 2026-10-08T00:32:09Z
+
+- Summary: Re-applied the throughput order after S-0324 left ready for in-progress: S-0318 (25m), S-0320 (25m), S-0319 (30m)
+- Items: S-0318, S-0320, S-0319
+- Seconds: 11
+- Cost: 0.3352 USD, estimated
+
+### 2026-10-08T00:35:17Z
+
+- Summary: Recommended an answer on TH-0353, citing design/adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md § Decision
+- Items: S-0326
+- Seconds: 188
+- Cost: 3.7195 USD, estimated
+
+### 2026-10-08T00:35:21Z
+
+- Summary: Recommended on TH-0353 (planner-S-0326) that the operator take the post-rebase issue-fold remedy for I-0112. Left the thread open: it adds an automatic change to issue files beyond ADR-0098, a decision not yet recorded. The plan's 5 tasks, 45m, and 25 USD/week fit; S-0326 stays a draft. The only plan candidates left are the duplicates S-0322, S-0325, and S-0327, held for the operator
+- Items: S-0326
+- Seconds: 4
+- Cost: 0.3438 USD, estimated
+
+### 2026-10-08T00:44:20Z
+
+- Summary: Recommended an answer on TH-0354, citing design/adrs/0019-story-branches-and-touches.md § Decision
+- Items: S-0324
+- Seconds: 539
+- Cost: 1.2325 USD, estimated
+
+### 2026-10-08T00:44:24Z
+
+- Summary: Recommended on TH-0354 (agent-S-0324; answer_threads autonomous) that the four quoted wip lines land with flai's next wip commit on main, such as S-0316's acceptance, rather than a hand commit. Posted as a recommendation: no recorded rule covers hand commits to wip on main (source: ADR-0019 § Decision)
+- Items: S-0324
+- Seconds: 4
+- Cost: 0.1777 USD, estimated
+
+### 2026-10-08T00:47:05Z
+
+- Summary: Recommended an answer on TH-0355, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0316
+- Seconds: 161
+- Cost: 0.3563 USD, estimated
+
+### 2026-10-08T00:47:10Z
+
+- Summary: Answered TH-0354, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0324
+- Seconds: 5
+- Cost: 0.1793 USD, estimated
+
+### 2026-10-08T00:47:15Z
+
+- Summary: Corrected my TH-0354 recommendation: S-0316's acceptance cannot land the quoted wip lines, because its own close-out fails on them and ADR-0093 needs a passed verify. Recommended on TH-0355 that the operator accept S-0315 (TH-0344) or commit the four files; until then every close-out's smoke tier fails on those lines. flai guard refused my first plain correction on TH-0354 for lacking a source ("the orchestrator cannot reply to TH-0354 ... give source"); it passed with ADR-0093 as source
+- Items: S-0316, S-0324, S-0315
+- Seconds: 5
+- Cost: 0.1799 USD, estimated
 
 ## Refusals
 
@@ -1335,4 +1398,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-07T19:07:42Z
 
 - Call: `flai serve status --json 2>/dev/null`
+- Needs: none
+
+### 2026-10-08T00:47:07Z
+
+- Call: `thread_reply TH-0354`
 - Needs: none
