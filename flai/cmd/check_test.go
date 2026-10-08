@@ -404,6 +404,45 @@ func TestCheckRecordIssuesLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
 	}
 }
 
+// I-0096, ADR-0123: another story in progress leaves a code span ending in a
+// space in its narrative, as S-0229 did; a close-out of S-004 neither notes
+// its markdown.MD038 nor records it in an issue, while the unscoped check
+// still warns on it.
+func TestCheckRecordIssuesLeavesOutAMarkdownFindingOnAnotherOpenStorysNarrative(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", map[string]string{"S-006": "docs"})
+	if err := os.WriteFile(filepath.Join(root, ".markdownlint.yaml"), []byte("default: true\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\nMD041: false\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	narrative := filepath.Join(root, "wip/agents/S-006.md")
+	data, err := os.ReadFile(narrative)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(narrative, append(data, "\nThe `rule: ` field.\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, _ := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	if !strings.Contains(out, "wip/agents/S-006.md:29: warning: markdown.MD038: ") {
+		t.Fatalf("unscoped, the run should report the MD038 on S-006's narrative:\n%s%s", out, errOut)
+	}
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "markdown.MD038") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the MD038 should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); names != nil {
+		t.Errorf("no issue should be opened or bumped, got %v", names)
+	}
+}
+
 // S-0227: a finding that quotes a code span is written without backticks,
 // so the issue it is recorded in passes the markdown lint (MD038).
 func TestFindingTextLeavesNoCodeSpanOpen(t *testing.T) {

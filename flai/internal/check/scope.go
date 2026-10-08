@@ -21,7 +21,9 @@ import (
 // left out of the scoped result, and the counts it added are taken back
 // (ADR-0115). So is an item.archive outside the story: the item waits for
 // the operator's flai archive in the main checkout, which no story branch
-// clears, and it never names a story in progress (ADR-0122, I-0078).
+// clears, and it never names a story in progress (ADR-0122, I-0078). So is a
+// markdown finding on the narrative of another story that is neither done nor
+// cancelled: that story's own close-out finds it (ADR-0123, I-0096).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	st, err := repo.Get(story)
 	if err != nil {
@@ -31,6 +33,10 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 		return fmt.Errorf("scope the check to %s: it is a %s; name a story (S-nnnn)", st.ID, st.Type)
 	}
 	in, err := storyPaths(repo, st)
+	if err != nil {
+		return fmt.Errorf("scope the check to %s: %w", st.ID, err)
+	}
+	others, err := openNarratives(repo, st.ID)
 	if err != nil {
 		return fmt.Errorf("scope the check to %s: %w", st.ID, err)
 	}
@@ -47,11 +53,14 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 			in[abs] = true
 		}
 	}
-	inside := func(path string) bool {
+	resolve := func(path string) string {
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(repo.Root, path)
 		}
-		path = filepath.Clean(path)
+		return filepath.Clean(path)
+	}
+	inside := func(path string) bool {
+		path = resolve(path)
 		if in[path] {
 			return true
 		}
@@ -64,7 +73,8 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 	}
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
-		if (f.Rule == "wip.overlap" && !namesStory(f, st.ID)) || (f.Rule == "item.archive" && !inside(f.Path)) {
+		if (f.Rule == "wip.overlap" && !namesStory(f, st.ID)) || (f.Rule == "item.archive" && !inside(f.Path)) ||
+			(strings.HasPrefix(f.Rule, "markdown.") && others[resolve(f.Path)]) {
 			res.drop(f)
 			continue
 		}
@@ -118,6 +128,24 @@ func (r *Result) drop(f Finding) {
 	case f.advisory:
 		r.Advisory--
 	}
+}
+
+// openNarratives is the cleaned paths of the narratives of the stories other
+// than story whose status is neither done nor cancelled (ADR-0123).
+func openNarratives(repo *workitem.Repo, story string) (map[string]bool, error) {
+	items, err := repo.List(true)
+	if err != nil {
+		return nil, err
+	}
+	open := map[string]bool{}
+	for _, it := range items {
+		if it.Type != workitem.Story || it.Status == workitem.Done || it.Status == workitem.Cancelled ||
+			workitem.CanonicalID(it.ID) == workitem.CanonicalID(story) {
+			continue
+		}
+		open[filepath.Clean(repo.NarrativePath(it.ID))] = true
+	}
+	return open, nil
 }
 
 // storyPaths is the cleaned paths of the files that belong to st: its item

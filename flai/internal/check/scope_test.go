@@ -256,6 +256,138 @@ func TestScopedCheckLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
 	}
 }
 
+// I-0096, ADR-0123: scoped to a story, a markdown finding on the narrative
+// of another story in progress, a code span ending in a space as S-0229's
+// was, is left out of the result, and its warning is taken back from the
+// counts, so the run neither notes nor records it: that story's own
+// close-out finds it. Unscoped, it is reported as before.
+func TestScopedCheckLeavesOutAMarkdownFindingOnAnotherOpenStorysNarrative(t *testing.T) {
+	root := scopeProject(t)
+	lintMarkdown(t, root)
+	addStory(t, root, "S-006", "E-001", "")
+	addCodeSpan(t, root, "wip/agents/S-006.md")
+	whole, scoped := runScoped(t, root, nil)
+	if got := codeSpanFindings(whole); len(got) != 1 || filepath.ToSlash(got[0].Path) != "wip/agents/S-006.md" {
+		t.Fatalf("unscoped, the run should report the MD038 on S-006's narrative: %+v", whole.Findings)
+	}
+	if got := codeSpanFindings(scoped); len(got) != 0 {
+		t.Errorf("scoped to S-004, the MD038 on S-006's narrative should be left out: %+v", got)
+	}
+	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	}
+	assertCountsMatch(t, scoped)
+}
+
+// ADR-0123 §2: a markdown finding outside the story on anything but another
+// open story's narrative stays a note: the narrative of a done or cancelled
+// story, an archived narrative, a task, or a thread of another story.
+func TestScopedCheckNotesEveryOtherMarkdownFindingOutsideTheStory(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(t *testing.T, root string) string
+	}{
+		{"done story's narrative", func(t *testing.T, root string) string {
+			addStory(t, root, "S-006", "E-001", "")
+			edit(t, root, "wip/kanban/stories/S-006-six.md", "status: in-progress\n", "status: done\n")
+			return "wip/agents/S-006.md"
+		}},
+		{"cancelled story's narrative", func(t *testing.T, root string) string {
+			addStory(t, root, "S-006", "E-001", "")
+			edit(t, root, "wip/kanban/stories/S-006-six.md", "status: in-progress\n", "status: cancelled\n")
+			return "wip/agents/S-006.md"
+		}},
+		{"archived narrative", func(t *testing.T, root string) string {
+			if err := os.MkdirAll(filepath.Join(root, "wip/archive/agents"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			narrative, err := os.ReadFile(filepath.Join(root, "wip/agents/S-004.md"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(root, "wip/archive/agents/S-005.md"), []byte(strings.ReplaceAll(string(narrative), "S-004", "S-005")), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			return "wip/archive/agents/S-005.md"
+		}},
+		{"another story's task", func(*testing.T, string) string {
+			return "wip/archive/kanban/tasks/T-004-t4.md"
+		}},
+		{"another story's thread", func(t *testing.T, root string) string {
+			addStory(t, root, "S-006", "E-001", "")
+			edit(t, root, "wip/threads/TH-0001-is-four-really-done.md", "  item: S-004\n", "  item: S-006\n")
+			return "wip/threads/TH-0001-is-four-really-done.md"
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := scopeProject(t)
+			lintMarkdown(t, root)
+			rel := tc.setup(t, root)
+			addCodeSpan(t, root, rel)
+			whole, scoped := runScoped(t, root, nil)
+			if got := codeSpanFindings(whole); len(got) != 1 || filepath.ToSlash(got[0].Path) != rel {
+				t.Fatalf("unscoped, the run should report the MD038 on %s: %+v", rel, whole.Findings)
+			}
+			if got := codeSpanFindings(scoped); len(got) != 1 || !got[0].Outside {
+				t.Errorf("scoped to S-004, the MD038 on %s should be a note outside it: %+v", rel, got)
+			}
+			assertCountsMatch(t, scoped)
+		})
+	}
+}
+
+// lintMarkdown gives the project a markdownlint configuration, so the wip
+// markdown is linted (S-0179).
+func lintMarkdown(t *testing.T, root string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(root, ".markdownlint.yaml"), []byte("default: true\nMD022:\n  lines_below: 0\nMD024:\n  siblings_only: true\nMD025:\n  front_matter_title: \"\"\nMD041: false\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// addCodeSpan appends to a fixture file a code span ending in a space, which
+// the markdown lint reports as MD038 (I-0096).
+func addCodeSpan(t *testing.T, root, rel string) {
+	t.Helper()
+	p := filepath.Join(root, rel)
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(p, append(data, "\nThe `rule: ` field.\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// codeSpanFindings is res's markdown.MD038 findings.
+func codeSpanFindings(res *Result) []Finding {
+	var out []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "markdown.MD038" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// assertCountsMatch fails when res's warnings and outside counts are not
+// those of the findings it kept.
+func assertCountsMatch(t *testing.T, res *Result) {
+	t.Helper()
+	warnings, outside := 0, 0
+	for _, f := range res.Findings {
+		if f.Level == Warning {
+			warnings++
+		}
+		if f.Outside {
+			outside++
+		}
+	}
+	if res.Warnings != warnings || res.Outside != outside {
+		t.Errorf("counts should match the findings kept: warnings %d outside %d, findings give %d, %d", res.Warnings, res.Outside, warnings, outside)
+	}
+}
+
 // addCancelledStory writes a story under E-001 that was cancelled from
 // backlog and never archived, as S-0250 was (I-0078), and lists it in the
 // epic.
