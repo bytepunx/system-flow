@@ -3,11 +3,11 @@ id: S-0334
 type: story
 nature: feature
 title: A story held on overlap is asked about by message, and starts when the holding story's agent shares the paths or narrows its claim
-status: in-progress
+status: done
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:04Z
-updated: 2026-10-08T09:48:40Z
+updated: 2026-10-08T10:28:37Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:25Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:41:58Z
     by: agent-S-0334
+  - to: review
+    at: 2026-10-08T10:27:05Z
+    by: agent-S-0334
+  - to: done
+    at: 2026-10-08T10:28:37Z
+    by: orchestrator
 tags: [flai, template]
 topics: [cli, conventions, template]
-touches: [design/adrs, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go]
+touches: [design/adrs, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, flai/internal/messages/share.go, flai/internal/messages/share_test.go, docs/operators/settings.md, flai/internal/serve/start.go]
 after: [S-0332]
 agent:
   harness: claude-code
@@ -26,19 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 404
-  estimated: true
+  seconds: 2719
   turns:
     - day: 2026-10-08
-      hand_edits: 1
-      work: 24
+      test_runs: 4
+      hand_edits: 2
+      work: 62
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 377
-      cache_read: 3708158
-      cache_write: 246187
-      cost: 1.7771
+      input: 414
+      output: 179375
+      cache_read: 29383240
+      cache_write: 868275
+      cost: 14.7064
   strategic:
     - kind: orchestrator
       seconds: 341
@@ -72,12 +78,12 @@ Raise throughput by letting the agent that holds a story decide whether the hold
 
 ## Acceptance criteria
 
-- [ ] When a ready story is held on overlap alone, flai serve messages each story in progress that holds it, once per pair while the hold lasts, `about` the overlapping paths, with the held story's goal and what the agent can answer.
-- [ ] `flai message share <conversation> --paths <path>… "<split>"`, and the MCP tool `message_share`, record that the holding story shares those paths with the held story and how the work is split; only the holding story's agent, or the operator, may share.
-- [ ] An overlap on shared paths does not hold: `flai board`, `inbox`, `wait_for_work`, and the launcher take the story, and its `held` reason names any paths still held; a share ends when either story leaves the open columns, or the held story leaves ready before it starts.
-- [ ] The held story's agent, once started, finds the conversation and the split in its first `inbox`, and the prompt flai serve gives it names them.
-- [ ] Two stories that share paths are still trial-merged at `flai stream sync`, and a conflict between them opens their conversation as S-0332 has it.
-- [ ] An ADR refining ADR-0046 and ADR-0096 records the share, and `design/system/workflow.md` § Branches and collisions, `agent-coordination.md`, and `work-management.md` in both copies describe it.
+- [x] When a ready story is held on overlap alone, flai serve messages each story in progress that holds it, once per pair while the hold lasts, `about` the overlapping paths, with the held story's goal and what the agent can answer.
+- [x] `flai message share <conversation> --paths <path>… "<split>"`, and the MCP tool `message_share`, record that the holding story shares those paths with the held story and how the work is split; only the holding story's agent, or the operator, may share.
+- [x] An overlap on shared paths does not hold: `flai board`, `inbox`, `wait_for_work`, and the launcher take the story, and its `held` reason names any paths still held; a share ends when either story leaves the open columns, or the held story leaves ready before it starts.
+- [x] The held story's agent, once started, finds the conversation and the split in its first `inbox`, and the prompt flai serve gives it names them.
+- [x] Two stories that share paths are still trial-merged at `flai stream sync`, and a conflict between them opens their conversation as S-0332 has it.
+- [x] An ADR refining ADR-0046 and ADR-0096 records the share, and `design/system/workflow.md` § Branches and collisions, `agent-coordination.md`, and `work-management.md` in both copies describe it.
 
 ## Tasks
 
@@ -117,3 +123,16 @@ Touches:
 Forecast 53m: `flai forecast` gave it on 2026-10-08, 104 s per unit over 33 done large-band feature stories, times size 30 (6 criteria, 24 touches). It stands; the 58m of the first plan came from 114 s per unit over 29 stories.
 
 Cost of delay 288.04 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 53m of the 3h4m forecast over the four open stories (S-0334, S-0336, S-0337, S-0338). It stands; this story is where the epic's throughput comes from, but no input prices that apart.
+
+### Accepted by the orchestrator
+
+- Verified: 1eeef480841294dc4c4801dacffba1cd5736fb6c
+- At: 2026-10-08T10:28:37Z
+
+Verdict: accept. flai verify passed every step at the branch head 1eeef480, and the verifier matched all six criteria to the diff. The share policy matches the operator's TH-0318 decision: a share lifts a hold on its own, and the trial merge still catches a bad split.
+- 1: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/messages/share.go, flai/internal/messages/messages_test.go
+- 2: flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go
+- 3: flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/share.go, flai/internal/workitem/boardview.go
+- 4: flai/internal/serve/agents.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go
+- 5: flai/internal/serve/agents_test.go
+- 6: design/adrs/README.md, design/system/workflow.md, design/system/agent-coordination.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md

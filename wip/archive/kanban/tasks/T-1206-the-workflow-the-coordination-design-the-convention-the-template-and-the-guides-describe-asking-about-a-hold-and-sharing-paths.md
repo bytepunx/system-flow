@@ -3,16 +3,36 @@ id: T-1206
 type: task
 nature: feature
 title: The workflow, the coordination design, the convention, the template, and the guides describe asking about a hold and sharing paths
-status: backlog
+status: done
 parent: S-0334
 owner: alex
 created: 2026-10-07T20:16:26Z
-updated: 2026-10-08T09:44:31Z
-transitions: []
+updated: 2026-10-08T10:20:21Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:11:04Z
+    by: agent-S-0334
+  - to: in-progress
+    at: 2026-10-08T10:11:05Z
+    by: agent-S-0334
+  - to: done
+    at: 2026-10-08T10:20:21Z
+    by: agent-S-0334
 stream: S-0334
 tags: [flai, template]
-touches: [design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1203]
+usage:
+  source: log
+  seconds: 556
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 32766
+      cache_read: 5367295
+      cache_write: 158604
+      cost: 2.6864
 ---
 # T-1206 The workflow, the coordination design, the convention, the template, and the guides describe asking about a hold and sharing paths
 

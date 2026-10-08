@@ -3,11 +3,11 @@ id: T-1203
 type: task
 nature: feature
 title: flai message share and the MCP tool message_share record a share of paths with a held story, and flai can ask about a hold
-status: in-progress
+status: done
 parent: S-0334
 owner: alex
 created: 2026-10-07T20:16:02Z
-updated: 2026-10-08T09:49:11Z
+updated: 2026-10-08T10:10:50Z
 transitions:
   - to: ready
     at: 2026-10-08T09:49:11Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:49:11Z
     by: agent-S-0334
+  - to: done
+    at: 2026-10-08T10:10:50Z
+    by: agent-S-0334
 stream: S-0334
 tags: [flai]
-touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/messages/share.go, flai/internal/messages/share_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
+touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/internal/messages/share.go, flai/internal/messages/share_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go]
 after: [T-1204]
+usage:
+  source: log
+  seconds: 1299
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 160
+      output: 69326
+      cache_read: 11356169
+      cache_write: 335575
+      cost: 5.6838
 ---
 # T-1203 flai message share and the MCP tool message_share record a share of paths with a held story, and flai can ask about a hold
 

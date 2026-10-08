@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 318.7914
-accrued_seconds: 116971
-tasks_completed: 301
-last_run: 2026-10-08T09:52:17Z
+accrued_cost: 321.1557
+accrued_seconds: 117520
+tasks_completed: 302
+last_run: 2026-10-08T10:01:26Z
 ---
 
 # Orchestrator activity
@@ -2118,6 +2118,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0344
 - Seconds: 416
 - Cost: 3.7877 USD, estimated
+
+### 2026-10-08T10:01:26Z
+
+- Summary: Accepted S-0297 under accept_reviews at verified commit 45a0db97. flai verify passed at the head, and the verifier matched both criteria (tests reproduce I-0092's remaining instances on S-0326's merge; I-0092 closed). The dry-run had no blockers. Did not publish (judgement, 1 pending): it is tests only with no shipped behaviour, so it is held to bundle with the next flai change. The ready order is unchanged; the only promote candidate is the blocked S-0241.
+- Items: S-0297
+- Seconds: 549
+- Cost: 2.3643 USD, estimated
 
 ## Refusals
 

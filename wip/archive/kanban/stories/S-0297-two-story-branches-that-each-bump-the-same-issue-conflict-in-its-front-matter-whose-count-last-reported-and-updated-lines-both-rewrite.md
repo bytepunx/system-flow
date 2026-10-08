@@ -44,15 +44,21 @@ usage:
       cost: 3.1143
   strategic:
     - kind: orchestrator
-      seconds: 38
+      seconds: 587
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 17
-          output: 232
-          cache_read: 5008682
-          cache_write: 6369
-          cost: 1.2376
+          input: 39
+          output: 617
+          cache_read: 14243012
+          cache_write: 16338
+          cost: 3.5152
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 65
+          cache_read: 67672
+          cache_write: 32832
+          cost: 0.0867
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

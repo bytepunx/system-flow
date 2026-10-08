@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 141
-      cache_read: 1079339
-      cache_write: 85443
-      cost: 0.5235
+      input: 16
+      output: 7044
+      cache_read: 1153844
+      cache_write: 34096
+      cost: 0.5775
 ---
 # T-1204 An overlap on shared paths does not hold, and the held reason names only the paths still held
 

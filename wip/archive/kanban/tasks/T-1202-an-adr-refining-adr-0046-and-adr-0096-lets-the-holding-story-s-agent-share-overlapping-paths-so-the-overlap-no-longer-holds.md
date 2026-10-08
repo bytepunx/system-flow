@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 110
-      cache_read: 1216320
-      cache_write: 12762
-      cost: 0.5524
+      input: 17
+      output: 7433
+      cache_read: 1217529
+      cache_write: 35978
+      cost: 0.6094
 ---
 # T-1202 An ADR refining ADR-0046 and ADR-0096 lets the holding story's agent share overlapping paths, so the overlap no longer holds
 
