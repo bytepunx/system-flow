@@ -1,7 +1,7 @@
 ---
 id: ADR-0129
 title: "A story's agent names a provider beside its harness and model, and the providers map, with each gateway's API, base URL, and the name of its key's variable, lives on the host"
-status: proposed
+status: accepted
 date: 2026-10-08
 supersedes: []
 superseded_by: []
@@ -20,6 +20,7 @@ A story's agent names a provider beside its harness and model, and the providers
 
 - `agent` gains `provider`, beside `harness`, `model`, `config`, and `roles`, in the manifest's default agent, under `planning`, `orchestration`, and `analysis`, and in a story's front matter, copied as ADR-0037 copies the rest. Absent, the harness's own default stands: today's behaviour.
 - `provider` names an entry in a `providers` map on the host, in flai's configuration beside `agent.harnesses`, set with `flai serve agent provider <name>` and the dashboard's settings host action. An entry holds `api` (`anthropic-messages`, `openai-chat`, or `openai-responses`), `base_url`, `key_env`, the name of the environment variable that holds the key, and optional `models`, the harness's aliases on that provider. It never holds a key.
+- A project may override, in its manifest under `providers.<name>`, the values of a host's entry that are not secrets and name no secret: `api`, `base_url`, and `models`. The host's entry supplies what the manifest leaves out, and `key_env` is the host's alone, since it names a variable of the host's environment. A manifest entry whose name the host has no entry for is refused at start, naming the host setting that adds it (the operator's answer on TH-0368).
 - `flai serve` reads the variable `key_env` names when it starts the agent, sets the harness's own variable in the child's environment, and logs neither; the start record keeps the name. It refuses a start whose provider names an unset variable, or an `api` the harness cannot speak, as it refuses an unknown harness.
 - Each adapter derives its own settings from the entry: `claude-code` sets `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, an empty `ANTHROPIC_API_KEY`, and the `ANTHROPIC_DEFAULT_*_MODEL` aliases; the `command` adapter gets `FLAI_PROVIDER`, `FLAI_PROVIDER_API`, `FLAI_PROVIDER_BASE_URL`, `FLAI_PROVIDER_KEY_ENV`, and `{provider}`.
 
@@ -31,6 +32,6 @@ A story's agent names a provider beside its harness and model, and the providers
 
 ## Alternatives considered
 
-- A `providers` map in the manifest, committed, with a host override: a clone would carry it, but base URLs and variable names are host-bound, and anyone who edits the manifest could point a story at another endpoint, against ADR-0038's rule that what runs is the operator's.
+- The whole `providers` map in the manifest, committed, with a host override: a clone would carry it, but the key's variable name is host-bound, and the host could not refuse an endpoint it never named, against ADR-0038's rule that what runs is the operator's. The decision keeps the host as the source and lets the manifest override only the non-secret values of an entry the host has.
 - Provider settings inside `agent.config`: three keys per story, repeated, with the harness mapping each; the harness, not the story, knows what to set.
 - The key itself in the host configuration: refused by the safety convention; the environment and the name of its variable suffice.

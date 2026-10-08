@@ -1,7 +1,7 @@
 ---
 id: ADR-0131
 title: "A harness without a guard hook runs a story's agent but none of its roles unless the host sets guard none for it, and a protected write on it is refused unless auto-approve is on"
-status: proposed
+status: accepted
 date: 2026-10-08
 supersedes: []
 superseded_by: []

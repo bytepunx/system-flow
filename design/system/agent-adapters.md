@@ -551,14 +551,14 @@ Questions only the operator can answer, each with the recommended answer first:
 
 ## Decision
 
-The five questions at the end of [Recommendation](#recommendation) were put to the operator on TH-0368 on 2026-10-08, recommendation first. The first four are drafted as proposed ADRs, to be accepted as the operator answers; the fifth, the paid trial, is spend and the operator's alone, recorded in the epic.
+The five questions at the end of [Recommendation](#recommendation) were put to the operator on TH-0368 on 2026-10-08, recommendation first, and answered the same day. The first four are recorded as accepted ADRs; the fifth, the paid trial, is spend and is recorded in the epic.
 
-| Question | ADR | Status |
-|----------|-----|--------|
-| 1, the harness, provider, and model split, with `providers` on the host | [ADR-0129](../adrs/0129-a-story-s-agent-names-a-provider-beside-its-harness-and-model-and-the-providers.md) | proposed |
-| 2, the neutral contracts every harness meets flai through | [ADR-0130](../adrs/0130-every-harness-meets-flai-through-neutral-contracts-an-adapter-s-capabilities-a.md) | proposed |
-| 3, a harness without a guard hook or a permission handler | [ADR-0131](../adrs/0131-a-harness-without-a-guard-hook-runs-a-story-s-agent-but-none-of-its-roles.md) | proposed |
-| 4, where a story's cost comes from, `priced_by` on `usage` | [ADR-0132](../adrs/0132-a-story-s-cost-comes-from-its-provider-s-spend-log-when-it-has-a-provider-from.md) | proposed |
-| 5, a paid trial in the spike story | none; the epic's notes | awaiting the operator |
+| Question | Answer | ADR |
+|----------|--------|-----|
+| 1, the harness, provider, and model split | As recommended, `providers` on the host, and a project may override in its manifest the values of an entry that are not secrets: `api`, `base_url`, `models`; `key_env` stays the host's | [ADR-0129](../adrs/0129-a-story-s-agent-names-a-provider-beside-its-harness-and-model-and-the-providers.md) |
+| 2, which adapters, in what order | Option A: the provider split and Claude Code over a gateway, with the neutral contracts. Codex CLI, OpenCode, Goose, and a loop of flai's own are not chosen; the spike's checks are the first story's work inside A | [ADR-0130](../adrs/0130-every-harness-meets-flai-through-neutral-contracts-an-adapter-s-capabilities-a.md) |
+| 3, a harness without a guard hook or a permission handler | As recommended | [ADR-0131](../adrs/0131-a-harness-without-a-guard-hook-runs-a-story-s-agent-but-none-of-its-roles.md) |
+| 4, where a story's cost comes from | Yes: the gateway's spend log, `priced_by` on `usage` | [ADR-0132](../adrs/0132-a-story-s-cost-comes-from-its-provider-s-spend-log-when-it-has-a-provider-from.md) |
+| 5, a paid trial | Begin with OpenRouter. Its integration and smoke tests run only where an OpenRouter key is configured, and do nothing where it is not, so that no close-out and no CI run without the key fails for want of it | none; the epic's criteria |
 
-The order the epic builds in, question 2, is the recommendation's: the spike, then Claude Code over a gateway with the provider split and the neutral contracts, then Codex CLI; OpenCode on demand; Goose and a loop of flai's own not now.
+What the answer to question 2 leaves of the recommendation: the epic builds A alone. The two facts the spike was to settle, whether each gateway forwards what Claude Code sends and what the gateway's spend log says beside `total_cost_usd`, are checked by the epic's first story against OpenRouter, with the key the operator configures, before the contracts are fixed; LiteLLM follows OpenRouter. ADR-0130's contracts are built inside the Claude Code adapter, and Codex CLI stays the harness the finding recommends when a non-Claude model is wanted, as a later epic.

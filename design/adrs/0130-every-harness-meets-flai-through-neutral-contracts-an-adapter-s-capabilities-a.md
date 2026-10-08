@@ -1,7 +1,7 @@
 ---
 id: ADR-0130
 title: "Every harness meets flai through neutral contracts, an adapter's capabilities, a usage reader, the guard's call and verdict with hold-and-ask, and a protected list per harness, and Claude Code's hooks and permission tool are one adapter's form of them"
-status: proposed
+status: accepted
 date: 2026-10-08
 supersedes: []
 superseded_by: []

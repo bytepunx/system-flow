@@ -1,7 +1,7 @@
 ---
 id: ADR-0132
 title: "A story's cost comes from its provider's spend log when it has a provider, from the harness's own figure when it has none, and is estimated otherwise, with the source named on its usage as priced_by"
-status: proposed
+status: accepted
 date: 2026-10-08
 supersedes: []
 superseded_by: []
