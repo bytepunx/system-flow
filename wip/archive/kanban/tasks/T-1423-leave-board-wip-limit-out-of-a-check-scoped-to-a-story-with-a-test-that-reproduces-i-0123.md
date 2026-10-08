@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 237
-      cache_read: 1348570
-      cache_write: 75405
-      cost: 0.6402
+      input: 25
+      output: 6348
+      cache_read: 1388719
+      cache_write: 57694
+      cost: 0.8058
 ---
 # T-1423 Leave board.wip-limit out of a check scoped to a story, with a test that reproduces I-0123
 

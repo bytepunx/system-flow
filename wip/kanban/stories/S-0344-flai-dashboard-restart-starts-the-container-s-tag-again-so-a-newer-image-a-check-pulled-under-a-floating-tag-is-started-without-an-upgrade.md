@@ -6,7 +6,7 @@ title: flai dashboard restart starts the container's tag again, so a newer image
 status: in-progress
 owner: alex
 created: 2026-10-08T08:08:17Z
-updated: 2026-10-08T09:08:24Z
+updated: 2026-10-08T09:39:39Z
 transitions:
   - to: ready
     at: 2026-10-08T08:38:55Z
@@ -23,20 +23,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 871
+  seconds: 1870
   estimated: true
   turns:
     - day: 2026-10-08
-      ceremony: 1
+      ceremony: 2
       hand_edits: 2
-      work: 19
+      work: 33
   models:
     - model: claude-opus-5-5
-      input: 88
-      output: 589
-      cache_read: 4192842
-      cache_write: 248848
-      cost: 2
+      input: 156
+      output: 1059
+      cache_read: 8308097
+      cache_write: 401371
+      cost: 3.9123
   strategic:
     - kind: orchestrator
       seconds: 375
@@ -73,8 +73,8 @@ finalized:
 This story remediates [I-0116](../../../design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md), "flai dashboard restart starts the container's tag again, so a newer image a check pulled under a floating tag is started without an upgrade". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0116 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0116 is closed with `flai issue close I-0116 --reason` saying what fixed it
+- [x] The cause I-0116 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0116 is closed with `flai issue close I-0116 --reason` saying what fixed it
 
 ## Tasks
 - T-1360 flai dashboard restart starts the image the container runs, by its image ID, never the tag again

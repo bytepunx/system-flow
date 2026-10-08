@@ -3,16 +3,19 @@ id: S-0341
 type: story
 nature: improvement
 title: flai verify resumes at the tier that failed when the branch head and its base are unchanged, so a retry re-runs the failure and not the tiers that passed
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-08T07:59:12Z
-updated: 2026-10-08T09:09:18Z
+updated: 2026-10-08T09:41:28Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
     by: system-flow
   - to: in-progress
     at: 2026-10-08T08:37:17Z
+    by: agent-S-0341
+  - to: review
+    at: 2026-10-08T09:41:28Z
     by: agent-S-0341
 tags: [cli]
 topics: [testing]
@@ -24,32 +27,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1325
-  estimated: true
+  seconds: 3918
   turns:
     - day: 2026-10-08
-      ceremony: 4
+      ceremony: 6
       test_runs: 1
-      hand_edits: 2
-      work: 37
+      hand_edits: 3
+      work: 71
   models:
     - model: claude-opus-5-5
-      input: 206
-      output: 1166
-      cache_read: 9708178
-      cache_write: 436903
-      cost: 4.5791
+      input: 290
+      output: 90508
+      cache_read: 20259528
+      cache_write: 509364
+      cost: 9.2642
   strategic:
     - kind: orchestrator
-      seconds: 25
+      seconds: 740
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 118
-          cache_read: 1411778
-          cache_write: 4516
-          cost: 0.349
+          input: 60
+          output: 1100
+          cache_read: 21956490
+          cache_write: 23532
+          cost: 5.4155
+        - model: claude-sonnet-5-5
+          input: 24
+          output: 128
+          cache_read: 470711
+          cache_write: 59648
+          cost: 0.4572
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -77,7 +85,7 @@ A verify run at the same branch head, against the same main commit, with the sam
 
 - [x] `flai verify S-nnnn` reads the story's last record and, when the branch head, the main commit it was verified against, and the selected tiers are the same, re-runs the rebase, sync, narrative, and check steps and then only the tiers from the first one the record shows as failed or not reached; a tier it did not run is reported as `reused` with the time of the run it comes from, in the text and in `--json`.
 - [x] Any change to the head, the base, the selected tiers, the manifest's `tests`, or a tier's command makes the next run a full run, and `--fresh` forces one; the record written by a resumed run holds every tier's state, reused ones included, so `--last` and the review page show a whole result.
-- [ ] `scripts/close-out.sh` runs `flai verify` as it does, so a second close-out at an unchanged head after a smoke failure reaches smoke within the cheap checks' time; the close-out's last line says when tiers were reused.
+- [x] `scripts/close-out.sh` runs `flai verify` as it does, so a second close-out at an unchanged head after a smoke failure reaches smoke within the cheap checks' time; the close-out's last line says when tiers were reused.
 - [x] Tests cover a resumed run, each condition that forces a full run, and `--fresh`.
 - [x] `docs/users/flai.md` and `design/system/flai-cli.md` describe when a run resumes and how to force a full one.
 
@@ -91,6 +99,13 @@ A verify run at the same branch head, against the same main commit, with the sam
 ## Notes
 
 The record is `.flai-cache/verify/S-nnnn.json`, which `flai verify --last` prints; it already carries the head and the main commit a run was verified against. A commit in the close-out between verify and the next run changes the head and so forces a full run, which is right: the tiers ran against other code.
+
+### How criterion 3 was verified
+
+- `scripts/close-out.sh` still runs `flai verify --record-issues` with no `--fresh`. A close-out that stops at flai verify commits nothing, so the next close-out runs at the same head and resumes, as `TestVerifyResumesAtTheTierTheLastRunFailed` shows for verify.
+- The last line's `(reused N tiers from <time>)` was checked with a hand-run harness (T-1347): a stub git and a fake `scripts/flai.sh`, under `sh`, `bash`, and `dash`, for a pass, a stop, one tier, a malformed record, nothing reused, exit 2, and TERM.
+- The story's own close-out passed in full at c7c37c90 and ended with the unchanged form. It was not run a second time to show a real resumed close-out, since a passing run is not repeated.
+- When a close-out loses the race with main (I-0119), the sync it needs moves the head and the base, so the run after it is full. Resuming does not help that case.
 
 ### Planning
 

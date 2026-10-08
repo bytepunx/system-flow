@@ -3,10 +3,10 @@ id: S-0346
 type: story
 nature: improvement
 title: "flai check finds `markdown.MD034` outside the story at close-out"
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-08T08:08:21Z
-updated: 2026-10-08T09:29:30Z
+updated: 2026-10-08T09:42:18Z
 transitions:
   - to: ready
     at: 2026-10-08T08:59:57Z
@@ -14,18 +14,32 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:29:30Z
     by: agent-S-0346
+  - to: review
+    at: 2026-10-08T09:42:18Z
+    by: agent-S-0346
 tags: [flai, mdlint, serve]
 topics: [markdown, planning]
-touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, design/system/agent-narrative.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, design/system/agent-narrative.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/summary.md, flai/internal/mdlint/rules.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 790
+  turns:
+    - day: 2026-10-08
+      test_runs: 1
+      hand_edits: 1
+      work: 35
+  models:
+    - model: claude-opus-5-5
+      input: 76
+      output: 17344
+      cache_read: 5544624
+      cache_write: 185900
+      cost: 2.9433
   strategic:
     - kind: orchestrator
       seconds: 359
@@ -68,8 +82,8 @@ finalized:
 This story remediates [I-0118](../../../design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md), "flai check finds `markdown.MD034` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0118 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0118 is closed with `flai issue close I-0118 --reason` saying what fixed it
+- [x] The cause I-0118 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0118 is closed with `flai issue close I-0118 --reason` saying what fixed it
 
 ## Tasks
 - T-1419 mdlint quotes the bare URLs md034 finds in a line, so flai can make text it takes lint clean

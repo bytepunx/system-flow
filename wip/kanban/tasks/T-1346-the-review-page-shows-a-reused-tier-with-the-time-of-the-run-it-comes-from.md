@@ -28,10 +28,10 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 137
-      cache_read: 642654
-      cache_write: 47307
+      input: 10
+      output: 3043
+      cache_read: 681105
+      cache_write: 17124
       cost: 0.3115
 ---
 # T-1346 The review page shows a reused tier with the time of the run it comes from

@@ -7,12 +7,12 @@ status: backlog
 parent: S-0334
 owner: alex
 created: 2026-10-07T20:16:26Z
-updated: 2026-10-07T20:16:26Z
+updated: 2026-10-08T09:44:31Z
 transitions: []
 stream: S-0334
 tags: [flai, template]
 touches: [design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
-after: [T-1204, T-1205]
+after: [T-1203]
 ---
 # T-1206 The workflow, the coordination design, the convention, the template, and the guides describe asking about a hold and sharing paths
 

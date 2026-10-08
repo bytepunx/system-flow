@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 208
-      cache_read: 2170706
-      cache_write: 29819
-      cost: 0.9932
+      input: 31
+      output: 9704
+      cache_read: 2172244
+      cache_write: 54614
+      cost: 0.9933
 ---
 # T-1343 flai verify resumes a story's run from its last record when the head, the base, and the tiers are unchanged
 

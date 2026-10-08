@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 299.0941
-accrued_seconds: 114973
-tasks_completed: 296
-last_run: 2026-10-08T09:18:59Z
+accrued_cost: 312.8336
+accrued_seconds: 116448
+tasks_completed: 299
+last_run: 2026-10-08T09:43:34Z
 ---
 
 # Orchestrator activity
@@ -2083,6 +2083,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0348
 - Seconds: 8
 - Cost: 0.1872 USD, estimated
+
+### 2026-10-08T09:31:29Z
+
+- Summary: Accepted S-0322 under accept_reviews at verified commit 8c6b475b. flai verify passed at the head, and the verifier matched all three criteria (ADR-0128: task done commits only the closing task's paths; I-0104 and I-0108 closed) and found no regression. The dry-run had no blockers. Published under judgement (4 pending, 498 USD/week): S-0322 with the held S-0288, S-0290 and S-0345, as flai 1.39.13→1.39.14 (flai/v1.39.14), flaiover 0.42.0→0.42.1 (flaiover/v0.42.1) and template 1.0.80→1.0.81 (5d57904), pushed. Applied the throughput order after S-0346 was pulled.
+- Items: S-0322, S-0288, S-0290, S-0345
+- Seconds: 750
+- Cost: 7.6228 USD, estimated
+
+### 2026-10-08T09:43:24Z
+
+- Summary: S-0341 is in review: verify passed at head c7c37c90 and the verifier matched all 5 criteria. I did not accept it. Its resume reuses tiers across uncommitted edits at the same head, so a record can say a tier passed at H for content it never ran on, which weakens the ADR-0093 gate I accept on. On TH-0387 I asked the agent to gate reuse on a clean tree, with a test and docs, plus the MCP description and a Svelte test, or the operator to accept it themselves and file a follow-up.
+- Items: S-0341
+- Seconds: 715
+- Cost: 5.5237 USD, estimated
+
+### 2026-10-08T09:43:34Z
+
+- Summary: S-0334 and S-0297 left ready for in-progress. Applied the throughput order: S-0338, S-0342, S-0337, S-0343. The only promote candidate is S-0241, which the operator blocked. S-0347 is held on overlap with S-0334, and S-0349 on S-0232.
+- Items: S-0334, S-0297
+- Seconds: 10
+- Cost: 0.5930 USD, estimated
 
 ## Refusals
 

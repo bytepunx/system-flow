@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 201732
-      cache_write: 633
-      cost: 0.091
+      input: 4
+      output: 902
+      cache_read: 197351
+      cache_write: 8199
+      cost: 0.1145
 ---
 # T-1425 Close I-0123 saying what fixed it
 

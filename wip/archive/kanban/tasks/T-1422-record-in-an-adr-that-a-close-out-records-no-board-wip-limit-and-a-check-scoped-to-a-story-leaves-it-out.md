@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 15
-      cache_read: 380951
-      cache_write: 5628
-      cost: 0.1738
+      input: 7
+      output: 1723
+      cache_read: 377003
+      cache_write: 15662
+      cost: 0.2188
 ---
 # T-1422 Record in an ADR that a close-out records no board.wip-limit and a check scoped to a story leaves it out
 

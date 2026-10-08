@@ -3,17 +3,20 @@ id: S-0297
 type: story
 nature: improvement
 title: Two story branches that each bump the same issue conflict in its front matter, whose count, last_reported, and updated lines both rewrite
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T19:46:46Z
-updated: 2026-10-08T08:50:34Z
+updated: 2026-10-08T09:44:11Z
 transitions:
   - to: ready
     at: 2026-10-08T08:50:34Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T09:42:11Z
+    by: agent-S-0297
 tags: [cli]
 topics: [cli, git, continuous-improvement]
-touches: [flai/internal/issues/merge.go, flai/internal/issues/merge_test.go, flai/internal/issues/issues.go, flai/internal/issues/issues_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/branch.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, design/adrs, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0092-two-story-branches-that-each-bump-the-same-issue-conflict-in-its-front-matter-whose-count-last-reported-and-updated-lines-both-rewrite.md, design/issues/summary.md]
+touches: [flai/cmd/stream_sync_test.go, design/issues/I-0092-two-story-branches-that-each-bump-the-same-issue-conflict-in-its-front-matter-whose-count-last-reported-and-updated-lines-both-rewrite.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 33
+      seconds: 38
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 14
-          output: 221
-          cache_read: 3807545
-          cache_write: 4016
-          cost: 0.9411
+          input: 17
+          output: 232
+          cache_read: 5008682
+          cache_write: 6369
+          cost: 1.2376
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -57,6 +60,8 @@ This story remediates [I-0092](../../../design/issues/I-0092-two-story-branches-
 - [ ] I-0092 is closed with `flai issue close I-0092 --reason` saying what fixed it
 
 ## Tasks
+- T-1428 Tests reproduce I-0092's instances not yet covered: an acceptance whose rebase meets main's bump of the same issue, and a sync whose bump meets main's close of it
+- T-1429 I-0092 is closed with flai issue close, naming S-0326's merge and the tests that reproduce its instances
 
 ## Notes
 

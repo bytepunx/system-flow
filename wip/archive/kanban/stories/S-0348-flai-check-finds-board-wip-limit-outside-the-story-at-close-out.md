@@ -3,10 +3,10 @@ id: S-0348
 type: story
 nature: improvement
 title: "flai check finds `board.wip-limit` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-08T08:37:06Z
-updated: 2026-10-08T09:29:56Z
+updated: 2026-10-08T09:44:32Z
 transitions:
   - to: ready
     at: 2026-10-08T09:09:03Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:18:00Z
     by: agent-S-0348
+  - to: review
+    at: 2026-10-08T09:41:52Z
+    by: agent-S-0348
+  - to: done
+    at: 2026-10-08T09:44:32Z
+    by: orchestrator
 tags: [flai, check]
 topics: [cli, conventions, template]
 touches: [design/adrs, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0123-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -24,19 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 720
-  estimated: true
+  seconds: 1454
   turns:
     - day: 2026-10-08
+      ceremony: 1
       hand_edits: 1
-      work: 26
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 740
-      cache_read: 4996606
-      cache_write: 306387
-      cost: 2.3842
+      input: 148
+      output: 37218
+      cache_read: 8142510
+      cache_write: 338278
+      cost: 4.7247
   strategic:
     - kind: planner
       seconds: 250
@@ -133,3 +139,12 @@ Folder touch kept: `design/adrs`, because T-1422 adds an ADR whose number is not
 Forecast: 21m, delivery 2026-10-08T14:34:00Z, as `flai forecast` gives it (78 s per unit of size over 51 large-band improvement stories, size 16). Kept: the three precedent stories took 12m, 22m, and 49m of agent time.
 
 Cost of delay: 12.50 USD a week, as `flai cod` gives it from `time_lost_per_cycle: 5m`, the input the orchestrator set on TH-0383 as recommended. Kept: it matches S-0346, a close-out finding of the same kind.
+
+### Accepted by the orchestrator
+
+- Verified: 917f01e1504a7ca1d7389cf2a064a33ce194f4fe
+- At: 2026-10-08T09:44:32Z
+
+Verdict: accept. flai verify passed every step at the branch head 917f01e1, and the verifier matched both criteria to the diff. The unscoped check still fails on board.wip-limit. Loose end: I-0122, a duplicate of I-0123, is still open.
+- 1: design/adrs/0133-a-close-out-records-no-board-wip-limit-and-a-check-scoped-to-a-story-leaves-out.md, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md
+- 2: design/issues/I-0123-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md, design/issues/summary.md

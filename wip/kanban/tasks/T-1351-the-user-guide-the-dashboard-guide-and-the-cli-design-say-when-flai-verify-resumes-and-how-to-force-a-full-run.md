@@ -24,15 +24,15 @@ touches: [docs/users/flai.md, design/system/flai-cli.md, docs/users/flaiover.md]
 after: [T-1344, T-1346]
 usage:
   source: log
-  seconds: 424
+  seconds: 438
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 306
-      cache_read: 2223978
-      cache_write: 68953
-      cost: 1.035
+      input: 36
+      output: 11206
+      cache_read: 2508273
+      cache_write: 63063
+      cost: 1.147
 ---
 # T-1351 The user guide, the dashboard guide, and the CLI design say when flai verify resumes and how to force a full run
 

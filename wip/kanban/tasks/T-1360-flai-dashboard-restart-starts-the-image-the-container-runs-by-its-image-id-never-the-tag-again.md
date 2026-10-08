@@ -31,7 +31,7 @@ usage:
       output: 331
       cache_read: 2254115
       cache_write: 117669
-      cost: 1.068
+      cost: 1.0654
 ---
 # T-1360 flai dashboard restart starts the image the container runs, by its image ID, never the tag again
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 32
-      output: 147
-      cache_read: 1093244
-      cache_write: 64621
-      cost: 0.5206
+      input: 21
+      output: 5161
+      cache_read: 1129195
+      cache_write: 46912
+      cost: 0.6552
 ---
 # T-1424 Say in the design, the user guide, and the work-management convention that a close-out leaves out board.wip-limit
 

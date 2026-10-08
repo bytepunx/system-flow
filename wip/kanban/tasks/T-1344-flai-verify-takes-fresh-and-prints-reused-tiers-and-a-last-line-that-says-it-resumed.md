@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 161
-      cache_read: 1594267
-      cache_write: 86887
-      cost: 0.7588
+      input: 24
+      output: 7414
+      cache_read: 1659556
+      cache_write: 41724
+      cost: 0.7589
 ---
 # T-1344 flai verify takes --fresh and prints reused tiers and a last line that says it resumed
 

@@ -3,15 +3,18 @@ id: S-0334
 type: story
 nature: feature
 title: A story held on overlap is asked about by message, and starts when the holding story's agent shares the paths or narrows its claim
-status: ready
+status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:04Z
-updated: 2026-10-08T09:30:45Z
+updated: 2026-10-08T09:41:58Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:25Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T09:41:58Z
+    by: agent-S-0334
 tags: [flai, template]
 topics: [cli, conventions, template]
 touches: [design/adrs, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/system/workflow.md, design/system/agent-coordination.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 336
+      seconds: 341
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 62
-          output: 1085
-          cache_read: 9400333
-          cache_write: 18351
-          cost: 2.3207
+          input: 65
+          output: 1097
+          cache_read: 10601471
+          cache_write: 20704
+          cost: 2.6172
 cost_of_delay:
   value: 288.04
   by: planner-E-0018
