@@ -3,16 +3,36 @@ id: T-1320
 type: task
 nature: remediation
 title: issues.Fold folds each open issue a branch added into the main branch's open issue of the same title
-status: backlog
+status: done
 parent: S-0326
 owner: alex
 created: 2026-10-08T00:33:44Z
-updated: 2026-10-08T00:33:44Z
-transitions: []
+updated: 2026-10-08T06:37:46Z
+transitions:
+  - to: ready
+    at: 2026-10-08T06:35:37Z
+    by: agent-S-0326
+  - to: in-progress
+    at: 2026-10-08T06:35:37Z
+    by: agent-S-0326
+  - to: done
+    at: 2026-10-08T06:37:46Z
+    by: agent-S-0326
 stream: S-0326
 tags: [cli, go]
 touches: [flai/internal/issues/fold.go, flai/internal/issues/fold_test.go]
-after: [T-1319]
+after: [T-1332]
+usage:
+  source: log
+  seconds: 129
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 138
+      cache_read: 1109279
+      cache_write: 65092
+      cost: 0.524
 ---
 # T-1320 issues.Fold folds each open issue a branch added into the main branch's open issue of the same title
 

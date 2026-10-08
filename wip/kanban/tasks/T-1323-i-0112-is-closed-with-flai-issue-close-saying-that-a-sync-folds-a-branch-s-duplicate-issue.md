@@ -3,16 +3,36 @@ id: T-1323
 type: task
 nature: remediation
 title: I-0112 is closed with flai issue close, saying that a sync folds a branch's duplicate issue
-status: backlog
+status: done
 parent: S-0326
 owner: alex
 created: 2026-10-08T00:34:04Z
-updated: 2026-10-08T00:34:04Z
-transitions: []
+updated: 2026-10-08T07:09:56Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:09:46Z
+    by: agent-S-0326
+  - to: in-progress
+    at: 2026-10-08T07:09:47Z
+    by: agent-S-0326
+  - to: done
+    at: 2026-10-08T07:09:56Z
+    by: agent-S-0326
 stream: S-0326
 tags: [issues]
 touches: [design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md, design/issues/summary.md]
 after: [T-1321, T-1322]
+usage:
+  source: log
+  seconds: 8
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 48
+      cache_read: 498983
+      cache_write: 2687
+      cost: 0.2238
 ---
 # T-1323 I-0112 is closed with flai issue close, saying that a sync folds a branch's duplicate issue
 

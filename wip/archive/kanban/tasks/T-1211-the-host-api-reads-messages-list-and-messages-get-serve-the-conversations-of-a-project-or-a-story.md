@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 247
-      cache_read: 1427881
-      cache_write: 77528
-      cost: 0.6716
+      input: 27
+      output: 8271
+      cache_read: 1487175
+      cache_write: 46474
+      cost: 0.7556
 ---
 # T-1211 The host API reads messages.list and messages.get serve the conversations of a project or a story
 

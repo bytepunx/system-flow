@@ -3,16 +3,36 @@ id: T-1321
 type: task
 nature: remediation
 title: A sync, a task's close, and an acceptance fold the branch's duplicate issue after the rebase, with a test that reproduces I-0112
-status: backlog
+status: done
 parent: S-0326
 owner: alex
 created: 2026-10-08T00:33:54Z
-updated: 2026-10-08T00:33:54Z
-transitions: []
+updated: 2026-10-08T07:08:09Z
+transitions:
+  - to: ready
+    at: 2026-10-08T06:38:15Z
+    by: agent-S-0326
+  - to: in-progress
+    at: 2026-10-08T06:38:15Z
+    by: agent-S-0326
+  - to: done
+    at: 2026-10-08T07:08:09Z
+    by: agent-S-0326
 stream: S-0326
 tags: [cli, go, git]
-touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/internal/taskdone/taskdone.go, flai/cmd/stream_sync_test.go]
-after: [T-1320]
+touches: [flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/internal/taskdone/taskdone.go, flai/cmd/stream_sync_test.go, flai/internal/issues/generated.go, flai/cmd/stream_sync.go, docs/users/flai-reference.md]
+after: [T-1320, T-1332]
+usage:
+  source: log
+  seconds: 1794
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 124
+      output: 777
+      cache_read: 7083403
+      cache_write: 463976
+      cost: 3.3676
 ---
 # T-1321 A sync, a task's close, and an acceptance fold the branch's duplicate issue after the rebase, with a test that reproduces I-0112
 

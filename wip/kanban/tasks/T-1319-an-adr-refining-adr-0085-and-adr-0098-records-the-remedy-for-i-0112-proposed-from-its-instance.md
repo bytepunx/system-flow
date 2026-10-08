@@ -3,15 +3,35 @@ id: T-1319
 type: task
 nature: remediation
 title: An ADR refining ADR-0085 and ADR-0098 records the remedy for I-0112, proposed from its instance
-status: backlog
+status: done
 parent: S-0326
 owner: alex
 created: 2026-10-08T00:33:37Z
-updated: 2026-10-08T00:33:37Z
-transitions: []
+updated: 2026-10-08T06:27:19Z
+transitions:
+  - to: ready
+    at: 2026-10-08T06:26:05Z
+    by: agent-S-0326
+  - to: in-progress
+    at: 2026-10-08T06:26:06Z
+    by: agent-S-0326
+  - to: done
+    at: 2026-10-08T06:27:19Z
+    by: agent-S-0326
 stream: S-0326
 tags: [adr, design]
-touches: [design/adrs, design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0126-a-rebase-of-a-story-branch-merges-an-issue-file-both-sides-changed-by-its.md]
+usage:
+  source: log
+  seconds: 73
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 209
+      cache_read: 1353180
+      cache_write: 9930
+      cost: 0.6082
 ---
 # T-1319 An ADR refining ADR-0085 and ADR-0098 records the remedy for I-0112, proposed from its instance
 

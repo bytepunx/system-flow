@@ -6,7 +6,7 @@ title: flai verify --record-issues opens an issue on the story branch that anoth
 status: in-progress
 owner: alex
 created: 2026-10-07T18:59:58Z
-updated: 2026-10-08T06:23:31Z
+updated: 2026-10-08T07:08:09Z
 transitions:
   - to: ready
     at: 2026-10-08T04:21:11Z
@@ -16,16 +16,28 @@ transitions:
     by: agent-S-0326
 tags: [cli]
 topics: [cli, git, continuous-improvement]
-touches: [design/adrs, design/adrs/README.md, flai/internal/issues/fold.go, flai/internal/issues/fold_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/internal/taskdone/taskdone.go, flai/cmd/stream_sync_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md, design/issues/summary.md]
+touches: [design/adrs/README.md, flai/internal/issues/fold.go, flai/internal/issues/fold_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/internal/taskdone/taskdone.go, flai/cmd/stream_sync_test.go, design/system/continuous-improvement.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0112-flai-verify-record-issues-opens-an-issue-on-the-story-branch-that-another-branch-opened-under-the-same-title-meanwhile.md, design/issues/summary.md, design/adrs/0126-a-rebase-of-a-story-branch-merges-an-issue-file-both-sides-changed-by-its.md, flai/internal/issues/merge.go, flai/internal/issues/merge_test.go, flai/internal/issues/generated.go, flai/cmd/stream_sync.go, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2789
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      ceremony: 4
+      hand_edits: 1
+      work: 44
+  models:
+    - model: claude-opus-5-5
+      input: 296
+      output: 1872
+      cache_read: 16147709
+      cache_write: 888512
+      cost: 7.6016
   strategic:
     - kind: orchestrator
       seconds: 249
@@ -71,6 +83,7 @@ This story remediates [I-0112](../../../design/issues/I-0112-flai-verify-record-
 - T-1321 A sync, a task's close, and an acceptance fold the branch's duplicate issue after the rebase, with a test that reproduces I-0112
 - T-1322 The design and the users' guide say that a sync folds a branch's issue into the main branch's issue of the same title
 - T-1323 I-0112 is closed with flai issue close, saying that a sync folds a branch's duplicate issue
+- T-1332 issues.Merge merges an issue file both sides of a stopped rebase changed, keeping the instances of both
 
 ## Notes
 

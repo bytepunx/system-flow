@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 234
-      cache_read: 1574687
-      cache_write: 65881
-      cost: 0.7319
+      input: 30
+      output: 9013
+      cache_read: 1620697
+      cache_write: 50646
+      cost: 0.8234
 ---
 # T-1212 flaiover's repo reads messages from the host, and /api/messages serves them
 

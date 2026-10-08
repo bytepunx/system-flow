@@ -6,8 +6,11 @@ title: Measure planned stories again with forked task sub-agents once a headless
 status: backlog
 owner: arobson
 created: 2026-10-02T17:14:07Z
-updated: 2026-10-08T06:24:05Z
+updated: 2026-10-08T07:08:56Z
 transitions: []
+blocked:
+  - from: 2026-10-08T07:08:56Z
+    reason: No candidate solutions yet
 tags: [template]
 topics: [conventions]
 touches: [design/system/agent-context.md, design/experiments/S-0241-measure-planned-stories-again-with-forked-task-sub-agents-once-a-headless-session-offers-forks.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 351
+      seconds: 3007
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 54
-          output: 712
-          cache_read: 7766620
-          cache_write: 29861
-          cost: 1.921
+          input: 140
+          output: 2282
+          cache_read: 16094204
+          cache_write: 53682
+          cost: 3.9789
 cost_of_delay:
   inputs:
     penalty_per_week: 25

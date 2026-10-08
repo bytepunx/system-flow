@@ -3,11 +3,11 @@ id: S-0336
 type: story
 nature: feature
 title: The dashboard shows the messages between stories' agents on each story's page and in a Messages view
-status: in-progress
+status: done
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:22Z
-updated: 2026-10-08T06:20:59Z
+updated: 2026-10-08T07:14:11Z
 transitions:
   - to: ready
     at: 2026-10-08T04:35:26Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-08T06:12:50Z
     by: agent-S-0336
+  - to: review
+    at: 2026-10-08T07:13:16Z
+    by: agent-S-0336
+  - to: done
+    at: 2026-10-08T07:14:11Z
+    by: orchestrator
 tags: [flai, flaiover]
 topics: [dashboard, cli]
-touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/routes/api/messages/+server.ts, flaiover/src/routes/api/messages/messages.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, flaiover/src/routes/messages/+page.svelte, flaiover/src/routes/messages/messages.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md, flaiover/src/lib/server/agent.ts, design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md, design/issues/summary.md]
+touches: [flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/routes/api/messages/+server.ts, flaiover/src/routes/api/messages/messages.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, flaiover/src/routes/messages/+page.svelte, flaiover/src/routes/messages/messages.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md, flaiover/src/lib/server/agent.ts, design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md, design/issues/summary.md, flaiover/src/lib/components/SiteMenu.svelte, flaiover/src/lib/components/SiteMenu.svelte.test.ts, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
 after: [S-0330]
 agent:
   harness: claude-code
@@ -26,20 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 495
+  seconds: 1162
   estimated: true
   turns:
     - day: 2026-10-08
       ceremony: 1
       hand_edits: 1
-      work: 25
+      work: 43
   models:
     - model: claude-opus-5-5
-      input: 124
-      output: 655
-      cache_read: 4868683
-      cache_write: 271961
-      cost: 2.2934
+      input: 262
+      output: 1568
+      cache_read: 11852476
+      cache_write: 502878
+      cost: 5.5131
   strategic:
     - kind: orchestrator
       seconds: 444
@@ -74,10 +80,10 @@ Let the operator see how the agents are coordinating without being asked. Messag
 ## Acceptance criteria
 
 - [x] The host API reads `messages.list` and `messages.get` serve the conversations of the project or of one story, with their entries, their `about` paths, and their state.
-- [ ] A story's page lists its conversations, open first, each with the other story linked and its entries.
-- [ ] A Messages view, linked from the navigation, lists every open conversation with its two stories, its paths, which side it awaits, and its age, and the closed ones on request.
-- [ ] The operator's inbox badge and inbox view count no message.
-- [ ] `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` describe the view.
+- [x] A story's page lists its conversations, open first, each with the other story linked and its entries.
+- [x] A Messages view, linked from the navigation, lists every open conversation with its two stories, its paths, which side it awaits, and its age, and the closed ones on request.
+- [x] The operator's inbox badge and inbox view count no message.
+- [x] `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` describe the view.
 
 ## Tasks
 
@@ -116,3 +122,15 @@ Touches:
 Forecast 40m: `flai forecast` gave it, 104 s per unit over 33 done large-band feature stories, times size 23 (5 criteria, 18 touches). It stands; the split took 8m off the 48m of the first plan.
 
 Cost of delay 217.39 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 40m of the 3h4m forecast over the four open stories (S-0334, S-0336, S-0337, S-0338). It stands. It is the first of them that can be pulled, since it waits for nothing open.
+
+### Accepted by the orchestrator
+
+- Verified: 831995e01fdb81b4a1b58f8842585e0bb4949daa
+- At: 2026-10-08T07:14:11Z
+
+Verdict: accept. flai verify passed every step at the branch head 831995e0, and the verifier matched all five criteria to the diff. The contract test lists the new reads, and they are read-only.
+- 1: flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/contract_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/repo.test.ts, flaiover/src/routes/api/messages/+server.ts, flaiover/src/routes/api/messages/messages.test.ts
+- 2: flaiover/src/routes/items/[id]/+page.svelte, flaiover/src/routes/items/[id]/item.svelte.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts
+- 3: flaiover/src/routes/messages/+page.svelte, flaiover/src/routes/messages/messages.svelte.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/SiteMenu.svelte, flaiover/src/lib/components/SiteMenu.svelte.test.ts
+- 4: flai/internal/hostapi/hostapi_test.go, design/system/flaiover-dashboard.md, docs/users/flaiover.md
+- 5: design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/system/flai-cli.md

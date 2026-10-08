@@ -3,12 +3,18 @@ id: T-1271
 type: task
 nature: remediation
 title: An ADR refining ADR-0060 records that a sub-agent writes an ADR but never commits it, and agent-context.md says so
-status: backlog
+status: in-progress
 parent: S-0287
 owner: alex
 created: 2026-10-07T23:19:16Z
-updated: 2026-10-07T23:19:16Z
-transitions: []
+updated: 2026-10-08T07:14:09Z
+transitions:
+  - to: ready
+    at: 2026-10-08T07:14:08Z
+    by: agent-S-0287
+  - to: in-progress
+    at: 2026-10-08T07:14:09Z
+    by: agent-S-0287
 stream: S-0287
 tags: [adr, design, guard]
 touches: [design/system/agent-context.md]

@@ -3,14 +3,17 @@ id: S-0287
 type: story
 nature: remediation
 title: flai guard lets a task sub-agent run flai adr new but refuses flai adr topics
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-06T09:56:50Z
-updated: 2026-10-08T06:24:05Z
+updated: 2026-10-08T07:13:23Z
 transitions:
   - to: ready
     at: 2026-10-08T04:24:25Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T07:13:23Z
+    by: agent-S-0287
 tags: [cli, flai, guard]
 topics: [cli, conventions, template]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard_test.go, design/system/agent-context.md, design/conventions/delegation.md, template/root/design/conventions/delegation.md, docs/users/flai.md, design/issues/I-0062-flai-guard-lets-a-task-sub-agent-run-flai-adr-new-but-refuses-flai-adr-topics.md, design/issues/summary.md]

@@ -4,10 +4,10 @@ title: "S-0241 is a promote candidate but cannot be worked yet: block it until f
 anchor:
   path: wip/kanban/stories/S-0241-measure-planned-stories-again-with-forked-task-sub-agents-once-a-headless-session-offers-forks.md
   item: S-0241
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-07T23:16:59Z
-updated: 2026-10-07T23:16:59Z
+updated: 2026-10-08T07:09:00Z
 ---
 
 # TH-0333 S-0241 is a promote candidate but cannot be worked yet: block it until forks are offered?
@@ -30,3 +30,6 @@ Until you answer, I leave S-0241 in the backlog and promote nothing in its place
 
 - Promote it anyway, and let T-1267 confirm and block.
 - Make it a draft again, which keeps it out of `flai promote --candidates`.
+
+### 2026-10-08T07:09:00Z orchestrator
+Resolved: The operator blocked S-0241 at 07:08Z ("No candidate solutions yet"), as recommended. It stays out of ready until it is unblocked.
