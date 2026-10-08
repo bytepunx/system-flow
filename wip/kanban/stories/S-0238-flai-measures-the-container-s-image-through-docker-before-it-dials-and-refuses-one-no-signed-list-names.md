@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-08T05:02:40Z
+updated: 2026-10-08T05:53:30Z
 transitions: []
 tags: [cli]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T23:06:46Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-08T11:05:00Z
-  basis: "Its own forecast of 1h15m; 13th in the pull order with an in-progress limit of 3, behind S-0232, S-0318, S-0320, S-0319, S-0309, S-0336, S-0326, S-0287, S-0321, S-0322, S-0233, S-0234, S-0235, S-0236 and S-0237."
+  delivery: 2026-10-08T11:55:00Z
+  basis: "Its own forecast of 1h15m; 11th in the pull order with an in-progress limit of 3, behind S-0232, S-0309, S-0319, S-0336, S-0326, S-0287, S-0321, S-0322, S-0233, S-0234, S-0235, S-0236 and S-0237."
   by: flai
-  at: 2026-10-08T05:02:40Z
+  at: 2026-10-08T05:53:30Z
 ---
 # S-0238 flai measures the container's image through Docker before it dials and refuses one no signed list names
 

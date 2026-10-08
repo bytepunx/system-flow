@@ -2,6 +2,7 @@
 
 ## 1.0.78 - 2026-10-08
 
+- S-0318 flai check finds `markdown.MD038` outside the story at close-out (patch).
 - S-0318 A close-out records no markdown finding on another open story's narrative (patch, ADR-0123): `work-management.md` says that a markdown finding on the narrative of another story not yet done or cancelled is left out of a close-out's check, as an `item.archive` is, and recorded in no issue, since that story's own close-out checks its narrative and stops on it. A markdown finding anywhere else outside the story is still recorded. It needs a flai that has it; an older flai still records every markdown finding outside the story at close-out.
 
 ## 1.0.77 - 2026-10-07
