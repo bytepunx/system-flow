@@ -1,4 +1,4 @@
-.PHONY: check flai flai-reference test integration smoke install-test flai-test flai-snapshot template-test install-tools lint-md mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
+.PHONY: check flai flai-reference test integration smoke install-test install-published-test flai-test flai-snapshot template-test install-tools lint-md mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -18,8 +18,11 @@ integration: ## Integration tests (real git, monorepo round-trip), after test
 smoke: ## Smoke tests (template render and check, repo check, markdown lint, installer), after integration
 	scripts/smoke.sh
 
-install-test: ## Install the latest flai release with install.sh and flai self-upgrade into .flai-cache
+install-test: ## Install with install.sh and flai self-upgrade from a release built from the tree and served locally, with no GitHub access
 	scripts/install-test.sh
+
+install-published-test: ## Install the latest published flai from GitHub with install.sh and flai self-upgrade (needs network and a token)
+	scripts/install-published-test.sh
 
 lint-md: ## Lint all markdown with the CI globs and config
 	scripts/lint-md.sh

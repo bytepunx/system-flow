@@ -1,0 +1,32 @@
+name: install published release
+
+# Installs the latest published flai from GitHub with install.sh and flai
+# self-upgrade. No story's close-out runs this check: the smoke tier installs
+# from a release built from the tree. A failure here fails the run, which is
+# the record; the script opens or bumps an issue only when run on a host.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install-published:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: flai/go.mod
+      - name: Build flai
+        run: go build -o /usr/local/bin/flai .
+        working-directory: flai
+      - name: Install the latest published release
+        run: scripts/install-published-test.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
