@@ -6,7 +6,7 @@ title: flaiover's notify.test.ts fails now and then under the full vitest run be
 status: ready
 owner: alex
 created: 2026-10-06T09:56:51Z
-updated: 2026-10-08T08:51:29Z
+updated: 2026-10-08T08:53:22Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:50Z
@@ -59,10 +59,10 @@ cost_of_delay:
   at: 2026-10-08T08:50:18Z
 forecast:
   duration: 20m
-  delivery: 2026-10-08T09:12:00Z
+  delivery: 2026-10-08T09:14:00Z
   basis: "Its own forecast of 20m; 1st in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340 and S-0341."
   by: flai
-  at: 2026-10-08T08:51:29Z
+  at: 2026-10-08T08:53:22Z
 finalized:
   by: alex
   at: 2026-10-07T02:20:05Z

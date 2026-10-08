@@ -6,7 +6,7 @@ title: flai dashboard restart starts the container's tag again, so a newer image
 status: ready
 owner: alex
 created: 2026-10-08T08:08:17Z
-updated: 2026-10-08T08:51:29Z
+updated: 2026-10-08T08:53:22Z
 transitions:
   - to: ready
     at: 2026-10-08T08:38:55Z
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-10-08T08:36:23Z
 forecast:
   duration: 30m
-  delivery: 2026-10-08T09:26:00Z
+  delivery: 2026-10-08T09:28:00Z
   basis: "Its own forecast of 30m; 2nd in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341 and S-0288."
   by: flai
-  at: 2026-10-08T08:51:29Z
+  at: 2026-10-08T08:53:22Z
 finalized:
   by: orchestrator
   at: 2026-10-08T08:36:52Z

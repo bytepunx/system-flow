@@ -6,7 +6,7 @@ title: A story's integration tier lints main's committed wip, so markdown any ag
 status: ready
 owner: alex
 created: 2026-10-08T08:08:19Z
-updated: 2026-10-08T08:51:29Z
+updated: 2026-10-08T08:53:22Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:14Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T08:41:04Z
 forecast:
   duration: 30m
-  delivery: 2026-10-08T09:43:00Z
-  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341, S-0288 and S-0344."
+  delivery: 2026-10-08T09:47:00Z
+  basis: "Its own forecast of 30m; 4th in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341, S-0288, S-0344 and S-0290."
   by: flai
-  at: 2026-10-08T08:51:29Z
+  at: 2026-10-08T08:53:22Z
 finalized:
   by: alex
   at: 2026-10-08T08:40:10Z
