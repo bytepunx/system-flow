@@ -6,9 +6,11 @@ title: Publishing raises the manifest's flai minimum the moment it commits, befo
 status: backlog
 owner: alex
 created: 2026-10-07T18:59:52Z
-updated: 2026-10-07T18:59:52Z
+updated: 2026-10-08T00:29:58Z
 transitions: []
-tags: []
+tags: [flai, release, serve]
+topics: [release]
+touches: [flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/release.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0107-publishing-raises-the-manifest-s-flai-minimum-the-moment-it-commits-before-the-release-is-built-so-the-host-s-flai-drops-the-project-until-the-binaries-exist.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -20,21 +22,32 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 4
+      seconds: 384
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 12
-          cache_read: 64217
-          cache_write: 5432
-          cost: 0.0172
-draft: true
+          input: 70
+          output: 1181
+          cache_read: 20786680
+          cache_write: 31138
+          cost: 5.1292
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h
     by: flai
     at: 2026-10-07T18:59:52Z
+  value: 150
+  by: planner-S-0321
+  at: 2026-10-08T00:24:08Z
+forecast:
+  duration: 45m
+  delivery: 2026-10-08T07:59:00Z
+  basis: "Its own forecast of 45m; 25th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0317, S-0324, S-0318, S-0320, S-0319, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0287, S-0288, S-0289, S-0290, S-0291, S-0297, S-0304, S-0305, S-0306, S-0309, S-0312 and S-0313."
+  by: flai
+  at: 2026-10-08T00:29:58Z
+finalized:
+  by: orchestrator
+  at: 2026-10-08T00:24:59Z
 ---
 # S-0321 Publishing raises the manifest's flai minimum the moment it commits, before the release is built, so the host's flai drops the project until the binaries exist
 
@@ -49,7 +62,33 @@ Directions to weigh: have `flai release` raise `flai.minimum` only after the rel
 - [ ] I-0107 is closed with `flai issue close I-0107 --reason` saying what fixed it
 
 ## Tasks
+- T-1309 flai release raises flai.minimum no higher than the flai that publishes
+- T-1310 flai serve lets a project's requests in flight finish when its manifest stops loading
+- T-1311 Document when a publish raises flai.minimum and what the host does when a project stops loading
+- T-1312 Close I-0107 with what fixed it
 
 ## Notes
 
 Cost of delay inputs set by flai from I-0107. time_lost_per_cycle 1h: 30m per occurrence × 2 occurrences ÷ 1 cycle of 168h (first reported 2026-10-07T07:39:30Z, 0.5 days before this story; under one cycle counts as one).
+
+### Planning
+
+Direction taken from the issue's options: the planner assumed it, and the story's agent may change it. The publish raises `flai.minimum` only to a flai release no newer than the flai running the publish (T-1309). A raise it cannot make yet waits for the first publish from the upgraded flai, so a publish can never drop the host that serves it. The host also lets a dropped project's requests in flight finish (T-1310), so a minimum raised by other means, such as a pull, no longer kills a `publish.run`. Serving a project below its minimum was not chosen: the CLI and `flai mcp` refuse it all the same.
+
+Touches, all files, no folder:
+
+| Touch | Source |
+|-------|--------|
+| `flai/internal/release/release.go`, `flai/internal/release/release_test.go` | layout: `RaiseMinimum` and `TestRaiseMinimum` |
+| `flai/cmd/release.go` | layout: `computeApplyAndTagPending` calls `RaiseMinimum` and prints the warning |
+| `flai/internal/serve/serve.go`, `flai/internal/serve/serve_test.go` | layout: `reconcile` drops the project with `running.halt` |
+| `flai/internal/channel/channel.go` | layout: the client whose context cancels requests in flight |
+| `design/system/flai-cli.md` | design: § Versions: the host's flai and the tree describes the raise |
+| `design/system/project-manifest.md`, `docs/users/flai.md`, `docs/operators/index.md` | design and layout: each describes when `flai.minimum` rises |
+| `design/issues/I-0107-….md`, `design/issues/summary.md` | goal: criterion 2, `flai issue close` |
+
+`flai touches suggest` listed only hub documents that change with most commits, such as `design/system/flaiover-dashboard.md` at 15%, and none of them bears on this story, so none was taken. An ADR, if the story's agent records the new rule in one, is a new file no task can name yet; its touch is left to the agent's widening rather than kept as a folder.
+
+Forecast: `flai forecast` gave 17m (73 s per unit of size over 17 done large-band remediation stories, times size 14). Raised to 45m: two independent code changes, the serve one with no existing test that drives a manifest which stops loading mid-request, plus four documents and the close-out's full run. The delivery is flai's 2026-10-08T07:21Z moved by the 28m added.
+
+Cost of delay: `flai cod` gives 150 USD a week from the inputs flai set from I-0107 (1h lost per 168h cycle at 150 USD an hour). It stands, worked from those inputs as they are.

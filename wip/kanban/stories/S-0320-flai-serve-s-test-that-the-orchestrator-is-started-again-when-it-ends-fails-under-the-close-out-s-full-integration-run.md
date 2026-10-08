@@ -6,7 +6,7 @@ title: flai serve's test that the orchestrator is started again when it ends fai
 status: ready
 owner: alex
 created: 2026-10-07T18:59:51Z
-updated: 2026-10-08T00:18:41Z
+updated: 2026-10-08T00:29:58Z
 transitions:
   - to: ready
     at: 2026-10-08T00:18:40Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 142
+      seconds: 145
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 873
-          cache_read: 14017472
-          cache_write: 18761
-          cost: 3.4584
+          input: 51
+          output: 885
+          cache_read: 14348616
+          cache_write: 20447
+          cost: 3.5404
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T00:18:16Z
 forecast:
   duration: 25m
-  delivery: 2026-10-08T00:56:00Z
-  basis: "Its own forecast of 25m; 2nd in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0317 and S-0318."
+  delivery: 2026-10-08T01:01:00Z
+  basis: "Its own forecast of 25m; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0317, S-0324 and S-0318."
   by: flai
-  at: 2026-10-08T00:18:41Z
+  at: 2026-10-08T00:29:58Z
 finalized:
   by: orchestrator
   at: 2026-10-08T00:18:36Z

@@ -6,7 +6,7 @@ title: "flai check finds `markdown.MD038` outside the story at close-out"
 status: ready
 owner: alex
 created: 2026-10-07T18:59:49Z
-updated: 2026-10-08T00:18:41Z
+updated: 2026-10-08T00:29:58Z
 transitions:
   - to: ready
     at: 2026-10-08T00:11:45Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 126
+      seconds: 129
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 37
-          output: 549
-          cache_read: 9628008
-          cache_write: 26069
-          cost: 2.3787
+          input: 38
+          output: 562
+          cache_read: 9959152
+          cache_write: 27756
+          cost: 2.4607
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T00:10:05Z
 forecast:
   duration: 25m
-  delivery: 2026-10-08T00:46:00Z
-  basis: "Its own forecast of 25m; 1st in the pull order with an in-progress limit of 3, behind S-0232, S-0316 and S-0317."
+  delivery: 2026-10-08T00:57:00Z
+  basis: "Its own forecast of 25m; 2nd in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0317 and S-0324."
   by: flai
-  at: 2026-10-08T00:18:41Z
+  at: 2026-10-08T00:29:58Z
 finalized:
   by: orchestrator
   at: 2026-10-08T00:11:41Z

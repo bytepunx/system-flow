@@ -6,7 +6,7 @@ title: flai test never runs flaiover's prettier, eslint, or svelte-check, so for
 status: ready
 owner: alex
 created: 2026-10-07T18:59:50Z
-updated: 2026-10-08T00:18:41Z
+updated: 2026-10-08T00:29:58Z
 transitions:
   - to: ready
     at: 2026-10-08T00:16:14Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 268
+      seconds: 271
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 27
-          output: 426
-          cache_read: 7326788
-          cache_write: 20261
-          cost: 1.8102
+          input: 28
+          output: 438
+          cache_read: 7657932
+          cache_write: 21947
+          cost: 1.8922
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-08T00:15:45Z
 forecast:
   duration: 30m
-  delivery: 2026-10-08T01:08:00Z
-  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0317, S-0318 and S-0320."
+  delivery: 2026-10-08T01:14:00Z
+  basis: "Its own forecast of 30m; 4th in the pull order with an in-progress limit of 3, behind S-0232, S-0316, S-0317, S-0324, S-0318 and S-0320."
   by: flai
-  at: 2026-10-08T00:18:41Z
+  at: 2026-10-08T00:29:58Z
 finalized:
   by: orchestrator
   at: 2026-10-08T00:16:10Z
