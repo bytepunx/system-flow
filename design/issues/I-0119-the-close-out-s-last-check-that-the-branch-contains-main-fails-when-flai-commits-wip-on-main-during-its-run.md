@@ -2,12 +2,12 @@
 id: I-0119
 title: The close-out's last check that the branch contains main fails when flai commits wip on main during its run
 class: efficiency
-status: open
+status: closed
 count: 6
 cost: 9m
 first_reported: 2026-10-08T04:29:28Z
 last_reported: 2026-10-08T09:55:20Z
-updated: 2026-10-08T09:55:20Z
+updated: 2026-10-08T10:45:46Z
 ---
 
 # I-0119 The close-out's last check that the branch contains main fails when flai commits wip on main during its run
@@ -44,3 +44,4 @@ S-0297's close-out passed every verify step, then stopped at the last sync check
 ## Remediation
 
 Story S-0347 remediates this issue, created from it at 2026-10-08T08:08:22Z.
+Closed 2026-10-08T10:45:46Z: Fixed by S-0347 (ADR-0135): the sync step of flai verify passes when the commits the branch lacks change only wip/ paths the branch does not change, naming them in a note on the step, and the close-out's last check is flai verify --sync-only in place of git merge-base --is-ancestor, in this repository's scripts/close-out.sh and the template's. A commit outside wip/, such as an acceptance or a release during the run, still stops the close-out and needs a sync and another run.
