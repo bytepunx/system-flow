@@ -81,6 +81,14 @@ func (h *Holds) WithShares(shares []Share) *Holds {
 	return h
 }
 
+// InForce says whether share s is in force, as WithShares judges it, with
+// the stories h knows: flai serve asks it of the shares it names in the
+// prompt of a story started on one.
+func (h *Holds) InForce(s Share) bool {
+	s.Holder, s.Held = CanonicalID(s.Holder), CanonicalID(s.Held)
+	return h.inForce(s)
+}
+
 // inForce says whether share s still holds, judged with the stories h knows.
 func (h *Holds) inForce(s Share) bool {
 	at, err := time.Parse(TimeFormat, s.At)

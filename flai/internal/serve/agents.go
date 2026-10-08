@@ -381,6 +381,10 @@ type launcher struct {
 	// could not be opened, by story and start: warned of once, not at every
 	// look (S-0294).
 	untold map[string]bool
+	// unasked are the asks about a hold that could not be written at the
+	// last look, by held and holding story, with the error: warned of once
+	// until the error changes, not at every look (ADR-0134).
+	unasked map[string]string
 }
 
 // told records a run in the host's state and tells changed.
@@ -458,18 +462,18 @@ type readyStory struct {
 
 // readyStories are the ready stories in pull order, the claims of the open
 // stories they are held by, how many more stories the in-progress limit
-// leaves room for, -1 when there is none, and why review being full holds
-// every one back, "" when it does not (S-0243).
-func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Holds, free int, review string, err error) {
+// leaves room for, -1 when there is none, why review being full holds every
+// one back, "" when it does not (S-0243), and the items read, by ID.
+func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Holds, free int, review string, byID map[string]*workitem.Item, err error) {
 	items, err := repo.List(false)
 	if err != nil {
-		return nil, nil, 0, "", err
+		return nil, nil, 0, "", nil, err
 	}
 	board, err := repo.LoadBoard()
 	if err != nil {
-		return nil, nil, 0, "", err
+		return nil, nil, 0, "", nil, err
 	}
-	byID := map[string]*workitem.Item{}
+	byID = map[string]*workitem.Item{}
 	for _, it := range items {
 		byID[it.ID] = it
 	}
@@ -486,7 +490,7 @@ func readyStories(repo *workitem.Repo) (ready []readyStory, holds *workitem.Hold
 	if limit, ok := view.WIPLimits[workitem.InProgress]; ok && limit > 0 {
 		free = max(0, limit-view.Counts[workitem.InProgress])
 	}
-	return ready, holds, free, view.ReviewHold(), nil
+	return ready, holds, free, view.ReviewHold(), byID, nil
 }
 
 // agentStarted is how a hold names a story in ready whose agent has been
@@ -639,7 +643,7 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if err != nil {
 		return
 	}
-	stories, holds, free, review, err := readyStories(repo)
+	stories, holds, free, review, items, err := readyStories(repo)
 	if err != nil {
 		return
 	}
@@ -658,11 +662,15 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if len(stories) == 0 {
 		return
 	}
+	st := l.dir.AgentStates()[l.entry.Root]
+	// Deferred, so that it runs on every way out of the look, the agent
+	// action off and the limit full among them, with the claims of the agents
+	// this look started opened in holds.
+	defer l.askHolds(repo, stories, holds, items, st)
 	if !cfg.Enabled {
 		sk.add("the agent host action is off for this project", stories...)
 		return
 	}
-	st := l.dir.AgentStates()[l.entry.Root]
 	commandSet := cfg.host(harness.Command).Program != ""
 	var todo, nothing, noRoom, reviewFull []readyStory
 	reserved := 0
@@ -719,6 +727,43 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	if len(reviewFull) > 0 {
 		sk.add(review+"; it holds "+strings.Join(ids(reviewFull), ", "), reviewFull...)
 	}
+}
+
+// askHolds asks the agent of each story in progress that holds a ready story
+// on overlap alone about the hold, in the two stories' conversation, with the
+// paths it is held on (ADR-0134). It asks whether or not the agent action is
+// on, the in-progress limit has room, or review is full: a held story is never
+// started, so the ask matters most when the board is busy. messages.AskHold
+// asks once per pair while the held story stays in ready, so a look that finds
+// the same hold writes nothing. A story held by after: or by a story with no
+// touches is not asked about (OverlapsBy), nor one whose agent runs, and a
+// holder in ready with its agent started is not asked. An ask that cannot be
+// written is warned of, once until its error changes, and the look goes on.
+func (l *launcher) askHolds(repo *workitem.Repo, stories []readyStory, holds *workitem.Holds, items map[string]*workitem.Item, st AgentState) {
+	now := l.now()
+	failed := map[string]string{}
+	for _, s := range stories {
+		if st.Stories[s.ID].live() {
+			continue
+		}
+		for _, o := range holds.OverlapsBy(s.item) {
+			if h := items[o.By]; h == nil || h.Status != workitem.InProgress {
+				continue
+			}
+			c, wrote, err := messages.AskHold(repo, messages.AskOptions{Held: s.ID, Holder: o.By, Paths: o.Paths, Now: now})
+			key := s.ID + " " + o.By
+			switch {
+			case err != nil:
+				failed[key] = err.Error()
+				if l.unasked[key] != err.Error() {
+					l.warn("hold not asked about", "held", s.ID, "holder", o.By, "err", err.Error())
+				}
+			case wrote:
+				l.log("hold asked about", "held", s.ID, "holder", o.By, "conversation", c.ID)
+			}
+		}
+	}
+	l.unasked = failed
 }
 
 // skips are the ready stories a look did not start, and why, in the order
@@ -1037,8 +1082,13 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if err != nil {
 		return fail(err)
 	}
+	var shares []harness.Share
+	if story.Asked == nil && story.Commit == "" {
+		shares = sharedWith(l.entry.Root, story.ID) // a resumed session knows them; a commit needs none
+	}
 	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
-		Session: run.Session, Answered: run.Answered, Restart: story.Restart, AutoRestart: autoRestart(story.AutoRestarts, cfg.AutoRestarts), Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun}, cfg.host(name))
+		Session: run.Session, Answered: run.Answered, Restart: story.Restart, AutoRestart: autoRestart(story.AutoRestarts, cfg.AutoRestarts), Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun,
+		Shares: shares}, cfg.host(name))
 	if err != nil {
 		return fail(err)
 	}
@@ -1080,6 +1130,36 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		l.measure(story.ID)
 	})
 	return true
+}
+
+// sharedWith are the shares in force on which story is the held side, each
+// with the conversation it was made on, for its agent's prompt (ADR-0134):
+// kept in a conversation that reads as open, and in force as
+// workitem.Holds.WithShares judges one. None when they cannot be read: the
+// prompt then names no share, and the agent's first inbox still lists the
+// conversation.
+func sharedWith(root, story string) []harness.Share {
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return nil
+	}
+	cs, err := messages.For(repo, story)
+	if err != nil {
+		return nil
+	}
+	holds := repo.Holds(nil)
+	var out []harness.Share
+	for _, c := range cs {
+		if closed, _ := c.Closed(repo); closed {
+			continue
+		}
+		for _, s := range c.Shares {
+			if workitem.CanonicalID(s.Held) == story && holds.InForce(s) {
+				out = append(out, harness.Share{Conversation: c.ID, Holder: workitem.CanonicalID(s.Holder), Paths: s.Paths, Split: s.Split})
+			}
+		}
+	}
+	return out
 }
 
 // openLog opens the log of a run for subject, a story or a strategic

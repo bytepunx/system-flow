@@ -103,7 +103,7 @@ func roomFor(repo *workitem.Repo, st AgentState, id string) (bool, *workitem.Hol
 // limit leaves room, why review being full holds the story back ("" when it
 // does not), and whether a claim holds it.
 func room(repo *workitem.Repo, st AgentState, id string) (bool, string, *workitem.Hold, error) {
-	stories, holds, free, review, err := readyStories(repo)
+	stories, holds, free, review, _, err := readyStories(repo)
 	if err != nil {
 		return false, "", nil, err
 	}

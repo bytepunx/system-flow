@@ -1,6 +1,6 @@
 ---
 title: Coordinating stories that run in parallel
-updated: 2026-10-07
+updated: 2026-10-08
 status: active
 topics: [cli, dashboard]
 ---
@@ -116,6 +116,8 @@ The stories that build it are under E-0009. Until they are accepted, flai behave
 
 [ADR-0096](../adrs/0096-a-story-in-review-holds-nothing-an-overlap-inside-the-manifest-s-shared-paths.md) (S-0295, 2026-10-06) refines this decision: a story in review holds nothing, an overlap inside the manifest's shared paths never holds, and a story's tasks narrow its folder touches in its claim. [workflow.md](workflow.md#branches-and-collisions-adr-0019) says how the hold works now.
 
+[ADR-0134](../adrs/0134-flai-serve-asks-the-agent-of-a-story-in-progress-about-each-ready-story-it.md) (S-0334, 2026-10-08) refines it, with ADR-0096, ADR-0120, and ADR-0121: flai serve asks the agent of each story in progress that holds a ready story on overlap alone, in the pair's conversation, and that agent may narrow its touches, share the overlapping paths with a split of who changes what, or say why the hold stands. An overlap on paths shared this way does not hold while both stories stay open; the trial merge and the notice at acceptance still report it.
+
 ## Messages between stories
 
 The hold, the trial merge, and the notice at accept coordinate stories through flai. Since S-0330 the agents of two open stories can also agree between themselves, for example on who changes a shared file first, without asking the operator to relay. [ADR-0120](../adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md) records the decision.
@@ -125,7 +127,7 @@ The hold, the trial merge, and the notice at accept coordinate stories through f
 - **Closed with the story.** A conversation reads as closed once either story is done, cancelled, or archived, and then takes no reply. `flai accept` and `flai archive` close the open conversations of the stories they archive, with the entry `Closed: S-nnnn was accepted` or `was archived`. A closed conversation is never reopened; a new message starts a new one.
 - **Apart from threads.** None appears in `flai thread list`, among the threads awaiting the operator in `inbox` or the dashboard's designer inbox, or in a narrative's `## Open questions`. The operator reads them with `flai message list --all` and `flai message show`. A question for the designer is still a thread.
 
-An agent finds the conversations of its story with `flai message list --story S-nnnn`, or, since S-0331, through MCP: `message_send` and `message_reply`, `inbox` listing them under `messages`, and `wait_for_events` waking on one. Since S-0333 flai sends one itself: `flai task done` tells each other open story whose claim covers a path the task's commit changed, before either story is accepted ([workflow.md](workflow.md#branches-and-collisions-adr-0019)). Since S-0332 a trial-merge conflict at `flai stream sync` and a claim grown into another in-progress story's arrive the same way, in the pair's conversation, not on a thread; either agent escalates to the operator with `flai message escalate`, or `message_escalate`, only when the two do not agree ([ADR-0121](../adrs/0121-flai-tells-two-stories-of-a-trial-merge-conflict-or-a-grown-overlap-with-a.md)). The dashboard's view (S-0336) comes in a later story of E-0018.
+An agent finds the conversations of its story with `flai message list --story S-nnnn`, or, since S-0331, through MCP: `message_send` and `message_reply`, `inbox` listing them under `messages`, and `wait_for_events` waking on one. Since S-0333 flai sends one itself: `flai task done` tells each other open story whose claim covers a path the task's commit changed, before either story is accepted ([workflow.md](workflow.md#branches-and-collisions-adr-0019)). Since S-0332 a trial-merge conflict at `flai stream sync` and a claim grown into another in-progress story's arrive the same way, in the pair's conversation, not on a thread; either agent escalates to the operator with `flai message escalate`, or `message_escalate`, only when the two do not agree ([ADR-0121](../adrs/0121-flai-tells-two-stories-of-a-trial-merge-conflict-or-a-grown-overlap-with-a.md)). Since S-0334 a conversation may have a ready story on one side: flai serve asks a holding story's agent there about the ready story it holds, and that agent answers with `flai message share`, or `message_share`, or a reply ([ADR-0134](../adrs/0134-flai-serve-asks-the-agent-of-a-story-in-progress-about-each-ready-story-it.md)). The dashboard's view (S-0336) comes in a later story of E-0018.
 
 ## Within a story
 

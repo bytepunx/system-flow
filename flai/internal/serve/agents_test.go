@@ -1766,3 +1766,246 @@ func TestAnEndedAgentIsNotRestartedOnItsOwnWhenItShouldNotBe(t *testing.T) {
 		})
 	}
 }
+
+// asks counts, by holding story, the messages flai wrote on held's
+// conversations asking about its hold (ADR-0134).
+func (lab *agentLab) asks(held string) map[string]int {
+	lab.t.Helper()
+	cs, err := messages.For(lab.repo, held)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	out := map[string]int{}
+	for _, c := range cs {
+		for _, e := range c.Entries() {
+			if e.Author == messages.AskAuthor {
+				out[c.Other(held)]++
+			}
+		}
+	}
+	return out
+}
+
+// heldNow is why story is held, as the board reads it.
+func (lab *agentLab) heldNow(story string) *workitem.Hold {
+	lab.t.Helper()
+	items, err := lab.repo.List(false)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	it, err := lab.repo.Get(story)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	return lab.repo.Holds(items).Of(it)
+}
+
+// logged counts the lines logged with msg.
+func (lab *agentLab) logged(msg string) int { return strings.Count(lab.logText(), `msg="`+msg+`"`) }
+
+// ADR-0134: at each look flai serve asks the agent of each story in progress
+// that holds a ready story on overlap alone about the hold, once per pair
+// while the held story stays in ready, the in-progress limit full or not:
+// a second look writes nothing new.
+func TestAHoldOnOverlapAloneIsAskedAboutOncePerPair(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(1)
+	holder := lab.readyTouching("Holder", "flai/cmd")
+	lab.move(holder, workitem.InProgress)
+	held := lab.readyTouching("Held", "flai/cmd/serve.go")
+	lab.l.look(ctx, false)
+	cs, err := messages.For(lab.repo, held)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cs) != 1 || cs[0].From != held || cs[0].To != holder || !slices.Equal(cs[0].About, []string{"flai/cmd/serve.go"}) {
+		t.Fatalf("one conversation from %s to %s about the overlap: %+v", held, holder, cs)
+	}
+	if got := lab.asks(held); len(got) != 1 || got[holder] != 1 {
+		t.Fatalf("asks: %v", got)
+	}
+	if n := lab.logged("hold asked about"); n != 1 || !strings.Contains(lab.logText(), `msg="hold asked about" component=serve project=t held=`+held+" holder="+holder+" conversation="+cs[0].ID) {
+		t.Errorf("logged %d asks:\n%s", n, lab.logText())
+	}
+	lab.l.look(ctx, false)
+	if got := lab.asks(held); len(got) != 1 || got[holder] != 1 {
+		t.Errorf("a second look asked again: %v", got)
+	}
+	if again, _ := messages.Get(lab.repo, cs[0].ID); len(again.Entries()) != len(cs[0].Entries()) {
+		t.Errorf("a second look wrote on %s: %d entries, then %d", cs[0].ID, len(cs[0].Entries()), len(again.Entries()))
+	}
+	if n := lab.logged("hold asked about"); n != 1 {
+		t.Errorf("logged %d asks after two looks", n)
+	}
+	if lab.run(held) != nil {
+		t.Errorf("a held story was started: %+v", lab.run(held))
+	}
+}
+
+// ADR-0134: a story held by after:, or by a story with no touches, or one
+// whose own claim is empty, is held on more than overlap and is not asked
+// about; nor is a story held only by one whose agent was started and is
+// still in ready.
+func TestNoAskForAHoldThatIsNotOnOverlapAlone(t *testing.T) {
+	ctx := context.Background()
+	t.Run("after", func(t *testing.T) {
+		lab := newAgentLab(t)
+		holder := lab.readyTouching("Holder", "flai/cmd")
+		lab.move(holder, workitem.InProgress)
+		st, err := lab.repo.Get(lab.backlog("Waits", nil, "flai/cmd/serve.go"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		st.After = []string{holder}
+		if err := lab.repo.Save(st); err != nil {
+			t.Fatal(err)
+		}
+		lab.toReady(st.ID)
+		if h := lab.heldNow(st.ID); h == nil || h.Code != workitem.HoldAfter {
+			t.Fatalf("held by after: %+v", h)
+		}
+		lab.l.look(ctx, false)
+		if got := lab.asks(st.ID); len(got) != 0 {
+			t.Errorf("asked about a story held by after: %v", got)
+		}
+	})
+	t.Run("no touches", func(t *testing.T) {
+		lab := newAgentLab(t)
+		bare := lab.readyTouching("Bare", []string{}...)
+		lab.move(bare, workitem.InProgress)
+		held := lab.readyTouching("Held", "flai/cmd/serve.go")
+		if h := lab.heldNow(held); h == nil || h.Code != workitem.HoldNoTouches {
+			t.Fatalf("held by a story with no touches: %+v", h)
+		}
+		lab.l.look(ctx, false)
+		if got := lab.asks(held); len(got) != 0 {
+			t.Errorf("asked about a story held by one with no touches: %v", got)
+		}
+	})
+	t.Run("a holder still ready", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.limit(3)
+		lab.hold()
+		first := lab.readyTouching("First", "flai/cmd")
+		held := lab.readyTouching("Held", "flai/cmd/serve.go")
+		lab.l.look(ctx, false)
+		waitFor(t, "the first story's agent runs", func() bool { return lab.run(first).live() })
+		lab.l.look(ctx, false)
+		if lab.run(held) != nil {
+			t.Fatalf("started a story held by one whose agent started: %+v", lab.run(held))
+		}
+		if got := lab.asks(held); len(got) != 0 {
+			t.Errorf("asked a story still in ready: %v", got)
+		}
+		if n := lab.logged("hold not asked about"); n != 0 {
+			t.Errorf("warned %d times", n)
+		}
+		lab.release(first)
+		waitFor(t, "it ends", func() bool { return !lab.run(first).live() })
+	})
+}
+
+// ADR-0134: an ask that cannot be written is warned of with the held and
+// holding stories and the error, once until the error changes, and the look
+// goes on.
+func TestAnAskThatCannotBeWrittenIsWarnedOfOnce(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(3)
+	lab.hold()
+	holder := lab.readyTouching("Holder", "flai/cmd")
+	lab.move(holder, workitem.InProgress)
+	held := lab.readyTouching("Held", "flai/cmd/serve.go")
+	clear := lab.readyTouching("Clear", "docs/clear")
+	// a file where the conversations' folder goes: no conversation can be written
+	if err := os.WriteFile(filepath.Join(lab.root, "wip", messages.Folder), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	lab.l.look(ctx, false)
+	if n := lab.logged("hold not asked about"); n != 1 || !strings.Contains(lab.logText(), `msg="hold not asked about" component=serve project=t held=`+held+" holder="+holder+" err=") {
+		t.Errorf("warned %d times:\n%s", n, lab.logText())
+	}
+	waitFor(t, "the look went on to the clear story", func() bool { return lab.run(clear).live() })
+	lab.release(clear)
+	waitFor(t, "it ends", func() bool { return !lab.run(clear).live() })
+}
+
+// ADR-0134: a story held on overlap alone by two stories in progress is asked
+// about of each, with the paths each holds it on.
+func TestAHoldByTwoIsAskedAboutOfEach(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(3)
+	a := lab.readyTouching("A", "flai/cmd/a.go")
+	lab.move(a, workitem.InProgress)
+	b := lab.readyTouching("B", "docs/guide.md")
+	lab.move(b, workitem.InProgress)
+	held := lab.readyTouching("Held", "flai/cmd", "docs/guide.md")
+	lab.l.look(ctx, false)
+	if got := lab.asks(held); len(got) != 2 || got[a] != 1 || got[b] != 1 {
+		t.Fatalf("asks: %v", got)
+	}
+	cs, err := messages.For(lab.repo, held)
+	if err != nil {
+		t.Fatal(err)
+	}
+	about := map[string][]string{}
+	for _, c := range cs {
+		about[c.Other(held)] = c.About
+	}
+	if !slices.Equal(about[a], []string{"flai/cmd/a.go"}) || !slices.Equal(about[b], []string{"docs/guide.md"}) {
+		t.Errorf("about: %v", about)
+	}
+}
+
+// ADR-0134: once the holding story's agent shares the paths, the held story
+// is started, and its agent's prompt names the conversation, the holder, the
+// paths, and the split; a story started on no share is told of none.
+func TestAStoryStartedOnAShareIsToldTheSplit(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.limit(3)
+	lab.cfg.Command = nil
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+	claude := &manifest.Agent{Harness: harness.ClaudeCode}
+	holder := lab.readyTouching("Holder", "flai/cmd")
+	lab.move(holder, workitem.InProgress)
+	id := lab.backlog("Held", claude, "flai/cmd/serve.go")
+	lab.toReady(id)
+	lab.l.look(ctx, false)
+	cs, err := messages.For(lab.repo, id)
+	if err != nil || len(cs) != 1 {
+		t.Fatalf("asked: %v %+v", err, cs)
+	}
+	if lab.run(id) != nil {
+		t.Fatalf("started before the share: %+v", lab.run(id))
+	}
+	split := "Holder changes the flags; Held adds the serve command below them."
+	if _, err := messages.Share(lab.repo, messages.ShareOptions{ID: cs[0].ID, Story: holder, Author: "builder-" + holder, Paths: []string{"flai/cmd/serve.go"}, Split: split, Now: lab.now.Add(time.Minute)}); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "the held story's agent ran", func() bool { r := lab.run(id); return r != nil && !r.live() })
+	got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+	for _, want := range []string{
+		id + " works on a share (ADR-0134)",
+		"On " + cs[0].ID + ", " + holder + "'s agent shared `flai/cmd/serve.go` with " + id + `, split so: "` + split + `".`,
+		"Keep to the split",
+		"Your first inbox lists " + cs[0].ID + " under messages",
+		"message_reply (flai message reply " + cs[0].ID + " on the host)",
+	} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("the prompt lacks %q:\n%s", want, got)
+		}
+	}
+
+	other := lab.backlog("Unshared", claude, "docs/unshared.md")
+	lab.toReady(other)
+	lab.l.look(ctx, false)
+	waitFor(t, "the other story's agent ran", func() bool { r := lab.run(other); return r != nil && !r.live() })
+	if got, _ := os.ReadFile(filepath.Join(lab.outDir, other+".txt")); !strings.Contains(string(got), "You are builder-"+other) || strings.Contains(string(got), "works on a share") {
+		t.Errorf("a story started on no share is told of one:\n%s", got)
+	}
+}

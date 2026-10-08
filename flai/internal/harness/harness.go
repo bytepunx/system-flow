@@ -79,6 +79,19 @@ type Request struct {
 	// had no agent for it and the operator has one started here (S-0177,
 	// ADR-0064); nil otherwise.
 	Begun *Begun
+	// Shares are the shares in force that cleared a hold on the story, each
+	// made by the agent of the story that held it (ADR-0134); none otherwise.
+	Shares []Share
+}
+
+// Share is the sharing of paths that cleared a hold on the story an agent is
+// started for (ADR-0134): the conversation it was made on, the story that
+// held it and shared, the paths shared, and the split of who changes what.
+type Share struct {
+	Conversation string
+	Holder       string
+	Paths        []string
+	Split        string
 }
 
 // Begun is where, when, and by whom a story was begun on another host, or
@@ -226,7 +239,9 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // and that the operator chooses at acceptance which become stories (S-0198).
 // An agent for a ready story begins it with story_start (S-0274); one for a
 // story already in progress, which story_start refuses, primes and takes it
-// up with flai stream open. The planner is asked to plan its item instead
+// up with flai stream open. One started on a share that cleared a hold on
+// its story is told the share's conversation, paths, and split (ADR-0134,
+// shared). The planner is asked to plan its item instead
 // (planPrompt), the orchestrator to keep the project's work moving
 // (orchestratePrompt), and the analyzer to write a report (analyzePrompt).
 // Only the claude-code adapter sends a prompt.
@@ -278,13 +293,47 @@ If a change cannot be committed without the designer deciding something, ask wit
 	case r.Started:
 		why = "because the operator started it now, from the story's page or with flai serve agent start."
 	}
-	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, %[5]s
+	return fmt.Sprintf(`You are %[1]s, started by flai serve on this host to work story %[2]s in the project at %[3]s, %[5]s%[8]s
 
 Work %[2]s to review, and no other story. Follow CLAUDE.md, or AGENTS.md where there is no CLAUDE.md. %[7]s A brief is not the document: when one bears on the story, read it, or its section that does, with the flai MCP tool doc_get and its heading (flai doc show --heading on the host) before relying on it or changing what it describes, and find sections by their words with doc_search. Write the story's tasks if it has none, or review the ones the planner drafted, and work them in that worktree. When a task is done, close it with flai task done T-nnnn -m "<message>" in the worktree (or the flai MCP tool task_done), with its docs and work-item updates in the change: it commits on story/%[2]s, runs flai stream sync %[2]s, moves the task to done, logs it in the narrative, widens the touches, runs flai check, and answers your inbox, stopping at the first step that fails. When the sync stops on conflicts, resolve each path it lists in the worktree, git add it, and git rebase --continue, then call it again; when the check stops, fix what it found and call it again. Then run the task's tests with flai test and the paths it changed (or the flai MCP tool test with them), and close any fix they need by calling flai task done again. flai stream sync does the branch's git work and refuses while anything is uncommitted: never start a rebase or merge by hand. Keep the narrative's Current state and Next steps true: rewrite them at every task transition with flai stream state %[2]s --current "<text>" --next "<text>" (or the flai MCP tool stream_state), never by editing the narrative.
 
 %[6]s
 
-%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r), open)
+%[4]s`, r.Name, r.Story, r.Root, rules(r), why, delegation(r), open, shared(r))
+}
+
+// shared tells an agent started on shares (ADR-0134), as a paragraph of its
+// own, each share's conversation, the story that shared, the paths, and the
+// split; to keep to the split; that its first inbox lists the conversation
+// under messages; and to answer there with message_reply when the split no
+// longer fits. Empty when it was started on none.
+func shared(r Request) string {
+	if len(r.Shares) == 0 {
+		return ""
+	}
+	var each, convs []string
+	for _, s := range r.Shares {
+		paths := make([]string, len(s.Paths))
+		for i, p := range s.Paths {
+			paths[i] = "`" + p + "`"
+		}
+		each = append(each, fmt.Sprintf("On %s, %s's agent shared %s with %s, split so: \"%s\".", s.Conversation, s.Holder, strings.Join(paths, ", "), r.Story, strings.Join(strings.Fields(s.Split), " ")))
+		if !slices.Contains(convs, s.Conversation) {
+			convs = append(convs, s.Conversation)
+		}
+	}
+	split, a := "the split", "the split"
+	if len(r.Shares) > 1 {
+		split, a = "each split", "a split"
+	}
+	id, read, there := convs[0], "read it", "there"
+	if len(convs) > 1 {
+		id, read, there = "<MS-nnnn>", "read each", "on its conversation"
+	}
+	return fmt.Sprintf(`
+
+%[1]s works on a share (ADR-0134): its claim overlaps the claim of another story, whose agent shared the overlapping paths with it and split the work, so the overlap no longer holds it. %[2]s Keep to %[3]s: in the paths shared, change only what it gives %[1]s, and leave the rest to the story that shared. Your first inbox lists %[4]s under messages: %[5]s with the flai MCP tool message_get (flai message show %[6]s on the host). If %[7]s no longer fits the work, say so %[8]s with message_reply (flai message reply %[6]s on the host) before you change what it does not give %[1]s.`,
+		r.Story, strings.Join(each, " "), split, strings.Join(convs, ", "), read, id, a, there)
 }
 
 // startStory is how an agent begins a ready story (S-0274): one call to the

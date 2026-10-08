@@ -1861,3 +1861,40 @@ func TestTheTemplatesAnalyzerIsHeldToItsReport(t *testing.T) {
 	}
 	t.Error("the template's settings have no Edit|MultiEdit|Write|NotebookEdit hook")
 }
+
+// ADR-0134: an agent started on a share is told, for each, the conversation,
+// the story that shared, the paths, and the split, to keep to it, and to
+// answer on the conversation when it no longer fits; one started on none is
+// told of none.
+func TestAnAgentStartedOnAShareIsToldTheSplit(t *testing.T) {
+	if p := Prompt(req(nil)); strings.Contains(p, "works on a share") || strings.Contains(p, "message_get") {
+		t.Errorf("a story started on no share is told of one:\n%s", p)
+	}
+	r := req(nil)
+	r.Shares = []Share{{Conversation: "MS-0007", Holder: "S-0100", Paths: []string{"flai/cmd/serve.go", "docs/guide.md"}, Split: "S-0100 changes the flags;\nS-0104 adds the command."}}
+	p := Prompt(r)
+	for _, want := range []string{
+		"S-0104 works on a share (ADR-0134): its claim overlaps the claim of another story, whose agent shared the overlapping paths with it and split the work, so the overlap no longer holds it.",
+		"On MS-0007, S-0100's agent shared `flai/cmd/serve.go`, `docs/guide.md` with S-0104, split so: \"S-0100 changes the flags; S-0104 adds the command.\".",
+		"Keep to the split: in the paths shared, change only what it gives S-0104",
+		"Your first inbox lists MS-0007 under messages: read it with the flai MCP tool message_get (flai message show MS-0007 on the host).",
+		"If the split no longer fits the work, say so there with message_reply (flai message reply MS-0007 on the host)",
+		"Begin with the flai MCP tool story_start with S-0104",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("prompt lacks %q:\n%s", want, p)
+		}
+	}
+	r.Shares = append(r.Shares, Share{Conversation: "MS-0009", Holder: "S-0101", Paths: []string{"design"}, Split: "Each its own section."})
+	p = Prompt(r)
+	for _, want := range []string{
+		"On MS-0009, S-0101's agent shared `design` with S-0104",
+		"Keep to each split",
+		"Your first inbox lists MS-0007, MS-0009 under messages: read each with the flai MCP tool message_get (flai message show <MS-nnnn> on the host).",
+		"If a split no longer fits the work, say so on its conversation with message_reply (flai message reply <MS-nnnn> on the host)",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("prompt with two shares lacks %q:\n%s", want, p)
+		}
+	}
+}

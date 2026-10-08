@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-07
+updated: 2026-10-08
 status: active
 ---
 
@@ -264,7 +264,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--bucket` | [flai stats](../users/flai-reference.md#flai-stats) |
 | `--budget` | [flai prime](../users/flai-reference.md#flai-prime), [flai story start](../users/flai-reference.md#flai-story-start) |
 | `--build` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
-| `--by` | [flai accept](../users/flai-reference.md#flai-accept), [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai edit](../users/flai-reference.md#flai-edit), [flai message escalate](../users/flai-reference.md#flai-message-escalate), [flai message reply](../users/flai-reference.md#flai-message-reply), [flai message send](../users/flai-reference.md#flai-message-send), [flai move](../users/flai-reference.md#flai-move), [flai order](../users/flai-reference.md#flai-order), [flai stats](../users/flai-reference.md#flai-stats), [flai stream answer](../users/flai-reference.md#flai-stream-answer), [flai thread confirm](../users/flai-reference.md#flai-thread-confirm), [flai thread new](../users/flai-reference.md#flai-thread-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
+| `--by` | [flai accept](../users/flai-reference.md#flai-accept), [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai edit](../users/flai-reference.md#flai-edit), [flai message escalate](../users/flai-reference.md#flai-message-escalate), [flai message reply](../users/flai-reference.md#flai-message-reply), [flai message send](../users/flai-reference.md#flai-message-send), [flai message share](../users/flai-reference.md#flai-message-share), [flai move](../users/flai-reference.md#flai-move), [flai order](../users/flai-reference.md#flai-order), [flai stats](../users/flai-reference.md#flai-stats), [flai stream answer](../users/flai-reference.md#flai-stream-answer), [flai thread confirm](../users/flai-reference.md#flai-thread-confirm), [flai thread new](../users/flai-reference.md#flai-thread-new), [flai thread reply](../users/flai-reference.md#flai-thread-reply), [flai thread resolve](../users/flai-reference.md#flai-thread-resolve) |
 | `--candidates` | [flai plan](../users/flai-reference.md#flai-plan), [flai promote](../users/flai-reference.md#flai-promote) |
 | `--cat` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--check` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
@@ -297,7 +297,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--forecast-basis` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--forecast-delivery` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--forecast-duration` | [flai edit](../users/flai-reference.md#flai-edit) |
-| `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai message escalate](../users/flai-reference.md#flai-message-escalate), [flai message reply](../users/flai-reference.md#flai-message-reply), [flai message send](../users/flai-reference.md#flai-message-send), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
+| `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai message escalate](../users/flai-reference.md#flai-message-escalate), [flai message reply](../users/flai-reference.md#flai-message-reply), [flai message send](../users/flai-reference.md#flai-message-send), [flai message share](../users/flai-reference.md#flai-message-share), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--grace-seconds` | [flai checks cancel](../users/flai-reference.md#flai-checks-cancel) |
 | `--harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--hash` | [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |
@@ -335,6 +335,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--owner` | [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--parent` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--part` | [flai prime](../users/flai-reference.md#flai-prime) |
+| `--paths` | [flai message share](../users/flai-reference.md#flai-message-share) |
 | `--penalty-per-week` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--pending` | [flai push](../users/flai-reference.md#flai-push), [flai release](../users/flai-reference.md#flai-release) |
 | `--placed-by` | [flai order](../users/flai-reference.md#flai-order) |

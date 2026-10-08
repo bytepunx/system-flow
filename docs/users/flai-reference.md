@@ -1849,6 +1849,8 @@ Conversations between the agents of two open stories, apart from the operator's 
 
 Conversations between the agents of two stories in progress or in review (ADR-0120). A message goes from one story to another, and the messages between the two make a conversation, one file in wip/messages, MS-nnnn-&lt;slug&gt;.md, in the main checkout.
 
+A ready story held on overlap alone with a story in progress has no agent, so flai serve asks the holding story's agent about it in their conversation, and that agent may share the overlapping paths with flai message share, so that the overlap no longer holds (ADR-0134).
+
 A conversation awaits the story that did not write its last message. When the two do not agree, either story's agent asks the operator with flai message escalate, which opens a thread (ADR-0121). It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
 
 Messages are kept apart from threads: none appears in flai thread list, among the threads awaiting the operator, or in a narrative's Open questions. A question for the designer is still a thread.
@@ -1859,6 +1861,7 @@ Subcommands:
 - [list](#flai-message-list): List conversations; those still open by default
 - [reply](#flai-message-reply): Add a message to a conversation from one of its two stories
 - [send](#flai-message-send): Start a conversation from one open story to another with its first message
+- [share](#flai-message-share): Share paths a story in progress holds a ready story on, with a split of the work, so that the overlap no longer holds
 - [show](#flai-message-show): Print a conversation with every message
 
 #### flai message escalate
@@ -1968,6 +1971,35 @@ Flags:
 | `--about` stringArray | repository path the conversation is about, relative to the root (repeatable) |
 | `--by` string | author (default: FLAI\_AGENT, then config author) |
 | `--from` string | the story the message comes from (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
+
+#### flai message share
+
+Share paths a story in progress holds a ready story on, with a split of the work, so that the overlap no longer holds.
+
+```text
+flai message share <MS-nnnn> --paths <path>... "<split>" [flags]
+```
+
+Records in the conversation &lt;MS-nnnn&gt;, between a story in progress and a ready story it holds on overlap, that the story in progress shares the paths --paths with the ready one, split as &lt;split&gt; says: who changes what (ADR-0134). The conversation's front matter keeps the share under shares, and a message from the story in progress gives the split. Prints the share and whom the conversation awaits; --json prints the conversation as flai message show --json does.
+
+While the share is in force, an overlap between the two stories on those paths does not hold, so flai board, inbox, wait\_for\_work, flai story start, and flai serve take the ready story. It ends when either story leaves ready, in progress, or review, or the ready story goes back to backlog.
+
+Only the story in progress's agent, writing for it, or the operator, its owner, may share. The story is --from, else FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here; the author is --by, else FLAI\_AGENT, else the config author. --paths names a path, relative to the root, both stories claim; give it once per path, or comma separated. A share is refused from anyone else, on a conversation that reads as closed or has no ready story, with an empty split, and for a path outside the two stories' overlap; nothing is written.
+
+Examples:
+
+```bash
+flai message share MS-0004 --paths flai/internal/workitem/hold.go "S-0330 changes holdBy; S-0334 adds a function below it." --from S-0330
+flai message share ms-4 --paths docs/users/flai.md,design/system/workflow.md "Each adds its own section" --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--by` string | author (default: FLAI\_AGENT, then config author) |
+| `--from` string | the story in progress that shares, one of the conversation's two (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
+| `--paths` strings | a path both stories claim, relative to the root (repeatable, or comma separated) |
 
 #### flai message show
 
