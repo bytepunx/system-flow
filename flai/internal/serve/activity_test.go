@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -234,6 +235,34 @@ func TestARunEndLogsWhatWasSpentSinceTheLastActivity(t *testing.T) {
 	}
 	if doc := lab.doc(workitem.ActivityPlanner); doc.TasksCompleted != 2 || doc.AccruedCost != 1.0 {
 		t.Errorf("document = %+v, want both entries' totals", doc)
+	}
+}
+
+// I-0118: a bare www. literal reached orchestrator.md, which MD034 finds. A
+// run's final text is checked by no agent, so a bare URL in its first line
+// had the run-end entry refused by the lint and its seconds and cost lost.
+// flai now puts it in a code span, and the document lints clean.
+func TestARunEndQuotesABareURLInItsSummary(t *testing.T) {
+	lab := newActivityLab(t)
+	if err := os.WriteFile(filepath.Join(lab.root, ".markdownlint.yaml"), []byte("default: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	lab.log("t-orchestrator-20261003T100000Z.log",
+		streamCall("s", "m1", runStart, 999),
+		streamFinal("Published, see www.example.com and https://example.org/r.\nThe rest.", 1000, 0.5))
+	got, err := LogRunEnd(lab.dir, lab.root, "t", workitem.ActivityOrchestrator, nil)
+	if err != nil || got == nil {
+		t.Fatalf("run end = %+v (%v), want logged", got, err)
+	}
+	if want := "Published, see `www.example.com` and `https://example.org/r`."; got.Entry.Summary != want || got.Entry.Cost != 0.5 {
+		t.Errorf("entry = %+v, want summary %q at 0.5 USD", got.Entry, want)
+	}
+	data, err := os.ReadFile(lab.repo.ActivityPath(workitem.ActivityOrchestrator))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mdlint.Guard(lab.root, "wip/agents/orchestrator.md", "", string(data)); err != nil {
+		t.Errorf("the document does not lint clean: %v", err)
 	}
 }
 

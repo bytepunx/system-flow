@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -126,6 +127,8 @@ func logRunEnd(d Dir, root, key, kind, trigger, summary string, items []string) 
 // logRunEndSaying is logRunEnd with the entry's summary made by say from the
 // first line of the run's final text, "run ended" when it has none: the
 // analyzer's names the report the run wrote, or says it wrote none (S-0223).
+// A bare URL in the summary is put in a code span, since no agent checked
+// that text against the lint, which would refuse the entry (I-0118).
 func logRunEndSaying(d Dir, root, key, kind, trigger string, say func(final string) string, items []string) (*Logged, error) {
 	m, err := readActivity(d, root, key, kind)
 	if err != nil {
@@ -144,7 +147,7 @@ func logRunEndSaying(d Dir, root, key, kind, trigger string, say func(final stri
 		return nil, nil
 	}
 	logged, err := m.append(workitem.ActivityEntry{
-		At: s.To, Summary: say(firstLine(run.Result, "run ended")), Trigger: trigger, Items: items,
+		At: s.To, Summary: mdlint.QuoteBareURLs(say(firstLine(run.Result, "run ended"))), Trigger: trigger, Items: items,
 		Seconds: seconds(s), Cost: u.Cost(), Estimated: u.Estimated,
 	})
 	if err != nil {
