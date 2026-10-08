@@ -3,11 +3,17 @@ id: S-0347
 type: story
 nature: improvement
 title: The close-out's last check that the branch contains main fails when flai commits wip on main during its run
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-08T08:08:22Z
-updated: 2026-10-08T10:28:37Z
-transitions: []
+updated: 2026-10-08T10:29:15Z
+transitions:
+  - to: ready
+    at: 2026-10-08T10:29:09Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T10:29:15Z
+    by: agent-S-0347
 tags: [cli, template]
 topics: [testing, git]
 touches: [design/adrs/0133-the-close-out-s-sync-check-passes-over-commits-on-main-that-change-only-wip.md, design/adrs/README.md, design/system/flai-cli.md, design/system/devex.md, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/paths.go, flai/internal/verify/paths_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, docs/users/flai.md, docs/users/flai-reference.md, scripts/close-out.sh, template/root/scripts/close-out.sh, scripts/README.md, template/root/scripts/README.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md, design/issues/summary.md]
@@ -22,15 +28,21 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 292
+      seconds: 851
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 138
-          output: 2553
-          cache_read: 36173643
-          cache_write: 28419
-          cost: 8.9197
+          input: 170
+          output: 3120
+          cache_read: 50153941
+          cache_write: 39864
+          cost: 12.367
+        - model: claude-sonnet-5-5
+          input: 8
+          output: 32
+          cache_read: 211907
+          cache_write: 27086
+          cost: 0.206
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m
@@ -41,10 +53,10 @@ cost_of_delay:
   at: 2026-10-08T08:45:10Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-08T15:28:00Z
-  basis: "Its own forecast of 1h30m; 18th in the pull order with an in-progress limit of 5, behind S-0232, S-0338, S-0342, S-0337, S-0343, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0304, S-0305, S-0306 and S-0313."
+  delivery: 2026-10-08T12:06:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0232, S-0338, S-0342 and S-0337."
   by: flai
-  at: 2026-10-08T10:28:37Z
+  at: 2026-10-08T10:29:12Z
 finalized:
   by: alex
   at: 2026-10-08T08:39:51Z
