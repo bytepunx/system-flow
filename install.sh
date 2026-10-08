@@ -44,12 +44,24 @@ TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
 if [ -z "$TOKEN" ] && command -v gh >/dev/null 2>&1; then
   TOKEN=$(gh auth token 2>/dev/null || true)
 fi
+# api fetches $2 into $3 accepting $1. A call the network drops (GitHub cuts
+# off a large response now and then, I-0086) is tried three times in all, two
+# seconds apart; an HTTP error, curl's exit 22 under --fail, fails at once.
 api() {
-  if [ -n "$TOKEN" ]; then
-    curl -fsSL -H "Accept: $1" -H "Authorization: Bearer $TOKEN" "$2" -o "$3"
-  else
-    curl -fsSL -H "Accept: $1" "$2" -o "$3"
-  fi
+  API_TRY=1
+  while :; do
+    API_RC=0
+    if [ -n "$TOKEN" ]; then
+      curl -fsSL -H "Accept: $1" -H "Authorization: Bearer $TOKEN" "$2" -o "$3" || API_RC=$?
+    else
+      curl -fsSL -H "Accept: $1" "$2" -o "$3" || API_RC=$?
+    fi
+    if [ "$API_RC" -eq 0 ]; then return 0; fi
+    if [ "$API_RC" -eq 22 ] || [ "$API_TRY" -ge 3 ]; then return "$API_RC"; fi
+    warn "fetching $2 failed (curl exit $API_RC); trying again in 2s (attempt $((API_TRY + 1)) of 3)" >&2
+    sleep 2
+    API_TRY=$((API_TRY + 1))
+  done
 }
 
 TMP=$(mktemp -d)
@@ -60,10 +72,19 @@ if [ -n "${FLAI_VERSION:-}" ]; then
   TAG="flai/v${FLAI_VERSION#v}"
   TAG_URL="$API/repos/$REPO/releases/tags/$(printf '%s' "$TAG" | sed 's|/|%2F|g')"
 else
+  # Small pages, since a large listing is what the network drops (I-0086):
+  # the next is asked for only while no flai/v* tag has turned up, up to the
+  # 50 newest releases, and not past a page that holds no release.
   step "Resolving latest release..."
-  api "application/vnd.github+json" "$API/repos/$REPO/releases?per_page=50" "$TMP/releases.json" \
-    || fatal "could not list releases of $REPO (private repository? set GITHUB_TOKEN or run gh auth login)"
-  TAG=$(tr -d '\n' < "$TMP/releases.json" | grep -o '"tag_name": *"flai/v[^"]*"' | head -1 | sed -E 's/.*"(flai\/v[^"]+)".*/\1/')
+  TAG=""
+  PAGE=1
+  while [ -z "$TAG" ] && [ "$PAGE" -le 5 ]; do
+    api "application/vnd.github+json" "$API/repos/$REPO/releases?per_page=10&page=$PAGE" "$TMP/releases.json" \
+      || fatal "could not list releases of $REPO (private repository? set GITHUB_TOKEN or run gh auth login)"
+    grep -q '"tag_name"' "$TMP/releases.json" || break
+    TAG=$(tr -d '\n' < "$TMP/releases.json" | grep -o '"tag_name": *"flai/v[^"]*"' | head -1 | sed -E 's/.*"(flai\/v[^"]+)".*/\1/')
+    PAGE=$((PAGE + 1))
+  done
   [ -n "$TAG" ] || fatal "no flai release found in $REPO"
   TAG_URL="$API/repos/$REPO/releases/tags/$(printf '%s' "$TAG" | sed 's|/|%2F|g')"
 fi
