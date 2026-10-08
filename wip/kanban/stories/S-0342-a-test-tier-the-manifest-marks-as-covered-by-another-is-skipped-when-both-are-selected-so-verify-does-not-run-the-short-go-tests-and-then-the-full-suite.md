@@ -6,7 +6,7 @@ title: A test tier the manifest marks as covered by another is skipped when both
 status: ready
 owner: alex
 created: 2026-10-08T07:59:14Z
-updated: 2026-10-08T08:07:59Z
+updated: 2026-10-08T08:23:42Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:30Z
@@ -25,20 +25,20 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 25
+      seconds: 83
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 146
-          cache_read: 1288467
-          cache_write: 6039
-          cost: 0.319
+          input: 22
+          output: 382
+          cache_read: 3920294
+          cache_write: 11915
+          cost: 0.9689
 cost_of_delay:
   inputs:
-    time_lost_per_cycle: 1m
+    time_lost_per_cycle: 1h54m
     by: alex
-    at: 2026-10-08T07:59:14Z
+    at: 2026-10-08T08:23:42Z
   value: 2.5
   by: planner-S-0342
   at: 2026-10-08T08:07:48Z
@@ -65,6 +65,7 @@ The manifest can say which tier covers which: a tier that names `covers:` anothe
 - [ ] Tests cover the selection with and without the covering tier, the validation, and the reported skip; `docs/users/flai.md` and `design/system/flai-cli.md` describe it.
 
 ## Tasks
+
 - T-1345 A test tier may carry covers, and the manifest's validation refuses an unknown name, the tier itself, and a cycle
 - T-1349 A selected tier that another selected tier covers is skipped, not run, with state skipped and the covering tier named
 - T-1353 This repository's manifest marks integration as covering go-test, and the template's manifest shows the key
@@ -75,3 +76,29 @@ The manifest can say which tier covers which: a tier that names `covers:` anothe
 ## Notes
 
 S-0287's record on 2026-10-08: go-test 1 min 7 s, integration 3 min 6 s, smoke 11 min 25 s. This story takes the first minute off every close-out that touches `flai/`; the smoke minutes are the subject of the local release server story filed with it.
+
+### Planning
+
+Planned by planner-S-0342 on 2026-10-08. Every touch is a file; no folder touch is kept.
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/verify/select.go`, `select_test.go` | declared | Where `Select` and `SelectStory` choose the tiers; the cover step goes here (T-1349) |
+| `flai/internal/manifest/manifest.go`, `manifest_test.go` | declared | `TestTier.Covers` and its validation in `TestErrors` (T-1345) |
+| `system-flow.yaml` | declared | `integration` covers `go-test` (T-1353) |
+| `template/root/system-flow.yaml` | declared | Kept as declared; the file does not exist. The template's manifest is `template/root/system-flow.yaml.tmpl` |
+| `design/system/project-manifest.md`, `design/system/flai-cli.md`, `docs/users/flai.md` | declared | The key, the skip, and its report (T-1359) |
+| `template/root/system-flow.yaml.tmpl` | layout | The template's real manifest (T-1353) |
+| `template/CHANGELOG.md` | co-change (10%) | Every change under `template/root/` takes an entry (T-1353) |
+| `flai/internal/manifest/settings.go`, `settings_test.go` | layout | `flai manifest set tests=` renders and compares tiers field by field (`testsLines`, `sameTiers`) (T-1345) |
+| `docs/operators/settings.md` | co-change (19%) and design | `cmd/settings_doc_test.go` fails when a manifest key has no row, so `tests[].covers` lands with T-1345 |
+| `flai/internal/verify/verify.go`, `manifest.go`, `manifest_test.go`, `run.go`, `run_test.go` | layout | `Tier.Covers`, `FromManifest`, the `skipped` state and `covered_by`, and `Run` not starting a covered tier (T-1349) |
+| `flai/internal/verify/text.go`, `text_test.go`, `story.go`, `story_test.go` | layout | `flai test`'s text and verify's steps carry the skip (T-1355) |
+| `flai/cmd/verify.go`, `verify_test.go` | layout | `verifyText` prints verify's steps (T-1355) |
+| `flaiover/src/lib/review.ts`, `review.test.ts` | layout | The review page types a step's state as `passed`, `failed`, or `not-reached` (T-1358) |
+
+`touches suggest` listed the most frequent co-changes (`docs/operators/index.md`, `design/system/flaiover-dashboard.md`, `docs/users/flai-reference.md`, `design/adrs/README.md`, and others); none is taken. `flai-reference.md` is generated from command help and no flag changes. No ADR is planned, since the key extends `tests` as `all_only` did.
+
+Forecast: 41m, as `flai forecast` gives it after the touches were predicted: 78 s per unit over 51 done improvement stories on claude-opus-5-5 in the large band, times size 31 (4 criteria, 27 touches). It stands: six tasks in three layers, Go, one small flaiover change, and docs, with a close-out that runs integration, smoke, and the flaiover tier. flai plays the delivery out again as the board moves.
+
+Cost of delay: 2.50 USD a week, as `flai cod` works it out from the operator's input, 1m lost per 168h cycle at 150 USD an hour. It stands as the inputs give it. The Notes say the minute is lost on every close-out that touches `flai/`, and 114 of the 136 stories accepted in the 7 days to 2026-10-08 changed `flai/`, so per week the loss is nearer 1h54m, 285 USD a week. That is the operator's input to change; it is asked on the plan's thread.
