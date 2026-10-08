@@ -3,11 +3,11 @@ id: I-0117
 title: A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
 class: blocker
 status: open
-count: 2
-cost: 23m
+count: 3
+cost: 17m
 first_reported: 2026-10-08T04:12:50Z
-last_reported: 2026-10-08T05:00:50Z
-updated: 2026-10-08T05:00:50Z
+last_reported: 2026-10-08T05:31:34Z
+updated: 2026-10-08T05:31:34Z
 ---
 
 # I-0117 A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
@@ -24,5 +24,9 @@ S-0324 makes flai's MD034 report a bare `www.` literal. `TestRepositoryLintsClea
 ### 2026-10-08T05:00:50Z
 Story: S-0318.
 S-0318's close-out failed its integration tier on TestRepositoryLintsClean: `wip/agents/orchestrator.md` line 1529, the orchestrator's publish summary for S-0324, holds a bare www. literal (MD034), committed on main by cad49eee (publish flai 1.39.5). The tier's tail did not name the test (I-0113); the outside note on the same line pointed to it. Fixed in the main checkout by wrapping it in a code span, but S-0318 cannot pass until a main commit takes the fix, and every other story's close-out fails meanwhile.
+
+### 2026-10-08T05:31:34Z
+Story: S-0318.
+After main took the orchestrator.md fix, S-0318's close-out, now on a flai with the www. rule, stopped at check on a bare `www.` in TH-0360's title and its mirror in wip/agents/S-0318.md. The installed flai 1.39.3 behind the MCP server wrote that title without complaint. Quoted both by hand in the main checkout.
 
 ## Remediation
