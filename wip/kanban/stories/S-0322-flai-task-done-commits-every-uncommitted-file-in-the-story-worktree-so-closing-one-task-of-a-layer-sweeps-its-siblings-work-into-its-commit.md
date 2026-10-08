@@ -6,7 +6,7 @@ title: flai task done commits every uncommitted file in the story worktree, so c
 status: backlog
 owner: alex
 created: 2026-10-07T18:59:53Z
-updated: 2026-10-08T04:33:38Z
+updated: 2026-10-08T04:34:12Z
 transitions: []
 tags: [flai]
 touches: [flai/internal/taskdone/taskdone_test.go, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md]
@@ -65,6 +65,7 @@ This story remediates [I-0108](../../../design/issues/I-0108-flai-task-done-comm
 
 ## Acceptance criteria
 - [ ] The cause I-0108 describes no longer occurs, with a test that reproduces it where one fits
+- [ ] I-0104 is closed with flai issue close I-0104 --reason saying what fixed it
 - [ ] I-0108 is closed with `flai issue close I-0108 --reason` saying what fixed it
 
 ## Tasks
