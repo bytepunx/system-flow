@@ -19,7 +19,10 @@ import (
 // notice at acceptance tells an overlapping story what changed. An overlap
 // that lies wholly inside a pattern of the manifest's claims.shared holds
 // nothing either (ADR-0096): many stories change those paths in separate
-// sections or new files. The operator's own moves only warn.
+// sections or new files. An overlap between a ready story and the story in
+// progress that holds it, on paths that story's agent shared with it in their
+// conversation, holds nothing while the share is in force (ADR-0134, share.go).
+// The operator's own moves only warn.
 
 // Hold reason codes.
 const (
@@ -40,6 +43,7 @@ type Hold struct {
 type Holds struct {
 	projects []manifest.Project
 	shared   manifest.Claims    // an overlap wholly inside these holds nothing
+	shares   []Share            // shares in force, IDs canonical (ADR-0134)
 	tasks    map[string][]*Item // tasks by story, cancelled ones left out
 	open     []openClaim
 	stories  map[string]*Item // every story given, archived ones included
@@ -76,8 +80,9 @@ func NewHolds(items []*Item, projects []manifest.Project) *Holds {
 }
 
 // Holds judges ready stories against items, as NewHolds does, with the
-// manifest's shared paths as SharedClaims reads them, and finds a story named
-// in after: in the archive when items do not hold it.
+// manifest's shared paths as SharedClaims reads them and the shares in force
+// of the open conversations (ADR-0134), and finds a story named in after: or
+// in a share in the archive when items do not hold it.
 func (r *Repo) Holds(items []*Item) *Holds {
 	h := NewHolds(items, r.Manifest.Projects).WithShared(r.SharedClaims())
 	h.lookup = func(id string) *Item {
@@ -86,7 +91,7 @@ func (r *Repo) Holds(items []*Item) *Holds {
 		}
 		return nil
 	}
-	return h
+	return h.WithShares(r.Shares())
 }
 
 // SharedClaims is the manifest's claims as system-flow.yaml has them now,
@@ -117,12 +122,24 @@ func (h *Holds) Overlaps(a, b string) bool {
 	if !PathsOverlap(a, b) {
 		return false
 	}
-	narrower := b // overlapping, one is the other or lies below it
-	if len(strings.TrimSuffix(a, "/")) > len(strings.TrimSuffix(b, "/")) {
-		narrower = a
-	}
-	_, shared := h.shared.Covers(narrower)
+	_, shared := h.shared.Covers(narrower(a, b))
 	return !shared
+}
+
+// overlapsFor is Overlaps for mine, an entry of held's claim, and theirs, an
+// entry of holder's: a pair whose narrower lies inside a path holder shared
+// with held does not overlap either (ADR-0134).
+func (h *Holds) overlapsFor(held, holder, mine, theirs string) bool {
+	return h.Overlaps(mine, theirs) && !h.sharedBy(holder, held, narrower(mine, theirs))
+}
+
+// narrower is the deeper of two overlapping paths, the second when they are
+// equal: one is the other or lies below it.
+func narrower(a, b string) string {
+	if len(strings.TrimSuffix(a, "/")) > len(strings.TrimSuffix(b, "/")) {
+		return a
+	}
+	return b
 }
 
 // Open counts story as open from now on, named with label: flai serve's
@@ -311,7 +328,7 @@ func (h *Holds) overlap(story *Item) *Hold {
 	var parts []string
 	var by []openClaim
 	for _, o := range others {
-		part, c := h.holdBy(claim, o)
+		part, c := h.holdBy(story.ID, claim, o)
 		if part == "" {
 			continue
 		}
@@ -327,27 +344,42 @@ func (h *Holds) overlap(story *Item) *Hold {
 	return &Hold{Code: code, Reason: fmt.Sprintf("held (%s): %s; starts when %s", code, strings.Join(parts, "; "), clears(by))}
 }
 
-// holdBy says how claim overlaps o's, if it does, naming the first pair that
-// holds: a pair whose overlap lies wholly inside a shared path does not.
-func (h *Holds) holdBy(claim []string, o openClaim) (part, code string) {
+// holdBy says how claim, held's, overlaps o's, if it does, naming the first
+// pair that holds: a pair whose overlap lies wholly inside a shared path, or
+// inside a path o shared with held, does not, so the pair named is one still
+// held.
+func (h *Holds) holdBy(held string, claim []string, o openClaim) (part, code string) {
 	who := o.id + " (" + o.label + ")"
 	if len(o.paths) == 0 {
 		return who + " declares no touches, so it may change anything", HoldNoTouches
 	}
+	pairs := h.holding(held, claim, o)
+	if len(pairs) == 0 {
+		return "", ""
+	}
+	mine, theirs := pairs[0][0], pairs[0][1]
+	switch {
+	case mine == theirs:
+		return fmt.Sprintf("touches %s, which %s touches too", mine, who), HoldOverlap
+	case strings.HasPrefix(mine, theirs+"/"):
+		return fmt.Sprintf("touches %s, inside %s which %s touches", mine, theirs, who), HoldOverlap
+	default:
+		return fmt.Sprintf("touches %s, which holds %s that %s touches", mine, theirs, who), HoldOverlap
+	}
+}
+
+// holding is every pair of an entry of claim, held's, and one of o's that
+// holds, in claim order, then o's.
+func (h *Holds) holding(held string, claim []string, o openClaim) [][2]string {
+	var out [][2]string
 	for _, mine := range claim {
 		for _, theirs := range o.paths {
-			switch {
-			case !h.Overlaps(mine, theirs):
-			case mine == theirs:
-				return fmt.Sprintf("touches %s, which %s touches too", mine, who), HoldOverlap
-			case strings.HasPrefix(mine, theirs+"/"):
-				return fmt.Sprintf("touches %s, inside %s which %s touches", mine, theirs, who), HoldOverlap
-			default:
-				return fmt.Sprintf("touches %s, which holds %s that %s touches", mine, theirs, who), HoldOverlap
+			if h.overlapsFor(held, o.id, mine, theirs) {
+				out = append(out, [2]string{mine, theirs})
 			}
 		}
 	}
-	return "", ""
+	return out
 }
 
 // clears says what ends a hold by these stories: each leaving in progress.
