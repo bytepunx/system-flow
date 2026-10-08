@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:59:39Z
-updated: 2026-10-08T08:59:47Z
+updated: 2026-10-08T08:59:58Z
 transitions: []
 tags: [cli]
 topics: [agents]
@@ -19,6 +19,12 @@ agent:
   config:
     effort: high
 draft: true
+forecast:
+  duration: 20m
+  delivery: 2026-10-08T22:32:00Z
+  basis: "flai forecast gave 12m (85.5 s per unit over 11 small improvement stories, size 8); raised to 20m because the check moves from once per host to once per provider, with a fake claude in its tests."
+  by: planner-E-0019
+  at: 2026-10-08T08:59:58Z
 ---
 # S-0360 flai serve checks each new claude version through the provider a project's agents name, so a host that reaches Claude only through a gateway is not reported failing
 
@@ -38,6 +44,7 @@ draft: true
 
 Drafted by the planner; see the children.
 - T-1426 The claude version check runs through the project's provider, records the provider per version, and skips a provider whose key is unset
+- T-1427 flai-cli.md describes the claude version check per provider
 
 ## Notes
 

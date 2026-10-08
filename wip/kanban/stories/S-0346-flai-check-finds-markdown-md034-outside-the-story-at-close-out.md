@@ -3,11 +3,14 @@ id: S-0346
 type: story
 nature: improvement
 title: "flai check finds `markdown.MD034` outside the story at close-out"
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-08T08:08:21Z
-updated: 2026-10-08T08:55:53Z
-transitions: []
+updated: 2026-10-08T08:59:57Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:59:57Z
+    by: orchestrator
 tags: [flai, mdlint, serve]
 topics: [markdown, planning]
 touches: [flai/internal/mdlint/inline.go, flai/internal/mdlint/quote.go, flai/internal/mdlint/quote_test.go, flai/internal/serve/activity.go, flai/internal/serve/activity_test.go, design/system/agent-narrative.md, design/issues/I-0118-flai-check-finds-markdown-md034-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -22,15 +25,21 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 312
+      seconds: 359
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 198
-          output: 3503
-          cache_read: 57664480
-          cache_write: 52511
-          cost: 14.2206
+          input: 209
+          output: 3657
+          cache_read: 61215993
+          cache_write: 64871
+          cost: 15.0987
+        - model: claude-sonnet-5-5
+          input: 7
+          output: 38
+          cache_read: 115837
+          cache_write: 27278
+          cost: 0.1234
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

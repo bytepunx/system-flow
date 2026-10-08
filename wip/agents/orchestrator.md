@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 277.7147
-accrued_seconds: 113743
-tasks_completed: 289
-last_run: 2026-10-08T08:58:28Z
+accrued_cost: 279.7175
+accrued_seconds: 113838
+tasks_completed: 290
+last_run: 2026-10-08T09:00:03Z
 ---
 
 # Orchestrator activity
@@ -2034,6 +2034,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0348
 - Seconds: 1
 - Cost: 0.1569 USD, estimated
+
+### 2026-10-08T09:00:03Z
+
+- Summary: Accepted S-0340 under accept_reviews at verified commit 9f19cc9e. flai verify passed at the head, the verifier matched all six criteria (the local release server, smoke passing without GitHub, the checks kept, the separate published check, docs, I-0086), and the dry-run had no blockers. Did not publish (judgement, 1 pending, 800 USD/week): it is test and CI tooling whose value lands on main's close-outs at once, so it is held to bundle with the next flai behaviour change. Promoted S-0346 under promote_to_ready (rank 1, 40m) after S-0288 left ready, and applied the throughput order.
+- Items: S-0340, S-0346
+- Seconds: 95
+- Cost: 2.0028 USD, estimated
 
 ## Refusals
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:42:40Z
-updated: 2026-10-08T08:56:57Z
+updated: 2026-10-08T09:00:10Z
 transitions: []
 tags: [cli, template]
 topics: [agents]
@@ -18,15 +18,15 @@ agent:
   config:
     effort: high
 cost_of_delay:
-  value: 63.66
+  value: 60.84
   by: planner-E-0019
-  at: 2026-10-08T08:56:10Z
+  at: 2026-10-08T09:00:10Z
 forecast:
   duration: 55m
-  delivery: 2026-10-08T15:21:00Z
-  basis: "flai forecast: median 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 33 (6 criteria, 27 touches); kept as given."
-  by: planner-E-0019
-  at: 2026-10-08T08:55:41Z
+  delivery: 2026-10-08T15:13:00Z
+  basis: "Its own forecast of 55m; 26th in the pull order with an in-progress limit of 5, behind S-0232, S-0288, S-0321, S-0322, S-0341, S-0290, S-0344, S-0345, S-0338, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0304, S-0305, S-0306, S-0313, S-0346, S-0347 and S-0348."
+  by: flai
+  at: 2026-10-08T08:59:49Z
 finalized:
   by: alex
   at: 2026-10-08T08:51:54Z

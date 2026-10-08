@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:46:31Z
-updated: 2026-10-08T08:57:52Z
+updated: 2026-10-08T08:59:49Z
 transitions: []
 tags: [cli]
 topics: [agents]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-08T08:56:18Z
 forecast:
   duration: 50m
-  delivery: 2026-10-08T19:10:00Z
-  basis: "flai forecast gave 26m (78 s per unit over 51 improvement stories, size 20); raised to 50m because guard.go is 1,550 lines with a 1,289-line test, every rule moved with its text unchanged."
-  by: planner-E-0019
-  at: 2026-10-08T08:55:46Z
+  delivery: 2026-10-08T21:51:00Z
+  basis: "Its own forecast of 50m; 30th in the pull order with an in-progress limit of 5, behind S-0232, S-0288, S-0321, S-0322, S-0341, S-0290, S-0344, S-0345, S-0338, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0304, S-0305, S-0306, S-0313, S-0346, S-0347, S-0348, S-0349, S-0350, S-0351 and S-0352."
+  by: flai
+  at: 2026-10-08T08:59:49Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:06Z

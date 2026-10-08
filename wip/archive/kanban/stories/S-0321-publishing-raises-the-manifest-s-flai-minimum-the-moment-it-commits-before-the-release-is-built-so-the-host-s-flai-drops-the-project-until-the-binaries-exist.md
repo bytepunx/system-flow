@@ -3,10 +3,10 @@ id: S-0321
 type: story
 nature: remediation
 title: Publishing raises the manifest's flai minimum the moment it commits, before the release is built, so the host's flai drops the project until the binaries exist
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T18:59:52Z
-updated: 2026-10-08T08:55:09Z
+updated: 2026-10-08T09:00:11Z
 transitions:
   - to: ready
     at: 2026-10-08T05:02:36Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T07:58:14Z
     by: agent-S-0321
+  - to: review
+    at: 2026-10-08T09:00:01Z
+    by: alex
+  - to: done
+    at: 2026-10-08T09:00:11Z
+    by: alex
 tags: [flai, release, serve]
 topics: [release]
 touches: [flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/release.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0107-publishing-raises-the-manifest-s-flai-minimum-the-moment-it-commits-before-the-release-is-built-so-the-host-s-flai-drops-the-project-until-the-binaries-exist.md, design/issues/summary.md, design/system/work-hierarchy.md, flai/internal/manifest/manifest.go, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/I-0123-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md]

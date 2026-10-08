@@ -6,7 +6,7 @@ title: TestRoundTripRepositoryItems reads the live main checkout and fails a clo
 status: ready
 owner: alex
 created: 2026-10-06T09:56:52Z
-updated: 2026-10-08T08:53:41Z
+updated: 2026-10-08T08:59:49Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:35Z
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-10-08T08:42:37Z
 forecast:
   duration: 30m
-  delivery: 2026-10-08T09:25:00Z
-  basis: "Its own forecast of 30m; 2nd in the pull order with an in-progress limit of 5, behind S-0232, S-0321, S-0322, S-0340, S-0341 and S-0288."
+  delivery: 2026-10-08T09:31:00Z
+  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 5, behind S-0232, S-0288, S-0321, S-0322 and S-0341."
   by: flai
-  at: 2026-10-08T08:53:41Z
+  at: 2026-10-08T08:59:49Z
 finalized:
   by: alex
   at: 2026-10-07T02:19:37Z
