@@ -2,6 +2,7 @@ package release
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -519,10 +520,12 @@ func TestPendingNamesWhatItCannotPlan(t *testing.T) {
 	}
 }
 
-// S-0181: publishing a release whose front-matter fields changed since the
-// component's last release raises the manifest's flai.minimum to it; one
-// that left them alone, a fields file the last release did not have, a
-// first release, or a component with no fields file, does not.
+// S-0181: a release whose front-matter fields changed since the component's
+// previous release raises the manifest's flai.minimum to it; one that left
+// them alone, a fields file the previous release did not have, a first
+// release, or a component with no fields file, does not. I-0107: the
+// minimum rises only to a release no newer than the flai publishing, so it
+// never names one whose binaries are not built yet.
 func TestRaiseMinimum(t *testing.T) {
 	root, r := gitRepo(t)
 	man := filepath.Join(root, manifest.File)
@@ -545,42 +548,94 @@ func TestRaiseMinimum(t *testing.T) {
 		git("commit", "-q", "-m", msg)
 	}
 	minimum := func() string {
+		t.Helper()
 		got, err := manifest.Load(man)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return got.Flai.Minimum
 	}
-	if raised, err := RaiseMinimum(r, root, plan(Version{0, 10, 0}, Version{0, 11, 0})); err != nil || raised {
-		t.Fatalf("no fields file: %v %v", raised, err)
+	raise := func(p *PendingPlan, running string, want Raise, why string) {
+		t.Helper()
+		got, err := RaiseMinimum(r, root, p, running)
+		if err != nil || got != want {
+			t.Fatalf("%s: %+v %v, want %+v", why, got, err, want)
+		}
 	}
+	raise(plan(Version{0, 10, 0}, Version{0, 11, 0}), "0.11.0", Raise{}, "no fields file")
 	writeFields("item: id\n", "feat: [S-005] the fields file")
-	if raised, err := RaiseMinimum(r, root, plan(Version{0, 10, 0}, Version{0, 11, 0})); err != nil || raised {
-		t.Fatalf("a fields file cli/v0.10.0 did not have: %v %v", raised, err)
-	}
-	if raised, err := RaiseMinimum(r, root, plan(Version{}, Version{0, 1, 0})); err != nil || raised {
-		t.Fatalf("a first release: %v %v", raised, err)
-	}
+	raise(plan(Version{0, 10, 0}, Version{0, 11, 0}), "0.11.0", Raise{}, "a fields file cli/v0.10.0 did not have")
+	raise(plan(Version{}, Version{0, 1, 0}), "0.1.0", Raise{}, "a first release")
 	git("tag", "-a", "cli/v0.11.0", "-m", "cli 0.11.0")
 
+	// I-0107: flai 0.11.0 publishes 0.12.0, whose fields changed. 0.12.0's
+	// binaries are not built yet, so the minimum waits rather than rising.
 	writeFields("item: hold id\n", "feat: [S-006] a field")
-	if raised, err := RaiseMinimum(r, root, plan(Version{0, 11, 0}, Version{0, 12, 0})); err != nil || !raised {
-		t.Fatalf("fields changed since cli/v0.11.0: %v %v", raised, err)
+	raise(plan(Version{0, 11, 0}, Version{0, 12, 0}), "0.11.0", Raise{Waits: "0.12.0"}, "flai 0.11.0 publishing 0.12.0")
+	if got := minimum(); got != "" {
+		t.Fatalf("flai 0.11.0 raised the minimum to %q, above itself", got)
 	}
-	if got := minimum(); got != "0.12.0" {
-		t.Errorf("minimum: %q", got)
+	raise(plan(Version{0, 11, 0}, Version{0, 12, 0}), "dev", Raise{Waits: "0.12.0", NotRelease: true}, "a dev build")
+	raise(plan(Version{0, 11, 0}, Version{0, 12, 0}), "0.0.0-abc1234", Raise{Waits: "0.12.0", NotRelease: true}, "a snapshot build")
+	if got := minimum(); got != "" {
+		t.Fatalf("a build that is not a release raised the minimum to %q", got)
 	}
 	git("tag", "-a", "cli/v0.12.0", "-m", "cli 0.12.0")
-	if raised, err := RaiseMinimum(r, root, plan(Version{0, 12, 0}, Version{0, 12, 1})); err != nil || raised {
-		t.Errorf("fields unchanged since cli/v0.12.0: %v %v", raised, err)
-	}
-	if _, err := RaiseMinimum(r, root, plan(Version{0, 13, 0}, Version{0, 13, 1})); err == nil {
-		t.Error("a last release with no tag is an error, not a change")
-	}
+
+	// The next publish, still from flai 0.11.0, leaves it waiting; the first
+	// from flai 0.12.0 raises it, the fields unchanged since.
+	raise(plan(Version{0, 12, 0}, Version{0, 12, 1}), "0.11.0", Raise{Waits: "0.12.0"}, "flai 0.11.0 publishing 0.12.1")
+	raise(plan(Version{0, 12, 0}, Version{0, 12, 1}), "0.12.0", Raise{To: "0.12.0"}, "flai 0.12.0 publishing 0.12.1")
 	if got := minimum(); got != "0.12.0" {
+		t.Fatalf("minimum after a publish from flai 0.12.0: %q", got)
+	}
+	raise(plan(Version{0, 12, 0}, Version{0, 12, 1}), "0.12.1", Raise{}, "a minimum already at the newest change")
+
+	// The release being published counts once the flai publishing is it.
+	writeFields("item: hold id note\n", "feat: [S-007] another field")
+	raise(plan(Version{0, 12, 0}, Version{0, 13, 0}), "0.12.0", Raise{Waits: "0.13.0"}, "flai 0.12.0 publishing 0.13.0")
+	raise(plan(Version{0, 12, 0}, Version{0, 13, 0}), "0.13.0", Raise{To: "0.13.0"}, "flai 0.13.0 publishing 0.13.0 again")
+
+	if err := manifest.SetMinimum(man, "0.20.0"); err != nil {
+		t.Fatal(err)
+	}
+	raise(plan(Version{0, 12, 0}, Version{0, 13, 0}), "0.13.0", Raise{}, "a minimum above every change")
+	if got := minimum(); got != "0.20.0" {
+		t.Errorf("minimum lowered: %q", got)
+	}
+	if _, err := RaiseMinimum(r, root, plan(Version{0, 14, 0}, Version{0, 14, 1}), "0.14.0"); err == nil || !strings.Contains(err.Error(), "cli/v0.14.0") {
+		t.Errorf("a last release with no tag is an error naming it, not a change: %v", err)
+	}
+	if got := minimum(); got != "0.20.0" {
 		t.Errorf("minimum moved: %q", got)
 	}
 }
+
+// A git that fails is an error saying what it was asked, not a minimum left
+// as it was in silence.
+func TestRaiseMinimumGitFails(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, manifest.File), []byte("version: 1\nname: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	_ = os.MkdirAll(filepath.Join(root, "cli", filepath.Dir(FieldsFile)), 0o755)
+	_ = os.WriteFile(filepath.Join(root, "cli", FieldsFile), []byte("item: id\n"), 0o644)
+	p := &PendingPlan{Component: manifest.Project{Name: "cli", Path: "cli", Kind: "go"}, From: Version{0, 1, 0}, To: Version{0, 2, 0}, Tag: "cli/v0.2.0"}
+	_, err := RaiseMinimum(failingGit{}, root, p, "0.2.0")
+	if err == nil || !strings.Contains(err.Error(), "list the cli/v* tags") {
+		t.Errorf("a failing git: %v", err)
+	}
+}
+
+type failingGit struct{}
+
+func (failingGit) Run(_, name string, _ ...string) (string, error) {
+	return "", errors.New(name + ": not a git repository")
+}
+
+func (f failingGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return f.Run(dir, name, args...)
+}
+
+func (failingGit) LookPath(name string) (string, error) { return name, nil }
 
 // I-0107: a changelog that already has a section for the version being
 // released, written by hand before the release was cut, gets the release's

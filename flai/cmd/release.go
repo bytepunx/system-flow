@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/pending"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
@@ -322,13 +323,11 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 		if err := release.ApplyPending(p, root, a.now()); err != nil {
 			return nil, nil, err
 		}
-		raised, err := release.RaiseMinimum(a.runner, root, p)
+		raise, err := release.RaiseMinimum(a.runner, root, p, buildinfo.Version)
 		if err != nil {
 			return nil, nil, err
 		}
-		if raised {
-			a.logger().Warn("flai.minimum raised: this release changes the front-matter fields flai reads, so a flai below it stops on this project; upgrade the host's flai once the release's binaries are built", "component", "release", "minimum", p.To.String())
-		}
+		a.reportRaise(raise)
 	}
 	if len(plans) > 0 {
 		if status, _ := a.runner.Run(root, "git", "status", "--porcelain"); strings.TrimSpace(status) != "" {
@@ -351,6 +350,26 @@ func (a *app) computeApplyAndTagPending(root string, repo *workitem.Repo) ([]*re
 		}
 	}
 	return plans, tags, nil
+}
+
+// reportRaise says what a publish did to flai.minimum (I-0107): raised to a
+// release that can be installed, a raise that waits for a publish from a
+// newer flai, or none, because the publishing flai is not a release.
+func (a *app) reportRaise(r release.Raise) {
+	if r.To != "" {
+		a.logger().Info("flai.minimum raised", "component", "release", "minimum", r.To,
+			"detail", fmt.Sprintf("flai %s changed the front-matter fields flai reads, and it can be installed, so a flai below it stops on this project: upgrade with %s", r.To, buildinfo.UpgradeCommand))
+	}
+	if r.Waits == "" {
+		return
+	}
+	if r.NotRelease {
+		a.logger().Warn("flai.minimum not raised", "component", "release", "running", buildinfo.Version, "waits", r.Waits,
+			"detail", fmt.Sprintf("flai %s changed the front-matter fields flai reads, but this flai is %s, not a release, so it cannot say flai %s can be installed: a publish from flai %s or newer raises flai.minimum to it", r.Waits, buildinfo.Version, r.Waits, r.Waits))
+		return
+	}
+	a.logger().Info("flai.minimum raise waits", "component", "release", "running", buildinfo.Version, "waits", r.Waits,
+		"detail", fmt.Sprintf("flai %s changed the front-matter fields flai reads, but this flai is %s, older, so flai %s may not be installable yet: a publish from flai %s or newer raises flai.minimum to it", r.Waits, buildinfo.Version, r.Waits, r.Waits))
 }
 
 // remoteTagsInStep refuses a publish from a clone missing release tags its

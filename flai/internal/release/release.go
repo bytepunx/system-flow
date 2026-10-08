@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -17,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -688,39 +688,132 @@ func PendingIDs(r execx.Runner, root string, m manifest.Manifest, repo *workitem
 // component's flai reads. Only flai has one (S-0181).
 const FieldsFile = "internal/workitem/front-matter-fields.txt"
 
-// RaiseMinimum raises the manifest's flai.minimum to the plan's version when
-// the plan releases a component whose FieldsFile changed since its last
-// release: an older flai does not know the fields this one writes. A first
-// release, and a fields file that the last release did not have, raise
-// nothing: no older flai was released knowing a different list. It reports
-// whether it raised it; the caller commits.
-func RaiseMinimum(r execx.Runner, root string, plan *PendingPlan) (bool, error) {
+// Raise is what RaiseMinimum did to flai.minimum, for the caller to report.
+type Raise struct {
+	// To is the minimum written, "" when the manifest's was left as it was.
+	To string `json:"to,omitempty"`
+	// Waits is the newest release whose front-matter fields changed that
+	// this publish could not write as the minimum; a publish from a flai at
+	// or above it does. "" when none waits.
+	Waits string `json:"waits,omitempty"`
+	// NotRelease says the running flai is not a release build, so it cannot
+	// say which releases can be installed and raises nothing.
+	NotRelease bool `json:"not_release,omitempty"`
+}
+
+// RaiseMinimum raises the manifest's flai.minimum to the newest flai release
+// that changed the plan component's FieldsFile and that can already be
+// installed: no newer than running, the flai doing the publish (I-0107). A
+// release changed it when its fields file differs from the previous
+// release's; the release being published counts, compared at HEAD, but only
+// once running is at or above it, so its binaries exist before a manifest
+// asks for them. A first release, and a fields file the previous release
+// lacked, raise nothing: no older flai was released knowing a different
+// list. A running flai that is not a release raises nothing, and the
+// minimum never falls. The caller commits.
+func RaiseMinimum(r execx.Runner, root string, plan *PendingPlan, running string) (Raise, error) {
 	if plan.Tag == "" || plan.From == (Version{}) {
-		return false, nil
+		return Raise{}, nil
 	}
 	fields := filepath.ToSlash(filepath.Join(plan.Component.Path, FieldsFile))
 	_, err := os.Stat(filepath.Join(root, filepath.FromSlash(fields)))
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		return false, nil
+		return Raise{}, nil
 	case err != nil:
-		return false, fmt.Errorf("read %s to decide whether flai.minimum rises: %w", fields, err)
+		return Raise{}, fmt.Errorf("read %s to decide whether flai.minimum rises: %w", fields, err)
 	}
-	from := strings.TrimSuffix(plan.Tag, plan.To.String()) + plan.From.String()
-	had, err := r.Run(root, "git", "ls-tree", "--name-only", from, "--", fields)
+	path := filepath.Join(root, manifest.File)
+	m, err := manifest.Load(path)
 	if err != nil {
-		return false, fmt.Errorf("ask git whether %s had %s: %w", from, fields, err)
+		return Raise{}, fmt.Errorf("read flai.minimum to decide whether it rises: %w", err)
 	}
-	if strings.TrimSpace(had) == "" {
-		return false, nil
+	floor, _ := ParseVersion(m.Flai.Minimum)
+	changed, err := fieldsChanged(r, root, plan, fields)
+	if err != nil {
+		return Raise{}, err
 	}
-	_, err = r.Run(root, "git", "diff", "--quiet", from, "HEAD", "--", fields)
-	var exit *exec.ExitError
-	switch {
-	case err == nil:
-		return false, nil
-	case !errors.As(err, &exit) || exit.ExitCode() != 1:
-		return false, fmt.Errorf("compare %s with %s: %w", fields, from, err)
+	release := buildinfo.Bare(running)
+	run, _ := ParseVersion(running)
+	var target, waits Version // changed is oldest first: each ends as the newest of its kind
+	for _, v := range changed {
+		if !less(floor, v) {
+			continue
+		}
+		if release && !less(run, v) {
+			target = v
+		} else {
+			waits = v
+		}
 	}
-	return true, manifest.SetMinimum(filepath.Join(root, manifest.File), plan.To.String())
+	out := Raise{NotRelease: !release}
+	if waits != (Version{}) {
+		out.Waits = waits.String()
+	}
+	if target == (Version{}) {
+		return out, nil
+	}
+	out.To = target.String()
+	if err := manifest.SetMinimum(path, out.To); err != nil {
+		return Raise{}, fmt.Errorf("write flai.minimum %s into %s: %w", out.To, path, err)
+	}
+	return out, nil
+}
+
+// fieldsChanged lists, oldest first, the releases of the plan's component
+// whose fields file differs from the previous release's, the previous one
+// having had it, with the plan's own release when HEAD's differs from its
+// last tag's. One git process reads every release's file.
+func fieldsChanged(r execx.Runner, root string, plan *PendingPlan, fields string) ([]Version, error) {
+	prefix := strings.TrimSuffix(plan.Tag, plan.To.String())
+	out, err := r.Run(root, "git", "tag", "--list", prefix+"*")
+	if err != nil {
+		return nil, fmt.Errorf("list the %s tags to find the releases whose %s changed: %w", prefix+"*", fields, err)
+	}
+	var tags []Version
+	for _, t := range strings.Split(strings.TrimSpace(out), "\n") {
+		if v, ok := ParseVersion(strings.TrimPrefix(t, prefix)); ok && strings.HasPrefix(t, prefix) && !less(plan.From, v) {
+			tags = append(tags, v)
+		}
+	}
+	sort.Slice(tags, func(i, j int) bool { return less(tags[i], tags[j]) })
+	if len(tags) == 0 || tags[len(tags)-1] != plan.From {
+		return nil, fmt.Errorf("decide whether flai.minimum rises: the last release, tag %s%s, is not in this clone; fetch the tags (git fetch --tags) and publish again", prefix, plan.From)
+	}
+	revs := make([]string, 0, len(tags)+1)
+	for _, v := range tags {
+		revs = append(revs, prefix+v.String()+":"+fields)
+	}
+	revs = append(revs, "HEAD:"+fields)
+	out, err = r.RunInput(root, "git", strings.Join(revs, "\n")+"\n", "cat-file", "--batch-check")
+	if err != nil {
+		return nil, fmt.Errorf("read %s at each %s tag to find the releases that changed it: %w", fields, prefix+"*", err)
+	}
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) != len(revs) {
+		return nil, fmt.Errorf("read %s at each %s tag: git cat-file answered %d lines for %d objects:\n%s", fields, prefix+"*", len(lines), len(revs), out)
+	}
+	blobs := make([]string, len(lines))
+	for i, l := range lines {
+		f := strings.Fields(l)
+		switch {
+		case len(f) == 3 && f[1] == "blob":
+			blobs[i] = f[0]
+		case l == revs[i]+" missing": // the release had no fields file
+		default:
+			return nil, fmt.Errorf("read %s: git cat-file answered %q for %s", fields, l, revs[i])
+		}
+	}
+	var changed []Version
+	for i := 1; i < len(blobs); i++ {
+		if blobs[i-1] == "" || blobs[i] == "" || blobs[i] == blobs[i-1] {
+			continue
+		}
+		if i < len(tags) {
+			changed = append(changed, tags[i])
+		} else {
+			changed = append(changed, plan.To)
+		}
+	}
+	return changed, nil
 }
