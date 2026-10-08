@@ -6,7 +6,7 @@ title: Agent adapters for LiteLLM and OpenRouter
 status: ready
 owner: alex
 created: 2026-10-08T08:33:28Z
-updated: 2026-10-08T08:38:12Z
+updated: 2026-10-08T08:45:23Z
 transitions:
   - to: ready
     at: 2026-10-08T08:38:12Z
@@ -29,6 +29,11 @@ usage:
           cache_read: 13917152
           cache_write: 12708
           cost: 3.4322
+cost_of_delay:
+  inputs:
+    penalty_per_week: 500
+    by: alex
+    at: 2026-10-08T08:45:23Z
 ---
 # E-0019 Agent adapters for LiteLLM and OpenRouter
 
@@ -49,6 +54,9 @@ A story's agent runs on Claude Code over a gateway, OpenRouter first and then a 
 ## Stories
 
 To be drafted by the planner from the finding. Order: the provider split and OpenRouter first, with the first story settling the two open checks (headers forwarded, cost reported) against OpenRouter; then the neutral contracts inside the Claude Code adapter; then LiteLLM; then cost from the spend log and `priced_by`; the harness-without-a-guard rule lands with the capabilities; documentation and the template with each story.
+- S-0349 A story's agent names a provider from the host's providers map, and a project's manifest may override the entry's api, base_url, and models
+- S-0350 flai serve starts a claude-code agent through its provider, with the key read from the variable the host names and never written down
+- S-0351 A claude-code agent runs through OpenRouter with the guard and permission_prompt on, checked by tests that run only where its key is set, and what OpenRouter forwards and charges is recorded
 
 ## Notes
 
