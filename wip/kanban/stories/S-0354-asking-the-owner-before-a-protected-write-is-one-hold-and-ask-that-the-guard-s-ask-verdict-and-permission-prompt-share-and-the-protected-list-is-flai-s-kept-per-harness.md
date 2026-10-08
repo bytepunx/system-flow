@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:47:53Z
-updated: 2026-10-08T09:00:17Z
+updated: 2026-10-08T09:01:08Z
 transitions: []
 tags: [cli]
 topics: [agents]
@@ -74,4 +74,4 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 
 Forecast: 35m. `flai forecast` gave 23m, 78 s per unit over 51 improvement stories, size 17. It is raised for moving `permission.go`'s 465 lines of thread handling into a new package with its tests unchanged.
 
-Cost of delay: 40.51 USD a week, as `flai cod` works it out: 35m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.
+Cost of delay: 38.72 USD a week, as `flai cod` works it out: 35m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.

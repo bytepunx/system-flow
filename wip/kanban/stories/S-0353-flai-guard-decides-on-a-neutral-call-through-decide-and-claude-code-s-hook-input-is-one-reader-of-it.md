@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:46:31Z
-updated: 2026-10-08T09:00:17Z
+updated: 2026-10-08T09:01:05Z
 transitions: []
 tags: [cli]
 topics: [agents]
@@ -74,4 +74,4 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 
 Forecast: 50m. `flai forecast` gave 26m, 78 s per unit over 51 improvement stories, size 20. It is raised because `guard.go` is 1,550 lines with a 1,289-line test, and every rule moves with its refusal text unchanged.
 
-Cost of delay: 57.87 USD a week, as `flai cod` works it out: 50m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.
+Cost of delay: 55.31 USD a week, as `flai cod` works it out: 50m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.

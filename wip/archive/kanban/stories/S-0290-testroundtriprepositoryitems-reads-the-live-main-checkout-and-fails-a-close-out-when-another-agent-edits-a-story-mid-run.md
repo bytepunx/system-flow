@@ -3,10 +3,10 @@ id: S-0290
 type: story
 nature: remediation
 title: TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-06T09:56:52Z
-updated: 2026-10-08T09:00:23Z
+updated: 2026-10-08T09:08:56Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:35Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T09:00:23Z
     by: agent-S-0290
+  - to: review
+    at: 2026-10-08T09:08:12Z
+    by: agent-S-0290
+  - to: done
+    at: 2026-10-08T09:08:56Z
+    by: orchestrator
 tags: [flai, tests]
 touches: [flai/internal/workitem/workitem_test.go, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/summary.md]
 agent:
@@ -22,9 +28,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 479
+  turns:
+    - day: 2026-10-08
+      ceremony: 2
+      test_runs: 2
+      hand_edits: 2
+      work: 35
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 13500
+      cache_read: 5303853
+      cache_write: 166472
+      cost: 2.6629
   strategic:
     - kind: orchestrator
       seconds: 56
@@ -61,8 +79,8 @@ finalized:
 This story remediates [I-0079](../../../design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md), "TestRoundTripRepositoryItems reads the live main checkout and fails a close-out when another agent edits a story mid-run". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0079 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0079 is closed with `flai issue close I-0079 --reason` saying what fixed it
+- [x] The cause I-0079 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0079 is closed with `flai issue close I-0079 --reason` saying what fixed it
 
 ## Tasks
 - T-1367 TestRoundTripRepositoryItems round-trips each item from one read of its file and skips a file gone since the list
@@ -96,3 +114,12 @@ Cost of delay: `flai cod` gives 15 USD a week from the input of 6m a cycle. That
 ```
 
 The input is left as it is because it is the operator's. TH-0377 recommends raising it to 1h47m, which makes `flai cod` agree.
+
+### Accepted by the orchestrator
+
+- Verified: 75462ec068919a4d4c2acf158c4496b1bdebcba9
+- At: 2026-10-08T09:08:56Z
+
+Verdict: accept. flai verify passed every step at the branch head 75462ec0, and the verifier matched both criteria to the diff. A minor note: the rewritten-file test's comment describes the old behaviour loosely.
+- 1: flai/internal/workitem/workitem_test.go
+- 2: design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/summary.md

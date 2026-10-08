@@ -6,7 +6,7 @@ title: "flai check finds `board.wip-limit` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-08T08:37:06Z
-updated: 2026-10-08T09:00:17Z
+updated: 2026-10-08T09:00:47Z
 transitions: []
 tags: [flai, check]
 topics: [cli, conventions, template]
@@ -21,17 +21,32 @@ usage:
   seconds: 0
   models: []
   strategic:
+    - kind: planner
+      seconds: 250
+      estimated: true
+      models:
+        - model: claude-haiku-4-5-20251001
+          input: 210
+          output: 7700
+          cache_read: 1170700
+          cache_write: 64849
+          cost: 0.2368
+        - model: claude-opus-5-5
+          input: 87
+          output: 34492
+          cache_read: 7010398
+          cache_write: 159138
+          cost: 3.3654
     - kind: orchestrator
-      seconds: 170
+      seconds: 182
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 70
-          output: 1268
-          cache_read: 21997395
-          cache_write: 19067
-          cost: 5.4246
-draft: true
+          input: 76
+          output: 1303
+          cache_read: 24040222
+          cache_write: 27600
+          cost: 5.93
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -46,6 +61,9 @@ forecast:
   basis: "Its own forecast of 21m; 25th in the pull order with an in-progress limit of 5, behind S-0232, S-0288, S-0322, S-0341, S-0290, S-0344, S-0345, S-0338, S-0346, S-0342, S-0337, S-0334, S-0343, S-0297, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0289, S-0304, S-0305, S-0306, S-0313 and S-0347."
   by: flai
   at: 2026-10-08T09:00:17Z
+finalized:
+  by: orchestrator
+  at: 2026-10-08T09:00:47Z
 ---
 # S-0348 flai check finds `board.wip-limit` outside the story at close-out
 

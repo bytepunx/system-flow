@@ -3,15 +3,35 @@ id: T-1367
 type: task
 nature: remediation
 title: TestRoundTripRepositoryItems round-trips each item from one read of its file and skips a file gone since the list
-status: backlog
+status: done
 parent: S-0290
 owner: alex
 created: 2026-10-08T08:42:15Z
-updated: 2026-10-08T08:42:15Z
-transitions: []
+updated: 2026-10-08T09:02:29Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:01:11Z
+    by: agent-S-0290
+  - to: in-progress
+    at: 2026-10-08T09:01:12Z
+    by: agent-S-0290
+  - to: done
+    at: 2026-10-08T09:02:29Z
+    by: agent-S-0290
 stream: S-0290
 tags: [flai, tests]
 touches: [flai/internal/workitem/workitem_test.go]
+usage:
+  source: log
+  seconds: 77
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 3554
+      cache_read: 1396473
+      cache_write: 43831
+      cost: 0.7011
 ---
 # T-1367 TestRoundTripRepositoryItems round-trips each item from one read of its file and skips a file gone since the list
 

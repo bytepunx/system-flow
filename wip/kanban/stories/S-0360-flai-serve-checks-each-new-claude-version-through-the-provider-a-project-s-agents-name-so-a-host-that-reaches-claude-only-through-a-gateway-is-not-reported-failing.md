@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:59:39Z
-updated: 2026-10-08T09:00:17Z
+updated: 2026-10-08T09:01:29Z
 transitions: []
 tags: [cli]
 topics: [agents]
@@ -18,6 +18,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 12
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 34
+          cache_read: 2042826
+          cache_write: 8532
+          cost: 0.5054
 draft: true
 cost_of_delay:
   value: 22.12
@@ -46,7 +61,6 @@ forecast:
 
 ## Tasks
 
-Drafted by the planner; see the children.
 - T-1426 The claude version check runs through the project's provider, records the provider per version, and skips a provider whose key is unset
 - T-1427 flai-cli.md describes the claude version check per provider
 
@@ -54,3 +68,18 @@ Drafted by the planner; see the children.
 
 - Proposed on the plan's thread on E-0019 as an addition: the operator's reason for the epic's cost of delay is a capped subscription, which is the case where today's check fails.
 - It comes after S-0351, which factors `claudecheck.go`'s scratch project for the gateway test.
+
+### Planning
+
+Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch is kept. Two layers: the check (T-1426), then the document (T-1427).
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `flai/internal/serve/claudecheck.go`, `claudecheck_test.go` | layout | The check and its record (T-1426) |
+| `design/system/flai-cli.md` | design | Where the check is described (T-1427) |
+
+`touches suggest` listed the user and operator guides and the dashboard's documents. None is taken: the check's thread and its text are unchanged.
+
+Forecast: 20m. `flai forecast` gave 12m, 85.5 s per unit over 11 small improvement stories, size 8. It is raised because the check moves from once per host to once per provider, with a fake `claude` in its tests.
+
+Cost of delay: 22.12 USD a week, as `flai cod` works it out: 20m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.

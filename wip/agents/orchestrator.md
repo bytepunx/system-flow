@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 280.2098
-accrued_seconds: 113853
-tasks_completed: 291
-last_run: 2026-10-08T09:00:18Z
+accrued_cost: 281.7168
+accrued_seconds: 113894
+tasks_completed: 293
+last_run: 2026-10-08T09:00:59Z
 ---
 
 # Orchestrator activity
@@ -2048,6 +2048,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0321
 - Seconds: 15
 - Cost: 0.4923 USD, estimated
+
+### 2026-10-08T09:00:35Z
+
+- Summary: The operator accepted S-0321 just before my TH-0385, which I resolved as moot. Published under judgement (2 pending, 950 USD/week): S-0321 (flai.minimum raised no higher than the publishing flai, in-flight requests kept) with the held S-0340, as flai 1.39.12→1.39.13 (flai/v1.39.13), pushed.
+- Items: S-0321, S-0340
+- Seconds: 17
+- Cost: 0.4962 USD, estimated
+
+### 2026-10-08T09:00:59Z
+
+- Summary: Finalized S-0348 under finalize_drafts: complete per flai promote --drafts, 21m, 12.50 USD/week, 4 tasks matching both criteria in the ADR-0122/0123/0125 pattern. Left S-0360 a draft, though complete (20m, 22.12 USD/week): its planner proposes it as an addition to E-0019 on the epic's plan thread, which is not open yet, so the scope is the operator's to confirm there. Applied the throughput order after S-0290 was pulled.
+- Items: S-0348, S-0360
+- Seconds: 24
+- Cost: 1.0108 USD, estimated
 
 ## Refusals
 

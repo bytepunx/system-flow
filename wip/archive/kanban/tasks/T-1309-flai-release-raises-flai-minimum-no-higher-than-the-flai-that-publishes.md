@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 357
-      cache_read: 2175146
-      cache_write: 97496
-      cost: 1.0188
+      input: 34
+      output: 11206
+      cache_read: 2247616
+      cache_write: 52548
+      cost: 1.016
 ---
 # T-1309 flai release raises flai.minimum no higher than the flai that publishes
 

@@ -3,11 +3,11 @@ id: T-1369
 type: task
 nature: remediation
 title: notify.test.ts reproduces the stale manifest read, and its setManifest writes atomically and tells the Repo
-status: in-progress
+status: done
 parent: S-0288
 owner: alex
 created: 2026-10-08T08:42:33Z
-updated: 2026-10-08T08:59:08Z
+updated: 2026-10-08T09:00:58Z
 transitions:
   - to: ready
     at: 2026-10-08T08:59:08Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-08T08:59:08Z
     by: agent-S-0288
+  - to: done
+    at: 2026-10-08T09:00:58Z
+    by: agent-S-0288
 stream: S-0288
 tags: [flaiover, tests]
 touches: [flaiover/src/lib/server/notify.test.ts]
+usage:
+  source: log
+  seconds: 110
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 4002
+      cache_read: 957436
+      cache_write: 61257
+      cost: 0.7314
 ---
 # T-1369 notify.test.ts reproduces the stale manifest read, and its setManifest writes atomically and tells the Repo
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:42:40Z
-updated: 2026-10-08T09:00:17Z
+updated: 2026-10-08T09:00:56Z
 transitions: []
 tags: [cli, template]
 topics: [agents]
@@ -76,4 +76,4 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 
 Forecast: 55m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 33. It stands: four tasks of plain schema and command work.
 
-Cost of delay: 63.66 USD a week, as `flai cod` works it out: this story's 55m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands. The value of the epic arrives with this story, S-0350, and S-0351, which their `after` already put first.
+Cost of delay: 60.84 USD a week, as `flai cod` works it out: 55m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands. The value of the epic arrives with this story, S-0350, and S-0351, which their `after` already put first.

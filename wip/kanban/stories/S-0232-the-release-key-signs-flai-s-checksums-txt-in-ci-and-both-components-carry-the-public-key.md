@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-08T08:25:05Z
+updated: 2026-10-08T09:00:31Z
 transitions:
   - to: ready
     at: 2026-10-07T22:14:01Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0232
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,7 +25,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1306
+  seconds: 1360
   turns:
     - day: 2026-10-07
       ceremony: 7
@@ -34,7 +34,7 @@ usage:
     - day: 2026-10-08
       ceremony: 2
       hand_edits: 2
-      work: 42
+      work: 52
   models:
     - model: claude-haiku-4-5-20251001
       input: 210085
@@ -43,11 +43,11 @@ usage:
       cache_write: 0
       cost: 0.2639
     - model: claude-opus-5-5
-      input: 414
-      output: 123961
-      cache_read: 31997061
-      cache_write: 785578
-      cost: 14.3963
+      input: 436
+      output: 128762
+      cache_read: 35474441
+      cache_write: 799062
+      cost: 15.2957
   strategic:
     - kind: orchestrator
       seconds: 823

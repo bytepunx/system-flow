@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 330
-      cache_read: 2273248
-      cache_write: 73138
-      cost: 1.0519
+      input: 35
+      output: 11569
+      cache_read: 2320546
+      cache_write: 54253
+      cost: 1.049
 ---
 # T-1311 Document when a publish raises flai.minimum and what the host does when a project stops loading
 

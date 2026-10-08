@@ -7,8 +7,6 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0344
-  - S-0345
   - S-0338
   - S-0346
   - S-0342

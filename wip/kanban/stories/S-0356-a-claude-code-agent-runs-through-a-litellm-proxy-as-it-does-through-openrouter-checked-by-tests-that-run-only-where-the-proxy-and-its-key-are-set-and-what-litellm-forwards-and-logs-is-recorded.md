@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:49:40Z
-updated: 2026-10-08T09:00:17Z
+updated: 2026-10-08T09:01:12Z
 transitions: []
 tags: [cli]
 topics: [agents, testing]
@@ -72,4 +72,4 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 
 Forecast: 30m. `flai forecast` gave 20m from only 3 medium feature stories. It is raised for live runs through two LiteLLM routes and its spend log, on S-0351's test.
 
-Cost of delay: 34.72 USD a week, as `flai cod` works it out: 30m of the 7h12m forecast over E-0019's 11 stories, of the operator's 500 USD a week penalty. It stands.
+Cost of delay: 33.19 USD a week, as `flai cod` works it out: 30m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.

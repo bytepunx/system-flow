@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 262
-      cache_read: 2723652
-      cache_write: 133151
-      cost: 1.2806
+      input: 43
+      output: 14086
+      cache_read: 2825325
+      cache_write: 66055
+      cost: 1.2772
 ---
 # T-1310 flai serve lets a project's requests in flight finish when its manifest stops loading
 

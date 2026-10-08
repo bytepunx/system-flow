@@ -18,7 +18,7 @@ tags: [dashboard, cli]
 topics: [releases]
 usage:
   source: sum
-  seconds: 3852
+  seconds: 3906
   turns:
     - day: 2026-10-07
       ceremony: 7
@@ -27,7 +27,7 @@ usage:
     - day: 2026-10-08
       ceremony: 2
       hand_edits: 2
-      work: 42
+      work: 52
   models:
     - model: claude-fable-5-1
       input: 2082
@@ -42,11 +42,11 @@ usage:
       cache_write: 78430
       cost: 0.5655
     - model: claude-opus-5-5
-      input: 518
-      output: 148394
-      cache_read: 35036741
-      cache_write: 927760
-      cost: 16.4663
+      input: 540
+      output: 153195
+      cache_read: 38514121
+      cache_write: 941244
+      cost: 17.3657
     - model: claude-sonnet-5-5
       input: 48
       output: 14014

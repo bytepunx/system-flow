@@ -3,14 +3,17 @@ id: S-0345
 type: story
 nature: remediation
 title: A story's integration tier lints main's committed wip, so markdown any agent commits there fails every story's close-out until main commits a fix
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-08T08:08:19Z
-updated: 2026-10-08T08:59:49Z
+updated: 2026-10-08T09:08:32Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:14Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T09:08:32Z
+    by: agent-S-0345
 tags: [flai]
 topics: [testing]
 touches: [flai/internal/mdlint/mdlint_test.go, flai/internal/mdlint/repo_test.go, scripts/lint-md.sh, scripts/README.md, design/system/flai-cli.md, design/issues/I-0117-a-story-s-integration-tier-lints-main-s-committed-wip-so-markdown-any-agent-commits-there-fails-every-story-s-close-out-until-main-commits-a-fix.md, design/issues/summary.md]

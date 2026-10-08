@@ -3,16 +3,19 @@ id: S-0288
 type: story
 nature: remediation
 title: flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-06T09:56:51Z
-updated: 2026-10-08T08:58:41Z
+updated: 2026-10-08T09:08:25Z
 transitions:
   - to: ready
     at: 2026-10-08T08:40:50Z
     by: alex
   - to: in-progress
     at: 2026-10-08T08:58:41Z
+    by: agent-S-0288
+  - to: review
+    at: 2026-10-08T09:08:25Z
     by: agent-S-0288
 tags: [flaiover, tests]
 touches: [flaiover/src/lib/server/notify.test.ts, design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md, design/issues/summary.md]
@@ -22,9 +25,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 593
+  turns:
+    - day: 2026-10-08
+      ceremony: 2
+      hand_edits: 1
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 11808
+      cache_read: 2824921
+      cache_write: 180740
+      cost: 2.1581
   strategic:
     - kind: planner
       seconds: 187
@@ -77,8 +91,8 @@ finalized:
 This story remediates [I-0085](../../../design/issues/I-0085-flaiover-s-notify-test-ts-fails-now-and-then-under-the-full-vitest-run-because-project-info-reads-a-system-flow-yaml-with-no-version.md), "flaiover's notify.test.ts fails now and then under the full vitest run because project.info reads a system-flow.yaml with no version". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0085 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0085 is closed with `flai issue close I-0085 --reason` saying what fixed it
+- [x] The cause I-0085 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0085 is closed with `flai issue close I-0085 --reason` saying what fixed it
 
 ## Tasks
 - T-1369 notify.test.ts reproduces the stale manifest read, and its setManifest writes atomically and tells the Repo

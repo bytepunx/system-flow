@@ -6,7 +6,7 @@ title: flai verify resumes at the tier that failed when the branch head and its 
 status: in-progress
 owner: alex
 created: 2026-10-08T07:59:12Z
-updated: 2026-10-08T08:52:08Z
+updated: 2026-10-08T09:00:36Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
@@ -79,7 +79,7 @@ A verify run at the same branch head, against the same main commit, with the sam
 - [x] Any change to the head, the base, the selected tiers, the manifest's `tests`, or a tier's command makes the next run a full run, and `--fresh` forces one; the record written by a resumed run holds every tier's state, reused ones included, so `--last` and the review page show a whole result.
 - [ ] `scripts/close-out.sh` runs `flai verify` as it does, so a second close-out at an unchanged head after a smoke failure reaches smoke within the cheap checks' time; the close-out's last line says when tiers were reused.
 - [x] Tests cover a resumed run, each condition that forces a full run, and `--fresh`.
-- [ ] `docs/users/flai.md` and `design/system/flai-cli.md` describe when a run resumes and how to force a full one.
+- [x] `docs/users/flai.md` and `design/system/flai-cli.md` describe when a run resumes and how to force a full one.
 
 ## Tasks
 - T-1343 flai verify resumes a story's run from its last record when the head, the base, and the tiers are unchanged

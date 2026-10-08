@@ -3,16 +3,36 @@ id: T-1368
 type: task
 nature: remediation
 title: Close I-0079 with the one-read round trip as its fix
-status: backlog
+status: done
 parent: S-0290
 owner: alex
 created: 2026-10-08T08:42:22Z
-updated: 2026-10-08T08:42:22Z
-transitions: []
+updated: 2026-10-08T09:02:47Z
+transitions:
+  - to: ready
+    at: 2026-10-08T09:02:40Z
+    by: agent-S-0290
+  - to: in-progress
+    at: 2026-10-08T09:02:40Z
+    by: agent-S-0290
+  - to: done
+    at: 2026-10-08T09:02:47Z
+    by: agent-S-0290
 stream: S-0290
 tags: [issues]
 touches: [design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/summary.md]
 after: [T-1367]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 384
+      cache_read: 150723
+      cache_write: 4731
+      cost: 0.0757
 ---
 # T-1368 Close I-0079 with the one-read round trip as its fix
 

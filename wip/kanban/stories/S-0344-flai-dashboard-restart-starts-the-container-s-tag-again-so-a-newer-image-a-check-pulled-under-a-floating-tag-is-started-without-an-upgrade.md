@@ -3,14 +3,17 @@ id: S-0344
 type: story
 nature: remediation
 title: flai dashboard restart starts the container's tag again, so a newer image a check pulled under a floating tag is started without an upgrade
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-08T08:08:17Z
-updated: 2026-10-08T08:59:49Z
+updated: 2026-10-08T09:08:24Z
 transitions:
   - to: ready
     at: 2026-10-08T08:38:55Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T09:08:24Z
+    by: agent-S-0344
 tags: [flai, dashboard]
 touches: [flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go, docs/users/flai-reference.md, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, design/issues/I-0116-flai-dashboard-restart-starts-the-container-s-tag-again-so-a-newer-image-a-check-pulled-under-a-floating-tag-is-started-without-an-upgrade.md, design/issues/summary.md]
 agent:
