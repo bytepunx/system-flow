@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -312,5 +313,86 @@ func TestMessageEscalate(t *testing.T) {
 	}
 	if matches, _ := filepath.Glob(filepath.Join(root, "wip", "threads", "*.md")); len(matches) != 2 {
 		t.Errorf("a refused escalation opens no thread: %v", matches)
+	}
+}
+
+// shareFixture is messageProject with claims, S-0001 in progress holding
+// S-0004, ready, on design/system/plan.md, and flai's ask in MS-0001.
+func shareFixture(t *testing.T) (string, *workitem.Repo) {
+	t.Helper()
+	root, repo := messageProject(t)
+	for id, touches := range map[string][]string{"S-0001": {"design/system"}, "S-0002": {"flai"}, "S-0004": {"design/system/plan.md"}} {
+		s, err := repo.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.Touches = touches
+		if err := repo.Save(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, _, err := messages.AskHold(repo, messages.AskOptions{Held: "S-0004", Holder: "S-0001", Paths: []string{"design/system/plan.md"}, Now: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	return root, repo
+}
+
+// S-0334, ADR-0134: flai message share records the share from the holding
+// story's agent, prints it, and the held story is no longer held.
+func TestMessageShare(t *testing.T) {
+	root, repo := shareFixture(t)
+	out, errOut, code := runIn(t, root, "message", "share", "MS-0001", "--paths", "design/system/plan.md", "S-0001 edits the first section; S-0004 adds one at the end.", "--from", "S-0001", "--by", "agent-S-0001")
+	if code != 0 {
+		t.Fatalf("share: %d %s", code, errOut)
+	}
+	if out != "MS-0001: S-0001 shares design/system/plan.md with S-0004\nMS-0001 awaits S-0004 (2 entries)\n" {
+		t.Errorf("share:\n%s", out)
+	}
+	items, err := repo.List(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	held, err := repo.Get("S-0004")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h := repo.Holds(items).Of(held); h != nil {
+		t.Errorf("S-0004 is still held: %+v", h)
+	}
+
+	out, errOut, code = runIn(t, root, "message", "share", "ms-1", "--paths", "design/system/plan.md,design/system", "Apart.", "--from", "S-0001", "--by", "agent-S-0001", "--json")
+	if code != 0 {
+		t.Fatalf("share --json: %d %s", code, errOut)
+	}
+	var v struct {
+		ID     string           `json:"id"`
+		Shares []workitem.Share `json:"shares"`
+	}
+	if err := json.Unmarshal([]byte(out), &v); err != nil {
+		t.Fatalf("--json: %v\n%s", err, out)
+	}
+	if v.ID != "MS-0001" || len(v.Shares) != 2 || strings.Join(v.Shares[1].Paths, ",") != "design/system/plan.md,design/system" || v.Shares[1].By != "agent-S-0001" || v.Shares[1].Split != "Apart." {
+		t.Errorf("share --json: %+v", v)
+	}
+}
+
+// S-0334, ADR-0134: flai message share is refused from the held story, and
+// for a path outside the overlap, writing nothing.
+func TestMessageShareRefusals(t *testing.T) {
+	root, repo := shareFixture(t)
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--paths", "design/system/plan.md", "Mine.", "--from", "S-0004", "--by", "agent-S-0004"}, "agent-S-0004, writing for S-0004, may not share S-0001's paths with S-0004"},
+		{[]string{"--paths", "flai", "Mine.", "--from", "S-0001", "--by", "agent-S-0001"}, "--paths flai lies outside the overlap"},
+	} {
+		args := append([]string{"message", "share", "MS-0001"}, tc.args...)
+		if _, errOut, code := runIn(t, root, args...); code == 0 || !strings.Contains(errOut, tc.want) {
+			t.Errorf("%v: %d %s, want %q", tc.args, code, errOut, tc.want)
+		}
+	}
+	if shares := repo.Shares(); len(shares) != 0 {
+		t.Errorf("a refused share records nothing: %+v", shares)
 	}
 }

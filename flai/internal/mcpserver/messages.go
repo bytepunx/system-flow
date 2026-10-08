@@ -40,6 +40,8 @@ const messageReplyDescription = "Add a message to the conversation id from this 
 
 const messageEscalateDescription = "Ask the operator to settle what this session's story and the other story of the conversation id do not agree, as flai message escalate does (ADR-0121): reason says what the two could not agree. It opens a thread on this session's story, which awaits the operator, whose title names both stories and the conversation's title and whose first entry names both stories, gives the conversation's path, and quotes the reason; and it adds a message from this story to the conversation naming the thread, so that the conversation awaits the other story and stays open. Escalate only when the two of you have tried and do not agree; settle what you can with message_reply." + messagesWhat + messagesFrom + " An escalation is refused from a story that is not one of the two, from a story no longer in progress or in review, on a conversation that reads as closed, and with an empty reason; nothing is written. Returns thread, as thread_get answers it, and conversation, as flai message show --json prints it."
 
+const messageShareDescription = "Share the paths your story, in progress, holds a ready story on with that story, as flai message share does (ADR-0134), in their conversation id, kept between the two stories apart from the operator's threads (ADR-0120), the one in which flai asked you about the hold: paths are what you share, each a path relative to the root that both stories claim, and split says who changes what. The share is kept in the conversation's front matter under shares, and a message from your story gives the split. While it is in force the overlap between the two stories on those paths does not hold, so the ready story can start; it ends when either story leaves ready, in progress, or review, or the ready story goes back to backlog. Share only what the two stories can change apart; otherwise narrow your touches, or say why the hold stands with message_reply. Only the holding story's agent, writing for it, or the operator, its owner, may share: the story is this session's own (FLAI_STORY, else the story in this agent's name of the form agent-S-nnnn, else the story branch checked out where this server runs), with no argument to name another, and the author this agent's name, which shares as the operator when it is the holding story's owner. A share is refused from anyone else, on a conversation that reads as closed or has no ready story, with an empty split or no path, and for a path outside the two stories' overlap; nothing is written." + messagesReturns + " Its shares lists every share, each with holder, held, paths, split, by, and at."
+
 const messageGetDescription = "Read the conversation id (any zero padding, such as ms-4), as flai message show --json prints it (S-0331): its front matter, whether it reads as closed and why, the story it awaits while open, and every entry. Any session may read one; it needs no story of its own." + messagesWhat + messagesReturns
 
 // MessageSendIn starts a conversation from the calling session's story. It
@@ -87,6 +89,17 @@ type MessageGetIn struct {
 
 func (in MessageGetIn) project() string { return in.Project }
 
+// MessageShareIn shares, from the calling session's story, paths it holds a
+// ready story on with that story (ADR-0134).
+type MessageShareIn struct {
+	Project string   `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
+	ID      string   `json:"id" jsonschema:"the conversation between your story and the ready story it holds, such as MS-0004 (any zero padding)"`
+	Paths   []string `json:"paths" jsonschema:"the paths shared, each relative to the root and claimed by both stories"`
+	Split   string   `json:"split" jsonschema:"who changes what in the paths shared"`
+}
+
+func (in MessageShareIn) project() string { return in.Project }
+
 // ConversationOut is a conversation field for field as messages.View gives
 // it, which flai message show --json prints.
 type ConversationOut struct {
@@ -104,6 +117,7 @@ type ConversationOut struct {
 	Updated      string           `json:"updated"`
 	Path         string           `json:"path" jsonschema:"from the project root"`
 	Entries      []messages.Entry `json:"entries" jsonschema:"every message in order, each with its time, author, story (empty on the entry that closed it), and text"`
+	Shares       []workitem.Share `json:"shares" jsonschema:"the paths the story in progress shared with the ready story it held (ADR-0134), each with holder, held, paths, split, by (who shared), and at"`
 }
 
 // conversationOut is c as messages.View gives it, so that the tools answer
@@ -181,6 +195,18 @@ func (s *server) messageEscalate(_ context.Context, _ *mcp.CallToolRequest, in M
 		return nil, EscalateOut{}, err
 	}
 	return nil, EscalateOut{Thread: s.detail(th), Conversation: conv}, nil
+}
+
+// messageShare records a share from the calling session's story, or from the
+// operator when this agent's name is the holding story's owner; a session
+// with no story shares only as the latter.
+func (s *server) messageShare(_ context.Context, _ *mcp.CallToolRequest, in MessageShareIn) (*mcp.CallToolResult, ConversationOut, error) {
+	c, err := messages.Share(s.repo, messages.ShareOptions{ID: in.ID, Story: s.recordingStory(""), Author: s.agent, Paths: in.Paths, Split: in.Split, Now: s.now()})
+	if err != nil {
+		return nil, ConversationOut{}, err
+	}
+	out, err := conversationOut(s.repo, c)
+	return nil, out, err
 }
 
 func (s *server) messageGet(_ context.Context, _ *mcp.CallToolRequest, in MessageGetIn) (*mcp.CallToolResult, ConversationOut, error) {

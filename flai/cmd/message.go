@@ -19,11 +19,13 @@ func newMessageCmd(a *app) *cobra.Command {
 		Short: "Conversations between the agents of two open stories, apart from the operator's threads (wip/messages)",
 		Long: `Conversations between the agents of two stories in progress or in review (ADR-0120). A message goes from one story to another, and the messages between the two make a conversation, one file in wip/messages, MS-nnnn-<slug>.md, in the main checkout.
 
+A ready story held on overlap alone with a story in progress has no agent, so flai serve asks the holding story's agent about it in their conversation, and that agent may share the overlapping paths with flai message share, so that the overlap no longer holds (ADR-0134).
+
 A conversation awaits the story that did not write its last message. When the two do not agree, either story's agent asks the operator with flai message escalate, which opens a thread (ADR-0121). It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
 
 Messages are kept apart from threads: none appears in flai thread list, among the threads awaiting the operator, or in a narrative's Open questions. A question for the designer is still a thread.`,
 	}
-	c.AddCommand(newMessageSendCmd(a), newMessageReplyCmd(a), newMessageEscalateCmd(a), newMessageListCmd(a), newMessageShowCmd(a))
+	c.AddCommand(newMessageSendCmd(a), newMessageReplyCmd(a), newMessageEscalateCmd(a), newMessageShareCmd(a), newMessageListCmd(a), newMessageShowCmd(a))
 	return c
 }
 
@@ -155,6 +157,43 @@ The escalating story is --from, else FLAI_STORY, else the story in FLAI_AGENT of
 		},
 	}
 	c.Flags().StringVar(&from, "from", "", "the story that escalates, one of the conversation's two (default: FLAI_STORY, else the story in FLAI_AGENT of the form agent-S-nnnn, else the story branch checked out here)")
+	c.Flags().StringVar(&by, "by", "", "author (default: FLAI_AGENT, then config author)")
+	return c
+}
+
+func newMessageShareCmd(a *app) *cobra.Command {
+	var from, by string
+	var paths []string
+	c := &cobra.Command{
+		Use:   "share <MS-nnnn> --paths <path>... \"<split>\"",
+		Short: "Share paths a story in progress holds a ready story on, with a split of the work, so that the overlap no longer holds",
+		Long: `Records in the conversation <MS-nnnn>, between a story in progress and a ready story it holds on overlap, that the story in progress shares the paths --paths with the ready one, split as <split> says: who changes what (ADR-0134). The conversation's front matter keeps the share under shares, and a message from the story in progress gives the split. Prints the share and whom the conversation awaits; --json prints the conversation as flai message show --json does.
+
+While the share is in force, an overlap between the two stories on those paths does not hold, so flai board, inbox, wait_for_work, flai story start, and flai serve take the ready story. It ends when either story leaves ready, in progress, or review, or the ready story goes back to backlog.
+
+Only the story in progress's agent, writing for it, or the operator, its owner, may share. The story is --from, else FLAI_STORY, else the story in FLAI_AGENT of the form agent-S-nnnn, else the story branch checked out here; the author is --by, else FLAI_AGENT, else the config author. --paths names a path, relative to the root, both stories claim; give it once per path, or comma separated. A share is refused from anyone else, on a conversation that reads as closed or has no ready story, with an empty split, and for a path outside the two stories' overlap; nothing is written.`,
+		Example: `  flai message share MS-0004 --paths flai/internal/workitem/hold.go "S-0330 changes holdBy; S-0334 adds a function below it." --from S-0330
+  flai message share ms-4 --paths docs/users/flai.md,design/system/workflow.md "Each adds its own section" --json`,
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			c, err := messages.Share(repo, messages.ShareOptions{ID: args[0], Story: a.issueStory(repo, from), Author: a.threadAuthor(by), Paths: paths, Split: args[1], Now: a.now()})
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(messages.View(repo, c))
+			}
+			sh := c.Shares[len(c.Shares)-1]
+			fmt.Fprintf(a.out, "%s: %s shares %s with %s\n%s awaits %s (%d entries)\n", c.ID, sh.Holder, strings.Join(sh.Paths, ", "), sh.Held, c.ID, c.Awaiting(), len(c.Entries()))
+			return nil
+		},
+	}
+	c.Flags().StringVar(&from, "from", "", "the story in progress that shares, one of the conversation's two (default: FLAI_STORY, else the story in FLAI_AGENT of the form agent-S-nnnn, else the story branch checked out here)")
+	c.Flags().StringSliceVar(&paths, "paths", nil, "a path both stories claim, relative to the root (repeatable, or comma separated)")
 	c.Flags().StringVar(&by, "by", "", "author (default: FLAI_AGENT, then config author)")
 	return c
 }

@@ -54,6 +54,10 @@ type Conversation struct {
 	Created      string   `yaml:"created" json:"created"`
 	Updated      string   `yaml:"updated" json:"updated"`
 
+	// Shares are the paths the holding story shared with the ready story it
+	// held, each with the split of the work (ADR-0134).
+	Shares []workitem.Share `yaml:"shares,omitempty" json:"shares"`
+
 	// Unknown is the front matter this flai does not know, kept for writing
 	// back (S-0181).
 	Unknown []workitem.Field `yaml:"-" json:"-"`
@@ -155,6 +159,7 @@ func (c *Conversation) Validate() error {
 			errs = append(errs, fmt.Sprintf("%s %q is not a UTC timestamp", name, v))
 		}
 	}
+	errs = append(errs, validateShares(c.Shares)...)
 	if len(errs) > 0 {
 		sort.Strings(errs)
 		return fmt.Errorf("%s", strings.Join(errs, "; "))
@@ -177,6 +182,13 @@ func (c *Conversation) Marshal() string {
 	fmt.Fprintf(&b, "participants: %s\n", workitem.FlowList(c.Participants))
 	fmt.Fprintf(&b, "created: %s\n", c.Created)
 	fmt.Fprintf(&b, "updated: %s\n", c.Updated)
+	if len(c.Shares) > 0 {
+		b.WriteString("shares:\n")
+		for _, sh := range c.Shares {
+			fmt.Fprintf(&b, "  - holder: %s\n    held: %s\n    paths: %s\n    split: %s\n    by: %s\n    at: %s\n",
+				sh.Holder, sh.Held, workitem.FlowList(sh.Paths), workitem.Scalar(sh.Split), workitem.Scalar(sh.By), sh.At)
+		}
+	}
 	workitem.WriteFields(&b, c.Unknown)
 	b.WriteString("---\n")
 	b.WriteString(c.Body)
@@ -340,6 +352,9 @@ func (c *Conversation) Other(story string) string {
 
 // AwaitingOther returns story's conversations that read as open and await
 // the other story's reply: those story sent or answered last, in ID order.
+// One whose other story is not in progress or in review is left out: a
+// ready story, such as one flai asked about a hold for, has no agent to
+// reply until it starts, so a reply to it awaits no one (ADR-0134).
 func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
 	all, err := For(r, story)
 	if err != nil {
@@ -350,9 +365,13 @@ func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
 		if closed, _ := c.Closed(r); closed {
 			continue
 		}
-		if workitem.CanonicalID(c.Awaiting()) != workitem.CanonicalID(story) {
-			out = append(out, c)
+		if workitem.CanonicalID(c.Awaiting()) == workitem.CanonicalID(story) {
+			continue
 		}
+		if it, err := r.Get(c.Other(story)); err == nil && it.Status != workitem.InProgress && it.Status != workitem.Review {
+			continue
+		}
+		out = append(out, c)
 	}
 	return out, nil
 }
@@ -451,12 +470,14 @@ func Notify(r *workitem.Repo, opt SendOptions) (*Conversation, error) {
 	return c, save(r, c, was)
 }
 
-// message is a first message, or a notice, checked and ready to write.
+// message is a first message, or a notice, checked and ready to write. id is
+// the conversation's ID when the text names it before it is written; begin
+// allocates one when it is empty.
 type message struct {
-	text, author string
-	from, to     *workitem.Item
-	about        []string
-	now          string
+	id, text, author string
+	from, to         *workitem.Item
+	about            []string
+	now              string
 }
 
 // prepare checks what Send and Notify share: the text, the author, and two
@@ -484,8 +505,12 @@ func prepare(r *workitem.Repo, opt SendOptions) (message, error) {
 
 // begin writes a new conversation holding the message as its first entry.
 func begin(r *workitem.Repo, m message) (*Conversation, error) {
+	id := m.id
+	if id == "" {
+		id = NextID(r)
+	}
 	c := &Conversation{
-		ID: NextID(r), Title: titleOf(m.text, m.from.ID), From: m.from.ID, To: m.to.ID, About: m.about,
+		ID: id, Title: titleOf(m.text, m.from.ID), From: m.from.ID, To: m.to.ID, About: m.about,
 		Status: StatusOpen, Participants: []string{m.author}, Created: m.now, Updated: m.now,
 	}
 	c.Path = filepath.Join(Dir(r), c.ID+"-"+orSlug(c.Title)+".md")
@@ -749,7 +774,8 @@ func CloseOn(r *workitem.Repo, stories []string, author, verb string, now time.T
 
 // View is a conversation as flai prints it with --json and the dashboard
 // reads it: the front matter, whether it reads as closed and why, the story
-// it awaits while open, the path relative to the repository, and the entries.
+// it awaits while open, the path relative to the repository, the entries,
+// and the shares (an empty list when there are none).
 func View(r *workitem.Repo, c *Conversation) map[string]any {
 	path := relTo(r, c.Path)
 	closed, why := c.Closed(r)
@@ -757,9 +783,12 @@ func View(r *workitem.Repo, c *Conversation) map[string]any {
 	if !closed {
 		awaiting = c.Awaiting()
 	}
-	about, entries := c.About, c.Entries()
+	about, entries, shares := c.About, c.Entries(), c.Shares
 	if about == nil {
 		about = []string{}
+	}
+	if shares == nil {
+		shares = []workitem.Share{}
 	}
 	if entries == nil {
 		entries = []Entry{}
@@ -768,7 +797,7 @@ func View(r *workitem.Repo, c *Conversation) map[string]any {
 		"id": c.ID, "title": c.Title, "from": c.From, "to": c.To, "about": about,
 		"status": c.Status, "closed": closed, "closed_reason": why, "awaiting": awaiting,
 		"participants": c.Participants, "created": c.Created, "updated": c.Updated,
-		"path": path, "entries": entries,
+		"path": path, "entries": entries, "shares": shares,
 	}
 }
 

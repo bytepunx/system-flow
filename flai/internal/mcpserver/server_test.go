@@ -119,7 +119,7 @@ func TestToolsAreAdvertised(t *testing.T) {
 		}
 	}
 	sort.Strings(names)
-	want := "activity_log adr_new agent_restart agent_start analyze board criteria_tick doc_get doc_search inbox issue_bump issue_close issue_new issue_story item_edit item_get item_move item_new message_escalate message_get message_reply message_send order_by_policy permission_prompt plan prime promote_candidates release_evaluate release_publish shared_paths shared_paths_edit story_start stream_state task_done test thread_get thread_open thread_reply thread_resolve verify versions wait_for_events wait_for_work who_touches"
+	want := "activity_log adr_new agent_restart agent_start analyze board criteria_tick doc_get doc_search inbox issue_bump issue_close issue_new issue_story item_edit item_get item_move item_new message_escalate message_get message_reply message_send message_share order_by_policy permission_prompt plan prime promote_candidates release_evaluate release_publish shared_paths shared_paths_edit story_start stream_state task_done test thread_get thread_open thread_reply thread_resolve verify versions wait_for_events wait_for_work who_touches"
 	if strings.Join(names, " ") != want {
 		t.Errorf("tools: %v", names)
 	}

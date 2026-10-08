@@ -220,8 +220,8 @@ func TestTheMessageToolsAndInstructions(t *testing.T) {
 			}
 		}
 	}
-	if len(seen) != 4 {
-		t.Errorf("message_send, message_reply, message_escalate, and message_get should be listed: %v", seen)
+	if len(seen) != 5 {
+		t.Errorf("message_send, message_reply, message_escalate, message_get, and message_share should be listed: %v", seen)
 	}
 	root := t.TempDir()
 	makeProject(t, filepath.Join(root, "alpha"), "alpha")
@@ -446,4 +446,81 @@ func TestMessageEscalateAsksTheOperator(t *testing.T) {
 	if matches, _ := filepath.Glob(filepath.Join(f.repo.WipDir(), "threads", "*.md")); len(matches) != 2 {
 		t.Errorf("a refused escalation should open no thread: %v", matches)
 	}
+}
+
+// S-0334, ADR-0134: message_share, from the holding story's session, records
+// the share flai's ask invited and answers the conversation with it; from the
+// held story's session it is refused, and nothing is written.
+func TestMessageShare(t *testing.T) {
+	f, _ := messagesFixture(t)
+	epic, err := f.repo.Get(f.story.Parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	held := storyOfEpic(t, f.repo, epic, "Held", []string{"flai/internal/mcpserver/messages.go"}, workitem.Ready)
+	asked, _, err := messages.AskHold(f.repo, messages.AskOptions{Held: held.ID, Holder: f.story.ID, Paths: []string{"flai/internal/mcpserver/messages.go"}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock := t0.Add(time.Hour)
+	as := func(agent string) *server {
+		return newServer(Options{Repo: f.repo, Agent: agent, Version: "test", Now: func() time.Time { return clock }}, f.repo)
+	}
+	in := MessageShareIn{ID: "ms-1", Paths: []string{"flai/internal/mcpserver/messages.go"}, Split: "The holder changes the descriptions; the held story adds a tool below them."}
+
+	was := readFile(t, asked.Path)
+	if _, _, err := as("agent-"+held.ID).messageShare(context.Background(), nil, in); err == nil || !strings.Contains(err.Error(), "agent-"+held.ID+", writing for "+held.ID+", may not share "+f.story.ID+"'s paths with "+held.ID) {
+		t.Errorf("a share from the held story's session should be refused: %v", err)
+	}
+	if readFile(t, asked.Path) != was {
+		t.Error("a refused share should write nothing")
+	}
+
+	_, out, err := as("agent-"+f.story.ID).messageShare(context.Background(), nil, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.ID != "MS-0001" || len(out.Shares) != 1 || out.Shares[0].Holder != f.story.ID || out.Shares[0].Held != held.ID || out.Shares[0].By != "agent-"+f.story.ID || out.Shares[0].Split != in.Split {
+		t.Errorf("message_share should answer the conversation with the share: %+v", out)
+	}
+	if last := out.Entries[len(out.Entries)-1]; last.Story != f.story.ID || !strings.Contains(last.Text, "shares `flai/internal/mcpserver/messages.go` with "+held.ID) {
+		t.Errorf("the share's entry: %+v", last)
+	}
+	c, err := messages.Get(f.repo, "MS-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, got := sortedJSON(t, messages.View(f.repo, c)), sortedJSON(t, out)
+	if want != got {
+		t.Errorf("message_share should answer what flai message show --json prints:\nwant %s\ngot  %s", want, got)
+	}
+}
+
+// sortedJSON is v as JSON with the keys of every object sorted, so that a
+// struct and a map holding the same fields compare equal.
+func sortedJSON(t *testing.T, v any) string {
+	t.Helper()
+	raw, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields any
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatal(err)
+	}
+	out, err := json.Marshal(fields)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out)
+}
+
+// readFile is a file's content.
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
 }
