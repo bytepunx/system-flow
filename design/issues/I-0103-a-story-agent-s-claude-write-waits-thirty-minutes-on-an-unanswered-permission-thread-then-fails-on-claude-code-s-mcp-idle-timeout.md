@@ -2,12 +2,12 @@
 id: I-0103
 title: A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 30m
 first_reported: 2026-10-07T04:55:43Z
 last_reported: 2026-10-07T04:55:43Z
-updated: 2026-10-07T06:48:44Z
+updated: 2026-10-08T06:02:09Z
 ---
 
 # I-0103 A story agent's .claude/ write waits thirty minutes on an unanswered permission thread, then fails on Claude Code's MCP idle timeout
@@ -24,3 +24,4 @@ S-0270's agent wrote `.claude/agents/verifier.md` through `permission_prompt`, w
 ## Remediation
 
 Story S-0309 remediates this issue, created from it at 2026-10-07T06:48:44Z.
+Closed 2026-10-08T06:02:09Z: Fixed by S-0309 (ADR-0124). permission_prompt holds a protected write at most four minutes, below Claude Code's MCP idle timeout. When no answer comes in that time, or the session ends, it refuses the write naming the thread and leaves the thread open. When the agent makes the same write again, the answer given since is taken from that thread, or it waits again. The start prompt and delegation.md now tell the agent to retry the write once the thread is answered, instead of staging files in .flai-cache/ with cp commands. TestPermissionPromptRefusesUnansweredWithinTheBoundAndLeavesTheThreadOpen reproduces the cause.
