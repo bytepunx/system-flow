@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.79 - 2026-10-08
+
+- S-0323 A close-out records no `narrative.state` finding on another open story's narrative (patch, ADR-0125): `work-management.md` says that a `narrative.state`, a `## Current state` or `## Next steps` not yet written, on the narrative of another story not yet done or cancelled is left out of a close-out's check, as a markdown finding there is, since only that story's agent writes them. It needs a flai that has it; an older flai still records every `narrative.state` outside the story at close-out.
+
 ## 1.0.78 - 2026-10-08
 
 - S-0318 flai check finds `markdown.MD038` outside the story at close-out (patch).
