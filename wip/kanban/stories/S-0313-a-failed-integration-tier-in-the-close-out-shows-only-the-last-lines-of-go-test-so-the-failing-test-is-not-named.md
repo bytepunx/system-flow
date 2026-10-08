@@ -6,7 +6,7 @@ title: A failed integration tier in the close-out shows only the last lines of g
 status: backlog
 owner: alex
 created: 2026-10-07T14:26:02Z
-updated: 2026-10-08T04:38:47Z
+updated: 2026-10-08T04:39:45Z
 transitions: []
 tags: []
 topics: [testing]
@@ -58,6 +58,7 @@ This story remediates [I-0113](../../../design/issues/I-0113-a-failed-integratio
 ## Acceptance criteria
 - [ ] The cause I-0113 describes no longer occurs, with a test that reproduces it where one fits
 - [ ] I-0113 is closed with `flai issue close I-0113 --reason` saying what fixed it
+- [ ] I-0114 is closed with `flai issue close I-0114 --reason` saying what fixed it
 
 ## Tasks
 - T-1286 A plain finding names the failures go test printed, not only the last lines
