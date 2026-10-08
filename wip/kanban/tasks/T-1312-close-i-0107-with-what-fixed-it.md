@@ -3,16 +3,36 @@ id: T-1312
 type: task
 nature: remediation
 title: Close I-0107 with what fixed it
-status: backlog
+status: done
 parent: S-0321
 owner: alex
 created: 2026-10-08T00:23:40Z
-updated: 2026-10-08T00:23:40Z
-transitions: []
+updated: 2026-10-08T08:11:52Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:11:30Z
+    by: agent-S-0321
+  - to: in-progress
+    at: 2026-10-08T08:11:31Z
+    by: agent-S-0321
+  - to: done
+    at: 2026-10-08T08:11:52Z
+    by: agent-S-0321
 stream: S-0321
 tags: [issues]
 touches: [design/issues/I-0107-publishing-raises-the-manifest-s-flai-minimum-the-moment-it-commits-before-the-release-is-built-so-the-host-s-flai-drops-the-project-until-the-binaries-exist.md, design/issues/summary.md]
 after: [T-1311]
+usage:
+  source: log
+  seconds: 21
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 115
+      cache_read: 1387692
+      cache_write: 3447
+      cost: 0.6236
 ---
 # T-1312 Close I-0107 with what fixed it
 

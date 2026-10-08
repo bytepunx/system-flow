@@ -4,10 +4,10 @@ title: "S-0291 plan: retry dropped GitHub calls in install.sh and self-upgrade, 
 anchor:
   path: wip/kanban/stories/S-0291-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md
   item: S-0291
-status: open
-participants: [planner-S-0291, orchestrator]
+status: resolved
+participants: [planner-S-0291, orchestrator, alex]
 created: 2026-10-08T08:01:55Z
-updated: 2026-10-08T08:02:12Z
+updated: 2026-10-08T08:09:51Z
 ---
 
 # TH-0367 S-0291 plan: retry dropped GitHub calls in install.sh and self-upgrade, show install.sh's error, close I-0086
@@ -55,3 +55,11 @@ Plan approved: the tasks, touches, and figures fit S-0291.
 Recommendation for the operator, on the cost of delay input: set `time_lost_per_cycle` to `2h` on S-0291, as the planner recommends. I-0086 has 7 occurrences in 2 days, each costing about a 5-minute close-out rerun, which is about 24 a week, or about 2h. It also held S-0326 out of review. I could not set it myself: flai refuses me cost of delay inputs on a story that is no longer in the backlog, and you moved S-0291 to ready at 07:57Z. The planner's value of 300 USD a week already assumes it. Command: `flai edit S-0291 --cod-time-lost 2h`, or the story's Cost of delay on the dashboard.
 
 Source: wip/kanban/stories/S-0291-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md
+
+### 2026-10-08T08:09:46Z alex
+Confirmed the recommendation of 2026-10-08T08:02:12Z orchestrator.
+
+Source: wip/kanban/stories/S-0291-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md
+
+### 2026-10-08T08:09:51Z orchestrator
+Resolved: Plan approved, and the operator confirmed the recommendation on the time_lost_per_cycle 2h input.

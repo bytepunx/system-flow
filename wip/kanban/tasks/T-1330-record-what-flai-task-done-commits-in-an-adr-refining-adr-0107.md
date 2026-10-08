@@ -3,15 +3,35 @@ id: T-1330
 type: task
 nature: improvement
 title: Record what flai task done commits, in an ADR refining ADR-0107
-status: backlog
+status: done
 parent: S-0322
 owner: alex
 created: 2026-10-08T04:35:05Z
-updated: 2026-10-08T04:38:25Z
-transitions: []
+updated: 2026-10-08T08:16:41Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:14:14Z
+    by: agent-S-0322
+  - to: in-progress
+    at: 2026-10-08T08:14:14Z
+    by: agent-S-0322
+  - to: done
+    at: 2026-10-08T08:16:41Z
+    by: agent-S-0322
 stream: S-0322
 tags: [flai]
-touches: [design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, design/adrs/0128-flai-task-done-commits-the-paths-the-closing-task-covers-and-those-no-other.md]
+usage:
+  source: log
+  seconds: 147
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 225
+      cache_read: 1731700
+      cache_write: 72615
+      cost: 0.8111
 ---
 # T-1330 Record what flai task done commits, in an ADR refining ADR-0107
 

@@ -3,16 +3,36 @@ id: T-1329
 type: task
 nature: remediation
 title: Document what flai task done commits, and close I-0104 and I-0108
-status: backlog
+status: done
 parent: S-0322
 owner: alex
 created: 2026-10-08T04:32:45Z
-updated: 2026-10-08T04:38:31Z
-transitions: []
+updated: 2026-10-08T08:32:45Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:25:41Z
+    by: agent-S-0322
+  - to: in-progress
+    at: 2026-10-08T08:25:41Z
+    by: agent-S-0322
+  - to: done
+    at: 2026-10-08T08:32:45Z
+    by: agent-S-0322
 stream: S-0322
 tags: [flai]
 touches: [docs/users/flai.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md]
 after: [T-1328]
+usage:
+  source: log
+  seconds: 408
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 125
+      cache_read: 1016759
+      cache_write: 57292
+      cost: 0.4828
 ---
 # T-1329 Document what flai task done commits, and close I-0104 and I-0108
 

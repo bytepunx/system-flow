@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 204
-      output: 13050
-      cache_read: 734095
-      cache_write: 80101
-      cost: 2.031
+      input: 141
+      output: 7742
+      cache_read: 746126
+      cache_write: 41970
+      cost: 1.2304
 ---
 # T-1335 Set out the vendor-neutral abstractions flai needs, with options and a recommendation
 

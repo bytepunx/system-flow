@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 7552
-      cache_read: 1146903
-      cache_write: 47104
-      cost: 0.657
+      input: 16
+      output: 6478
+      cache_read: 1151016
+      cache_write: 39710
+      cost: 0.594
 ---
 # T-1320 issues.Fold folds each open issue a branch added into the main branch's open issue of the same title
 

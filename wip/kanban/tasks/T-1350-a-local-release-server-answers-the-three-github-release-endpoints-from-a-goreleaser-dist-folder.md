@@ -3,15 +3,35 @@ id: T-1350
 type: task
 nature: remediation
 title: A local release server answers the three GitHub release endpoints from a GoReleaser dist folder
-status: backlog
+status: done
 parent: S-0340
 owner: alex
 created: 2026-10-08T08:05:44Z
-updated: 2026-10-08T08:05:44Z
-transitions: []
+updated: 2026-10-08T08:24:15Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:16:39Z
+    by: agent-S-0340
+  - to: in-progress
+    at: 2026-10-08T08:16:39Z
+    by: agent-S-0340
+  - to: done
+    at: 2026-10-08T08:24:15Z
+    by: agent-S-0340
 stream: S-0340
 tags: [cli]
 touches: [flai/internal/releaseserver/releaseserver.go, flai/internal/releaseserver/releaseserver_test.go, flai/internal/releaseserver/serve/main.go, scripts/release-server.sh]
+usage:
+  source: log
+  seconds: 456
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 258
+      cache_read: 2490916
+      cache_write: 117910
+      cost: 1.1727
 ---
 # T-1350 A local release server answers the three GitHub release endpoints from a GoReleaser dist folder
 

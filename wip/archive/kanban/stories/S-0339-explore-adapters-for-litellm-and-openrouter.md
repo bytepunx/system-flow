@@ -3,10 +3,10 @@ id: S-0339
 type: story
 nature: research
 title: Explore Adapters for LiteLLM and OpenRouter
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-08T07:17:16Z
-updated: 2026-10-08T07:39:13Z
+updated: 2026-10-08T08:37:05Z
 transitions:
   - to: ready
     at: 2026-10-08T07:17:18Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-08T07:39:13Z
     by: agent-S-0339
+  - to: review
+    at: 2026-10-08T08:34:45Z
+    by: agent-S-0339
+  - to: done
+    at: 2026-10-08T08:37:05Z
+    by: alex
 tags: []
 topics: [cli, template]
-touches: [design/system/agent-adapters.md, design/system/README.md, design/adrs, design/adrs/README.md]
+touches: [design/system/agent-adapters.md, design/system/README.md, design/adrs, design/adrs/README.md, design/issues/I-0123-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-fable-5-1
@@ -24,18 +30,19 @@ agent:
     effort: medium
 usage:
   source: log
-  seconds: 1543
+  seconds: 2102
   turns:
     - day: 2026-10-08
-      hand_edits: 2
-      work: 17
+      ceremony: 1
+      hand_edits: 4
+      work: 39
   models:
     - model: claude-fable-5-1
-      input: 1501
-      output: 96177
-      cache_read: 5410330
-      cache_write: 590352
-      cost: 14.9684
+      input: 2307
+      output: 126861
+      cache_read: 12226315
+      cache_write: 687734
+      cost: 20.1623
     - model: claude-haiku-4-5-20251001
       input: 853006
       output: 55817
@@ -60,15 +67,21 @@ usage:
           cache_write: 123558
           cost: 1.9344
     - kind: orchestrator
-      seconds: 328
+      seconds: 464
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 38
-          output: 545
-          cache_read: 5349287
-          cache_write: 20566
-          cost: 1.3231
+          input: 64
+          output: 939
+          cache_read: 11161936
+          cache_write: 31624
+          cost: 2.758
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 74
+          cache_read: 136633
+          cache_write: 47329
+          cost: 0.1586
 cost_of_delay:
   inputs:
     penalty_per_week: 500
@@ -91,9 +104,9 @@ forecast:
 Perform the research necessary to write a new epic to implement agent adapters for both LiteLLM and OpenRouter while exploring the necessary changes and abstractions to capture intent free from vendor specifics (Anthropic SDK API vs. OpenAI's).
 
 ## Acceptance criteria
-- [ ] A new epic to create agent adapters for LiteLLM and OpenRouter
-- [ ] New ADRs where necessary to capture changes necessary to move flai away from being Anthropic specific
-- [ ] Documentation capturing the abstractions and changes needed to expand support for other vendor's agents that can inform the planner that will write the epic's stories
+- [x] A new epic to create agent adapters for LiteLLM and OpenRouter
+- [x] New ADRs where necessary to capture changes necessary to move flai away from being Anthropic specific
+- [x] Documentation capturing the abstractions and changes needed to expand support for other vendor's agents that can inform the planner that will write the epic's stories
 
 ## Tasks
 - T-1333 Record where flai is tied to Anthropic and Claude Code today

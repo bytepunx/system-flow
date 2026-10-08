@@ -3,15 +3,35 @@ id: T-1338
 type: task
 nature: remediation
 title: install.sh retries a GitHub API call the network drops and resolves the latest release from a small page
-status: backlog
+status: done
 parent: S-0291
 owner: alex
 created: 2026-10-08T07:59:51Z
-updated: 2026-10-08T07:59:51Z
-transitions: []
+updated: 2026-10-08T08:24:31Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:14:00Z
+    by: agent-S-0291
+  - to: in-progress
+    at: 2026-10-08T08:14:01Z
+    by: agent-S-0291
+  - to: done
+    at: 2026-10-08T08:24:31Z
+    by: agent-S-0291
 stream: S-0291
 tags: [install, network]
 touches: [install.sh, flai/cmd/installsh_test.go]
+usage:
+  source: log
+  seconds: 630
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 181
+      cache_read: 1279857
+      cache_write: 70404
+      cost: 0.6066
 ---
 # T-1338 install.sh retries a GitHub API call the network drops and resolves the latest release from a small page
 

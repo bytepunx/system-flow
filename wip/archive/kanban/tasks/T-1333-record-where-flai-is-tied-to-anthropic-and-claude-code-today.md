@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 492
-      output: 31502
-      cache_read: 1772090
-      cache_write: 193363
-      cost: 4.9027
+      input: 340
+      output: 18689
+      cache_read: 1801132
+      cache_write: 101314
+      cost: 2.9702
     - model: claude-haiku-4-5-20251001
       input: 853006
       output: 55817

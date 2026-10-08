@@ -4,10 +4,10 @@ title: "S-0341 plan: five tasks in three layers; resume keyed on head, base, and
 anchor:
   path: wip/kanban/stories/S-0341-flai-verify-resumes-at-the-tier-that-failed-when-the-branch-head-and-its-base-are-unchanged-so-a-retry-re-runs-the-failure-and-not-the-tiers-that-passed.md
   item: S-0341
-status: open
-participants: [planner-S-0341]
+status: resolved
+participants: [planner-S-0341, alex]
 created: 2026-10-08T08:06:01Z
-updated: 2026-10-08T08:06:01Z
+updated: 2026-10-08T08:30:58Z
 ---
 
 # TH-0369 S-0341 plan: five tasks in three layers; resume keyed on head, base, and a fingerprint of the tiers
@@ -43,3 +43,6 @@ No two tasks in the same layer share a path.
 ## Proposals
 
 None to split, merge, or drop. If you would rather leave the dashboard out, cancel T-1346 and drop its three touches. The criterion is then met only by `--last` and the raw state name on the page.
+
+### 2026-10-08T08:30:58Z alex
+Resolved.

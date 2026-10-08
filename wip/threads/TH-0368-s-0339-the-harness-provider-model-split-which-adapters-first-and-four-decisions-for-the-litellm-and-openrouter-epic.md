@@ -4,10 +4,10 @@ title: "S-0339: the harness/provider/model split, which adapters first, and four
 anchor:
   path: wip/kanban/stories/S-0339-explore-adapters-for-litellm-and-openrouter.md
   item: S-0339
-status: open
-participants: [agent-S-0339, orchestrator]
+status: resolved
+participants: [agent-S-0339, orchestrator, alex]
 created: 2026-10-08T08:04:25Z
-updated: 2026-10-08T08:04:48Z
+updated: 2026-10-08T08:37:05Z
 ---
 
 # TH-0368 S-0339: the harness/provider/model split, which adapters first, and four decisions for the LiteLLM and OpenRouter epic
@@ -45,3 +45,38 @@ Recommendation for the operator: answer "as recommended" on 1 to 4, and decide 5
 For the agent: until the operator answers, it can draft the ADRs as `proposed` without deciding them.
 
 Source: design/adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md § Decision
+
+### 2026-10-08T08:29:00Z agent-S-0339
+While this awaits you, the first four decisions are drafted as proposed ADRs on `story/S-0339`, as the orchestrator suggested: ADR-0129 (the split, `providers` on the host), ADR-0130 (the neutral contracts), ADR-0131 (a harness without a guard hook), ADR-0132 (cost from the gateway's spend log, `priced_by`). `design/system/agent-adapters.md` has a `## Decision` section linking them. On "as recommended" I set each to accepted and create the epic; on another answer I rewrite the ADR concerned. Question 5, the paid trial, is recorded in the epic's notes either way.
+
+### 2026-10-08T08:30:29Z alex
+1. take the recommendation but allow project specific overrides for the configuration values that aren't secrets 2. A 3. recommendation 4. yes 5. begin work to support open router but make it so that the openrouter integration/smoke tests do not work if there isn't a configured key for it.
+
+### 2026-10-08T08:31:44Z agent-S-0339
+Recorded. How I read each answer, so you can correct it here before acceptance:
+
+1. ADR-0129 accepted, with a clause: a project's manifest may override an entry's non-secret values, `api`, `base_url`, and `models`; `key_env` stays the host's, since it names a variable of the host's environment, and the host must have the entry.
+2. Option A only: the provider split and Claude Code over a gateway, with the neutral contracts (ADR-0130). No Codex, OpenCode, Goose, or loop of flai's own in this epic. The spike's two checks (what the gateway forwards, what its spend log says) become the first story's work against OpenRouter.
+3. ADR-0131 accepted as recommended.
+4. ADR-0132 accepted.
+5. The epic starts with OpenRouter; LiteLLM follows. Its integration and smoke tests run only where an OpenRouter key is configured and do nothing where it is not, so no close-out or CI run without the key fails for want of it. I read "do not work" as "are skipped", not "fail".
+
+Creating the epic next, with no stories, for the planner.
+
+### 2026-10-08T08:36:04Z orchestrator (recommendation)
+Recommendation for the operator: confirm the agent's readings of your five answers (08:31:44Z), or correct them here, then resolve this thread. It is the only thing blocking S-0339's acceptance.
+
+- On 5, "skipped, saying so", not "fail", is the reading I recommend. A test that fails without a key would fail every close-out and CI run on a host without OpenRouter credit, which is exactly what S-0340 is removing for GitHub.
+- S-0339 is in review. Verify passed at its head, ce4a34de. The verifier matched all three criteria:
+  - E-0019, with nine criteria including key-gated tests;
+  - ADR-0129 to ADR-0132, with ADR-0129 letting a manifest override `api`, `base_url` and `models` while `key_env` stays on the host;
+  - `design/system/agent-adapters.md`, which has a Decision section and is indexed.
+- No secret appears anywhere.
+- `flai accept --dry-run` names one blocker: this thread is open.
+
+Once it is resolved, I accept S-0339 and start E-0019's planner, which I have held back until the finding and the ADRs are on main.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-08T08:37:05Z alex
+Resolved: S-0339 was accepted

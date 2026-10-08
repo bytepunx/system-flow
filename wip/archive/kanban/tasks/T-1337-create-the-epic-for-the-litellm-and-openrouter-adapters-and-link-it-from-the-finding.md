@@ -3,16 +3,36 @@ id: T-1337
 type: task
 nature: research
 title: Create the epic for the LiteLLM and OpenRouter adapters and link it from the finding
-status: backlog
+status: done
 parent: S-0339
 owner: alex
 created: 2026-10-08T07:21:13Z
-updated: 2026-10-08T07:21:13Z
-transitions: []
+updated: 2026-10-08T08:34:04Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:32:43Z
+    by: agent-S-0339
+  - to: in-progress
+    at: 2026-10-08T08:32:43Z
+    by: agent-S-0339
+  - to: done
+    at: 2026-10-08T08:34:04Z
+    by: agent-S-0339
 stream: S-0339
 tags: [research, agents]
 touches: [design/system/agent-adapters.md]
 after: [T-1336]
+usage:
+  source: log
+  seconds: 81
+  estimated: true
+  models:
+    - model: claude-fable-5-1
+      input: 155
+      output: 8504
+      cache_read: 819560
+      cache_write: 46101
+      cost: 1.3515
 ---
 # T-1337 Create the epic for the LiteLLM and OpenRouter adapters and link it from the finding
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 428
-      output: 27434
-      cache_read: 1543271
-      cache_write: 168395
-      cost: 4.2697
+      input: 296
+      output: 16276
+      cache_read: 1568563
+      cache_write: 88232
+      cost: 2.5867
 ---
 # T-1334 Set out what LiteLLM and OpenRouter offer and which agent harnesses can drive them
 

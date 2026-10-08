@@ -3,16 +3,36 @@ id: T-1342
 type: task
 nature: remediation
 title: Close I-0086 saying the installer and self-upgrade retry a dropped GitHub connection
-status: backlog
+status: done
 parent: S-0291
 owner: alex
 created: 2026-10-08T08:00:17Z
-updated: 2026-10-08T08:00:28Z
-transitions: []
+updated: 2026-10-08T08:25:34Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:25:27Z
+    by: agent-S-0291
+  - to: in-progress
+    at: 2026-10-08T08:25:28Z
+    by: agent-S-0291
+  - to: done
+    at: 2026-10-08T08:25:34Z
+    by: agent-S-0291
 stream: S-0291
 tags: [issues]
 touches: [design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/summary.md]
 after: [T-1338, T-1339, T-1340]
+usage:
+  source: log
+  seconds: 6
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 24
+      cache_read: 182313
+      cache_write: 830
+      cost: 0.0823
 ---
 # T-1342 Close I-0086 saying the installer and self-upgrade retry a dropped GitHub connection
 

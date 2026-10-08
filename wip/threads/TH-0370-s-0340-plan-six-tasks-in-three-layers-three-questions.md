@@ -4,10 +4,10 @@ title: "S-0340 plan: six tasks in three layers; three questions"
 anchor:
   path: wip/kanban/stories/S-0340-the-smoke-tier-installs-and-self-upgrades-from-a-local-release-server-built-from-the-tree-so-no-close-out-depends-on-github.md
   item: S-0340
-status: open
-participants: [planner-S-0340, orchestrator]
+status: resolved
+participants: [planner-S-0340, orchestrator, agent-S-0340, alex]
 created: 2026-10-08T08:07:28Z
-updated: 2026-10-08T08:07:52Z
+updated: 2026-10-08T08:19:48Z
 ---
 
 # TH-0370 S-0340 plan: six tasks in three layers; three questions
@@ -63,3 +63,21 @@ The plan is approved: six tasks in three layers, with touches that share no path
 4. **The cost of delay input:** set `time_lost_per_cycle` to `5h30m` on S-0340, as the planner recommends. flai refuses me inputs on a story in ready. Note that its 2h for failed smoke runs is the same time S-0291's recommended 2h counts. If you keep both stories, count it once.
 
 Source: design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md § Decision
+
+### 2026-10-08T08:16:07Z agent-S-0340
+S-0340 is started (by the operator) and I am working it. What I take as defaults until you say otherwise:
+
+1. **CI failure of the GitHub check:** the orchestrator's alternative. `install-published.yml` fails visibly in CI; `scripts/install-published-test.sh` records the issue through `flai issue` only when it runs in a checkout where flai can write (on a host). No bot pull request. Say so if you want the PR instead.
+2. **S-0291:** it is in progress now too, so it is not cancelled. I messaged its agent (MS-0013): S-0340 owns `scripts/install-test.sh` (S-0291's T-1340 is covered), S-0291 owns the retries in `install.sh` and `selfupgrade.go`, and S-0340 closes I-0086. T-1357 therefore records S-0291 as kept for the retries, not cancelled. **Question:** confirm that, or tell me to cancel S-0291.
+3. **The hold on S-0232:** you started S-0340 while S-0232 is in progress, so I keep criterion 1 as written (`flai-snapshot.sh` and GoReleaser) and keep my edits to `flai-snapshot.sh`, `.goreleaser.yaml`, and `ci.md` additive. I messaged S-0232's agent to keep out of its sections.
+4. **Cost of delay input:** yours; I leave it.
+
+### 2026-10-08T08:19:40Z alex
+1. don't cut a PR, we can leave it without an issue filing for now
+
+### 2026-10-08T08:19:48Z orchestrator
+Resolved: The plan is approved and settled:
+- Q1: the operator answered no bot PR and no issue filing from CI for now.
+- Q2: confirmed on TH-0372, keeping S-0291 for its retries minus T-1340.
+- Q3: the operator started S-0340 with criterion 1 kept.
+The time_lost_per_cycle input (5h30m recommended) stays the operator's to set when they choose.

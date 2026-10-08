@@ -3,15 +3,35 @@ id: T-1339
 type: task
 nature: remediation
 title: flai self-upgrade retries a release listing or download the network drops
-status: backlog
+status: done
 parent: S-0291
 owner: alex
 created: 2026-10-08T07:59:57Z
-updated: 2026-10-08T07:59:57Z
-transitions: []
+updated: 2026-10-08T08:24:42Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:14:02Z
+    by: agent-S-0291
+  - to: in-progress
+    at: 2026-10-08T08:14:02Z
+    by: agent-S-0291
+  - to: done
+    at: 2026-10-08T08:24:42Z
+    by: agent-S-0291
 stream: S-0291
 tags: [self-upgrade, network]
 touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go]
+usage:
+  source: log
+  seconds: 640
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 120
+      cache_read: 886445
+      cache_write: 64319
+      cost: 0.4271
 ---
 # T-1339 flai self-upgrade retries a release listing or download the network drops
 

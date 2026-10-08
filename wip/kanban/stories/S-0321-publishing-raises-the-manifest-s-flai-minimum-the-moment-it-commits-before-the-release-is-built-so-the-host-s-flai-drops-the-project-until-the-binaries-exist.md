@@ -6,7 +6,7 @@ title: Publishing raises the manifest's flai minimum the moment it commits, befo
 status: in-progress
 owner: alex
 created: 2026-10-07T18:59:52Z
-updated: 2026-10-08T07:58:14Z
+updated: 2026-10-08T08:22:58Z
 transitions:
   - to: ready
     at: 2026-10-08T05:02:36Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0321
 tags: [flai, release, serve]
 topics: [release]
-touches: [flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/release.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0107-publishing-raises-the-manifest-s-flai-minimum-the-moment-it-commits-before-the-release-is-built-so-the-host-s-flai-drops-the-project-until-the-binaries-exist.md, design/issues/summary.md]
+touches: [flai/internal/release/release.go, flai/internal/release/release_test.go, flai/cmd/release.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go, design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0107-publishing-raises-the-manifest-s-flai-minimum-the-moment-it-commits-before-the-release-is-built-so-the-host-s-flai-drops-the-project-until-the-binaries-exist.md, design/issues/summary.md, design/system/work-hierarchy.md, flai/internal/manifest/manifest.go, design/issues/I-0079-testroundtriprepositoryitems-reads-the-live-main-checkout-and-fails-a-close-out-when-another-agent-edits-a-story-mid-run.md, design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,19 +24,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 515
+  seconds: 820
   estimated: true
   turns:
     - day: 2026-10-08
-      hand_edits: 1
-      work: 16
+      ceremony: 2
+      hand_edits: 2
+      work: 34
   models:
     - model: claude-opus-5-5
-      input: 140
-      output: 818
-      cache_read: 5329464
-      cache_write: 312189
-      cost: 2.5254
+      input: 228
+      output: 1399
+      cache_read: 10092978
+      cache_write: 434803
+      cost: 4.7196
   strategic:
     - kind: orchestrator
       seconds: 418
@@ -75,8 +76,8 @@ This story remediates [I-0107](../../../design/issues/I-0107-publishing-raises-t
 Directions to weigh: have `flai release` raise `flai.minimum` only after the release's binaries are published, in a later commit, or have the publish leave the bump for the first run of the upgraded flai; or have `flai serve` keep serving a project whose manifest newly demands a minimum above its own version, with the warning it already logs for a flai older than the project, and refuse only the writes that touch fields it does not know. Either way the publish should not cancel its own `publish.run`: the journal recorded it as failed with `flai exited with -1` although the tags had been pushed. A test that publishes a release raising the minimum against a running `flai serve` of the older version, and expects the project to stay served, would pin it. The release build's own failure that day (a duplicated `## 1.0.67` heading in `template/CHANGELOG.md`, which `TestRepositoryLintsClean` rejects, since `flai release` prepended a second section with the heading the stories had already written) is a separate defect and made the outage last longer.
 
 ## Acceptance criteria
-- [ ] The cause I-0107 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0107 is closed with `flai issue close I-0107 --reason` saying what fixed it
+- [x] The cause I-0107 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0107 is closed with `flai issue close I-0107 --reason` saying what fixed it
 
 ## Tasks
 - T-1309 flai release raises flai.minimum no higher than the flai that publishes
@@ -87,6 +88,8 @@ Directions to weigh: have `flai release` raise `flai.minimum` only after the rel
 ## Notes
 
 Cost of delay inputs set by flai from I-0107. time_lost_per_cycle 1h: 30m per occurrence × 2 occurrences ÷ 1 cycle of 168h (first reported 2026-10-07T07:39:30Z, 0.5 days before this story; under one cycle counts as one).
+
+The separate defect I-0107 names, the duplicated `## 1.0.67` heading in `template/CHANGELOG.md`, was already fixed on `main` by 7772bd34 (`TestBumpMergesIntoAChangelogSectionTheVersionAlreadyHas`), so no issue records it and this story leaves it out.
 
 ### Planning
 

@@ -3,11 +3,11 @@ id: T-1336
 type: task
 nature: research
 title: Report the options to the operator and record the decision in ADRs
-status: in-progress
+status: done
 parent: S-0339
 owner: alex
 created: 2026-10-08T07:20:56Z
-updated: 2026-10-08T08:04:09Z
+updated: 2026-10-08T08:32:17Z
 transitions:
   - to: ready
     at: 2026-10-08T08:04:09Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-08T08:04:09Z
     by: agent-S-0339
+  - to: done
+    at: 2026-10-08T08:32:17Z
+    by: agent-S-0339
 stream: S-0339
 tags: [research, agents, adr]
 touches: [design/system/agent-adapters.md, design/adrs, design/adrs/README.md]
 after: [T-1335]
 usage:
   source: log
-  seconds: 42
+  seconds: 422
   estimated: true
   models:
     - model: claude-fable-5-1
-      input: 106
-      output: 6803
-      cache_read: 382673
-      cache_write: 41756
-      cost: 1.0587
+      input: 923
+      output: 50751
+      cache_read: 4891141
+      cache_write: 275128
+      cost: 8.0659
 ---
 # T-1336 Report the options to the operator and record the decision in ADRs
 

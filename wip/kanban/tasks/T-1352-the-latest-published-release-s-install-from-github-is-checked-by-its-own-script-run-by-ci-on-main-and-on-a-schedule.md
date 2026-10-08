@@ -3,15 +3,35 @@ id: T-1352
 type: task
 nature: remediation
 title: The latest published release's install from GitHub is checked by its own script, run by CI on main and on a schedule
-status: backlog
+status: done
 parent: S-0340
 owner: alex
 created: 2026-10-08T08:05:51Z
-updated: 2026-10-08T08:06:10Z
-transitions: []
+updated: 2026-10-08T08:24:57Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:16:40Z
+    by: agent-S-0340
+  - to: in-progress
+    at: 2026-10-08T08:16:40Z
+    by: agent-S-0340
+  - to: done
+    at: 2026-10-08T08:24:57Z
+    by: agent-S-0340
 stream: S-0340
 tags: [cli]
 touches: [scripts/install-published-test.sh, ".github/workflows/install-published.yml", Makefile]
+usage:
+  source: log
+  seconds: 497
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 339
+      cache_read: 3534321
+      cache_write: 117451
+      cost: 1.6416
 ---
 # T-1352 The latest published release's install from GitHub is checked by its own script, run by CI on main and on a schedule
 

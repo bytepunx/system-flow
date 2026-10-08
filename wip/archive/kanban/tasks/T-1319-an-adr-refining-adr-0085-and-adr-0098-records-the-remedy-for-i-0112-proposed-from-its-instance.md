@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 8765
-      cache_read: 1331214
-      cache_write: 54674
-      cost: 0.7626
+      input: 19
+      output: 7519
+      cache_read: 1335987
+      cache_write: 46092
+      cost: 0.6894
 ---
 # T-1319 An ADR refining ADR-0085 and ADR-0098 records the remedy for I-0112, proposed from its instance
 

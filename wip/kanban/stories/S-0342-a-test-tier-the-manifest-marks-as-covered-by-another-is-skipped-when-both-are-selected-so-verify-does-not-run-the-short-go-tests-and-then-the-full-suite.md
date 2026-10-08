@@ -6,7 +6,7 @@ title: A test tier the manifest marks as covered by another is skipped when both
 status: ready
 owner: alex
 created: 2026-10-08T07:59:14Z
-updated: 2026-10-08T08:23:42Z
+updated: 2026-10-08T08:24:19Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:30Z
@@ -24,24 +24,34 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 83
+    - kind: planner
+      seconds: 44
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 382
-          cache_read: 3920294
-          cache_write: 11915
-          cost: 0.9689
+          input: 16
+          output: 4821
+          cache_read: 422747
+          cache_write: 51765
+          cost: 0.5952
+    - kind: orchestrator
+      seconds: 373
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 52
+          output: 883
+          cache_read: 10160388
+          cache_write: 24554
+          cost: 2.5095
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h54m
     by: alex
     at: 2026-10-08T08:23:42Z
-  value: 2.5
+  value: 285
   by: planner-S-0342
-  at: 2026-10-08T08:07:48Z
+  at: 2026-10-08T08:24:19Z
 forecast:
   duration: 41m
   delivery: 2026-10-08T08:52:00Z
@@ -79,7 +89,7 @@ S-0287's record on 2026-10-08: go-test 1 min 7 s, integration 3 min 6 s, smoke 1
 
 ### Planning
 
-Planned by planner-S-0342 on 2026-10-08. Every touch is a file; no folder touch is kept.
+Planned by planner-S-0342 on 2026-10-08, and revisited the same day after the operator set the cost of delay input. Every touch is a file; no folder touch is kept.
 
 | Touch | Source | Why |
 |-------|--------|-----|
@@ -99,6 +109,6 @@ Planned by planner-S-0342 on 2026-10-08. Every touch is a file; no folder touch 
 
 `touches suggest` listed the most frequent co-changes (`docs/operators/index.md`, `design/system/flaiover-dashboard.md`, `docs/users/flai-reference.md`, `design/adrs/README.md`, and others); none is taken. `flai-reference.md` is generated from command help and no flag changes. No ADR is planned, since the key extends `tests` as `all_only` did.
 
-Forecast: 41m, as `flai forecast` gives it after the touches were predicted: 78 s per unit over 51 done improvement stories on claude-opus-5-5 in the large band, times size 31 (4 criteria, 27 touches). It stands: six tasks in three layers, Go, one small flaiover change, and docs, with a close-out that runs integration, smoke, and the flaiover tier. flai plays the delivery out again as the board moves.
+Forecast: 41m, as `flai forecast` gives it: 78 s per unit over 51 done improvement stories on claude-opus-5-5 in the large band, times size 31 (4 criteria, 27 touches). It stands: six tasks in three layers, Go, one small flaiover change, and docs, with a close-out that runs integration, smoke, and the flaiover tier. flai plays the delivery out again as the board moves; the story is held meanwhile on overlap with S-0232 (`docs/operators/settings.md`) and S-0321 (`flai/internal/manifest/manifest.go`).
 
-Cost of delay: 2.50 USD a week, as `flai cod` works it out from the operator's input, 1m lost per 168h cycle at 150 USD an hour. It stands as the inputs give it. The Notes say the minute is lost on every close-out that touches `flai/`, and 114 of the 136 stories accepted in the 7 days to 2026-10-08 changed `flai/`, so per week the loss is nearer 1h54m, 285 USD a week. That is the operator's input to change; it is asked on the plan's thread.
+Cost of delay: 285 USD a week, as `flai cod` works it out from the operator's input of 1h54m lost per 168h cycle at 150 USD an hour. It stands as the inputs give it. The input matches the count behind it: about a minute lost on each of the 114 of 136 stories accepted in the 7 days to 2026-10-08 that changed `flai/`. The earlier value, 2.50 USD a week, came from the first input of 1m a cycle and is replaced.

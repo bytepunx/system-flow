@@ -31,7 +31,7 @@ usage:
       output: 357
       cache_read: 2175146
       cache_write: 97496
-      cost: 1.0173
+      cost: 1.0188
 ---
 # T-1309 flai release raises flai.minimum no higher than the flai that publishes
 

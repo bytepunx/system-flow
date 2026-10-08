@@ -23,15 +23,15 @@ tags: [flai, serve]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go]
 usage:
   source: log
-  seconds: 484
+  seconds: 502
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 243
-      cache_read: 2288749
-      cache_write: 113449
-      cost: 1.0753
+      input: 60
+      output: 262
+      cache_read: 2723652
+      cache_write: 133151
+      cost: 1.2806
 ---
 # T-1310 flai serve lets a project's requests in flight finish when its manifest stops loading
 

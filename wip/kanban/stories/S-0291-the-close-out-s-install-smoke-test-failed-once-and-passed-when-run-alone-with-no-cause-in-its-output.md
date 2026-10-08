@@ -3,37 +3,55 @@ id: S-0291
 type: story
 nature: improvement
 title: The close-out's install smoke test failed once and passed when run alone, with no cause in its output
-status: ready
+status: review
 owner: alex
 created: 2026-10-06T10:31:55Z
-updated: 2026-10-08T08:07:59Z
+updated: 2026-10-08T08:37:05Z
 transitions:
   - to: ready
     at: 2026-10-08T07:57:14Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T08:13:36Z
+    by: agent-S-0291
+  - to: review
+    at: 2026-10-08T08:37:02Z
+    by: agent-S-0291
 tags: []
 topics: [release]
-touches: [install.sh, scripts/install-test.sh, flai/cmd/installsh_test.go, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/summary.md]
+touches: [install.sh, flai/cmd/installsh_test.go, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md, design/issues/summary.md, design/issues/I-0122-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 719
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      ceremony: 2
+      hand_edits: 1
+      work: 25
+  models:
+    - model: claude-opus-5-5
+      input: 116
+      output: 597
+      cache_read: 5186840
+      cache_write: 291446
+      cost: 2.4611
   strategic:
     - kind: orchestrator
-      seconds: 1123
+      seconds: 1261
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 59
-          output: 1011
-          cache_read: 9044665
-          cache_write: 20285
-          cost: 2.2337
+          input: 80
+          output: 1318
+          cache_read: 13128694
+          cache_write: 30112
+          cost: 3.2424
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 6m
@@ -59,8 +77,8 @@ finalized:
 This story remediates [I-0086](../../../design/issues/I-0086-the-close-out-s-install-smoke-test-failed-once-and-passed-when-run-alone-with-no-cause-in-its-output.md), "The close-out's install smoke test failed once and passed when run alone, with no cause in its output". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0086 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0086 is closed with `flai issue close I-0086 --reason` saying what fixed it
+- [x] The cause I-0086 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0086 is closed with `flai issue close I-0086 --reason` saying what fixed it
 
 ## Tasks
 - T-1338 install.sh retries a GitHub API call the network drops and resolves the latest release from a small page

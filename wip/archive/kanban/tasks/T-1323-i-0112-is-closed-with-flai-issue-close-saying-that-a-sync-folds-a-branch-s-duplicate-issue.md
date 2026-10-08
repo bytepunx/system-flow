@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 3226
-      cache_read: 489928
-      cache_write: 20122
-      cost: 0.2807
+      input: 7
+      output: 2767
+      cache_read: 491685
+      cache_write: 16963
+      cost: 0.2537
 ---
 # T-1323 I-0112 is closed with flai issue close, saying that a sync folds a branch's duplicate issue
 

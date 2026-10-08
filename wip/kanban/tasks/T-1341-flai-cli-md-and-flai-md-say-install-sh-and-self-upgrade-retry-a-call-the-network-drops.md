@@ -3,16 +3,30 @@ id: T-1341
 type: task
 nature: remediation
 title: flai-cli.md and flai.md say install.sh and self-upgrade retry a call the network drops
-status: backlog
+status: done
 parent: S-0291
 owner: alex
 created: 2026-10-08T08:00:12Z
-updated: 2026-10-08T08:00:12Z
-transitions: []
+updated: 2026-10-08T08:25:23Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:25:21Z
+    by: agent-S-0291
+  - to: in-progress
+    at: 2026-10-08T08:25:21Z
+    by: agent-S-0291
+  - to: done
+    at: 2026-10-08T08:25:23Z
+    by: agent-S-0291
 stream: S-0291
 tags: [docs, install]
 touches: [design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1338, T-1339]
+usage:
+  source: log
+  seconds: 2
+  estimated: true
+  models: []
 ---
 # T-1341 flai-cli.md and flai.md say install.sh and self-upgrade retry a call the network drops
 

@@ -3,16 +3,36 @@ id: T-1331
 type: task
 nature: improvement
 title: flai task done, the MCP tool task_done, and the host method task.done take a message only when there is something to commit, and print the paths left
-status: backlog
+status: done
 parent: S-0322
 owner: alex
 created: 2026-10-08T04:35:19Z
-updated: 2026-10-08T04:38:15Z
-transitions: []
+updated: 2026-10-08T08:32:30Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:25:40Z
+    by: agent-S-0322
+  - to: in-progress
+    at: 2026-10-08T08:25:40Z
+    by: agent-S-0322
+  - to: done
+    at: 2026-10-08T08:32:30Z
+    by: agent-S-0322
 stream: S-0322
 tags: [flai]
 touches: [flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai-reference.md]
 after: [T-1328]
+usage:
+  source: log
+  seconds: 409
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 75
+      output: 447
+      cache_read: 3594678
+      cache_write: 124157
+      cost: 1.6718
 ---
 # T-1331 flai task done, the MCP tool task_done, and the host method task.done take a message only when there is something to commit, and print the paths left
 

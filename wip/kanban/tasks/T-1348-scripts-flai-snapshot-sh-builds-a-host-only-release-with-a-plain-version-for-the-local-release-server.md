@@ -3,15 +3,35 @@ id: T-1348
 type: task
 nature: remediation
 title: scripts/flai-snapshot.sh builds a host-only release with a plain version for the local release server
-status: backlog
+status: done
 parent: S-0340
 owner: alex
 created: 2026-10-08T08:05:33Z
-updated: 2026-10-08T08:05:33Z
-transitions: []
+updated: 2026-10-08T08:24:12Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:16:38Z
+    by: agent-S-0340
+  - to: in-progress
+    at: 2026-10-08T08:16:39Z
+    by: agent-S-0340
+  - to: done
+    at: 2026-10-08T08:24:12Z
+    by: agent-S-0340
 stream: S-0340
 tags: [cli]
 touches: [scripts/flai-snapshot.sh, flai/.goreleaser.yaml]
+usage:
+  source: log
+  seconds: 453
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 276
+      cache_read: 1645173
+      cache_write: 74267
+      cost: 0.773
 ---
 # T-1348 scripts/flai-snapshot.sh builds a host-only release with a plain version for the local release server
 

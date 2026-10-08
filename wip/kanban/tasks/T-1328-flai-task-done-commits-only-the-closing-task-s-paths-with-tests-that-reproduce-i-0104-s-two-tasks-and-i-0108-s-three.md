@@ -3,16 +3,36 @@ id: T-1328
 type: task
 nature: remediation
 title: flai task done commits only the closing task's paths, with tests that reproduce I-0104's two tasks and I-0108's three
-status: backlog
+status: done
 parent: S-0322
 owner: alex
 created: 2026-10-08T04:32:40Z
-updated: 2026-10-08T04:35:14Z
-transitions: []
+updated: 2026-10-08T08:25:30Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:16:49Z
+    by: agent-S-0322
+  - to: in-progress
+    at: 2026-10-08T08:16:49Z
+    by: agent-S-0322
+  - to: done
+    at: 2026-10-08T08:25:30Z
+    by: agent-S-0322
 stream: S-0322
 tags: [flai]
-touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
+touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, design/adrs/0128-flai-task-done-commits-the-paths-the-closing-task-covers-and-those-no-other.md, design/system/flai-cli.md]
 after: [T-1330]
+usage:
+  source: log
+  seconds: 521
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 493
+      cache_read: 4202905
+      cache_write: 135088
+      cost: 1.9501
 ---
 # T-1328 flai task done commits only the closing task's paths, with tests that reproduce I-0104's two tasks and I-0108's three
 

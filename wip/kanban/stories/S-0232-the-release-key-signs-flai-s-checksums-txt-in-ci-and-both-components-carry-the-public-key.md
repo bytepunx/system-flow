@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-07T22:28:05Z
+updated: 2026-10-08T08:25:05Z
 transitions:
   - to: ready
     at: 2026-10-07T22:14:01Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0232
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, scripts/flai-snapshot.sh]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,12 +25,16 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1060
+  seconds: 1230
   turns:
     - day: 2026-10-07
       ceremony: 7
       hand_edits: 3
       work: 44
+    - day: 2026-10-08
+      ceremony: 2
+      hand_edits: 2
+      work: 25
   models:
     - model: claude-haiku-4-5-20251001
       input: 210085
@@ -39,11 +43,11 @@ usage:
       cache_write: 0
       cost: 0.2639
     - model: claude-opus-5-5
-      input: 304
-      output: 100381
-      cache_read: 16917566
-      cache_write: 490525
-      cost: 8.5479
+      input: 372
+      output: 116857
+      cache_read: 25770409
+      cache_write: 762627
+      cost: 12.8251
   strategic:
     - kind: orchestrator
       seconds: 823
@@ -88,6 +92,10 @@ The first step of ADR-0070: a cosign key pair exists, the two release workflows 
 - T-1225 The release public key is a PEM constant in flai's buildinfo and in flaiover's release module, parsed by a test in each and checked identical
 
 ## Notes
+
+### Snapshot builds
+
+`scripts/flai-snapshot.sh` is S-0340's to change (MS-0014, MS-0019): its d3322fda skips `sign` in both its modes. Until S-0340 is accepted, a plain `make flai-snapshot` on a main that holds S-0232's `signs` entry needs cosign and the key; pass `--skip=sign` by hand meanwhile.
 
 ### Planning
 

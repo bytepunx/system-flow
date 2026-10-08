@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 214.8605
-accrued_seconds: 110715
-tasks_completed: 258
-last_run: 2026-10-08T08:08:00Z
+accrued_cost: 233.7839
+accrued_seconds: 112452
+tasks_completed: 272
+last_run: 2026-10-08T08:36:57Z
 ---
 
 # Orchestrator activity
@@ -1817,6 +1817,104 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0342, S-0343
 - Seconds: 5
 - Cost: 0.1808 USD, estimated
+
+### 2026-10-08T08:08:32Z
+
+- Summary: The operator accepted S-0326 (I-0112, ADR-0126 issue fold and merge at sync). Published under judgement (1 pending, 25 USD/week) as flai 1.39.10→1.39.11 (flai/v1.39.11), pushed, because it removes a recurring source of sync conflicts.
+- Items: S-0326
+- Seconds: 32
+- Cost: 1.5536 USD, estimated
+
+### 2026-10-08T08:09:30Z
+
+- Summary: Recommended an answer on TH-0371, citing wip/kanban/stories/S-0342-a-test-tier-the-manifest-marks-as-covered-by-another-is-skipped-when-both-are-selected-so-verify-does-not-run-the-short-go-tests-and-then-the-full-suite.md
+- Items: S-0342
+- Seconds: 58
+- Cost: 0.6499 USD, estimated
+
+### 2026-10-08T08:09:32Z
+
+- Summary: TH-0371 (planner-S-0342): approved the plan (6 tasks, 3 layers, 41m), keeping T-1358. Recommended to the operator: time_lost_per_cycle 1h54m (flai refuses me inputs on a ready story); flaiover covering flaiover-lint and vitest as a later follow-up rather than this story's scope; and the comment-only template change.
+- Items: S-0342
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T08:09:52Z
+
+- Summary: Resolved planner-S-0291's TH-0367 under plan_backlog_stories: the operator confirmed my recommendation (plan approved, time_lost_per_cycle 2h).
+- Items: S-0291
+- Seconds: 20
+- Cost: 0.2851 USD, estimated
+
+### 2026-10-08T08:13:47Z
+
+- Summary: The in-progress limit is now 5. S-0291 and S-0322 were pulled, making 5 in progress: S-0232, S-0291, S-0321, S-0322 and S-0339. Applied the throughput order to the remaining ready stories: S-0342 (41m), S-0341 (1h30m), S-0340 (1h30m), S-0343 (no forecast).
+- Items: S-0291, S-0322
+- Seconds: 235
+- Cost: 1.4472 USD, estimated
+
+### 2026-10-08T08:16:19Z
+
+- Summary: Recommended an answer on TH-0372, citing wip/kanban/stories/S-0340-the-smoke-tier-installs-and-self-upgrades-from-a-local-release-server-built-from-the-tree-so-no-close-out-depends-on-github.md
+- Items: S-0340
+- Seconds: 152
+- Cost: 1.8602 USD, estimated
+
+### 2026-10-08T08:16:20Z
+
+- Summary: TH-0372 (S-0340 criterion 6, keep or cancel S-0291) is a scope decision criterion 6 leaves to the operator. I recommended keeping S-0291's retries and dropping its T-1340, matching my TH-0370 recommendation.
+- Items: S-0340, S-0291
+- Seconds: 1
+- Cost: 0.0000 USD
+
+### 2026-10-08T08:19:49Z
+
+- Summary: Resolved planner-S-0340's TH-0370 under plan_backlog_stories. Q1 was answered by the operator (no bot PR, no CI issue filing for now), Q2 confirmed on TH-0372 (keep S-0291 for its retries), and Q3 settled when the operator started S-0340 with criterion 1. The 5h30m cost input is left to the operator.
+- Items: S-0340
+- Seconds: 209
+- Cost: 2.1025 USD, estimated
+
+### 2026-10-08T08:24:39Z
+
+- Summary: Resolved planner-S-0342's TH-0371 under plan_backlog_stories. The operator set the 1h54m input, giving 285 USD/week, and the plan stands as drafted. My unconfirmed points 2 and 3 (no flaiover covers, a comment-only template change) match the drafted plan, so nothing waits on them. Re-applied the throughput order: S-0342, S-0341, S-0343.
+- Items: S-0342
+- Seconds: 290
+- Cost: 1.5406 USD, estimated
+
+### 2026-10-08T08:33:48Z
+
+- Summary: Started the planner for S-0344 under plan_backlog_stories, the first story flai plan --candidates lists (a dashboard restart under a floating tag). Deferred E-0019 (LiteLLM and OpenRouter adapters), which plan --candidates lists first: its finding, design/system/agent-adapters.md, and ADRs 0129 to 0132 are still on story/S-0339 and not on main, so a planner started now would plan the epic without them. I will start it once S-0339 is accepted.
+- Items: S-0344, E-0019
+- Seconds: 549
+- Cost: 6.6235 USD, estimated
+
+### 2026-10-08T08:36:04Z
+
+- Summary: Recommended an answer on TH-0368, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0339
+- Seconds: 136
+- Cost: 1.5935 USD, estimated
+
+### 2026-10-08T08:36:06Z
+
+- Summary: S-0339 is in review. Verify passed at head ce4a34de, and the verifier matched all three criteria (E-0019; ADRs 0129 to 0132 reflecting the operator's answers; agent-adapters.md). The dry-run is blocked only by the open TH-0368, where the agent asked the operator to confirm its readings. I recommended confirming them, with "skipped, not fail" on answer 5, and resolving the thread. S-0339 stays in review, and E-0019's planner waits on its acceptance.
+- Items: S-0339, E-0019
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-08T08:36:42Z
+
+- Summary: Answered TH-0373, citing design/adrs/0118-a-dashboard-release-chosen-on-the-updates-page-keeps-running-through-restarts.md § Decision
+- Items: S-0344
+- Seconds: 36
+- Cost: 0.6838 USD, estimated
+
+### 2026-10-08T08:36:57Z
+
+- Summary: Settled planner-S-0344's TH-0373: approved the plan, keeping the watch, T-1361, in scope under ADR-0118 § Decision ¶1, and resolved the thread. Finalized S-0344 under finalize_drafts: complete per flai promote --drafts, 30m, 12.50 USD/week, its criteria matched by its tasks. It is not yet promotable: held on overlap with S-0321 on docs/operators/index.md. Started the planner for S-0345, the next plan candidate (E-0019 still deferred until S-0339 is accepted). S-0334 stays a draft per TH-0319.
+- Items: S-0344, S-0345
+- Seconds: 15
+- Cost: 0.5835 USD, estimated
 
 ## Refusals
 

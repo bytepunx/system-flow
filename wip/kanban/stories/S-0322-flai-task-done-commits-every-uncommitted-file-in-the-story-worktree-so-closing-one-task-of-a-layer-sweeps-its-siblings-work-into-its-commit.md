@@ -3,25 +3,40 @@ id: S-0322
 type: story
 nature: improvement
 title: flai task done commits every uncommitted file in the story worktree, so closing one task of a layer sweeps its siblings' work into its commit
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-07T18:59:53Z
-updated: 2026-10-08T08:07:59Z
+updated: 2026-10-08T08:35:18Z
 transitions:
   - to: ready
     at: 2026-10-08T04:36:45Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-08T08:13:36Z
+    by: agent-S-0322
 tags: [flai]
-touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md]
+touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/conventions/git.md, template/root/design/conventions/git.md, template/CHANGELOG.md, design/issues/I-0104-flai-task-done-commits-everything-in-the-worktree-so-two-tasks-of-one-layer-cannot-be-closed-apart.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md, design/adrs/0128-flai-task-done-commits-the-paths-the-closing-task-covers-and-those-no-other.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1136
+  estimated: true
+  turns:
+    - day: 2026-10-08
+      ceremony: 2
+      hand_edits: 2
+      work: 32
+  models:
+    - model: claude-opus-5-5
+      input: 258
+      output: 1499
+      cache_read: 11678857
+      cache_write: 530477
+      cost: 5.4886
   strategic:
     - kind: planner
       seconds: 369
@@ -34,15 +49,15 @@ usage:
           cache_write: 411856
           cost: 5.3736
     - kind: orchestrator
-      seconds: 546
+      seconds: 663
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 196
-          output: 3100
-          cache_read: 84909446
-          cache_write: 75366
-          cost: 20.9384
+          input: 211
+          output: 3347
+          cache_read: 87842484
+          cache_write: 79081
+          cost: 21.662
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -69,8 +84,8 @@ This story remediates [I-0108](../../../design/issues/I-0108-flai-task-done-comm
 
 ## Acceptance criteria
 - [ ] The cause I-0108 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0104 is closed with `flai issue close I-0104 --reason` saying what fixed it
-- [ ] I-0108 is closed with `flai issue close I-0108 --reason` saying what fixed it
+- [x] I-0104 is closed with `flai issue close I-0104 --reason` saying what fixed it
+- [x] I-0108 is closed with `flai issue close I-0108 --reason` saying what fixed it
 
 ## Tasks
 - T-1328 flai task done commits only the closing task's paths, with tests that reproduce I-0104's two tasks and I-0108's three

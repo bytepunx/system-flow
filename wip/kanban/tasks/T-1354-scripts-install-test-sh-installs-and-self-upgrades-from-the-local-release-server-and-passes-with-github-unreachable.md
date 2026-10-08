@@ -3,16 +3,36 @@ id: T-1354
 type: task
 nature: remediation
 title: scripts/install-test.sh installs and self-upgrades from the local release server and passes with GitHub unreachable
-status: backlog
+status: done
 parent: S-0340
 owner: alex
 created: 2026-10-08T08:06:02Z
-updated: 2026-10-08T08:06:02Z
-transitions: []
+updated: 2026-10-08T08:31:59Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:25:08Z
+    by: agent-S-0340
+  - to: in-progress
+    at: 2026-10-08T08:25:08Z
+    by: agent-S-0340
+  - to: done
+    at: 2026-10-08T08:31:59Z
+    by: agent-S-0340
 stream: S-0340
 tags: [cli]
 touches: [scripts/install-test.sh, scripts/smoke.sh, install.sh, ".github/workflows/system-flow-check.yml"]
 after: [T-1348, T-1350]
+usage:
+  source: log
+  seconds: 410
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 189
+      cache_read: 2017612
+      cache_write: 91458
+      cost: 0.9481
 ---
 # T-1354 scripts/install-test.sh installs and self-upgrades from the local release server and passes with GitHub unreachable
 

@@ -3,16 +3,36 @@ id: T-1311
 type: task
 nature: remediation
 title: Document when a publish raises flai.minimum and what the host does when a project stops loading
-status: backlog
+status: done
 parent: S-0321
 owner: alex
 created: 2026-10-08T00:23:29Z
-updated: 2026-10-08T00:23:36Z
-transitions: []
+updated: 2026-10-08T08:11:22Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:08:42Z
+    by: agent-S-0321
+  - to: in-progress
+    at: 2026-10-08T08:08:42Z
+    by: agent-S-0321
+  - to: done
+    at: 2026-10-08T08:11:22Z
+    by: agent-S-0321
 stream: S-0321
 tags: [docs]
-touches: [design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md]
+touches: [design/system/flai-cli.md, design/system/project-manifest.md, docs/users/flai.md, docs/operators/index.md, flai/internal/manifest/manifest.go, design/system/work-hierarchy.md]
 after: [T-1309, T-1310]
+usage:
+  source: log
+  seconds: 160
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 330
+      cache_read: 2273248
+      cache_write: 73138
+      cost: 1.0519
 ---
 # T-1311 Document when a publish raises flai.minimum and what the host does when a project stops loading
 

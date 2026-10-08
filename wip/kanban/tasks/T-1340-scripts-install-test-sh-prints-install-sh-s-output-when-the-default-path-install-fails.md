@@ -3,15 +3,35 @@ id: T-1340
 type: task
 nature: remediation
 title: scripts/install-test.sh prints install.sh's output when the default-path install fails
-status: backlog
+status: cancelled
 parent: S-0291
 owner: alex
 created: 2026-10-08T08:00:03Z
-updated: 2026-10-08T08:00:03Z
-transitions: []
+updated: 2026-10-08T08:24:52Z
+transitions:
+  - to: ready
+    at: 2026-10-08T08:14:03Z
+    by: agent-S-0291
+  - to: in-progress
+    at: 2026-10-08T08:14:04Z
+    by: agent-S-0291
+  - to: cancelled
+    at: 2026-10-08T08:24:52Z
+    by: agent-S-0291
 stream: S-0291
 tags: [smoke, install]
 touches: [scripts/install-test.sh]
+usage:
+  source: log
+  seconds: 648
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 54
+      cache_read: 807568
+      cache_write: 30559
+      cost: 0.3765
 ---
 # T-1340 scripts/install-test.sh prints install.sh's output when the default-path install fails
 
@@ -31,3 +51,4 @@ Waits for nothing: no other task changes this script.
 - `flai test scripts/install-test.sh` passes.
 
 ## Notes
+- 2026-10-08T08:24:52Z: moved to cancelled: S-0340 rewrites scripts/install-test.sh and prints install.sh's output when an install fails; agreed on MS-0013
