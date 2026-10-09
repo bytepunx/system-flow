@@ -3,7 +3,8 @@
 import { agentAction, type StoryActivity } from './activity';
 
 /** What an entry of the card's menu does. */
-export type CardAction = 'open' | 'finalize' | 'agent' | 'plan' | 'block' | 'unblock' | 'cancel';
+export type CardAction =
+	'open' | 'finalize' | 'agent' | 'plan' | 'block' | 'unblock' | 'cancel' | 'archive';
 
 /** One entry of the card's menu: its action, its label, and for the agent, which flai runs. */
 export type CardEntry = { action: CardAction; label: string; agent?: 'start' | 'restart' };
@@ -36,5 +37,8 @@ export function cardMenu(
 	if (changeable && card.blocked) entries.push({ action: 'unblock', label: 'Unblock' });
 	else if (changeable && open) entries.push({ action: 'block', label: 'Block…' });
 	if (changeable && open) entries.push({ action: 'cancel', label: 'Cancel…' });
+	// where Cancel… stood before the item was cancelled: what is left to do with it (S-0343)
+	if (changeable && card.status === 'cancelled')
+		entries.push({ action: 'archive', label: 'Archive' });
 	return entries;
 }

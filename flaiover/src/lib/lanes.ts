@@ -48,11 +48,17 @@ export function hasLimit(lane: string): boolean {
 	return (LIMITED_LANES as readonly string[]).includes(lane);
 }
 
-/** What a lane's menu does: create an item there, move stories a column, or change the limit. */
-export type LaneAction = 'create' | 'forward' | 'back' | 'limit';
+/**
+ * What a lane's menu does: create an item there, move stories a column, change the limit, or archive
+ * every card it holds.
+ */
+export type LaneAction = 'create' | 'forward' | 'back' | 'limit' | 'archive';
 
-/** The lane's menu, in order (S-0167); a card's menu offers it too, under the lane (S-0202). */
-export function laneEntries(lane: string): { action: LaneAction; label: string }[] {
+/**
+ * The lane's menu, in order (S-0167), for a lane holding `count` cards; a card's menu offers it too,
+ * under the lane (S-0202).
+ */
+export function laneEntries(lane: string, count = 0): { action: LaneAction; label: string }[] {
 	const forward = forwardOf(lane);
 	const backTo = backOf(lane);
 	return [
@@ -61,8 +67,22 @@ export function laneEntries(lane: string): { action: LaneAction; label: string }
 			? [{ action: 'forward' as const, label: `Move stories forward to ${forward}…` }]
 			: []),
 		...(backTo ? [{ action: 'back' as const, label: `Move stories back to ${backTo}…` }] : []),
-		...(hasLimit(lane) ? [{ action: 'limit' as const, label: 'Change WIP limit…' }] : [])
+		...(hasLimit(lane) ? [{ action: 'limit' as const, label: 'Change WIP limit…' }] : []),
+		// cancelled cards stay until archived, and flai check fails on them (S-0343)
+		...(lane === 'cancelled' && count > 0
+			? [{ action: 'archive' as const, label: 'Archive All' }]
+			: [])
 	];
+}
+
+/**
+ * The IDs in the order Archive All archives them, one per call (S-0343): stories first, since each
+ * takes its tasks along, then tasks, then epics, which flai refuses while a story of theirs is on
+ * the board; each type in the order the lane holds it.
+ */
+export function archiveOrder(cards: { id: string; type: string }[]): string[] {
+	const rank = (type: string) => (type === 'story' ? 0 : type === 'epic' ? 2 : 1);
+	return [...cards].sort((a, b) => rank(a.type) - rank(b.type)).map((c) => c.id);
 }
 
 // What a lane holds, by type (S-0256): a short count below its title, the long form on hover.

@@ -1,6 +1,7 @@
 // S-0202: a right click, the context-menu key, the card's menu button, or a long press opens a card's
 // menu, which offers what the item's page does (Open, Finalize on a draft, the agent, Plan since
-// S-0263, Block or Unblock, Cancel) and then the lane's menu, and makes the page's writes.
+// S-0263, Block or Unblock, Cancel, Archive on a cancelled item since S-0343) and then the lane's
+// menu, and makes the page's writes.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { resetForTests } from '$lib/project.svelte';
@@ -107,7 +108,8 @@ describe('a card’s menu (S-0202)', () => {
 		columns = {
 			backlog: [card('S-0001', 'backlog', { draft: true }), card('S-0002', 'backlog')],
 			ready: [card('S-0003', 'ready')],
-			review: [card('S-0005', 'review')]
+			review: [card('S-0005', 'review')],
+			cancelled: [card('S-0007', 'cancelled'), card('T-0010', 'cancelled', { type: 'task' })]
 		};
 	});
 	afterEach(() => {
@@ -326,5 +328,37 @@ describe('a card’s menu (S-0202)', () => {
 		touch('pointerup');
 		link('S-0002').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 		expect(reached).toHaveBeenCalledTimes(1);
+	});
+
+	// S-0343: a cancelled card stays on the board until it is archived
+	it('archives a cancelled card, and says what went with it', async () => {
+		await open();
+		rightClick(link('S-0007'));
+		expect(offered()).toEqual([
+			'Open',
+			'Archive',
+			'Create item here',
+			'Move stories back to backlog…',
+			'Archive All'
+		]);
+		const before = boards();
+		posted = answer({ archived: ['S-0007', 'T-0010'], dry_run: false });
+		await pick('archive');
+		expect(posts).toEqual([{ url: '/api/board/archive', body: { ids: ['S-0007'] } }]);
+		expect(menu()).toBeNull();
+		expect(notice()).toContain('Archived S-0007, T-0010.');
+		expect(boards()).toBe(before + 1);
+	});
+
+	it('says why flai refused to archive a card (S-0343)', async () => {
+		await open();
+		rightClick(link('T-0010'));
+		posted = answer({ error: 'T-0010 is archived already' }, false);
+		await pick('archive');
+		expect(posts).toEqual([{ url: '/api/board/archive', body: { ids: ['T-0010'] } }]);
+		expect(notice()).toContain('Refused: T-0010: T-0010 is archived already.');
+		expect(
+			document.querySelector('[data-testid="board-notice"]')!.parentElement!.getAttribute('role')
+		).toBe('alert');
 	});
 });

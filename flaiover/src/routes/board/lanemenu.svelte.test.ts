@@ -1,6 +1,7 @@
 // S-0167: a right click on a lane opens its menu, which offers only what the lane allows by flai's
 // rules (ADR-0055): create an item starting there, move stories forward from backlog or back from
-// ready, in-progress, review, and cancelled, and change the WIP limit of ready, in-progress, review.
+// ready, in-progress, review, and cancelled, and change the WIP limit of ready, in-progress, review;
+// since S-0343, archive every card the cancelled lane shows.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { resetForTests } from '$lib/project.svelte';
@@ -18,15 +19,17 @@ class QuietEventSource {
 	close() {}
 }
 
-const card = (id: string, status: string, type = 'story') => ({
+const card = (id: string, status: string, type = 'story', archived = false) => ({
 	id,
 	type,
 	title: `${id} title`,
 	nature: 'feature',
 	status,
 	blocked: false,
-	age_seconds: 60
+	age_seconds: 60,
+	archived
 });
+let cancelled: ReturnType<typeof card>[];
 const board = (writable = true) => ({
 	wip_limits: { ready: 5, 'in-progress': 2, review: 3 },
 	order: [],
@@ -41,7 +44,7 @@ const board = (writable = true) => ({
 		'in-progress': [card('S-0004', 'in-progress')],
 		review: [card('S-0005', 'review')],
 		done: [card('S-0006', 'done')],
-		cancelled: [card('S-0007', 'cancelled')]
+		cancelled
 	}
 });
 const answer = (body: unknown, ok = true) => ({
@@ -57,16 +60,20 @@ const settle = async () => {
 describe('the lane menu (S-0167)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	let posts: { url: string; body: Record<string, unknown> }[];
-	let refuse: (url: string) => string | null;
+	let refuse: (url: string, body: Record<string, unknown>) => string | null;
+	// what flai archive answers it archived, by the ID asked for: the ID alone unless named here
+	let brings: Record<string, string[]>;
 
 	const open = async (writable = true) => {
 		api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
 			if (init?.method === 'POST') {
 				const body = JSON.parse(init.body ?? '{}');
 				posts.push({ url, body });
-				const why = refuse(url);
+				const why = refuse(url, body);
 				if (why) return answer({ error: why }, false);
 				if (url === '/api/board/limit') return answer({ column: body.column, limit: body.limit });
+				if (url === '/api/board/archive')
+					return answer({ archived: brings[body.ids[0]] ?? body.ids, dry_run: false });
 				return answer({ id: url.split('/')[3], status: body.to, warnings: [] });
 			}
 			if (url === '/api/board') return answer(board(writable));
@@ -117,6 +124,8 @@ describe('the lane menu (S-0167)', () => {
 		vi.stubGlobal('EventSource', QuietEventSource);
 		posts = [];
 		refuse = () => null;
+		brings = {};
+		cancelled = [card('S-0007', 'cancelled')];
 	});
 	afterEach(() => {
 		if (c) unmount(c);
@@ -147,7 +156,7 @@ describe('the lane menu (S-0167)', () => {
 			'in-progress': ['create', 'back', 'limit'],
 			review: ['create', 'back', 'limit'],
 			done: ['create'],
-			cancelled: ['create', 'back']
+			cancelled: ['create', 'back', 'archive']
 		});
 	});
 
@@ -266,5 +275,47 @@ describe('the lane menu (S-0167)', () => {
 		expect(
 			document.querySelector<HTMLButtonElement>('[data-testid="wip-limit-confirm"]')!.disabled
 		).toBe(true);
+	});
+
+	// S-0343: cancelled cards stay on the board, and flai check fails, until they are archived
+	it('archives every card the cancelled lane shows, stories first and epics last, one per call', async () => {
+		cancelled = [
+			card('E-0002', 'cancelled', 'epic'),
+			card('T-0010', 'cancelled', 'task'),
+			card('S-0007', 'cancelled'),
+			card('T-0011', 'cancelled', 'task'),
+			card('S-0008', 'cancelled'),
+			card('S-0009', 'cancelled', 'story', true)
+		];
+		brings = { 'S-0007': ['S-0007', 'T-0010'] };
+		refuse = (_, body) =>
+			(body.ids as string[] | undefined)?.[0] === 'S-0008' ? 'S-0008 is archived already' : null;
+		await open();
+		rightClick(lane('cancelled'));
+		expect(entries()).toEqual(['create', 'back', 'archive']);
+		expect(
+			document.querySelector('[data-testid="lane-menu"] [data-action="archive"]')!.textContent
+		).toContain('Archive All');
+		const boards = api.mock.calls.filter(([u]) => u === '/api/board').length;
+		await pick('archive');
+		// T-0010 went with its story; the archived S-0009 is not asked for
+		expect(posts).toEqual([
+			{ url: '/api/board/archive', body: { ids: ['S-0007'] } },
+			{ url: '/api/board/archive', body: { ids: ['S-0008'] } },
+			{ url: '/api/board/archive', body: { ids: ['T-0011'] } },
+			{ url: '/api/board/archive', body: { ids: ['E-0002'] } }
+		]);
+		const notice = document.querySelector('[data-testid="board-notice"]')!;
+		expect(notice.textContent).toContain('Archived S-0007, T-0010, T-0011, E-0002.');
+		expect(notice.textContent).toContain('Refused: S-0008: S-0008 is archived already.');
+		expect(notice.parentElement!.getAttribute('role')).toBe('status');
+		expect(api.mock.calls.filter(([u]) => u === '/api/board').length).toBe(boards + 1);
+	});
+
+	it('offers no Archive All while the cancelled lane shows no card to archive', async () => {
+		cancelled = [card('S-0009', 'cancelled', 'story', true)];
+		await open();
+		rightClick(lane('cancelled'));
+		expect(entries()).toEqual(['create', 'back']);
 	});
 });

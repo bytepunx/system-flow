@@ -44,10 +44,30 @@ describe('a card’s menu', () => {
 		expect(labels({ ...story, blocked: true }, writer)).not.toContain('Block…');
 	});
 	it('offers no Block… or Cancel… on a done or cancelled item, nor anything on an archived one', () => {
-		for (const status of ['done', 'cancelled']) {
-			expect(labels({ ...story, status }, writer)).toEqual(['Open']);
-		}
+		expect(labels({ ...story, status: 'done' }, writer)).toEqual(['Open']);
+		expect(labels({ ...story, status: 'cancelled' }, writer)).toEqual(['Open', 'Archive']);
 		expect(labels({ ...story, archived: true, blocked: true }, writer)).toEqual(['Open']);
+	});
+	// S-0343: a cancelled card stays on the board until it is archived
+	it('offers Archive, last, on a writable cancelled item not archived, of any type', () => {
+		for (const type of ['story', 'task', 'epic'])
+			expect(cardMenu({ ...story, type, status: 'cancelled' }, writer).at(-1)).toEqual({
+				action: 'archive',
+				label: 'Archive'
+			});
+		expect(labels({ ...story, status: 'cancelled', blocked: true }, writer)).toEqual([
+			'Open',
+			'Unblock',
+			'Archive'
+		]);
+		for (const status of ['backlog', 'ready', 'in-progress', 'review', 'done'])
+			expect(labels({ ...story, status }, writer)).not.toContain('Archive');
+		expect(labels({ ...story, status: 'cancelled', archived: true }, writer)).not.toContain(
+			'Archive'
+		);
+		expect(labels({ ...story, status: 'cancelled' }, { ...writer, writable: false })).toEqual([
+			'Open'
+		]);
 	});
 	it('offers the story page’s agent action, with the agent action on', () => {
 		expect(cardMenu({ ...story, status: 'ready' }, writer)).toContainEqual({

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	archiveOrder,
 	backOf,
 	forwardOf,
 	hasLimit,
@@ -62,6 +63,39 @@ describe('lanes', () => {
 		]);
 		expect(laneEntries('done').map((e) => e.action)).toEqual(['create']);
 		expect(laneEntries('cancelled').map((e) => e.action)).toEqual(['create', 'back']);
+	});
+
+	// S-0343: cancelled cards stay until archived
+	it('offers Archive All on the cancelled lane only, and only while it holds cards', () => {
+		expect(laneEntries('cancelled', 3)).toEqual([
+			{ action: 'create', label: 'Create item here' },
+			{ action: 'back', label: 'Move stories back to backlog…' },
+			{ action: 'archive', label: 'Archive All' }
+		]);
+		expect(laneEntries('cancelled', 0).map((e) => e.action)).not.toContain('archive');
+		for (const lane of LANES.filter((l) => l !== 'cancelled'))
+			expect(laneEntries(lane, 3).map((e) => e.action)).not.toContain('archive');
+	});
+
+	it('archives stories first, then tasks, then epics, each in the order the lane holds them', () => {
+		const cards = [
+			{ id: 'E-0001', type: 'epic' },
+			{ id: 'T-0002', type: 'task' },
+			{ id: 'S-0003', type: 'story' },
+			{ id: 'E-0004', type: 'epic' },
+			{ id: 'T-0001', type: 'task' },
+			{ id: 'S-0001', type: 'story' }
+		];
+		expect(archiveOrder(cards)).toEqual([
+			'S-0003',
+			'S-0001',
+			'T-0002',
+			'T-0001',
+			'E-0001',
+			'E-0004'
+		]);
+		expect(cards[0].id).toBe('E-0001');
+		expect(archiveOrder([])).toEqual([]);
 	});
 
 	// S-0256: what a lane holds, below its title

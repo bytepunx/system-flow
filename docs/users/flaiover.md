@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-08
+updated: 2026-10-09
 status: active
 ---
 
@@ -83,21 +83,24 @@ Board shows one column per state with the WIP count against the limit from `wip/
 | **Plan** | an open epic or story, while the `plan` host action is on | starts the planner for it on the host, as **Plan** on its page does (see [The item page](#the-item-page)) |
 | **Block…** or **Unblock** | an item not done or cancelled, or one that is blocked | asks why and blocks it, or unblocks it, as its page does |
 | **Cancel…** | an item not done or cancelled | opens the same confirmation as dropping it on cancelled |
+| **Archive** | a cancelled item that is not archived | archives it, as `flai archive` does: a story takes its tasks with it (see **Archive All** below) |
 
 Under the column's name the menu then lists the lane menu's entries for that column (below), with the card ticked first in a move. A notice above the columns says what each choice did, or why flai refused it, and the card shows the result at once. Arrow keys move through the menu; Escape closes it and puts you back on the card; clicking elsewhere, tabbing away, or choosing an entry closes it too. Hold Shift while you right-click to get the browser's own menu instead, for example to open a card in a new tab. A read-only board offers no menu and no **⋯** button.
 
 **The lane menu.** Right-click a column's empty space for what that column allows. Hold Shift while you right-click to get the browser's own menu instead. A read-only board offers no menu.
 
-| Column | Create item here | Move stories forward | Move stories back | Change WIP limit |
-|--------|------------------|----------------------|-------------------|------------------|
-| backlog | yes, starts in backlog | to ready | | |
-| ready | yes, starts in ready | | to backlog | yes |
-| in-progress | yes, starts in in-progress | | to ready | yes |
-| review | yes, starts in backlog | | to in-progress, with a reason | yes |
-| done | yes, starts in backlog | | | |
-| cancelled | yes, starts in backlog | | to backlog | |
+| Column | Create item here | Move stories forward | Move stories back | Change WIP limit | Archive All |
+|--------|------------------|----------------------|-------------------|------------------|-------------|
+| backlog | yes, starts in backlog | to ready | | | |
+| ready | yes, starts in ready | | to backlog | yes | |
+| in-progress | yes, starts in in-progress | | to ready | yes | |
+| review | yes, starts in backlog | | to in-progress, with a reason | yes | |
+| done | yes, starts in backlog | | | | |
+| cancelled | yes, starts in backlog | | to backlog | | yes, while it shows a card |
 
 **Create item here** opens the new item page with that column chosen as where it starts. **Move stories** opens a list of the column's stories to tick, with **All** to tick every one; chosen from a card's menu, that card starts ticked. Each story is moved on its own with the rules of `flai move`, so a story without an acceptance criterion is refused on its way to ready while the others move, and the notice names what moved and what was refused and why. A story moved back to ready goes last in the ready order and, like any story entering ready, may have its agent started by flai on the host. Done is final: nothing moves out of it. **Change WIP limit** sets the column's limit, 0 for none, in `wip/kanban/board.md`, the file flai, flai serve, and `flai check` read it from; a move past a limit warns and is made, and flai serve starts agents only while in-progress has room.
+
+A cancelled item stays in the cancelled column, and `flai check` fails on it, until it is archived. **Archive All** archives every card the cancelled column shows (the type and nature toggles of the legend decide which), and a cancelled card's **Archive** archives that one item. Each item is archived on its own with `flai archive`, stories first, then tasks, then epics: a story takes its tasks with it, so they are not asked for again, and an epic is refused while a story of it is still on the board, so it goes last. A refusal stops only its item, and the notice names what was archived and what was refused and why. Nothing is committed: the items and narratives move to `wip/archive/` in the project's checkout on the host, as `flai archive` moves them, for you to commit.
 
 **Accepting.** Dropping a story on done accepts it, so the dashboard first shows what acceptance will do — the branch to be merged, anything that blocks it — and only proceeds when you confirm. When the story is its epic's last open one, the epic is accepted and archived with it, as with `flai accept` ([flai.md](flai.md#accept-and-release)). When the story's agent left changes uncommitted in its worktree, the confirmation lists them and offers **Have an agent commit them**. Accepting merges, archives, and commits; it cuts no release by itself (S-0087). An experiment story is accepted once its results document, `design/experiments/<S-nnnn>-<slug>.md`, is committed on its branch; until then the confirmation names the document to write and its accept button stays disabled, and cancelling leaves the card in review. Like research, an experiment releases nothing, and the confirmation lists the components it touched as landing on main without a release. If files outside `wip/` are uncommitted, the confirmation lists them: acceptance refuses them by default so that its commit holds only acceptance, so either cancel and commit or stash them first, or tick the box to include them, which is the dashboard's form of `flai accept --yes`. The accept button waits for that choice. When acceptance cannot run from the dashboard, the confirmation lists why and what to do, and its accept button stays disabled; accept from a shell with `flai accept S-nnnn` instead. An acceptance is made on the host by flai, committed there. The review page (below) is the fuller way to accept.
 

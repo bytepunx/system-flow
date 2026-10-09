@@ -11,12 +11,15 @@
 
 	let {
 		lane,
+		count,
 		x,
 		y,
 		onpick,
 		onclose
 	}: {
 		lane: string;
+		/** How many cards the lane shows, for Archive All on cancelled (S-0343). */
+		count: number;
 		x: number;
 		y: number;
 		onpick: (action: LaneAction) => void;
@@ -29,7 +32,7 @@
 	{y}
 	label="{lane} lane"
 	testid="lane-menu"
-	groups={[{ entries: laneEntries(lane) }]}
+	groups={[{ entries: laneEntries(lane, count) }]}
 	onpick={(action) => onpick(action as LaneAction)}
 	{onclose}
 />

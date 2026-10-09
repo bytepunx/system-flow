@@ -9,6 +9,7 @@
 	let {
 		card,
 		lane,
+		laneCount,
 		writable,
 		activity,
 		agentEnabled,
@@ -21,6 +22,8 @@
 	}: {
 		card: Parameters<typeof cardMenu>[0];
 		lane: string;
+		/** How many cards the lane shows, for Archive All on cancelled (S-0343). */
+		laneCount: number;
 		writable: boolean;
 		activity?: StoryActivity;
 		agentEnabled: boolean;
@@ -40,7 +43,7 @@
 	{y}
 	label="{card.id} actions"
 	testid="card-menu"
-	groups={[{ entries }, { heading: lane, entries: laneEntries(lane) }]}
+	groups={[{ entries }, { heading: lane, entries: laneEntries(lane, laneCount) }]}
 	onpick={(action, group) => {
 		if (group === 1) onlane(action as LaneAction);
 		else oncard(entries.find((e) => e.action === action)!);

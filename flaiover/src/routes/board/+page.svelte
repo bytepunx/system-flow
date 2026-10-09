@@ -9,7 +9,7 @@
 	import { longPress } from './longpress';
 	import LaneMoveDialog from '$lib/components/LaneMoveDialog.svelte';
 	import WipLimitDialog from '$lib/components/WipLimitDialog.svelte';
-	import { backOf, forwardOf, laneCounts, longCounts, shortCounts } from '$lib/lanes';
+	import { archiveOrder, backOf, forwardOf, laneCounts, longCounts, shortCounts } from '$lib/lanes';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
@@ -241,6 +241,8 @@
 		(board?.columns[lane] ?? [])
 			.filter((c) => c.type === 'story')
 			.map((c) => ({ id: c.id, title: c.title }));
+	// What Archive All archives (S-0343): the cards the lane shows, none already archived.
+	const archivable = (lane: string) => cards(lane).filter((c) => !c.archived);
 
 	// A card's menu (S-0202): what the item's page offers, then its lane's menu. A right click opens
 	// it at the pointer; the keyboard, the card's menu button, and a long press below the card.
@@ -292,6 +294,10 @@
 		}
 		if (action === 'limit') {
 			laneLimit = lane;
+			return;
+		}
+		if (action === 'archive') {
+			void archive(archiveOrder(archivable(lane)));
 			return;
 		}
 		const to = action === 'forward' ? forwardOf(lane) : backOf(lane);
@@ -361,6 +367,9 @@
 				return loadAgents();
 			case 'cancel':
 				cancelling = id;
+				return;
+			case 'archive':
+				return archive([id]);
 		}
 	}
 	async function closeCardMenu(how: MenuClose) {
@@ -402,6 +411,34 @@
 			text
 		};
 		laneMove = null;
+		await load();
+	}
+
+	// One `flai archive` after another (S-0343), so a refusal stops only its item; an ID an earlier
+	// answer archived, a story's task, is not asked for again. One notice says what was archived and
+	// what was refused.
+	async function archive(ids: string[]) {
+		notice = null;
+		const archived: string[] = [];
+		const refused: string[] = [];
+		for (const id of ids) {
+			if (archived.includes(id)) continue;
+			const r = await api('/api/board/archive', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ ids: [id] })
+			});
+			const body = await r.json().catch(() => ({}));
+			if (!r.ok) refused.push(`${id}: ${body.error ?? r.statusText}`);
+			else archived.push(...(body.archived ?? []));
+		}
+		const text = [
+			archived.length ? `Archived ${archived.join(', ')}.` : '',
+			refused.length ? `Refused: ${refused.join('; ')}.` : ''
+		]
+			.filter(Boolean)
+			.join(' ');
+		notice = { kind: !archived.length ? 'error' : refused.length ? 'warn' : 'ok', text };
 		await load();
 	}
 
@@ -470,6 +507,7 @@
 {#if laneMenu}
 	<LaneMenu
 		lane={laneMenu.lane}
+		count={archivable(laneMenu.lane).length}
 		x={laneMenu.x}
 		y={laneMenu.y}
 		onpick={(action) => {
@@ -487,6 +525,7 @@
 		<CardMenu
 			{card}
 			lane={menuCard.lane}
+			laneCount={archivable(menuCard.lane).length}
 			writable={board?.writable === true}
 			activity={activity[card.id]}
 			agentEnabled={hostAgent?.enabled === true}
