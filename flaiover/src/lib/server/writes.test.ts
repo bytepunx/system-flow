@@ -142,6 +142,22 @@ describe.skipIf(!haveFlai)('writes through flai on a temp project', () => {
 			status: 400
 		});
 	});
+	it('archives a closed item, and refuses an open one and none (S-0343)', async () => {
+		await expect(r.write('board.archive', { ids: [] })).rejects.toMatchObject({ status: 400 });
+		await expect(r.write('board.archive', { ids: ['S-004'] })).rejects.toMatchObject({
+			message: expect.stringContaining('only done or cancelled items can be archived')
+		});
+		// T-003 is done since the first write of this suite
+		const { data } = await r.write<{ archived: string[] }>('board.archive', { ids: ['T-003'] });
+		expect(data.archived).toEqual(['T-003']);
+		expect(await readdir(join(dir, 'wip/archive/kanban/tasks'))).toContain('T-003-t3.md');
+		const columns = (await board(new Repo(dir, flaiAsk(dir)))).columns;
+		expect(
+			Object.values(columns)
+				.flat()
+				.map((c) => c.id)
+		).not.toContain('T-003');
+	});
 	it('moves a story back a column (S-0167, ADR-0055)', async () => {
 		const { data } = await r.write<{ id: string; status: string }>('item.move', {
 			id: 'S-004',
