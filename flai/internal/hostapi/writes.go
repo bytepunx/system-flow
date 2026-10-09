@@ -827,6 +827,28 @@ func itemSpecs() map[string]spec {
 			return []string{"board", "limit", "--", in.Column, strconv.Itoa(*in.Limit)}, "", nil
 		}),
 
+		// board.archive: the done or cancelled items named, archived with
+		// flai archive, from the board's Archive and Archive All menu entries
+		// (S-0343). An empty list is refused: flai archive without IDs
+		// archives every closed item.
+		"board.archive": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				IDs []string `json:"ids"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if len(in.IDs) == 0 {
+				return nil, "", bad("name the items to archive in ids; flai archive without IDs would archive every closed item")
+			}
+			for _, id := range in.IDs {
+				if e := needID(id); e != nil {
+					return nil, "", e
+				}
+			}
+			return append([]string{"archive", "--"}, in.IDs...), "", nil
+		}),
+
 		"item.block": one(func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID     string `json:"id"`

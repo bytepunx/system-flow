@@ -70,6 +70,7 @@ export const REQUIRED_METHODS = [
 	'item.move.preview',
 	'item.order',
 	'board.limit',
+	'board.archive',
 	'item.block',
 	'item.unblock',
 	'item.new',

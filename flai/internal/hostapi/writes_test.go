@@ -32,6 +32,7 @@ var good = map[string]struct {
 	"item.order":         {`{"id":"S-0002","before":"S-0001",` + rid + `}`, "order S-0002 --before=S-0001 --json", ""},
 	"item.block":         {`{"id":"T-0001","reason":"tide",` + rid + `}`, "block T-0001 --reason=tide --json", ""},
 	"board.limit":        {`{"column":"in-progress","limit":3,` + rid + `}`, "board limit --json -- in-progress 3", ""},
+	"board.archive":      {`{"ids":["S-0001","T-0002"],` + rid + `}`, "archive --json -- S-0001 T-0002", ""},
 	"item.unblock":       {`{"id":"T-0001",` + rid + `}`, "unblock T-0001 --json", ""},
 	"item.new":           {`{"type":"story","title":" --json  is my title ","parent":"E-0001","tags":["cli"],"touches":["flai/cmd"],"topics":["logging"," release"],"body":"## Goal\nx\n",` + rid + `}`, "story new --nature=feature --owner=olive --epic=E-0001 --tag=cli --touches=flai/cmd --topics=logging --topics=release --body-stdin --autocommit --trailer=" + Trailer + " --json -- --json is my title", "## Goal\nx\n"},
 	"item.template":      {`{"type":"epic"}`, "epic new --print-body --json", ""},
@@ -124,6 +125,7 @@ var refused = map[string][]string{
 	"item.order":    {`{"id":"S-0002","before":"--top",` + rid + `}`, `{"id":"S-0002","top":true,"bottom":true,` + rid + `}`, `{"id":"S-0002",` + rid + `}`},
 	"item.block":    {`{"id":"T-0001","reason":"  ",` + rid + `}`, `{"id":"T","reason":"x",` + rid + `}`},
 	"board.limit":   {`{"column":"backlog","limit":3,` + rid + `}`, `{"column":"--json","limit":3,` + rid + `}`, `{"column":"ready","limit":-1,` + rid + `}`, `{"column":"ready","limit":100,` + rid + `}`, `{"column":"ready",` + rid + `}`},
+	"board.archive": {`{"ids":[],` + rid + `}`, `{` + rid + `}`, `{"ids":["S-0001","--json"],` + rid + `}`},
 	"item.unblock":  {`{"id":"--json",` + rid + `}`},
 	"item.finalize": {`{"id":"--help",` + rid + `}`, `{"id":"E-0001",` + rid + `}`, `{"id":"T-0001",` + rid + `}`, `{"id":"S-0001 --draft",` + rid + `}`, `{"id":"S-0001"}`},
 	"item.criteria": {
