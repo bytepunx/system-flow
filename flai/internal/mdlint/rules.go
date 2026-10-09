@@ -727,6 +727,23 @@ func intraword(d *doc, e emph) bool {
 func md049(c *Config, d *doc, in *inlineOut, add adder) { emphasisStyle(c, "MD049", d, in, false, add) }
 func md050(c *Config, d *doc, in *inlineOut, add adder) { emphasisStyle(c, "MD050", d, in, true, add) }
 
+// md056 reports each row of a table whose unescaped pipes, those inside a
+// code span among them, give it more or fewer cells than its header row
+// (I-0077).
+func md056(_ *Config, d *doc, _ *inlineOut, add adder) {
+	for _, t := range d.tables {
+		want := t[0].cells
+		for _, r := range t[1:] {
+			switch {
+			case r.cells < want:
+				add(r.line, fmt.Sprintf("Expected: %d; Actual: %d; Too few cells, row will be missing data", want, r.cells), "")
+			case r.cells > want:
+				add(r.line, fmt.Sprintf("Expected: %d; Actual: %d; Too many cells, extra data will be missing", want, r.cells), "")
+			}
+		}
+	}
+}
+
 func firstWord(s string) string {
 	if f := strings.Fields(s); len(f) > 0 {
 		return f[0]

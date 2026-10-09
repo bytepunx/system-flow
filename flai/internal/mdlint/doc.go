@@ -83,6 +83,10 @@ type list struct {
 	parent  *listItem // the item the list is nested in; nil at the top level or directly in a quote
 }
 
+// tableRow is a row of a table: its line, and how many cells its unescaped
+// pipes give it.
+type tableRow struct{ line, cells int }
+
 type doc struct {
 	lines      []*line
 	front      []string // front matter lines, without the fences
@@ -91,7 +95,8 @@ type doc struct {
 	lists      []*list
 	fences     []*fence
 	paras      []*para
-	tableCells [][3]int // line, start, end of each table cell
+	tables     [][]tableRow // the rows of each table, its header and delimiter rows first
+	tableCells [][3]int     // line, start, end of each table cell
 	paraSeg    map[*para]*segment
 	paraInfo   map[*para]segInfo
 }
@@ -366,9 +371,11 @@ func (p *parser) rest(i, off, ind, base int) {
 		p.para, p.html, p.table = nil, false, false
 		return
 	}
-	if p.table && strings.Contains(c, "|") {
+	// a table's body runs to a blank line or a line that starts another
+	// block, and a line without a pipe is a row of one cell
+	if p.table && ind-base < 4 && !endsTable(c) {
 		ln.kind = kTable
-		p.cells(i, off)
+		p.row(i, off)
 		return
 	}
 	p.table = false
@@ -447,10 +454,11 @@ func (p *parser) block(i, off, depth, ind int) {
 		ln.kind = kHTML
 		p.html = true
 		p.endLists(depth)
-	case strings.Contains(c, "|") && i+1 < len(d.lines) && strings.Contains(d.lines[i+1].raw, "-") && delimRow.MatchString(strings.TrimSpace(d.lines[i+1].raw[p.match(d.lines[i+1].raw).pos:])):
+	case p.header(i, off):
 		ln.kind = kTable
 		p.table, p.para = true, nil
-		p.cells(i, off)
+		d.tables = append(d.tables, nil)
+		p.row(i, off)
 		p.endLists(depth)
 	default:
 		if p.para == nil || p.para.depth != depth {
@@ -515,7 +523,7 @@ func (p *parser) item(i, off, depth, ind int) bool {
 		if !p.item(i, at, depth+1, it.contentIndent) {
 			p.text(i, at)
 		}
-	case fenceRe.MatchString(inner) || atxRe.MatchString(inner) || hrRe.MatchString(inner) || strings.HasPrefix(inner, ">"):
+	case fenceRe.MatchString(inner) || atxRe.MatchString(inner) || hrRe.MatchString(inner) || strings.HasPrefix(inner, ">") || p.header(i, at):
 		p.block(i, at, depth+1, it.contentIndent)
 	default:
 		p.text(i, at)
@@ -549,24 +557,72 @@ func (p *parser) atx(i, off int) {
 	d.headings = append(d.headings, h)
 }
 
-// cells records the cells of a table row, for the inline rules.
-func (p *parser) cells(i, off int) {
-	raw := p.d.lines[i].raw
+// header reports whether line i, its content at byte off, heads a table: it
+// has a pipe, and the next line is a delimiter row with as many cells.
+func (p *parser) header(i, off int) bool {
+	d := p.d
+	if !strings.Contains(d.lines[i].raw[off:], "|") || i+1 >= len(d.lines) {
+		return false
+	}
+	next := d.lines[i+1].raw
+	at := p.match(next).pos
+	return strings.Contains(next[at:], "-") && delimRow.MatchString(strings.TrimSpace(next[at:])) &&
+		len(rowCells(d.lines[i].raw, off)) == len(rowCells(next, at))
+}
+
+// endsTable reports whether content ends a table's body rather than adding
+// a row to it: a fence, a heading, a rule, a quote, a list item, or HTML.
+func endsTable(c string) bool {
+	return startsBlock(c) || bulletRe.MatchString(c) || orderedRe.MatchString(c) || htmlRe.MatchString(c)
+}
+
+// row records a row of the current table, and its cells for the inline
+// rules unless it is a delimiter row.
+func (p *parser) row(i, off int) {
+	d := p.d
+	raw := d.lines[i].raw
+	cells := rowCells(raw, off)
+	t := len(d.tables) - 1
+	d.tables[t] = append(d.tables[t], tableRow{line: i, cells: len(cells)})
 	if delimRow.MatchString(strings.TrimSpace(raw[off:])) {
 		return
 	}
+	for _, c := range cells {
+		d.tableCells = append(d.tableCells, [3]int{i, c[0], c[1]})
+	}
+}
+
+// rowCells returns the start and end of each cell of a table row whose
+// content starts at byte off. As GFM does, it splits the row on every pipe
+// a backslash does not escape, inside a code span too, less a leading and
+// a trailing one.
+func rowCells(raw string, off int) [][2]int {
 	s, e := off, len(strings.TrimRight(raw, " \t"))
+	for s < e && (raw[s] == ' ' || raw[s] == '\t') {
+		s++
+	}
 	if s < e && raw[s] == '|' {
 		s++
 	}
-	if e > s && raw[e-1] == '|' && (e < 2 || raw[e-2] != '\\') {
-		e--
-	}
-	from := s
-	for j := s; j <= e; j++ {
-		if j == e || (raw[j] == '|' && raw[j-1] != '\\') {
-			p.d.tableCells = append(p.d.tableCells, [3]int{i, from, j})
-			from = j + 1
+	var pipes []int
+	for j := s; j < e; j++ {
+		switch raw[j] {
+		case '\\':
+			if j+1 < e && (raw[j+1] == '\\' || raw[j+1] == '|') {
+				j++
+			}
+		case '|':
+			pipes = append(pipes, j)
 		}
 	}
+	if n := len(pipes); n > 0 && pipes[n-1] == e-1 {
+		pipes, e = pipes[:n-1], e-1
+	}
+	var out [][2]int
+	from := s
+	for _, j := range append(pipes, e) {
+		out = append(out, [2]int{from, j})
+		from = j + 1
+	}
+	return out
 }

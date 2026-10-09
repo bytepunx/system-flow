@@ -77,6 +77,7 @@ func init() {
 		{"MD047", "Files should end with a single newline character", []string{"single-trailing-newline"}, []string{"blank_lines"}, md047},
 		{"MD049", "Emphasis style", []string{"emphasis-style"}, []string{"emphasis"}, md049},
 		{"MD050", "Strong style", []string{"strong-style"}, []string{"emphasis"}, md050},
+		{"MD056", "Table column count", []string{"table-column-count"}, []string{"table"}, md056},
 	}
 }
 

@@ -239,6 +239,43 @@ func TestSpaceInCodeSpanOfI0072(t *testing.T) {
 	}
 }
 
+// I-0077: a row of flai-cli.md's commands table wrote the merge-base marker
+// as a code span of seven unescaped pipes, which split the row into nine
+// cells; markdownlint-cli2 0.20.0 stopped a close-out on it and mdlint
+// passed it. mdlint now reports the row as markdownlint does, and lets the
+// escaped pipes through.
+func TestTableColumnCountOfI0077(t *testing.T) {
+	c, err := Parse([]byte("default: true\n"), false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head := "# T\n\n| Command | What |\n|---|---|\n"
+	for _, tc := range []struct{ row, want string }{
+		{"| `flai check` | a line that begins with `<<<<<<<`, `|||||||`, or `>>>>>>>` |\n",
+			"5 MD038/no-space-in-code Spaces inside code span elements [Context: \"`, or `\"]|" +
+				"5 MD056/table-column-count Table column count [Expected: 2; Actual: 9; Too many cells, extra data will be missing]"},
+		{"| `flai check` | a line that begins with `<<<<<<<`, `\\|\\|\\|\\|\\|\\|\\|`, or `>>>>>>>` |\n", ""},
+		{"| `flai check` |\n", "5 MD056/table-column-count Table column count [Expected: 2; Actual: 1; Too few cells, row will be missing data]"},
+		{"a row without a pipe\n", "5 MD056/table-column-count Table column count [Expected: 2; Actual: 1; Too few cells, row will be missing data]"},
+		{"- a list item ends the table | a | b |\n", ""},
+	} {
+		var got []string
+		for _, f := range c.Lint(head + tc.row) {
+			got = append(got, fmt.Sprintf("%d %s", f.Line, f))
+		}
+		if strings.Join(got, "|") != tc.want {
+			t.Errorf("%q:\n got  %s\n want %s", tc.row, strings.Join(got, "|"), tc.want)
+		}
+	}
+	off, err := Parse([]byte("default: true\ntable-column-count: false\n"), false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f := off.Lint(head + "| `flai check` |\n"); len(f) != 0 {
+		t.Errorf("the rule's alias turns it off: %v", f)
+	}
+}
+
 // I-0056: TH-0067's entries carried a bare email address, which
 // markdownlint-cli2 0.20.0 reports as MD034, and they reached main because
 // mdlint knew only http and https literals. A thread entry that brings one
