@@ -2,12 +2,12 @@
 id: I-0077
 title: flai's markdown lint does not split a table row on pipes inside a code span, as markdownlint does
 class: defect
-status: open
+status: closed
 count: 1
 cost: 6m
 first_reported: 2026-10-05T03:58:53Z
 last_reported: 2026-10-05T03:58:53Z
-updated: 2026-10-06T09:56:52Z
+updated: 2026-10-09T18:29:17Z
 ---
 
 # I-0077 flai's markdown lint does not split a table row on pipes inside a code span, as markdownlint does
@@ -24,3 +24,4 @@ design/system/flai-cli.md:52, a table row, wrote the merge-base marker as a code
 ## Remediation
 
 Story S-0289 remediates this issue, created from it at 2026-10-06T09:56:52Z.
+Closed 2026-10-09T18:29:17Z: S-0289: flai's mdlint now has MD056, table column count, so a row whose unescaped pipes, those inside a code span among them, give it more cells than its header is reported as markdownlint-cli2 reports it (TestTableColumnCountOfI0077, testdata/cases/tables.md).
