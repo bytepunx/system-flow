@@ -4,10 +4,10 @@ title: S-0342 is ready to accept, but waits until S-0338's half-finished accepta
 anchor:
   path: wip/kanban/stories/S-0342-a-test-tier-the-manifest-marks-as-covered-by-another-is-skipped-when-both-are-selected-so-verify-does-not-run-the-short-go-tests-and-then-the-full-suite.md
   item: S-0342
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-08T21:29:10Z
-updated: 2026-10-08T21:29:10Z
+updated: 2026-10-10T19:00:16Z
 ---
 
 # TH-0391 S-0342 is ready to accept, but waits until S-0338's half-finished acceptance is committed (TH-0389)
@@ -34,3 +34,6 @@ Two notes from the review, neither a blocker:
 - `system-flow.yaml` also marks `flaiover` as covering `flaiover-lint` and `vitest`, beyond criterion 3, because `scripts/flaiover-test.sh` runs both. The template gets a comment rather than a `covers:` key, since its `test` and `integration` placeholders do not overlap.
 
 I will resolve this thread and accept once main's `git status` is clean.
+
+### 2026-10-10T19:00:16Z orchestrator
+Resolved: Main is clean outside wip since 03dad4c9 and S-0338 is committed; the verifier matched all 4 criteria again at 9abaf456, so I accept S-0342 now.

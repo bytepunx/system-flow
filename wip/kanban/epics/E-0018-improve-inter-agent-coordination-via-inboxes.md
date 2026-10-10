@@ -17,7 +17,7 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 16751
+  seconds: 16771
   estimated: true
   turns:
     - day: 2026-10-07
@@ -32,13 +32,16 @@ usage:
       work: 206
     - day: 2026-10-09
       work: 18
+    - day: 2026-10-10
+      ceremony: 1
+      work: 1
   models:
     - model: claude-opus-5-5
-      input: 2746
-      output: 952048
-      cache_read: 163553867
-      cache_write: 5362470
-      cost: 85.1864
+      input: 2752
+      output: 952792
+      cache_read: 163793750
+      cache_write: 5473672
+      cost: 86.1389
   strategic:
     - kind: planner
       seconds: 1011

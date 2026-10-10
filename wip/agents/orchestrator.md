@@ -2337,3 +2337,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai order --by throughput --apply --json 2>`
 - Needs: none
+
+### 2026-10-10T19:00:34Z
+
+- Call: `git -C .flai-cache/worktrees/S-0342 rebase --abort`
+- Needs: none
+
+### 2026-10-10T19:00:38Z
+
+- Call: `git merge-tree --write-tree --name-only main story/S-0343`
+- Needs: none

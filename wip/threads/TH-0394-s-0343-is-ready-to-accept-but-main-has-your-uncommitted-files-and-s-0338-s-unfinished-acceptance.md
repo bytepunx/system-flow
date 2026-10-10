@@ -4,10 +4,10 @@ title: S-0343 is ready to accept, but main has your uncommitted files and S-0338
 anchor:
   path: wip/kanban/stories/S-0343-add-an-archive-action-to-context-menus.md
   item: S-0343
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-09T16:58:19Z
-updated: 2026-10-09T16:58:19Z
+updated: 2026-10-10T19:00:17Z
 ---
 
 # TH-0394 S-0343 is ready to accept, but main has your uncommitted files and S-0338's unfinished acceptance
@@ -40,3 +40,6 @@ These look like your own work in progress, perhaps the LiteLLM set-up for S-0356
 S-0338's acceptance is also still uncommitted in `wip/` (TH-0389). Any acceptance commit now would sweep it in under the wrong subject, as TH-0391 says for S-0342.
 
 I am leaving S-0343 in review. I will accept it, and S-0342, once `git status` on main is clean.
+
+### 2026-10-10T19:00:17Z orchestrator
+Resolved: The operator's uncommitted files went in with 03dad4c9 and S-0338 is committed; the verifier matched both criteria again at 6bf02b67, so I accept S-0343 now.

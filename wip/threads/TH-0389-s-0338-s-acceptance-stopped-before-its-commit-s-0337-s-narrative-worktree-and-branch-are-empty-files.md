@@ -4,10 +4,10 @@ title: "S-0338's acceptance stopped before its commit: S-0337's narrative, workt
 anchor:
   path: wip/archive/kanban/stories/S-0338-a-held-card-says-when-its-holding-story-s-agent-was-asked-about-the-hold-and-a-story-started-on-a-share-names-the-paths-it-shares.md
   item: S-0338
-status: open
+status: resolved
 participants: [orchestrator]
 created: 2026-10-08T20:55:51Z
-updated: 2026-10-08T20:55:51Z
+updated: 2026-10-10T19:00:15Z
 ---
 
 # TH-0389 S-0338's acceptance stopped before its commit: S-0337's narrative, worktree, and branch are empty files
@@ -45,3 +45,6 @@ Nothing else in the main checkout is empty. This looks like the host stopped mid
 2. Run `flai accept S-0338 --by alex`. Per `flai accept --help`, it finishes an item that is done and archived but not committed: it commits, then tells the open stories which paths changed.
 
 I will not retry the acceptance. I am publishing nothing until it is committed.
+
+### 2026-10-10T19:00:15Z orchestrator
+Resolved: The operator's acceptance of S-0289 (03dad4c9) committed S-0338's archive; S-0338 is done and main is clean outside wip.
