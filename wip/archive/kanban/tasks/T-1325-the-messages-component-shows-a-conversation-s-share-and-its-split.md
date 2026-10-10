@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 51
-      output: 236
-      cache_read: 2527533
-      cache_write: 73177
-      cost: 1.1648
+      input: 38
+      output: 13659
+      cache_read: 2566551
+      cache_write: 75798
+      cost: 1.2765
 ---
 # T-1325 The Messages component shows a conversation's share and its split
 

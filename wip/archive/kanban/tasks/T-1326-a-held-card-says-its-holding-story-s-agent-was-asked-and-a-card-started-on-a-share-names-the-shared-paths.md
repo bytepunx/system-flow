@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 63
-      output: 260
-      cache_read: 2981937
-      cache_write: 96378
-      cost: 1.3787
+      input: 45
+      output: 16168
+      cache_read: 3037888
+      cache_write: 89718
+      cost: 1.511
 ---
 # T-1326 A held card says its holding story's agent was asked, and a card started on a share names the shared paths
 

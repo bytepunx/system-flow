@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-08T10:21:38Z
+updated: 2026-10-08T20:55:33Z
 transitions:
   - to: ready
     at: 2026-10-07T22:14:01Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0232
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,7 +25,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1507
+  seconds: 1575
   turns:
     - day: 2026-10-07
       ceremony: 7
@@ -34,7 +34,7 @@ usage:
     - day: 2026-10-08
       ceremony: 5
       hand_edits: 2
-      work: 81
+      work: 95
   models:
     - model: claude-haiku-4-5-20251001
       input: 210085
@@ -43,11 +43,11 @@ usage:
       cache_write: 0
       cost: 0.2639
     - model: claude-opus-5-5
-      input: 520
-      output: 141651
-      cache_read: 49875170
-      cache_write: 844062
-      cost: 18.794
+      input: 554
+      output: 147640
+      cache_read: 55900904
+      cache_write: 1214564
+      cost: 23.0831
   strategic:
     - kind: orchestrator
       seconds: 823

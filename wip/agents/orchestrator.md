@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 331.9006
-accrued_seconds: 119195
-tasks_completed: 304
-last_run: 2026-10-08T10:29:21Z
+accrued_cost: 361.7093
+accrued_seconds: 244694
+tasks_completed: 322
+last_run: 2026-10-10T18:36:57Z
 ---
 
 # Orchestrator activity
@@ -2140,6 +2140,132 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 6
 - Cost: 0.4298 USD, estimated
 
+### 2026-10-08T10:53:05Z
+
+- Summary: Accepted S-0347 under accept_reviews at verified commit 9b15341e. flai verify passed at the head. The verifier matched both criteria: ADR-0135, the sync step passing over wip-only main commits, and --sync-only, which stores no record; I-0119 is closed. It noted one minor gap (a deleted wip path is not counted as shared), which the acceptance rebase still catches. The dry-run had no blockers. Published under judgement (1 pending, 75 USD/week) as flai 1.40.0→1.40.1 (flai/v1.40.1) and template 1.0.83→1.0.84 (816e0cf), pushed.
+- Items: S-0347
+- Seconds: 1424
+- Cost: 15.6790 USD, estimated
+
+### 2026-10-08T11:04:30Z
+
+- Summary: run ended
+- Items: none
+- Seconds: 685
+- Cost: 0.8973 USD, estimated
+
+### 2026-10-08T20:55:55Z
+
+- Summary: Accepted S-0338 under accept_reviews at verified commit 2d114ffc. Verify had passed at the head, the verifier matched all 5 criteria, and the dry-run had no blockers. flai accept merged, moved it to done, archived it, and closed MS-0042, then failed before the commit: "wip/agents/S-0337.md: no front matter". S-0337's 11:04Z start left only 0-byte files: its narrative, its branch ref, and all 4147 files of its worktree. flai reserves completing a failed acceptance to the operator, so I asked on TH-0389 for S-0337 to be cleared and for flai accept S-0338 --by alex. I am not retrying and not publishing. S-0341 is still held on my TH-0387.
+- Items: S-0338, S-0337
+- Seconds: 113
+- Cost: 0.6213 USD, estimated
+
+### 2026-10-08T20:56:10Z
+
+- Summary: Reviewed the board after S-0342 left ready for in-progress. Ready now holds only S-0343, so there is nothing to order. The only promote candidate is S-0241 (rank 1, 2h), which the operator blocked, so I promoted nothing. flai plan --candidates lists nothing. S-0360 stays a draft: it is complete, but its scope awaits the operator on E-0019's plan thread TH-0386. S-0341 stays in review on TH-0387.
+- Items: S-0342, S-0343, S-0241, S-0360
+- Seconds: 15
+- Cost: 0.0952 USD, estimated
+
+### 2026-10-08T20:57:26Z
+
+- Summary: Recommended an answer on TH-0390, citing design/conventions/safety.md § Rules
+- Items: S-0337
+- Seconds: 76
+- Cost: 0.2460 USD, estimated
+
+### 2026-10-08T20:57:29Z
+
+- Summary: Under answer_threads autonomous, posted a recommendation on TH-0390 (agent-S-0337 asks the operator to delete S-0337's empty branch ref and reflog), citing safety.md § Rules. No source settles it because it is a .git deletion the operator must confirm. I checked that both files are 0 bytes, and recommended running flai accept S-0338 --by alex (TH-0389) first, so S-0338's uncommitted acceptance is not swept into S-0337's stream-open commit.
+- Items: S-0337, S-0338
+- Seconds: 3
+- Cost: 0.0358 USD, estimated
+
+### 2026-10-08T21:29:13Z
+
+- Summary: S-0342 moved to review and is ready to accept: verify passed at head 9abaf456, the verifier matched all 4 criteria, and the dry-run has no blockers. I am holding the acceptance because main still holds S-0338's uncommitted half-acceptance (TH-0389), which S-0342's acceptance commit would sweep in under the wrong subject. I recorded this on TH-0391 and will accept S-0342 once main is clean. S-0343 is still held on no-touches.
+- Items: S-0342, S-0338
+- Seconds: 1904
+- Cost: 2.2954 USD, estimated
+
+### 2026-10-09T14:16:51Z
+
+- Summary: S-0338 and S-0342 are both stuck until you act on main, so I'm holding with nothing else to do. S-0338's acceptance stopped before its commit, and S-0342 is ready to accept but waiting on that.
+- Items: none
+- Seconds: 60458
+- Cost: 2.2577 USD, estimated
+
+### 2026-10-09T14:17:51Z
+
+- Summary: Reviewed the board. Nothing to plan: flai plan --candidates lists none. Opened TH-0392 on draft S-0360 (complete, 20m, 22.12 USD/week): I recommend finalizing it, but it adds scope to E-0019, so it is the operator's. Promoted nothing: the only candidate, S-0241 (rank 1, 2h), is blocked by the operator. Ready holds only the held S-0343, so there is nothing to order. No acceptance and no publish: main still holds S-0338's uncommitted acceptance (TH-0389), which blocks S-0342 (TH-0391). S-0341 was only rebased to 04d8195b and still lacks the dirty-tree gate (TH-0387). flai guard refused git worktree list and git branch --list; I used git rev-parse instead.
+- Items: S-0360, S-0241, S-0341, S-0342, S-0338
+- Seconds: 57
+- Cost: 0.4158 USD, estimated
+
+### 2026-10-09T16:37:31Z
+
+- Summary: S-0343 left ready for in-progress after its planner gave it touches and S-0337's agent was asked about the overlap (MS-0046). Ready is now empty, so there is nothing to order. Promoted nothing: the only candidate, S-0241 (rank 1, 2h), is still blocked by the operator, and every other backlog story is held or lacks figures. Reviews are unchanged: S-0342 waits on TH-0389/TH-0391 and S-0341 on TH-0387.
+- Items: S-0343, S-0241
+- Seconds: 8380
+- Cost: 0.4318 USD, estimated
+
+### 2026-10-09T16:38:22Z
+
+- Summary: Answered TH-0393, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0343
+- Seconds: 51
+- Cost: 0.2744 USD, estimated
+
+### 2026-10-09T16:38:27Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0393, planner-S-0343's plan. It has 17 file touches covering both criteria, a 25m forecast from flai forecast, a 50 USD/week value from flai cod on the operator's input, and four proposed tasks in three layers, which agent-S-0343 now writes since it holds the story.
+- Items: S-0343
+- Seconds: 5
+- Cost: 0.0409 USD, estimated
+
+### 2026-10-09T16:58:22Z
+
+- Summary: S-0343 reached review. flai verify passed at head 6bf02b67, and the verifier matched both criteria (Archive All on the cancelled lane, Archive on a cancelled card) with every file within its touches. I did not accept: the dry-run refuses on the operator's uncommitted files outside wip (Makefile, scripts/env.sh, scripts/litellm.sh, scripts/README.md, docs/contributors/index.md), and S-0338's acceptance is still uncommitted in wip (TH-0389). I will not use --yes. Opened TH-0394 asking the operator to commit or stash and finish S-0338, after which I accept S-0342 and S-0343.
+- Items: S-0343, S-0342, S-0338
+- Seconds: 1195
+- Cost: 1.5336 USD, estimated
+
+### 2026-10-09T18:23:30Z
+
+- Summary: Answered TH-0395, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0289
+- Seconds: 5108
+- Cost: 0.7711 USD, estimated
+
+### 2026-10-09T18:23:41Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0395, planner-S-0289's plan: MD056 in mdlint (T-1433), then closing I-0077 (T-1434). Its touches are all files, and its figures are flai's: a 22m forecast and 15.00 USD/week. I left the title, which the planner suggested changing, to the operator. Under promote_to_ready, moved S-0289 to ready (rank 1, 22m under throughput). Applied the throughput order: S-0289. S-0241 (rank 2, 2h) stays out, blocked by the operator. flai guard refused flai order with a 2>&1 redirect; it ran without one.
+- Items: S-0289
+- Seconds: 11
+- Cost: 0.2111 USD, estimated
+
+### 2026-10-09T18:38:34Z
+
+- Summary: S-0289 reached review. flai verify passed at head b044db7d, and the verifier matched both criteria (MD056 in mdlint with TestTableColumnCountOfI0077 and a fixture; I-0077 closed). I did not accept: the dry-run refuses on the operator's uncommitted files outside wip, and S-0338's acceptance is still uncommitted (TH-0389). Opened TH-0396 pointing to TH-0394. Review now holds S-0341 (TH-0387), S-0342, S-0343, and S-0289, the last three ready to accept once main is clean.
+- Items: S-0289, S-0343, S-0342
+- Seconds: 893
+- Cost: 1.7985 USD, estimated
+
+### 2026-10-10T07:09:53Z
+
+- Summary: run ended
+- Items: none
+- Seconds: 45079
+- Cost: 1.9058 USD, estimated
+
+### 2026-10-10T18:36:57Z
+
+- Summary: Started and reviewed the board; nothing to act on. flai plan --candidates lists none. S-0360 stays a draft: it is complete, but it adds scope and waits on the operator on TH-0392. Promoted nothing: the only candidate, S-0241 (rank 1, 2h), is blocked by the operator. Ready is empty, so nothing to order. No acceptance: the dry-run of S-0289 at b044db7d still refuses on the operator's uncommitted files outside wip, and S-0338's acceptance is still uncommitted (TH-0389, TH-0394, TH-0396). S-0342 and S-0343 wait on the same. S-0341 waits on TH-0387. No thread awaits an answer from me: TH-0324 has a pending recommendation, TH-0375 was answered by the operator, and TH-0386 is the epic planner's thread, which is the operator's.
+- Items: S-0360, S-0241, S-0289, S-0342, S-0343, S-0341
+- Seconds: 42
+- Cost: 0.2980 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -2188,6 +2314,26 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Needs: none
 
 ### 2026-10-08T05:02:37Z
+
+- Call: `flai order --by throughput --apply --json 2>`
+- Needs: none
+
+### 2026-10-08T20:55:29Z
+
+- Call: `git worktree list`
+- Needs: none
+
+### 2026-10-09T14:17:33Z
+
+- Call: `git worktree list`
+- Needs: none
+
+### 2026-10-09T14:17:35Z
+
+- Call: `git branch --list story/S-034*`
+- Needs: none
+
+### 2026-10-09T18:23:36Z
 
 - Call: `flai order --by throughput --apply --json 2>`
 - Needs: none

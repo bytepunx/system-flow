@@ -24,6 +24,12 @@ export npm_config_store_dir="$CACHE_ROOT/.flai-cache/pnpm-store"
 export FLAI_CONFIG="${FLAI_CONFIG:-$CACHE_ROOT/.flai-cache/config.json}"
 export FLAI_CACHE_DIR="${FLAI_CACHE_DIR:-$CACHE_ROOT/.flai-cache/cache}"
 mkdir -p "$CACHE_ROOT/.flai-cache" "$ROOT/bin"
+# The local LiteLLM proxy's key file, written by scripts/litellm.sh up: the
+# gateway tests, flai serve, and the agents it starts read LITELLM_BASE_URL and
+# LITELLM_API_KEY from it. An environment that already names the proxy wins.
+if [ -z "${LITELLM_BASE_URL:-}" ] && [ -f "$CACHE_ROOT/.flai-cache/litellm/litellm.env" ]; then
+  . "$CACHE_ROOT/.flai-cache/litellm/litellm.env"
+fi
 # First run: create the config with the cache inside the repo, not under ~/.flai.
 if [ ! -f "$FLAI_CONFIG" ] && [ -x "$ROOT/bin/flai" ]; then
   "$ROOT/bin/flai" config set cache_dir "$CACHE_ROOT/.flai-cache/cache" >/dev/null 2>&1 || true

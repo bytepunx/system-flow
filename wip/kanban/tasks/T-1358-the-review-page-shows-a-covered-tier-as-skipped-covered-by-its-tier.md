@@ -3,16 +3,36 @@ id: T-1358
 type: task
 nature: improvement
 title: The review page shows a covered tier as skipped, covered by its tier
-status: backlog
+status: done
 parent: S-0342
 owner: alex
 created: 2026-10-08T08:06:34Z
-updated: 2026-10-08T08:06:34Z
-transitions: []
+updated: 2026-10-08T21:13:30Z
+transitions:
+  - to: ready
+    at: 2026-10-08T21:07:50Z
+    by: agent-S-0342
+  - to: in-progress
+    at: 2026-10-08T21:07:50Z
+    by: agent-S-0342
+  - to: done
+    at: 2026-10-08T21:13:30Z
+    by: agent-S-0342
 stream: S-0342
 tags: [dashboard]
 touches: [flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts]
 after: [T-1349]
+usage:
+  source: log
+  seconds: 340
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 5193
+      cache_read: 850765
+      cache_write: 34109
+      cost: 0.4866
 ---
 # T-1358 The review page shows a covered tier as skipped, covered by its tier
 

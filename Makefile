@@ -1,4 +1,4 @@
-.PHONY: check flai flai-reference test integration smoke install-test install-published-test flai-test flai-snapshot template-test install-tools lint-md mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image help
+.PHONY: check flai flai-reference test integration smoke install-test install-published-test flai-test flai-snapshot template-test install-tools lint-md mdlint-fixtures board stats dashboard dashboard-stop flaiover-install flaiover-dev flaiover-build flaiover-test flaiover-image litellm litellm-stop litellm-status help
 
 check: ## Validate this repo against the standard (flai check --strict)
 	scripts/check.sh
@@ -56,6 +56,15 @@ flaiover-test: ## flaiover lint, type check, unit tests
 
 flaiover-image: ## Build the flaiover image as flaiover:local
 	scripts/flaiover-image.sh
+
+litellm: ## Start the local LiteLLM proxy in Docker and write its key file (needs ANTHROPIC_API_KEY the first time)
+	scripts/litellm.sh up
+
+litellm-stop: ## Stop the local LiteLLM proxy, keeping its spend database
+	scripts/litellm.sh down
+
+litellm-status: ## Is the local LiteLLM proxy up, its models, and the key's spend
+	scripts/litellm.sh status
 
 board: ## Print the kanban board
 	scripts/flai.sh board

@@ -31,6 +31,7 @@ Every script in `scripts/` sources `scripts/env.sh`, which sets this environment
 | `PATH` | The tree's own `bin/`, then the main checkout's `bin/` (from a story worktree under `.flai-cache/worktrees/`), then the main checkout's pnpm, then `~/go/bin` |
 | `FLAI_CONFIG` | `.flai-cache/config.json` in the main checkout, unless already set |
 | `FLAI_CACHE_DIR`, npm and pnpm caches | Under the main checkout's `.flai-cache/` |
+| `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `FLAI_TEST_LITELLM_HAIKU` | From `.flai-cache/litellm/litellm.env` when `scripts/litellm.sh up` has written it and the environment does not already set them: the local LiteLLM proxy and its budgeted virtual key, for the gateway tests and the agents `flai serve` starts |
 
 Run `make install-tools` once, from any tree: it installs the pinned golangci-lint v2 and GoReleaser into the main checkout's `bin/`, so every story worktree lints with them. `make flai-test` names the golangci-lint it runs and stops if it is not v2.
 

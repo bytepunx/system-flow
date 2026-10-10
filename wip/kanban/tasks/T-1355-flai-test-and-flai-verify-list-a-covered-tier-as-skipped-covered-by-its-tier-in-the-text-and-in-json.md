@@ -3,16 +3,36 @@ id: T-1355
 type: task
 nature: improvement
 title: "flai test and flai verify list a covered tier as skipped: covered by its tier, in the text and in --json"
-status: backlog
+status: done
 parent: S-0342
 owner: alex
 created: 2026-10-08T08:06:11Z
-updated: 2026-10-08T08:06:28Z
-transitions: []
+updated: 2026-10-08T21:16:03Z
+transitions:
+  - to: ready
+    at: 2026-10-08T21:07:49Z
+    by: agent-S-0342
+  - to: in-progress
+    at: 2026-10-08T21:07:49Z
+    by: agent-S-0342
+  - to: done
+    at: 2026-10-08T21:16:03Z
+    by: agent-S-0342
 stream: S-0342
 tags: [cli]
-touches: [flai/internal/verify/text.go, flai/internal/verify/text_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go]
+touches: [flai/internal/verify/text.go, flai/internal/verify/text_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/verify.go, docs/users/flai-reference.md]
 after: [T-1349]
+usage:
+  source: log
+  seconds: 494
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 21730
+      cache_read: 3559976
+      cache_write: 142728
+      cost: 2.0363
 ---
 # T-1355 flai test and flai verify list a covered tier as skipped: covered by its tier, in the text and in --json
 

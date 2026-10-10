@@ -24,15 +24,15 @@ touches: [design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/u
 after: [T-1325, T-1326]
 usage:
   source: log
-  seconds: 127
+  seconds: 128
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 232
-      cache_read: 2205670
-      cache_write: 99716
-      cost: 1.0325
+      input: 34
+      output: 12108
+      cache_read: 2275116
+      cache_write: 67191
+      cost: 1.1316
 ---
 # T-1327 The CLI design, the dashboard design, and the guides describe the asked and shared cards and the new board fields
 

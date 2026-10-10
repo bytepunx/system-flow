@@ -3,15 +3,18 @@ id: S-0337
 type: story
 nature: feature
 title: flai stats reports the conversations between agents, the conflicts found at sync and at acceptance, and the hold time shares saved, per week
-status: ready
+status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:31Z
-updated: 2026-10-08T10:52:25Z
+updated: 2026-10-08T11:04:51Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:33Z
     by: alex
+  - to: in-progress
+    at: 2026-10-08T11:04:51Z
+    by: agent-S-0337
 tags: [flai, flaiover]
 topics: [cli, dashboard, git]
 touches: [design/adrs, design/system/metrics.md, flai/internal/storygit/conflicts.go, flai/internal/storygit/conflicts_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/internal/metrics/coordination.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, design/system/flai-cli.md]
@@ -22,20 +25,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 344
+  turns:
+    - day: 2026-10-08
+      ceremony: 1
+      work: 31
+    - day: 2026-10-09
+      work: 18
+  models:
+    - model: claude-opus-5-5
+      input: 120
+      output: 19863
+      cache_read: 4479106
+      cache_write: 264164
+      cost: 3.4069
   strategic:
     - kind: orchestrator
-      seconds: 309
+      seconds: 443
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 57
-          output: 1021
-          cache_read: 7083640
-          cache_write: 12995
-          cost: 1.7486
+          input: 91
+          output: 1283
+          cache_read: 9011006
+          cache_write: 77496
+          cost: 2.2394
+        - model: claude-sonnet-5-5
+          input: 6
+          output: 36
+          cache_read: 74126
+          cache_write: 23071
+          cost: 0.0838
 cost_of_delay:
   value: 277.17
   by: planner-E-0018

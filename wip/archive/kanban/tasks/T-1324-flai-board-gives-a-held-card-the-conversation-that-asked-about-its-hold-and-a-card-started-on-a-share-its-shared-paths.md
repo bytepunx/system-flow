@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 257
-      cache_read: 3026420
-      cache_write: 111901
-      cost: 1.4056
+      input: 46
+      output: 16483
+      cache_read: 3097111
+      cache_write: 91467
+      cost: 1.5404
 ---
 # T-1324 flai board gives a held card the conversation that asked about its hold, and a card started on a share its shared paths
 

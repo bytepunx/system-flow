@@ -3,16 +3,36 @@ id: T-1349
 type: task
 nature: improvement
 title: A selected tier that another selected tier covers is skipped, not run, with state skipped and the covering tier named
-status: backlog
+status: done
 parent: S-0342
 owner: alex
 created: 2026-10-08T08:05:37Z
-updated: 2026-10-08T08:05:37Z
-transitions: []
+updated: 2026-10-08T21:07:31Z
+transitions:
+  - to: ready
+    at: 2026-10-08T21:03:04Z
+    by: agent-S-0342
+  - to: in-progress
+    at: 2026-10-08T21:03:04Z
+    by: agent-S-0342
+  - to: done
+    at: 2026-10-08T21:07:31Z
+    by: agent-S-0342
 stream: S-0342
 tags: [cli]
 touches: [flai/internal/verify/verify.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go]
 after: [T-1345]
+usage:
+  source: log
+  seconds: 267
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 13528
+      cache_read: 2216184
+      cache_write: 88852
+      cost: 1.2676
 ---
 # T-1349 A selected tier that another selected tier covers is skipped, not run, with state skipped and the covering tier named
 

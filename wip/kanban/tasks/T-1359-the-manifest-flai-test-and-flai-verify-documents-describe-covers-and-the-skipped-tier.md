@@ -3,16 +3,36 @@ id: T-1359
 type: task
 nature: improvement
 title: The manifest, flai test, and flai verify documents describe covers and the skipped tier
-status: backlog
+status: done
 parent: S-0342
 owner: alex
 created: 2026-10-08T08:07:12Z
-updated: 2026-10-08T08:07:12Z
-transitions: []
+updated: 2026-10-08T21:13:36Z
+transitions:
+  - to: ready
+    at: 2026-10-08T21:07:50Z
+    by: agent-S-0342
+  - to: in-progress
+    at: 2026-10-08T21:07:51Z
+    by: agent-S-0342
+  - to: done
+    at: 2026-10-08T21:13:36Z
+    by: agent-S-0342
 stream: S-0342
 tags: [docs]
 touches: [design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1349]
+usage:
+  source: log
+  seconds: 345
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 11082
+      cache_read: 1815567
+      cache_write: 72790
+      cost: 1.0385
 ---
 # T-1359 The manifest, flai test, and flai verify documents describe covers and the skipped tier
 

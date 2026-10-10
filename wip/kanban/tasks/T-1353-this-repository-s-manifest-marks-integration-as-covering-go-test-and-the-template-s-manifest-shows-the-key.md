@@ -3,16 +3,36 @@ id: T-1353
 type: task
 nature: improvement
 title: This repository's manifest marks integration as covering go-test, and the template's manifest shows the key
-status: backlog
+status: done
 parent: S-0342
 owner: alex
 created: 2026-10-08T08:06:00Z
-updated: 2026-10-08T08:06:00Z
-transitions: []
+updated: 2026-10-08T21:07:36Z
+transitions:
+  - to: ready
+    at: 2026-10-08T21:03:05Z
+    by: agent-S-0342
+  - to: in-progress
+    at: 2026-10-08T21:03:05Z
+    by: agent-S-0342
+  - to: done
+    at: 2026-10-08T21:07:36Z
+    by: agent-S-0342
 stream: S-0342
 tags: [template]
 touches: [system-flow.yaml, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
 after: [T-1345]
+usage:
+  source: log
+  seconds: 271
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 6551
+      cache_read: 1073193
+      cache_write: 43027
+      cost: 0.6139
 ---
 # T-1353 This repository's manifest marks integration as covering go-test, and the template's manifest shows the key
 

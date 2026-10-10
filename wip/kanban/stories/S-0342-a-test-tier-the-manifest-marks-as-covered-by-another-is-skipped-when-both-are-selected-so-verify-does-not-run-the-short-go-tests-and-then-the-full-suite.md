@@ -3,26 +3,44 @@ id: S-0342
 type: story
 nature: improvement
 title: A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite
-status: ready
+status: review
 owner: alex
 created: 2026-10-08T07:59:14Z
-updated: 2026-10-08T10:52:25Z
+updated: 2026-10-08T21:21:04Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:30Z
     by: system-flow
+  - to: in-progress
+    at: 2026-10-08T20:55:29Z
+    by: agent-S-0342
+  - to: review
+    at: 2026-10-08T21:21:04Z
+    by: agent-S-0342
 tags: [cli]
 topics: [testing]
-touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, template/root/system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/text.go, flai/internal/verify/text_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, docs/operators/settings.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts]
+touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, template/root/system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/text.go, flai/internal/verify/text_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, docs/operators/settings.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, docs/users/flai-reference.md, flai/cmd/test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/verify.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1555
+  turns:
+    - day: 2026-10-08
+      ceremony: 5
+      test_runs: 1
+      hand_edits: 2
+      work: 56
+  models:
+    - model: claude-opus-5-5
+      input: 316
+      output: 94488
+      cache_read: 15479404
+      cache_write: 620605
+      cost: 8.8541
   strategic:
     - kind: planner
       seconds: 44
@@ -35,15 +53,21 @@ usage:
           cache_write: 51765
           cost: 0.5952
     - kind: orchestrator
-      seconds: 373
+      seconds: 2042
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 52
-          output: 883
-          cache_read: 10160388
-          cache_write: 24554
-          cost: 2.5095
+          input: 152
+          output: 2348
+          cache_read: 18251092
+          cache_write: 96251
+          cost: 4.5448
+        - model: claude-sonnet-5-5
+          input: 22
+          output: 118
+          cache_read: 395031
+          cache_write: 60008
+          cost: 0.3798
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 1h54m
@@ -69,10 +93,10 @@ The manifest can say which tier covers which: a tier that names `covers:` anothe
 
 ## Acceptance criteria
 
-- [ ] A tier in the manifest's `tests` may carry `covers: [<tier name>...]`; `flai manifest` validation refuses a name that is not a tier or a cycle, and `design/system/project-manifest.md` documents the key.
-- [ ] When the tiers verify selects, or `flai test --all` runs, include a tier and one that covers it, the covered tier is not run and the result lists it as `skipped: covered by <tier>`, in the text and in `--json`; when only the covered tier is selected it runs as before.
-- [ ] This repository's `system-flow.yaml` marks `integration` as covering `go-test`, and the template's manifest does the same for its `test` and `integration` tiers where they overlap, so a story's close-out that touches `flai/` runs the Go tests once.
-- [ ] Tests cover the selection with and without the covering tier, the validation, and the reported skip; `docs/users/flai.md` and `design/system/flai-cli.md` describe it.
+- [x] A tier in the manifest's `tests` may carry `covers: [<tier name>...]`; `flai manifest` validation refuses a name that is not a tier or a cycle, and `design/system/project-manifest.md` documents the key.
+- [x] When the tiers verify selects, or `flai test --all` runs, include a tier and one that covers it, the covered tier is not run and the result lists it as `skipped: covered by <tier>`, in the text and in `--json`; when only the covered tier is selected it runs as before.
+- [x] This repository's `system-flow.yaml` marks `integration` as covering `go-test`, and the template's manifest does the same for its `test` and `integration` tiers where they overlap, so a story's close-out that touches `flai/` runs the Go tests once.
+- [x] Tests cover the selection with and without the covering tier, the validation, and the reported skip; `docs/users/flai.md` and `design/system/flai-cli.md` describe it.
 
 ## Tasks
 

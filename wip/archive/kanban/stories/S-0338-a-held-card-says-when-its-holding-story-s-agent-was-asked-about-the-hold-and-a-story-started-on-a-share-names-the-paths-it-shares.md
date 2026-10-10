@@ -3,11 +3,11 @@ id: S-0338
 type: story
 nature: feature
 title: A held card says when its holding story's agent was asked about the hold, and a story started on a share names the paths it shares
-status: in-progress
+status: done
 parent: E-0018
 owner: alex
 created: 2026-10-08T04:31:41Z
-updated: 2026-10-08T10:50:52Z
+updated: 2026-10-08T20:55:08Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:43Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T10:28:46Z
     by: agent-S-0338
+  - to: review
+    at: 2026-10-08T11:04:39Z
+    by: agent-S-0338
+  - to: done
+    at: 2026-10-08T20:55:08Z
+    by: orchestrator
 tags: [flai, flaiover]
 topics: [dashboard, cli]
 touches: [flai/internal/workitem/hold.go, flai/internal/workitem/hold_test.go, flai/internal/workitem/boardview.go, flai/internal/workitem/boardview_test.go, flaiover/src/lib/activity.ts, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, design/system/flai-cli.md, flai/internal/workitem/share.go, flai/internal/workitem/share_test.go, flaiover/src/lib/server/board.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md, design/issues/summary.md, design/issues/I-0128-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md, flai/cmd/story_start_test.go]
@@ -26,30 +32,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 775
-  estimated: true
+  seconds: 2175
   turns:
     - day: 2026-10-08
-      hand_edits: 1
-      work: 56
+      ceremony: 1
+      test_runs: 3
+      hand_edits: 2
+      work: 70
   models:
     - model: claude-opus-5-5
-      input: 238
-      output: 1257
-      cache_read: 13273314
-      cache_write: 537991
-      cost: 6.1857
+      input: 286
+      output: 102155
+      cache_read: 19194545
+      cache_write: 566870
+      cost: 9.5469
   strategic:
     - kind: orchestrator
-      seconds: 20
+      seconds: 1439
       estimated: true
       models:
         - model: claude-opus-5-5
+          input: 116
+          output: 1537
+          cache_read: 13316685
+          cache_write: 112556
+          cost: 3.3215
+        - model: claude-sonnet-5-5
           input: 19
-          output: 267
-          cache_read: 6355421
-          cache_write: 10487
-          cost: 1.5684
+          output: 93
+          cache_read: 304789
+          cache_write: 66783
+          cost: 0.3176
 cost_of_delay:
   value: 217.39
   by: planner-E-0018
@@ -72,11 +85,11 @@ Show the operator, on the board, that a hold is being worked out between agents.
 
 ## Acceptance criteria
 
-- [ ] `flai board --json` gives a ready card held on overlap the conversation that asked its holding story's agent about the hold, and a card started on a share the shared paths, the split, and the conversation.
-- [ ] A held card whose holding story's agent was asked says so and links the conversation.
-- [ ] A card of a story started on a share names the shared paths and links the conversation.
-- [ ] The Messages view and a story's page show a conversation's share and its split.
-- [ ] `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`, and `docs/users/flai.md` describe the card and the new board fields.
+- [x] `flai board --json` gives a ready card held on overlap the conversation that asked its holding story's agent about the hold, and a card started on a share the shared paths, the split, and the conversation.
+- [x] A held card whose holding story's agent was asked says so and links the conversation.
+- [x] A card of a story started on a share names the shared paths and links the conversation.
+- [x] The Messages view and a story's page show a conversation's share and its split.
+- [x] `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`, and `docs/users/flai.md` describe the card and the new board fields.
 
 ## Tasks
 
@@ -111,3 +124,16 @@ Touches:
 Forecast 40m: `flai forecast` gave 33m, 104 s per unit over 33 done large-band feature stories, times size 19 (5 criteria, 14 touches). Raised to 40m, because `workitem` cannot import `messages` and T-1324 will pass the asks and shares in from callers no task can name yet, so the size will grow.
 
 Cost of delay 217.39 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 40m of the 3h4m forecast over the four open stories. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: 2d114ffc11fec9802810cbec19070f8857b0cc55
+- At: 2026-10-08T20:55:08Z
+
+Verdict: pass. All five criteria are met, every changed file is within the story's touches, and no convention break was found; flai verify passed every step at 2d114ffc.
+
+- 1: flai/internal/workitem/hold.go, flai/internal/workitem/boardview.go, flai/internal/workitem/share.go, flai/internal/workitem/boardview_test.go, flai/internal/workitem/share_test.go, flai/cmd/story_start_test.go
+- 2: flaiover/src/lib/activity.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/activity.test.ts, flaiover/src/lib/components/BoardCard.svelte.test.ts
+- 3: flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/server/board.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/lib/components/BoardCard.svelte.test.ts
+- 4: flaiover/src/lib/components/Messages.svelte, flaiover/src/lib/components/Messages.svelte.test.ts
+- 5: design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md
