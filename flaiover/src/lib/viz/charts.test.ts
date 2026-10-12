@@ -62,6 +62,9 @@ import {
 	codOrderRows,
 	codOutstanding,
 	codWeekRows,
+	coordinationChart,
+	hasCoordination,
+	shareTotals,
 	hasCostOfDelay,
 	hasOrder,
 	orderSummary,
@@ -69,6 +72,8 @@ import {
 	type Bucket,
 	type Claims,
 	type CodDay,
+	type Coordination,
+	type CoordinationWeek,
 	type CostOfDelayReport,
 	type ErrorFilter,
 	type ItemMetrics,
@@ -1718,6 +1723,7 @@ describe('planning charts', () => {
 			'Forecast Error / Model',
 			'Parallelism',
 			'Hold Time',
+			'Coordination',
 			'Touches Drift'
 		]);
 		expect(PLANNING_KINDS).toEqual([...FORECAST_KINDS, ...CLAIMS_KINDS]);
@@ -2258,7 +2264,43 @@ const claims: Claims = {
 		drift('S-109', ['flai/cmd/e.go'], ['docs'])
 	]
 };
-const claiming: Report = { ...forecasting, claims };
+// Coordination as flai sends it (S-0337, ADR-0138) over the same weeks: two conversations opened
+// in W32, one agreed and one escalated in W33, both closed with their story in W34; a conflict
+// found early in W32 over two paths, and in W35 one met at sync over a path and one at acceptance
+// over three; a story started on a share in W33 that would have waited 20 hours, and two in W36
+// that would have waited 2 and 4.
+const coordWeek = (
+	week: string,
+	start: string,
+	[opened, agreed, escalated, closed]: number[],
+	[found, foundPaths, sync, syncPaths, accept, acceptPaths]: number[],
+	[started, held]: number[]
+): CoordinationWeek => ({
+	week,
+	start,
+	conversations: { opened, agreed, escalated, closed_with_story: closed },
+	conflicts: {
+		found,
+		found_paths: foundPaths,
+		met_sync: sync,
+		met_sync_paths: syncPaths,
+		met_accept: accept,
+		met_accept_paths: acceptPaths
+	},
+	shares: { started, held_seconds: held }
+});
+const coordination: Coordination = {
+	logged: true,
+	weeks: [
+		coordWeek('2026-W31', '2026-07-27', [0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0]),
+		coordWeek('2026-W32', '2026-08-03', [2, 0, 0, 0], [1, 2, 0, 0, 0, 0], [0, 0]),
+		coordWeek('2026-W33', '2026-08-10', [0, 1, 1, 0], [0, 0, 0, 0, 0, 0], [1, 72000]),
+		coordWeek('2026-W34', '2026-08-17', [0, 0, 0, 2], [0, 0, 0, 0, 0, 0], [0, 0]),
+		coordWeek('2026-W35', '2026-08-24', [0, 0, 0, 0], [0, 0, 1, 1, 1, 3], [0, 0]),
+		coordWeek('2026-W36', '2026-08-31', [0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [2, 21600])
+	]
+};
+const claiming: Report = { ...forecasting, claims, coordination };
 
 describe('claims charts', () => {
 	type Line = {
@@ -2441,9 +2483,10 @@ describe('claims charts', () => {
 		const spans = {
 			parallelism: [midnight('2026-08-02'), end],
 			'hold-time': [midnight('2026-07-27') - 3.5 * day, midnight('2026-08-31') + 3.5 * day],
+			coordination: [midnight('2026-07-27') - 3.5 * day, midnight('2026-08-31') + 3.5 * day],
 			'touches-drift': [start, end]
 		} as const;
-		for (const r of [{ ...claiming, claims: empty }, forecasting]) {
+		for (const r of [{ ...claiming, claims: empty, coordination: undefined }, forecasting]) {
 			for (const kind of CLAIMS_KINDS) {
 				const o = build(kind, r, light) as Option;
 				expect(
@@ -2476,6 +2519,143 @@ describe('claims charts', () => {
 			expect(errorFacets(forecasting, kind), kind).toEqual({ natures: [], models: [] });
 		}
 		expect(FORECAST_KINDS.every(isForecastKind)).toBe(true);
+	});
+});
+
+describe('the coordination chart (S-0337)', () => {
+	type Point = { value: [number, number]; week: string; start: string; detail?: string };
+	type Series = {
+		name: string;
+		type: string;
+		stack?: string;
+		symbol?: string;
+		itemStyle: { color: string };
+		data: Point[];
+	};
+	type Option = {
+		legend: { show: boolean };
+		xAxis: { type: string; min?: number; max?: number; minInterval?: number };
+		yAxis: { name: string; minInterval?: number };
+		tooltip: { formatter: (p: unknown) => string };
+		series: Series[];
+	};
+	const day = 86400e3;
+	const counts = (o: Option) => o.series.map((s) => [s.name, s.data.map((d) => d.value[1])]);
+	const mondays = ['07-27', '08-03', '08-10', '08-17', '08-24', '08-31'].map((d) =>
+		midnight(`2026-${d}`)
+	);
+	const axis = {
+		type: 'time',
+		minInterval: 7 * day,
+		min: midnight('2026-07-27') - 3.5 * day,
+		max: midnight('2026-08-31') + 3.5 * day
+	};
+
+	it('bars the conflicts found early against those met late, with a line per conversation outcome', () => {
+		const o = coordinationChart(claiming, light) as Option;
+		expect(o.series.map((s) => [s.name, s.type])).toEqual([
+			['found early', 'bar'],
+			['met late', 'bar'],
+			['opened', 'line'],
+			['agreed', 'line'],
+			['escalated', 'line'],
+			['closed with story', 'line']
+		]);
+		// met late is met at sync and met at acceptance together
+		expect(counts(o)).toEqual([
+			['found early', [0, 1, 0, 0, 0, 0]],
+			['met late', [0, 0, 0, 0, 2, 0]],
+			['opened', [0, 2, 0, 0, 0, 0]],
+			['agreed', [0, 0, 1, 0, 0, 0]],
+			['escalated', [0, 0, 1, 0, 0, 0]],
+			['closed with story', [0, 0, 0, 2, 0, 0]]
+		]);
+		// the bars side by side, not stacked, and every point on its week's Monday's tick
+		expect(o.series.some((s) => s.stack)).toBe(false);
+		for (const s of o.series)
+			expect(
+				s.data.map((d) => d.value[0]),
+				s.name
+			).toEqual(mondays);
+		// six series in six colours, the four lines told apart by their marks too
+		expect(new Set(o.series.map((s) => s.itemStyle.color)).size).toBe(6);
+		expect(new Set(o.series.slice(2).map((s) => s.symbol)).size).toBe(4);
+		const week = (n: number) =>
+			o.tooltip.formatter(o.series.map((s) => ({ seriesName: s.name, data: s.data[n] })));
+		expect(week(1)).toBe(
+			'week of 2026-08-03 (2026-W32)<br/>found early: 1 (2 paths)<br/>' +
+				'met late: 0 (0 at sync, 0 at acceptance, 0 paths)<br/>opened: 2<br/>agreed: 0<br/>' +
+				'escalated: 0<br/>closed with story: 0'
+		);
+		expect(week(4)).toContain('met late: 2 (1 at sync, 1 at acceptance, 4 paths)');
+		expect(o.tooltip.formatter([])).toBe('');
+		// from the week that holds the window's start to the one that holds now (ADR-0054)
+		expect(o.xAxis).toMatchObject(axis);
+		expect(o.yAxis).toMatchObject({ name: 'per week', minInterval: 1 });
+		expect(o.legend.show).toBe(true);
+		expect((build('coordination', claiming, light) as Option).series).toEqual(o.series);
+	});
+	it('states the stories started on a share and the hold time they saved, summed over the weeks', () => {
+		expect(shareTotals(claiming)).toEqual({ started: 3, held_seconds: 93600 });
+		expect(hasCoordination(claiming)).toBe(true);
+	});
+	it('draws a window without coordination as weeks of zeros over the window', () => {
+		const quiet: Report = {
+			...claiming,
+			coordination: {
+				logged: true,
+				weeks: coordination.weeks.map((wk) =>
+					coordWeek(wk.week, wk.start, [0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0])
+				)
+			}
+		};
+		const o = coordinationChart(quiet, light) as Option;
+		expect(o.series.length).toBe(6);
+		for (const s of o.series)
+			expect(
+				s.data.map((d) => d.value[1]),
+				s.name
+			).toEqual([0, 0, 0, 0, 0, 0]);
+		expect(o.xAxis).toMatchObject(axis);
+		expect(shareTotals(quiet)).toEqual({ started: 0, held_seconds: 0 });
+	});
+	it('draws the conversations alone when the conflict log could not be read', () => {
+		const unread: Report = {
+			...claiming,
+			coordination: {
+				logged: false,
+				weeks: coordination.weeks.map(({ week, start, conversations, shares }) => ({
+					week,
+					start,
+					conversations,
+					shares
+				}))
+			}
+		};
+		const o = coordinationChart(unread, light) as Option;
+		expect(o.series.map((s) => s.name)).toEqual([
+			'opened',
+			'agreed',
+			'escalated',
+			'closed with story'
+		]);
+		expect(o.series[0].data.map((d) => d.value[1])).toEqual([0, 2, 0, 0, 0, 0]);
+		expect(shareTotals(unread)).toEqual({ started: 3, held_seconds: 93600 });
+	});
+	it('draws empty over the window from a flai older than S-0337, which sends no coordination', () => {
+		const older: Report = { ...claiming, coordination: undefined };
+		expect(hasCoordination(older)).toBe(false);
+		expect(shareTotals(older)).toBeUndefined();
+		const o = build('coordination', older, light) as Option;
+		expect(o.series.every((s) => s.data.length === 0)).toBe(true);
+		expect(o.xAxis).toMatchObject(axis);
+		// a flai that sends no weeks at all is read as none
+		const nulls = normalise({
+			...claiming,
+			coordination: { logged: true, weeks: null }
+		} as unknown as Report);
+		expect(nulls.coordination).toEqual({ logged: true, weeks: [] });
+		expect(normalise(older).coordination).toBeUndefined();
 	});
 });
 

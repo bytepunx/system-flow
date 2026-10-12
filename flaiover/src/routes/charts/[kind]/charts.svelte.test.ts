@@ -657,6 +657,7 @@ describe('the planning charts (S-0212)', () => {
 			['Forecast Error / Model', '/charts/forecast-by-model'],
 			['Parallelism', '/charts/parallelism'],
 			['Hold Time', '/charts/hold-time'],
+			['Coordination', '/charts/coordination'],
 			['Touches Drift', '/charts/touches-drift'],
 			['CoD Outstanding', '/charts/cod-outstanding'],
 			['CoD Incurred', '/charts/cod-incurred'],
@@ -1042,6 +1043,153 @@ describe('the claims charts (S-0214)', () => {
 		expect(cells('hold-time-table').length).toBe(2);
 	});
 
+	// coordination as flai sends it (S-0337) over the weeks of the window: in W39 a conversation
+	// opened and a conflict found early over two paths, and a story started on a share that would
+	// have waited 20 hours; in W40 the conversation agreed and closed with its story, a conflict met
+	// at sync and one at acceptance, and two stories on a share that would have waited 2 and 4 hours
+	const coordination = {
+		logged: true,
+		weeks: [
+			{
+				week: '2026-W39',
+				start: '2026-09-21',
+				conversations: { opened: 1, agreed: 0, escalated: 0, closed_with_story: 0 },
+				conflicts: {
+					found: 1,
+					found_paths: 2,
+					met_sync: 0,
+					met_sync_paths: 0,
+					met_accept: 0,
+					met_accept_paths: 0
+				},
+				shares: { started: 1, held_seconds: 72000 }
+			},
+			{
+				week: '2026-W40',
+				start: '2026-09-28',
+				conversations: { opened: 0, agreed: 1, escalated: 0, closed_with_story: 1 },
+				conflicts: {
+					found: 0,
+					found_paths: 0,
+					met_sync: 1,
+					met_sync_paths: 1,
+					met_accept: 1,
+					met_accept_paths: 1
+				},
+				shares: { started: 2, held_seconds: 21600 }
+			}
+		]
+	};
+	const coordinationNotes = () =>
+		['coordination-older', 'conflicts-unread', 'claims-older'].filter(
+			(id) => document.querySelector(`[data-testid="${id}"]`) !== null
+		);
+
+	it('draws coordination per week with the stories started on a share and the hold time saved (S-0337)', async () => {
+		answered = { items, claims, coordination };
+		await open('coordination');
+		expect(text('h1')).toBe('Coordination');
+		expect(controls()).toEqual(['window']);
+		expect(asked()).toEqual(['/api/stats?since=30d&type=story&bucket=day']);
+		const w39 = midnight('2026-09-21');
+		const w40 = midnight('2026-09-28');
+		expect(
+			drawn().series.map((s) => [
+				s.name,
+				(s.data as { value: [number, number] }[]).map((d) => d.value)
+			])
+		).toEqual([
+			[
+				'found early',
+				[
+					[w39, 1],
+					[w40, 0]
+				]
+			],
+			[
+				'met late',
+				[
+					[w39, 0],
+					[w40, 2]
+				]
+			],
+			[
+				'opened',
+				[
+					[w39, 1],
+					[w40, 0]
+				]
+			],
+			[
+				'agreed',
+				[
+					[w39, 0],
+					[w40, 1]
+				]
+			],
+			[
+				'escalated',
+				[
+					[w39, 0],
+					[w40, 0]
+				]
+			],
+			[
+				'closed with story',
+				[
+					[w39, 0],
+					[w40, 1]
+				]
+			]
+		]);
+		expect(text('[data-testid="coordination-shares"]')).toBe(
+			'Stories started on a share in the window: 3 · hold time saved: 26h.'
+		);
+		expect(cells('coordination-table')).toEqual([
+			['2026-W39', '2026-09-21', '1', '0', '0', '0', '1', '0', '0', '1', '20h'],
+			['2026-W40', '2026-09-28', '0', '1', '0', '1', '0', '1', '1', '2', '6h']
+		]);
+		expect(coordinationNotes()).toEqual([]);
+		await choose('window', '7d');
+		expect(asked().at(-1)).toBe('/api/stats?since=7d&type=story&bucket=day');
+	});
+
+	it('says the conflict log could not be read, and draws the conversations alone (S-0337)', async () => {
+		const weeks = coordination.weeks.map(({ week, start, conversations, shares }) => ({
+			week,
+			start,
+			conversations,
+			shares
+		}));
+		answered = { items, claims, coordination: { logged: false, weeks } };
+		await open('coordination');
+		expect(coordinationNotes()).toEqual(['conflicts-unread']);
+		expect(text('[data-testid="conflicts-unread"]')).toContain('.flai-cache/conflicts.jsonl');
+		expect(drawn().series.map((s) => s.name)).toEqual([
+			'opened',
+			'agreed',
+			'escalated',
+			'closed with story'
+		]);
+		expect(cells('coordination-table').map((r) => r.slice(6, 9))).toEqual([
+			['-', '-', '-'],
+			['-', '-', '-']
+		]);
+		expect(text('[data-testid="coordination-shares"]')).toContain('3');
+	});
+
+	it('says the flai on the host is older when it sends no coordination (S-0337)', async () => {
+		answered = { items, claims };
+		await open('coordination');
+		expect(coordinationNotes()).toEqual(['coordination-older']);
+		expect(text('[data-testid="coordination-older"]')).toContain('flai self-upgrade');
+		expect(document.querySelector('[data-testid="coordination-shares"]')).toBeNull();
+		expect(cells('coordination-table')).toEqual([]);
+		// the other claims charts are drawn as before
+		await go('hold-time');
+		expect(coordinationNotes()).toEqual([]);
+	});
+
 	it('says the flai on the host is older when it sends no held stories or time held', async () => {
 		const days = claims.days.map(({ date, in_progress }) => ({ date, in_progress }));
 		answered = { items, claims: { limit: 2, days, drift: claims.drift } };
@@ -1351,6 +1499,7 @@ describe('the cost of delay charts (S-0213)', () => {
 			'Forecast Error / Model',
 			'Parallelism',
 			'Hold Time',
+			'Coordination',
 			'Touches Drift',
 			'CoD Outstanding',
 			'CoD Incurred',

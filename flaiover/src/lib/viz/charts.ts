@@ -121,6 +121,40 @@ export type Claims = {
 	/** Absent when git could not be read. */
 	drift?: TouchDrift[];
 };
+/** The conversations between stories of an ISO week, by how they began or ended (ADR-0138). */
+export type ConversationCounts = {
+	opened: number;
+	agreed: number;
+	escalated: number;
+	closed_with_story: number;
+};
+/**
+ * The conflict log's lines of an ISO week: those a trial merge found while both stories were open,
+ * and those a rebase met at sync or at acceptance, each with the paths its lines name.
+ */
+export type ConflictCounts = {
+	found: number;
+	found_paths: number;
+	met_sync: number;
+	met_sync_paths: number;
+	met_accept: number;
+	met_accept_paths: number;
+};
+/** One ISO week of coordination; `conflicts` is absent when the conflict log could not be read. */
+export type CoordinationWeek = {
+	week: string;
+	start: string;
+	conversations: ConversationCounts;
+	conflicts?: ConflictCounts;
+	/** The stories started on a share in the week, and the hold each would have waited, summed. */
+	shares: { started: number; held_seconds: number };
+};
+/** How stories coordinated, per ISO week of the window (S-0337, metrics.md § Coordination). */
+export type Coordination = {
+	/** Whether the conflict log could be read. */
+	logged: boolean;
+	weeks: CoordinationWeek[];
+};
 /** The per-item error fields the planning charts read. */
 export type ErrorField =
 	'forecast_error_seconds' | 'delivery_error_seconds' | 'estimate_error_seconds';
@@ -310,6 +344,10 @@ export function normalise(r: Report): Report {
 			...r.waiting,
 			weeks: r.waiting.weeks ?? [],
 			longest: r.waiting.longest ?? []
+		},
+		coordination: r.coordination && {
+			...r.coordination,
+			weeks: r.coordination.weeks ?? []
 		}
 	};
 }
@@ -336,6 +374,8 @@ export type Report = {
 	/** One per day of the window; absent from a flai older than S-0205. */
 	strategic_days?: StrategicDay[];
 	cost_of_delay?: CostOfDelayReport;
+	/** Absent from a flai older than S-0337. */
+	coordination?: Coordination;
 };
 
 /** The columns cost of delay is laid out in, in board order (S-0205). */
@@ -402,8 +442,11 @@ export const FORECAST_KINDS = [
 	'forecast-by-model'
 ] as const;
 export type ForecastKind = (typeof FORECAST_KINDS)[number];
-/** The charts of what claims cost in parallelism and holds, and of touches drift (S-0214). */
-export const CLAIMS_KINDS = ['parallelism', 'hold-time', 'touches-drift'] as const;
+/**
+ * The charts of what claims cost in parallelism and holds (S-0214), of how stories coordinated
+ * around them (S-0337), and of touches drift (S-0214).
+ */
+export const CLAIMS_KINDS = ['parallelism', 'hold-time', 'coordination', 'touches-drift'] as const;
 export type ClaimsKind = (typeof CLAIMS_KINDS)[number];
 /** The charts the Planning group lists: forecasts, then claims. */
 export const PLANNING_KINDS = [...FORECAST_KINDS, ...CLAIMS_KINDS] as const;
@@ -441,6 +484,7 @@ export const TITLES: Record<Kind, string> = {
 	'forecast-by-model': 'Forecast Error / Model',
 	parallelism: 'Parallelism',
 	'hold-time': 'Hold Time',
+	coordination: 'Coordination',
 	'touches-drift': 'Touches Drift',
 	'strategic-cost': 'Strategic Cost',
 	'strategic-use': 'Strategic Use',
@@ -1893,6 +1937,118 @@ export function holdTime(r: Report, t: Theme): Opt {
 		series
 	});
 }
+/** Whether the report carries coordination: a flai older than S-0337 sends none. */
+export const hasCoordination = (r: Report) => r.coordination !== undefined;
+/** What Coordination states beside it: the stories started on a share, and the hold they saved. */
+export type ShareTotals = { started: number; held_seconds: number };
+/**
+ * The sums of `shares.started` and `shares.held_seconds` over the weeks of the window; none from a
+ * flai older than S-0337.
+ */
+export function shareTotals(r: Report): ShareTotals | undefined {
+	if (!r.coordination) return undefined;
+	return (r.coordination.weeks ?? []).reduce(
+		(n, wk) => ({
+			started: n.started + wk.shares.started,
+			held_seconds: n.held_seconds + wk.shares.held_seconds
+		}),
+		{ started: 0, held_seconds: 0 }
+	);
+}
+/** A week's count on its Monday's tick, with what its tooltip adds after the count. */
+type CoordPoint = { value: [number, number]; week: string; start: string; detail?: string };
+/**
+ * Each conversation series of the coordination chart: how they began or ended, a mark each so the
+ * four lines are told apart by more than colour, and opened, the count the others come out of, in
+ * the text colour.
+ */
+const CONVERSATION_SERIES: {
+	key: keyof ConversationCounts;
+	name: string;
+	slot?: number;
+	symbol: string;
+}[] = [
+	{ key: 'opened', name: 'opened', symbol: 'circle' },
+	{ key: 'agreed', name: 'agreed', slot: 5, symbol: 'rect' },
+	{ key: 'escalated', name: 'escalated', slot: 3, symbol: 'triangle' },
+	{ key: 'closed_with_story', name: 'closed with story', slot: 6, symbol: 'diamond' }
+];
+const pathCount = (n: number) => `${n} ${n === 1 ? 'path' : 'paths'}`;
+/**
+ * Coordination (S-0337, ADR-0138): per ISO week of the window, bars of the conflicts a trial merge
+ * found while both stories were open against those a rebase met late, at sync or at acceptance,
+ * and a line each for the conversations between stories opened, agreed, escalated, and closed with
+ * their story. Without the conflict log, `logged` false, it draws the conversations alone.
+ */
+export function coordinationChart(r: Report, t: Theme): Opt {
+	const weeks = r.coordination?.weeks ?? [];
+	const logged = r.coordination?.logged !== false;
+	const point = (wk: CoordinationWeek, n: number, detail?: string): CoordPoint => ({
+		value: [place(Date.parse(wk.start), 'week'), n],
+		week: wk.week,
+		start: wk.start,
+		detail
+	});
+	const bar = (name: string, color: string, of: (wk: CoordinationWeek) => CoordPoint) => ({
+		name,
+		type: 'bar',
+		barMaxWidth: 12,
+		itemStyle: { color, borderColor: t.surface, borderWidth: 1 },
+		data: weeks.map(of)
+	});
+	const conflicts = logged
+		? [
+				bar('found early', t.series[2], (wk) => {
+					const c = wk.conflicts;
+					return point(wk, c?.found ?? 0, pathCount(c?.found_paths ?? 0));
+				}),
+				bar('met late', t.series[1], (wk) => {
+					const c = wk.conflicts;
+					const sync = c?.met_sync ?? 0;
+					const accept = c?.met_accept ?? 0;
+					const n = (c?.met_sync_paths ?? 0) + (c?.met_accept_paths ?? 0);
+					return point(
+						wk,
+						sync + accept,
+						`${sync} at sync, ${accept} at acceptance, ${pathCount(n)}`
+					);
+				})
+			]
+		: [];
+	const conversations = CONVERSATION_SERIES.map((s) => {
+		const color = s.slot === undefined ? t.text : t.series[s.slot];
+		return {
+			...line(t, s.name, color, s.symbol, []),
+			showSymbol: true,
+			data: weeks.map((wk) => point(wk, wk.conversations[s.key]))
+		};
+	});
+	const tip = (ps: { marker?: string; seriesName: string; data: CoordPoint }[]) => {
+		const list = ps.filter((p) => p?.data);
+		if (list.length === 0) return '';
+		const { week, start } = list[0].data;
+		const lines = list.map((p) => {
+			const d = p.data;
+			return `${p.marker ?? ''}${p.seriesName}: ${d.value[1]}${d.detail ? ` (${d.detail})` : ''}`;
+		});
+		return `week of ${start} (${week})<br/>${lines.join('<br/>')}`;
+	};
+	const axes = bucketAxes(
+		t,
+		r,
+		'week',
+		weeks.map((wk) => Date.parse(wk.start)),
+		true,
+		'per week',
+		(v) => `${v}`,
+		tip
+	);
+	return base(t, {
+		...axes,
+		yAxis: { ...axes.yAxis, minInterval: 1 },
+		series: [...conflicts, ...conversations]
+	});
+}
 /** A story of the touches-drift chart: its drift as flai reports it, and its title and completion. */
 export type DriftedStory = TouchDrift & { title: string; completed: string };
 /**
@@ -2426,6 +2582,8 @@ export function build(
 			return parallelism(r, t);
 		case 'hold-time':
 			return holdTime(r, t);
+		case 'coordination':
+			return coordinationChart(r, t);
 		case 'touches-drift':
 			return touchesDrift(r, t);
 		case 'strategic-cost':

@@ -24,6 +24,7 @@
 		FLOW_KINDS,
 		forecastRows,
 		hasClaims,
+		hasCoordination,
 		hasCostOfDelay,
 		hasOrder,
 		hasSpend,
@@ -39,6 +40,7 @@
 		ORDERS,
 		orderSummary,
 		SPEND_KINDS,
+		shareTotals,
 		spendRows,
 		STRATEGIC_AGENTS,
 		STRATEGIC_KINDS,
@@ -171,6 +173,8 @@
 	const completed = $derived(report ? completedIn(report) : []);
 	// the stories touches drift draws, done in the window, as it draws them (S-0214)
 	const drifted = $derived(report && kind === 'touches-drift' ? driftedIn(report) : []);
+	// what Coordination states beside it: the stories started on a share and the hold saved (S-0337)
+	const shares = $derived(report && kind === 'coordination' ? shareTotals(report) : undefined);
 	const share = (v: number | undefined) => (v === undefined ? '-' : `${Math.round(v * 100)}%`);
 	/** What the items done in the window spent, and what that comes to, in a line. */
 	const usageSummary = $derived.by(() => {
@@ -395,7 +399,17 @@
 				>flai edit &lt;story&gt; --forecast-duration 6h --forecast-delivery &lt;UTC time&gt;</code
 			>.
 		</p>
-	{:else if claimsKind && report && !hasClaims(report)}
+	{:else if kind === 'coordination' && report && !hasCoordination(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="coordination-older">
+			The flai on the host sends no coordination, which this chart is drawn from: it is older than
+			the dashboard. Upgrade it with <code>flai self-upgrade</code>.
+		</p>
+	{:else if kind === 'coordination' && report?.coordination && !report.coordination.logged}
+		<p class="mb-2 text-sm text-muted" data-testid="conflicts-unread">
+			flai could not read the conflict log on the host, <code>.flai-cache/conflicts.jsonl</code> in
+			the main checkout, so this chart draws no conflicts found or met. <code>flai stats</code> says why.
+		</p>
+	{:else if claimsKind && kind !== 'coordination' && report && !hasClaims(report)}
 		<p class="mb-2 text-sm text-muted" data-testid="claims-older">
 			The flai on the host sends no held stories or time held, which this chart is drawn from: it is
 			older than the dashboard. Upgrade it with <code>flai self-upgrade</code>.
@@ -457,6 +471,19 @@
 		{#await import('$lib/viz/charts') then m}
 			<Chart option={m.stateShare(report, t)} theme={t} height={120} />
 		{/await}
+	{/if}
+	{#if kind === 'coordination' && shares}
+		<p class="mt-2 text-sm" data-testid="coordination-shares">
+			Stories started on a share in the window: {shares.started} · hold time saved: {hours(
+				shares.held_seconds
+			)}h.
+		</p>
+		<p class="text-xs text-muted" data-testid="coordination-note">
+			The bars are the conflicts a trial merge found while both stories were open, early, against
+			those a rebase met at sync or at acceptance, late. The lines are the conversations between
+			stories opened each week, and those that agreed, were escalated, or closed with their story.
+			The hold time saved is what the stories started on a share would have waited for their holder.
+		</p>
 	{/if}
 	{#if kind === 'agent-waiting' && report?.waiting}
 		<h2 class="mt-6 mb-2 text-base font-medium">Longest waits</h2>
@@ -576,6 +603,33 @@
 										w.held_seconds.overlap + w.held_seconds.after + w.held_seconds['no-touches']
 									)}</td
 								></tr
+							>{/each}</tbody
+					>
+				</table>
+			{:else if kind === 'coordination' && report}
+				<table class="min-w-full" data-testid="coordination-table">
+					<thead
+						><tr class="text-left text-muted"
+							><th class="pr-4">week</th><th class="pr-4">start</th><th class="pr-4">opened</th><th
+								class="pr-4">agreed</th
+							><th class="pr-4">escalated</th><th class="pr-4">closed with story</th><th
+								class="pr-4">found early</th
+							><th class="pr-4">met at sync</th><th class="pr-4">met at acceptance</th><th
+								class="pr-4">started on a share</th
+							><th>hold saved</th></tr
+						></thead
+					><tbody
+						>{#each report.coordination?.weeks ?? [] as w (w.week)}<tr
+								><td class="pr-4 font-mono">{w.week}</td><td class="pr-4 font-mono">{w.start}</td
+								><td class="pr-4">{w.conversations.opened}</td><td class="pr-4"
+									>{w.conversations.agreed}</td
+								><td class="pr-4">{w.conversations.escalated}</td><td class="pr-4"
+									>{w.conversations.closed_with_story}</td
+								><td class="pr-4">{w.conflicts?.found ?? '-'}</td><td class="pr-4"
+									>{w.conflicts?.met_sync ?? '-'}</td
+								><td class="pr-4">{w.conflicts?.met_accept ?? '-'}</td><td class="pr-4"
+									>{w.shares.started}</td
+								><td>{human(w.shares.held_seconds)}</td></tr
 							>{/each}</tbody
 					>
 				</table>
