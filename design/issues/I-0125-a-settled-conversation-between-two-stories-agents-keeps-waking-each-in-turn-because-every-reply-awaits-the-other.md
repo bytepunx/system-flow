@@ -3,11 +3,11 @@ id: I-0125
 title: A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
 class: efficiency
 status: open
-count: 2
+count: 3
 cost: 3m
 first_reported: 2026-10-08T10:21:38Z
-last_reported: 2026-10-08T10:43:24Z
-updated: 2026-10-08T10:43:24Z
+last_reported: 2026-10-12T14:41:55Z
+updated: 2026-10-12T14:41:55Z
 ---
 
 # I-0125 A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
@@ -24,5 +24,9 @@ S-0232's agent ended to wait on TH-0324, and flai serve restarted it once for ea
 ### 2026-10-08T10:43:24Z
 Story: S-0232.
 MS-0041 with S-0347: S-0232's agent answered that there was nothing to change and asked for no reply. S-0347's agent replied anyway, restating that, which woke S-0232's agent again. S-0232 left the conversation unanswered, even though it is listed as awaiting S-0232, so that S-0347's agent is not woken in turn.
+
+### 2026-10-12T14:41:55Z
+Story: S-0232.
+MS-0053 from S-0362, like MS-0021 and MS-0031 before it, notified S-0232 that a task changed `design/issues/summary.md`. That file is generated and regenerated at every sync (ADR-0098), so the notice cannot break anything. Each such notice still restarts the claiming story's agent. A notice for a path that flai regenerates at sync could be left out.
 
 ## Remediation
