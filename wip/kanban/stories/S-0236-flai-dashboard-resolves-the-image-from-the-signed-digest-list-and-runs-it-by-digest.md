@@ -7,7 +7,7 @@ status: ready
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T17:57:47Z
+updated: 2026-10-12T17:59:23Z
 transitions:
   - to: ready
     at: 2026-10-12T17:57:39Z
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-07T22:55:27Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-12T19:49:00Z
-  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0370, S-0373 and S-0351."
+  delivery: 2026-10-12T19:51:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 5, behind S-0363, S-0370, S-0373 and S-0351."
   by: flai
-  at: 2026-10-12T17:57:47Z
+  at: 2026-10-12T17:59:23Z
 ---
 # S-0236 flai dashboard resolves the image from the signed digest list and runs it by digest
 
