@@ -2,11 +2,11 @@
 id: I-0135
 title: "flai check finds `threads.archived` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 3
 first_reported: 2026-10-09T16:51:57Z
 last_reported: 2026-10-12T14:23:39Z
-updated: 2026-10-12T14:33:40Z
+updated: 2026-10-12T15:37:53Z
 ---
 
 # I-0135 flai check finds `threads.archived` outside the story at close-out
@@ -33,3 +33,4 @@ flai check found TH-0389's threads.archived outside the story at S-0342's close-
 ## Remediation
 
 Story S-0366 remediates this issue, created from it at 2026-10-12T14:12:35Z.
+Closed 2026-10-12T15:37:53Z: S-0366: ADR-0137 decides that a check scoped to a story leaves out every threads.archived outside it, and ScopeToStory (flai/internal/check/scope.go) now drops it beside item.archive, board.wip-limit, and issues.no-story, so a close-out neither notes nor records an open thread on an archived item it did not touch, as TH-0389 on S-0338 was at the close-outs of S-0343, S-0289, and S-0342. TestScopedCheckLeavesOutAThreadsArchivedOutsideTheStory and TestCheckRecordIssuesLeavesOutAThreadsArchivedOutsideTheStory reproduce it. One on a thread anchored on the story or its tasks stays inside, and flai check in the main checkout still warns on every open thread on an archived item.
