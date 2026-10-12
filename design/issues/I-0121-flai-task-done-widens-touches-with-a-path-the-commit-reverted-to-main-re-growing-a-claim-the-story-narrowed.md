@@ -2,12 +2,12 @@
 id: I-0121
 title: flai task done widens touches with a path the commit reverted to main, re-growing a claim the story narrowed
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-08T08:25:05Z
 last_reported: 2026-10-08T08:25:05Z
-updated: 2026-10-12T16:52:44Z
+updated: 2026-10-12T20:40:45Z
 ---
 
 # I-0121 flai task done widens touches with a path the commit reverted to main, re-growing a claim the story narrowed
@@ -24,3 +24,4 @@ S-0232 agreed on MS-0014 to leave scripts/flai-snapshot.sh to S-0340. It removed
 ## Remediation
 
 Story S-0370 remediates this issue, created from it at 2026-10-12T16:52:44Z.
+Closed 2026-10-12T20:40:45Z: S-0370: flai task done now widens touches only with the committed paths the story's branch still changes against its merge base with main, read after the sync, and lists the others as unchanged (ADR-0144); TestRunWidensTouchesOnlyWithPathsTheBranchStillChanges reproduces the revert.
