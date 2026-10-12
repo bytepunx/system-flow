@@ -3,12 +3,15 @@ id: S-0360
 type: story
 nature: improvement
 title: flai serve checks each new claude version through the provider a project's agents name, so a host that reaches Claude only through a gateway is not reported failing
-status: backlog
+status: ready
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:59:39Z
-updated: 2026-10-12T20:03:40Z
-transitions: []
+updated: 2026-10-12T20:03:53Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:03:43Z
+    by: alex
 tags: [cli]
 topics: [agents]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, design/system/flai-cli.md]
@@ -39,10 +42,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:28Z
 forecast:
   duration: 20m
-  delivery: 2026-10-13T02:22:00Z
-  basis: "Its own forecast of 20m; 16th in the pull order with an in-progress limit of 5, behind S-0370, S-0351, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357 and S-0358."
+  delivery: 2026-10-12T20:26:00Z
+  basis: "Its own forecast of 20m; 1st in the pull order with an in-progress limit of 5, behind S-0238."
   by: flai
-  at: 2026-10-12T20:01:35Z
+  at: 2026-10-12T20:03:53Z
 finalized:
   by: alex
   at: 2026-10-12T20:03:40Z

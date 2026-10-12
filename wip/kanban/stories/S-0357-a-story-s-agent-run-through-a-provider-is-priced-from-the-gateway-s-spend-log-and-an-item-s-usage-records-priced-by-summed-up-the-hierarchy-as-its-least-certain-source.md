@@ -3,12 +3,15 @@ id: S-0357
 type: story
 nature: feature
 title: A story's agent run through a provider is priced from the gateway's spend log, and an item's usage records priced_by, summed up the hierarchy as its least certain source
-status: backlog
+status: ready
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:50:22Z
-updated: 2026-10-12T20:02:30Z
-transitions: []
+updated: 2026-10-12T20:03:53Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:03:02Z
+    by: alex
 tags: [cli]
 topics: [agents, usage]
 touches: [flai/internal/usage/spend.go, flai/internal/usage/spend_test.go, flai/internal/usage/openrouter.go, flai/internal/usage/openrouter_test.go, flai/internal/usage/litellm.go, flai/internal/usage/litellm_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/internal/workitem/usage.go, flai/internal/workitem/usage_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/flai-cli.md]
@@ -24,10 +27,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:25Z
 forecast:
   duration: 42m
-  delivery: 2026-10-13T05:27:00Z
-  basis: "Its own forecast of 42m; 13th in the pull order with an in-progress limit of 5, behind S-0238, S-0370, S-0351, S-0352, S-0353, S-0239, S-0241, S-0304, S-0305, S-0306, S-0354, S-0355 and S-0356."
+  delivery: 2026-10-13T00:20:00Z
+  basis: "Its own forecast of 42m; 5th in the pull order with an in-progress limit of 5, behind S-0238, S-0360, S-0370, S-0356 and S-0354."
   by: flai
-  at: 2026-10-12T20:02:30Z
+  at: 2026-10-12T20:03:53Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:43Z

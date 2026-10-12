@@ -6,7 +6,7 @@ title: flai task done widens touches with a path the commit reverted to main, re
 status: ready
 owner: alex
 created: 2026-10-12T16:52:44Z
-updated: 2026-10-12T20:01:35Z
+updated: 2026-10-12T20:03:53Z
 transitions:
   - to: ready
     at: 2026-10-12T17:57:35Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-12T17:09:21Z
 forecast:
   duration: 21m
-  delivery: 2026-10-12T20:26:00Z
-  basis: "Its own forecast of 21m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
+  delivery: 2026-10-12T20:28:00Z
+  basis: "Its own forecast of 21m; 2nd in the pull order with an in-progress limit of 5, behind S-0238 and S-0360."
   by: flai
-  at: 2026-10-12T20:01:35Z
+  at: 2026-10-12T20:03:53Z
 finalized:
   by: orchestrator
   at: 2026-10-12T17:11:28Z

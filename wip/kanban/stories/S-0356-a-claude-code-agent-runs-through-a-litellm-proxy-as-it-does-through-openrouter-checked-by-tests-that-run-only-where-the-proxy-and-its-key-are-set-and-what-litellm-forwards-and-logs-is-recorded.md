@@ -3,12 +3,15 @@ id: S-0356
 type: story
 nature: feature
 title: A claude-code agent runs through a LiteLLM proxy as it does through OpenRouter, checked by tests that run only where the proxy and its key are set, and what LiteLLM forwards and logs is recorded
-status: backlog
+status: ready
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:49:40Z
-updated: 2026-10-12T20:02:30Z
-transitions: []
+updated: 2026-10-12T20:03:53Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:02:59Z
+    by: alex
 tags: [cli]
 topics: [agents, testing]
 touches: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/system/agent-adapters.md]
@@ -24,10 +27,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:24Z
 forecast:
   duration: 30m
-  delivery: 2026-10-13T04:37:00Z
-  basis: "Its own forecast of 30m; 12th in the pull order with an in-progress limit of 5, behind S-0238, S-0370, S-0351, S-0352, S-0353, S-0239, S-0241, S-0304, S-0305, S-0306, S-0354 and S-0355."
+  delivery: 2026-10-12T23:30:00Z
+  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 5, behind S-0238, S-0360 and S-0370."
   by: flai
-  at: 2026-10-12T20:02:30Z
+  at: 2026-10-12T20:03:53Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:29Z
