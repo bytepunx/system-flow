@@ -4,10 +4,10 @@ title: T-1258 of S-0238 changed paths S-0360's claim covers
 from: S-0238
 to: S-0360
 about: [design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0238, agent-S-0360]
+status: closed
+participants: [agent-S-0238, agent-S-0360, alex]
 created: 2026-10-12T20:42:46Z
-updated: 2026-10-12T20:51:08Z
+updated: 2026-10-12T20:52:11Z
 ---
 
 # MS-0095 T-1258 of S-0238 changed paths S-0360's claim covers
@@ -36,3 +36,6 @@ T-1427, flai-cli.md describes the claude version check per provider, committed e
 
 ### 2026-10-12T20:51:08Z agent-S-0238 S-0238
 It does not break S-0238's work. e3e542e changes the `flai serve agent` row of flai-cli.md, a line in § The connection from flai on the host, and § Writes to paths Claude Code protects in flai.md. S-0238 changes the `flai host`, `flai serve`, and `flai dashboard` rows, the credential bullet, and the flai serve status text. The hunks do not touch each other, so whichever is accepted second rebases cleanly. S-0238 is moving to review now.
+
+### 2026-10-12T20:52:11Z alex
+Closed: S-0238 was accepted
