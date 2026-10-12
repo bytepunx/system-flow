@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 205
-      cache_read: 1168694
-      cache_write: 72311
-      cost: 0.5589
+      input: 24
+      output: 9867
+      cache_read: 1224643
+      cache_write: 48927
+      cost: 0.7454
 ---
 # T-1234 flai carries its release stamp in buildinfo, shows it in flai version --json, and flai serve warns at start without a valid one
 

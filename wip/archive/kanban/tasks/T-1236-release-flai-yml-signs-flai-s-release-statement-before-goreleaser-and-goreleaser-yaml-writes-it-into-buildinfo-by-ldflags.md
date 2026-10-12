@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 135
-      cache_read: 866919
-      cache_write: 54959
-      cost: 0.4152
+      input: 18
+      output: 7330
+      cache_read: 909735
+      cache_write: 36346
+      cost: 0.5538
 ---
 # T-1236 release-flai.yml signs flai's release statement before GoReleaser, and .goreleaser.yaml writes it into buildinfo by ldflags
 

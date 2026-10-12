@@ -24,15 +24,15 @@ touches: [".github/workflows/release-flaiover.yml", flaiover/Dockerfile, flai/cm
 after: [T-1235]
 usage:
   source: log
-  seconds: 472
+  seconds: 476
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 217
-      cache_read: 1182887
-      cache_write: 74863
-      cost: 0.5665
+      input: 25
+      output: 10000
+      cache_read: 1241175
+      cache_write: 49587
+      cost: 0.7555
 ---
 # T-1237 release-flaiover.yml signs flaiover's release statement and passes it to the image, which keeps it as the stamp file, and flai dashboard --build passes none
 

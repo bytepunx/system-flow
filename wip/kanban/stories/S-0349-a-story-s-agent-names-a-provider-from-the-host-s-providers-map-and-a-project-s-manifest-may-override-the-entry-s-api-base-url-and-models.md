@@ -3,11 +3,11 @@ id: S-0349
 type: story
 nature: feature
 title: A story's agent names a provider from the host's providers map, and a project's manifest may override the entry's api, base_url, and models
-status: in-progress
+status: review
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:42:40Z
-updated: 2026-10-12T16:03:18Z
+updated: 2026-10-12T16:41:00Z
 transitions:
   - to: ready
     at: 2026-10-12T15:50:18Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T15:52:16Z
     by: agent-S-0349
+  - to: review
+    at: 2026-10-12T16:41:00Z
+    by: agent-S-0349
 tags: [cli, template]
 topics: [agents]
-touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/agent.go, flai/cmd/agent_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/internal/itemedit/itemedit.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/work-hierarchy.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/check/check.go, flai/internal/check/providers_test.go, flai/internal/workitem/front-matter-fields.txt]
+touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/agent.go, flai/cmd/agent_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/internal/itemedit/itemedit.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/work-hierarchy.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/check/check.go, flai/internal/check/providers_test.go, flai/internal/workitem/front-matter-fields.txt, flai/cmd/items.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/folder.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,20 +28,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1400
+  seconds: 2570
   estimated: true
   turns:
     - day: 2026-10-12
-      ceremony: 2
+      ceremony: 4
       hand_edits: 1
-      work: 29
+      work: 48
   models:
     - model: claude-opus-5-5
-      input: 202
-      output: 1129
-      cache_read: 10899766
-      cache_write: 412986
-      cost: 5.0947
+      input: 430
+      output: 2374
+      cache_read: 23467850
+      cache_write: 682740
+      cost: 10.8762
   strategic:
     - kind: orchestrator
       seconds: 6
@@ -72,12 +75,12 @@ A story's `agent` names the harness and the model today, and where the model's c
 
 ## Acceptance criteria
 
-- [ ] `agent.provider` is accepted in the manifest's default agent, in `planning.agent`, `orchestration.agent`, and `analysis.agent`, and in a story's front matter, validated by the same name pattern as `harness`, and copied into a new story with the rest of the agent (ADR-0037).
-- [ ] The host's configuration holds `agent.providers.<name>` with `api` (`anthropic-messages`, `openai-chat`, or `openai-responses`), `base_url`, `key_env`, and optional `models` (`<alias>: <name on the provider>`), set and reset with `flai serve agent provider <name>`; an unknown `api`, a `base_url` that is not an http or https URL, or a `key_env` that is not a variable name is refused, and no flag takes a key.
+- [x] `agent.provider` is accepted in the manifest's default agent, in `planning.agent`, `orchestration.agent`, and `analysis.agent`, and in a story's front matter, validated by the same name pattern as `harness`, and copied into a new story with the rest of the agent (ADR-0037).
+- [x] The host's configuration holds `agent.providers.<name>` with `api` (`anthropic-messages`, `openai-chat`, or `openai-responses`), `base_url`, `key_env`, and optional `models` (`<alias>: <name on the provider>`), set and reset with `flai serve agent provider <name>`; an unknown `api`, a `base_url` that is not an http or https URL, or a `key_env` that is not a variable name is refused, and no flag takes a key.
 - [x] The manifest's `providers.<name>` may set `api`, `base_url`, and `models`; `key_env` there is refused by the manifest's validation, naming the host setting that holds it.
 - [x] One resolver merges the host's entry with the manifest's override and refuses a provider the host has no entry for, naming `flai serve agent provider <name>`; tests cover the merge, each refusal, and an agent with no provider, which resolves to none.
-- [ ] `flai agent`, `flai edit`, `flai manifest set`, and the MCP `item_new` and `item_edit` agent take `provider`, and `flai check --strict` passes on a story that names one.
-- [ ] `docs/operators/settings.md` indexes every new key and `TestSettingsIndexIsComplete` passes; `docs/users/flai.md`, `design/system/project-manifest.md`, `design/system/work-hierarchy.md`, and `design/system/flai-cli.md` describe the provider; the template's `system-flow.yaml.tmpl` shows `provider` and `providers` commented out, with a `template/CHANGELOG.md` entry.
+- [x] `flai agent`, `flai edit`, `flai manifest set`, and the MCP `item_new` and `item_edit` agent take `provider`, and `flai check --strict` passes on a story that names one.
+- [x] `docs/operators/settings.md` indexes every new key and `TestSettingsIndexIsComplete` passes; `docs/users/flai.md`, `design/system/project-manifest.md`, `design/system/work-hierarchy.md`, and `design/system/flai-cli.md` describe the provider; the template's `system-flow.yaml.tmpl` shows `provider` and `providers` commented out, with a `template/CHANGELOG.md` entry.
 
 ## Tasks
 

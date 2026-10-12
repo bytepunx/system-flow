@@ -7,7 +7,7 @@ status: done
 parent: S-0235
 owner: alex
 created: 2026-10-07T22:48:44Z
-updated: 2026-10-12T16:15:43Z
+updated: 2026-10-12T16:32:43Z
 transitions:
   - to: ready
     at: 2026-10-12T16:07:56Z
@@ -20,18 +20,18 @@ transitions:
     by: agent-S-0235
 stream: S-0235
 tags: [dashboard]
-touches: [flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/metrics.ts, flaiover/src/lib/server/metrics.test.ts, flaiover/src/hooks.server.ts]
+touches: [flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/metrics.ts, flaiover/src/lib/server/metrics.test.ts, flaiover/src/hooks.server.ts, flaiover/src/lib/server/no-project-files.test.ts]
 usage:
   source: log
   seconds: 466
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 177
-      cache_read: 1320181
-      cache_write: 73602
-      cost: 0.6277
+      input: 27
+      output: 11081
+      cache_read: 1375407
+      cache_write: 54950
+      cost: 0.8372
 ---
 # T-1235 flaiover reads and verifies its release stamp from a file, labels flaiover_build_info signed, and warns at start without a valid one
 

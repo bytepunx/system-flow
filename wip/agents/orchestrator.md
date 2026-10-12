@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 388.3990
-accrued_seconds: 335799
-tasks_completed: 367
-last_run: 2026-10-12T16:07:14Z
+accrued_cost: 392.2956
+accrued_seconds: 336959
+tasks_completed: 368
+last_run: 2026-10-12T16:26:34Z
 ---
 
 # Orchestrator activity
@@ -2580,6 +2580,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0234, S-0313
 - Seconds: 275
 - Cost: 1.8540 USD, estimated
+
+### 2026-10-12T16:26:34Z
+
+- Summary: The operator accepted S-0234 and S-0313. release_evaluate lists only S-0313 as pending, so S-0234 needs no release from me. Under judgement, published S-0313 (1 pending, 10 USD/week) as flai 1.41.0→1.41.1 (flai/v1.41.1), pushed. flai guard refused my read-only `git tag --points-at 135506ae`: the orchestrator never runs git tag. Not retried. The host still runs flai 1.40.1 (TH-0411 open).
+- Items: S-0313, S-0234
+- Seconds: 1160
+- Cost: 3.8966 USD, estimated
 
 ## Refusals
 

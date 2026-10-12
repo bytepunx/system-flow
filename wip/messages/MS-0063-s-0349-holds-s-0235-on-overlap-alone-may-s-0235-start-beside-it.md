@@ -3,11 +3,11 @@ id: MS-0063
 title: "S-0349 holds S-0235 on overlap alone: may S-0235 start beside it?"
 from: S-0235
 to: S-0349
-about: [docs/operators/settings.md]
-status: open
-participants: [flai, agent-S-0349, agent-S-0235]
+about: [docs/operators/settings.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flai.md]
+status: closed
+participants: [flai, agent-S-0349, agent-S-0235, orchestrator]
 created: 2026-10-12T15:52:16Z
-updated: 2026-10-12T16:15:33Z
+updated: 2026-10-12T16:41:07Z
 shares:
   - holder: S-0349
     held: S-0235
@@ -19,7 +19,7 @@ shares:
 
 # MS-0063 S-0349 holds S-0235 on overlap alone: may S-0235 start beside it?
 
-Between S-0235 and S-0349, about `docs/operators/settings.md`.
+Between S-0235 and S-0349, about `docs/operators/settings.md`, `design/system/flai-cli.md`, `docs/users/flai-reference.md`, `docs/users/flai.md`.
 
 ## Entries
 
@@ -52,3 +52,27 @@ Agreed. In `docs/operators/settings.md`, S-0235 changes only the flaiover contai
 T-1372 of S-0349 changed paths S-0235's claim covers.
 
 T-1372, The host's configuration holds agent.providers, set and reset with flai serve agent provider, committed cb05210 on story/S-0349, `feat: [S-0349] the host's configuration holds agent.providers, set and reset with flai serve agent provider`, changing `docs/operators/settings.md`. It reaches the main branch when S-0349 is accepted; `git show cb05210` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T16:29:14Z agent-S-0235 S-0235
+T-1238 of S-0235 changed paths S-0349's claim covers.
+
+T-1238, The operator and design documentation say what the release stamp is, where each build carries it, and what it does not prove, committed f56d543 on story/S-0235, `docs: [S-0235] the operator and design docs say what the release stamp is, where each build carries it, and what it does not prove`, changing `design/system/flai-cli.md`, `docs/operators/settings.md`, `docs/users/flai-reference.md`, `docs/users/flai.md`. It reaches the main branch when S-0235 is accepted; `git show f56d543` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T16:29:16Z agent-S-0349 S-0349
+T-1373 of S-0349 changed paths S-0235's claim covers.
+
+T-1373, flai agent, flai edit, flai manifest set, and the MCP item_new and item_edit agent take provider, committed af3e03f on story/S-0349, `feat: [S-0349] flai agent, flai story new, flai edit, flai manifest set, and the MCP and host API agent writes take provider`, changing `docs/operators/settings.md`, `docs/users/flai-reference.md`. It reaches the main branch when S-0349 is accepted; `git show af3e03f` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T16:35:06Z agent-S-0349 S-0349
+T-1374 of S-0349 changed paths S-0235's claim covers.
+
+T-1374, The user and design documents describe the provider, and the template's manifest shows provider and providers, committed f220343 on story/S-0349, `docs: [S-0349] the guides, the design, and the template describe a story's agent's provider`, changing `design/system/flai-cli.md`, `docs/users/flai.md`. It reaches the main branch when S-0349 is accepted; `git show f220343` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T16:39:42Z agent-S-0235 S-0235
+f220343 does not break S-0235. The last sync found story/S-0235 and story/S-0349 merging cleanly. S-0235 changes only the `flai version` text in `flai-cli.md` and `flai.md`, and the flaiover container rows in `settings.md`. S-0235 is now in review. `flai-reference.md` is generated: whichever story syncs onto the other's acceptance regenerates it with `make flai-reference`.
+
+### 2026-10-12T16:40:53Z agent-S-0349 S-0349
+Noted. S-0349 is moving to review. Whichever of the two syncs onto the other's acceptance regenerates `flai-reference.md` and the flags table with `make flai-reference`.
+
+### 2026-10-12T16:41:07Z orchestrator
+Closed: S-0235 was accepted

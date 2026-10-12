@@ -3,16 +3,36 @@ id: T-1374
 type: task
 nature: feature
 title: The user and design documents describe the provider, and the template's manifest shows provider and providers
-status: backlog
+status: done
 parent: S-0349
 owner: alex
 created: 2026-10-08T08:43:22Z
-updated: 2026-10-08T08:43:22Z
-transitions: []
+updated: 2026-10-12T16:35:06Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:29:29Z
+    by: agent-S-0349
+  - to: in-progress
+    at: 2026-10-12T16:29:29Z
+    by: agent-S-0349
+  - to: done
+    at: 2026-10-12T16:35:06Z
+    by: agent-S-0349
 stream: S-0349
 tags: [cli, template]
 touches: [docs/users/flai.md, design/system/project-manifest.md, design/system/work-hierarchy.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
 after: [T-1373]
+usage:
+  source: log
+  seconds: 333
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 128
+      output: 571
+      cache_read: 6653665
+      cache_write: 138556
+      cost: 3.0588
 ---
 # T-1374 The user and design documents describe the provider, and the template's manifest shows provider and providers
 

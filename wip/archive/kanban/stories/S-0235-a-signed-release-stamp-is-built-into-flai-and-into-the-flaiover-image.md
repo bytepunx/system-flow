@@ -3,11 +3,11 @@ id: S-0235
 type: story
 nature: feature
 title: A signed release stamp is built into flai and into the flaiover image
-status: in-progress
+status: done
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-12T16:24:13Z
+updated: 2026-10-12T16:41:07Z
 transitions:
   - to: ready
     at: 2026-10-12T15:50:18Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-12T16:07:09Z
     by: agent-S-0235
+  - to: review
+    at: 2026-10-12T16:39:36Z
+    by: agent-S-0235
+  - to: done
+    at: 2026-10-12T16:41:07Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flai/internal/buildinfo, ".github/workflows/release-flaiover.yml", flaiover/Dockerfile, flaiover/src/lib/server/release.ts, docs/operators, flai/cmd/version.go, flai/cmd/serve.go, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/metrics.ts, flaiover/src/lib/server/metrics.test.ts, flaiover/src/hooks.server.ts, design/tech/docker.md, flai/cmd/cmd_test.go, flai/cmd/serve_test.go, flai/cmd/dashboard_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flai/internal/buildinfo, ".github/workflows/release-flaiover.yml", flaiover/Dockerfile, flaiover/src/lib/server/release.ts, docs/operators, flai/cmd/version.go, flai/cmd/serve.go, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/metrics.ts, flaiover/src/lib/server/metrics.test.ts, flaiover/src/hooks.server.ts, design/tech/docker.md, flai/cmd/cmd_test.go, flai/cmd/serve_test.go, flai/cmd/dashboard_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md, flaiover/src/lib/server/no-project-files.test.ts, docs/users/flai-reference.md]
 after: [S-0232]
 agent:
   harness: claude-code
@@ -26,19 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1010
-  estimated: true
+  seconds: 1967
   turns:
     - day: 2026-10-12
-      hand_edits: 1
-      work: 18
+      ceremony: 2
+      hand_edits: 2
+      work: 40
   models:
     - model: claude-opus-5-5
-      input: 156
-      output: 804
-      cache_read: 5205679
-      cache_write: 403484
-      cost: 2.5262
+      input: 282
+      output: 114428
+      cache_read: 14202680
+      cache_write: 567422
+      cost: 8.6452
   strategic:
     - kind: orchestrator
       seconds: 94
@@ -72,7 +78,7 @@ Each release build carries a statement CI signed with the release key before the
 - [x] `release-flaiover.yml` signs `flaiover <version> <commit>` and passes both as build arguments; the image keeps them as a file the server reads; `flaiover_build_info` gains a `signed` label, and `flai dashboard --build` produces an image with no stamp.
 - [x] Both components verify their own stamp at start with the embedded public key and log one `warn` when a build that has a version carries no valid stamp.
 - [x] Tests cover a valid stamp, a missing one, and one signed by another key, on both sides.
-- [ ] The operator documentation says what the stamp is and what it does not prove, in the words of `release-signing.md § Verifying the peer`.
+- [x] The operator documentation says what the stamp is and what it does not prove, in the words of `release-signing.md § Verifying the peer`.
 
 ## Tasks
 - T-1234 flai carries its release stamp in buildinfo, shows it in flai version --json, and flai serve warns at start without a valid one
@@ -107,3 +113,16 @@ Forecast: 1h, adjusted from 1h15m. flai replays the delivery from the pull order
 - S-0232, of the same spread across CI, Go, and TypeScript, closed four tasks in 14 minutes and its one code task ran more than 20 minutes more. This story has two code tasks with tests on both sides, two workflow tasks, and docs, so 1h: above flai's figure, below the earlier 1h15m.
 
 Cost of delay: 2.70 USD a week, as `flai cod` gives it after the forecast changed: this story's 1h share of the 9h15m forecast over E-0015's eight open stories, of the epic's 25 USD a week penalty, which the operator set on TH-0312. Kept as given: each story closes part of one exposure, closed only when the chain is done, so a share by work fits.
+
+### Accepted by the orchestrator
+
+- Verified: 43124fc3715b1aca8d9527d9d86b03a5fb39378b
+- At: 2026-10-12T16:41:07Z
+
+Verdict: pass at 43124fc3715b1aca8d9527d9d86b03a5fb39378b; flai verify passed every step at that commit, the verifier matched all five criteria to the diff, and no private key or secret value is in it.
+
+- 1: .github/workflows/release-flai.yml, flai/.goreleaser.yaml, flai/internal/buildinfo/buildinfo.go, flai/internal/buildinfo/stamp.go, flai/cmd/version.go, flai/cmd/cmd_test.go
+- 2: .github/workflows/release-flaiover.yml, flaiover/Dockerfile, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/metrics.ts, flaiover/src/lib/server/metrics.test.ts, flai/cmd/dashboard_test.go
+- 3: flai/cmd/serve.go, flai/internal/buildinfo/stamp.go, flaiover/src/hooks.server.ts, flaiover/src/lib/server/release.ts
+- 4: flai/internal/buildinfo/stamp_test.go, flai/cmd/cmd_test.go, flai/cmd/serve_test.go, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/metrics.test.ts
+- 5: docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, design/system/release-signing.md, design/system/flai-cli.md, design/tech/docker.md, docs/users/flai-reference.md
