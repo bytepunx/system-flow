@@ -27,6 +27,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -61,6 +62,10 @@ type Options struct {
 	Now     func() time.Time // time.Now when nil
 	Version string           // the running flai's, for the inbox
 	Logger  *slog.Logger     // nil discards
+	// Fix rewrites in place the paths of the worktree that the project's fix
+	// commands select (S-0367), before the commit and after the sync's
+	// rebase; nil runs the fix commands the worktree's manifest declares.
+	Fix storygit.FixFunc
 }
 
 // Result is what each step did, nil for a step not reached, and the step
@@ -213,6 +218,11 @@ func start(o Options) (*run, error) {
 	if r.logger == nil {
 		r.logger = slog.New(slog.DiscardHandler)
 	}
+	if r.o.Fix == nil {
+		r.o.Fix = func(dir string, paths []string) ([]string, error) {
+			return verify.CheckoutFix(context.Background(), dir, paths, r.logger)
+		}
+	}
 	task, err := o.Repo.Get(o.Task)
 	if err != nil {
 		return nil, err
@@ -287,6 +297,7 @@ func (r *run) commit() error {
 	if strings.TrimSpace(r.o.Message) == "" {
 		return fmt.Errorf("a commit message is needed to commit %s: %s -m \"<message>\"", strings.Join(paths, ", "), r.again())
 	}
+	r.fix(paths)
 	// git commit with paths takes each from the worktree, a deletion
 	// included, and leaves the rest of the index as it was; only a path git
 	// does not know yet is staged first.
@@ -310,6 +321,20 @@ func (r *run) commit() error {
 	}
 	r.res.Commit = &Commit{Hash: strings.TrimSpace(hash), Subject: subject(r.o.Message), Paths: paths}
 	return nil
+}
+
+// fix runs the project's fix commands over the paths the commit step is
+// about to commit, so that it commits them fixed (S-0367). A fix that fails
+// is logged and the commit goes on.
+func (r *run) fix(paths []string) {
+	fixed, err := r.o.Fix(r.wt, paths)
+	if err != nil {
+		r.logger.Warn("the lint of the paths to commit not fixed; they are committed as they are", "component", "taskdone", "task", r.task.ID, "err", err)
+		return
+	}
+	if len(fixed) > 0 {
+		r.logger.Info("the lint of the paths to commit fixed", "component", "taskdone", "task", r.task.ID, "paths", fixed)
+	}
 }
 
 // changed is the paths whose content in the worktree differs from the
@@ -409,7 +434,7 @@ func (r *run) notice(cov itemedit.Covered) string {
 func (r *run) sync() error {
 	res, err := storygit.Sync(storygit.SyncOptions{
 		Runner: r.o.Runner, Repo: r.o.Repo, Story: r.story, Now: r.o.Now(),
-		Files: issues.SyncFiles(r.o.Repo, r.story.ID, r.o.Runner, r.o.Now), Again: r.again(), Log: r.logger,
+		Files: issues.SyncFiles(r.o.Repo, r.story.ID, r.o.Runner, r.o.Now), Fix: r.o.Fix, Again: r.again(), Log: r.logger,
 	})
 	r.res.Sync = &res
 	if err != nil {

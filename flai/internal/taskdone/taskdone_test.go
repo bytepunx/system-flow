@@ -751,3 +751,60 @@ func toldAs(told, want []Told) bool {
 		return a.Story == b.Story && a.Title == b.Title && a.Conversation == b.Conversation && slices.Equal(a.Paths, b.Paths)
 	})
 }
+
+// S-0367: the commit step runs the fix over the paths it commits before it
+// commits them, so the commit holds what the fix wrote, and the sync after it
+// runs the fix again over what the branch changes, which finds nothing left.
+func TestRunCommitsWhatTheFixWrote(t *testing.T) {
+	repo, wt := project(t)
+	write(t, wt, "README.md", "# good\n\n\n\nChanged on the story's branch.\n")
+	const fixed = "# good\n\nChanged on the story's branch.\n"
+	var calls [][]string
+	o := options(repo, "docs: change the readme")
+	o.Fix = func(dir string, paths []string) ([]string, error) {
+		calls = append(calls, slices.Clone(paths))
+		if dir != wt {
+			t.Errorf("the fix ran in %s, not the worktree %s", dir, wt)
+		}
+		p := filepath.Join(dir, "README.md")
+		data, err := os.ReadFile(p)
+		if err != nil || string(data) == fixed {
+			return nil, err
+		}
+		return []string{"README.md"}, os.WriteFile(p, []byte(fixed), 0o644)
+	}
+
+	res, err := Run(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil {
+		t.Fatalf("stopped at %q: %s, commit %+v", res.Stopped, res.Error, res.Commit)
+	}
+	if got := git(t, wt, "show", res.Commit.Hash+":README.md"); got+"\n" != fixed {
+		t.Errorf("the commit holds %q, not what the fix wrote", got)
+	}
+	if len(calls) != 2 || !slices.Equal(calls[0], []string{"README.md"}) || !slices.Contains(calls[1], "README.md") {
+		t.Errorf("the fix was called with %v; want the commit's paths, then the branch's after the sync", calls)
+	}
+	if res.Sync == nil || len(res.Sync.Fixed) != 0 || git(t, wt, "status", "--porcelain") != "" {
+		t.Errorf("the sync fixed %v or left the worktree changed", res.Sync)
+	}
+}
+
+// S-0367: a fix that fails leaves the paths as they are, and the close goes
+// on and commits them.
+func TestRunCommitsWhenTheFixFails(t *testing.T) {
+	repo, wt := project(t)
+	write(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
+	o := options(repo, "docs: change the readme")
+	o.Fix = func(string, []string) ([]string, error) { return nil, os.ErrPermission }
+
+	res, err := Run(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil || !slices.Equal(res.Commit.Paths, []string{"README.md"}) {
+		t.Fatalf("stopped at %q: %s, commit %+v", res.Stopped, res.Error, res.Commit)
+	}
+}
