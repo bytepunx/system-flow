@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-09
+updated: 2026-10-12
 status: active
 ---
 
@@ -285,6 +285,7 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Forecast Error / Model | How far forecasts were off, over time, one line per model: the p50 of the forecast errors of the stories each model's agents did in each hour, day, or week |
 | Parallelism | Each day of the window: how many items were in progress at its end, and how many stories in ready were held then, beside a dashed line at the board's in-progress limit. Stories held while in progress sits below the limit are work the claims kept from starting, not the limit |
 | Hold Time | The hours stories in ready were held in each week of the window, stacked by reason: overlap, a claim that overlaps a story in progress; after, a story it waits for is not done; empty claim, its touches or the in-progress story's are empty. Each hold counts under one reason, so a bar's height is the time held |
+| Coordination | Whether the agents of open stories settle their overlaps early: each week of the window, a bar of the conflicts found while both stories were open beside a bar of those met late, at sync and at acceptance, and the conversations between stories opened, agreed, escalated, and closed with their story. Beside it, the stories started on a share and the hold time they saved ([Coordination](#coordination)) |
 | Touches Drift | One bar per story done in the window: the files it changed outside its touches, which the planner or its agent should have declared, stacked on the touches it never changed, which they should have dropped. Hover a bar for the paths. A line on the right-hand axis shows each week's share of stories whose touches were exact |
 | Strategic Cost | A bar for each day of the window: what the planner, the orchestrator, and the analyzer spent that day, stacked. A line for what the agents spent per item completed that day, and a dashed line for what the strategic agents spent per item over the window, with its share of the agents' cost per item |
 | Strategic Use | A bar for each day of the window: the hours the planner, the orchestrator, and the analyzer worked that day, stacked. Two lines for the items completed that day: their mean cycle time and their mean waiting time, in hours |
@@ -326,6 +327,17 @@ Parallelism, Hold Time, and Touches Drift show what claims cost. A story in read
 - **Controls.** These charts offer only the window. They need a flai on the host as new as the dashboard, and say so when it is older. Touches Drift is drawn from git: when flai cannot read it, the chart says so.
 
 The table views list Parallelism by day, with in progress, held, and the limit; Hold Time by week, with each reason's time and the total; and Touches Drift by story, with both counts, then by week, with the stories done, how many had exact touches, and the share.
+
+#### Coordination
+
+Coordination, listed between Hold Time and Touches Drift, shows whether the agents of stories open at once settle their overlaps while both are open, rather than when one is accepted, which is what epic E-0018 set out to achieve ([Messages between stories](flai.md#messages-between-stories)). It reads `coordination` in `flai stats --json`; [metrics.md](../../design/system/metrics.md#coordination) defines each value.
+
+- **Found early against met late.** Each week has a bar of the conflicts a trial merge found while both stories were open, and a bar of those a rebase met late: at sync, after another story was accepted, plus at acceptance.
+- **How the conversations went.** Each week also shows the conversations between stories that were opened, agreed, escalated to you, and closed with their story. Agreed counts a share or a clean merge at sync; agreement in a reply, or a narrowed claim, is not recorded, so it is a floor.
+- **Shares.** Beside the chart, the stories started on a share over the window, and the hold time they saved: how long each would have waited for the story holding it ([Asked about a hold](flai.md#asked-about-a-hold)).
+- **How to read it.** More conflicts found early than met late, and more conversations agreed than escalated, means the coordination of E-0018 works: stories find their conflicts while both are open and settle them between themselves.
+- **The conflict log.** The conflicts come from `.flai-cache/conflicts.jsonl` on the host, which flai writes from the release that brought it, so earlier weeks show none found or met. When flai cannot read the log, the chart says so and draws no conflicts; `flai stats` says why ([Flow metrics](flai.md#flow-metrics)).
+- **Controls.** It offers only the window, as the other charts of claims do. With a flai on the host older than the dashboard, it says to upgrade it.
 
 ### Cost of delay
 
