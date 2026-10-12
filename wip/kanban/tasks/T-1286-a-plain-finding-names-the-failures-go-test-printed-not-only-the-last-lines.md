@@ -3,15 +3,35 @@ id: T-1286
 type: task
 nature: improvement
 title: A plain finding names the failures go test printed, not only the last lines
-status: backlog
+status: done
 parent: S-0313
 owner: alex
 created: 2026-10-07T23:39:26Z
-updated: 2026-10-07T23:39:26Z
-transitions: []
+updated: 2026-10-12T15:55:28Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:52:23Z
+    by: agent-S-0313
+  - to: in-progress
+    at: 2026-10-12T15:52:24Z
+    by: agent-S-0313
+  - to: done
+    at: 2026-10-12T15:55:28Z
+    by: agent-S-0313
 stream: S-0313
 tags: [flai, verify]
 touches: [flai/internal/verify/parse.go, flai/internal/verify/parse_test.go]
+usage:
+  source: log
+  seconds: 183
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 126
+      cache_read: 929977
+      cache_write: 51458
+      cost: 0.4417
 ---
 # T-1286 A plain finding names the failures go test printed, not only the last lines
 

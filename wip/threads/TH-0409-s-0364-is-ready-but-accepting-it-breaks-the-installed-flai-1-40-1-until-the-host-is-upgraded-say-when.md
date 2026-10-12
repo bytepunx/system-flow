@@ -4,10 +4,10 @@ title: "S-0364 is ready, but accepting it breaks the installed flai 1.40.1 until
 anchor:
   path: wip/kanban/stories/S-0364-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md
   item: S-0364
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-12T15:43:37Z
-updated: 2026-10-12T15:43:37Z
+updated: 2026-10-12T15:56:20Z
 ---
 
 # TH-0409 S-0364 is ready, but accepting it breaks the installed flai 1.40.1 until the host is upgraded: say when
@@ -41,3 +41,6 @@ A second reason: I cannot verify S-0364 at its head. MCP `verify` refuses on the
 - S-0364 would add 25 USD a week.
 
 If you would rather do it yourself: `scripts/flai.sh accept S-0364 --by alex`, then `flai release --pending`, then `flai host upgrade`.
+
+### 2026-10-12T15:56:20Z alex
+Resolved: S-0364 was accepted

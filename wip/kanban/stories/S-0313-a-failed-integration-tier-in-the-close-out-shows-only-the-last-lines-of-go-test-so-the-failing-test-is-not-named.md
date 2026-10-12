@@ -3,11 +3,17 @@ id: S-0313
 type: story
 nature: improvement
 title: A failed integration tier in the close-out shows only the last lines of go test, so the failing test is not named
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-07T14:26:02Z
-updated: 2026-10-12T15:48:40Z
-transitions: []
+updated: 2026-10-12T15:52:19Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:50:17Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T15:51:15Z
+    by: agent-S-0313
 tags: []
 topics: [testing]
 touches: [flai/internal/verify/parse.go, flai/internal/verify/parse_test.go, scripts/integration.sh, system-flow.yaml, scripts/README.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/summary.md]
@@ -17,20 +23,30 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 255
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      work: 18
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 289
+      cache_read: 2509411
+      cache_write: 186997
+      cost: 1.2134
   strategic:
     - kind: orchestrator
-      seconds: 283
+      seconds: 289
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 64
-          output: 1046
-          cache_read: 12551836
-          cache_write: 36260
-          cost: 3.1096
+          input: 66
+          output: 1060
+          cache_read: 12973554
+          cache_write: 38710
+          cost: 3.2165
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m
@@ -64,7 +80,7 @@ This story remediates [I-0113](../../../design/issues/I-0113-a-failed-integratio
 - T-1286 A plain finding names the failures go test printed, not only the last lines
 - T-1287 The integration tier reads go test -json, so its findings name each failing test by file and line
 - T-1288 The manifest and settings docs say what a plain finding keeps
-- T-1289 Close I-0113 with what fixed it
+- T-1289 Close I-0113 and I-0114 with what fixed them
 
 ## Notes
 

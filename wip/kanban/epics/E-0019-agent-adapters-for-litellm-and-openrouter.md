@@ -3,14 +3,17 @@ id: E-0019
 type: epic
 nature: feature
 title: Agent adapters for LiteLLM and OpenRouter
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-08T08:33:28Z
-updated: 2026-10-08T08:59:39Z
+updated: 2026-10-12T15:52:16Z
 transitions:
   - to: ready
     at: 2026-10-08T08:38:12Z
     by: alex
+  - to: in-progress
+    at: 2026-10-12T15:52:16Z
+    by: agent-S-0349
 tags: [cli, template]
 topics: [cli, agents]
 touches: [flai/internal/harness, flai/internal/serve, flai/internal/guard, flai/internal/usage, flai/internal/mcpserver/permission.go, flai/internal/protected/protected.go, flai/internal/manifest/agent.go, flai/internal/hostapi/settings.go, design/system/metrics.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md]
@@ -20,15 +23,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 467
+      seconds: 473
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 109
-          output: 1507
-          cache_read: 20819002
-          cache_write: 102010
-          cost: 5.1824
+          input: 111
+          output: 1521
+          cache_read: 21240720
+          cache_write: 104460
+          cost: 5.2893
 cost_of_delay:
   inputs:
     penalty_per_week: 500
@@ -78,3 +81,4 @@ To be drafted by the planner from the finding. Order: the provider split and Ope
 - Spend: an OpenRouter key with a few dollars of credit, and a local LiteLLM proxy, free, configured by the operator; cap the trial with `max_budget_usd` on the story's agent and a limit on the key.
 - Claude models only: Anthropic and OpenRouter both say Claude Code over a gateway is supported for Claude models alone. Non-Claude models need another harness, which the finding recommends as Codex CLI, for a later epic.
 - Cost of delay inputs are the operator's.
+- 2026-10-12T15:52:16Z: moved to in-progress: follows S-0349, which moved to in-progress

@@ -3,12 +3,18 @@ id: T-1371
 type: task
 nature: feature
 title: The manifest's agent takes provider, the manifest's providers map overrides api, base_url, and models, and one resolver merges it with the host's entry
-status: backlog
+status: in-progress
 parent: S-0349
 owner: alex
 created: 2026-10-08T08:42:58Z
-updated: 2026-10-08T08:42:58Z
-transitions: []
+updated: 2026-10-12T15:52:56Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:52:55Z
+    by: agent-S-0349
+  - to: in-progress
+    at: 2026-10-12T15:52:56Z
+    by: agent-S-0349
 stream: S-0349
 tags: [cli]
 touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md]

@@ -3,12 +3,18 @@ id: S-0349
 type: story
 nature: feature
 title: A story's agent names a provider from the host's providers map, and a project's manifest may override the entry's api, base_url, and models
-status: backlog
+status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:42:40Z
-updated: 2026-10-12T15:48:40Z
-transitions: []
+updated: 2026-10-12T15:52:16Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:50:18Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T15:52:16Z
+    by: agent-S-0349
 tags: [cli, template]
 topics: [agents]
 touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/agent.go, flai/cmd/agent_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/internal/itemedit/itemedit.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/work-hierarchy.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
@@ -17,6 +23,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 6
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 14
+          cache_read: 421718
+          cache_write: 2450
+          cost: 0.1069
 cost_of_delay:
   value: 60.84
   by: planner-E-0019

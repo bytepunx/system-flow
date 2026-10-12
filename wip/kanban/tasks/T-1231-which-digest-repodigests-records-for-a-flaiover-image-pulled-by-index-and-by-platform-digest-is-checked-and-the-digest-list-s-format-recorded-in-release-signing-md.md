@@ -3,12 +3,18 @@ id: T-1231
 type: task
 nature: research
 title: Which digest RepoDigests records for a flaiover image pulled by index and by platform digest is checked, and the digest list's format recorded in release-signing.md
-status: backlog
+status: in-progress
 parent: S-0234
 owner: alex
 created: 2026-10-07T22:42:56Z
-updated: 2026-10-07T22:42:56Z
-transitions: []
+updated: 2026-10-12T15:51:32Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:51:31Z
+    by: agent-S-0234
+  - to: in-progress
+    at: 2026-10-12T15:51:32Z
+    by: agent-S-0234
 stream: S-0234
 tags: [dashboard]
 touches: [design/system/release-signing.md]

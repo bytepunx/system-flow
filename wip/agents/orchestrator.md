@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 381.5374
-accrued_seconds: 334384
-tasks_completed: 361
-last_run: 2026-10-12T15:43:39Z
+accrued_cost: 382.6798
+accrued_seconds: 334791
+tasks_completed: 363
+last_run: 2026-10-12T15:50:26Z
 ---
 
 # Orchestrator activity
@@ -2538,6 +2538,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0364, S-0232
 - Seconds: 423
 - Cost: 1.7666 USD, estimated
+
+### 2026-10-12T15:50:01Z
+
+- Summary: The operator accepted S-0366 at 15:48, during my verify. My run at its head 8101e9f6 had failed the integration tier, with the failing test unnamed (I-0113). Under judgement, did not publish: 2 pending (S-0232 2.63, S-0366 12.5; 15.13 USD/week). Main may carry a failing or flaky integration test, and this release is S-0232's first signed build. Opened TH-0410 on S-0366 asking the operator to run make integration on main; I publish once they answer. S-0364 still waits on TH-0409.
+- Items: S-0366, S-0232, S-0364
+- Seconds: 382
+- Cost: 0.7147 USD, estimated
+
+### 2026-10-12T15:50:26Z
+
+- Summary: With S-0232, S-0365, and S-0366 done and S-0364 in review, the holds lifted. Under promote_to_ready, moved four candidates to ready in flai promote --candidates order under throughput: S-0234 (rank 1, 45m), S-0313 (rank 2, 45m), S-0349 (rank 3, 55m), S-0235 (rank 4, 1h). S-0241 (rank 5, 2h) stays out, blocked by the operator. Applied the throughput order: S-0234, S-0313, S-0349, S-0235.
+- Items: S-0234, S-0313, S-0349, S-0235
+- Seconds: 25
+- Cost: 0.4277 USD, estimated
 
 ## Refusals
 

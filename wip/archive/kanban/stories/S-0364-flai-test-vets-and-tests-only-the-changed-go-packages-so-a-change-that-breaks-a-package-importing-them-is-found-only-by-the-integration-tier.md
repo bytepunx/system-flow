@@ -3,10 +3,10 @@ id: S-0364
 type: story
 nature: improvement
 title: flai test vets and tests only the changed Go packages, so a change that breaks a package importing them is found only by the integration tier
-status: review
+status: done
 owner: alex
 created: 2026-10-12T14:12:31Z
-updated: 2026-10-12T15:42:23Z
+updated: 2026-10-12T15:56:20Z
 transitions:
   - to: ready
     at: 2026-10-12T15:26:03Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-12T15:42:23Z
     by: agent-S-0364
+  - to: done
+    at: 2026-10-12T15:56:20Z
+    by: alex
 tags: [cli]
 topics: [testing]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/verify/importers.go, flai/internal/verify/importers_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, design/issues/I-0128-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md, design/issues/summary.md]
@@ -27,30 +30,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 987
+  seconds: 1343
   turns:
     - day: 2026-10-12
-      ceremony: 2
+      ceremony: 6
       hand_edits: 2
-      work: 40
+      work: 54
   models:
     - model: claude-opus-5-5
-      input: 182
-      output: 55559
-      cache_read: 8274245
-      cache_write: 330827
-      cost: 4.9164
+      input: 220
+      output: 62882
+      cache_read: 9337809
+      cache_write: 387821
+      cost: 5.7316
   strategic:
     - kind: orchestrator
-      seconds: 514
+      seconds: 641
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 44
-          output: 466
-          cache_read: 7354049
-          cache_write: 36305
-          cost: 1.8631
+          input: 48
+          output: 502
+          cache_read: 8291662
+          cache_write: 43720
+          cost: 2.1013
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

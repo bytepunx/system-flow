@@ -3,12 +3,15 @@ id: S-0235
 type: story
 nature: feature
 title: A signed release stamp is built into flai and into the flaiover image
-status: backlog
+status: ready
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-12T15:48:40Z
-transitions: []
+updated: 2026-10-12T15:50:18Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:50:18Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [release, security]
 touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flai/internal/buildinfo, ".github/workflows/release-flaiover.yml", flaiover/Dockerfile, flaiover/src/lib/server/release.ts, docs/operators, flai/cmd/version.go, flai/cmd/serve.go, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/metrics.ts, flaiover/src/lib/server/metrics.test.ts, flaiover/src/hooks.server.ts, design/tech/docker.md, flai/cmd/cmd_test.go, flai/cmd/serve_test.go, flai/cmd/dashboard_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 88
+      seconds: 94
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 397
-          cache_read: 2383459
-          cache_write: 18117
-          cost: 0.5917
+          input: 28
+          output: 411
+          cache_read: 2805176
+          cache_write: 20567
+          cost: 0.6986
 cost_of_delay:
   value: 2.7
   by: planner-S-0235

@@ -7,11 +7,11 @@ status: backlog
 parent: S-0234
 owner: alex
 created: 2026-10-07T22:43:07Z
-updated: 2026-10-07T22:43:07Z
+updated: 2026-10-12T15:51:31Z
 transitions: []
 stream: S-0234
 tags: [dashboard]
-touches: [".github/workflows/release-flaiover.yml", scripts/flaiover-digests.sh]
+touches: [".github/workflows/release-flaiover.yml", scripts/flaiover-digests.sh, scripts/README.md]
 after: [T-1231]
 ---
 # T-1232 release-flaiover.yml signs the digest list, the image, and its provenance on a flaiover tag and publishes the list on a flaiover GitHub release

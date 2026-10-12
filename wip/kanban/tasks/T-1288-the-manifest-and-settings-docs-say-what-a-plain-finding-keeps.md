@@ -3,16 +3,22 @@ id: T-1288
 type: task
 nature: improvement
 title: The manifest and settings docs say what a plain finding keeps
-status: backlog
+status: in-progress
 parent: S-0313
 owner: alex
 created: 2026-10-07T23:39:37Z
-updated: 2026-10-07T23:39:37Z
-transitions: []
+updated: 2026-10-12T15:55:57Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:55:57Z
+    by: agent-S-0313
+  - to: in-progress
+    at: 2026-10-12T15:55:57Z
+    by: agent-S-0313
 stream: S-0313
 tags: [docs]
 touches: [design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md]
-after: [T-1286]
+after: [T-1286, T-1287]
 ---
 # T-1288 The manifest and settings docs say what a plain finding keeps
 

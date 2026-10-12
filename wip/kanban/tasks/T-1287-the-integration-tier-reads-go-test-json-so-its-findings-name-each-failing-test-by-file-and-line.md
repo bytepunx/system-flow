@@ -3,15 +3,35 @@ id: T-1287
 type: task
 nature: improvement
 title: The integration tier reads go test -json, so its findings name each failing test by file and line
-status: backlog
+status: done
 parent: S-0313
 owner: alex
 created: 2026-10-07T23:39:30Z
-updated: 2026-10-07T23:39:30Z
-transitions: []
+updated: 2026-10-12T15:55:45Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:52:24Z
+    by: agent-S-0313
+  - to: in-progress
+    at: 2026-10-12T15:52:25Z
+    by: agent-S-0313
+  - to: done
+    at: 2026-10-12T15:55:45Z
+    by: agent-S-0313
 stream: S-0313
 tags: [scripts, verify]
 touches: [scripts/integration.sh, system-flow.yaml, scripts/README.md]
+usage:
+  source: log
+  seconds: 182
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 32
+      cache_read: 449256
+      cache_write: 8031
+      cost: 0.2058
 ---
 # T-1287 The integration tier reads go test -json, so its findings name each failing test by file and line
 

@@ -3,12 +3,18 @@ id: S-0234
 type: story
 nature: feature
 title: The flaiover image's digest list is signed in CI and published on a flaiover GitHub release
-status: backlog
+status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-12T15:48:40Z
-transitions: []
+updated: 2026-10-12T15:50:25Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:50:16Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T15:50:25Z
+    by: agent-S-0234
 tags: [dashboard]
 topics: [release, security]
 touches: [".github/workflows/release-flaiover.yml", design/tech/ci.md, docs/operators, design/tech/docker.md, design/system/release-signing.md, scripts/flaiover-digests.sh, docs/operators/runbooks/update.md, docs/operators/runbooks/release-key.md, docs/operators/settings.md]
@@ -24,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 158
+      seconds: 165
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 248
-          cache_read: 1380358
-          cache_write: 8211
-          cost: 0.3421
+          input: 20
+          output: 262
+          cache_read: 1802076
+          cache_write: 10661
+          cost: 0.449
 cost_of_delay:
   value: 1.97
   by: planner-E-0015

@@ -2,19 +2,25 @@
 id: T-1289
 type: task
 nature: improvement
-title: Close I-0113 with what fixed it
-status: backlog
+title: Close I-0113 and I-0114 with what fixed them
+status: in-progress
 parent: S-0313
 owner: alex
 created: 2026-10-07T23:39:40Z
-updated: 2026-10-07T23:39:40Z
-transitions: []
+updated: 2026-10-12T15:55:59Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:55:58Z
+    by: agent-S-0313
+  - to: in-progress
+    at: 2026-10-12T15:55:59Z
+    by: agent-S-0313
 stream: S-0313
 tags: [issues]
-touches: [design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/summary.md]
+touches: [design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/summary.md, design/issues/I-0114-flai-verify-s-integration-tier-keeps-only-the-last-lines-of-go-test-s-output-so-the-failing-test-is-not-named.md]
 after: [T-1286, T-1287]
 ---
-# T-1289 Close I-0113 with what fixed it
+# T-1289 Close I-0113 and I-0114 with what fixed them
 
 ## Work
 
