@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,9 +13,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/dashboard"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -100,6 +105,77 @@ const sharedContainerName = "flaiover"
 func (s dashboardSettings) ref() string { return s.Image + ":" + s.Tag }
 func (s dashboardSettings) url() string { return fmt.Sprintf("http://localhost:%d", s.Port) }
 
+// signedDashboardImage is the image repository the flaiover releases' signed
+// digest lists name (ADR-0070), and the configured image by default.
+const signedDashboardImage = "ghcr.io/bytepunx/flaiover"
+
+// dashboardReleases are the release client's options, the token aside, that
+// flai dashboard resolves dashboard.tag with: the flaiover releases of the
+// repository self-upgrade reads, from FLAI_RELEASES_API when set, verified
+// with the keys this flai trusts. Tests point it at a stand-in.
+var dashboardReleases = func() selfupgrade.Options {
+	return selfupgrade.Options{Repo: "bytepunx/system-flow", APIBase: strings.TrimSpace(os.Getenv("FLAI_RELEASES_API")), Keys: releaseKeys}
+}
+
+// dashboardImage is what a new dashboard container runs: a flaiover release's
+// image by digest from its verified digest list, or, for --build and an image
+// of another repository, the reference as given, unsigned.
+type dashboardImage struct {
+	Ref         string // what is pulled and run: <repository>@sha256:… for a release, image:tag otherwise
+	Release     string // the flaiover release whose verified list names Ref; "" when unsigned
+	Unreachable error  // why the release could not be reached, when its cached list was used
+}
+
+// describe is the line flai dashboard prints for where d comes from.
+func (d dashboardImage) describe() string {
+	switch {
+	case d.Release == "":
+		return fmt.Sprintf("  unsigned: no signed digest list names %s; it runs as given (--build, or an image of a repository other than %s)\n", d.Ref, signedDashboardImage)
+	case d.Unreachable != nil:
+		return fmt.Sprintf("  flaiover %s, run by digest from its verified digest list cached beside flai serve's state: the release could not be reached (%v)\n", d.Release, d.Unreachable)
+	}
+	return fmt.Sprintf("  flaiover %s, run by digest from its verified digest list (ADR-0070)\n", d.Release)
+}
+
+// dashboardCache is the cache of verified digest lists beside flai serve's
+// state, trusting the keys a list must verify against.
+func (a *app) dashboardCache(opt selfupgrade.Options) (dashboard.Cache, error) {
+	keys, err := selfupgrade.TrustedKeys(opt)
+	if err != nil {
+		return dashboard.Cache{}, fmt.Errorf("reading the release keys to verify a flaiover digest list failed: %w; this flai build is broken, so install a release of flai", err)
+	}
+	return dashboard.NewCache(string(a.serveDir()), keys), nil
+}
+
+// chooseDashboardImage is what a new container runs (ADR-0070): for the
+// signed repository, s's tag resolved to a flaiover release and run by the
+// digest its verified list names, a release refused or not resolved being an
+// error; for --build or another repository, s's reference as given.
+func (a *app) chooseDashboardImage(ctx context.Context, s dashboardSettings, build bool) (dashboardImage, error) {
+	if build || s.Image != signedDashboardImage {
+		return dashboardImage{Ref: s.ref()}, nil
+	}
+	opt := dashboardReleases()
+	opt.Token = a.githubToken()
+	cache, err := a.dashboardCache(opt)
+	if err != nil {
+		return dashboardImage{}, err
+	}
+	res, err := dashboard.Resolver{Releases: opt, Cache: cache}.Resolve(ctx, s.Image, s.Tag)
+	var refused *dashboard.Refusal
+	switch {
+	case errors.As(err, &refused):
+		return dashboardImage{}, err
+	case err != nil:
+		return dashboardImage{}, fmt.Errorf("%w; no dashboard container was started", err)
+	}
+	if res.Cached {
+		a.logger().Warn("flaiover release not reached, cached digest list used", "component", "dashboard", "release", res.Version, "err", res.Unreachable.Error())
+	}
+	a.logger().Info("dashboard release resolved", "component", "dashboard", "tag", s.Tag, "release", res.Version, "image", res.Reference)
+	return dashboardImage{Ref: res.Reference, Release: res.Version, Unreachable: res.Unreachable}, nil
+}
+
 func newDashboardCmd(a *app) *cobra.Command {
 	var image, tag, bind, pushKeyFlag, pushHostsFlag string
 	var port int
@@ -127,7 +203,7 @@ when they decide what the shared container is started with.`,
   flai dashboard stop`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runDashboard(image, tag, port, bind, pushKeyFlag, pushHostsFlag, pull, attach, open, build, noServe)
+			return a.runDashboard(cmd.Context(), image, tag, port, bind, pushKeyFlag, pushHostsFlag, pull, attach, open, build, noServe)
 		},
 	}
 	f := c.Flags()
@@ -154,21 +230,26 @@ const (
 	localTag   = "local"
 )
 
-// pullDashboardImage pulls the image for the daemon's platform; when the
-// registry refuses, it logs Docker in with the GitHub token sources and
-// tries once more. The flaiover package on GHCR is private while the
-// repository is.
+// pullDashboardImage pulls s's image at its tag; see pullDashboardRef.
 func (a *app) pullDashboardImage(s dashboardSettings) error {
+	return a.pullDashboardRef(s.Image, s.ref())
+}
+
+// pullDashboardRef pulls ref, an image of repository image by tag or by
+// digest, for the daemon's platform; when the registry refuses, it logs
+// Docker in with the GitHub token sources and tries once more. The flaiover
+// package on GHCR is private while the repository is.
+func (a *app) pullDashboardRef(image, ref string) error {
 	platform := a.dockerPlatform()
-	a.logger().Info("pulling image", "component", "dashboard", "image", s.ref(), "platform", platform)
+	a.logger().Info("pulling image", "component", "dashboard", "image", ref, "platform", platform)
 	pull := func() error {
 		args := []string{"pull", "--quiet"}
 		if platform != "" {
 			args = append(args, "--platform", platform)
 		}
-		_, err := a.runner.Run("", "docker", append(args, s.ref())...)
+		_, err := a.runner.Run("", "docker", append(args, ref)...)
 		if err != nil && noManifest(err) {
-			return fmt.Errorf("%s has no image for %s: %w; pick a tag published for it, or build one from the system-flow monorepo with flai dashboard --build", s.ref(), orDefault(platform, "this Docker daemon's platform"), err)
+			return fmt.Errorf("%s has no image for %s: %w; pick a tag published for it, or build one from the system-flow monorepo with flai dashboard --build", ref, orDefault(platform, "this Docker daemon's platform"), err)
 		}
 		return err
 	}
@@ -176,13 +257,13 @@ func (a *app) pullDashboardImage(s dashboardSettings) error {
 	if err == nil {
 		return nil
 	}
-	registry := registryOf(s.Image)
+	registry := registryOf(image)
 	if registry == "" || !unauthorized(err) {
 		return err
 	}
 	token := a.githubToken()
 	if token == "" {
-		return fmt.Errorf("%s refused the pull for %s and no token is available: set GITHUB_TOKEN or run `gh auth login`, then `gh auth refresh -h github.com -s read:packages` (the package is private while the repository is; making the package public also works)", registry, s.ref())
+		return fmt.Errorf("%s refused the pull for %s and no token is available: set GITHUB_TOKEN or run `gh auth login`, then `gh auth refresh -h github.com -s read:packages` (the package is private while the repository is; making the package public also works)", registry, ref)
 	}
 	user := a.registryUser()
 	a.logger().Info("logging into registry", "component", "dashboard", "registry", registry, "user", user)
@@ -348,7 +429,7 @@ func (a *app) requireDocker() error {
 	return execx.Require(a.runner, "docker", "Install Docker Engine 24 or newer (https://docs.docker.com/engine/install/) or Docker Desktop, and make sure the daemon is running.")
 }
 
-func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushHostsFlag string, pull, attach, open, build, noServe bool) error {
+func (a *app) runDashboard(ctx context.Context, image, tag string, port int, bind, pushKeyFlag, pushHostsFlag string, pull, attach, open, build, noServe bool) error {
 	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
@@ -369,13 +450,17 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	// (S-0080): register this project with it too, and say so, instead of
 	// starting a second container or refusing.
 	already, _ := a.containerRunning(s.Name)
+	var img dashboardImage
 	if !already {
+		if img, err = a.chooseDashboardImage(ctx, s, build); err != nil {
+			return err
+		}
 		if build {
-			if err := a.buildDashboardImage(s.Root, s.ref()); err != nil {
+			if err := a.buildDashboardImage(s.Root, img.Ref); err != nil {
 				return err
 			}
-		} else if pull || a.needsPull(s.ref()) {
-			if err := a.pullDashboardImage(s); err != nil {
+		} else if pull || a.needsPull(img.Ref) {
+			if err := a.pullDashboardRef(s.Image, img.Ref); err != nil {
 				return err
 			}
 		}
@@ -401,7 +486,7 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 			}
 		}
 	} else {
-		id, err = a.startDashboard(dir, s, s.ref())
+		id, err = a.startDashboard(dir, s, img.Ref)
 		if err != nil {
 			return err
 		}
@@ -423,6 +508,15 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 		if retired != "" {
 			out["retired"] = strings.TrimSpace(retired)
 		}
+		if !already {
+			out["image"], out["signed"] = img.Ref, img.Release != ""
+			if img.Release != "" {
+				out["release"] = img.Release
+			}
+			if img.Unreachable != nil {
+				out["cached_list"] = true
+			}
+		}
 		return a.printJSON(out)
 	}
 	reach := "reachable from this host only"
@@ -432,7 +526,8 @@ func (a *app) runDashboard(image, tag string, port int, bind, pushKeyFlag, pushH
 	if already {
 		fmt.Fprintf(a.out, "%s already runs at %s, and now also serves %s\n  log in with: %s\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", s.Name, url, s.Root, loginURL(url, token), tokenPath(dir))
 	} else {
-		fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, for %s\n    it is given this port, its login token, and the host flai's credential, and no file of any project (ADR-0031)\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", url, reach, loginURL(url, token), s.Name, s.ref(), s.Root, tokenPath(dir))
+		fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, for %s\n    it is given this port, its login token, and the host flai's credential, and no file of any project (ADR-0031)\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", url, reach, loginURL(url, token), s.Name, img.Ref, s.Root, tokenPath(dir))
+		fmt.Fprint(a.out, img.describe())
 	}
 	fmt.Fprint(a.out, retired)
 	fmt.Fprint(a.out, serveNote)
@@ -480,6 +575,72 @@ func (a *app) containerInfo(name string) (image, url string) {
 		image = strings.TrimSpace(parts[2])
 	}
 	return image, url
+}
+
+// imageProvenance is where a running container's image comes from: its
+// repository digest, and the flaiover release whose verified digest list
+// names it (ADR-0070).
+type imageProvenance struct {
+	Digest  string // sha256:… of the RepoDigests entry a list names, else of the first; "" when docker says none
+	Release string // the release whose cached verified list names the image; "" when none does
+}
+
+// describe is the line flai dashboard status prints for p.
+func (p imageProvenance) describe() string {
+	switch {
+	case p.Release != "":
+		return fmt.Sprintf("  digest: %s (flaiover %s, on a signed list)\n", p.Digest, p.Release)
+	case p.Digest != "":
+		return fmt.Sprintf("  digest: %s (unsigned: no signed digest list names it)\n", p.Digest)
+	}
+	return "  unsigned: its image has no repository digest, so no signed digest list names it\n"
+}
+
+// runningProvenance reads the named container's image's RepoDigests, not its
+// image ID, which is the listed digest in one image store and the
+// configuration's digest in another (release-signing.md § The digest list),
+// and matches each against the verified lists cached beside flai serve's
+// state, the newest release first.
+func (a *app) runningProvenance(name string) imageProvenance {
+	id, err := a.containerImageID(name)
+	if err != nil || id == "" {
+		return imageProvenance{}
+	}
+	out, err := a.runner.Run("", "docker", "image", "inspect", id, "--format", "{{json .RepoDigests}}")
+	var repoDigests []string
+	if err == nil {
+		err = json.Unmarshal([]byte(strings.TrimSpace(out)), &repoDigests)
+	}
+	if err != nil {
+		a.logger().Warn("image digests not read", "component", "dashboard", "container", name, "image", id, "err", err.Error())
+		return imageProvenance{}
+	}
+	if len(repoDigests) == 0 {
+		return imageProvenance{}
+	}
+	cache, err := a.dashboardCache(dashboardReleases())
+	if err != nil {
+		a.logger().Warn("cached digest lists not read", "component", "dashboard", "err", err.Error())
+		return imageProvenance{Digest: digestOf(repoDigests[0])}
+	}
+	lists, skipped := cache.All()
+	if len(skipped) > 0 {
+		a.logger().Warn("cached digest lists skipped", "component", "dashboard", "count", len(skipped), "err", errors.Join(skipped...).Error())
+	}
+	for _, l := range lists {
+		for _, rd := range repoDigests {
+			if l.Matches(rd) {
+				return imageProvenance{Digest: digestOf(rd), Release: l.Version}
+			}
+		}
+	}
+	return imageProvenance{Digest: digestOf(repoDigests[0])}
+}
+
+// digestOf is the digest of a RepoDigests entry, <repository>@sha256:….
+func digestOf(repoDigest string) string {
+	_, digest, _ := strings.Cut(repoDigest, "@")
+	return digest
 }
 
 func newDashboardStopCmd(a *app) *cobra.Command {
@@ -579,8 +740,10 @@ is set.`,
 				}
 			}
 			var stale []string
+			var from imageProvenance
 			if running {
 				stale = a.staleMounts(s.Name)
+				from = a.runningProvenance(s.Name)
 			}
 			served, err := a.serveDir().Projects()
 			if err != nil {
@@ -598,6 +761,13 @@ is set.`,
 				if len(stale) > 0 {
 					out["stale_mounts"] = stale
 				}
+				out["signed"] = from.Release != ""
+				if from.Digest != "" {
+					out["digest"] = from.Digest
+				}
+				if from.Release != "" {
+					out["release"] = from.Release
+				}
 				out["host_flai"] = a.hostFlai(s.Root)
 				return a.printJSON(out)
 			}
@@ -611,6 +781,7 @@ is set.`,
 				} else {
 					fmt.Fprintf(a.out, "%s not answering at %s (%s%s): the container runs and /_health does not answer; flai host restarts it unless dashboard.no_restart is set, or run flai dashboard restart\n", s.Name, url, image, dockerSays)
 				}
+				fmt.Fprint(a.out, from.describe())
 				if len(names) > 0 {
 					fmt.Fprintf(a.out, "  serves: %s\n", strings.Join(names, ", "))
 				}

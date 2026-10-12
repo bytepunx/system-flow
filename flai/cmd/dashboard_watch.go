@@ -61,8 +61,11 @@ func probeHost(addr string) string {
 // image it ran, never a fresh pull (S-0184). Image is the image ID the
 // container runs, so that a newer image pulled under a floating tag such as
 // latest is not started without an upgrade (I-0116), and Ref the reference
-// to show for it. Image is empty in a record an older flai wrote, or when
-// docker could not say the ID, and the watch then starts Ref.
+// to show for it: a flaiover release's <repository>@sha256:… (ADR-0070), so
+// that a restart starts the same release without resolving dashboard.tag
+// again, or image:tag for --build, an image of another repository, or a
+// record an older flai wrote. Image is empty in a record an older flai wrote,
+// or when docker could not say the ID, and the watch then starts Ref.
 type dashboardRecord struct {
 	Name    string `json:"name"`
 	Ref     string `json:"ref"`

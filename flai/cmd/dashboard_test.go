@@ -2,6 +2,12 @@ package cmd
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/host"
+	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
@@ -34,6 +41,10 @@ type fakeRunner struct {
 	probeAddr      string            // host:port `docker port` reports for the upgrade probe container; default 127.0.0.1:19999
 	health         map[string]string // container name -> docker's HEALTHCHECK verdict; default none
 	env            map[string]string // container name -> its environment, one VAR=value per line
+
+	// repoDigests are each image ID's RepoDigests; by default, the ref it was
+	// pulled by when that is by digest, as a pull by digest leaves it.
+	repoDigests map[string][]string
 
 	// removeDelay stands in for a --rm container Docker is still removing
 	// after docker stop: the name stays listed by that many `docker ps --all`
@@ -62,6 +73,28 @@ func (f *fakeRunner) idFor(ref string) string {
 		return id
 	}
 	return "sha256:" + ref
+}
+
+// repoDigestsOf is the RepoDigests docker image inspect reports for image ID
+// id, as JSON: f.repoDigests' entry, else the by-digest reference whose image
+// it is, as a pull by digest leaves it, else none.
+func (f *fakeRunner) repoDigestsOf(id string) string {
+	digests, ok := f.repoDigests[id]
+	if !ok {
+		refs := []string{strings.TrimPrefix(id, "sha256:")}
+		for ref, refID := range f.imageIDs {
+			if refID == id {
+				refs = append(refs, ref)
+			}
+		}
+		for _, ref := range refs {
+			if strings.Contains(ref, "@sha256:") && f.idFor(ref) == id {
+				digests = []string{ref}
+			}
+		}
+	}
+	data, _ := json.Marshal(append([]string{}, digests...))
+	return string(data)
 }
 
 func (f *fakeRunner) RunInput(dir, name, input string, args ...string) (string, error) {
@@ -116,6 +149,9 @@ func (f *fakeRunner) Run(dir, name string, args ...string) (string, error) {
 		return f.platform(), nil
 	case "image":
 		ref := args[2]
+		if len(args) >= 5 && args[3] == "--format" && args[4] == "{{json .RepoDigests}}" {
+			return f.repoDigestsOf(ref), nil
+		}
 		if !f.images[ref] {
 			return "", fmt.Errorf("docker image inspect %s: exit status 1\nError: No such image", ref)
 		}
@@ -260,6 +296,9 @@ func runWithApp(t *testing.T, a *app, args ...string) (string, string, int) {
 	if a.healthProbe == nil {
 		a.healthProbe = func(string) bool { return true } // tests never reach the network; a running container answers
 	}
+	if dashboardReleasesOf != t {
+		lazySignedDashboardReleases(t) // nor does flai dashboard, for a test that names no releases of its own
+	}
 	root := newRootCmdWith(a)
 	root.SetArgs(args)
 	code := 0
@@ -273,6 +312,340 @@ func runWithApp(t *testing.T, a *app, args ...string) (string, string, int) {
 		}
 	}
 	return out.String(), errOut.String(), code
+}
+
+// testReleaseVersions are the flaiover releases the dashboard tests' stand-in
+// publishes, newest first.
+var testReleaseVersions = []string{"0.10.0", "0.4.0", "0.3.0", "0.2.0"}
+
+// flaioverDigest is the index digest release version's test list names.
+func flaioverDigest(version string) string {
+	sum := sha256.Sum256([]byte("index " + version))
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// flaioverRef is what flai dashboard pulls and runs for release version.
+func flaioverRef(version string) string {
+	return signedDashboardImage + "@" + flaioverDigest(version)
+}
+
+// signedListOf is release version's digest list, its index at
+// flaioverDigest(version), beside a platform manifest.
+func signedListOf(version string) []byte {
+	ref := signedDashboardImage + ":" + version
+	platform := sha256.Sum256([]byte("linux/amd64 " + version))
+	return []byte(flaioverDigest(version) + " " + ref + " index\n" +
+		"sha256:" + hex.EncodeToString(platform[:]) + " " + ref + " linux/amd64\n")
+}
+
+// dashboardReleasesOf is the test dashboardReleases answers for, nil when
+// none has set it.
+var dashboardReleasesOf *testing.T
+
+// setDashboardReleases makes flai dashboard resolve its releases through opt
+// for the rest of t.
+func setDashboardReleases(t *testing.T, opt func() selfupgrade.Options) {
+	t.Helper()
+	old, oldOf := dashboardReleases, dashboardReleasesOf
+	t.Cleanup(func() { dashboardReleases, dashboardReleasesOf = old, oldOf })
+	dashboardReleases, dashboardReleasesOf = opt, t
+}
+
+// releaseKey is a fresh key for a test's releases to be signed with.
+func releaseKey(t *testing.T) *ecdsa.PrivateKey {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+// signedReleases are testReleaseVersions, each publishing signedListOf it
+// signed by key.
+func signedReleases(t *testing.T, key *ecdsa.PrivateKey) []flaioverRelease {
+	t.Helper()
+	rels := make([]flaioverRelease, len(testReleaseVersions))
+	for i, v := range testReleaseVersions {
+		rels[i] = signedFlaiover(t, v, signedListOf(v), key)
+	}
+	return rels
+}
+
+// dashboardReleasesAt are the options for o/r's releases at api, verified
+// with trusted.
+func dashboardReleasesAt(api string, trusted *ecdsa.PrivateKey) selfupgrade.Options {
+	return selfupgrade.Options{Repo: "o/r", APIBase: api, Keys: []*ecdsa.PublicKey{&trusted.PublicKey}}
+}
+
+// serveDashboardReleases serves rels as o/r's flaiover releases and makes flai
+// dashboard resolve them for the rest of t, trusting trusted; asked lists the
+// paths asked for so far.
+func serveDashboardReleases(t *testing.T, trusted *ecdsa.PrivateKey, rels ...flaioverRelease) (asked func() []string) {
+	t.Helper()
+	tags := make([]string, len(rels))
+	for i, r := range rels {
+		tags[i] = selfupgrade.DashboardTagPrefix + r.version
+	}
+	api, asked := dashboardStandIn(t, tags, rels...)
+	setDashboardReleases(t, func() selfupgrade.Options { return dashboardReleasesAt(api, trusted) })
+	return asked
+}
+
+// useSignedDashboardReleases serves testReleaseVersions, each with its list
+// signed by a key flai dashboard trusts, for the rest of t.
+func useSignedDashboardReleases(t *testing.T) (asked func() []string) {
+	t.Helper()
+	key := releaseKey(t)
+	return serveDashboardReleases(t, key, signedReleases(t, key)...)
+}
+
+// lazySignedDashboardReleases is useSignedDashboardReleases, started the first
+// time flai dashboard asks for its releases in t: every dashboard test gets it
+// from runWithApp unless it sets its own.
+func lazySignedDashboardReleases(t *testing.T) {
+	t.Helper()
+	var opt *selfupgrade.Options
+	setDashboardReleases(t, func() selfupgrade.Options {
+		if opt == nil {
+			key := releaseKey(t)
+			tags := make([]string, len(testReleaseVersions))
+			for i, v := range testReleaseVersions {
+				tags[i] = selfupgrade.DashboardTagPrefix + v
+			}
+			api, _ := dashboardStandIn(t, tags, signedReleases(t, key)...)
+			o := dashboardReleasesAt(api, key)
+			opt = &o
+		}
+		return *opt
+	})
+}
+
+// lastRunOf is the last docker run f was asked for, "" when none.
+func lastRunOf(f *fakeRunner) string { return lastRun(f.calls) }
+
+// called reports whether any of f's calls starts with prefix.
+func called(f *fakeRunner, prefix string) bool {
+	return slices.ContainsFunc(f.calls, func(c string) bool { return strings.HasPrefix(c, prefix) })
+}
+
+// S-0236, ADR-0070: flai dashboard resolves dashboard.tag to a flaiover
+// release, verifies its digest list, keeps it in the cache beside flai
+// serve's state, and pulls and runs the image by the list's index digest.
+func TestDashboardRunsTheReleaseByDigest(t *testing.T) {
+	root := dashboardProject(t)
+	asked := useSignedDashboardReleases(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard")
+	if code != 0 {
+		t.Fatalf("start: %d %s", code, errOut)
+	}
+	ref := flaioverRef("0.10.0")
+	if !slices.Contains(f.calls, "docker pull --quiet --platform linux/amd64 "+ref) {
+		t.Errorf("latest is pulled by the newest release's index digest:\n%s", strings.Join(f.calls, "\n"))
+	}
+	if run := lastRunOf(f); !strings.HasSuffix(run, " --label "+dashboardRefLabel+"="+ref+" "+ref) {
+		t.Errorf("run by digest, labelled with it: %s", run)
+	}
+	if !strings.Contains(out, "image "+ref) || !strings.Contains(out, "flaiover 0.10.0, run by digest from its verified digest list") || strings.Contains(out, "unsigned") {
+		t.Errorf("output: %s", out)
+	}
+	dir := string((&app{}).serveDir())
+	cached, err := os.ReadFile(filepath.Join(dir, "dashboard-digests", "0.10.0.digests"))
+	if err != nil || string(cached) != string(signedListOf("0.10.0")) {
+		t.Errorf("the verified list is cached beside flai serve's state: %v %q", err, cached)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "dashboard-digests", "0.10.0.digests.sig")); err != nil {
+		t.Errorf("with its signature: %v", err)
+	}
+	if r, _ := readDashboardRecord(dir); r.Ref != ref {
+		t.Errorf("the record keeps the by-digest reference: %+v", r)
+	}
+	if !slices.Contains(asked(), "/repos/o/r/releases") {
+		t.Errorf("the releases are asked: %v", asked())
+	}
+
+	// a version is that release; --json says what runs and that it is signed
+	g := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code = runWith(t, root, g, "dashboard", "--tag", "0.3.0", "--json")
+	var js map[string]any
+	if code != 0 || json.Unmarshal([]byte(out), &js) != nil {
+		t.Fatalf("start 0.3.0: %d %s %s", code, out, errOut)
+	}
+	if js["image"] != flaioverRef("0.3.0") || js["signed"] != true || js["release"] != "0.3.0" || js["cached_list"] != nil {
+		t.Errorf("--json: %v", js)
+	}
+	if !slices.Contains(g.calls, "docker pull --quiet --platform linux/amd64 "+flaioverRef("0.3.0")) {
+		t.Errorf("0.3.0 by digest:\n%s", strings.Join(g.calls, "\n"))
+	}
+}
+
+// S-0236, ADR-0070: a release with no list this flai can verify, or a tag that
+// names no release, starts no container: nothing is pulled or run, nothing is
+// cached, and the error says why.
+func TestDashboardRefusesAReleaseWithNoListItCanVerify(t *testing.T) {
+	root := dashboardProject(t)
+	key := releaseKey(t)
+	noList := signedFlaiover(t, "0.10.0", signedListOf("0.10.0"), key)
+	delete(noList.assets, "flaiover_0.10.0.digests")
+	altered := signedFlaiover(t, "0.4.0", signedListOf("0.4.0"), key)
+	altered.assets["flaiover_0.4.0.digests"] = signedListOf("0.4.1")
+	unknown := signedFlaiover(t, "0.3.0", signedListOf("0.3.0"), releaseKey(t))
+	serveDashboardReleases(t, key, noList, altered, unknown)
+	for tag, why := range map[string]string{
+		"latest": "flaiover 0.10.0 is not started",
+		"0.4.0":  "the list may have been altered since it was signed",
+		"0.3.0":  "which this flai does not know",
+		"0.9.9":  "has no published release tagged flaiover/v0.9.9",
+		"edge":   "is not a flaiover release version",
+	} {
+		f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+		out, errOut, code := runWith(t, root, f, "dashboard", "--tag", tag)
+		if code == 0 || !strings.Contains(errOut, why) {
+			t.Errorf("%s refused: %d %s %s", tag, code, out, errOut)
+		}
+		if called(f, "docker pull") || called(f, "docker run") {
+			t.Errorf("%s: nothing is pulled or run:\n%s", tag, strings.Join(f.calls, "\n"))
+		}
+	}
+	if entries, _ := os.ReadDir(filepath.Join(string((&app{}).serveDir()), "dashboard-digests")); len(entries) != 0 {
+		t.Errorf("nothing refused is cached: %v", entries)
+	}
+}
+
+// S-0236: when the releases cannot be reached, the cached verified list of the
+// release runs, and flai dashboard says so; with none cached nothing starts.
+func TestDashboardRunsTheCachedListWhenTheReleasesCannotBeReached(t *testing.T) {
+	root := dashboardProject(t)
+	key := releaseKey(t)
+	serveDashboardReleases(t, key, signedReleases(t, key)...)
+	if _, errOut, code := runWith(t, root, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}, "dashboard", "--tag", "0.4.0"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	setDashboardReleases(t, func() selfupgrade.Options { return dashboardReleasesAt("http://127.0.0.1:1", key) })
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard", "--tag", "0.4.0")
+	if code != 0 || !strings.Contains(out, "flaiover 0.4.0, run by digest from its verified digest list cached beside flai serve's state: the release could not be reached") {
+		t.Fatalf("cached: %d %s %s", code, out, errOut)
+	}
+	if run := lastRunOf(f); !strings.HasSuffix(run, " "+flaioverRef("0.4.0")) {
+		t.Errorf("the cached release by digest: %s", run)
+	}
+	g := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	_, errOut, code = runWith(t, root, g, "dashboard", "--tag", "0.3.0")
+	if code == 0 || !strings.Contains(errOut, "no list of it is cached") || !strings.Contains(errOut, "no dashboard container was started") || called(g, "docker run") {
+		t.Errorf("nothing cached: %d %s", code, errOut)
+	}
+}
+
+// S-0236: --image naming another repository, a configured image of another
+// repository, and --build run what they name, as before, asking no release,
+// and say the container is unsigned.
+func TestDashboardRunsAnotherImageUnsigned(t *testing.T) {
+	root := dashboardProject(t)
+	asked := useSignedDashboardReleases(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard", "--image", "registry.example/team/flaiover", "--tag", "1.2")
+	if code != 0 || !strings.Contains(out, "unsigned: no signed digest list names registry.example/team/flaiover:1.2") {
+		t.Fatalf("--image: %d %s %s", code, out, errOut)
+	}
+	if run := lastRunOf(f); !strings.HasSuffix(run, " registry.example/team/flaiover:1.2") || !slices.Contains(f.calls, "docker pull --quiet --platform linux/amd64 registry.example/team/flaiover:1.2") {
+		t.Errorf("runs what --image names: %s", run)
+	}
+	js, _, _ := runWith(t, mirrorProject(t), &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}, "dashboard", "--json")
+	if !strings.Contains(js, `"signed": false`) || !strings.Contains(js, `"image": "`+mirrorLatest+`"`) || strings.Contains(js, `"release"`) {
+		t.Errorf("a configured image of another repository: %s", js)
+	}
+	if n := len(asked()); n != 0 {
+		t.Errorf("an unsigned image asks no release: %v", asked())
+	}
+}
+
+// S-0236: status shows the running image's repository digest, the release
+// whose cached verified list names it, and whether it is on a signed list.
+func TestDashboardStatusShowsTheDigestAndItsRelease(t *testing.T) {
+	root := dashboardProject(t)
+	useSignedDashboardReleases(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, errOut, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	type status struct {
+		Image   string `json:"image"`
+		Digest  string `json:"digest"`
+		Release string `json:"release"`
+		Signed  bool   `json:"signed"`
+	}
+	read := func() (status, string) {
+		t.Helper()
+		js, errOut, code := runWith(t, root, f, "dashboard", "status", "--json")
+		var st status
+		if code != 0 || json.Unmarshal([]byte(js), &st) != nil {
+			t.Fatalf("status --json: %d %s %s", code, js, errOut)
+		}
+		out, _, _ := runWith(t, root, f, "dashboard", "status")
+		return st, out
+	}
+	st, out := read()
+	if st != (status{Image: flaioverRef("0.10.0"), Digest: flaioverDigest("0.10.0"), Release: "0.10.0", Signed: true}) {
+		t.Errorf("signed: %+v", st)
+	}
+	if !strings.Contains(out, "digest: "+flaioverDigest("0.10.0")+" (flaiover 0.10.0, on a signed list)") {
+		t.Errorf("signed text: %s", out)
+	}
+
+	// the entry a cached list names is the one shown, whichever comes first;
+	// 0.4.0's list is cached once a start resolves it
+	if _, errOut, code := runWith(t, root, &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}, "dashboard", "--tag", "0.4.0"); code != 0 {
+		t.Fatalf("start 0.4.0: %s", errOut)
+	}
+	id := f.containerImage["flaiover"]
+	f.repoDigests = map[string][]string{id: {"registry.example/flaiover@sha256:" + strings.Repeat("c", 64), flaioverRef("0.4.0")}}
+	if st, _ = read(); st.Digest != flaioverDigest("0.4.0") || st.Release != "0.4.0" || !st.Signed {
+		t.Errorf("the listed entry: %+v", st)
+	}
+
+	// a digest no list names, or a listed digest under another repository, is unsigned
+	f.repoDigests = map[string][]string{id: {"registry.example/flaiover@" + flaioverDigest("0.10.0")}}
+	st, out = read()
+	if st.Digest != flaioverDigest("0.10.0") || st.Release != "" || st.Signed {
+		t.Errorf("another repository: %+v", st)
+	}
+	if !strings.Contains(out, "digest: "+flaioverDigest("0.10.0")+" (unsigned: no signed digest list names it)") {
+		t.Errorf("unsigned text: %s", out)
+	}
+	f.repoDigests = map[string][]string{id: {}}
+	st, out = read()
+	if st.Digest != "" || st.Signed || !strings.Contains(out, "unsigned: its image has no repository digest") {
+		t.Errorf("no digest: %+v %s", st, out)
+	}
+	js, _, _ := runWith(t, root, f, "dashboard", "status", "--json")
+	if strings.Contains(js, `"digest"`) || strings.Contains(js, `"release"`) {
+		t.Errorf("digest and release are left out when there is none: %s", js)
+	}
+}
+
+// S-0236, ADR-0118: flai dashboard restart starts the release it ran again by
+// digest, asking no release and pulling nothing.
+func TestDashboardRestartKeepsTheDigest(t *testing.T) {
+	root := dashboardProject(t)
+	asked := useSignedDashboardReleases(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, errOut, code := runWith(t, root, f, "dashboard", "--tag", "0.4.0"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	ref, ranImage, before := flaioverRef("0.4.0"), f.containerImage["flaiover"], len(asked())
+	f.calls = nil
+	out, errOut, code := runWith(t, root, f, "dashboard", "restart", "--json")
+	if code != 0 || !strings.Contains(out, `"ref": "`+ref+`"`) {
+		t.Fatalf("restart: %d %s %s", code, out, errOut)
+	}
+	if f.containerLabel["flaiover"] != ref || f.containerImage["flaiover"] != ranImage || called(f, "docker pull") || len(asked()) != before {
+		t.Errorf("restart keeps the digest: label %s image %s\n%s", f.containerLabel["flaiover"], f.containerImage["flaiover"], strings.Join(f.calls, "\n"))
+	}
+	if r, _ := readDashboardRecord(string((&app{}).serveDir())); r.Ref != ref {
+		t.Errorf("record after restart: %+v", r)
+	}
 }
 
 func TestDashboardLifecycle(t *testing.T) {
@@ -296,14 +669,14 @@ func TestDashboardLifecycle(t *testing.T) {
 	}
 	joined := strings.Join(f.calls, "\n")
 	for _, want := range []string{
-		"docker image inspect ghcr.io/bytepunx/flaiover:0.2.0",
-		"docker pull --quiet --platform linux/amd64 ghcr.io/bytepunx/flaiover:0.2.0",
+		"docker image inspect " + flaioverRef("0.2.0"),
+		"docker pull --quiet --platform linux/amd64 " + flaioverRef("0.2.0"),
 		"--name flaiover",
 		"--publish 0.0.0.0:5555:3000",
 		"--mount type=bind,source=" + filepath.Join(serveDir, "dashboard.token") + ",target=/run/secrets/flaiover_token,readonly",
 		"--env FLAIOVER_TOKEN_FILE=/run/secrets/flaiover_token",
 		"--user " + fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()),
-		"--label " + dashboardRefLabel + "=ghcr.io/bytepunx/flaiover:0.2.0 ghcr.io/bytepunx/flaiover:0.2.0",
+		"--label " + dashboardRefLabel + "=" + flaioverRef("0.2.0") + " " + flaioverRef("0.2.0"),
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing %q in calls:\n%s", want, joined)
@@ -357,31 +730,31 @@ func TestDashboardLifecycle(t *testing.T) {
 		t.Errorf("rotate --no-restart: %d %s", code, out)
 	}
 	// precedence: flag port beats manifest port; manifest port beat config's 4242
-	out, _, _ = runWith(t, root, &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}, "dashboard", "--port", "6000", "--json")
+	out, _, _ = runWith(t, root, &fakeRunner{images: map[string]bool{flaioverRef("0.10.0"): true}, running: map[string]bool{}}, "dashboard", "--port", "6000", "--json")
 	if !strings.Contains(out, `"url": "http://localhost:6000"`) {
 		t.Errorf("flag precedence: %s", out)
 	}
 	// the host's git identity stays on the host: flai serve commits there (S-0075)
-	idr := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}, identity: true}
+	idr := &fakeRunner{images: map[string]bool{flaioverRef("0.10.0"): true}, running: map[string]bool{}, identity: true}
 	_, _, _ = runWith(t, root, idr, "dashboard")
 	if j := strings.Join(idr.calls, "\n"); strings.Contains(j, "Test User") || strings.Contains(j, "git config") {
 		t.Errorf("the identity is not read, let alone passed:\n%s", j)
 	}
 	// --bind restricts the published address; the manifest can set it too
-	bnd := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
+	bnd := &fakeRunner{images: map[string]bool{flaioverRef("0.10.0"): true}, running: map[string]bool{}}
 	out, _, _ = runWith(t, root, bnd, "dashboard", "--bind", "127.0.0.1")
 	if !strings.Contains(strings.Join(bnd.calls, "\n"), "--publish 127.0.0.1:5555:3000") || !strings.Contains(out, "reachable from this host only") {
 		t.Errorf("--bind: %s\n%s", out, strings.Join(bnd.calls, "\n"))
 	}
 	// present image is not pulled unless --pull
-	g := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
+	g := &fakeRunner{images: map[string]bool{flaioverRef("0.10.0"): true}, running: map[string]bool{}}
 	_, _, _ = runWith(t, root, g, "dashboard")
 	if strings.Contains(strings.Join(g.calls, "\n"), "docker pull") {
 		t.Error("pulled although present")
 	}
-	h := &fakeRunner{images: map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}, running: map[string]bool{}}
+	h := &fakeRunner{images: map[string]bool{flaioverRef("0.10.0"): true}, running: map[string]bool{}}
 	_, _, _ = runWith(t, root, h, "dashboard", "--pull")
-	if !strings.Contains(strings.Join(h.calls, "\n"), "docker pull --quiet --platform linux/amd64 ghcr.io/bytepunx/flaiover:latest") {
+	if !strings.Contains(strings.Join(h.calls, "\n"), "docker pull --quiet --platform linux/amd64 "+flaioverRef("0.10.0")) {
 		t.Error("--pull should pull")
 	}
 	// already running for this same project: still registers, says so, starts no second container
@@ -390,7 +763,7 @@ func TestDashboardLifecycle(t *testing.T) {
 		t.Errorf("second start: %s\n%s", out, strings.Join(f.calls, "\n"))
 	}
 	out, _, _ = runWith(t, root, f, "dashboard", "status")
-	if !strings.Contains(out, "running at http://localhost:5555 (ghcr.io/bytepunx/flaiover:0.2.0)") {
+	if !strings.Contains(out, "running at http://localhost:5555 ("+flaioverRef("0.2.0")+")") {
 		t.Errorf("status must report the running container: %s", out)
 	}
 	if strings.Contains(out, "older flai") || strings.Contains(out, "push") || strings.Contains(out, "read-only") {
@@ -427,7 +800,7 @@ func TestDashboardLifecycle(t *testing.T) {
 func TestDashboardPullsTheDaemonsPlatform(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
-	img := "ghcr.io/bytepunx/flaiover:latest"
+	img := flaioverRef("0.10.0")
 
 	f := &fakeRunner{daemonPlatform: "linux/arm64", images: map[string]bool{}, running: map[string]bool{}}
 	_, errOut, code := runWith(t, root, f, "dashboard", "--pull")
@@ -462,7 +835,7 @@ func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", "")
 	t.Setenv("GH_TOKEN", "")
 	root := tempProject(t)
-	img := "ghcr.io/bytepunx/flaiover:latest"
+	img := flaioverRef("0.10.0")
 
 	// Unauthorized pull, token from gh: login and retry.
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}, private: map[string]bool{img: true}}
@@ -539,7 +912,7 @@ func TestDashboardBuildPassesNoReleaseStamp(t *testing.T) {
 func TestDashboardPushKeyIsRetired(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
-	img := map[string]bool{"ghcr.io/bytepunx/flaiover:latest": true}
+	img := map[string]bool{flaioverRef("0.10.0"): true}
 	f := &fakeRunner{images: img, running: map[string]bool{}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "--push-key", "/home/me/.ssh/deploy")
 	if code != 0 || !strings.Contains(out, "--push-key: retired and ignored") || !strings.Contains(out, "flai release --pending") || strings.Contains(out, "flai push") || !strings.Contains(out, "ADR-0031") {
@@ -574,6 +947,25 @@ func dashboardProject(t *testing.T) string {
 	return root
 }
 
+// mirrorImage is an image of a repository other than the signed one, which
+// flai dashboard runs by its tag, unsigned (S-0236); mirrorLatest is its tag
+// the mirror project configures.
+const (
+	mirrorImage  = "registry.example/flaiover"
+	mirrorLatest = mirrorImage + ":latest"
+)
+
+// mirrorProject is dashboardProject configured with mirrorImage, for the
+// tests of a tag that can name another image tomorrow (I-0116), which only an
+// unsigned image has, and of check and upgrade, which compare by tag.
+func mirrorProject(t *testing.T) string {
+	t.Helper()
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: My Proj\nkey: m\nlayout:\n  design: design\n  docs: docs\n  wip: wip\ndashboard:\n  image: "+mirrorImage+"\n  port: 5555\n  tag: latest\n"), 0o644)
+	return root
+}
+
 func TestDashboardRestartStartsWhenNotRunning(t *testing.T) {
 	root := dashboardProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
@@ -590,14 +982,14 @@ func TestDashboardRestartStartsWhenNotRunning(t *testing.T) {
 }
 
 func TestDashboardRestartCyclesTheRunningContainerWithoutChangingItsImage(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
 	ranImage := f.containerImage["flaiover"]
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"} // a newer build under the same tag
-	f.calls = nil                                                                      // only the restart's own calls matter below
+	f.imageIDs = map[string]string{mirrorLatest: "sha256:newer"} // a newer build under the same tag
+	f.calls = nil                                                // only the restart's own calls matter below
 	out, errOut, code := runWith(t, root, f, "dashboard", "restart")
 	if code != 0 {
 		t.Fatalf("restart: %d %s", code, errOut)
@@ -618,8 +1010,8 @@ func TestDashboardRestartCyclesTheRunningContainerWithoutChangingItsImage(t *tes
 // newer latest is pulled the tag names another image than the one that runs.
 // A restart starts the image that runs, by its ID, and still names the tag.
 func TestDashboardRestartRunsTheImageIDNotWhatTheTagNamesNow(t *testing.T) {
-	root := dashboardProject(t)
-	tag := "ghcr.io/bytepunx/flaiover:latest"
+	root := mirrorProject(t)
+	tag := mirrorLatest
 	f := &fakeRunner{images: map[string]bool{tag: true}, running: map[string]bool{}, imageIDs: map[string]string{tag: "sha256:old"}}
 	if _, errOut, code := runWith(t, root, f, "dashboard"); code != 0 || f.containerImage["flaiover"] != "sha256:old" {
 		t.Fatalf("start: %d %s", code, errOut)
@@ -725,7 +1117,7 @@ func TestDashboardCheckReportsNotRunningPlainly(t *testing.T) {
 }
 
 func TestDashboardCheckFindsNothingWhenAlreadyCurrent(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
@@ -740,12 +1132,12 @@ func TestDashboardCheckFindsNothingWhenAlreadyCurrent(t *testing.T) {
 }
 
 func TestDashboardCheckFindsAnUpdate(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	f.imageIDs = map[string]string{mirrorLatest: "sha256:newer"}
 	out, errOut, code := runWith(t, root, f, "dashboard", "check", "--json")
 	if code != 0 {
 		t.Fatalf("check: %d %s", code, errOut)
@@ -768,7 +1160,7 @@ func TestDashboardUpgradeStartsWhenNotRunning(t *testing.T) {
 }
 
 func TestDashboardUpgradeReportsAlreadyUpToDate(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
@@ -791,12 +1183,12 @@ func TestDashboardUpgradeReportsAlreadyUpToDate(t *testing.T) {
 const dashboardUpgradeProbeName = "flaiover" + upgradeProbeSuffix
 
 func TestDashboardUpgradeSwapsToAHealthyNewImage(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	f.imageIDs = map[string]string{mirrorLatest: "sha256:newer"}
 	var probed []string
 	a := &app{cwd: root, runner: f, healthProbe: func(url string) bool { probed = append(probed, url); return true }}
 	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
@@ -821,12 +1213,12 @@ func TestDashboardUpgradeSwapsToAHealthyNewImage(t *testing.T) {
 }
 
 func TestDashboardUpgradeLeavesThePreviousContainerRunningWhenTheNewOneNeverAnswersHealthy(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:broken"}
+	f.imageIDs = map[string]string{mirrorLatest: "sha256:broken"}
 	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { return false }}
 	out, errOut, code := runWithApp(t, a, "dashboard", "upgrade")
 	if code == 0 {
@@ -850,12 +1242,12 @@ func TestDashboardUpgradeLeavesThePreviousContainerRunningWhenTheNewOneNeverAnsw
 // holds its name until it has removed it, and a docker run under that name
 // at once fails with a conflict. An upgrade waits for the name first.
 func TestDashboardUpgradeSwapsWhileDockerStillRemovesTheStoppedContainer(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	f.imageIDs = map[string]string{mirrorLatest: "sha256:newer"}
 	f.removeDelay = 3
 	f.calls = nil
 	out, errOut, code := runWith(t, root, f, "dashboard", "upgrade")
@@ -887,12 +1279,12 @@ func TestDashboardRestartWaitsWhileDockerStillRemovesTheStoppedContainer(t *test
 }
 
 func TestDashboardUpgradeRemovesANameDockerNeverReleases(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	f.imageIDs = map[string]string{mirrorLatest: "sha256:newer"}
 	f.removeDelay = nameReleaseAttempts + 5 // still listed when the wait gives up
 	f.calls = nil
 	slept := 0
@@ -920,19 +1312,19 @@ func TestDashboardUpgradeRemovesANameDockerNeverReleases(t *testing.T) {
 }
 
 func TestDashboardUpgradeStartsThePreviousImageAgainWhenTheNewOneFailsToStart(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
 	previous := f.containerImage["flaiover"]
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
-	f.runFails = map[string]bool{"flaiover ghcr.io/bytepunx/flaiover:latest": true}
+	f.imageIDs = map[string]string{mirrorLatest: "sha256:newer"}
+	f.runFails = map[string]bool{"flaiover " + mirrorLatest: true}
 	out, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--json")
 	if code == 0 {
 		t.Fatalf("the upgrade failed, so it exits non-zero, --json or not: %s", out)
 	}
-	for _, want := range []string{"upgrade to ghcr.io/bytepunx/flaiover:latest failed", "did not start after flaiover stopped", "driver failed programming", "flaiover runs the previous image ghcr.io/bytepunx/flaiover:latest again"} {
+	for _, want := range []string{"upgrade to " + mirrorLatest + " failed", "did not start after flaiover stopped", "driver failed programming", "flaiover runs the previous image " + mirrorLatest + " again"} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("missing %q in: %s", want, errOut)
 		}
@@ -940,25 +1332,25 @@ func TestDashboardUpgradeStartsThePreviousImageAgainWhenTheNewOneFailsToStart(t 
 	if !f.running["flaiover"] || f.containerImage["flaiover"] != previous {
 		t.Errorf("flaiover should run the previous image %s again (by its ID, as the pull moved the tag), runs %s", previous, f.containerImage["flaiover"])
 	}
-	if f.containerLabel["flaiover"] != "ghcr.io/bytepunx/flaiover:latest" {
+	if f.containerLabel["flaiover"] != mirrorLatest {
 		t.Errorf("the previous image is labelled with the tag it ran as, so status names that: %q", f.containerLabel["flaiover"])
 	}
 }
 
 func TestDashboardUpgradeSaysTheDashboardIsDownWhenThePreviousImageFailsToStartToo(t *testing.T) {
-	root := dashboardProject(t)
+	root := mirrorProject(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, _, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatal("start")
 	}
 	previous := f.containerImage["flaiover"]
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
-	f.runFails = map[string]bool{"flaiover ghcr.io/bytepunx/flaiover:latest": true, "flaiover " + previous: true}
+	f.imageIDs = map[string]string{mirrorLatest: "sha256:newer"}
+	f.runFails = map[string]bool{"flaiover " + mirrorLatest: true, "flaiover " + previous: true}
 	_, errOut, code := runWith(t, root, f, "dashboard", "upgrade")
 	if code == 0 {
 		t.Fatal("upgrade should have failed")
 	}
-	for _, want := range []string{"upgrade to ghcr.io/bytepunx/flaiover:latest failed", "starting the previous image ghcr.io/bytepunx/flaiover:latest again failed too", "the dashboard is down: run flai dashboard to start it"} {
+	for _, want := range []string{"upgrade to " + mirrorLatest + " failed", "starting the previous image " + mirrorLatest + " again failed too", "the dashboard is down: run flai dashboard to start it"} {
 		if !strings.Contains(errOut, want) {
 			t.Errorf("missing %q in: %s", want, errOut)
 		}
@@ -977,7 +1369,7 @@ func TestDashboardRestartSaysTheDashboardIsDownWhenItDoesNotStartAgain(t *testin
 	ran := f.containerImage["flaiover"]
 	f.runFails = map[string]bool{"flaiover " + ran: true}
 	_, errOut, code := runWith(t, root, f, "dashboard", "restart")
-	if code == 0 || !strings.Contains(errOut, "restart flaiover: it stopped but did not start again from ghcr.io/bytepunx/flaiover:latest (image "+ran+")") || !strings.Contains(errOut, "the dashboard is down: run flai dashboard to start it") {
+	if code == 0 || !strings.Contains(errOut, "restart flaiover: it stopped but did not start again from "+flaioverRef("0.10.0")+" (image "+ran+")") || !strings.Contains(errOut, "the dashboard is down: run flai dashboard to start it") {
 		t.Errorf("restart: %d %s", code, errOut)
 	}
 }

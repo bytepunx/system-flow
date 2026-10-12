@@ -102,7 +102,7 @@ func TestDashboardRecordsWhatFlaiHostRestarts(t *testing.T) {
 		t.Fatalf("start: %s", errOut)
 	}
 	r, ok := readDashboardRecord(dir)
-	if !ok || r.Name != "flaiover" || r.Ref != "ghcr.io/bytepunx/flaiover:0.2.0" || r.Publish != "0.0.0.0:5555:3000" {
+	if !ok || r.Name != "flaiover" || r.Ref != flaioverRef("0.2.0") || r.Publish != "0.0.0.0:5555:3000" {
 		t.Fatalf("record after start: %+v %v", r, ok)
 	}
 
@@ -137,7 +137,7 @@ func TestDashboardRecordsWhatFlaiHostRestarts(t *testing.T) {
 func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
 	root := dashboardProject(t)
 	answers := true
-	f := &fakeRunner{images: map[string]bool{"sha256:v020": true}, running: map[string]bool{}, imageIDs: map[string]string{"ghcr.io/bytepunx/flaiover:0.2.0": "sha256:v020"}}
+	f := &fakeRunner{images: map[string]bool{"sha256:v020": true}, running: map[string]bool{}, imageIDs: map[string]string{flaioverRef("0.2.0"): "sha256:v020"}}
 	a := &app{cwd: root, runner: f, healthProbe: func(string) bool { return answers }}
 	if _, _, code := runWithApp(t, a, "dashboard", "--tag", "0.2.0"); code != 0 {
 		t.Fatal("start")
@@ -161,7 +161,7 @@ func TestDashboardWatchLooksAndRestartsAsRecorded(t *testing.T) {
 		t.Fatalf("restart: %v", err)
 	}
 	calls := strings.Join(f.calls[before:], "\n")
-	if !strings.Contains(calls, "docker rm -f flaiover") || !strings.Contains(calls, "--publish 0.0.0.0:5555:3000") || !strings.HasSuffix(calls, "--label "+dashboardRefLabel+"=ghcr.io/bytepunx/flaiover:0.2.0 sha256:v020") || strings.Contains(calls, "docker pull") {
+	if !strings.Contains(calls, "docker rm -f flaiover") || !strings.Contains(calls, "--publish 0.0.0.0:5555:3000") || !strings.HasSuffix(calls, "--label "+dashboardRefLabel+"="+flaioverRef("0.2.0")+" sha256:v020") || strings.Contains(calls, "docker pull") {
 		t.Errorf("restart calls:\n%s", calls)
 	}
 	if !f.running["flaiover"] {
@@ -195,8 +195,8 @@ func lastRun(calls []string) string {
 // tag, never what the tag names now, so a newer image flai dashboard check
 // pulled under a floating tag is not started without an upgrade.
 func TestDashboardWatchRestartsTheImageIDNotWhatItsTagNamesNow(t *testing.T) {
-	root := dashboardProject(t)
-	const latest = "ghcr.io/bytepunx/flaiover:latest"
+	root := mirrorProject(t)
+	const latest = mirrorLatest
 	f := &fakeRunner{images: map[string]bool{"sha256:old": true}, running: map[string]bool{}, imageIDs: map[string]string{latest: "sha256:old"}}
 	a := &app{cwd: root, runner: f}
 	if _, errOut, code := runWithApp(t, a, "dashboard"); code != 0 {
@@ -274,8 +274,8 @@ func TestDashboardWatchStartsTheRefWhenTheRecordedImageIsGone(t *testing.T) {
 // shows beside it, so the watch's restart after it is labelled with the tag,
 // not the ID.
 func TestDashboardRestartRecordsTheTagAndTheImageID(t *testing.T) {
-	root := dashboardProject(t)
-	const latest = "ghcr.io/bytepunx/flaiover:latest"
+	root := mirrorProject(t)
+	const latest = mirrorLatest
 	f := &fakeRunner{images: map[string]bool{"sha256:old": true}, running: map[string]bool{}, imageIDs: map[string]string{latest: "sha256:old"}}
 	a := &app{cwd: root, runner: f}
 	if _, errOut, code := runWithApp(t, a, "dashboard"); code != 0 {
