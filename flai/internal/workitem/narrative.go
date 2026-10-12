@@ -591,37 +591,50 @@ func (r *Repo) AnswerOpenQuestion(storyID, question, answer, by string, now time
 }
 
 // ActiveNarratives lists narratives under wip/agents: the S-*.md files, so
-// not the strategic agents' activity documents.
-func (r *Repo) ActiveNarratives() ([]*Narrative, error) {
+// not the strategic agents' activity documents. A file that does not parse,
+// such as an empty one, is not among them: unreadable names its stream, from
+// its file name, so that one story's broken narrative fails no other story's
+// command (I-0129).
+func (r *Repo) ActiveNarratives() (narratives []*Narrative, unreadable []string) {
 	matches, _ := filepath.Glob(filepath.Join(r.AgentsDir(), "S-*.md"))
-	var out []*Narrative
 	for _, m := range matches {
 		n, err := ReadNarrative(m)
 		if err != nil {
-			return nil, err
+			unreadable = append(unreadable, strings.TrimSuffix(filepath.Base(m), ".md"))
+			continue
 		}
-		out = append(out, n)
+		narratives = append(narratives, n)
 	}
-	sort.Slice(out, func(i, j int) bool { return lessID(out[i].Stream, out[j].Stream) })
-	return out, nil
+	sort.Slice(narratives, func(i, j int) bool { return lessID(narratives[i].Stream, narratives[j].Stream) })
+	return narratives, unreadable
 }
 
 // WriteIndex regenerates wip/agents/index.md from the active narratives and,
 // under a heading of their own, the strategic agents' activity documents.
 func (r *Repo) WriteIndex(items []*Item, now time.Time) error {
-	narratives, err := r.ActiveNarratives()
-	if err != nil {
-		return err
-	}
+	narratives, unreadable := r.ActiveNarratives()
 	status := map[string]string{}
 	for _, it := range items {
 		status[it.ID] = it.Status
 	}
+	// A narrative that does not parse is listed as such, in its stream's
+	// place, rather than failing the index; flai check names the fault.
+	streams := make([]string, 0, len(narratives)+len(unreadable))
+	row := map[string]string{}
+	for _, n := range narratives {
+		streams = append(streams, n.Stream)
+		row[n.Stream] = fmt.Sprintf("| [%s](%s.md) | %s | %s | %s | %s |\n", n.Stream, n.Stream, n.Title, orDefault(status[n.Stream], "unknown"), n.Agent, n.Updated)
+	}
+	for _, id := range unreadable {
+		streams = append(streams, id)
+		row[id] = fmt.Sprintf("| [%s](%s.md) | unreadable, see flai check | %s | | |\n", id, id, orDefault(status[id], "unknown"))
+	}
+	sort.Slice(streams, func(i, j int) bool { return lessID(streams[i], streams[j]) })
 	var b strings.Builder
 	fmt.Fprintf(&b, "---\ntitle: Active streams\nupdated: %s\n---\n\n# Active streams\n\n", now.UTC().Format(TimeFormat))
 	b.WriteString("| Stream | Title | Status | Last agent | Updated |\n|--------|-------|--------|------------|---------|\n")
-	for _, n := range narratives {
-		fmt.Fprintf(&b, "| [%s](%s.md) | %s | %s | %s | %s |\n", n.Stream, n.Stream, n.Title, orDefault(status[n.Stream], "unknown"), n.Agent, n.Updated)
+	for _, id := range streams {
+		b.WriteString(row[id])
 	}
 	// An activity document that does not parse is listed as such rather than
 	// failing the index, which every move rewrites; flai check names the fault.

@@ -417,3 +417,41 @@ func TestNarrativeSection(t *testing.T) {
 		}
 	}
 }
+
+// I-0129: a narrative that does not parse, such as an empty file, is listed in
+// the index as unreadable, in its stream's place, and fails no other story's
+// log or index; its own story's log still fails, naming the file.
+func TestIndexListsAnUnreadableNarrative(t *testing.T) {
+	r := lintProject(t)
+	for _, title := range []string{"One", "Two", "Three"} {
+		mustCreate(t, r, Story, title, "")
+	}
+	for _, id := range []string{"S-0001", "S-0003"} {
+		s, _ := r.Get(id)
+		if _, err := r.OpenStream(s, StreamOptions{Agent: "test", Now: t0}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(r.NarrativePath("S-0002"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.LogStream("S-0001", "Still logs.", StreamOptions{Agent: "test", Now: t0}); err != nil {
+		t.Fatalf("another story's log: %v", err)
+	}
+	items, _ := r.List(false)
+	if err := r.WriteIndex(items, t0); err != nil {
+		t.Fatalf("index with an empty narrative: %v", err)
+	}
+	index := filepath.Join(r.AgentsDir(), "index.md")
+	data, _ := os.ReadFile(index)
+	one := strings.Index(string(data), "| [S-0001](S-0001.md) | One |")
+	two := strings.Index(string(data), "| [S-0002](S-0002.md) | unreadable, see flai check | backlog | | |\n")
+	three := strings.Index(string(data), "| [S-0003](S-0003.md) | Three |")
+	if one < 0 || two < one || three < two {
+		t.Errorf("index, want S-0002 listed as unreadable between S-0001 and S-0003:\n%s", data)
+	}
+	mustLintClean(t, index)
+	if _, err := r.LogStream("S-0002", "Fails.", StreamOptions{Agent: "test", Now: t0}); err == nil || !strings.Contains(err.Error(), "S-0002.md") {
+		t.Errorf("the story's own log on its empty narrative: %v, want an error naming the file", err)
+	}
+}

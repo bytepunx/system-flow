@@ -382,8 +382,8 @@ func TestIndexListsActivityDocuments(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if ns, err := r.ActiveNarratives(); err != nil || len(ns) != 1 {
-		t.Fatalf("narratives are the stories' only: %v %v", ns, err)
+	if ns, unreadable := r.ActiveNarratives(); len(unreadable) != 0 || len(ns) != 1 {
+		t.Fatalf("narratives are the stories' only: %v %v", ns, unreadable)
 	}
 	items, _ := r.List(false)
 	if err := r.WriteIndex(items, activityAt); err != nil {
