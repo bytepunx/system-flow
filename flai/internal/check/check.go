@@ -696,12 +696,15 @@ func (c *checker) narratives() {
 	}
 	matches, _ := filepath.Glob(filepath.Join(dir, "S-*.md"))
 	for _, path := range matches {
+		want := strings.TrimSuffix(filepath.Base(path), ".md")
 		n, err := workitem.ReadNarrative(path)
 		if err != nil {
+			// The index lists it as unreadable (I-0129), so this is its one
+			// finding, not an index that lists a stream with no narrative too.
+			active[want] = true
 			c.add(Error, "narrative.front-matter", path, 1, "%v", err)
 			continue
 		}
-		want := strings.TrimSuffix(filepath.Base(path), ".md")
 		if n.Stream != want {
 			c.add(Error, "narrative.stream", path, keyLine(path, "stream"), "stream %q does not match file name %s", n.Stream, want)
 		}

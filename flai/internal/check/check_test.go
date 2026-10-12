@@ -1093,3 +1093,38 @@ func TestReviewOverItsLimitDoesNotFailStrict(t *testing.T) {
 		}
 	}
 }
+
+// I-0129: an empty narrative has one finding, narrative.front-matter, on the
+// file; the index, which lists it as unreadable, draws none for it.
+func TestUnreadableNarrativeIsOneFinding(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte("version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644)
+	for _, d := range []string{"design/adrs", "design/system", "design/tech", "design/conventions", "docs", "wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustItem(t, repo, workitem.Story, "One", "")
+	if err := os.WriteFile(repo.NarrativePath("S-0001"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	items, _ := repo.List(false)
+	if err := repo.WriteIndex(items, now); err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range res.Findings {
+		if strings.HasPrefix(f.Rule, "narrative.") {
+			got = append(got, f.Rule+" "+f.Path)
+		}
+	}
+	if strings.Join(got, "|") != "narrative.front-matter wip/agents/S-0001.md" {
+		t.Errorf("narrative findings: %q, want narrative.front-matter on the file alone", got)
+	}
+}
