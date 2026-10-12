@@ -14,9 +14,13 @@
 		argv,
 		health,
 		lines,
+		PROVIDER_APIS,
+		providerChange,
+		providerForm,
 		replanMeans,
 		sharedQuery,
 		sharedRefusal,
+		type ProviderForm,
 		type ServedProject,
 		type SettingsKind,
 		type SettingsView,
@@ -35,10 +39,14 @@
 	// the forms, filled from what flai said
 	let dHarness = $state('');
 	let dModel = $state('');
+	let dProvider = $state('');
 	let dConfig = $state('');
 	let aName = $state('');
 	let aCommand = $state('');
 	let harnessForm = $state<Record<string, { program: string; args: string }>>({});
+	let providerForms = $state<Record<string, ProviderForm>>({});
+	let newProviderName = $state('');
+	let newProvider = $state<ProviderForm>(providerForm());
 	let checkForm = $state<Record<string, string>>({});
 	let newCheckName = $state('');
 	let newCheckCommand = $state('');
@@ -62,6 +70,7 @@
 		if (!h) return;
 		dHarness = h.default_agent?.harness ?? '';
 		dModel = h.default_agent?.model ?? '';
+		dProvider = h.default_agent?.provider ?? '';
 		dConfig = configText(h.default_agent?.config);
 		aName = h.agent.name ?? '';
 		aCommand = lines(h.agent.command);
@@ -70,6 +79,9 @@
 				n,
 				{ program: x.program, args: lines(x.args) }
 			])
+		);
+		providerForms = Object.fromEntries(
+			Object.entries(h.agent.providers ?? {}).map(([n, p]) => [n, providerForm(p)])
 		);
 		checkForm = Object.fromEntries(h.checks.commands.map((c) => [c.name, lines(c.command)]));
 		timeout = String(h.checks.timeout_minutes);
@@ -124,9 +136,27 @@
 			said.default = { ok: false, text: `config: ${parsed.error}` };
 			return;
 		}
+		const roles = view?.host?.default_agent?.roles;
 		void change('default', 'default_agent', {
-			agent: agentFrom(dHarness, dModel, parsed.config, view?.host?.default_agent?.roles) ?? null
+			agent: agentFrom(dHarness, dModel, parsed.config, roles, dProvider) ?? null
 		});
+	}
+	// A provider set through flai serve agent provider (S-0359): the fields typed, a models line
+	// that is not alias=name said before anything is sent. A new one needs api, base_url, and
+	// key_env, which flai says when one is missing.
+	async function saveProvider(section: string, name: string, form: ProviderForm) {
+		const c = providerChange(name, form);
+		if ('error' in c) {
+			said[section] = { ok: false, text: c.error };
+			return false;
+		}
+		return (await change(section, 'provider', c)) !== null;
+	}
+	/** Whether a provider's key is in flai serve's environment, in words; never the key. */
+	function keyLine(name: string): string {
+		const p = view?.host?.agent.providers?.[name];
+		if (p?.key_set) return 'key set';
+		return `${p?.key_env} is not set in flai serve's environment: an agent that names ${name} is refused at start`;
 	}
 	function saveAgent() {
 		const params: Record<string, unknown> = {};
@@ -235,6 +265,53 @@
 	{/if}
 {/snippet}
 
+{#snippet providerFields(f: ProviderForm)}
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+		<label class="block">
+			<span class="mb-1 block text-xs text-muted">api</span>
+			<select
+				class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+				bind:value={f.api}
+				data-testid="provider-api"
+			>
+				<option value="" disabled>choose one</option>
+				{#each PROVIDER_APIS as a (a)}
+					<option value={a}>{a}</option>
+				{/each}
+			</select>
+		</label>
+		<label class="block">
+			<span class="mb-1 block text-xs text-muted">base URL</span>
+			<input
+				class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+				bind:value={f.base_url}
+				placeholder="http://127.0.0.1:4000"
+				data-testid="provider-base-url"
+			/>
+		</label>
+		<label class="block">
+			<span class="mb-1 block text-xs text-muted">key_env: the variable that holds its key</span>
+			<input
+				class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+				bind:value={f.key_env}
+				placeholder="LITELLM_API_KEY"
+				data-testid="provider-key-env"
+			/>
+		</label>
+	</div>
+	<label class="mt-2 block">
+		<span class="mb-1 block text-xs text-muted"
+			>models, one alias=name a line; left empty, the aliases stay as they are, and only Remove
+			clears them all</span
+		>
+		<textarea
+			class="h-16 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+			bind:value={f.models}
+			placeholder="opus=anthropic/claude-opus-5-5"
+			data-testid="provider-models"></textarea>
+	</label>
+{/snippet}
+
 {#snippet result(section: string)}
 	{#if said[section]}
 		<p
@@ -315,6 +392,7 @@
 			<AgentFields
 				bind:harness={dHarness}
 				bind:model={dModel}
+				bind:provider={dProvider}
 				bind:config={dConfig}
 				isDefault
 				note="Stored in system-flow.yaml and committed; empty fields leave it without them"
@@ -555,6 +633,76 @@
 					{@render result('harness-' + name)}
 				</div>
 			{/each}
+		</section>
+
+		<section data-testid="section-providers">
+			<h2 class="mb-2 font-medium">Providers, where agents' model calls go, on this host</h2>
+			{@render gate('provider')}
+			<p class="text-xs text-muted">
+				flai serve starts an agent that names a provider with the key from the variable key_env
+				names. The key is never shown or asked for here: set the variable in flai serve's
+				environment.
+			</p>
+			{#each Object.keys(providerForms).sort() as name (name)}
+				{@const p = h.agent.providers?.[name]}
+				<div class="mt-4 rounded border border-line p-3" data-testid="provider-{name}">
+					<h3 class="mb-2 font-mono text-xs">provider {name}</h3>
+					{@render providerFields(providerForms[name])}
+					<p
+						class="mt-2 text-xs {p?.key_set ? 'text-good' : 'text-danger'}"
+						data-testid="provider-key"
+					>
+						{keyLine(name)}
+					</p>
+					<div class="mt-2 flex gap-2">
+						<button
+							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+							disabled={!can('provider').ok || busy !== null}
+							data-testid="save-provider"
+							onclick={() => saveProvider('provider-' + name, name, providerForms[name])}
+							>Save</button
+						>
+						<button
+							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+							disabled={!can('provider').ok || busy !== null}
+							data-testid="reset-provider"
+							onclick={() => change('provider-' + name, 'provider', { name, reset: true })}
+							>Remove</button
+						>
+					</div>
+					{@render result('provider-' + name)}
+				</div>
+			{/each}
+			{#if Object.keys(providerForms).length === 0}
+				<p class="mt-2 text-xs text-muted" data-testid="providers-none">
+					None: each agent's harness calls its own default.
+				</p>
+			{/if}
+			<div class="mt-4 rounded border border-line p-3" data-testid="new-provider">
+				<h3 class="mb-2 text-xs font-medium">Add a provider</h3>
+				<label class="mb-2 block">
+					<span class="mb-1 block text-xs text-muted">name</span>
+					<input
+						class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+						bind:value={newProviderName}
+						placeholder="litellm"
+						data-testid="new-provider-name"
+					/>
+				</label>
+				{@render providerFields(newProvider)}
+				<button
+					class="mt-2 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+					disabled={!can('provider').ok || busy !== null || !newProviderName.trim()}
+					data-testid="add-provider"
+					onclick={async () => {
+						if (await saveProvider('providers', newProviderName, newProvider)) {
+							newProviderName = '';
+							newProvider = providerForm();
+						}
+					}}>Add provider</button
+				>
+				{@render result('providers')}
+			</div>
 		</section>
 
 		<section data-testid="section-checks">

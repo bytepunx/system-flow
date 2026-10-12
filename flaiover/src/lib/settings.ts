@@ -7,6 +7,7 @@ export const SETTINGS_KINDS = [
 	'default_agent',
 	'agent',
 	'harness',
+	'provider',
 	'check',
 	'checks_timeout',
 	'import',
@@ -27,6 +28,7 @@ export type SettingsRead = (typeof SETTINGS_READS)[number];
 export const HOSTWIDE: readonly SettingsKind[] = [
 	'agent',
 	'harness',
+	'provider',
 	'check',
 	'checks_timeout',
 	'import',
@@ -36,6 +38,62 @@ export const HOSTWIDE: readonly SettingsKind[] = [
 export type HostAction = { name: string; means: string; here: boolean; everywhere: boolean };
 export type Harness = { program: string; args: string[]; set: boolean };
 export type NamedCommand = { name: string; command: string[] };
+
+/**
+ * A provider on the host (S-0359, ADR-0129): the API its gateway speaks, its base URL, the name of
+ * the variable that holds its key, and the harness's model aliases on it. key_set says whether that
+ * variable is set in flai serve's environment; the key itself is never read.
+ */
+export type Provider = {
+	api: string;
+	base_url: string;
+	key_env: string;
+	models: Record<string, string>;
+	key_set: boolean;
+};
+
+/** The APIs a provider may speak, in flai's order (manifest.ProviderAPIs). */
+export const PROVIDER_APIS = ['anthropic-messages', 'openai-chat', 'openai-responses'] as const;
+
+/** A provider as its fields are typed: models one alias=name a line. */
+export type ProviderForm = { api: string; base_url: string; key_env: string; models: string };
+
+/** The form as the host has the provider, or an empty one for a new provider. */
+export function providerForm(p?: Provider): ProviderForm {
+	return {
+		api: p?.api ?? '',
+		base_url: p?.base_url ?? '',
+		key_env: p?.key_env ?? '',
+		models: configText(p?.models)
+	};
+}
+
+/** What settings.provider is asked to set: a field left out leaves it as it is. */
+export type ProviderChange = {
+	name: string;
+	api?: string;
+	base_url?: string;
+	key_env?: string;
+	models?: Record<string, string>;
+};
+
+/**
+ * The change the form asks for, each field typed and an empty one left out; or, when a models line
+ * is not alias=name, why.
+ */
+export function providerChange(
+	name: string,
+	form: ProviderForm
+): ProviderChange | { error: string } {
+	const parsed = parseConfig(form.models);
+	if ('error' in parsed) return { error: `models: ${parsed.error}` };
+	const change: ProviderChange = { name: name.trim() };
+	if (form.api.trim()) change.api = form.api.trim();
+	if (form.base_url.trim()) change.base_url = form.base_url.trim();
+	if (form.key_env.trim()) change.key_env = form.key_env.trim();
+	if (Object.keys(parsed.config).length) change.models = parsed.config;
+	return change;
+}
 
 /**
  * A project flai serve serves, or one below a folder named for import that it does not (S-0122):
@@ -119,6 +177,8 @@ export type SettingsView = {
 			name: string;
 			command: string[];
 			harnesses: Record<string, Harness>;
+			/** The host's providers by name (S-0359); absent from a flai that has none to say. */
+			providers?: Record<string, Provider>;
 		};
 		checks: { commands: NamedCommand[]; timeout_minutes: number };
 		manifest_checks?: NamedCommand[] | null;
@@ -172,8 +232,11 @@ export type StrategicSettings = {
 /** One field flai refused, and why. */
 export type Refusal = { field: string; reason: string };
 
-/** An agent setting as its fields are typed: harness, model, and config one key=value a line. */
-export type AgentForm = { harness: string; model: string; config: string };
+/**
+ * An agent setting as its fields are typed: harness, model, provider, and config one key=value a
+ * line.
+ */
+export type AgentForm = { harness: string; model: string; provider: string; config: string };
 
 /** A block's settings as typed: a boolean as true or false, an agent by its fields, the rest as text. */
 export type StrategicForm = { values: Record<string, string>; agents: Record<string, AgentForm> };
@@ -198,6 +261,7 @@ export function strategicForm(settings: StrategicSetting[]): StrategicForm {
 			form.agents[s.key] = {
 				harness: a.harness ?? '',
 				model: a.model ?? '',
+				provider: a.provider ?? '',
 				config: configText(a.config)
 			};
 		} else if (s.kind === 'boolean') {
@@ -225,7 +289,14 @@ export function strategicChange(
 		if (s.kind === 'agent') {
 			const b = before.agents[s.key];
 			const n = now.agents[s.key];
-			if (!n || (b && b.harness === n.harness && b.model === n.model && b.config === n.config))
+			if (
+				!n ||
+				(b &&
+					b.harness === n.harness &&
+					b.model === n.model &&
+					b.provider === n.provider &&
+					b.config === n.config)
+			)
 				continue;
 			const parsed = parseConfig(n.config);
 			if ('error' in parsed) {
@@ -233,7 +304,7 @@ export function strategicChange(
 				continue;
 			}
 			const roles = (s.value as Agent | undefined)?.roles;
-			const agent = agentFrom(n.harness, n.model, parsed.config, roles);
+			const agent = agentFrom(n.harness, n.model, parsed.config, roles, n.provider);
 			if (agent) change.set[s.key] = agent;
 			else change.unset.push(s.key);
 			continue;

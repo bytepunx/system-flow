@@ -390,6 +390,200 @@ describe('SettingsPanel (S-0105)', () => {
 		});
 	});
 
+	// S-0359, ADR-0129: the host's providers, set under the settings action on for every project; a
+	// key is never shown or asked for, only its variable's name.
+	describe('providers', () => {
+		const providers = (here: boolean, everywhere: boolean) => {
+			const v = view(here, everywhere);
+			v.host!.default_agent = { harness: 'claude-code', model: 'opus', provider: 'litellm' };
+			v.host!.agent.providers = {
+				litellm: {
+					api: 'anthropic-messages',
+					base_url: 'http://127.0.0.1:4000',
+					key_env: 'LITELLM_API_KEY',
+					models: {
+						opus: 'anthropic/claude-opus-5-5',
+						haiku: 'anthropic/claude-haiku-4-5'
+					},
+					key_set: true
+				},
+				openrouter: {
+					api: 'openai-chat',
+					base_url: 'https://openrouter.ai/api/v1',
+					key_env: 'OPENROUTER_API_KEY',
+					models: {},
+					key_set: false
+				}
+			};
+			return v;
+		};
+		const box = (name: string) => q(`provider-${name}`)!;
+		const field = <T extends HTMLElement>(within: HTMLElement, id: string) =>
+			within.querySelector<T>(`[data-testid="${id}"]`)!;
+		const type = (
+			el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+			value: string
+		) => {
+			el.value = value;
+			el.dispatchEvent(
+				new Event(el instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true })
+			);
+			flushSync();
+		};
+
+		it('shows each provider and whether its key’s variable is set, read-only until settings is on everywhere', async () => {
+			const sent = backend(providers(true, false));
+			await show();
+			const litellm = box('litellm');
+			expect(field<HTMLSelectElement>(litellm, 'provider-api').value).toBe('anthropic-messages');
+			const apis = field<HTMLSelectElement>(litellm, 'provider-api').options;
+			expect([...apis].filter((o) => !o.disabled).map((o) => o.value)).toEqual([
+				'anthropic-messages',
+				'openai-chat',
+				'openai-responses'
+			]);
+			expect(field<HTMLInputElement>(litellm, 'provider-base-url').value).toBe(
+				'http://127.0.0.1:4000'
+			);
+			expect(field<HTMLInputElement>(litellm, 'provider-key-env').value).toBe('LITELLM_API_KEY');
+			expect(field<HTMLTextAreaElement>(litellm, 'provider-models').value).toBe(
+				'haiku=anthropic/claude-haiku-4-5\nopus=anthropic/claude-opus-5-5'
+			);
+			expect(field(litellm, 'provider-key').textContent!.trim()).toBe('key set');
+			expect(field(box('openrouter'), 'provider-key').textContent).toContain(
+				"OPENROUTER_API_KEY is not set in flai serve's environment"
+			);
+			expect(q('section-providers')!.querySelector('[data-testid="gate"]')!.textContent).toContain(
+				'flai serve enable settings --all-projects'
+			);
+			expect(field<HTMLButtonElement>(litellm, 'save-provider').disabled).toBe(true);
+			expect(field<HTMLButtonElement>(litellm, 'reset-provider').disabled).toBe(true);
+			type(q<HTMLInputElement>('new-provider-name')!, 'openai');
+			expect(q<HTMLButtonElement>('add-provider')!.disabled).toBe(true);
+			expect(sent).toEqual([]);
+		});
+
+		it('says when there are none', async () => {
+			backend(view(true, true));
+			await show();
+			expect(q('providers-none')!.textContent).toContain('None');
+		});
+
+		it('saves a provider’s fields, its models one alias=name a line', async () => {
+			const sent = backend(providers(true, true));
+			await show();
+			const litellm = box('litellm');
+			expect(q('section-providers')!.querySelector('[data-testid="gate"]')).toBeNull();
+			type(field<HTMLSelectElement>(litellm, 'provider-api'), 'openai-chat');
+			type(field<HTMLInputElement>(litellm, 'provider-base-url'), ' https://llm.example.com ');
+			type(field<HTMLTextAreaElement>(litellm, 'provider-models'), 'opus = openai/gpt-6\n\n');
+			field<HTMLButtonElement>(litellm, 'save-provider').click();
+			await settle();
+			expect(sent).toEqual([
+				{
+					kind: 'provider',
+					name: 'litellm',
+					api: 'openai-chat',
+					base_url: 'https://llm.example.com',
+					key_env: 'LITELLM_API_KEY',
+					models: { opus: 'openai/gpt-6' }
+				}
+			]);
+			expect(q('said-provider-litellm')!.textContent).toContain('saved');
+		});
+
+		it('sends no models when they are emptied, and says a line that is not alias=name without sending it', async () => {
+			const sent = backend(providers(true, true));
+			await show();
+			const litellm = box('litellm');
+			type(field<HTMLTextAreaElement>(litellm, 'provider-models'), 'opus');
+			field<HTMLButtonElement>(litellm, 'save-provider').click();
+			await settle();
+			expect(sent).toEqual([]);
+			expect(q('said-provider-litellm')!.getAttribute('role')).toBe('alert');
+			expect(q('said-provider-litellm')!.textContent).toContain('models: "opus" is not key=value');
+
+			type(field<HTMLTextAreaElement>(litellm, 'provider-models'), '');
+			field<HTMLButtonElement>(litellm, 'save-provider').click();
+			await settle();
+			expect(sent).toEqual([
+				{
+					kind: 'provider',
+					name: 'litellm',
+					api: 'anthropic-messages',
+					base_url: 'http://127.0.0.1:4000',
+					key_env: 'LITELLM_API_KEY'
+				}
+			]);
+		});
+
+		it('removes a provider whole', async () => {
+			const sent = backend(providers(true, true));
+			await show();
+			field<HTMLButtonElement>(box('openrouter'), 'reset-provider').click();
+			await settle();
+			expect(sent).toEqual([{ kind: 'provider', name: 'openrouter', reset: true }]);
+		});
+
+		it('adds a provider by name and clears the form, and keeps it when flai refuses one', async () => {
+			const sent = backend(providers(true, true), {
+				provider: [
+					400,
+					{
+						error:
+							'agent.providers.groq is not complete: give api, base_url, and key_env for a new provider'
+					}
+				]
+			});
+			await show();
+			const add = q('new-provider')!;
+			type(q<HTMLInputElement>('new-provider-name')!, 'groq');
+			type(field<HTMLInputElement>(add, 'provider-base-url'), 'https://api.groq.com/openai/v1');
+			q<HTMLButtonElement>('add-provider')!.click();
+			await settle();
+			expect(sent).toEqual([
+				{ kind: 'provider', name: 'groq', base_url: 'https://api.groq.com/openai/v1' }
+			]);
+			expect(q('said-providers')!.textContent).toContain('is not complete');
+			expect(q<HTMLInputElement>('new-provider-name')!.value).toBe('groq');
+
+			const again = backend(providers(true, true));
+			type(field<HTMLSelectElement>(add, 'provider-api'), 'openai-chat');
+			type(field<HTMLInputElement>(add, 'provider-key-env'), 'GROQ_API_KEY');
+			type(field<HTMLTextAreaElement>(add, 'provider-models'), 'sonnet=llama-4');
+			q<HTMLButtonElement>('add-provider')!.click();
+			await settle();
+			expect(again).toEqual([
+				{
+					kind: 'provider',
+					name: 'groq',
+					api: 'openai-chat',
+					base_url: 'https://api.groq.com/openai/v1',
+					key_env: 'GROQ_API_KEY',
+					models: { sonnet: 'llama-4' }
+				}
+			]);
+			expect(q<HTMLInputElement>('new-provider-name')!.value).toBe('');
+			expect(field<HTMLInputElement>(add, 'provider-base-url').value).toBe('');
+		});
+
+		it('shows the default agent’s provider and sends the one typed', async () => {
+			const sent = backend(providers(true, false));
+			await show();
+			const provider = q<HTMLInputElement>('agent-provider')!;
+			expect(provider.value).toBe('litellm');
+			type(provider, ' openrouter ');
+			q<HTMLButtonElement>('save-default-agent')!.click();
+			await settle();
+			expect(sent).toEqual([
+				{
+					kind: 'default_agent',
+					agent: { harness: 'claude-code', model: 'opus', provider: 'openrouter' }
+				}
+			]);
+		});
+	});
+
 	// S-0295, ADR-0096: the shared paths, changed under the settings action and checked by anyone.
 	describe('shared paths', () => {
 		const shared = (here: boolean, patterns = ['docs/users/*.md', 'design/adrs']) => {
