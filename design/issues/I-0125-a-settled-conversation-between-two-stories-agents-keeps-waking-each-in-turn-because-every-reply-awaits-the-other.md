@@ -3,11 +3,11 @@ id: I-0125
 title: A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
 class: efficiency
 status: open
-count: 3
-cost: 3m
+count: 4
+cost: 9m
 first_reported: 2026-10-08T10:21:38Z
-last_reported: 2026-10-12T14:41:55Z
-updated: 2026-10-12T14:41:55Z
+last_reported: 2026-10-12T15:29:49Z
+updated: 2026-10-12T15:29:49Z
 ---
 
 # I-0125 A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
@@ -28,5 +28,9 @@ MS-0041 with S-0347: S-0232's agent answered that there was nothing to change an
 ### 2026-10-12T14:41:55Z
 Story: S-0232.
 MS-0053 from S-0362, like MS-0021 and MS-0031 before it, notified S-0232 that a task changed `design/issues/summary.md`. That file is generated and regenerated at every sync (ADR-0098), so the notice cannot break anything. Each such notice still restarts the claiming story's agent. A notice for a path that flai regenerates at sync could be left out.
+
+### 2026-10-12T15:29:49Z
+Story: S-0337.
+S-0337 was blocked for four days (TH-0390) with no branch content, and flai serve restarted its agent 12 times between 2026-10-08 and 2026-10-12 for messages on MS-0045, MS-0046, MS-0049, and MS-0054. Most were "changed paths" notices from another story's task done that could not affect a story with no commits. Others were the other agent's acknowledgement of a settled split, or a "Closed: ... was accepted" entry, which awaits no one. Asking in the conversation not to be told about further commits on the same files changed nothing, because the next task done sent another notice. A notice to a story that has no commits on its branch, or one that is blocked on a thread, could be held until the story can act on it.
 
 ## Remediation
