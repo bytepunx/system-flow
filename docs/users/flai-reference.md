@@ -1361,7 +1361,7 @@ Have the host install the newest flai, or --version a published one, and restart
 flai host upgrade [flags]
 ```
 
-Has the host install the newest flai, as flai self-upgrade does, and restart itself and every process it runs on what it installed.
+Has the host install the newest flai, as flai self-upgrade does, and restart itself and every process it runs on what it installed. The release is verified with the release key embedded in the host's flai before it is installed: one it cannot verify (unsigned, from before releases were signed, or signed by a key it does not trust) is refused with self-upgrade's refusal, naming the release and why, and for an unknown key the newest release it can verify, to install first; nothing is replaced and nothing restarts. flai host versions marks the releases it cannot verify.
 
 --version installs that published release instead, an earlier one included, the same way: the host restarts on it with its processes. A version that is not X.Y.Z is refused before anything runs, and one that is not a published release is refused, naming the published ones (flai host versions), before anything is downloaded or replaced. A release below a served project's flai.minimum is installed, not refused: flai host versions marks it.
 
@@ -1379,7 +1379,7 @@ Ask the host for the published flai releases, newest first, marking the installe
 flai host versions
 ```
 
-Asks the host for the published flai releases, newest first, as flai self-upgrade --list prints them from the host's flai: each with its date, marking the installed one (the flai flai host upgrade would replace), the newest, and any below the flai.minimum of a project flai serve serves. With --json it prints the list as the host answers it: version, tag, published, installed, latest, and below\_minimum (each project and minimum the release is below, left out when none). It installs nothing.
+Asks the host for the published flai releases, newest first, as flai self-upgrade --list prints them from the host's flai: each with its date, marking the installed one (the flai flai host upgrade would replace), the newest, any below the flai.minimum of a project flai serve serves, and any the host's flai cannot verify with its embedded release key, with why: flai host upgrade refuses those. With --json it prints the list as the host answers it: version, tag, published, installed, latest, below\_minimum (each project and minimum the release is below, left out when none), and, for a release the host's flai cannot verify, unverifiable (true), signature (missing, bad, or unknown-key), and reason (all three left out for a release it can verify). It installs nothing.
 
 ### flai hostapi
 
@@ -2364,11 +2364,13 @@ Install the latest flai release over this binary, or list the published ones.
 flai self-upgrade [flags]
 ```
 
-Resolves the newest flai release on GitHub (or --version), downloads the archive for this platform and checksums.txt, verifies the SHA-256, and replaces the running executable. While the repository is private the API needs a token: GITHUB\_TOKEN, GH\_TOKEN, or a gh auth login session. The same operation from a shell is install.sh at the repository root.
+Resolves the newest flai release on GitHub (or --version), downloads its checksums.txt and the signature over it, checksums.txt.sig, and verifies the signature with the release key embedded in this flai before anything else is downloaded; then it downloads the archive for this platform, verifies its SHA-256 against checksums.txt, and replaces the running executable. A release this flai cannot verify is refused, naming it and why, and nothing is replaced: one from before releases were signed has no signature, and for one signed by a key this flai does not trust the refusal names the newest release it can verify, to install first. While the repository is private the API needs a token: GITHUB\_TOKEN, GH\_TOKEN, or a gh auth login session. The same operation from a shell is install.sh at the repository root.
 
 --version installs that release, an earlier one included, the way the newest is installed; a version that is not a published release is refused, naming the published ones, before anything is downloaded. A release below the flai.minimum of the project in this folder, or of a project flai serve serves, is warned about and installed: going back past it is your call.
 
---list prints the published releases, newest first, and installs nothing. It marks the installed one (the flai self-upgrade would replace), the newest, and any below such a project's flai.minimum; with --json it prints a list of version, tag, published, installed, latest, and below\_minimum (each project and minimum the release is below, left out when none).
+--check reports the installed version and the newest, and, when that is an upgrade, whether this flai can verify it.
+
+--list prints the published releases, newest first, and installs nothing. It marks the installed one (the flai self-upgrade would replace), the newest, any below such a project's flai.minimum, and any this flai cannot verify, with why; with --json it prints a list of version, tag, published, installed, latest, below\_minimum (each project and minimum the release is below, left out when none), and, for a release this flai cannot verify, unverifiable (true), signature (missing, bad, or unknown-key), and reason (all three left out for a release it can verify). A release that publishes a signature has its checksums.txt and signature downloaded to be checked; one that publishes none costs nothing more.
 
 Examples:
 

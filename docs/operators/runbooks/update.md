@@ -25,7 +25,7 @@ Before either, read the release notes on the [releases page](https://github.com/
    flai host upgrade
    ```
 
-   The host downloads the release (checked against its checksum), installs it over the flai it runs, then stops `flai serve` and every MCP server it runs and starts itself again on the new binary. From the dashboard, the Upgrade button does the same once the `host` host action is on.
+   The host's flai verifies the release's signature with the release key built into it, downloads the archive and checks it against the signed `checksums.txt`, installs it over the flai it runs, then stops `flai serve` and every MCP server it runs and starts itself again on the new binary. From the dashboard, the Upgrade button does the same once the `host` host action is on.
 3. Or, with no host running, or to choose the release:
 
    ```bash
@@ -33,6 +33,8 @@ Before either, read the release notes on the [releases page](https://github.com/
    flai self-upgrade --version 1.16.1  # a given release
    flai host stop && flai host start   # a running host keeps the old binary until it restarts
    ```
+
+   If the release is refused, nothing was installed and nothing restarted. The refusal names the release and why: it has no signature, its signature does not verify, or it is signed by a key this flai does not know. For an unknown key it names the release to install first: install that one with `--version`, then upgrade again. What each refusal means is in [What an upgrade verifies](../../users/flai.md#what-an-upgrade-verifies), and the key's fingerprint under [Current key](release-key.md#current-key).
 
 4. Check it:
 
@@ -52,7 +54,7 @@ Before either, read the release notes on the [releases page](https://github.com/
    flai self-upgrade --list    # where no host runs
    ```
 
-   Each list marks the installed release, the newest, and any below the `flai.minimum` of a project `flai serve` serves.
+   Each list marks the installed release, the newest, any below the `flai.minimum` of a project `flai serve` serves, and, `not installable`, any the flai that would install it cannot verify. Those are refused, so you cannot go back past flai 1.42.0, the first signed release.
 2. Install one:
 
    ```bash

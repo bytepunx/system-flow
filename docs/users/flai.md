@@ -16,7 +16,7 @@ One line on macOS or Linux:
 curl -fsSL https://raw.githubusercontent.com/bytepunx/system-flow/main/install.sh | sh
 ```
 
-The script detects the OS and architecture, resolves the newest `flai/v*` release, downloads the archive and `checksums.txt`, verifies the SHA-256, and installs `flai` into `$HOME/.flai/bin`, a directory you already own, alongside flai's own config and cache under `~/.flai`. No `sudo` is ever used. It ends by printing where it installed and, if `$HOME/.flai/bin` is not already on your `PATH`, a line to add to your shell profile.
+The script detects the OS and architecture, resolves the newest `flai/v*` release, and downloads the archive, `checksums.txt`, and the signature over it, `checksums.txt.sig`. It verifies the signature with `openssl` and the release key it carries, then the archive's SHA-256 against `checksums.txt`, and prints `Signature verified` on the way. A release it cannot verify is not installed ([What an upgrade verifies](#what-an-upgrade-verifies)). It then installs `flai` into `$HOME/.flai/bin`, a directory you already own, alongside flai's own config and cache under `~/.flai`. No `sudo` is ever used. It ends by printing where it installed and, if `$HOME/.flai/bin` is not already on your `PATH`, a line to add to your shell profile.
 
 | Variable | Effect |
 |----------|--------|
@@ -36,9 +36,9 @@ flai self-upgrade --version 1.0.3
 flai self-upgrade --dir /some/other/directory
 ```
 
-`self-upgrade` performs the same steps as the script from inside the binary: resolve, download, verify, and replace the running executable atomically. It uses the same token sources. Both try a call again when the connection to GitHub drops, up to three attempts in all, while a 401 or 404 still fails at once. Without `--version` it does nothing when the installed version is already the latest. With no `--dir` it replaces whichever binary is running, so once installed under `~/.flai/bin` an agent or a scheduled job can run `flai self-upgrade` itself, with no `sudo` and no extra configuration. The exception is a flai that runs from inside a system-flow project, such as a checkout's own `bin/flai`. It installs the release where `install.sh` would (`$FLAI_INSTALL_DIR`, else `~/.flai/bin`), leaves the checkout alone, and says to put that folder on your PATH ahead of the checkout's. A build there is replaced by the next build, and that folder exists on no other machine.
+`self-upgrade` performs the same steps as the script from inside the binary: resolve, verify the signature, download, verify the checksum, and replace the running executable atomically ([What an upgrade verifies](#what-an-upgrade-verifies)). It uses the same token sources. Both try a call again when the connection to GitHub drops, up to three attempts in all, while a 401 or 404 still fails at once. Without `--version` it does nothing when the installed version is already the latest. With no `--dir` it replaces whichever binary is running, so once installed under `~/.flai/bin` an agent or a scheduled job can run `flai self-upgrade` itself, with no `sudo` and no extra configuration. The exception is a flai that runs from inside a system-flow project, such as a checkout's own `bin/flai`. It installs the release where `install.sh` would (`$FLAI_INSTALL_DIR`, else `~/.flai/bin`), leaves the checkout alone, and says to put that folder on your PATH ahead of the checkout's. A build there is replaced by the next build, and that folder exists on no other machine.
 
-`--list` prints the published releases, newest first, with their dates (S-0298). It marks the installed one, the newest, and any below the `flai.minimum` of the project in this folder or of a project `flai serve` serves; `--json` gives the same as a list. `--version` installs any published release, an earlier one included, the way the newest is installed. A version that is not published is refused, naming the published ones, before anything is downloaded. One below a project's `flai.minimum` is installed with a warning: a flai below it will not read that project. Through the host, `flai host versions` and `flai host upgrade --version` do the same ([flai host](#flai-host-the-process-that-runs-flai-serve-and-the-mcp-servers)).
+`--list` prints the published releases, newest first, with their dates (S-0298). It marks the installed one, the newest, any below the `flai.minimum` of the project in this folder or of a project `flai serve` serves, and any this flai cannot verify, which it will not install ([What an upgrade verifies](#what-an-upgrade-verifies)); `--json` gives the same as a list. `--version` installs any published release, an earlier one included, the way the newest is installed. A version that is not published is refused, naming the published ones, before anything is downloaded. One below a project's `flai.minimum` is installed with a warning: a flai below it will not read that project. Through the host, `flai host versions` and `flai host upgrade --version` do the same ([flai host](#flai-host-the-process-that-runs-flai-serve-and-the-mcp-servers)).
 
 `FLAI_RELEASES_API` points it at another source of releases that answers as GitHub's releases API does, such as a mirror. `flai host check`, `versions`, and `upgrade`, `flai dashboard versions`, the MCP tool `versions`, and the dashboard's Check for upgrade, Versions, and Upgrade buttons, which ask the host, follow it too.
 
@@ -52,6 +52,34 @@ FLAI_RELEASES_API="$URL" flai self-upgrade --check --repo local/flai
 ```
 
 The server stops when the shell that started it exits. `make install-test` does all of this and checks every install and upgrade, with no token and no request to GitHub. `make install-published-test` installs the latest published release from GitHub the same way, and needs a token.
+
+#### What an upgrade verifies
+
+Every flai release from 1.42.0 on is signed in CI with the release key ([ADR-0070](../../design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)). The signature, `checksums.txt.sig`, covers `checksums.txt`, which holds the SHA-256 of every archive. So a release whose signature verifies is one the key's holder published, archive and all.
+
+`flai self-upgrade` verifies the signature with the public key built into the flai that runs. It does so before it downloads the archive, then checks the archive against `checksums.txt`. `flai host upgrade` runs `flai self-upgrade` on the host, so the host's flai verifies with its own key. `install.sh` verifies with `openssl` and the key it carries. The key's fingerprint is under [Current key](../operators/runbooks/release-key.md#current-key) in the release key runbook.
+
+A release that cannot be verified is refused. The refusal names the release and why. Nothing is replaced, and through the host nothing restarts.
+
+| The refusal says | It means | Do |
+|------------------|----------|----|
+| it publishes no `checksums.txt.sig` | The release has no signature. Releases before flai 1.42.0, the first signed one, have none. | Install a signed release, such as the latest. `--version` cannot go back past 1.42.0. |
+| the signature does not verify | The release may have been altered since it was signed. | Do not install it by other means. Report it to the repository's maintainers. |
+| signed by a key this flai does not trust | The release key has changed since this flai was built. | Install the release the refusal names first, the newest this flai can verify: `flai self-upgrade --version X.Y.Z`, or `flai host upgrade --version X.Y.Z`. Then upgrade again. If it names none, install with `install.sh` and compare the key's fingerprint with [Current key](../operators/runbooks/release-key.md#current-key). |
+
+`install.sh` refuses in the same cases, in its own words:
+
+| The script says | Do |
+|-----------------|----|
+| `openssl is required` | Install `openssl` with your package manager (`apt install openssl`, `dnf install openssl`, `apk add openssl`, or `brew install openssl`) and run it again. |
+| the release has no `checksums.txt.sig` | `FLAI_VERSION` names a release from before signing. Leave it unset for the newest, or name 1.42.0 or later. |
+| the signature does not verify with the release key this `install.sh` carries | The release may have been altered, or signed by a newer key. Get the newest `install.sh`, as the one line above does, and run it again. |
+
+The lists say beforehand what would be refused. `flai self-upgrade --list` and `flai host versions` mark each release this flai cannot verify `not installable:` with the reason. With `--json` such a release has `unverifiable: true`, `signature` (`missing`, `bad`, or `unknown-key`), and `reason`. To check, the list downloads `checksums.txt` and its signature for each release that publishes one; a release with none costs nothing. A download that fails fails the list. `flai self-upgrade --check` says when the upgrade it reports is not installable. The dashboard's Updates page shows such a release as not installable and offers no way to install it ([flaiover guide](flaiover.md#host)).
+
+flai 1.42.0 is the first signed release, but the check came in a later flai. A flai without the check installs any release unchecked, the one that brings the check included. From then on, every upgrade is verified.
+
+To check a release by hand, follow [Check a release by hand](../operators/runbooks/release-key.md#check-a-release-by-hand).
 
 ### Other ways
 
@@ -2024,6 +2052,8 @@ flai host versions          # the published flai releases, newest first
 flai host upgrade --version 1.16.1  # install that one instead, an earlier one included, and restart the same way
 flai host stop              # the host and everything it runs
 ```
+
+`flai host upgrade` verifies the release's signature with the key in the host's flai before it installs anything. A release it cannot verify is refused with the reason, and the host and its processes keep running as they were. `flai host versions` marks those releases `not installable` ([What an upgrade verifies](#what-an-upgrade-verifies)).
 
 One host runs per machine: a second one is refused and told which runs. The host listens on `127.0.0.1:4241` (`FLAI_HOST_ADDR` moves it), where `flai serve` and these commands reach it with the token it wrote. [The operator guide](../operators/index.md#flai-host-the-process-that-runs-the-others-s-0106) has the rest.
 

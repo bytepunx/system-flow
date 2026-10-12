@@ -1,6 +1,6 @@
 ---
 title: "Runbook: install"
-updated: 2026-09-26
+updated: 2026-10-12
 status: active
 ---
 
@@ -11,7 +11,7 @@ status: active
 | Need | For | Check |
 |------|-----|-------|
 | Linux or macOS on amd64 or arm64 | `install.sh`; on Windows use the zip from the releases page, and note that `flai host` there has not been tried | `uname -sm` |
-| `curl`, `tar`, and `sha256sum` or `shasum` | `install.sh` | `command -v curl tar sha256sum shasum` |
+| `curl`, `tar`, `openssl`, and `sha256sum` or `shasum` | `install.sh`; `openssl` verifies the release's signature, and the script refuses to run without it | `command -v curl tar openssl sha256sum shasum` |
 | `git` | every project command | `git --version` |
 | Docker Engine 24 or newer, on `PATH` | the dashboard only | `docker version` |
 | A GitHub token, while the repository is private: `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth login` | the download, and the dashboard image (scope `read:packages`) | `gh auth status` |
@@ -26,7 +26,7 @@ Nothing here needs `sudo`. Everything flai keeps is under `~/.flai` and each pro
    curl -fsSL https://raw.githubusercontent.com/bytepunx/system-flow/main/install.sh | sh
    ```
 
-   `FLAI_VERSION=1.16.1` pins a release; `FLAI_INSTALL_DIR=/some/dir` installs elsewhere, into a folder you can already write to. The script verifies the archive's SHA-256 against the release's `checksums.txt` and stops if it differs.
+   `FLAI_VERSION=1.16.1` pins a release; `FLAI_INSTALL_DIR=/some/dir` installs elsewhere, into a folder you can already write to. The script verifies the release's signature over `checksums.txt` with the release key it carries, prints `Signature verified`, then verifies the archive's SHA-256 against `checksums.txt`. It stops, installing nothing, if either fails. A release before flai 1.42.0, the first signed one, has no signature and is refused.
 2. Put the folder on your `PATH`, with the line the script prints, in your shell profile. If it says an earlier `PATH` entry takes precedence, another `flai` comes first: remove it or reorder.
 3. Check it:
 
@@ -48,6 +48,8 @@ Nothing here needs `sudo`. Everything flai keeps is under `~/.flai` and each pro
    Both are in [the flai guide](../../users/flai.md#create-a-project). A project's `.mcp.json` runs `flai mcp` from your `PATH`, so an agent in it reaches the flai you just installed.
 
 If the download is refused, the repository is private and no token was found: `gh auth login`, or set `GITHUB_TOKEN`, and run it again.
+
+If the script refuses the release, it says why: `openssl` is missing, the release has no signature, or the signature does not verify. What each means and what to do is in [What an upgrade verifies](../../users/flai.md#what-an-upgrade-verifies). To check a release yourself, follow [Check a release by hand](release-key.md#check-a-release-by-hand), which compares the key's fingerprint with [Current key](release-key.md#current-key).
 
 ## flaiover
 
