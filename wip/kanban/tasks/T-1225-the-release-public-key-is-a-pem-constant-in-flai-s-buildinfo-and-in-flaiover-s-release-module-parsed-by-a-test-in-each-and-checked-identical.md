@@ -3,16 +3,36 @@ id: T-1225
 type: task
 nature: feature
 title: The release public key is a PEM constant in flai's buildinfo and in flaiover's release module, parsed by a test in each and checked identical
-status: backlog
+status: done
 parent: S-0232
 owner: alex
 created: 2026-10-07T22:15:41Z
-updated: 2026-10-07T22:15:47Z
-transitions: []
+updated: 2026-10-12T15:06:27Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:05:05Z
+    by: agent-S-0232
+  - to: in-progress
+    at: 2026-10-12T15:05:06Z
+    by: agent-S-0232
+  - to: done
+    at: 2026-10-12T15:06:27Z
+    by: agent-S-0232
 stream: S-0232
 tags: []
-touches: [flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts]
+touches: [flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/cosign.pub, flai/.goreleaser.yaml, docs/operators/runbooks/release-key.md]
 after: [T-1222]
+usage:
+  source: log
+  seconds: 80
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 137
+      cache_read: 3659181
+      cache_write: 8711
+      cost: 1.6189
 ---
 # T-1225 The release public key is a PEM constant in flai's buildinfo and in flaiover's release module, parsed by a test in each and checked identical
 

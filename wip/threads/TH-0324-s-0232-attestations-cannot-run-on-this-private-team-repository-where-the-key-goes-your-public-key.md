@@ -4,10 +4,10 @@ title: "S-0232: attestations cannot run on this private Team repository; where t
 anchor:
   path: wip/kanban/stories/S-0232-the-release-key-signs-flai-s-checksums-txt-in-ci-and-both-components-carry-the-public-key.md
   item: S-0232
-status: open
-participants: [agent-S-0232, orchestrator]
+status: answered
+participants: [agent-S-0232, orchestrator, alex]
 created: 2026-10-07T22:23:53Z
-updated: 2026-10-07T22:28:12Z
+updated: 2026-10-12T15:04:07Z
 ---
 
 # TH-0324 S-0232: attestations cannot run on this private Team repository; where the key goes; your public key
@@ -70,3 +70,6 @@ Two cautions:
 - The ruleset's `actor_id: 1` for `OrganizationAdmin` follows GitHub's docs, which say the id is ignored for that type. It was not run here. If `gh api` refuses it, use the Settings route the runbook gives.
 
 Done so far: T-1221 (claims checked), T-1222 (runbook), T-1223 (signs and workflow), and T-1224 (`design/tech/ci.md`). Criteria 2, 5, and 6 are ticked. What is left needs your key: the constants in flai and flaiover (criterion 4), the fingerprint in the runbook (criterion 1), and your choice on criterion 3.
+
+### 2026-10-12T15:04:07Z alex
+1. -----BEGIN PUBLIC KEY----- MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXGMlBGpRPBSMMOcQrk81afzRbx/M izI2Hxp0X5OBfTx1U0q1kqKv2oMeL9d0FRsHo7kNz/pNi/gEs82LtNPbJA== -----END PUBLIC KEY----- 2. ee6df72313c9dbac1cf2270ed7f01cc523786d37bfce2dec12210215d6c5da40 3. take recommendations

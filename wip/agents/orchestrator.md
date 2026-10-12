@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 366.9925
-accrued_seconds: 330115
-tasks_completed: 336
-last_run: 2026-10-12T14:32:29Z
+accrued_cost: 373.5500
+accrued_seconds: 332151
+tasks_completed: 352
+last_run: 2026-10-12T15:06:25Z
 ---
 
 # Orchestrator activity
@@ -2363,6 +2363,118 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0362, S-0363, S-0361
 - Seconds: 21
 - Cost: 0.2062 USD, estimated
+
+### 2026-10-12T14:34:10Z
+
+- Summary: The operator accepted S-0342 and S-0343. Under judgement, published 3 pending stories worth 335 USD/week: S-0342 (285), S-0343 (50), and S-0361 (0). Versions: flai 1.40.3→1.40.4 (flai/v1.40.4), flaiover 0.42.2→0.42.3 (flaiover/v0.42.3), template 1.0.84→1.0.85 (v1.0.85), pushed. Each is complete and accepted; S-0342's covers key is already in this repository's manifest. S-0343 was accepted between my evaluation and the publish, and went into the batch.
+- Items: S-0342, S-0343, S-0361
+- Seconds: 101
+- Cost: 0.3775 USD, estimated
+
+### 2026-10-12T14:37:49Z
+
+- Summary: Recommended an answer on TH-0401, citing design/adrs/0117-the-host-api-installs-a-release-the-dashboard-names-only-when-flai-lists-it-as.md § Decision
+- Items: S-0363
+- Seconds: 219
+- Cost: 0.9198 USD, estimated
+
+### 2026-10-12T14:37:52Z
+
+- Summary: Under plan_backlog_stories, recommended on TH-0401 (planner-S-0363's plan) and left it open for the operator. The plan adds ADR-0136, which makes task_done refuse on an outdated flai, a new decision that departs from ADR-0117's warn-only minimum. I recommended the softer form the planner offered, refusing only on a major or minor difference: on today's host (1.40.1 against 1.40.4) the strict form would stop every story agent after each publish, and I-0127's own instance was a minor difference. S-0363 stays a draft until then; its figures are flai's (20m, 12.50 USD/week).
+- Items: S-0363
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-12T14:38:02Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0364 (flai test vets only the changed Go packages), next on flai plan --candidates.
+- Items: S-0364
+- Seconds: 10
+- Cost: 0.1225 USD, estimated
+
+### 2026-10-12T14:53:51Z
+
+- Summary: S-0362 reached review. flai verify passed at head f6fa8938, and the verifier matched both criteria (1: taskdone_test.go and mcpserver/task_test.go reproduce I-0126's layer; 2: I-0126 closed, summary.md). I did not accept: the dry-run refuses on an untracked scripts/release-key-setup.sh in main, the operator's, and I will not use --yes. Opened TH-0402 on S-0362 asking the operator to move, commit, or stash it.
+- Items: S-0362
+- Seconds: 949
+- Cost: 1.2173 USD, estimated
+
+### 2026-10-12T14:54:14Z
+
+- Summary: Answered TH-0402, citing design/conventions/decisions.md § Rules
+- Items: S-0364
+- Seconds: 23
+- Cost: 0.1950 USD, estimated
+
+### 2026-10-12T14:54:27Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0402, planner-S-0364's plan: an {importers} placeholder for the vet tier, four tasks in three layers. Its 14 file touches fit both criteria, and the figures are flai's (21m, 25 USD/week from flai's 10m-per-cycle input). It extends tests as S-0342's covers did, so no ADR. Under finalize_drafts, finalized S-0364. Not promoted: promote --candidates holds it on overlap with S-0232 (docs/operators/settings.md). The only candidate, S-0241 (rank 1, 2h), is blocked by the operator.
+- Items: S-0364
+- Seconds: 13
+- Cost: 0.1355 USD, estimated
+
+### 2026-10-12T14:54:32Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0365 (issues.no-story at close-out), next on flai plan --candidates. Correction to my 14:53 entry: the thread on S-0362's untracked file is TH-0403, not TH-0402.
+- Items: S-0365, S-0362
+- Seconds: 5
+- Cost: 0.0000 USD
+
+### 2026-10-12T14:56:01Z
+
+- Summary: Answered TH-0404, citing no source
+- Items: S-0365
+- Seconds: 89
+- Cost: 0.2071 USD, estimated
+
+### 2026-10-12T14:56:03Z
+
+- Summary: Under plan_backlog_stories, set the cost of delay input planner-S-0365 recommended on TH-0404: time_lost_per_cycle 5m on S-0365 (as S-0348 and S-0346 had for the same kind of close-out finding; no reason given for 2m or 10m). Replied and resolved the thread; the planner works out the value.
+- Items: S-0365
+- Seconds: 2
+- Cost: 0.0693 USD, estimated
+
+### 2026-10-12T14:57:52Z
+
+- Summary: Answered TH-0405, citing design/adrs/0133-a-close-out-records-no-board-wip-limit-and-a-check-scoped-to-a-story-leaves-out.md
+- Items: S-0365
+- Seconds: 109
+- Cost: 0.8450 USD, estimated
+
+### 2026-10-12T14:58:21Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0405, planner-S-0365's plan: a scoped check leaves out issues.no-story outside the story, following ADR-0122/0125/0133, four tasks in three layers. Its figures are flai's: 23m, and 12.50 USD/week from my 5m input. I asked the story's agent to narrow T-1447's design/adrs folder touch once the ADR is named. Under finalize_drafts, finalized S-0365 (complete). Under promote_to_ready, moved it to ready (rank 1, 23m under throughput); S-0241 (rank 2) stays out, blocked. flai serve pulled it at once, so the order had nothing to apply. Started the planner for S-0366, the last candidate.
+- Items: S-0365, S-0366
+- Seconds: 29
+- Cost: 0.2918 USD, estimated
+
+### 2026-10-12T15:05:08Z
+
+- Summary: Answered TH-0406, citing no source
+- Items: S-0366
+- Seconds: 407
+- Cost: 1.7132 USD, estimated
+
+### 2026-10-12T15:05:09Z
+
+- Summary: Under plan_backlog_stories, set the cost of delay input planner-S-0366 recommended on TH-0406: time_lost_per_cycle 5m on S-0366, the same as S-0365, S-0348, and S-0346 for close-out findings outside the story. Replied and resolved the thread; the planner works out the value.
+- Items: S-0366
+- Seconds: 1
+- Cost: 0.0000 USD
+
+### 2026-10-12T15:06:16Z
+
+- Summary: Answered TH-0407, citing design/adrs/0133-a-close-out-records-no-board-wip-limit-and-a-check-scoped-to-a-story-leaves-out.md
+- Items: S-0366
+- Seconds: 67
+- Cost: 0.4635 USD, estimated
+
+### 2026-10-12T15:06:25Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0407, planner-S-0366's plan: a scoped check leaves out threads.archived outside the story, four tasks in three layers, after S-0365. Its figures are flai's: 23m, and 12.50 USD/week from my 5m input. Under finalize_drafts, finalized S-0366 (complete). Not promoted: it waits for S-0365, in progress. All six issue drafts from 14:12 are now planned. S-0363 awaits the operator on TH-0401, and S-0362's acceptance on TH-0403.
+- Items: S-0366, S-0363, S-0362
+- Seconds: 9
+- Cost: 0.0000 USD
 
 ## Refusals
 

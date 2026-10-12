@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-08T20:55:33Z
+updated: 2026-10-12T15:06:37Z
 transitions:
   - to: ready
     at: 2026-10-07T22:14:01Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0232
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md, flai/internal/buildinfo/cosign.pub]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,7 +25,8 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1717
+  seconds: 1863
+  estimated: true
   turns:
     - day: 2026-10-07
       ceremony: 7
@@ -37,7 +38,8 @@ usage:
       work: 95
     - day: 2026-10-12
       ceremony: 1
-      work: 4
+      hand_edits: 3
+      work: 21
   models:
     - model: claude-haiku-4-5-20251001
       input: 210085
@@ -46,11 +48,11 @@ usage:
       cache_write: 0
       cost: 0.2639
     - model: claude-opus-5-5
-      input: 566
-      output: 149502
-      cache_read: 57852158
-      cache_write: 1592749
-      cost: 26.5361
+      input: 608
+      output: 151102
+      cache_read: 66260360
+      cache_write: 1613768
+      cost: 30.0234
   strategic:
     - kind: orchestrator
       seconds: 823
@@ -80,10 +82,10 @@ forecast:
 The first step of ADR-0070: a cosign key pair exists, the two release workflows can use it, `release-flai.yml` signs `checksums.txt` with it, and the public key is a constant in flai's and flaiover's sources, so that every later story has a signature to check and a key to check it with. The finding is `design/system/release-signing.md`.
 
 ## Acceptance criteria
-- [ ] The operator documentation has a runbook for generating the pair with `cosign generate-key-pair`, storing the encrypted key and its password as two GitHub Actions secrets, publishing the public key, and rotating or replacing a compromised key; the operator has run it once and the fingerprint of the public key is recorded there.
+- [x] The operator documentation has a runbook for generating the pair with `cosign generate-key-pair`, storing the encrypted key and its password as two GitHub Actions secrets, publishing the public key, and rotating or replacing a compromised key; the operator has run it once and the fingerprint of the public key is recorded there.
 - [x] `flai/.goreleaser.yaml` has a `signs` section that runs `cosign sign-blob` over the checksum file with the key from the environment and `--tlog-upload=false`, and uploads `checksums.txt.sig` as a release asset; `release-flai.yml` provides the secrets and installs cosign, and a release whose key is missing fails.
-- [ ] `release-flai.yml` also runs `actions/attest-build-provenance` over the archives and the checksum file.
-- [ ] The public key is a PEM constant in a flai package and in a flaiover server module, each with a test that parses it, and the two are identical.
+- [x] `release-flai.yml` also runs `actions/attest-build-provenance` over the archives and the checksum file.
+- [x] The public key is a PEM constant in a flai package and in a flaiover server module, each with a test that parses it, and the two are identical.
 - [x] The claims marked **to check** in `release-signing.md § Signing releases` that bear on cosign and GoReleaser were checked against their current documentation and the document corrected where it was wrong.
 - [x] `design/tech/ci.md` lists cosign and the attestation action with their versions and why.
 
@@ -95,6 +97,14 @@ The first step of ADR-0070: a cosign key pair exists, the two release workflows 
 - T-1225 The release public key is a PEM constant in flai's buildinfo and in flaiover's release module, parsed by a test in each and checked identical
 
 ## Notes
+
+### Criterion 4
+
+flai's PEM is the file `flai/internal/buildinfo/cosign.pub`, embedded with `go:embed` and read through `buildinfo.ReleaseKeyPEM()`, rather than a Go `const`. That way GoReleaser publishes the same bytes as the release asset `cosign.pub`, and no second copy can drift. flaiover's is the `const` `RELEASE_PUBLIC_KEY` in `src/lib/server/release.ts`. `releasekey_test.go` and `release.test.ts` each parse the key as ECDSA P-256 and check the fingerprint `ee6df723…c5da40`, and `release.test.ts` fails when its PEM differs from flai's file.
+
+### Criterion 3
+
+`release-flai.yml` runs `actions/attest-build-provenance` over the archives and `checksums.txt` with `if: ${{ !github.event.repository.private }}`: on the Team plan artifact attestations exist only for public repositories, and `bytepunx/system-flow` is private, so the step is skipped until the repository is public or the organisation moves to Enterprise Cloud. The operator took this on TH-0324 (2026-10-12); the criterion is ticked on that basis.
 
 ### Snapshot builds
 

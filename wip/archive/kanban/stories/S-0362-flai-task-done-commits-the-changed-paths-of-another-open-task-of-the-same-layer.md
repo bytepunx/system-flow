@@ -3,10 +3,10 @@ id: S-0362
 type: story
 nature: remediation
 title: flai task done commits the changed paths of another open task of the same layer
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T14:12:29Z
-updated: 2026-10-12T14:32:27Z
+updated: 2026-10-12T15:10:25Z
 transitions:
   - to: ready
     at: 2026-10-12T14:32:20Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T14:32:27Z
     by: agent-S-0362
+  - to: review
+    at: 2026-10-12T14:46:35Z
+    by: agent-S-0362
+  - to: done
+    at: 2026-10-12T15:10:25Z
+    by: alex
 tags: [cli]
 touches: [flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go, design/issues/I-0126-flai-task-done-commits-the-changed-paths-of-another-open-task-of-the-same-layer.md, design/issues/summary.md]
 agent:
@@ -22,9 +28,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 862
+  turns:
+    - day: 2026-10-12
+      ceremony: 1
+      test_runs: 4
+      hand_edits: 2
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 23329
+      cache_read: 4767165
+      cache_write: 245824
+      cost: 3.1112
   strategic:
     - kind: planner
       seconds: 358
@@ -43,15 +61,21 @@ usage:
           cache_write: 108683
           cost: 1.2435
     - kind: orchestrator
-      seconds: 37
+      seconds: 986
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 70
-          cache_read: 960466
-          cache_write: 18527
-          cost: 0.2468
+          input: 49
+          output: 669
+          cache_read: 5647126
+          cache_write: 28407
+          cost: 1.4308
+        - model: claude-sonnet-5-5
+          input: 4
+          output: 40
+          cache_read: 12362
+          cache_write: 28753
+          cost: 0.0333
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
@@ -77,8 +101,8 @@ finalized:
 This story remediates [I-0126](../../../design/issues/I-0126-flai-task-done-commits-the-changed-paths-of-another-open-task-of-the-same-layer.md), "flai task done commits the changed paths of another open task of the same layer". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0126 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0126 is closed with `flai issue close I-0126 --reason` saying what fixed it
+- [x] The cause I-0126 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0126 is closed with `flai issue close I-0126 --reason` saying what fixed it
 
 ## Tasks
 - T-1437 Tests reproduce I-0126's layer through task_done and with a ready or backlog sibling, and pass on the current code

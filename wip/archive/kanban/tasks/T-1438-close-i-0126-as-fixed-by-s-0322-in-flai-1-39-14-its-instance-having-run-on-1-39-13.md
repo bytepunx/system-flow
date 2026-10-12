@@ -3,16 +3,36 @@ id: T-1438
 type: task
 nature: remediation
 title: Close I-0126 as fixed by S-0322 in flai 1.39.14, its instance having run on 1.39.13
-status: backlog
+status: done
 parent: S-0362
 owner: alex
 created: 2026-10-12T14:20:55Z
-updated: 2026-10-12T14:20:55Z
-transitions: []
+updated: 2026-10-12T14:41:42Z
+transitions:
+  - to: ready
+    at: 2026-10-12T14:41:30Z
+    by: agent-S-0362
+  - to: in-progress
+    at: 2026-10-12T14:41:31Z
+    by: agent-S-0362
+  - to: done
+    at: 2026-10-12T14:41:42Z
+    by: agent-S-0362
 stream: S-0362
 tags: [cli]
 touches: [design/issues/I-0126-flai-task-done-commits-the-changed-paths-of-another-open-task-of-the-same-layer.md, design/issues/summary.md]
 after: [T-1437]
+usage:
+  source: log
+  seconds: 11
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1467
+      cache_read: 299755
+      cache_write: 15457
+      cost: 0.1956
 ---
 # T-1438 Close I-0126 as fixed by S-0322 in flai 1.39.14, its instance having run on 1.39.13
 
