@@ -1,6 +1,6 @@
 ---
 title: Agent narrative
-updated: 2026-10-08
+updated: 2026-10-12
 status: active
 topics: [all]
 ---
@@ -24,6 +24,8 @@ wip/agents/
 A work stream is a story. Tasks report into their story's narrative through the `stream` key. Epics have no narrative; their story narratives are enough.
 
 When a story is archived, its narrative moves with it to `wip/archive/agents/`.
+
+`index.md` is written again by every command that opens, logs, states, moves, edits, archives, or accepts. A narrative that does not parse, such as an empty file, is listed in it in its stream's place as unreadable, with its story's status, rather than failing the write, as an unreadable activity document is (I-0129, S-0373). One story's broken narrative so fails no other story's command. `flai check` reports it once, as `narrative.front-matter`, and counts it as listed. Its own story's `flai stream log` and `flai stream state` still fail on it, naming the file.
 
 ## Narrative structure
 

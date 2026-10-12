@@ -1131,7 +1131,7 @@ An agent writes its narrative's `## Current state` and `## Next steps` with `fla
 
 `flai check` warns with `narrative.state` when the narrative of a story in progress or in review has an empty `## Current state` or `## Next steps`, or still holds the template's placeholder, or has a `## Next steps` that is not a list. The warning names `flai stream state`. `--strict` passes over it, since a narrative is unwritten from `flai stream open` until its agent first writes it; `flai verify` stops such a story before review.
 
-`wip/agents/index.md` is regenerated after every open, log, state, move, and archive.
+`wip/agents/index.md` is regenerated after every open, log, state, move, and archive. A narrative that does not parse, such as an empty file, is listed there as unreadable rather than making the command fail, so it breaks no other story's commands. `flai check` reports it as `narrative.front-matter`; its own story's `flai stream log` still fails on it until it is fixed.
 
 ### Archiving
 
