@@ -4,9 +4,13 @@ package serve
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -23,11 +27,14 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// The gateway check (S-0351): a headless claude -p, started with the
-// claude-code adapter's own arguments and a provider entry for OpenRouter,
-// in a scratch project with flai guard registered and auto-approve on. It
-// runs only where OPENROUTER_API_KEY is set and claude is on PATH, and
-// spends real money on that key, capped by max_budget_usd.
+// The gateway checks (S-0351, S-0356): a headless claude -p, started with
+// the claude-code adapter's own arguments and a provider entry for a
+// gateway, in a scratch project with flai guard registered and auto-approve
+// on. The OpenRouter check runs only where OPENROUTER_API_KEY is set and
+// claude is on PATH; the LiteLLM check, by the proxy's unified API and by
+// its Anthropic pass-through, only where LITELLM_BASE_URL and
+// LITELLM_API_KEY are set and claude is on PATH. Each spends real money on
+// its key, capped by max_budget_usd.
 
 const (
 	// gatewayKeyEnv holds the OpenRouter key the check runs on.
@@ -60,14 +67,41 @@ const (
 	keySettled = 30 * time.Second
 	// keyReads is how many reads of the key one reading of its spend takes.
 	keyReads = 5
+
+	// litellmBaseEnv and litellmKeyEnv hold the LiteLLM proxy's root URL and
+	// the virtual key the check runs on.
+	litellmBaseEnv = "LITELLM_BASE_URL"
+	litellmKeyEnv  = "LITELLM_API_KEY"
+	// litellmMasterEnv holds the proxy's master key, the only key that reads
+	// its spend log.
+	litellmMasterEnv = "LITELLM_MASTER_KEY"
+	// litellmHaikuEnv and litellmHaikuDefault are the slug the haiku alias
+	// resolves to by the unified API; the pass-through takes it without its
+	// anthropic/ prefix, as Anthropic's own model ID.
+	litellmHaikuEnv     = "FLAI_TEST_LITELLM_HAIKU"
+	litellmHaikuDefault = "anthropic/claude-haiku-4-5"
+	// litellmSpendLag bounds the wait for the key's spend to count the run:
+	// the proxy writes spend in batches.
+	litellmSpendLag = 2 * time.Minute
+	// litellmSettled is how long the key's spend stays put before the run is
+	// taken as wholly counted in it.
+	litellmSettled = 15 * time.Second
+	// litellmLogLag bounds the wait for the run's rows in the spend log.
+	litellmLogLag = time.Minute
+	// litellmLogSettled is how long the count of the run's rows in the spend
+	// log stays put before they are taken as all there.
+	litellmLogSettled = 6 * time.Second
 )
 
 // gatewayMissing names what the check needs and this host lacks, "" when
-// nothing: the key's variable, claude on PATH, or both.
-func gatewayMissing(key string, claudeErr error) string {
+// nothing: each of the variables names that getenv finds empty, and claude
+// on PATH.
+func gatewayMissing(getenv func(string) string, claudeErr error, names ...string) string {
 	var missing []string
-	if key == "" {
-		missing = append(missing, gatewayKeyEnv+" is not set")
+	for _, name := range names {
+		if getenv(name) == "" {
+			missing = append(missing, name+" is not set")
+		}
 	}
 	if claudeErr != nil {
 		missing = append(missing, "claude is not on PATH")
@@ -91,6 +125,7 @@ type gatewayUsage struct {
 type gatewayLine struct {
 	Type       string   `json:"type"`
 	Subtype    string   `json:"subtype"`
+	SessionID  string   `json:"session_id"`
 	Model      string   `json:"model"`
 	Version    string   `json:"claude_code_version"`
 	Tools      []string `json:"tools"`
@@ -258,6 +293,14 @@ func (r gatewayRun) resolvedTo(slug string) bool {
 	return false
 }
 
+// totalCost is the run's total_cost_usd, or -1 when it ended with no result.
+func (r gatewayRun) totalCost() float64 {
+	if r.Result == nil {
+		return -1
+	}
+	return r.Result.TotalCostUSD
+}
+
 // TestGatewayStreamIsJudged covers the check's reading of a stream with no
 // network: a sub-agent's refused work-item write, the main session's write,
 // the model the alias resolved to, the messages by ID, and the end.
@@ -304,20 +347,30 @@ func TestGatewayStreamIsJudged(t *testing.T) {
 	}
 }
 
+// TestGatewayMissingNamesWhatIsMissing covers both checks' skips: each
+// variable that is not set, claude not on PATH, and nothing missing.
 func TestGatewayMissingNamesWhatIsMissing(t *testing.T) {
 	notFound := exec.ErrNotFound
+	openRouter := []string{gatewayKeyEnv}
+	litellm := []string{litellmBaseEnv, litellmKeyEnv}
 	for _, c := range []struct {
-		key  string
-		err  error
-		want string
+		env   map[string]string
+		names []string
+		err   error
+		want  string
 	}{
-		{"k", nil, ""},
-		{"", nil, "OPENROUTER_API_KEY is not set"},
-		{"k", notFound, "claude is not on PATH"},
-		{"", notFound, "OPENROUTER_API_KEY is not set and claude is not on PATH"},
+		{map[string]string{gatewayKeyEnv: "k"}, openRouter, nil, ""},
+		{nil, openRouter, nil, "OPENROUTER_API_KEY is not set"},
+		{map[string]string{gatewayKeyEnv: "k"}, openRouter, notFound, "claude is not on PATH"},
+		{nil, openRouter, notFound, "OPENROUTER_API_KEY is not set and claude is not on PATH"},
+		{map[string]string{litellmBaseEnv: "u", litellmKeyEnv: "k"}, litellm, nil, ""},
+		{map[string]string{litellmBaseEnv: "u"}, litellm, notFound, "LITELLM_API_KEY is not set and claude is not on PATH"},
+		{map[string]string{litellmKeyEnv: "k"}, litellm, nil, "LITELLM_BASE_URL is not set"},
+		{nil, litellm, notFound, "LITELLM_BASE_URL is not set and LITELLM_API_KEY is not set and claude is not on PATH"},
 	} {
-		if got := gatewayMissing(c.key, c.err); got != c.want {
-			t.Errorf("gatewayMissing(%q, %v) = %q, want %q", c.key, c.err, got, c.want)
+		getenv := func(name string) string { return c.env[name] }
+		if got := gatewayMissing(getenv, c.err, c.names...); got != c.want {
+			t.Errorf("gatewayMissing(%v, %v, %q) = %q, want %q", c.env, c.err, c.names, got, c.want)
 		}
 	}
 }
@@ -334,10 +387,98 @@ func TestGatewayOpenRouter(t *testing.T) {
 	}
 	key := os.Getenv(gatewayKeyEnv)
 	claude, claudeErr := exec.LookPath("claude")
-	if missing := gatewayMissing(key, claudeErr); missing != "" {
+	if missing := gatewayMissing(os.Getenv, claudeErr, gatewayKeyEnv); missing != "" {
 		t.Skip("the gateway check needs OpenRouter's key and claude: " + missing)
 	}
 	slug := envOr(gatewayHaikuEnv, gatewayHaikuDefault)
+	ctx := context.Background()
+	var before openRouterKeyInfo
+	var beforeErr error
+	checkGateway(t, claude, gatewayRoute{
+		name: "OpenRouter", providerName: "openrouter", slug: slug,
+		provider: &manifest.Provider{API: manifest.APIAnthropicMessages, BaseURL: gatewayBaseURL, KeyEnv: gatewayKeyEnv, Models: map[string]string{"haiku": slug}},
+		before: func() {
+			before, beforeErr = keyNow(ctx, key)
+			if beforeErr != nil {
+				t.Logf("key before: unread: %v", beforeErr)
+			}
+		},
+		after: func(run gatewayRun, _ time.Time) {
+			lookups := lookUpGenerations(ctx, t, key, run.Messages)
+			after, afterErr := keyAfter(ctx, key, before, beforeErr)
+			if afterErr != nil {
+				t.Logf("key after: unread: %v", afterErr)
+			}
+			if beforeErr == nil && afterErr == nil {
+				t.Logf("key usage before $%.6f, after $%.6f, delta $%.6f (daily before $%.6f, after $%.6f); limit %s, remaining %s", before.Usage, after.Usage, after.Usage-before.Usage, before.UsageDaily, after.UsageDaily, dollars(after.Limit), dollars(after.LimitRemaining))
+			}
+			t.Logf("gateway's cost: sum of generations $%.6f (%d of %d found), key delta %s; Claude Code's total_cost_usd $%.6f", lookups.total, lookups.found, len(run.Messages), keyDelta(before, after, beforeErr, afterErr), run.totalCost())
+		},
+	})
+}
+
+// S-0356: the same check through a LiteLLM proxy, by both of its routes to
+// Anthropic: its unified API, which maps the slug through the proxy's model
+// list, and its Anthropic pass-through, which forwards the body to Anthropic
+// as is and so takes Anthropic's own model ID. After each run it logs the
+// key's spend and, with the master key, the proxy's spend log rows for the
+// run and whether they carry the run's session ID.
+func TestGatewayLiteLLM(t *testing.T) {
+	if testing.Short() {
+		t.Skip("runs claude -p through a LiteLLM proxy, a paid call")
+	}
+	claude, claudeErr := exec.LookPath("claude")
+	if missing := gatewayMissing(os.Getenv, claudeErr, litellmBaseEnv, litellmKeyEnv); missing != "" {
+		t.Skip("the gateway check needs a LiteLLM proxy, its key, and claude: " + missing)
+	}
+	root := strings.TrimRight(os.Getenv(litellmBaseEnv), "/")
+	key := os.Getenv(litellmKeyEnv)
+	master := os.Getenv(litellmMasterEnv)
+	slug := envOr(litellmHaikuEnv, litellmHaikuDefault)
+	for _, c := range []struct {
+		name, route, baseURL, slug string
+	}{
+		{"unified", "LiteLLM (unified)", root, slug},
+		{"pass-through", "LiteLLM (Anthropic pass-through)", root + "/anthropic", strings.TrimPrefix(slug, "anthropic/")},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			var before litellmKeyInfo
+			var beforeErr error
+			checkGateway(t, claude, gatewayRoute{
+				name: c.route, providerName: "litellm", slug: c.slug,
+				provider: &manifest.Provider{API: manifest.APIAnthropicMessages, BaseURL: c.baseURL, KeyEnv: litellmKeyEnv, Models: map[string]string{"haiku": c.slug}},
+				before: func() {
+					before, beforeErr = litellmKey(ctx, root, key)
+					if beforeErr != nil {
+						t.Logf("key before: unread: %v", beforeErr)
+					}
+				},
+				after: func(run gatewayRun, started time.Time) {
+					logLiteLLMSpend(ctx, t, root, key, master, run, started, before, beforeErr)
+				},
+			})
+		})
+	}
+}
+
+// gatewayRoute is one way through a gateway that the check runs claude by.
+type gatewayRoute struct {
+	name         string // as the prompt names it, e.g. "OpenRouter"
+	providerName string
+	provider     *manifest.Provider
+	slug         string                                  // the model haiku resolves to
+	before       func()                                  // reads the gateway's spend just before claude runs
+	after        func(run gatewayRun, started time.Time) // reads it once the run is logged, before the judgements
+}
+
+// checkGateway runs claude, the binary at that path, through route in a
+// scratch project with flai guard registered and auto-approve on, logs what
+// the stream says and what route reads of the spend, and judges the run:
+// the protected Write through permission_prompt, the sub-agent's work-item
+// write refused by the guard, the haiku alias resolved to route.slug, and a
+// result.
+func checkGateway(t *testing.T, claude string, route gatewayRoute) {
 	budget := envOr(gatewayBudgetEnv, gatewayBudgetDefault)
 	ctx := context.Background()
 
@@ -364,11 +505,10 @@ func TestGatewayOpenRouter(t *testing.T) {
 	}
 	title := story.Title
 
-	provider := &manifest.Provider{API: manifest.APIAnthropicMessages, BaseURL: gatewayBaseURL, KeyEnv: gatewayKeyEnv, Models: map[string]string{"haiku": slug}}
 	req := harness.Request{
 		Story: s.story, Root: s.root, Project: "flai-check", Name: gatewayAgent, Flai: flai,
-		Agent:        &manifest.Agent{Harness: harness.ClaudeCode, Model: "haiku", Provider: "openrouter", Config: map[string]string{"max_budget_usd": budget}},
-		ProviderName: "openrouter", Provider: provider,
+		Agent:        &manifest.Agent{Harness: harness.ClaudeCode, Model: "haiku", Provider: route.providerName, Config: map[string]string{"max_budget_usd": budget}},
+		ProviderName: route.providerName, Provider: route.provider,
 	}
 	spec, err := harness.Adapters[harness.ClaudeCode].Start(req, harness.ClaudeCodeHost(harness.Host{}))
 	if err != nil {
@@ -378,7 +518,7 @@ func TestGatewayOpenRouter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := fmt.Sprintf("flai checked Claude Code %s through OpenRouter and permission_prompt.", strings.Fields(string(version))[0])
+	want := fmt.Sprintf("flai checked Claude Code %s through %s and permission_prompt.", strings.Fields(string(version))[0], route.name)
 	prompt := gatewayPrompt(s.target, want, s.story)
 	argv := slices.Clone(spec.Argv)
 	i := slices.Index(argv, "-p")
@@ -398,28 +538,13 @@ func TestGatewayOpenRouter(t *testing.T) {
 	t.Logf("env dropped from this process's, names only (the session go test may run under): %q", dropped)
 	env = append(append(env, added...), keys...)
 
-	before, beforeErr := keyNow(ctx, key)
-	if beforeErr != nil {
-		t.Logf("key before: unread: %v", beforeErr)
-	}
+	route.before()
 	started := time.Now()
 	out, runErr := runClaudeWith(ctx, s.root, argv, env)
 	t.Logf("claude ran %s; err: %v", time.Since(started).Round(time.Second), runErr)
 	run := parseGatewayStream(out)
 	logGatewayRun(t, run)
-	lookups := lookUpGenerations(ctx, t, key, run.Messages)
-	after, afterErr := keyAfter(ctx, key, before, beforeErr)
-	if afterErr != nil {
-		t.Logf("key after: unread: %v", afterErr)
-	}
-	if beforeErr == nil && afterErr == nil {
-		t.Logf("key usage before $%.6f, after $%.6f, delta $%.6f (daily before $%.6f, after $%.6f); limit %s, remaining %s", before.Usage, after.Usage, after.Usage-before.Usage, before.UsageDaily, after.UsageDaily, dollars(after.Limit), dollars(after.LimitRemaining))
-	}
-	cost := -1.0
-	if run.Result != nil {
-		cost = run.Result.TotalCostUSD
-	}
-	t.Logf("gateway's cost: sum of generations $%.6f (%d of %d found), key delta %s; Claude Code's total_cost_usd $%.6f", lookups.total, lookups.found, len(run.Messages), keyDelta(before, after, beforeErr, afterErr), cost)
+	route.after(run, started)
 
 	// the protected Write, through permission_prompt
 	if got, err := os.ReadFile(s.target); err != nil || strings.TrimSpace(string(got)) != want {
@@ -442,8 +567,8 @@ func TestGatewayOpenRouter(t *testing.T) {
 		t.Errorf("the story's title is %q, want %q unchanged: a work-item write got through", edited.Title, title)
 	}
 	// the alias, resolved through the provider's models
-	if !run.resolvedTo(slug) {
-		t.Errorf("no model in the stream is %s, the slug haiku resolves to", slug)
+	if !run.resolvedTo(route.slug) {
+		t.Errorf("no model in the stream is %s, the slug haiku resolves to", route.slug)
 	}
 	// the end
 	if run.Result == nil {
@@ -732,6 +857,315 @@ func openRouterGet(ctx context.Context, key, path string, v any) (int, error) {
 	}
 	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
 		return resp.StatusCode, fmt.Errorf("GET %s%s: %w", gatewayBaseURL, path, err)
+	}
+	return resp.StatusCode, nil
+}
+
+// TestLiteLLMSpendLogIsJudged covers the check's reading of the proxy's
+// spend log with no network: the rows since the run started in each time
+// layout, the rows it cannot read, their metadata's keys, and where the
+// run's session ID appears in them.
+func TestLiteLLMSpendLogIsJudged(t *testing.T) {
+	since := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
+	raw := []json.RawMessage{
+		json.RawMessage(`{"startTime":"2026-10-12T08:59:59.999999Z","model":"claude-haiku-4-5","spend":1,"session_id":"s-1"}`),
+		json.RawMessage(`{"startTime":"2026-10-12T09:00:00","model":"claude-haiku-4-5","call_type":"anthropic_messages","spend":0.25,"prompt_tokens":10,"completion_tokens":2,"session_id":"s-1","metadata":{"user_api_key_alias":"k","headers":{"x-claude-code-session-id":"s-1"}}}`),
+		json.RawMessage(`{"startTime":"2026-10-12 09:00:05.5+00:00","model":"anthropic/claude-haiku-4-5","spend":0.5,"session_id":null,"metadata":"{\"tags\":[\"x\"]}","messages":[{"note":"session s-1"}]}`),
+		json.RawMessage(`{"startTime":"yesterday","spend":2}`),
+		json.RawMessage(`[]`),
+	}
+	rows, unread := spendRowsSince(raw, since)
+	if len(rows) != 2 || unread != 2 || rows[0].Spend != 0.25 || rows[0].PromptTokens != 10 || rows[1].Model != "anthropic/claude-haiku-4-5" {
+		t.Fatalf("rows %+v, %d unread; want the two since %s and two unread", rows, unread, since)
+	}
+	if got := jsonKeys(rows[0].Metadata); !slices.Equal(got, []string{"headers", "user_api_key_alias"}) {
+		t.Errorf("the first row's metadata keys are %q, want headers and user_api_key_alias", got)
+	}
+	if got := jsonKeys(rows[1].Metadata); !slices.Equal(got, []string{"tags"}) {
+		t.Errorf("the second row's metadata keys, from a string, are %q, want tags", got)
+	}
+	field, where := sessionJoin(rows, "s-1")
+	want := []string{"row 1: metadata.headers.x-claude-code-session-id", "row 1: session_id", "row 2: messages[0].note"}
+	if !field || !slices.Equal(where, want) {
+		t.Errorf("sessionJoin(s-1) = %v, %q; want true, %q", field, where, want)
+	}
+	if field, where := sessionJoin(rows, "s-2"); field || where != nil {
+		t.Errorf("sessionJoin(s-2) = %v, %q; want no join", field, where)
+	}
+	if field, where := sessionJoin(rows, ""); field || where != nil {
+		t.Errorf("sessionJoin of no session ID = %v, %q; want no join", field, where)
+	}
+}
+
+// logLiteLLMSpend logs the proxy's reading of a run's spend: the key's
+// spend before and after, the spend log's rows since started when the master
+// key is at hand and whether they carry the run's session ID, and the cost
+// beside Claude Code's total_cost_usd.
+func logLiteLLMSpend(ctx context.Context, t *testing.T, root, key, master string, run gatewayRun, started time.Time, before litellmKeyInfo, beforeErr error) {
+	t.Helper()
+	after, afterErr := litellmKeyAfter(ctx, root, key, before, beforeErr)
+	if afterErr != nil {
+		t.Logf("key after: unread: %v", afterErr)
+	}
+	delta := "unknown"
+	if beforeErr == nil && afterErr == nil {
+		delta = fmt.Sprintf("$%.6f", after.Spend-before.Spend)
+		t.Logf("key spend before $%.6f, after $%.6f, delta %s; max_budget %s", before.Spend, after.Spend, delta, dollars(after.MaxBudget))
+	}
+	session := ""
+	if run.Init != nil {
+		session = run.Init.SessionID
+	}
+	t.Logf("the run's session ID (session_id on system/init): %q", session)
+	logged := "unknown (not read)"
+	if master == "" {
+		t.Logf("spend log: not read: only the proxy's master key reads /spend/logs and %s is not set", litellmMasterEnv)
+	} else if rows, ok := readSpendLog(ctx, t, root, master, key, started); ok {
+		total := 0.0
+		for i, r := range rows {
+			total += r.Spend
+			t.Logf("spend log row %d: startTime %s, model %q, model_group %q, custom_llm_provider %q, call_type %q, spend $%.6f, prompt_tokens %d, completion_tokens %d, session_id %q, request_tags %s, metadata keys %q", i+1, r.StartTime, r.Model, r.ModelGroup, r.Provider, r.CallType, r.Spend, r.PromptTokens, r.CompletionTokens, r.SessionID, compact(r.RequestTags), jsonKeys(r.Metadata))
+		}
+		logged = fmt.Sprintf("$%.6f (%d rows)", total, len(rows))
+		field, where := sessionJoin(rows, session)
+		t.Logf("session join: a row's session_id is the run's: %v; the run's session ID appears in the rows at: %q", field, where)
+	}
+	t.Logf("gateway's cost: key delta %s, spend log rows %s; Claude Code's total_cost_usd $%.6f", delta, logged, run.totalCost())
+}
+
+// litellmKeyInfo is what the proxy's /key/info says of the key's spend.
+type litellmKeyInfo struct {
+	Spend     float64  `json:"spend"`
+	MaxBudget *float64 `json:"max_budget"`
+}
+
+// litellmKey reads the key's spend from the proxy at root.
+func litellmKey(ctx context.Context, root, key string) (litellmKeyInfo, error) {
+	var body struct {
+		Info litellmKeyInfo `json:"info"`
+	}
+	_, err := litellmGet(ctx, root, key, "/key/info", nil, &body)
+	return body.Info, err
+}
+
+// litellmKeyAfter reads the key's spend once the run has settled in it: the
+// proxy writes spend in batches, so it waits for the spend to move from
+// before's and then to stay put for litellmSettled, at most litellmSpendLag
+// in all; it answers the highest spend read, or the last read when the spend
+// never moved.
+func litellmKeyAfter(ctx context.Context, root, key string, before litellmKeyInfo, beforeErr error) (litellmKeyInfo, error) {
+	deadline := time.Now().Add(litellmSpendLag)
+	last, moved := before, time.Now()
+	for {
+		after, err := litellmKey(ctx, root, key)
+		switch {
+		case beforeErr != nil:
+			return after, err
+		case err == nil && after.Spend > last.Spend:
+			last, moved = after, time.Now()
+		}
+		if last.Spend > before.Spend && (time.Since(moved) >= litellmSettled || time.Now().After(deadline)) {
+			return last, nil
+		}
+		if time.Now().After(deadline) {
+			return after, err
+		}
+		time.Sleep(2 * time.Second)
+	}
+}
+
+// readSpendLog reads the proxy's spend log, by the master key, for the key's
+// rows that started at or after since, waiting up to litellmLogLag for rows
+// to appear and their count to stay put for litellmLogSettled; it logs what
+// it read, a log it could not read, and no row found, and answers whether it
+// read the log at all.
+func readSpendLog(ctx context.Context, t *testing.T, root, master, key string, since time.Time) ([]litellmRow, bool) {
+	t.Helper()
+	// the proxy files a key's rows under its hex SHA-256
+	sum := sha256.Sum256([]byte(key))
+	query := url.Values{"api_key": {hex.EncodeToString(sum[:])}}
+	deadline := time.Now().Add(litellmLogLag)
+	var rows []litellmRow
+	var err error
+	read, all, unread, count, changed := false, 0, 0, -1, time.Now()
+	for {
+		var raw []json.RawMessage
+		var code int
+		if code, err = litellmGet(ctx, root, master, "/spend/logs", query, &raw); err == nil {
+			read, all = true, len(raw)
+			rows, unread = spendRowsSince(raw, since)
+			if len(rows) != count {
+				count, changed = len(rows), time.Now()
+			}
+			if count > 0 && time.Since(changed) >= litellmLogSettled {
+				break
+			}
+		}
+		// a refusal, unlike a row not yet written, does not pass with waiting
+		if code >= 400 && code < 500 || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(2 * time.Second)
+	}
+	if err != nil {
+		t.Logf("spend log: unread: %v", err)
+	}
+	if !read {
+		return nil, false
+	}
+	t.Logf("spend log: %d rows for the key, %d of them since the run started, %d unreadable", all, len(rows), unread)
+	if len(rows) == 0 {
+		t.Log("spend log: no row for the run")
+	}
+	return rows, true
+}
+
+// litellmRow is one row of the proxy's spend log, as far as the check reads it.
+type litellmRow struct {
+	StartTime        string          `json:"startTime"`
+	Model            string          `json:"model"`
+	ModelGroup       string          `json:"model_group"`
+	Provider         string          `json:"custom_llm_provider"`
+	CallType         string          `json:"call_type"`
+	Spend            float64         `json:"spend"`
+	PromptTokens     int             `json:"prompt_tokens"`
+	CompletionTokens int             `json:"completion_tokens"`
+	SessionID        string          `json:"session_id"`
+	RequestTags      json.RawMessage `json:"request_tags"`
+	Metadata         json.RawMessage `json:"metadata"`
+	whole            any             // the whole row, for finding the session ID in it
+}
+
+// spendRowsSince is the rows of raw that started at or after since, and how
+// many rows it could not read.
+func spendRowsSince(raw []json.RawMessage, since time.Time) (rows []litellmRow, unread int) {
+	for _, r := range raw {
+		var row litellmRow
+		if json.Unmarshal(r, &row) != nil || json.Unmarshal(r, &row.whole) != nil {
+			unread++
+			continue
+		}
+		start, err := litellmTime(row.StartTime)
+		if err != nil {
+			unread++
+			continue
+		}
+		if !start.Before(since) {
+			rows = append(rows, row)
+		}
+	}
+	return rows, unread
+}
+
+// litellmTime reads a spend log row's time: RFC 3339, or the same with a
+// space for the T, or with no zone, which is taken as UTC.
+func litellmTime(s string) (time.Time, error) {
+	for _, layout := range []string{time.RFC3339Nano, "2006-01-02T15:04:05.999999999", "2006-01-02 15:04:05.999999999Z07:00", "2006-01-02 15:04:05.999999999"} {
+		if at, err := time.Parse(layout, s); err == nil {
+			return at, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("the spend log's time %q is in no layout it uses", s)
+}
+
+// jsonKeys is the sorted names of raw's keys when it is an object or a
+// string holding one, nil otherwise.
+func jsonKeys(raw json.RawMessage) []string {
+	var obj map[string]json.RawMessage
+	if json.Unmarshal(raw, &obj) != nil {
+		var s string
+		if json.Unmarshal(raw, &s) != nil || json.Unmarshal([]byte(s), &obj) != nil {
+			return nil
+		}
+	}
+	return slices.Sorted(maps.Keys(obj))
+}
+
+// sessionJoin says whether a row's session_id is id, and where in the rows
+// id appears at all, as "row N: path" counting from 1; neither for no id.
+func sessionJoin(rows []litellmRow, id string) (field bool, where []string) {
+	if id == "" {
+		return false, nil
+	}
+	for i, r := range rows {
+		field = field || r.SessionID == id
+		for _, p := range pathsHolding(r.whole, "", id) {
+			where = append(where, fmt.Sprintf("row %d: %s", i+1, p))
+		}
+	}
+	return field, where
+}
+
+// pathsHolding is the paths below path of the strings in v that hold s, in
+// key order: keys joined by dots, list items by their index in brackets.
+func pathsHolding(v any, path, s string) []string {
+	var out []string
+	switch v := v.(type) {
+	case string:
+		if strings.Contains(v, s) {
+			out = append(out, path)
+		}
+	case map[string]any:
+		for _, k := range slices.Sorted(maps.Keys(v)) {
+			p := k
+			if path != "" {
+				p = path + "." + k
+			}
+			out = append(out, pathsHolding(v[k], p, s)...)
+		}
+	case []any:
+		for i, item := range v {
+			out = append(out, pathsHolding(item, fmt.Sprintf("%s[%d]", path, i), s)...)
+		}
+	}
+	return out
+}
+
+// litellmGet GETs path, with query, under the proxy at root with bearer as
+// the key, and decodes the body into v; it answers the status, and an error
+// naming it and what the proxy said when it is not 200. Its errors name the
+// path without the query and leave out the key and the query's values.
+func litellmGet(ctx context.Context, root, bearer, path string, query url.Values, v any) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	target := root + path
+	if len(query) > 0 {
+		target += "?" + query.Encode()
+	}
+	// a *url.Error names the whole URL, query and all; its Err does not
+	bare := func(err error) error {
+		var ue *url.Error
+		if errors.As(err, &ue) {
+			return ue.Err
+		}
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if err != nil {
+		return 0, fmt.Errorf("GET %s%s: %w", root, path, bare(err))
+	}
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("GET %s%s: %w", root, path, bare(err))
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		data, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		said := string(data)
+		secrets := []string{bearer}
+		for _, vs := range query {
+			secrets = append(secrets, vs...)
+		}
+		for _, secret := range secrets {
+			if secret != "" {
+				said = strings.ReplaceAll(said, secret, "<redacted>")
+			}
+		}
+		return resp.StatusCode, fmt.Errorf("GET %s%s answered %d: %s", root, path, resp.StatusCode, oneLine(said))
+	}
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		return resp.StatusCode, fmt.Errorf("GET %s%s: %w", root, path, err)
 	}
 	return resp.StatusCode, nil
 }
