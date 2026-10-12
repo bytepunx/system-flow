@@ -39,7 +39,9 @@ checkout clears, a board.wip-limit outside the story, which counts the main
 checkout's columns and only the operator's acceptances, cancellations, or a
 raised limit clear, an issues.no-story outside the story, which names an
 issue the story did not touch and only the operator's choice to make a story
-for it clears, and a markdown or narrative.state finding on the narrative of
+for it clears, a threads.archived outside the story, an open or answered
+thread on an archived item that only the operator or the thread's opener
+resolves in the main checkout, and a markdown or narrative.state finding on the narrative of
 another story that is neither done nor cancelled, which that story's own
 close-out finds. A finding outside keeps its level and is printed with
 "(outside S-nnnn)"; it is a note that neither an error nor --strict fails
@@ -50,7 +52,7 @@ With --record-issues as well, each rule with findings outside the story is
 recorded in design/issues, in the checkout the run reads, which is the
 story's worktree at close-out. A wip.overlap is not recorded: the pull hold
 and the other story's agent clear it. Each rule is recorded in the open
-issue whose title names it, as "flai check finds ` + "`threads.archived`" + ` outside
+issue whose title names it, as "flai check finds ` + "`story.unaccepted`" + ` outside
 the story at close-out" does, opened with class efficiency when none is,
 with an instance naming the story and each finding's path and message. An
 instance for the same story and the same findings is written once, so
@@ -164,9 +166,10 @@ func (r recordedIssue) describe() string {
 // merge report it where it can be acted on, and an issue would only count
 // how often stories ran side by side (I-0076). An item.archive outside the
 // story never reaches it: the scoped check leaves it out (ADR-0122), as it
-// does a board.wip-limit (ADR-0133) and an issues.no-story (ADR-0136)
-// outside the story and a markdown or narrative.state finding on another open
-// story's narrative (ADR-0123, ADR-0125).
+// does a board.wip-limit (ADR-0133), an issues.no-story (ADR-0136), and a
+// threads.archived (ADR-0137) outside the story and a markdown or
+// narrative.state finding on another open story's narrative (ADR-0123,
+// ADR-0125).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {
 	byRule := map[string][]string{}
 	for _, f := range res.Findings {

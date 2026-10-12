@@ -490,6 +490,45 @@ func TestCheckRecordIssuesLeavesOutAnIssuesNoStoryOutsideTheStory(t *testing.T) 
 	}
 }
 
+// I-0135, ADR-0137: an open thread is anchored on an archived story, as
+// TH-0389 was on S-0338 at S-0343's, S-0289's, and S-0342's close-outs; a
+// close-out of S-004, which did not touch it, neither notes the
+// threads.archived nor records it in an issue, while the unscoped check still
+// warns on it and fails --strict.
+func TestCheckRecordIssuesLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", nil)
+	thread := "---\nid: TH-0389\ntitle: Waits for the operator\nanchor:\n  path: wip/kanban/stories/S-003-three.md\n  item: S-003\n" +
+		"status: open\nparticipants: [orchestrator]\ncreated: 2026-08-30T09:00:00Z\nupdated: 2026-08-30T09:00:00Z\n---\n\n" +
+		"# TH-0389 Waits for the operator\n\nOn S-003 (wip/kanban/stories/S-003-three.md).\n\n## Entries\n\n### 2026-08-30T09:00:00Z orchestrator\nOver to the operator.\n"
+	path := filepath.Join(root, "wip", "threads", "TH-0389-waits-for-the-operator.md")
+	if err := os.WriteFile(path, []byte(thread), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict")
+	if code == 0 || !strings.Contains(out, "warning: threads.archived: TH-0389 is open but S-003 is archived; resolve it with flai thread resolve TH-0389") {
+		t.Fatalf("unscoped, the run should warn on TH-0389 open on the archived S-003 and fail --strict: exit %d\n%s%s", code, out, errOut)
+	}
+	out, errOut, code = runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "threads.archived") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the threads.archived should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); len(names) != 0 {
+		t.Errorf("no issue should be opened, got %v", names)
+	}
+	if data, err := os.ReadFile(path); err != nil || string(data) != thread {
+		t.Errorf("TH-0389 should be left as it was: %v\n%s", err, data)
+	}
+}
+
 // I-0096, ADR-0123: another story in progress leaves a code span ending in a
 // space in its narrative, as S-0229 did; a close-out of S-004 neither notes
 // its markdown.MD038 nor records it in an issue, while the unscoped check

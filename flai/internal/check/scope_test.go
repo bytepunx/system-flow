@@ -389,6 +389,85 @@ func noStoryFindings(res *Result) []Finding {
 	return out
 }
 
+// I-0135, ADR-0137: scoped to a story, a threads.archived on an open thread
+// anchored on an archived story the story did not touch, as TH-0389's on
+// S-0338 was at S-0343's, S-0289's, and S-0342's close-outs, is left out of
+// the result, and its warning is taken back from the counts, so the run
+// neither notes nor records it. Unscoped, it is reported as before; on a
+// thread file the story changes, or a thread anchored on one of its tasks,
+// it stays inside the story.
+func TestScopedCheckLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T) {
+	const rel = "wip/threads/TH-0389-waits-for-the-operator.md"
+	root := scopeProject(t)
+	addOpenThread(t, root, rel, "TH-0389", "wip/kanban/stories/S-003-three.md", "S-003")
+	whole, scoped := runScoped(t, root, nil)
+	want := "TH-0389 is open but S-003 is archived; resolve it with flai thread resolve TH-0389"
+	if got := archivedFindings(whole); len(got) != 1 || got[0].Message != want || !strings.HasSuffix(filepath.ToSlash(got[0].Path), rel) {
+		t.Fatalf("unscoped, the run should report TH-0389's threads.archived: %+v", whole.Findings)
+	}
+	if got := archivedFindings(scoped); len(got) != 0 {
+		t.Errorf("scoped to S-004, the threads.archived on a thread it did not touch should be left out: %+v", got)
+	}
+	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	}
+	assertCountsMatch(t, scoped)
+	if !scoped.OK(true) {
+		t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
+	}
+
+	_, scoped = runScoped(t, root, []string{rel})
+	if got := archivedFindings(scoped); len(got) != 1 || got[0].Outside {
+		t.Errorf("scoped to S-004, which changes %s, its threads.archived should be inside it: %+v", rel, got)
+	}
+	if scoped.OK(true) {
+		t.Errorf("scoped to S-004, its own threads.archived should fail --strict: %+v", scoped.Findings)
+	}
+
+	// A thread anchored on an archived task of S-004 is the story's own.
+	const task = "wip/archive/kanban/tasks/T-005-t5.md"
+	data, err := os.ReadFile(filepath.Join(root, "wip/archive/kanban/tasks/T-001-t1.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t5 := strings.NewReplacer("T-001", "T-005", "T1", "T5", "S-001", "S-004").Replace(string(data))
+	if err := os.WriteFile(filepath.Join(root, task), []byte(t5), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const own = "wip/threads/TH-0390-on-a-task-of-four.md"
+	addOpenThread(t, root, own, "TH-0390", task, "T-005")
+	_, scoped = runScoped(t, root, nil)
+	got := archivedFindings(scoped)
+	if len(got) != 1 || got[0].Outside || !strings.HasSuffix(filepath.ToSlash(got[0].Path), own) {
+		t.Errorf("scoped to S-004, the threads.archived on a thread anchored on its task T-005 should be inside it, and TH-0389's left out: %+v", got)
+	}
+	if scoped.OK(true) {
+		t.Errorf("scoped to S-004, the threads.archived on its own thread should fail --strict: %+v", scoped.Findings)
+	}
+}
+
+// addOpenThread writes an open thread id at rel, anchored on item at path.
+func addOpenThread(t *testing.T, root, rel, id, path, item string) {
+	t.Helper()
+	doc := "---\nid: " + id + "\ntitle: Waits for the operator\nanchor:\n  path: " + path + "\n  item: " + item +
+		"\nstatus: open\nparticipants: [orchestrator]\ncreated: 2026-08-30T09:00:00Z\nupdated: 2026-08-30T09:00:00Z\n---\n\n# " + id +
+		" Waits for the operator\n\nOn " + item + " (" + path + ").\n\n## Entries\n\n### 2026-08-30T09:00:00Z orchestrator\nOver to the operator.\n"
+	if err := os.WriteFile(filepath.Join(root, rel), []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// archivedFindings is res's threads.archived findings.
+func archivedFindings(res *Result) []Finding {
+	var out []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "threads.archived" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
 // I-0096, ADR-0123: scoped to a story, a markdown finding on the narrative
 // of another story in progress, a code span ending in a space as S-0229's
 // was, is left out of the result, and its warning is taken back from the

@@ -27,9 +27,13 @@ import (
 // or a raised limit clear (ADR-0133, I-0123). So is an issues.no-story
 // outside the story: it names an issue the story did not touch, and only the
 // operator's choice to make a story for it clears it (ADR-0136, I-0134). So
-// is a markdown or narrative.state finding on the narrative of another story
-// that is neither done nor cancelled: that story's own close-out finds it
-// (ADR-0123, I-0096; ADR-0125, I-0109).
+// is a threads.archived outside the story: it names an open or answered
+// thread on an archived item the story did not touch, which only the operator
+// or the thread's opener resolves, in the main checkout, which no story
+// branch changes (ADR-0137, I-0135); one on a thread anchored on the story or
+// one of its tasks is inside it. So is a markdown or narrative.state finding
+// on the narrative of another story that is neither done nor cancelled: that
+// story's own close-out finds it (ADR-0123, I-0096; ADR-0125, I-0109).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	st, err := repo.Get(story)
 	if err != nil {
@@ -80,7 +84,7 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if (f.Rule == "wip.overlap" && !namesStory(f, st.ID)) ||
-			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story") && !inside(f.Path)) ||
+			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived") && !inside(f.Path)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)
 			continue
