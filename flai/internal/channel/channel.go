@@ -81,6 +81,11 @@ func (e *RefusedError) Error() string {
 // Unwrap makes a refusal ErrUnsigned to errors.Is.
 func (e *RefusedError) Unwrap() error { return ErrUnsigned }
 
+// gateError is an attempt that Client.BeforeDial refused: it was not dialled.
+type gateError struct{ reason string }
+
+func (e *gateError) Error() string { return "flai refused the dashboard: " + e.reason }
+
 // Release is a release stamp as hello carries it: the statement
 // "<component> <version> <commit>" and its signature by the release key, in
 // base64 (design/system/release-signing.md).
@@ -164,8 +169,10 @@ type State struct {
 	// RefusedBy says which side refused the other as unsigned at the last
 	// attempt, RefusedByDashboard or RefusedByFlai, and RefusedReason why:
 	// "missing stamp", "invalid signature", "wrong component <name>", or
-	// "unsigned" when the dashboard's close said no more. Both are cleared
-	// once a connection is proven (S-0237).
+	// "unsigned" when the dashboard's close said no more. A refusal by
+	// Client.BeforeDial is RefusedByFlai with the gate's error as the reason
+	// (S-0238). Both are cleared once a connection is proven or an attempt
+	// ends otherwise (S-0237).
 	RefusedBy     string `json:"refused_by,omitempty"`
 	RefusedReason string `json:"refused_reason,omitempty"`
 	// PeerVersion is the dashboard's version, from its stamp or its answer to
@@ -196,6 +203,9 @@ type Client struct {
 	// default, refuses it. A stamp that does not verify or names another
 	// component is refused either way. See refuses.
 	AllowUnsigned bool
+	// BeforeDial, when set, is asked before every dial, reconnections
+	// included; an error refuses the attempt without a dial (S-0238).
+	BeforeDial func(ctx context.Context) error
 
 	// Tests shorten these.
 	MaxBytes   int // cap on one message, MaxMessage when zero
@@ -203,8 +213,8 @@ type Client struct {
 	MinBackoff time.Duration
 	MaxBackoff time.Duration
 	// HeldBackoff is how long a flai the dashboard refused with CloseHeld,
-	// or that either side refused with CloseUnsigned, waits before it dials
-	// again; a minute when zero.
+	// that either side refused with CloseUnsigned, or whose BeforeDial
+	// refused, waits before it tries again; a minute when zero.
 	HeldBackoff time.Duration
 	Now         func() time.Time
 	// Slow is how long a request may take before its "request answered"
@@ -356,7 +366,7 @@ func (c *Client) setState(f func(*State)) {
 // jitter. A connection that held for a while resets the backoff. One the
 // dashboard refused because another flai holds the project waits
 // HeldBackoff instead (S-0184), and so does one that either side refused as
-// unsigned (S-0237).
+// unsigned (S-0237) or that BeforeDial refused (S-0238).
 func (c *Client) Run(ctx context.Context) {
 	c.defaults()
 	c.setState(func(s *State) { s.URL = c.URL })
@@ -364,10 +374,12 @@ func (c *Client) Run(ctx context.Context) {
 	lastLogged := "\x00"
 	for ctx.Err() == nil && !c.isDraining() {
 		started := c.Now()
-		err := c.serveOnce(ctx)
+		err := c.attempt(ctx)
 		held := errors.Is(err, ErrHeld)
 		var refused *RefusedError
 		unsigned := errors.As(err, &refused)
+		var gated *gateError
+		gate := errors.As(err, &gated)
 		proven := false
 		c.setState(func(s *State) {
 			proven = s.Since != ""
@@ -375,12 +387,16 @@ func (c *Client) Run(ctx context.Context) {
 			if err != nil {
 				s.LastError = err.Error()
 			}
-			if held || unsigned {
+			if held || unsigned || gate {
 				s.LastError += "; trying again in " + c.HeldBackoff.String()
 			}
-			if unsigned {
+			switch {
+			case unsigned:
 				s.RefusedBy, s.RefusedReason, s.PeerVersion, s.PeerSigned = refused.By, refused.Reason, refused.PeerVersion, false
-			} else {
+			case gate:
+				// not dialled, so nothing was heard from the dashboard
+				s.RefusedBy, s.RefusedReason, s.PeerVersion, s.PeerSigned = RefusedByFlai, gated.reason, "", false
+			default:
 				// the refusal was the last attempt's; this one ended otherwise
 				s.RefusedBy, s.RefusedReason = "", ""
 			}
@@ -408,6 +424,15 @@ func (c *Client) Run(ctx context.Context) {
 				c.Logger.Error("connection refused as unsigned", "component", "channel", "url", c.URL, "project", c.Project.Key,
 					"refused_by", refused.By, "reason", refused.Reason, "peer_version", refused.PeerVersion, "retry_after", c.HeldBackoff.String())
 			}
+		case gate:
+			wait = jitter(c.HeldBackoff)
+			// Said once per refusal. An attempt the gate passes logs its own end
+			// under other words, so a refusal after it is said again.
+			if msg := errText(err); msg != lastLogged {
+				lastLogged = msg
+				c.Logger.Error("flai refused to dial the dashboard", "component", "channel", "url", c.URL, "project", c.Project.Key,
+					"reason", gated.reason, "retry_after", c.HeldBackoff.String())
+			}
 		default:
 			if c.Now().Sub(started) > 2*c.MaxBackoff {
 				backoff = c.MinBackoff
@@ -429,6 +454,16 @@ func (c *Client) Run(ctx context.Context) {
 		case <-time.After(wait):
 		}
 	}
+}
+
+// attempt asks BeforeDial, when set, and dials and serves only when it passes.
+func (c *Client) attempt(ctx context.Context) error {
+	if c.BeforeDial != nil {
+		if err := c.BeforeDial(ctx); err != nil {
+			return &gateError{reason: err.Error()}
+		}
+	}
+	return c.serveOnce(ctx)
 }
 
 func errText(err error) string {

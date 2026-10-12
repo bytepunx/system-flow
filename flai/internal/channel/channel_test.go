@@ -612,3 +612,166 @@ func TestAllowUnsignedAdmitsOnlyAMissingStamp(t *testing.T) {
 		}
 	}
 }
+
+// fakeGate is a BeforeDial that refuses with refuse while it is set, and
+// records when it was asked.
+type fakeGate struct {
+	mu     sync.Mutex
+	refuse error
+	asked  []time.Time
+}
+
+func (g *fakeGate) before(context.Context) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.asked = append(g.asked, time.Now())
+	return g.refuse
+}
+
+func (g *fakeGate) set(refuse error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.refuse = refuse
+}
+
+func (g *fakeGate) times() []time.Time {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return append([]time.Time(nil), g.asked...)
+}
+
+func waitUntil(t *testing.T, what string, ok func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for !ok() {
+		if time.Now().After(deadline) {
+			t.Fatalf("never %s", what)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+func hellos(d *fakeDashboard) int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return len(d.hellos)
+}
+
+// gateRefusals are the error events that give reason as theirs.
+func gateRefusals(logs *lockedBuffer, reason string) []map[string]any {
+	var out []map[string]any
+	for _, line := range strings.Split(logs.String(), "\n") {
+		var ev map[string]any
+		if json.Unmarshal([]byte(line), &ev) == nil && ev["level"] == "ERROR" && ev["reason"] == reason {
+			out = append(out, ev)
+		}
+	}
+	return out
+}
+
+func gatedClient(d *fakeDashboard, g *fakeGate, logs *lockedBuffer, held time.Duration) *Client {
+	return &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: Project{Key: "harbour", Name: "Harbour"}, Methods: testMethods(), Version: "test",
+		ReleaseKeys: d.keys, BeforeDial: g.before, Logger: slog.New(slog.NewJSONHandler(logs, nil)),
+		PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, HeldBackoff: held}
+}
+
+const unsignedImage = "the dashboard runs an unsigned image ghcr.io/bytepunx/flaiover:2.3.0 sha256:0b1d"
+
+// S-0238: a gate that passes is asked once and the dashboard is dialled.
+func TestAGateThatPassesDials(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	g := &fakeGate{}
+	var logs lockedBuffer
+	c := gatedClient(d, g, &logs, 60*time.Millisecond)
+	runClient(t, c)
+	waitProven(t, d)
+	st := waitState(t, c, "connected", func(s State) bool { return s.Connected })
+	if n := len(g.times()); n != 1 || st.RefusedBy != "" || st.LastError != "" {
+		t.Errorf("gate asked %d times, state %+v; want once and connected", n, st)
+	}
+}
+
+// S-0238: a gate that refuses is not dialled; the state says flai refused
+// the dashboard and why, as a refused stamp does; the gate is asked again
+// after the held back-off; and one error says so however often it refuses.
+func TestAGateThatRefusesIsNotDialled(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	g := &fakeGate{refuse: errors.New(unsignedImage)}
+	var logs lockedBuffer
+	c := gatedClient(d, g, &logs, 60*time.Millisecond)
+	runClient(t, c)
+	waitUntil(t, "asked the gate four times", func() bool { return len(g.times()) >= 4 })
+
+	if n := hellos(d); n != 0 {
+		t.Errorf("dialled %d times past a gate that refused", n)
+	}
+	st := c.State()
+	if st.Connected || st.RefusedBy != RefusedByFlai || st.RefusedReason != unsignedImage || st.PeerVersion != "" || st.PeerSigned || st.Attempts < 3 ||
+		st.LastError != "flai refused the dashboard: "+unsignedImage+"; trying again in 60ms" {
+		t.Errorf("state: %+v", st)
+	}
+	asked := g.times()
+	for i := 1; i < len(asked); i++ {
+		// jitter spreads the wait over [HeldBackoff/2, HeldBackoff)
+		if gap := asked[i].Sub(asked[i-1]); gap < 25*time.Millisecond {
+			t.Errorf("asked again after %v, not after the held back-off", gap)
+		}
+	}
+	said := gateRefusals(&logs, unsignedImage)
+	if len(said) != 1 || said[0]["component"] != "channel" || said[0]["url"] != d.srv.URL || said[0]["project"] != "harbour" || said[0]["retry_after"] != "60ms" {
+		t.Errorf("logged %v, want one error for the same refusal met %d times", said, len(asked))
+	}
+}
+
+// S-0238: the gate is asked on every attempt: a refusal is asked again and
+// dialled once it passes, which clears the refusal; a reconnection after the
+// dashboard ends the connection asks it again, and a refusal then is said
+// again, since an attempt passed in between.
+func TestTheGateIsAskedOnEveryAttempt(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	g := &fakeGate{refuse: errors.New(unsignedImage)}
+	var logs lockedBuffer
+	c := gatedClient(d, g, &logs, 60*time.Millisecond)
+	runClient(t, c)
+	waitState(t, c, "refused", func(s State) bool { return s.RefusedBy != "" })
+
+	g.set(nil)
+	first := waitProven(t, d)
+	st := waitState(t, c, "connected", func(s State) bool { return s.Connected })
+	if st.RefusedBy != "" || st.RefusedReason != "" || st.LastError != "" || !st.PeerSigned {
+		t.Errorf("the refusal outlived the connection: %+v", st)
+	}
+	before := len(g.times())
+
+	g.set(errors.New(unsignedImage))
+	_ = first.Close(websocket.StatusGoingAway, "restart")
+	st = waitState(t, c, "refused again", func(s State) bool { return s.RefusedBy == RefusedByFlai })
+	if len(g.times()) <= before || hellos(d) != 1 || st.RefusedReason != unsignedImage {
+		t.Errorf("after the dashboard ended the connection: gate asked %d times (%d before), %d hellos, state %+v", len(g.times()), before, hellos(d), st)
+	}
+	if said := gateRefusals(&logs, unsignedImage); len(said) != 2 {
+		t.Errorf("logged %d refusals, want the second said again after a connection", len(said))
+	}
+
+	g.set(nil)
+	waitProven(t, d)
+}
+
+// S-0238: a client the gate refuses still ends as soon as its context does,
+// however long the held back-off.
+func TestARefusedGateEndsWithTheContext(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	g := &fakeGate{refuse: errors.New(unsignedImage)}
+	var logs lockedBuffer
+	c := gatedClient(d, g, &logs, 0)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { c.Run(ctx); close(done) }()
+	waitState(t, c, "refused", func(s State) bool { return strings.Contains(s.LastError, "trying again in 1m0s") })
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run outlived its context")
+	}
+}
