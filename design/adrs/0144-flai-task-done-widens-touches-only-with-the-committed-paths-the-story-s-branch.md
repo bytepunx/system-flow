@@ -6,6 +6,7 @@ date: 2026-10-12
 supersedes: []
 superseded_by: []
 refines: [ADR-0107, ADR-0128]
+topics: [cli, touches]
 ---
 
 # ADR-0144 flai task done widens touches only with the committed paths the story's branch still changes against main
