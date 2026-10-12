@@ -3,12 +3,15 @@ id: S-0354
 type: story
 nature: improvement
 title: Asking the owner before a protected write is one hold-and-ask that the guard's ask verdict and permission_prompt share, and the protected list is flai's, kept per harness
-status: backlog
+status: ready
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:47:53Z
-updated: 2026-10-12T18:47:34Z
-transitions: []
+updated: 2026-10-12T20:02:42Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:02:42Z
+    by: alex
 tags: [cli]
 topics: [agents]
 touches: [flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go, flai/internal/protected/protected.go, flai/internal/protected/protected_test.go, flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, docs/users/flai.md, docs/operators/settings.md, design/system/flai-cli.md]
@@ -24,10 +27,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:22Z
 forecast:
   duration: 35m
-  delivery: 2026-10-13T01:30:00Z
-  basis: "Its own forecast of 35m; 11th in the pull order with an in-progress limit of 5, behind S-0236, S-0370, S-0351, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0352 and S-0353."
+  delivery: 2026-10-13T02:45:00Z
+  basis: "Its own forecast of 35m; 10th in the pull order with an in-progress limit of 5, behind S-0238, S-0370, S-0351, S-0352, S-0353, S-0239, S-0241, S-0304, S-0305 and S-0306."
   by: flai
-  at: 2026-10-12T18:47:34Z
+  at: 2026-10-12T20:02:30Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:09Z

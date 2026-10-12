@@ -3,12 +3,15 @@ id: S-0353
 type: story
 nature: improvement
 title: flai guard decides on a neutral call through Decide, and Claude Code's hook input is one reader of it
-status: backlog
+status: ready
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:46:31Z
-updated: 2026-10-12T20:01:35Z
-transitions: []
+updated: 2026-10-12T20:02:30Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:02:27Z
+    by: alex
 tags: [cli]
 topics: [agents]
 touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/flai-cli.md]
@@ -24,10 +27,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:21Z
 forecast:
   duration: 50m
-  delivery: 2026-10-13T02:06:00Z
-  basis: "Its own forecast of 50m; 10th in the pull order with an in-progress limit of 5, behind S-0370, S-0351, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306 and S-0352."
+  delivery: 2026-10-13T02:07:00Z
+  basis: "Its own forecast of 50m; 4th in the pull order with an in-progress limit of 5, behind S-0238, S-0370, S-0351 and S-0352."
   by: flai
-  at: 2026-10-12T20:01:35Z
+  at: 2026-10-12T20:02:30Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:06Z

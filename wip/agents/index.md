@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-12T20:01:35Z
+updated: 2026-10-12T20:02:30Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0238](S-0238.md) | flai measures the container's image through Docker before it dials and refuses one no signed list names | in-progress | agent-S-0238 | 2026-10-12T20:01:45Z |
+| [S-0238](S-0238.md) | flai measures the container's image through Docker before it dials and refuses one no signed list names | in-progress | system-flow | 2026-10-12T20:02:17Z |
 
 ## Strategic agents
 
