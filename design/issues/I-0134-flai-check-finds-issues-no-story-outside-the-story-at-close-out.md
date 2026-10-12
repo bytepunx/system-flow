@@ -2,11 +2,11 @@
 id: I-0134
 title: "flai check finds `issues.no-story` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 5
 first_reported: 2026-10-09T16:51:57Z
 last_reported: 2026-10-12T14:46:12Z
-updated: 2026-10-12T14:46:12Z
+updated: 2026-10-12T15:06:12Z
 ---
 
 # I-0134 flai check finds `issues.no-story` outside the story at close-out
@@ -43,3 +43,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0365 remediates this issue, created from it at 2026-10-12T14:12:33Z.
+Closed 2026-10-12T15:06:12Z: Fixed by S-0365 (ADR-0136): a check scoped to a story, as the close-out runs it, leaves out every issues.no-story outside the story and takes back its counts, so --record-issues no longer records an open issue no story links, such as I-0052; one on an issue file the story changes stays inside, and the main checkout's flai check still warns on every one. TestScopedCheckLeavesOutAnIssuesNoStoryOutsideTheStory and TestCheckRecordIssuesLeavesOutAnIssuesNoStoryOutsideTheStory reproduce it.
