@@ -109,6 +109,8 @@ export type ServedProject = {
 	below?: string;
 	state?: 'connected' | 'connecting' | 'not-connected' | 'unavailable' | 'not-running';
 	since?: string;
+	/** Why its last connection ended; `the dashboard refused this flai: unsigned peer: <why>` after a
+	 * refusal as unsigned (S-0237), which health() says as the connection list does. */
 	last_error?: string;
 	/** Why it is unavailable, or why it is not served. */
 	reason?: string;
@@ -368,12 +370,53 @@ export function sharedRefusal(text: string): string {
 	return text.replace(/^\S*system-flow\.yaml: /, '');
 }
 
+/** Why the dashboard refused a project's flai as unsigned (S-0237), as /api/projects gives it. */
+export type FlaiRefusal = {
+	/** When, as an ISO timestamp. */
+	at: string;
+	/** `missing stamp`, `invalid signature`, or `wrong component <name>`. */
+	reason: string;
+	/** The version that flai named, or empty when it named none. */
+	flai: string;
+};
+
+/** What the connection list reads of a project's flai (S-0237), from /api/projects. */
+export type FlaiTrust = {
+	connected: boolean;
+	/** Whether the connected flai's release stamp verified; absent while not connected. */
+	signed?: boolean;
+	/** The last flai the dashboard refused for the project, until a signed one connects. */
+	refused?: FlaiRefusal;
+};
+
+/** The words a refused project's label carries. */
+export const REFUSED_LABEL = 'refused: unsigned flai';
+
+/**
+ * A few words on whether a project's flai is signed: signed or unsigned while connected, the
+ * refusal while not and the dashboard refused it, else nothing to say.
+ */
+export function trust(p: FlaiTrust): string {
+	if (p.connected) return p.signed === undefined ? '' : p.signed ? 'signed' : 'unsigned';
+	return p.refused ? REFUSED_LABEL : '';
+}
+
+/** A refusal with its reason and the version that flai named, for the list of why. */
+export function refusalText(r: FlaiRefusal): string {
+	return `${REFUSED_LABEL}: ${r.reason}${r.flai ? ` (flai ${r.flai})` : ''}`;
+}
+
+/** How flai words a connection the dashboard closed as unsigned, before the reason. */
+const REFUSED_BY_DASHBOARD = 'the dashboard refused this flai: unsigned peer: ';
+
 /** What a served project's state says, in a few words. */
 export function health(p: ServedProject): string {
 	switch (p.state) {
 		case 'connected':
 			return p.since ? `connected since ${localTime(p.since)}` : 'connected';
 		case 'not-connected':
+			if (p.last_error?.startsWith(REFUSED_BY_DASHBOARD))
+				return `not connected: ${REFUSED_LABEL}: ${p.last_error.slice(REFUSED_BY_DASHBOARD.length)}`;
 			return `not connected: ${p.last_error ?? 'no answer yet'}`;
 		case 'unavailable':
 			return `not served: ${p.reason ?? 'unavailable'}`;

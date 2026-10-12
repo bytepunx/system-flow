@@ -5,16 +5,28 @@
 	// the layout keys the page on the current project, so the page remounts, asks again, and reopens
 	// its event stream for the project picked. A project flai serve serves that is not connected is
 	// labelled apart from one that is, and a link goes to the settings page, which says why (S-0122).
+	// Each project says whether its flai is signed, and one whose flai the dashboard refused as
+	// unsigned says so, with the reason in the list of why (S-0237).
 	import { resolve } from '$app/paths';
 	import { projectState, type Project } from '$lib/project.svelte';
+	import { refusalText, trust, type FlaiTrust } from '$lib/settings';
 
-	const projects = $derived(projectState.list.filter((p) => !p.candidate));
+	// /api/projects gives each project what the connection list reads of its flai
+	type Listed = Project & FlaiTrust;
+
+	const projects = $derived((projectState.list as Listed[]).filter((p) => !p.candidate));
 	const offered = $derived(projectState.list.filter((p) => p.candidate));
 	const down = $derived(projects.filter((p) => !p.connected));
 
-	function label(p: Project): string {
-		if (p.connected) return p.name;
-		return `${p.name} (${p.served ? 'served, not connected' : 'not connected'})`;
+	function label(p: Listed): string {
+		const said = trust(p);
+		if (p.connected) return said ? `${p.name} (${said})` : p.name;
+		return `${p.name} (${said || (p.served ? 'served, not connected' : 'not connected')})`;
+	}
+
+	/** Why a project is not connected: the dashboard's own refusal first, else what flai serve says. */
+	function whyDown(p: Listed): string | undefined {
+		return p.refused ? refusalText(p.refused) : p.lastError;
 	}
 
 	function onchange(e: Event) {
@@ -53,7 +65,7 @@
 				<option value="" disabled>choose a project…</option>
 			{/if}
 			{#each projects as p (p.key)}
-				<option value={p.key} title={p.connected ? undefined : p.lastError}>{label(p)}</option>
+				<option value={p.key} title={p.connected ? undefined : whyDown(p)}>{label(p)}</option>
 			{/each}
 			{#if offered.length}
 				<optgroup label="Not imported yet">
@@ -70,7 +82,7 @@
 			href={resolve('/settings')}
 			data-testid="project-switcher-why"
 			onclick={why}
-			title={down.map((p) => `${p.name}: ${p.lastError ?? 'not connected'}`).join('\n')}
+			title={down.map((p) => `${p.name}: ${whyDown(p) ?? 'not connected'}`).join('\n')}
 			>{down.length} not connected: why?</a
 		>
 	{/if}

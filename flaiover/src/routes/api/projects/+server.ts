@@ -1,4 +1,9 @@
-import { connectedProjects, registry, type ConnectedProject } from '$lib/server/agent';
+import {
+	connectedProjects,
+	registry,
+	type ConnectedProject,
+	type Refusal
+} from '$lib/server/agent';
 import { respond } from '$lib/server/respond';
 import type { ProjectsView } from '$lib/settings';
 import type { RequestHandler } from './$types';
@@ -16,8 +21,16 @@ import type { RequestHandler } from './$types';
  * The projects flai serve serves (S-0122) come from one connected project's settings.get: each is
  * marked served, one this dashboard has no connection to is added, and one that is not connected
  * carries flai serve's last error, so the switcher can tell it apart and point at the settings page.
+ *
+ * Each says whether its flai is signed (S-0237): `signed` while connected, and `refused` while the
+ * last flai to connect for it was refused as unsigned. A project whose only flai was refused is
+ * listed, not connected, with the refusal, though the registry never adopted a flai for it.
  */
 export type ProjectGlance = ConnectedProject & {
+	/** Whether the connected flai's release stamp verified; absent while not connected. */
+	signed?: boolean;
+	/** Why the dashboard last refused a flai for it as unsigned, until a signed one is adopted. */
+	refused?: Refusal;
 	review?: number;
 	threadsAwaiting?: number;
 	agentAttending?: boolean;

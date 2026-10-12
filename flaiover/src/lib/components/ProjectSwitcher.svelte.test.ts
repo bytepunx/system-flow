@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import ProjectSwitcher from './ProjectSwitcher.svelte';
-import { projectState, resetForTests } from '$lib/project.svelte';
+import { projectState, resetForTests, type Project } from '$lib/project.svelte';
+import { health, type FlaiTrust } from '$lib/settings';
 
 describe('ProjectSwitcher (S-0080)', () => {
 	let c: ReturnType<typeof mount> | undefined;
@@ -121,5 +122,58 @@ describe('ProjectSwitcher (S-0080)', () => {
 		why.addEventListener('click', (e) => e.preventDefault());
 		why.click();
 		expect(projectState.current).toBe('harbour');
+	});
+
+	it('says per project whether its flai is signed, and names a refused one with the reason (S-0237)', () => {
+		const list: (Project & FlaiTrust)[] = [
+			{ key: 'harbour', name: 'Harbour', connected: true, signed: true },
+			{ key: 'pier', name: 'Pier', connected: true, signed: false },
+			{
+				key: 'quay',
+				name: 'Quay',
+				connected: false,
+				served: true,
+				lastError: 'the dashboard refused this flai: unsigned peer: missing stamp',
+				refused: { at: '2026-10-12T17:00:00Z', reason: 'missing stamp', flai: '1.43.0' }
+			},
+			{
+				key: 'wharf',
+				name: 'Wharf',
+				connected: false,
+				refused: { at: '2026-10-12T17:00:00Z', reason: 'invalid signature', flai: '' }
+			}
+		];
+		projectState.list = list;
+		projectState.pick('harbour', false);
+		c = mount(ProjectSwitcher, { target: document.body });
+		flushSync();
+		const options = [...document.querySelectorAll('option')];
+		expect(options.map((o) => o.textContent)).toEqual([
+			'Harbour (signed)',
+			'Pier (unsigned)',
+			'Quay (refused: unsigned flai)',
+			'Wharf (refused: unsigned flai)'
+		]);
+		expect(options[2].title).toBe('refused: unsigned flai: missing stamp (flai 1.43.0)');
+		const why = document.querySelector<HTMLAnchorElement>('[data-testid="project-switcher-why"]');
+		expect(why?.textContent).toBe('2 not connected: why?');
+		expect(why?.title).toBe(
+			'Quay: refused: unsigned flai: missing stamp (flai 1.43.0)\n' +
+				'Wharf: refused: unsigned flai: invalid signature'
+		);
+	});
+
+	it('the Settings page says a refused project’s state in the switcher’s words (S-0237)', () => {
+		const served = { key: 'quay', name: 'Quay', root: '/r/quay', settings: true } as const;
+		expect(
+			health({
+				...served,
+				state: 'not-connected',
+				last_error: 'the dashboard refused this flai: unsigned peer: missing stamp'
+			})
+		).toBe('not connected: refused: unsigned flai: missing stamp');
+		expect(health({ ...served, state: 'not-connected', last_error: 'dial: refused' })).toBe(
+			'not connected: dial: refused'
+		);
 	});
 });

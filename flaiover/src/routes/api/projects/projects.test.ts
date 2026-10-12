@@ -1,12 +1,21 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import http from 'node:http';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import WebSocket from 'ws';
 import { GET } from './+server';
-import { AgentRegistry, proof, registry, resetAgent, REQUIRED_METHODS } from '$lib/server/agent';
+import {
+	AgentRegistry,
+	CLOSE_UNSIGNED,
+	PROTOCOL,
+	proof,
+	registry,
+	resetAgent,
+	REQUIRED_METHODS
+} from '$lib/server/agent';
 
 const KEY = 'agent-credential-for-tests';
 
@@ -23,7 +32,8 @@ beforeAll(() => {
 function connect(
 	url: string,
 	answer: (method: string) => unknown | Promise<unknown>,
-	project: { key: string; name: string }
+	project: { key: string; name: string },
+	hello: Record<string, unknown> = { protocol: 1 }
 ): Promise<WebSocket> {
 	return new Promise((resolve, reject) => {
 		const ws = new WebSocket(url);
@@ -35,7 +45,7 @@ function connect(
 					jsonrpc: '2.0',
 					id: 'hello',
 					method: 'hello',
-					params: { protocol: 1, nonce: mine, flai: '9.9.9', project, methods: REQUIRED_METHODS }
+					params: { nonce: mine, flai: '9.9.9', project, methods: REQUIRED_METHODS, ...hello }
 				})
 			)
 		);
@@ -57,6 +67,29 @@ function connect(
 				// undefined means: never answer, to test a stall.
 			});
 		});
+		ws.on('error', reject);
+	});
+}
+
+// A flai the dashboard refuses as unsigned: it says hello and is closed before any proof (S-0237).
+function refused(
+	url: string,
+	project: { key: string; name: string },
+	hello: Record<string, unknown>
+): Promise<number> {
+	return new Promise((resolve, reject) => {
+		const ws = new WebSocket(url);
+		ws.on('open', () =>
+			ws.send(
+				JSON.stringify({
+					jsonrpc: '2.0',
+					id: 'hello',
+					method: 'hello',
+					params: { nonce: 'c'.repeat(32), flai: '9.9.8', project, ...hello }
+				})
+			)
+		);
+		ws.on('close', (code) => resolve(code));
 		ws.on('error', reject);
 	});
 }
@@ -275,5 +308,57 @@ describe('/api/projects (S-0080)', () => {
 		registry().hub('quay');
 		const body = await (await GET({} as never)).json();
 		expect(body.projects).toEqual([{ key: 'quay', name: 'quay', connected: false }]);
+	});
+
+	it('says per project whether its flai is signed, and lists a refused one with the reason (S-0237)', async () => {
+		// a release key the test makes stands in for the embedded one; a flai without a stamp is
+		// still served, marked unsigned, and one whose stamp does not verify is refused either way
+		const { publicKey, privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+		const pem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+		const statement = 'flai 9.9.9 abc1234';
+		const signature = sign('sha256', Buffer.from(statement), privateKey).toString('base64');
+		resetAgent();
+		registry(process.env, { allowUnsigned: true, peerKeys: [pem] });
+		const server = http.createServer();
+		server.on('upgrade', (req, socket, head) =>
+			(registry() as unknown as AgentRegistry).handleUpgrade(req, socket, head)
+		);
+		await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+		const url = `ws://127.0.0.1:${(server.address() as AddressInfo).port}/agent`;
+		const answer = (method: string) => (method === 'board.get' ? { columns: {} } : {});
+		const signedFlai = await connect(
+			url,
+			answer,
+			{ key: 'harbour', name: 'Harbour' },
+			{ protocol: PROTOCOL, release: { statement, signature } }
+		);
+		const unsignedFlai = await connect(url, answer, { key: 'pier', name: 'Pier' });
+		const code = await refused(
+			url,
+			{ key: 'quay', name: 'Quay' },
+			{ protocol: PROTOCOL, release: { statement: 'flai 9.9.8 abc1234', signature } }
+		);
+		try {
+			expect(code).toBe(CLOSE_UNSIGNED);
+			const body = await (await GET({} as never)).json();
+			const rows = Object.fromEntries(
+				body.projects.map((p: { key: string }) => [p.key, p])
+			) as Record<string, Record<string, unknown>>;
+			expect(Object.keys(rows)).toEqual(['harbour', 'pier', 'quay']);
+			expect(rows.harbour).toMatchObject({ connected: true, signed: true });
+			expect(rows.harbour.refused).toBeUndefined();
+			expect(rows.pier).toMatchObject({ connected: true, signed: false });
+			expect(rows.quay).toMatchObject({
+				key: 'quay',
+				connected: false,
+				refused: { reason: 'invalid signature', flai: '9.9.8' }
+			});
+			expect(rows.quay.signed).toBeUndefined();
+			expect(Date.parse(String((rows.quay.refused as { at: string }).at))).not.toBeNaN();
+		} finally {
+			signedFlai.terminate();
+			unsignedFlai.terminate();
+			server.close();
+		}
 	});
 });
