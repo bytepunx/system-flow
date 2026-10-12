@@ -17,6 +17,9 @@ export type HostFlaiStatus = {
 	since?: string;
 	flai?: string;
 	error?: string;
+	/** The last flai this dashboard refused for the project as unsigned (S-0237); while none is
+	 * connected, error says so and what to do, so it is not read as only "not connected". */
+	refused?: { at: string; reason: string; flai: string };
 	/** project.info, when the connected flai answered it. */
 	info?: { flai_outdated?: FlaiOutdated };
 };

@@ -47,6 +47,22 @@ describe('HostFlai', () => {
 		unmount(c);
 	});
 
+	// S-0237: a flai this dashboard refused as unsigned is not merely "not connected".
+	it('says refused, with the reason in its title, when the dashboard refused the flai as unsigned', () => {
+		const c = mount(HostFlai, { target: document.body });
+		hostFlai.status = {
+			configured: true,
+			connected: false,
+			refused: { at: '2026-10-12T17:00:00.000Z', reason: 'missing stamp', flai: '1.40.1' },
+			error: 'this dashboard refused flai 1.40.1 on the host: unsigned (missing stamp)'
+		};
+		flushSync();
+		expect(badge()?.getAttribute('data-host-flai')).toBe('refused');
+		expect(badge()?.textContent).toContain('refused (unsigned)');
+		expect(badge()?.getAttribute('title')).toContain('missing stamp');
+		unmount(c);
+	});
+
 	// Found live (S-0086): the same "not connected" wording used to cover this case too, when a
 	// flai genuinely was connected (just too old for what the dashboard asks of it).
 	it('tells a connected but outdated flai apart from one never connected', () => {

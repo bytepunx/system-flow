@@ -87,6 +87,29 @@ describe('HostFlaiBanner', () => {
 		unmount(c);
 	});
 
+	// S-0237: a flai refused as unsigned did reach the dashboard; "not connected" would send the
+	// operator to start one that is already running. The banner says it was refused, why, and what to do.
+	it('tells a flai refused as unsigned apart from one never connected', () => {
+		const c = mount(HostFlaiBanner, { target: document.body });
+		hostFlai.status = {
+			configured: true,
+			connected: false,
+			refused: { at: '2026-10-12T10:00:00Z', reason: 'missing stamp', flai: '1.44.0' },
+			error:
+				'this dashboard refused flai 1.44.0 on the host: unsigned (missing stamp); install a release of flai on the host with flai host upgrade, or with flai self-upgrade and then flai serve stop and flai dashboard; a development build of flai carries no stamp and is refused'
+		};
+		flushSync();
+		const text = banner()?.textContent ?? '';
+		expect(banner()?.getAttribute('role')).toBe('alert');
+		expect(text).toContain('This dashboard refused the flai on the host as unsigned');
+		expect(text).not.toContain('No flai on the host is connected');
+		expect(text).toContain('1.44.0');
+		expect(text).toContain('missing stamp');
+		expect(text).toContain('flai host upgrade');
+		expect(text).toContain('a development build of flai carries no stamp');
+		unmount(c);
+	});
+
 	it('tells a container started by an older flai apart', () => {
 		const c = mount(HostFlaiBanner, { target: document.body });
 		hostFlai.status = { configured: false, connected: false };

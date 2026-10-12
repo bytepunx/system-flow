@@ -36,4 +36,47 @@ describe('GET /api/agent', () => {
 		expect(ask).toHaveBeenCalledWith('project.info', {}, 2000);
 		expect(body.info).toEqual({ name: 'Harbour' });
 	});
+
+	// S-0237: a flai refused as unsigned never connects, so the status alone would say "not
+	// connected"; the kept refusal becomes an error naming the flai, the reason, and what to do.
+	const refused = { at: '2026-10-12T10:00:00Z', reason: 'missing stamp', flai: '1.44.0' };
+
+	it('names a refused flai, why, and what to do, with no connection up', async () => {
+		const { body, ask } = await answerFor({ configured: true, connected: false, refused });
+		expect(ask).not.toHaveBeenCalled();
+		expect(body.connected).toBe(false);
+		expect(body.refused).toEqual(refused);
+		expect(body.error).toContain(
+			'this dashboard refused flai 1.44.0 on the host: unsigned (missing stamp)'
+		);
+		expect(body.error).toContain('flai host upgrade');
+		expect(body.error).toContain('flai self-upgrade');
+		expect(body.error).toContain('a development build of flai carries no stamp');
+	});
+
+	it('names a refused flai that gave no version without an empty name', async () => {
+		const { body } = await answerFor({
+			configured: true,
+			connected: false,
+			refused: { ...refused, reason: 'invalid signature', flai: '' }
+		});
+		expect(body.error).toContain(
+			'this dashboard refused a flai on the host: unsigned (invalid signature)'
+		);
+	});
+
+	it('says nothing of a refusal while a flai is connected and serves the project', async () => {
+		const ask = vi.fn(async () => ({ name: 'Harbour' }));
+		const { body } = await answerFor(
+			{ configured: true, connected: true, signed: true, missing: [], refused },
+			ask
+		);
+		expect(body.error).toBeUndefined();
+		expect(body.info).toEqual({ name: 'Harbour' });
+	});
+
+	it('says nothing more of a flai that was never refused and is not connected', async () => {
+		const { body } = await answerFor({ configured: true, connected: false });
+		expect(body.error).toBeUndefined();
+	});
 });

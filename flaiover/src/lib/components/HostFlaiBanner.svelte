@@ -31,6 +31,12 @@
 			{:else if status.connected}
 				<p class="font-medium">flai on the host is connected, but the project cannot be shown.</p>
 				<p class="mt-1">{status.error}</p>
+			{:else if status.refused}
+				<!-- S-0237: a flai refused as unsigned did connect, so "not connected" would hide why -->
+				<p class="font-medium">
+					This dashboard refused the flai on the host as unsigned, so the project cannot be shown.
+				</p>
+				<p class="mt-1">{status.error}</p>
 			{:else}
 				<p class="font-medium">No flai on the host is connected, so the project cannot be shown.</p>
 				<p class="mt-1">
