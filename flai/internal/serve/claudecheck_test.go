@@ -15,15 +15,16 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // claudeLab is a stand-in for claude, a flai serve state folder, and the
 // projects it serves. The stand-in prints a version for --version; run
-// with -p, it keeps its arguments and what the scratch project held, and
-// either writes the file asked for in each worktree, or prints the events
-// and the error of a refused write and fails.
+// with -p, it keeps its arguments, its environment, and what the scratch
+// project held, and either writes the file asked for in each worktree, or
+// prints the events and the error of a refused write and fails.
 type claudeLab struct {
 	t       *testing.T
 	stub    string
@@ -38,6 +39,13 @@ type claudeLab struct {
 const (
 	claudeLabVersion = "9.8.7"
 	claudeLabError   = "Permission prompt tool returned an invalid result: expected behavior"
+	// claudeLabGateway is the provider the lab's host has whole, its key in
+	// claudeLabKeyEnv; claudeLabChat speaks an API claude does not.
+	claudeLabGateway = "openrouter"
+	claudeLabChat    = "chat"
+	claudeLabKeyEnv  = "FLAI_TEST_CLAUDE_CHECK_KEY"
+	claudeLabBaseURL = "https://gateway.example/api"
+	claudeLabHaiku   = "vendor/haiku-on-host"
 )
 
 func newClaudeLab(t *testing.T, fail bool) *claudeLab {
@@ -63,6 +71,7 @@ func newClaudeLab(t *testing.T, fail bool) *claudeLab {
 		"if [ \"$1\" = --version ]; then echo version >> \"" + lab.out + "/calls\"; echo '" + claudeLabVersion + " (Claude Code)'; exit 0; fi\n" +
 		"echo p >> \"" + lab.out + "/calls\"\n" +
 		"printf '%s\\n' \"$@\" > \"" + lab.out + "/argv\"\n" +
+		"env > \"" + lab.out + "/env\"\n" +
 		"cp ../config.json \"" + lab.out + "/config.json\"\n" +
 		"cp -r wip/kanban/stories \"" + lab.out + "/stories\"\n" +
 		"pwd > \"" + lab.out + "/pwd\"\n" +
@@ -75,15 +84,44 @@ func newClaudeLab(t *testing.T, fail bool) *claudeLab {
 	return lab
 }
 
-// config is the operator's say with the agent action on and the stand-in as
-// claude-code's program.
+// config is the operator's say with the agent action on, the stand-in as
+// claude-code's program, and the host's providers claudeLabGateway and
+// claudeLabChat.
 func (lab *claudeLab) config() AgentConfig {
-	return AgentConfig{Enabled: true, Flai: "/usr/local/bin/flai", Harnesses: map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}}
+	return AgentConfig{Enabled: true, Flai: "/usr/local/bin/flai", Harnesses: map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}},
+		Providers: map[string]manifest.Provider{
+			claudeLabGateway: {API: manifest.APIAnthropicMessages, BaseURL: claudeLabBaseURL, KeyEnv: claudeLabKeyEnv, Models: map[string]string{"haiku": claudeLabHaiku}},
+			claudeLabChat:    {API: manifest.APIOpenAIChat, BaseURL: "https://chat.example/v1", KeyEnv: claudeLabKeyEnv},
+		}}
 }
 
+// check checks the stand-in through no provider.
 func (lab *claudeLab) check() {
 	lab.t.Helper()
-	lab.checker.check(context.Background(), harness.ClaudeCodeHost(lab.config().host(harness.ClaudeCode)), "/usr/local/bin/flai")
+	lab.checkThrough("", "")
+}
+
+// checkThrough checks the stand-in through provider, as the default agent of
+// the project at root names it.
+func (lab *claudeLab) checkThrough(root, provider string) {
+	lab.t.Helper()
+	lab.checker.check(context.Background(), harness.ClaudeCodeHost(lab.config().host(harness.ClaudeCode)), lab.config(), root, provider)
+}
+
+// env is the stand-in's environment at its last -p run, by variable.
+func (lab *claudeLab) env() map[string]string {
+	lab.t.Helper()
+	data, err := os.ReadFile(filepath.Join(lab.out, "env"))
+	if err != nil {
+		lab.t.Fatalf("the stand-in kept no environment: %v", err)
+	}
+	out := map[string]string{}
+	for line := range strings.Lines(string(data)) {
+		if name, value, ok := strings.Cut(strings.TrimSuffix(line, "\n"), "="); ok {
+			out[name] = value
+		}
+	}
+	return out
 }
 
 // calls are the stand-in's runs, version for --version and p for -p.
@@ -92,7 +130,8 @@ func (lab *claudeLab) calls() []string {
 	return strings.Fields(string(data))
 }
 
-func (lab *claudeLab) records() map[string]ClaudeCheck {
+// records are the host's records, by version and then by provider.
+func (lab *claudeLab) records() map[string]map[string]ClaudeCheck {
 	lab.t.Helper()
 	all, err := lab.o.Dir.claudeChecks()
 	if err != nil {
@@ -104,11 +143,23 @@ func (lab *claudeLab) records() map[string]ClaudeCheck {
 // serve adds a project to those served, its agents on harness when it names one.
 func (lab *claudeLab) serve(key, harnessName string) *workitem.Repo {
 	lab.t.Helper()
+	return lab.serveOn(key, harnessName, "", "")
+}
+
+// serveOn adds a project to those served, its agents on harness when it
+// names one, its default agent naming provider when it names one, and more
+// written at the end of its manifest.
+func (lab *claudeLab) serveOn(key, harnessName, provider, more string) *workitem.Repo {
+	lab.t.Helper()
 	root := lab.t.TempDir()
 	m := "version: 1\nname: " + key + "\nkey: " + key + "\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
 	if harnessName != "" {
 		m += "agent:\n  harness: " + harnessName + "\n"
 	}
+	if provider != "" {
+		m += "  provider: " + provider + "\n"
+	}
+	m += more
 	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
 		lab.t.Fatal(err)
 	}
@@ -147,9 +198,14 @@ func TestAnUncheckedClaudeCodeIsCheckedAndRecorded(t *testing.T) {
 	if got := strings.Join(lab.calls(), " "); got != "version p" {
 		t.Fatalf("the stand-in ran as %q, want its version read and one check; flai serve logged:\n%s", got, lab.logs.String())
 	}
-	rec, ok := lab.records()[claudeLabVersion]
+	rec, ok := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]
 	if !ok || rec.Outcome != ClaudeCheckPassed || rec.Error != "" || rec.Checked == "" || rec.Program != lab.stub {
-		t.Fatalf("record %+v (found %v), want %s passed with when and the program", rec, ok, claudeLabVersion)
+		t.Fatalf("record %+v (found %v), want %s passed through %s with when and the program", rec, ok, claudeLabVersion, ClaudeCheckAnthropic)
+	}
+	// S-0360: through no provider, the environment is an agent's, with no gateway's
+	env := lab.env()
+	if env["ANTHROPIC_BASE_URL"] == claudeLabBaseURL || env["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == claudeLabHaiku || env["FLAI_AGENT"] != claudeCheckAgent {
+		t.Errorf("the check through no provider ran with ANTHROPIC_BASE_URL %q, ANTHROPIC_DEFAULT_HAIKU_MODEL %q, FLAI_AGENT %q; want no gateway's and %s", env["ANTHROPIC_BASE_URL"], env["ANTHROPIC_DEFAULT_HAIKU_MODEL"], env["FLAI_AGENT"], claudeCheckAgent)
 	}
 	argv, _ := os.ReadFile(filepath.Join(lab.out, "argv"))
 	args := strings.Split(strings.TrimSpace(string(argv)), "\n")
@@ -202,7 +258,7 @@ func TestAnUncheckedClaudeCodeIsCheckedAndRecorded(t *testing.T) {
 		t.Errorf("a passed check opened %d threads", n)
 	}
 	logs := lab.logs.String()
-	for _, want := range []string{`msg="claude code check started"`, `msg="claude code check ended"`, "version=" + claudeLabVersion, "outcome=passed"} {
+	for _, want := range []string{`msg="claude code check started"`, `msg="claude code check ended"`, "version=" + claudeLabVersion, "provider=" + ClaudeCheckAnthropic, "outcome=passed"} {
 		if !strings.Contains(logs, want) {
 			t.Errorf("the log lacks %s:\n%s", want, logs)
 		}
@@ -216,14 +272,14 @@ func TestARecordedClaudeCodeIsNotCheckedAgain(t *testing.T) {
 			lab := newClaudeLab(t, false)
 			repo := lab.serve("harbour", harness.ClaudeCode)
 			before := ClaudeCheck{Checked: "2026-10-01T00:00:00Z", Program: lab.stub, Outcome: outcome}
-			if err := lab.o.Dir.recordClaudeCheck(claudeLabVersion, before); err != nil {
+			if err := lab.o.Dir.recordClaudeCheck(claudeLabVersion, ClaudeCheckAnthropic, before); err != nil {
 				t.Fatal(err)
 			}
 			lab.check()
 			if got := strings.Join(lab.calls(), " "); got != "version" {
 				t.Errorf("the stand-in ran as %q, want its version read and nothing else", got)
 			}
-			if got := lab.records()[claudeLabVersion]; got != before {
+			if got := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]; got != before {
 				t.Errorf("the record became %+v", got)
 			}
 			if n := len(threadsOf(t, repo)); n != 0 {
@@ -236,14 +292,16 @@ func TestARecordedClaudeCodeIsNotCheckedAgain(t *testing.T) {
 // S-0286: a failed check is recorded with Claude Code's error, and told on
 // one thread on the manifest of each served project whose agents run
 // claude-code, quoting it and naming the version; a project on another
-// harness hears nothing.
+// harness hears nothing. S-0360: nor does one whose default agent names
+// another provider than the check ran through, and the thread names it.
 func TestAFailedClaudeCodeCheckOpensOneThreadQuotingItsError(t *testing.T) {
 	lab := newClaudeLab(t, true)
 	claude := lab.serve("harbour", harness.ClaudeCode)
 	other := lab.serve("quay", harness.Command)
+	gateway := lab.serveOn("pier", harness.ClaudeCode, claudeLabGateway, "")
 	lab.check()
 
-	rec := lab.records()[claudeLabVersion]
+	rec := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]
 	if rec.Outcome != ClaudeCheckFailed || !strings.Contains(rec.Error, claudeLabError) || !strings.Contains(rec.Error, "stand-in: the write was refused") || !strings.Contains(rec.Error, "was not written") {
 		t.Fatalf("record %+v, want failed with the stand-in's error", rec)
 	}
@@ -252,16 +310,19 @@ func TestAFailedClaudeCodeCheckOpensOneThreadQuotingItsError(t *testing.T) {
 		t.Fatalf("%d threads on the claude-code project, want one", len(all))
 	}
 	th := all[0]
-	if th.Anchor.Path != "system-flow.yaml" || !th.Open() || th.Opener() != claudeCheckAuthor || !strings.Contains(th.Title, claudeLabVersion) {
-		t.Errorf("thread %+v, want one open on system-flow.yaml by %s naming %s", th, claudeCheckAuthor, claudeLabVersion)
+	if th.Anchor.Path != "system-flow.yaml" || !th.Open() || th.Opener() != claudeCheckAuthor || !strings.Contains(th.Title, claudeLabVersion+" through "+ClaudeCheckAnthropic) {
+		t.Errorf("thread %+v, want one open on system-flow.yaml by %s naming %s through %s", th, claudeCheckAuthor, claudeLabVersion, ClaudeCheckAnthropic)
 	}
-	for _, want := range []string{"```text\n", claudeLabError, "Claude Code " + claudeLabVersion, ".mcp.json", "will not go through permission_prompt"} {
+	for _, want := range []string{"```text\n", claudeLabError, "Claude Code " + claudeLabVersion, "through " + ClaudeCheckAnthropic, ".mcp.json", "will not go through permission_prompt", "remove the " + ClaudeCheckAnthropic + " entry under " + claudeLabVersion} {
 		if !strings.Contains(th.Body, want) {
 			t.Errorf("the thread lacks %q:\n%s", want, th.Body)
 		}
 	}
 	if n := len(threadsOf(t, other)); n != 0 {
 		t.Errorf("%d threads on the project on another harness", n)
+	}
+	if n := len(threadsOf(t, gateway)); n != 0 {
+		t.Errorf("%d threads on the project whose agent names %s", n, claudeLabGateway)
 	}
 	logs := lab.logs.String()
 	if !strings.Contains(logs, `level=WARN msg="claude code check ended"`) || !strings.Contains(logs, "outcome=failed") {
@@ -302,7 +363,7 @@ func TestALookChecksTheClaudeItWouldRunOnce(t *testing.T) {
 	if got := strings.Join(lab.calls(), " "); got != "version p" {
 		t.Fatalf("the stand-in ran as %q, want one check; flai serve logged:\n%s", got, lab.logs.String())
 	}
-	if rec := lab.records()[claudeLabVersion]; rec.Outcome != ClaudeCheckPassed {
+	if rec := lab.records()[claudeLabVersion][ClaudeCheckAnthropic]; rec.Outcome != ClaudeCheckPassed {
 		t.Fatalf("record %+v", rec)
 	}
 
@@ -315,5 +376,170 @@ func TestALookChecksTheClaudeItWouldRunOnce(t *testing.T) {
 	lab.checker.wait()
 	if got := strings.Join(lab.calls(), " "); got != "version p version" {
 		t.Errorf("the stand-in ran as %q, want its version read again and no check", got)
+	}
+}
+
+// S-0360: a project whose default agent names a provider has the check run
+// through it: the adapter's provider environment, from the host's entry with
+// the project's overrides laid over, the haiku alias resolved through its
+// models, and the key copied from its variable; it is recorded under the
+// provider, and the key is in no log line or record.
+func TestAClaudeCodeCheckRunsThroughTheProviderTheDefaultAgentNames(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	const key = "sk-test-not-a-real-key"
+	t.Setenv(claudeLabKeyEnv, key)
+	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-inherited")
+	repo := lab.serveOn("harbour", harness.ClaudeCode, claudeLabGateway, "providers:\n  "+claudeLabGateway+":\n    models:\n      sonnet: vendor/sonnet-in-project\n")
+	lab.checkThrough(repo.Root, claudeLabGateway)
+
+	if got := strings.Join(lab.calls(), " "); got != "version p" {
+		t.Fatalf("the stand-in ran as %q, want its version read and one check; flai serve logged:\n%s", got, lab.logs.String())
+	}
+	env := lab.env()
+	for name, want := range map[string]string{
+		"ANTHROPIC_BASE_URL":             claudeLabBaseURL,
+		"ANTHROPIC_DEFAULT_HAIKU_MODEL":  claudeLabHaiku,
+		"ANTHROPIC_DEFAULT_SONNET_MODEL": "vendor/sonnet-in-project",
+		"ANTHROPIC_AUTH_TOKEN":           key,
+		"ANTHROPIC_API_KEY":              "",
+		"FLAI_AGENT":                     claudeCheckAgent,
+	} {
+		if got, ok := env[name]; !ok || got != want {
+			t.Errorf("the check ran with %s %q (set %v), want %q", name, got, ok, want)
+		}
+	}
+	argv, _ := os.ReadFile(filepath.Join(lab.out, "argv"))
+	if !strings.Contains(string(argv), "--model\nhaiku\n") {
+		t.Errorf("the check's arguments lack --model haiku:\n%s", argv)
+	}
+	all := lab.records()[claudeLabVersion]
+	if rec, ok := all[claudeLabGateway]; !ok || rec.Outcome != ClaudeCheckPassed {
+		t.Errorf("records %+v, want %s passed through %s", all, claudeLabVersion, claudeLabGateway)
+	}
+	if _, ok := all[ClaudeCheckAnthropic]; ok {
+		t.Errorf("records %+v: the check through %s is recorded as %s too", all, claudeLabGateway, ClaudeCheckAnthropic)
+	}
+	logs := lab.logs.String()
+	if !strings.Contains(logs, `msg="claude code check ended"`) || !strings.Contains(logs, "provider="+claudeLabGateway) {
+		t.Errorf("the log does not name the provider the check ran through:\n%s", logs)
+	}
+	file, _ := os.ReadFile(lab.o.Dir.claudeChecksFile())
+	if strings.Contains(logs, key) || strings.Contains(string(file), key) {
+		t.Errorf("the key's value reached the log or the record")
+	}
+}
+
+// S-0360: a version that passed through Anthropic is checked again through a
+// provider the first time a served project's default agent names it, and not
+// again after that, by this flai serve or by the next one.
+func TestAVersionPassedThroughOneProviderIsCheckedThroughAnother(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	t.Setenv(claudeLabKeyEnv, "sk-test-not-a-real-key")
+	direct := lab.serve("harbour", harness.ClaudeCode)
+	gateway := lab.serveOn("pier", harness.ClaudeCode, claudeLabGateway, "")
+	ctx := context.Background()
+
+	lab.checker.consider(ctx, direct.Root, lab.config())
+	lab.checker.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p" {
+		t.Fatalf("the stand-in ran as %q, want one check through %s; flai serve logged:\n%s", got, ClaudeCheckAnthropic, lab.logs.String())
+	}
+	lab.checker.consider(ctx, gateway.Root, lab.config())
+	lab.checker.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p version p" {
+		t.Fatalf("the stand-in ran as %q, want a second check through %s; flai serve logged:\n%s", got, claudeLabGateway, lab.logs.String())
+	}
+	if env := lab.env(); env["ANTHROPIC_BASE_URL"] != claudeLabBaseURL {
+		t.Errorf("the second check ran with ANTHROPIC_BASE_URL %q, want %s", env["ANTHROPIC_BASE_URL"], claudeLabBaseURL)
+	}
+	all := lab.records()[claudeLabVersion]
+	if all[ClaudeCheckAnthropic].Outcome != ClaudeCheckPassed || all[claudeLabGateway].Outcome != ClaudeCheckPassed {
+		t.Fatalf("records %+v, want %s passed through %s and %s", all, claudeLabVersion, ClaudeCheckAnthropic, claudeLabGateway)
+	}
+
+	lab.checker.consider(ctx, direct.Root, lab.config())
+	lab.checker.wait()
+	lab.checker.consider(ctx, gateway.Root, lab.config())
+	lab.checker.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p version p" {
+		t.Errorf("the stand-in ran as %q after more looks, want nothing more", got)
+	}
+	next := newClaudeChecker(lab.o, func() []Entry { return lab.served })
+	next.consider(ctx, gateway.Root, lab.config())
+	next.wait()
+	if got := strings.Join(lab.calls(), " "); got != "version p version p version" {
+		t.Errorf("the stand-in ran as %q for the next flai serve, want its version read and no check", got)
+	}
+}
+
+// S-0360: a provider whose key's variable is unset or empty is not checked,
+// nothing is recorded, no thread is opened, and the log says the check was
+// skipped and names the variable; one claude cannot call, of another API, is
+// not checked either, and the log says why.
+func TestAProviderWithoutItsKeyIsNotChecked(t *testing.T) {
+	for _, c := range []struct{ provider, msg, why string }{
+		{claudeLabGateway, `level=WARN msg="claude code check skipped"`, claudeLabKeyEnv + ", which is unset or empty"},
+		{claudeLabChat, `level=WARN msg="claude code not checked"`, "claude-code speaks " + manifest.APIAnthropicMessages + " alone"},
+	} {
+		t.Run(c.provider, func(t *testing.T) {
+			lab := newClaudeLab(t, true)
+			t.Setenv(claudeLabKeyEnv, "")
+			repo := lab.serveOn("harbour", harness.ClaudeCode, c.provider, "")
+			lab.checkThrough(repo.Root, c.provider)
+
+			if got := strings.Join(lab.calls(), " "); got != "version" {
+				t.Errorf("the stand-in ran as %q, want its version read and no check", got)
+			}
+			if all := lab.records(); len(all) != 0 {
+				t.Errorf("records %+v, want none", all)
+			}
+			if n := len(threadsOf(t, repo)); n != 0 {
+				t.Errorf("%d threads opened", n)
+			}
+			logs := lab.logs.String()
+			for _, want := range []string{c.msg, "provider=" + c.provider, "version=" + claudeLabVersion, c.why} {
+				if !strings.Contains(logs, want) {
+					t.Errorf("the log lacks %s:\n%s", want, logs)
+				}
+			}
+		})
+	}
+}
+
+// S-0360: a record written before checks were made per provider, one record
+// for a version, reads as checked through anthropic, and the next record
+// writes the file by version and then by provider.
+func TestAnOlderClaudeChecksFileReadsAsAnthropic(t *testing.T) {
+	lab := newClaudeLab(t, false)
+	lab.serve("harbour", harness.ClaudeCode)
+	if err := os.MkdirAll(string(lab.o.Dir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	old := `{"` + claudeLabVersion + `": {"checked": "2026-10-01T00:00:00Z", "program": "/opt/claude", "outcome": "failed", "error": "refused"}}`
+	if err := os.WriteFile(lab.o.Dir.claudeChecksFile(), []byte(old), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want := ClaudeCheck{Checked: "2026-10-01T00:00:00Z", Program: "/opt/claude", Outcome: ClaudeCheckFailed, Error: "refused"}
+	if got := lab.records()[claudeLabVersion]; len(got) != 1 || got[ClaudeCheckAnthropic] != want {
+		t.Fatalf("the older record reads as %+v, want %+v under %s alone", got, want, ClaudeCheckAnthropic)
+	}
+	lab.check()
+	if got := strings.Join(lab.calls(), " "); got != "version" {
+		t.Errorf("the stand-in ran as %q, want its version read and no check", got)
+	}
+
+	if err := lab.o.Dir.recordClaudeCheck(claudeLabVersion, claudeLabGateway, ClaudeCheck{Checked: "2026-10-02T00:00:00Z", Program: "/opt/claude", Outcome: ClaudeCheckPassed}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(lab.o.Dir.claudeChecksFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var written map[string]map[string]ClaudeCheck
+	if err := json.Unmarshal(data, &written); err != nil {
+		t.Fatalf("the file is not by version and then by provider: %v\n%s", err, data)
+	}
+	if got := written[claudeLabVersion]; got[ClaudeCheckAnthropic] != want || got[claudeLabGateway].Outcome != ClaudeCheckPassed {
+		t.Errorf("the file holds %+v, want the older record under %s and the new one under %s", got, ClaudeCheckAnthropic, claudeLabGateway)
 	}
 }
