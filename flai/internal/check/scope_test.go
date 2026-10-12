@@ -257,11 +257,11 @@ func TestScopedCheckLeavesOutAnItemArchiveOutsideTheStory(t *testing.T) {
 	}
 }
 
-// I-0123, ADR-0133: scoped to a story, a board.wip-limit on the main
-// checkout's board, in progress over its limit as at S-0321's and S-0339's
-// close-outs or review over it, advisory, is left out of the result, and its
-// counts are taken back, advisory included, so the run neither notes nor
-// records it. Unscoped, it is reported as before.
+// I-0122, I-0123, ADR-0133: scoped to a story, a board.wip-limit on the main
+// checkout's board, in progress over its limit as at S-0291's, S-0321's, and
+// S-0339's close-outs or review over it, advisory, is left out of the result,
+// and its counts are taken back, advisory included, so the run neither notes
+// nor records it. Unscoped, it is reported as before.
 func TestScopedCheckLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
