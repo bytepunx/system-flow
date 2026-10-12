@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -83,6 +84,14 @@ A story whose branch changes a path Claude Code protects (a .claude folder,
 story's owner or the project's owner, or anyone but the orchestrator when
 neither is named. Anyone else is refused, before anything is merged, with the
 files named; --dry-run lists them.
+
+Markdown flai accept commits passes the project's lint (S-0367): the fix
+command of each test tier that has one runs over what the main checkout has
+not committed before anything changes and again before step 3's commit, and
+step 0's rebase runs it over what the story branch changes. When a tier's
+check still fails on those files, the acceptance is refused with each file,
+line, and error, before anything changes or before the merge; correct them
+and accept again. --dry-run runs neither.
 
 --by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless
 orchestration.permissions.accept_reviews is on; under FLAI_ROLE=orchestrate no
@@ -176,10 +185,17 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return acc, nil
 	}
 	acc.ClosedMessages, acc.closing = nil, nil
+	useGit, hasBranch := a.inGitWorkTree(repo.MainRoot), res.Branch != ""
+	// what the acceptance commits from the main checkout passes the lint
+	// its fix leaves, or nothing changes (S-0367, TH-0413)
+	if useGit {
+		if err := a.refuseUnfixedUncommitted(context.Background(), it.ID, repo.Root); err != nil {
+			return nil, err
+		}
+	}
 	if res.CommitOnly {
 		return a.finishCommit(repo, it, acc, o)
 	}
-	useGit, hasBranch := a.inGitWorkTree(repo.MainRoot), res.Branch != ""
 
 	// 0. bring the story branch into the main branch (ADR-0019)
 	var changed []string // what the merge brought, for the stories still open
@@ -457,11 +473,13 @@ func canonicalSet(ids []string) map[string]bool {
 	return set
 }
 
-// commitAcceptance is step 3: it commits everything in the main checkout
-// under the acceptance's subject. git add and git commit are run again while
-// another git process holds the index lock (I-0100). A commit that fails even
-// so says what the acceptance has done and how to finish it.
+// commitAcceptance is step 3: it runs the lint fix over what the main
+// checkout has not committed (S-0367) and commits everything there under the
+// acceptance's subject. git add and git commit are run again while another
+// git process holds the index lock (I-0100). A commit that fails even so says
+// what the acceptance has done and how to finish it.
 func (a *app) commitAcceptance(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, trailers []string) error {
+	a.fixUncommitted(context.Background(), it.ID, repo.Root)
 	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, "add", "-A"); err != nil {
 		return notCommitted(it.ID, res, "not yet staged", err)
 	}

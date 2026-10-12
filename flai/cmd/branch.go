@@ -177,19 +177,25 @@ func (a *app) mergeStoryBranch(repo *workitem.Repo, id string) (bool, error) {
 		return false, nil
 	}
 	branch, path := storyBranch(id), repo.WorktreePath(id)
-	hasWorktree := false
+	hasWorktree, base := false, ""
 	if _, err := os.Stat(path); err == nil {
 		hasWorktree = true
 		if st, _ := a.runner.Run(path, "git", "status", "--porcelain"); strings.TrimSpace(st) != "" {
 			return false, fmt.Errorf("the worktree %s has uncommitted changes; commit them on %s (or discard them) before accepting", relPath(repo.MainRoot, path), branch)
 		}
-		if _, _, err := a.syncStoryBranch(repo, id); err != nil {
+		if base, _, err = a.syncStoryBranch(repo, id); err != nil {
 			return false, err
 		}
 	}
 	// a conflict git-added unresolved must not reach main (S-0253, I-0066)
 	if err := a.refuseConflictMarkers(repo, id); err != nil {
 		return false, err
+	}
+	// nor lint the fix after the rebase left (S-0367, TH-0413)
+	if hasWorktree {
+		if err := a.refuseUnfixedBranch(repo, id, base); err != nil {
+			return false, err
+		}
 	}
 	if _, err := a.runner.Run(repo.MainRoot, "git", "merge", "--ff-only", "--quiet", branch); err != nil {
 		return false, fmt.Errorf("merge %s into the main branch: %w", branch, err)
