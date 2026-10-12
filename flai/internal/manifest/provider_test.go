@@ -26,9 +26,9 @@ func TestProviderProblems(t *testing.T) {
 		{Provider{BaseURL: "/v1"}, `providers.litellm.base_url "/v1" is not an absolute http or https URL`},
 		{Provider{BaseURL: "ftp://litellm.example.com"}, `providers.litellm.base_url "ftp://litellm.example.com" is not an absolute http or https URL`},
 		{Provider{BaseURL: "https://"}, `providers.litellm.base_url "https://" is not an absolute http or https URL`},
-		{Provider{BaseURL: "https://me:secret@litellm.example.com"}, `providers.litellm.base_url "https://me:secret@litellm.example.com" carries a user or password`},
-		{Provider{KeyEnv: "1KEY"}, `providers.litellm.key_env "1KEY" is not the name of an environment variable`},
-		{Provider{KeyEnv: "LITELLM-KEY"}, `providers.litellm.key_env "LITELLM-KEY" is not the name of an environment variable`},
+		{Provider{BaseURL: "https://me:secret@litellm.example.com"}, `providers.litellm.base_url carries a user or password`},
+		{Provider{KeyEnv: "1KEY"}, `providers.litellm.key_env is not the name of an environment variable`},
+		{Provider{KeyEnv: "LITELLM-KEY"}, `providers.litellm.key_env is not the name of an environment variable`},
 		{Provider{Models: map[string]string{"": "claude-opus-5-5"}}, `providers.litellm.models alias "" is not a name`},
 		{Provider{Models: map[string]string{"opus": ""}}, `providers.litellm.models.opus "" is not a model ID`},
 		{Provider{Models: map[string]string{"opus": "has space"}}, `providers.litellm.models.opus "has space" is not a model ID`},
@@ -36,6 +36,13 @@ func TestProviderProblems(t *testing.T) {
 		errs := c.p.Problems("providers.litellm")
 		if len(errs) != 1 || !strings.Contains(errs[0], c.want) {
 			t.Errorf("%+v: got %q, want %q", c.p, errs, c.want)
+		}
+	}
+	// A key pasted where its variable's name goes, or a password in the URL,
+	// is never repeated in the message.
+	for _, p := range []Provider{{KeyEnv: "sk-or-v1-0123456789"}, {BaseURL: "https://me:sk-or-v1-0123456789@litellm.example.com"}} {
+		if errs := p.Problems("providers.litellm"); len(errs) != 1 || strings.Contains(errs[0], "sk-or-v1-0123456789") {
+			t.Errorf("%+v: got %q, want one problem without the secret", p, errs)
 		}
 	}
 }

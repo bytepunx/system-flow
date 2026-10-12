@@ -9,11 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // EnvVar overrides the config file path when set.
@@ -72,6 +75,13 @@ type AgentStart struct {
 	// (S-0104): the program that is run and the arguments that say what the
 	// agent may do. A harness not here runs with its adapter's defaults.
 	Harnesses map[string]HarnessHost `json:"harnesses,omitempty"`
+	// Providers are where the model calls of a story's agent that names a
+	// provider go (ADR-0129): each entry's API, base URL, the name of the
+	// environment variable that holds its key, and the harness's model
+	// aliases on it, every entry whole. It never holds a key; flai serve
+	// agent provider manages it, and a project's manifest may override an
+	// entry's api, base_url, and models.
+	Providers map[string]manifest.Provider `json:"providers,omitempty"`
 	// AutoRestarts is how many times flai serve restarts a story's agent on
 	// its own after it ends with its story in progress (ADR-0108). Nil means
 	// DefaultAutoRestarts, 0 turns the restart off, and a negative count is
@@ -100,6 +110,43 @@ func (a AgentStart) WithAutoRestarts(n int) (AgentStart, error) {
 	}
 	a.AutoRestarts = &n
 	return a, nil
+}
+
+// WithProvider returns the settings with the provider name set to p, refusing
+// a name that is not one and an entry manifest.HostProviderProblems refuses,
+// such as one without its api, base_url, or key_env. The map is copied.
+func (a AgentStart) WithProvider(name string, p manifest.Provider) (AgentStart, error) {
+	if err := checkProviders(map[string]manifest.Provider{name: p}); err != nil {
+		return a, err
+	}
+	next := maps.Clone(a.Providers)
+	if next == nil {
+		next = map[string]manifest.Provider{}
+	}
+	next[name] = p
+	a.Providers = next
+	return a, nil
+}
+
+// WithoutProvider returns the settings without the provider name. The map is
+// copied.
+func (a AgentStart) WithoutProvider(name string) AgentStart {
+	next := maps.Clone(a.Providers)
+	delete(next, name)
+	if len(next) == 0 {
+		next = nil
+	}
+	a.Providers = next
+	return a
+}
+
+// checkProviders refuses providers manifest.HostProviderProblems finds wrong,
+// with every problem, each naming the setting that fixes it.
+func checkProviders(providers map[string]manifest.Provider) error {
+	if errs := manifest.HostProviderProblems(providers); len(errs) > 0 {
+		return errors.New(strings.Join(errs, "; "))
+	}
+	return nil
 }
 
 // checkAutoRestarts refuses a negative count of automatic restarts.
@@ -263,8 +310,9 @@ func Load(path string) (cfg Config, created bool, err error) {
 	return cfg, false, nil
 }
 
-// Parse decodes JSON into a Config, rejecting unknown keys and a negative
-// agent.auto_restarts.
+// Parse decodes JSON into a Config, rejecting unknown keys, a negative
+// agent.auto_restarts, and an agent.providers entry that is not whole or sets
+// a value flai refuses.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -276,6 +324,9 @@ func Parse(data []byte) (Config, error) {
 		if err := checkAutoRestarts(*n); err != nil {
 			return Config{}, err
 		}
+	}
+	if err := checkProviders(cfg.Agent.Providers); err != nil {
+		return Config{}, err
 	}
 	return cfg, nil
 }

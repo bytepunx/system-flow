@@ -2462,9 +2462,10 @@ flai serve agent clear
 
 Subcommands:
 
-- [clear](#flai-serve-agent-clear): Remove the command and the name; the harnesses and the restart limit stay
+- [clear](#flai-serve-agent-clear): Remove the command and the name; the harnesses, the providers, and the restart limit stay
 - [commit](#flai-serve-agent-commit): Start an agent to commit what a story in review left uncommitted in its worktree
 - [harness](#flai-serve-agent-harness): Set the program a harness is and the arguments that say what its agent may do
+- [provider](#flai-serve-agent-provider): Set where the model calls of a story's agent that names a provider go: its API, its URL, and the variable that holds its key
 - [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed, or that has none here
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own
 - [show](#flai-serve-agent-show): Print the command and whether the action is enabled here
@@ -2475,7 +2476,7 @@ Subcommands:
 
 ##### flai serve agent clear
 
-Remove the command and the name; the harnesses and the restart limit stay.
+Remove the command and the name; the harnesses, the providers, and the restart limit stay.
 
 ```text
 flai serve agent clear
@@ -2524,6 +2525,38 @@ Flags:
 |------|---------|
 | `--program` string | the program the harness is on this host |
 | `--reset` | go back to the adapter's program and arguments |
+
+##### flai serve agent provider
+
+Set where the model calls of a story's agent that names a provider go: its API, its URL, and the variable that holds its key.
+
+```text
+flai serve agent provider [<name>] [--api <api>] [--base-url <url>] [--key-env <variable>] [--model <alias>=<name>]... [--reset] [flags]
+```
+
+A story's agent may name a provider, such as litellm or openrouter, beside its harness and model; you say here what that is on this host. --api is what the provider speaks (anthropic-messages, openai-chat, openai-responses), --base-url where it answers, and --key-env the name of the environment variable that holds its key. No flag takes a key: the key stays in that variable, which flai serve reads when it starts the agent, and is never written to the configuration. --model &lt;alias&gt;=&lt;name&gt;, repeated, maps the harness's model aliases to names on the provider; given at all, it replaces the entry's aliases.
+
+A new entry needs --api, --base-url, and --key-env; on an entry that is set, the flags given change those fields and leave the rest. --reset removes the entry. With a name and no flag, the entry is shown; with no name, every entry. A project's manifest may override an entry's api, base\_url, and models under providers.&lt;name&gt;, never its key\_env.
+
+Examples:
+
+```bash
+flai serve agent provider
+flai serve agent provider litellm --api anthropic-messages --base-url http://127.0.0.1:4000 --key-env LITELLM_API_KEY
+flai serve agent provider openrouter --api openai-chat --base-url https://openrouter.ai/api/v1 --key-env OPENROUTER_API_KEY --model opus=anthropic/claude-opus-5-5 --model sonnet=anthropic/claude-sonnet-5
+flai serve agent provider litellm --base-url https://litellm.example.com
+flai serve agent provider litellm --reset
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--api` string | what the provider speaks: anthropic-messages, openai-chat, openai-responses |
+| `--base-url` string | the provider's http or https URL, such as https://litellm.example.com |
+| `--key-env` string | the name of the environment variable that holds the provider's key, such as LITELLM\_API\_KEY; never the key |
+| `--model` stringArray | a model alias and its name on the provider, alias=name (repeatable; replaces the entry's aliases) |
+| `--reset` | remove the provider's entry |
 
 ##### flai serve agent restart
 

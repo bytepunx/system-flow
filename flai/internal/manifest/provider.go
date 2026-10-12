@@ -47,11 +47,13 @@ func (p Provider) Problems(what string) []string {
 	}
 	if p.BaseURL != "" {
 		if r := baseURLProblem(p.BaseURL); r != "" {
-			errs = append(errs, fmt.Sprintf("%s.base_url %q %s", what, p.BaseURL, r))
+			errs = append(errs, fmt.Sprintf("%s.base_url %s", what, r))
 		}
 	}
+	// The value is not quoted: one that is not a variable's name may be the
+	// key itself, pasted in its place.
 	if p.KeyEnv != "" && !envNamePattern.MatchString(p.KeyEnv) {
-		errs = append(errs, fmt.Sprintf("%s.key_env %q is not the name of an environment variable; write one such as LITELLM_API_KEY (letters, digits, _, not beginning with a digit)", what, p.KeyEnv))
+		errs = append(errs, fmt.Sprintf("%s.key_env is not the name of an environment variable; write one such as LITELLM_API_KEY (letters, digits, _, not beginning with a digit), never the key", what))
 	}
 	for _, alias := range sortedKeys(p.Models) {
 		switch model := p.Models[alias]; {
@@ -65,14 +67,15 @@ func (p Provider) Problems(what string) []string {
 }
 
 // baseURLProblem says what is wrong with a base URL, or "" when it is an
-// absolute http or https URL with a host and no user or password in it.
+// absolute http or https URL with a host and no user or password in it. It
+// quotes the URL only when it carries no user or password.
 func baseURLProblem(s string) string {
 	u, err := url.Parse(s)
 	switch {
-	case err != nil || u.Host == "" || u.Scheme != "http" && u.Scheme != "https":
-		return "is not an absolute http or https URL; write one such as https://litellm.example.com or http://127.0.0.1:4000"
-	case u.User != nil:
+	case err == nil && u.User != nil:
 		return "carries a user or password; write the URL without it, and put the key in the variable key_env names"
+	case err != nil || u.Host == "" || u.Scheme != "http" && u.Scheme != "https":
+		return fmt.Sprintf("%q is not an absolute http or https URL; write one such as https://litellm.example.com or http://127.0.0.1:4000", s)
 	}
 	return ""
 }

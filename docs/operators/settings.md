@@ -51,6 +51,10 @@ Keys only the `flai serve` commands on the host change, or the dashboard's Setti
 | `agent.attended_minutes` | `6` | `flai serve agent set --attended-minutes` | How recent a sign of someone attending must be, and how long it holds a ready story back |
 | `agent.harnesses.<name>.program` | the harness's own program, `claude` for `claude-code` | `flai serve agent harness <name> --program` | The binary a harness runs on this host |
 | `agent.harnesses.<name>.args` | the adapter's, `--permission-mode acceptEdits --allowedTools Bash,mcp__flai` for `claude-code` | `flai serve agent harness <name> -- ...`, `--reset` | What an agent that harness starts may do |
+| `agent.providers.<name>.api` | none: no provider is set | `flai serve agent provider <name> --api`, `--reset` | What the provider a story's agent may name speaks: `anthropic-messages`, `openai-chat`, or `openai-responses`. A new entry needs `api`, `base_url`, and `key_env`; a project may override `api`, `base_url`, and `models` under its manifest's `providers.<name>` ([ADR-0129](../../design/adrs/0129-a-story-s-agent-names-a-provider-beside-its-harness-and-model-and-the-providers.md)) |
+| `agent.providers.<name>.base_url` | none | `flai serve agent provider <name> --base-url` | Where the provider answers, an absolute `http` or `https` URL with no user or password in it |
+| `agent.providers.<name>.key_env` | none | `flai serve agent provider <name> --key-env` | The name of the environment variable on this host that holds the provider's key, which `flai serve` reads when it starts the agent. The key itself is never written to the configuration, and no flag takes it |
+| `agent.providers.<name>.models.<name>` | none: the harness's own names | `flai serve agent provider <name> --model <alias>=<name>`, repeated; given at all, it replaces the entry's aliases | A model alias of the harness, such as `opus`, and the model's name on the provider, such as `anthropic/claude-opus-5-5` |
 | `agent.auto_restarts` | `2` | `flai serve agent set --auto-restarts N` | How many times `flai serve` restarts a story's agent on its own after it ends with its story in progress, failed and not asking; `0` turns the automatic restart off, and past the limit `flai serve` opens one thread on the story for you ([ADR-0108](../../design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md)) |
 | `checks.commands[].name` | none: the manifest's `checks` apply | `flai serve checks set --name`, `flai serve checks clear` | The name of one check a story in review is run with ([The checks host action](index.md#the-checks-host-action-s-0082)) |
 | `checks.commands[].command` | none | `flai serve checks set --name <name> -- ...` | That check's argument list, never run through a shell |
@@ -273,10 +277,12 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--agent-config` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--all` | [flai board](../users/flai-reference.md#flai-board), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai message list](../users/flai-reference.md#flai-message-list), [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage), [flai test](../users/flai-reference.md#flai-test), [flai thread list](../users/flai-reference.md#flai-thread-list) |
 | `--all-projects` | [flai serve disable](../users/flai-reference.md#flai-serve-disable), [flai serve enable](../users/flai-reference.md#flai-serve-enable) |
+| `--api` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--apply` | [flai order](../users/flai-reference.md#flai-order), [flai release](../users/flai-reference.md#flai-release) |
 | `--attach` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--auto-restarts` | [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set) |
 | `--autocommit` | [flai adr accept](../users/flai-reference.md#flai-adr-accept), [flai adr new](../users/flai-reference.md#flai-adr-new), [flai adr topics](../users/flai-reference.md#flai-adr-topics), [flai agent clear](../users/flai-reference.md#flai-agent-clear), [flai agent set](../users/flai-reference.md#flai-agent-set), [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue close](../users/flai-reference.md#flai-issue-close), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai issue story](../users/flai-reference.md#flai-issue-story), [flai manifest set](../users/flai-reference.md#flai-manifest-set), [flai shared add](../users/flai-reference.md#flai-shared-add), [flai shared remove](../users/flai-reference.md#flai-shared-remove), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
+| `--base-url` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--before` | [flai order](../users/flai-reference.md#flai-order) |
 | `--bind` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--body-stdin` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
@@ -328,6 +334,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--json` | every command ([global flags](../users/flai-reference.md#flai)) |
 | `--keep-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--keep-placed` | [flai order](../users/flai-reference.md#flai-order) |
+| `--key-env` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--last` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `-n`, `--last` | [flai serve journal](../users/flai-reference.md#flai-serve-journal) |
 | `--layout` | [flai import](../users/flai-reference.md#flai-import), [flai new](../users/flai-reference.md#flai-new) |
@@ -339,7 +346,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--message` | [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |
 | `-m`, `--message` | [flai task done](../users/flai-reference.md#flai-task-done) |
 | `--min` | [flai touches suggest](../users/flai-reference.md#flai-touches-suggest) |
-| `--model` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
+| `--model` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--name` | [flai serve agent set](../users/flai-reference.md#flai-serve-agent-set), [flai serve checks set](../users/flai-reference.md#flai-serve-checks-set) |
 | `--nature` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--next` | [flai stream state](../users/flai-reference.md#flai-stream-state) |
@@ -378,7 +385,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--replace-all` | [flai upgrade](../users/flai-reference.md#flai-upgrade) |
 | `--repo` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade), [flai dashboard versions](../users/flai-reference.md#flai-dashboard-versions), [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--report` | [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new) |
-| `--reset` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
+| `--reset` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness), [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--revenue-per-week` | [flai edit](../users/flai-reference.md#flai-edit), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai issue bump](../users/flai-reference.md#flai-issue-bump), [flai issue new](../users/flai-reference.md#flai-issue-new), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--role` | [flai prime](../users/flai-reference.md#flai-prime) |
 | `--role-config` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |

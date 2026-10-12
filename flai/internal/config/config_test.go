@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 func TestLoadCreatesDefaultsOnFirstRun(t *testing.T) {
@@ -223,6 +225,63 @@ func TestAgentAutoRestarts(t *testing.T) {
 	got, err := Parse([]byte(`{"agent":{"auto_restarts":0}}`))
 	if err != nil || got.Agent.AutoRestarts == nil || got.Agent.AutoRestartLimit() != 0 {
 		t.Errorf("0 read from the file is off, not unset: %v %v", got.Agent.AutoRestarts, err)
+	}
+}
+
+// S-0349 (ADR-0129): agent.providers round-trips whole through a save and a
+// load; an entry with an unknown api, a base_url that is not an http or https
+// URL, a key_env that is not a variable's name, or a field left out is
+// refused when set and when loaded, saying what sets it; and an entry is
+// removed alone.
+func TestAgentProviders(t *testing.T) {
+	whole := manifest.Provider{API: manifest.APIOpenAIChat, BaseURL: "https://litellm.example.com", KeyEnv: "LITELLM_API_KEY",
+		Models: map[string]string{"opus": "anthropic/claude-opus-5-5"}}
+	c := Default()
+	agent, err := c.Agent.WithProvider("litellm", whole)
+	if err != nil {
+		t.Fatalf("a whole entry: %v", err)
+	}
+	if c.Agent.Providers != nil {
+		t.Errorf("WithProvider copies the map: %+v", c.Agent.Providers)
+	}
+	c.Agent = agent
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, c); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(back.Agent.Providers, map[string]manifest.Provider{"litellm": whole}) {
+		t.Errorf("round trip: %+v", back.Agent.Providers)
+	}
+	for _, bad := range []struct {
+		name, want string
+		p          manifest.Provider
+	}{
+		{"unknown api", `agent.providers.litellm.api "bedrock" is not an API flai speaks`, manifest.Provider{API: "bedrock", BaseURL: whole.BaseURL, KeyEnv: whole.KeyEnv}},
+		{"base_url not http", `agent.providers.litellm.base_url "ftp://x" is not an absolute http or https URL`, manifest.Provider{API: whole.API, BaseURL: "ftp://x", KeyEnv: whole.KeyEnv}},
+		{"key_env not a name", `agent.providers.litellm.key_env is not the name of an environment variable`, manifest.Provider{API: whole.API, BaseURL: whole.BaseURL, KeyEnv: "sk-123 456"}},
+		{"no key_env", "agent.providers.litellm has no key_env; set it with flai serve agent provider litellm --key-env", manifest.Provider{API: whole.API, BaseURL: whole.BaseURL}},
+		{"no api", "agent.providers.litellm has no api; set it with flai serve agent provider litellm --api", manifest.Provider{BaseURL: whole.BaseURL, KeyEnv: whole.KeyEnv}},
+	} {
+		if _, err := back.Agent.WithProvider("litellm", bad.p); err == nil || !strings.Contains(err.Error(), bad.want) {
+			t.Errorf("%s is refused when set, saying so: %v", bad.name, err)
+		}
+		data, err := json.Marshal(map[string]any{"agent": map[string]any{"providers": map[string]manifest.Provider{"litellm": bad.p}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Parse(data); err == nil || !strings.Contains(err.Error(), bad.want) {
+			t.Errorf("%s in the file is refused on load: %v", bad.name, err)
+		}
+	}
+	if !reflect.DeepEqual(back.Agent.Providers["litellm"], whole) {
+		t.Errorf("a refused entry changes nothing: %+v", back.Agent.Providers)
+	}
+	if got := back.Agent.WithoutProvider("litellm"); got.Providers != nil || len(back.Agent.Providers) != 1 {
+		t.Errorf("removed, and the map copied: %+v %+v", got.Providers, back.Agent.Providers)
 	}
 }
 

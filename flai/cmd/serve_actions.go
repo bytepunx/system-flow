@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -381,16 +382,16 @@ after it ends with its story in progress, 2 when unset and 0 for never
 	// Retired (S-0116, ADR-0043): accepted so that a script that sets it still runs.
 	set.Flags().IntVar(&attended, "attended-minutes", 0, "retired: nobody attending holds a ready story back any more")
 	_ = set.Flags().MarkHidden("attended-minutes")
-	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStopCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
+	c.AddCommand(set, newServeAgentHarnessCmd(a), newServeAgentProviderCmd(a), newServeAgentStartCmd(a), newServeAgentRestartCmd(a), newServeAgentCommitCmd(a), newServeAgentStopCmd(a), newServeAgentStreamCmd(a), newServeAgentUsageCmd(a),
 		&cobra.Command{Use: "show", Short: "Print the command and whether the action is enabled here", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error { return a.showAgentCommand() }},
-		&cobra.Command{Use: "clear", Short: "Remove the command and the name; the harnesses and the restart limit stay", Args: cobra.NoArgs,
+		&cobra.Command{Use: "clear", Short: "Remove the command and the name; the harnesses, the providers, and the restart limit stay", Args: cobra.NoArgs,
 			RunE: func(*cobra.Command, []string) error {
 				cfg, path, err := a.loadConfig()
 				if err != nil {
 					return err
 				}
-				cfg.Agent = config.AgentStart{Harnesses: cfg.Agent.Harnesses, AutoRestarts: cfg.Agent.AutoRestarts}
+				cfg.Agent = config.AgentStart{Harnesses: cfg.Agent.Harnesses, Providers: cfg.Agent.Providers, AutoRestarts: cfg.Agent.AutoRestarts}
 				if err := config.Save(path, cfg); err != nil {
 					return err
 				}
@@ -770,6 +771,153 @@ func settable() []string {
 		}
 	}
 	return out
+}
+
+// flai serve agent provider: where the model calls of a story's agent that
+// names a provider go, on this host (ADR-0129). The flags given change those
+// fields of the entry, --model given at all replaces its aliases, and --reset
+// removes it. No flag takes a key, and nothing here reads the variable that
+// holds it.
+func newServeAgentProviderCmd(a *app) *cobra.Command {
+	var p manifest.Provider
+	var models []string
+	var reset bool
+	c := &cobra.Command{
+		Use:   "provider [<name>] [--api <api>] [--base-url <url>] [--key-env <variable>] [--model <alias>=<name>]... [--reset]",
+		Short: "Set where the model calls of a story's agent that names a provider go: its API, its URL, and the variable that holds its key",
+		Long: `A story's agent may name a provider, such as litellm or openrouter, beside
+its harness and model; you say here what that is on this host. --api is what
+the provider speaks (` + strings.Join(manifest.ProviderAPIs, ", ") + `), --base-url
+where it answers, and --key-env the name of the environment variable that
+holds its key. No flag takes a key: the key stays in that variable, which
+flai serve reads when it starts the agent, and is never written to the
+configuration. --model <alias>=<name>, repeated, maps the harness's model
+aliases to names on the provider; given at all, it replaces the entry's
+aliases.
+
+A new entry needs --api, --base-url, and --key-env; on an entry that is
+set, the flags given change those fields and leave the rest. --reset removes
+the entry. With a name and no flag, the entry is shown; with no name, every
+entry. A project's manifest may override an entry's api, base_url, and
+models under providers.<name>, never its key_env.`,
+		Example: `  flai serve agent provider
+  flai serve agent provider litellm --api anthropic-messages --base-url http://127.0.0.1:4000 --key-env LITELLM_API_KEY
+  flai serve agent provider openrouter --api openai-chat --base-url https://openrouter.ai/api/v1 --key-env OPENROUTER_API_KEY --model opus=anthropic/claude-opus-5-5 --model sonnet=anthropic/claude-sonnet-5
+  flai serve agent provider litellm --base-url https://litellm.example.com
+  flai serve agent provider litellm --reset`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			changed := func(flags ...string) bool {
+				return slices.ContainsFunc(flags, cmd.Flags().Changed)
+			}
+			given := changed("api", "base-url", "key-env", "model")
+			if len(args) == 0 {
+				if given || reset {
+					return fmt.Errorf("name the provider, such as litellm: flai serve agent provider <name> --api <api> --base-url <url> --key-env <variable>")
+				}
+				return a.showProviders("")
+			}
+			name := args[0]
+			if !given && !reset {
+				return a.showProviders(name)
+			}
+			if reset && given {
+				return fmt.Errorf("--reset takes no other flag: it removes provider %s whole", name)
+			}
+			cfg, path, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			if reset {
+				cfg.Agent = cfg.Agent.WithoutProvider(name)
+			} else {
+				entry := cfg.Agent.Providers[name]
+				if changed("api") {
+					entry.API = p.API
+				}
+				if changed("base-url") {
+					entry.BaseURL = p.BaseURL
+				}
+				if changed("key-env") {
+					entry.KeyEnv = p.KeyEnv
+				}
+				if changed("model") {
+					if entry.Models, err = providerModels(models); err != nil {
+						return err
+					}
+				}
+				if cfg.Agent, err = cfg.Agent.WithProvider(name, entry); err != nil {
+					return err
+				}
+			}
+			if err := config.Save(path, cfg); err != nil {
+				return err
+			}
+			return a.showProviders(name)
+		},
+	}
+	c.Flags().StringVar(&p.API, "api", "", "what the provider speaks: "+strings.Join(manifest.ProviderAPIs, ", "))
+	c.Flags().StringVar(&p.BaseURL, "base-url", "", "the provider's http or https URL, such as https://litellm.example.com")
+	c.Flags().StringVar(&p.KeyEnv, "key-env", "", "the name of the environment variable that holds the provider's key, such as LITELLM_API_KEY; never the key")
+	c.Flags().StringArrayVar(&models, "model", nil, "a model alias and its name on the provider, alias=name (repeatable; replaces the entry's aliases)")
+	c.Flags().BoolVar(&reset, "reset", false, "remove the provider's entry")
+	return c
+}
+
+// providerModels are the model aliases --model gives, alias=name each; the
+// names themselves are checked with the rest of the entry.
+func providerModels(pairs []string) (map[string]string, error) {
+	out := map[string]string{}
+	for _, pair := range pairs {
+		alias, model, ok := strings.Cut(pair, "=")
+		alias = strings.TrimSpace(alias)
+		if !ok || alias == "" {
+			return nil, fmt.Errorf("--model %q is not alias=name; write one such as opus=anthropic/claude-opus-5-5", pair)
+		}
+		out[alias] = strings.TrimSpace(model)
+	}
+	return out, nil
+}
+
+// showProviders prints the host's provider name, or every one when name is
+// empty: what each speaks, where, and the name of the variable that holds its
+// key, never the key.
+func (a *app) showProviders(name string) error {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return err
+	}
+	providers := cfg.Agent.Providers
+	if name != "" {
+		providers = map[string]manifest.Provider{}
+		if p, ok := cfg.Agent.Providers[name]; ok {
+			providers[name] = p
+		}
+	}
+	if a.jsonOut {
+		if providers == nil {
+			providers = map[string]manifest.Provider{}
+		}
+		return a.printJSON(map[string]any{"providers": providers})
+	}
+	const add = "--api <api> --base-url <url> --key-env <variable>"
+	switch {
+	case len(providers) > 0:
+	case name == "":
+		fmt.Fprintf(a.out, "no provider is set on this host; add one with flai serve agent provider <name> %s\n", add)
+		return nil
+	default:
+		fmt.Fprintf(a.out, "provider %s has no entry on this host; add it with flai serve agent provider %s %s\n", name, name, add)
+		return nil
+	}
+	for _, n := range slices.Sorted(maps.Keys(providers)) {
+		p := providers[n]
+		fmt.Fprintf(a.out, "provider %s: %s at %s, its key in the variable %s\n", n, p.API, p.BaseURL, p.KeyEnv)
+		for _, alias := range slices.Sorted(maps.Keys(p.Models)) {
+			fmt.Fprintf(a.out, "  model %s: %s\n", alias, p.Models[alias])
+		}
+	}
+	return nil
 }
 
 // hostSettings is the host's configuration as it applies to the project at

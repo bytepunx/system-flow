@@ -337,6 +337,97 @@ func TestServeAgentHarness(t *testing.T) {
 	}
 }
 
+// S-0349 (ADR-0129): a provider's entry is the operator's, set, shown,
+// changed field by field, and removed on the host; a new entry is whole, a
+// refused value changes nothing, clear keeps the providers, and nothing the
+// command prints or writes holds the key, which no flag takes and the
+// command never reads.
+func TestServeAgentProvider(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	const key = "sk-never-shown-0123456789"
+	t.Setenv("LITELLM_API_KEY", key)
+	root := tempProject(t)
+	var seen strings.Builder
+	run := func(args ...string) (string, string, int) {
+		t.Helper()
+		out, errOut, code := runIn(t, root, append([]string{"serve", "agent", "provider"}, args...)...)
+		seen.WriteString(out + errOut)
+		return out, errOut, code
+	}
+	saved := func() map[string]manifest.Provider {
+		t.Helper()
+		cfg, _, err := config.Load(cfgPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Agent.Providers
+	}
+	if out, _, _ := run(); !strings.Contains(out, "no provider is set on this host; add one with flai serve agent provider <name> --api <api> --base-url <url> --key-env <variable>") {
+		t.Errorf("none set: %s", out)
+	}
+	if out, _, _ := run("litellm"); !strings.Contains(out, "provider litellm has no entry on this host; add it with flai serve agent provider litellm --api") {
+		t.Errorf("a name with no entry: %s", out)
+	}
+	if _, errOut, code := run("litellm", "--api", "openai-chat"); code == 0 || !strings.Contains(errOut, "has no base_url; set it with flai serve agent provider litellm --base-url") || saved() != nil {
+		t.Errorf("a new entry must be whole: %d %s %+v", code, errOut, saved())
+	}
+	out, errOut, code := run("litellm", "--api", "openai-chat", "--base-url", "http://127.0.0.1:4000", "--key-env", "LITELLM_API_KEY", "--model", "opus=anthropic/claude-opus-5-5", "--model", "sonnet=anthropic/claude-sonnet-5")
+	if code != 0 || !strings.Contains(out, "provider litellm: openai-chat at http://127.0.0.1:4000, its key in the variable LITELLM_API_KEY\n  model opus: anthropic/claude-opus-5-5\n  model sonnet: anthropic/claude-sonnet-5\n") {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	if out, _, _ := run("litellm"); !strings.Contains(out, "provider litellm: openai-chat at http://127.0.0.1:4000") {
+		t.Errorf("print: %s", out)
+	}
+	// the flags given change those fields; --model given replaces the aliases
+	run("litellm", "--base-url", "https://litellm.example.com", "--model", "haiku=anthropic/claude-haiku-4-5")
+	want := manifest.Provider{API: "openai-chat", BaseURL: "https://litellm.example.com", KeyEnv: "LITELLM_API_KEY", Models: map[string]string{"haiku": "anthropic/claude-haiku-4-5"}}
+	if got := saved(); !reflect.DeepEqual(got, map[string]manifest.Provider{"litellm": want}) {
+		t.Errorf("update: %+v", got)
+	}
+	run("litellm", "--api", "anthropic-messages")
+	want.API = "anthropic-messages"
+	if got := saved()["litellm"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("--api alone keeps the rest: %+v", got)
+	}
+	if js, _, _ := run("litellm", "--json"); !strings.Contains(js, `"litellm": {`) || !strings.Contains(js, `"key_env": "LITELLM_API_KEY"`) {
+		t.Errorf("--json: %s", js)
+	}
+	for _, bad := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"litellm", "--api", "bedrock"}, "is not an API flai speaks"},
+		{[]string{"litellm", "--base-url", "litellm.example.com"}, "is not an absolute http or https URL"},
+		{[]string{"litellm", "--key-env", "litellm-key"}, "is not the name of an environment variable"},
+		{[]string{"litellm", "--model", "opus"}, "is not alias=name"},
+		{[]string{"--api", "openai-chat"}, "name the provider"},
+		{[]string{"litellm", "--reset", "--api", "openai-chat"}, "--reset takes no other flag"},
+		{[]string{"lite llm", "--api", "openai-chat", "--base-url", "https://x.example.com", "--key-env", "X"}, "is not a provider name"},
+	} {
+		if _, errOut, code := run(bad.args...); code == 0 || !strings.Contains(errOut, bad.want) {
+			t.Errorf("%q is refused, saying why: %d %s", bad.args, code, errOut)
+		}
+	}
+	if got := saved()["litellm"]; !reflect.DeepEqual(got, want) {
+		t.Errorf("a refused value changes nothing: %+v", got)
+	}
+	runIn(t, root, "serve", "agent", "clear")
+	if got := saved(); len(got) != 1 {
+		t.Errorf("clear keeps the providers: %+v", got)
+	}
+	if out, _, _ := run("litellm", "--reset"); !strings.Contains(out, "provider litellm has no entry on this host") || saved() != nil {
+		t.Errorf("reset: %s %+v", out, saved())
+	}
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(seen.String()+string(data), key) {
+		t.Errorf("the key is in what flai printed or wrote:\n%s\n%s", seen.String(), data)
+	}
+}
+
 // S-0294 (ADR-0108): --auto-restarts sets how many times flai serve restarts
 // a story's agent on its own, alone without touching the command, the name,
 // or the harnesses; show says it and whether it is the default; a negative
