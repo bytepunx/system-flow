@@ -3,15 +3,18 @@ id: S-0360
 type: story
 nature: improvement
 title: flai serve checks each new claude version through the provider a project's agents name, so a host that reaches Claude only through a gateway is not reported failing
-status: ready
+status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:59:39Z
-updated: 2026-10-12T20:40:11Z
+updated: 2026-10-12T20:40:20Z
 transitions:
   - to: ready
     at: 2026-10-12T20:03:43Z
     by: alex
+  - to: in-progress
+    at: 2026-10-12T20:40:20Z
+    by: agent-S-0360
 tags: [cli]
 topics: [agents]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, design/system/flai-cli.md]

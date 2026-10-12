@@ -3,15 +3,18 @@ id: S-0352
 type: story
 nature: improvement
 title: Each adapter states its capabilities and reads its harness's log into neutral usage events, and flai measures usage from those events
-status: ready
+status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:45:35Z
-updated: 2026-10-12T20:03:53Z
+updated: 2026-10-12T20:40:20Z
 transitions:
   - to: ready
     at: 2026-10-12T20:02:19Z
     by: alex
+  - to: in-progress
+    at: 2026-10-12T20:40:20Z
+    by: agent-S-0352
 tags: [cli]
 topics: [agents, usage]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/turns.go, flai/internal/usage/turns_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, design/system/metrics.md, design/system/flai-cli.md]
@@ -27,10 +30,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:20Z
 forecast:
   duration: 45m
-  delivery: 2026-10-13T02:23:00Z
-  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 5, behind S-0238, S-0360, S-0370, S-0356, S-0354, S-0357 and S-0351."
+  delivery: 2026-10-12T21:50:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 5, behind S-0238, S-0370, S-0360, S-0356, S-0354 and S-0357."
   by: flai
-  at: 2026-10-12T20:03:53Z
+  at: 2026-10-12T20:40:11Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:03Z
