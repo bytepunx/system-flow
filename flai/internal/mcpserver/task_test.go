@@ -13,6 +13,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -315,6 +316,28 @@ func TestTaskDoneAnswersAFailedCheck(t *testing.T) {
 	}
 	if st := t003(t, repo); st != workitem.Done {
 		t.Errorf("T-003 is %s", st)
+	}
+}
+
+// I-0127, ADR-0142: task_done on a server whose flai is a minor version
+// behind the newest flai release in the project's history is a tool error
+// naming the upgrade, and leaves the task open and its changes uncommitted.
+func TestTaskDoneRefusesAFlaiAMinorVersionBehind(t *testing.T) {
+	repo, wt := closeProject(t)
+	gitIn(t, repo.Root, "tag", "flai/v1.10.0")
+	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
+	head := gitIn(t, wt, "rev-parse", "HEAD")
+	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Version: "1.9.3", Now: func() time.Time { return closeClock }})
+
+	out, failed := (&fixture{repo: repo, cs: cs}).call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
+	if !strings.Contains(failed, "this flai is 1.9.3, a minor version behind flai 1.10.0") || !strings.Contains(failed, buildinfo.UpgradeCommand) {
+		t.Fatalf("answered %v, failed %q", out, failed)
+	}
+	if st := t003(t, repo); st != workitem.InProgress {
+		t.Errorf("T-003 is %s", st)
+	}
+	if gitIn(t, wt, "rev-parse", "HEAD") != head || gitIn(t, wt, "diff", "--name-only") != "README.md" {
+		t.Error("the worktree changed")
 	}
 }
 

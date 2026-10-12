@@ -20,12 +20,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -157,7 +159,8 @@ func (r Result) ExitCode() int {
 }
 
 // Run closes the task as ADR-0107 orders it. It returns an error only when
-// it could not start: a task, story, or worktree it cannot find. Once the
+// it could not start: a task, story, or worktree it cannot find, or a flai a
+// major or minor version behind the project's history (ADR-0142). Once the
 // commit step has begun, a step that fails, whether refused or unable to
 // run, is the Result's Stopped and Error, alongside what the steps before it
 // did: they have changed the repository, and the caller reports them either
@@ -202,8 +205,8 @@ type run struct {
 	res    Result
 }
 
-// start fills in the defaults and finds the task, its story, and the
-// story's worktree.
+// start fills in the defaults, finds the task, refuses the close while this
+// flai is outdated (ADR-0142), and finds its story and the story's worktree.
 func start(o Options) (*run, error) {
 	if o.Repo == nil || o.Runner == nil {
 		return nil, errors.New("taskdone needs a project and a runner")
@@ -230,6 +233,9 @@ func start(o Options) (*run, error) {
 	if task.Type != workitem.Task {
 		return nil, fmt.Errorf("%s is a %s; flai task done closes a task (T-nnnn)", task.ID, task.Type)
 	}
+	if err := refuseOutdated(o, task.ID); err != nil {
+		return nil, err
+	}
 	if task.Parent == "" {
 		return nil, fmt.Errorf("%s has no story; give it one with flai edit %s --parent S-nnnn", task.ID, task.ID)
 	}
@@ -249,6 +255,29 @@ func start(o Options) (*run, error) {
 	r.wtRepo.MainRoot = mainRoot(o.Repo)
 	r.res = Result{Task: task.ID, Story: story.ID}
 	return r, nil
+}
+
+// refuseOutdated refuses to close the task while the running flai's major or
+// minor version is behind the newest flai release in the project's history
+// (ADR-0142); a patch behind, or a build that is not a release, closes it.
+func refuseOutdated(o Options, task string) error {
+	out := release.FlaiOutdated(o.Runner, mainRoot(o.Repo), o.Version)
+	if out == nil {
+		return nil
+	}
+	running, _ := buildinfo.Semver(out.Running)
+	newest, _ := buildinfo.Semver(out.Newest)
+	var behind string
+	switch {
+	case running[0] < newest[0]:
+		behind = "major"
+	case running[1] < newest[1]:
+		behind = "minor"
+	default:
+		return nil
+	}
+	return fmt.Errorf("flai task done refuses to close %s: this flai is %s, a %s version behind flai %s in the project's history, and would close it by older rules (ADR-0142); upgrade it with %s and close it again",
+		task, out.Running, behind, out.Newest, out.Upgrade)
 }
 
 // again is the command that runs this close again.

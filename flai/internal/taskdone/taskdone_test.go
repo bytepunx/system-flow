@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
@@ -806,5 +807,109 @@ func TestRunCommitsWhenTheFixFails(t *testing.T) {
 	}
 	if res.Stopped != "" || res.Commit == nil || !slices.Equal(res.Commit.Paths, []string{"README.md"}) {
 		t.Fatalf("stopped at %q: %s, commit %+v", res.Stopped, res.Error, res.Commit)
+	}
+}
+
+// layerUnder is I-0127's case: T-003 and a second open task of S-004 with
+// disjoint touches, each with its file changed in the worktree, and the main
+// checkout's HEAD tagged tag. It returns the project, the worktree, and the
+// second task's ID.
+func layerUnder(t *testing.T, tag string) (*workitem.Repo, string, string) {
+	t.Helper()
+	repo, wt := project(t)
+	git(t, repo.Root, "tag", tag)
+	setTouches(t, repo, "T-003", "src/one")
+	second := newTask(t, repo, "Second", "src/two.go")
+	write(t, wt, "src/one/a.go", "package one\n")
+	write(t, wt, "src/two.go", "package two\n")
+	return repo, wt, second
+}
+
+// I-0127, ADR-0142: a flai a minor or major version behind the newest flai
+// release in the project's history refuses the close before any step, naming
+// both versions and the upgrade, and changes nothing: no commit, the
+// worktree's changes as they were, the task in progress, no touches widened,
+// and nothing logged.
+func TestRunRefusesAMinorOrMajorVersionBehind(t *testing.T) {
+	for _, tc := range []struct{ version, running, behind string }{
+		{"1.9.3", "1.9.3", "minor"},
+		{"v1.9.3", "1.9.3", "minor"},
+		{"0.12.0", "0.12.0", "major"},
+	} {
+		t.Run(tc.version, func(t *testing.T) {
+			repo, wt, second := layerUnder(t, "flai/v1.10.0")
+			head, status := git(t, wt, "rev-parse", "HEAD"), git(t, wt, "status", "--porcelain", "--untracked-files=all")
+			before := narrative(t, repo)
+			touches := map[string]string{}
+			for _, id := range []string{"T-003", second, "S-004"} {
+				touches[id] = strings.Join(get(t, repo, id).Touches, ",")
+			}
+			o := options(repo, "feat: [S-004] T-003 one")
+			o.Version = tc.version
+
+			res, err := Run(context.Background(), o)
+			if err == nil {
+				t.Fatalf("the close went ahead: stopped %q, commit %+v", res.Stopped, res.Commit)
+			}
+			for _, want := range []string{"flai task done refuses to close T-003", "this flai is " + tc.running + ", a " + tc.behind + " version behind flai 1.10.0", "ADR-0142", "upgrade it with " + buildinfo.UpgradeCommand} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("error lacks %q: %v", want, err)
+				}
+			}
+			if res.Task != "T-003" || res.Commit != nil || res.Move != nil || res.Log != nil || res.Touches != nil {
+				t.Errorf("a step ran: %+v", res)
+			}
+			if git(t, wt, "rev-parse", "HEAD") != head || git(t, wt, "status", "--porcelain", "--untracked-files=all") != status {
+				t.Error("the worktree changed")
+			}
+			if st := get(t, repo, "T-003").Status; st != workitem.InProgress {
+				t.Errorf("T-003 is %s", st)
+			}
+			for id, want := range touches {
+				if got := strings.Join(get(t, repo, id).Touches, ","); got != want {
+					t.Errorf("%s touches %s, want %s", id, got, want)
+				}
+			}
+			if narrative(t, repo) != before {
+				t.Error("the narrative was logged to")
+			}
+		})
+	}
+}
+
+// ADR-0142: a flai of the newest release, one a patch behind it, whose inbox
+// warns, and a build that is not a release close I-0127's case as before:
+// the task's own file committed, the sibling's left.
+func TestRunClosesWithinAPatchOfTheNewestRelease(t *testing.T) {
+	for _, tc := range []struct {
+		version, tag string
+		warned       bool
+	}{
+		{"1.10.0", "flai/v1.10.0", false},
+		{"1.10.0", "flai/v1.10.2", true},
+		{"dev", "flai/v1.10.0", false},
+	} {
+		t.Run(tc.version+" under "+tc.tag, func(t *testing.T) {
+			repo, _, _ := layerUnder(t, tc.tag)
+			o := options(repo, "feat: [S-004] T-003 one")
+			o.Version = tc.version
+
+			res, err := Run(context.Background(), o)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if res.Stopped != "" || res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "src/one/a.go" || strings.Join(res.Left, ",") != "src/two.go" {
+				t.Fatalf("stopped at %q: %s, commit %+v, left %v", res.Stopped, res.Error, res.Commit, res.Left)
+			}
+			if st := get(t, repo, "T-003").Status; st != workitem.Done {
+				t.Errorf("T-003 is %s", st)
+			}
+			if res.Inbox == nil {
+				t.Fatal("the inbox was not read")
+			}
+			if warned := res.Inbox.FlaiOutdated != nil; warned != tc.warned {
+				t.Errorf("the inbox warns %v (%+v), want %v", warned, res.Inbox.FlaiOutdated, tc.warned)
+			}
+		})
 	}
 }

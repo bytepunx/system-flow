@@ -3430,6 +3430,8 @@ Exit codes: 0 when every step ran, 3 when the sync stopped the run, 4 when the c
 
 A story or an epic is refused: a story goes to review with flai move S-nnnn review after its close-out, and an epic follows its stories.
 
+While this flai's major or minor version is behind the newest flai release in the project's history, the close is refused and nothing changes (ADR-0142); one patch behind only warns, in the inbox.
+
 Examples:
 
 ```bash

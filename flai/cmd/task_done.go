@@ -74,7 +74,11 @@ Exit codes: 0 when every step ran, 3 when the sync stopped the run, 4 when
 the check did, and 1 when another step did or the run could not start.
 
 A story or an epic is refused: a story goes to review with flai move
-S-nnnn review after its close-out, and an epic follows its stories.`,
+S-nnnn review after its close-out, and an epic follows its stories.
+
+While this flai's major or minor version is behind the newest flai release
+in the project's history, the close is refused and nothing changes
+(ADR-0142); one patch behind only warns, in the inbox.`,
 		Example: `  flai task done T-0021 -m "feat: [S-0004] T-0021 the parser reads tables"
   flai task done T-0021 -m "fix: [S-0004] what the tests found" --log "fixed the empty table case"
   flai task done T-0021 -m "docs: [S-0004] the guide" --json
