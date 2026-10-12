@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:48:54Z
-updated: 2026-10-12T18:37:42Z
+updated: 2026-10-12T18:47:34Z
 transitions: []
 tags: [cli, dashboard]
 topics: [agents]
@@ -24,10 +24,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:31Z
 forecast:
   duration: 34m
-  delivery: 2026-10-13T01:19:00Z
-  basis: "Its own forecast of 34m; 12th in the pull order with an in-progress limit of 5, behind S-0236, S-0369, S-0370, S-0351, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0352, S-0353 and S-0354."
+  delivery: 2026-10-13T01:28:00Z
+  basis: "Its own forecast of 34m; 12th in the pull order with an in-progress limit of 5, behind S-0236, S-0370, S-0351, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0352, S-0353 and S-0354."
   by: flai
-  at: 2026-10-12T18:37:42Z
+  at: 2026-10-12T18:47:34Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:24Z
