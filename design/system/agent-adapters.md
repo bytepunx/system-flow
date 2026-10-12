@@ -206,7 +206,7 @@ Claude Code speaks the Anthropic Messages format to whatever `ANTHROPIC_BASE_URL
 | Usage stream | `--output-format stream-json --verbose`: `assistant` events with `message.usage`, `parent_tool_use_id`; `result` with `total_cost_usd` and `modelUsage`; "client-side estimates" that can differ from the bill ([run programmatically](https://code.claude.com/docs/en/headless)) |
 | Instruction files | `CLAUDE.md` at the root and in `~/.claude/`; agents in `.claude/agents/` |
 
-What changes over a gateway: the model names in `--model`, the role models, and `--fallback-model` must be names the gateway serves, and `haiku`, `sonnet`, `opus` resolve only through the `ANTHROPIC_DEFAULT_*_MODEL` variables; `total_cost_usd` is Claude Code's own estimate from Anthropic's prices, not what LiteLLM or OpenRouter charged; and the models stay Claude.
+What changes over a gateway: the model names in `--model`, the role models, and `--fallback-model` must be names the gateway serves, and `haiku`, `sonnet`, `opus` resolve only through the `ANTHROPIC_DEFAULT_*_MODEL` variables; `total_cost_usd` is Claude Code's own estimate, not what LiteLLM or OpenRouter charged (through OpenRouter it ran 3.2 to 4 times the charge, § Checked against OpenRouter); and the models stay Claude.
 
 ### OpenAI Codex CLI
 
@@ -291,13 +291,28 @@ What it would not get: Claude Code's prompt caching defaults, system prompt, bui
 
 What the documentation does not settle:
 
-- Whether OpenRouter's or LiteLLM's `/v1/messages` carries every beta header and body field Claude Code sends, which the compatibility guide says a gateway must forward byte for byte; LiteLLM's unified endpoint translates, so some fields may be dropped. **To check** by running one `claude -p` through each.
+- Whether LiteLLM's `/v1/messages` carries every beta header and body field Claude Code sends, which the compatibility guide says a gateway must forward byte for byte; LiteLLM's unified endpoint translates, so some fields may be dropped. **To check** by running one `claude -p` through it. OpenRouter's carried every feature the check exercised (§ Checked against OpenRouter).
 - Whether Codex's `PreToolUse` `ask` and OpenCode's `permission.asked` can be answered by an outside process in a headless run, as `permission_prompt` is answered on a thread today.
 - Whether Codex's and Goose's hooks tell a sub-agent's tool call from the main agent's, as Claude Code's `agent_id` does; Codex has `SubagentStart` and `SubagentStop`, Goose has neither.
 - The exact fields of OpenCode's `step_finish` and Goose's `stream-json` events, read only from third-party write-ups.
 - Which `wire_api` Codex should use against each gateway, and whether OpenCode's Anthropic provider accepts a custom base URL.
 - Whether aider's current release is an MCP client; its own documentation does not say.
-- What any harness reports as cost over a gateway: Claude Code and OpenCode price from their own tables, Codex and Goose report tokens only. Only the gateway knows what was charged: OpenRouter's `usage.cost` and `/api/v1/generation`, LiteLLM's `x-litellm-response-cost` and `/spend/logs`.
+- What any harness reports as cost over a gateway: Claude Code and OpenCode price from their own tables, Codex and Goose report tokens only. Only the gateway knows what was charged: OpenRouter's `usage.cost` and its key's `usage` (its `/api/v1/generation` cannot be reached from Claude Code's stream, § Checked against OpenRouter), LiteLLM's `x-litellm-response-cost` and `/spend/logs`.
+
+### Checked against OpenRouter
+
+S-0351's `TestGatewayOpenRouter` (`flai/internal/serve/gateway_test.go`) ran on 2026-10-12 with Claude Code 2.1.296, through `https://openrouter.ai/api` with the `claude-code` adapter's own arguments and environment for a provider: `--model haiku`, `ANTHROPIC_DEFAULT_HAIKU_MODEL=anthropic/claude-haiku-4.5`, `ANTHROPIC_API_KEY` empty, `ANTHROPIC_AUTH_TOKEN` the OpenRouter key, `--max-budget-usd`, `flai guard` registered as the template registers it, and `permission_prompt` with auto-approve on. The main session wrote a file under its story worktree's `.claude/`, and a `general-purpose` sub-agent called `item_edit`. Five runs; the figures below are the last's, which passed, and the first's, which Claude Code stopped on its budget.
+
+| Question | What the run showed |
+|----------|---------------------|
+| Did the guard and `permission_prompt` work? | Yes. The protected `Write` went through `permission_prompt`, with `permission_denials` empty. The sub-agent's `item_edit` came back as `flai guard`'s refusal, and the story was unchanged. The hooks and the permission tool run in Claude Code, so the gateway does not bear on them. |
+| Which beta headers and body fields reached the model? | What OpenRouter forwarded upstream cannot be read from the client, so it is judged by the features that need them, and every feature exercised worked: tool use and `tool_result`, MCP tools (the `flai` server connected, 44 of its tools listed), a sub-agent with its own `parent_tool_use_id`, prompt caching (`cache_creation_input_tokens` and `cache_read_input_tokens` nonzero in every message), extended thinking (`thinking_tokens` 285 on the last turn, 1219 in all), and the stream's events. `system/init` listed no `betas`. Message and tool IDs began `msg_bdrk_` and `toolu_bdrk_`: OpenRouter served the model from Amazon Bedrock, so a beta Bedrock lacks may be dropped there; none the check exercised was. |
+| Did the alias resolve? | Yes. `system/init`'s model, every message's `model`, and `modelUsage`'s key were `anthropic/claude-haiku-4.5`. Claude Code printed `[claude-code:unrecognized_model]` on stderr and reported `costBasis: "unknown"` for it. |
+| Are the stream's message IDs OpenRouter's generation IDs? | No. They are the upstream's (`msg_bdrk_…`), and `GET /api/v1/generation?id=<message id>` answers `400 Invalid generation ID` for each. Claude Code does not surface OpenRouter's own generation ID, so a call cannot be priced after the fact from its stream. |
+| What did the gateway charge against `total_cost_usd`? | Last run: OpenRouter's key `usage` rose $0.060022, which is Haiku 4.5's list price on `modelUsage`'s tokens (2,979 input, 1,783 output, 18,921 cache write, 244,763 cache read); `total_cost_usd` was $0.191134, 3.2 times as much. First run, one turn: $0.0759 against $0.3035, 4.0 times. `--max-budget-usd` holds to Claude Code's figure, so a budget stops a run at a quarter to a third of what it names in OpenRouter's money. |
+| What else? | `/api/v1/key` answered from copies that lag one another: one read gave $0.2791 between two of $0.3384, so a reading takes the highest of several, and the run showed in it only some seconds after it ended. A message's `usage` in the stream gave 1 to 7 output tokens, not its final count; `modelUsage` in `result` holds the totals. The session loaded the host's user-level tools beside flai's, 74 in all, so its first turn's prompt was about 59,000 tokens, 49,000 of them read from the cache. Claude Code warned that `claude.ai` connectors are off while an API key or token is set. |
+
+What it settles for the contracts: an agent through OpenRouter runs with the guard and `permission_prompt` as against Anthropic; `total_cost_usd` is not the charge and must not price a story with a provider (ADR-0132); and OpenRouter's spend joins a story only through a key's `usage` read before and after, or a key per story or agent, not per call through `/api/v1/generation`. LiteLLM's half of each question stays open for its own run.
 
 ## Abstractions
 
@@ -486,7 +501,7 @@ Where a price comes from when the log gives none, or gives an estimate from the 
 |--------|-----|------|
 | The harness | `total_cost_usd`, OpenCode's `cost` | Today's `result`; wrong over a gateway |
 | The gateway, per call | LiteLLM `x-litellm-response-cost`; OpenRouter `usage.cost` | Only flai's own loop sees the response |
-| The gateway, after the fact | LiteLLM `/spend/logs` by virtual key; OpenRouter `/api/v1/key` and `/api/v1/generation` | A key per project, or per agent, joins spend to a story: a `spend` reader per provider `api`; per-call joining needs the gateway to keep a session tag, LiteLLM's reading of `x-claude-code-session-id` **to check** |
+| The gateway, after the fact | LiteLLM `/spend/logs` by virtual key; OpenRouter `/api/v1/key` | A key per project, or per agent, joins spend to a story: a `spend` reader per provider `api`; per-call joining needs the gateway to keep a session tag, LiteLLM's reading of `x-claude-code-session-id` **to check**. OpenRouter's `/api/v1/generation` takes its own generation ID, which Claude Code's stream does not carry (§ Checked against OpenRouter) |
 | A price table | LiteLLM's public model cost map, or flai's own | ADR-0051 chose measured over tabulated; a table dates |
 | Estimated | `Rates` from reported totals (today) | Nothing to rate when no run ever reported a cost |
 
