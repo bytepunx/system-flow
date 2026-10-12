@@ -2,12 +2,12 @@
 id: I-0127
 title: An outdated MCP flai's task_done commits every changed path under the closing task, so a layer's tasks cannot close apart
 class: defect
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-08T10:41:45Z
 last_reported: 2026-10-08T10:41:45Z
-updated: 2026-10-12T14:12:30Z
+updated: 2026-10-12T18:26:12Z
 ---
 
 # I-0127 An outdated MCP flai's task_done commits every changed path under the closing task, so a layer's tasks cannot close apart
@@ -24,3 +24,4 @@ S-0338 ran three layer-1 tasks together (T-1324, T-1325, T-1326, no path in comm
 ## Remediation
 
 Story S-0363 remediates this issue, created from it at 2026-10-12T14:12:30Z.
+Closed 2026-10-12T18:26:12Z: S-0363: flai task done, the MCP tool task_done, and the host's task.done refuse, changing nothing, while the running flai's major or minor version is behind the newest flai release in the project's history (ADR-0142), so an outdated flai no longer closes a task by older rules and commits another open task's paths; a patch behind still warns through flai_outdated. The specific commit defect was fixed by S-0322 (ADR-0128).
