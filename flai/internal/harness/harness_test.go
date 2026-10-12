@@ -132,6 +132,28 @@ func TestWhichAdapterAStoryGets(t *testing.T) {
 	}
 }
 
+func TestEachAdapterStatesItsCapabilities(t *testing.T) {
+	want := map[string]Capabilities{
+		ClaudeCode: {Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true},
+		Command:    {},
+	}
+	for _, name := range Names() {
+		w, ok := want[name]
+		if !ok {
+			t.Errorf("adapter %q states capabilities no test pins: add it here", name)
+			continue
+		}
+		if got := Adapters[name].Capabilities(); got != w {
+			t.Errorf("%s: capabilities %+v, want %+v", name, got, w)
+		}
+	}
+	for name := range want {
+		if _, ok := Adapters[name]; !ok {
+			t.Errorf("capabilities pinned for %q, which is not an adapter", name)
+		}
+	}
+}
+
 func TestTheOperatorsCommandGetsTheModelAndTheConfig(t *testing.T) {
 	a := &manifest.Agent{Model: "claude-sonnet-5", Config: map[string]string{"anything": "goes here"}}
 	st, err := (command{}).Start(req(a), Host{Program: "run-agent", Args: []string{"--story={story}", "{root}", "--model", "{model}", "{harness}"}})

@@ -35,6 +35,14 @@ func (claudeCode) DefaultHost() Host {
 	return Host{Program: "claude", Args: []string{"--permission-mode", "acceptEdits", "--allowedTools", "Bash,mcp__flai"}}
 }
 
+// Capabilities are all of them: claude resumes a session, runs flai guard as
+// its hook, asks through permission_prompt, takes a model per role in
+// --agents, runs a strategic agent from its definition, and reports its cost
+// in stream-json.
+func (claudeCode) Capabilities() Capabilities {
+	return Capabilities{Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true}
+}
+
 var claudeCodeTakes = map[string]option{
 	"effort":         {flag: "--effort", value: regexp.MustCompile(`^(low|medium|high|xhigh|max)$`), says: "low, medium, high, xhigh, or max"},
 	"max_budget_usd": {flag: "--max-budget-usd", value: regexp.MustCompile(`^\d{1,5}(\.\d{1,2})?$`), says: "an amount of dollars, such as 5 or 12.50"},
@@ -353,6 +361,10 @@ type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.
 func (command) DefaultHost() Host { return Host{} }
+
+// Capabilities are none: flai can neither resume, guard, ask, nor read the
+// operator's command.
+func (command) Capabilities() Capabilities { return Capabilities{} }
 
 // Start replaces the placeholders in the operator's command.
 func (command) Start(r Request, host Host) (Start, error) {

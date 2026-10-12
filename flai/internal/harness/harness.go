@@ -156,6 +156,28 @@ type Start struct {
 	EnvFrom map[string]string
 }
 
+// Capabilities are what flai serve may count on a harness to do (ADR-0130).
+type Capabilities struct {
+	// Resume is that flai serve may go on with an agent in the session it
+	// ran before, rather than start a new one.
+	Resume bool
+	// Guard is that flai serve may run flai guard as a hook on the agent's
+	// calls, so that a call the guard refuses is never made.
+	Guard bool
+	// Ask is that flai serve may hold a call to ask the owner on a thread,
+	// as permission_prompt does, and answer it allow or deny.
+	Ask bool
+	// RoleModels is that flai serve may give each sub-agent role its own
+	// model.
+	RoleModels bool
+	// StrategicAgents is that flai serve may run a strategic agent, the
+	// planner, the orchestrator, or the analyzer, from its definition.
+	StrategicAgents bool
+	// Cost is that the harness reports the cost of its calls, for flai to
+	// measure.
+	Cost bool
+}
+
 // Adapter builds the command for one harness.
 type Adapter interface {
 	// DefaultHost is the program and arguments used when the operator has
@@ -164,6 +186,8 @@ type Adapter interface {
 	// Start builds the command. It refuses what the story says that the
 	// harness does not take.
 	Start(req Request, host Host) (Start, error)
+	// Capabilities are what flai serve may count on the harness to do.
+	Capabilities() Capabilities
 }
 
 // Adapters are the harnesses flai can start, by name.
