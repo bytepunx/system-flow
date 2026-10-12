@@ -3,11 +3,17 @@ id: S-0362
 type: story
 nature: remediation
 title: flai task done commits the changed paths of another open task of the same layer
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-12T14:12:29Z
-updated: 2026-10-12T14:31:40Z
-transitions: []
+updated: 2026-10-12T14:32:27Z
+transitions:
+  - to: ready
+    at: 2026-10-12T14:32:20Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T14:32:27Z
+    by: agent-S-0362
 tags: [cli]
 touches: [flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go, design/issues/I-0126-flai-task-done-commits-the-changed-paths-of-another-open-task-of-the-same-layer.md, design/issues/summary.md]
 agent:
@@ -37,16 +43,15 @@ usage:
           cache_write: 108683
           cost: 1.2435
     - kind: orchestrator
-      seconds: 14
+      seconds: 37
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 4
-          output: 32
-          cache_read: 312640
-          cache_write: 3463
-          cost: 0.0797
-draft: true
+          input: 11
+          output: 70
+          cache_read: 960466
+          cache_write: 18527
+          cost: 0.2468
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 3m
@@ -61,6 +66,9 @@ forecast:
   basis: "Its own forecast of 12m; 25th in the pull order with an in-progress limit of 5, behind S-0232, S-0337, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0313, S-0349, S-0350, S-0351, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357, S-0358, S-0359 and S-0360."
   by: flai
   at: 2026-10-12T14:31:40Z
+finalized:
+  by: orchestrator
+  at: 2026-10-12T14:32:13Z
 ---
 # S-0362 flai task done commits the changed paths of another open task of the same layer
 

@@ -4,10 +4,10 @@ title: "S-0342's acceptance stopped mid-rebase on a conflict in design/system/fl
 anchor:
   path: wip/kanban/stories/S-0342-a-test-tier-the-manifest-marks-as-covered-by-another-is-skipped-when-both-are-selected-so-verify-does-not-run-the-short-go-tests-and-then-the-full-suite.md
   item: S-0342
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-10T19:00:58Z
-updated: 2026-10-10T19:00:58Z
+updated: 2026-10-12T14:33:30Z
 ---
 
 # TH-0397 S-0342's acceptance stopped mid-rebase on a conflict in design/system/flai-cli.md: abort it and have the story synced
@@ -45,3 +45,6 @@ S-0289 changed `design/system/flai-cli.md` on main, and S-0342 changes it too.
 flai guard refused my `git rebase --abort`, since the orchestrator runs only git's reads. So the abort is yours.
 
 S-0342 stays in review until then.
+
+### 2026-10-12T14:33:30Z alex
+Resolved: S-0342 was accepted

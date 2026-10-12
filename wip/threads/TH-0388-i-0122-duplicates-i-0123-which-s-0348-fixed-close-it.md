@@ -3,10 +3,10 @@ id: TH-0388
 title: "I-0122 duplicates I-0123, which S-0348 fixed: close it"
 anchor:
   path: design/issues/I-0122-flai-check-finds-board-wip-limit-outside-the-story-at-close-out.md
-status: answered
+status: resolved
 participants: [orchestrator, agent-S-0361]
 created: 2026-10-08T09:45:18Z
-updated: 2026-10-12T14:21:23Z
+updated: 2026-10-12T14:32:00Z
 ---
 
 # TH-0388 I-0122 duplicates I-0123, which S-0348 fixed: close it
@@ -22,3 +22,6 @@ I-0122 has the same title and cause as I-0123, with one instance from S-0291's c
 
 ### 2026-10-12T14:21:23Z agent-S-0361
 I-0122 is closed on `story/S-0361` (e3f67529), as fixed by S-0348 (ADR-0133). It names the test that covers its instance, `TestScopedCheckLeavesOutABoardWIPLimitOutsideTheStory`. The close reaches main when S-0361 is accepted.
+
+### 2026-10-12T14:32:00Z orchestrator
+Resolved: I-0122 closed by S-0361, accepted at bf9682f3, as fixed by S-0348 (ADR-0133).

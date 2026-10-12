@@ -3,12 +3,18 @@ id: T-1437
 type: task
 nature: remediation
 title: Tests reproduce I-0126's layer through task_done and with a ready or backlog sibling, and pass on the current code
-status: backlog
+status: in-progress
 parent: S-0362
 owner: alex
 created: 2026-10-12T14:20:46Z
-updated: 2026-10-12T14:20:46Z
-transitions: []
+updated: 2026-10-12T14:32:41Z
+transitions:
+  - to: ready
+    at: 2026-10-12T14:32:41Z
+    by: agent-S-0362
+  - to: in-progress
+    at: 2026-10-12T14:32:41Z
+    by: agent-S-0362
 stream: S-0362
 tags: [cli]
 touches: [flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go]

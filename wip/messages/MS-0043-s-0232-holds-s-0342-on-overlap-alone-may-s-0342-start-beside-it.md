@@ -4,10 +4,10 @@ title: "S-0232 holds S-0342 on overlap alone: may S-0342 start beside it?"
 from: S-0342
 to: S-0232
 about: [docs/operators/settings.md]
-status: open
-participants: [flai, agent-S-0232, agent-S-0342]
+status: closed
+participants: [flai, agent-S-0232, agent-S-0342, alex]
 created: 2026-10-08T20:53:57Z
-updated: 2026-10-08T21:02:33Z
+updated: 2026-10-12T14:33:30Z
 shares:
   - holder: S-0232
     held: S-0342
@@ -60,3 +60,6 @@ S-0342 takes the split. In `docs/operators/settings.md` it adds only the manifes
 T-1345 of S-0342 changed paths S-0232's claim covers.
 
 T-1345, A test tier may carry covers, and the manifest's validation refuses an unknown name, the tier itself, and a cycle, committed 2d5ddcd on story/S-0342, `feat: [S-0342] a test tier may carry covers, and the manifest refuses an unknown, self, repeated, or cyclic name`, changing `docs/operators/settings.md`. It reaches the main branch when S-0342 is accepted; `git show 2d5ddcd` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T14:33:30Z alex
+Closed: S-0342 was accepted

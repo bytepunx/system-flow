@@ -3,10 +3,10 @@ id: S-0342
 type: story
 nature: improvement
 title: A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite
-status: review
+status: done
 owner: alex
 created: 2026-10-08T07:59:14Z
-updated: 2026-10-08T21:21:04Z
+updated: 2026-10-12T14:33:30Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:30Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-08T21:21:04Z
     by: agent-S-0342
+  - to: done
+    at: 2026-10-12T14:33:30Z
+    by: alex
 tags: [cli]
 topics: [testing]
 touches: [flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, system-flow.yaml, template/root/system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/verify/verify.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/internal/verify/text.go, flai/internal/verify/text_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, docs/operators/settings.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, docs/users/flai-reference.md, flai/cmd/test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/verify.go]

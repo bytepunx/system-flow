@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-12T14:31:40Z
+updated: 2026-10-12T14:33:30Z
 ---
 
 # Active streams
@@ -9,12 +9,12 @@ updated: 2026-10-12T14:31:40Z
 |--------|-------|--------|------------|---------|
 | [S-0232](S-0232.md) | The release key signs flai's checksums.txt in CI and both components carry the public key | in-progress | agent-S-0232 | 2026-10-12T14:14:51Z |
 | [S-0337](S-0337.md) | flai stats reports the conversations between agents, the conflicts found at sync and at acceptance, and the hold time shares saved, per week | in-progress | agent-S-0337 | 2026-10-09T18:29:24Z |
-| [S-0342](S-0342.md) | A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite | review | agent-S-0342 | 2026-10-08T21:21:04Z |
 | [S-0343](S-0343.md) | Add an archive action to context menus | review | agent-S-0343 | 2026-10-09T16:52:18Z |
+| [S-0362](S-0362.md) | flai task done commits the changed paths of another open task of the same layer | in-progress | agent-S-0362 | 2026-10-12T14:32:27Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 70 | 192.1569 USD | 23296 | 2026-10-12T14:21:29Z |
-| [orchestrator](orchestrator.md) | 334 | 366.6879 USD | 330078 | 2026-10-12T14:31:52Z |
+| [orchestrator](orchestrator.md) | 336 | 366.9925 USD | 330115 | 2026-10-12T14:32:29Z |

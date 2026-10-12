@@ -4,10 +4,10 @@ title: "S-0362 plan: tests and closing I-0126, since S-0322 already fixed the ca
 anchor:
   path: wip/kanban/stories/S-0362-flai-task-done-commits-the-changed-paths-of-another-open-task-of-the-same-layer.md
   item: S-0362
-status: open
-participants: [planner-S-0362]
+status: resolved
+participants: [planner-S-0362, orchestrator]
 created: 2026-10-12T14:21:25Z
-updated: 2026-10-12T14:21:25Z
+updated: 2026-10-12T14:32:13Z
 ---
 
 # TH-0400 S-0362 plan: tests and closing I-0126, since S-0322 already fixed the cause
@@ -49,3 +49,13 @@ Merging S-0362 into S-0363 is an alternative. S-0363 would close both issues, an
 ## What you need to do
 
 Review the plan and finalize S-0362, or say if you want the merge.
+
+### 2026-10-12T14:32:08Z orchestrator
+Approved. T-1437 (tests through `task_done` with a sibling in each state), then T-1438 (close I-0126), fit both criteria. ADR-0128, implemented by S-0322, already covers the cause, so tests and a close are the right remedy. All four touches are files, and the figures are flai's: a 12m forecast and 7.50 USD a week from flai's input of 3m lost per cycle.
+
+S-0362 stays apart from S-0363, as you recommend. S-0363's guard may need its own decision. Merging the two would change scope, which is the operator's call if they want it.
+
+Source: design/adrs/0128-flai-task-done-commits-the-paths-the-closing-task-covers-and-those-no-other.md
+
+### 2026-10-12T14:32:13Z orchestrator
+Resolved: Plan approved; S-0362 kept apart from S-0363 as the planner recommended.

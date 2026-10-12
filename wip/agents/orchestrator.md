@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 366.5018
-accrued_seconds: 330054
-tasks_completed: 332
-last_run: 2026-10-12T14:31:27Z
+accrued_cost: 366.9925
+accrued_seconds: 330115
+tasks_completed: 336
+last_run: 2026-10-12T14:32:29Z
 ---
 
 # Orchestrator activity
@@ -2335,6 +2335,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0361
 - Seconds: 668
 - Cost: 0.8860 USD, estimated
+
+### 2026-10-12T14:31:46Z
+
+- Summary: Accepted S-0361 at bf9682f3 under accept_reviews. flai verify passed every step at the branch head, and the verifier matched both criteria (1: scope_test.go's ADR-0133 test now names I-0122; 2: I-0122 closed, summary.md). The one file outside its touches is I-0134, an issue the close-out recorded. TH-0399 had reopened on the planner's last entry, so I resolved it before the dry-run, which then had no blocker. flai told S-0232 and S-0343 about the overlap on design/issues/summary.md.
+- Items: S-0361
+- Seconds: 18
+- Cost: 0.1393 USD, estimated
+
+### 2026-10-12T14:31:52Z
+
+- Summary: Under judgement, did not publish: release_evaluate gives 1 pending (S-0361), 0 USD/week. It changes only a test comment and closes I-0122, with no behaviour change, so it waits to go out with the next acceptance.
+- Items: S-0361
+- Seconds: 6
+- Cost: 0.0468 USD, estimated
+
+### 2026-10-12T14:32:08Z
+
+- Summary: Answered TH-0400, citing design/adrs/0128-flai-task-done-commits-the-paths-the-closing-task-covers-and-those-no-other.md
+- Items: S-0362
+- Seconds: 16
+- Cost: 0.0984 USD, estimated
+
+### 2026-10-12T14:32:29Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0400, planner-S-0362's plan: T-1437 (task_done tests with a sibling in each state), then T-1438 (close I-0126, fixed by S-0322 under ADR-0128). It has four file touches, a 12m forecast, and 7.50 USD/week from flai's 3m-per-cycle input. I kept it apart from S-0363, as the planner recommended. Resolved my TH-0388 now that S-0361 closed I-0122. Under finalize_drafts, finalized S-0362 (complete, and its figures are consistent with tests and a close). Under promote_to_ready, moved it to ready (rank 1, 12m under throughput); S-0241 (rank 2) stays out, blocked. Applied the throughput order: S-0362. Started the planner for S-0363.
+- Items: S-0362, S-0363, S-0361
+- Seconds: 21
+- Cost: 0.2062 USD, estimated
 
 ## Refusals
 
