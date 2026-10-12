@@ -54,7 +54,7 @@ tests:
     paths: ["flai/**/*.go"]
     format: gofmt-list
   - name: vet
-    command: [go, vet, "{packages}"]
+    command: [go, vet, "{importers}"]
     dir: flai
     paths: ["flai/**/*.go", "flai/**/testdata/**"]
     format: plain
