@@ -174,3 +174,33 @@ func TestCheckoutFix(t *testing.T) {
 		t.Errorf("a bad fix command: %v, want it refused naming tests[0].fix_command", err)
 	}
 }
+
+// S-0367: Unfixed runs the command of each tier that carries a fix command
+// over the existing files it selects, and answers the first failure with its
+// findings; a tier without a fix command, and a path no such tier selects,
+// are not run.
+func TestUnfixedRunsTheCheckOfTheTiersThatFix(t *testing.T) {
+	root := tree(t, map[string]string{"docs/a.md": "a", "flai/b.go": "b"})
+	tiers := []Tier{
+		{Name: "gofmt", Command: []string{"gofmt", "{files}"}, Paths: []string{"flai/**"}},
+		{Name: "markdown", Command: []string{"mdlint", "{files}"}, Paths: []string{"**/*.md"}, FixCommand: []string{"upper", "{files}"}},
+	}
+	proc := &fixProc{exits: map[string]int{"mdlint": 1}}
+
+	res, err := Unfixed(context.Background(), root, tiers, []string{"docs/a.md", "flai/b.go", "docs/gone.md"}, RunOptions{Proc: proc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed || len(res.Tiers) != 1 || res.Tiers[0].Name != "markdown" || res.Tiers[0].State != Failed || len(res.Tiers[0].Findings) == 0 {
+		t.Fatalf("result %+v", res)
+	}
+	if !reflect.DeepEqual(proc.ran, []string{"mdlint docs/a.md"}) {
+		t.Errorf("ran %v; want only the markdown tier's command over the file that exists", proc.ran)
+	}
+
+	proc = &fixProc{}
+	res, err = Unfixed(context.Background(), root, tiers, []string{"flai/b.go"}, RunOptions{Proc: proc})
+	if err != nil || !res.Passed || len(proc.ran) != 0 {
+		t.Errorf("with no tier that fixes selected: %+v, %v, ran %v", res, err, proc.ran)
+	}
+}

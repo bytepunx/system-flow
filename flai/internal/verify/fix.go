@@ -124,3 +124,33 @@ func runFix(ctx context.Context, root string, t Tier, argv []string, proc Proc, 
 	}
 	log.Warn("a tier's fix command failed; what it changed before it stopped is kept", args...)
 }
+
+// Unfixed runs, as Run runs them, the commands of the tiers that carry a fix
+// command and that the existing files among the root-relative paths select,
+// over those files, and answers what their fix left: a pass, or the first
+// tier that fails with its findings (S-0367, TH-0413). flai accept refuses on
+// a failure. With no such tier selected it passes.
+func Unfixed(ctx context.Context, root string, tiers []Tier, paths []string, opts RunOptions) (Result, error) {
+	var fixing []Tier
+	for _, t := range tiers {
+		if len(t.FixCommand) > 0 {
+			fixing = append(fixing, t)
+		}
+	}
+	fsys := os.DirFS(root)
+	existing := regularFiles(fsys, paths)
+	res, err := Run(ctx, root, Select(fsys, fixing, existing, false), opts)
+	res.Paths = existing
+	return res, err
+}
+
+// CheckoutUnfixed runs Unfixed over the paths of the checkout at root with
+// the tiers its manifest declares and the commands as processes. It returns
+// an error when the tiers cannot be read or ctx ends.
+func CheckoutUnfixed(ctx context.Context, root string, paths []string) (Result, error) {
+	tiers, err := CheckoutTiers(root)
+	if err != nil {
+		return Result{}, err
+	}
+	return Unfixed(ctx, root, tiers, paths, RunOptions{})
+}
