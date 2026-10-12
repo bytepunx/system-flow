@@ -538,6 +538,9 @@ func testsLines(tiers []TestTier, indent, key, old string) []string {
 		if len(t.AllCommand) > 0 {
 			field("all_command", flowList(t.AllCommand))
 		}
+		if len(t.FixCommand) > 0 {
+			field("fix_command", flowList(t.FixCommand))
+		}
 		if len(t.Covers) > 0 {
 			field("covers", flowList(t.Covers))
 		}
@@ -561,7 +564,7 @@ func sameTiers(a, b []TestTier) bool {
 	return slices.EqualFunc(a, b, func(x, y TestTier) bool {
 		return x.Name == y.Name && x.Dir == y.Dir && x.Format == y.Format && x.AllOnly == y.AllOnly &&
 			slices.Equal(x.Command, y.Command) && slices.Equal(x.Paths, y.Paths) && slices.Equal(x.AllCommand, y.AllCommand) &&
-			slices.Equal(x.Covers, y.Covers)
+			slices.Equal(x.FixCommand, y.FixCommand) && slices.Equal(x.Covers, y.Covers)
 	})
 }
 

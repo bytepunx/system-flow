@@ -751,13 +751,15 @@ func TestTestsRoundTrip(t *testing.T) {
 		"  paths: [\"flai/**\", \"!flai/testdata/**\"]\n" +
 		"  format: go-test-json\n" +
 		"  all_command: [go, test, -json, ./...]\n" +
+		"  fix_command: [gofmt, -w, \"{files}\"]\n" +
 		"- name: smoke\n" +
 		"  command: [scripts/smoke.sh]\n" +
 		"  all_only: true\n"
 	m := loaded(t, []byte(body))
 	want := []TestTier{
 		{Name: "unit", Command: []string{"go", "test", "-json", PlaceholderPackages}, Dir: "flai",
-			Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON, AllCommand: []string{"go", "test", "-json", "./..."}},
+			Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON, AllCommand: []string{"go", "test", "-json", "./..."},
+			FixCommand: []string{"gofmt", "-w", PlaceholderFiles}},
 		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true},
 	}
 	if !reflect.DeepEqual(m.Tests, want) {
@@ -785,8 +787,35 @@ func TestTestsRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(js, &fromJSON); err != nil || !reflect.DeepEqual(fromJSON, want) {
 		t.Errorf("JSON round trip: %v\n%s", err, js)
 	}
-	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) {
+	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) {
 		t.Errorf("JSON keys are not snake_case: %s", js)
+	}
+}
+
+// S-0367: flai manifest set writes a tier's fix_command on a line of its own
+// and reads it back; tiers that differ only in it are not the same.
+func TestEditSettingsWritesFixCommand(t *testing.T) {
+	value := `[{"name":"md","command":["scripts/lint-md.sh","{files}"],"paths":["**/*.md"],"fix_command":["scripts/lint-md.sh","--fix","{files}"]}]`
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"tests", value}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "tests:\n" +
+		"  - name: md\n" +
+		"    command: [scripts/lint-md.sh, \"{files}\"]\n" +
+		"    paths: [\"**/*.md\"]\n" +
+		"    fix_command: [scripts/lint-md.sh, \"--fix\", \"{files}\"]\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if len(m.Tests) != 1 || !reflect.DeepEqual(m.Tests[0].FixCommand, []string{"scripts/lint-md.sh", "--fix", PlaceholderFiles}) {
+		t.Errorf("reads back: %+v", m.Tests)
+	}
+	unfixed := []TestTier{m.Tests[0]}
+	unfixed[0].FixCommand = nil
+	if sameTiers(m.Tests, unfixed) {
+		t.Error("tiers that differ in fix_command are the same")
 	}
 }
 
@@ -821,6 +850,9 @@ func TestTestErrors(t *testing.T) {
 		{"another placeholder names all three", []TestTier{with(func(x *TestTier) { x.Command = []string{"go", "{story}"} })}, "argument {story} is not a placeholder flai fills; write {packages}, {files}, or {importers}, or remove it"},
 		{"importers inside", []TestTier{with(func(x *TestTier) { x.Command = []string{"go", "test", "./{importers}"} })}, `argument "./{importers}" holds a placeholder inside it, which flai does not fill; write {packages}, {files}, or {importers} as an argument of its own`},
 		{"importers under all", []TestTier{with(func(x *TestTier) { x.AllCommand = []string{"go", "test", "{importers}"} })}, `tests[0].all_command (tier "unit") argument {importers} is a placeholder, and all_command runs for no paths; write it without {packages}, {files}, or {importers}`},
+		// S-0367: fix_command is checked as command is, placeholders allowed.
+		{"a bad placeholder in fix", []TestTier{with(func(x *TestTier) { x.FixCommand = []string{"lint", "{story}"} })}, `tests[0].fix_command (tier "unit") argument {story} is not a placeholder flai fills`},
+		{"no program in fix", []TestTier{with(func(x *TestTier) { x.FixCommand = []string{"{files}"} })}, `tests[0].fix_command (tier "unit") begins with the placeholder {files}`},
 		{"an absolute dir", []TestTier{with(func(x *TestTier) { x.Dir = "/srv/flai" })}, `tests[0].dir (tier "unit") "/srv/flai" is an absolute path`},
 		{"a dir outside", []TestTier{with(func(x *TestTier) { x.Dir = "../other" })}, `"../other" leaves the repository`},
 		{"a dir not clean", []TestTier{with(func(x *TestTier) { x.Dir = "flai/./web/" })}, "is not a clean path"},
@@ -849,6 +881,7 @@ func TestTestErrors(t *testing.T) {
 		with(func(x *TestTier) { x.Command = []string{"go", "vet", "{packages}", "{files}"} }),
 		with(func(x *TestTier) { x.Command = []string{"go", "test", "{importers}"} }),
 		with(func(x *TestTier) { x.Command = []string{"sh", "-c", "echo ${HOME}"} }),
+		with(func(x *TestTier) { x.FixCommand = []string{"scripts/lint-md.sh", "--fix", "{files}"} }),
 	} {
 		if errs := (Manifest{Tests: []TestTier{tier}}).TestErrors(); len(errs) != 0 {
 			t.Errorf("%+v refused: %v", tier, errs)

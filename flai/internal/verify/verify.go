@@ -56,6 +56,10 @@ type Tier struct {
 	// runs with {packages} and {importers} as ./... and {files} as the
 	// directory itself.
 	AllCommand []string `json:"all_command,omitempty"`
+	// FixCommand is the argv Fix runs, with the placeholders Command takes,
+	// to rewrite the files the tier's paths select in place before they are
+	// committed; none means the tier fixes nothing.
+	FixCommand []string `json:"fix_command,omitempty"`
 	// Covers names the tiers this one runs everything of: when it is
 	// selected with them, they are skipped rather than run (S-0342).
 	Covers []string `json:"covers,omitempty"`

@@ -623,6 +623,10 @@ type TestTier struct {
 	// AllCommand, when set, runs instead of Command when every tier is asked
 	// for. It takes no placeholders.
 	AllCommand []string `yaml:"all_command,omitempty" json:"all_command,omitempty"`
+	// FixCommand, when set, is an argument list run before flai commits the
+	// files the tier's paths select, with placeholders as Command takes
+	// them. It rewrites those files in place; its exit status is ignored.
+	FixCommand []string `yaml:"fix_command,omitempty" json:"fix_command,omitempty"`
 	// Covers are the names of the tiers this one runs everything of, so that
 	// when it is selected with them only this one runs (S-0342).
 	Covers []string `yaml:"covers,omitempty" json:"covers,omitempty"`
@@ -741,6 +745,9 @@ func (m Manifest) TestErrors() []string {
 		}
 		if len(t.AllCommand) > 0 {
 			errs = append(errs, commandProblems(at("all_command"), t.AllCommand, false)...)
+		}
+		if len(t.FixCommand) > 0 {
+			errs = append(errs, commandProblems(at("fix_command"), t.FixCommand, true)...)
 		}
 		if r := dirProblem(t.Dir); r != "" {
 			errs = append(errs, fmt.Sprintf("%s %q %s", at("dir"), t.Dir, r))
