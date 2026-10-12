@@ -11,8 +11,10 @@ import {
 	routeLabel,
 	statusClass,
 	version,
-	commit
+	commit,
+	recordBuildInfo
 } from '$lib/server/metrics';
+import { checkReleaseStamp, stampWarrantsWarning } from '$lib/server/release';
 import { startTracing, traceId, withRequestSpan } from '$lib/server/otel';
 import { authenticate, decide, initAuth } from '$lib/server/auth';
 import { repo } from '$lib/server/repo';
@@ -22,6 +24,24 @@ import { agent, exposeAgentUpgrade, registry, withProject } from '$lib/server/ag
 import { redirect, json } from '@sveltejs/kit';
 
 export const init: ServerInit = async () => {
+	// The image's own release stamp, checked once (S-0235): build_info says whether it verified, and a
+	// build with a version that carries no valid stamp is warned about; a development build is not.
+	const stamp = checkReleaseStamp({ version, commit });
+	recordBuildInfo(stamp.state === 'signed');
+	if (stampWarrantsWarning(stamp)) {
+		log().warn(
+			{
+				component: 'server',
+				state: stamp.state,
+				reason: stamp.reason,
+				path: stamp.path,
+				err: stamp.error ?? undefined,
+				version,
+				commit
+			},
+			'release stamp not verified'
+		);
+	}
 	const auth = initAuth();
 	const tracing = await startTracing();
 	// The channel flai on the host dials (ADR-0029): the server entry hands /agent upgrades to the hub.
@@ -49,6 +69,7 @@ export const init: ServerInit = async () => {
 			component: 'server',
 			version,
 			commit,
+			release_stamp: stamp.state,
 			tracing,
 			auth,
 			channel

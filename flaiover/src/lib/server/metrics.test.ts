@@ -6,7 +6,9 @@ import {
 	inFlight,
 	routeLabel,
 	statusClass,
-	version
+	version,
+	commit,
+	recordBuildInfo
 } from './metrics';
 
 describe('metrics', () => {
@@ -30,6 +32,19 @@ describe('metrics', () => {
 			'flaiover_http_requests_total{method="GET",route="/api/items",status="2xx"} 1'
 		);
 		expect(registry.contentType).toContain('text/plain');
+	});
+	it('labels build_info signed by whether the release stamp verified, one series at a time (S-0235)', async () => {
+		const series = (signed: string) =>
+			`flaiover_build_info{version="${version}",commit="${commit}",signed="${signed}"} 1`;
+		expect(await registry.metrics()).toContain(series('false'));
+		recordBuildInfo(true);
+		let text = await registry.metrics();
+		expect(text).toContain(series('true'));
+		expect(text).not.toContain(series('false'));
+		recordBuildInfo(false);
+		text = await registry.metrics();
+		expect(text).toContain(series('false'));
+		expect(text).not.toContain(series('true'));
 	});
 	it('labels routes by route id and statuses by class', () => {
 		expect(routeLabel('/api/items/[id]', '/api/items/S-001')).toBe('/api/items/[id]');

@@ -29,7 +29,7 @@ export const inFlight = new Gauge({
 export const buildInfo = new Gauge({
 	name: 'flaiover_build_info',
 	help: 'Build metadata; always 1',
-	labelNames: ['version', 'commit'] as const,
+	labelNames: ['version', 'commit', 'signed'] as const,
 	registers: [registry]
 });
 
@@ -40,7 +40,13 @@ export const version: string =
 	process.env.FLAIOVER_VERSION ??
 	(typeof __FLAIOVER_VERSION__ === 'string' ? __FLAIOVER_VERSION__ : '0.0.0');
 export const commit = process.env.FLAIOVER_COMMIT ?? 'unknown';
-buildInfo.labels(version, commit).set(1);
+
+/** Set build_info's one series; signed says whether the release stamp verified (S-0235). */
+export function recordBuildInfo(signed: boolean) {
+	buildInfo.reset();
+	buildInfo.labels(version, commit, String(signed)).set(1);
+}
+recordBuildInfo(false);
 
 collectDefaultMetrics({ register: registry, prefix: 'flaiover_' });
 
