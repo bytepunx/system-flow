@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 363.7101
-accrued_seconds: 291253
-tasks_completed: 325
-last_run: 2026-10-12T03:44:46Z
+accrued_cost: 366.5018
+accrued_seconds: 330054
+tasks_completed: 332
+last_run: 2026-10-12T14:31:27Z
 ---
 
 # Orchestrator activity
@@ -2286,6 +2286,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0360, S-0241, S-0342, S-0343, S-0341
 - Seconds: 52
 - Cost: 0.2202 USD, estimated
+
+### 2026-10-12T14:12:54Z
+
+- Summary: The operator accepted S-0341. Under judgement (1 pending, 12.5 USD/week), published it as flai 1.40.2→1.40.3 (flai/v1.40.3) and flaiover 0.42.1→0.42.2 (flaiover/v0.42.2), pushed: a complete, self-contained change to flai verify. S-0342 and S-0343 stay in review: S-0342's worktree is still mid-rebase (TH-0397), and S-0343 still needs a sync (TH-0398), now onto S-0341 as well.
+- Items: S-0341, S-0342, S-0343
+- Seconds: 37688
+- Cost: 0.7179 USD, estimated
+
+### 2026-10-12T14:13:17Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0361 (I-0122, board.wip-limit at close-out), first of six new issue drafts flai plan --candidates lists (S-0361 to S-0366: no touches, forecast, value, or tasks). The rest follow one at a time.
+- Items: S-0361
+- Seconds: 23
+- Cost: 0.1786 USD, estimated
+
+### 2026-10-12T14:15:07Z
+
+- Summary: Answered TH-0399, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0361
+- Seconds: 110
+- Cost: 0.4844 USD, estimated
+
+### 2026-10-12T14:15:17Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0399, planner-S-0361's plan: T-1435 (confirm S-0348's scoped-check test covers I-0122), then T-1436 (close I-0122). Its touches are three files, and the 9m forecast is flai's. Set the cost of delay input it recommended on S-0361, penalty_per_week 0; the planner works out the value on its next run. I left the alternative, cancelling S-0361 as a duplicate, to the operator.
+- Items: S-0361
+- Seconds: 10
+- Cost: 0.0776 USD, estimated
+
+### 2026-10-12T14:15:31Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0362 (task done commits another open task's paths), next on flai plan --candidates after S-0361.
+- Items: S-0362
+- Seconds: 14
+- Cost: 0.0797 USD, estimated
+
+### 2026-10-12T14:20:19Z
+
+- Summary: Under finalize_drafts, finalized S-0361: flai promote --drafts lists it as complete, and its two criteria, three file touches, 9m forecast, and 0 USD/week value are consistent with a confirmation-and-close story (the operator made it from I-0122, which settles TH-0388's question of how I-0122 closes). Under promote_to_ready, moved S-0361 to ready (rank 1, 9m under throughput); S-0241 (rank 2, 2h) stays out, blocked by the operator. Applied the throughput order: S-0361.
+- Items: S-0361
+- Seconds: 288
+- Cost: 0.3675 USD, estimated
+
+### 2026-10-12T14:31:27Z
+
+- Summary: Answered TH-0399, citing no source
+- Items: S-0361
+- Seconds: 668
+- Cost: 0.8860 USD, estimated
 
 ## Refusals
 
