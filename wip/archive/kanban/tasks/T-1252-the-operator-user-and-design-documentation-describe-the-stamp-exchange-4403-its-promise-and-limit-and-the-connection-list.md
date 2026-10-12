@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 526
-      cache_read: 5343229
-      cache_write: 165555
-      cost: 2.496
+      input: 91
+      output: 39029
+      cache_read: 5471459
+      cache_write: 163542
+      cost: 2.8283
 ---
 # T-1252 The operator, user, and design documentation describe the stamp exchange, 4403, its promise and limit, and the connection list
 

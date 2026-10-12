@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 215
-      cache_read: 1810307
-      cache_write: 62081
-      cost: 0.8484
+      input: 31
+      output: 13266
+      cache_read: 1859709
+      cache_write: 55587
+      cost: 0.9613
 ---
 # T-1250 The dashboard shows a project whose flai it refused as unsigned where it shows a flai that lacks a required method
 

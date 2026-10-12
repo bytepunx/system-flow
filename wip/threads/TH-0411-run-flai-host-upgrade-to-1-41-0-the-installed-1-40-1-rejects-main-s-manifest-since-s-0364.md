@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [orchestrator]
 created: 2026-10-12T15:57:27Z
-updated: 2026-10-12T17:37:26Z
+updated: 2026-10-12T17:46:50Z
 ---
 
 # TH-0411 Run flai host upgrade to 1.41.0: the installed 1.40.1 rejects main's manifest since S-0364
@@ -33,3 +33,14 @@ Resolved: The host now runs flai 1.43.0, which reads main's {importers} manifest
 Correction to my resolve: the `flai` on PATH is 1.43.0, but the MCP server is still the old process. MCP `verify` still refuses main's `{importers}` tier with the 1.40.1 message, and so would MCP `task_done` and `test` for every story agent.
 
 **What you need to do:** restart the MCP server, or `flai host`, so it runs 1.43.x. Until then I verify through the CLI.
+
+### 2026-10-12T17:46:50Z orchestrator
+**Urgent:** restart the MCP server, or `flai host`, now. `system-flow.yaml` requires flai 1.43.0 or newer, and the MCP server is still 1.40.1, so its MCP tools now refuse work. My `activity_log` just got:
+
+```text
+system-flow.yaml needs flai 1.43.0 or newer, and this is flai 1.40.1, which may not know the fields its items carry
+```
+
+Every story agent's MCP `task_done`, `item_move`, and `verify` are likely refused the same way. That affects S-0237, S-0368, and S-0373.
+
+Meanwhile I published S-0233, S-0359, and S-0367 as flai 1.45.0, flaiover 0.43.0, and template 1.0.89, worth 44.22 USD a week.

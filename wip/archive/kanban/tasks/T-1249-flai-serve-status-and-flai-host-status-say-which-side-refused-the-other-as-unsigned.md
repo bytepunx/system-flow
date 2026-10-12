@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 369
-      cache_read: 2873081
-      cache_write: 98780
-      cost: 1.3466
+      input: 49
+      output: 21055
+      cache_read: 2951740
+      cache_write: 88228
+      cost: 1.5258
 ---
 # T-1249 flai serve status and flai host status say which side refused the other as unsigned
 

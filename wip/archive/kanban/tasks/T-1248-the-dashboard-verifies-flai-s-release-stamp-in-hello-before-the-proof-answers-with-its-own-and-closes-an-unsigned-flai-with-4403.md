@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 99
-      output: 539
-      cache_read: 5881156
-      cache_write: 161370
-      cost: 2.7378
+      output: 42810
+      cache_read: 6001582
+      cache_write: 179388
+      cost: 3.1023
 ---
 # T-1248 The dashboard verifies flai's release stamp in hello before the proof, answers with its own, and closes an unsigned flai with 4403
 

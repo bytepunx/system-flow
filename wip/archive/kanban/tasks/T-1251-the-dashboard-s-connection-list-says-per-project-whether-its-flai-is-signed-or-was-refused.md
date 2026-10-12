@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 401
-      cache_read: 3552163
-      cache_write: 96599
-      cost: 1.6533
+      input: 60
+      output: 25851
+      cache_read: 3624061
+      cache_write: 108323
+      cost: 1.8733
 ---
 # T-1251 The dashboard's connection list says per project whether its flai is signed or was refused
 

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 95
-      output: 541
-      cache_read: 5782158
-      cache_write: 159335
-      cost: 2.692
+      input: 98
+      output: 42094
+      cache_read: 5901231
+      cache_write: 176388
+      cost: 3.0504
 ---
 # T-1247 flai sends its release stamp in hello, verifies the dashboard's before the proof, and closes or backs off a minute on 4403
 

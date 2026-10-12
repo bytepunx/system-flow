@@ -3,11 +3,11 @@ id: S-0237
 type: story
 nature: feature
 title: flai and flaiover exchange their release stamps in hello and refuse an unsigned peer with close code 4403
-status: in-progress
+status: done
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T17:35:39Z
+updated: 2026-10-12T17:56:44Z
 transitions:
   - to: ready
     at: 2026-10-12T16:53:33Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T17:04:18Z
     by: agent-S-0237
+  - to: review
+    at: 2026-10-12T17:54:49Z
+    by: agent-S-0237
+  - to: done
+    at: 2026-10-12T17:56:44Z
+    by: alex
 tags: [cli, dashboard]
 topics: [release, security]
 touches: [flai/internal/channel, flaiover/src/lib/server/agent.ts, docs/operators, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/HostFlaiBanner.svelte, flaiover/src/lib/components/HostFlaiBanner.svelte.test.ts, flai/cmd/serve.go, flai/cmd/host.go, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/settings.ts, flai/internal/buildinfo/stamp.go, flai/internal/buildinfo/stamp_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts, flai/cmd/serve_test.go, flai/cmd/host_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md, flai/internal/serve/below_test.go, flai/internal/serve/candidates_test.go, flai/internal/serve/outdated_test.go, flai/internal/serve/projects_test.go, flaiover/src/lib/server/project-events.test.ts, flai/cmd/dashboard_agent.go, flai/cmd/dashboard_agent_test.go, flai/cmd/serve_status_below.go, flai/cmd/serve_status_below_test.go, flaiover/src/lib/components/HostFlai.svelte, flaiover/src/lib/components/HostFlai.svelte.test.ts]
@@ -26,20 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2280
-  estimated: true
+  seconds: 3047
   turns:
     - day: 2026-10-12
-      ceremony: 4
+      ceremony: 5
       hand_edits: 2
-      work: 64
+      work: 67
   models:
     - model: claude-opus-5-5
-      input: 482
-      output: 2910
-      cache_read: 28418588
-      cache_write: 892023
-      cost: 13.2805
+      input: 504
+      output: 216985
+      cache_read: 30419392
+      cache_write: 909237
+      cost: 15.7243
   strategic:
     - kind: orchestrator
       seconds: 387
@@ -69,11 +74,11 @@ forecast:
 The channel's handshake carries each side's release stamp; each verifies the other's with the public key and the component it names before the credential proof, and a missing, unverifiable, or wrong stamp closes the connection with `4403 unsigned peer` (ADR-0070). The refusal is visible on both sides.
 
 ## Acceptance criteria
-- [ ] `hello` carries flai's `release` (statement and signature) and the answer carries the dashboard's; each side verifies the other's signature with the embedded key, checks the component (`flaiover` from the dashboard, `flai` from flai), and otherwise closes with `4403`; the protocol number is bumped and an older peer's hello without the field is treated as unsigned.
-- [ ] flai backs off a minute on `4403` as on `4409`, logs one `error` with the peer's version and the reason, and `flai serve status` and `flai host status` say "the dashboard refused this flai: unsigned" or "flai refused the dashboard: unsigned".
-- [ ] The dashboard shows a project whose flai it refused with the reason where it shows a flai that lacks a required method, and its connection list says per project whether the flai is signed.
-- [ ] Tests on both sides cover a signed peer, an unsigned one, a wrong component, and an older peer without the field.
-- [ ] The operator documentation states the promise and its limit as `release-signing.md § Verifying the peer` does, and `docs/users/flaiover.md` describes what the connection list shows.
+- [x] `hello` carries flai's `release` (statement and signature) and the answer carries the dashboard's; each side verifies the other's signature with the embedded key, checks the component (`flaiover` from the dashboard, `flai` from flai), and otherwise closes with `4403`; the protocol number is bumped and an older peer's hello without the field is treated as unsigned.
+- [x] flai backs off a minute on `4403` as on `4409`, logs one `error` with the peer's version and the reason, and `flai serve status` and `flai host status` say "the dashboard refused this flai: unsigned" or "flai refused the dashboard: unsigned".
+- [x] The dashboard shows a project whose flai it refused with the reason where it shows a flai that lacks a required method, and its connection list says per project whether the flai is signed.
+- [x] Tests on both sides cover a signed peer, an unsigned one, a wrong component, and an older peer without the field.
+- [x] The operator documentation states the promise and its limit as `release-signing.md § Verifying the peer` does, and `docs/users/flaiover.md` describes what the connection list shows.
 
 ## Tasks
 - T-1247 flai sends its release stamp in hello, verifies the dashboard's before the proof, and closes or backs off a minute on 4403
