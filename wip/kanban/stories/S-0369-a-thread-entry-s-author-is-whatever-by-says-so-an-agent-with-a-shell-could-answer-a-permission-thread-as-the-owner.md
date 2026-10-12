@@ -3,11 +3,14 @@ id: S-0369
 type: story
 nature: improvement
 title: A thread entry's author is whatever --by says, so an agent with a shell could answer a permission thread as the owner
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-12T16:52:42Z
-updated: 2026-10-12T17:59:23Z
-transitions: []
+updated: 2026-10-12T18:00:51Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:00:46Z
+    by: orchestrator
 tags: [flai, guard, threads]
 topics: [cli, conventions]
 touches: [design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/thread_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0091-a-thread-entry-s-author-is-whatever-by-says-so-an-agent-with-a-shell-could-answer-a-permission-thread-as-the-owner.md, design/issues/summary.md]
@@ -47,7 +50,6 @@ usage:
           cache_read: 13418258
           cache_write: 20896
           cost: 3.388
-draft: true
 cost_of_delay:
   inputs:
     penalty_per_week: 10
@@ -58,10 +60,13 @@ cost_of_delay:
   at: 2026-10-12T17:06:49Z
 forecast:
   duration: 45m
-  delivery: 2026-10-13T01:08:00Z
-  basis: "Its own forecast of 45m; 20th in the pull order with an in-progress limit of 5, behind S-0363, S-0370, S-0373, S-0351, S-0236, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357, S-0358 and S-0360."
+  delivery: 2026-10-12T18:51:00Z
+  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 5, behind S-0363, S-0370, S-0373 and S-0351."
   by: flai
-  at: 2026-10-12T17:59:23Z
+  at: 2026-10-12T18:00:51Z
+finalized:
+  by: orchestrator
+  at: 2026-10-12T18:00:29Z
 ---
 # S-0369 A thread entry's author is whatever --by says, so an agent with a shell could answer a permission thread as the owner
 

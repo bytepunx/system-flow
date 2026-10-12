@@ -6,7 +6,7 @@ title: An outdated MCP flai's task_done commits every changed path under the clo
 status: ready
 owner: alex
 created: 2026-10-12T14:12:30Z
-updated: 2026-10-12T17:59:23Z
+updated: 2026-10-12T18:00:51Z
 transitions:
   - to: ready
     at: 2026-10-12T17:59:16Z
@@ -43,10 +43,10 @@ cost_of_delay:
   at: 2026-10-12T14:35:38Z
 forecast:
   duration: 20m
-  delivery: 2026-10-12T18:21:00Z
+  delivery: 2026-10-12T18:23:00Z
   basis: "Its own forecast of 20m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-12T17:59:23Z
+  at: 2026-10-12T18:00:51Z
 finalized:
   by: orchestrator
   at: 2026-10-12T17:58:40Z
