@@ -5,6 +5,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -19,6 +22,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 )
 
 // I-0086: GitHub drops the connection partway through the releases listing
@@ -26,7 +31,7 @@ import (
 // releases a small page at a time, asking for the next page only while no
 // flai release has turned up.
 func TestInstallShRetriesAListingTheNetworkDrops(t *testing.T) {
-	api, listed := installStandIn(t, func(w http.ResponseWriter, n int, page string) {
+	api, script, listed := installStandIn(t, func(w http.ResponseWriter, n int, page string) {
 		switch {
 		case n == 1:
 			cutOff(t, w, `[{"tag_name":"flaiover/v0.9.0"},{"tag_name":"flaiover/v0.8.0"}]`)
@@ -39,7 +44,7 @@ func TestInstallShRetriesAListingTheNetworkDrops(t *testing.T) {
 		}
 	})
 	dir := filepath.Join(t.TempDir(), "bin")
-	out, code := runInstallSh(t, api, dir)
+	out, code := runInstallSh(t, script, api, dir)
 	if code != 0 {
 		t.Fatalf("install.sh: exit %d\n%s", code, out)
 	}
@@ -62,12 +67,12 @@ func TestInstallShRetriesAListingTheNetworkDrops(t *testing.T) {
 // answers for a private repository without a token, fails at once with the
 // hint, and the listing is asked for once.
 func TestInstallShFailsAtOnceOnAnHTTPError(t *testing.T) {
-	api, listed := installStandIn(t, func(w http.ResponseWriter, _ int, _ string) {
+	api, script, listed := installStandIn(t, func(w http.ResponseWriter, _ int, _ string) {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, `{"message":"Not Found"}`)
 	})
 	dir := filepath.Join(t.TempDir(), "bin")
-	out, code := runInstallSh(t, api, dir)
+	out, code := runInstallSh(t, script, api, dir)
 	if code == 0 || !strings.Contains(out, "could not list releases of o/r (private repository?") {
 		t.Errorf("install.sh: exit %d, want a failure with the hint\n%s", code, out)
 	}
@@ -85,10 +90,17 @@ func TestInstallShFailsAtOnceOnAnHTTPError(t *testing.T) {
 // installStandIn answers install.sh as GitHub's releases API does for o/r:
 // listing answers each releases listing, given its count from one and the
 // page asked for, and release flai/v1.2.3 holds an archive for every platform
-// install.sh knows, each a flai that prints its version, and their
-// checksums.txt. listed returns the query of each listing asked for so far.
-func installStandIn(t *testing.T, listing func(w http.ResponseWriter, n int, page string)) (url string, listed func() []string) {
+// install.sh knows, each a flai that prints its version, their checksums.txt,
+// and checksums.txt.sig, its signature by a test key. script is a copy of
+// install.sh that carries the test key in place of the release key (S-0233).
+// listed returns the query of each listing asked for so far.
+func installStandIn(t *testing.T, listing func(w http.ResponseWriter, n int, page string)) (url, script string, listed func() []string) {
 	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script = installShWithKey(t, key)
 	content := []byte("#!/bin/sh\necho 'flai 1.2.3'\n")
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
@@ -107,6 +119,7 @@ func installStandIn(t *testing.T, listing func(w http.ResponseWriter, n int, pag
 			sums = append(sums, hex.EncodeToString(sum[:])+"  "+name+"\n")
 		}
 	}
+	sig := bytes.TrimSpace(signBlob(t, key, []byte(strings.Join(sums, ""))))
 
 	var mu sync.Mutex
 	var queries []string
@@ -121,21 +134,23 @@ func installStandIn(t *testing.T, listing func(w http.ResponseWriter, n int, pag
 			mu.Unlock()
 			listing(w, n, r.URL.Query().Get("page"))
 		case "/repos/o/r/releases/tags/flai/v1.2.3":
-			list := []string{`{"url":"` + assets + `0","name":"checksums.txt"}`}
+			list := []string{`{"url":"` + assets + `0","name":"checksums.txt"}`, `{"url":"` + assets + `1","name":"checksums.txt.sig"}`}
 			for i, name := range names {
-				list = append(list, fmt.Sprintf(`{"url":"%s%d","name":"%s"}`, assets, i+1, name))
+				list = append(list, fmt.Sprintf(`{"url":"%s%d","name":"%s"}`, assets, i+2, name))
 			}
 			fmt.Fprintf(w, `{"url":"%s/repos/o/r/releases/1","tag_name":"flai/v1.2.3","assets":[%s]}`, base, strings.Join(list, ","))
 		case "/repos/o/r/releases/assets/0":
 			fmt.Fprint(w, strings.Join(sums, ""))
-		case "/repos/o/r/releases/assets/1", "/repos/o/r/releases/assets/2", "/repos/o/r/releases/assets/3", "/repos/o/r/releases/assets/4":
+		case "/repos/o/r/releases/assets/1":
+			_, _ = w.Write(sig)
+		case "/repos/o/r/releases/assets/2", "/repos/o/r/releases/assets/3", "/repos/o/r/releases/assets/4", "/repos/o/r/releases/assets/5":
 			_, _ = w.Write(archive)
 		default:
 			http.NotFound(w, r)
 		}
 	}))
 	t.Cleanup(srv.Close)
-	return srv.URL, func() []string {
+	return srv.URL, script, func() []string {
 		mu.Lock()
 		defer mu.Unlock()
 		return slices.Clone(queries)
@@ -155,21 +170,41 @@ func cutOff(t *testing.T, w http.ResponseWriter, body string) {
 	_ = rw.Flush()
 }
 
-// runInstallSh runs the repository's install.sh against the API at api,
+// installShWithKey writes a copy of the repository's install.sh that carries
+// key's public half in place of the release key, and returns its path.
+func installShWithKey(t *testing.T, key *ecdsa.PrivateKey) string {
+	t.Helper()
+	b, err := os.ReadFile("../../install.sh")
+	if err != nil {
+		t.Fatalf("read install.sh: %v", err)
+	}
+	release := strings.TrimSpace(buildinfo.ReleaseKeyPEM())
+	if strings.Count(string(b), release) != 1 {
+		t.Fatal("install.sh does not carry the release key once; flai/internal/selfupgrade's TestInstallShCarriesTheReleaseKey says how it differs")
+	}
+	pub := strings.TrimSpace(string(publicPEM(t, key)))
+	path := filepath.Join(t.TempDir(), "install.sh")
+	if err := os.WriteFile(path, []byte(strings.Replace(string(b), release, pub, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// runInstallSh runs the install.sh at script against the API at api,
 // installing into dir, and returns its output and exit code.
-func runInstallSh(t *testing.T, api, dir string) (string, int) {
+func runInstallSh(t *testing.T, script, api, dir string) (string, int) {
 	t.Helper()
 	if runtime.GOOS == "windows" {
 		t.Skip("install.sh does not install on Windows")
 	}
-	for _, tool := range []string{"sh", "curl", "tar"} {
+	for _, tool := range []string{"sh", "curl", "tar", "openssl"} {
 		if _, err := exec.LookPath(tool); err != nil {
 			t.Skipf("install.sh needs %s", tool)
 		}
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "sh", "../../install.sh")
+	cmd := exec.CommandContext(ctx, "sh", script)
 	// a token of its own, so that install.sh does not ask gh for one
 	cmd.Env = []string{"HOME=" + t.TempDir(), "PATH=" + os.Getenv("PATH"), "FLAI_API=" + api, "FLAI_REPO=o/r", "FLAI_INSTALL_DIR=" + dir, "GITHUB_TOKEN=stand-in"}
 	out, err := cmd.CombinedOutput()

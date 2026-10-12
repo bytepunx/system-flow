@@ -81,12 +81,21 @@ func (e *SignatureError) Summary() string {
 }
 
 // trustedKeys are the keys a release's signature must verify against:
-// Options.Keys, else the release key embedded in the binary.
+// Options.Keys, else the release key embedded in the binary and the test key
+// a test build was linked with, which no release build is.
 func (o Options) trustedKeys() ([]*ecdsa.PublicKey, error) {
 	if len(o.Keys) > 0 {
 		return o.Keys, nil
 	}
-	return buildinfo.ReleaseKeys()
+	keys, err := buildinfo.ReleaseKeys()
+	if err != nil {
+		return nil, err
+	}
+	linked, err := buildinfo.LinkedTestReleaseKeys()
+	if err != nil {
+		return nil, err
+	}
+	return append(keys, linked...), nil
 }
 
 // VerifyRelease checks that rel's checksums.txt is signed by a key this binary

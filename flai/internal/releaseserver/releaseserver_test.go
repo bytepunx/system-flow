@@ -5,9 +5,16 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -45,9 +53,26 @@ func archive(t *testing.T, content string) []byte {
 	return buf.Bytes()
 }
 
+// testKey is the key the tests' releases are signed with, as the release key
+// signs a published release; the server's clients trust it through
+// selfupgrade.Options.Keys.
+var testKey = sync.OnceValue(func() *ecdsa.PrivateKey {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+	return key
+})
+
+// trusted are options that read the server at api and trust testKey only.
+func trusted(api string) selfupgrade.Options {
+	return selfupgrade.Options{Repo: repo, APIBase: api, OS: "linux", Arch: "amd64", Keys: []*ecdsa.PublicKey{&testKey().PublicKey}}
+}
+
 // dist writes a GoReleaser-style dist folder for version on linux/amd64,
-// with a checksums.txt holding the archive's real sha256 and the files
-// GoReleaser writes beside them, and answers its path.
+// with a checksums.txt holding the archive's real sha256, its signature by
+// testKey and testKey's public half as the release workflow writes them, and
+// the files GoReleaser writes beside them, and answers its path.
 func dist(t *testing.T, version, content string) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -60,7 +85,19 @@ func dist(t *testing.T, version, content string) string {
 		}
 	}
 	write(name, data)
-	write(ChecksumsName, fmt.Appendf(nil, "%s  %s\n", hex.EncodeToString(sum[:]), name))
+	sums := fmt.Appendf(nil, "%s  %s\n", hex.EncodeToString(sum[:]), name)
+	write(ChecksumsName, sums)
+	digest := sha256.Sum256(sums)
+	sig, err := ecdsa.SignASN1(rand.Reader, testKey(), digest[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(SignatureName, []byte(base64.StdEncoding.EncodeToString(sig)))
+	der, err := x509.MarshalPKIXPublicKey(&testKey().PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(PublicKeyName, pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}))
 	write("artifacts.json", []byte("[]"))
 	write("flai_snapshot_linux_amd64.tar.gz", []byte("not a plain version"))
 	if err := os.Mkdir(filepath.Join(dir, "flai_linux_amd64_v1"), 0o755); err != nil {
@@ -104,7 +141,7 @@ func get(t *testing.T, url, accept string) (int, http.Header, []byte) {
 
 func TestResolveAndDownloadAgainstTheServer(t *testing.T) {
 	srv := serve(t, dist(t, "9.9.9", "the new flai"), dist(t, "9.9.8", "the old flai"))
-	opt := selfupgrade.Options{Repo: repo, APIBase: srv.URL, OS: "linux", Arch: "amd64"}
+	opt := trusted(srv.URL)
 	ctx := context.Background()
 
 	rel, err := selfupgrade.Resolve(ctx, opt)
@@ -190,8 +227,8 @@ func TestTagRouteTakesAnEscapedSlash(t *testing.T) {
 				t.Errorf("asset %s has url %s, which install.sh's asset_url does not match", a.Name, a.URL)
 			}
 		}
-		if got := strings.Join(names, ","); got != "checksums.txt,flai_9.9.9_linux_amd64.tar.gz" {
-			t.Errorf("assets are %s, want checksums.txt and the archive only", got)
+		if got := strings.Join(names, ","); got != "checksums.txt,checksums.txt.sig,cosign.pub,flai_9.9.9_linux_amd64.tar.gz" {
+			t.Errorf("assets are %s, want checksums.txt, its signature, the public key, and the archive only", got)
 		}
 	}
 }
@@ -206,9 +243,10 @@ func TestAssetURLComesBeforeItsName(t *testing.T) {
 	for _, p := range pairs {
 		keys = append(keys, p[1:strings.Index(p[1:], `"`)+1])
 	}
-	// the release's name, then url and name for each of two assets
-	if got := strings.Join(keys, ","); got != "name,url,name,url,name" {
-		t.Errorf("url and name keys come in the order %s, want name,url,name,url,name", got)
+	// the release's name, then url and name for each of four assets
+	want := "name" + strings.Repeat(",url,name", 4)
+	if got := strings.Join(keys, ","); got != want {
+		t.Errorf("url and name keys come in the order %s, want %s", got, want)
 	}
 }
 
@@ -234,6 +272,58 @@ func TestAssetAnswersBytesOnlyForOctetStream(t *testing.T) {
 	}
 	if code != http.StatusOK || json.Unmarshal(body, &desc) != nil || desc.Name != ChecksumsName || desc.Size != int64(len(want)) {
 		t.Errorf("asset 1 without octet-stream answered %d %s, want its description", code, body)
+	}
+}
+
+// A release is verified with the signature and public key the server serves:
+// a flai that trusts only the embedded release key refuses one signed with
+// another key, which the release's own cosign.pub verifies, as signed by a key
+// it does not know.
+func TestTheServedSignatureVerifiesOnlyWithItsKey(t *testing.T) {
+	srv := serve(t, dist(t, "9.9.9", "x"))
+	ctx := context.Background()
+	opt := trusted(srv.URL)
+	opt.Keys = nil
+	rel, err := selfupgrade.Resolve(ctx, opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin, err := selfupgrade.Download(ctx, opt, rel)
+	var refused *selfupgrade.SignatureError
+	if !errors.As(err, &refused) || refused.Kind != selfupgrade.SignatureUnknownKey {
+		t.Fatalf("download with the embedded release key answered %q, %v; want a refusal for an unknown key", bin, err)
+	}
+	if err := selfupgrade.VerifyRelease(ctx, trusted(srv.URL), rel); err != nil {
+		t.Errorf("verify with the signing key: %v", err)
+	}
+}
+
+// A dist folder without a signature, as scripts/flai-snapshot.sh writes one,
+// still serves its archives and checksums.txt; a flai refuses to install it.
+func TestAnUnsignedFolderServesWithoutASignature(t *testing.T) {
+	dir := dist(t, "9.9.9", "x")
+	for _, name := range []string{SignatureName, PublicKeyName} {
+		if err := os.Remove(filepath.Join(dir, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srv := serve(t, dir)
+	ctx := context.Background()
+	rel, err := selfupgrade.Resolve(ctx, trusted(srv.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, a := range rel.Assets {
+		names = append(names, a.Name)
+	}
+	if got := strings.Join(names, ","); got != "checksums.txt,flai_9.9.9_linux_amd64.tar.gz" {
+		t.Errorf("assets are %s, want checksums.txt and the archive only", got)
+	}
+	_, err = selfupgrade.Download(ctx, trusted(srv.URL), rel)
+	var refused *selfupgrade.SignatureError
+	if !errors.As(err, &refused) || refused.Kind != selfupgrade.SignatureMissing {
+		t.Errorf("download of an unsigned release answered %v, want a refusal for a missing signature", err)
 	}
 }
 

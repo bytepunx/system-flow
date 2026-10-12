@@ -14,7 +14,10 @@
 # test key it makes with openssl, installs with a copy of install.sh that
 # carries the test key in place of the release key, and checks that the
 # repository's install.sh refuses the same release, and refuses on a PATH
-# without openssl.
+# without openssl. Likewise flai trusts only the release key it embeds, so the
+# script builds a test flai linked with the test key as well (buildinfo's
+# testReleaseKey, which no release build sets), upgrades with it, and checks
+# that the repository's bin/flai refuses the same release.
 #
 # When a step fails it prints the step, its output, and the server's request
 # log, and exits non-zero, leaving its scratch folders under .flai-cache.
@@ -37,6 +40,8 @@ LOG="$ROOT/.flai-cache/install-test.log"
 SERVER_LOG="$ROOT/.flai-cache/install-test-server.log"
 # install.sh, carrying the test key in place of the release key.
 TEST_INSTALL="$KEYS/install.sh"
+# flai built from the tree, trusting the test key beside the release key.
+TEST_FLAI="$KEYS/flai"
 OUTSIDE=""
 trap 'if [ -n "$OUTSIDE" ]; then rm -rf "$OUTSIDE"; fi' EXIT
 rm -rf "$DIR" "$SCRATCH_HOME" "$DIST" "$GH_EMPTY" "$KEYS" "$TOOLS" "$REFUSED" "$LOG" "$LOG.install" "$SERVER_LOG"
@@ -145,7 +150,8 @@ build_releases() {
 
 # sign_releases makes a test key pair, signs each release's checksums.txt with
 # it as cosign sign-blob does (base64 of the DER ECDSA P-256 signature over
-# the file's SHA-256) into checksums.txt.sig beside it, and writes
+# the file's SHA-256) into checksums.txt.sig beside it, publishes the public
+# key as the release's cosign.pub, as the release workflow does, and writes
 # TEST_INSTALL, install.sh with the test key's PEM body in place of the
 # release key's.
 sign_releases() {
@@ -156,6 +162,7 @@ sign_releases() {
     sums="$DIST/$v/checksums.txt"
     openssl dgst -sha256 -sign "$KEYS/test.key" -out "$KEYS/$v.sig.der" "$sums" || return 1
     openssl base64 -A -in "$KEYS/$v.sig.der" -out "$sums.sig" || return 1
+    cp "$KEYS/test.pub" "$DIST/$v/cosign.pub" || return 1
   done
   awk -v pub="$KEYS/test.pub" '
     /-----BEGIN PUBLIC KEY-----/ {
@@ -171,6 +178,16 @@ sign_releases() {
     echo "the copy of install.sh still carries the release key"
     return 1
   fi
+}
+
+# build_test_flai builds TEST_FLAI from the tree as scripts/flai-build.sh
+# builds bin/flai, linked with the test key's PEM body on one line, which is
+# the form a -X value takes.
+build_test_flai() {
+  key=$(grep -v -e '^-----' "$KEYS/test.pub" | tr -d '\n') || return 1
+  [ -n "$key" ] || { echo "$KEYS/test.pub holds no PEM body"; return 1; }
+  (cd "$ROOT/flai" && go build -o "$TEST_FLAI" \
+    -ldflags "-X github.com/bytepunx/system-flow/flai/internal/buildinfo.testReleaseKey=$key" .) || return 1
 }
 
 # The repository's install.sh knows only the release key, so it refuses a
@@ -208,25 +225,48 @@ install_default_dir() {
     || { echo "install.sh did not print a PATH line"; return 1; }
 }
 
+# With --dir, --check compares NEW with the running flai's version, dev, so it
+# reports an upgrade and verifies NEW's signature, which the test key made.
 upgrade_check() {
-  out=$("$ROOT/bin/flai" self-upgrade --check --repo "$REPO" 2>&1)
+  out=$("$TEST_FLAI" self-upgrade --check --dir "$DIR" --repo "$REPO" 2>&1)
   check_status=$?
   printf '%s\n' "$out"
   [ "$check_status" -eq 0 ] || return "$check_status"
-  printf '%s\n' "$out" | grep -qF "latest is $NEW" \
-    || { echo "self-upgrade --check did not report $NEW as the latest"; return 1; }
+  printf '%s\n' "$out" | grep -qF "installed at $DIR/flai; latest is $NEW (upgrade available)" \
+    || { echo "self-upgrade --check did not report $NEW as the latest, and installable"; return 1; }
 }
 
-# $DIR holds OLD, so self-upgrade downloads NEW over it.
+# bin/flai, built as every flai but the test one is, trusts only the release
+# key: it reports NEW not installable, refuses to install it, and leaves OLD
+# in place.
+refuse_test_key() {
+  out=$("$ROOT/bin/flai" self-upgrade --check --dir "$DIR" --repo "$REPO" 2>&1)
+  check_status=$?
+  printf '%s\n' "$out"
+  [ "$check_status" -eq 0 ] || return "$check_status"
+  printf '%s\n' "$out" | grep -qF "latest is $NEW (upgrade available, but not installable: it is signed by a key this flai does not trust" \
+    || { echo "bin/flai self-upgrade --check did not report $NEW not installable"; return 1; }
+  upgrade_status=0
+  out=$("$ROOT/bin/flai" self-upgrade --dir "$DIR" --repo "$REPO" 2>&1) || upgrade_status=$?
+  printf '%s\n' "$out"
+  [ "$upgrade_status" -ne 0 ] || { echo "bin/flai self-upgrade exited 0; want a refusal"; return 1; }
+  printf '%s\n' "$out" | grep -qF "which this flai does not trust" \
+    || { echo "bin/flai self-upgrade did not say the release's key is not trusted"; return 1; }
+  expect_version "$DIR/flai" "$OLD"
+}
+
+# $DIR holds OLD, so self-upgrade verifies NEW and downloads it over it.
 upgrade_dir() {
-  "$ROOT/bin/flai" self-upgrade --dir "$DIR" --repo "$REPO" || return 1
+  "$TEST_FLAI" self-upgrade --dir "$DIR" --repo "$REPO" || return 1
   expect_version "$DIR/flai" "$NEW"
 }
 
 # $DIR is inside this project, where self-upgrade never installs (S-0111), so
 # the binary's own path is checked on a copy outside any project. Resolved, as
 # flai resolves its own path: macOS's temporary directory is under /var, a link
-# to /private/var (I-0045).
+# to /private/var (I-0045). The copy is release NEW, built by GoReleaser and so
+# trusting only the release key; it is the latest, so --check verifies no
+# signature, as the next step's does not.
 upgrade_own_path() {
   cp "$DIR/flai" "$OUTSIDE/flai" || return 1
   out=$("$OUTSIDE/flai" self-upgrade --check --repo "$REPO" 2>&1)
@@ -251,6 +291,7 @@ step "install.sh never invokes sudo" no_sudo
 step "install.sh refuses, saying why, on a PATH without openssl" no_openssl
 quiet_step "build bin/flai, and releases $OLD and $NEW from the tree" build_releases
 step "sign releases $OLD and $NEW with a test key, and copy install.sh to carry it" sign_releases
+quiet_step "build a test flai that trusts the test key beside the release key" build_test_flai
 
 say "serve releases $OLD and $NEW as $REPO on 127.0.0.1"
 # The server's stderr goes to a file, not into $(...), which would wait for the
@@ -269,8 +310,9 @@ export FLAI_RELEASES_API
 step "install.sh refuses release $OLD, signed by a key it does not know" refuse_unknown_key
 step "install.sh with an explicit FLAI_INSTALL_DIR verifies and installs release $OLD" install_explicit_dir
 step "install.sh with no FLAI_INSTALL_DIR verifies and installs the latest under a fresh HOME/.flai/bin, without sudo" install_default_dir
-step "flai self-upgrade --check" upgrade_check
-step "flai self-upgrade --dir upgrades $OLD to $NEW" upgrade_dir
+step "flai self-upgrade --check verifies release $NEW" upgrade_check
+step "bin/flai, which trusts only the release key, refuses release $NEW, signed by the test key" refuse_test_key
+step "flai self-upgrade --dir verifies and upgrades $OLD to $NEW" upgrade_dir
 OUTSIDE=$(cd "$(mktemp -d)" && pwd -P)
 step "flai self-upgrade with no --dir, outside a project, resolves to the binary's own path" upgrade_own_path
 step "flai self-upgrade with no --dir, run from inside a project, resolves to HOME/.flai/bin" upgrade_in_project

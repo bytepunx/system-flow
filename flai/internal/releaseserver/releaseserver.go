@@ -31,6 +31,15 @@ const TagPrefix = "flai/v"
 // ChecksumsName is the checksums file GoReleaser writes into a dist folder.
 const ChecksumsName = "checksums.txt"
 
+// SignatureName and PublicKeyName are the signature over checksums.txt and
+// the public key that verifies it, which a signed release publishes beside it
+// (S-0233). A dist folder holds them when the release workflow, or the smoke
+// test with its test key, signed it; the server serves each it finds.
+const (
+	SignatureName = "checksums.txt.sig"
+	PublicKeyName = "cosign.pub"
+)
+
 // archiveName matches a GoReleaser archive of flai: flai_<version>_<os>_<arch>
 // with .tar.gz or .zip.
 var archiveName = regexp.MustCompile(`^flai_([^_]+)_[^_]+_[^_]+\.(tar\.gz|zip)$`)
@@ -51,7 +60,8 @@ type Release struct {
 
 // Scan reads GoReleaser dist folders into releases, newest version first: one
 // release per plain X.Y.Z version among the folders' flai archives, holding
-// those archives and the checksums.txt of their folder, published at the
+// those archives and the checksums.txt of their folder, with its
+// checksums.txt.sig and cosign.pub when the folder has them, published at the
 // newest archive's modification time.
 func Scan(dirs ...string) ([]Release, error) {
 	if len(dirs) == 0 {
@@ -97,13 +107,18 @@ func scanDir(dir string, fsys fs.FS) (map[string]*Release, error) {
 	}
 	out := map[string]*Release{}
 	hasSums := false
+	var signed []string // the signature files the folder has
 	for _, e := range entries {
 		if !e.Type().IsRegular() {
 			continue
 		}
 		name := e.Name()
-		if name == ChecksumsName {
+		switch name {
+		case ChecksumsName:
 			hasSums = true
+			continue
+		case SignatureName, PublicKeyName:
+			signed = append(signed, name)
 			continue
 		}
 		m := archiveName.FindStringSubmatch(name)
@@ -132,6 +147,9 @@ func scanDir(dir string, fsys fs.FS) (map[string]*Release, error) {
 	}
 	for _, rel := range out {
 		rel.Assets = append(rel.Assets, Asset{Name: ChecksumsName, FS: fsys})
+		for _, name := range signed {
+			rel.Assets = append(rel.Assets, Asset{Name: name, FS: fsys})
+		}
 		slices.SortFunc(rel.Assets, func(a, b Asset) int { return strings.Compare(a.Name, b.Name) })
 	}
 	return out, nil
