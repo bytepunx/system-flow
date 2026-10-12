@@ -79,3 +79,42 @@ func TestAThreadRecommendationIsPostedWithItsSourceAndConfirmed(t *testing.T) {
 		t.Errorf("a second confirm: exit %d, %q", code, errOut)
 	}
 }
+
+// S-0369: a thread entry without --by is FLAI_AGENT's when it is set, else
+// the config's author, so the operator's own shell answers as the operator.
+func TestAThreadEntryIsTheConfigAuthorsWithoutFLAIAGENT(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "")
+	root := tempProject(t)
+	for _, args := range [][]string{{"config", "set", "author", "olive"}, {"thread", "new", "--on", "system-flow.yaml", "--by", "planner", "Which first?", "The CLI or the dashboard?"}} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %d %s", args, code, errOut)
+		}
+	}
+	lastAuthor := func(args ...string) string {
+		t.Helper()
+		out, errOut, code := runIn(t, root, append([]string{"thread", "reply", "TH-0001", "--json"}, args...)...)
+		if code != 0 {
+			t.Fatalf("reply %v: %d %s", args, code, errOut)
+		}
+		var view struct {
+			Entries []struct {
+				Author string `json:"author"`
+			} `json:"entries"`
+		}
+		if err := json.Unmarshal([]byte(out), &view); err != nil {
+			t.Fatalf("reply --json: %v\n%s", err, out)
+		}
+		return view.Entries[len(view.Entries)-1].Author
+	}
+	if got := lastAuthor("The CLI."); got != "olive" {
+		t.Errorf("without FLAI_AGENT the config author replied, got %q", got)
+	}
+	t.Setenv("FLAI_AGENT", "claude")
+	if got := lastAuthor("The dashboard."); got != "claude" {
+		t.Errorf("with FLAI_AGENT the agent replied, got %q", got)
+	}
+	if got := lastAuthor("--by", "dana", "Both."); got != "dana" {
+		t.Errorf("--by wins, got %q", got)
+	}
+}

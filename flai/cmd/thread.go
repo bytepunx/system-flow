@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -10,12 +11,16 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-// threadAuthor is --by, else the agent identity, else the config author.
+// threadAuthor is --by, else FLAI_AGENT when an agent's session sets it, else
+// the config author. agentIdentity is not asked: it answers "agent" when
+// FLAI_AGENT is unset, which would write the operator's own entries as an
+// agent's, and permission_prompt would never take them as the owner's answer
+// (S-0369).
 func (a *app) threadAuthor(by string) string {
 	if by != "" {
 		return by
 	}
-	if agent, _ := agentIdentity(); agent != "" {
+	if agent := os.Getenv("FLAI_AGENT"); agent != "" {
 		return agent
 	}
 	return a.author()
