@@ -96,9 +96,10 @@ tests:
     all_only: true
     covers: [flaiover-lint, vitest]
   - name: integration
-    command: [scripts/integration.sh]
+    command: ["../scripts/integration.sh", "-json"]
+    dir: flai
     paths: ["flai/**"]
-    format: plain
+    format: go-test-json
     all_only: true
     covers: [go-test]
   - name: smoke
