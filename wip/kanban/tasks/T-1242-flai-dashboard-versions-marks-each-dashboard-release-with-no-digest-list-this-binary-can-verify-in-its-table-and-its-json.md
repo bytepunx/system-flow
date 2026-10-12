@@ -3,12 +3,18 @@ id: T-1242
 type: task
 nature: feature
 title: flai dashboard versions marks each dashboard release with no digest list this binary can verify, in its table and its JSON
-status: backlog
+status: in-progress
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:53:48Z
-updated: 2026-10-12T18:17:24Z
-transitions: []
+updated: 2026-10-12T18:26:47Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:26:46Z
+    by: agent-S-0236
+  - to: in-progress
+    at: 2026-10-12T18:26:47Z
+    by: agent-S-0236
 stream: S-0236
 tags: [cli]
 touches: [flai/cmd/dashboard_versions.go, flai/cmd/dashboard_versions_test.go]

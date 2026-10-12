@@ -3,11 +3,11 @@ id: T-1440
 type: task
 nature: remediation
 title: taskdone.Run refuses, changing nothing, while the running flai's major or minor version is behind the project's history, tested through Run and the MCP tool
-status: in-progress
+status: done
 parent: S-0363
 owner: alex
 created: 2026-10-12T14:36:30Z
-updated: 2026-10-12T18:15:28Z
+updated: 2026-10-12T18:22:43Z
 transitions:
   - to: ready
     at: 2026-10-12T18:15:27Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:15:28Z
     by: agent-S-0363
+  - to: done
+    at: 2026-10-12T18:22:43Z
+    by: agent-S-0363
 stream: S-0363
 tags: [cli]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go, flai/cmd/task_done.go, docs/users/flai-reference.md]
 after: [T-1439]
+usage:
+  source: log
+  seconds: 435
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 59
+      output: 305
+      cache_read: 2555740
+      cache_write: 114466
+      cost: 1.2106
 ---
 # T-1440 taskdone.Run refuses, changing nothing, while the running flai's major or minor version is behind the project's history, tested through Run and the MCP tool
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 33
-      cache_read: 687480
-      cache_write: 12762
-      cost: 0.3174
+      input: 9
+      output: 1758
+      cache_read: 680500
+      cache_write: 19741
+      cost: 0.3292
 ---
 # T-1491 Design and user docs say an unreadable narrative is listed as unreadable instead of failing the write
 

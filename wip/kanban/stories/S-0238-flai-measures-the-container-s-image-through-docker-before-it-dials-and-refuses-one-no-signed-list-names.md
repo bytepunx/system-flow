@@ -3,12 +3,15 @@ id: S-0238
 type: story
 nature: feature
 title: flai measures the container's image through Docker before it dials and refuses one no signed list names
-status: backlog
+status: ready
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T18:20:02Z
-transitions: []
+updated: 2026-10-12T18:29:30Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:29:30Z
+    by: alex
 tags: [cli]
 topics: [release, security]
 touches: [flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/imagecheck.go, flai/internal/serve/imagecheck_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/cmd/dashboard_test.go, docs/operators/index.md, docs/users/flai-reference.md, design/system/release-signing.md]

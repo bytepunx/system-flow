@@ -24,15 +24,15 @@ touches: [design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-ev
 after: [T-1491]
 usage:
   source: log
-  seconds: 4
+  seconds: 5
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 190543
-      cache_write: 704
-      cost: 0.0867
+      input: 3
+      output: 480
+      cache_read: 185855
+      cache_write: 5392
+      cost: 0.0899
 ---
 # T-1492 Close I-0129 with what fixed it
 

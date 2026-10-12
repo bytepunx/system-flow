@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 48
-      cache_read: 668391
-      cache_write: 5871
-      cost: 0.3056
+      input: 9
+      output: 1692
+      cache_read: 655251
+      cache_write: 19009
+      cost: 0.317
 ---
 # T-1489 WriteIndex lists an unreadable narrative as unreadable and writes the index
 

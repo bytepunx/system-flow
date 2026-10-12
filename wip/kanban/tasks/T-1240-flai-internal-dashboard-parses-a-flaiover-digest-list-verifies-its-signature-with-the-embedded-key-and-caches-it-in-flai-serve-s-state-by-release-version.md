@@ -3,16 +3,36 @@ id: T-1240
 type: task
 nature: feature
 title: flai/internal/dashboard parses a flaiover digest list, verifies its signature with the embedded key, and caches it in flai serve's state by release version
-status: backlog
+status: done
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:53:30Z
-updated: 2026-10-12T18:17:19Z
-transitions: []
+updated: 2026-10-12T18:26:34Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:22:27Z
+    by: agent-S-0236
+  - to: in-progress
+    at: 2026-10-12T18:22:28Z
+    by: agent-S-0236
+  - to: done
+    at: 2026-10-12T18:26:34Z
+    by: agent-S-0236
 stream: S-0236
 tags: [cli]
 touches: [flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go]
 after: [T-1239]
+usage:
+  source: log
+  seconds: 245
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 205
+      cache_read: 1208658
+      cache_write: 72893
+      cost: 0.581
 ---
 # T-1240 flai/internal/dashboard parses a flaiover digest list, verifies its signature with the embedded key, and caches it in flai serve's state by release version
 

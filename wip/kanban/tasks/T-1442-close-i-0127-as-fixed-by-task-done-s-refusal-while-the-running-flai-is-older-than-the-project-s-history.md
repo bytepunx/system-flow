@@ -3,16 +3,36 @@ id: T-1442
 type: task
 nature: remediation
 title: Close I-0127 as fixed by task_done's refusal while the running flai is older than the project's history
-status: backlog
+status: done
 parent: S-0363
 owner: alex
 created: 2026-10-12T14:36:44Z
-updated: 2026-10-12T14:36:44Z
-transitions: []
+updated: 2026-10-12T18:26:14Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:26:08Z
+    by: agent-S-0363
+  - to: in-progress
+    at: 2026-10-12T18:26:09Z
+    by: agent-S-0363
+  - to: done
+    at: 2026-10-12T18:26:14Z
+    by: agent-S-0363
 stream: S-0363
 tags: [cli]
 touches: [design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md, design/issues/summary.md]
 after: [T-1440, T-1441]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 24
+      cache_read: 206883
+      cache_write: 255
+      cost: 0.0939
 ---
 # T-1442 Close I-0127 as fixed by task_done's refusal while the running flai is older than the project's history
 

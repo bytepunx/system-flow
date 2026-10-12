@@ -3,11 +3,11 @@ id: T-1239
 type: task
 nature: feature
 title: selfupgrade lists the flaiover GitHub releases with their assets and downloads a release's asset
-status: in-progress
+status: done
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:53:23Z
-updated: 2026-10-12T18:17:51Z
+updated: 2026-10-12T18:22:20Z
 transitions:
   - to: ready
     at: 2026-10-12T18:17:50Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:17:51Z
     by: agent-S-0236
+  - to: done
+    at: 2026-10-12T18:22:20Z
+    by: agent-S-0236
 stream: S-0236
 tags: [cli]
-touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go]
+touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, flai/internal/selfupgrade/signature.go]
+usage:
+  source: log
+  seconds: 269
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 224
+      cache_read: 1992693
+      cache_write: 104229
+      cost: 0.9507
 ---
 # T-1239 selfupgrade lists the flaiover GitHub releases with their assets and downloads a release's asset
 

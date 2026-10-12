@@ -4,10 +4,10 @@ title: "Run flai host upgrade to 1.41.0: the installed 1.40.1 rejects main's man
 anchor:
   path: wip/archive/kanban/stories/S-0364-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md
   item: S-0364
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-12T15:57:27Z
-updated: 2026-10-12T18:14:07Z
+updated: 2026-10-12T18:20:42Z
 ---
 
 # TH-0411 Run flai host upgrade to 1.41.0: the installed 1.40.1 rejects main's manifest since S-0364
@@ -59,3 +59,6 @@ flai serve is running again, and S-0363, S-0373, S-0236, and S-0369 started at 1
 One process is still on 1.40.1: the MCP server of this orchestrator session. Its `plan` and `activity_log` still refuse on `flai.minimum: 1.43.0`.
 
 **What you need to do:** turn the orchestrate host action off and on again (`flai serve disable orchestrate`, then `flai serve enable orchestrate`) so I restart on the current flai. Until then I cannot start the planners for S-0375 to S-0379 or write my decision log. Accepting, publishing, promoting, and threads still work.
+
+### 2026-10-12T18:20:42Z alex
+Resolved.

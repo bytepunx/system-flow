@@ -6,7 +6,7 @@ title: An outdated MCP flai's task_done commits every changed path under the clo
 status: in-progress
 owner: alex
 created: 2026-10-12T14:12:30Z
-updated: 2026-10-12T18:15:02Z
+updated: 2026-10-12T18:26:19Z
 transitions:
   - to: ready
     at: 2026-10-12T17:59:16Z
@@ -23,18 +23,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 97
+  seconds: 764
   estimated: true
   turns:
     - day: 2026-10-12
-      work: 19
+      ceremony: 2
+      hand_edits: 1
+      work: 33
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 236
-      cache_read: 1552294
-      cache_write: 124730
-      cost: 0.7603
+      input: 148
+      output: 1031
+      cache_read: 7017872
+      cache_write: 345506
+      cost: 3.3384
   strategic:
     - kind: orchestrator
       seconds: 226
@@ -72,7 +74,7 @@ This story remediates [I-0127](../../../design/issues/I-0127-an-outdated-mcp-fla
 
 ## Acceptance criteria
 - [ ] The cause I-0127 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0127 is closed with `flai issue close I-0127 --reason` saying what fixed it
+- [x] I-0127 is closed with `flai issue close I-0127 --reason` saying what fixed it
 
 ## Tasks
 - T-1439 ADR: flai task done refuses to close a task while the running flai's major or minor version is behind the project's history

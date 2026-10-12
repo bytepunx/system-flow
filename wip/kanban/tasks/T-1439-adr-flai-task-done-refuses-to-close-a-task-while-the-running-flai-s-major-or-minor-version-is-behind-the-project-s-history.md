@@ -23,7 +23,7 @@ tags: [cli]
 touches: [design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md, design/adrs/README.md]
 usage:
   source: log
-  seconds: 25
+  seconds: 26
   estimated: true
   models:
     - model: claude-opus-5-5

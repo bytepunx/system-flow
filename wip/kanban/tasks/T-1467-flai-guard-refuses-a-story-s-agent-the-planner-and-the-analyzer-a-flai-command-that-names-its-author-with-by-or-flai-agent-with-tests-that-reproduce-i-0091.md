@@ -3,12 +3,18 @@ id: T-1467
 type: task
 nature: remediation
 title: flai guard refuses a story's agent, the planner, and the analyzer a flai command that names its author with --by or FLAI_AGENT, with tests that reproduce I-0091
-status: backlog
+status: in-progress
 parent: S-0369
 owner: alex
 created: 2026-10-12T17:05:52Z
-updated: 2026-10-12T18:17:41Z
-transitions: []
+updated: 2026-10-12T18:27:12Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:27:12Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T18:27:12Z
+    by: system-flow
 stream: S-0369
 tags: [flai, guard]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md]

@@ -3,11 +3,11 @@ id: T-1441
 type: task
 nature: remediation
 title: The design, user, and operator docs say flai task done refuses while the running flai's major or minor version is behind the project's history
-status: in-progress
+status: done
 parent: S-0363
 owner: alex
 created: 2026-10-12T14:36:40Z
-updated: 2026-10-12T18:15:29Z
+updated: 2026-10-12T18:22:56Z
 transitions:
   - to: ready
     at: 2026-10-12T18:15:28Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:15:29Z
     by: agent-S-0363
+  - to: done
+    at: 2026-10-12T18:22:56Z
+    by: agent-S-0363
 stream: S-0363
 tags: [cli, docs]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
 after: [T-1439]
+usage:
+  source: log
+  seconds: 447
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 275
+      cache_read: 1323956
+      cache_write: 73392
+      cost: 0.6336
 ---
 # T-1441 The design, user, and operator docs say flai task done refuses while the running flai's major or minor version is behind the project's history
 

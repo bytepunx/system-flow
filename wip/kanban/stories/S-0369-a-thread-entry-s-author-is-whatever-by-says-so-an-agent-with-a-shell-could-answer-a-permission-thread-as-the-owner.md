@@ -6,7 +6,7 @@ title: A thread entry's author is whatever --by says, so an agent with a shell c
 status: in-progress
 owner: alex
 created: 2026-10-12T16:52:42Z
-updated: 2026-10-12T18:18:00Z
+updated: 2026-10-12T18:26:43Z
 transitions:
   - to: ready
     at: 2026-10-12T18:00:46Z
@@ -16,16 +16,27 @@ transitions:
     by: agent-S-0369
 tags: [flai, guard, threads]
 topics: [cli, conventions]
-touches: [design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0091-a-thread-entry-s-author-is-whatever-by-says-so-an-agent-with-a-shell-could-answer-a-permission-thread-as-the-owner.md, design/issues/summary.md, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go]
+touches: [design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0091-a-thread-entry-s-author-is-whatever-by-says-so-an-agent-with-a-shell-could-answer-a-permission-thread-as-the-owner.md, design/issues/summary.md, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, design/adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 776
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      hand_edits: 1
+      work: 33
+  models:
+    - model: claude-opus-5-5
+      input: 102
+      output: 792
+      cache_read: 4915592
+      cache_write: 256213
+      cost: 2.3448
   strategic:
     - kind: planner
       seconds: 496

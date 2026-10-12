@@ -3,11 +3,11 @@ id: T-1465
 type: task
 nature: improvement
 title: An ADR refining ADR-0060 and ADR-0097 decides that flai guard refuses a served agent a flai command that names who wrote it, and agent-adapters.md and strategic-agents.md record it
-status: in-progress
+status: done
 parent: S-0369
 owner: alex
 created: 2026-10-12T17:05:34Z
-updated: 2026-10-12T18:18:05Z
+updated: 2026-10-12T18:26:43Z
 transitions:
   - to: ready
     at: 2026-10-12T18:18:04Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:18:05Z
     by: system-flow
+  - to: done
+    at: 2026-10-12T18:26:43Z
+    by: agent-S-0369
 stream: S-0369
 tags: [flai, guard, adr]
-touches: [design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md]
+touches: [design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, design/adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md]
+usage:
+  source: log
+  seconds: 518
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 127
+      cache_read: 798852
+      cache_write: 50532
+      cost: 0.3851
 ---
 # T-1465 An ADR refining ADR-0060 and ADR-0097 decides that flai guard refuses a served agent a flai command that names who wrote it, and agent-adapters.md and strategic-agents.md record it
 

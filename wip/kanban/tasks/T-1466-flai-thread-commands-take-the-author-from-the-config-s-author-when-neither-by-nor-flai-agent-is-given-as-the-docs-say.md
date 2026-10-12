@@ -3,11 +3,11 @@ id: T-1466
 type: task
 nature: remediation
 title: flai thread commands take the author from the config's author when neither --by nor FLAI_AGENT is given, as the docs say
-status: in-progress
+status: done
 parent: S-0369
 owner: alex
 created: 2026-10-12T17:05:39Z
-updated: 2026-10-12T18:18:06Z
+updated: 2026-10-12T18:26:58Z
 transitions:
   - to: ready
     at: 2026-10-12T18:18:06Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:18:06Z
     by: system-flow
+  - to: done
+    at: 2026-10-12T18:26:58Z
+    by: agent-S-0369
 stream: S-0369
 tags: [flai, threads]
 touches: [flai/cmd/thread.go, flai/cmd/thread_test.go]
+usage:
+  source: log
+  seconds: 517
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 246
+      cache_read: 858669
+      cache_write: 41793
+      cost: 0.4083
 ---
 # T-1466 flai thread commands take the author from the config's author when neither --by nor FLAI_AGENT is given, as the docs say
 

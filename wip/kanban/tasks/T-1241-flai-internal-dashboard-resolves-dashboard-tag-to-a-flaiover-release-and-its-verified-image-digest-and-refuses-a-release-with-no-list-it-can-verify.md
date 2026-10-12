@@ -3,12 +3,18 @@ id: T-1241
 type: task
 nature: feature
 title: flai/internal/dashboard resolves dashboard.tag to a flaiover release and its verified image digest, and refuses a release with no list it can verify
-status: backlog
+status: in-progress
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:53:42Z
-updated: 2026-10-12T18:17:36Z
-transitions: []
+updated: 2026-10-12T18:26:45Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:26:44Z
+    by: agent-S-0236
+  - to: in-progress
+    at: 2026-10-12T18:26:45Z
+    by: agent-S-0236
 stream: S-0236
 tags: [cli]
 touches: [flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go]
