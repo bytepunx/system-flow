@@ -38,17 +38,22 @@ func newDashboardVersionsCmd(a *app) *cobra.Command {
 	var src releaseSource
 	c := &cobra.Command{
 		Use:   "versions",
-		Short: "List the published dashboard releases, marking the running and the configured one",
+		Short: "List the published dashboard releases, marking the running, the configured, and the not deployable ones",
 		Long: `Lists the published dashboard releases, the repository's flaiover/vX.Y.Z tags,
 newest first, and installs nothing. Each release's image tag is its bare
 version, X.Y.Z. It marks the newest, the release the running container's image
 carries (its FLAIOVER_VERSION, else its image tag), and the configured tag
-(flags, then the dashboard section of system-flow.yaml, then config). Docker
-is not needed to list: without it, or with no container running, nothing is
-marked running. flai dashboard upgrade --published --tag X.Y.Z deploys one of
-them, an earlier one included, for that container once; dashboard.tag is not
-changed. With --json it prints a list of version, tag, running, configured,
-and latest.`,
+(flags, then the dashboard section of system-flow.yaml, then config). It marks
+"not deployable", with the reason, each release with no digest list this flai
+can verify, such as one from before signing (ADR-0070): flai dashboard
+refuses to run it. To check, it downloads each release's digest list and its
+signature; a download that fails fails the list. Docker is not needed to
+list: without it, or with no container running, nothing is marked running.
+flai dashboard upgrade --published --tag X.Y.Z deploys one of them, an
+earlier one included, for that container once; dashboard.tag is not changed.
+With --json it prints a list of version, tag, running, configured, and
+latest, and, for a release that is not deployable, unverifiable, signature
+(missing, bad, or unknown-key), and reason.`,
 		Example: `  flai dashboard versions
   flai dashboard versions --json
   flai dashboard upgrade --published --tag 0.4.0`,
@@ -174,12 +179,12 @@ func requirePublishedDashboard(ctx context.Context, opt selfupgrade.Options, tag
 		return err
 	}
 	if len(published) == 0 {
-		return fmt.Errorf("upgrade the dashboard to %s: %s has no published dashboard release (no tag %sX.Y.Z); check the repository the releases come from, or give --tag without --published to use a tag as it is", tag, opt.Repo, selfupgrade.DashboardTagPrefix)
+		return fmt.Errorf("upgrade the dashboard to %s: %s has no published dashboard release (no tag %sX.Y.Z); check the repository the releases come from, or give --image and --tag without --published to run another image's tag as it is, unsigned", tag, opt.Repo, selfupgrade.DashboardTagPrefix)
 	}
 	i := slices.IndexFunc(published, func(r selfupgrade.Release) bool { return r.Version == tag })
 	if i < 0 {
 		list := selfupgrade.VersionList(published)
-		return fmt.Errorf("upgrade the dashboard to %s: it is not a published dashboard release of %s (a tag %sX.Y.Z, whose image is tagged X.Y.Z); published are %s: give one of them as the bare X.Y.Z, or give --tag without --published to use a tag as it is", tag, opt.Repo, selfupgrade.DashboardTagPrefix, list)
+		return fmt.Errorf("upgrade the dashboard to %s: it is not a published dashboard release of %s (a tag %sX.Y.Z, whose image is tagged X.Y.Z); published are %s: give one of them as the bare X.Y.Z, or give --image and --tag without --published to run another image's tag as it is, unsigned", tag, opt.Repo, selfupgrade.DashboardTagPrefix, list)
 	}
 	chosen, err := digestListRefusals(ctx, opt, published[i:i+1])
 	if err != nil || chosen[0] == nil {
@@ -198,7 +203,7 @@ func requirePublishedDashboard(ctx context.Context, opt selfupgrade.Options, tag
 	}
 	head := fmt.Sprintf("upgrade the dashboard to %s: it is not deployable: %s, so this flai cannot verify the image it names (ADR-0070)", tag, chosen[0].Reason)
 	if len(deployable) == 0 {
-		return fmt.Errorf("%s; no published dashboard release of %s has a digest list this flai can verify: upgrade flai (flai self-upgrade), or give --tag without --published to use a tag as it is", head, opt.Repo)
+		return fmt.Errorf("%s; no published dashboard release of %s has a digest list this flai can verify: upgrade flai (flai self-upgrade), or give --image and --tag without --published to run another image's tag as it is, unsigned", head, opt.Repo)
 	}
 	return fmt.Errorf("%s; deployable are %s: give one of them as the bare X.Y.Z", head, selfupgrade.VersionList(deployable))
 }

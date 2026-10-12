@@ -82,16 +82,20 @@ A `flai` that runs from inside a system-flow project, such as a checkout's own `
    flai dashboard upgrade
    ```
 
-   It pulls the configured image and tag and, when it differs from what runs, starts it beside the running container, waits for it to answer healthy, and only then replaces the running one. If the new one never answers healthy, the running container is left as it was and the command says why. If it answers healthy but then fails to start in the running one's place, the command starts the previous image again and fails with an error ending `<name> runs the previous image <ref> again`. Only if that fails too does the error end `the dashboard is down: run flai dashboard to start it`; run `flai dashboard`. From the dashboard, its own Upgrade button does the same once the `dashboard` host action is on.
-3. Check it: `flai dashboard status`, and the dashboard's `/metrics` reports the release in `flaiover_build_info`. Browser sessions survive: the login token did not change.
+   It resolves `dashboard.tag` to a flaiover release, `latest` for the newest or `X.Y.Z` for that one, and verifies the release's signed digest list with the key built into flai. When the running image is not on the list, it pulls the release by digest, `ghcr.io/bytepunx/flaiover@sha256:…`, starts it beside the running container, waits for it to answer healthy, and only then replaces the running one. If the new one never answers healthy, the running container is left as it was and the command says why. If it answers healthy but then fails to start in the running one's place, the command starts the previous image again and fails with an error ending `<name> runs the previous image <ref> again`. Only if that fails too does the error end `the dashboard is down: run flai dashboard to start it`; run `flai dashboard`. From the dashboard, its own Upgrade button does the same once the `dashboard` host action is on.
+
+   If the release is refused, nothing was pulled and the running container is as it was. The refusal names the release and why: it publishes no digest list, its list's signature does not verify, or the list is signed by a key this flai does not know. For an unknown key, upgrade flai first ([flai](#flai)), then the dashboard. What each refusal means is in [What the dashboard verifies](../../users/flai.md#what-the-dashboard-verifies).
+3. Check it: `flai dashboard status` shows the image's digest and the release whose signed list names it, and the dashboard's `/metrics` reports the release in `flaiover_build_info`. Browser sessions survive: the login token did not change.
 
 ### To go back, or to a chosen release
 
 1. List the published releases, newest first. Each is a `flaiover/vX.Y.Z` tag, and its image tag is the bare `X.Y.Z`:
 
    ```bash
-   flai dashboard versions   # marks the running release, the configured tag, and the newest
+   flai dashboard versions   # marks the running release, the configured tag, the newest, and the not deployable
    ```
+
+   A release is `not deployable` when it has no digest list this flai can verify, such as one from before signing. flai refuses to run it.
 
 2. Deploy one:
 
@@ -99,13 +103,13 @@ A `flai` that runs from inside a system-flow project, such as a checkout's own `
    flai dashboard upgrade --published --tag 0.27.4
    ```
 
-   It swaps the container as `flai dashboard upgrade` does, only once the new one answers healthy. With `--published` a tag that is not a published release is refused, naming the published ones, before anything is pulled. Without it the tag is used as given, such as a mirror's.
+   It swaps the container as `flai dashboard upgrade` does, by digest, only once the new one answers healthy. With `--published` a tag that is not a published release is refused, naming the published ones, and so is a release that is not deployable, naming why and the deployable ones, before anything is pulled. Only `--image` naming another repository, such as a mirror's, runs a tag as given, unsigned.
 
 From the dashboard, the Dashboard area of the Updates page has **Versions**, which lists the same releases and deploys a chosen one once the `dashboard` host action is on ([flaiover guide](../../users/flaiover.md#host)).
 
 A chosen release applies to the container, not the configuration. It keeps running through restarts (`flai dashboard restart`, or flai host's watch) until the next `flai dashboard upgrade` without a tag, the page's Upgrade, which goes to the configured `dashboard.tag`, or until `flai dashboard` starts a container after `flai dashboard stop` ([ADR-0118](../../../design/adrs/0118-a-dashboard-release-chosen-on-the-updates-page-keeps-running-through-restarts.md)).
 
-`latest` follows the main branch. To stay on a release, pin its tag, then upgrade to it:
+`dashboard.tag: latest` is the newest flaiover release. To stay on a release, pin its version, then upgrade to it:
 
 ```bash
 flai config set dashboard.tag 0.27.4   # or dashboard.tag in system-flow.yaml, for one project
@@ -119,7 +123,7 @@ flai dashboard upgrade
 | `X.Y.Z`, and its major `X` | a `flaiover/vX.Y.Z` tag | yes: the image carries a cosign signature by the release key, and its digests are on the release's signed digest list |
 | `latest`, `sha-<short>` | every push to main | no: no signature, on no digest list |
 
-`latest` and `sha-*` are builds of main, not releases. Today `flai dashboard` runs them as it runs a release. Once `flai dashboard` verifies images against the signed list, it will run such a build only as a development image, which the operator allows with the `dashboard.allow_unsigned` setting. A released `X.Y.Z` needs no allowance. How the list and the check work is in [release-signing.md](../../../design/system/release-signing.md#the-digest-list).
+The registry's `latest` and `sha-*` are builds of main, not releases, and `flai dashboard` does not run them from `ghcr.io/bytepunx/flaiover`: there `dashboard.tag: latest` is the newest release, and `sha-*` is refused as not a release version. `--build`, and `--image` naming another repository, run what they name and are reported unsigned. How the list and the check work is in [release-signing.md](../../../design/system/release-signing.md#the-digest-list).
 
 ### Check a release image by hand
 
@@ -143,4 +147,4 @@ flai dashboard upgrade
    cosign verify --key cosign.pub --insecure-ignore-tlog=true ghcr.io/bytepunx/flaiover@sha256:…
    ```
 
-4. Check that the image you run is on the list: `docker image inspect --format '{{json .RepoDigests}}' ghcr.io/bytepunx/flaiover:X.Y.Z` names a digest the list has.
+4. Check that the image you run is on the list: `docker image inspect --format '{{json .RepoDigests}}' "$(docker inspect --format '{{.Image}}' flaiover)"` names a digest the list has. `flai dashboard status` does the same against the lists flai verified.

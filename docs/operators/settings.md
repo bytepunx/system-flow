@@ -30,8 +30,8 @@ Keys `flai config set` reaches:
 |-----|---------|-----|
 | `template.repo` | `https://github.com/bytepunx/system-flow-template` | The template `flai new`, `flai import`, and `flai upgrade` use when `--template` is not given |
 | `template.ref` | `main` | The template's branch, tag, or commit when `--ref` is not given; empty, the default branch, or a release tag follows releases: the newest version tag |
-| `dashboard.image` | `ghcr.io/bytepunx/flaiover` | The image `flai dashboard` runs ([Access to the image](index.md#access-to-the-image)) |
-| `dashboard.tag` | `latest` | The image's tag |
+| `dashboard.image` | `ghcr.io/bytepunx/flaiover` | The image `flai dashboard` runs ([Access to the image](index.md#access-to-the-image)); another repository runs `dashboard.tag` as given, reported unsigned |
+| `dashboard.tag` | `latest` | For `ghcr.io/bytepunx/flaiover`, the flaiover release to run: `latest` for the newest, `X.Y.Z` for that one. Either is run by the digest its signed digest list names; any other tag, and a release with no list flai can verify, is refused ([What the dashboard verifies](../users/flai.md#what-the-dashboard-verifies)). For another image, its tag |
 | `dashboard.port` | `4242` | The host port the dashboard is published on |
 | `dashboard.bind` | `0.0.0.0` | The host address it is published on; `127.0.0.1` keeps it to this machine ([Security posture](index.md#security-posture)) |
 | `dashboard.no_restart` | `false` | `true` stops flai host restarting a dashboard that is gone or not answering ([The dashboard's watch](index.md#the-dashboards-watch)) |
@@ -85,7 +85,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `projects[].kind` | none | `go`, `sveltekit`, `template`, and so on; `template` is released by its version file, not a tag |
 | `projects[].tags` | none | Story tags that mean a story delivers to it |
 | `dashboard.image` | the configuration's | The image, for this project, over `dashboard.image` in the configuration |
-| `dashboard.tag` | the configuration's | The image's tag, likewise |
+| `dashboard.tag` | the configuration's | The flaiover release, `latest` or `X.Y.Z`, run by digest, or another image's tag, likewise |
 | `dashboard.port` | the configuration's | The host port, likewise |
 | `dashboard.bind` | the configuration's | The host address, likewise |
 | `dashboard.autocommit` | `true` | Commit documents saved from the dashboard, one path per commit |

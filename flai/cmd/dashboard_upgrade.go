@@ -74,8 +74,12 @@ is running, this stops it and starts again the exact image it was running, by
 its image ID, never a fresh pull and never what its tag names now, so a
 floating tag such as latest cannot silently upgrade it, even after flai
 dashboard check pulled a newer one; flai dashboard upgrade does that
-deliberately. It still names the tag the image was started for. If it is
-not running, this starts it, the same as flai dashboard. Every project
+deliberately. It still names the reference the image was started for: for a
+flaiover release, ghcr.io/bytepunx/flaiover@sha256:<digest>. If it is not
+running, this starts the dashboard flai last recorded, by its image ID while
+that is still here, else by its reference, without resolving dashboard.tag
+again; with no record, or with --image or --tag, it starts what flai
+dashboard would, a release refused starting nothing. Every project
 registered with flai serve keeps its registration: only the container's
 process restarts.`,
 		Args: cobra.NoArgs,
@@ -85,7 +89,7 @@ process restarts.`,
 	}
 	f := c.Flags()
 	f.StringVar(&image, "image", "", "image name (default: manifest, then config)")
-	f.StringVar(&tag, "tag", "", "image tag (default: manifest, then config)")
+	f.StringVar(&tag, "tag", "", "latest or a flaiover release X.Y.Z, when no container runs; for another --image, its tag (default: manifest, then config)")
 	f.IntVar(&port, "port", 0, "host port to publish (default: manifest, then config)")
 	f.StringVar(&bind, "bind", "", "host address to publish on (default: manifest, then config, then 0.0.0.0)")
 	return c
@@ -189,16 +193,21 @@ func newDashboardCheckCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "check",
 		Short: "Report whether a newer dashboard image is available, without changing anything",
-		Long: `Pulls the configured (or --tag) image and compares it against what the running
-container was started from. Changes nothing: flai dashboard upgrade applies
-it. Reports plainly, not as an error, when the container is not running.`,
+		Long: `Resolves the configured (or --tag) tag as flai dashboard does and compares the
+result with what the running container runs. For ghcr.io/bytepunx/flaiover it
+verifies the release's signed digest list and asks whether a digest of the
+running image is on it, pulling nothing; a release refused is an error saying
+why. For --image naming another repository it pulls the tag and compares
+image IDs, and reports the image unsigned. Changes nothing: flai dashboard
+upgrade applies it. Reports plainly, not as an error, when the container is
+not running.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runDashboardCheck(cmd.Context(), image, tag)
 		},
 	}
 	c.Flags().StringVar(&image, "image", "", "image name (default: manifest, then config)")
-	c.Flags().StringVar(&tag, "tag", "", "image tag to check against (default: manifest, then config)")
+	c.Flags().StringVar(&tag, "tag", "", "latest or a flaiover release X.Y.Z to check against; for another --image, its tag (default: manifest, then config)")
 	return c
 }
 
@@ -294,7 +303,14 @@ func newDashboardUpgradeCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "upgrade",
 		Short: "Pull a newer dashboard image, or a chosen release, and swap to it, only once it answers healthy",
-		Long: `Pulls the configured (or --tag) image and, if it differs from what is running,
+		Long: `Resolves the configured (or --tag) tag as flai dashboard does. For
+ghcr.io/bytepunx/flaiover that is latest, the newest flaiover release, or a
+release X.Y.Z, whose signed digest list flai verifies; a release refused is
+refused before anything is pulled, saying why. When no digest of the running
+image is on the list, it pulls the release's image by digest,
+ghcr.io/bytepunx/flaiover@sha256:<digest>. For --image naming another
+repository it pulls the tag and compares image IDs, and reports the image
+unsigned. When the image differs from what is running, it
 starts it as a second, temporary container on a loopback port of its own,
 waits for it to answer /_health, and only then stops the running container
 and starts the new image at the real name and port. The running container is
@@ -304,16 +320,18 @@ one is left exactly as it was, and this reports why. Should the new image
 then fail to start at the real name, the previous image is started there
 again, and this still fails, saying so.
 
---tag deploys that image tag, an earlier release included, the same way, for
+--tag deploys that release, an earlier one included, the same way, for
 this container once: dashboard.tag is not changed, so an upgrade without a
 tag uses the configured one again (pin with flai config set dashboard.tag).
 With --published the tag must be a published dashboard release, the bare
 X.Y.Z of a flaiover/vX.Y.Z tag (flai dashboard versions lists them): any
-other is refused, naming the published ones, before anything is pulled.
-Without it a tag is used as it is, such as a mirror's.`,
+other is refused, naming the published ones, and so is one with no digest
+list this flai can verify, naming why and the deployable ones, before
+anything is pulled. Only an --image of another repository, such as a
+mirror's, runs a tag as given, unsigned.`,
 		Example: `  flai dashboard upgrade
   flai dashboard upgrade --published --tag 0.4.0
-  flai dashboard upgrade --tag my-mirror-build`,
+  flai dashboard upgrade --image registry.example.com/flaiover --tag my-mirror-build`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if published {
@@ -329,7 +347,7 @@ Without it a tag is used as it is, such as a mirror's.`,
 	}
 	f := c.Flags()
 	f.StringVar(&image, "image", "", "image name (default: manifest, then config)")
-	f.StringVar(&tag, "tag", "", "image tag to upgrade to, for this container once (default: manifest, then config)")
+	f.StringVar(&tag, "tag", "", "latest or a flaiover release X.Y.Z to upgrade to, for this container once; for another --image, its tag (default: manifest, then config)")
 	f.IntVar(&port, "port", 0, "host port to publish (default: manifest, then config)")
 	f.StringVar(&bind, "bind", "", "host address to publish on (default: manifest, then config, then 0.0.0.0)")
 	f.BoolVar(&published, "published", false, "refuse a --tag that is not a published dashboard release, before anything is pulled")

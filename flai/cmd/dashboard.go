@@ -203,8 +203,18 @@ serve on this host, which this command registers the project with; it
 starts flai host, which runs flai serve and the MCP servers, when none runs
 (S-0106). Image, tag, port, and bind come from flags, then the dashboard
 section of system-flow.yaml, then config; they matter only the first time,
-when they decide what the shared container is started with.`,
+when they decide what the shared container is started with.
+
+For ghcr.io/bytepunx/flaiover, the default image, the tag names a flaiover
+release: latest is the newest, X.Y.Z that one. flai downloads the release's
+digest list, verifies its signature with the key built into it, and pulls and
+runs ghcr.io/bytepunx/flaiover@sha256:<digest> (ADR-0070). Any other tag, or a
+release with no list this flai can verify, is refused, saying why, and nothing
+starts. When the releases cannot be reached, a list verified before and kept
+beside flai serve's state is used, and that is said. --build, and --image
+naming another repository, run image:tag as given and are reported unsigned.`,
 		Example: `  flai dashboard
+  flai dashboard --tag 0.42.3      # that flaiover release, run by digest
   flai dashboard --port 8080 --pull
   flai dashboard --attach          # stream logs until Ctrl-C (the container keeps running)
   flai dashboard --build           # build flaiover:local from this monorepo instead of pulling
@@ -215,8 +225,8 @@ when they decide what the shared container is started with.`,
 		},
 	}
 	f := c.Flags()
-	f.StringVar(&image, "image", "", "image name (default: manifest, then config)")
-	f.StringVar(&tag, "tag", "", "image tag (default: manifest, then config)")
+	f.StringVar(&image, "image", "", "image repository; one other than ghcr.io/bytepunx/flaiover runs its tag as given, unsigned (default: manifest, then config)")
+	f.StringVar(&tag, "tag", "", "latest or a flaiover release X.Y.Z, run by digest from its signed list; for another --image, its tag (default: manifest, then config)")
 	f.IntVar(&port, "port", 0, "host port to publish (default: manifest, then config)")
 	f.StringVar(&bind, "bind", "", "host address to publish on, 0.0.0.0 for every interface (default: manifest, then config, then 0.0.0.0)")
 	f.StringVar(&pushKeyFlag, "push-key", "", "retired (ADR-0031): the container pushes nothing")
@@ -724,7 +734,9 @@ port whether /_health answers (S-0184): running when it does, not answering
 when the container runs and it does not, gone when no container runs. Docker's
 own verdict from the image's HEALTHCHECK is shown beside it. flai host
 restarts a dashboard that is gone or not answering unless dashboard.no_restart
-is set.`,
+is set. For a running container it shows its image's digest and the flaiover
+release whose signed digest list, kept beside flai serve's state, names it, or
+that it is unsigned.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.projectOrNone()

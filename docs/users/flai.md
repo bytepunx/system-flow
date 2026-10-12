@@ -189,8 +189,8 @@ flai config path
 |-----|---------|---------|
 | `template.repo` | `https://github.com/bytepunx/system-flow-template` | Where `flai new`, `flai import`, and `flai upgrade` take the template from when `--template` is not given: a git URL or a local directory |
 | `template.ref` | `main` | The template's branch, tag, or commit, when `--ref` is not given. `main`, the template's default branch, follows releases: `flai new` and `flai import` take the newest version tag (`vX.Y.Z`), as does an empty ref or a release tag. Another branch or a commit is used as given ([Which template version](#which-template-version)) |
-| `dashboard.image` | `ghcr.io/bytepunx/flaiover` | The image `flai dashboard` runs |
-| `dashboard.tag` | `latest` | The image's tag |
+| `dashboard.image` | `ghcr.io/bytepunx/flaiover` | The image `flai dashboard` runs; another repository runs `dashboard.tag` as given, unsigned |
+| `dashboard.tag` | `latest` | For `ghcr.io/bytepunx/flaiover`, the flaiover release: `latest` for the newest, `X.Y.Z` for that one, run by digest from its signed digest list ([What the dashboard verifies](#what-the-dashboard-verifies)). For another image, its tag |
 | `dashboard.port` | `4242` | The host port the dashboard is published on |
 | `dashboard.bind` | `0.0.0.0` | The host address it is published on; `127.0.0.1` keeps it to this machine |
 | `dashboard.push_key`, `dashboard.push_known_hosts` | empty | Retired and ignored ([ADR-0031](../../design/adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). They still load so an old file works, and `flai dashboard` names them when set; clear them with `flai config set dashboard.push_key ""` |
@@ -2054,25 +2054,53 @@ A template developed inside another repository is published by cloning its remot
 ## Run the dashboard
 
 ```bash
-flai dashboard                 # pull the image if needed, run it, print the URL
+flai dashboard                 # resolve the release, pull its image by digest if needed, run it, print the URL
+flai dashboard --tag 0.42.3    # that release instead of the newest
 flai dashboard --port 8080 --pull
 flai dashboard --attach        # follow the logs; Ctrl-C leaves the container running
 flai dashboard --build         # build flaiover:local from this monorepo and run that
 flai dashboard --bind 127.0.0.1  # this host only (default: every interface)
-flai dashboard status          # running, not answering, or gone, from a probe of /_health
+flai dashboard status          # running, not answering, or gone, from a probe of /_health; the image's digest and release
 flai dashboard logs [-f]
 flai dashboard stop
 flai dashboard restart         # start the image that runs again, never a newer one a check pulled
 flai dashboard token           # print the token and login link
 flai dashboard token --rotate  # new token; a running dashboard restarts
 flai dashboard --no-serve      # do not register with flai serve, or start flai host
-flai dashboard check           # is a newer image published? changes nothing
-flai dashboard upgrade         # pull the configured image and swap to it once it answers healthy
-flai dashboard versions        # the published dashboard releases, newest first
+flai dashboard check           # is the configured release's image the one that runs? changes nothing
+flai dashboard upgrade         # pull the configured release by digest and swap to it once it answers healthy
+flai dashboard versions        # the published dashboard releases, newest first, and which are not deployable
 flai dashboard upgrade --published --tag 0.27.4  # deploy one of them, an earlier one included
 ```
 
-`flai dashboard versions` lists the repository's `flaiover/vX.Y.Z` tags, newest first, and marks the release running, the configured `dashboard.tag`, and the newest (S-0298). A release's image tag is its bare `X.Y.Z`. `flai dashboard upgrade --tag` deploys that tag the way `upgrade` deploys the configured one. With `--published`, a tag that is not a published release is refused, naming the published ones, before anything is pulled; without it the tag is used as given, such as a mirror's. The tag applies to the container, not the configuration: it keeps running through restarts until the next `flai dashboard upgrade` without a tag, or `flai dashboard` starting a container after `flai dashboard stop`. Pin a release with `flai config set dashboard.tag` ([update runbook](../operators/runbooks/update.md#flaiover)).
+`flai dashboard versions` lists the repository's `flaiover/vX.Y.Z` tags, newest first, and marks the release running, the configured `dashboard.tag`, and the newest (S-0298). It marks `not deployable:`, with the reason, each release with no digest list this flai can verify ([What the dashboard verifies](#what-the-dashboard-verifies)). A release's image tag is its bare `X.Y.Z`. `flai dashboard upgrade --tag` deploys that release the way `upgrade` deploys the configured one. With `--published`, a tag that is not a published release is refused, naming the published ones, before anything is pulled, and so is one that is not deployable, naming why and the deployable ones. Only `--image` naming another repository, such as a mirror's, runs a tag as given. The tag applies to the container, not the configuration: it keeps running through restarts until the next `flai dashboard upgrade` without a tag, or `flai dashboard` starting a container after `flai dashboard stop`. Pin a release with `flai config set dashboard.tag` ([update runbook](../operators/runbooks/update.md#flaiover)).
+
+### What the dashboard verifies
+
+Every flaiover release publishes a digest list, `flaiover_X.Y.Z.digests`, signed with the release key as flai's `checksums.txt` is ([ADR-0070](../../design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)). The list names the release image's digests, so an image whose digest is on a list that verifies is one the key's holder published. Its format is in [release-signing.md](../../design/system/release-signing.md#the-digest-list).
+
+For `ghcr.io/bytepunx/flaiover`, the default image, `dashboard.tag` names a flaiover release. `latest` is the newest published release, and `X.Y.Z` (or `vX.Y.Z`) is that one. `latest` is not the registry's `latest` tag, which is a build of the main branch. `flai dashboard` downloads the release's list and its signature and verifies the signature with the public key built into the flai that runs. It then pulls and runs `ghcr.io/bytepunx/flaiover@sha256:<digest>`, the image index's digest from the list, and Docker checks what it pulls against that digest. `flai dashboard check` and `flai dashboard upgrade` resolve the tag the same way. `check` compares the running image's digests with the list and pulls nothing; `upgrade` pulls the release by digest when no container runs or the running image is not on its list. `flai dashboard restart`, with no container running, starts the image recorded when the dashboard last started, a release by its digest, without resolving the tag again.
+
+flai keeps each list it verified, with its signature, in `dashboard-digests` in the `serve` folder beside flai's config file, and verifies it again whenever it reads it. When the releases cannot be reached, `flai dashboard` runs the release from its kept list and says so. `flai dashboard status` reads the kept lists: it shows the running image's digest and the release whose list names it, `on a signed list`, or says it is unsigned.
+
+A release that cannot be verified is refused. The refusal names the release and why. Nothing is pulled or started, and `upgrade` leaves the running container as it was.
+
+| The refusal says | It means | Do |
+|------------------|----------|----|
+| `dashboard.tag` is not a flaiover release version | The tag is neither `latest` nor `X.Y.Z`, such as `sha-<short>` or a build's tag. | Set `dashboard.tag` to `latest` or a release. To run another build, see below. |
+| no published release tagged `flaiover/vX.Y.Z` | No published release has that version; drafts and prereleases are not published. | Set `dashboard.tag` to a version the refusal lists, or to `latest`. |
+| it publishes no `flaiover_X.Y.Z.digests` | The release has no signed list. Releases from before signing have none. | Choose a signed release, such as `latest`. |
+| signed by the key it publishes, which this flai does not know | The release key has changed since this flai was built. | Upgrade flai first (`flai self-upgrade`, or `flai host upgrade`), then start the dashboard again. |
+| neither a key this flai trusts nor the release's `cosign.pub` verifies it | The list may have been altered since it was signed. | Run no image it names. Report the release to the repository's maintainers. |
+| verifies, but it is not in the format, lists another version, or names another repository | The release is mislabelled. | Run no image it names. Report the release to the repository's maintainers. |
+
+When the releases cannot be reached and no list of the release is kept, `flai dashboard` fails, saying so: check the connection and the token, then run it again.
+
+`flai dashboard versions` marks each release this flai cannot verify `not deployable:` with the reason. With `--json` such a release has `unverifiable: true`, `signature` (`missing`, `bad`, or `unknown-key`), and `reason`. To check, the list downloads each release's digest list and signature; a download that fails fails the list. The dashboard's Updates page shows such a release as not deployable and offers no way to deploy it ([flaiover guide](flaiover.md#host)).
+
+`--build`, and `--image` naming another repository, such as a mirror or `flaiover` from `make flaiover-image`, run `image:tag` as given. No list names them, so `flai dashboard`, `check`, and `upgrade` report them unsigned.
+
+With `--json`, `flai dashboard` has `image`, the reference it started, `signed`, `release`, and `cached_list` when the list kept was used. `status` has `digest`, `release`, and `signed`; `check` has `image`, `signed`, and `release`; `upgrade` has `signed` and `release`, and its `to` is the reference by digest.
 
 ### flai host: the process that runs flai serve and the MCP servers
 
@@ -2160,7 +2188,7 @@ The container runs detached as `flaiover`, one for every project on the host, pu
 
 The image lives on GHCR and is private while the repository is. When the pull is refused, `flai dashboard` logs Docker into the registry with `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token` and retries once. The token needs the `read:packages` scope; `gh auth refresh -h github.com -s read:packages` adds it. Inside the monorepo, `--build` sidesteps the registry by building the image from `flaiover/` as `flaiover:local`.
 
-The image is published for `linux/amd64` and `linux/arm64`. `flai dashboard`, `flai dashboard upgrade`, and `flai dashboard check` pull the image for the platform the Docker daemon runs, such as `linux/arm64` on Apple silicon. If the image already present was built for another platform (for example an amd64 image pulled before arm64 was published), `flai dashboard` pulls again without being asked. A tag published without your platform fails with an error that names the platform; pick a newer tag, or use `--build` in the monorepo.
+The image is published for `linux/amd64` and `linux/arm64`. `flai dashboard` and `flai dashboard upgrade`, and `flai dashboard check` for an image of another repository, pull the image for the platform the Docker daemon runs, such as `linux/arm64` on Apple silicon. If the image already present was built for another platform (for example an amd64 image pulled before arm64 was published), `flai dashboard` pulls again without being asked. A tag published without your platform fails with an error that names the platform; pick a newer tag, or use `--build` in the monorepo.
 
 #### Writes to paths Claude Code protects
 
