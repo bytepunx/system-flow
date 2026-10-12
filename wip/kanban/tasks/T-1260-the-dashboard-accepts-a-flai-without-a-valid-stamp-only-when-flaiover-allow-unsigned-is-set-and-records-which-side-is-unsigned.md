@@ -3,15 +3,35 @@ id: T-1260
 type: task
 nature: feature
 title: The dashboard accepts a flai without a valid stamp only when FLAIOVER_ALLOW_UNSIGNED is set, and records which side is unsigned
-status: backlog
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-07T23:09:08Z
-updated: 2026-10-07T23:09:08Z
-transitions: []
+updated: 2026-10-12T21:15:18Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:07:26Z
+    by: agent-S-0239
+  - to: in-progress
+    at: 2026-10-12T21:07:27Z
+    by: agent-S-0239
+  - to: done
+    at: 2026-10-12T21:15:18Z
+    by: agent-S-0239
 stream: S-0239
 tags: [dashboard]
 touches: [flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts]
+usage:
+  source: log
+  seconds: 471
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 305
+      cache_read: 1990596
+      cache_write: 114398
+      cost: 0.9616
 ---
 # T-1260 The dashboard accepts a flai without a valid stamp only when FLAIOVER_ALLOW_UNSIGNED is set, and records which side is unsigned
 

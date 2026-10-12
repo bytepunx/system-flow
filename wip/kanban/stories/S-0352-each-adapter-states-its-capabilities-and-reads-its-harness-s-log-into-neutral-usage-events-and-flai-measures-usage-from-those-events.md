@@ -3,11 +3,11 @@ id: S-0352
 type: story
 nature: improvement
 title: Each adapter states its capabilities and reads its harness's log into neutral usage events, and flai measures usage from those events
-status: in-progress
+status: review
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:45:35Z
-updated: 2026-10-12T21:03:56Z
+updated: 2026-10-12T21:20:51Z
 transitions:
   - to: ready
     at: 2026-10-12T20:02:19Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T20:40:20Z
     by: agent-S-0352
+  - to: review
+    at: 2026-10-12T21:20:51Z
+    by: agent-S-0352
 tags: [cli]
 topics: [agents, usage]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/turns.go, flai/internal/usage/turns_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, design/system/metrics.md, design/system/flai-cli.md, flai/internal/serve/activity.go]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/turns.go, flai/internal/usage/turns_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, design/system/metrics.md, design/system/flai-cli.md, flai/internal/serve/activity.go, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/summary.md, design/issues/I-0143-flai-check-finds-board-order-outside-the-story-at-close-out.md]
 after: [S-0351]
 agent:
   harness: claude-code
@@ -26,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1396
-  estimated: true
+  seconds: 2452
   turns:
     - day: 2026-10-12
-      ceremony: 1
-      hand_edits: 2
-      work: 33
+      ceremony: 7
+      hand_edits: 3
+      work: 51
   models:
     - model: claude-opus-5-5
-      input: 326
-      output: 1931
-      cache_read: 17995398
-      cache_write: 645425
-      cost: 8.4918
+      input: 386
+      output: 152672
+      cache_read: 24684773
+      cache_write: 697007
+      cost: 12.2192
 cost_of_delay:
   value: 49.78
   by: planner-E-0019

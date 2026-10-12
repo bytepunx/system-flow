@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:49:40Z
-updated: 2026-10-12T20:48:50Z
+updated: 2026-10-12T21:07:30Z
 transitions:
   - to: ready
     at: 2026-10-12T20:02:59Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0356
 tags: [cli]
 topics: [agents, testing]
-touches: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/system/agent-adapters.md]
+touches: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0144-the-local-litellm-proxy-s-upstream-anthropic-key-is-a-placeholder-so-a-gateway-check-through-it-reaches-no-model.md, design/issues/summary.md]
 after: [S-0351]
 agent:
   harness: claude-code
@@ -26,19 +26,18 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1030
-  estimated: true
+  seconds: 1154
   turns:
     - day: 2026-10-12
       hand_edits: 1
-      work: 17
+      work: 31
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 431
-      cache_read: 3333563
-      cache_write: 352652
-      cost: 1.6799
+      input: 104
+      output: 61167
+      cache_read: 7028482
+      cache_write: 409094
+      cost: 5.3728
 cost_of_delay:
   value: 33.19
   by: planner-E-0019
@@ -62,8 +61,8 @@ S-0351 checks Claude Code against OpenRouter. This story runs the same check aga
 ## Acceptance criteria
 
 - [ ] `TestGatewayLiteLLM` in `flai/internal/serve` runs the S-0351 check once through the proxy's unified `/v1/messages` and once through `/anthropic`, each with a provider entry for that route, when `LITELLM_BASE_URL` and `LITELLM_API_KEY` are set and `claude` is on `PATH`, and skips naming what is missing otherwise; the integration tier passes on a host without them.
-- [ ] The test reads `/spend/logs` for the key after each run and logs the gateway's spend, and whether a row carries the session's ID, beside `total_cost_usd`.
-- [ ] `scripts/gateway-smoke.sh` runs it where the variables are set and prints the skip line where they are not; the smoke tier passes on a host without them.
+- [x] The test reads `/spend/logs` for the key after each run and logs the gateway's spend, and whether a row carries the session's ID, beside `total_cost_usd`.
+- [x] `scripts/gateway-smoke.sh` runs it where the variables are set and prints the skip line where they are not; the smoke tier passes on a host without them.
 - [ ] `design/system/agent-adapters.md` gains a LiteLLM section beside S-0351's, with the date, the proxy's version, and the answers for each route: fields forwarded, aliases resolved, session join, and the gateway's spend against `total_cost_usd`. It says which route a provider entry should use.
 - [ ] `docs/operators/index.md` shows a provider entry for a local LiteLLM proxy and the virtual key it needs; `docs/contributors/index.md` lists the variables.
 

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 344
-      cache_read: 2139798
-      cache_write: 202008
-      cost: 1.0672
+      input: 33
+      output: 19534
+      cache_read: 2244597
+      cache_write: 130647
+      cost: 1.7158
 ---
 # T-1402 TestGatewayLiteLLM runs the gateway check through the proxy's unified and pass-through routes and reads its spend log
 

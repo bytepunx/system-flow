@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 75
-      output: 416
-      cache_read: 3146580
-      cache_write: 139120
-      cost: 1.4968
+      input: 51
+      output: 20143
+      cache_read: 3256894
+      cache_write: 91963
+      cost: 1.6122
 ---
 # T-1387 usage.Event and usage.Reader are defined, and a Claude Code reader turns stream-json into them
 

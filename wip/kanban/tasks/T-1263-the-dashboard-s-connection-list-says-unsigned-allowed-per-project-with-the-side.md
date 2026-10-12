@@ -3,16 +3,36 @@ id: T-1263
 type: task
 nature: feature
 title: "The dashboard's connection list says \"unsigned allowed\" per project, with the side"
-status: backlog
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-07T23:09:30Z
-updated: 2026-10-07T23:09:30Z
-transitions: []
+updated: 2026-10-12T21:27:24Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:16:01Z
+    by: agent-S-0239
+  - to: in-progress
+    at: 2026-10-12T21:16:02Z
+    by: agent-S-0239
+  - to: done
+    at: 2026-10-12T21:27:24Z
+    by: agent-S-0239
 stream: S-0239
 tags: [dashboard]
 touches: [flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/project.svelte.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts]
 after: [T-1260]
+usage:
+  source: log
+  seconds: 682
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 187
+      cache_read: 1317528
+      cache_write: 74538
+      cost: 0.6359
 ---
 # T-1263 The dashboard's connection list says "unsigned allowed" per project, with the side
 

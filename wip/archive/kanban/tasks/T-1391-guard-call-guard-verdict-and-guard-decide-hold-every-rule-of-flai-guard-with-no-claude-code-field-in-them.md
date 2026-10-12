@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 358
-      cache_read: 4207733
-      cache_write: 265565
-      cost: 2.0378
+      input: 75
+      output: 33231
+      cache_read: 4324647
+      cache_write: 233606
+      cost: 2.9309
 ---
 # T-1391 guard.Call, guard.Verdict, and guard.Decide hold every rule of flai guard with no Claude Code field in them
 

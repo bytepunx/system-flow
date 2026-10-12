@@ -3,15 +3,35 @@ id: T-1259
 type: task
 nature: feature
 title: dashboard.allow_unsigned exists in the host configuration and the manifest, default false, with its settings row
-status: backlog
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-07T23:09:01Z
-updated: 2026-10-07T23:09:01Z
-transitions: []
+updated: 2026-10-12T21:15:11Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:07:25Z
+    by: agent-S-0239
+  - to: in-progress
+    at: 2026-10-12T21:07:26Z
+    by: agent-S-0239
+  - to: done
+    at: 2026-10-12T21:15:11Z
+    by: agent-S-0239
 stream: S-0239
 tags: [cli]
 touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 465
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 211
+      cache_read: 1083937
+      cache_write: 109638
+      cost: 0.5453
 ---
 # T-1259 dashboard.allow_unsigned exists in the host configuration and the manifest, default false, with its settings row
 

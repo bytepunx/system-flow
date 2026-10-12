@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 138
-      output: 763
-      cache_read: 9765420
-      cache_write: 214989
-      cost: 4.5464
+      input: 155
+      output: 61186
+      cache_read: 9892830
+      cache_write: 279337
+      cost: 4.897
 ---
 # T-1389 Each adapter gives its reader, and usage.Read, the task shares, empty wakes, and turns are measured from events
 

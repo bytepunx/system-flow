@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 27
-      output: 262
-      cache_read: 790920
-      cache_write: 49392
-      cost: 0.3829
+      input: 13
+      output: 5152
+      cache_read: 832950
+      cache_write: 23519
+      cost: 0.4123
 ---
 # T-1388 Each adapter states its capabilities, claude-code all of them and command none
 
