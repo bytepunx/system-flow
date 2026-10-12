@@ -6,7 +6,7 @@ title: flai test vets and tests only the changed Go packages, so a change that b
 status: backlog
 owner: alex
 created: 2026-10-12T14:12:31Z
-updated: 2026-10-12T15:10:25Z
+updated: 2026-10-12T15:17:00Z
 transitions: []
 tags: [cli]
 topics: [testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-12T14:41:33Z
 forecast:
   duration: 21m
-  delivery: 2026-10-13T03:01:00Z
-  basis: "Its own forecast of 21m; 26th in the pull order with an in-progress limit of 5, behind S-0232, S-0337, S-0365, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0313, S-0349, S-0350, S-0351, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357, S-0358, S-0359, S-0360 and S-0363."
+  delivery: 2026-10-13T03:08:00Z
+  basis: "Its own forecast of 21m; 26th in the pull order with an in-progress limit of 5, behind S-0232, S-0337, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0313, S-0349, S-0350, S-0351, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357, S-0358, S-0359, S-0360 and S-0363."
   by: flai
-  at: 2026-10-12T15:10:25Z
+  at: 2026-10-12T15:17:00Z
 finalized:
   by: orchestrator
   at: 2026-10-12T14:54:15Z
