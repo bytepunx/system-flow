@@ -10,11 +10,13 @@ permissions:
   contents: read
   packages: write
 
-# A push to main builds and pushes latest and sha-* and nothing else: release-key
-# and release run only on a flaiover/v* tag. On a tag, release-key runs first so
-# that a tag without the release key fails before anything is pushed; then image
-# builds and pushes; then release writes, signs, and publishes the digest list
-# and signs and attests the image (design/system/release-signing.md).
+# A push to main builds and pushes latest and sha-* and nothing else, with no
+# release stamp: release-key and release run only on a flaiover/v* tag. On a
+# tag, release-key runs first, so that a tag without the release key fails
+# before anything is pushed, and signs the release stamp, `flaiover <version>
+# <commit>`; then image builds and pushes, keeping the stamp as the file the
+# dashboard checks at start; then release writes, signs, and publishes the
+# digest list and signs and attests the image (design/system/release-signing.md).
 jobs:
   release-key:
     if: startsWith(github.ref, 'refs/tags/flaiover/v')
@@ -23,7 +25,13 @@ jobs:
     # in the environment `release`, which only flai/v* and flaiover/v* tags
     # may deploy to (docs/operators/runbooks/release-key.md).
     environment: release
-    permissions: {}
+    permissions:
+      contents: read
+    # Neither is secret: the statement is the version and commit, and the
+    # signature is what anyone checks with the public key.
+    outputs:
+      statement: ${{ steps.sign.outputs.statement }}
+      signature: ${{ steps.sign.outputs.signature }}
     steps:
       # An unsigned release is no release: fail before building when the key
       # or its password is missing.
@@ -40,6 +48,35 @@ jobs:
             fi
           done
           exit "$missing"
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Pinned: the sign flags below are cosign v3's, and v4 removes two of
+      # them (design/system/release-signing.md). The installer has no moving
+      # v4 tag.
+      - uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v3.1.3
+      # The statement has no trailing newline, as the dashboard verifies it
+      # (flaiover/src/lib/server/release.ts); its commit is computed as image
+      # computes the one it passes as FLAI_COMMIT. As flai's checksums.txt is
+      # signed (flai/.goreleaser.yaml): a key pair from the environment, no
+      # Rekor entry, one base64 signature. The three flags keep that in
+      # cosign v3.
+      - name: Sign the release statement
+        id: sign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          printf '%s' "flaiover ${GITHUB_REF_NAME#flaiover/v} $(git rev-parse --short HEAD)" > release-statement
+          cosign sign-blob --key env://COSIGN_PRIVATE_KEY \
+            --use-signing-config=false --new-bundle-format=false --tlog-upload=false \
+            --output-signature release-statement.sig --yes release-statement
+          {
+            echo "statement=$(cat release-statement)"
+            echo "signature=$(cat release-statement.sig)"
+          } >> "$GITHUB_OUTPUT"
 
   image:
     needs: release-key
@@ -84,9 +121,22 @@ jobs:
             echo "flaiover=$(git describe --tags --match 'flaiover/v*' --abbrev=0 2>/dev/null | sed 's|flaiover/v||' || echo 0.0.0)"
             echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
+      # The dashboard reports FLAIOVER_VERSION and FLAI_COMMIT and checks its
+      # stamp against them, so a release whose stamp names another build would
+      # warn about itself at every start: fail it here instead.
+      - name: Stamp names this build
+        if: startsWith(github.ref, 'refs/tags/flaiover/v')
+        env:
+          STATEMENT: ${{ needs.release-key.outputs.statement }}
+          BUILD: flaiover ${{ steps.flai.outputs.flaiover }} ${{ steps.flai.outputs.commit }}
+        run: |
+          if [ "$STATEMENT" != "$BUILD" ]; then
+            echo "::error::the stamp names '$STATEMENT' but the image is built as '$BUILD'"
+            exit 1
+          fi
       # Its digest output is the image index's digest, since two platforms are
       # pushed: what the digest list's index line, cosign, and the attestation
-      # name.
+      # name. On main the stamp's outputs are empty, and the image has no stamp.
       - name: Build and push
         id: build
         uses: docker/build-push-action@v6
@@ -102,6 +152,8 @@ jobs:
             FLAI_COMMIT=${{ steps.flai.outputs.commit }}
             FLAI_DATE=${{ steps.flai.outputs.date }}
             FLAIOVER_VERSION=${{ steps.flai.outputs.flaiover }}
+            FLAIOVER_STAMP_STATEMENT=${{ needs.release-key.outputs.statement }}
+            FLAIOVER_STAMP_SIGNATURE=${{ needs.release-key.outputs.signature }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

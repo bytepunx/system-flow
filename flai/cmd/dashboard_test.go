@@ -504,6 +504,36 @@ func TestDashboardPrivateRegistryAndBuild(t *testing.T) {
 	}
 }
 
+// S-0235: only release-flaiover.yml stamps an image, on a release tag; a
+// dashboard built here passes no stamp, so its image has none.
+func TestDashboardBuildPassesNoReleaseStamp(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	_ = os.MkdirAll(filepath.Join(root, "flaiover"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, "flaiover", "Dockerfile"), []byte("FROM scratch\n"), 0o644)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	_, errOut, code := runWith(t, root, f, "dashboard", "--build")
+	if code != 0 {
+		t.Fatalf("build: %d %s", code, errOut)
+	}
+	builds := 0
+	for _, call := range f.calls {
+		if !strings.HasPrefix(call, "docker build ") {
+			continue
+		}
+		builds++
+		if !strings.Contains(call, "--build-arg FLAIOVER_VERSION=") {
+			t.Errorf("the build passes no build arguments at all, so this test checks nothing: %s", call)
+		}
+		if strings.Contains(call, "FLAIOVER_STAMP_") {
+			t.Errorf("flai dashboard --build passed a release stamp: %s", call)
+		}
+	}
+	if builds != 1 {
+		t.Errorf("want one docker build, got %d:\n%s", builds, strings.Join(f.calls, "\n"))
+	}
+}
+
 // S-0077: the push key is retired. Asked for, it is named, explained, and
 // ignored, and the dashboard starts.
 func TestDashboardPushKeyIsRetired(t *testing.T) {

@@ -42,6 +42,24 @@ COPY --from=build /src/flaiover/scheme.js ./scheme.js
 # The license travels with every copy of the software (S-0231): the Host › License page reads
 # this file (FLAIOVER_LICENSE names another), and it is the same text flai license prints.
 COPY LICENSE.md ./LICENSE.md
+# The release stamp (S-0235, release-signing.md § A release stamp in hello): on a flaiover/v* tag,
+# release-flaiover.yml signs `flaiover <version> <commit>` with the release key and passes the
+# statement and its base64 signature, which this keeps as the two lines of /app/release-stamp for
+# the server to check at start (src/lib/server/release.ts). It must name the version and commit this
+# image reports. Given neither, as flai dashboard --build and scripts/flaiover-image.sh build it, the
+# image has no stamp; given one alone, the build fails. Declared here, after the copies, so that a
+# new stamp rebuilds only this layer.
+ARG FLAIOVER_STAMP_STATEMENT=
+ARG FLAIOVER_STAMP_SIGNATURE=
+RUN if [ -n "$FLAIOVER_STAMP_STATEMENT" ] && [ -n "$FLAIOVER_STAMP_SIGNATURE" ]; then \
+        if [ "$FLAIOVER_STAMP_STATEMENT" != "flaiover $FLAIOVER_VERSION $FLAI_COMMIT" ]; then \
+            echo "the stamp names '$FLAIOVER_STAMP_STATEMENT', not this build's 'flaiover $FLAIOVER_VERSION $FLAI_COMMIT'" >&2; exit 1; \
+        fi; \
+        printf '%s\n%s\n' "$FLAIOVER_STAMP_STATEMENT" "$FLAIOVER_STAMP_SIGNATURE" > /app/release-stamp && \
+        chmod 0644 /app/release-stamp; \
+    elif [ -n "$FLAIOVER_STAMP_STATEMENT$FLAIOVER_STAMP_SIGNATURE" ]; then \
+        echo "FLAIOVER_STAMP_STATEMENT and FLAIOVER_STAMP_SIGNATURE go together: give both or neither" >&2; exit 1; \
+    fi
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
