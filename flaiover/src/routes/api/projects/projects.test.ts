@@ -361,4 +361,64 @@ describe('/api/projects (S-0080)', () => {
 			server.close();
 		}
 	});
+
+	it('names per project the sides FLAIOVER_ALLOW_UNSIGNED let through unsigned, and none for a signed pair (S-0239)', async () => {
+		const { publicKey, privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+		const pem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+		const statement = 'flai 9.9.9 abc1234';
+		const signature = sign('sha256', Buffer.from(statement), privateKey).toString('base64');
+		const stamped = { protocol: PROTOCOL, release: { statement, signature } };
+		const answer = (method: string) => (method === 'board.get' ? { columns: {} } : {});
+		const cleanup: (() => void)[] = [];
+
+		/** The rows /api/projects gives with a signed and an unsigned flai connected, the dashboard's
+		 * own build stamped or not. */
+		async function rowsWith(dashboard: { statement: string; signature: string } | null) {
+			resetAgent();
+			registry(process.env, { allowUnsigned: true, peerKeys: [pem], stamp: dashboard });
+			const server = http.createServer();
+			server.on('upgrade', (req, socket, head) =>
+				(registry() as unknown as AgentRegistry).handleUpgrade(req, socket, head)
+			);
+			await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+			const url = `ws://127.0.0.1:${(server.address() as AddressInfo).port}/agent`;
+			const signedFlai = await connect(url, answer, { key: 'harbour', name: 'Harbour' }, stamped);
+			const unsignedFlai = await connect(url, answer, { key: 'pier', name: 'Pier' });
+			cleanup.push(() => {
+				signedFlai.terminate();
+				unsignedFlai.terminate();
+				server.close();
+			});
+			const body = await (await GET({} as never)).json();
+			return Object.fromEntries(body.projects.map((p: { key: string }) => [p.key, p])) as Record<
+				string,
+				Record<string, unknown>
+			>;
+		}
+
+		try {
+			const stampedBuild = await rowsWith({ statement: 'flaiover 9.9.9 abc1234', signature: 'x' });
+			expect(stampedBuild.harbour).toMatchObject({ connected: true, signed: true });
+			expect('unsigned' in stampedBuild.harbour).toBe(false); // a signed pair says nothing of it
+			expect(stampedBuild.pier).toMatchObject({
+				connected: true,
+				signed: false,
+				unsigned: ['flai']
+			});
+
+			const unstampedBuild = await rowsWith(null);
+			expect(unstampedBuild.harbour).toMatchObject({
+				connected: true,
+				signed: true,
+				unsigned: ['dashboard']
+			});
+			expect(unstampedBuild.pier).toMatchObject({
+				connected: true,
+				signed: false,
+				unsigned: ['flai', 'dashboard']
+			});
+		} finally {
+			for (const f of cleanup) f();
+		}
+	});
 });

@@ -8,11 +8,17 @@ const URL_PARAM = 'project';
 /** Well past /api/projects' own 3 s glance timeout: only a request that will never answer waits it out. */
 const REFRESH_TIMEOUT_MS = 15000;
 
+/** A side of a project's channel that is unsigned, as /api/projects gives it (S-0239). */
+export type UnsignedSide = 'flai' | 'dashboard';
+
 export type Project = {
 	key: string;
 	name: string;
 	connected: boolean;
 	since?: string;
+	/** The sides FLAIOVER_ALLOW_UNSIGNED let through unsigned while connected (S-0239): `flai`,
+	 * `dashboard`, or both in that order; absent for a signed pair. */
+	unsigned?: UnsignedSide[];
 	/** A repository offered for import, not a project yet (S-0098). */
 	candidate?: boolean;
 	/** flai serve serves it (S-0122). */
@@ -24,6 +30,11 @@ export type Project = {
 	threadsAwaiting?: number;
 	agentAttending?: boolean;
 };
+
+/** The words for a connection let through unsigned, naming its sides; empty for a signed pair. */
+export function unsignedLabel(sides: readonly UnsignedSide[] | undefined): string {
+	return sides?.length ? `unsigned allowed: ${sides.join(' and ')}` : '';
+}
 
 function stored(): string | null {
 	try {

@@ -4,6 +4,7 @@ import {
 	type ConnectedProject,
 	type Refusal
 } from '$lib/server/agent';
+import type { UnsignedSide } from '$lib/server/release';
 import { respond } from '$lib/server/respond';
 import type { ProjectsView } from '$lib/settings';
 import type { RequestHandler } from './$types';
@@ -25,12 +26,17 @@ import type { RequestHandler } from './$types';
  * Each says whether its flai is signed (S-0237): `signed` while connected, and `refused` while the
  * last flai to connect for it was refused as unsigned. A project whose only flai was refused is
  * listed, not connected, with the refusal, though the registry never adopted a flai for it.
+ *
+ * One whose connection FLAIOVER_ALLOW_UNSIGNED let through unsigned (S-0239) carries `unsigned`, the
+ * sides that were: `flai`, `dashboard`, or both in that order. A signed pair carries none.
  */
 export type ProjectGlance = ConnectedProject & {
 	/** Whether the connected flai's release stamp verified; absent while not connected. */
 	signed?: boolean;
 	/** Why the dashboard last refused a flai for it as unsigned, until a signed one is adopted. */
 	refused?: Refusal;
+	/** The sides the allowance let through unsigned while connected; absent for a signed pair. */
+	unsigned?: UnsignedSide[];
 	review?: number;
 	threadsAwaiting?: number;
 	agentAttending?: boolean;

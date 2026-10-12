@@ -6,9 +6,10 @@
 	// its event stream for the project picked. A project flai serve serves that is not connected is
 	// labelled apart from one that is, and a link goes to the settings page, which says why (S-0122).
 	// Each project says whether its flai is signed, and one whose flai the dashboard refused as
-	// unsigned says so, with the reason in the list of why (S-0237).
+	// unsigned says so, with the reason in the list of why (S-0237). One whose connection the
+	// dashboard let through unsigned under FLAIOVER_ALLOW_UNSIGNED names the side that was (S-0239).
 	import { resolve } from '$app/paths';
-	import { projectState, type Project } from '$lib/project.svelte';
+	import { projectState, unsignedLabel, type Project } from '$lib/project.svelte';
 	import { refusalText, trust, type FlaiTrust } from '$lib/settings';
 
 	// /api/projects gives each project what the connection list reads of its flai
@@ -19,8 +20,12 @@
 	const down = $derived(projects.filter((p) => !p.connected));
 
 	function label(p: Listed): string {
+		if (p.connected) {
+			// a connection let through unsigned names its sides in place of signed or unsigned (S-0239)
+			const said = unsignedLabel(p.unsigned) || trust(p);
+			return said ? `${p.name} (${said})` : p.name;
+		}
 		const said = trust(p);
-		if (p.connected) return said ? `${p.name} (${said})` : p.name;
 		return `${p.name} (${said || (p.served ? 'served, not connected' : 'not connected')})`;
 	}
 

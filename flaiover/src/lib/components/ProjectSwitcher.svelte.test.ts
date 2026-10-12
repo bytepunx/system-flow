@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import ProjectSwitcher from './ProjectSwitcher.svelte';
-import { projectState, resetForTests, type Project } from '$lib/project.svelte';
+import { projectState, resetForTests, unsignedLabel, type Project } from '$lib/project.svelte';
 import { health, type FlaiTrust } from '$lib/settings';
 
 describe('ProjectSwitcher (S-0080)', () => {
@@ -161,6 +161,46 @@ describe('ProjectSwitcher (S-0080)', () => {
 			'Quay: refused: unsigned flai: missing stamp (flai 1.43.0)\n' +
 				'Wharf: refused: unsigned flai: invalid signature'
 		);
+	});
+
+	it('names the side a connection was let through unsigned in place of signed or unsigned; a signed pair keeps signed (S-0239)', () => {
+		const list: (Project & FlaiTrust)[] = [
+			{ key: 'harbour', name: 'Harbour', connected: true, signed: true },
+			{ key: 'pier', name: 'Pier', connected: true, signed: false, unsigned: ['flai'] },
+			{ key: 'quay', name: 'Quay', connected: true, signed: true, unsigned: ['dashboard'] },
+			{
+				key: 'wharf',
+				name: 'Wharf',
+				connected: true,
+				signed: false,
+				unsigned: ['flai', 'dashboard']
+			},
+			{
+				key: 'dock',
+				name: 'Dock',
+				connected: false,
+				refused: { at: '2026-10-12T17:00:00Z', reason: 'invalid signature', flai: '9.9.8' }
+			}
+		];
+		projectState.list = list;
+		projectState.pick('harbour', false);
+		c = mount(ProjectSwitcher, { target: document.body });
+		flushSync();
+		expect([...document.querySelectorAll('option')].map((o) => o.textContent)).toEqual([
+			'Harbour (signed)',
+			'Pier (unsigned allowed: flai)',
+			'Quay (unsigned allowed: dashboard)',
+			'Wharf (unsigned allowed: flai and dashboard)',
+			'Dock (refused: unsigned flai)'
+		]);
+	});
+
+	it('words the sides let through unsigned, and nothing for none (S-0239)', () => {
+		expect(unsignedLabel(['flai'])).toBe('unsigned allowed: flai');
+		expect(unsignedLabel(['dashboard'])).toBe('unsigned allowed: dashboard');
+		expect(unsignedLabel(['flai', 'dashboard'])).toBe('unsigned allowed: flai and dashboard');
+		expect(unsignedLabel([])).toBe('');
+		expect(unsignedLabel(undefined)).toBe('');
 	});
 
 	it('the Settings page says a refused project’s state in the switcher’s words (S-0237)', () => {
