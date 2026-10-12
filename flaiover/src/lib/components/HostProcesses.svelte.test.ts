@@ -305,6 +305,53 @@ describe('HostProcesses', () => {
 		expect(deploy('1.9.0')).toBeNull();
 	});
 
+	it('marks a release the host’s flai cannot verify as not installable, with no deploy, and deploys a verifiable one', async () => {
+		await open(host(), fast);
+		api.mockResolvedValueOnce(
+			answer([
+				{ version: '1.10.0', tag: 'flai/v1.10.0', installed: false, latest: true },
+				{ version: '1.9.0', tag: 'flai/v1.9.0', installed: true, latest: false },
+				{
+					version: '1.2.0',
+					tag: 'flai/v1.2.0',
+					installed: false,
+					latest: false,
+					unverifiable: true,
+					signature: 'missing',
+					reason: 'it publishes no checksums.txt.sig'
+				}
+			])
+		);
+		q('host-processes-versions-list')!.click();
+		await settle();
+		expect(rows()).toEqual([
+			'1.10.0 newest Deploy',
+			'1.9.0 installed',
+			'1.2.0 not installable: it publishes no checksums.txt.sig'
+		]);
+		expect(text('host-processes-version-unverifiable')).toBe(
+			'not installable: it publishes no checksums.txt.sig'
+		);
+		// no control of any kind on the unverifiable row could ask the host to install it
+		const unverifiable = document.querySelectorAll('[data-testid="host-processes-version"]')[2];
+		expect(unverifiable.querySelectorAll('button, a')).toHaveLength(0);
+		expect(deploy('1.2.0')).toBeNull();
+
+		deploy('1.10.0')!.click();
+		flushSync();
+		api.mockResolvedValueOnce(
+			answer({ upgrade: { previous: '1.9.0', installed: '1.10.0' }, restarting: true })
+		);
+		api.mockResolvedValue(host({ version: '1.10.0' }));
+		q('host-processes-confirm-deploy-yes')!.click();
+		await eventually(() =>
+			expect(text('host-processes-message')).toBe(
+				'Deployed flai 1.10.0 over 1.9.0; serve and MCP restarted.'
+			)
+		);
+		expect(JSON.parse(api.mock.calls[2][1].body)).toEqual({ action: 'upgrade', version: '1.10.0' });
+	});
+
 	it('lists the releases while the host action is off, offering no deploy', async () => {
 		await listed(host({ host_enabled: false }));
 		expect(rows()).toHaveLength(3);

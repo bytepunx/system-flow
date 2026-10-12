@@ -9,6 +9,8 @@
 	// cannot be started from here; the Stop confirmation says what brings it back. Versions (S-0298)
 	// lists the published releases, a read, and installs a chosen one as Upgrade does, with its
 	// version; one below a served project's flai.minimum is warned about, not refused (ADR-0117).
+	// A release whose signature the host's flai cannot verify (S-0233) is marked not installable,
+	// with flai's reason, and offered no Deploy: flai host upgrade would refuse it anyway.
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { localDate } from '$lib/localtime';
@@ -42,6 +44,10 @@
 		installed: boolean;
 		latest: boolean;
 		below_minimum?: { project: string; minimum: string }[];
+		/** Set, with signature and reason, when the host's flai cannot verify the release. */
+		unverifiable?: boolean;
+		signature?: 'missing' | 'bad' | 'unknown-key';
+		reason?: string;
 	};
 
 	let {
@@ -387,7 +393,12 @@
 							{#each r.below_minimum ?? [] as m (m.project)}
 								<span class="text-warn">below {m.project}'s minimum {m.minimum}</span>
 							{/each}
-							{#if view.host_enabled && !r.installed}
+							{#if r.unverifiable}
+								<span class="text-warn" data-testid="host-processes-version-unverifiable"
+									>not installable: {r.reason ?? 'its signature cannot be verified'}</span
+								>
+							{/if}
+							{#if view.host_enabled && !r.installed && !r.unverifiable}
 								<button
 									type="button"
 									class="ml-auto rounded border border-line px-2 py-0.5 disabled:opacity-60"
