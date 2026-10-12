@@ -623,6 +623,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.Orchestration.Errors()...)
 	msgs = append(msgs, m.Analysis.Errors()...)
 	msgs = append(msgs, m.TestErrors()...)
+	msgs = append(msgs, m.ProviderErrors()...)
 	for _, e := range m.Claims.Errors() {
 		msgs = append(msgs, e.Error())
 	}

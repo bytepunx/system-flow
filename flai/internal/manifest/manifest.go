@@ -53,6 +53,10 @@ type Manifest struct {
 	// Agent is the project's default agent, copied into every story created
 	// while it is set (S-0103). flai agent sets it.
 	Agent *Agent `yaml:"agent,omitempty" json:"agent,omitempty"`
+	// Providers override, by name, the api, base_url, and models of the
+	// host's providers an agent may name (ADR-0129); key_env is the host's
+	// alone, and ProviderErrors refuses it here.
+	Providers map[string]Provider `yaml:"providers,omitempty" json:"providers,omitempty"`
 	// Prime is how flai prime --story builds this project's context packs
 	// (ADR-0049).
 	Prime Prime `yaml:"prime,omitempty" json:"prime,omitzero"`

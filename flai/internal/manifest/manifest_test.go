@@ -610,6 +610,83 @@ func TestAnalysisAgent(t *testing.T) {
 	}
 }
 
+// S-0349: agent.provider reads in the project's agent and each strategic
+// agent's, a strategic agent's winning over the project's in the merge;
+// providers reads by name with api, base_url, and models, and survives JSON;
+// and a provider that is not valid, or that sets key_env, is refused naming
+// the key, the latter naming the host setting that holds it.
+func TestProviders(t *testing.T) {
+	p := filepath.Join(t.TempDir(), File)
+	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
+		"agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  provider: litellm\n" +
+		"planning:\n  agent:\n    provider: openrouter\n" +
+		"orchestration:\n  agent:\n    model: claude-sonnet-5\n" +
+		"analysis:\n  agent:\n    provider: anthropic\n" +
+		"providers:\n  litellm:\n    base_url: https://litellm.example.com/v1\n    models:\n      opus: anthropic/claude-opus-5-5\n  openrouter:\n    api: openai-chat\n"
+	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for what, errs := range map[string][]string{"agent": m.Agent.Problems(), "planning": m.Planning.Errors(), "orchestration": m.Orchestration.Errors(), "analysis": m.Analysis.Errors(), "providers": m.ProviderErrors()} {
+		if len(errs) != 0 {
+			t.Errorf("valid %s: %v", what, errs)
+		}
+	}
+	for what, c := range map[string]struct {
+		a    *Agent
+		want string
+	}{
+		"agent":         {m.Agent, "litellm"},
+		"planning":      {m.PlanningAgent(), "openrouter"},
+		"orchestration": {m.OrchestrationAgent(), "litellm"},
+		"analysis":      {m.AnalysisAgent(), "anthropic"},
+	} {
+		if c.a.Provider != c.want || c.a.Harness != "claude-code" {
+			t.Errorf("%s's agent: %+v, want provider %s", what, c.a, c.want)
+		}
+	}
+	want := map[string]Provider{
+		"litellm":    {BaseURL: "https://litellm.example.com/v1", Models: map[string]string{"opus": "anthropic/claude-opus-5-5"}},
+		"openrouter": {API: APIOpenAIChat},
+	}
+	if !reflect.DeepEqual(m.Providers, want) {
+		t.Errorf("providers: %+v", m.Providers)
+	}
+	data, err := json.Marshal(m.Providers)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var back map[string]Provider
+	if err := json.Unmarshal(data, &back); err != nil || !reflect.DeepEqual(back, want) {
+		t.Errorf("through JSON %s: %+v, %v", data, back, err)
+	}
+	for _, c := range []struct {
+		p    map[string]Provider
+		want []string
+	}{
+		{map[string]Provider{"litellm": {KeyEnv: "LITELLM_API_KEY"}}, []string{"providers.litellm.key_env is the host's", "flai serve agent provider litellm --key-env"}},
+		{map[string]Provider{"litellm": {KeyEnv: "not a name"}}, []string{"providers.litellm.key_env is the host's"}},
+		{map[string]Provider{"litellm": {API: "grpc"}}, []string{`providers.litellm.api "grpc" is not an API`, "anthropic-messages, openai-chat, openai-responses"}},
+		{map[string]Provider{"litellm": {BaseURL: "litellm.example.com"}}, []string{`providers.litellm.base_url "litellm.example.com" is not an absolute http or https URL`}},
+		{map[string]Provider{"litellm": {Models: map[string]string{"opus": ""}}}, []string{`providers.litellm.models.opus "" is not a model ID`}},
+		{map[string]Provider{"LiteLLM": {API: APIOpenAIChat}}, []string{`providers "LiteLLM" is not a provider name`}},
+	} {
+		errs := (Manifest{Providers: c.p}).ProviderErrors()
+		if len(errs) != 1 {
+			t.Errorf("%+v: want one refusal, got %q", c.p, errs)
+			continue
+		}
+		for _, w := range c.want {
+			if !strings.Contains(errs[0], w) {
+				t.Errorf("%+v: got %q, want %q", c.p, errs[0], w)
+			}
+		}
+	}
+}
+
 // S-0181: a flai below the manifest's minimum says so, naming the version
 // needed and the upgrade, before anything else is read; a dev build and a
 // release at or above it read the project.

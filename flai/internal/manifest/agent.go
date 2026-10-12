@@ -19,12 +19,15 @@ import (
 // its adapters; here each is only checked for shape. Roles are the agents
 // for the parts of a story's work its agent hands to sub-agents (S-0189):
 // explore and verify, by role name, each a harness, a model, and config of
-// its own; the fields above are the story's own.
+// its own; the fields above are the story's own. Provider names the host's
+// provider the model's calls go to (ADR-0129); empty leaves the harness's
+// own default.
 type Agent struct {
-	Harness string            `yaml:"harness,omitempty" json:"harness,omitempty"`
-	Model   string            `yaml:"model,omitempty" json:"model,omitempty"`
-	Config  map[string]string `yaml:"config,omitempty" json:"config,omitempty"`
-	Roles   map[string]Role   `yaml:"roles,omitempty" json:"roles,omitempty"`
+	Harness  string            `yaml:"harness,omitempty" json:"harness,omitempty"`
+	Model    string            `yaml:"model,omitempty" json:"model,omitempty"`
+	Provider string            `yaml:"provider,omitempty" json:"provider,omitempty"`
+	Config   map[string]string `yaml:"config,omitempty" json:"config,omitempty"`
+	Roles    map[string]Role   `yaml:"roles,omitempty" json:"roles,omitempty"`
 }
 
 // Role is the agent for one role of a story's work other than the story's
@@ -51,7 +54,7 @@ var (
 
 // IsZero reports whether nothing is set.
 func (a *Agent) IsZero() bool {
-	return a == nil || a.Harness == "" && a.Model == "" && len(a.Config) == 0 && len(a.Roles) == 0
+	return a == nil || a.Harness == "" && a.Model == "" && a.Provider == "" && len(a.Config) == 0 && len(a.Roles) == 0
 }
 
 // ConfigKeys are the role's config keys in order.
@@ -64,10 +67,10 @@ func (r Role) IsZero() bool {
 	return r.Harness == "" && r.Model == "" && len(r.Config) == 0
 }
 
-// Validate checks each part's shape: an identifier for the harness, a model ID
-// for the model, config keys that are identifiers with values on one line,
-// and role names that are identifiers, each role setting something and
-// checked the same way.
+// Validate checks each part's shape: an identifier for the harness and the
+// provider, a model ID for the model, config keys that are identifiers with
+// values on one line, and role names that are identifiers, each role setting
+// something and checked the same way.
 func (a *Agent) Validate() error {
 	if errs := a.Problems(); len(errs) > 0 {
 		return errors.New(strings.Join(errs, "; "))
@@ -88,6 +91,9 @@ func (a *Agent) problems(what string) []string {
 		return nil
 	}
 	errs := validate(what, a.Harness, a.Model, a.Config)
+	if a.Provider != "" && !harnessPattern.MatchString(a.Provider) {
+		errs = append(errs, fmt.Sprintf("%s provider %q is not a name such as litellm or openrouter (lower case letters, digits, . _ -)", what, a.Provider))
+	}
 	for _, n := range a.RoleNames() {
 		r := a.Roles[n]
 		switch {
@@ -127,7 +133,7 @@ func (a *Agent) Same(b *Agent) bool {
 	if a.IsZero() || b.IsZero() {
 		return a.IsZero() && b.IsZero()
 	}
-	if a.Harness != b.Harness || a.Model != b.Model || !sameConfig(a.Config, b.Config) || len(a.Roles) != len(b.Roles) {
+	if a.Harness != b.Harness || a.Model != b.Model || a.Provider != b.Provider || !sameConfig(a.Config, b.Config) || len(a.Roles) != len(b.Roles) {
 		return false
 	}
 	for n, r := range a.Roles {
@@ -193,9 +199,9 @@ func (a *Agent) ConfigKeys() []string {
 	return sortedKeys(a.Config)
 }
 
-// With is a with over's harness and model where over sets them, and their
-// configs merged key by key, over's winning; each role is merged the same
-// way, role by role. Nil when the result is empty.
+// With is a with over's harness, model, and provider where over sets them,
+// and their configs merged key by key, over's winning; each role is merged
+// the same way, role by role. Nil when the result is empty.
 func (a *Agent) With(over *Agent) *Agent {
 	out := &Agent{}
 	for _, x := range []*Agent{a, over} {
@@ -203,6 +209,9 @@ func (a *Agent) With(over *Agent) *Agent {
 			continue
 		}
 		out.Harness, out.Model, out.Config = merge(out.Harness, out.Model, out.Config, x.Harness, x.Model, x.Config)
+		if x.Provider != "" {
+			out.Provider = x.Provider
+		}
 		for n, r := range x.Roles {
 			if out.Roles == nil {
 				out.Roles = map[string]Role{}
@@ -240,29 +249,34 @@ func merge(harness, model string, config map[string]string, h, m string, c map[s
 }
 
 // String is the agent in one line, for the terminal: claude-code,
-// claude-opus-5-5, effort=high; explore: haiku; verify: sonnet.
+// claude-opus-5-5, provider litellm, effort=high; explore: haiku; verify:
+// sonnet.
 func (a *Agent) String() string {
 	if a.IsZero() {
 		return "none"
 	}
-	parts := []string{line(a.Harness, a.Model, a.Config)}
+	provider := ""
+	if a.Provider != "" {
+		provider = "provider " + a.Provider
+	}
+	parts := []string{line(a.Config, a.Harness, a.Model, provider)}
 	if parts[0] == "" {
 		parts[0] = "default"
 	}
 	for _, n := range a.RoleNames() {
 		r := a.Roles[n]
-		parts = append(parts, n+": "+line(r.Harness, r.Model, r.Config))
+		parts = append(parts, n+": "+line(r.Config, r.Harness, r.Model))
 	}
 	return strings.Join(parts, "; ")
 }
 
-func line(harness, model string, config map[string]string) string {
+// line is the words that are set, then config's pairs, comma separated.
+func line(config map[string]string, words ...string) string {
 	var parts []string
-	if harness != "" {
-		parts = append(parts, harness)
-	}
-	if model != "" {
-		parts = append(parts, model)
+	for _, w := range words {
+		if w != "" {
+			parts = append(parts, w)
+		}
 	}
 	for _, k := range sortedKeys(config) {
 		parts = append(parts, k+"="+config[k])
@@ -367,24 +381,27 @@ func WriteAgent(path string, a *Agent) error {
 func AgentBlock(a *Agent, indent string) string {
 	var b strings.Builder
 	b.WriteString(indent + "agent:\n")
-	fields(&b, indent+"  ", a.Harness, a.Model, a.Config)
+	fields(&b, indent+"  ", a.Harness, a.Model, a.Provider, a.Config)
 	if len(a.Roles) > 0 {
 		fmt.Fprintf(&b, "%s  roles:\n", indent)
 		for _, n := range a.RoleNames() {
 			r := a.Roles[n]
 			fmt.Fprintf(&b, "%s    %s:\n", indent, n)
-			fields(&b, indent+"      ", r.Harness, r.Model, r.Config)
+			fields(&b, indent+"      ", r.Harness, r.Model, "", r.Config)
 		}
 	}
 	return b.String()
 }
 
-func fields(b *strings.Builder, indent, harness, model string, config map[string]string) {
+func fields(b *strings.Builder, indent, harness, model, provider string, config map[string]string) {
 	if harness != "" {
 		fmt.Fprintf(b, "%sharness: %s\n", indent, yamlScalar(harness))
 	}
 	if model != "" {
 		fmt.Fprintf(b, "%smodel: %s\n", indent, yamlScalar(model))
+	}
+	if provider != "" {
+		fmt.Fprintf(b, "%sprovider: %s\n", indent, yamlScalar(provider))
 	}
 	if len(config) > 0 {
 		fmt.Fprintf(b, "%sconfig:\n", indent)

@@ -92,6 +92,64 @@ func TestAgentRoles(t *testing.T) {
 	}
 }
 
+// S-0349: an agent's provider is checked as a harness is, carried by a merge
+// and a copy, compared, printed, and read back as it was written.
+func TestAgentProvider(t *testing.T) {
+	def := &Agent{Harness: "claude-code", Model: "claude-opus-5-5", Provider: "litellm"}
+	if err := def.Validate(); err != nil {
+		t.Errorf("good: %v", err)
+	}
+	for _, bad := range []string{"Lite LLM", "LiteLLM", "-litellm"} {
+		err := (&Agent{Provider: bad}).Validate()
+		if err == nil || !strings.Contains(err.Error(), `agent provider "`+bad+`"`) {
+			t.Errorf("%q: %v", bad, err)
+		}
+	}
+	if got := def.With(&Agent{Model: "claude-sonnet-5"}); got.Provider != "litellm" {
+		t.Errorf("a merge that leaves provider out dropped it: %+v", got)
+	}
+	if got := def.With(&Agent{Provider: "openrouter"}); got.Provider != "openrouter" || got.Model != "claude-opus-5-5" {
+		t.Errorf("a merge that sets provider: %+v", got)
+	}
+	if def.Provider != "litellm" {
+		t.Error("the default was changed by a merge")
+	}
+	if got := (*Agent)(nil).With(&Agent{Provider: "litellm"}); got == nil || got.Provider != "litellm" {
+		t.Errorf("only a provider: %+v", got)
+	}
+	if (&Agent{Provider: "litellm"}).IsZero() {
+		t.Error("an agent with only a provider is not empty")
+	}
+	if c := def.Clone(); c.Provider != "litellm" || !c.Same(def) {
+		t.Errorf("clone: %+v", c)
+	}
+	if def.Same(&Agent{Harness: "claude-code", Model: "claude-opus-5-5"}) {
+		t.Error("Same does not compare providers")
+	}
+	if s := (&Agent{Harness: "claude-code", Model: "claude-opus-5-5", Provider: "litellm", Config: map[string]string{"effort": "high"}}).String(); s != "claude-code, claude-opus-5-5, provider litellm, effort=high" {
+		t.Errorf("String: %s", s)
+	}
+	block := AgentBlock(def, "")
+	if !strings.Contains(block, "  provider: litellm\n") {
+		t.Errorf("block:\n%s", block)
+	}
+	path := filepath.Join(t.TempDir(), File)
+	if err := os.WriteFile(path, []byte("version: 1\nname: Harbour\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteAgent(path, def); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.Agent.Same(def) {
+		data, _ := os.ReadFile(path)
+		t.Errorf("read back %+v from:\n%s", m.Agent, data)
+	}
+}
+
 func TestParseRoles(t *testing.T) {
 	got, err := ParseRoles([]string{"verify=claude-code"}, []string{"explore=haiku", "verify = sonnet"}, []string{"verify.effort=medium"})
 	if err != nil {
