@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -79,7 +80,7 @@ registered with flai serve keeps its registration: only the container's
 process restarts.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runDashboardRestart(image, tag, port, bind)
+			return a.runDashboardRestart(cmd.Context(), image, tag, port, bind)
 		},
 	}
 	f := c.Flags()
@@ -90,7 +91,7 @@ process restarts.`,
 	return c
 }
 
-func (a *app) runDashboardRestart(image, tag string, port int, bind string) error {
+func (a *app) runDashboardRestart(ctx context.Context, image, tag string, port int, bind string) error {
 	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
@@ -107,11 +108,11 @@ func (a *app) runDashboardRestart(image, tag string, port int, bind string) erro
 	if err != nil {
 		return err
 	}
-	ref := s.ref()
-	runImage := ref
+	var ref, runImage string
 	if wasRunning {
 		// The image ID, not the tag: flai dashboard check may have pulled a
 		// newer image under the tag since the container started (I-0116).
+		ref = s.ref()
 		if running, _ := a.containerInfo(s.Name); running != "" {
 			ref = running
 		}
@@ -123,6 +124,8 @@ func (a *app) runDashboardRestart(image, tag string, port int, bind string) erro
 		if err := a.stopAndRelease(s.Name); err != nil {
 			return err
 		}
+	} else if ref, runImage, err = a.restartImage(ctx, s, image != "" || tag != ""); err != nil {
+		return err
 	}
 	id, err := a.startDashboardImage(dir, s, runImage, ref)
 	if err != nil {
@@ -140,6 +143,36 @@ func (a *app) runDashboardRestart(image, tag string, port int, bind string) erro
 	}
 	fmt.Fprintf(a.out, "%s %s (%s) at %s\n", verb, s.Name, ref, s.url())
 	return nil
+}
+
+// restartImage is what a restart starts when no container runs: the recorded
+// dashboard, by its image ID while that is still here, as flai host's watch
+// starts it (ADR-0118), unless named, --image or --tag, asks for another;
+// with no record, or named, what flai dashboard starts, which for the signed
+// repository is the release s's tag resolves to, by digest (ADR-0070). ref is
+// the reference to show for it; image, what docker runs, is pulled first when
+// it is a reference not present for the daemon's platform.
+func (a *app) restartImage(ctx context.Context, s dashboardSettings, named bool) (ref, image string, err error) {
+	if r, ok := readDashboardRecord(string(a.serveDir())); ok && !named {
+		ref, image = r.Ref, r.Ref
+		if r.Image != "" {
+			if id, err := a.imageID(r.Image); err == nil && id != "" {
+				image = r.Image
+			}
+		}
+	} else {
+		img, err := a.chooseDashboardImage(ctx, s, false)
+		if err != nil {
+			return "", "", err
+		}
+		ref, image = img.Ref, img.Ref
+	}
+	if image == ref && a.needsPull(ref) {
+		if err := a.pullDashboardRef(s.Image, ref); err != nil {
+			return "", "", err
+		}
+	}
+	return ref, image, nil
 }
 
 // refAndImage names what a restart ran: the reference, and the image ID when
@@ -161,7 +194,7 @@ container was started from. Changes nothing: flai dashboard upgrade applies
 it. Reports plainly, not as an error, when the container is not running.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runDashboardCheck(image, tag)
+			return a.runDashboardCheck(cmd.Context(), image, tag)
 		},
 	}
 	c.Flags().StringVar(&image, "image", "", "image name (default: manifest, then config)")
@@ -169,7 +202,7 @@ it. Reports plainly, not as an error, when the container is not running.`,
 	return c
 }
 
-func (a *app) runDashboardCheck(image, tag string) error {
+func (a *app) runDashboardCheck(ctx context.Context, image, tag string) error {
 	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
@@ -192,26 +225,42 @@ func (a *app) runDashboardCheck(image, tag string) error {
 		fmt.Fprintf(a.out, "%s is not running; flai dashboard starts it\n", s.Name)
 		return nil
 	}
-	if err := a.pullDashboardImage(s); err != nil {
-		return err
-	}
-	latest, err := a.imageID(s.ref())
+	img, err := a.chooseDashboardImage(ctx, s, false)
 	if err != nil {
 		return err
 	}
-	current, err := a.containerImageID(s.Name)
-	if err != nil {
-		return err
+	// A release is compared by digest, with nothing pulled (ADR-0070); an
+	// unsigned image by the image ID its tag names once pulled, as before.
+	var available bool
+	if img.Release != "" {
+		available = !img.runs(a.runningRepoDigests(s.Name))
+	} else {
+		if err := a.pullDashboardRef(s.Image, img.Ref); err != nil {
+			return err
+		}
+		latest, err := a.imageID(img.Ref)
+		if err != nil {
+			return err
+		}
+		current, err := a.containerImageID(s.Name)
+		if err != nil {
+			return err
+		}
+		available = current != "" && latest != "" && current != latest
 	}
-	available := current != "" && latest != "" && current != latest
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"container": s.Name, "running": true, "ref": s.ref(), "upgrade_available": available})
+		out := map[string]any{"container": s.Name, "running": true, "ref": s.ref(), "image": img.Ref, "signed": img.Release != "", "upgrade_available": available}
+		if img.Release != "" {
+			out["release"] = img.Release
+		}
+		return a.printJSON(out)
 	}
 	if available {
-		fmt.Fprintf(a.out, "an update to %s is available; flai dashboard upgrade applies it\n", s.ref())
+		fmt.Fprintf(a.out, "an update to %s is available; flai dashboard upgrade applies it\n", img.Ref)
 	} else {
-		fmt.Fprintf(a.out, "%s is already running %s\n", s.Name, s.ref())
+		fmt.Fprintf(a.out, "%s is already running %s\n", s.Name, img.Ref)
 	}
+	fmt.Fprint(a.out, img.describe())
 	return nil
 }
 
@@ -275,7 +324,7 @@ Without it a tag is used as it is, such as a mirror's.`,
 					return err
 				}
 			}
-			return a.runDashboardUpgrade(image, tag, port, bind)
+			return a.runDashboardUpgrade(cmd.Context(), image, tag, port, bind)
 		},
 	}
 	f := c.Flags()
@@ -288,7 +337,7 @@ Without it a tag is used as it is, such as a mirror's.`,
 	return c
 }
 
-func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) error {
+func (a *app) runDashboardUpgrade(ctx context.Context, image, tag string, port int, bind string) error {
 	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
@@ -301,37 +350,60 @@ func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) erro
 		return err
 	}
 	dir := string(a.serveDir())
-	a.logger().Info("pulling image", "component", "dashboard", "image", s.ref())
-	if err := a.pullDashboardImage(s); err != nil {
+	// A release refused is refused here, before anything is pulled (ADR-0070).
+	img, err := a.chooseDashboardImage(ctx, s, false)
+	if err != nil {
 		return err
 	}
+	signed := img.Release != ""
 	running, err := a.containerRunning(s.Name)
 	if err != nil {
 		return err
 	}
 	if !running {
-		id, err := a.startDashboard(dir, s, s.ref())
+		if err := a.pullDashboardRef(s.Image, img.Ref); err != nil {
+			return err
+		}
+		id, err := a.startDashboard(dir, s, img.Ref)
 		if err != nil {
 			return err
 		}
-		return a.printUpgradeResult(s, "started", "", s.ref(), id)
+		return a.printUpgradeResult(s, img, "started", "", id)
 	}
-	latest, err := a.imageID(s.ref())
-	if err != nil {
-		return err
+	// A release is compared by digest before it is pulled; an unsigned image
+	// by the image ID its tag names once pulled, as before.
+	if !signed {
+		if err := a.pullDashboardRef(s.Image, img.Ref); err != nil {
+			return err
+		}
 	}
 	current, err := a.containerImageID(s.Name)
 	if err != nil {
 		return err
 	}
-	if latest != "" && current == latest {
-		return a.printUpgradeResult(s, "up-to-date", s.ref(), s.ref(), "")
+	var upToDate bool
+	if signed {
+		upToDate = img.runs(a.runningRepoDigests(s.Name))
+	} else {
+		latest, err := a.imageID(img.Ref)
+		if err != nil {
+			return err
+		}
+		upToDate = latest != "" && current == latest
+	}
+	if upToDate {
+		return a.printUpgradeResult(s, img, "up-to-date", img.Ref, "")
+	}
+	if signed {
+		if err := a.pullDashboardRef(s.Image, img.Ref); err != nil {
+			return err
+		}
 	}
 
 	probeName := s.Name + upgradeProbeSuffix
 	_, _ = a.runner.Run("", "docker", "rm", "-f", probeName) // a previous failed attempt may have left one behind
 	a.logger().Info("starting a temporary container to check the new image", "component", "dashboard", "container", probeName)
-	if _, err := a.startContainer(dir, probeName, fmt.Sprintf("127.0.0.1::%d", containerPort), s.ref()); err != nil {
+	if _, err := a.startContainer(dir, probeName, fmt.Sprintf("127.0.0.1::%d", containerPort), img.Ref); err != nil {
 		return fmt.Errorf("start the temporary container to check the new image: %w", err)
 	}
 	healthy, healthErr := a.waitHealthy(probeName)
@@ -346,7 +418,7 @@ func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) erro
 		// it: this must fail the same way whether or not --json was given, so
 		// a host action calling it with --json always sees a real error, not
 		// a 200-shaped answer that happens to say "failed".
-		return fmt.Errorf("upgrade to %s failed: %s; %s keeps running unchanged", s.ref(), detail, s.Name)
+		return fmt.Errorf("upgrade to %s failed: %s; %s keeps running unchanged", img.Ref, detail, s.Name)
 	}
 
 	a.logger().Info("new image is healthy, swapping", "component", "dashboard", "container", s.Name)
@@ -354,22 +426,22 @@ func (a *app) runDashboardUpgrade(image, tag string, port int, bind string) erro
 	if err := a.stopAndRelease(s.Name); err != nil {
 		return err
 	}
-	id, err := a.startDashboard(dir, s, s.ref())
+	id, err := a.startDashboard(dir, s, img.Ref)
 	if err != nil {
 		// The image ID, not the tag: the pull may have moved a floating tag
 		// such as latest to the new image this just failed to start.
-		return a.restorePreviousDashboard(dir, s, previousRef, orDefault(current, previousRef), err)
+		return a.restorePreviousDashboard(dir, s, img.Ref, previousRef, orDefault(current, previousRef), err)
 	}
-	return a.printUpgradeResult(s, "upgraded", previousRef, s.ref(), id)
+	return a.printUpgradeResult(s, img, "upgraded", previousRef, id)
 }
 
 // restorePreviousDashboard starts the image the dashboard ran before an
-// upgrade stopped it, under the real name and port, after the new image
+// upgrade to newRef stopped it, under the real name and port, after newRef
 // failed to start there. It always returns an error, with --json too, as the
 // upgrade failed either way: one that says the previous image runs again, or,
 // when it does not start either, that the dashboard is down.
-func (a *app) restorePreviousDashboard(dir string, s dashboardSettings, previousRef, previousImage string, startErr error) error {
-	failed := fmt.Errorf("upgrade to %s failed: the new image did not start after %s stopped: %w", s.ref(), s.Name, startErr)
+func (a *app) restorePreviousDashboard(dir string, s dashboardSettings, newRef, previousRef, previousImage string, startErr error) error {
+	failed := fmt.Errorf("upgrade to %s failed: the new image did not start after %s stopped: %w", newRef, s.Name, startErr)
 	shown := orDefault(previousRef, previousImage)
 	a.logger().Warn("new image did not start, starting the previous one again", "component", "dashboard", "container", s.Name, "image", previousImage)
 	a.releaseName(s.Name) // a failed docker run can leave a created container holding the name
@@ -419,9 +491,16 @@ func (a *app) containerListed(name string) (bool, error) {
 	return strings.TrimSpace(out) != "", nil
 }
 
-func (a *app) printUpgradeResult(s dashboardSettings, outcome, from, to string, id string) error {
+// printUpgradeResult says what an upgrade to img did: outcome up-to-date,
+// started, or upgraded, from the reference the container ran before.
+func (a *app) printUpgradeResult(s dashboardSettings, img dashboardImage, outcome, from, id string) error {
+	to := img.Ref
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"container": s.Name, "outcome": outcome, "from": from, "to": to, "id": short(id), "url": s.url()})
+		out := map[string]any{"container": s.Name, "outcome": outcome, "from": from, "to": to, "id": short(id), "url": s.url(), "signed": img.Release != ""}
+		if img.Release != "" {
+			out["release"] = img.Release
+		}
+		return a.printJSON(out)
 	}
 	switch outcome {
 	case "up-to-date":
@@ -431,6 +510,7 @@ func (a *app) printUpgradeResult(s dashboardSettings, outcome, from, to string, 
 	case "upgraded":
 		fmt.Fprintf(a.out, "upgraded %s from %s to %s at %s\n", s.Name, from, to, s.url())
 	}
+	fmt.Fprint(a.out, img.describe())
 	return nil
 }
 

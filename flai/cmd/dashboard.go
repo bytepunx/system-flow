@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -121,9 +122,16 @@ var dashboardReleases = func() selfupgrade.Options {
 // image by digest from its verified digest list, or, for --build and an image
 // of another repository, the reference as given, unsigned.
 type dashboardImage struct {
-	Ref         string // what is pulled and run: <repository>@sha256:… for a release, image:tag otherwise
-	Release     string // the flaiover release whose verified list names Ref; "" when unsigned
-	Unreachable error  // why the release could not be reached, when its cached list was used
+	Ref         string         // what is pulled and run: <repository>@sha256:… for a release, image:tag otherwise
+	Release     string         // the flaiover release whose verified list names Ref; "" when unsigned
+	List        dashboard.List // that verified list, which check and upgrade match a running image against; empty when unsigned
+	Unreachable error          // why the release could not be reached, when its cached list was used
+}
+
+// runs reports whether one of repoDigests, a running image's RepoDigests, is
+// on d's verified list: never, for an unsigned d.
+func (d dashboardImage) runs(repoDigests []string) bool {
+	return d.Release != "" && slices.ContainsFunc(repoDigests, d.List.Matches)
 }
 
 // describe is the line flai dashboard prints for where d comes from.
@@ -167,13 +175,13 @@ func (a *app) chooseDashboardImage(ctx context.Context, s dashboardSettings, bui
 	case errors.As(err, &refused):
 		return dashboardImage{}, err
 	case err != nil:
-		return dashboardImage{}, fmt.Errorf("%w; no dashboard container was started", err)
+		return dashboardImage{}, fmt.Errorf("%w; nothing was pulled, started, or swapped", err)
 	}
 	if res.Cached {
 		a.logger().Warn("flaiover release not reached, cached digest list used", "component", "dashboard", "release", res.Version, "err", res.Unreachable.Error())
 	}
 	a.logger().Info("dashboard release resolved", "component", "dashboard", "tag", s.Tag, "release", res.Version, "image", res.Reference)
-	return dashboardImage{Ref: res.Reference, Release: res.Version, Unreachable: res.Unreachable}, nil
+	return dashboardImage{Ref: res.Reference, Release: res.Version, List: res.List, Unreachable: res.Unreachable}, nil
 }
 
 func newDashboardCmd(a *app) *cobra.Command {
@@ -229,11 +237,6 @@ const (
 	localImage = "flaiover"
 	localTag   = "local"
 )
-
-// pullDashboardImage pulls s's image at its tag; see pullDashboardRef.
-func (a *app) pullDashboardImage(s dashboardSettings) error {
-	return a.pullDashboardRef(s.Image, s.ref())
-}
 
 // pullDashboardRef pulls ref, an image of repository image by tag or by
 // digest, for the daemon's platform; when the registry refuses, it logs
@@ -596,15 +599,14 @@ func (p imageProvenance) describe() string {
 	return "  unsigned: its image has no repository digest, so no signed digest list names it\n"
 }
 
-// runningProvenance reads the named container's image's RepoDigests, not its
-// image ID, which is the listed digest in one image store and the
-// configuration's digest in another (release-signing.md § The digest list),
-// and matches each against the verified lists cached beside flai serve's
-// state, the newest release first.
-func (a *app) runningProvenance(name string) imageProvenance {
+// runningRepoDigests are the RepoDigests of the named container's image, not
+// its image ID, which is the listed digest in one image store and the
+// configuration's digest in another (release-signing.md § The digest list):
+// none when docker cannot say.
+func (a *app) runningRepoDigests(name string) []string {
 	id, err := a.containerImageID(name)
 	if err != nil || id == "" {
-		return imageProvenance{}
+		return nil
 	}
 	out, err := a.runner.Run("", "docker", "image", "inspect", id, "--format", "{{json .RepoDigests}}")
 	var repoDigests []string
@@ -613,8 +615,16 @@ func (a *app) runningProvenance(name string) imageProvenance {
 	}
 	if err != nil {
 		a.logger().Warn("image digests not read", "component", "dashboard", "container", name, "image", id, "err", err.Error())
-		return imageProvenance{}
+		return nil
 	}
+	return repoDigests
+}
+
+// runningProvenance matches the named container's runningRepoDigests against
+// the verified lists cached beside flai serve's state, the newest release
+// first.
+func (a *app) runningProvenance(name string) imageProvenance {
+	repoDigests := a.runningRepoDigests(name)
 	if len(repoDigests) == 0 {
 		return imageProvenance{}
 	}

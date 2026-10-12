@@ -106,11 +106,11 @@ func TestDashboardRecordsWhatFlaiHostRestarts(t *testing.T) {
 		t.Fatalf("record after start: %+v %v", r, ok)
 	}
 
-	f.imageIDs = map[string]string{"ghcr.io/bytepunx/flaiover:latest": "sha256:newer"}
+	// dashboard.tag latest resolves to the newest release, run by digest
 	if _, errOut, code := runWithApp(t, &app{cwd: root, runner: f}, "dashboard", "upgrade"); code != 0 {
 		t.Fatalf("upgrade: %s", errOut)
 	}
-	if r, _ = readDashboardRecord(dir); r.Ref != "ghcr.io/bytepunx/flaiover:latest" {
+	if r, _ = readDashboardRecord(dir); r.Ref != flaioverRef("0.10.0") || r.Image != f.idFor(flaioverRef("0.10.0")) {
 		t.Errorf("record after upgrade: %+v", r)
 	}
 

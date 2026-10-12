@@ -265,7 +265,8 @@ func TestDashboardUpgradePublishedRefusesAnUnpublishedTag(t *testing.T) {
 }
 
 // S-0298, ADR-0117 §4 and §5: a published tag deploys as an upgrade does,
-// for that container once: dashboard.tag is not written.
+// for that container once: dashboard.tag is not written. S-0236, ADR-0070:
+// both the release that ran and the one deployed run by digest.
 func TestDashboardUpgradePublishedDeploysAPublishedTag(t *testing.T) {
 	root := versionsProject(t, "latest")
 	api, _ := signedDashboardStandIn(t)
@@ -275,11 +276,12 @@ func TestDashboardUpgradePublishedDeploysAPublishedTag(t *testing.T) {
 	}
 	manifestBefore, _ := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
 	out, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--published", "--tag", "0.3.0", "--repo", "o/r", "--api", api)
-	if code != 0 || !strings.Contains(out, "upgraded flaiover from ghcr.io/bytepunx/flaiover:latest to ghcr.io/bytepunx/flaiover:0.3.0") {
+	from, to := flaioverRef("0.10.0"), flaioverRef("0.3.0")
+	if code != 0 || !strings.Contains(out, "upgraded flaiover from "+from+" to "+to) {
 		t.Fatalf("upgrade: %d %s %s", code, out, errOut)
 	}
-	if !slices.Contains(f.calls, "docker pull --quiet --platform linux/amd64 ghcr.io/bytepunx/flaiover:0.3.0") || f.containerRef["flaiover"] != "ghcr.io/bytepunx/flaiover:0.3.0" {
-		t.Errorf("pulled and swapped to 0.3.0: %v %v", f.containerRef, f.calls)
+	if !slices.Contains(f.calls, "docker pull --quiet --platform linux/amd64 "+to) || f.containerRef["flaiover"] != to || f.containerLabel["flaiover"] != to {
+		t.Errorf("pulled and swapped to 0.3.0 by digest: %v %v", f.containerRef, f.calls)
 	}
 	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
 	if strings.Contains(string(cfg), "0.3.0") {
@@ -288,9 +290,13 @@ func TestDashboardUpgradePublishedDeploysAPublishedTag(t *testing.T) {
 	if manifestAfter, _ := os.ReadFile(filepath.Join(root, "system-flow.yaml")); string(manifestAfter) != string(manifestBefore) {
 		t.Errorf("the manifest is not changed: %s", manifestAfter)
 	}
-	// a tag without --published is used as it is, unchecked
-	if _, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--tag", "mirror-build", "--api", "http://127.0.0.1:1"); code != 0 {
+	// a tag without --published is used as it is, unchecked, for an image of
+	// another repository; for the signed one it must name a release still
+	if _, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--image", mirrorImage, "--tag", "mirror-build", "--api", "http://127.0.0.1:1"); code != 0 || f.containerLabel["flaiover"] != mirrorImage+":mirror-build" {
 		t.Errorf("unchecked tag: %d %s", code, errOut)
+	}
+	if _, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--tag", "mirror-build"); code == 0 || !strings.Contains(errOut, "is not a flaiover release version") {
+		t.Errorf("the signed repository resolves the tag: %d %s", code, errOut)
 	}
 }
 
