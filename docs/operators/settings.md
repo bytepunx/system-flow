@@ -194,6 +194,7 @@ The strategic agents' settings, the `orchestration` keys but `agent`, and the `p
 | `GITHUB_TOKEN`, `GH_TOKEN` | `gh auth token` when neither is set | GitHub API and registry authentication for `flai self-upgrade`, `flai host upgrade`, and `flai dashboard`'s image pull |
 | `USER` | none | The `author` written when the configuration file is created, when the system cannot name the login |
 | `GITHUB_ACTOR` | a placeholder | The user name `flai dashboard` logs in to `ghcr.io` with; the registry checks only the token |
+| The variable a provider's `key_env` names, such as `LITELLM_API_KEY` | none | The provider's key, read by `flai serve` at each start of an agent that names the provider; a start is refused while it is unset or empty. Set it in the environment `flai host` or `flai serve` runs in ([Starting an agent](index.md#starting-an-agent-when-a-story-becomes-ready)) |
 
 ### Set by flai for the processes it starts
 
@@ -213,6 +214,8 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 | `FLAI_AGENT_ROLES` | `flai serve`, for your `agent.command`, when the story's agent has roles | The story's `agent.roles` as a JSON object, each role with its `harness`, `model`, and `config` |
 | `FLAI_ANSWERED` | `flai serve`, for an agent started again because its question was answered | The thread's ID |
 | `FLAI_COMMIT` | `flai serve`, for your `agent.command` started to commit what a story's worktree holds (`flai serve agent commit`) | The worktree's path |
+| `FLAI_PROVIDER`, `FLAI_PROVIDER_API`, `FLAI_PROVIDER_BASE_URL`, `FLAI_PROVIDER_KEY_ENV` | `flai serve`, for your `agent.command`, when the agent names a provider | The provider's name, its `api`, its `base_url`, and the name of the variable that holds its key, which the command reads itself ([Where its model's calls go](../users/flai.md#where-its-models-calls-go-a-provider)) |
+| `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL` | `flai serve`, for a `claude-code` agent that names a provider | The provider's `base_url`; its key, copied from the variable its `key_env` names; empty; and its `models`' `opus`, `sonnet`, and `haiku`, each only when named |
 
 ### Read by install.sh
 
