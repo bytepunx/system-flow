@@ -10,6 +10,11 @@
 // sets out to hide a command (a backslash inside a name, a command held in a
 // variable).
 //
+// A harness's Reader reads its hook's input into a Call, which Decide decides
+// on in no harness's terms, and answers the harness with the Verdict
+// (S-0353); Claude Code's, under the harness name claude-code, is the only
+// one.
+//
 // A sub-agent may write an ADR, a document like the design and the code it
 // edits, with flai adr new, topics, and accept, or the MCP tool adr_new, but
 // not commit it (S-0287, ADR-0127): with --commit or --autocommit, or
@@ -87,8 +92,9 @@
 // role, is refused its own wait_for_events while a sub-agent of its session
 // runs and no thread on its story awaits the designer (S-0285): the call
 // reports work items and threads, not sub-agents, so it would run to its
-// timeout. Record keeps each session's running sub-agents, from Claude
-// Code's SubagentStart and SubagentStop hooks.
+// timeout. RecordChange keeps each session's running sub-agents, from a
+// harness's reports of each starting and stopping, Claude Code's
+// SubagentStart and SubagentStop hooks.
 //
 // A story's agent, the planner, and the analyzer write only as themselves
 // (S-0369, ADR-0143): an entry's author is whatever --by, else FLAI_AGENT,
@@ -108,6 +114,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"io"
 	"maps"
 	"path"
 	"path/filepath"
@@ -120,56 +127,6 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
-
-// Event is the part of a Claude Code hook's input the guard reads: a
-// PreToolUse's tool call, or a SubagentStart's or SubagentStop's sub-agent,
-// as HookEventName says, in the session SessionID.
-type Event struct {
-	HookEventName string `json:"hook_event_name"`
-	SessionID     string `json:"session_id"`
-	ToolName      string `json:"tool_name"`
-	ToolInput     Input  `json:"tool_input"`
-	// AgentID is set only when a sub-agent makes the call, or on the
-	// sub-agent a SubagentStart or SubagentStop reports; AgentType names the
-	// sub-agent's definition. A session started with --agent may carry an
-	// agent type of its own, so the ID is what marks a sub-agent.
-	AgentID   string `json:"agent_id"`
-	AgentType string `json:"agent_type"`
-}
-
-// Input is the part of a tool call's input the guard reads: Bash's command;
-// the file Edit or Write changes, or the notebook NotebookEdit does; and a
-// flai tool's Args. UnmarshalJSON fills Args' Fields and CostOfDelay.
-type Input struct {
-	Command      string `json:"command"`
-	FilePath     string `json:"file_path"`
-	NotebookPath string `json:"notebook_path"`
-	Args
-}
-
-// UnmarshalJSON decodes a tool call's input, the names of its fields, and
-// the keys of its cost_of_delay. A cost_of_delay that is not an object is
-// left nil rather than failing the input, which flai guard would let through
-// unread.
-func (in *Input) UnmarshalJSON(data []byte) error {
-	type input Input
-	if err := json.Unmarshal(data, (*input)(in)); err != nil {
-		return err
-	}
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
-		return err
-	}
-	in.Fields = slices.Sorted(maps.Keys(fields))
-	if raw, ok := fields["cost_of_delay"]; ok && json.Unmarshal(raw, &in.CostOfDelay) != nil {
-		in.CostOfDelay = nil
-	}
-	return nil
-}
-
-// MCPPrefix starts the name of each of flai's MCP tools as Claude Code
-// knows them, from a server named flai.
-const MCPPrefix = "mcp__flai__"
 
 // MCPReads are flai's MCP tools a sub-agent may call: they read and use no
 // agent's identity.
@@ -283,12 +240,6 @@ var cliPlans = map[string][]string{
 	"thread":  {"new", "reply"},
 	"touches": nil,
 }
-
-// fileWrites are Claude Code's tools that write a file, each a FileWrite
-// call: the planner and the orchestrator never use them, the analyzer only
-// on its report (S-0223), and a sub-agent on a file in a .claude/ folder only
-// while auto-approve is on.
-var fileWrites = []string{"Edit", "MultiEdit", "NotebookEdit", "Write"}
 
 // moveValues are the flags of flai move, flai's own among them, that take
 // a value.
@@ -555,15 +506,37 @@ func StoryThreadOpen(r *workitem.Repo, story string) func() (bool, error) {
 	}
 }
 
-// Refusal is the guard's decision on a call: Why it is refused, "" when it
-// is not. For the orchestrator's own calls Call is the call refused, in one
-// line, and Needs the permission that would allow it, as
-// orchestration.permissions.<name>, or "" when none would.
-type Refusal struct {
-	Why   string
-	Call  string
-	Needs string
+// Reader reads one harness's hook input for the guard and answers the
+// harness with the guard's verdict, so that Decide sees no harness.
+type Reader interface {
+	// Read reads a hook's input into what it asks of the guard: a Call, in
+	// g's role and story, or a sub-agent starting or stopping.
+	Read(data []byte, g Guard) (Hook, error)
+	// Answer tells the harness v, writing a refusal's reason to stderr, and
+	// returns the exit status the hook ends with.
+	Answer(v Verdict, stderr io.Writer) int
 }
+
+// Hook is what one hook input asks of the guard: a decision on Call, or,
+// when SubAgent is set, a change to the record of running sub-agents.
+type Hook struct {
+	Call     Call
+	SubAgent *SubAgentChange
+}
+
+// readers are the harnesses' readers, by the name flai guard --harness
+// takes.
+var readers = map[string]Reader{ClaudeCode: claudeCode{}}
+
+// ReaderFor is the reader of a harness's hook input, by the harness's name,
+// and whether there is one.
+func ReaderFor(harness string) (Reader, bool) {
+	r, ok := readers[harness]
+	return r, ok
+}
+
+// Harnesses are the names of the harnesses with a reader, sorted.
+func Harnesses() []string { return slices.Sorted(maps.Keys(readers)) }
 
 // rules are what one kind of caller may run on a command line: flai says
 // why a flai command is refused, and the permission that would allow it, or
@@ -994,42 +967,12 @@ func drafted(words []string) bool {
 	return draft
 }
 
-// Check says why a call is refused, or "" when it is not.
-func (g Guard) Check(e Event) string { return g.Decide(e).Why }
-
-// Decide decides on a Claude Code call, as Decide does on the Call it
-// makes: the zero Refusal lets it through.
-func (g Guard) Decide(e Event) Refusal {
-	v := Decide(g, g.call(e))
-	if v.Outcome == Allow {
-		return Refusal{}
-	}
-	return Refusal{Why: v.Reason, Call: v.Call, Needs: v.Needs}
-}
-
-// call is the Call e makes, in g's role and story: Bash runs a command line,
-// fileWrites write their file_path or notebook_path, and a tool of
-// MCPPrefix is a flai tool; a call with an agent ID is a sub-agent's.
-func (g Guard) call(e Event) Call {
-	c := Call{Session: e.SessionID, Subagent: e.AgentID != "", Agent: e.AgentType, Role: g.Role, Story: g.Story, Name: e.ToolName}
-	tool, flai := strings.CutPrefix(e.ToolName, MCPPrefix)
-	switch {
-	case e.ToolName == "Bash":
-		c.Kind, c.Command = Shell, e.ToolInput.Command
-	case slices.Contains(fileWrites, e.ToolName):
-		c.Kind, c.Path = FileWrite, cmp.Or(e.ToolInput.FilePath, e.ToolInput.NotebookPath)
-	case flai:
-		c.Kind, c.Tool, c.Args = FlaiTool, tool, e.ToolInput.Args
-	}
-	return c
-}
-
-// ProtectedWrite says whether e writes a path Claude Code protects other than
+// ProtectedWrite says whether c writes a path Claude Code protects other than
 // one in .git, such as a file in a .claude/ folder or .mcp.json, and which
 // file (S-0299, ADR-0106): Claude Code asks a person before any such write,
 // so that a sub-agent's would wait on a thread for the operator.
 // permission_prompt refuses a path in .git at once, so that one never waits.
-func ProtectedWrite(e Event) (string, bool) { return protectedWrite(Guard{}.call(e)) }
+func ProtectedWrite(c Call) (string, bool) { return protectedWrite(c) }
 
 // waitsOnSubAgents ends the refusal of a story's agent's wait_for_events: why
 // it would not return, and how to wait instead.

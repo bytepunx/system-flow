@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -18,10 +17,11 @@ import (
 
 // exitGuardRefused is the exit status with which a Claude Code hook refuses
 // a tool call; the hook's standard error goes back to the caller.
-const exitGuardRefused = 2
+const exitGuardRefused = guard.ClaudeCodeRefuses
 
 func newGuardCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var harness string
+	c := &cobra.Command{
 		Use:   "guard",
 		Short: "Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait_for_events, as a Claude Code hook",
 		Long: `Reads a Claude Code PreToolUse hook's input on standard input and refuses
@@ -50,6 +50,15 @@ input whose hook_event_name is neither SubagentStart nor SubagentStop is a
 PreToolUse's, named or not. It is not a shell, and
 a command hidden on purpose (a backslash in its name, a variable holding
 it) gets past it.
+
+--harness names the harness whose hook runs it, and so the reader of the
+hook's input and of the answer it expects (S-0353). claude-code, the
+default and the only reader there is, reads a Claude Code hook's input, as
+this help says, and answers a refusal with exit 2 and why on standard
+error. The reader turns the input into a call that names no harness, which
+the rules below decide on. A harness with no reader passes the call, with a
+warning on standard error naming the readers there are: the guard fails
+open (ADR-0060).
 
 A sub-agent's Edit, MultiEdit, Write, or NotebookEdit of a file in a
 .claude/ folder, one with a folder named .claude along its path, is refused
@@ -207,27 +216,33 @@ session, where none of those is set, a file edit does not run it.`,
 		Example: `  flai guard < hook-input.json`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			reader, ok := guard.ReaderFor(harness)
+			if !ok {
+				a.logger().Warn("no reader for the harness, the call passes", "component", "guard", "harness", harness, "readers", strings.Join(guard.Harnesses(), ", "))
+				return nil
+			}
 			data, err := io.ReadAll(cmd.InOrStdin())
 			if err != nil {
 				a.logger().Warn("hook input unreadable", "component", "guard", "err", err.Error())
 				return nil
 			}
-			var e guard.Event
-			if err := json.Unmarshal(data, &e); err != nil {
+			g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY"), Served: os.Getenv(guard.StartedByEnv) == guard.StartedByServe,
+				Agent: os.Getenv("FLAI_AGENT"), Session: os.Getenv("FLAI_SESSION"), Item: os.Getenv("FLAI_ITEM")}
+			for _, sub := range cmd.Root().Commands() {
+				g.Commands = append(g.Commands, sub.Name())
+			}
+			h, err := reader.Read(data, g)
+			if err != nil {
 				a.logger().Warn("hook input is not a tool call", "component", "guard", "err", err.Error())
 				return nil
 			}
-			if e.HookEventName == guard.HookSubagentStart || e.HookEventName == guard.HookSubagentStop {
-				a.recordSubAgent(e)
+			if h.SubAgent != nil {
+				a.recordSubAgent(*h.SubAgent)
 				return nil
 			}
-			g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY"), Served: os.Getenv(guard.StartedByEnv) == guard.StartedByServe,
-				Agent: os.Getenv("FLAI_AGENT"), Session: os.Getenv("FLAI_SESSION"), Item: os.Getenv("FLAI_ITEM")}
-			for _, c := range cmd.Root().Commands() {
-				g.Commands = append(g.Commands, c.Name())
-			}
+			call := h.Call
 			var repo *workitem.Repo
-			if g.Role == guard.RoleOrchestrate && e.AgentID == "" {
+			if g.Role == guard.RoleOrchestrate && !call.Subagent {
 				if repo, err = a.guardProject(); err != nil {
 					a.logger().Warn("project unreadable, the orchestrator's permissions are taken as off", "component", "guard", "err", err.Error())
 				} else {
@@ -235,35 +250,37 @@ session, where none of those is set, a file edit does not run it.`,
 					g.Opener = guard.ThreadOpener(repo)
 				}
 			}
-			if g.Role == guard.RoleAnalyze && e.AgentID == "" {
+			if g.Role == guard.RoleAnalyze && !call.Subagent {
 				if p, err := a.guardProject(); err != nil {
 					a.logger().Warn("project unreadable, the analyzer may edit no file", "component", "guard", "err", err.Error())
 				} else {
 					g.Root, g.Reports = p.Root, analysis.Dir(p.Manifest)
 				}
 			}
-			if _, ok := guard.ProtectedWrite(e); ok && e.AgentID != "" {
+			if _, ok := guard.ProtectedWrite(call); ok && call.Subagent {
 				g.AutoApprove = a.guardAutoApprove()
 			}
-			if g.Role == "" && g.Story != "" && e.AgentID == "" {
-				a.holdWaits(&g, e.SessionID)
+			if g.Role == "" && g.Story != "" && !call.Subagent {
+				a.holdWaits(&g, call.Session)
 			}
-			if e.AgentID != "" && e.ToolName == "Bash" {
+			if call.Subagent && call.Kind == guard.Shell {
 				g.ReadOnly = a.guardReadOnly()
 			}
-			r := g.Decide(e)
-			if r.Why == "" {
-				return nil
-			}
-			fmt.Fprintln(a.errOut, r.Why)
-			if repo != nil && r.Call != "" {
-				if _, err := repo.AppendRefusal(workitem.ActivityOrchestrator, workitem.ActivityRefusal{At: a.now(), Call: r.Call, Needs: r.Needs}); err != nil {
+			v := guard.Decide(g, call)
+			code := reader.Answer(v, a.errOut)
+			if v.Outcome != guard.Allow && repo != nil && v.Call != "" {
+				if _, err := repo.AppendRefusal(workitem.ActivityOrchestrator, workitem.ActivityRefusal{At: a.now(), Call: v.Call, Needs: v.Needs}); err != nil {
 					a.logger().Warn("refusal not logged in the orchestrator's activity document", "component", "guard", "err", err.Error())
 				}
 			}
-			return &exitError{code: exitGuardRefused}
+			if code != 0 {
+				return &exitError{code: code}
+			}
+			return nil
 		},
 	}
+	c.Flags().StringVar(&harness, "harness", guard.ClaudeCode, "the harness whose hook runs the guard, which names the reader of its input: "+strings.Join(guard.Harnesses(), ", "))
+	return c
 }
 
 // guardProject is the project the hook runs in, from the working directory,
@@ -311,16 +328,16 @@ func (a *app) guardReadOnly() func(string) bool {
 	return guard.ReadOnlyAgents(repo.Root)
 }
 
-// recordSubAgent notes in the project's .flai-cache/guard that e's
+// recordSubAgent notes in the project's .flai-cache/guard that ch's
 // sub-agent started or stopped in its session. It says nothing when it
 // does, and warns when it cannot: the guard fails open.
-func (a *app) recordSubAgent(e guard.Event) {
+func (a *app) recordSubAgent(ch guard.SubAgentChange) {
 	repo, err := a.guardProject()
 	if err == nil {
-		err = guard.Record(filepath.Join(repo.CacheDir(), guard.RecordDir), e, a.now())
+		err = guard.RecordChange(filepath.Join(repo.CacheDir(), guard.RecordDir), ch, a.now())
 	}
 	if err != nil {
-		a.logger().Warn("sub-agent not recorded", "component", "guard", "event", e.HookEventName, "agent_id", e.AgentID, "err", err.Error())
+		a.logger().Warn("sub-agent not recorded", "component", "guard", "agent_id", ch.ID, "stopped", ch.Stopped, "err", err.Error())
 	}
 }
 

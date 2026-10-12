@@ -1252,10 +1252,12 @@ flai forecast S-0210 --json
 Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook.
 
 ```text
-flai guard
+flai guard [flags]
 ```
 
 Reads a Claude Code PreToolUse hook's input on standard input and refuses the call when a sub-agent makes it (the input carries an agent\_id) and it would change a work item, a thread, a narrative, or the repository's history (ADR-0059, ADR-0060): any of flai's MCP tools but board, doc\_get, doc\_search, item\_get, order\_by\_policy, prime, promote\_candidates, release\_evaluate, shared\_paths, thread\_get, and who\_touches; a flai command other than one that reads (board, check, cod, doc search and show, forecast, help, issue list, order --by without --apply and without a story to place, plan --candidates, prime, promote --candidates or --drafts, release --evaluate, shared list and check, show, stats, stream diff, thread list and show, touches suggest, version, or any with --help); and a git command other than one that reads (blame, cat-file, describe, diff, grep, log, ls-files, ls-tree, merge-base, rev-list, rev-parse, shortlog, show, status). A refusal prints why on standard error and exits 2, which Claude Code hands back to the sub-agent. Every word of a command line is looked at, so a command run through env, sudo, timeout, xargs, find -exec, or a shell's -c is found too. A heredoc's text (cat &lt;&lt;EOF, python3 - &lt;&lt;'EOF') is input, not commands, and is not looked at, unless a shell on its line reads it (bash &lt;&lt;EOF, cat &lt;&lt;EOF | sh). The story's agent's own calls carry no agent\_id and pass, save one that names another author or session and the wait below, as does anything it cannot read: the guard fails open. An input whose hook\_event\_name is neither SubagentStart nor SubagentStop is a PreToolUse's, named or not. It is not a shell, and a command hidden on purpose (a backslash in its name, a variable holding it) gets past it.
+
+--harness names the harness whose hook runs it, and so the reader of the hook's input and of the answer it expects (S-0353). claude-code, the default and the only reader there is, reads a Claude Code hook's input, as this help says, and answers a refusal with exit 2 and why on standard error. The reader turns the input into a call that names no harness, which the rules below decide on. A harness with no reader passes the call, with a warning on standard error naming the readers there are: the guard fails open (ADR-0060).
 
 A sub-agent's Edit, MultiEdit, Write, or NotebookEdit of a file in a .claude/ folder, one with a folder named .claude along its path, is refused unless the operator enabled the project's auto-approve host action (flai serve enable auto-approve) (S-0299): Claude Code asks a person before each such write, and flai's MCP tool permission\_prompt asks the operator on a thread, which would hold the call, and the sub-agent's layer with it, until they answer. The refusal names the sub-agent and the file and tells it to put the file's whole new content in its final message, for the story's agent to write. A configuration or project it cannot read counts auto-approve as off. The story's agent's own writes, and every write outside a .claude/ folder, pass.
 
@@ -1282,6 +1284,12 @@ Examples:
 ```bash
 flai guard < hook-input.json
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--harness` string | the harness whose hook runs the guard, which names the reader of its input: claude-code (default `claude-code`) |
 
 ### flai host
 

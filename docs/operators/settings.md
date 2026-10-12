@@ -330,7 +330,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--fresh` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai message escalate](../users/flai-reference.md#flai-message-escalate), [flai message reply](../users/flai-reference.md#flai-message-reply), [flai message send](../users/flai-reference.md#flai-message-send), [flai message share](../users/flai-reference.md#flai-message-share), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--grace-seconds` | [flai checks cancel](../users/flai-reference.md#flai-checks-cancel) |
-| `--harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
+| `--harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai guard](../users/flai-reference.md#flai-guard), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--hash` | [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |
 | `--heading` | [flai doc show](../users/flai-reference.md#flai-doc-show), [flai thread new](../users/flai-reference.md#flai-thread-new) |
 | `--idle` | [flai mcp http](../users/flai-reference.md#flai-mcp-http), [flai mcp start](../users/flai-reference.md#flai-mcp-start) |

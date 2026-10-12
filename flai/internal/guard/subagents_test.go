@@ -71,6 +71,34 @@ func TestRecordIgnoresWhatItCannotFile(t *testing.T) {
 	}
 }
 
+// S-0353: RecordChange keeps a session's running sub-agents from a change
+// that names no harness's event, and ignores one with no sub-agent ID or an
+// unsafe session.
+func TestRecordChangeKeepsTheSessionsRunningSubAgents(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), RecordDir)
+	at := time.Date(2026, 10, 12, 9, 0, 0, 500, time.UTC)
+	for _, ch := range []SubAgentChange{{Session: "s1"}, {Session: "../s1", ID: "a1"}} {
+		if err := RecordChange(dir, ch, at); err != nil {
+			t.Errorf("%+v: %v", ch, err)
+		}
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("recorded: %v", err)
+	}
+	if err := RecordChange(dir, SubAgentChange{Session: "s1", ID: "a1", Type: "explorer"}, at); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Running(dir, "s1"); err != nil || !slices.Equal(got, []SubAgent{{ID: "a1", Type: "explorer", Started: at.Truncate(time.Second)}}) {
+		t.Errorf("started: %+v, %v", got, err)
+	}
+	if err := RecordChange(dir, SubAgentChange{Session: "s1", ID: "a1", Stopped: true}, at); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Running(dir, "s1"); err != nil || got != nil {
+		t.Errorf("stopped: %+v, %v", got, err)
+	}
+}
+
 // S-0285: a layer's sub-agents start at once, each in a hook process of its
 // own; every start lands in the record.
 func TestRecordKeepsEveryStartOfALayer(t *testing.T) {

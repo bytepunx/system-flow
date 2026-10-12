@@ -513,3 +513,20 @@ func TestGuardRefusesTheStorysAgentsWaitOnItsSubAgents(t *testing.T) {
 	hook(subAgentHook("SubagentStop", "ac73f87145abc4315", "general-purpose"))
 	wait("the sub-agent stopped", 0, "")
 }
+
+// S-0353: flai guard reads the input with the reader --harness names,
+// claude-code by default; a harness with no reader passes the call, with a
+// warning on standard error naming the readers there are.
+func TestGuardReadsTheInputWithTheHarnessesReader(t *testing.T) {
+	dir := t.TempDir()
+	const refused = `{"tool_name":"mcp__flai__item_move","tool_input":{"id":"S-1","to":"review"},"agent_type":"verifier","agent_id":"a1"}`
+	for _, args := range [][]string{{"guard"}, {"guard", "--harness", "claude-code"}} {
+		if _, errOut, code := runStdin(t, dir, refused, args...); code != exitGuardRefused || !strings.Contains(errOut, "a sub-agent (verifier) cannot call item_move") {
+			t.Errorf("%v: code %d, stderr %q", args, code, errOut)
+		}
+	}
+	_, errOut, code := runStdin(t, dir, refused, "guard", "--harness", "codex")
+	if code != 0 || !strings.Contains(errOut, "no reader for the harness, the call passes") || !strings.Contains(errOut, "codex") || !strings.Contains(errOut, "claude-code") {
+		t.Errorf("no reader: code %d, stderr %q", code, errOut)
+	}
+}

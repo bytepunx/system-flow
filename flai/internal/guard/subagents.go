@@ -13,20 +13,12 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 )
 
-// The Claude Code hook events on a sub-agent, which the guard tells from a
-// PreToolUse by hook_event_name. An input that names neither is a tool call,
-// whether it names PreToolUse or, as the guard was first fed, no event.
-const (
-	HookSubagentStart = "SubagentStart"
-	HookSubagentStop  = "SubagentStop"
-)
-
 // RecordDir is the folder, under a project's .flai-cache in its main
 // checkout, that holds each session's record of its running sub-agents.
 const RecordDir = "guard"
 
-// SubAgent is one sub-agent running in a session, as its SubagentStart
-// reported it: its ID, the name of its definition, and when it started.
+// SubAgent is one sub-agent running in a session, as its start reported
+// it: its ID, the name of its definition, and when it started.
 type SubAgent struct {
 	ID      string    `json:"agent_id"`
 	Type    string    `json:"agent_type"`
@@ -41,47 +33,56 @@ type record struct {
 // sessionName is what a session ID must be to name a record file.
 var sessionName = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-// recordLockWait is how long Record waits for another flai guard to finish
-// with a session's record; recordLockAge is how old a lock is when it is
-// taken as left behind by a flai guard that died holding it. A record is held
-// for a read and a write of a few lines, so either is far longer than any
-// holder needs.
+// recordLockWait is how long RecordChange waits for another flai guard to
+// finish with a session's record; recordLockAge is how old a lock is when it
+// is taken as left behind by a flai guard that died holding it. A record is
+// held for a read and a write of a few lines, so either is far longer than
+// any holder needs.
 const (
 	recordLockWait = 10 * time.Second
 	recordLockAge  = 5 * time.Second
 )
 
-// Record notes in dir, the project's .flai-cache/guard, that e's sub-agent
-// started (SubagentStart) or stopped (SubagentStop) at at, in the record of
-// e's session. Each sub-agent of a layer starts in a hook process of its
-// own, often in the same second, so the record is read and written under a
-// lock and replaced in one step. A record left with no sub-agent running is
-// removed. An event of another kind, a session ID that is not a safe file
-// name, or an event with no agent ID is ignored.
-func Record(dir string, e Event, at time.Time) error {
-	if (e.HookEventName != HookSubagentStart && e.HookEventName != HookSubagentStop) || !sessionName.MatchString(e.SessionID) || e.AgentID == "" {
+// SubAgentChange is a sub-agent starting, or stopping, in a session, as a
+// harness reports it: the session's ID, and the sub-agent's ID and the name
+// of its definition.
+type SubAgentChange struct {
+	Session string
+	ID      string
+	Type    string
+	Stopped bool
+}
+
+// RecordChange notes in dir, the project's .flai-cache/guard, that ch's
+// sub-agent started at at, or stopped, in the record of ch's session. Each
+// sub-agent of a layer starts in a hook process of its own, often in the same
+// second, so the record is read and written under a lock and replaced in one
+// step. A record left with no sub-agent running is removed. A session ID that
+// is not a safe file name, or a change with no sub-agent ID, is ignored.
+func RecordChange(dir string, ch SubAgentChange, at time.Time) error {
+	if !sessionName.MatchString(ch.Session) || ch.ID == "" {
 		return nil
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("record of session %s: %w", e.SessionID, err)
+		return fmt.Errorf("record of session %s: %w", ch.Session, err)
 	}
-	path := filepath.Join(dir, e.SessionID+".json")
+	path := filepath.Join(dir, ch.Session+".json")
 	unlock, err := lockRecord(path + ".lock")
 	if err != nil {
-		return fmt.Errorf("record of session %s: %w", e.SessionID, err)
+		return fmt.Errorf("record of session %s: %w", ch.Session, err)
 	}
 	defer unlock()
 	r, err := readRecord(path)
 	if err != nil {
 		return err
 	}
-	r.Running = slices.DeleteFunc(r.Running, func(s SubAgent) bool { return s.ID == e.AgentID })
-	if e.HookEventName == HookSubagentStart {
-		r.Running = append(r.Running, SubAgent{ID: e.AgentID, Type: e.AgentType, Started: at.UTC().Truncate(time.Second)})
+	r.Running = slices.DeleteFunc(r.Running, func(s SubAgent) bool { return s.ID == ch.ID })
+	if !ch.Stopped {
+		r.Running = append(r.Running, SubAgent{ID: ch.ID, Type: ch.Type, Started: at.UTC().Truncate(time.Second)})
 	}
 	if len(r.Running) == 0 {
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("record of session %s: %w", e.SessionID, err)
+			return fmt.Errorf("record of session %s: %w", ch.Session, err)
 		}
 		return nil
 	}
@@ -90,7 +91,7 @@ func Record(dir string, e Event, at time.Time) error {
 		return err
 	}
 	if err := atomicfile.WriteFile(path, append(data, '\n'), 0o644); err != nil {
-		return fmt.Errorf("record of session %s: %w", e.SessionID, err)
+		return fmt.Errorf("record of session %s: %w", ch.Session, err)
 	}
 	return nil
 }
