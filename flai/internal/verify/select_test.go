@@ -284,3 +284,45 @@ func TestRepositoryManifestLintsChangedFlaioverFiles(t *testing.T) {
 		t.Errorf("selected %q, want %q", got, want)
 	}
 }
+
+// I-0128: a tier whose command holds {importers} runs on the changed
+// packages and every package of their module that imports them, where
+// {packages} names the changed ones only; with all, on ./...; with no
+// go.mod, on what {packages} names.
+func TestSelectFillsImportersWithTheModulesImporters(t *testing.T) {
+	tiers := []Tier{
+		{Name: "vet", Dir: "mod", Paths: []string{"mod/**"}, Command: []string{"go", "vet", "{importers}"}},
+		{Name: "go-test", Dir: "mod", Paths: []string{"mod/**"}, Command: []string{"go", "test", "{packages}"}},
+		{Name: "loose", Dir: "loose", Paths: []string{"loose/**"}, Command: []string{"go", "vet", "{importers}"}},
+		{Name: "integration", AllOnly: true, Dir: "mod", Paths: []string{"mod/**"}, Command: []string{"go", "test", "{importers}"}},
+	}
+	fsys := moduleFS()
+	fsys["loose/p/p.go"] = &fstest.MapFile{Data: []byte("package p\n")}
+	fsys["loose/q/q.go"] = &fstest.MapFile{Data: []byte("package q\n\nimport \"example.com/loose/p\"\n")}
+	fsys["loose/notes/n.txt"] = &fstest.MapFile{}
+	for _, tc := range []struct {
+		name string
+		got  []Selected
+		want []string // name and argv, joined
+	}{
+		{name: "Select for a change to a", got: Select(fsys, tiers, []string{"mod/a/a.go"}, false),
+			want: []string{"vet go vet ./a ./b ./c ./d", "go-test go test ./a"}},
+		{name: "Select for changes to c and the root", got: Select(fsys, tiers, []string{"mod/c/c.go", "mod/go.mod"}, false),
+			want: []string{"vet go vet . ./c ./root", "go-test go test . ./c"}},
+		{name: "SelectStory for a change to a", got: SelectStory(fsys, tiers, []string{"mod/a/a.go"}),
+			want: []string{"vet go vet ./a ./b ./c ./d", "go-test go test ./a", "integration go test ./..."}},
+		{name: "Select with all", got: Select(fsys, tiers, nil, true),
+			want: []string{"vet go vet ./...", "go-test go test ./...", "loose go vet ./...", "integration go test ./..."}},
+		{name: "no go.mod gives the packages", got: Select(fsys, tiers, []string{"loose/p/p.go"}, false),
+			want: []string{"loose go vet ./p"}},
+		{name: "no package leaves the tier out", got: Select(fsys, tiers, []string{"loose/notes/n.txt"}, false)},
+	} {
+		var got []string
+		for _, s := range tc.got {
+			got = append(got, s.Tier.Name+" "+strings.Join(s.Argv, " "))
+		}
+		if !reflect.DeepEqual(got, tc.want) {
+			t.Errorf("%s: selected %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}

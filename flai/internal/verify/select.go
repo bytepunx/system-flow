@@ -11,8 +11,9 @@ import (
 
 // The placeholders a tier's command may hold as whole arguments.
 const (
-	packagesArg = manifest.PlaceholderPackages
-	filesArg    = manifest.PlaceholderFiles
+	packagesArg  = manifest.PlaceholderPackages
+	filesArg     = manifest.PlaceholderFiles
+	importersArg = manifest.PlaceholderImporters
 )
 
 // Selected is a tier chosen for a run, with the argv it runs.
@@ -28,8 +29,9 @@ type Selected struct {
 // select, each with its placeholders filled; with all, every tier, AllOnly
 // ones too. A tier is selected by a path that one of its patterns matches
 // and none of its ! patterns does, and is left out when a placeholder in its
-// command comes to nothing, as {packages} does for files no Go package
-// holds. fsys is the checkout, read for the directories that hold .go files.
+// command comes to nothing, as {packages} and {importers} do for files no Go
+// package holds. fsys is the checkout, read for the directories that hold .go
+// files and, for {importers}, for the imports of each.
 // A selected tier that another selected tier covers is marked CoveredBy.
 func Select(fsys fs.FS, tiers []Tier, paths []string, all bool) []Selected {
 	return cover(tiers, selectTiers(fsys, tiers, paths, all))
@@ -156,7 +158,12 @@ func selectByPaths(fsys fs.FS, t Tier, paths []string) (Selected, bool) {
 		return Selected{}, false
 	}
 	dir := cleanDir(t.Dir)
-	argv, ok := fill(t.Command, files(dir, matched), packages(fsys, dir, matched))
+	pkgs := packages(fsys, dir, matched)
+	var imps []string
+	if slices.Contains(t.Command, importersArg) {
+		imps = importers(fsys, dir, pkgs)
+	}
+	argv, ok := fill(t.Command, map[string][]string{filesArg: files(dir, matched), packagesArg: pkgs, importersArg: imps})
 	return Selected{Tier: t, Argv: argv}, ok
 }
 
@@ -165,7 +172,7 @@ func allArgv(t Tier) []string {
 	if len(t.AllCommand) > 0 {
 		return slices.Clone(t.AllCommand)
 	}
-	argv, _ := fill(t.Command, []string{"."}, []string{"./..."})
+	argv, _ := fill(t.Command, map[string][]string{filesArg: {"."}, packagesArg: {"./..."}, importersArg: {"./..."}})
 	return argv
 }
 
@@ -192,25 +199,20 @@ func matching(patterns, paths []string) []string {
 	return got
 }
 
-// fill is argv with each placeholder replaced by its list, and whether
-// every placeholder it holds came to something.
-func fill(argv, files, packages []string) ([]string, bool) {
+// fill is argv with each placeholder that lists holds replaced by its list,
+// and whether every placeholder it holds came to something.
+func fill(argv []string, lists map[string][]string) ([]string, bool) {
 	var out []string
 	for _, a := range argv {
-		switch a {
-		case filesArg:
-			if len(files) == 0 {
-				return nil, false
-			}
-			out = append(out, files...)
-		case packagesArg:
-			if len(packages) == 0 {
-				return nil, false
-			}
-			out = append(out, packages...)
-		default:
+		list, ok := lists[a]
+		if !ok {
 			out = append(out, a)
+			continue
 		}
+		if len(list) == 0 {
+			return nil, false
+		}
+		out = append(out, list...)
 	}
 	return out, true
 }
@@ -252,7 +254,7 @@ func nearestPackage(fsys fs.FS, dir, d string) (string, bool) {
 	if d != "." {
 		segs := strings.Split(d, "/")
 		for i, s := range segs {
-			if s == "testdata" || strings.HasPrefix(s, ".") || strings.HasPrefix(s, "_") {
+			if ignoredDir(s) {
 				d = path.Join(append([]string{"."}, segs[:i]...)...)
 				break
 			}
@@ -260,10 +262,7 @@ func nearestPackage(fsys fs.FS, dir, d string) (string, bool) {
 	}
 	for {
 		if holdsGo(fsys, path.Join(dir, d)) {
-			if d == "." {
-				return ".", true
-			}
-			return "./" + d, true
+			return packageArg(d), true
 		}
 		if d == "." {
 			return "", false

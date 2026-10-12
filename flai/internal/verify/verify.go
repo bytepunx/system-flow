@@ -35,8 +35,9 @@ const (
 type Tier struct {
 	// Name names the tier in the answer, such as go-test.
 	Name string `json:"name"`
-	// Command is the argv run; an argument that is wholly {packages} or
-	// {files} stands for the Go packages or the files the paths select.
+	// Command is the argv run; an argument that is wholly {packages},
+	// {importers}, or {files} stands for the Go packages the paths select,
+	// those and the packages of their module that import them, or the files.
 	Command []string `json:"command"`
 	// Dir is where the command runs, relative to the checkout's root, ""
 	// for the root itself. The placeholders are filled relative to it.
@@ -52,7 +53,8 @@ type Tier struct {
 	// AllOnly keeps the tier out of every run but one of all the tiers.
 	AllOnly bool `json:"all_only,omitempty"`
 	// AllCommand is the argv run when every tier runs; without it Command
-	// runs with {packages} as ./... and {files} as the directory itself.
+	// runs with {packages} and {importers} as ./... and {files} as the
+	// directory itself.
 	AllCommand []string `json:"all_command,omitempty"`
 	// Covers names the tiers this one runs everything of: when it is
 	// selected with them, they are skipped rather than run (S-0342).
