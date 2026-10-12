@@ -3,15 +3,21 @@ id: T-1389
 type: task
 nature: improvement
 title: Each adapter gives its reader, and usage.Read, the task shares, empty wakes, and turns are measured from events
-status: backlog
+status: in-progress
 parent: S-0352
 owner: alex
 created: 2026-10-08T08:46:02Z
-updated: 2026-10-08T08:46:02Z
-transitions: []
+updated: 2026-10-12T20:49:34Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:49:21Z
+    by: agent-S-0352
+  - to: in-progress
+    at: 2026-10-12T20:49:24Z
+    by: agent-S-0352
 stream: S-0352
 tags: [cli]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/turns.go, flai/internal/usage/turns_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/turns.go, flai/internal/usage/turns_test.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/serve/activity.go]
 after: [T-1387, T-1388]
 ---
 # T-1389 Each adapter gives its reader, and usage.Read, the task shares, empty wakes, and turns are measured from events

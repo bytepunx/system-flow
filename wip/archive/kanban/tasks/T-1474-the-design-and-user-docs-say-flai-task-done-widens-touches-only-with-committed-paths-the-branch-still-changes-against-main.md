@@ -24,15 +24,15 @@ touches: [design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1472]
 usage:
   source: log
-  seconds: 1773
+  seconds: 1782
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 152
-      cache_read: 781167
-      cache_write: 46670
-      cost: 0.3762
+      input: 20
+      output: 4840
+      cache_read: 962930
+      cache_write: 71126
+      cost: 0.7148
 ---
 # T-1474 The design and user docs say flai task done widens touches only with committed paths the branch still changes against main
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 462
-      cache_read: 3889361
-      cache_write: 259853
-      cost: 1.8856
+      input: 80
+      output: 31656
+      cache_read: 4046649
+      cache_write: 227697
+      cost: 2.7366
 ---
 # T-1255 flai serve runs the image check before each dial, refuses an unlisted image, and records the verdict in its status
 

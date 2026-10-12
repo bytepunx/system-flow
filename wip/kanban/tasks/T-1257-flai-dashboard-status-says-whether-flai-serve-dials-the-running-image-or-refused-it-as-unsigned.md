@@ -24,15 +24,15 @@ touches: [flai/cmd/dashboard.go, flai/cmd/dashboard_test.go]
 after: [T-1255]
 usage:
   source: log
-  seconds: 601
+  seconds: 605
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 409
-      cache_read: 2705010
-      cache_write: 199610
-      cost: 1.3201
+      input: 56
+      output: 22160
+      cache_read: 2832840
+      cache_write: 159398
+      cost: 1.9157
 ---
 # T-1257 flai dashboard status says whether flai serve dials the running image or refused it as unsigned
 

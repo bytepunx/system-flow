@@ -3,11 +3,11 @@ id: S-0238
 type: story
 nature: feature
 title: flai measures the container's image through Docker before it dials and refuses one no signed list names
-status: in-progress
+status: review
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T20:33:25Z
+updated: 2026-10-12T20:51:18Z
 transitions:
   - to: ready
     at: 2026-10-12T18:29:30Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T20:01:45Z
     by: agent-S-0238
+  - to: review
+    at: 2026-10-12T20:51:14Z
+    by: system-flow
 tags: [cli]
 topics: [release, security]
-touches: [flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/imagecheck.go, flai/internal/serve/imagecheck_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/cmd/dashboard_test.go, docs/operators/index.md, docs/users/flai-reference.md, design/system/release-signing.md, flai/internal/serve/candidates.go, flai/cmd/serve_status_below.go]
+touches: [flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/imagecheck.go, flai/internal/serve/imagecheck_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/cmd/dashboard_test.go, docs/operators/index.md, docs/users/flai-reference.md, design/system/release-signing.md, flai/internal/serve/candidates.go, flai/cmd/serve_status_below.go, design/issues/I-0144-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [S-0236]
 agent:
   harness: claude-code
@@ -26,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1907
-  estimated: true
+  seconds: 2989
   turns:
     - day: 2026-10-12
-      ceremony: 2
-      hand_edits: 1
-      work: 30
+      ceremony: 4
+      hand_edits: 2
+      work: 43
   models:
     - model: claude-opus-5-5
-      input: 284
-      output: 1713
-      cache_read: 12191518
-      cache_write: 958744
-      cost: 5.9764
+      input: 408
+      output: 161462
+      cache_read: 20640185
+      cache_write: 1161381
+      cost: 13.9582
   strategic:
     - kind: orchestrator
       seconds: 294
@@ -69,11 +71,11 @@ forecast:
 Before `flai serve` dials the dashboard, and whenever the connection is opened anew, it asks Docker which image the `flaiover` container runs and compares its digest with the verified digest lists it has (ADR-0070). A digest on a list is dialled; one on none is refused, logged, and shown, so that a container restarted from another image or a moved tag is caught by something the peer does not control.
 
 ## Acceptance criteria
-- [ ] `flai serve` reads the container's image digest with `docker inspect` and `docker image inspect` through the `execx.Runner`, compares it with the cached verified lists, fetching and verifying the list for the running version when it has none, and dials only when the digest is on one.
-- [ ] An unlisted digest is not dialled: one `error` event with the image and digest, the state in `flai serve status`, `flai dashboard status`, and `flai host status`, and another look when the container changes.
-- [ ] A dashboard flai cannot inspect, because Docker is not where `flai serve` runs or the container is not local, falls back to the stamp check alone and says so in status.
-- [ ] Tests cover a listed digest, an unlisted one, a local image with no `RepoDigests`, and an uninspectable dashboard, with a fake runner.
-- [ ] `docs/users/flai.md` and the operator documentation describe the check and what status shows.
+- [x] `flai serve` reads the container's image digest with `docker inspect` and `docker image inspect` through the `execx.Runner`, compares it with the cached verified lists, fetching and verifying the list for the running version when it has none, and dials only when the digest is on one.
+- [x] An unlisted digest is not dialled: one `error` event with the image and digest, the state in `flai serve status`, `flai dashboard status`, and `flai host status`, and another look when the container changes.
+- [x] A dashboard flai cannot inspect, because Docker is not where `flai serve` runs or the container is not local, falls back to the stamp check alone and says so in status.
+- [x] Tests cover a listed digest, an unlisted one, a local image with no `RepoDigests`, and an uninspectable dashboard, with a fake runner.
+- [x] `docs/users/flai.md` and the operator documentation describe the check and what status shows.
 
 ## Tasks
 - T-1253 flai/internal/serve measures the flaiover container's image digest through Docker and judges it against the verified digest lists

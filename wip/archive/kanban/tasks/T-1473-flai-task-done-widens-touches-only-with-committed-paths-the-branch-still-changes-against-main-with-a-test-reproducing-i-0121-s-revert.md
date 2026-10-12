@@ -24,15 +24,15 @@ touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_te
 after: [T-1472]
 usage:
   source: log
-  seconds: 1773
+  seconds: 1775
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 88
-      output: 459
-      cache_read: 3460758
-      cache_write: 385738
-      cost: 1.7481
+      input: 75
+      output: 18316
+      cache_read: 3643942
+      cache_write: 269156
+      cost: 2.7051
 ---
 # T-1473 flai task done widens touches only with committed paths the branch still changes against main, with a test reproducing I-0121's revert
 

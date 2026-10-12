@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 147
-      cache_read: 763124
-      cache_write: 74139
-      cost: 0.3805
+      input: 16
+      output: 6388
+      cache_read: 816574
+      cache_write: 45947
+      cost: 0.5522
 ---
 # T-1254 The channel client asks a gate before each dial, and a refusal skips the dial, records why, and waits a minute
 

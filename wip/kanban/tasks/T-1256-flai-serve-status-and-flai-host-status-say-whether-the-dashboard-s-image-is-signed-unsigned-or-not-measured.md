@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 311
-      cache_read: 2080708
-      cache_write: 168781
-      cost: 1.0223
+      input: 43
+      output: 17162
+      cache_read: 2193900
+      cache_write: 123446
+      cost: 1.4836
 ---
 # T-1256 flai serve status and flai host status say whether the dashboard's image is signed, unsigned, or not measured
 

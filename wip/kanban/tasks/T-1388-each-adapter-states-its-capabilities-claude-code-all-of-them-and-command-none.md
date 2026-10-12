@@ -3,15 +3,35 @@ id: T-1388
 type: task
 nature: improvement
 title: Each adapter states its capabilities, claude-code all of them and command none
-status: backlog
+status: done
 parent: S-0352
 owner: alex
 created: 2026-10-08T08:45:54Z
-updated: 2026-10-08T08:45:54Z
-transitions: []
+updated: 2026-10-12T20:48:58Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:40:52Z
+    by: agent-S-0352
+  - to: in-progress
+    at: 2026-10-12T20:40:53Z
+    by: agent-S-0352
+  - to: done
+    at: 2026-10-12T20:48:58Z
+    by: agent-S-0352
 stream: S-0352
 tags: [cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 485
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 27
+      output: 262
+      cache_read: 790920
+      cache_write: 49392
+      cost: 0.3824
 ---
 # T-1388 Each adapter states its capabilities, claude-code all of them and command none
 

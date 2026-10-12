@@ -3,10 +3,10 @@ id: S-0370
 type: story
 nature: remediation
 title: flai task done widens touches with a path the commit reverted to main, re-growing a claim the story narrowed
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T16:52:44Z
-updated: 2026-10-12T20:05:43Z
+updated: 2026-10-12T20:51:50Z
 transitions:
   - to: ready
     at: 2026-10-12T17:57:35Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T20:04:40Z
     by: agent-S-0370
+  - to: review
+    at: 2026-10-12T20:48:40Z
+    by: agent-S-0370
+  - to: done
+    at: 2026-10-12T20:51:50Z
+    by: alex
 tags: [cli]
 topics: [touches]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/internal/mcpserver/task.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/adrs/0144-flai-task-done-widens-touches-only-with-the-committed-paths-the-story-s-branch.md]
@@ -24,20 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1871
-  estimated: true
+  seconds: 2654
   turns:
     - day: 2026-10-12
-      ceremony: 2
+      ceremony: 3
       hand_edits: 1
-      work: 21
+      work: 29
   models:
     - model: claude-opus-5-5
-      input: 148
-      output: 839
-      cache_read: 6185657
-      cache_write: 573926
-      cost: 3.072
+      input: 172
+      output: 41973
+      cache_read: 8350392
+      cache_write: 616793
+      cost: 6.1989
   strategic:
     - kind: orchestrator
       seconds: 220
@@ -74,8 +79,8 @@ finalized:
 This story remediates [I-0121](../../../design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md), "flai task done widens touches with a path the commit reverted to main, re-growing a claim the story narrowed". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0121 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0121 is closed with `flai issue close I-0121 --reason` saying what fixed it
+- [x] The cause I-0121 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0121 is closed with `flai issue close I-0121 --reason` saying what fixed it
 
 ## Tasks
 - T-1472 ADR: flai task done widens touches only with the committed paths the story's branch still changes against main

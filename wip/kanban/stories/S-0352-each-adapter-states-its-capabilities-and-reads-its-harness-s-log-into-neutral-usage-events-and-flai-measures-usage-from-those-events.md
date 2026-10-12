@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:45:35Z
-updated: 2026-10-12T20:40:20Z
+updated: 2026-10-12T20:49:20Z
 transitions:
   - to: ready
     at: 2026-10-12T20:02:19Z
@@ -24,6 +24,22 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 524
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 1
+      hand_edits: 1
+      work: 15
+  models:
+    - model: claude-opus-5-5
+      input: 120
+      output: 779
+      cache_read: 4612669
+      cache_write: 281984
+      cost: 2.2269
 cost_of_delay:
   value: 49.78
   by: planner-E-0019
@@ -46,7 +62,7 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] `harness.Adapter` has `Capabilities() Capabilities` with `Resume`, `Guard`, `Ask`, `RoleModels`, `StrategicAgents`, and `Cost`; `claude-code` states all true and `command` all false, and a test pins both.
+- [x] `harness.Adapter` has `Capabilities() Capabilities` with `Resume`, `Guard`, `Ask`, `RoleModels`, `StrategicAgents`, and `Cost`; `claude-code` states all true and `command` all false, and a test pins both.
 - [ ] `harness.Adapter` has `Reader() usage.Reader`, and `usage.Event` carries the kind (session start, model call, tool call, tool result, run end), the session, the model, the message ID, the tokens (input, output, cache read, cache write), the cost when the harness reports one, the parent call that started a sub-agent, and the tool's name, ID, description, and result.
 - [ ] The Claude Code reader turns stream-json into those events, keeping what `log.go` relies on today: the repeated message IDs, `parent_tool_use_id`, `modelUsage` and `costUSD` per model, and the empty-wake test on a `wait_for_events` result.
 - [ ] `usage.Read`, the task apportionment, the empty wakes, and the turn classes work from events, and every existing test in `flai/internal/usage` and `flai/internal/serve` passes unchanged in its expectations; a log the `command` adapter wrote yields no events and no usage, as today.

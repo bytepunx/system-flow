@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:46:31Z
-updated: 2026-10-12T20:40:20Z
+updated: 2026-10-12T20:42:18Z
 transitions:
   - to: ready
     at: 2026-10-12T20:02:27Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0353
 tags: [cli]
 topics: [agents]
-touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/flai-cli.md]
+touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/operators/settings.md, docs/users/flai-reference.md, design/system/flai-cli.md, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go]
 after: [S-0351]
 agent:
   harness: claude-code

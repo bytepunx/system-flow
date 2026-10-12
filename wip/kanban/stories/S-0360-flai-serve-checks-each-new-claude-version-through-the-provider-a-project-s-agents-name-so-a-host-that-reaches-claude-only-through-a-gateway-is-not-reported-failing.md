@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:59:39Z
-updated: 2026-10-12T20:40:20Z
+updated: 2026-10-12T20:49:54Z
 transitions:
   - to: ready
     at: 2026-10-12T20:03:43Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0360
 tags: [cli]
 topics: [agents]
-touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, design/system/flai-cli.md]
+touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md]
 after: [S-0351]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 562
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 2
+      hand_edits: 1
+      work: 27
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 581
+      cache_read: 6020850
+      cache_write: 296861
+      cost: 2.8741
   strategic:
     - kind: orchestrator
       seconds: 189
@@ -61,11 +73,11 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] When a served project's default agent names a provider, the check for that project runs through it: the `claude-code` adapter's provider environment, the `haiku` alias resolved through the entry's `models`, and the key copied from its variable as S-0350 copies it.
-- [ ] `claude-checks.json` records, per version, the provider each check ran through, `anthropic` when none; a version passed through one provider is checked again through another the first time a project names it.
-- [ ] A provider whose key's variable is unset is not checked and opens no thread; `flai serve`'s log says the check was skipped and why.
-- [ ] Tests cover a check with a provider, without one, a second provider for a version already passed, and an unset key, with a fake `claude`.
-- [ ] `design/system/flai-cli.md` describes the check per provider.
+- [x] When a served project's default agent names a provider, the check for that project runs through it: the `claude-code` adapter's provider environment, the `haiku` alias resolved through the entry's `models`, and the key copied from its variable as S-0350 copies it.
+- [x] `claude-checks.json` records, per version, the provider each check ran through, `anthropic` when none; a version passed through one provider is checked again through another the first time a project names it.
+- [x] A provider whose key's variable is unset is not checked and opens no thread; `flai serve`'s log says the check was skipped and why.
+- [x] Tests cover a check with a provider, without one, a second provider for a version already passed, and an unset key, with a fake `claude`.
+- [x] `design/system/flai-cli.md` describes the check per provider.
 
 ## Tasks
 

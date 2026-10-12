@@ -3,12 +3,18 @@ id: T-1402
 type: task
 nature: feature
 title: TestGatewayLiteLLM runs the gateway check through the proxy's unified and pass-through routes and reads its spend log
-status: backlog
+status: in-progress
 parent: S-0356
 owner: alex
 created: 2026-10-08T08:49:47Z
-updated: 2026-10-08T08:49:47Z
-transitions: []
+updated: 2026-10-12T20:50:17Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:50:15Z
+    by: agent-S-0356
+  - to: in-progress
+    at: 2026-10-12T20:50:17Z
+    by: agent-S-0356
 stream: S-0356
 tags: [cli]
 touches: [flai/internal/serve/gateway_test.go]

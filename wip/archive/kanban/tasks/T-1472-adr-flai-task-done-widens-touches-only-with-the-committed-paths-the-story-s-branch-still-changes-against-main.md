@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 73
-      cache_read: 710432
-      cache_write: 4463
-      cost: 0.3249
+      input: 14
+      output: 3404
+      cache_read: 677244
+      cache_write: 50024
+      cost: 0.5027
 ---
 # T-1472 ADR: flai task done widens touches only with the committed paths the story's branch still changes against main
 

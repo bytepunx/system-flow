@@ -3,15 +3,35 @@ id: T-1426
 type: task
 nature: improvement
 title: The claude version check runs through the project's provider, records the provider per version, and skips a provider whose key is unset
-status: backlog
+status: done
 parent: S-0360
 owner: alex
 created: 2026-10-08T08:59:47Z
-updated: 2026-10-08T08:59:47Z
-transitions: []
+updated: 2026-10-12T20:48:00Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:41:19Z
+    by: agent-S-0360
+  - to: in-progress
+    at: 2026-10-12T20:41:20Z
+    by: agent-S-0360
+  - to: done
+    at: 2026-10-12T20:48:00Z
+    by: agent-S-0360
 stream: S-0360
 tags: [cli]
 touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go]
+usage:
+  source: log
+  seconds: 400
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 311
+      cache_read: 2694864
+      cache_write: 126797
+      cost: 1.2837
 ---
 # T-1426 The claude version check runs through the project's provider, records the provider per version, and skips a provider whose key is unset
 

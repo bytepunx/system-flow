@@ -3,15 +3,21 @@ id: T-1391
 type: task
 nature: improvement
 title: guard.Call, guard.Verdict, and guard.Decide hold every rule of flai guard with no Claude Code field in them
-status: backlog
+status: in-progress
 parent: S-0353
 owner: alex
 created: 2026-10-08T08:46:53Z
-updated: 2026-10-08T08:46:53Z
-transitions: []
+updated: 2026-10-12T20:42:18Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:42:18Z
+    by: agent-S-0353
+  - to: in-progress
+    at: 2026-10-12T20:42:18Z
+    by: agent-S-0353
 stream: S-0353
 tags: [cli]
-touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go]
+touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/shared.go, flai/internal/guard/shared_test.go, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go]
 ---
 # T-1391 guard.Call, guard.Verdict, and guard.Decide hold every rule of flai guard with no Claude Code field in them
 

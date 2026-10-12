@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 186
-      cache_read: 1228453
-      cache_write: 127776
-      cost: 0.6164
+      input: 26
+      output: 10347
+      cache_read: 1322716
+      cache_write: 74427
+      cost: 0.8945
 ---
 # T-1253 flai/internal/serve measures the flaiover container's image digest through Docker and judges it against the verified digest lists
 

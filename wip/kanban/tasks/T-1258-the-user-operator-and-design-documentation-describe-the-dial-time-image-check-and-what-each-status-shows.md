@@ -3,11 +3,11 @@ id: T-1258
 type: task
 nature: feature
 title: The user, operator, and design documentation describe the dial-time image check and what each status shows
-status: in-progress
+status: done
 parent: S-0238
 owner: alex
 created: 2026-10-07T23:06:10Z
-updated: 2026-10-12T20:33:38Z
+updated: 2026-10-12T20:42:48Z
 transitions:
   - to: ready
     at: 2026-10-12T20:33:38Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T20:33:38Z
     by: system-flow
+  - to: done
+    at: 2026-10-12T20:42:48Z
+    by: agent-S-0238
 stream: S-0238
 tags: [cli]
 touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/system/flai-cli.md, design/system/release-signing.md]
 after: [T-1256, T-1257]
+usage:
+  source: log
+  seconds: 550
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 84
+      output: 33236
+      cache_read: 4248608
+      cache_write: 239061
+      cost: 2.8732
 ---
 # T-1258 The user, operator, and design documentation describe the dial-time image check and what each status shows
 

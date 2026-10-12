@@ -3,15 +3,35 @@ id: T-1387
 type: task
 nature: improvement
 title: usage.Event and usage.Reader are defined, and a Claude Code reader turns stream-json into them
-status: backlog
+status: done
 parent: S-0352
 owner: alex
 created: 2026-10-08T08:45:48Z
-updated: 2026-10-08T08:45:48Z
-transitions: []
+updated: 2026-10-12T20:49:03Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:40:52Z
+    by: agent-S-0352
+  - to: in-progress
+    at: 2026-10-12T20:40:53Z
+    by: agent-S-0352
+  - to: done
+    at: 2026-10-12T20:49:03Z
+    by: agent-S-0352
 stream: S-0352
 tags: [cli]
 touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go]
+usage:
+  source: log
+  seconds: 485
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 406
+      cache_read: 3008504
+      cache_write: 125716
+      cost: 1.4259
 ---
 # T-1387 usage.Event and usage.Reader are defined, and a Claude Code reader turns stream-json into them
 
