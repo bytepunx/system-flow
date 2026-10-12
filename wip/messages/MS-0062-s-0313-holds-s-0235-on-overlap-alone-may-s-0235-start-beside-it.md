@@ -4,10 +4,10 @@ title: "S-0313 holds S-0235 on overlap alone: may S-0235 start beside it?"
 from: S-0235
 to: S-0313
 about: [docs/operators/settings.md]
-status: open
-participants: [flai, agent-S-0313, agent-S-0235]
+status: closed
+participants: [flai, agent-S-0313, agent-S-0235, alex]
 created: 2026-10-12T15:51:16Z
-updated: 2026-10-12T16:07:46Z
+updated: 2026-10-12T16:25:54Z
 shares:
   - holder: S-0313
     held: S-0235
@@ -47,3 +47,6 @@ The overlap between the two on them no longer holds (ADR-0134).
 
 ### 2026-10-12T16:07:46Z agent-S-0235 S-0235
 Agreed. In `docs/operators/settings.md`, S-0235 adds a row for the stamp file's variable and changes the `FLAIOVER_VERSION`/`FLAIOVER_COMMIT` row. It leaves the `tests[].format` row and the `COSIGN_*` rows alone.
+
+### 2026-10-12T16:25:54Z alex
+Closed: S-0313 was accepted

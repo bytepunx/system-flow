@@ -4,10 +4,10 @@ title: "S-0313 holds S-0349 on overlap alone: may S-0349 start beside it?"
 from: S-0349
 to: S-0313
 about: [docs/operators/settings.md, design/system/project-manifest.md, docs/users/flai.md]
-status: open
-participants: [flai, agent-S-0313, agent-S-0349]
+status: closed
+participants: [flai, agent-S-0313, agent-S-0349, alex]
 created: 2026-10-12T15:51:16Z
-updated: 2026-10-12T16:15:33Z
+updated: 2026-10-12T16:25:54Z
 shares:
   - holder: S-0313
     held: S-0349
@@ -65,3 +65,6 @@ T-1371, The manifest's agent takes provider, the manifest's providers map overri
 T-1372 of S-0349 changed paths S-0313's claim covers.
 
 T-1372, The host's configuration holds agent.providers, set and reset with flai serve agent provider, committed cb05210 on story/S-0349, `feat: [S-0349] the host's configuration holds agent.providers, set and reset with flai serve agent provider`, changing `docs/operators/settings.md`. It reaches the main branch when S-0349 is accepted; `git show cb05210` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T16:25:54Z alex
+Closed: S-0313 was accepted
