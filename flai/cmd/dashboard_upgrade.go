@@ -20,17 +20,25 @@ import (
 // has that ID as its {{.Config.Image}}, and this keeps the tag to show.
 const dashboardRefLabel = "io.bytepunx.flai.ref"
 
+// allowUnsignedEnv is the variable that, set to 1, lets the dashboard serve a
+// flai with no release stamp (release-signing.md § The development case).
+const allowUnsignedEnv = "FLAIOVER_ALLOW_UNSIGNED"
+
 // containerArgs is the docker run argument list every dashboard container
-// shares: a port publish, the two secrets (ADR-0031), and, off Windows,
-// running as this user so the secrets (readable by this user only) can be
-// read. publish is a full --publish value: a fixed host port for the real
-// container, or "127.0.0.1::<port>" for an upgrade's temporary one, which
-// docker assigns an ephemeral port for. It runs image, a reference or an
-// image ID, and labels the container with ref, the reference to show for it.
-func containerArgs(dir, name, publish, image, ref string) []string {
+// shares: a port publish, the two secrets (ADR-0031), allowUnsignedEnv=1 when
+// allowUnsigned, and, off Windows, running as this user so the secrets
+// (readable by this user only) can be read. publish is a full --publish
+// value: a fixed host port for the real container, or "127.0.0.1::<port>" for
+// an upgrade's temporary one, which docker assigns an ephemeral port for. It
+// runs image, a reference or an image ID, and labels the container with ref,
+// the reference to show for it.
+func containerArgs(dir, name, publish, image, ref string, allowUnsigned bool) []string {
 	args := []string{"run", "--detach", "--rm", "--name", name, "--publish", publish}
 	args = append(args, tokenArgs(dir)...)
 	args = append(args, agentKeyArgs(dir)...)
+	if allowUnsigned {
+		args = append(args, "--env", allowUnsignedEnv+"=1")
+	}
 	if runtime.GOOS != "windows" {
 		args = append(args, "--user", strconv.Itoa(os.Getuid())+":"+strconv.Itoa(os.Getgid()))
 	}
@@ -39,14 +47,26 @@ func containerArgs(dir, name, publish, image, ref string) []string {
 }
 
 // startContainer runs a dashboard container from ref, labelled with ref.
-func (a *app) startContainer(dir, name, publish, ref string) (string, error) {
-	return a.startContainerImage(dir, name, publish, ref, ref)
+func (a *app) startContainer(dir, name, publish, ref string, allowUnsigned bool) (string, error) {
+	return a.startContainerImage(dir, name, publish, ref, ref, allowUnsigned)
 }
 
 // startContainerImage runs a dashboard container from image, labelled with
-// ref, the reference to show for it.
-func (a *app) startContainerImage(dir, name, publish, image, ref string) (string, error) {
-	return a.runner.Run("", "docker", containerArgs(dir, name, publish, image, ref)...)
+// ref, the reference to show for it, allowing unsigned builds when
+// allowUnsigned.
+func (a *app) startContainerImage(dir, name, publish, image, ref string, allowUnsigned bool) (string, error) {
+	return a.runner.Run("", "docker", containerArgs(dir, name, publish, image, ref, allowUnsigned)...)
+}
+
+// keepAllowance is s allowing unsigned builds when the dashboard flai
+// dashboard recorded was started allowing them: a restart or an upgrade keeps
+// what the start was given, a one-start --allow-unsigned or --build included,
+// and the settings can only add to it.
+func keepAllowance(dir string, s dashboardSettings) dashboardSettings {
+	if r, ok := readDashboardRecord(dir); ok && r.AllowUnsigned {
+		s.AllowUnsigned = true
+	}
+	return s
 }
 
 // imageID is the local image ID (docker image inspect's {{.Id}}) of ref,
@@ -81,7 +101,9 @@ that is still here, else by its reference, without resolving dashboard.tag
 again; with no record, or with --image or --tag, it starts what flai
 dashboard would, a release refused starting nothing. Every project
 registered with flai serve keeps its registration: only the container's
-process restarts.`,
+process restarts. It allows unsigned builds (FLAIOVER_ALLOW_UNSIGNED=1) when
+the start it repeats did, by --allow-unsigned, --build, or the setting, or
+dashboard.allow_unsigned is on now.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return a.runDashboardRestart(cmd.Context(), image, tag, port, bind)
@@ -108,6 +130,7 @@ func (a *app) runDashboardRestart(ctx context.Context, image, tag string, port i
 		return err
 	}
 	dir := string(a.serveDir())
+	s = keepAllowance(dir, s)
 	wasRunning, err := a.containerRunning(s.Name)
 	if err != nil {
 		return err
@@ -321,7 +344,9 @@ never stopped until the replacement has proven healthy: if it does not
 become healthy in time, the temporary container is removed and the running
 one is left exactly as it was, and this reports why. Should the new image
 then fail to start at the real name, the previous image is started there
-again, and this still fails, saying so.
+again, and this still fails, saying so. The new container allows unsigned
+builds (FLAIOVER_ALLOW_UNSIGNED=1) when the one it replaces was started
+allowing them, or dashboard.allow_unsigned is on now.
 
 --tag deploys that release, an earlier one included, the same way, for
 this container once: dashboard.tag is not changed, so an upgrade without a
@@ -371,6 +396,7 @@ func (a *app) runDashboardUpgrade(ctx context.Context, image, tag string, port i
 		return err
 	}
 	dir := string(a.serveDir())
+	s = keepAllowance(dir, s)
 	// A release refused is refused here, before anything is pulled (ADR-0070).
 	img, err := a.chooseDashboardImage(ctx, s, false)
 	if err != nil {
@@ -424,7 +450,7 @@ func (a *app) runDashboardUpgrade(ctx context.Context, image, tag string, port i
 	probeName := s.Name + upgradeProbeSuffix
 	_, _ = a.runner.Run("", "docker", "rm", "-f", probeName) // a previous failed attempt may have left one behind
 	a.logger().Info("starting a temporary container to check the new image", "component", "dashboard", "container", probeName)
-	if _, err := a.startContainer(dir, probeName, fmt.Sprintf("127.0.0.1::%d", containerPort), img.Ref); err != nil {
+	if _, err := a.startContainer(dir, probeName, fmt.Sprintf("127.0.0.1::%d", containerPort), img.Ref, s.AllowUnsigned); err != nil {
 		return fmt.Errorf("start the temporary container to check the new image: %w", err)
 	}
 	healthy, healthErr := a.waitHealthy(probeName)

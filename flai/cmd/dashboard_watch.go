@@ -71,6 +71,9 @@ type dashboardRecord struct {
 	Ref     string `json:"ref"`
 	Image   string `json:"image,omitempty"`
 	Publish string `json:"publish"`
+
+	// AllowUnsigned: started with FLAIOVER_ALLOW_UNSIGNED=1, which a restart keeps.
+	AllowUnsigned bool `json:"allow_unsigned,omitempty"`
 }
 
 const dashboardRecordFile = "dashboard-container.json"
@@ -117,11 +120,11 @@ func (a *app) startDashboard(dir string, s dashboardSettings, ref string) (strin
 // image ID the container runs, for flai host's watch to start again.
 func (a *app) startDashboardImage(dir string, s dashboardSettings, image, ref string) (string, error) {
 	publish := fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)
-	id, err := a.startContainerImage(dir, s.Name, publish, image, ref)
+	id, err := a.startContainerImage(dir, s.Name, publish, image, ref, s.AllowUnsigned)
 	if err != nil {
 		return id, err
 	}
-	a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Image: a.runningImageID(s.Name, image), Publish: publish})
+	a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Image: a.runningImageID(s.Name, image), Publish: publish, AllowUnsigned: s.AllowUnsigned})
 	return id, nil
 }
 
@@ -199,7 +202,7 @@ func (a *app) restartDashboard(ctx context.Context) error {
 			a.logger().Warn("recorded dashboard image is gone, starting its reference", "component", "dashboard", "container", r.Name, "image", r.Image, "ref", r.Ref)
 		}
 	}
-	if _, err := a.startContainerImage(dir, r.Name, r.Publish, image, r.Ref); err != nil {
+	if _, err := a.startContainerImage(dir, r.Name, r.Publish, image, r.Ref, r.AllowUnsigned); err != nil {
 		return fmt.Errorf("start %s from %s: %w", r.Name, refAndImage(r.Ref, image), err)
 	}
 	if image != r.Image {

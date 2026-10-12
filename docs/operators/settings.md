@@ -284,6 +284,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--agent-config` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--all` | [flai board](../users/flai-reference.md#flai-board), [flai issue list](../users/flai-reference.md#flai-issue-list), [flai message list](../users/flai-reference.md#flai-message-list), [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage), [flai test](../users/flai-reference.md#flai-test), [flai thread list](../users/flai-reference.md#flai-thread-list) |
 | `--all-projects` | [flai serve disable](../users/flai-reference.md#flai-serve-disable), [flai serve enable](../users/flai-reference.md#flai-serve-enable) |
+| `--allow-unsigned` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
 | `--api` | [flai serve agent provider](../users/flai-reference.md#flai-serve-agent-provider) |
 | `--apply` | [flai order](../users/flai-reference.md#flai-order), [flai release](../users/flai-reference.md#flai-release) |
 | `--attach` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |

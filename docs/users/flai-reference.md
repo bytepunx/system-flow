@@ -713,6 +713,7 @@ Keys:
   dashboard.port
   dashboard.bind
   dashboard.no_restart
+  dashboard.allow_unsigned
   dashboard.push_key
   dashboard.push_known_hosts
   cache_dir
@@ -848,6 +849,8 @@ One dashboard container serves every project on this host (S-0080): if it is not
 
 For ghcr.io/bytepunx/flaiover, the default image, the tag names a flaiover release: latest is the newest, X.Y.Z that one. flai downloads the release's digest list, verifies its signature with the key built into it, and pulls and runs ghcr.io/bytepunx/flaiover@sha256:&lt;digest&gt; (ADR-0070). Any other tag, or a release with no list this flai can verify, is refused, saying why, and nothing starts. When the releases cannot be reached, a list verified before and kept beside flai serve's state is used, and that is said. --build, and --image naming another repository, run image:tag as given and are reported unsigned.
 
+The container serves a flai with no release stamp, a development build such as scripts/flai.sh builds, only when it is started with FLAIOVER\_ALLOW\_UNSIGNED=1: with dashboard.allow\_unsigned on, in the manifest's dashboard section or else in config, with --build, or with --allow-unsigned, for this start only, which writes nothing to the configuration. flai dashboard restart, flai dashboard upgrade, and flai host's restart keep it for the container they start again.
+
 Examples:
 
 ```bash
@@ -856,6 +859,7 @@ flai dashboard --tag 0.42.3      # that flaiover release, run by digest
 flai dashboard --port 8080 --pull
 flai dashboard --attach          # stream logs until Ctrl-C (the container keeps running)
 flai dashboard --build           # build flaiover:local from this monorepo instead of pulling
+flai dashboard --allow-unsigned  # serve a flai with no release stamp, for this start only
 flai dashboard stop
 ```
 
@@ -863,9 +867,10 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--allow-unsigned` | allow unsigned builds for this start only, without writing the configuration: the container serves a flai with no release stamp |
 | `--attach` | follow the container logs after starting |
 | `--bind` string | host address to publish on, 0.0.0.0 for every interface (default: manifest, then config, then 0.0.0.0) |
-| `--build` | build the image from flaiover/ in this repository as flaiover:local and run that |
+| `--build` | build the image from flaiover/ in this repository as flaiover:local and run that; unsigned builds are allowed for it |
 | `--image` string | image repository; one other than ghcr.io/bytepunx/flaiover runs its tag as given, unsigned (default: manifest, then config) |
 | `--no-serve` | do not register the project with flai serve or start flai host; the dashboard then has no flai on the host to ask (ADR-0029) |
 | `--open` | open the dashboard in a browser |
@@ -923,7 +928,7 @@ Stop and start the dashboard container again, with whatever image it is already 
 flai dashboard restart [flags]
 ```
 
-Cycles the shared dashboard container's process without changing its image: if it is running, this stops it and starts again the exact image it was running, by its image ID, never a fresh pull and never what its tag names now, so a floating tag such as latest cannot silently upgrade it, even after flai dashboard check pulled a newer one; flai dashboard upgrade does that deliberately. It still names the reference the image was started for: for a flaiover release, ghcr.io/bytepunx/flaiover@sha256:&lt;digest&gt;. If it is not running, this starts the dashboard flai last recorded, by its image ID while that is still here, else by its reference, without resolving dashboard.tag again; with no record, or with --image or --tag, it starts what flai dashboard would, a release refused starting nothing. Every project registered with flai serve keeps its registration: only the container's process restarts.
+Cycles the shared dashboard container's process without changing its image: if it is running, this stops it and starts again the exact image it was running, by its image ID, never a fresh pull and never what its tag names now, so a floating tag such as latest cannot silently upgrade it, even after flai dashboard check pulled a newer one; flai dashboard upgrade does that deliberately. It still names the reference the image was started for: for a flaiover release, ghcr.io/bytepunx/flaiover@sha256:&lt;digest&gt;. If it is not running, this starts the dashboard flai last recorded, by its image ID while that is still here, else by its reference, without resolving dashboard.tag again; with no record, or with --image or --tag, it starts what flai dashboard would, a release refused starting nothing. Every project registered with flai serve keeps its registration: only the container's process restarts. It allows unsigned builds (FLAIOVER\_ALLOW\_UNSIGNED=1) when the start it repeats did, by --allow-unsigned, --build, or the setting, or dashboard.allow\_unsigned is on now.
 
 Flags:
 
@@ -977,7 +982,7 @@ Pull a newer dashboard image, or a chosen release, and swap to it, only once it 
 flai dashboard upgrade [flags]
 ```
 
-Resolves the configured (or --tag) tag as flai dashboard does. For ghcr.io/bytepunx/flaiover that is latest, the newest flaiover release, or a release X.Y.Z, whose signed digest list flai verifies; a release refused is refused before anything is pulled, saying why. When no digest of the running image is on the list, it pulls the release's image by digest, ghcr.io/bytepunx/flaiover@sha256:&lt;digest&gt;. For --image naming another repository it pulls the tag and compares image IDs, and reports the image unsigned. When the image differs from what is running, it starts it as a second, temporary container on a loopback port of its own, waits for it to answer /\_health, and only then stops the running container and starts the new image at the real name and port. The running container is never stopped until the replacement has proven healthy: if it does not become healthy in time, the temporary container is removed and the running one is left exactly as it was, and this reports why. Should the new image then fail to start at the real name, the previous image is started there again, and this still fails, saying so.
+Resolves the configured (or --tag) tag as flai dashboard does. For ghcr.io/bytepunx/flaiover that is latest, the newest flaiover release, or a release X.Y.Z, whose signed digest list flai verifies; a release refused is refused before anything is pulled, saying why. When no digest of the running image is on the list, it pulls the release's image by digest, ghcr.io/bytepunx/flaiover@sha256:&lt;digest&gt;. For --image naming another repository it pulls the tag and compares image IDs, and reports the image unsigned. When the image differs from what is running, it starts it as a second, temporary container on a loopback port of its own, waits for it to answer /\_health, and only then stops the running container and starts the new image at the real name and port. The running container is never stopped until the replacement has proven healthy: if it does not become healthy in time, the temporary container is removed and the running one is left exactly as it was, and this reports why. Should the new image then fail to start at the real name, the previous image is started there again, and this still fails, saying so. The new container allows unsigned builds (FLAIOVER\_ALLOW\_UNSIGNED=1) when the one it replaces was started allowing them, or dashboard.allow\_unsigned is on now.
 
 --tag deploys that release, an earlier one included, the same way, for this container once: dashboard.tag is not changed, so an upgrade without a tag uses the configured one again (pin with flai config set dashboard.tag). With --published the tag must be a published dashboard release, the bare X.Y.Z of a flaiover/vX.Y.Z tag (flai dashboard versions lists them): any other is refused, naming the published ones, and so is one with no digest list this flai can verify, naming why and the deployable ones, before anything is pulled. Only an --image of another repository, such as a mirror's, runs a tag as given, unsigned.
 

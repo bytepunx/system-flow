@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -10,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -1694,5 +1696,197 @@ func TestDashboardRestartSaysTheDashboardIsDownWhenItDoesNotStartAgain(t *testin
 	_, errOut, code := runWith(t, root, f, "dashboard", "restart")
 	if code == 0 || !strings.Contains(errOut, "restart flaiover: it stopped but did not start again from "+flaioverRef("0.10.0")+" (image "+ran+")") || !strings.Contains(errOut, "the dashboard is down: run flai dashboard to start it") {
 		t.Errorf("restart: %d %s", code, errOut)
+	}
+}
+
+// allowUnsignedArg is what docker run is given for a container that serves a
+// flai with no release stamp (S-0239).
+const allowUnsignedArg = "--env " + allowUnsignedEnv + "=1"
+
+// allowUnsignedProject is dashboardProject with dashboard.allow_unsigned set
+// to value in its manifest, or left out when value is "".
+func allowUnsignedProject(t *testing.T, value string) string {
+	t.Helper()
+	root := dashboardProject(t)
+	if value != "" {
+		path := filepath.Join(root, "system-flow.yaml")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, append(data, []byte("  allow_unsigned: "+value+"\n")...), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root
+}
+
+// S-0239: flai dashboard starts the container with FLAIOVER_ALLOW_UNSIGNED=1
+// when the host configuration's dashboard.allow_unsigned, the manifest's over
+// it, or --allow-unsigned allows unsigned builds, records that, and says so;
+// otherwise the variable is not passed at all.
+func TestDashboardAllowsUnsignedBuildsOnlyWhenAsked(t *testing.T) {
+	for _, c := range []struct {
+		name, manifest, host string
+		args                 []string
+		want                 bool
+	}{
+		{name: "none", want: false},
+		{name: "host configuration", host: "true", want: true},
+		{name: "manifest", manifest: "true", want: true},
+		{name: "manifest false over host true", manifest: "false", host: "true", want: false},
+		{name: "manifest true over host false", manifest: "true", host: "false", want: true},
+		{name: "--allow-unsigned", args: []string{"--allow-unsigned"}, want: true},
+		{name: "--allow-unsigned over manifest false", manifest: "false", args: []string{"--allow-unsigned"}, want: true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			root := allowUnsignedProject(t, c.manifest)
+			if c.host != "" {
+				if _, errOut, code := runWith(t, root, &fakeRunner{}, "config", "set", "dashboard.allow_unsigned", c.host); code != 0 {
+					t.Fatalf("config set: %s", errOut)
+				}
+			}
+			f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+			out, errOut, code := runWith(t, root, f, append([]string{"dashboard"}, c.args...)...)
+			if code != 0 {
+				t.Fatalf("start: %d %s", code, errOut)
+			}
+			run := lastRunOf(f)
+			if got := strings.Contains(run, allowUnsignedArg); got != c.want {
+				t.Errorf("%s passed: %v, want %v: %s", allowUnsignedEnv, got, c.want, run)
+			}
+			if strings.Count(run, allowUnsignedEnv) > 1 || (!c.want && strings.Contains(run, allowUnsignedEnv)) {
+				t.Errorf("%s at most once, and only as =1: %s", allowUnsignedEnv, run)
+			}
+			if got := strings.Contains(out, "unsigned allowed: started with "+allowUnsignedEnv+"=1"); got != c.want {
+				t.Errorf("output says unsigned allowed: %v, want %v:\n%s", got, c.want, out)
+			}
+			if r, _ := readDashboardRecord(string((&app{}).serveDir())); r.AllowUnsigned != c.want {
+				t.Errorf("record: %+v", r)
+			}
+		})
+	}
+}
+
+// S-0239: --build allows unsigned builds for the flaiover:local it starts.
+func TestDashboardBuildAllowsUnsignedBuilds(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	_ = os.MkdirAll(filepath.Join(root, "flaiover"), 0o755)
+	_ = os.WriteFile(filepath.Join(root, "flaiover", "Dockerfile"), []byte("FROM scratch\n"), 0o644)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	out, errOut, code := runWith(t, root, f, "dashboard", "--build", "--json")
+	if code != 0 {
+		t.Fatalf("build: %d %s", code, errOut)
+	}
+	if run := lastRunOf(f); !strings.Contains(run, allowUnsignedArg) || !strings.HasSuffix(run, " flaiover:local") {
+		t.Errorf("--build runs flaiover:local allowing unsigned builds: %s", run)
+	}
+	if !strings.Contains(out, `"allow_unsigned": true`) {
+		t.Errorf("--json: %s", out)
+	}
+}
+
+// S-0239: --allow-unsigned is for one start: the configuration file is the
+// same after it, and a later start without it passes nothing.
+func TestDashboardAllowUnsignedLeavesTheConfigurationUnchanged(t *testing.T) {
+	root := dashboardProject(t)
+	if _, errOut, code := runWith(t, root, &fakeRunner{}, "config", "set", "dashboard.allow_unsigned", "false"); code != 0 {
+		t.Fatalf("config set: %s", errOut)
+	}
+	cfg := os.Getenv("FLAI_CONFIG")
+	before, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, errOut, code := runWith(t, root, f, "dashboard", "--allow-unsigned"); code != 0 || !strings.Contains(lastRunOf(f), allowUnsignedArg) {
+		t.Fatalf("start: %d %s\n%s", code, errOut, lastRunOf(f))
+	}
+	if after, err := os.ReadFile(cfg); err != nil || !bytes.Equal(before, after) {
+		t.Errorf("the configuration changed: %v\nbefore: %s\nafter: %s", err, before, after)
+	}
+	g := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	forgetDashboard(string((&app{}).serveDir()))
+	if _, errOut, code := runWith(t, root, g, "dashboard"); code != 0 || strings.Contains(lastRunOf(g), allowUnsignedEnv) {
+		t.Errorf("a later start without it: %d %s\n%s", code, errOut, lastRunOf(g))
+	}
+}
+
+// S-0239: a container that runs without the allowance gets none from
+// flai dashboard --allow-unsigned, which starts nothing, and that is said.
+func TestDashboardAllowUnsignedSaysARunningContainerKeepsItsTerms(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, errOut, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	f.calls = nil
+	out, errOut, code := runWith(t, root, f, "dashboard", "--allow-unsigned")
+	if code != 0 || !strings.Contains(out, "already runs") || !strings.Contains(out, "unsigned not allowed: flaiover already runs, started without "+allowUnsignedEnv+"=1") || called(f, "docker run") {
+		t.Errorf("already running: %d %s %s\n%s", code, out, errOut, strings.Join(f.calls, "\n"))
+	}
+}
+
+// S-0239: flai dashboard restart, flai host's restart, and flai dashboard
+// upgrade, its temporary container included, keep the allowance the start
+// was given, a one-start --allow-unsigned included; a container started
+// without it is restarted without it.
+func TestDashboardRestartAndUpgradeKeepTheAllowance(t *testing.T) {
+	root := dashboardProject(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	dir := string(a.serveDir())
+	if _, errOut, code := runWithApp(t, a, "dashboard", "--tag", "0.4.0", "--allow-unsigned"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+
+	f.calls = nil
+	if _, errOut, code := runWithApp(t, a, "dashboard", "restart"); code != 0 || !strings.Contains(lastRunOf(f), allowUnsignedArg) {
+		t.Errorf("flai dashboard restart of the running container: %d %s\n%s", code, errOut, lastRunOf(f))
+	}
+	delete(f.running, "flaiover")
+	f.calls = nil
+	if _, errOut, code := runWithApp(t, a, "dashboard", "restart"); code != 0 || !strings.Contains(lastRunOf(f), allowUnsignedArg) {
+		t.Errorf("flai dashboard restart of the recorded container: %d %s\n%s", code, errOut, lastRunOf(f))
+	}
+	delete(f.running, "flaiover")
+	f.calls = nil
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil || !strings.Contains(lastRunOf(f), allowUnsignedArg) {
+		t.Errorf("flai host's restart: %v\n%s", err, lastRunOf(f))
+	}
+	if r, _ := readDashboardRecord(dir); !r.AllowUnsigned {
+		t.Errorf("the record keeps the allowance: %+v", r)
+	}
+
+	f.calls = nil
+	if _, errOut, code := runWithApp(t, a, "dashboard", "upgrade"); code != 0 {
+		t.Fatalf("upgrade: %s", errOut)
+	}
+	runs := 0
+	for _, c := range f.calls {
+		if strings.HasPrefix(c, "docker run ") {
+			runs++
+			if !strings.Contains(c, allowUnsignedArg) {
+				t.Errorf("upgrade start without the allowance: %s", c)
+			}
+		}
+	}
+	if runs != 2 {
+		t.Errorf("want the temporary container and the swap, got %d runs:\n%s", runs, strings.Join(f.calls, "\n"))
+	}
+
+	// started without it, every restart is without it
+	forgetDashboard(dir)
+	delete(f.running, "flaiover")
+	if _, errOut, code := runWithApp(t, a, "dashboard"); code != 0 || strings.Contains(lastRunOf(f), allowUnsignedEnv) {
+		t.Fatalf("start without: %d %s\n%s", code, errOut, lastRunOf(f))
+	}
+	if _, errOut, code := runWithApp(t, a, "dashboard", "restart"); code != 0 || strings.Contains(lastRunOf(f), allowUnsignedEnv) {
+		t.Errorf("restart without: %d %s\n%s", code, errOut, lastRunOf(f))
+	}
+	delete(f.running, "flaiover")
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil || strings.Contains(lastRunOf(f), allowUnsignedEnv) {
+		t.Errorf("flai host's restart without: %v\n%s", err, lastRunOf(f))
 	}
 }

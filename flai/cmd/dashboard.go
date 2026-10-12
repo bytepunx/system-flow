@@ -33,14 +33,19 @@ type dashboardSettings struct {
 	Bind       string // host address the port is published on
 	Name       string
 	Root       string
+	// AllowUnsigned starts the container with FLAIOVER_ALLOW_UNSIGNED=1, so
+	// that it serves a flai with no release stamp (release-signing.md § The
+	// development case): the manifest's dashboard.allow_unsigned over the
+	// configuration's, which --allow-unsigned and --build turn on for a start.
+	AllowUnsigned bool
 }
 
 // defaultBind publishes on every interface so the dashboard is reachable
 // from other hosts (operator's call, S-0035); --bind 127.0.0.1 restricts it.
 const defaultBind = "0.0.0.0"
 
-// dashboardSettings resolves image, tag, and port: flags, then the
-// manifest's dashboard section, then config.
+// dashboardSettings resolves image, tag, port, bind, and the allowance of
+// unsigned builds: flags, then the manifest's dashboard section, then config.
 func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int, bind string) (dashboardSettings, error) {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
@@ -95,6 +100,7 @@ func (a *app) dashboardSettings(repo *workitem.Repo, image, tag string, port int
 	if s.Tag == "" {
 		s.Tag = "latest"
 	}
+	s.AllowUnsigned = m.Dashboard.AllowUnsignedOr(cfg.Dashboard.AllowUnsigned)
 	// One container serves every project the host flai serves (S-0080): its
 	// name is fixed, not derived from a project's own name any more.
 	s.Name = sharedContainerName
@@ -211,7 +217,7 @@ func (a *app) pinnedRecordRef(ctx context.Context, ref string) (string, error) {
 func newDashboardCmd(a *app) *cobra.Command {
 	var image, tag, bind, pushKeyFlag, pushHostsFlag string
 	var port int
-	var pull, attach, open, build, noServe bool
+	var pull, attach, open, build, noServe, allowUnsigned bool
 	c := &cobra.Command{
 		Use:   "dashboard",
 		Short: "Make sure the one flaiover dashboard runs and serves this project",
@@ -236,16 +242,25 @@ runs ghcr.io/bytepunx/flaiover@sha256:<digest> (ADR-0070). Any other tag, or a
 release with no list this flai can verify, is refused, saying why, and nothing
 starts. When the releases cannot be reached, a list verified before and kept
 beside flai serve's state is used, and that is said. --build, and --image
-naming another repository, run image:tag as given and are reported unsigned.`,
+naming another repository, run image:tag as given and are reported unsigned.
+
+The container serves a flai with no release stamp, a development build such
+as scripts/flai.sh builds, only when it is started with
+FLAIOVER_ALLOW_UNSIGNED=1: with dashboard.allow_unsigned on, in the
+manifest's dashboard section or else in config, with --build, or with
+--allow-unsigned, for this start only, which writes nothing to the
+configuration. flai dashboard restart, flai dashboard upgrade, and flai host's
+restart keep it for the container they start again.`,
 		Example: `  flai dashboard
   flai dashboard --tag 0.42.3      # that flaiover release, run by digest
   flai dashboard --port 8080 --pull
   flai dashboard --attach          # stream logs until Ctrl-C (the container keeps running)
   flai dashboard --build           # build flaiover:local from this monorepo instead of pulling
+  flai dashboard --allow-unsigned  # serve a flai with no release stamp, for this start only
   flai dashboard stop`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return a.runDashboard(cmd.Context(), image, tag, port, bind, pushKeyFlag, pushHostsFlag, pull, attach, open, build, noServe)
+			return a.runDashboard(cmd.Context(), image, tag, port, bind, pushKeyFlag, pushHostsFlag, pull, attach, open, build, noServe, allowUnsigned)
 		},
 	}
 	f := c.Flags()
@@ -261,7 +276,8 @@ naming another repository, run image:tag as given and are reported unsigned.`,
 	f.BoolVar(&attach, "attach", false, "follow the container logs after starting")
 	f.BoolVar(&open, "open", false, "open the dashboard in a browser")
 	f.BoolVar(&noServe, "no-serve", false, "do not register the project with flai serve or start flai host; the dashboard then has no flai on the host to ask (ADR-0029)")
-	f.BoolVar(&build, "build", false, "build the image from flaiover/ in this repository as flaiover:local and run that")
+	f.BoolVar(&build, "build", false, "build the image from flaiover/ in this repository as flaiover:local and run that; unsigned builds are allowed for it")
+	f.BoolVar(&allowUnsigned, "allow-unsigned", false, "allow unsigned builds for this start only, without writing the configuration: the container serves a flai with no release stamp")
 	c.AddCommand(newDashboardStopCmd(a), newDashboardStatusCmd(a), newDashboardLogsCmd(a), newDashboardTokenCmd(a),
 		newDashboardRestartCmd(a), newDashboardCheckCmd(a), newDashboardUpgradeCmd(a), newDashboardVersionsCmd(a))
 	return c
@@ -466,7 +482,7 @@ func (a *app) requireDocker() error {
 	return execx.Require(a.runner, "docker", "Install Docker Engine 24 or newer (https://docs.docker.com/engine/install/) or Docker Desktop, and make sure the daemon is running.")
 }
 
-func (a *app) runDashboard(ctx context.Context, image, tag string, port int, bind, pushKeyFlag, pushHostsFlag string, pull, attach, open, build, noServe bool) error {
+func (a *app) runDashboard(ctx context.Context, image, tag string, port int, bind, pushKeyFlag, pushHostsFlag string, pull, attach, open, build, noServe, allowUnsigned bool) error {
 	repo, err := a.projectOrNone()
 	if err != nil {
 		return err
@@ -481,6 +497,7 @@ func (a *app) runDashboard(ctx context.Context, image, tag string, port int, bin
 	if err != nil {
 		return err
 	}
+	s.AllowUnsigned = s.AllowUnsigned || allowUnsigned || build
 	dir := string(a.serveDir())
 	retired := a.retiredPushKey(pushKeyFlag, pushHostsFlag)
 	// A container started for another project may already serve this one
@@ -514,10 +531,15 @@ func (a *app) runDashboard(ctx context.Context, image, tag string, port int, bin
 		return fmt.Errorf("agent credential: %w", err)
 	}
 	var id string
+	allowNote := ""
 	if already {
 		// a container an older flai started has no record: keep it as it runs,
 		// by its image ID too (I-0116), so that flai host watches it (S-0184)
-		if _, ok := readDashboardRecord(dir); !ok {
+		r, ok := readDashboardRecord(dir)
+		if ok && s.AllowUnsigned && !r.AllowUnsigned {
+			allowNote = "  unsigned not allowed: " + s.Name + " already runs, started without " + allowUnsignedEnv + "=1, which only a start gives; set dashboard.allow_unsigned and run flai dashboard restart\n"
+		}
+		if !ok {
 			if ref, _ := a.containerInfo(s.Name); ref != "" {
 				a.recordDashboard(dir, dashboardRecord{Name: s.Name, Ref: ref, Image: a.runningImageID(s.Name, ref), Publish: fmt.Sprintf("%s:%d:%d", s.Bind, s.Port, containerPort)})
 			}
@@ -546,7 +568,7 @@ func (a *app) runDashboard(ctx context.Context, image, tag string, port int, bin
 			out["retired"] = strings.TrimSpace(retired)
 		}
 		if !already {
-			out["image"], out["signed"] = img.Ref, img.Release != ""
+			out["image"], out["signed"], out["allow_unsigned"] = img.Ref, img.Release != "", s.AllowUnsigned
 			if img.Release != "" {
 				out["release"] = img.Release
 			}
@@ -565,7 +587,11 @@ func (a *app) runDashboard(ctx context.Context, image, tag string, port int, bin
 	} else {
 		fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, for %s\n    it is given this port, its login token, and the host flai's credential, and no file of any project (ADR-0031)\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", url, reach, loginURL(url, token), s.Name, img.Ref, s.Root, tokenPath(dir))
 		fmt.Fprint(a.out, img.describe())
+		if s.AllowUnsigned {
+			fmt.Fprintf(a.out, "  unsigned allowed: started with %s=1, it serves a flai with no release stamp\n", allowUnsignedEnv)
+		}
 	}
+	fmt.Fprint(a.out, allowNote)
 	fmt.Fprint(a.out, retired)
 	fmt.Fprint(a.out, serveNote)
 	if open {
