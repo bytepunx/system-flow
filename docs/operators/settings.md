@@ -246,7 +246,7 @@ Stored secrets of the repository's CI, not of flai or the dashboard: no flai or 
 
 | Secret | Read by | For |
 |--------|---------|-----|
-| `COSIGN_PRIVATE_KEY` | `release-flai.yml`, and later `release-flaiover.yml` | The release key's private half, the encrypted PEM `cosign generate-key-pair` wrote, which signs `checksums.txt` ([The release signing key](runbooks/release-key.md#store-the-secrets)) |
+| `COSIGN_PRIVATE_KEY` | `release-flai.yml` and `release-flaiover.yml`, on a release tag | The release key's private half, the encrypted PEM `cosign generate-key-pair` wrote, which signs flai's `checksums.txt`, flaiover's digest list, and the flaiover image ([The release signing key](runbooks/release-key.md#store-the-secrets)) |
 | `COSIGN_PASSWORD` | the same | The password that decrypts it |
 
 ## Flags

@@ -1,6 +1,6 @@
 ---
 title: "Runbook: update"
-updated: 2026-10-08
+updated: 2026-10-12
 status: active
 ---
 
@@ -109,3 +109,36 @@ A chosen release applies to the container, not the configuration. It keeps runni
 flai config set dashboard.tag 0.27.4   # or dashboard.tag in system-flow.yaml, for one project
 flai dashboard upgrade
 ```
+
+### Released and unreleased images
+
+| Tag | Built from | Signed |
+|-----|------------|--------|
+| `X.Y.Z`, and its major `X` | a `flaiover/vX.Y.Z` tag | yes: the image carries a cosign signature by the release key, and its digests are on the release's signed digest list |
+| `latest`, `sha-<short>` | every push to main | no: no signature, on no digest list |
+
+`latest` and `sha-*` are builds of main, not releases. Today `flai dashboard` runs them as it runs a release. Once `flai dashboard` verifies images against the signed list, it will run such a build only as a development image, which the operator allows with the `dashboard.allow_unsigned` setting. A released `X.Y.Z` needs no allowance. How the list and the check work is in [release-signing.md](../../../design/system/release-signing.md#the-digest-list).
+
+### Check a release image by hand
+
+1. From the release `flaiover vX.Y.Z` on the [releases page](https://github.com/bytepunx/system-flow/releases), download `flaiover_X.Y.Z.digests` and `flaiover_X.Y.Z.digests.sig`, and `cosign.pub` from the same release or from your own copy. Compare the key's fingerprint with the one under [Current key](release-key.md#current-key) first.
+2. Verify the list, with cosign:
+
+   ```bash
+   cosign verify-blob --key cosign.pub --signature flaiover_X.Y.Z.digests.sig --insecure-ignore-tlog flaiover_X.Y.Z.digests
+   ```
+
+   or with openssl:
+
+   ```bash
+   openssl base64 -d -A -in flaiover_X.Y.Z.digests.sig -out flaiover_X.Y.Z.digests.der
+   openssl dgst -sha256 -verify cosign.pub -signature flaiover_X.Y.Z.digests.der flaiover_X.Y.Z.digests   # Verified OK
+   ```
+
+3. Verify the image's signature in the registry, by the `index` line's digest:
+
+   ```bash
+   cosign verify --key cosign.pub --insecure-ignore-tlog=true ghcr.io/bytepunx/flaiover@sha256:…
+   ```
+
+4. Check that the image you run is on the list: `docker image inspect --format '{{json .RepoDigests}}' ghcr.io/bytepunx/flaiover:X.Y.Z` names a digest the list has.

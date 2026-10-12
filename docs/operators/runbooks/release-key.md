@@ -10,7 +10,7 @@ Step by step, for the operator who holds the key. Most operators never run this:
 
 ## What the key is for
 
-One cosign key pair, ECDSA P-256, signs every release. In CI it signs flai's `checksums.txt`, and later flaiover's digest list. The public key is built into flai and flaiover, which check a release with it before they install or run it. The private key lives only in GitHub Actions, as two secrets of `bytepunx/system-flow`. Why this way, and what it does not promise, is in [release-signing.md](../../../design/system/release-signing.md) and [ADR-0070](../../../design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md).
+One cosign key pair, ECDSA P-256, signs every release. In CI it signs flai's `checksums.txt`, and flaiover's digest list and image. `release-flai.yml` signs `checksums.txt` through GoReleaser. `release-flaiover.yml` signs the digest list `flaiover_<version>.digests` and the image, by its index digest, with cosign. Both read the key only in the environment `release`, and a release tag whose run cannot read it fails before anything is pushed. The public key is built into flai and flaiover, which check a release with it before they install or run it. The private key lives only in GitHub Actions, as two secrets of `bytepunx/system-flow`. Why this way, and what it does not promise, is in [release-signing.md](../../../design/system/release-signing.md) and [ADR-0070](../../../design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md).
 
 ## Before you start
 
@@ -129,7 +129,7 @@ Why both: `bytepunx/system-flow` is a private repository on GitHub Team, where a
 
    `openssl ec -pubin -in cosign.pub -outform DER | openssl dgst -sha256` gives the same.
 2. Add a row to [Current key](#current-key) with the fingerprint and today's date.
-3. Put `cosign.pub` in the two sources, or give it to the agent working the story: copy the file to `flai/internal/buildinfo/cosign.pub`, which flai embeds, and paste the same PEM into `RELEASE_PUBLIC_KEY` in `flaiover/src/lib/server/release.ts`. A flaiover test fails when the two differ, and a test on each side fails when the fingerprint is not the one under [Current key](#current-key). flai's release publishes the file as the asset `cosign.pub`.
+3. Put `cosign.pub` in the two sources, or give it to the agent working the story: copy the file to `flai/internal/buildinfo/cosign.pub`, which flai embeds, and paste the same PEM into `RELEASE_PUBLIC_KEY` in `flaiover/src/lib/server/release.ts`. A flaiover test fails when the two differ, and a test on each side fails when the fingerprint is not the one under [Current key](#current-key). flai's and flaiover's releases publish the file as the asset `cosign.pub`.
 
 `cosign.pub` is not secret. Keep a copy wherever is convenient.
 
@@ -178,7 +178,7 @@ A bridging release is signed with the compromised key, which an attacker also ho
 
 ## Check a release by hand
 
-Download `checksums.txt` and `checksums.txt.sig` from the release, and `cosign.pub` from the same release or from your own copy. A key from your own copy is the stronger check: a key downloaded beside the release proves only what the release says about itself. Compare its fingerprint with [Current key](#current-key) first.
+For flai, download `checksums.txt` and `checksums.txt.sig` from the release, and `cosign.pub` from the same release or from your own copy. A key from your own copy is the stronger check: a key downloaded beside the release proves only what the release says about itself. Compare its fingerprint with [Current key](#current-key) first.
 
 With cosign:
 
@@ -199,3 +199,5 @@ Then check the archive against `checksums.txt`:
 sha256sum --ignore-missing -c checksums.txt   # Linux
 shasum -a 256 --ignore-missing -c checksums.txt   # macOS
 ```
+
+For flaiover, the same checks on its digest list, and on the image's signature, are in [Update](update.md#check-a-release-image-by-hand).
