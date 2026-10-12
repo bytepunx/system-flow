@@ -6,7 +6,7 @@ title: "flai check finds `threads.archived` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-12T14:12:35Z
-updated: 2026-10-12T15:06:18Z
+updated: 2026-10-12T15:10:25Z
 transitions: []
 tags: [flai, check]
 touches: [design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0135-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-12T15:05:52Z
 forecast:
   duration: 23m
-  delivery: 2026-10-13T03:06:00Z
-  basis: "flai forecast: 78 s per unit of size over 57 done large-band improvement stories on claude-opus-5-5, times size 17; 27th in the pull order with an in-progress limit of 5. Kept: S-0365, the same fix for issues.no-story with the same four tasks, was forecast at 23m, and S-0348 took 24m."
-  by: planner-S-0366
-  at: 2026-10-12T15:00:01Z
+  delivery: 2026-10-13T03:17:00Z
+  basis: "Its own forecast of 23m; 27th in the pull order with an in-progress limit of 5, behind S-0232, S-0337, S-0365, S-0233, S-0234, S-0235, S-0236, S-0237, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0313, S-0349, S-0350, S-0351, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357, S-0358, S-0359, S-0360, S-0363 and S-0364."
+  by: flai
+  at: 2026-10-12T15:10:25Z
 finalized:
   by: orchestrator
   at: 2026-10-12T15:06:18Z
