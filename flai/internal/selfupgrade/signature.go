@@ -115,33 +115,42 @@ func VerifyRelease(ctx context.Context, opt Options, rel *Release) error {
 // verifiedSums answers rel's checksums.txt once its signature verifies against
 // one of keys, else a *SignatureError saying why not.
 func (o Options) verifiedSums(ctx context.Context, rel *Release, keys []*ecdsa.PublicKey) ([]byte, error) {
-	sums, encoded, err := FetchSigned(ctx, o, *rel, checksumsName)
+	sums, _, err := VerifySigned(ctx, o, *rel, checksumsName, keys)
+	return sums, err
+}
+
+// VerifySigned answers rel's asset name and its signature, name+".sig", once
+// the signature verifies against one of keys, else a *SignatureError saying
+// why not: missing, unknown-key when only the release's own cosign.pub
+// verifies it (read only to tell that from a bad signature, never trusted),
+// or bad. A failed download is answered as one, not as a refusal.
+func VerifySigned(ctx context.Context, opt Options, rel Release, name string, keys []*ecdsa.PublicKey) (data, sig []byte, err error) {
+	data, encoded, err := FetchSigned(ctx, opt, rel, name)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	sig, err := decodeSignature(encoded)
+	decoded, err := decodeSignature(encoded)
 	if err != nil {
-		return nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: signatureName + " is not base64"}
+		return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: name + ".sig is not base64"}
 	}
-	if signedByOneOf(sums, sig, keys) {
-		return sums, nil
+	if signedByOneOf(data, decoded, keys) {
+		return data, encoded, nil
 	}
-	pubAsset, ok := rel.Asset(publicKeyName)
-	if !ok {
-		return nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: "no key this flai trusts verifies it, and the release publishes no " + publicKeyName}
+	if _, ok := rel.Asset(publicKeyName); !ok {
+		return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: "no key this flai trusts verifies it, and the release publishes no " + publicKeyName}
 	}
-	pubPEM, err := o.getBytes(ctx, pubAsset.URL)
+	pubPEM, err := FetchAsset(ctx, opt, rel, publicKeyName)
 	if err != nil {
-		return nil, fmt.Errorf("download %s of release %s: %w", publicKeyName, rel.Tag, err)
+		return nil, nil, err
 	}
 	own, err := parsePublicKey(pubPEM)
 	if err != nil {
-		return nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: fmt.Sprintf("no key this flai trusts verifies it, and the release's %s cannot check it: %v", publicKeyName, err)}
+		return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: fmt.Sprintf("no key this flai trusts verifies it, and the release's %s cannot check it: %v", publicKeyName, err)}
 	}
-	if signedByOneOf(sums, sig, []*ecdsa.PublicKey{own}) {
-		return nil, &SignatureError{Tag: rel.Tag, Kind: SignatureUnknownKey, Reason: "it is signed by the key it publishes as " + publicKeyName}
+	if signedByOneOf(data, decoded, []*ecdsa.PublicKey{own}) {
+		return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureUnknownKey, Reason: "it is signed by the key it publishes as " + publicKeyName}
 	}
-	return nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: "neither a key this flai trusts nor the release's " + publicKeyName + " verifies it"}
+	return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: "neither a key this flai trusts nor the release's " + publicKeyName + " verifies it"}
 }
 
 // FetchSigned downloads rel's asset name and its signature, the asset
