@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-08
+updated: 2026-10-12
 status: active
 topics: [cli, template]
 ---
@@ -45,7 +45,7 @@ dashboard:
   notify_url: ""                             # optional, default unset: POST new inbox entries here as JSON (S-0042)
 tests:                                       # optional (S-0273): the test tiers, cheapest first, that flai test runs; default one plain tier, scripts/test.sh
   - name: unit                               # unique among the tiers
-    command: [go, test, -json, "{packages}"] # an argument list; {packages} or {files}, an argument of its own, stands for what the paths selected
+    command: [go, test, -json, "{packages}"] # an argument list; {packages}, {importers}, or {files}, an argument of its own, stands for what the paths selected
     dir: flai                                # optional: the folder it runs in, from the root; default the root
     paths: ["flai/**", "!flai/testdata/**"]  # globs from the root that select it, as claims.shared; ! takes paths out; required unless all_only
     format: go-test-json                     # go-test-json, vitest-json, golangci-json, gofmt-list, or plain; default plain
@@ -116,7 +116,11 @@ Rules:
 - `dashboard.autocommit: false` leaves documents saved from the dashboard uncommitted; the default commits each save on the main checkout, one path per commit (ADR-0023).
 - `tests` lists the project's test tiers, cheapest first, which `flai test` runs for the paths each selects (S-0273), and `flai verify` runs for what a story's branch changed against the main branch (S-0270). A tier has:
   - `name`, unique among the tiers.
-  - `command`, an argument list run as it stands, never through a shell. `{packages}` and `{files}`, each as an argument of its own, stand for the packages and the files the tier's paths selected, and `flai test` fills them. Any other argument that is a word in braces, such as `{story}`, and a placeholder inside a longer argument are refused.
+  - `command`, an argument list run as it stands, never through a shell. `{packages}`, `{importers}`, and `{files}`, each as an argument of its own, stand for what the tier's paths selected, and `flai test` fills them. `{packages}` is the Go packages that hold the selected files, and `{files}` is the files. A tier whose placeholder comes to nothing, such as `{packages}` for files no Go package holds, is left out. Under `flai test --all`, with no `all_command`, `{packages}` and `{importers}` are `./...` and `{files}` is `.`. Any other argument that is a word in braces, such as `{story}`, and a placeholder inside a longer argument are refused.
+
+    `{importers}` (S-0364) is the packages `{packages}` names and every package of the same Go module that imports one of them, directly or through other packages. An import counts in a package's own files and in its test files, external `_test` packages included. Each package is written `./x/y`, relative to the tier's `dir`, and the list is sorted. flai reads the module path from the `go.mod` in the tier's `dir`, and each `.go` file's imports from the checkout. It skips the folders the go tool ignores: `testdata` and names beginning with `.` or `_`. It ignores build constraints, so the set is never smaller than the go tool's. With no `go.mod` in the tier's `dir`, `{importers}` is what `{packages}` is.
+
+    This repository's `vet` tier runs `go vet "{importers}"` in `flai`. `go vet` type-checks test files, so a change that breaks a package importing the changed one fails `flai test` and the close-out's `vet` tier. Before, only the integration tier found it ([I-0128](../issues/I-0128-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md)). `go-test` and `golangci-lint` keep `{packages}`: running every importer's tests or lint on each change would cost most of the integration tier, and `vet` already catches the build break.
   - `dir`, the folder the command runs in, relative to the root and inside it. Unset, it is the root.
   - `paths`, glob patterns relative to the root with the syntax of `claims.shared` (below); one beginning with `!` takes paths out again. Required, with at least one pattern without `!`, unless `all_only` is set.
   - `format`, how the command's output becomes findings: `go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`, which reads only the exit status. Unset, it is `plain`. The list is `manifest.TestFormats`.

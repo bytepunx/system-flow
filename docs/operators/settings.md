@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-08
+updated: 2026-10-12
 status: active
 ---
 
@@ -89,7 +89,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `checks[].name` | none | A check a story in review is run with, when the host names none ([The checks host action](index.md#the-checks-host-action-s-0082)) |
 | `checks[].command` | none | Its argument list |
 | `tests[].name` | none; with no `tests` key, one tier `test` | A test tier's name, unique among them. `flai test` runs the tiers, cheapest first, for the paths each selects. With no `tests` key, one `plain` tier named `test` runs `scripts/test.sh` for every path when that file exists; `tests: []` means none. A project made from the template starts with `test`, `integration`, and `smoke`, its three scripts. Changed whole with `flai manifest set tests='<JSON list>'`, such as `[{"name":"test","command":["scripts/test.sh"],"paths":["**"]}]`, or by hand ([Project manifest](../../design/system/project-manifest.md)) |
-| `tests[].command` | none | Its argument list, run without a shell; `{packages}` or `{files}`, each as an argument of its own, stands for what its paths selected |
+| `tests[].command` | none | Its argument list, run without a shell; `{packages}`, `{importers}`, or `{files}`, each as an argument of its own, stands for what its paths selected: the Go packages, those packages and every package of the module that imports them, or the files ([Project manifest](../../design/system/project-manifest.md)) |
 | `tests[].dir` | the root | The folder it runs in, relative to the root and inside it |
 | `tests[].paths` | none; required unless `all_only` | Glob patterns from the root, as `claims.shared`'s, that select the tier for a changed or named path; one beginning with `!` takes paths out |
 | `tests[].format` | `plain` | How its output becomes findings: `go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`, which reads only the exit status |
