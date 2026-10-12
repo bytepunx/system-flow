@@ -325,6 +325,70 @@ func TestScopedCheckLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
 	}
 }
 
+// I-0134, ADR-0136: scoped to a story, an issues.no-story on an open issue
+// that no open story links and the story did not touch, as I-0052's was at
+// S-0343's, S-0289's, S-0342's, and S-0361's close-outs, is left out of the
+// result, and its warning is taken back from the counts, so the run neither
+// notes nor records it. Unscoped, it is reported as before; on an issue file
+// the story changes, it stays inside the story.
+func TestScopedCheckLeavesOutAnIssuesNoStoryOutsideTheStory(t *testing.T) {
+	const rel = "design/issues/I-0052-waits-for-a-story.md"
+	root := scopeProject(t)
+	addUnlinkedIssue(t, root, rel)
+	whole, scoped := runScoped(t, root, nil)
+	want := "I-0052 has been open since 2026-08-01 with no open story linking it (issues.story_after is unset, so 168h): make one with flai issue story I-0052"
+	if got := noStoryFindings(whole); len(got) != 1 || got[0].Message != want || !strings.HasSuffix(filepath.ToSlash(got[0].Path), rel) {
+		t.Fatalf("unscoped, the run should report I-0052's issues.no-story: %+v", whole.Findings)
+	}
+	if got := noStoryFindings(scoped); len(got) != 0 {
+		t.Errorf("scoped to S-004, the issues.no-story on an issue it did not touch should be left out: %+v", got)
+	}
+	if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+		t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+	}
+	assertCountsMatch(t, scoped)
+	if !scoped.OK(true) {
+		t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
+	}
+
+	_, scoped = runScoped(t, root, []string{rel})
+	if got := noStoryFindings(scoped); len(got) != 1 || got[0].Outside {
+		t.Errorf("scoped to S-004, which changes %s, its issues.no-story should be inside it: %+v", rel, got)
+	}
+	if scoped.OK(true) {
+		t.Errorf("scoped to S-004, its own issues.no-story should fail --strict: %+v", scoped.Findings)
+	}
+}
+
+// addUnlinkedIssue writes an open issue at rel, first reported a month
+// before now, that no story links, and a summary.md that lists it.
+func addUnlinkedIssue(t *testing.T, root, rel string) {
+	t.Helper()
+	dir := filepath.Join(root, filepath.Dir(rel))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	issue := "---\nid: I-0052\ntitle: Waits for a story\nclass: defect\nstatus: open\ncount: 1\nfirst_reported: 2026-08-01T12:00:00Z\n" +
+		"last_reported: 2026-08-01T12:00:00Z\nupdated: 2026-08-01T12:00:00Z\n---\n\n# I-0052 Waits for a story\n"
+	if err := os.WriteFile(filepath.Join(root, rel), []byte(issue), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "summary.md"), []byte("# Issues\n\n- [I-0052](I-0052-waits-for-a-story.md)\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// noStoryFindings is res's issues.no-story findings.
+func noStoryFindings(res *Result) []Finding {
+	var out []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "issues.no-story" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
 // I-0096, ADR-0123: scoped to a story, a markdown finding on the narrative
 // of another story in progress, a code span ending in a space as S-0229's
 // was, is left out of the result, and its warning is taken back from the

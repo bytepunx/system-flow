@@ -24,10 +24,12 @@ import (
 // clears, and it never names a story in progress (ADR-0122, I-0078). So is a
 // board.wip-limit outside the story, advisory or not: it counts the main
 // checkout's columns, which only the operator's acceptances, cancellations,
-// or a raised limit clear (ADR-0133, I-0123). So is a markdown or
-// narrative.state finding on the narrative of another story that is neither
-// done nor cancelled: that story's own close-out finds it (ADR-0123, I-0096;
-// ADR-0125, I-0109).
+// or a raised limit clear (ADR-0133, I-0123). So is an issues.no-story
+// outside the story: it names an issue the story did not touch, and only the
+// operator's choice to make a story for it clears it (ADR-0136, I-0134). So
+// is a markdown or narrative.state finding on the narrative of another story
+// that is neither done nor cancelled: that story's own close-out finds it
+// (ADR-0123, I-0096; ADR-0125, I-0109).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	st, err := repo.Get(story)
 	if err != nil {
@@ -78,7 +80,7 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if (f.Rule == "wip.overlap" && !namesStory(f, st.ID)) ||
-			((f.Rule == "item.archive" || f.Rule == "board.wip-limit") && !inside(f.Path)) ||
+			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story") && !inside(f.Path)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)
 			continue

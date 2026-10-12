@@ -37,8 +37,10 @@ story is outside it too, and one between two other stories is left out, as
 is an item.archive outside the story, which only flai archive in the main
 checkout clears, a board.wip-limit outside the story, which counts the main
 checkout's columns and only the operator's acceptances, cancellations, or a
-raised limit clear, and a markdown or narrative.state finding on the narrative
-of another story that is neither done nor cancelled, which that story's own
+raised limit clear, an issues.no-story outside the story, which names an
+issue the story did not touch and only the operator's choice to make a story
+for it clears, and a markdown or narrative.state finding on the narrative of
+another story that is neither done nor cancelled, which that story's own
 close-out finds. A finding outside keeps its level and is printed with
 "(outside S-nnnn)"; it is a note that neither an error nor --strict fails
 on, and the summary counts it, as does outside in --json. Without --story
@@ -162,9 +164,9 @@ func (r recordedIssue) describe() string {
 // merge report it where it can be acted on, and an issue would only count
 // how often stories ran side by side (I-0076). An item.archive outside the
 // story never reaches it: the scoped check leaves it out (ADR-0122), as it
-// does a board.wip-limit outside the story (ADR-0133) and a markdown or
-// narrative.state finding on another open story's narrative (ADR-0123,
-// ADR-0125).
+// does a board.wip-limit (ADR-0133) and an issues.no-story (ADR-0136)
+// outside the story and a markdown or narrative.state finding on another open
+// story's narrative (ADR-0123, ADR-0125).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {
 	byRule := map[string][]string{}
 	for _, f := range res.Findings {

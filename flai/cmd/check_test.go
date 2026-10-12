@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -437,6 +438,55 @@ func TestCheckRecordIssuesLeavesOutABoardWIPLimitOutsideTheStory(t *testing.T) {
 	}
 	if names := issueFiles(t, root); names != nil {
 		t.Errorf("no issue should be opened or bumped, got %v", names)
+	}
+}
+
+// I-0134, ADR-0136: an open issue that no open story links has waited past
+// issues.story_after, as I-0052 had at S-0343's, S-0289's, S-0342's, and
+// S-0361's close-outs; a close-out of S-004, which did not touch it, neither
+// notes the issues.no-story nor records it in an issue, while the unscoped
+// check still warns on it and fails --strict.
+func TestCheckRecordIssuesLeavesOutAnIssuesNoStoryOutsideTheStory(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := overlapFixture(t, "", nil)
+	dir := filepath.Join(root, "design", "issues")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	issue := "---\nid: I-0052\ntitle: Waits for a story\nclass: defect\nstatus: open\ncount: 1\nfirst_reported: 2026-08-01T12:00:00Z\n" +
+		"last_reported: 2026-08-01T12:00:00Z\nupdated: 2026-08-01T12:00:00Z\n---\n\n# I-0052 Waits for a story\n"
+	if err := os.WriteFile(filepath.Join(dir, "I-0052-waits-for-a-story.md"), []byte(issue), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	summary := "# Issues\n\n- [I-0052](I-0052-waits-for-a-story.md)\n"
+	if err := os.WriteFile(filepath.Join(dir, "summary.md"), []byte(summary), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict")
+	if code == 0 || !strings.Contains(out, "warning: issues.no-story: I-0052 has been open since 2026-08-01 with no open story linking it") {
+		t.Fatalf("unscoped, the run should warn on I-0052 with no story and fail --strict: exit %d\n%s%s", code, out, errOut)
+	}
+	out, errOut, code = runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	var res struct {
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "issues.no-story") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, the issues.no-story should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); !slices.Equal(names, []string{"I-0052-waits-for-a-story.md", "summary.md"}) {
+		t.Errorf("no issue should be opened, got %v", names)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "I-0052-waits-for-a-story.md"))
+	if err != nil || string(data) != issue {
+		t.Errorf("I-0052 should be left as it was: %v\n%s", err, data)
+	}
+	if data, err := os.ReadFile(filepath.Join(dir, "summary.md")); err != nil || string(data) != summary {
+		t.Errorf("summary.md should be left as it was: %v\n%s", err, data)
 	}
 }
 
