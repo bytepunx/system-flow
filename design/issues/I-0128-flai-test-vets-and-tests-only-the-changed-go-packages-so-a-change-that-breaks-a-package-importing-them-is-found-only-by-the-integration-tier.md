@@ -2,12 +2,12 @@
 id: I-0128
 title: flai test vets and tests only the changed Go packages, so a change that breaks a package importing them is found only by the integration tier
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-08T10:50:48Z
 last_reported: 2026-10-08T10:50:48Z
-updated: 2026-10-12T14:12:31Z
+updated: 2026-10-12T15:36:43Z
 ---
 
 # I-0128 flai test vets and tests only the changed Go packages, so a change that breaks a package importing them is found only by the integration tier
@@ -24,3 +24,4 @@ S-0338 added a slice field to workitem.Hold, which made it uncomparable. flai te
 ## Remediation
 
 Story S-0364 remediates this issue, created from it at 2026-10-12T14:12:31Z.
+Closed 2026-10-12T15:36:43Z: Fixed by S-0364: a test tier's command may hold {importers}, the changed Go packages and every package of the module that imports one of them, in its own files or its test files. This repository's vet tier runs go vet on {importers}, so a change that breaks a package importing the changed one, as S-0338's change to internal/workitem broke cmd/story_start_test.go, fails flai test and the close-out's vet tier rather than only the integration tier. flai test flai/internal/workitem now vets ./cmd and every other importer, in 2.5s.
