@@ -3,10 +3,10 @@ id: S-0343
 type: story
 nature: improvement
 title: Add an archive action to context menus
-status: review
+status: done
 owner: alex
 created: 2026-10-08T08:07:29Z
-updated: 2026-10-09T16:52:24Z
+updated: 2026-10-12T14:33:41Z
 transitions:
   - to: ready
     at: 2026-10-08T08:07:30Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-09T16:52:20Z
     by: agent-S-0343
+  - to: done
+    at: 2026-10-12T14:33:41Z
+    by: alex
 tags: [dashboard]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/system/flai-cli.md, flaiover/src/routes/api/board/archive/+server.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/writes.test.ts, flaiover/src/lib/lanes.ts, flaiover/src/lib/lanes.test.ts, flaiover/src/lib/cardmenu.ts, flaiover/src/lib/cardmenu.test.ts, flaiover/src/lib/components/LaneMenu.svelte, flaiover/src/lib/components/CardMenu.svelte, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/issues/I-0132-flai-check-finds-issues-no-story-outside-the-story-at-close-out.md, design/issues/I-0133-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
