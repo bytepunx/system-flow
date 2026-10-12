@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 305
-      cache_read: 1990596
-      cache_write: 114398
-      cost: 0.9616
+      input: 37
+      output: 14234
+      cache_read: 2080212
+      cache_write: 80589
+      cost: 1.1581
 ---
 # T-1260 The dashboard accepts a flai without a valid stamp only when FLAIOVER_ALLOW_UNSIGNED is set, and records which side is unsigned
 

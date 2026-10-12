@@ -24,15 +24,15 @@ touches: [docs/contributors/index.md, docs/operators/index.md, docs/users/flai.m
 after: [T-1264, T-1265]
 usage:
   source: log
-  seconds: 745
+  seconds: 751
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 138
-      output: 796
-      cache_read: 10441831
-      cache_write: 204067
-      cost: 4.8631
+      input: 189
+      output: 71987
+      cache_read: 10520483
+      cache_write: 407569
+      cost: 5.8571
 ---
 # T-1266 The contributor, operator, user, template, and design documentation describe dashboard.allow_unsigned and how it is shown
 

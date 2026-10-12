@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:49:40Z
-updated: 2026-10-12T21:07:30Z
+updated: 2026-10-12T22:07:23Z
 transitions:
   - to: ready
     at: 2026-10-12T20:02:59Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0356
 tags: [cli]
 topics: [agents, testing]
-touches: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0144-the-local-litellm-proxy-s-upstream-anthropic-key-is-a-placeholder-so-a-gateway-check-through-it-reaches-no-model.md, design/issues/summary.md]
+touches: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0144-the-local-litellm-proxy-s-upstream-anthropic-key-is-a-placeholder-so-a-gateway-check-through-it-reaches-no-model.md, design/issues/summary.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md]
 after: [S-0351]
 agent:
   harness: claude-code
@@ -26,19 +26,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1190
+  seconds: 1230
   turns:
     - day: 2026-10-12
       ceremony: 2
       hand_edits: 1
-      work: 34
+      work: 41
   models:
     - model: claude-opus-5-5
-      input: 116
-      output: 63123
-      cache_read: 8569526
-      cache_write: 428524
-      cost: 5.8756
+      input: 132
+      output: 65409
+      cache_read: 10749845
+      cache_write: 442197
+      cost: 6.4668
 cost_of_delay:
   value: 33.19
   by: planner-E-0019

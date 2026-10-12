@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 89
-      output: 517
-      cache_read: 3928180
-      cache_write: 128860
-      cost: 1.8534
+      input: 72
+      output: 27434
+      cache_read: 4009282
+      cache_write: 155322
+      cost: 2.2321
 ---
 # T-1265 flai serve status, flai dashboard status, and flai host status say "unsigned allowed" with the side
 

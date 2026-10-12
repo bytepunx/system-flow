@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 256
-      cache_read: 2979651
-      cache_write: 140166
-      cost: 1.4252
+      input: 55
+      output: 21096
+      cache_read: 3083078
+      cache_write: 119440
+      cost: 1.7164
 ---
 # T-1262 With the allowance in force, flai serve dials an unlisted container, accepts a dashboard without a stamp, warns once per connection, and records the unsigned side
 

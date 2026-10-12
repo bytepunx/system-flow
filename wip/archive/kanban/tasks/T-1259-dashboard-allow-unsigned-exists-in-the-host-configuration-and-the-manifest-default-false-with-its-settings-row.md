@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 211
-      cache_read: 1083937
-      cache_write: 109638
-      cost: 0.5453
+      input: 21
+      output: 8071
+      cache_read: 1179532
+      cache_write: 45696
+      cost: 0.6567
 ---
 # T-1259 dashboard.allow_unsigned exists in the host configuration and the manifest, default false, with its settings row
 

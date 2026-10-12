@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 55
-      output: 327
-      cache_read: 2935178
-      cache_write: 154670
-      cost: 1.4115
+      output: 20893
+      cache_read: 3053459
+      cache_write: 118293
+      cost: 1.7
 ---
 # T-1261 flai dashboard --allow-unsigned, and the setting or --build, start the container with FLAIOVER_ALLOW_UNSIGNED=1
 

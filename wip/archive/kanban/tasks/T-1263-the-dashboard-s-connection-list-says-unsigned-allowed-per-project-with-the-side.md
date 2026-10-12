@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 187
-      cache_read: 1317528
-      cache_write: 74538
-      cost: 0.6359
+      input: 25
+      output: 9413
+      cache_read: 1375687
+      cache_write: 53295
+      cost: 0.7659
 ---
 # T-1263 The dashboard's connection list says "unsigned allowed" per project, with the side
 

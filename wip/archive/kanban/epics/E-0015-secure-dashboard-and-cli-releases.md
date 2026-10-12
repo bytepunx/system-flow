@@ -3,10 +3,10 @@ id: E-0015
 type: epic
 nature: feature
 title: Secure Dashboard and CLI Releases
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-01T11:06:14Z
-updated: 2026-10-07T22:13:38Z
+updated: 2026-10-12T22:18:01Z
 transitions:
   - to: ready
     at: 2026-10-01T11:15:15Z
@@ -14,12 +14,17 @@ transitions:
   - to: in-progress
     at: 2026-10-05T00:30:17Z
     by: alex
+  - to: review
+    at: 2026-10-12T22:16:10Z
+    by: agent-S-0239
+  - to: done
+    at: 2026-10-12T22:18:01Z
+    by: orchestrator
 tags: [dashboard, cli]
 topics: [releases]
 usage:
   source: sum
-  seconds: 26536
-  estimated: true
+  seconds: 27750
   turns:
     - day: 2026-10-07
       ceremony: 7
@@ -30,9 +35,9 @@ usage:
       hand_edits: 2
       work: 95
     - day: 2026-10-12
-      ceremony: 22
-      hand_edits: 20
-      work: 385
+      ceremony: 24
+      hand_edits: 21
+      work: 394
   models:
     - model: claude-fable-5-1
       input: 2082
@@ -53,11 +58,11 @@ usage:
       cache_write: 165721
       cost: 0.2258
     - model: claude-opus-5-5
-      input: 3714
-      output: 1289274
-      cache_read: 247116237
-      cache_write: 8766970
-      cost: 130.3619
+      input: 3854
+      output: 1542953
+      cache_read: 256293652
+      cache_write: 9081525
+      cost: 137.7829
     - model: claude-sonnet-5-5
       input: 78
       output: 24221
@@ -127,3 +132,5 @@ Determine how each component can use this same mechanism to ensure they are only
 - S-0239 dashboard.allow_unsigned lets a development build connect, shown on every page and in every status
 
 ## Notes
+- 2026-10-12T22:16:10Z: moved to review: follows S-0239, which moved to review
+- 2026-10-12T22:18:01Z: moved to done: follows S-0239, which moved to done

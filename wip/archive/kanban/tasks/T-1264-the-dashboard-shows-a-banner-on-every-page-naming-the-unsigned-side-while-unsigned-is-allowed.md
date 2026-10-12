@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 140
-      cache_read: 858532
-      cache_write: 55072
-      cost: 0.4174
+      input: 16
+      output: 6178
+      cache_read: 902854
+      cache_write: 34977
+      cost: 0.5026
 ---
 # T-1264 The dashboard shows a banner on every page naming the unsigned side while unsigned is allowed
 

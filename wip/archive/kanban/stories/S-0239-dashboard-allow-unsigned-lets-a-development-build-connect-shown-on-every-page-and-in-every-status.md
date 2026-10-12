@@ -3,11 +3,11 @@ id: S-0239
 type: story
 nature: feature
 title: dashboard.allow_unsigned lets a development build connect, shown on every page and in every status
-status: in-progress
+status: done
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T21:56:34Z
+updated: 2026-10-12T22:18:01Z
 transitions:
   - to: ready
     at: 2026-10-12T18:29:28Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-12T21:06:29Z
     by: agent-S-0239
+  - to: review
+    at: 2026-10-12T22:16:10Z
+    by: agent-S-0239
+  - to: done
+    at: 2026-10-12T22:18:01Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [flai/internal/config, flai/internal/manifest, flai/cmd/dashboard.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components, docs/operators/settings.md, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flai/cmd/serve.go, flai/cmd/host.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/contributors/index.md, template/root/docs/operators/index.md.tmpl, template/CHANGELOG.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/+layout.svelte, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/project.svelte.ts, docs/operators/index.md, design/system/flaiover-dashboard.md, design/system/release-signing.md, flai/internal/serve/candidates.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_agent.go, flai/cmd/serve_status_below.go]
+touches: [flai/internal/config, flai/internal/manifest, flai/cmd/dashboard.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components, docs/operators/settings.md, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flai/cmd/serve.go, flai/cmd/host.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/contributors/index.md, template/root/docs/operators/index.md.tmpl, template/CHANGELOG.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/+layout.svelte, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/project.svelte.ts, docs/operators/index.md, design/system/flaiover-dashboard.md, design/system/release-signing.md, flai/internal/serve/candidates.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_agent.go, flai/cmd/serve_status_below.go, flai/internal/serve/imagecheck.go]
 after: [S-0237, S-0238]
 agent:
   harness: claude-code
@@ -26,20 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2980
-  estimated: true
+  seconds: 4194
   turns:
     - day: 2026-10-12
-      ceremony: 2
-      hand_edits: 2
-      work: 43
+      ceremony: 4
+      hand_edits: 3
+      work: 52
   models:
     - model: claude-opus-5-5
-      input: 534
-      output: 3072
-      cache_read: 28345326
-      cache_write: 1139097
-      cost: 13.4691
+      input: 674
+      output: 256751
+      cache_read: 37522741
+      cache_write: 1453652
+      cost: 20.8901
   strategic:
     - kind: orchestrator
       seconds: 238
@@ -69,11 +74,11 @@ forecast:
 Unsigned builds are allowed only on purpose: `dashboard.allow_unsigned` in the host's flai configuration, settable per project in the manifest, default off (ADR-0070). With it on, flai dials an unlisted container and accepts a peer without a stamp, and `flai dashboard` tells the container to accept an unsigned flai. Allowed is never silent.
 
 ## Acceptance criteria
-- [ ] `dashboard.allow_unsigned` exists in the configuration and the manifest, default false, with a row in `docs/operators/settings.md` and the generated flag table; `flai dashboard --allow-unsigned` sets it for one start.
-- [ ] With it on, or with `--build`, `flai dashboard` starts the container with `FLAIOVER_ALLOW_UNSIGNED=1`; the dashboard accepts a flai without a valid stamp only when that variable is set, and flai dials an unlisted container and accepts a dashboard without a stamp only when the setting is on.
-- [ ] Allowed is shown: `flai serve` logs one `warn` per connection naming the unsigned side, `flai serve status`, `flai dashboard status`, and `flai host status` say "unsigned allowed" with the side, the dashboard shows a banner on every page naming which side is unsigned, and the connection list says it per project; a signed pair with the setting on shows nothing.
-- [ ] This repository's own contributor documentation says to set the allowance in `.flai-cache/config.json`, since it builds both from source, and the setting is covered by the template's operator documentation.
-- [ ] Tests on both sides cover allowed and refused, each side unsigned, and the banner.
+- [x] `dashboard.allow_unsigned` exists in the configuration and the manifest, default false, with a row in `docs/operators/settings.md` and the generated flag table; `flai dashboard --allow-unsigned` sets it for one start.
+- [x] With it on, or with `--build`, `flai dashboard` starts the container with `FLAIOVER_ALLOW_UNSIGNED=1`; the dashboard accepts a flai without a valid stamp only when that variable is set, and flai dials an unlisted container and accepts a dashboard without a stamp only when the setting is on.
+- [x] Allowed is shown: `flai serve` logs one `warn` per connection naming the unsigned side, `flai serve status`, `flai dashboard status`, and `flai host status` say "unsigned allowed" with the side, the dashboard shows a banner on every page naming which side is unsigned, and the connection list says it per project; a signed pair with the setting on shows nothing.
+- [x] This repository's own contributor documentation says to set the allowance in `.flai-cache/config.json`, since it builds both from source, and the setting is covered by the template's operator documentation.
+- [x] Tests on both sides cover allowed and refused, each side unsigned, and the banner.
 
 ## Tasks
 - T-1259 dashboard.allow_unsigned exists in the host configuration and the manifest, default false, with its settings row
@@ -113,3 +118,16 @@ Forecast: 1h30m, kept. flai replays the delivery from the pull order whenever it
 - S-0237 has six tasks in three layers with code on both sides and is planned at 1h30m. This story has eight in four layers on both sides, each smaller: a setting threaded through what S-0237 and S-0238 built. So 1h30m stands over flai's 1h8m.
 
 Cost of delay: 3.85 USD a week, as `flai cod` gives it, down from 3.95 after S-0238's forecast rose. It is this story's 1h30m share of the 9h45m forecast over E-0015's eight open stories, applied to the epic's 25 USD a week penalty, which the operator set on TH-0312. Kept as given: each story closes part of one exposure, and that exposure closes only when the chain is done, so a share by work fits.
+
+### Accepted by the orchestrator
+
+- Verified: 2be3d88e4a5db11699d9a120a7e05125b495445c
+- At: 2026-10-12T22:18:01Z
+
+Verdict: pass at 2be3d88e4a5db11699d9a120a7e05125b495445c; flai verify passed every step at that commit, the verifier matched all five criteria to the diff, released builds stay strict by default, and no secret value is in it. Noted for the operator: a project's manifest can set dashboard.allow_unsigned true over a host setting of false, as the story's goal asks.
+
+- 1: flai/internal/config/config.go, flai/internal/manifest/manifest.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/cmd/dashboard.go
+- 2: flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/agent.ts, flai/internal/serve/serve.go, flai/internal/channel/channel.go
+- 3: flai/internal/channel/channel.go, flai/cmd/serve.go, flai/cmd/host.go, flai/cmd/dashboard_agent.go, flaiover/src/lib/components/UnsignedBanner.svelte, flaiover/src/routes/+layout.svelte, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/routes/api/projects/+server.ts
+- 4: docs/contributors/index.md, template/root/docs/operators/index.md.tmpl, docs/operators/index.md
+- 5: flai/internal/channel/channel_test.go, flai/internal/serve/serve_test.go, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/components/UnsignedBanner.svelte.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts, flaiover/src/routes/api/projects/projects.test.ts

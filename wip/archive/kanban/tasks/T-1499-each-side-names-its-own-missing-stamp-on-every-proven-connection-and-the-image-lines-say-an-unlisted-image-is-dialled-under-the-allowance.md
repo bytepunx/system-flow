@@ -3,11 +3,11 @@ id: T-1499
 type: task
 nature: remediation
 title: Each side names its own missing stamp on every proven connection, and the image lines say an unlisted image is dialled under the allowance
-status: in-progress
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-12T21:56:34Z
-updated: 2026-10-12T21:56:37Z
+updated: 2026-10-12T22:06:48Z
 transitions:
   - to: ready
     at: 2026-10-12T21:56:36Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T21:56:37Z
     by: agent-S-0239
+  - to: done
+    at: 2026-10-12T22:06:48Z
+    by: agent-S-0239
 stream: S-0239
 tags: []
-touches: [flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/agent.test.ts, flai/internal/serve/imagecheck.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/cmd/serve.go, flai/cmd/serve_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, design/system/release-signing.md, docs/operators/index.md, design/system/flai-cli.md]
+touches: [flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/agent.test.ts, flai/internal/serve/imagecheck.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/cmd/serve.go, flai/cmd/serve_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, design/system/release-signing.md, docs/operators/index.md, design/system/flai-cli.md, docs/users/flai.md, flaiover/src/lib/server/agent.ts]
 after: [T-1265, T-1266]
+usage:
+  source: log
+  seconds: 611
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 39653
+      cache_read: 5795045
+      cache_write: 224503
+      cost: 3.2263
 ---
 # T-1499 Each side names its own missing stamp on every proven connection, and the image lines say an unlisted image is dialled under the allowance
 
