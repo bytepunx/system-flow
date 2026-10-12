@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 415.2674
-accrued_seconds: 340031
-tasks_completed: 395
-last_run: 2026-10-12T17:17:49Z
+accrued_cost: 416.8118
+accrued_seconds: 340156
+tasks_completed: 396
+last_run: 2026-10-12T17:19:54Z
 ---
 
 # Orchestrator activity
@@ -2776,6 +2776,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0372
 - Seconds: 7
 - Cost: 0.1557 USD, estimated
+
+### 2026-10-12T17:19:54Z
+
+- Summary: Accepted S-0350 at 2c644431 under accept_reviews. flai verify passed every step at the branch head, and the branch contained main. The verifier matched all five criteria and found no secret: the claude-code and command adapters take the resolved provider; serve, plan, orchestrate, and analyze refuse a missing provider or key; the key reaches only the child's environment. Noted one minor doc gap: docs/operators/index.md omits {provider}. The dry-run had no blocker. flai told S-0233, S-0237, S-0359, S-0367, and S-0368 about the overlaps.
+- Items: S-0350
+- Seconds: 125
+- Cost: 1.5444 USD, estimated
 
 ## Refusals
 

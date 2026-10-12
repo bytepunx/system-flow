@@ -7,7 +7,7 @@ status: in-progress
 parent: S-0237
 owner: alex
 created: 2026-10-07T23:00:26Z
-updated: 2026-10-12T17:05:53Z
+updated: 2026-10-12T17:20:03Z
 transitions:
   - to: ready
     at: 2026-10-12T17:05:52Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0237
 stream: S-0237
 tags: [dashboard]
-touches: [flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts]
+touches: [flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/server/project-events.test.ts]
 ---
 # T-1248 The dashboard verifies flai's release stamp in hello before the proof, answers with its own, and closes an unsigned flai with 4403
 

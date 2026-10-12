@@ -7,7 +7,7 @@ status: in-progress
 parent: S-0237
 owner: alex
 created: 2026-10-07T23:00:18Z
-updated: 2026-10-12T17:05:51Z
+updated: 2026-10-12T17:20:03Z
 transitions:
   - to: ready
     at: 2026-10-12T17:05:51Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0237
 stream: S-0237
 tags: [cli]
-touches: [flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/internal/channel/channeltest/dashboard.go, flai/internal/buildinfo/stamp.go, flai/internal/buildinfo/stamp_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
+touches: [flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/internal/channel/channeltest/dashboard.go, flai/internal/buildinfo/stamp.go, flai/internal/buildinfo/stamp_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/projects_test.go, flai/internal/serve/outdated_test.go, flai/internal/serve/candidates_test.go, flai/internal/serve/below_test.go]
 ---
 # T-1247 flai sends its release stamp in hello, verifies the dashboard's before the proof, and closes or backs off a minute on 4403
 
