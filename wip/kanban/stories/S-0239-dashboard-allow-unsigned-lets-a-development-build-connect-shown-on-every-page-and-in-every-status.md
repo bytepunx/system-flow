@@ -7,7 +7,7 @@ status: ready
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T18:30:15Z
+updated: 2026-10-12T20:01:35Z
 transitions:
   - to: ready
     at: 2026-10-12T18:29:28Z
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-07T23:10:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-12T23:29:00Z
-  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0236, S-0363, S-0369, S-0370, S-0351 and S-0238."
+  delivery: 2026-10-12T23:21:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0370, S-0351 and S-0238."
   by: flai
-  at: 2026-10-12T18:30:15Z
+  at: 2026-10-12T20:01:35Z
 ---
 # S-0239 dashboard.allow_unsigned lets a development build connect, shown on every page and in every status
 

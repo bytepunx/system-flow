@@ -3,15 +3,18 @@ id: S-0238
 type: story
 nature: feature
 title: flai measures the container's image through Docker before it dials and refuses one no signed list names
-status: ready
+status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T18:29:30Z
+updated: 2026-10-12T20:01:45Z
 transitions:
   - to: ready
     at: 2026-10-12T18:29:30Z
     by: alex
+  - to: in-progress
+    at: 2026-10-12T20:01:45Z
+    by: agent-S-0238
 tags: [cli]
 topics: [release, security]
 touches: [flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/imagecheck.go, flai/internal/serve/imagecheck_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/cmd/dashboard_test.go, docs/operators/index.md, docs/users/flai-reference.md, design/system/release-signing.md]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-10-07T23:06:46Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-12T21:38:00Z
-  basis: "Its own forecast of 1h15m; 3rd in the pull order with an in-progress limit of 5, behind S-0236, S-0363, S-0369, S-0373, S-0370 and S-0351."
+  delivery: 2026-10-12T21:32:00Z
+  basis: "Its own forecast of 1h15m; 3rd in the pull order with an in-progress limit of 5, behind S-0370 and S-0351."
   by: flai
-  at: 2026-10-12T18:20:02Z
+  at: 2026-10-12T20:01:35Z
 ---
 # S-0238 flai measures the container's image through Docker before it dials and refuses one no signed list names
 
