@@ -2,12 +2,12 @@
 id: I-0114
 title: flai verify's integration tier keeps only the last lines of go test's output, so the failing test is not named
 class: efficiency
-status: open
+status: closed
 count: 2
 cost: 13m
 first_reported: 2026-10-07T09:20:56Z
 last_reported: 2026-10-08T00:43:55Z
-updated: 2026-10-08T00:43:55Z
+updated: 2026-10-12T15:56:50Z
 ---
 
 # I-0114 flai verify's integration tier keeps only the last lines of go test's output, so the failing test is not named
@@ -28,3 +28,4 @@ S-0324's close-out failed its integration tier after 3m49s. Neither the output, 
 ## Remediation
 
 Story S-0327 remediates this issue, created from it at 2026-10-07T18:59:59Z.
+Closed 2026-10-12T15:56:50Z: fixed by S-0313, which remediates its duplicate I-0113: a failing plain tier's finding keeps go test's failure lines ahead of its last lines, and the integration tier reads go test -json, so flai verify names the failing test
