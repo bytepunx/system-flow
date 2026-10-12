@@ -2,13 +2,17 @@ package guard
 
 import (
 	"cmp"
+	"context"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/ask"
 	"github.com/bytepunx/system-flow/flai/internal/protected"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Kind is what a call does, as far as the guard tells calls apart.
@@ -78,7 +82,7 @@ type Args struct {
 type Outcome int
 
 // The outcomes: Allow lets the call through, Deny refuses it, and Ask puts
-// it to a person.
+// it to a person: the harness's own permission tool asks, or Hold does.
 const (
 	Allow Outcome = iota
 	Deny
@@ -108,7 +112,9 @@ func deny(why string) Verdict {
 
 // Decide decides on c under g's policy: the shared paths for every caller,
 // then the rules of a sub-agent, or of the session's own role, and the
-// author a served agent writes as.
+// author a served agent writes as. A story's own agent's write to a path flai
+// protects in its worktree, which they would allow, is put to the story's
+// owner (Ask) while auto-approve is off.
 func Decide(g Guard, c Call) Verdict {
 	if v := g.shared(c); v.Outcome != Allow {
 		return v
@@ -132,7 +138,72 @@ func Decide(g Guard, c Call) Verdict {
 	}
 	// a call its role refuses whoever it names is refused for the role's
 	// reason, so that leaving out --by does not meet a second refusal
-	return deny(cmp.Or(why, g.authors(c)))
+	if v := deny(cmp.Or(why, g.authors(c))); v.Outcome != Allow || c.Role != "" {
+		return v
+	}
+	return g.ask(c)
+}
+
+// ask puts to the story's owner a write by a story's own agent to a path flai
+// protects, other than one in .git, inside the story's worktree, while
+// auto-approve is off (ADR-0086, ADR-0130); it allows every other call.
+func (g Guard) ask(c Call) Verdict {
+	if c.Kind != FileWrite || c.Story == "" || g.AutoApprove {
+		return Verdict{}
+	}
+	rel, ok := inWorktree(c)
+	if !ok || !protected.Path(rel) || protected.Git(rel) {
+		return Verdict{}
+	}
+	story := workitem.CanonicalID(c.Story)
+	return Verdict{Outcome: Ask, Reason: fmt.Sprintf("%s of %s waits on the story's owner: a path flai protects is written only with the owner's approval on a thread on %s (ADR-0086, ADR-0130)", c.Name, rel, story)}
+}
+
+// inWorktree is the path c writes relative to its story's worktree, slash
+// separated, and whether it lies inside it: below the segment
+// .flai-cache/worktrees/<story>/ of the cleaned path, where
+// workitem.Repo.WorktreePath puts the worktree in any project.
+func inWorktree(c Call) (string, bool) {
+	if c.Story == "" || c.Path == "" {
+		return "", false
+	}
+	segment := "/.flai-cache/worktrees/" + workitem.CanonicalID(c.Story) + "/"
+	clean := filepath.ToSlash(filepath.Clean(c.Path))
+	_, rel, ok := strings.Cut(clean, segment)
+	return rel, ok && rel != ""
+}
+
+// askedWhy is why a person must answer a write the guard holds itself, in no
+// harness's terms.
+const askedWhy = "flai protects the path and does not let an agent write it without a person's approval (ADR-0086, ADR-0130)."
+
+// askedChange is what the thread shows under the question: a Call carries
+// the path it writes, not the content.
+const askedChange = "The harness gave flai the path alone, not what the call would write."
+
+// Hold decides on c under g's policy as Decide does and, when the verdict is
+// Ask, holds the call: it asks the story's owner through a, within bound, the
+// harness's, and allows the call or denies it with ask's reason. A reader
+// whose harness calls no permission tool of flai's holds through it; any
+// other verdict comes back as Decide gives it.
+func Hold(ctx context.Context, g Guard, a ask.Asker, c Call, bound time.Duration) Verdict {
+	v := Decide(g, c)
+	if v.Outcome != Ask {
+		return v
+	}
+	rel, _ := inWorktree(c)
+	story, err := a.Repo.Get(c.Story)
+	if err != nil {
+		return deny(fmt.Sprintf("could not read %s for its owner, so %s was not written: %v", c.Story, rel, err))
+	}
+	if story.Status != workitem.InProgress {
+		return deny(fmt.Sprintf("%s is %s, not in progress, so %s was not written: a path flai protects is asked for only in an in-progress story's worktree", story.ID, story.Status, rel))
+	}
+	req := ask.Request{Story: story.ID, Owner: story.Owner, Agent: g.selves(c)[0], Tool: c.Name, Path: rel, Why: askedWhy, Change: askedChange}
+	if ok, why := a.Hold(ctx, req, bound); !ok {
+		return deny(why)
+	}
+	return Verdict{}
 }
 
 // asSubAgent decides on a sub-agent's call: it reads, writes an ADR without
@@ -144,7 +215,7 @@ func (g Guard) asSubAgent(c Call) Verdict {
 	switch c.Kind {
 	case FileWrite:
 		if file, ok := protectedWrite(c); ok && !g.AutoApprove {
-			return deny(fmt.Sprintf("a sub-agent (%s) cannot use %s on %s: a path Claude Code protects, such as a file in a .claude/ folder or .mcp.json, is written only with the operator's approval on a thread, which would hold this call, and the layer with it, until they answer (ADR-0086, ADR-0106). Put the file's whole new content in your final message; the story's agent writes it.", who, c.Name, file))
+			return deny(fmt.Sprintf("a sub-agent (%s) cannot use %s on %s: a path flai protects, such as a file in a .claude/ folder or .mcp.json, is written only with the operator's approval on a thread, which would hold this call, and the layer with it, until they answer (ADR-0086, ADR-0106). Put the file's whole new content in your final message; the story's agent writes it.", who, c.Name, file))
 		}
 	case FlaiTool:
 		switch {

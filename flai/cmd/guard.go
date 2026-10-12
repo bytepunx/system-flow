@@ -257,7 +257,7 @@ session, where none of those is set, a file edit does not run it.`,
 					g.Root, g.Reports = p.Root, analysis.Dir(p.Manifest)
 				}
 			}
-			if _, ok := guard.ProtectedWrite(call); ok && call.Subagent {
+			if _, ok := guard.ProtectedWrite(call); ok && (call.Subagent || g.Role == "" && g.Story != "") {
 				g.AutoApprove = a.guardAutoApprove()
 			}
 			if g.Role == "" && g.Story != "" && !call.Subagent {

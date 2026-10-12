@@ -34,7 +34,8 @@ const MCPPrefix = "mcp__flai__"
 // fileWrites are Claude Code's tools that write a file, each a FileWrite
 // call: the planner and the orchestrator never use them, the analyzer only
 // on its report (S-0223), and a sub-agent on a file in a .claude/ folder only
-// while auto-approve is on.
+// while auto-approve is on; a story's agent's on a path flai protects in its
+// worktree is asked, through permission_prompt, while auto-approve is off.
 var fileWrites = []string{"Edit", "MultiEdit", "NotebookEdit", "Write"}
 
 // Event is the part of a Claude Code hook's input the guard reads: a
@@ -97,10 +98,11 @@ type Refusal struct {
 func (g Guard) Check(e Event) string { return g.Decide(e).Why }
 
 // Decide decides on a Claude Code call, as Decide does on the Call it
-// makes: the zero Refusal lets it through.
+// makes: the zero Refusal lets it through. An Ask is no refusal: Claude
+// Code's own permission handling asks, through permission_prompt.
 func (g Guard) Decide(e Event) Refusal {
 	v := Decide(g, g.call(e))
-	if v.Outcome == Allow {
+	if v.Outcome != Deny {
 		return Refusal{}
 	}
 	return Refusal{Why: v.Reason, Call: v.Call, Needs: v.Needs}
@@ -161,11 +163,13 @@ func (claudeCode) Read(data []byte, g Guard) (Hook, error) {
 	return Hook{Call: g.call(e)}, nil
 }
 
-// Answer lets an allowed call through with exit 0, and refuses any other, an
-// Ask among them, with ClaudeCodeRefuses and its reason on stderr, which
-// Claude Code hands back to the caller.
+// Answer refuses a denied call with ClaudeCodeRefuses and its reason on
+// stderr, which Claude Code hands back to the caller, and passes any other
+// with exit 0 and nothing on stderr: an Ask goes on to Claude Code's own
+// permission handling, which calls permission_prompt, flai's hold-and-ask in
+// Claude Code's form (ADR-0130), so the guard does not hold it.
 func (claudeCode) Answer(v Verdict, stderr io.Writer) int {
-	if v.Outcome == Allow {
+	if v.Outcome != Deny {
 		return 0
 	}
 	fmt.Fprintln(stderr, v.Reason)

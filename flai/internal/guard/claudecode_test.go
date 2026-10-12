@@ -86,9 +86,10 @@ func TestClaudeCodesReaderFailsOnInputItCannotRead(t *testing.T) {
 	}
 }
 
-// S-0353: Claude Code's reader answers an allowed call with exit 0 and
-// nothing on stderr, and a refusal, or an ask, with exit 2 and the reason on
-// stderr.
+// S-0353, S-0354: Claude Code's reader answers an allowed call with exit 0
+// and nothing on stderr, a refusal with exit 2 and the reason on stderr, and
+// an ask as it does an allowed call, so that Claude Code's own permission
+// handling calls permission_prompt, which asks (ADR-0130).
 func TestClaudeCodesReaderAnswersTheVerdictWithItsExit(t *testing.T) {
 	for _, tc := range []struct {
 		v      Verdict
@@ -97,12 +98,31 @@ func TestClaudeCodesReaderAnswersTheVerdictWithItsExit(t *testing.T) {
 	}{
 		{Verdict{}, 0, ""},
 		{Verdict{Outcome: Deny, Reason: "it reads"}, 2, "it reads\n"},
-		{Verdict{Outcome: Ask, Reason: "ask the operator"}, 2, "ask the operator\n"},
+		{Verdict{Outcome: Ask, Reason: "ask the operator"}, 0, ""},
 	} {
 		var stderr bytes.Buffer
 		if code := claudeCodeReader(t).Answer(tc.v, &stderr); code != tc.code || stderr.String() != tc.stderr {
 			t.Errorf("%+v: exit %d, stderr %q; want %d, %q", tc.v, code, stderr.String(), tc.code, tc.stderr)
 		}
+	}
+}
+
+// S-0354: the story's agent's Write of its worktree's .claude/settings.json,
+// read from Claude Code's hook input, is asked, and Claude Code's entry
+// refuses nothing for it: Claude Code calls permission_prompt as before.
+func TestClaudeCodesReaderPassesAStoryAgentsProtectedWriteOnToAsk(t *testing.T) {
+	gd := Guard{Commands: g.Commands, Story: "S-0001", Served: true}
+	file := "/home/op/proj/.flai-cache/worktrees/S-0001/.claude/settings.json"
+	input := `{"session_id":"s1","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"` + file + `","content":"{}"}}`
+	h, err := claudeCodeReader(t).Read([]byte(input), gd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := Decide(gd, h.Call); v.Outcome != Ask {
+		t.Errorf("decided %+v, want an ask", v)
+	}
+	if why := gd.Check(fileEdit("Write", file)); why != "" {
+		t.Errorf("an ask reported as a refusal: %q", why)
 	}
 }
 
