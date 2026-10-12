@@ -1,17 +1,121 @@
 package cmd
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 )
 
 // dashboardTags are the stand-in's flaiover tags: three releases, out of
 // order, and a prerelease, which is not one.
 var dashboardTags = []string{"flaiover/v0.3.0", "flaiover/v0.10.0", "flaiover/v0.4.0", "flaiover/v0.5.0-rc.1"}
+
+// flaioverRelease is one flaiover GitHub release dashboardStandIn serves: its
+// version, and its assets by name.
+type flaioverRelease struct {
+	version string
+	assets  map[string][]byte
+}
+
+// digestListFor is a well-formed digest list naming version.
+func digestListFor(version string) []byte {
+	ref := "ghcr.io/bytepunx/flaiover:" + version
+	return []byte("sha256:" + strings.Repeat("a", 64) + " " + ref + " index\n" +
+		"sha256:" + strings.Repeat("b", 64) + " " + ref + " linux/amd64\n")
+}
+
+// signedFlaiover is release version publishing list as its digest list,
+// signed by key, beside cosign.pub, key's public half.
+func signedFlaiover(t *testing.T, version string, list []byte, key *ecdsa.PrivateKey) flaioverRelease {
+	t.Helper()
+	name := "flaiover_" + version + ".digests"
+	return flaioverRelease{version: version, assets: map[string][]byte{
+		name:          list,
+		name + ".sig": signBlob(t, key, list),
+		"cosign.pub":  publicPEM(t, key),
+	}}
+}
+
+// otherKey is a key this flai does not trust.
+func otherKey(t *testing.T) *ecdsa.PrivateKey {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+// dashboardStandIn answers as GitHub's API does for o/r: the flaiover tags
+// given, and rels as its GitHub releases, each asset at
+// /assets/<version>/<name>; asked lists the paths asked for so far.
+func dashboardStandIn(t *testing.T, tags []string, rels ...flaioverRelease) (url string, asked func() []string) {
+	t.Helper()
+	var mu sync.Mutex
+	var paths []string
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.URL.Path)
+		mu.Unlock()
+		switch r.URL.Path {
+		case "/repos/o/r/releases":
+			list := make([]string, len(rels))
+			for i, rel := range rels {
+				var assets []string
+				for name := range rel.assets {
+					assets = append(assets, fmt.Sprintf(`{"name":%q,"url":"%s/assets/%s/%s"}`, name, srv.URL, rel.version, name))
+				}
+				list[i] = fmt.Sprintf(`{"tag_name":"flaiover/v%s","assets":[%s]}`, rel.version, strings.Join(assets, ","))
+			}
+			fmt.Fprint(w, "["+strings.Join(list, ",")+"]")
+		case "/repos/o/r/git/matching-refs/tags/flaiover/v":
+			refs := make([]string, len(tags))
+			for i, tag := range tags {
+				refs[i] = `{"ref":"refs/tags/` + tag + `"}`
+			}
+			fmt.Fprint(w, "["+strings.Join(refs, ",")+"]")
+		default:
+			for _, rel := range rels {
+				if name, ok := strings.CutPrefix(r.URL.Path, "/assets/"+rel.version+"/"); ok {
+					if data, ok := rel.assets[name]; ok {
+						_, _ = w.Write(data)
+						return
+					}
+				}
+			}
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv.URL, func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(paths)
+	}
+}
+
+// signedDashboardStandIn serves dashboardTags with each release's digest
+// list signed by a key this flai trusts for the rest of t.
+func signedDashboardStandIn(t *testing.T) (url string, asked func() []string) {
+	t.Helper()
+	key := trustTestKey(t)
+	var rels []flaioverRelease
+	for _, v := range []string{"0.3.0", "0.10.0", "0.4.0"} {
+		rels = append(rels, signedFlaiover(t, v, digestListFor(v), key))
+	}
+	return dashboardStandIn(t, dashboardTags, rels...)
+}
 
 // versionsProject is a project whose configured dashboard tag is tag.
 func versionsProject(t *testing.T, tag string) string {
@@ -47,7 +151,7 @@ func marksOf(out string) ([]string, map[string]string) {
 // tag, and the newest.
 func TestDashboardVersions(t *testing.T) {
 	root := versionsProject(t, "0.4.0")
-	api, _ := releasesStandIn(t, "[]", dashboardTags...)
+	api, _ := signedDashboardStandIn(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{"flaiover": true},
 		env: map[string]string{"flaiover": "PATH=/usr/bin\nFLAIOVER_VERSION=0.3.0\n"}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "versions", "--repo", "o/r", "--api", api)
@@ -94,7 +198,7 @@ func TestDashboardVersions(t *testing.T) {
 // is not a release is said to be none.
 func TestDashboardVersionsNotesWhatIsNotARelease(t *testing.T) {
 	root := versionsProject(t, "latest")
-	api, _ := releasesStandIn(t, "[]", dashboardTags...)
+	api, _ := signedDashboardStandIn(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{"flaiover": true},
 		containerRef: map[string]string{"flaiover": "ghcr.io/bytepunx/flaiover:0.4.0"}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "versions", "--repo", "o/r", "--api", api)
@@ -114,7 +218,7 @@ func TestDashboardVersionsNotesWhatIsNotARelease(t *testing.T) {
 // S-0298: the list needs no Docker; without it nothing is marked running.
 func TestDashboardVersionsWithoutDocker(t *testing.T) {
 	root := versionsProject(t, "0.4.0")
-	api, _ := releasesStandIn(t, "[]", dashboardTags...)
+	api, _ := signedDashboardStandIn(t)
 	f := &fakeRunner{missing: true, images: map[string]bool{}, running: map[string]bool{}}
 	out, errOut, code := runWith(t, root, f, "dashboard", "versions", "--repo", "o/r", "--api", api)
 	if code != 0 {
@@ -138,7 +242,7 @@ func TestDashboardVersionsWithoutDocker(t *testing.T) {
 // docker call.
 func TestDashboardUpgradePublishedRefusesAnUnpublishedTag(t *testing.T) {
 	root := versionsProject(t, "latest")
-	api, asked := releasesStandIn(t, "[]", dashboardTags...)
+	api, asked := signedDashboardStandIn(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{"flaiover": true}}
 	for _, tag := range []string{"0.9.9", "v0.4.0", "0.5.0-rc.1"} {
 		_, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--published", "--tag", tag, "--repo", "o/r", "--api", api)
@@ -164,7 +268,7 @@ func TestDashboardUpgradePublishedRefusesAnUnpublishedTag(t *testing.T) {
 // for that container once: dashboard.tag is not written.
 func TestDashboardUpgradePublishedDeploysAPublishedTag(t *testing.T) {
 	root := versionsProject(t, "latest")
-	api, _ := releasesStandIn(t, "[]", dashboardTags...)
+	api, _ := signedDashboardStandIn(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	if _, errOut, code := runWith(t, root, f, "dashboard"); code != 0 {
 		t.Fatalf("start: %s", errOut)
@@ -187,5 +291,103 @@ func TestDashboardUpgradePublishedDeploysAPublishedTag(t *testing.T) {
 	// a tag without --published is used as it is, unchecked
 	if _, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--tag", "mirror-build", "--api", "http://127.0.0.1:1"); code != 0 {
 		t.Errorf("unchecked tag: %d %s", code, errOut)
+	}
+}
+
+// S-0236, ADR-0070: dashboard versions marks each release with no digest
+// list this flai can verify, saying why, in its table and its JSON, and
+// leaves a signed one unmarked.
+func TestDashboardVersionsMarksReleasesWithNoListItCanVerify(t *testing.T) {
+	root := versionsProject(t, "0.9.0")
+	key, other := trustTestKey(t), otherKey(t)
+	noList := signedFlaiover(t, "0.8.0", digestListFor("0.8.0"), key)
+	delete(noList.assets, "flaiover_0.8.0.digests")
+	altered := signedFlaiover(t, "0.7.0", digestListFor("0.7.0"), key)
+	altered.assets["flaiover_0.7.0.digests"] = digestListFor("0.7.1")
+	unknown := signedFlaiover(t, "0.6.0", digestListFor("0.6.0"), other)
+	forAnother := signedFlaiover(t, "0.5.0", digestListFor("0.4.0"), key)
+	malformed := signedFlaiover(t, "0.4.0", []byte("not a digest list\n"), key)
+	api, _ := dashboardStandIn(t,
+		[]string{"flaiover/v0.10.0", "flaiover/v0.9.0", "flaiover/v0.8.0", "flaiover/v0.7.0", "flaiover/v0.6.0", "flaiover/v0.5.0", "flaiover/v0.4.0"},
+		signedFlaiover(t, "0.10.0", digestListFor("0.10.0"), key), noList, altered, unknown, forAnother, malformed)
+	f := &fakeRunner{missing: true, images: map[string]bool{}, running: map[string]bool{}}
+
+	out, errOut, code := runWith(t, root, f, "dashboard", "versions", "--repo", "o/r", "--api", api)
+	if code != 0 {
+		t.Fatalf("versions: %d %s", code, errOut)
+	}
+	_, marks := marksOf(out)
+	wantMarks := map[string]string{
+		"0.10.0": "latest",
+		"0.9.0":  "configured, not deployable: it has no GitHub release with a signed digest list",
+		"0.8.0":  "not deployable: it publishes no signed digest list",
+		"0.7.0":  "not deployable: its digest list's signature does not verify, so it may have been altered",
+		"0.6.0":  "not deployable: its digest list is signed by a key this flai does not trust",
+		"0.5.0":  "not deployable: its digest list is for another version",
+		"0.4.0":  "not deployable: its digest list is not in the format release-flaiover.yml writes",
+	}
+	for v, w := range wantMarks {
+		if marks[v] != w {
+			t.Errorf("%s: %q, want %q\n%s", v, marks[v], w, out)
+		}
+	}
+
+	out, errOut, code = runWith(t, root, f, "dashboard", "versions", "--repo", "o/r", "--api", api, "--json")
+	if code != 0 {
+		t.Fatalf("versions --json: %d %s", code, errOut)
+	}
+	var listed []map[string]any
+	if err := json.Unmarshal([]byte(out), &listed); err != nil || len(listed) != 7 {
+		t.Fatalf("json: %v %s", err, out)
+	}
+	wantSignature := []string{"", "missing", "missing", "bad", "unknown-key", "bad", "bad"}
+	for i, w := range wantSignature {
+		got := listed[i]
+		if w == "" {
+			for _, k := range []string{"unverifiable", "signature", "reason"} {
+				if _, ok := got[k]; ok {
+					t.Errorf("a signed release has no %s: %v", k, got)
+				}
+			}
+			continue
+		}
+		reason := strings.TrimPrefix(wantMarks[got["version"].(string)], "configured, ")
+		if got["unverifiable"] != true || got["signature"] != w || got["reason"] != strings.TrimPrefix(reason, "not deployable: ") {
+			t.Errorf("%d: %v, want signature %s", i, got, w)
+		}
+	}
+}
+
+// S-0236, ADR-0070: with --published a release with no digest list this flai
+// can verify is refused, naming why and the deployable ones, before any
+// docker call; TestDashboardUpgradePublishedDeploysAPublishedTag deploys a
+// signed one.
+func TestDashboardUpgradePublishedRefusesAnUnverifiableRelease(t *testing.T) {
+	root := versionsProject(t, "latest")
+	key := trustTestKey(t)
+	api, _ := dashboardStandIn(t, []string{"flaiover/v0.10.0", "flaiover/v0.4.0", "flaiover/v0.3.0"},
+		signedFlaiover(t, "0.10.0", digestListFor("0.10.0"), otherKey(t)),
+		signedFlaiover(t, "0.3.0", digestListFor("0.3.0"), key))
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	for tag, why := range map[string]string{
+		"0.10.0": "it is not deployable: its digest list is signed by a key this flai does not trust",
+		"0.4.0":  "it is not deployable: it has no GitHub release with a signed digest list",
+	} {
+		_, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--published", "--tag", tag, "--repo", "o/r", "--api", api)
+		if code == 0 || !strings.Contains(errOut, why) || !strings.Contains(errOut, "deployable are 0.3.0") {
+			t.Errorf("%s refused: %d %s", tag, code, errOut)
+		}
+	}
+	for _, c := range f.calls {
+		if strings.HasPrefix(c, "docker ") {
+			t.Errorf("no docker call before the refusal: %s", c)
+		}
+	}
+
+	// with none deployable, the refusal says so
+	none, _ := dashboardStandIn(t, []string{"flaiover/v0.4.0"})
+	_, errOut, code := runWith(t, root, f, "dashboard", "upgrade", "--published", "--tag", "0.4.0", "--repo", "o/r", "--api", none)
+	if code == 0 || !strings.Contains(errOut, "no published dashboard release of o/r has a digest list this flai can verify") {
+		t.Errorf("none deployable: %d %s", code, errOut)
 	}
 }
