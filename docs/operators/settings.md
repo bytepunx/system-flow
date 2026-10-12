@@ -92,7 +92,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `tests[].command` | none | Its argument list, run without a shell; `{packages}`, `{importers}`, or `{files}`, each as an argument of its own, stands for what its paths selected: the Go packages, those packages and every package of the module that imports them, or the files ([Project manifest](../../design/system/project-manifest.md)) |
 | `tests[].dir` | the root | The folder it runs in, relative to the root and inside it |
 | `tests[].paths` | none; required unless `all_only` | Glob patterns from the root, as `claims.shared`'s, that select the tier for a changed or named path; one beginning with `!` takes paths out |
-| `tests[].format` | `plain` | How its output becomes findings: `go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`, which reads only the exit status |
+| `tests[].format` | `plain` | How its output becomes findings: `go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`, whose one finding is the exit status after the last 20 lines of output and, ahead of them, the `go test` failure lines those left out (`--- FAIL:` with the lines under it, `FAIL<tab><package>`, `panic:`) ([Project manifest](../../design/system/project-manifest.md)) |
 | `tests[].all_only` | `false` | Run the tier only under `flai test --all`, as integration and smoke tests are |
 | `tests[].all_command` | `command` | The argument list run instead of `command` under `--all`; it takes no placeholder |
 | `tests[].covers` | none | The tiers this one runs everything of, by name, which are skipped when it is selected with them |
