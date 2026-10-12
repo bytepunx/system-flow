@@ -36,7 +36,9 @@ func tarball(t *testing.T, name string, content []byte) []byte {
 // fakeGitHub serves flai releases over two pages of the releases API, newest
 // first by publish date as the API does, mixed with what is not published: a
 // draft, a prerelease, a suffixed version, a leading zero, and a flaiover
-// release. It serves the flaiover tags over two pages of matching refs.
+// release. Every flai release publishes checksums.txt signed by the trusted
+// test key, and that key as cosign.pub. It serves the flaiover tags over two
+// pages of matching refs.
 func fakeGitHub(t *testing.T, archive, sums []byte, wantToken string) *httptest.Server {
 	t.Helper()
 	return fakeGitHubBehind(t, archive, sums, wantToken, func(h http.Handler) http.Handler { return h })
@@ -45,6 +47,8 @@ func fakeGitHub(t *testing.T, archive, sums []byte, wantToken string) *httptest.
 // fakeGitHubBehind is fakeGitHub with front standing before its handler.
 func fakeGitHubBehind(t *testing.T, archive, sums []byte, wantToken string, front func(http.Handler) http.Handler) *httptest.Server {
 	t.Helper()
+	sig := sign(t, privateKey(t, "trusted"), sums)
+	pub := testdataFile(t, "trusted.pub")
 	var srv *httptest.Server
 	srv = httptest.NewServer(front(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if wantToken != "" && r.Header.Get("Authorization") != "Bearer "+wantToken {
@@ -52,7 +56,7 @@ func fakeGitHubBehind(t *testing.T, archive, sums []byte, wantToken string, fron
 			return
 		}
 		assets := func(v string) string {
-			return fmt.Sprintf(`"assets":[{"name":"checksums.txt","url":"%s/assets/sums"},{"name":"flai_%s_linux_amd64.tar.gz","url":"%s/assets/archive"},{"name":"flai_%s_windows_amd64.zip","url":"%s/assets/zip"}]`, srv.URL, v, srv.URL, v, srv.URL)
+			return fmt.Sprintf(`"assets":[{"name":"checksums.txt","url":"%s/assets/sums"},{"name":"checksums.txt.sig","url":"%s/assets/sig"},{"name":"cosign.pub","url":"%s/assets/pub"},{"name":"flai_%s_linux_amd64.tar.gz","url":"%s/assets/archive"},{"name":"flai_%s_windows_amd64.zip","url":"%s/assets/zip"}]`, srv.URL, srv.URL, srv.URL, v, srv.URL, v, srv.URL)
 		}
 		page := r.URL.Query().Get("page")
 		switch {
@@ -79,6 +83,10 @@ func fakeGitHubBehind(t *testing.T, archive, sums []byte, wantToken string, fron
 			_, _ = w.Write(archive)
 		case r.URL.Path == "/assets/sums":
 			_, _ = w.Write(sums)
+		case r.URL.Path == "/assets/sig":
+			_, _ = w.Write(sig)
+		case r.URL.Path == "/assets/pub":
+			_, _ = w.Write(pub)
 		default:
 			http.NotFound(w, r)
 		}
@@ -158,7 +166,7 @@ func TestList(t *testing.T) {
 		t.Errorf("flai releases across pages, newest first by semver: %q", got)
 	}
 	want := time.Date(2026, 8, 10, 10, 0, 0, 0, time.UTC)
-	if flai[0].Tag != "flai/v1.10.0" || !flai[0].Published.Equal(want) || len(flai[0].Assets) != 3 {
+	if flai[0].Tag != "flai/v1.10.0" || !flai[0].Published.Equal(want) || len(flai[0].Assets) != 5 {
 		t.Errorf("newest: %+v", flai[0])
 	}
 
@@ -226,7 +234,7 @@ func TestResolveDownloadReplace(t *testing.T) {
 	sum := sha256.Sum256(archive)
 	sums := []byte(hex.EncodeToString(sum[:]) + "  flai_1.10.0_linux_amd64.tar.gz\n" + "deadbeef  flai_1.0.0_linux_amd64.tar.gz\n")
 	srv := fakeGitHub(t, archive, sums, "tok")
-	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", OS: "linux", Arch: "amd64"}
+	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", OS: "linux", Arch: "amd64", Keys: trustedKeys(t)}
 
 	rel, err := Resolve(context.Background(), opt)
 	if err != nil || rel.Version != "1.10.0" || rel.Tag != "flai/v1.10.0" {
@@ -257,7 +265,7 @@ func TestResolveDownloadReplace(t *testing.T) {
 	if _, err := Download(context.Background(), opt, pinned); err == nil {
 		t.Error("checksum mismatch for 1.0.0 should fail")
 	}
-	if _, err := Download(context.Background(), Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", OS: "darwin", Arch: "arm64"}, rel); err == nil {
+	if _, err := Download(context.Background(), Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", OS: "darwin", Arch: "arm64", Keys: trustedKeys(t)}, rel); err == nil {
 		t.Error("missing platform asset should fail")
 	}
 	if _, err := Resolve(context.Background(), Options{Repo: "o/r", APIBase: srv.URL}); err == nil {
@@ -291,7 +299,7 @@ func TestDroppedAnswerIsAskedAgain(t *testing.T) {
 	sums := []byte(hex.EncodeToString(sum[:]) + "  flai_1.10.0_linux_amd64.tar.gz\n")
 	d, front := dropFirst(t, map[string]int{"/repos/o/r/releases": 2, "/assets/archive": 1, "/assets/sums": 1})
 	srv := fakeGitHubBehind(t, archive, sums, "tok", front)
-	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", OS: "linux", Arch: "amd64"}
+	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", OS: "linux", Arch: "amd64", Keys: trustedKeys(t)}
 
 	rel, err := Resolve(context.Background(), opt)
 	if err != nil || rel.Version != "1.10.0" {

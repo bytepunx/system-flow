@@ -1,10 +1,12 @@
 // Package selfupgrade lists the published flai releases and dashboard tags,
 // and installs a flai release over the running binary: it resolves the newest
 // published flai/v* GitHub release (or a pinned published one), downloads
-// the archive for the platform and checksums.txt through the release asset
-// API (which works for private repositories with a token), verifies the
-// SHA-256, and replaces the executable atomically. install.sh at the
-// repository root does the same from a shell.
+// checksums.txt and its signature through the release asset API (which works
+// for private repositories with a token), verifies the signature with the
+// release key embedded in the binary (ADR-0070) and refuses a release it
+// cannot verify, then downloads the archive for the platform, verifies its
+// SHA-256 against checksums.txt, and replaces the executable atomically.
+// install.sh at the repository root does the same from a shell.
 package selfupgrade
 
 import (
@@ -13,6 +15,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -47,6 +50,9 @@ type Options struct {
 	OS      string       // default runtime.GOOS
 	Arch    string       // default runtime.GOARCH
 	Client  *http.Client // default http.DefaultClient
+	// Keys are the keys a release's checksums.txt.sig must verify against;
+	// default the release key embedded in the binary.
+	Keys []*ecdsa.PublicKey
 }
 
 // Release is a published release: a flai GitHub release with its assets, or
@@ -257,8 +263,11 @@ func (r *Release) Asset(name string) (Asset, bool) {
 	return Asset{}, false
 }
 
-// Download fetches the platform archive and checksums.txt, verifies the
-// archive, and returns the extracted flai binary.
+// Download verifies the signature over the release's checksums.txt, then
+// fetches the platform archive, verifies it against checksums.txt, and returns
+// the extracted flai binary. A release it cannot verify is refused with a
+// *SignatureError; one signed by a key it does not trust names the newest
+// published release it can verify, to install first.
 func Download(ctx context.Context, opt Options, rel *Release) ([]byte, error) {
 	opt.defaults()
 	name := ArchiveName(rel.Version, opt.OS, opt.Arch)
@@ -266,17 +275,21 @@ func Download(ctx context.Context, opt Options, rel *Release) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("release %s has no asset %s", rel.Tag, name)
 	}
-	sums, ok := rel.Asset("checksums.txt")
-	if !ok {
-		return nil, fmt.Errorf("release %s has no checksums.txt", rel.Tag)
+	keys, err := opt.trustedKeys()
+	if err != nil {
+		return nil, fmt.Errorf("verify the signature of release %s: %w", rel.Tag, err)
+	}
+	sumData, err := opt.verifiedSums(ctx, rel, keys)
+	var refused *SignatureError
+	if errors.As(err, &refused) && refused.Kind == SignatureUnknownKey {
+		return nil, opt.withBridge(ctx, refused, keys)
+	}
+	if err != nil {
+		return nil, err
 	}
 	data, err := opt.getBytes(ctx, archive.URL)
 	if err != nil {
 		return nil, fmt.Errorf("download %s: %w", name, err)
-	}
-	sumData, err := opt.getBytes(ctx, sums.URL)
-	if err != nil {
-		return nil, fmt.Errorf("download checksums.txt: %w", err)
 	}
 	if err := Verify(data, name, sumData); err != nil {
 		return nil, err
