@@ -2,6 +2,7 @@
 
 ## 1.0.85 - 2026-10-08
 
+- S-0342 A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite (patch).
 - S-0342 A test tier may name the tiers it covers (patch): a tier in the manifest's `tests` may carry `covers: [<tier>...]`, the tiers it runs everything of, and when `flai verify` or `flai test --all` selects it with one it covers, the covered tier is skipped and reported `skipped: covered by <tier>`. The template's `system-flow.yaml` covers nothing, since its `test` and `integration` scripts run different things; a comment on its `integration` tier says to add `covers: [test]` when that script runs the behaviour tests too. It needs a flai that has it; an older flai ignores `covers` and runs both tiers.
 
 ## 1.0.84 - 2026-10-08
