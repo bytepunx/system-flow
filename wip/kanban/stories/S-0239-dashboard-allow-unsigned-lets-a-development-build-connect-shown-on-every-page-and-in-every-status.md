@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T21:06:29Z
+updated: 2026-10-12T21:56:34Z
 transitions:
   - to: ready
     at: 2026-10-12T18:29:28Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0239
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [flai/internal/config, flai/internal/manifest, flai/cmd/dashboard.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components, docs/operators/settings.md, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flai/cmd/serve.go, flai/cmd/host.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/contributors/index.md, template/root/docs/operators/index.md.tmpl, template/CHANGELOG.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/+layout.svelte, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/project.svelte.ts, docs/operators/index.md, design/system/flaiover-dashboard.md, design/system/release-signing.md]
+touches: [flai/internal/config, flai/internal/manifest, flai/cmd/dashboard.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components, docs/operators/settings.md, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flai/cmd/serve.go, flai/cmd/host.go, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/contributors/index.md, template/root/docs/operators/index.md.tmpl, template/CHANGELOG.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/+layout.svelte, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/project.svelte.ts, docs/operators/index.md, design/system/flaiover-dashboard.md, design/system/release-signing.md, flai/internal/serve/candidates.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_agent.go, flai/cmd/serve_status_below.go]
 after: [S-0237, S-0238]
 agent:
   harness: claude-code
@@ -26,20 +26,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1257
+  seconds: 2980
   estimated: true
   turns:
     - day: 2026-10-12
       ceremony: 2
-      hand_edits: 1
-      work: 30
+      hand_edits: 2
+      work: 43
   models:
     - model: claude-opus-5-5
-      input: 270
-      output: 1523
-      cache_read: 11653236
-      cache_write: 707660
-      cost: 5.6468
+      input: 534
+      output: 3072
+      cache_read: 28345326
+      cache_write: 1139097
+      cost: 13.4691
   strategic:
     - kind: orchestrator
       seconds: 238
@@ -84,6 +84,7 @@ Unsigned builds are allowed only on purpose: `dashboard.allow_unsigned` in the h
 - T-1264 The dashboard shows a banner on every page naming the unsigned side while unsigned is allowed
 - T-1265 flai serve status, flai dashboard status, and flai host status say "unsigned allowed" with the side
 - T-1266 The contributor, operator, user, template, and design documentation describe dashboard.allow_unsigned and how it is shown
+- T-1499 Each side names its own missing stamp on every proven connection, and the image lines say an unlisted image is dialled under the allowance
 
 ## Notes
 

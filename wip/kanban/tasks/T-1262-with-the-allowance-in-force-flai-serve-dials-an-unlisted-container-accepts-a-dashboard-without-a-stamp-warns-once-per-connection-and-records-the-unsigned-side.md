@@ -3,11 +3,11 @@ id: T-1262
 type: task
 nature: feature
 title: With the allowance in force, flai serve dials an unlisted container, accepts a dashboard without a stamp, warns once per connection, and records the unsigned side
-status: in-progress
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-07T23:09:24Z
-updated: 2026-10-12T21:27:20Z
+updated: 2026-10-12T21:27:33Z
 transitions:
   - to: ready
     at: 2026-10-12T21:16:00Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T21:16:01Z
     by: agent-S-0239
+  - to: done
+    at: 2026-10-12T21:27:33Z
+    by: agent-S-0239
 stream: S-0239
 tags: [cli]
 touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/cmd/serve.go, flai/cmd/serve_test.go, flai/internal/serve/candidates.go]
 after: [T-1259]
 usage:
   source: log
-  seconds: 683
+  seconds: 692
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 252
-      cache_read: 2869543
-      cache_write: 135566
-      cost: 1.3728
+      input: 59
+      output: 256
+      cache_read: 2979651
+      cache_write: 140166
+      cost: 1.4252
 ---
 # T-1262 With the allowance in force, flai serve dials an unlisted container, accepts a dashboard without a stamp, warns once per connection, and records the unsigned side
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 13
-      output: 7380
-      cache_read: 848023
-      cache_write: 49359
-      cost: 0.6483
+      input: 12
+      output: 6280
+      cache_read: 852536
+      cache_write: 42632
+      cost: 0.5845
 ---
 # T-1403 The smoke tier runs the LiteLLM check where the proxy and its key are set, and the contributor guide lists its variables
 

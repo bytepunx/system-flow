@@ -26,18 +26,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1154
+  seconds: 1190
   turns:
     - day: 2026-10-12
+      ceremony: 2
       hand_edits: 1
-      work: 31
+      work: 34
   models:
     - model: claude-opus-5-5
-      input: 104
-      output: 61167
-      cache_read: 7028482
-      cache_write: 409094
-      cost: 5.3728
+      input: 116
+      output: 63123
+      cache_read: 8569526
+      cache_write: 428524
+      cost: 5.8756
 cost_of_delay:
   value: 33.19
   by: planner-E-0019

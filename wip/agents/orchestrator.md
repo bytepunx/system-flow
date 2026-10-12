@@ -2945,3 +2945,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai serve status 2>&1`
 - Needs: none
+
+### 2026-10-12T21:27:42Z
+
+- Call: `git merge-tree --write-tree --name-only main story/S-0352 >/dev/null 2>&1`
+- Needs: none

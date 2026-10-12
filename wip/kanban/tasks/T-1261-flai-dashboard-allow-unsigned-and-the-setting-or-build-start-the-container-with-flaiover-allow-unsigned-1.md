@@ -3,11 +3,11 @@ id: T-1261
 type: task
 nature: feature
 title: "flai dashboard --allow-unsigned, and the setting or --build, start the container with FLAIOVER_ALLOW_UNSIGNED=1"
-status: in-progress
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-07T23:09:17Z
-updated: 2026-10-12T21:27:20Z
+updated: 2026-10-12T21:27:45Z
 transitions:
   - to: ready
     at: 2026-10-12T21:15:59Z
@@ -15,21 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T21:16:00Z
     by: agent-S-0239
+  - to: done
+    at: 2026-10-12T21:27:45Z
+    by: agent-S-0239
 stream: S-0239
 tags: [cli]
 touches: [flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_test.go, docs/users/flai-reference.md, docs/operators/settings.md, flai/cmd/dashboard_watch.go]
 after: [T-1259]
 usage:
   source: log
-  seconds: 684
+  seconds: 705
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 252
-      cache_read: 2354766
-      cache_write: 137530
-      cost: 1.1385
+      input: 55
+      output: 327
+      cache_read: 2935178
+      cache_write: 154670
+      cost: 1.4115
 ---
 # T-1261 flai dashboard --allow-unsigned, and the setting or --build, start the container with FLAIOVER_ALLOW_UNSIGNED=1
 

@@ -3,16 +3,36 @@ id: T-1265
 type: task
 nature: feature
 title: "flai serve status, flai dashboard status, and flai host status say \"unsigned allowed\" with the side"
-status: backlog
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-07T23:09:46Z
-updated: 2026-10-07T23:09:46Z
-transitions: []
+updated: 2026-10-12T21:43:35Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:33:22Z
+    by: agent-S-0239
+  - to: in-progress
+    at: 2026-10-12T21:33:22Z
+    by: agent-S-0239
+  - to: done
+    at: 2026-10-12T21:43:35Z
+    by: agent-S-0239
 stream: S-0239
 tags: [cli]
 touches: [flai/cmd/serve.go, flai/cmd/serve_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go]
 after: [T-1261, T-1262]
+usage:
+  source: log
+  seconds: 613
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 89
+      output: 517
+      cache_read: 3928180
+      cache_write: 128860
+      cost: 1.8534
 ---
 # T-1265 flai serve status, flai dashboard status, and flai host status say "unsigned allowed" with the side
 

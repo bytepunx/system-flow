@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0354
   - S-0357
 ---
 

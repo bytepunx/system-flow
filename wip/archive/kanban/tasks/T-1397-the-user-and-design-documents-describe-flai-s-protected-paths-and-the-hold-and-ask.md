@@ -3,16 +3,36 @@ id: T-1397
 type: task
 nature: improvement
 title: The user and design documents describe flai's protected paths and the hold-and-ask
-status: backlog
+status: done
 parent: S-0354
 owner: alex
 created: 2026-10-08T08:48:21Z
-updated: 2026-10-08T08:48:30Z
-transitions: []
+updated: 2026-10-12T21:49:04Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:46:02Z
+    by: agent-S-0354
+  - to: in-progress
+    at: 2026-10-12T21:46:05Z
+    by: agent-S-0354
+  - to: done
+    at: 2026-10-12T21:49:04Z
+    by: agent-S-0354
 stream: S-0354
 tags: [cli]
 touches: [docs/users/flai.md, docs/operators/settings.md, design/system/flai-cli.md]
 after: [T-1396]
+usage:
+  source: log
+  seconds: 179
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 19868
+      cache_read: 2505325
+      cache_write: 121420
+      cost: 1.6572
 ---
 # T-1397 The user and design documents describe flai's protected paths and the hold-and-ask
 

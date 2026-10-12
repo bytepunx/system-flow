@@ -3,16 +3,36 @@ id: T-1264
 type: task
 nature: feature
 title: The dashboard shows a banner on every page naming the unsigned side while unsigned is allowed
-status: backlog
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-07T23:09:38Z
-updated: 2026-10-07T23:09:38Z
-transitions: []
+updated: 2026-10-12T21:43:27Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:33:21Z
+    by: agent-S-0239
+  - to: in-progress
+    at: 2026-10-12T21:33:21Z
+    by: agent-S-0239
+  - to: done
+    at: 2026-10-12T21:43:27Z
+    by: agent-S-0239
 stream: S-0239
 tags: [dashboard]
-touches: [flaiover/src/lib/components/UnsignedBanner.svelte, flaiover/src/lib/components/UnsignedBanner.svelte.test.ts, flaiover/src/routes/+layout.svelte]
+touches: [flaiover/src/lib/components/UnsignedBanner.svelte, flaiover/src/lib/components/UnsignedBanner.svelte.test.ts, flaiover/src/routes/+layout.svelte, docs/users/flai-reference.md, flai/cmd/dashboard_agent.go, flai/cmd/serve_status_below.go]
 after: [T-1263]
+usage:
+  source: log
+  seconds: 606
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 140
+      cache_read: 858532
+      cache_write: 55072
+      cost: 0.4174
 ---
 # T-1264 The dashboard shows a banner on every page naming the unsigned side while unsigned is allowed
 

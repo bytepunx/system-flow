@@ -3,15 +3,35 @@ id: T-1394
 type: task
 nature: improvement
 title: The hold-and-ask moves out of permission_prompt into flai/internal/ask, with the bound passed by the caller
-status: backlog
+status: done
 parent: S-0354
 owner: alex
 created: 2026-10-08T08:48:02Z
-updated: 2026-10-08T08:48:02Z
-transitions: []
+updated: 2026-10-12T21:34:37Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:28:31Z
+    by: agent-S-0354
+  - to: in-progress
+    at: 2026-10-12T21:28:33Z
+    by: agent-S-0354
+  - to: done
+    at: 2026-10-12T21:34:37Z
+    by: agent-S-0354
 stream: S-0354
 tags: [cli]
 touches: [flai/internal/ask/ask.go, flai/internal/ask/ask_test.go, flai/internal/mcpserver/permission.go, flai/internal/mcpserver/permission_test.go]
+usage:
+  source: log
+  seconds: 364
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 15045
+      cache_read: 1897147
+      cache_write: 91945
+      cost: 1.2549
 ---
 # T-1394 The hold-and-ask moves out of permission_prompt into flai/internal/ask, with the bound passed by the caller
 

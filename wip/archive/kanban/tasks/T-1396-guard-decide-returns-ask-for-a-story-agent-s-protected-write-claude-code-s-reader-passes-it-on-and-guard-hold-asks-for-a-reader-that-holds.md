@@ -3,16 +3,36 @@ id: T-1396
 type: task
 nature: improvement
 title: guard.Decide returns ask for a story agent's protected write, Claude Code's reader passes it on, and guard.Hold asks for a reader that holds
-status: backlog
+status: done
 parent: S-0354
 owner: alex
 created: 2026-10-08T08:48:15Z
-updated: 2026-10-08T08:48:15Z
-transitions: []
+updated: 2026-10-12T21:45:58Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:36:42Z
+    by: agent-S-0354
+  - to: in-progress
+    at: 2026-10-12T21:36:44Z
+    by: agent-S-0354
+  - to: done
+    at: 2026-10-12T21:45:58Z
+    by: agent-S-0354
 stream: S-0354
 tags: [cli]
-touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go]
+touches: [flai/internal/guard/call.go, flai/internal/guard/call_test.go, flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/cmd/guard.go]
 after: [T-1394, T-1395]
+usage:
+  source: log
+  seconds: 554
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 24521
+      cache_read: 3091964
+      cache_write: 149851
+      cost: 2.0452
 ---
 # T-1396 guard.Decide returns ask for a story agent's protected write, Claude Code's reader passes it on, and guard.Hold asks for a reader that holds
 

@@ -3,15 +3,35 @@ id: T-1395
 type: task
 nature: improvement
 title: The protected list keeps its paths per harness, Claude Code's as today, and Path and Changed answer for the union
-status: backlog
+status: done
 parent: S-0354
 owner: alex
 created: 2026-10-08T08:48:08Z
-updated: 2026-10-08T08:48:08Z
-transitions: []
+updated: 2026-10-12T21:34:32Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:28:32Z
+    by: agent-S-0354
+  - to: in-progress
+    at: 2026-10-12T21:28:33Z
+    by: agent-S-0354
+  - to: done
+    at: 2026-10-12T21:34:32Z
+    by: agent-S-0354
 stream: S-0354
 tags: [cli]
 touches: [flai/internal/protected/protected.go, flai/internal/protected/protected_test.go]
+usage:
+  source: log
+  seconds: 359
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 6378
+      cache_read: 804204
+      cache_write: 38975
+      cost: 0.532
 ---
 # T-1395 The protected list keeps its paths per harness, Claude Code's as today, and Path and Changed answer for the union
 

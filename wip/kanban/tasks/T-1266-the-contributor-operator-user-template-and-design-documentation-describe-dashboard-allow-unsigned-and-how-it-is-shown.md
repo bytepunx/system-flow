@@ -3,16 +3,36 @@ id: T-1266
 type: task
 nature: feature
 title: The contributor, operator, user, template, and design documentation describe dashboard.allow_unsigned and how it is shown
-status: backlog
+status: done
 parent: S-0239
 owner: alex
 created: 2026-10-07T23:09:58Z
-updated: 2026-10-07T23:09:58Z
-transitions: []
+updated: 2026-10-12T21:56:13Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:43:41Z
+    by: agent-S-0239
+  - to: in-progress
+    at: 2026-10-12T21:43:42Z
+    by: agent-S-0239
+  - to: done
+    at: 2026-10-12T21:56:13Z
+    by: agent-S-0239
 stream: S-0239
 tags: [cli, dashboard]
-touches: [docs/contributors/index.md, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, template/root/docs/operators/index.md.tmpl, template/CHANGELOG.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/release-signing.md]
+touches: [docs/contributors/index.md, docs/operators/index.md, docs/users/flai.md, docs/users/flaiover.md, template/root/docs/operators/index.md.tmpl, template/CHANGELOG.md, design/system/project-manifest.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/system/release-signing.md, docs/operators/settings.md]
 after: [T-1264, T-1265]
+usage:
+  source: log
+  seconds: 745
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 138
+      output: 796
+      cache_read: 10441831
+      cache_write: 204067
+      cost: 4.8631
 ---
 # T-1266 The contributor, operator, user, template, and design documentation describe dashboard.allow_unsigned and how it is shown
 
