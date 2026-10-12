@@ -20,11 +20,13 @@ func newAgentCmd(a *app) *cobra.Command {
 		Short: "The project's default agent: the harness, model, and options every new story gets",
 		Long: `Who works a story is an agent: a harness (the command line or API that runs
 it, such as claude-code), a model (such as claude-opus-5-5), and options for
-that harness (config, key=value). The project's default is kept in
-system-flow.yaml; every story created while it is set gets a copy in its front
-matter, which flai story new --harness/--model/--agent-config and flai edit
-override for that story. Stories created before, or with no default set, carry
-none.
+that harness (config, key=value). It may name a provider, the endpoint the
+model's calls go to, by a name the host sets with flai serve agent provider
+<name> (ADR-0129); with none, the harness's own. The project's default is kept
+in system-flow.yaml; every story created while it is set gets a copy in its
+front matter, which flai story new --harness/--model/--provider/--agent-config
+and flai edit override for that story. Stories created before, or with no
+default set, carry none.
 
 An agent may also name roles: the agents for the work a story's agent hands
 to sub-agents, explore and verify (S-0189), each with a harness, model, and
@@ -38,12 +40,13 @@ removes a role), and clear removes it.`,
 		Example: `  flai agent
   flai agent set --harness claude-code --model claude-opus-5-5 --config effort=high
   flai agent set --model claude-sonnet-5
+  flai agent set --provider litellm
   flai agent set --role-model explore=haiku --role-model verify=sonnet
   flai agent clear`,
 		Args: cobra.NoArgs,
 		RunE: func(*cobra.Command, []string) error { return a.showAgent("") },
 	}
-	var harness, model string
+	var harness, model, provider string
 	var config, unset, trailers []string
 	var replace, autocommit bool
 	var rf roleFlags
@@ -64,14 +67,14 @@ removes a role), and clear removes it.`,
 			if err != nil {
 				return err
 			}
-			if harness == "" && model == "" && len(cfg) == 0 && len(unset) == 0 && !rf.given() {
-				return fmt.Errorf("nothing to set: give --harness, --model, --config key=value, --unset key, or a --role- flag")
+			if harness == "" && model == "" && provider == "" && len(cfg) == 0 && len(unset) == 0 && !rf.given() {
+				return fmt.Errorf("nothing to set: give --harness, --model, --provider, --config key=value, --unset key, or a --role- flag")
 			}
 			base := repo.Manifest.Agent
 			if replace {
 				base = nil
 			}
-			next := base.With(&manifest.Agent{Harness: harness, Model: model, Config: cfg, Roles: roles})
+			next := base.With(&manifest.Agent{Harness: harness, Model: model, Provider: provider, Config: cfg, Roles: roles})
 			if next != nil {
 				for _, k := range unset {
 					delete(next.Config, k)
@@ -95,6 +98,7 @@ removes a role), and clear removes it.`,
 	}
 	set.Flags().StringVar(&harness, "harness", "", "the harness that runs the agent, such as claude-code")
 	set.Flags().StringVar(&model, "model", "", "the model it runs, such as claude-opus-5-5")
+	set.Flags().StringVar(&provider, "provider", "", "the provider the model's calls go to, a name the host sets with flai serve agent provider <name>, such as litellm")
 	set.Flags().StringArrayVar(&config, "config", nil, "an option for the harness, key=value (repeatable)")
 	set.Flags().StringArrayVar(&unset, "unset", nil, "remove an option by key (repeatable)")
 	rf.register(set, true)
@@ -247,9 +251,9 @@ func (rf roleFlags) prune(next *manifest.Agent) {
 	}
 }
 
-// agentFlags is the agent --harness, --model, --agent-config, and the role
-// flags give, nil when none is given.
-func agentFlags(harness, model string, config []string, rf roleFlags) (*manifest.Agent, error) {
+// agentFlags is the agent --harness, --model, --provider, --agent-config, and
+// the role flags give, nil when none is given.
+func agentFlags(harness, model, provider string, config []string, rf roleFlags) (*manifest.Agent, error) {
 	cfg, err := manifest.ParseConfig(config)
 	if err != nil {
 		return nil, err
@@ -258,7 +262,7 @@ func agentFlags(harness, model string, config []string, rf roleFlags) (*manifest
 	if err != nil {
 		return nil, err
 	}
-	a := &manifest.Agent{Harness: harness, Model: model, Config: cfg, Roles: roles}
+	a := &manifest.Agent{Harness: harness, Model: model, Provider: provider, Config: cfg, Roles: roles}
 	if a.IsZero() {
 		return nil, nil
 	}
@@ -269,7 +273,7 @@ func agentFlags(harness, model string, config []string, rf roleFlags) (*manifest
 // merged into what it has, or, with --clear-agent, exactly what is given; a
 // key given with no value (key=, role.key=) is removed, and so is a role
 // --unset-role names. Nil means none.
-func editedAgent(repo *workitem.Repo, id string, replace bool, harness, model string, config []string, rf roleFlags) (*manifest.Agent, error) {
+func editedAgent(repo *workitem.Repo, id string, replace bool, harness, model, provider string, config []string, rf roleFlags) (*manifest.Agent, error) {
 	cfg, err := manifest.ParseConfig(config)
 	if err != nil {
 		return nil, err
@@ -292,7 +296,7 @@ func editedAgent(repo *workitem.Repo, id string, replace bool, harness, model st
 			set[k] = v
 		}
 	}
-	next := base.With(&manifest.Agent{Harness: harness, Model: model, Config: set, Roles: roles})
+	next := base.With(&manifest.Agent{Harness: harness, Model: model, Provider: provider, Config: set, Roles: roles})
 	if next != nil {
 		for k, v := range cfg {
 			if v == "" {

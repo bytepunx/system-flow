@@ -1084,7 +1084,7 @@ func itemSpecs() map[string]spec {
 			if len(in.Agent) > 0 {
 				var agent *manifest.Agent
 				if err := json.Unmarshal(in.Agent, &agent); err != nil {
-					return nil, "", bad("agent is an object with harness, model, and config, or null: %s", err)
+					return nil, "", bad("agent is an object with harness, model, provider, config, and roles, or null: %s", err)
 				}
 				more, e := agentArgs(agent)
 				if e != nil {
@@ -2812,6 +2812,9 @@ func agentArgs(a *manifest.Agent) ([]string, *channel.Error) {
 	}
 	if a.Model != "" {
 		args = append(args, "--model="+a.Model)
+	}
+	if a.Provider != "" {
+		args = append(args, "--provider="+a.Provider)
 	}
 	for _, k := range a.ConfigKeys() {
 		if strings.TrimSpace(a.Config[k]) == "" {

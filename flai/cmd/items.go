@@ -36,7 +36,7 @@ func newItemCmd(a *app, typ string) *cobra.Command {
 }
 
 func newItemNewCmd(a *app, typ string) *cobra.Command {
-	var nature, owner, parent, harness, model, revenue, penalty, timeLost string
+	var nature, owner, parent, harness, model, provider, revenue, penalty, timeLost string
 	var tags, touches, topics, after, trailers, agentConfig []string
 	var rf roleFlags
 	var bodyStdin, autocommit, printBody, draft bool
@@ -77,7 +77,7 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 				fmt.Fprint(a.out, body)
 				return nil
 			}
-			agent, err := agentFlags(harness, model, agentConfig, rf)
+			agent, err := agentFlags(harness, model, provider, agentConfig, rf)
 			if err != nil {
 				return err
 			}
@@ -180,6 +180,7 @@ the template gives, for a form or a script to start from, and creates nothing.%s
 		// who works it (S-0103), over the project's default (flai agent)
 		c.Flags().StringVar(&harness, "harness", "", "the harness that runs the agent for this story, over the project's default")
 		c.Flags().StringVar(&model, "model", "", "the model it runs, over the project's default")
+		c.Flags().StringVar(&provider, "provider", "", "the provider its model's calls go to, over the project's default: a name the host sets with flai serve agent provider <name>")
 		c.Flags().StringArrayVar(&agentConfig, "agent-config", nil, "an option for the harness, key=value, over the project's default (repeatable)")
 		rf.register(c, false)
 		c.Flags().BoolVar(&draft, "draft", false, "make the story a draft, which must be finalized before it is ready")

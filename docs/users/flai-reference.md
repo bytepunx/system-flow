@@ -287,7 +287,7 @@ The project's default agent: the harness, model, and options every new story get
 flai agent
 ```
 
-Who works a story is an agent: a harness (the command line or API that runs it, such as claude-code), a model (such as claude-opus-5-5), and options for that harness (config, key=value). The project's default is kept in system-flow.yaml; every story created while it is set gets a copy in its front matter, which flai story new --harness/--model/--agent-config and flai edit override for that story. Stories created before, or with no default set, carry none.
+Who works a story is an agent: a harness (the command line or API that runs it, such as claude-code), a model (such as claude-opus-5-5), and options for that harness (config, key=value). It may name a provider, the endpoint the model's calls go to, by a name the host sets with flai serve agent provider &lt;name&gt; (ADR-0129); with none, the harness's own. The project's default is kept in system-flow.yaml; every story created while it is set gets a copy in its front matter, which flai story new --harness/--model/--provider/--agent-config and flai edit override for that story. Stories created before, or with no default set, carry none.
 
 An agent may also name roles: the agents for the work a story's agent hands to sub-agents, explore and verify (S-0189), each with a harness, model, and config of its own (--role-harness, --role-model, --role-config). flai serve starts claude-code with each role's model over the project's sub-agent definition for it.
 
@@ -299,6 +299,7 @@ Examples:
 flai agent
 flai agent set --harness claude-code --model claude-opus-5-5 --config effort=high
 flai agent set --model claude-sonnet-5
+flai agent set --provider litellm
 flai agent set --role-model explore=haiku --role-model verify=sonnet
 flai agent clear
 ```
@@ -339,6 +340,7 @@ Flags:
 | `--config` stringArray | an option for the harness, key=value (repeatable) |
 | `--harness` string | the harness that runs the agent, such as claude-code |
 | `--model` string | the model it runs, such as claude-opus-5-5 |
+| `--provider` string | the provider the model's calls go to, a name the host sets with flai serve agent provider &lt;name&gt;, such as litellm |
 | `--replace` | start from nothing: the default becomes exactly what is given |
 | `--role-config` stringArray | an option for a sub-agent role, role.key=value (repeatable) |
 | `--role-harness` stringArray | the harness of a sub-agent role, role=harness, such as verify=claude-code (repeatable) |
@@ -1151,7 +1153,7 @@ Flags:
 | `--body-stdin` | read the body below the heading from standard input |
 | `--by` string | who edits, as agents are told (default: FLAI\_AGENT, then the config author) |
 | `--clear-after` | remove what a story or a task waits for |
-| `--clear-agent` | remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those |
+| `--clear-agent` | remove the story's agent; with --harness, --model, --provider, or --agent-config, replace it with exactly those |
 | `--clear-cost-of-delay` | remove the cost of delay |
 | `--clear-forecast` | remove the story's forecast |
 | `--clear-tags` | remove every tag |
@@ -1170,6 +1172,7 @@ Flags:
 | `--no-draft` | finalize a draft story, so that it may go to ready, recording who finalized it and when |
 | `--parent` string | the new parent: an epic for a story, a story for a task |
 | `--penalty-per-week` string | cost of delay input: what each week it is not done costs beyond revenue; empty removes it |
+| `--provider` string | a story's agent: the provider its model's calls go to, a name the host sets with flai serve agent provider &lt;name&gt; |
 | `--revenue-per-week` string | cost of delay input: revenue each week it is done brings, in planning.currency; empty removes it |
 | `--role-config` stringArray | an option for a sub-agent role, role.key=value (repeatable) |
 | `--role-harness` stringArray | the harness of a sub-agent role, role=harness, such as verify=claude-code (repeatable) |
@@ -2553,7 +2556,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--api` string | what the provider speaks: anthropic-messages, openai-chat, openai-responses |
-| `--base-url` string | the provider's http or https URL, such as https://litellm.example.com |
+| `--base-url` string | the provider's absolute http or https URL, with no user or password in it |
 | `--key-env` string | the name of the environment variable that holds the provider's key, such as LITELLM\_API\_KEY; never the key |
 | `--model` stringArray | a model alias and its name on the provider, alias=name (repeatable; replaces the entry's aliases) |
 | `--reset` | remove the provider's entry |
@@ -3184,6 +3187,7 @@ Flags:
 | `--owner` string | owner (default: config author) |
 | `--penalty-per-week` string | cost of delay input: what each week it is not done costs beyond revenue, in planning.currency |
 | `--print-body` | print the body the template gives this type and create nothing |
+| `--provider` string | the provider its model's calls go to, over the project's default: a name the host sets with flai serve agent provider &lt;name&gt; |
 | `--revenue-per-week` string | cost of delay input: revenue each week it is done brings, in planning.currency |
 | `--role-config` stringArray | an option for a sub-agent role, role.key=value (repeatable) |
 | `--role-harness` stringArray | the harness of a sub-agent role, role=harness, such as verify=claude-code (repeatable) |

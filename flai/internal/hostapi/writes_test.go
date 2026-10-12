@@ -87,8 +87,8 @@ var good = map[string]struct {
 	"orchestrate.start": {`{` + rid + `}`, "serve orchestrate start --json", ""},
 	// S-0105: the host's settings, each a flai command gated by the settings action
 	"settings.action": {`{"action":"push","on":true,` + rid + `}`, "serve enable push --json", ""},
-	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"},"roles":{"verify":{"model":"sonnet"}}},` + rid + `}`,
-		"agent set --replace --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --harness=claude-code --model=claude-opus-5-5 --config=effort=high --role-model=verify=sonnet --json", ""},
+	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","provider":"litellm","config":{"effort":"high"},"roles":{"verify":{"model":"sonnet"}}},` + rid + `}`,
+		"agent set --replace --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --harness=claude-code --model=claude-opus-5-5 --provider=litellm --config=effort=high --role-model=verify=sonnet --json", ""},
 	"settings.agent":           {`{"name":"builder","attended_minutes":10,"command":["claude","-p","work on {story}; echo $HOME"],` + rid + `}`, "serve agent set --name=builder --json -- claude -p work on {story}; echo $HOME", ""},
 	"settings.harness":         {`{"name":"claude-code","program":"/opt/claude","args":["--permission-mode","acceptEdits"],` + rid + `}`, "serve agent harness claude-code --program=/opt/claude --json -- --permission-mode acceptEdits", ""},
 	"settings.check":           {`{"name":"flai","command":["scripts/flai-test.sh","--short"],` + rid + `}`, "serve checks set --name=flai --json -- scripts/flai-test.sh --short", ""},
@@ -114,9 +114,9 @@ var good = map[string]struct {
 // keys in order, the number without an exponent, the agent as compact JSON.
 const (
 	manifestSave = `{"set":{"planning.schedule":"0 6 * * 1-5","orchestration.release.value":1e6,"orchestration.permissions.promote_to_ready":true,` +
-		`"orchestration.release.count":3,"planning.agent":{"model":"claude-sonnet-5","harness":"claude-code","config":{"effort":"medium"}}},"unset":["analysis.schedule"],` + rid + `}`
+		`"orchestration.release.count":3,"planning.agent":{"model":"claude-sonnet-5","provider":"litellm","harness":"claude-code","config":{"effort":"medium"}}},"unset":["analysis.schedule"],` + rid + `}`
 	manifestSaveArgs = `orchestration.permissions.promote_to_ready=true orchestration.release.count=3 orchestration.release.value=1000000 ` +
-		`planning.agent={"harness":"claude-code","model":"claude-sonnet-5","config":{"effort":"medium"}} planning.schedule=0 6 * * 1-5`
+		`planning.agent={"harness":"claude-code","model":"claude-sonnet-5","provider":"litellm","config":{"effort":"medium"}} planning.schedule=0 6 * * 1-5`
 )
 
 // refused is, per method, params that must never reach a command line.
@@ -235,7 +235,7 @@ var refused = map[string][]string{
 	"orchestrate.start": {`"--force"`, `["--force"]`, `{}`},
 	"settings.action": {`{"action":"settings","on":true,` + rid + `}`, `{"action":"settings","on":false,` + rid + `}`, `{"action":"--all-projects","on":true,` + rid + `}`,
 		`{"action":"push",` + rid + `}`, `{"action":"push","on":true}`},
-	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
+	"settings.default_agent": {`{"agent":{"harness":"--dangerously-skip-permissions"},` + rid + `}`, `{"agent":{"provider":"--x"},` + rid + `}`, `{"agent":{"model":"m","config":{"Bad Key":"v"}},` + rid + `}`,
 		`{"agent":{"model":"m","config":{"k":"a\nb"}},` + rid + `}`},
 	"settings.agent": {`{"name":"--x",` + rid + `}`, `{"attended_minutes":10,` + rid + `}`, `{"command":[],` + rid + `}`, `{"command":["","x"],` + rid + `}`,
 		`{"command":"claude -p",` + rid + `}`, `{"command":["claude","a\nb"],` + rid + `}`, `{` + rid + `}`},
@@ -254,7 +254,7 @@ var refused = map[string][]string{
 		`{"set":{"--autocommit":true},` + rid + `}`, `{"set":{"planning.currency":"EUR"},` + rid + `}`, `{"unset":["--json"],` + rid + `}`, `{"unset":[" planning.replan"],` + rid + `}`,
 		`{"set":{"planning.replan":["agent"]},` + rid + `}`, `{"set":{"planning.replan":{"x":1}},` + rid + `}`, `{"set":{"planning.replan":null},` + rid + `}`,
 		`{"set":{"planning.schedule":"0 6 * * *\n--unset=x"},` + rid + `}`, `{"set":{"planning.agent":"claude-sonnet-5"},` + rid + `}`,
-		`{"set":{"planning.agent":{"harness":"--dangerously-skip-permissions"}},` + rid + `}`, `{"set":{"planning.agent":{"modelname":"claude-sonnet-5"}},` + rid + `}`},
+		`{"set":{"planning.agent":{"harness":"--dangerously-skip-permissions"}},` + rid + `}`, `{"set":{"planning.agent":{"provider":"--x"}},` + rid + `}`, `{"set":{"planning.agent":{"modelname":"claude-sonnet-5"}},` + rid + `}`},
 	"settings.shared_check": {`{}`, `{"paths":[]}`, `{"paths":[" "]}`, `{"paths":["a\u0000b"]}`, `{"paths":["S-0001"]}`, `{"paths":"docs"}`,
 		`{"story":"T-0001"}`, `{"story":"--help"}`, `{"story":"S-0001 --json"}`},
 	// S-0275: an issue's ID, a story's ID, a class from the list, a duration, and a title or reason
@@ -2006,9 +2006,9 @@ func TestTheAgentReachesFlaiAsFlags(t *testing.T) {
 		}
 		return rec.runs[len(rec.runs)-1].Args, e
 	}
-	args, e := run("item.new", `{"type":"story","title":"T","body":"b","request_id":"req-00000001","agent":{"harness":"claude-code","model":"claude-opus-5-5","config":{"effort":"high"}}}`)
+	args, e := run("item.new", `{"type":"story","title":"T","body":"b","request_id":"req-00000001","agent":{"harness":"claude-code","model":"claude-opus-5-5","provider":"litellm","config":{"effort":"high"}}}`)
 	joined := strings.Join(args, " ")
-	if e != nil || !strings.Contains(joined, "--harness=claude-code --model=claude-opus-5-5 --agent-config=effort=high") {
+	if e != nil || !strings.Contains(joined, "--harness=claude-code --model=claude-opus-5-5 --provider=litellm --agent-config=effort=high") {
 		t.Errorf("item.new: %v %s", e, joined)
 	}
 	if _, e := run("item.new", `{"type":"epic","title":"T","body":"b","request_id":"req-00000002","agent":{"model":"x"}}`); e == nil {
@@ -2017,9 +2017,12 @@ func TestTheAgentReachesFlaiAsFlags(t *testing.T) {
 	if _, e := run("item.new", `{"type":"story","title":"T","body":"b","request_id":"req-00000003","agent":{"harness":"; rm -rf /"}}`); e == nil {
 		t.Error("an invalid harness reached a command line")
 	}
+	if _, e := run("item.new", `{"type":"story","title":"T","body":"b","request_id":"req-00000008","agent":{"provider":"--help"}}`); e == nil {
+		t.Error("an invalid provider reached a command line")
+	}
 	hash := strings.Repeat("a", 64)
-	args, e = run("item.edit", `{"id":"S-0001","hash":"`+hash+`","request_id":"req-00000004","agent":{"model":"claude-sonnet-5"}}`)
-	if e != nil || !strings.Contains(strings.Join(args, " "), "--clear-agent --model=claude-sonnet-5") {
+	args, e = run("item.edit", `{"id":"S-0001","hash":"`+hash+`","request_id":"req-00000004","agent":{"model":"claude-sonnet-5","provider":"openrouter"}}`)
+	if e != nil || !strings.Contains(strings.Join(args, " "), "--clear-agent --model=claude-sonnet-5 --provider=openrouter") {
 		t.Errorf("item.edit replaces: %v %v", e, args)
 	}
 	args, e = run("item.edit", `{"id":"S-0001","hash":"`+hash+`","request_id":"req-00000005","agent":null}`)

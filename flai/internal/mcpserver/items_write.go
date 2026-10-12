@@ -27,7 +27,7 @@ type ItemNewIn struct {
 	Touches []string        `json:"touches,omitempty" jsonschema:"paths or components the work changes"`
 	Topics  []string        `json:"topics,omitempty" jsonschema:"a story's or epic's: what it is about beyond the components its tags and touches reach, such as logging or release"`
 	After   []string        `json:"after,omitempty" jsonschema:"what it waits for until they are done: a story's stories (it is held in ready meanwhile), a task's tasks of the same story; flai check runs with it, and an entry that does not exist, a task of another story, or a cycle refuses the creation"`
-	Agent   *manifest.Agent `json:"agent,omitempty" jsonschema:"a story's agent: harness, model, config, and roles (explore, verify: each a harness, model, and config for that sub-agent), over the project's default, which fills in what is not given, role by role"`
+	Agent   *manifest.Agent `json:"agent,omitempty" jsonschema:"a story's agent: harness, model, provider (a name the host sets with flai serve agent provider), config, and roles (explore, verify: each a harness, model, and config for that sub-agent), over the project's default, which fills in what is not given, role by role"`
 	Body    string          `json:"body,omitempty" jsonschema:"the goal, criteria, and notes below the heading; the template's empty sections when not given"`
 	Draft   bool            `json:"draft,omitempty" jsonschema:"a story's only: true makes it a draft, which cannot go to ready until the operator finalizes it; give it for a story you wrote for the operator to review"`
 }
@@ -102,7 +102,7 @@ type ItemEditIn struct {
 	After   *[]string `json:"after,omitempty" jsonschema:"a story's or a task's: replaces what it waits for until they are done, a story's stories (it is held in ready meanwhile), a task's tasks of the same story; an empty list removes them"`
 	Parent  *string   `json:"parent,omitempty"`
 	// Agent replaces a story's agent; ClearAgent removes it.
-	Agent      *manifest.Agent `json:"agent,omitempty" jsonschema:"replaces the story's agent with exactly this harness, model, config, and roles; roles left out are removed"`
+	Agent      *manifest.Agent `json:"agent,omitempty" jsonschema:"replaces the story's agent with exactly this harness, model, provider, config, and roles; roles left out are removed"`
 	ClearAgent bool            `json:"clear_agent,omitempty" jsonschema:"removes the story's agent"`
 	Body       *string         `json:"body,omitempty" jsonschema:"replaces everything below the heading"`
 	// Draft, CostOfDelay, and Forecast are the item's planning data (S-0199),

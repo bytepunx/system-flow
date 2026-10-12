@@ -19,7 +19,7 @@ import (
 
 // flai edit changes a work item after it was made (S-0085).
 func newEditCmd(a *app) *cobra.Command {
-	var title, nature, parent, hash, message, byFlag, harness, model string
+	var title, nature, parent, hash, message, byFlag, harness, model, provider string
 	var agentConfig []string
 	var rf roleFlags
 	var tags, touches, topics, after, trailers []string
@@ -171,8 +171,8 @@ the item changed.`,
 			case f.Changed("after"):
 				ch.After = &after
 			}
-			if clearAgent || f.Changed("harness") || f.Changed("model") || f.Changed("agent-config") || rf.given() {
-				next, err := editedAgent(repo, args[0], clearAgent, harness, model, agentConfig, rf)
+			if clearAgent || f.Changed("harness") || f.Changed("model") || f.Changed("provider") || f.Changed("agent-config") || rf.given() {
+				next, err := editedAgent(repo, args[0], clearAgent, harness, model, provider, agentConfig, rf)
 				if err != nil {
 					return err
 				}
@@ -197,7 +197,7 @@ the item changed.`,
 				ch.Body = &body
 			}
 			if ch == (itemedit.Change{}) {
-				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --agent-config, a --role- flag, --unset-role, --clear-agent, --draft, --no-draft, a cost of delay or forecast flag, or --body-stdin (flai edit %s --show prints what is there)", args[0])
+				return fmt.Errorf("nothing to change: give --title, --nature, --tag, --topics, --clear-topics, --touches, --after, --clear-after, --parent, --harness, --model, --provider, --agent-config, a --role- flag, --unset-role, --clear-agent, --draft, --no-draft, a cost of delay or forecast flag, or --body-stdin (flai edit %s --show prints what is there)", args[0])
 			}
 			orchestrator := os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate
 			if noDraft && orchestrator {
@@ -291,8 +291,9 @@ the item changed.`,
 	f.StringVar(&parent, "parent", "", "the new parent: an epic for a story, a story for a task")
 	f.StringVar(&harness, "harness", "", "a story's agent: the harness that runs it")
 	f.StringVar(&model, "model", "", "a story's agent: the model it runs")
+	f.StringVar(&provider, "provider", "", "a story's agent: the provider its model's calls go to, a name the host sets with flai serve agent provider <name>")
 	f.StringArrayVar(&agentConfig, "agent-config", nil, "a story's agent: an option, key=value, and key= to remove one (repeatable)")
-	f.BoolVar(&clearAgent, "clear-agent", false, "remove the story's agent; with --harness, --model, or --agent-config, replace it with exactly those")
+	f.BoolVar(&clearAgent, "clear-agent", false, "remove the story's agent; with --harness, --model, --provider, or --agent-config, replace it with exactly those")
 	rf.register(c, true)
 	f.BoolVar(&draft, "draft", false, "make a story in the backlog a draft, which must be finalized before it is ready")
 	f.BoolVar(&noDraft, "no-draft", false, "finalize a draft story, so that it may go to ready, recording who finalized it and when")

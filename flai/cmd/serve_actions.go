@@ -857,7 +857,7 @@ models under providers.<name>, never its key_env.`,
 		},
 	}
 	c.Flags().StringVar(&p.API, "api", "", "what the provider speaks: "+strings.Join(manifest.ProviderAPIs, ", "))
-	c.Flags().StringVar(&p.BaseURL, "base-url", "", "the provider's http or https URL, such as https://litellm.example.com")
+	c.Flags().StringVar(&p.BaseURL, "base-url", "", "the provider's absolute http or https URL, with no user or password in it")
 	c.Flags().StringVar(&p.KeyEnv, "key-env", "", "the name of the environment variable that holds the provider's key, such as LITELLM_API_KEY; never the key")
 	c.Flags().StringArrayVar(&models, "model", nil, "a model alias and its name on the provider, alias=name (repeatable; replaces the entry's aliases)")
 	c.Flags().BoolVar(&reset, "reset", false, "remove the provider's entry")

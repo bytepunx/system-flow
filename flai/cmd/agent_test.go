@@ -149,6 +149,76 @@ func TestAgentRolesAreSetAndEdited(t *testing.T) {
 	}
 }
 
+// S-0349: a provider is set on the default with flai agent set and merged
+// as a harness is, copied into a new story (ADR-0037), given by flai story
+// new and flai edit, cleared with the rest by --clear-agent, and a story
+// that names one passes flai check --strict with no entry for it on the host.
+func TestAProviderIsSetCopiedEditedAndChecked(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	runIn(t, root, "agent", "set", "--harness", "claude-code", "--model", "claude-opus-5-5")
+	if out, errOut, code := runIn(t, root, "agent", "set", "--provider", "litellm"); code != 0 || !strings.Contains(out, "default agent: claude-code, claude-opus-5-5, provider litellm\n") {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	if out, _, _ := runIn(t, root, "agent"); !strings.Contains(out, "provider litellm") {
+		t.Errorf("show: %s", out)
+	}
+	if _, errOut, code := runIn(t, root, "agent", "set", "--provider", "Not Valid"); code == 0 || !strings.Contains(errOut, "not a name such as litellm") {
+		t.Errorf("an invalid provider: %d %s", code, errOut)
+	}
+	runIn(t, root, "epic", "new", "E")
+	if _, errOut, code := runIn(t, root, "story", "new", "Copied", "--epic", "E-0001"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "story", "new", "Given", "--epic", "E-0001", "--provider", "openrouter"); code != 0 {
+		t.Fatal(errOut)
+	}
+	front := func(id string) string {
+		t.Helper()
+		matches, _ := filepath.Glob(filepath.Join(root, "wip/kanban/stories/"+id+"-*.md"))
+		if len(matches) != 1 {
+			t.Fatalf("%s: %v", id, matches)
+		}
+		data, _ := os.ReadFile(matches[0])
+		return string(data)
+	}
+	if got := front("S-0001"); !strings.Contains(got, "agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  provider: litellm\n") {
+		t.Errorf("the default's provider is not copied:\n%s", got)
+	}
+	if got := front("S-0002"); !strings.Contains(got, "agent:\n  harness: claude-code\n  model: claude-opus-5-5\n  provider: openrouter\n") {
+		t.Errorf("the provider given is not the story's:\n%s", got)
+	}
+	for _, id := range []string{"S-0001", "S-0002"} {
+		if out, errOut, code := runIn(t, root, "check", "--strict", "--story", id); code != 0 {
+			t.Errorf("check --strict on %s: %d %s %s", id, code, out, errOut)
+		}
+	}
+	edit := func(args ...string) {
+		t.Helper()
+		if _, errOut, code := runIn(t, root, append([]string{"edit", "S-0001"}, args...)...); code != 0 {
+			t.Fatalf("edit %v: %s", args, errOut)
+		}
+	}
+	edit("--provider", "openrouter")
+	if got := front("S-0001"); !strings.Contains(got, "  model: claude-opus-5-5\n  provider: openrouter\n") {
+		t.Errorf("edited:\n%s", got)
+	}
+	if out, _, _ := runIn(t, root, "edit", "S-0001", "--show"); !strings.Contains(out, "agent: claude-code, claude-opus-5-5, provider openrouter (project default: claude-code, claude-opus-5-5, provider litellm)") {
+		t.Errorf("--show: %s", out)
+	}
+	edit("--clear-agent", "--provider", "litellm")
+	if got := front("S-0001"); !strings.Contains(got, "agent:\n  provider: litellm\n") || strings.Contains(got, "harness:") {
+		t.Errorf("replaced by the provider alone:\n%s", got)
+	}
+	edit("--clear-agent")
+	if got := front("S-0001"); strings.Contains(got, "provider") {
+		t.Errorf("cleared:\n%s", got)
+	}
+	if _, errOut, code := runIn(t, root, "edit", "S-0002", "--provider", "Bad Name"); code == 0 || !strings.Contains(errOut, "not a name such as litellm") {
+		t.Errorf("an invalid provider: %d %s", code, errOut)
+	}
+}
+
 // S-0105: the dashboard replaces the default whole and commits it, as its
 // other writes are committed.
 func TestTheDefaultAgentIsReplacedAndCommitted(t *testing.T) {

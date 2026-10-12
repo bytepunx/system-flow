@@ -223,7 +223,7 @@ func settingArg(s manifest.Setting, raw json.RawMessage) (string, string) {
 		dec.DisallowUnknownFields()
 		var a manifest.Agent
 		if !bytes.HasPrefix(bytes.TrimSpace(raw), []byte("{")) || dec.Decode(&a) != nil {
-			return "", `is an agent, an object such as {"harness":"claude-code","model":"claude-sonnet-5"} with harness, model, config, and roles only; {} unsets it`
+			return "", `is an agent, an object such as {"harness":"claude-code","model":"claude-sonnet-5"} with harness, model, provider, config, and roles only; {} unsets it`
 		}
 		if err := a.Validate(); err != nil {
 			return "", err.Error()
@@ -316,6 +316,9 @@ func settingsSpecs() map[string]spec {
 			}
 			if in.Agent.Model != "" {
 				args = append(args, "--model="+in.Agent.Model)
+			}
+			if in.Agent.Provider != "" {
+				args = append(args, "--provider="+in.Agent.Provider)
 			}
 			for _, k := range in.Agent.ConfigKeys() {
 				if strings.TrimSpace(in.Agent.Config[k]) == "" {

@@ -74,6 +74,11 @@ func TestEditSettingsWritesEachKindAndKeepsTheRest(t *testing.T) {
 			replaced(t, "      effort: medium\n", "      effort: medium\n  schedule: daily\n")},
 		{KindAgent, Assignment{"planning.agent", `{"harness":"claude-code","config":{"effort":"high"}}`},
 			replaced(t, "    model: claude-sonnet-5\n    config:\n      effort: medium\n", "    harness: claude-code\n    config:\n      effort: high\n")},
+		// S-0349: an agent names its provider, written after the model
+		{KindAgent, Assignment{"planning.agent", `{"model":"claude-sonnet-5","provider":"litellm"}`},
+			replaced(t, "    model: claude-sonnet-5\n    config:\n      effort: medium\n", "    model: claude-sonnet-5\n    provider: litellm\n")},
+		{KindAgent, Assignment{"analysis.agent", `{"provider":"openrouter"}`},
+			settingsFixture + "analysis:\n  agent:\n    provider: openrouter\n"},
 		{KindText, Assignment{"orchestration.release.tag", "spring release"},
 			replaced(t, "    count: 5      # five stories\n", "    count: 5      # five stories\n    tag: spring release\n")},
 	} {
@@ -131,6 +136,7 @@ func TestEditSettingsRefusesWithTheFieldAndTheReason(t *testing.T) {
 		{"duration", []Assignment{{"planning.cycle", "0s"}}, nil, "planning.cycle", "is not a duration longer than zero"},
 		{"cron", []Assignment{{"analysis.schedule", "* * *"}}, nil, "analysis.schedule", "has 3 fields, not five"},
 		{"agent", []Assignment{{"planning.agent", `{"harness":"Bad Harness"}`}}, nil, "planning.agent", "is not a name such as claude-code"},
+		{"agent's provider", []Assignment{{"planning.agent", `{"provider":"Lite LLM"}`}}, nil, "planning.agent", `provider "Lite LLM" is not a name such as litellm`},
 		{"not an agent", []Assignment{{"analysis.agent", "claude"}}, nil, "analysis.agent", "is not an agent"},
 		{"agent with an unknown field", []Assignment{{"analysis.agent", `{"modelname":"x"}`}}, nil, "analysis.agent", "is not an agent"},
 		{"text", []Assignment{{"orchestration.release.policy", "theme"}, {"orchestration.release.epic", "epic-7"}}, nil, "orchestration.release.epic", "is not an epic ID"},

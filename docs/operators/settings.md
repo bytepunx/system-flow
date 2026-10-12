@@ -370,6 +370,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--port` | [flai dashboard](../users/flai-reference.md#flai-dashboard), [flai dashboard restart](../users/flai-reference.md#flai-dashboard-restart), [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--print-body` | [flai adr new](../users/flai-reference.md#flai-adr-new), [flai epic new](../users/flai-reference.md#flai-epic-new), [flai story new](../users/flai-reference.md#flai-story-new), [flai task new](../users/flai-reference.md#flai-task-new) |
 | `--program` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
+| `--provider` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--publish` | [flai push](../users/flai-reference.md#flai-push) |
 | `--published` | [flai dashboard upgrade](../users/flai-reference.md#flai-dashboard-upgrade) |
 | `--pull` | [flai dashboard](../users/flai-reference.md#flai-dashboard) |
