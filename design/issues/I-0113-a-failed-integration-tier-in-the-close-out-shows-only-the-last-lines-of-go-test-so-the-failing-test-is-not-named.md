@@ -2,12 +2,12 @@
 id: I-0113
 title: A failed integration tier in the close-out shows only the last lines of go test, so the failing test is not named
 class: efficiency
-status: open
+status: closed
 count: 3
 cost: 6m
 first_reported: 2026-10-07T09:13:42Z
 last_reported: 2026-10-08T08:17:32Z
-updated: 2026-10-08T08:17:32Z
+updated: 2026-10-12T15:56:50Z
 ---
 
 # I-0113 A failed integration tier in the close-out shows only the last lines of go test, so the failing test is not named
@@ -32,3 +32,4 @@ S-0321's close-out integration tier showed only the tail of T-1340's body and "F
 ## Remediation
 
 Story S-0313 remediates this issue, created from it at 2026-10-07T14:26:02Z.
+Closed 2026-10-12T15:56:50Z: fixed by S-0313: a failing plain tier's finding keeps go test's --- FAIL, FAIL<tab><package>, and panic lines ahead of its last 20 lines (TestPlainNamesTheFailuresAheadOfItsLastLines), and this repository's integration tier runs scripts/integration.sh -json in flai as go-test-json, so its findings name each failing test by file and line
