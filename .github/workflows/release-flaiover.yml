@@ -59,7 +59,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -137,7 +137,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       # For docker buildx imagetools, which reads the index's manifests.
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       # The list names the image by the tag the version gives it, so the
       # version image read from git must be the one this tag carries.
       - name: Digest list
