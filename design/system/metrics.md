@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-07
+updated: 2026-10-12
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -327,6 +327,48 @@ story agents' turns, over 2 stories in the window:
 
 The heading counts `turns.stories`. The `total` line gives each class's count and its share of the total, rounded to a whole percent. `by day` lists only the days with turns. A class is named with a space for its underscore.
 
+## Coordination
+
+Whether E-0018 runs more stories at once with less conflict work at the end (S-0337, [ADR-0138](../adrs/0138-flai-stats-reports-per-week-the-conversations-between-agents-and-how-they-ended.md)): per week, the conversations between stories and how they ended, the conflicts a trial merge found while both stories were open against those a rebase met at sync or at acceptance, and the stories started on a share with the hold each would have waited, beside the time held in `claims.weeks[]` ([Claims and touches](#claims-and-touches)). Each value comes from one of three sources.
+
+| Source | What is read |
+|--------|--------------|
+| Conversations | The files under `wip/messages` ([agent-coordination.md](agent-coordination.md#messages-between-stories)), whatever their status. Each event is placed by the time in its entry's heading, `### <time> <author>`, or by a share's `at`: a conversation has no kind, can mix notices with talk, and its `updated` moves with every entry, so neither `created` nor `updated` says when it agreed or ended |
+| Conflict log | `.flai-cache/conflicts.jsonl` in the main checkout, one JSON line per event, below. Append-only and never trimmed. A write that fails is logged as a warning and the command goes on |
+| Board | The transitions of every story, archived ones included, and the conversations' `shares[]` ([ADR-0134](../adrs/0134-flai-serve-asks-the-agent-of-a-story-in-progress-about-each-ready-story-it.md)) |
+
+A line of the conflict log:
+
+| Field | Definition |
+|-------|------------|
+| `at` | When the conflict was found or met, `YYYY-MM-DDTHH:MM:SSZ` |
+| `story` | The story whose sync or acceptance found or met it |
+| `other` | On a `trial` line only, the other story of the pair |
+| `where` | `trial`: the trial merge at `flai stream sync` sent a conflict message to the pair's conversation, or changed the paths of the one there ([ADR-0121](../adrs/0121-flai-tells-two-stories-of-a-trial-merge-conflict-or-a-grown-overlap-with-a.md)). The conversation skips a message naming the same paths as its newest, so a pair counts once per distinct conflict, not once per sync. `sync`: the story branch's rebase stopped on conflicts in `storygit.Rebase`, at `flai stream sync` or `flai task done`. `accept`: the rebase in `flai accept` stopped on conflicts, before the acceptance was refused |
+| `paths` | The conflicting paths, sorted. Generated files the sync settles itself ([ADR-0098](../adrs/0098-flai-stream-sync-and-flai-accept-regenerate-design-issues-summary-md-when-a.md)) are left out, and a stop settled by them alone writes no line |
+
+Each value is counted in the ISO week that holds its event, from the window's start to now, as `claims.weeks[].stories` is.
+
+| Value | Definition | Precision |
+|-------|------------|-----------|
+| `coordination.logged` | Whether the conflict log could be read. True when it is missing, which means no conflicts; false when it could not be read, which `flai stats` warns of on stderr | `true` or `false` |
+| `coordination.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `conversations`, `conflicts`, and `shares` | `start` is `YYYY-MM-DD`, a Monday |
+| `coordination.weeks[].conversations.opened` | The conversations whose first entry is in the week | Whole count |
+| `coordination.weeks[].conversations.agreed` | The conversations whose first agreement is in the week: the earlier of their first share in `shares[]`, at its `at`, and an entry closing them because the two branches merge cleanly at a sync, `Closed: <branch> and <branch> merge cleanly at the sync of S-nnnn`. Each conversation counts once | Whole count |
+| `coordination.weeks[].conversations.escalated` | The conversations whose first escalation is in the week: the entry `flai message escalate` adds, starting `Asked the operator on`. Each conversation counts once | Whole count |
+| `coordination.weeks[].conversations.closed_with_story` | The conversations whose entry closing them because a story was accepted, archived, or no longer open is in the week: `Closed: S-nnnn was accepted`, `Closed: S-nnnn was archived`, or `Closed: S-nnnn is <state>, no longer open, at the sync of S-nnnn`. A conversation that reads as closed with no such entry counts at the first done or cancelled transition of either of its stories, and not at all when neither has one. A closing entry for any other reason counts under neither this nor `agreed` | Whole count |
+| `coordination.weeks[].conflicts` | The conflict log's lines in the week. Absent when `logged` is false | |
+| `coordination.weeks[].conflicts.found` | The `trial` lines: conflicts found while both stories were open | Whole count |
+| `coordination.weeks[].conflicts.found_paths` | The paths of those lines, each counted once per line | Whole count |
+| `coordination.weeks[].conflicts.met_sync` | The `sync` lines: conflicts a rebase met at sync, after another story was accepted | Whole count |
+| `coordination.weeks[].conflicts.met_sync_paths` | The paths of those lines, each counted once per line | Whole count |
+| `coordination.weeks[].conflicts.met_accept` | The `accept` lines: conflicts a rebase met at acceptance | Whole count |
+| `coordination.weeks[].conflicts.met_accept_paths` | The paths of those lines, each counted once per line | Whole count |
+| `coordination.weeks[].shares.started` | The stories started on a share whose first move to `in-progress` is in the week. A story is started on a share when that move falls while a share names it as `held`: the share's `at` is at or before the move, and the share's `holder` has not yet left `in-progress` | Whole count |
+| `coordination.weeks[].shares.held_seconds` | Summed over those stories, the hold each would have waited without the share: from its first move to `in-progress` to the holder's first move to `review`, `done`, or `cancelled` after it, or to now while the holder is still in progress. A story's hold counts whole in the week it started, not split over the weeks it spans, so it grows while its holder is in progress. The counterpart of `claims.weeks[].held_seconds`, the hold that ran | Whole seconds |
+
+Not counted: a narrowed claim and agreement in free text. Nothing records either against the conversation, so `agreed` is a floor: a pair that agreed in a reply, or by narrowing a claim, shows as opened and later closed with its story. The conflict log starts with the release that writes it, so weeks before it show no conflicts found or met.
+
 ## Charts
 
 Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166), save CoD by Order, which projects from now ([What the pull order costs](#what-the-pull-order-costs-s-0213)). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
@@ -353,6 +395,7 @@ Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-t
 | Forecast Error / Model | Per model, the item's `model`, one point per bucket: the p50 of the absolute `forecast_error_seconds` of its stories done in the bucket | Filter by nature. A bucket with no such story is a gap ([ADR-0111](../adrs/0111-flai-stats-gives-each-item-the-model-its-forecasts-are-grouped-under.md)) |
 | Parallelism | Per day of the window, `claims.days[].in_progress`, with `held` as a second series, and a line at `claims.limit` | No limit line when `claims.limit` is absent ([Claims and touches](#claims-and-touches)) |
 | Hold Time | Stacked bar per week of the window, `claims.weeks[].held_seconds` in hours, one series per reason: `overlap`, `after`, and `no-touches`, the empty claim | A hold with more than one reason counts under the one it is named by, so a bar's height is the time held ([ADR-0113](../adrs/0113-flai-stats-reports-held-stories-per-day-held-time-by-reason-per-week-and-the.md)) |
+| Coordination | Per week of the window, bars of the conflicts found early, `coordination.weeks[].conflicts.found`, against those met late, `met_sync` plus `met_accept`; and the conversations `opened`, `agreed`, `escalated`, and `closed_with_story`, one series each, as lines or bars | Beside it, the stories started on a share in the window and the hold time they saved, the sums of `shares.started` and `shares.held_seconds` over the weeks. Without the conflict log, `logged` false, the chart says it could not be read ([Coordination](#coordination), [ADR-0138](../adrs/0138-flai-stats-reports-per-week-the-conversations-between-agents-and-how-they-ended.md)) |
 | Touches Drift | Stacked bar per story of `claims.drift[]` completed in the window, x its `completed` in `items[]`: `outside_count` and `unchanged_count`. On a second axis, `claims.weeks[].exact_share` per week | Cancelled stories left out. A week with no such story has no share, a gap, not 0. Without `claims.drift`, the chart says git could not be read |
 | CoD Outstanding | Stacked area per day of the window, `cost_of_delay.days[].outstanding`, one series per column in board order | Of the report's type. Beside it, the items without a value now, today's `days[].without_value` per column ([ADR-0112](../adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)) |
 | CoD Incurred | Bar per week of the window, `cost_of_delay.weeks[].incurred`, with the running mean per week as a line: the sum from the window's first week to this one over the number of those weeks | Of the report's type. Beside it, the items without a value now, as on CoD Outstanding |
