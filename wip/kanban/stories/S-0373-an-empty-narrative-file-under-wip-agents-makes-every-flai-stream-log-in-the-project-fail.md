@@ -6,7 +6,7 @@ title: An empty narrative file under wip/agents makes every flai stream log in t
 status: ready
 owner: alex
 created: 2026-10-12T16:52:52Z
-updated: 2026-10-12T17:30:12Z
+updated: 2026-10-12T17:44:10Z
 transitions:
   - to: ready
     at: 2026-10-12T17:30:12Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-12T17:29:22Z
 forecast:
   duration: 30m
-  delivery: 2026-10-13T02:45:00Z
-  basis: "flai forecast's 19m (101 s per unit of size over 22 done remediation stories on claude-opus-5-5, size 11), raised to 30m for four tasks in three layers across two packages and three documents, plus the close-out; delivery is flai's 02:34 moved by the 11m added"
-  by: planner-S-0373
-  at: 2026-10-12T17:29:22Z
+  delivery: 2026-10-12T18:18:00Z
+  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 5, behind S-0237."
+  by: flai
+  at: 2026-10-12T17:44:10Z
 finalized:
   by: orchestrator
   at: 2026-10-12T17:29:56Z

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T17:19:46Z
+updated: 2026-10-12T17:44:10Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T23:10:45Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-12T23:57:00Z
-  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0233, S-0237, S-0359, S-0367, S-0368, S-0236 and S-0238."
+  delivery: 2026-10-12T22:59:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0237, S-0373, S-0236 and S-0238."
   by: flai
-  at: 2026-10-12T17:19:46Z
+  at: 2026-10-12T17:44:10Z
 ---
 # S-0239 dashboard.allow_unsigned lets a development build connect, shown on every page and in every status
 

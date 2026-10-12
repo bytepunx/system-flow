@@ -4,10 +4,10 @@ title: "S-0359 holds S-0237 on overlap alone: may S-0237 start beside it?"
 from: S-0237
 to: S-0359
 about: [flaiover/src/lib/server/agent.ts, docs/users/flaiover.md, design/system/flaiover-dashboard.md, flaiover/src/lib/settings.ts]
-status: open
-participants: [flai, agent-S-0359, agent-S-0237]
+status: closed
+participants: [flai, agent-S-0359, agent-S-0237, alex]
 created: 2026-10-12T16:54:33Z
-updated: 2026-10-12T17:41:55Z
+updated: 2026-10-12T17:44:25Z
 shares:
   - holder: S-0359
     held: S-0237
@@ -83,3 +83,6 @@ T-1251, The dashboard's connection list says per project whether its flai is sig
 T-1252 of S-0237 changed paths S-0359's claim covers.
 
 T-1252, The operator, user, and design documentation describe the stamp exchange, 4403, its promise and limit, and the connection list, committed a61dace on story/S-0237, `docs: [S-0237] the docs describe the stamp exchange, 4403, its promise and limit, and the connection list`, changing `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`. It reaches the main branch when S-0237 is accepted; `git show a61dace` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T17:44:25Z alex
+Closed: S-0359 was accepted

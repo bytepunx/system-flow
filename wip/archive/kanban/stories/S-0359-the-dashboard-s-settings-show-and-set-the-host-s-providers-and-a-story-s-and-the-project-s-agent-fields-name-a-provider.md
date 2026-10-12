@@ -3,11 +3,11 @@ id: S-0359
 type: story
 nature: feature
 title: The dashboard's settings show and set the host's providers, and a story's and the project's agent fields name a provider
-status: review
+status: done
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:52:44Z
-updated: 2026-10-12T17:32:55Z
+updated: 2026-10-12T17:44:24Z
 transitions:
   - to: ready
     at: 2026-10-12T16:53:33Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-12T17:32:55Z
     by: agent-S-0359
+  - to: done
+    at: 2026-10-12T17:44:24Z
+    by: alex
 tags: [cli, dashboard]
 topics: [agents]
 touches: [flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/components/AgentFields.svelte, flaiover/src/lib/components/ItemEditor.svelte, flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/agent.ts, flaiover/src/lib/agent.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/ItemEditor.svelte.test.ts, flaiover/src/lib/components/NewItemForm.svelte.test.ts, design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md]
@@ -92,9 +95,6 @@ S-0349 puts providers on the host and `provider` on an agent, set from a shell. 
 ## Notes
 
 - Whether the key's variable is set is a yes or no, so that the page can say why a start would be refused without holding the key.
-- The page's line for an unset key says an agent that names the provider is refused at start, as S-0350 made flai serve do.
-- Criterion 4's Reset is the button labelled **Remove**: a reset removes the provider's entry whole, and the page's other sections label a removal so.
-- The strategic agents' form (`StrategicSettings.svelte`) does not use `AgentFields` and has no provider input; a provider the manifest gives a strategic agent is kept on a save. The goal names the default agent, a new story, and a story's agent only.
 
 ### Planning
 
