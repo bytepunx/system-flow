@@ -68,6 +68,14 @@ func (a *app) serveImageLists() *serve.ImageLists {
 	return &serve.ImageLists{Cache: cache, Fetch: serve.ResolverFetcher(dashboard.Resolver{Releases: opt, Cache: cache}, signedDashboardImage)}
 }
 
+// hostAllowsUnsigned is the host configuration's dashboard.allow_unsigned,
+// read again at each dial so that a changed setting takes effect at the next
+// (S-0239); a configuration that does not load allows nothing.
+func (a *app) hostAllowsUnsigned() bool {
+	cfg, _, err := a.loadConfig()
+	return err == nil && cfg.Dashboard.AllowUnsigned
+}
+
 // warnReleaseStamp logs once, at start, when a build that claims a release
 // version carries no valid release stamp; a development build is never
 // warned about (S-0235).
@@ -136,7 +144,7 @@ there does.`,
 			servePprof(ctx, a.logger())
 			warnReleaseStamp(a.logger(), buildinfo.OwnStamp())
 			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, ImportRoots: a.importRoots,
-				Images: a.serveImageLists(), Docker: a.runner})
+				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned})
 		},
 	}
 	c.Flags().IntVar(&exitWith, "exit-with", 0, "stop when the process with this PID is gone")

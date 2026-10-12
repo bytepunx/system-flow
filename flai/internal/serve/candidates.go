@@ -277,9 +277,7 @@ func (f *offers) reconcile(ctx context.Context, entries []Entry) {
 		cctx, stop := context.WithCancel(ctx)
 		c := f.o.NewClient(e, []byte(strings.TrimSpace(string(key))))
 		c.Kind = channel.KindCandidate
-		if f.o.Images != nil && f.images != nil {
-			c.BeforeDial = f.images.gate(f.o, e)
-		}
+		guard(f.o, f.images, e, c)
 		c.Methods = hostapi.ImportMethods(f.o.ImportRun, f.o.Now, f.o.Host, f.imported(e))
 		r := &running{entry: e, client: c, stop: stop, done: make(chan struct{})}
 		f.running[k] = r

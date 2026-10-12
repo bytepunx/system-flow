@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -70,8 +72,8 @@ func TestTheDefaultClientCarriesTheStampAndTheReleaseKey(t *testing.T) {
 	if len(c.ReleaseKeys) != 1 || !c.ReleaseKeys[0].Equal(want[0]) {
 		t.Errorf("the client verifies with %v, want the embedded release key", c.ReleaseKeys)
 	}
-	if c.AllowUnsigned {
-		t.Error("the client admits an unsigned dashboard")
+	if c.AllowUnsigned != nil {
+		t.Error("the client admits an unsigned dashboard by itself")
 	}
 }
 
@@ -485,7 +487,21 @@ type imageLab struct {
 	logs   *syncBuffer
 }
 
+// labSettings are the allowance an image lab runs with, and which sides of
+// its connection carry a release stamp (S-0239).
+type labSettings struct {
+	host      func() bool // the host configuration's dashboard.allow_unsigned; nil is off
+	manifest  string      // the project manifest's dashboard.allow_unsigned, "" for none
+	signed    bool        // this flai sends a release stamp
+	unstamped bool        // the dashboard answers hello without one
+}
+
 func newImageLab(t *testing.T, docker *fakeDocker) *imageLab {
+	t.Helper()
+	return newImageLabWith(t, docker, labSettings{})
+}
+
+func newImageLabWith(t *testing.T, docker *fakeDocker, set labSettings) *imageLab {
 	t.Helper()
 	key := imgKey(t)
 	cache := imgCache(t, key)
@@ -494,6 +510,26 @@ func newImageLab(t *testing.T, docker *fakeDocker) *imageLab {
 		docker: &lockedDocker{d: docker}, logs: &syncBuffer{}}
 	root, keyFile := scratchProject(t, "harbour")
 	lab.root = root
+	if set.manifest != "" {
+		f, err := os.OpenFile(filepath.Join(root, "system-flow.yaml"), os.O_APPEND|os.O_WRONLY, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = f.WriteString("dashboard:\n  allow_unsigned: " + set.manifest + "\n")
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if set.unstamped {
+		lab.dash.Answer(nil)
+	}
+	var own channel.Release
+	if set.signed {
+		own = channel.Release{Statement: "flai 1.43.0 a1825d8", Signature: "c2lnbmF0dXJl"} // the test dashboard does not check it
+	}
 	if err := lab.dir.Register(Entry{Key: "harbour", Name: "harbour", Root: root, URL: lab.dash.URL, KeyFile: keyFile}); err != nil {
 		t.Fatal(err)
 	}
@@ -502,11 +538,11 @@ func newImageLab(t *testing.T, docker *fakeDocker) *imageLab {
 	done := make(chan error, 1)
 	go func() {
 		done <- Run(ctx, Options{Dir: lab.dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: time.Hour, Logger: logger,
-			Images: &ImageLists{Cache: cache, Fetch: noFetch(t)}, Docker: lab.docker,
+			Images: &ImageLists{Cache: cache, Fetch: noFetch(t)}, Docker: lab.docker, AllowUnsigned: set.host,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root}, Logger: logger,
 					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond,
-					HeldBackoff: 20 * time.Millisecond, ReleaseKeys: lab.dash.Keys}
+					HeldBackoff: 20 * time.Millisecond, ReleaseKeys: lab.dash.Keys, Release: own}
 			}})
 	}()
 	t.Cleanup(func() {
@@ -634,5 +670,121 @@ func TestServeDialsOnceTheContainerRunsAListedImage(t *testing.T) {
 	})
 	if c := st.Connections[lab.root]; c.RefusedBy != "" {
 		t.Errorf("connection %+v still says it was refused", c)
+	}
+}
+
+func on() bool { return true }
+
+// unsignedWarns are the warn events that name a connection's unsigned sides.
+func (lab *imageLab) unsignedWarns() []map[string]any {
+	var out []map[string]any
+	lines := bufio.NewScanner(strings.NewReader(lab.logs.String()))
+	for lines.Scan() {
+		var ev map[string]any
+		if json.Unmarshal(lines.Bytes(), &ev) == nil && ev["level"] == "WARN" && ev["unsigned"] != nil {
+			out = append(out, ev)
+		}
+	}
+	return out
+}
+
+// S-0239: with the allowance in force for the project, by the host's setting
+// or by the manifest's over the host's, a local build with no RepoDigests is
+// dialled and still recorded as unlisted; a dashboard without a stamp is
+// accepted; the unsigned sides reach the status; and one warn names them for
+// each connection, again for a new one.
+func TestServeDialsAnUnlistedImageWithTheAllowance(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		set  labSettings
+	}{
+		{"the host's setting", labSettings{host: on, unstamped: true}},
+		{"the manifest's over the host's", labSettings{manifest: "true", unstamped: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lab := newImageLabWith(t, dockerWith(t, "0.0.0", nil), tc.set)
+			conn := lab.dash.Wait(t)
+			want := []string{channel.UnsignedFlai, channel.UnsignedDashboard}
+			st := lab.status(t, "the connection and its unsigned sides are in the status", func(st Status) bool {
+				return st.Connections[lab.root].Connected && len(st.Connections[lab.root].Unsigned) > 0
+			})
+			if c := st.Connections[lab.root]; !slices.Equal(c.Unsigned, want) || c.RefusedBy != "" || c.PeerSigned {
+				t.Errorf("connection %+v, want unsigned %v", c, want)
+			}
+			if v := st.Images[lab.root]; v.Kind != ImageUnlisted {
+				t.Errorf("verdict %+v, want unlisted though dialled", v)
+			}
+			data, err := os.ReadFile(filepath.Join(string(lab.dir), "state.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(data), `"unsigned": [`) {
+				t.Errorf("the status file does not carry the unsigned sides:\n%s", data)
+			}
+			said := lab.unsignedWarns()
+			if len(said) != 1 || said[0]["project"] != "harbour" || said[0]["component"] == nil || fmt.Sprint(said[0]["unsigned"]) != fmt.Sprint(want) {
+				t.Fatalf("logged %v, want one warn naming %v", said, want)
+			}
+
+			conn.Close()
+			lab.dash.Wait(t)
+			waitFor(t, "a second warn for the second connection", func() bool { return len(lab.unsignedWarns()) == 2 })
+		})
+	}
+}
+
+// S-0239: without the allowance in force, the host's off and none in the
+// manifest, or the manifest's off over the host's on, an unlisted image is
+// refused as before.
+func TestServeRefusesAnUnlistedImageWithoutTheAllowance(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		set  labSettings
+	}{
+		{"none", labSettings{unstamped: true}},
+		{"the manifest's off over the host's on", labSettings{host: on, manifest: "false", unstamped: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			lab := newImageLabWith(t, dockerWith(t, "0.0.0", nil), tc.set)
+			st := lab.refusedAttempts(t, 3)
+			select {
+			case conn := <-lab.dash.Proven:
+				t.Fatalf("flai dialled an unlisted image without the allowance, for %q", conn.Project)
+			default:
+			}
+			if c := st.Connections[lab.root]; c.Connected || c.RefusedBy != channel.RefusedByFlai || c.Unsigned != nil {
+				t.Errorf("connection %+v, want refused by flai", c)
+			}
+			if said := lab.unsignedWarns(); len(said) != 0 {
+				t.Errorf("logged %v", said)
+			}
+		})
+	}
+}
+
+// S-0239: the host's setting is read at each dial: turned on, the next dial
+// of a refused unlisted image goes ahead.
+func TestTheAllowanceTakesEffectAtTheNextDial(t *testing.T) {
+	var allow atomic.Bool
+	lab := newImageLabWith(t, dockerWith(t, "0.0.0", nil), labSettings{host: allow.Load, unstamped: true})
+	lab.refusedAttempts(t, 1)
+	allow.Store(true)
+	lab.dash.Wait(t)
+}
+
+// S-0239: a signed pair with the allowance on records and logs nothing of it:
+// the allowance permits, it does not downgrade.
+func TestASignedPairWithTheAllowanceShowsNothing(t *testing.T) {
+	lab := newImageLabWith(t, dockerWith(t, imgVersion, []string{imgRepo + "@" + imgAMD64}), labSettings{host: on, signed: true})
+	lab.dash.Wait(t)
+	st := lab.status(t, "connected", func(st Status) bool { return st.Connections[lab.root].Connected })
+	if c := st.Connections[lab.root]; c.Unsigned != nil || !c.PeerSigned {
+		t.Errorf("connection %+v, want signed with no unsigned side", c)
+	}
+	if v := st.Images[lab.root]; v.Kind != ImageListed {
+		t.Errorf("verdict %+v, want listed", v)
+	}
+	if said := lab.unsignedWarns(); len(said) != 0 {
+		t.Errorf("a signed pair logged %v", said)
 	}
 }

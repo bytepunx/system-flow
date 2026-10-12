@@ -180,7 +180,17 @@ type State struct {
 	// dashboard's stamp verified.
 	PeerVersion string `json:"peer_version,omitempty"`
 	PeerSigned  bool   `json:"peer_signed,omitempty"`
+	// Unsigned are the sides of the open connection that Client.AllowUnsigned
+	// admitted without a release stamp, UnsignedFlai then UnsignedDashboard;
+	// none for a signed pair, and cleared when the connection ends (S-0239).
+	Unsigned []string `json:"unsigned,omitempty"`
 }
+
+// The sides of a connection State.Unsigned names.
+const (
+	UnsignedFlai      = "flai"      // this flai is a development build: it has no stamp of its own
+	UnsignedDashboard = "dashboard" // the dashboard sent no stamp
+)
 
 // Client keeps one connection to one dashboard alive.
 type Client struct {
@@ -199,10 +209,11 @@ type Client struct {
 	// ReleaseKeys verify the dashboard's release stamp; buildinfo.ReleaseKeys()
 	// when nil. Tests give keys they generate.
 	ReleaseKeys []*ecdsa.PublicKey
-	// AllowUnsigned admits a dashboard that sent no release stamp; false, the
-	// default, refuses it. A stamp that does not verify or names another
-	// component is refused either way. See refuses.
-	AllowUnsigned bool
+	// AllowUnsigned is asked at each attempt whether a dashboard that sends no
+	// release stamp is admitted; nil, the default, refuses it. A stamp that
+	// does not verify or names another component is refused either way. See
+	// refuses.
+	AllowUnsigned func() bool
 	// BeforeDial, when set, is asked before every dial, reconnections
 	// included; an error refuses the attempt without a dial (S-0238).
 	BeforeDial func(ctx context.Context) error
@@ -336,17 +347,40 @@ func (c *Client) defaults() {
 	}
 }
 
+// allowsUnsigned is AllowUnsigned's answer for this attempt, false when nil.
+func (c *Client) allowsUnsigned() bool {
+	return c.AllowUnsigned != nil && c.AllowUnsigned()
+}
+
 // refuses is the one place that decides whether the dashboard's checked
 // stamp closes the connection: every stamp that is not signed, except a
-// missing one when AllowUnsigned admits it.
-func (c *Client) refuses(p buildinfo.PeerStamp) bool {
+// missing one when allow, the attempt's allowance, admits it.
+func refuses(p buildinfo.PeerStamp, allow bool) bool {
 	switch p.State {
 	case buildinfo.StampSigned:
 		return false
 	case buildinfo.StampMissing:
-		return !c.AllowUnsigned
+		return !allow
 	}
 	return true
+}
+
+// unsignedSides are the sides of a connection the allowance admitted without
+// a stamp: this flai when it has none, the dashboard when it sent none.
+// Without the allowance no connection has an unsigned side, since one would
+// have been refused.
+func (c *Client) unsignedSides(allow bool, peer buildinfo.PeerStamp) []string {
+	if !allow {
+		return nil
+	}
+	var out []string
+	if c.Release == (Release{}) {
+		out = append(out, UnsignedFlai)
+	}
+	if peer.State == buildinfo.StampMissing {
+		out = append(out, UnsignedDashboard)
+	}
+	return out
 }
 
 // State reports the connection as it is now.
@@ -383,7 +417,7 @@ func (c *Client) Run(ctx context.Context) {
 		proven := false
 		c.setState(func(s *State) {
 			proven = s.Since != ""
-			s.Connected, s.Since, s.Attempts = false, "", s.Attempts+1
+			s.Connected, s.Since, s.Attempts, s.Unsigned = false, "", s.Attempts+1, nil
 			if err != nil {
 				s.LastError = err.Error()
 			}
@@ -456,14 +490,15 @@ func (c *Client) Run(ctx context.Context) {
 	}
 }
 
-// attempt asks BeforeDial, when set, and dials and serves only when it passes.
+// attempt asks BeforeDial, when set, and dials and serves only when it
+// passes, with the allowance AllowUnsigned gives now.
 func (c *Client) attempt(ctx context.Context) error {
 	if c.BeforeDial != nil {
 		if err := c.BeforeDial(ctx); err != nil {
 			return &gateError{reason: err.Error()}
 		}
 	}
-	return c.serveOnce(ctx)
+	return c.serveOnce(ctx, c.allowsUnsigned())
 }
 
 func errText(err error) string {
@@ -553,14 +588,15 @@ func dashboardRefusal(err error) *RefusedError {
 }
 
 // checkDashboard verifies the release stamp in the dashboard's answer to
-// hello, and returns the refusal to close with when refuses says so.
-func (c *Client) checkDashboard(hr helloResult) (buildinfo.PeerStamp, *RefusedError) {
+// hello, and returns the refusal to close with when refuses says so under
+// allow, the attempt's allowance.
+func (c *Client) checkDashboard(hr helloResult, allow bool) (buildinfo.PeerStamp, *RefusedError) {
 	var stamp Release
 	if hr.Release != nil {
 		stamp = *hr.Release
 	}
 	p := buildinfo.VerifyPeerStamp(stamp.Statement, stamp.Signature, peerComponent, c.ReleaseKeys)
-	if !c.refuses(p) {
+	if !refuses(p, allow) {
 		return p, nil
 	}
 	reason := string(p.Fault)
@@ -579,8 +615,9 @@ func peerVersion(p buildinfo.PeerStamp, hr helloResult) string {
 	return hr.Dashboard
 }
 
-// serveOnce dials, proves, and serves requests until the connection ends.
-func (c *Client) serveOnce(ctx context.Context) error {
+// serveOnce dials, proves, and serves requests until the connection ends;
+// allow admits a dashboard that sends no stamp.
+func (c *Client) serveOnce(ctx context.Context, allow bool) error {
 	u, err := wsURL(c.URL)
 	if err != nil {
 		return err
@@ -659,7 +696,7 @@ func (c *Client) serveOnce(ctx context.Context) error {
 	}
 	// The dashboard's stamp is checked before this flai proves itself: an
 	// unsigned dashboard is told nothing more (S-0237).
-	peer, refused := c.checkDashboard(hr)
+	peer, refused := c.checkDashboard(hr, allow)
 	if refused != nil {
 		_ = conn.Close(CloseUnsigned, UnsignedReason+": "+refused.Reason)
 		return refused
@@ -668,10 +705,12 @@ func (c *Client) serveOnce(ctx context.Context) error {
 	if err := send(message{Method: "hello.prove", Params: proof}); err != nil {
 		return err
 	}
+	unsigned := c.unsignedSides(allow, peer)
 	c.setState(func(s *State) {
 		s.Connected, s.Since, s.LastError = true, c.Now().UTC().Format(time.RFC3339), ""
 		s.RefusedBy, s.RefusedReason = "", ""
 		s.PeerVersion, s.PeerSigned = peerVersion(peer, hr), peer.State == buildinfo.StampSigned
+		s.Unsigned = unsigned
 	})
 	c.mu.Lock()
 	c.notify = func(method string, params any) error {
@@ -688,6 +727,10 @@ func (c *Client) serveOnce(ctx context.Context) error {
 		c.mu.Unlock()
 	}()
 	c.Logger.Info("connected to the dashboard", "component", "channel", "url", c.URL, "project", c.Project.Key, "dashboard", hr.Dashboard)
+	if len(unsigned) > 0 {
+		// said once for each connection proven, never for a signed pair (S-0239)
+		c.Logger.Warn("connection allowed unsigned", "component", "channel", "url", c.URL, "project", c.Project.Key, "unsigned", unsigned)
+	}
 	c.setState(func(s *State) { s.Attempts = 0 })
 
 	// A dashboard that stops answering pings is gone, however open the socket looks.

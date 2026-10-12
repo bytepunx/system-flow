@@ -220,6 +220,33 @@ type Options struct {
 	// system's docker when nil.
 	Images *ImageLists
 	Docker execx.Runner
+	// AllowUnsigned is the host configuration's dashboard.allow_unsigned,
+	// asked before each dial of a project's dashboard, which a project's
+	// manifest overrides (S-0239); nil is off.
+	AllowUnsigned func() bool
+}
+
+// allowsUnsigned is whether the allowance is in force for the project at
+// root: its manifest's dashboard.allow_unsigned over the host's. A root whose
+// manifest does not load, a repository offered for import say, has the
+// host's.
+func (o Options) allowsUnsigned(root string) bool {
+	host := o.AllowUnsigned != nil && o.AllowUnsigned()
+	m, err := manifest.Load(filepath.Join(root, manifest.File))
+	if err != nil {
+		return host
+	}
+	return m.Dashboard.AllowUnsignedOr(host)
+}
+
+// guard has c ask before each dial whether the allowance is in force for e's
+// project and, when flai serve judges images, whether the dashboard's image
+// may be dialled.
+func guard(o Options, images *imageVerdicts, e Entry, c *channel.Client) {
+	c.AllowUnsigned = func() bool { return o.allowsUnsigned(e.Root) }
+	if o.Images != nil && images != nil {
+		c.BeforeDial = images.gate(o, e)
+	}
 }
 
 // ImageLists are what flai serve judges the dashboard's image against: the
@@ -293,40 +320,47 @@ func (l *ImageLists) check(ctx context.Context, docker execx.Runner, url string)
 }
 
 // imageVerdicts are each project's last image verdict, by root, recorded by
-// the gate before each dial and reported in the status.
+// the gate before each dial and reported in the status, and whether the
+// allowance was in force when it was judged.
 type imageVerdicts struct {
-	mu sync.Mutex
-	by map[string]ImageVerdict
+	mu      sync.Mutex
+	by      map[string]ImageVerdict
+	allowed map[string]bool
 }
 
 // gate is what a project's client asks before each dial, reconnections
 // included (S-0238): it judges the image the dashboard container runs and
 // records the verdict. An unlisted image is refused, and the channel logs and
-// shows the refusal; a listed one is dialled, and so is one not measured,
-// whose dashboard the release stamp check alone then admits or refuses. Every
-// retry of a refused dial looks again, so a container restarted from a listed
-// image is dialled at the next.
+// shows the refusal, unless the allowance is in force for the project, when
+// it is dialled and still recorded as unlisted (S-0239); a listed one is
+// dialled, and so is one not measured, whose dashboard the release stamp
+// check alone then admits or refuses. Every retry of a refused dial looks
+// again, so a container restarted from a listed image, or a setting turned
+// on, is dialled at the next.
 func (iv *imageVerdicts) gate(o Options, e Entry) func(context.Context) error {
 	docker := dockerOf(o)
 	return func(ctx context.Context) error {
 		v := o.Images.check(ctx, docker, e.URL)
-		if iv.record(e.Root, v) {
-			logVerdict(o.Logger, e, v)
+		allowed := o.allowsUnsigned(e.Root)
+		if iv.record(e.Root, v, allowed) {
+			logVerdict(o.Logger, e, v, allowed)
 		}
-		if v.Kind == ImageUnlisted {
+		if v.Kind == ImageUnlisted && !allowed {
 			return errors.New(unsignedImage(v))
 		}
 		return nil
 	}
 }
 
-// record keeps v as root's verdict and reports whether it differs from the last.
-func (iv *imageVerdicts) record(root string, v ImageVerdict) bool {
+// record keeps v as root's verdict, judged with the allowance as allowed, and
+// reports whether either differs from the last.
+func (iv *imageVerdicts) record(root string, v ImageVerdict, allowed bool) bool {
 	iv.mu.Lock()
 	defer iv.mu.Unlock()
 	was, ok := iv.by[root]
-	iv.by[root] = v
-	return !ok || !sameVerdict(was, v)
+	wasAllowed := iv.allowed[root]
+	iv.by[root], iv.allowed[root] = v, allowed
+	return !ok || !sameVerdict(was, v) || wasAllowed != allowed
 }
 
 // of are the verdicts of roots that have one; nil when none has.
@@ -350,10 +384,16 @@ func sameVerdict(a, b ImageVerdict) bool {
 		slices.Equal(a.RepoDigests, b.RepoDigests) && a.Digest == b.Digest && a.Release == b.Release && a.Reason == b.Reason
 }
 
-// logVerdict says a project's new verdict once. An unlisted one is not said
-// here: the channel logs the refusal it causes, with this reason.
-func logVerdict(log *slog.Logger, e Entry, v ImageVerdict) {
+// logVerdict says a project's new verdict once. An unlisted one is said here
+// only when the allowance dials it; otherwise the channel logs the refusal it
+// causes, with this reason.
+func logVerdict(log *slog.Logger, e Entry, v ImageVerdict, allowed bool) {
 	switch v.Kind {
+	case ImageUnlisted:
+		if allowed {
+			log.Info("dashboard image is on no verified digest list; dialled as unsigned is allowed", "component", "serve", "root", e.Root, "key", e.Key,
+				"container", v.Container, "image", v.Image, "reason", v.Reason)
+		}
 	case ImageListed:
 		log.Info("dashboard image is on a verified digest list", "component", "serve", "root", e.Root, "key", e.Key,
 			"container", v.Container, "image", v.Image, "digest", v.Digest, "release", v.Release)
@@ -402,7 +442,7 @@ func Run(ctx context.Context, o Options) error {
 	draining := map[string]*running{}
 	var drains sync.WaitGroup
 	unavailable := map[string]string{}
-	images := &imageVerdicts{by: map[string]ImageVerdict{}}
+	images := &imageVerdicts{by: map[string]ImageVerdict{}, allowed: map[string]bool{}}
 	offered := &offers{o: o, running: map[string]*running{}, images: images}
 	var mu sync.Mutex
 	// Each Claude Code that flai serve may start an agent with is checked
@@ -525,10 +565,8 @@ func Run(ctx context.Context, o Options) error {
 			clientCtx, stop := context.WithCancel(ctx)
 			cctx, stopLooks := context.WithCancel(clientCtx)
 			r := &running{entry: e, client: o.NewClient(e, []byte(strings.TrimSpace(string(key)))), stop: stop, stopLooks: stopLooks, done: make(chan struct{})}
-			if o.Images != nil {
-				// the dashboard's image is judged before each dial (S-0238)
-				r.client.BeforeDial = images.gate(o, e)
-			}
+			// the allowance is read and the dashboard's image judged before each dial (S-0238, S-0239)
+			guard(o, images, e, r.client)
 			clients[root] = r
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
 			starter := newLauncher(o, e)
@@ -652,7 +690,7 @@ func Run(ctx context.Context, o Options) error {
 // defaultClient is the client for one project when the options name no
 // other: it sends this build's release stamp in hello, none for a
 // development build, and verifies the dashboard's with the embedded release
-// key (S-0237).
+// key (S-0237). Run gives it the allowance and the image gate with guard.
 func defaultClient(o Options, e Entry, key []byte) *channel.Client {
 	keys, err := buildinfo.ReleaseKeys()
 	if err != nil {

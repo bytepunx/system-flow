@@ -10,13 +10,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -599,7 +602,7 @@ func TestDashboardRefusal(t *testing.T) {
 func TestAllowUnsignedAdmitsOnlyAMissingStamp(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
 	d.answer(nil, "")
-	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys, AllowUnsigned: true,
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys, AllowUnsigned: allowed,
 		MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
 	runClient(t, c)
 	waitProven(t, d)
@@ -607,9 +610,132 @@ func TestAllowUnsignedAdmitsOnlyAMissingStamp(t *testing.T) {
 		t.Errorf("state: %+v", st)
 	}
 	for _, r := range []*Release{d.sign("flai 2.3.0 1a2b3c4"), {Statement: "flaiover 2.3.0 1a2b3c4", Signature: "not base64!"}} {
-		if _, refused := c.checkDashboard(helloResult{Release: r}); refused == nil {
+		if _, refused := c.checkDashboard(helloResult{Release: r}, true); refused == nil {
 			t.Errorf("AllowUnsigned admitted %+v", r)
 		}
+	}
+}
+
+func allowed() bool { return true }
+
+// provenPastRefusals waits for a proven connection, passing over the
+// handshakes that flai refused before it.
+func provenPastRefusals(t *testing.T, d *fakeDashboard) *websocket.Conn {
+	t.Helper()
+	for {
+		select {
+		case c := <-d.proven:
+			return c
+		case <-d.failed:
+		case <-time.After(5 * time.Second):
+			t.Fatal("no connection")
+		}
+	}
+}
+
+// signedFlai is a stamp for this flai's side: the fake dashboard does not
+// check it, so any that is not the zero value stands for a release build.
+var signedFlai = Release{Statement: "flai 1.43.0 a1825d8", Signature: "c2lnbmF0dXJl"}
+
+// allowedUnsigned are the warn events that name the unsigned sides of a connection.
+func allowedUnsigned(logs *lockedBuffer) []map[string]any {
+	var out []map[string]any
+	for _, line := range strings.Split(logs.String(), "\n") {
+		var ev map[string]any
+		if json.Unmarshal([]byte(line), &ev) == nil && ev["level"] == "WARN" && ev["unsigned"] != nil {
+			out = append(out, ev)
+		}
+	}
+	return out
+}
+
+// S-0239: with the allowance a connection records the sides it admitted
+// without a stamp, flai then the dashboard, and warns once naming them; a
+// signed pair records and says nothing.
+func TestTheAllowanceRecordsAndWarnsOfTheUnsignedSides(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		own       Release
+		dashboard bool // the dashboard answers with its signed stamp
+		want      []string
+	}{
+		{"a dashboard without a stamp", signedFlai, false, []string{UnsignedDashboard}},
+		{"a development build of flai", Release{}, true, []string{UnsignedFlai}},
+		{"both", Release{}, false, []string{UnsignedFlai, UnsignedDashboard}},
+		{"a signed pair", signedFlai, true, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := newFakeDashboard(t, "s3cret")
+			if !tc.dashboard {
+				d.answer(nil, "")
+			}
+			var logs lockedBuffer
+			c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys,
+				Release: tc.own, AllowUnsigned: allowed, Logger: slog.New(slog.NewJSONHandler(&logs, nil)),
+				PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+			runClient(t, c)
+			waitProven(t, d)
+			st := waitState(t, c, "connected", func(s State) bool { return s.Connected })
+			if !slices.Equal(st.Unsigned, tc.want) || st.PeerSigned != tc.dashboard {
+				t.Errorf("state %+v, want unsigned %v", st, tc.want)
+			}
+			said := allowedUnsigned(&logs)
+			if tc.want == nil {
+				if len(said) != 0 {
+					t.Errorf("a signed pair logged %v", said)
+				}
+				return
+			}
+			if len(said) != 1 || said[0]["component"] != "channel" || said[0]["project"] != "harbour" || fmt.Sprint(said[0]["unsigned"]) != fmt.Sprint(tc.want) {
+				t.Errorf("logged %v, want one warn naming %v", said, tc.want)
+			}
+		})
+	}
+}
+
+// S-0239: without the allowance a dashboard without a stamp is closed with
+// 4403 before the proof; the allowance is asked at each attempt, so once it
+// is on the next attempt is admitted. Each connection proven warns once, and
+// the unsigned side is cleared when it ends.
+func TestTheAllowanceIsAskedAtEachAttempt(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	d.answer(nil, "")
+	var on atomic.Bool
+	var logs lockedBuffer
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys,
+		Release: signedFlai, AllowUnsigned: on.Load, Logger: slog.New(slog.NewJSONHandler(&logs, nil)),
+		PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, HeldBackoff: 40 * time.Millisecond}
+	runClient(t, c)
+	select {
+	case msg := <-d.failed:
+		if !strings.Contains(msg, "4403") || !strings.Contains(msg, "unsigned peer: missing stamp") {
+			t.Errorf("the dashboard read %q, want a close with 4403 before any proof", msg)
+		}
+	case <-d.proven:
+		t.Fatal("flai admitted a dashboard without a stamp without the allowance")
+	case <-time.After(5 * time.Second):
+		t.Fatal("nothing happened")
+	}
+	if st := waitState(t, c, "refused", func(s State) bool { return s.RefusedBy != "" }); st.RefusedBy != RefusedByFlai || st.Unsigned != nil {
+		t.Errorf("state: %+v", st)
+	}
+
+	on.Store(true)
+	first := provenPastRefusals(t, d)
+	if st := waitState(t, c, "connected", func(s State) bool { return s.Connected }); !slices.Equal(st.Unsigned, []string{UnsignedDashboard}) || st.RefusedBy != "" {
+		t.Errorf("state: %+v", st)
+	}
+
+	d.answer(nil, "missing stamp") // the dashboard now refuses this flai, so no connection follows
+	_ = first.Close(websocket.StatusGoingAway, "restart")
+	if st := waitState(t, c, "dropped", func(s State) bool { return !s.Connected && s.RefusedBy == RefusedByDashboard }); st.Unsigned != nil {
+		t.Errorf("the unsigned side outlived the connection: %+v", st)
+	}
+	d.answer(nil, "")
+	provenPastRefusals(t, d)
+	waitState(t, c, "connected again", func(s State) bool { return s.Connected })
+	if said := allowedUnsigned(&logs); len(said) != 2 {
+		t.Errorf("logged %d warns over two connections, want one each: %v", len(said), said)
 	}
 }
 

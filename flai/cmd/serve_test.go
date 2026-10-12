@@ -246,11 +246,11 @@ func TestServeStatusSaysWhichSideRefusedTheOtherAsUnsigned(t *testing.T) {
 	if err := json.Unmarshal([]byte(js), &st); err != nil || st.Status == nil {
 		t.Fatalf("json: %v %s", err, js)
 	}
-	if got := st.Status.Connections["/p/quay"]; got != refusedConnections["/p/quay"] {
+	if got := st.Status.Connections["/p/quay"]; !reflect.DeepEqual(got, refusedConnections["/p/quay"]) {
 		t.Errorf("flai's refusal: %+v", got)
 	}
 	for _, p := range projects {
-		if got := st.Status.Connections[p.Root]; got != refusedConnections["/p/"+p.Key] {
+		if got := st.Status.Connections[p.Root]; !reflect.DeepEqual(got, refusedConnections["/p/"+p.Key]) {
 			t.Errorf("%s: %+v", p.Key, got)
 		}
 	}
