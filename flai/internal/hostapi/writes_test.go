@@ -98,6 +98,9 @@ var good = map[string]struct {
 	"settings.unserve":         {`{"root":"/home/me/git/blog",` + rid + `}`, "serve project remove --json -- /home/me/git/blog", ""},
 	"settings.mcp_token":       {`{` + rid + `}`, "mcp token --rotate --json", ""},
 	"settings.dashboard_token": {`{` + rid + `}`, "dashboard token --rotate --no-restart --json", ""},
+	// S-0359: a provider on the host, under the settings action
+	"settings.provider": {`{"name":"litellm","api":"openai-chat","base_url":"http://127.0.0.1:4000","key_env":"LITELLM_API_KEY","models":{"sonnet":"anthropic/claude-sonnet-5","opus":"anthropic/claude-opus-5-5"},` + rid + `}`,
+		"serve agent provider litellm --api=openai-chat --base-url=http://127.0.0.1:4000 --key-env=LITELLM_API_KEY --model=opus=anthropic/claude-opus-5-5 --model=sonnet=anthropic/claude-sonnet-5 --json", ""},
 	// S-0295: the shared paths, changed under the settings action and checked by anyone
 	"settings.shared":       {`{"action":"add","pattern":" --docs/users/*.md ",` + rid + `}`, "shared add --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --json -- --docs/users/*.md", ""},
 	"settings.shared_check": {`{"paths":["docs/users/flai.md"," --help "],"story":"S-0001"}`, "shared check --json -- docs/users/flai.md --help S-0001", ""},
@@ -248,6 +251,12 @@ var refused = map[string][]string{
 	"settings.unserve":         {`{"key":"blog",` + rid + `}`, `{"root":"/a\nb",` + rid + `}`, `{"root":"/a","key":"a b",` + rid + `}`},
 	"settings.mcp_token":       {`"--force"`, `{}`},
 	"settings.dashboard_token": {`"--force"`, `{}`},
+	// S-0359: a provider's name and each value checked for its shape; reset alone
+	"settings.provider": {`{"name":"--help","api":"openai-chat",` + rid + `}`, `{"name":"Lite LLM","api":"openai-chat",` + rid + `}`, `{"api":"openai-chat",` + rid + `}`,
+		`{"name":"litellm",` + rid + `}`, `{"name":"litellm","models":{},` + rid + `}`, `{"name":"litellm","reset":true,"api":"openai-chat",` + rid + `}`,
+		`{"name":"litellm","api":"bedrock",` + rid + `}`, `{"name":"litellm","base_url":"--help",` + rid + `}`, `{"name":"litellm","base_url":"http://u:sk-x@h.example.com",` + rid + `}`,
+		`{"name":"litellm","key_env":"sk-0123 456",` + rid + `}`, `{"name":"litellm","key_env":"X\n--reset",` + rid + `}`, `{"name":"litellm","models":{"opus=x":"y"},` + rid + `}`,
+		`{"name":"litellm","models":{"opus":"--help"},` + rid + `}`, `{"name":"litellm","models":["opus=x"],` + rid + `}`, `{"name":"litellm","api":"openai-chat"}`},
 	"settings.shared": {`{"action":"--add","pattern":"x",` + rid + `}`, `{"pattern":"x",` + rid + `}`, `{"action":"add","pattern":"  ",` + rid + `}`,
 		`{"action":"remove","pattern":"a\nb",` + rid + `}`, `{"action":"add","pattern":["x"],` + rid + `}`, `{"action":"add","pattern":"x"}`},
 	"settings.manifest": {`{` + rid + `}`, `{"set":{},"unset":[],` + rid + `}`, `{"set":"planning.replan=agent",` + rid + `}`, `{"set":{"planning.replan":"agent"}}`,
@@ -899,6 +908,85 @@ func TestSettingsSharedAddsAndRemovesThroughFlaiShared(t *testing.T) {
 		if got := journal[i]; got.Action != ActionSettings || got.Method != "settings.shared" || got.Outcome != w.outcome || got.Detail != w.detail {
 			t.Errorf("entry %d: %+v, want %+v", i, got, w)
 		}
+	}
+}
+
+// S-0359, ADR-0129: settings.provider sets a field or removes an entry
+// through flai serve agent provider, host-wide, journalled as the command it
+// ran; what it refuses itself says why, and flai's refusal is a rule with
+// flai's reason.
+func TestSettingsProviderSetsAndResetsThroughFlaiServeAgentProvider(t *testing.T) {
+	p := withDocs(t)
+	var journal []Entry
+	host := Host{Enabled: func(a, _ string) bool { return a == ActionSettings }, Record: func(e Entry) { journal = append(journal, e) }}
+	rec := &recorder{}
+	m := writeMethods(rec.run, time.Now, host)["settings.provider"]
+	call := func(params string, ran Ran) (any, *channel.Error) {
+		rec.ran = ran
+		return m(context.Background(), p, json.RawMessage(params))
+	}
+
+	if _, e := call(`{"name":"litellm","base_url":"https://litellm.example.com","request_id":"req-00000051"}`, Ran{Stdout: []byte(`{"providers":{}}`)}); e != nil {
+		t.Fatalf("one field: %+v", e)
+	}
+	if _, e := call(`{"name":"litellm","reset":true,"request_id":"req-00000052"}`, Ran{Stdout: []byte(`{"providers":{}}`)}); e != nil {
+		t.Fatalf("reset: %+v", e)
+	}
+	why := "agent.providers.litellm has no api; set it with flai serve agent provider litellm --api <api> (anthropic-messages, openai-chat, openai-responses)"
+	_, e := call(`{"name":"litellm","key_env":"LITELLM_API_KEY","request_id":"req-00000053"}`, Ran{Exit: 1, Events: []map[string]any{{"level": "FATAL", "msg": "command failed", "err": why}}})
+	if e == nil || e.Code != Rule || e.Message != why {
+		t.Errorf("flai's refusal is a rule with its reason: %+v", e)
+	}
+	ran := []string{
+		"serve agent provider litellm --base-url=https://litellm.example.com --json",
+		"serve agent provider litellm --reset --json",
+		"serve agent provider litellm --key-env=LITELLM_API_KEY --json",
+	}
+	if len(rec.runs) != len(ran) {
+		t.Fatalf("ran %d commands, want %d", len(rec.runs), len(ran))
+	}
+	for i, want := range ran {
+		if got := strings.Join(rec.runs[i].Args, " "); got != want {
+			t.Errorf("run %d: %q, want %q", i, got, want)
+		}
+	}
+
+	for _, c := range []struct{ params, want string }{
+		{`{"name":"Lite LLM","api":"openai-chat","request_id":"req-00000054"}`, `"Lite LLM" is not a provider name`},
+		{`{"name":"litellm","reset":true,"key_env":"X","request_id":"req-00000055"}`, "reset takes no other field"},
+		{`{"name":"litellm","request_id":"req-00000056"}`, "nothing to set: give api, base_url, key_env, models, or reset"},
+		{`{"name":"litellm","api":"bedrock","request_id":"req-00000057"}`, `agent.providers.litellm.api "bedrock" is not an API flai speaks`},
+		{`{"name":"litellm","key_env":"sk-never-shown","request_id":"req-00000058"}`, "agent.providers.litellm.key_env is not the name of an environment variable"},
+	} {
+		_, e := call(c.params, Ran{Stdout: []byte(`{}`)})
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, c.want) {
+			t.Errorf("%s: %+v, want a refusal saying %q", c.params, e, c.want)
+		}
+		if e != nil && strings.Contains(e.Message, "sk-never-shown") {
+			t.Errorf("a key pasted for key_env is in the refusal: %s", e.Message)
+		}
+	}
+	if len(rec.runs) != len(ran) {
+		t.Errorf("a refused call ran: %d commands", len(rec.runs))
+	}
+
+	want := []struct{ outcome, detail string }{
+		{"done", "flai serve agent provider litellm --base-url=https://litellm.example.com"},
+		{"done", "flai serve agent provider litellm --reset"},
+		{"failed", why},
+	}
+	if len(journal) < len(want) {
+		t.Fatalf("journal: %+v", journal)
+	}
+	for i, w := range want {
+		if got := journal[i]; got.Action != ActionSettings || got.Method != "settings.provider" || got.Outcome != w.outcome || got.Detail != w.detail {
+			t.Errorf("entry %d: %+v, want %+v", i, got, w)
+		}
+	}
+
+	_, e = writeMethods(rec.run, time.Now, Host{Enabled: func(a, root string) bool { return a == ActionSettings && root == p.Root }})["settings.provider"](context.Background(), p, json.RawMessage(`{"name":"litellm","reset":true,"request_id":"req-00000059"}`))
+	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings --all-projects") {
+		t.Errorf("host-wide: enabled for this project only, it is refused: %+v", e)
 	}
 }
 

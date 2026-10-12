@@ -20,8 +20,8 @@ import (
 // now each is a flai command a method builds, as the dashboard's other writes
 // are, gated by the settings host action, which only a shell turns on and
 // off. What the host's configuration keeps for every project (the agent's
-// command, the harnesses, the checks, the import folders, the dashboard
-// token) needs it on for every project; what belongs to one project (its host
+// command, the harnesses, the providers, the checks, the import folders, the
+// dashboard token) needs it on for every project; what belongs to one project (its host
 // actions, its default agent, its shared paths, its MCP token) needs it on for
 // that project.
 
@@ -143,6 +143,61 @@ func sharedCheck(_ channel.Project, raw json.RawMessage) ([]string, string, *cha
 			return nil, "", e
 		}
 		args = append(args, in.Story)
+	}
+	return args, "", nil
+}
+
+// providerEdit is settings.provider's command line (S-0359, ADR-0129): flai
+// serve agent provider with a flag for each field given, the model aliases in
+// order, or --reset alone. Each value is checked for its shape first, since
+// it becomes an argument; whether a new entry is whole is flai's to say. An
+// empty models leaves the entry's aliases, as the command does without
+// --model.
+func providerEdit(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+	var in struct {
+		Name    string            `json:"name"`
+		API     string            `json:"api"`
+		BaseURL string            `json:"base_url"`
+		KeyEnv  string            `json:"key_env"`
+		Models  map[string]string `json:"models"`
+		Reset   bool              `json:"reset"`
+	}
+	if e := params(raw, &in); e != nil {
+		return nil, "", e
+	}
+	if !harnessName.MatchString(in.Name) {
+		return nil, "", bad("%q is not a provider name such as litellm or openrouter (lower case letters, digits, . _ -)", in.Name)
+	}
+	p := manifest.Provider{API: in.API, BaseURL: in.BaseURL, KeyEnv: in.KeyEnv, Models: in.Models}
+	given := p.API != "" || p.BaseURL != "" || p.KeyEnv != "" || len(p.Models) > 0
+	args := []string{"serve", "agent", "provider", in.Name}
+	switch {
+	case in.Reset && given:
+		return nil, "", bad("reset takes no other field: it removes provider %s whole", in.Name)
+	case in.Reset:
+		return append(args, "--reset"), "", nil
+	case !given:
+		return nil, "", bad("nothing to set: give api, base_url, key_env, models, or reset")
+	}
+	if problems := p.Problems("agent.providers." + in.Name); len(problems) > 0 {
+		return nil, "", bad("%s", strings.Join(problems, "; "))
+	}
+	if p.API != "" {
+		args = append(args, "--api="+p.API)
+	}
+	if p.BaseURL != "" {
+		args = append(args, "--base-url="+p.BaseURL)
+	}
+	if p.KeyEnv != "" {
+		args = append(args, "--key-env="+p.KeyEnv)
+	}
+	aliases := make([]string, 0, len(p.Models))
+	for alias := range p.Models {
+		aliases = append(aliases, alias)
+	}
+	sort.Strings(aliases)
+	for _, alias := range aliases {
+		args = append(args, "--model="+alias+"="+p.Models[alias])
 	}
 	return args, "", nil
 }
@@ -434,6 +489,13 @@ func settingsSpecs() map[string]spec {
 			}
 			return args, "", nil
 		}),
+
+		// settings.provider: where the model calls of a story's agent that
+		// names a provider go, on this host (S-0359, ADR-0129), never its key.
+		// flai exits 1 refusing an entry that is not whole or a value it does
+		// not take: it is answered as a rule, with flai's reason.
+		"settings.provider": {action: ActionSettings, hostwide: true, exits: map[int]int{1: Rule},
+			describe: settingsDone("a provider set or removed"), say: sayArgs(providerEdit), build: providerEdit},
 
 		// settings.check: one named check command, or null to remove it.
 		"settings.check": hostwide("a check command changed", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {

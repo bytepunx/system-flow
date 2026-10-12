@@ -633,6 +633,60 @@ func TestServeSettingsAreShownToTheDashboard(t *testing.T) {
 	}
 }
 
+// S-0359, ADR-0129: settings.get's host carries the host's providers, each
+// entry's fields and whether the variable its key_env names is set and not
+// empty in flai serve's environment, never the variable's value.
+func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	const key = "sk-never-shown-0123456789"
+	t.Setenv("LITELLM_API_KEY", key)
+	t.Setenv("OPENROUTER_API_KEY", "")
+	t.Setenv("FLAI_TEST_UNSET_GATEWAY_KEY", "") // restored after the test, unset in it
+	if err := os.Unsetenv("FLAI_TEST_UNSET_GATEWAY_KEY"); err != nil {
+		t.Fatal(err)
+	}
+	root := tempProject(t)
+	runIn(t, root, "serve", "agent", "provider") // creates the config, which an app with no logger cannot
+	agent := func() map[string]any {
+		t.Helper()
+		repo, err := workitem.Open(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+		if strings.Contains(string(got), key) {
+			t.Errorf("the key is in the settings: %s", got)
+		}
+		var out struct {
+			Agent map[string]any `json:"agent"`
+		}
+		if err := json.Unmarshal(got, &out); err != nil {
+			t.Fatal(err)
+		}
+		return out.Agent
+	}
+	if got, _ := json.Marshal(agent()["providers"]); string(got) != `{}` {
+		t.Errorf("no provider set is an empty object: %s", got)
+	}
+	for _, args := range [][]string{
+		{"litellm", "--api", "anthropic-messages", "--base-url", "http://127.0.0.1:4000", "--key-env", "LITELLM_API_KEY", "--model", "opus=anthropic/claude-opus-5-5"},
+		{"openrouter", "--api", "openai-chat", "--base-url", "https://openrouter.ai/api/v1", "--key-env", "OPENROUTER_API_KEY"},
+		{"gateway", "--api", "openai-responses", "--base-url", "https://gw.example.com", "--key-env", "FLAI_TEST_UNSET_GATEWAY_KEY"},
+	} {
+		if _, errOut, code := runIn(t, root, append([]string{"serve", "agent", "provider"}, args...)...); code != 0 {
+			t.Fatalf("set %s: %s", args[0], errOut)
+		}
+	}
+	got, _ := json.Marshal(agent()["providers"])
+	want := `{"gateway":{"api":"openai-responses","base_url":"https://gw.example.com","key_env":"FLAI_TEST_UNSET_GATEWAY_KEY","key_set":false,"models":{}},` +
+		`"litellm":{"api":"anthropic-messages","base_url":"http://127.0.0.1:4000","key_env":"LITELLM_API_KEY","key_set":true,"models":{"opus":"anthropic/claude-opus-5-5"}},` +
+		`"openrouter":{"api":"openai-chat","base_url":"https://openrouter.ai/api/v1","key_env":"OPENROUTER_API_KEY","key_set":false,"models":{}}}`
+	if string(got) != want {
+		t.Errorf("providers:\n%s\nwant\n%s", got, want)
+	}
+}
+
 // S-0295, ADR-0096: settings.get carries the shared paths as the manifest
 // has them now; settings.shared changes them through flai shared under the
 // settings action, its refusal a rule with flai's reason; and

@@ -144,6 +144,8 @@ export const REQUIRED_METHODS = [
 	'settings.shared_check',
 	// S-0229: the strategic agents' settings in the manifest, under the settings action
 	'settings.manifest',
+	// S-0359: the host's providers, under the settings action enabled for every project
+	'settings.provider',
 	// S-0116: a new agent for a story whose agent dropped or failed, gated by the agent host action
 	'agent.restart',
 	// S-0115: a ready story's agent now, gated by the agent host action

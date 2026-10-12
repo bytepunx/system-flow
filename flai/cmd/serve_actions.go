@@ -921,6 +921,25 @@ func (a *app) showProviders(name string) error {
 	return nil
 }
 
+// hostProviders are the host's providers for the dashboard's settings page
+// (S-0359): each entry's fields and whether the variable its key_env names is
+// set and not empty in lookup's environment, never the variable's value.
+func hostProviders(set map[string]manifest.Provider, lookup func(string) (string, bool)) map[string]any {
+	out := map[string]any{}
+	for name, p := range set {
+		models := p.Models
+		if models == nil {
+			models = map[string]string{}
+		}
+		value, ok := "", false
+		if p.KeyEnv != "" {
+			value, ok = lookup(p.KeyEnv)
+		}
+		out[name] = map[string]any{"api": p.API, "base_url": p.BaseURL, "key_env": p.KeyEnv, "models": models, "key_set": ok && value != ""}
+	}
+	return out
+}
+
 // hostSettings is the host's configuration as it applies to the project at
 // root, for the dashboard's settings page (S-0105). The tokens are not in
 // it: a rotation answers with the new one, once.
@@ -947,6 +966,7 @@ func (a *app) hostSettings(root string) any {
 		_, set := cfg.Agent.Harnesses[n]
 		harnesses[n] = map[string]any{"program": h.Program, "args": h.Args, "set": set}
 	}
+	providers := hostProviders(cfg.Agent.Providers, os.LookupEnv)
 	command := cfg.Agent.Command
 	if command == nil {
 		command = []string{}
@@ -966,7 +986,7 @@ func (a *app) hostSettings(root string) any {
 	out := map[string]any{
 		"actions": actions,
 		"agent": map[string]any{"name": cfg.Agent.Name, "command": command,
-			"harnesses": harnesses},
+			"harnesses": harnesses, "providers": providers},
 		"checks":       map[string]any{"commands": checks, "timeout_minutes": timeout},
 		"import_roots": roots,
 		"projects":     a.servedView(),
