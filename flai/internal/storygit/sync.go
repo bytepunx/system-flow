@@ -263,12 +263,17 @@ func (s SyncResult) RebaseInProgress() bool {
 // every other open story's, telling each conflicting pair in its
 // conversation (ADR-0121), and lists what the branch changed outside the
 // story's claim; a check that fails then is logged, the sync stands, and the
-// result holds what the checks found before it failed.
+// result holds what the checks found before it failed. A rebase stopped on
+// conflicts, and each conflict message a trial merge sends or changes, is a
+// line of the conflict log (S-0337).
 func Sync(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
 	}
 	res, err := Rebase(o)
+	if err == nil && res.Stopped == StopConflicts {
+		recordConflict(o, Conflict{Story: o.Story.ID, Where: WhereSync, Paths: res.Conflicts})
+	}
 	if err != nil || !res.Synced {
 		return res, err
 	}
@@ -287,7 +292,8 @@ func Sync(o SyncOptions) (SyncResult, error) {
 }
 
 // Rebase is Sync's rebase and fold without the checks after them, as flai
-// accept runs it before merging the branch.
+// accept runs it before merging the branch. It writes no line of the conflict
+// log, which its caller writes with where the stop was met.
 func Rebase(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
@@ -753,7 +759,8 @@ func tellConflicts(o SyncOptions, res *SyncResult) {
 
 // tellConflict adds the conflict message for b to the pair's conversation,
 // or starts one, unless the newest conflict message in pair, the pair's open
-// conversations, already says it. It returns the conversation that tells it.
+// conversations, already says it, and logs each message it sends as a trial
+// merge's line of the conflict log. It returns the conversation that tells it.
 func tellConflict(o SyncOptions, b BranchCheck, pair []*messages.Conversation) (string, error) {
 	text := ConflictText(o.Story.ID, b.Story, b.Conflicts)
 	for i := len(pair) - 1; i >= 0; i-- {
@@ -768,6 +775,7 @@ func tellConflict(o SyncOptions, b BranchCheck, pair []*messages.Conversation) (
 	if err != nil {
 		return "", err
 	}
+	recordConflict(o, Conflict{Story: o.Story.ID, Other: b.Story, Where: WhereTrial, Paths: b.Conflicts})
 	return c.ID, nil
 }
 

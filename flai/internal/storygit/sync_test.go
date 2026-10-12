@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -261,6 +262,11 @@ func TestSyncStopsOnConflictsAndRefusesARebaseInProgress(t *testing.T) {
 	if !RebaseInProgress(execx.System{}, wt) {
 		t.Fatal("the rebase is not left waiting")
 	}
+	// S-0337: the stop is a line of the conflict log
+	stop := []Conflict{{At: syncClock, Story: "S-0001", Where: WhereSync, Paths: []string{"docs/guide.md"}}}
+	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, stop) {
+		t.Errorf("conflict log: %+v, want %+v", got, stop)
+	}
 
 	res, err = Sync(syncOptions(repo, story))
 	if err != nil {
@@ -271,6 +277,10 @@ func TestSyncStopsOnConflictsAndRefusesARebaseInProgress(t *testing.T) {
 	}
 	if !RebaseInProgress(execx.System{}, wt) || strings.Join(Conflicts(execx.System{}, wt), ",") != "docs/guide.md" {
 		t.Error("the refused sync touched the rebase")
+	}
+	// a rebase found waiting is the same stop, not another line
+	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, stop) {
+		t.Errorf("conflict log after the refused sync: %+v, want %+v", got, stop)
 	}
 }
 
@@ -295,6 +305,32 @@ func TestSyncRegeneratesGeneratedFilesItStopsOnAlone(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(filepath.Join(wt, "docs", "gen.md")); string(got) != "regenerated\n" {
 		t.Errorf("docs/gen.md: %q", got)
+	}
+	// S-0337: a stop settled by generated files alone is no conflict
+	if got := conflictLog(t, repo.CacheDir()); len(got) != 0 {
+		t.Errorf("conflict log: %+v", got)
+	}
+}
+
+// S-0337: a stop on a generated file and another path is left for the agent,
+// and its line of the conflict log leaves the generated file out.
+func TestSyncLogsAStopWithoutItsGeneratedFiles(t *testing.T) {
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] both", "docs/gen.md", "docs/guide.md")
+	commitFiles(t, repo.MainRoot, "docs: main's both", "docs/gen.md", "docs/guide.md")
+	gen := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error { return nil }}
+
+	res, err := Sync(syncOptions(repo, story, gen))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != StopConflicts || strings.Join(res.Conflicts, ",") != "docs/gen.md,docs/guide.md" {
+		t.Fatalf("result: %+v", res)
+	}
+	want := []Conflict{{At: syncClock, Story: "S-0001", Where: WhereSync, Paths: []string{"docs/guide.md"}}}
+	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, want) {
+		t.Errorf("conflict log: %+v, want %+v", got, want)
 	}
 }
 
@@ -560,6 +596,40 @@ func TestSyncTrialMergeConflictIsAMessageBetweenThePair(t *testing.T) {
 		t.Errorf("not closed on a clean merge: %v %q", closed, why)
 	}
 	noThreads(t, repo)
+}
+
+// S-0337: each conflict message the trial merge sends or changes is a line of
+// the conflict log; a sync that finds the same conflict sends nothing and
+// logs nothing, and a clean merge logs nothing.
+func TestSyncLogsEachTrialMergeConflictItTells(t *testing.T) {
+	repo, story, one, two := conflictingPair(t)
+	at := func(minutes int) time.Time { return syncClock.Add(time.Duration(minutes) * time.Minute) }
+	want := []Conflict{{At: at(1), Story: "S-0001", Other: "S-0002", Where: WhereTrial, Paths: []string{"docs/guide.md"}}}
+
+	syncAt(t, repo, story, 1)
+	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, want) {
+		t.Fatalf("first sync: %+v, want %+v", got, want)
+	}
+	syncAt(t, repo, story, 2)
+	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, want) {
+		t.Fatalf("the same conflict again: %+v, want %+v", got, want)
+	}
+	commitFiles(t, one, "feat: [S-0001] more", "docs/more.md")
+	commitFiles(t, two, "feat: [S-0002] more", "docs/more.md")
+	syncAt(t, repo, story, 3)
+	want = append(want, Conflict{At: at(3), Story: "S-0001", Other: "S-0002", Where: WhereTrial, Paths: []string{"docs/guide.md", "docs/more.md"}})
+	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, want) {
+		t.Fatalf("new paths: %+v, want %+v", got, want)
+	}
+	write(t, two, "docs/guide.md", "feat: [S-0001] guide\n")
+	write(t, two, "docs/more.md", "feat: [S-0001] more\n")
+	git(t, two, "commit", "-q", "-am", "feat: [S-0002] take S-0001's lines")
+	if b := syncAt(t, repo, story, 4); !b.Clean {
+		t.Fatalf("not clean: %+v", b)
+	}
+	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, want) {
+		t.Errorf("clean merge: %+v, want %+v", got, want)
+	}
 }
 
 // A clean merge leaves open a conversation of the pair that tells of no

@@ -5,8 +5,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 )
 
 // I-0066: a rebase conflict during a story's sync was git-added unresolved,
@@ -100,6 +104,39 @@ func TestAcceptPreviewReportsConflictMarkers(t *testing.T) {
 	}
 	if len(res.Blockers) != 0 {
 		t.Errorf("a clean branch has no blocker: %q", res.Blockers)
+	}
+}
+
+// S-0337: an acceptance whose rebase of the story's branch stops on a
+// conflict is refused, and the stop is a line of the conflict log, met at
+// acceptance.
+func TestAcceptLogsTheConflictItsRebaseStopsOn(t *testing.T) {
+	root, wt, doc := conflictedStoryInReview(t)
+	_ = os.WriteFile(doc, []byte("\n# X\n\nthe story's\nend\n"), 0o644)
+	gitIn(t, wt, "commit", "-q", "-am", "docs: [S-0001] resolve x")
+	_ = os.WriteFile(filepath.Join(root, "design", "x.md"), []byte("\n# X\n\nmain's\nend\n"), 0o644)
+	gitIn(t, root, "add", "design/x.md")
+	gitIn(t, root, "commit", "-q", "-m", "docs: main's x")
+
+	_, errOut, code := runIn(t, root, "accept", "S-0001")
+	if code == 0 || !strings.Contains(errOut, "stopped on conflicts in design/x.md") {
+		t.Fatalf("acceptance must refuse the stopped rebase: %d %s", code, errOut)
+	}
+	got, err := storygit.ReadConflicts(filepath.Join(root, ".flai-cache"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []storygit.Conflict{{At: time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC), Story: "S-0001", Where: storygit.WhereAccept, Paths: []string{"design/x.md"}}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("conflict log: %+v, want %+v", got, want)
+	}
+
+	// accepting again finds the rebase waiting: the same stop, no new line
+	if _, _, code := runIn(t, root, "accept", "S-0001"); code == 0 {
+		t.Fatal("acceptance must refuse a rebase in progress")
+	}
+	if got, _ := storygit.ReadConflicts(filepath.Join(root, ".flai-cache")); !reflect.DeepEqual(got, want) {
+		t.Errorf("conflict log after the second refusal: %+v, want %+v", got, want)
 	}
 }
 

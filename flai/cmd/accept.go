@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
@@ -188,6 +190,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		}
 		merged, err := a.mergeStoryBranch(repo, it.ID)
 		if err != nil {
+			a.logAcceptConflict(repo, it.ID, err)
 			return nil, err
 		}
 		res.Merged = merged
@@ -280,6 +283,19 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	// 4. tell the stories still open what changed under their claim (S-0132)
 	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
 	return acc, nil
+}
+
+// logAcceptConflict writes a line of the conflict log (S-0337) when err is
+// the acceptance's own rebase of story's branch stopped on conflicts, with
+// the files flai resolves itself left out of its paths; a rebase found in
+// progress, or any other refusal, is not one.
+func (a *app) logAcceptConflict(repo *workitem.Repo, story string, err error) {
+	var stop *syncStopped
+	if !errors.As(err, &stop) || !stop.RebaseInProgress || stop.Found {
+		return
+	}
+	c := storygit.Conflict{At: a.now(), Story: story, Where: storygit.WhereAccept, Paths: stop.Conflicts}
+	storygit.RecordConflict(repo.CacheDir(), c, issues.SyncFiles(repo, story, a.runner, a.now), a.logger())
 }
 
 // finishCommit completes the acceptance of it, done and archived, whose
