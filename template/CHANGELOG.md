@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.87 - 2026-10-12
+
+- S-0366 A close-out records no `threads.archived` (patch, ADR-0137): `work-management.md` says that a `threads.archived` outside the story, an open thread on an archived item, is left out of a close-out's check, as an `item.archive`, a `board.wip-limit`, and an `issues.no-story` are, since it names that thread, not the story, and only the operator or the thread's opener clears it, with `flai thread resolve` in the main checkout. It needs a flai that has it; an older flai still records every `threads.archived` at close-out.
+
 ## 1.0.86 - 2026-10-12
 
 - S-0365 flai check finds `issues.no-story` outside the story at close-out (patch).
