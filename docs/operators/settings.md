@@ -99,6 +99,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `tests[].format` | `plain` | How its output becomes findings: `go-test-json`, `vitest-json`, `golangci-json`, `gofmt-list`, or `plain`, whose one finding is the exit status after the last 20 lines of output and, ahead of them, the `go test` failure lines those left out (`--- FAIL:` with the lines under it, `FAIL<tab><package>`, `panic:`) ([Project manifest](../../design/system/project-manifest.md)) |
 | `tests[].all_only` | `false` | Run the tier only under `flai test --all`, as integration and smoke tests are |
 | `tests[].all_command` | `command` | The argument list run instead of `command` under `--all`; it takes no placeholder |
+| `tests[].fix_command` | none | The argument list, with the placeholders `command` takes, that rewrites in place the files the tier selects: before `flai task done` commits them, after each clean `flai stream sync` over what the branch changes, and before `flai accept` commits the main checkout; its exit status is ignored ([ADR-0139](../../design/adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md)) |
 | `tests[].covers` | none | The tiers this one runs everything of, by name, which are skipped when it is selected with them |
 | `agent.harness` | none | The harness every new story gets, such as `claude-code` ([Starting an agent](index.md#starting-an-agent-when-a-story-becomes-ready)) |
 | `agent.model` | none | The model every new story gets |

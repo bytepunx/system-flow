@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.89 - 2026-10-12
+
+- S-0367 A test tier may carry `fix_command` (patch, ADR-0139): an argument list, with the placeholders `command` takes, that rewrites in place the files the tier selects. flai runs it before `flai task done` commits, after each clean `flai stream sync` over the files the branch changes, committing what it rewrote on the branch, and before `flai accept` commits the main checkout; its exit status is ignored. The template's `system-flow.yaml` adds none: the comment on its `markdown` tier says to add `fix_command: [scripts/lint-md.sh, --fix, "{files}"]` once `scripts/lint-md.sh` takes the paths. It needs a flai that has it; an older flai ignores `fix_command`.
+
 ## 1.0.88 - 2026-10-12
 
 - S-0349 A story's agent names a provider from the host's providers map, and a project's manifest may override the entry's api, base_url, and models (patch).

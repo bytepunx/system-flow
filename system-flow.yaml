@@ -84,6 +84,7 @@ tests:
     paths: ["**/*.md", "!**/node_modules/**", "!**/testdata/**", "!bin/**", "!flaiover/build/**", "!**/.svelte-kit/**", "!.flai-cache/**"]
     format: plain
     all_command: [scripts/lint-md.sh]
+    fix_command: [scripts/lint-md.sh, --fix, "{files}"]
   - name: template
     command: [scripts/template-test.sh]
     paths: ["template/**"]
