@@ -2,6 +2,7 @@
 
 ## 1.0.88 - 2026-10-12
 
+- S-0349 A story's agent names a provider from the host's providers map, and a project's manifest may override the entry's api, base_url, and models (patch).
 - S-0349 A story's agent names a provider, and a project may override the provider's api, base_url, and models (patch, ADR-0129): the template's `system-flow.yaml` shows, commented out, an `agent` block with `provider` beside `harness` and `model`, and a `providers` entry with `api`, `base_url`, and `models`. A provider is an entry on the host, set with `flai serve agent provider <name>`; its `key_env`, the name of the variable that holds the key, is the host's alone, and `flai check` refuses it in the manifest. No agent is started through a provider yet: S-0350 has `flai serve` read the variable `key_env` names and set the harness's environment. It needs a flai that has it; an older flai ignores `provider` and `providers`, and drops a story's `provider` when it writes the story.
 
 ## 1.0.87 - 2026-10-12

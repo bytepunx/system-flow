@@ -6,7 +6,7 @@ title: Perform lint fix on every markdown file a story touches as part of valida
 status: in-progress
 owner: alex
 created: 2026-10-12T16:48:56Z
-updated: 2026-10-12T16:52:33Z
+updated: 2026-10-12T16:52:55Z
 transitions:
   - to: ready
     at: 2026-10-12T16:48:58Z
@@ -55,5 +55,7 @@ Run `scripts/lint-md.sh --fix [markdown file]` for every markdown file that gets
 
 ## Tasks
 - T-1455 A test tier takes fix_command, and verify.Fix runs it over the files the tier selects
+- T-1456 flai stream sync runs the fix over what the branch changes right after its rebase, and commits what it fixed
+- T-1457 The manifest's markdown tier fixes with lint-md.sh --fix, and the docs and an ADR say what fix_command does
 
 ## Notes
