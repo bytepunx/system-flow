@@ -4,10 +4,10 @@ title: S-0367 is ready to accept but changes docs/users/flai-reference.md outsid
 anchor:
   path: wip/kanban/stories/S-0367-perform-lint-fix-on-every-markdown-file-a-story-touches-as-part-of-validation.md
   item: S-0367
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-12T17:38:41Z
-updated: 2026-10-12T17:38:41Z
+updated: 2026-10-12T17:44:30Z
 ---
 
 # TH-0425 S-0367 is ready to accept but changes docs/users/flai-reference.md outside its touches
@@ -42,3 +42,6 @@ blocked: story/S-0367 changes docs/users/flai-reference.md, which is under none 
 ```
 
 The file is the reference generated from the changed `accept.go` and `stream.go` help, added by the head commit 7bfd0d9a. It is in `claims.shared`, which keeps it from holding other stories, but acceptance still needs it in the story's touches (ADR-0093). Changing a story's touches is not among my permissions, so I leave it in review.
+
+### 2026-10-12T17:44:30Z alex
+Resolved: S-0367 was accepted

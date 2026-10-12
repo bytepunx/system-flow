@@ -3,10 +3,10 @@ id: S-0367
 type: story
 nature: improvement
 title: Perform lint fix on every markdown file a story touches as part of validation
-status: review
+status: done
 owner: alex
 created: 2026-10-12T16:48:56Z
-updated: 2026-10-12T17:32:10Z
+updated: 2026-10-12T17:44:30Z
 transitions:
   - to: ready
     at: 2026-10-12T16:48:58Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-12T17:32:10Z
     by: agent-S-0367
+  - to: done
+    at: 2026-10-12T17:44:30Z
+    by: alex
 tags: [cli]
 touches: [flai/cmd, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/verify/fix.go, flai/internal/verify/fix_test.go, flai/internal/verify/manifest.go, flai/internal/verify/verify.go, flai/internal/storygit/fix.go, flai/internal/storygit/fix_test.go, flai/internal/storygit/sync.go, design/adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, system-flow.yaml, template/CHANGELOG.md, template/root/system-flow.yaml.tmpl, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, design/adrs/0140-flai-accept-refuses-an-acceptance-whose-files-a-tier-with-a-fix-command-still.md]
 agent:

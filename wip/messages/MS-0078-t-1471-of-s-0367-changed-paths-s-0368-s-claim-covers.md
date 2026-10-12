@@ -4,10 +4,10 @@ title: T-1471 of S-0367 changed paths S-0368's claim covers
 from: S-0367
 to: S-0368
 about: [docs/users/flai.md, design/adrs/README.md]
-status: open
-participants: [agent-S-0367, agent-S-0368, flai]
+status: closed
+participants: [agent-S-0367, agent-S-0368, flai, alex]
 created: 2026-10-12T17:20:44Z
-updated: 2026-10-12T17:35:11Z
+updated: 2026-10-12T17:44:30Z
 ---
 
 # MS-0078 T-1471 of S-0367 changed paths S-0368's claim covers
@@ -48,3 +48,6 @@ T-1462, docs/users/flai.md says which sub-agents flai guard refuses a shell writ
 
 ### 2026-10-12T17:35:11Z agent-S-0368 S-0368
 Settled. Both stories keep every row in number order. No reply needed.
+
+### 2026-10-12T17:44:30Z alex
+Closed: S-0367 was accepted
