@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +13,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"text/tabwriter"
 	"time"
 
@@ -28,9 +31,15 @@ func newSelfUpgradeCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "self-upgrade",
 		Short: "Install the latest flai release over this binary, or list the published ones",
-		Long: `Resolves the newest flai release on GitHub (or --version), downloads the
-archive for this platform and checksums.txt, verifies the SHA-256, and
-replaces the running executable. While the repository is private the API
+		Long: `Resolves the newest flai release on GitHub (or --version), downloads its
+checksums.txt and the signature over it, checksums.txt.sig, and verifies the
+signature with the release key embedded in this flai before anything else is
+downloaded; then it downloads the archive for this platform, verifies its
+SHA-256 against checksums.txt, and replaces the running executable. A release
+this flai cannot verify is refused, naming it and why, and nothing is
+replaced: one from before releases were signed has no signature, and for one
+signed by a key this flai does not trust the refusal names the newest release
+it can verify, to install first. While the repository is private the API
 needs a token: GITHUB_TOKEN, GH_TOKEN, or a gh auth login session. The same
 operation from a shell is install.sh at the repository root.
 
@@ -40,11 +49,19 @@ the published ones, before anything is downloaded. A release below the
 flai.minimum of the project in this folder, or of a project flai serve
 serves, is warned about and installed: going back past it is your call.
 
+--check reports the installed version and the newest, and, when that is an
+upgrade, whether this flai can verify it.
+
 --list prints the published releases, newest first, and installs nothing. It
 marks the installed one (the flai self-upgrade would replace), the newest,
-and any below such a project's flai.minimum; with --json it prints a list of
-version, tag, published, installed, latest, and below_minimum (each project
-and minimum the release is below, left out when none).`,
+any below such a project's flai.minimum, and any this flai cannot verify,
+with why; with --json it prints a list of version, tag, published, installed,
+latest, below_minimum (each project and minimum the release is below, left
+out when none), and, for a release this flai cannot verify, unverifiable
+(true), signature (missing, bad, or unknown-key), and reason (all three left
+out for a release it can verify). A release that publishes a signature has
+its checksums.txt and signature downloaded to be checked; one that publishes
+none costs nothing more.`,
 		Example: `  flai self-upgrade --check
   flai self-upgrade --list
   flai self-upgrade
@@ -66,15 +83,7 @@ and minimum the release is below, left out when none).`,
 			current, running, dest, moved := t.current, t.running, t.dest, t.moved
 			upToDate := version == "" && rel.Version == current
 			if check {
-				if a.jsonOut {
-					return a.printJSON(map[string]any{"current": current, "latest": rel.Version, "tag": rel.Tag, "up_to_date": upToDate, "path": dest})
-				}
-				state := "upgrade available"
-				if upToDate {
-					state = "up to date"
-				}
-				fmt.Fprintf(a.out, "flai %s installed at %s; latest is %s (%s)\n", current, dest, rel.Version, state)
-				return nil
+				return a.printCheck(cmd.Context(), opt, rel, current, dest, upToDate)
 			}
 			if upToDate {
 				if a.jsonOut {
@@ -126,6 +135,39 @@ and minimum the release is below, left out when none).`,
 	return c
 }
 
+// printCheck reports the installed version and rel, the newest or the one
+// asked for, and, when rel is an upgrade, whether this flai can verify it: a
+// check costs rel's checksums.txt and signature only then.
+func (a *app) printCheck(ctx context.Context, opt selfupgrade.Options, rel *selfupgrade.Release, current, dest string, upToDate bool) error {
+	var refused *selfupgrade.SignatureError
+	if !upToDate {
+		var err error
+		if refused, err = signatureRefusal(ctx, opt, rel); err != nil {
+			return err
+		}
+	}
+	if a.jsonOut {
+		out := map[string]any{"current": current, "latest": rel.Version, "tag": rel.Tag, "up_to_date": upToDate, "path": dest}
+		if refused != nil {
+			out["unverifiable"], out["signature"], out["reason"] = true, refused.Kind, refused.Summary()
+		}
+		return a.printJSON(out)
+	}
+	state := "upgrade available"
+	switch {
+	case upToDate:
+		state = "up to date"
+	case refused != nil:
+		state = fmt.Sprintf("upgrade available, but not installable: %s; flai self-upgrade --list marks the releases this flai can verify", refused.Summary())
+	}
+	fmt.Fprintf(a.out, "flai %s installed at %s; latest is %s (%s)\n", current, dest, rel.Version, state)
+	return nil
+}
+
+// releaseKeys are the keys a release's signature is verified with; nil is the
+// release key embedded in this flai. Tests set it; no flag or variable does.
+var releaseKeys []*ecdsa.PublicKey
+
 // releaseSource is where published releases are read: a GitHub repository
 // and the API that answers for it. self-upgrade and the dashboard's versions
 // and upgrade --published read the same one.
@@ -147,7 +189,7 @@ func (s *releaseSource) register(c *cobra.Command, repoUsage string) {
 
 // options are the selfupgrade options for this source, with a token.
 func (s releaseSource) options(a *app, version string) selfupgrade.Options {
-	return selfupgrade.Options{Repo: s.repo, APIBase: s.api, Token: a.githubToken(), Version: version}
+	return selfupgrade.Options{Repo: s.repo, APIBase: s.api, Token: a.githubToken(), Version: version, Keys: releaseKeys}
 }
 
 // installTarget is where self-upgrade installs and the version it compares
@@ -185,10 +227,17 @@ type listedFlai struct {
 	Installed    bool             `json:"installed"`
 	Latest       bool             `json:"latest"`
 	BelowMinimum []projectMinimum `json:"below_minimum,omitempty"`
+	// Unverifiable marks a release whose signature this flai cannot verify,
+	// which self-upgrade refuses; Signature says why (missing, bad, or
+	// unknown-key) and Reason in words. All three are left out otherwise.
+	Unverifiable bool                      `json:"unverifiable,omitempty"`
+	Signature    selfupgrade.SignatureKind `json:"signature,omitempty"`
+	Reason       string                    `json:"reason,omitempty"`
 }
 
 // listFlaiReleases prints the published flai releases, newest first, marking
-// the installed one, the newest, and those below a project's minimum.
+// the installed one, the newest, those below a project's minimum, and those
+// this flai cannot verify.
 func (a *app) listFlaiReleases(cmd *cobra.Command, opt selfupgrade.Options, dir string) error {
 	published, err := selfupgrade.List(cmd.Context(), opt, selfupgrade.TagPrefix)
 	if err != nil {
@@ -198,11 +247,18 @@ func (a *app) listFlaiReleases(cmd *cobra.Command, opt selfupgrade.Options, dir 
 	if err != nil {
 		return err
 	}
+	refusals, err := signatureRefusals(cmd.Context(), opt, published)
+	if err != nil {
+		return err
+	}
 	mins := a.flaiMinimums()
 	listed := make([]listedFlai, len(published))
 	found := false
 	for i, r := range published {
 		listed[i] = listedFlai{Version: r.Version, Tag: r.Tag, Published: r.Published, Installed: r.Version == t.current, Latest: i == 0, BelowMinimum: belowMinimum(r.Version, mins)}
+		if refused := refusals[i]; refused != nil {
+			listed[i].Unverifiable, listed[i].Signature, listed[i].Reason = true, refused.Kind, refused.Summary()
+		}
 		found = found || listed[i].Installed
 	}
 	if a.jsonOut {
@@ -245,9 +301,66 @@ func writeFlaiReleases(out io.Writer, listed []listedFlai) error {
 		for _, m := range r.BelowMinimum {
 			marks = append(marks, fmt.Sprintf("below minimum %s of %s", m.Minimum, m.Project))
 		}
+		if r.Unverifiable {
+			marks = append(marks, "not installable: "+r.Reason)
+		}
 		fmt.Fprintf(w, "  %s\t%s\t%s\n", r.Version, date, strings.Join(marks, ", "))
 	}
 	return w.Flush()
+}
+
+// verifyAtOnce is how many releases' signatures are checked at once.
+const verifyAtOnce = 8
+
+// signatureRefusals are, for each of rels, the refusal self-upgrade would give
+// it, nil for a release this flai verifies. A release that publishes no
+// signature costs no download; one that does costs its checksums.txt and
+// signature, and its cosign.pub when no trusted key verifies it. A download
+// that fails fails them all: a release that could not be checked is not one
+// that cannot be verified.
+func signatureRefusals(ctx context.Context, opt selfupgrade.Options, rels []selfupgrade.Release) ([]*selfupgrade.SignatureError, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	refusals := make([]*selfupgrade.SignatureError, len(rels))
+	errs := make([]error, len(rels))
+	slots := make(chan struct{}, verifyAtOnce)
+	var wg sync.WaitGroup
+	for i := range rels {
+		wg.Go(func() {
+			slots <- struct{}{}
+			defer func() { <-slots }()
+			if refusals[i], errs[i] = signatureRefusal(ctx, opt, &rels[i]); errs[i] != nil {
+				cancel()
+			}
+		})
+	}
+	wg.Wait()
+	// the failure that cancelled the others, rather than one it caused
+	for _, err := range errs {
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return nil, err
+		}
+	}
+	for _, err := range errs {
+		if err != nil {
+			return nil, err
+		}
+	}
+	return refusals, nil
+}
+
+// signatureRefusal is the refusal self-upgrade would give rel, nil when this
+// flai verifies it, or the failure to check it.
+func signatureRefusal(ctx context.Context, opt selfupgrade.Options, rel *selfupgrade.Release) (*selfupgrade.SignatureError, error) {
+	err := selfupgrade.VerifyRelease(ctx, opt, rel)
+	var refused *selfupgrade.SignatureError
+	if errors.As(err, &refused) {
+		return refused, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("check whether this flai can verify release %s: %w", rel.Tag, err)
+	}
+	return nil, nil
 }
 
 // projectMinimum is a project's flai.minimum and the name it goes by.

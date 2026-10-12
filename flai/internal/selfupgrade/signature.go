@@ -68,6 +68,18 @@ func (e *SignatureError) Error() string {
 	return fmt.Sprintf("release %s is not installed: the signature over its checksums.txt does not verify (%s); the release may have been altered since it was signed: do not install it by other means, and report it to the repository's maintainers", e.Tag, e.Reason)
 }
 
+// Summary says in a few words why the release cannot be verified, for a list
+// that marks it.
+func (e *SignatureError) Summary() string {
+	switch e.Kind {
+	case SignatureMissing:
+		return e.Reason
+	case SignatureUnknownKey:
+		return "it is signed by a key this flai does not trust"
+	}
+	return "its signature does not verify, so it may have been altered"
+}
+
 // trustedKeys are the keys a release's signature must verify against:
 // Options.Keys, else the release key embedded in the binary.
 func (o Options) trustedKeys() ([]*ecdsa.PublicKey, error) {

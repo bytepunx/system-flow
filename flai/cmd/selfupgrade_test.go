@@ -5,9 +5,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -42,7 +48,8 @@ func TestSelfUpgradeCommand(t *testing.T) {
 	archive := buf.Bytes()
 	sum := sha256.Sum256(archive)
 	archiveName := fmt.Sprintf("flai_2.0.0_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
-	sums := hex.EncodeToString(sum[:]) + "  " + archiveName + "\n"
+	sums := []byte(hex.EncodeToString(sum[:]) + "  " + archiveName + "\n")
+	sig := signBlob(t, trustTestKey(t), sums)
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer tok" {
@@ -51,11 +58,13 @@ func TestSelfUpgradeCommand(t *testing.T) {
 		}
 		switch r.URL.Path {
 		case "/repos/o/r/releases":
-			fmt.Fprintf(w, `[{"tag_name":"flai/v2.0.0","assets":[{"name":"checksums.txt","url":"%s/sums"},{"name":"%s","url":"%s/archive"}]}]`, srv.URL, archiveName, srv.URL)
+			fmt.Fprintf(w, `[{"tag_name":"flai/v2.0.0","assets":[{"name":"checksums.txt","url":"%s/sums"},{"name":"checksums.txt.sig","url":"%s/sig"},{"name":"%s","url":"%s/archive"}]}]`, srv.URL, srv.URL, archiveName, srv.URL)
 		case "/archive":
 			_, _ = w.Write(archive)
 		case "/sums":
-			_, _ = w.Write([]byte(sums))
+			_, _ = w.Write(sums)
+		case "/sig":
+			_, _ = w.Write(sig)
 		default:
 			http.NotFound(w, r)
 		}
@@ -90,8 +99,61 @@ func TestSelfUpgradeCommand(t *testing.T) {
 }
 
 // fakeRelease serves release v of a flai that is a shell script answering
-// "version --json" with v, as GitHub's releases API does.
+// "version --json" with v, as GitHub's releases API does, signed with a key
+// the test makes the release key.
 func fakeRelease(t *testing.T, v string) string {
+	t.Helper()
+	url, _ := serveFlaiReleases(t, flaiRelease(t, v, trustTestKey(t)))
+	return url
+}
+
+// trustTestKey makes a new key the release key self-upgrade verifies with for
+// the rest of t, and answers it to sign releases with.
+func trustTestKey(t *testing.T) *ecdsa.PrivateKey {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := releaseKeys
+	t.Cleanup(func() { releaseKeys = old })
+	releaseKeys = []*ecdsa.PublicKey{&key.PublicKey}
+	return key
+}
+
+// signBlob is the checksums.txt.sig cosign sign-blob writes for data with
+// key: base64 of an ASN.1 ECDSA signature over its SHA-256.
+func signBlob(t *testing.T, key *ecdsa.PrivateKey, data []byte) []byte {
+	t.Helper()
+	sum := sha256.Sum256(data)
+	sig, err := ecdsa.SignASN1(rand.Reader, key, sum[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return []byte(base64.StdEncoding.EncodeToString(sig) + "\n")
+}
+
+// publicPEM is key's public half as cosign.pub holds it.
+func publicPEM(t *testing.T, key *ecdsa.PrivateKey) []byte {
+	t.Helper()
+	der, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
+}
+
+// fakeFlai is one release serveFlaiReleases serves: its version, and its
+// assets by name.
+type fakeFlai struct {
+	version string
+	assets  map[string][]byte
+}
+
+// flaiRelease is release v whose archive for this platform holds a shell
+// script answering "version --json" with v, with its checksums.txt and, when
+// key is not nil, the checksums.txt.sig key signs.
+func flaiRelease(t *testing.T, v string, key *ecdsa.PrivateKey) fakeFlai {
 	t.Helper()
 	content := []byte("#!/bin/sh\necho '{\"version\":\"" + v + "\"}'\n")
 	var buf bytes.Buffer
@@ -104,21 +166,54 @@ func fakeRelease(t *testing.T, v string) string {
 	archive := buf.Bytes()
 	sum := sha256.Sum256(archive)
 	archiveName := fmt.Sprintf("flai_%s_%s_%s.tar.gz", v, runtime.GOOS, runtime.GOARCH)
+	sums := []byte(hex.EncodeToString(sum[:]) + "  " + archiveName + "\n")
+	rel := fakeFlai{version: v, assets: map[string][]byte{archiveName: archive, "checksums.txt": sums}}
+	if key != nil {
+		rel.assets["checksums.txt.sig"] = signBlob(t, key, sums)
+	}
+	return rel
+}
+
+// serveFlaiReleases answers as GitHub's API does for o/r with rels, newest
+// first as given, each asset at /assets/<version>/<name>; asked counts the
+// requests for each path so far.
+func serveFlaiReleases(t *testing.T, rels ...fakeFlai) (url string, asked func(path string) int) {
+	t.Helper()
+	var mu sync.Mutex
+	count := map[string]int{}
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/repos/o/r/releases":
-			fmt.Fprintf(w, `[{"tag_name":"flai/v%s","assets":[{"name":"checksums.txt","url":"%s/sums"},{"name":"%s","url":"%s/archive"}]}]`, v, srv.URL, archiveName, srv.URL)
-		case "/archive":
-			_, _ = w.Write(archive)
-		case "/sums":
-			_, _ = w.Write([]byte(hex.EncodeToString(sum[:]) + "  " + archiveName + "\n"))
-		default:
-			http.NotFound(w, r)
+		mu.Lock()
+		count[r.URL.Path]++
+		mu.Unlock()
+		if r.URL.Path == "/repos/o/r/releases" {
+			list := make([]string, len(rels))
+			for i, rel := range rels {
+				var assets []string
+				for name := range rel.assets {
+					assets = append(assets, fmt.Sprintf(`{"name":%q,"url":"%s/assets/%s/%s"}`, name, srv.URL, rel.version, name))
+				}
+				list[i] = fmt.Sprintf(`{"tag_name":"flai/v%s","published_at":"2026-10-0%dT09:00:00Z","assets":[%s]}`, rel.version, 9-i, strings.Join(assets, ","))
+			}
+			fmt.Fprint(w, "["+strings.Join(list, ",")+"]")
+			return
 		}
+		for _, rel := range rels {
+			for name, data := range rel.assets {
+				if r.URL.Path == "/assets/"+rel.version+"/"+name {
+					_, _ = w.Write(data)
+					return
+				}
+			}
+		}
+		http.NotFound(w, r)
 	}))
 	t.Cleanup(srv.Close)
-	return srv.URL
+	return srv.URL, func(path string) int {
+		mu.Lock()
+		defer mu.Unlock()
+		return count[path]
+	}
 }
 
 // S-0111: a flai run from inside a project (a checkout's bin/flai) never
@@ -388,5 +483,185 @@ func TestSelfUpgradeWarnsBelowTheMinimum(t *testing.T) {
 	}
 	if !strings.Contains(errOut, "1.2.0") || !strings.Contains(errOut, "Here") || !strings.Contains(errOut, "WARN") {
 		t.Errorf("warning: %s", errOut)
+	}
+}
+
+// unverifiableReleases serves four releases to a flai whose release key is a
+// new test key: 1.3.0 signed by another key, which it publishes as
+// cosign.pub; 1.2.0 signed by the release key; 1.1.0 signed by another key it
+// does not publish; and 1.0.0, from before signing, with no signature.
+func unverifiableReleases(t *testing.T) (api string, asked func(path string) int) {
+	t.Helper()
+	trusted := trustTestKey(t)
+	other, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown := flaiRelease(t, "1.3.0", other)
+	unknown.assets["cosign.pub"] = publicPEM(t, other)
+	return serveFlaiReleases(t, unknown, flaiRelease(t, "1.2.0", trusted), flaiRelease(t, "1.1.0", other), flaiRelease(t, "1.0.0", nil))
+}
+
+// noArchiveAsked fails t when an archive of the versions was downloaded.
+func noArchiveAsked(t *testing.T, asked func(string) int, versions ...string) {
+	t.Helper()
+	for _, v := range versions {
+		if n := asked(fmt.Sprintf("/assets/%s/flai_%s_%s_%s.tar.gz", v, v, runtime.GOOS, runtime.GOARCH)); n != 0 {
+			t.Errorf("the archive of %s was downloaded %d times", v, n)
+		}
+	}
+}
+
+// S-0233: --list marks each release this flai cannot verify, and why, in text
+// and with --json, where a release it can verify carries no mark; a release
+// with no signature costs no download, and no archive is downloaded.
+func TestSelfUpgradeListMarksUnverifiableReleases(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("GITHUB_TOKEN", "tok")
+	oldExe := executablePath
+	t.Cleanup(func() { executablePath = oldExe })
+	executablePath = func() (string, error) { return filepath.Join(t.TempDir(), "flai"), nil }
+	api, asked := unverifiableReleases(t)
+	dir := t.TempDir()
+
+	out, errOut, code := runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api)
+	if code != 0 {
+		t.Fatalf("list: %d %s", code, errOut)
+	}
+	lines := map[string]string{}
+	for _, l := range strings.Split(out, "\n") {
+		if f := strings.Fields(l); strings.HasPrefix(l, "  ") && len(f) > 0 {
+			lines[f[0]] = l
+		}
+	}
+	for v, want := range map[string]string{
+		"1.3.0": "latest, not installable: it is signed by a key this flai does not trust",
+		"1.1.0": "not installable: its signature does not verify, so it may have been altered",
+		"1.0.0": "not installable: it publishes no checksums.txt.sig",
+	} {
+		if !strings.HasSuffix(lines[v], want) {
+			t.Errorf("%s: %q, want it to end %q", v, lines[v], want)
+		}
+	}
+	if l := lines["1.2.0"]; l == "" || strings.Contains(l, "not installable") {
+		t.Errorf("1.2.0 is verifiable: %q\n%s", l, out)
+	}
+	if n := asked("/assets/1.0.0/checksums.txt"); n != 0 {
+		t.Errorf("a release with no signature is marked without a download: %d", n)
+	}
+	noArchiveAsked(t, asked, "1.3.0", "1.2.0", "1.1.0", "1.0.0")
+
+	out, errOut, code = runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api, "--json")
+	if code != 0 {
+		t.Fatalf("list --json: %d %s", code, errOut)
+	}
+	var listed []map[string]any
+	if err := json.Unmarshal([]byte(out), &listed); err != nil || len(listed) != 4 {
+		t.Fatalf("json: %v %s", err, out)
+	}
+	for i, want := range []map[string]any{
+		{"version": "1.3.0", "unverifiable": true, "signature": "unknown-key", "reason": "it is signed by a key this flai does not trust"},
+		{"version": "1.2.0"},
+		{"version": "1.1.0", "unverifiable": true, "signature": "bad", "reason": "its signature does not verify, so it may have been altered"},
+		{"version": "1.0.0", "unverifiable": true, "signature": "missing", "reason": "it publishes no checksums.txt.sig"},
+	} {
+		for _, k := range []string{"version", "unverifiable", "signature", "reason"} {
+			if got, ok := listed[i][k]; got != want[k] || ok != (want[k] != nil) {
+				t.Errorf("%v %s: %v, want %v", want["version"], k, got, want[k])
+			}
+		}
+	}
+}
+
+// S-0233: a release whose signature could not be checked is not marked as
+// one that cannot be verified: the list fails, naming it.
+func TestSelfUpgradeListFailsWhenASignatureCannotBeFetched(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("GITHUB_TOKEN", "tok")
+	trustTestKey(t)
+	broken := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "down", http.StatusInternalServerError)
+	}))
+	t.Cleanup(broken.Close)
+	api, _ := releasesStandIn(t, `[{"tag_name":"flai/v1.2.0","assets":[{"name":"checksums.txt","url":"`+broken.URL+`/sums"},{"name":"checksums.txt.sig","url":"`+broken.URL+`/sig"}]},{"tag_name":"flai/v1.0.0"}]`)
+	for _, args := range [][]string{nil, {"--json"}} {
+		out, errOut, code := runIn(t, t.TempDir(), append([]string{"self-upgrade", "--list", "--repo", "o/r", "--api", api}, args...)...)
+		if code == 0 || !strings.Contains(errOut, "check whether this flai can verify release flai/v1.2.0: download checksums.txt of release flai/v1.2.0") || strings.Contains(errOut, "is not installed") {
+			t.Errorf("%v: %d %s %s", args, code, out, errOut)
+		}
+	}
+}
+
+// S-0233: self-upgrade refuses a release this flai cannot verify, naming it
+// and why, and for an unknown key the newest release it can verify; it exits
+// non-zero, downloads no archive, and replaces nothing.
+func TestSelfUpgradeRefusesAnUnverifiableRelease(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("tar archives are not used on windows")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("GITHUB_TOKEN", "tok")
+	api, asked := unverifiableReleases(t)
+	dir := t.TempDir()
+	for _, tc := range []struct {
+		args []string
+		want []string
+	}{
+		{nil, []string{"release flai/v1.3.0 is not installed: it is signed by the key it publishes as cosign.pub, which this flai does not trust", "install flai 1.2.0 first", "flai self-upgrade --version 1.2.0"}},
+		{[]string{"--version", "1.1.0"}, []string{"release flai/v1.1.0 is not installed: the signature over its checksums.txt does not verify", "may have been altered"}},
+		{[]string{"--version", "1.0.0"}, []string{"release flai/v1.0.0 is not installed: it publishes no checksums.txt.sig, so its signature cannot be verified"}},
+	} {
+		out, errOut, code := runIn(t, dir, append([]string{"self-upgrade", "--repo", "o/r", "--api", api, "--dir", dir}, tc.args...)...)
+		if code == 0 {
+			t.Errorf("%v is installed: %s", tc.args, out)
+		}
+		for _, w := range tc.want {
+			if !strings.Contains(errOut, w) {
+				t.Errorf("%v: want %q in %s", tc.args, w, errOut)
+			}
+		}
+	}
+	noArchiveAsked(t, asked, "1.3.0", "1.1.0", "1.0.0")
+	if _, err := os.Stat(filepath.Join(dir, "flai")); !os.IsNotExist(err) {
+		t.Errorf("nothing is installed: %v", err)
+	}
+	if out, errOut, code := runIn(t, dir, "self-upgrade", "--repo", "o/r", "--api", api, "--dir", dir, "--version", "1.2.0"); code != 0 || !strings.Contains(out, "installed flai 1.2.0") {
+		t.Errorf("the verifiable release installs: %d %s %s", code, out, errOut)
+	}
+}
+
+// S-0233: --check says when the upgrade it reports cannot be verified, and
+// checks nothing when there is none to report.
+func TestSelfUpgradeCheckSaysTheUpgradeCannotBeVerified(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("GITHUB_TOKEN", "tok")
+	oldVersion := buildinfo.Version
+	t.Cleanup(func() { buildinfo.Version = oldVersion })
+	buildinfo.Version = "1.1.0"
+	oldExe := executablePath
+	t.Cleanup(func() { executablePath = oldExe })
+	executablePath = func() (string, error) { return filepath.Join(t.TempDir(), "flai"), nil }
+	api, asked := unverifiableReleases(t)
+	dir := t.TempDir()
+
+	out, errOut, code := runIn(t, dir, "self-upgrade", "--check", "--repo", "o/r", "--api", api)
+	if code != 0 || !strings.Contains(out, "latest is 1.3.0 (upgrade available, but not installable: it is signed by a key this flai does not trust; flai self-upgrade --list marks the releases this flai can verify)") {
+		t.Errorf("check: %d %s %s", code, out, errOut)
+	}
+	out, _, _ = runIn(t, dir, "self-upgrade", "--check", "--repo", "o/r", "--api", api, "--json")
+	var said map[string]any
+	if err := json.Unmarshal([]byte(out), &said); err != nil || said["unverifiable"] != true || said["signature"] != "unknown-key" || said["reason"] != "it is signed by a key this flai does not trust" || said["latest"] != "1.3.0" {
+		t.Errorf("check --json: %v %s", err, out)
+	}
+	out, _, _ = runIn(t, dir, "self-upgrade", "--check", "--repo", "o/r", "--api", api, "--version", "1.2.0", "--json")
+	if strings.Contains(out, "unverifiable") || !strings.Contains(out, `"latest": "1.2.0"`) {
+		t.Errorf("a verifiable upgrade carries no mark: %s", out)
+	}
+
+	buildinfo.Version = "1.3.0"
+	before := asked("/assets/1.3.0/checksums.txt")
+	out, _, _ = runIn(t, dir, "self-upgrade", "--check", "--repo", "o/r", "--api", api)
+	if !strings.Contains(out, "latest is 1.3.0 (up to date)") || asked("/assets/1.3.0/checksums.txt") != before {
+		t.Errorf("up to date, nothing is checked: %s", out)
 	}
 }

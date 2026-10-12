@@ -320,3 +320,16 @@ func TestSignatureDownloadFailureIsNotARefusal(t *testing.T) {
 		t.Errorf("a failed download is named as one, not as a refusal: %v", err)
 	}
 }
+
+func TestSignatureErrorSummary(t *testing.T) {
+	for kind, want := range map[SignatureKind]string{
+		SignatureMissing:    "it publishes no checksums.txt.sig",
+		SignatureUnknownKey: "it is signed by a key this flai does not trust",
+		SignatureBad:        "its signature does not verify, so it may have been altered",
+	} {
+		e := &SignatureError{Tag: "flai/v2.0.0", Kind: kind, Reason: "it publishes no checksums.txt.sig"}
+		if got := e.Summary(); got != want {
+			t.Errorf("%s: %q, want %q", kind, got, want)
+		}
+	}
+}

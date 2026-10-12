@@ -19,11 +19,16 @@ import (
 // hostReleases is the list the stand-in's self-upgrade --list --json prints.
 const hostReleases = `[{"version":"1.2.0","tag":"flai/v1.2.0","published":"2026-10-01T09:00:00Z","installed":true,"latest":true},` +
 	`{"version":"1.1.0","tag":"flai/v1.1.0","published":"2026-09-20T09:00:00Z","installed":false,"latest":false,"below_minimum":[{"project":"Here","minimum":"1.2.0"}]},` +
-	`{"version":"1.0.0","tag":"flai/v1.0.0","installed":false,"latest":false}]`
+	`{"version":"1.0.0","tag":"flai/v1.0.0","installed":false,"latest":false,"unverifiable":true,"signature":"missing","reason":"it publishes no checksums.txt.sig"}]`
+
+// unsignedRefusal is what self-upgrade logs when it refuses 1.0.0, which
+// publishes no signature.
+const unsignedRefusal = "release flai/v1.0.0 is not installed: it publishes no checksums.txt.sig, so its signature cannot be verified (a release from before signing has none); install a signed release, such as the latest"
 
 // selfUpgradeStandIn writes a flai that answers self-upgrade as the real one
-// does with --json for the published releases 1.2.0, 1.1.0, and 1.0.0, and
-// appends each command line it is given to the file it answers.
+// does with --json for the published releases 1.2.0, 1.1.0, and 1.0.0, the
+// last of which it cannot verify, and appends each command line it is given
+// to the file it answers.
 func selfUpgradeStandIn(t *testing.T, installedPath string) (exe, calls string) {
 	t.Helper()
 	dir := t.TempDir()
@@ -32,6 +37,7 @@ func selfUpgradeStandIn(t *testing.T, installedPath string) (exe, calls string) 
 	script := "#!/bin/sh\necho \"$*\" >> '" + calls + "'\ncase \"$*\" in\n" +
 		"*--list*) echo '" + hostReleases + "' ;;\n" +
 		"*'--version 1.3.0'*) echo '" + refused + "' >&2; exit 1 ;;\n" +
+		"*'--version 1.0.0'*) echo '{\"level\":\"FATAL\",\"msg\":\"command failed\",\"err\":\"" + unsignedRefusal + "\"}' >&2; exit 1 ;;\n" +
 		"*'--version 1.1.0'*) echo '{\"previous\":\"1.2.0\",\"installed\":\"1.1.0\",\"tag\":\"flai/v1.1.0\",\"path\":\"" + installedPath + "\"}' ;;\n" +
 		"*) echo '{\"current\":\"1.2.0\",\"latest\":\"1.2.0\",\"up_to_date\":true,\"path\":\"" + installedPath + "\"}' ;;\nesac\n"
 	if err := os.WriteFile(exe, []byte(script), 0o755); err != nil {
@@ -131,6 +137,10 @@ func TestHostVersions(t *testing.T) {
 	if strings.Contains(lines[3], "installed") || strings.Contains(lines[3], "latest") {
 		t.Errorf("1.0.0 is neither installed nor the newest: %q", lines[3])
 	}
+	// S-0233: a release the host's flai cannot verify is marked, with why
+	if !strings.HasSuffix(lines[3], "not installable: it publishes no checksums.txt.sig") || strings.Contains(lines[1]+lines[2], "not installable") {
+		t.Errorf("only 1.0.0 is marked as not installable:\n%s", out)
+	}
 
 	out, errOut, code = runIn(t, dir, "host", "versions", "--json")
 	if code != 0 {
@@ -211,4 +221,27 @@ func TestHostUpgradeToAVersion(t *testing.T) {
 		t.Errorf("upgrade: %d %q %s, ran %q", code, out, errOut, lastCall(t, calls))
 	}
 	h.stillRuns(t)
+}
+
+// S-0233: flai host upgrade --version with a release the host's flai cannot
+// verify ends with self-upgrade's refusal, naming the release and why; nothing
+// is installed and the host does not restart.
+func TestHostUpgradeRefusesAnUnverifiableRelease(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	exe, calls := selfUpgradeStandIn(t, "/home/me/.flai/bin/flai")
+	dir := t.TempDir()
+	h := runHostFor(t, cfg, exe)
+
+	out, errOut, code := runIn(t, dir, "host", "upgrade", "--version", "1.0.0")
+	if code != 1 || !strings.Contains(errOut, unsignedRefusal) {
+		t.Errorf("refused: %d %q %s", code, out, errOut)
+	}
+	if got := lastCall(t, calls); got != "self-upgrade --version 1.0.0 --json --config "+cfg {
+		t.Errorf("the host ran %q", got)
+	}
+	h.stillRuns(t)
+	if to := h.l.installedTo(); to != "" {
+		t.Errorf("a refused release is restarted on: %q", to)
+	}
 }

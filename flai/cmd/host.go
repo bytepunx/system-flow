@@ -155,10 +155,14 @@ watching it work in a terminal, and for start, stop, status, and the rest.`,
 		Long: `Asks the host for the published flai releases, newest first, as flai
 self-upgrade --list prints them from the host's flai: each with its date,
 marking the installed one (the flai flai host upgrade would replace), the
-newest, and any below the flai.minimum of a project flai serve serves. With
---json it prints the list as the host answers it: version, tag, published,
-installed, latest, and below_minimum (each project and minimum the release is
-below, left out when none). It installs nothing.`,
+newest, any below the flai.minimum of a project flai serve serves, and any
+the host's flai cannot verify with its embedded release key, with why: flai
+host upgrade refuses those. With --json it prints the list as the host
+answers it: version, tag, published, installed, latest, below_minimum (each
+project and minimum the release is below, left out when none), and, for a
+release the host's flai cannot verify, unverifiable (true), signature
+(missing, bad, or unknown-key), and reason (all three left out for a release
+it can verify). It installs nothing.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			c, st, err := a.hostDir().Client(time.Now())
@@ -177,7 +181,13 @@ below, left out when none). It installs nothing.`,
 		Use:   "upgrade",
 		Short: "Have the host install the newest flai, or --version a published one, and restart itself and every process it runs on it",
 		Long: `Has the host install the newest flai, as flai self-upgrade does, and
-restart itself and every process it runs on what it installed.
+restart itself and every process it runs on what it installed. The release
+is verified with the release key embedded in the host's flai before it is
+installed: one it cannot verify (unsigned, from before releases were signed,
+or signed by a key it does not trust) is refused with self-upgrade's
+refusal, naming the release and why, and for an unknown key the newest
+release it can verify, to install first; nothing is replaced and nothing
+restarts. flai host versions marks the releases it cannot verify.
 
 --version installs that published release instead, an earlier one included,
 the same way: the host restarts on it with its processes. A version that is
