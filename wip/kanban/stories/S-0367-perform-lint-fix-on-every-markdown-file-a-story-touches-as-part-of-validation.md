@@ -6,7 +6,7 @@ title: Perform lint fix on every markdown file a story touches as part of valida
 status: in-progress
 owner: alex
 created: 2026-10-12T16:48:56Z
-updated: 2026-10-12T16:49:57Z
+updated: 2026-10-12T16:52:33Z
 transitions:
   - to: ready
     at: 2026-10-12T16:48:58Z
@@ -54,5 +54,6 @@ Run `scripts/lint-md.sh --fix [markdown file]` for every markdown file that gets
 - [ ] Lint fix should get called right after a rebase to ensure that old files with bad markdown don't continue polluting recently changed markdown files
 
 ## Tasks
+- T-1455 A test tier takes fix_command, and verify.Fix runs it over the files the tier selects
 
 ## Notes

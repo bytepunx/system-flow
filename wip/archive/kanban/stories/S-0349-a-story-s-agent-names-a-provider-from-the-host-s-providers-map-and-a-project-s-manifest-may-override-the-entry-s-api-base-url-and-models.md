@@ -3,11 +3,11 @@ id: S-0349
 type: story
 nature: feature
 title: A story's agent names a provider from the host's providers map, and a project's manifest may override the entry's api, base_url, and models
-status: review
+status: done
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:42:40Z
-updated: 2026-10-12T16:50:22Z
+updated: 2026-10-12T16:52:40Z
 transitions:
   - to: ready
     at: 2026-10-12T15:50:18Z
@@ -23,6 +23,9 @@ transitions:
     by: alex
   - to: review
     at: 2026-10-12T16:50:22Z
+    by: alex
+  - to: done
+    at: 2026-10-12T16:52:40Z
     by: alex
 tags: [cli, template]
 topics: [agents]
@@ -49,15 +52,15 @@ usage:
       cost: 12.1602
   strategic:
     - kind: orchestrator
-      seconds: 18
+      seconds: 35
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 26
-          cache_read: 1167448
-          cache_write: 5586
-          cost: 0.2957
+          input: 11
+          output: 66
+          cache_read: 2715131
+          cache_write: 13888
+          cost: 0.6879
 cost_of_delay:
   value: 60.84
   by: planner-E-0019

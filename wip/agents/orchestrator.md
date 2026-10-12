@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 397.8586
-accrued_seconds: 338450
-tasks_completed: 373
-last_run: 2026-10-12T16:51:28Z
+accrued_cost: 398.3802
+accrued_seconds: 338492
+tasks_completed: 375
+last_run: 2026-10-12T16:52:10Z
 ---
 
 # Orchestrator activity
@@ -2622,6 +2622,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0337, E-0018
 - Seconds: 132
 - Cost: 1.1222 USD, estimated
+
+### 2026-10-12T16:51:53Z
+
+- Summary: Under judgement, published 2 pending worth 279.87 USD/week: S-0337 (277.17, completing E-0018) and S-0235 (2.7). Versions: flai 1.41.1→1.42.0 (flai/v1.42.0) and flaiover 0.42.4→0.42.5 (flaiover/v0.42.5), pushed. S-0337's value outweighed holding S-0235 until the first signed CI release was confirmed. The host still runs flai 1.40.1 (TH-0411 open); S-0349 waits on TH-0412; S-0367 is ready.
+- Items: S-0337, S-0235, E-0018
+- Seconds: 25
+- Cost: 0.1294 USD, estimated
+
+### 2026-10-12T16:52:10Z
+
+- Summary: Answered TH-0412, citing no source
+- Items: S-0349
+- Seconds: 17
+- Cost: 0.3922 USD, estimated
 
 ## Refusals
 
