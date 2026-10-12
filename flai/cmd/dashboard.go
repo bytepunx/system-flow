@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -679,6 +681,44 @@ func (a *app) runningProvenance(name string) imageProvenance {
 	return imageProvenance{Digest: digestOf(repoDigests[0])}
 }
 
+// serveImage is flai serve's last verdict on the image the dashboard
+// container runs (S-0238): the one it recorded for root, else, as one
+// container serves every project, the one of the first root it recorded one
+// for; false when flai serve does not run or has recorded none.
+func (a *app) serveImage(root string) (serve.ImageVerdict, bool) {
+	st, alive := a.serveDir().ReadStatus(time.Now())
+	if !alive || len(st.Images) == 0 {
+		return serve.ImageVerdict{}, false
+	}
+	if v, ok := st.Images[root]; ok {
+		return v, true
+	}
+	return st.Images[slices.Sorted(maps.Keys(st.Images))[0]], true
+}
+
+// describeServeImage is the line flai dashboard status prints for what flai
+// serve did with the image v judges. from is the same image's provenance:
+// when its line already names the digest and release v lists, this one does
+// not repeat them.
+func describeServeImage(v serve.ImageVerdict, from imageProvenance) string {
+	switch v.Kind {
+	case serve.ImageListed:
+		if v.Digest == from.Digest && v.Release == from.Release {
+			return "  flai serve: dials it, signed\n"
+		}
+		return fmt.Sprintf("  flai serve: dials it, signed (flaiover %s, %s)\n", v.Release, v.Digest)
+	case serve.ImageUnlisted:
+		digests := "no RepoDigests"
+		if len(v.RepoDigests) > 0 {
+			digests = strings.Join(v.RepoDigests, ", ")
+		}
+		return fmt.Sprintf("  flai serve: refused it: the dashboard runs an unsigned image %s (%s); it does not dial it\n", v.Image, digests)
+	case serve.ImageNotMeasured:
+		return fmt.Sprintf("  flai serve: image not measured: %s; the release stamp alone is checked\n", v.Reason)
+	}
+	return ""
+}
+
 // digestOf is the digest of a RepoDigests entry, <repository>@sha256:….
 func digestOf(repoDigest string) string {
 	_, digest, _ := strings.Cut(repoDigest, "@")
@@ -758,7 +798,12 @@ own verdict from the image's HEALTHCHECK is shown beside it. flai host
 restarts a dashboard that is gone or not answering unless dashboard.no_restart
 is set. For a running container it shows its image's digest and the flaiover
 release whose signed digest list, kept beside flai serve's state, names it, or
-that it is unsigned.`,
+that it is unsigned. While flai serve runs, a line beside it says what flai
+serve did with that image at its last dial (S-0238): dials it, signed;
+refused it, as the dashboard runs an unsigned image no signed list names; or
+image not measured, as Docker where flai serve runs cannot say what the
+dashboard runs, with why, so the release stamp alone is checked. --json gives
+that verdict as serve_image.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.projectOrNone()
@@ -785,9 +830,12 @@ that it is unsigned.`,
 			}
 			var stale []string
 			var from imageProvenance
+			var verdict serve.ImageVerdict
+			judged := false
 			if running {
 				stale = a.staleMounts(s.Name)
 				from = a.runningProvenance(s.Name)
+				verdict, judged = a.serveImage(s.Root)
 			}
 			served, err := a.serveDir().Projects()
 			if err != nil {
@@ -812,6 +860,9 @@ that it is unsigned.`,
 				if from.Release != "" {
 					out["release"] = from.Release
 				}
+				if judged {
+					out["serve_image"] = verdict
+				}
 				out["host_flai"] = a.hostFlai(s.Root)
 				return a.printJSON(out)
 			}
@@ -826,6 +877,9 @@ that it is unsigned.`,
 					fmt.Fprintf(a.out, "%s not answering at %s (%s%s): the container runs and /_health does not answer; flai host restarts it unless dashboard.no_restart is set, or run flai dashboard restart\n", s.Name, url, image, dockerSays)
 				}
 				fmt.Fprint(a.out, from.describe())
+				if judged {
+					fmt.Fprint(a.out, describeServeImage(verdict, from))
+				}
 				if len(names) > 0 {
 					fmt.Fprintf(a.out, "  serves: %s\n", strings.Join(names, ", "))
 				}

@@ -625,6 +625,102 @@ func TestDashboardStatusShowsTheDigestAndItsRelease(t *testing.T) {
 	}
 }
 
+// S-0238: beside the digest, status says what flai serve did with the image at
+// its last dial: dials it, signed; refused it, unsigned; or not measured, with
+// why. The verdict is this project's, else any project's, as one container
+// serves them all; there is none while flai serve does not run.
+func TestDashboardStatusSaysWhatFlaiServeDidWithTheImage(t *testing.T) {
+	root := dashboardProject(t)
+	cfg := os.Getenv("FLAI_CONFIG")
+	useSignedDashboardReleases(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	if _, errOut, code := runWith(t, root, f, "dashboard"); code != 0 {
+		t.Fatalf("start: %s", errOut)
+	}
+	id := f.containerImage["flaiover"]
+	read := func() (*serve.ImageVerdict, string) {
+		t.Helper()
+		js, errOut, code := runWith(t, root, f, "dashboard", "status", "--json")
+		var st struct {
+			ServeImage *serve.ImageVerdict `json:"serve_image"`
+		}
+		if code != 0 || json.Unmarshal([]byte(js), &st) != nil {
+			t.Fatalf("status --json: %d %s %s", code, js, errOut)
+		}
+		out, _, _ := runWith(t, root, f, "dashboard", "status")
+		return st.ServeImage, out
+	}
+
+	// flai serve not running: no line, no field
+	if v, out := read(); v != nil || strings.Contains(out, "flai serve:") {
+		t.Errorf("no flai serve: %+v\n%s", v, out)
+	}
+	// flai serve running with no verdict yet: none either
+	writeServeState(t, cfg, serve.Status{Version: "test"})
+	if v, out := read(); v != nil || strings.Contains(out, "flai serve:") {
+		t.Errorf("no verdict: %+v\n%s", v, out)
+	}
+
+	signedLine := "  digest: " + flaioverDigest("0.10.0") + " (flaiover 0.10.0, on a signed list)\n"
+	unsigned := "registry.example/flaiover@sha256:" + strings.Repeat("c", 64)
+	unsignedLine := "  digest: sha256:" + strings.Repeat("c", 64) + " (unsigned: no signed digest list names it)\n"
+	localLine := "  unsigned: its image has no repository digest, so no signed digest list names it\n"
+	refused := serve.ImageVerdict{Kind: serve.ImageUnlisted, Image: id, RepoDigests: []string{unsigned}, Reason: "no verified digest list names any of its RepoDigests"}
+	for _, tc := range []struct {
+		name    string
+		digests []string // the image's RepoDigests, for the digest line
+		images  map[string]serve.ImageVerdict
+		lines   string // the digest line and the verdict's beside it
+	}{
+		{
+			name:   "listed, as the digest line says",
+			images: map[string]serve.ImageVerdict{root: {Kind: serve.ImageListed, Image: id, RepoDigests: []string{flaioverRef("0.10.0")}, Digest: flaioverDigest("0.10.0"), Release: "0.10.0"}},
+			lines:  signedLine + "  flai serve: dials it, signed\n",
+		},
+		{
+			name:   "listed, another project's verdict naming another release",
+			images: map[string]serve.ImageVerdict{"/elsewhere": {Kind: serve.ImageListed, Image: id, RepoDigests: []string{flaioverRef("0.4.0")}, Digest: flaioverDigest("0.4.0"), Release: "0.4.0"}},
+			lines:  signedLine + "  flai serve: dials it, signed (flaiover 0.4.0, " + flaioverDigest("0.4.0") + ")\n",
+		},
+		{
+			name:    "unlisted, this project's verdict though another root sorts first",
+			digests: []string{unsigned},
+			images:  map[string]serve.ImageVerdict{root: refused, "/elsewhere": {Kind: serve.ImageNotMeasured, Reason: "not this project's"}},
+			lines:   unsignedLine + "  flai serve: refused it: the dashboard runs an unsigned image " + id + " (" + unsigned + "); it does not dial it\n",
+		},
+		{
+			name:    "unlisted, a local build",
+			digests: []string{},
+			images:  map[string]serve.ImageVerdict{root: {Kind: serve.ImageUnlisted, Image: id, Reason: "its image has no RepoDigests"}},
+			lines:   localLine + "  flai serve: refused it: the dashboard runs an unsigned image " + id + " (no RepoDigests); it does not dial it\n",
+		},
+		{
+			name:   "not measured",
+			images: map[string]serve.ImageVerdict{root: {Kind: serve.ImageNotMeasured, Reason: "docker is not on PATH where flai serve runs"}},
+			lines:  signedLine + "  flai serve: image not measured: docker is not on PATH where flai serve runs; the release stamp alone is checked\n",
+		},
+	} {
+		// not subtests: runWith in one would resolve releases signed by another key
+		f.repoDigests = nil
+		if tc.digests != nil {
+			f.repoDigests = map[string][]string{id: tc.digests}
+		}
+		writeServeState(t, cfg, serve.Status{Version: "test", Images: tc.images})
+		v, out := read()
+		want, ok := tc.images[root]
+		if !ok {
+			want = tc.images["/elsewhere"]
+		}
+		if v == nil || v.Kind != want.Kind || v.Image != want.Image || !slices.Equal(v.RepoDigests, want.RepoDigests) ||
+			v.Digest != want.Digest || v.Release != want.Release || v.Reason != want.Reason {
+			t.Errorf("%s: serve_image %+v, want %+v", tc.name, v, want)
+		}
+		if !strings.Contains(out, tc.lines) || strings.Count(out, "flai serve:") != 1 {
+			t.Errorf("%s: want %q in:\n%s", tc.name, tc.lines, out)
+		}
+	}
+}
+
 // S-0236, ADR-0118: flai dashboard restart starts the release it ran again by
 // digest, asking no release and pulling nothing.
 func TestDashboardRestartKeepsTheDigest(t *testing.T) {
