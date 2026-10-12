@@ -480,6 +480,80 @@ func TestRunClosesALayerOfThreeTasksInACommitEach(t *testing.T) {
 	}
 }
 
+// I-0126, ADR-0128: a sibling task open in any state, ready and backlog as
+// much as in progress, keeps its changed paths out of the closing task's
+// commit, left for its own close; a done or cancelled sibling is not open,
+// so its paths go with the closing task's commit and widen its touches.
+func TestRunLeavesOnlyAnOpenSiblingsPaths(t *testing.T) {
+	for _, tc := range []struct {
+		status string
+		open   bool
+	}{
+		{workitem.Backlog, true},
+		{workitem.Ready, true},
+		{workitem.Done, false},
+		{workitem.Cancelled, false},
+	} {
+		t.Run(tc.status, func(t *testing.T) {
+			repo, wt := project(t)
+			setTouches(t, repo, "T-003", "src/one")
+			it, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Sibling", Parent: "S-004", Now: clock})
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := map[string][]string{
+				workitem.Backlog:   nil,
+				workitem.Ready:     {workitem.Ready},
+				workitem.Done:      {workitem.Ready, workitem.InProgress, workitem.Done},
+				workitem.Cancelled: {workitem.Cancelled},
+			}[tc.status]
+			for _, to := range path {
+				reason := ""
+				if to == workitem.Cancelled {
+					reason = "not needed"
+				}
+				if _, err := repo.TransitionAll(it, to, "agent", reason, clock, false); err != nil {
+					t.Fatal(err)
+				}
+			}
+			setTouches(t, repo, it.ID, "design/conventions/git.md", "template/CHANGELOG.md")
+			if got := get(t, repo, it.ID).Status; got != tc.status {
+				t.Fatalf("%s is %s, want %s", it.ID, got, tc.status)
+			}
+			write(t, wt, "src/one/a.go", "package one\n")
+			write(t, wt, "design/conventions/git.md", "---\ntitle: Git\nupdated: 2026-09-01\naudience: agent\norder: 20\nstatus: active\n---\n\n# Git\n\n## Rules\n- Commit at landing.\n- Close each task apart.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n- Tags are prefixed.\n")
+			write(t, wt, "template/CHANGELOG.md", "# Changelog\n\n## Unreleased\n\n- Close each task apart.\n")
+
+			res, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 one"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if res.Stopped != "" {
+				t.Fatalf("stopped at %q: %s; check %+v", res.Stopped, res.Error, res.Check)
+			}
+			commit, left, widened := "design/conventions/git.md,src/one/a.go,template/CHANGELOG.md", "", "design/conventions/git.md,template/CHANGELOG.md"
+			if tc.open {
+				commit, left, widened = "src/one/a.go", "design/conventions/git.md,template/CHANGELOG.md", ""
+			}
+			if res.Commit == nil || strings.Join(res.Commit.Paths, ",") != commit || committed(t, wt, res.Commit.Hash) != commit {
+				t.Errorf("commit: %+v, want %s", res.Commit, commit)
+			}
+			if strings.Join(res.Left, ",") != left {
+				t.Errorf("left: %v, want %s", res.Left, left)
+			}
+			if dirty := git(t, wt, "status", "--porcelain", "--untracked-files=all"); (dirty == "") == tc.open {
+				t.Errorf("uncommitted: %q", dirty)
+			}
+			if res.Touches == nil || strings.Join(res.Touches.Task, ",") != widened || strings.Join(res.Touches.Story, ",") != commit {
+				t.Errorf("touches: %+v, want task %s, story %s", res.Touches, widened, commit)
+			}
+			if got := get(t, repo, it.ID).Touches; strings.Join(got, ",") != "design/conventions/git.md,template/CHANGELOG.md" {
+				t.Errorf("%s touches %v", it.ID, got)
+			}
+		})
+	}
+}
+
 // ADR-0128: a changed file no task declares goes with the task closed first,
 // whichever it is, and widens that task's touches.
 func TestRunCommitsAnUndeclaredFileWithTheTaskClosedFirst(t *testing.T) {

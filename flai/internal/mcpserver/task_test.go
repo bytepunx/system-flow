@@ -188,6 +188,60 @@ func TestTaskDoneLeavesAnotherOpenTasksPaths(t *testing.T) {
 	}
 }
 
+// I-0126, ADR-0128: two in-progress tasks of one layer with disjoint
+// touches, one of code, the other of a convention, its template copy, and
+// the changelog, each with its files changed in the worktree. task_done on
+// the code task commits its code alone; the convention task's three paths
+// stay changed in the worktree, are answered in left, and widen neither the
+// closing task's touches nor the story's.
+func TestTaskDoneLeavesASiblingsConventionTemplateAndChangelog(t *testing.T) {
+	repo, wt := closeProject(t)
+	conventions := []string{"design/conventions/git.md", "template/CHANGELOG.md", "template/root/design/conventions/git.md"}
+	second := sibling(t, repo, []string{"src/one"}, conventions)
+	writeIn(t, wt, "src/one/a.go", "package one\n")
+	writeIn(t, wt, "src/one/a_test.go", "package one\n")
+	writeIn(t, wt, "design/conventions/git.md", "---\ntitle: Git\nupdated: 2026-09-01\naudience: agent\norder: 20\nstatus: active\n---\n\n# Git\n\n## Rules\n- Commit at landing.\n- Close each task apart.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n- Tags are prefixed.\n")
+	writeIn(t, wt, "template/root/design/conventions/git.md", "---\ntitle: Git\nupdated: 2026-09-01\naudience: agent\norder: 20\nstatus: active\n---\n\n# Git\n\n## Rules\n- Commit at landing.\n- Close each task apart.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n")
+	writeIn(t, wt, "template/CHANGELOG.md", "# Changelog\n\n## Unreleased\n\n- Close each task apart.\n")
+
+	out, failed := closer(t, repo).call(t, "task_done", map[string]any{"task": "T-003", "message": "feat: [S-004] T-003 the code"})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if out["stopped"] != "" {
+		t.Fatalf("stopped at %v: %v; check %v", out["stopped"], out["error"], out["check"])
+	}
+	const code = "src/one/a.go,src/one/a_test.go"
+	hash, _ := field(out, "commit.hash").(string)
+	if got := strings.Join(strs(field(out, "commit.paths")), ","); got != code || hash == "" {
+		t.Fatalf("commit: %v", out["commit"])
+	}
+	if got := strings.ReplaceAll(gitIn(t, wt, "show", "--name-only", "--no-renames", "--format=", hash), "\n", ","); got != code {
+		t.Errorf("the commit changed %s", got)
+	}
+	if got := strings.Join(strs(out["left"]), ","); got != strings.Join(conventions, ",") {
+		t.Errorf("left: %v", out["left"])
+	}
+	if modified, untracked := gitIn(t, wt, "diff", "--name-only", "HEAD"), gitIn(t, wt, "ls-files", "--others", "--exclude-standard"); modified != "design/conventions/git.md" || untracked != "template/CHANGELOG.md\ntemplate/root/design/conventions/git.md" {
+		t.Errorf("uncommitted: modified %q, untracked %q", modified, untracked)
+	}
+	if task, story := strs(field(out, "touches.task")), strings.Join(strs(field(out, "touches.story")), ","); len(task) != 0 || story != code {
+		t.Errorf("touches: %v", out["touches"])
+	}
+	for id, want := range map[string]string{"T-003": "src/one", "S-004": code, second: strings.Join(conventions, ",")} {
+		it, err := repo.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := strings.Join(it.Touches, ","); got != want {
+			t.Errorf("%s touches %s, want %s", id, got, want)
+		}
+	}
+	if field(out, "move.state") != workitem.Done || field(out, "sync.stopped") != storygit.StopUncommitted {
+		t.Errorf("move %v, sync %v", out["move"], out["sync"])
+	}
+}
+
 // ADR-0128: task_done with nothing to commit needs no message: it runs to
 // the end, answers no commit and left empty, and logs that the task was
 // closed.
