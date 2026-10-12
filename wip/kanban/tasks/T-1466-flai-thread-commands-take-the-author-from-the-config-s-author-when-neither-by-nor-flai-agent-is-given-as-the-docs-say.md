@@ -3,12 +3,18 @@ id: T-1466
 type: task
 nature: remediation
 title: flai thread commands take the author from the config's author when neither --by nor FLAI_AGENT is given, as the docs say
-status: backlog
+status: in-progress
 parent: S-0369
 owner: alex
 created: 2026-10-12T17:05:39Z
-updated: 2026-10-12T17:05:39Z
-transitions: []
+updated: 2026-10-12T18:18:06Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:18:06Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T18:18:06Z
+    by: system-flow
 stream: S-0369
 tags: [flai, threads]
 touches: [flai/cmd/thread.go, flai/cmd/thread_test.go]

@@ -7,7 +7,7 @@ status: backlog
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:54:20Z
-updated: 2026-10-07T22:54:20Z
+updated: 2026-10-12T18:17:31Z
 transitions: []
 stream: S-0236
 tags: [dashboard]
@@ -18,16 +18,16 @@ after: [T-1242]
 
 ## Work
 
-In `flaiover/src/lib/components/HostPanel.svelte`, add the field T-1242 put in `flai dashboard versions --json` to the `Release` type. Show a release that is not deployable as such, with the reason, such as "no signed digest list", and give it no deploy button. A release the field is missing from, from a flai older than this story, is shown as today.
+In `flaiover/src/lib/components/HostPanel.svelte`, add the fields T-1242 put in `flai dashboard versions --json`, `unverifiable?`, `signature?`, and `reason?`, to the `Release` type, as `HostProcesses.svelte` has them for flai releases. Show a release marked `unverifiable` as `not deployable: <reason>`, with a fallback reason when none is given, and give it no deploy button, as `HostProcesses.svelte` does for a flai release it cannot install. A release without the fields, from a flai older than this story, is shown as today.
 
-Cover a deployable release, one that is not, and one without the field in `HostPanel.svelte.test.ts`. Say in `docs/users/flaiover.md`, where it describes the Updates page's dashboard releases, that a release with no digest list this flai can verify, such as one from before signing, cannot be deployed from the page.
+Cover a deployable release, one that is not, and one without the fields in `HostPanel.svelte.test.ts`, as `HostProcesses.svelte.test.ts` does. Say in `docs/users/flaiover.md`, where it describes the Updates page's dashboard releases, that a release with no digest list this flai can verify, such as one from before signing, cannot be deployed from the page.
 
-Waits for T-1242, which names the field.
+Waits for T-1242, which names the fields.
 
 ## Done when
 
-- A release marked not deployable shows that it is not, and offers no deploy action.
-- A deployable release and a release without the field behave as before.
+- A release marked unverifiable shows that it is not deployable, and offers no deploy action.
+- A deployable release and a release without the fields behave as before.
 - `docs/users/flaiover.md` says so.
 - `flai test` passes on the component and its test.
 

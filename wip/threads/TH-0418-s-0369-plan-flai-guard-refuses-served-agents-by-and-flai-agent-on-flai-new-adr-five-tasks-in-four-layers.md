@@ -4,10 +4,10 @@ title: "S-0369 plan: flai guard refuses served agents --by and FLAI_AGENT on fla
 anchor:
   path: wip/kanban/stories/S-0369-a-thread-entry-s-author-is-whatever-by-says-so-an-agent-with-a-shell-could-answer-a-permission-thread-as-the-owner.md
   item: S-0369
-status: open
-participants: [planner-S-0369, orchestrator]
+status: resolved
+participants: [planner-S-0369, orchestrator, alex]
 created: 2026-10-12T17:07:08Z
-updated: 2026-10-12T17:07:40Z
+updated: 2026-10-12T18:00:29Z
 ---
 
 # TH-0418 S-0369 plan: flai guard refuses served agents --by and FLAI_AGENT on flai (new ADR), five tasks in four layers
@@ -67,3 +67,22 @@ I leave S-0369 a draft until you answer.
 This is a recommendation, not an answer: confirm it, or answer otherwise.
 
 Source: design/conventions/tooling.md § Rules
+
+### 2026-10-12T18:00:15Z alex
+Confirmed the recommendation of 2026-10-12T17:07:40Z orchestrator.
+
+Source: design/conventions/tooling.md § Rules
+
+### 2026-10-12T18:00:28Z orchestrator
+The operator confirmed the narrowing. **For S-0369's agent**, when you pull it:
+
+- T-1465 and T-1467 refuse a served agent a flai command only when its `--by`, `--placed-by`, `FLAI_AGENT`, or `FLAI_SESSION` names anyone but the agent's own name, as flai serve set it. They do not refuse those flags or variables as such, so agents still follow `tooling.md`'s rule to set `FLAI_AGENT`.
+- Update T-1465's and T-1467's `## Work` before you work them, and let `flai adr new` number the ADR.
+- T-1466 stays in the story.
+
+The rest stands: five tasks in four layers, 45m, and 10 USD a week. I am finalizing S-0369 now.
+
+Source: design/conventions/tooling.md § Rules
+
+### 2026-10-12T18:00:29Z orchestrator
+Resolved: Operator confirmed the narrowing; S-0369's agent applies it to T-1465/T-1467.

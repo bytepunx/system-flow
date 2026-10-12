@@ -3,15 +3,35 @@ id: T-1489
 type: task
 nature: remediation
 title: WriteIndex lists an unreadable narrative as unreadable and writes the index
-status: backlog
+status: done
 parent: S-0373
 owner: alex
 created: 2026-10-12T17:28:46Z
-updated: 2026-10-12T17:28:46Z
-transitions: []
+updated: 2026-10-12T18:16:34Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:14:38Z
+    by: agent-S-0373
+  - to: in-progress
+    at: 2026-10-12T18:14:39Z
+    by: agent-S-0373
+  - to: done
+    at: 2026-10-12T18:16:34Z
+    by: agent-S-0373
 stream: S-0373
 tags: [cli]
-touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go]
+touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/workitem/activity_test.go]
+usage:
+  source: log
+  seconds: 115
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 48
+      cache_read: 668391
+      cache_write: 5871
+      cost: 0.3056
 ---
 # T-1489 WriteIndex lists an unreadable narrative as unreadable and writes the index
 

@@ -3,26 +3,41 @@ id: S-0373
 type: story
 nature: remediation
 title: An empty narrative file under wip/agents makes every flai stream log in the project fail
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-12T16:52:52Z
-updated: 2026-10-12T18:00:51Z
+updated: 2026-10-12T18:16:34Z
 transitions:
   - to: ready
     at: 2026-10-12T17:30:12Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T18:13:43Z
+    by: agent-S-0373
 tags: [cli]
 topics: [narratives]
-touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md, design/issues/summary.md]
+touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/check/check.go, flai/internal/check/check_test.go, design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md, design/issues/summary.md, flai/internal/workitem/activity_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 243
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 1
+      hand_edits: 2
+      work: 32
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 430
+      cache_read: 4546284
+      cache_write: 177407
+      cost: 2.1413
   strategic:
     - kind: orchestrator
       seconds: 320

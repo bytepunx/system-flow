@@ -3,16 +3,36 @@ id: T-1491
 type: task
 nature: improvement
 title: Design and user docs say an unreadable narrative is listed as unreadable instead of failing the write
-status: backlog
+status: done
 parent: S-0373
 owner: alex
 created: 2026-10-12T17:29:01Z
-updated: 2026-10-12T17:29:01Z
-transitions: []
+updated: 2026-10-12T18:17:26Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:16:57Z
+    by: agent-S-0373
+  - to: in-progress
+    at: 2026-10-12T18:16:57Z
+    by: agent-S-0373
+  - to: done
+    at: 2026-10-12T18:17:26Z
+    by: agent-S-0373
 stream: S-0373
 tags: [docs]
 touches: [design/system/agent-narrative.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1489, T-1490]
+usage:
+  source: log
+  seconds: 29
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 33
+      cache_read: 687480
+      cache_write: 12762
+      cost: 0.3174
 ---
 # T-1491 Design and user docs say an unreadable narrative is listed as unreadable instead of failing the write
 

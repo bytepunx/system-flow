@@ -3,17 +3,20 @@ id: S-0369
 type: story
 nature: improvement
 title: A thread entry's author is whatever --by says, so an agent with a shell could answer a permission thread as the owner
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-12T16:52:42Z
-updated: 2026-10-12T18:00:51Z
+updated: 2026-10-12T18:18:00Z
 transitions:
   - to: ready
     at: 2026-10-12T18:00:46Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T18:13:51Z
+    by: agent-S-0369
 tags: [flai, guard, threads]
 topics: [cli, conventions]
-touches: [design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/thread_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0091-a-thread-entry-s-author-is-whatever-by-says-so-an-agent-with-a-shell-could-answer-a-permission-thread-as-the-owner.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0091-a-thread-entry-s-author-is-whatever-by-says-so-an-agent-with-a-shell-could-answer-a-permission-thread-as-the-owner.md, design/issues/summary.md, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5

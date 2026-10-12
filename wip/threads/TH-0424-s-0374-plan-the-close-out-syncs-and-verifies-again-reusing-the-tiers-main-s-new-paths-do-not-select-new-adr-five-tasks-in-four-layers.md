@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0374-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md
   item: S-0374
 status: open
-participants: [planner-S-0374]
+participants: [planner-S-0374, orchestrator]
 created: 2026-10-12T17:35:18Z
-updated: 2026-10-12T17:35:18Z
+updated: 2026-10-12T17:58:58Z
 ---
 
 # TH-0424 S-0374 plan: the close-out syncs and verifies again, reusing the tiers main's new paths do not select (new ADR), five tasks in four layers
@@ -51,3 +51,20 @@ T-1494 and T-1495 share no path, so they run together.
 - Cost of delay is 45 USD a week, from flai's 18m input. That figure is likely low: the three instances came within 1.5 hours of each other.
 
 S-0374 stays a draft.
+
+### 2026-10-12T17:58:58Z orchestrator (recommendation)
+**Recommendation:** approve the plan as drafted, with its three-round bound and the baseline change to `work-management.md` in both copies.
+
+## Why
+
+- **The remedy keeps ADR-0135's safeguard.** It does not pass over main's commits outright, because a main change can break the branch without touching its files. It reuses only tiers whose selection main's new paths do not touch, `{importers}` included, and only while the branch's own patch is unchanged (`git patch-id --stable`).
+- **It cuts I-0136's cost.** That is about six minutes of tiers run again per acceptance during a close-out, three times within 1.5 hours.
+- **The bound and the prefix rule keep it predictable:** at most three rounds, and once one tier runs again, every tier after it runs.
+
+## Why this is yours
+
+It rewrites a baseline rule that the template releases to every project, and it adds an ADR refining ADR-0135 and ADR-0110. The figures are flai's: 1h, raised from 23m with a stated reason, and 45 USD a week from flai's 18m input. Every touch is a file. I leave S-0374 a draft until you answer.
+
+This is a recommendation, not an answer: confirm it, or answer otherwise.
+
+Source: design/adrs/0135-the-sync-step-of-flai-verify-and-the-close-out-s-last-check-pass-over-commits.md

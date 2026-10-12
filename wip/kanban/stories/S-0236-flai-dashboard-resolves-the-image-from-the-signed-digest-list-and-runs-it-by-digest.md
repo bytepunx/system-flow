@@ -3,15 +3,18 @@ id: S-0236
 type: story
 nature: feature
 title: flai dashboard resolves the image from the signed digest list and runs it by digest
-status: ready
+status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T18:00:51Z
+updated: 2026-10-12T18:13:47Z
 transitions:
   - to: ready
     at: 2026-10-12T17:57:39Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T18:13:47Z
+    by: agent-S-0236
 tags: [cli]
 topics: [release, security]
 touches: [flai/cmd/dashboard.go, flai/internal/selfupgrade, flai/internal/dashboard, docs/operators/settings.md, docs/users/flai.md, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_versions.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_test.go, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/docker.md, flai/cmd/dashboard_versions_test.go, flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, docs/users/flaiover.md, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go, flai/cmd/dashboard_watch_test.go, docs/operators/runbooks/update.md, docs/users/flai-reference.md]

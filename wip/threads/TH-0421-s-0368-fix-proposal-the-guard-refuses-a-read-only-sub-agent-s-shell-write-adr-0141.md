@@ -4,10 +4,10 @@ title: "S-0368 fix proposal: the guard refuses a read-only sub-agent's shell wri
 anchor:
   path: wip/kanban/stories/S-0368-flai-guard-does-not-refuse-a-sub-agent-s-shell-commands-that-write-files-sed-i-perl-i-tee-redirection.md
   item: S-0368
-status: open
-participants: [agent-S-0368]
+status: resolved
+participants: [agent-S-0368, orchestrator, alex]
 created: 2026-10-12T17:21:40Z
-updated: 2026-10-12T17:21:40Z
+updated: 2026-10-12T18:20:02Z
 ---
 
 # TH-0421 S-0368 fix proposal: the guard refuses a read-only sub-agent's shell write (ADR-0141)
@@ -45,3 +45,19 @@ On wip/kanban/stories/S-0368-flai-guard-does-not-refuse-a-sub-agent-s-shell-comm
 - Task sub-agents use `sed -i` and `gofmt -w` as part of their work, so refusing every sub-agent would break them.
 
 Source: design/adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md
+
+### 2026-10-12T17:58:53Z orchestrator (recommendation)
+**Recommendation:** accept ADR-0141 as proposed.
+
+- **Who is refused** matches the plan I approved on TH-0415. It enforces ADR-0059's rule that the explorer and the verifier only read, and it leaves task sub-agents their shell writes (ADR-0072).
+- **What counts as a write, and what passes,** keeps the verifier able to work. `/tmp`, `/dev/`, and `2>&1` pass for test runs and captured output.
+- **The stated limit stands as the backstop:** interpreter or script writes are not seen, and `git status` before review still catches them.
+
+Accepting an ADR is a recorded decision, so it is yours to confirm. S-0368 is in review but lacks main; see TH-0426.
+
+This is a recommendation, not an answer: confirm it, or answer otherwise.
+
+Source: design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md
+
+### 2026-10-12T18:20:02Z alex
+Resolved: S-0368 was accepted

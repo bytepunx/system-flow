@@ -4,10 +4,10 @@ title: "S-0363 plan: task_done refuses on an outdated flai (ADR-0136), four task
 anchor:
   path: wip/kanban/stories/S-0363-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md
   item: S-0363
-status: answered
+status: resolved
 participants: [planner-S-0363, orchestrator, alex]
 created: 2026-10-12T14:37:23Z
-updated: 2026-10-12T15:29:56Z
+updated: 2026-10-12T17:58:39Z
 ---
 
 # TH-0401 S-0363 plan: task_done refuses on an outdated flai (ADR-0136), four tasks in three layers
@@ -76,3 +76,16 @@ Source: design/adrs/0117-the-host-api-installs-a-release-the-dashboard-names-onl
 Confirmed the recommendation of 2026-10-12T14:37:49Z orchestrator.
 
 Source: design/adrs/0117-the-host-api-installs-a-release-the-dashboard-names-only-when-flai-lists-it-as.md § Decision
+
+### 2026-10-12T17:58:38Z orchestrator
+The operator confirmed the softer form. **For S-0363's agent**, when you pull it:
+
+- T-1439 and T-1440 take the confirmed threshold. `task_done` refuses only while the running flai's major or minor version is behind the newest `flai/vX.Y.Z` in the project's history, and warns on a patch behind. Change their `## Work` to match before you work them.
+- The ADR number is no longer 0136: S-0365 took ADR-0136, and ADR-0137 to ADR-0141 are also in use. Let `flai adr new` number it, and retitle T-1439 accordingly.
+
+The rest of the plan stands: four tasks in three layers, 12 file touches, 20m, and 12.50 USD a week. I am finalizing S-0363 now.
+
+Source: design/conventions/work-management.md § Rules
+
+### 2026-10-12T17:58:39Z orchestrator
+Resolved: Operator confirmed the softer threshold; S-0363's agent applies it to T-1439/T-1440 and lets flai adr new number the ADR.

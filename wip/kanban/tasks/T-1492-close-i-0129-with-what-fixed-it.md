@@ -3,16 +3,36 @@ id: T-1492
 type: task
 nature: improvement
 title: Close I-0129 with what fixed it
-status: backlog
+status: done
 parent: S-0373
 owner: alex
 created: 2026-10-12T17:29:07Z
-updated: 2026-10-12T17:29:07Z
-transitions: []
+updated: 2026-10-12T18:17:41Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:17:35Z
+    by: agent-S-0373
+  - to: in-progress
+    at: 2026-10-12T18:17:36Z
+    by: agent-S-0373
+  - to: done
+    at: 2026-10-12T18:17:41Z
+    by: agent-S-0373
 stream: S-0373
 tags: [issues]
 touches: [design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md, design/issues/summary.md]
 after: [T-1491]
+usage:
+  source: log
+  seconds: 4
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 24
+      cache_read: 190543
+      cache_write: 704
+      cost: 0.0867
 ---
 # T-1492 Close I-0129 with what fixed it
 

@@ -3,15 +3,35 @@ id: T-1490
 type: task
 nature: remediation
 title: flai check counts an unreadable narrative as listed in the index and tests narrative.front-matter
-status: backlog
+status: done
 parent: S-0373
 owner: alex
 created: 2026-10-12T17:28:52Z
-updated: 2026-10-12T17:28:52Z
-transitions: []
+updated: 2026-10-12T18:16:39Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:14:40Z
+    by: agent-S-0373
+  - to: in-progress
+    at: 2026-10-12T18:14:41Z
+    by: agent-S-0373
+  - to: done
+    at: 2026-10-12T18:16:39Z
+    by: agent-S-0373
 stream: S-0373
 tags: [cli]
 touches: [flai/internal/check/check.go, flai/internal/check/check_test.go]
+usage:
+  source: log
+  seconds: 118
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 48
+      cache_read: 668391
+      cache_write: 5871
+      cost: 0.3056
 ---
 # T-1490 flai check counts an unreadable narrative as listed in the index and tests narrative.front-matter
 

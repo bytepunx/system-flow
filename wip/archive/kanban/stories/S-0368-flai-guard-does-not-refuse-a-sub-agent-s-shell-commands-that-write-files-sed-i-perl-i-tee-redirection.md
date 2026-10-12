@@ -3,10 +3,10 @@ id: S-0368
 type: story
 nature: improvement
 title: flai guard does not refuse a sub-agent's shell commands that write files (sed -i, perl -i, tee, redirection)
-status: review
+status: done
 owner: alex
 created: 2026-10-12T16:52:41Z
-updated: 2026-10-12T17:42:29Z
+updated: 2026-10-12T18:20:02Z
 transitions:
   - to: ready
     at: 2026-10-12T17:11:33Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-12T17:42:29Z
     by: agent-S-0368
+  - to: done
+    at: 2026-10-12T18:20:02Z
+    by: alex
 tags: [flai, guard]
 topics: [cli, conventions]
 touches: [design/adrs/README.md, design/system/agent-adapters.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0052-flai-guard-does-not-refuse-a-sub-agent-s-shell-commands-that-write-files-sed-i-perl-i-tee-redirection.md, design/issues/summary.md, design/adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md]

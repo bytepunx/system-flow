@@ -3,25 +3,38 @@ id: S-0363
 type: story
 nature: remediation
 title: An outdated MCP flai's task_done commits every changed path under the closing task, so a layer's tasks cannot close apart
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-12T14:12:30Z
-updated: 2026-10-12T18:00:51Z
+updated: 2026-10-12T18:15:02Z
 transitions:
   - to: ready
     at: 2026-10-12T17:59:16Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T18:13:33Z
+    by: agent-S-0363
 tags: [cli]
-touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go, flai/cmd/task_done.go, docs/users/flai-reference.md, design/adrs/0136-flai-task-done-refuses-to-close-a-task-while-the-running-flai-is-older-than-the.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md, design/issues/summary.md]
+touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go, flai/cmd/task_done.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md, design/issues/summary.md, design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 97
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 236
+      cache_read: 1552294
+      cache_write: 124730
+      cost: 0.7603
   strategic:
     - kind: orchestrator
       seconds: 226
@@ -62,9 +75,9 @@ This story remediates [I-0127](../../../design/issues/I-0127-an-outdated-mcp-fla
 - [ ] I-0127 is closed with `flai issue close I-0127 --reason` saying what fixed it
 
 ## Tasks
-- T-1439 ADR-0136: flai task done refuses to close a task while the running flai is older than the project's history
-- T-1440 taskdone.Run refuses, changing nothing, while the running flai is older than the project's history, tested through Run and the MCP tool
-- T-1441 The design, user, and operator docs say flai task done refuses while the running flai is older than the project's history
+- T-1439 ADR: flai task done refuses to close a task while the running flai's major or minor version is behind the project's history
+- T-1440 taskdone.Run refuses, changing nothing, while the running flai's major or minor version is behind the project's history, tested through Run and the MCP tool
+- T-1441 The design, user, and operator docs say flai task done refuses while the running flai's major or minor version is behind the project's history
 - T-1442 Close I-0127 as fixed by task_done's refusal while the running flai is older than the project's history
 
 ## Notes
