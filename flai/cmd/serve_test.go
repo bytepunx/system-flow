@@ -2,13 +2,20 @@ package cmd
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -108,5 +115,58 @@ func TestServeKeepsMCPServersOnlyWithTheHostItsConfigNames(t *testing.T) {
 	t.Setenv(host.TokenEnv, "")
 	if mcp, said := serveWith(hostCfg); mcp != nil || !strings.Contains(said, "not under flai host") {
 		t.Errorf("outside a host: %v, said %q", mcp, said)
+	}
+}
+
+// S-0235: flai serve logs one warn at start when a versioned build carries no
+// valid release stamp, and none for a development build or a signed one.
+func TestServeWarnsOnceWithoutAValidReleaseStamp(t *testing.T) {
+	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statement := "flai 1.42.0 0ef6d26"
+	sum := sha256.Sum256([]byte(statement))
+	der, err := ecdsa.SignASN1(rand.Reader, k, sum[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	sig := base64.StdEncoding.EncodeToString(der)
+	keys := []*ecdsa.PublicKey{&k.PublicKey}
+	for _, c := range []struct {
+		name          string
+		stamp         buildinfo.Stamp
+		state, reason string
+	}{
+		{"versioned without a stamp", buildinfo.VerifyStamp("", "", "1.42.0", "0ef6d26", keys), "missing", ""},
+		{"versioned, signed by another key", buildinfo.VerifyStamp(statement, sig, "1.42.0", "0ef6d26", nil), "invalid", "the signature does not verify against the release key"},
+		{"development build", buildinfo.VerifyStamp("", "", "dev", "", keys), "", ""},
+		{"snapshot build", buildinfo.VerifyStamp("", "", "0.0.0-0ef6d26", "0ef6d26", keys), "", ""},
+		{"signed", buildinfo.VerifyStamp(statement, sig, "1.42.0", "0ef6d26", keys), "", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			var logged bytes.Buffer
+			warnReleaseStamp(slog.New(slog.NewJSONHandler(&logged, nil)), c.stamp)
+			lines := strings.Split(strings.TrimSpace(logged.String()), "\n")
+			if c.state == "" {
+				if logged.Len() != 0 {
+					t.Errorf("warned: %s", logged.String())
+				}
+				return
+			}
+			if len(lines) != 1 {
+				t.Fatalf("want one event, got %q", logged.String())
+			}
+			var ev map[string]any
+			if err := json.Unmarshal([]byte(lines[0]), &ev); err != nil {
+				t.Fatal(err)
+			}
+			if ev["level"] != "WARN" || ev["component"] != "serve" || ev["state"] != c.state {
+				t.Errorf("event: %v", ev)
+			}
+			if r, _ := ev["reason"].(string); r != c.reason {
+				t.Errorf("reason %q, want %q", r, c.reason)
+			}
+		})
 	}
 }

@@ -14,6 +14,12 @@ var (
 	Version = "dev"
 	Commit  = ""
 	Date    = ""
+	// ReleaseStatement is the release stamp's statement, "flai <version>
+	// <commit>" on one line, which the release workflow signs (S-0235).
+	ReleaseStatement = ""
+	// ReleaseSignature is the statement's signature by the release key,
+	// base64 of its ASN.1 DER form, as cosign sign-blob writes it.
+	ReleaseSignature = ""
 )
 
 // Info is the resolved build metadata.

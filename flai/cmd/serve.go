@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -48,6 +49,20 @@ func (a *app) serveMCP() serve.MCP {
 		return nil
 	}
 	return hostMCP{c: c}
+}
+
+// warnReleaseStamp logs once, at start, when a build that claims a release
+// version carries no valid release stamp; a development build is never
+// warned about (S-0235).
+func warnReleaseStamp(log *slog.Logger, s buildinfo.Stamp) {
+	if s.Development || s.State == buildinfo.StampSigned {
+		return
+	}
+	attrs := []any{"component", "serve", "state", string(s.State)}
+	if s.Reason != "" {
+		attrs = append(attrs, "reason", s.Reason)
+	}
+	log.Warn("release stamp not valid", attrs...)
 }
 
 func newServeCmd(a *app) *cobra.Command {
@@ -102,6 +117,7 @@ there does.`,
 				folder, _ = a.workingDir()
 			}
 			servePprof(ctx, a.logger())
+			warnReleaseStamp(a.logger(), buildinfo.OwnStamp())
 			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, ImportRoots: a.importRoots})
 		},
 	}
