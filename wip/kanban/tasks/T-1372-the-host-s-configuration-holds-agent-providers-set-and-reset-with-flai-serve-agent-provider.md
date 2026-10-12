@@ -3,16 +3,36 @@ id: T-1372
 type: task
 nature: feature
 title: The host's configuration holds agent.providers, set and reset with flai serve agent provider
-status: backlog
+status: done
 parent: S-0349
 owner: alex
 created: 2026-10-08T08:43:05Z
-updated: 2026-10-08T08:54:14Z
-transitions: []
+updated: 2026-10-12T16:15:33Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:03:15Z
+    by: agent-S-0349
+  - to: in-progress
+    at: 2026-10-12T16:03:16Z
+    by: agent-S-0349
+  - to: done
+    at: 2026-10-12T16:15:33Z
+    by: agent-S-0349
 stream: S-0349
 tags: [cli]
-touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md]
+touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go]
 after: [T-1371]
+usage:
+  source: log
+  seconds: 737
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 380
+      cache_read: 3458470
+      cache_write: 116709
+      cost: 1.6101
 ---
 # T-1372 The host's configuration holds agent.providers, set and reset with flai serve agent provider
 

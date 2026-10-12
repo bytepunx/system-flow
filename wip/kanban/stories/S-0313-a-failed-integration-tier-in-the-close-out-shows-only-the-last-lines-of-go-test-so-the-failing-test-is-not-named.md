@@ -3,16 +3,19 @@ id: S-0313
 type: story
 nature: improvement
 title: A failed integration tier in the close-out shows only the last lines of go test, so the failing test is not named
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-07T14:26:02Z
-updated: 2026-10-12T15:56:50Z
+updated: 2026-10-12T16:02:14Z
 transitions:
   - to: ready
     at: 2026-10-12T15:50:17Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-12T15:51:15Z
+    by: agent-S-0313
+  - to: review
+    at: 2026-10-12T16:02:14Z
     by: agent-S-0313
 tags: []
 topics: [testing]
@@ -24,29 +27,29 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 334
-  estimated: true
+  seconds: 675
   turns:
     - day: 2026-10-12
-      work: 30
+      hand_edits: 1
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 84
-      output: 389
-      cache_read: 4658884
-      cache_write: 226241
-      cost: 2.1982
+      input: 106
+      output: 30728
+      cache_read: 6731170
+      cache_write: 239011
+      cost: 3.7384
   strategic:
     - kind: orchestrator
-      seconds: 289
+      seconds: 749
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 66
-          output: 1060
-          cache_read: 12973554
-          cache_write: 38710
-          cost: 3.2165
+          input: 96
+          output: 1447
+          cache_read: 19810958
+          cache_write: 53722
+          cost: 4.944
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m
@@ -72,9 +75,9 @@ finalized:
 This story remediates [I-0113](../../../design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md), "A failed integration tier in the close-out shows only the last lines of go test, so the failing test is not named". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0113 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0113 is closed with `flai issue close I-0113 --reason` saying what fixed it
-- [ ] I-0114 is closed with `flai issue close I-0114 --reason` saying what fixed it
+- [x] The cause I-0113 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0113 is closed with `flai issue close I-0113 --reason` saying what fixed it
+- [x] I-0114 is closed with `flai issue close I-0114 --reason` saying what fixed it
 
 ## Tasks
 - T-1286 A plain finding names the failures go test printed, not only the last lines

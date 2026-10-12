@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 382.6798
-accrued_seconds: 334791
-tasks_completed: 363
-last_run: 2026-10-12T15:50:26Z
+accrued_cost: 388.3990
+accrued_seconds: 335799
+tasks_completed: 367
+last_run: 2026-10-12T16:07:14Z
 ---
 
 # Orchestrator activity
@@ -2552,6 +2552,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0234, S-0313, S-0349, S-0235
 - Seconds: 25
 - Cost: 0.4277 USD, estimated
+
+### 2026-10-12T15:57:12Z
+
+- Summary: Answered TH-0410, citing no source
+- Items: S-0366
+- Seconds: 406
+- Cost: 2.9528 USD, estimated
+
+### 2026-10-12T15:57:16Z
+
+- Summary: The operator accepted S-0364, so main's {importers} vet tier is now rejected by the installed flai 1.40.1. Under judgement, published 3 pending worth 40.13 USD/week: S-0364 (25), S-0366 (12.5), S-0232 (2.63). Versions: flai 1.40.5→1.41.0 (flai/v1.41.0, the first signed release), flaiover 0.42.3→0.42.4 (flaiover/v0.42.4), template 1.0.86→1.0.87 (v1.0.87), pushed. TH-0410's integration worry was settled: S-0364's verify at 3a66dca4 passed integration on a base holding all three. Resolved TH-0410, asking the operator to run flai host upgrade once release-flai.yml finishes.
+- Items: S-0364, S-0366, S-0232
+- Seconds: 4
+- Cost: 0.1119 USD, estimated
+
+### 2026-10-12T16:02:39Z
+
+- Summary: S-0313 reached review. Its stored verify passed at bb952643, but the head is bb8d7154 (the close-out's commit), and MCP verify on the installed flai 1.40.1 refuses main's {importers} manifest. So I cannot verify it at the head until the host runs flai 1.41.0 (TH-0411). It stays in review; I verify and accept once the host is upgraded.
+- Items: S-0313
+- Seconds: 323
+- Cost: 0.8005 USD, estimated
+
+### 2026-10-12T16:07:14Z
+
+- Summary: S-0234 reached review. Its stored verify passed at 1bb10aa4 (markdown tier only), but the head is 64f88c63 (the close-out's commit), and MCP verify on flai 1.40.1 refuses main's {importers} manifest. It waits in review with S-0313 until the host runs flai 1.41.0 (TH-0411).
+- Items: S-0234, S-0313
+- Seconds: 275
+- Cost: 1.8540 USD, estimated
 
 ## Refusals
 

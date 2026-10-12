@@ -3,16 +3,36 @@ id: T-1233
 type: task
 nature: feature
 title: ci.md, docker.md, and the operator documentation describe the flaiover release, its signed assets, and the unsigned latest and sha builds
-status: backlog
+status: done
 parent: S-0234
 owner: alex
 created: 2026-10-07T22:43:16Z
-updated: 2026-10-07T22:43:16Z
-transitions: []
+updated: 2026-10-12T16:06:35Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:04:55Z
+    by: agent-S-0234
+  - to: in-progress
+    at: 2026-10-12T16:04:56Z
+    by: agent-S-0234
+  - to: done
+    at: 2026-10-12T16:06:35Z
+    by: agent-S-0234
 stream: S-0234
 tags: [dashboard, docs]
 touches: [design/tech/ci.md, design/tech/docker.md, docs/operators/runbooks/update.md, docs/operators/runbooks/release-key.md, docs/operators/settings.md]
 after: [T-1232]
+usage:
+  source: log
+  seconds: 99
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 8052
+      cache_read: 1085553
+      cache_write: 46984
+      cost: 0.6822
 ---
 # T-1233 ci.md, docker.md, and the operator documentation describe the flaiover release, its signed assets, and the unsigned latest and sha builds
 

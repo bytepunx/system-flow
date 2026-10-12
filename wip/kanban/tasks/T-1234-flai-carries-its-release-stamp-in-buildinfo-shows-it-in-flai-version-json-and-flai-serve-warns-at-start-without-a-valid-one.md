@@ -3,15 +3,35 @@ id: T-1234
 type: task
 nature: feature
 title: flai carries its release stamp in buildinfo, shows it in flai version --json, and flai serve warns at start without a valid one
-status: backlog
+status: done
 parent: S-0235
 owner: alex
 created: 2026-10-07T22:48:34Z
-updated: 2026-10-07T22:48:34Z
-transitions: []
+updated: 2026-10-12T16:15:36Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:07:55Z
+    by: agent-S-0235
+  - to: in-progress
+    at: 2026-10-12T16:07:56Z
+    by: agent-S-0235
+  - to: done
+    at: 2026-10-12T16:15:36Z
+    by: agent-S-0235
 stream: S-0235
 tags: [cli]
 touches: [flai/internal/buildinfo/buildinfo.go, flai/internal/buildinfo/stamp.go, flai/internal/buildinfo/stamp_test.go, flai/cmd/version.go, flai/cmd/cmd_test.go, flai/cmd/serve.go, flai/cmd/serve_test.go]
+usage:
+  source: log
+  seconds: 460
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 205
+      cache_read: 1168694
+      cache_write: 72311
+      cost: 0.5589
 ---
 # T-1234 flai carries its release stamp in buildinfo, shows it in flai version --json, and flai serve warns at start without a valid one
 

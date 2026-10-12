@@ -3,15 +3,21 @@ id: T-1238
 type: task
 nature: feature
 title: The operator and design documentation say what the release stamp is, where each build carries it, and what it does not prove
-status: backlog
+status: in-progress
 parent: S-0235
 owner: alex
 created: 2026-10-07T22:49:20Z
-updated: 2026-10-07T22:49:20Z
-transitions: []
+updated: 2026-10-12T16:24:16Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:24:16Z
+    by: agent-S-0235
+  - to: in-progress
+    at: 2026-10-12T16:24:16Z
+    by: agent-S-0235
 stream: S-0235
 tags: [cli, dashboard, docs]
-touches: [docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md, design/tech/docker.md]
+touches: [docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md, design/tech/docker.md, docs/users/flai-reference.md]
 after: [T-1236, T-1237]
 ---
 # T-1238 The operator and design documentation say what the release stamp is, where each build carries it, and what it does not prove

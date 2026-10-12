@@ -3,16 +3,36 @@ id: T-1237
 type: task
 nature: feature
 title: release-flaiover.yml signs flaiover's release statement and passes it to the image, which keeps it as the stamp file, and flai dashboard --build passes none
-status: backlog
+status: done
 parent: S-0235
 owner: alex
 created: 2026-10-07T22:49:09Z
-updated: 2026-10-07T22:49:09Z
-transitions: []
+updated: 2026-10-12T16:24:01Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:16:05Z
+    by: agent-S-0235
+  - to: in-progress
+    at: 2026-10-12T16:16:05Z
+    by: agent-S-0235
+  - to: done
+    at: 2026-10-12T16:24:01Z
+    by: agent-S-0235
 stream: S-0235
 tags: [dashboard, ci]
 touches: [".github/workflows/release-flaiover.yml", flaiover/Dockerfile, flai/cmd/dashboard_test.go]
 after: [T-1235]
+usage:
+  source: log
+  seconds: 472
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 217
+      cache_read: 1182887
+      cache_write: 74863
+      cost: 0.5665
 ---
 # T-1237 release-flaiover.yml signs flaiover's release statement and passes it to the image, which keeps it as the stamp file, and flai dashboard --build passes none
 

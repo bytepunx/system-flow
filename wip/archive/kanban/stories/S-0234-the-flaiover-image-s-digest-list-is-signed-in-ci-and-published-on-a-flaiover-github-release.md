@@ -3,11 +3,11 @@ id: S-0234
 type: story
 nature: feature
 title: The flaiover image's digest list is signed in CI and published on a flaiover GitHub release
-status: in-progress
+status: done
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-12T15:50:25Z
+updated: 2026-10-12T16:25:49Z
 transitions:
   - to: ready
     at: 2026-10-12T15:50:16Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-12T15:50:25Z
     by: agent-S-0234
+  - to: review
+    at: 2026-10-12T16:07:03Z
+    by: agent-S-0234
+  - to: done
+    at: 2026-10-12T16:25:49Z
+    by: alex
 tags: [dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flaiover.yml", design/tech/ci.md, docs/operators, design/tech/docker.md, design/system/release-signing.md, scripts/flaiover-digests.sh, docs/operators/runbooks/update.md, docs/operators/runbooks/release-key.md, docs/operators/settings.md]
+touches: [".github/workflows/release-flaiover.yml", design/tech/ci.md, docs/operators, design/tech/docker.md, design/system/release-signing.md, scripts/flaiover-digests.sh, docs/operators/runbooks/update.md, docs/operators/runbooks/release-key.md, docs/operators/settings.md, scripts/README.md]
 after: [S-0232]
 agent:
   harness: claude-code
@@ -25,20 +31,37 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1018
+  turns:
+    - day: 2026-10-12
+      ceremony: 3
+      hand_edits: 2
+      work: 29
+  models:
+    - model: claude-haiku-5-5
+      input: 65200
+      output: 2749
+      cache_read: 0
+      cache_write: 0
+      cost: 0.0079
+    - model: claude-opus-5-5
+      input: 204
+      output: 73457
+      cache_read: 9903674
+      cache_write: 428643
+      cost: 6.224
   strategic:
     - kind: orchestrator
-      seconds: 165
+      seconds: 303
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 262
-          cache_read: 1802076
-          cache_write: 10661
-          cost: 0.449
+          input: 36
+          output: 526
+          cache_read: 5476063
+          cache_write: 13786
+          cost: 1.376
 cost_of_delay:
   value: 1.97
   by: planner-E-0015
@@ -57,11 +80,11 @@ forecast:
 Every `flaiover/v*` tag produces a GitHub release `flaiover vX.Y.Z` carrying a digest list, the index digest and each platform's manifest digest the workflow pushed to GHCR, signed with the release key (ADR-0070), so that flai can choose and verify an image without a registry client.
 
 ## Acceptance criteria
-- [ ] On a `flaiover/v*` tag, `release-flaiover.yml` writes `flaiover_<version>.digests` from `docker/build-push-action`'s outputs with one line per digest and the reference it was pushed under, signs it with `cosign sign-blob --tlog-upload=false`, and creates the GitHub release with both files as assets; a run without the key fails.
-- [ ] The workflow also runs `cosign sign --key` on the image by digest and `actions/attest-build-provenance` with `push-to-registry`, so that `cosign verify` and `gh attestation verify oci://` work for anyone.
-- [ ] A push to `main` still publishes `latest` and `sha-*` as today, and the operator documentation says those builds are unsigned and what that means once `flai dashboard` verifies.
-- [ ] Which digest `RepoDigests` records for an image pulled by index digest and by platform digest was checked, and the list carries every digest a pull can leave behind.
-- [ ] `design/tech/ci.md` describes the release and its assets.
+- [x] On a `flaiover/v*` tag, `release-flaiover.yml` writes `flaiover_<version>.digests` from `docker/build-push-action`'s outputs with one line per digest and the reference it was pushed under, signs it with `cosign sign-blob --tlog-upload=false`, and creates the GitHub release with both files as assets; a run without the key fails.
+- [x] The workflow also runs `cosign sign --key` on the image by digest and `actions/attest-build-provenance` with `push-to-registry`, so that `cosign verify` and `gh attestation verify oci://` work for anyone.
+- [x] A push to `main` still publishes `latest` and `sha-*` as today, and the operator documentation says those builds are unsigned and what that means once `flai dashboard` verifies.
+- [x] Which digest `RepoDigests` records for an image pulled by index digest and by platform digest was checked, and the list carries every digest a pull can leave behind.
+- [x] `design/tech/ci.md` describes the release and its assets.
 
 ## Tasks
 - T-1231 Which digest RepoDigests records for a flaiover image pulled by index and by platform digest is checked, and the digest list's format recorded in release-signing.md
@@ -100,3 +123,9 @@ Forecast: 45m. flai replays the delivery from the pull order whenever it changes
 - S-0232, of like scope, closed four tasks in about 15 minutes, so no more than 45m.
 
 Cost of delay: 1.97 USD a week, as `flai cod` gives it: this story's 45m share of the 9h30m forecast over E-0015's eight open stories, of the epic's 25 USD a week penalty, which the operator set on TH-0312. Kept as given: each story closes part of one exposure, and that exposure is closed only when the chain is done, so a share by work fits.
+
+### Verification
+
+No `flaiover/v*` tag can run before review, so criteria 1 and 2 were checked by `actionlint` 1.7.12, by running `scripts/flaiover-digests.sh` against `ghcr.io/bytepunx/flaiover:0.42.3` (its output matches the example in `release-signing.md` byte for byte), and by running the workflow's exact `cosign sign-blob` and `cosign sign` commands with a throwaway key against a local `registry:2`, where `cosign verify-blob`, `openssl dgst -verify`, and `cosign verify` passed. The first real tag is the first full run.
+
+`release-flaiover.yml` runs `actions/attest-build-provenance` with `push-to-registry` under `if: ${{ !github.event.repository.private }}`, as `release-flai.yml` does: on the Team plan artifact attestations exist only for public repositories, so `gh attestation verify oci://` works once `bytepunx/system-flow` is public or the organisation moves to Enterprise Cloud. The operator took this for S-0232 on TH-0324; criterion 2 is ticked on that basis. `cosign verify` works for anyone who can pull the image, which depends on the GHCR package's visibility.

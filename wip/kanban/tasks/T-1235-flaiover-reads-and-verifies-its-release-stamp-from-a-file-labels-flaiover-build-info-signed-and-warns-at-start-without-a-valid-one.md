@@ -3,15 +3,35 @@ id: T-1235
 type: task
 nature: feature
 title: flaiover reads and verifies its release stamp from a file, labels flaiover_build_info signed, and warns at start without a valid one
-status: backlog
+status: done
 parent: S-0235
 owner: alex
 created: 2026-10-07T22:48:44Z
-updated: 2026-10-07T22:48:44Z
-transitions: []
+updated: 2026-10-12T16:15:43Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:07:56Z
+    by: agent-S-0235
+  - to: in-progress
+    at: 2026-10-12T16:07:57Z
+    by: agent-S-0235
+  - to: done
+    at: 2026-10-12T16:15:43Z
+    by: agent-S-0235
 stream: S-0235
 tags: [dashboard]
 touches: [flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/lib/server/metrics.ts, flaiover/src/lib/server/metrics.test.ts, flaiover/src/hooks.server.ts]
+usage:
+  source: log
+  seconds: 466
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 177
+      cache_read: 1320181
+      cache_write: 73602
+      cost: 0.6277
 ---
 # T-1235 flaiover reads and verifies its release stamp from a file, labels flaiover_build_info signed, and warns at start without a valid one
 

@@ -3,16 +3,36 @@ id: T-1236
 type: task
 nature: feature
 title: release-flai.yml signs flai's release statement before GoReleaser, and .goreleaser.yaml writes it into buildinfo by ldflags
-status: backlog
+status: done
 parent: S-0235
 owner: alex
 created: 2026-10-07T22:48:55Z
-updated: 2026-10-07T22:48:55Z
-transitions: []
+updated: 2026-10-12T16:23:57Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:16:04Z
+    by: agent-S-0235
+  - to: in-progress
+    at: 2026-10-12T16:16:04Z
+    by: agent-S-0235
+  - to: done
+    at: 2026-10-12T16:23:57Z
+    by: agent-S-0235
 stream: S-0235
 tags: [cli, ci]
 touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml]
 after: [T-1234]
+usage:
+  source: log
+  seconds: 473
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 135
+      cache_read: 866919
+      cache_write: 54959
+      cost: 0.4152
 ---
 # T-1236 release-flai.yml signs flai's release statement before GoReleaser, and .goreleaser.yaml writes it into buildinfo by ldflags
 

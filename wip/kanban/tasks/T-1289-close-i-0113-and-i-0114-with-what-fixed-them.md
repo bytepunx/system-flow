@@ -24,15 +24,15 @@ touches: [design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-
 after: [T-1286, T-1287]
 usage:
   source: log
-  seconds: 47
+  seconds: 54
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 46
-      cache_read: 923208
-      cache_write: 14810
-      cost: 0.4221
+      input: 20
+      output: 5927
+      cache_read: 1298256
+      cache_write: 46099
+      cost: 0.721
 ---
 # T-1289 Close I-0113 and I-0114 with what fixed them
 

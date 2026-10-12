@@ -3,11 +3,11 @@ id: T-1218
 type: task
 nature: feature
 title: flai stats reports the coordination values under coordination, in JSON and in print
-status: in-progress
+status: done
 parent: S-0337
 owner: alex
 created: 2026-10-07T20:17:26Z
-updated: 2026-10-12T15:48:17Z
+updated: 2026-10-12T16:08:10Z
 transitions:
   - to: ready
     at: 2026-10-12T15:35:42Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T15:48:17Z
     by: agent-S-0337
+  - to: done
+    at: 2026-10-12T16:08:10Z
+    by: agent-S-0337
 stream: S-0337
 tags: [flai]
 touches: [flai/internal/metrics/coordination.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go]
 after: [T-1216, T-1217]
+usage:
+  source: log
+  seconds: 1193
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 106
+      output: 641
+      cache_read: 7353835
+      cache_write: 157459
+      cost: 6.4823
 ---
 # T-1218 flai stats reports the coordination values under coordination, in JSON and in print
 

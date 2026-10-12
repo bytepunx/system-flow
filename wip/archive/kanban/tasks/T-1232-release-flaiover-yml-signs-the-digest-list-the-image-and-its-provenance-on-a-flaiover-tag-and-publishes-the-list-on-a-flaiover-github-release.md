@@ -3,16 +3,36 @@ id: T-1232
 type: task
 nature: feature
 title: release-flaiover.yml signs the digest list, the image, and its provenance on a flaiover tag and publishes the list on a flaiover GitHub release
-status: backlog
+status: done
 parent: S-0234
 owner: alex
 created: 2026-10-07T22:43:07Z
-updated: 2026-10-12T15:51:31Z
-transitions: []
+updated: 2026-10-12T16:04:27Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:57:37Z
+    by: agent-S-0234
+  - to: in-progress
+    at: 2026-10-12T15:57:37Z
+    by: agent-S-0234
+  - to: done
+    at: 2026-10-12T16:04:27Z
+    by: agent-S-0234
 stream: S-0234
 tags: [dashboard]
 touches: [".github/workflows/release-flaiover.yml", scripts/flaiover-digests.sh, scripts/README.md]
 after: [T-1231]
+usage:
+  source: log
+  seconds: 410
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 61
+      output: 21823
+      cache_read: 2942241
+      cache_write: 127344
+      cost: 1.8491
 ---
 # T-1232 release-flaiover.yml signs the digest list, the image, and its provenance on a flaiover tag and publishes the list on a flaiover GitHub release
 

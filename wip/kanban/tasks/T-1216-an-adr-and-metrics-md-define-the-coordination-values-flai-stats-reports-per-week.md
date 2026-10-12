@@ -31,7 +31,7 @@ usage:
       output: 479
       cache_read: 6957780
       cache_write: 229241
-      cost: 0.428
+      cost: 0.4355
     - model: claude-opus-5-5
       input: 52
       output: 287

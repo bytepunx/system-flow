@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 126
-      cache_read: 929977
-      cache_write: 51458
-      cost: 0.4417
+      input: 15
+      output: 4359
+      cache_read: 954945
+      cache_write: 33908
+      cost: 0.5304
 ---
 # T-1286 A plain finding names the failures go test printed, not only the last lines
 

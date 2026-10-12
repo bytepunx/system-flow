@@ -23,15 +23,15 @@ tags: [flai]
 touches: [flai/internal/storygit/conflicts.go, flai/internal/storygit/conflicts_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/accept.go, flai/cmd/accept_conflict_test.go]
 usage:
   source: log
-  seconds: 635
+  seconds: 643
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 321
-      cache_read: 3156037
-      cache_write: 119830
-      cost: 2.8271
+      input: 66
+      output: 326
+      cache_read: 3399467
+      cache_write: 131439
+      cost: 3.0472
 ---
 # T-1217 A rebase that stops on conflicts at flai stream sync or flai accept is logged with its story, paths, and time
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 38
-      cache_read: 734896
-      cache_write: 6468
-      cost: 0.3336
+      input: 11
+      output: 3293
+      cache_read: 721340
+      cache_write: 25613
+      cost: 0.4006
 ---
 # T-1288 The manifest and settings docs say what a plain finding keeps
 

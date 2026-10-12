@@ -3,11 +3,11 @@ id: T-1231
 type: task
 nature: research
 title: Which digest RepoDigests records for a flaiover image pulled by index and by platform digest is checked, and the digest list's format recorded in release-signing.md
-status: in-progress
+status: done
 parent: S-0234
 owner: alex
 created: 2026-10-07T22:42:56Z
-updated: 2026-10-12T15:51:32Z
+updated: 2026-10-12T15:56:57Z
 transitions:
   - to: ready
     at: 2026-10-12T15:51:31Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-12T15:51:32Z
     by: agent-S-0234
+  - to: done
+    at: 2026-10-12T15:56:57Z
+    by: agent-S-0234
 stream: S-0234
 tags: [dashboard]
 touches: [design/system/release-signing.md]
+usage:
+  source: log
+  seconds: 325
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 14768
+      cache_read: 1991056
+      cache_write: 86175
+      cost: 1.2513
 ---
 # T-1231 Which digest RepoDigests records for a flaiover image pulled by index and by platform digest is checked, and the digest list's format recorded in release-signing.md
 

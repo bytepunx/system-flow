@@ -3,15 +3,21 @@ id: T-1373
 type: task
 nature: feature
 title: flai agent, flai edit, flai manifest set, and the MCP item_new and item_edit agent take provider
-status: backlog
+status: in-progress
 parent: S-0349
 owner: alex
 created: 2026-10-08T08:43:11Z
-updated: 2026-10-08T08:54:16Z
-transitions: []
+updated: 2026-10-12T16:22:59Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:15:47Z
+    by: agent-S-0349
+  - to: in-progress
+    at: 2026-10-12T16:15:47Z
+    by: agent-S-0349
 stream: S-0349
 tags: [cli]
-touches: [flai/cmd/agent.go, flai/cmd/agent_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/internal/itemedit/itemedit.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, docs/users/flai-reference.md]
+touches: [flai/cmd/agent.go, flai/cmd/agent_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/internal/itemedit/itemedit.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, docs/users/flai-reference.md, flai/cmd/items.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flai/cmd/workitems_test.go, flai/internal/mcpserver/folder.go]
 after: [T-1372]
 ---
 # T-1373 flai agent, flai edit, flai manifest set, and the MCP item_new and item_edit agent take provider

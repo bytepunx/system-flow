@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 41
-      cache_read: 771197
-      cache_write: 20050
-      cost: 0.356
+      input: 12
+      output: 3515
+      cache_read: 769876
+      cache_write: 27337
+      cost: 0.4276
 ---
 # T-1287 The integration tier reads go test -json, so its findings name each failing test by file and line
 

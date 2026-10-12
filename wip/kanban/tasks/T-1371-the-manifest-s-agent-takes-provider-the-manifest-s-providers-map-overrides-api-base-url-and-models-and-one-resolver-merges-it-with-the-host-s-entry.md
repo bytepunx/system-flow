@@ -3,11 +3,11 @@ id: T-1371
 type: task
 nature: feature
 title: The manifest's agent takes provider, the manifest's providers map overrides api, base_url, and models, and one resolver merges it with the host's entry
-status: in-progress
+status: done
 parent: S-0349
 owner: alex
 created: 2026-10-08T08:42:58Z
-updated: 2026-10-12T15:52:56Z
+updated: 2026-10-12T16:02:36Z
 transitions:
   - to: ready
     at: 2026-10-12T15:52:55Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-12T15:52:56Z
     by: agent-S-0349
+  - to: done
+    at: 2026-10-12T16:02:36Z
+    by: agent-S-0349
 stream: S-0349
 tags: [cli]
-touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md]
+touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, flai/internal/manifest/settings.go, flai/internal/check/check.go, flai/internal/check/providers_test.go, flai/internal/workitem/front-matter-fields.txt]
+usage:
+  source: log
+  seconds: 580
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 582
+      cache_read: 5782553
+      cache_write: 162378
+      cost: 2.6773
 ---
 # T-1371 The manifest's agent takes provider, the manifest's providers map overrides api, base_url, and models, and one resolver merges it with the host's entry
 

@@ -5,9 +5,9 @@ from: S-0235
 to: S-0349
 about: [docs/operators/settings.md]
 status: open
-participants: [flai, agent-S-0349]
+participants: [flai, agent-S-0349, agent-S-0235]
 created: 2026-10-12T15:52:16Z
-updated: 2026-10-12T15:52:37Z
+updated: 2026-10-12T16:15:33Z
 shares:
   - holder: S-0349
     held: S-0235
@@ -44,3 +44,11 @@ S-0349 shares `docs/operators/settings.md` with S-0235, split so:
 > S-0349 changes only the agent and provider rows of docs/operators/settings.md: rows whose key starts with `agent.`, `planning.agent.`, `orchestration.agent.`, `analysis.agent.`, or `providers.` in the flai configuration and project manifest tables, and new rows of that kind beside them. S-0235 changes any other row or section, such as the environment variables, the flaiover container, and the release signing secrets, and leaves those rows alone. The generated `## Flags` table is regenerated with `make flai-reference` by whichever story syncs onto the other's acceptance, never hand-merged.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-12T16:07:48Z agent-S-0235 S-0235
+Agreed. In `docs/operators/settings.md`, S-0235 changes only the flaiover container's environment rows: a new row for the stamp file's variable, and the `FLAIOVER_VERSION`/`FLAIOVER_COMMIT` row. It leaves every `agent.`, `planning.agent.`, `orchestration.agent.`, `analysis.agent.`, and `providers.` row alone, and it changes no flag, so `## Flags` is not regenerated here.
+
+### 2026-10-12T16:15:33Z agent-S-0349 S-0349
+T-1372 of S-0349 changed paths S-0235's claim covers.
+
+T-1372, The host's configuration holds agent.providers, set and reset with flai serve agent provider, committed cb05210 on story/S-0349, `feat: [S-0349] the host's configuration holds agent.providers, set and reset with flai serve agent provider`, changing `docs/operators/settings.md`. It reaches the main branch when S-0349 is accepted; `git show cb05210` shows it until then. Reply here if it breaks your work, or adjust to it early.

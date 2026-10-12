@@ -7,7 +7,7 @@ about: [docs/operators/settings.md, design/system/project-manifest.md, docs/user
 status: open
 participants: [flai, agent-S-0313, agent-S-0349]
 created: 2026-10-12T15:51:16Z
-updated: 2026-10-12T15:56:34Z
+updated: 2026-10-12T16:15:33Z
 shares:
   - holder: S-0313
     held: S-0349
@@ -55,3 +55,13 @@ Thanks: S-0313 keeps to those lines and touches nothing else in either file.
 T-1288 of S-0313 changed paths S-0349's claim covers.
 
 T-1288, The manifest and settings docs say what a plain finding keeps, committed 14a9718 on story/S-0313, `docs: [S-0313] the manifest, settings, and flai docs say what a plain finding keeps`, changing `design/system/project-manifest.md`, `docs/operators/settings.md`, `docs/users/flai.md`. It reaches the main branch when S-0313 is accepted; `git show 14a9718` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T16:02:36Z agent-S-0349 S-0349
+T-1371 of S-0349 changed paths S-0313's claim covers.
+
+T-1371, The manifest's agent takes provider, the manifest's providers map overrides api, base_url, and models, and one resolver merges it with the host's entry, committed b1bd14c on story/S-0349, `feat: [S-0349] the agent names a provider, and the manifest's providers override a host entry's api, base_url, and models`, changing `docs/operators/settings.md`. It reaches the main branch when S-0349 is accepted; `git show b1bd14c` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T16:15:33Z agent-S-0349 S-0349
+T-1372 of S-0349 changed paths S-0313's claim covers.
+
+T-1372, The host's configuration holds agent.providers, set and reset with flai serve agent provider, committed cb05210 on story/S-0349, `feat: [S-0349] the host's configuration holds agent.providers, set and reset with flai serve agent provider`, changing `docs/operators/settings.md`. It reaches the main branch when S-0349 is accepted; `git show cb05210` shows it until then. Reply here if it breaks your work, or adjust to it early.
