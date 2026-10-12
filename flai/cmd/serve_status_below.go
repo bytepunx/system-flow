@@ -40,6 +40,7 @@ func (a *app) printBelowImportRoots(st serveStatus) {
 				line = "not connected: " + why
 			}
 			fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
+			a.printImageVerdict(st, p.Root)
 		}
 	}
 	if len(unserved) > 0 {

@@ -292,20 +292,29 @@ type hostStatus struct {
 	// Elsewhere is a host that holds the machine's address for another
 	// config file.
 	Elsewhere *host.Health `json:"elsewhere,omitempty"`
+	// Images are flai serve's verdicts on the image the dashboard container
+	// runs, by project root, as its status has them (S-0238); none when flai
+	// serve does not run or has checked none.
+	Images map[string]serve.ImageVerdict `json:"images,omitempty"`
 }
 
 func (a *app) readHostStatus(ctx context.Context) hostStatus {
 	dir := a.hostDir()
 	out := hostStatus{Dir: string(dir)}
+	running := func(st host.Status) hostStatus {
+		out.Running, out.Status = true, &st
+		if serveSt, alive := a.serveDir().ReadStatus(time.Now()); alive {
+			out.Images = serveSt.Images
+		}
+		return out
+	}
 	if c, _, err := dir.Client(time.Now()); err == nil {
 		if st, err := c.Status(ctx); err == nil {
-			out.Running, out.Status = true, &st
-			return out
+			return running(st)
 		}
 	}
 	if st, alive := dir.ReadStatus(time.Now()); alive {
-		out.Running, out.Status = true, &st
-		return out
+		return running(st)
 	}
 	if h, ok := host.Probe(host.Addr()); ok {
 		out.Elsewhere = &h
@@ -355,7 +364,7 @@ func (a *app) describeHost(st host.Status) {
 			fmt.Fprintf(a.out, "    last exit: %s\n", c.LastExit)
 		}
 		if c.Name == host.Serve {
-			for _, line := range a.serveRefusals() {
+			for _, line := range a.serveProjectLines() {
 				fmt.Fprintf(a.out, "    %s\n", line)
 			}
 		}
@@ -378,21 +387,35 @@ func (a *app) describeHost(st host.Status) {
 	}
 }
 
-// serveRefusals are the projects whose connection flai serve's state says was
-// refused as unsigned at its last attempt, one line each, by root, in the
-// words of flai serve status (S-0237); none when flai serve does not run.
-func (a *app) serveRefusals() []string {
+// serveProjectLines are, by root, in the words of flai serve status, each
+// project whose connection flai serve's state says was refused as unsigned at
+// its last attempt (S-0237), and beside it its dashboard image's verdict
+// (S-0238); none when flai serve does not run.
+func (a *app) serveProjectLines() []string {
 	st, alive := a.serveDir().ReadStatus(time.Now())
 	if !alive {
 		return nil
 	}
-	var out []string
+	lines := map[string][]string{}
 	for root, c := range st.Connections {
 		if why := refusal(c); why != "" && !c.Connected {
-			out = append(out, root+": "+why)
+			lines[root] = append(lines[root], root+": "+why)
 		}
 	}
-	sort.Strings(out)
+	for root, v := range st.Images {
+		if line := imageVerdictLine(v); line != "" {
+			lines[root] = append(lines[root], root+": "+line)
+		}
+	}
+	roots := make([]string, 0, len(lines))
+	for root := range lines {
+		roots = append(roots, root)
+	}
+	sort.Strings(roots)
+	var out []string
+	for _, root := range roots {
+		out = append(out, lines[root]...)
+	}
 	return out
 }
 

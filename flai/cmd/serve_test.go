@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -276,6 +277,114 @@ func TestRefusalLeavesOutWhatIsNotKnown(t *testing.T) {
 	} {
 		if got := refusal(c.state); got != c.want {
 			t.Errorf("refusal(%+v) = %q, want %q", c.state, got, c.want)
+		}
+	}
+}
+
+// unsignedImageReason is the reason flai serve's image gate refuses a dial
+// of an image with no RepoDigests with, as channel.State records it.
+const unsignedImageReason = "the dashboard runs an unsigned image sha256:c0c0 (no RepoDigests): " +
+	"its image has no RepoDigests, as a local build has none, so no signed digest list names it"
+
+// imageVerdicts are a listed image, an unlisted one with no RepoDigests, and
+// one not measured, as flai serve's status records them (S-0238).
+var imageVerdicts = map[string]serve.ImageVerdict{
+	"/p/dock": {Kind: serve.ImageListed, Container: "d0d0", Image: "sha256:a1a1", Version: "1.2.4",
+		RepoDigests: []string{"ghcr.io/bytepunx/flaiover@sha256:b2b2"}, Digest: "sha256:b2b2", Release: "1.2.4"},
+	"/p/quay": {Kind: serve.ImageUnlisted, Container: "d1d1", Image: "sha256:c0c0", Version: "1.2.3",
+		Reason: "its image has no RepoDigests, as a local build has none, so no signed digest list names it"},
+	"/p/harbour": {Kind: serve.ImageNotMeasured, Reason: "docker is not on PATH where flai serve runs"},
+}
+
+// imageConnections are the connections of imageVerdicts' projects: the
+// unlisted image refused by the gate, the others connected.
+var imageConnections = map[string]channel.State{
+	"/p/dock":    {URL: "http://127.0.0.1:4244", Connected: true, Since: "2026-10-12T17:00:00Z", PeerVersion: "1.2.4", PeerSigned: true},
+	"/p/quay":    {URL: "http://127.0.0.1:4243", Attempts: 3, RefusedBy: channel.RefusedByFlai, RefusedReason: unsignedImageReason, LastError: "flai refused the dashboard: " + unsignedImageReason + "; trying again in 1m0s"},
+	"/p/harbour": {URL: "http://127.0.0.1:4242", Connected: true, Since: "2026-10-12T17:00:01Z", PeerVersion: "1.2.2", PeerSigned: true},
+}
+
+// S-0238: each verdict on the dashboard's image is one line, in the words
+// flai dashboard status uses; a kind this flai does not know is said by none.
+func TestImageVerdictLineSaysEachVerdict(t *testing.T) {
+	for _, c := range []struct {
+		v    serve.ImageVerdict
+		want string
+	}{
+		{imageVerdicts["/p/dock"], "image: signed, flaiover 1.2.4, sha256:b2b2"},
+		{imageVerdicts["/p/quay"], "image: the dashboard runs an unsigned image sha256:c0c0 (no RepoDigests); flai does not dial it"},
+		{serve.ImageVerdict{Kind: serve.ImageUnlisted, Image: "sha256:e4e4", RepoDigests: []string{"ghcr.io/x/flaiover@sha256:f5f5", "ghcr.io/x/flaiover@sha256:a6a6"}},
+			"image: the dashboard runs an unsigned image sha256:e4e4 (ghcr.io/x/flaiover@sha256:f5f5, ghcr.io/x/flaiover@sha256:a6a6); flai does not dial it"},
+		{imageVerdicts["/p/harbour"], "image: not measured: docker is not on PATH where flai serve runs; the release stamp alone is checked"},
+		{serve.ImageVerdict{Kind: "weighed"}, ""},
+	} {
+		if got := imageVerdictLine(c.v); got != c.want {
+			t.Errorf("imageVerdictLine(%+v) = %q, want %q", c.v, got, c.want)
+		}
+	}
+}
+
+// S-0238: a dial the image gate refused is said in the gate's words, not
+// wrapped as a refused stamp is.
+func TestRefusalSaysAnImageRefusalInTheGatesWords(t *testing.T) {
+	if got, want := refusal(imageConnections["/p/quay"]), "flai refused the dashboard: "+unsignedImageReason; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// S-0238: flai serve status says under each project, registered or served
+// from the folder, whether its dashboard's image is signed, unsigned and not
+// dialled, or not measured, and nothing for a project with no verdict yet;
+// --json carries each verdict under status.images by root.
+func TestServeStatusSaysEachProjectsImageVerdict(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	roots := map[string]string{"harbour": tempProject(t), "dock": tempProject(t), "pier": tempProject(t)}
+	for key, root := range roots {
+		if err := os.WriteFile(filepath.Join(root, "k"), []byte("credential"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := serve.DirFor(cfg).Register(serve.Entry{Key: key, Name: key, Root: root, URL: "http://127.0.0.1:4242", KeyFile: filepath.Join(root, "k")}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	conns := map[string]channel.State{"/p/quay": imageConnections["/p/quay"], roots["pier"]: {URL: "http://127.0.0.1:4242"}}
+	images := map[string]serve.ImageVerdict{"/p/quay": imageVerdicts["/p/quay"]}
+	for _, key := range []string{"harbour", "dock"} {
+		conns[roots[key]], images[roots[key]] = imageConnections["/p/"+key], imageVerdicts["/p/"+key]
+	}
+	writeServeState(t, cfg, serve.Status{Version: "test", Connections: conns, Images: images, Folder: "/p",
+		FolderProjects: []serve.Entry{{Key: "quay", Root: "/p/quay", URL: "http://127.0.0.1:4243"}}})
+	out, _, _ := runIn(t, home, "serve", "status")
+	for _, want := range []string{
+		"  harbour  http://127.0.0.1:4242  connected since 2026-10-12T17:00:01Z\n    " + roots["harbour"] +
+			"\n    image: not measured: docker is not on PATH where flai serve runs; the release stamp alone is checked\n",
+		"  dock  http://127.0.0.1:4242  connected since 2026-10-12T17:00:00Z\n    " + roots["dock"] +
+			"\n    image: signed, flaiover 1.2.4, sha256:b2b2\n",
+		"  quay  http://127.0.0.1:4243  not connected: flai refused the dashboard: " + unsignedImageReason + "\n    /p/quay" +
+			"\n    image: the dashboard runs an unsigned image sha256:c0c0 (no RepoDigests); flai does not dial it\n",
+		"  pier  http://127.0.0.1:4242  not connected\n    " + roots["pier"] + "\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if n := strings.Count(out, "image: "); n != 3 {
+		t.Errorf("%d image lines, want 3 (none for pier):\n%s", n, out)
+	}
+	js, _, _ := runIn(t, home, "serve", "status", "--json")
+	var st serveStatus
+	if err := json.Unmarshal([]byte(js), &st); err != nil || st.Status == nil {
+		t.Fatalf("json: %v %s", err, js)
+	}
+	if !reflect.DeepEqual(st.Status.Images, images) {
+		t.Errorf("status.images = %+v, want %+v", st.Status.Images, images)
+	}
+	for _, field := range []string{`"kind": "listed"`, `"kind": "unlisted"`, `"kind": "not-measured"`, `"release": "1.2.4"`, `"digest": "sha256:b2b2"`,
+		`"repo_digests": [`, `"reason": "docker is not on PATH where flai serve runs"`} {
+		if !strings.Contains(js, field) {
+			t.Errorf("--json lacks %s:\n%s", field, js)
 		}
 	}
 }

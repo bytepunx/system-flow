@@ -284,6 +284,7 @@ func (a *app) printServeStatus() error {
 			}
 		}
 		fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
+		a.printImageVerdict(st, p.Root)
 		if m, ok := st.MCP[p.Root]; ok {
 			fmt.Fprintf(a.out, "    mcp: %s (pid %d); flai mcp status prints an agent's configuration\n", m.URL, m.PID)
 		}
@@ -301,6 +302,7 @@ func (a *app) printServeStatus() error {
 				line = "not connected: " + why
 			}
 			fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
+			a.printImageVerdict(st, p.Root)
 		}
 	}
 	a.printBelowImportRoots(st)
@@ -313,15 +315,55 @@ func (a *app) printServeStatus() error {
 	return nil
 }
 
+// unsignedImagePhrase opens the reason flai serve's image gate refuses a dial
+// with, and the image line of an unlisted verdict (S-0238).
+const unsignedImagePhrase = "the dashboard runs an unsigned image"
+
+// printImageVerdict prints root's image verdict under its project in flai
+// serve status; nothing when flai serve has none for it.
+func (a *app) printImageVerdict(st serveStatus, root string) {
+	if !st.Running {
+		return
+	}
+	if v, ok := st.Status.Images[root]; ok {
+		if line := imageVerdictLine(v); line != "" {
+			fmt.Fprintf(a.out, "    %s\n", line)
+		}
+	}
+}
+
+// imageVerdictLine says in one line what flai serve concluded about the
+// image the dashboard container runs (S-0238): signed, unsigned and not
+// dialled, or not measured; "" for a kind this flai does not know.
+func imageVerdictLine(v serve.ImageVerdict) string {
+	switch v.Kind {
+	case serve.ImageListed:
+		return fmt.Sprintf("image: signed, flaiover %s, %s", v.Release, v.Digest)
+	case serve.ImageUnlisted:
+		digests := "no RepoDigests"
+		if len(v.RepoDigests) > 0 {
+			digests = strings.Join(v.RepoDigests, ", ")
+		}
+		return fmt.Sprintf("image: %s %s (%s); flai does not dial it", unsignedImagePhrase, v.Image, digests)
+	case serve.ImageNotMeasured:
+		return fmt.Sprintf("image: not measured: %s; the release stamp alone is checked", v.Reason)
+	}
+	return ""
+}
+
 // refusal says which side refused the other as unsigned at a connection's
 // last attempt, with the reason and the dashboard's version where known
-// (S-0237); "" when the last attempt was not refused.
+// (S-0237); "" when the last attempt was not refused. A refusal of the
+// dashboard's image before the dial is said in the gate's own words (S-0238).
 func refusal(c channel.State) string {
 	line := "the dashboard refused this flai: unsigned"
 	switch c.RefusedBy {
 	case "":
 		return ""
 	case channel.RefusedByFlai:
+		if strings.HasPrefix(c.RefusedReason, unsignedImagePhrase) {
+			return "flai refused the dashboard: " + c.RefusedReason
+		}
 		line = "flai refused the dashboard: unsigned"
 	}
 	var detail []string
