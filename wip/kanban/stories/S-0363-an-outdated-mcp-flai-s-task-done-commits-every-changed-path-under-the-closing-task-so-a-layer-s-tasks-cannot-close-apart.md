@@ -6,7 +6,7 @@ title: An outdated MCP flai's task_done commits every changed path under the clo
 status: backlog
 owner: alex
 created: 2026-10-12T14:12:30Z
-updated: 2026-10-12T16:51:13Z
+updated: 2026-10-12T16:52:40Z
 transitions: []
 tags: [cli]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go, flai/cmd/task_done.go, docs/users/flai-reference.md, design/adrs/0136-flai-task-done-refuses-to-close-a-task-while-the-running-flai-is-older-than-the.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md, design/issues/summary.md]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-12T14:35:38Z
 forecast:
   duration: 20m
-  delivery: 2026-10-13T02:18:00Z
+  delivery: 2026-10-13T02:19:00Z
   basis: "Its own forecast of 20m; 21st in the pull order with an in-progress limit of 5, behind S-0367, S-0233, S-0236, S-0237, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0350, S-0351, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357, S-0358, S-0359 and S-0360."
   by: flai
-  at: 2026-10-12T16:51:13Z
+  at: 2026-10-12T16:52:40Z
 ---
 # S-0363 An outdated MCP flai's task_done commits every changed path under the closing task, so a layer's tasks cannot close apart
 
