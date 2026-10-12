@@ -1,6 +1,6 @@
 ---
 title: Agent adapters for LiteLLM and OpenRouter
-updated: 2026-10-08
+updated: 2026-10-12
 status: active
 topics: [cli, template]
 ---
@@ -82,7 +82,7 @@ Neutral already: the decision itself, which files may be written, by whom, after
 
 The hook's input is Claude Code's hook JSON on standard input, read by `Event` in `flai/internal/guard/guard.go`: `hook_event_name`, `session_id`, `tool_name`, `tool_input`, `agent_id`, and `agent_type`. From `tool_input` it reads `command` for `Bash`, `file_path` and `notebook_path` for the file tools, and the fields of flai's own MCP tools, `id`, `to`, `type`, `draft`, `commit`, `recommendation`, `source`, and `cost_of_delay`. A sub-agent is recognised by one thing: `agent_id` is not empty. The story's agent, the planner, the orchestrator, and the analyzer are told apart by `FLAI_STORY` and `FLAI_ROLE` in the environment, which `flai serve` set.
 
-What it keys on is Claude Code's tool vocabulary: `Bash`, `Edit`, `MultiEdit`, `Write`, `NotebookEdit`, and the MCP tool names under `MCPPrefix`, `mcp__flai__`. Within a `Bash` command it splits the shell line and judges each `git` and `flai` command by name. It refuses a sub-agent every flai MCP tool but the reads (`board`, `doc_get`, `doc_search`, `item_get`, `prime`, `thread_get`, `who_touches`, and a few more), every `git` and `flai` command that writes, and, while `auto-approve` is off, any write to a file under a `.claude/` folder ([ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)). It holds a strategic agent's own calls to its role's permissions. It records each session's running sub-agents in `.flai-cache/guard/<session_id>.json` from the `SubagentStart` and `SubagentStop` hooks and refuses the story agent's `wait_for_events` while one runs and no thread is open ([ADR-0092](../adrs/0092-a-story-s-agent-waits-for-a-sub-agent-by-launching-it-in-the-foreground-and.md)). It fails open: input it cannot read passes.
+What it keys on is Claude Code's tool vocabulary: `Bash`, `Edit`, `MultiEdit`, `Write`, `NotebookEdit`, and the MCP tool names under `MCPPrefix`, `mcp__flai__`. Within a `Bash` command it splits the shell line and judges each `git` and `flai` command by name. It refuses a sub-agent every flai MCP tool but the reads (`board`, `doc_get`, `doc_search`, `item_get`, `prime`, `thread_get`, `who_touches`, and a few more), every `git` and `flai` command that writes, a read-only sub-agent's shell command that writes a file outside the temporary folder ([ADR-0141](../adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md)), and, while `auto-approve` is off, any write to a file under a `.claude/` folder ([ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)). It holds a strategic agent's own calls to its role's permissions. It records each session's running sub-agents in `.flai-cache/guard/<session_id>.json` from the `SubagentStart` and `SubagentStop` hooks and refuses the story agent's `wait_for_events` while one runs and no thread is open ([ADR-0092](../adrs/0092-a-story-s-agent-waits-for-a-sub-agent-by-launching-it-in-the-foreground-and.md)). It fails open: input it cannot read passes.
 
 Neutral already: the policy, which caller may call which flai tool or command, and the shell-line parsing of `git` and `flai` commands. Claude Code's: the hook events and their JSON, the `settings.json` that registers them, `CLAUDE_PROJECT_DIR`, the built-in tool names, the `mcp__<server>__<tool>` naming, `agent_id` as the sign of a sub-agent, and the `SubagentStart` and `SubagentStop` record. A harness with no hooks has no guard at all: the guard runs only because Claude Code calls it before each tool.
 
@@ -99,6 +99,8 @@ The template ships five agent definitions in `template/root/.claude/agents/`, co
 | `analyzer.md` | `analyze`: writes one report under `design/analysis/` | Reads, `Edit`, `Write`, `Bash`, `Agent`, and the thread and issue tools | `inherit` | ADR-0075, [ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md) |
 
 The `tools` list is an allowlist in Claude Code's vocabulary, built-in names and `mcp__flai__*` names, and the `model` is a Claude Code alias (`haiku`, `sonnet`) or `inherit`. The explorer and verifier run as Claude Code sub-agents inside the story's session, started by the Agent tool; `flai serve` passes their definitions as `--agents` with the story's role model laid over them (ADR-0065). The three strategic agents are sessions of their own that `flai serve` starts with `--agent planner`, `--agent orchestrator`, or `--agent analyzer`, so the definition is the source of their tools and instructions (`claudeCodeStrategic` in `flai/internal/harness/adapters.go`).
+
+The `tools` line also tells the guard which sub-agents are read-only ([ADR-0141](../adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md)). A sub-agent whose definition names neither `Edit` nor `Write`, as the explorer and verifier do, and Claude Code's built-in `Explore` and `Plan`, are refused a shell command that writes a file outside the temporary folder. A task sub-agent, `general-purpose`, and a definition the guard cannot read or with no `tools` line still write through the shell.
 
 The conventions lean on the Agent tool directly. [delegation.md](../conventions/delegation.md) tells a story's agent to launch each task sub-agent in the foreground, "in Claude Code, the Agent tool's `run_in_background` set to false", to name the task's ID in the Agent tool's `description` so that usage is apportioned, and to "use a fork, which inherits your conversation, where the harness offers one". A sub-agent is told apart from its parent in the log by `parent_tool_use_id`, the ID of the `Agent` (or `Task`) `tool_use` that started it (ADR-0059).
 
@@ -379,6 +381,7 @@ Today `flai guard` is a hook whose input is Claude Code's JSON ([ADR-0060](../ad
 type Call struct {
     Session  string
     Subagent bool              // a sub-agent's call, not the session's own agent's
+    ReadOnly bool              // a sub-agent granted neither Edit nor Write
     Role     string            // FLAI_ROLE: plan, orchestrate, analyze, or empty
     Kind     CallKind          // Shell, FileWrite, FlaiTool
     Command  string            // Shell: the line, split and judged as today
@@ -389,7 +392,7 @@ type Call struct {
 func Decide(c Call, running SubagentRecord) Verdict
 ```
 
-`flai guard` keeps one `Decide` and gains one input reader per harness, each mapping the harness's tool names to `Kind` and its sub-agent sign to `Subagent`.
+`flai guard` keeps one `Decide` and gains one input reader per harness, each mapping the harness's tool names to `Kind`, its sub-agent sign to `Subagent`, and the sub-agent's tools to `ReadOnly`. A read-only sub-agent is refused a `Shell` command that writes a file outside the temporary folder, judged from the split line as `git` and `flai` commands are ([ADR-0141](../adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md)). In Claude Code, `ReadOnly` comes from `agent_type`: the definition's `tools` line, or the built-in `Explore` and `Plan`.
 
 | Harness | Hook | Sub-agent sign | Registration |
 |---------|------|----------------|--------------|
