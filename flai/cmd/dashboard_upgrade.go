@@ -158,8 +158,11 @@ func (a *app) runDashboardRestart(ctx context.Context, image, tag string, port i
 // it is a reference not present for the daemon's platform.
 func (a *app) restartImage(ctx context.Context, s dashboardSettings, named bool) (ref, image string, err error) {
 	if r, ok := readDashboardRecord(string(a.serveDir())); ok && !named {
-		ref, image = r.Ref, r.Ref
-		if r.Image != "" {
+		if ref, err = a.pinnedRecordRef(ctx, r.Ref); err != nil {
+			return "", "", err
+		}
+		image = ref
+		if ref == r.Ref && r.Image != "" {
 			if id, err := a.imageID(r.Image); err == nil && id != "" {
 				image = r.Image
 			}

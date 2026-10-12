@@ -222,24 +222,74 @@ func TestDashboardWatchRestartsTheImageIDNotWhatItsTagNamesNow(t *testing.T) {
 // its reference as before.
 func TestDashboardWatchRestartsAnOlderRecordFromItsRef(t *testing.T) {
 	root := dashboardProject(t)
+	useSignedDashboardReleases(t)
 	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
 	a := &app{cwd: root, runner: f}
 	dir := string(a.serveDir())
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	older := `{"name": "flaiover", "ref": "ghcr.io/bytepunx/flaiover:0.1.0", "publish": "0.0.0.0:5555:3000"}`
+	older := `{"name": "flaiover", "ref": "registry.example/flaiover:0.1.0", "publish": "0.0.0.0:5555:3000"}`
 	if err := os.WriteFile(filepath.Join(dir, dashboardRecordFile), []byte(older), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if r, ok := readDashboardRecord(dir); !ok || r.Ref != "ghcr.io/bytepunx/flaiover:0.1.0" || r.Image != "" {
+	if r, ok := readDashboardRecord(dir); !ok || r.Ref != "registry.example/flaiover:0.1.0" || r.Image != "" {
 		t.Fatalf("an older record is read: %+v %v", r, ok)
 	}
 	if err := a.dashboardWatch().Restart(context.Background()); err != nil {
 		t.Fatalf("restart: %v", err)
 	}
-	if run := lastRun(f.calls); !strings.HasSuffix(run, " ghcr.io/bytepunx/flaiover:0.1.0") || !strings.Contains(run, "--publish 0.0.0.0:5555:3000") {
-		t.Errorf("an older record restarts from its ref: %q", run)
+	if run := lastRun(f.calls); !strings.HasSuffix(run, " registry.example/flaiover:0.1.0") || !strings.Contains(run, "--publish 0.0.0.0:5555:3000") {
+		t.Errorf("an older record of another repository restarts from its ref: %q", run)
+	}
+}
+
+// S-0236, ADR-0070: a record an older flai wrote names the signed repository
+// by tag; a restart, by flai host's watch or flai dashboard restart, runs the
+// release that tag resolves to by digest and records it, and one whose tag
+// is refused starts nothing.
+func TestARestartPinsAnOlderRecordOfTheSignedRepositoryByDigest(t *testing.T) {
+	root := dashboardProject(t)
+	useSignedDashboardReleases(t)
+	f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))}
+	dir := string(a.serveDir())
+	record := func(ref string) {
+		t.Helper()
+		if err := writeDashboardRecord(dir, dashboardRecord{Name: "flaiover", Ref: ref, Image: "sha256:by-tag", Publish: "0.0.0.0:5555:3000"}); err != nil {
+			t.Fatal(err)
+		}
+		f.images["sha256:by-tag"] = true
+	}
+	record(signedDashboardImage + ":0.3.0")
+	if err := a.dashboardWatch().Restart(context.Background()); err != nil {
+		t.Fatalf("watch restart: %v", err)
+	}
+	want := flaioverRef("0.3.0")
+	if run := lastRun(f.calls); !strings.HasSuffix(run, " "+want) || !strings.Contains(run, "--label "+dashboardRefLabel+"="+want+" ") {
+		t.Errorf("the watch runs the tag's release by digest, not the image pulled by tag: %q", run)
+	}
+	if r, _ := readDashboardRecord(dir); r.Ref != want {
+		t.Errorf("the record keeps the digest: %+v", r)
+	}
+
+	record(signedDashboardImage + ":0.4.0")
+	delete(f.running, "flaiover")
+	out, errOut, code := runWithApp(t, a, "dashboard", "restart", "--json")
+	if want := flaioverRef("0.4.0"); code != 0 || !strings.Contains(out, `"ref": "`+want+`"`) || !strings.HasSuffix(lastRun(f.calls), " "+want) {
+		t.Errorf("flai dashboard restart runs the tag's release by digest: %d %s %s", code, out, errOut)
+	}
+
+	record(signedDashboardImage + ":edge")
+	delete(f.running, "flaiover")
+	f.calls = nil
+	if err := a.dashboardWatch().Restart(context.Background()); err == nil || !strings.Contains(err.Error(), "is not a flaiover release version") {
+		t.Errorf("a refused tag is not restarted: %v", err)
+	}
+	for _, c := range f.calls {
+		if strings.HasPrefix(c, "docker run ") || strings.HasPrefix(c, "docker rm ") {
+			t.Errorf("nothing is removed or started for a refused tag: %s", c)
+		}
 	}
 }
 
@@ -248,7 +298,7 @@ func TestDashboardWatchRestartsAnOlderRecordFromItsRef(t *testing.T) {
 // reference, and records the ID that now runs.
 func TestDashboardWatchStartsTheRefWhenTheRecordedImageIsGone(t *testing.T) {
 	root := dashboardProject(t)
-	const ref = "ghcr.io/bytepunx/flaiover:0.2.0"
+	ref := flaioverRef("0.2.0")
 	f := &fakeRunner{images: map[string]bool{ref: true}, running: map[string]bool{}, imageIDs: map[string]string{ref: "sha256:v020"}}
 	var logged bytes.Buffer
 	a := &app{cwd: root, runner: f, log: slog.New(slog.NewTextHandler(&logged, nil))}

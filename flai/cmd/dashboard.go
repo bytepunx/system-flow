@@ -184,6 +184,28 @@ func (a *app) chooseDashboardImage(ctx context.Context, s dashboardSettings, bui
 	return dashboardImage{Ref: res.Reference, Release: res.Version, List: res.List, Unreachable: res.Unreachable}, nil
 }
 
+// pinnedRecordRef is what a restart runs for a recorded reference: ref
+// itself, unless it names the signed repository by tag, as a record an older
+// flai wrote does; then the release that tag resolves to, by digest, so that
+// no restart runs the signed repository unverified (ADR-0070, ADR-0118).
+func (a *app) pinnedRecordRef(ctx context.Context, ref string) (string, error) {
+	if strings.Contains(ref, "@") {
+		return ref, nil
+	}
+	repo, tag := ref, "latest"
+	if i := strings.LastIndex(ref, ":"); i >= 0 && !strings.Contains(ref[i+1:], "/") {
+		repo, tag = ref[:i], ref[i+1:]
+	}
+	if repo != signedDashboardImage {
+		return ref, nil
+	}
+	img, err := a.chooseDashboardImage(ctx, dashboardSettings{Image: repo, Tag: tag}, false)
+	if err != nil {
+		return "", err
+	}
+	return img.Ref, nil
+}
+
 func newDashboardCmd(a *app) *cobra.Command {
 	var image, tag, bind, pushKeyFlag, pushHostsFlag string
 	var port int

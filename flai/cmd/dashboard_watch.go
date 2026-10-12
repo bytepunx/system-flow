@@ -177,13 +177,20 @@ func (a *app) lookDashboard(context.Context) string {
 // reference instead when the record has no image ID, as one an older flai
 // wrote has not, or when that image is no longer here, and then records the
 // image ID that runs.
-func (a *app) restartDashboard(context.Context) error {
+func (a *app) restartDashboard(ctx context.Context) error {
 	dir := string(a.serveDir())
 	r, ok := readDashboardRecord(dir)
 	if !ok {
 		return errors.New("no dashboard is recorded; flai dashboard starts one")
 	}
+	ref, err := a.pinnedRecordRef(ctx, r.Ref)
+	if err != nil {
+		return fmt.Errorf("restart %s from %s: %w", r.Name, r.Ref, err)
+	}
 	_, _ = a.runner.Run("", "docker", "rm", "-f", r.Name) // a container that does not answer is still there
+	if ref != r.Ref {
+		r.Ref, r.Image = ref, ""
+	}
 	image := r.Ref
 	if r.Image != "" {
 		if id, err := a.imageID(r.Image); err == nil && id != "" {

@@ -59,7 +59,7 @@ func (e *Refusal) Error() string {
 	head := fmt.Sprintf("flaiover %s is not started: %s", e.Version, e.Reason)
 	switch e.Kind {
 	case RefusalNotAVersion:
-		return head + "; only latest or a release version X.Y.Z is run, from its signed digest list: set dashboard.tag to one of them, or run an image unsigned with --image or --build"
+		return head + "; only latest or a release version X.Y.Z is run, from its signed digest list: set dashboard.tag to one of them, or run an image unsigned with --build, or with --image naming another repository"
 	case RefusalNoRelease:
 		return head + "; set dashboard.tag to a published version, or to latest for the newest"
 	case RefusalMissing:

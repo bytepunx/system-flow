@@ -206,7 +206,7 @@ func TestEachRefusalNamesTheReleaseAndTheReasonAndCachesNothing(t *testing.T) {
 		says    string
 	}{
 		{"no such release", signedRelease(t, trusted, goodV, good), "0.1.0", RefusalNoRelease, "0.1.0", "published are 0.42.3"},
-		{"a branch tag", signedRelease(t, trusted, goodV, good), "main", RefusalNotAVersion, "main", "--image or --build"},
+		{"a branch tag", signedRelease(t, trusted, goodV, good), "main", RefusalNotAVersion, "main", "unsigned with --build, or with --image naming another repository"},
 		{"a sha tag", signedRelease(t, trusted, goodV, good), "sha-abc1234", RefusalNotAVersion, "sha-abc1234", "not a flaiover release version"},
 		{"a major.minor tag", signedRelease(t, trusted, goodV, good), "1.2", RefusalNotAVersion, "1.2", "only latest or a release version X.Y.Z"},
 		{"no list", without(signedRelease(t, trusted, goodV, good), name), goodV, RefusalMissing, goodV, "publishes no " + name},
