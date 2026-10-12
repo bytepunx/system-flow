@@ -3,10 +3,10 @@ id: I-0134
 title: "flai check finds `issues.no-story` outside the story at close-out"
 class: efficiency
 status: open
-count: 4
+count: 5
 first_reported: 2026-10-09T16:51:57Z
-last_reported: 2026-10-12T14:25:45Z
-updated: 2026-10-12T14:33:40Z
+last_reported: 2026-10-12T14:46:12Z
+updated: 2026-10-12T14:46:12Z
 ---
 
 # I-0134 flai check finds `issues.no-story` outside the story at close-out
@@ -32,6 +32,11 @@ flai check found I-0052's issues.no-story outside the story at S-0342's close-ou
 
 ### 2026-10-12T14:25:45Z
 Story: S-0361.
+flai check found outside the story:
+`design/issues/I-0052-flai-guard-does-not-refuse-a-sub-agent-s-shell-commands-that-write-files-sed-i-perl-i-tee-redirection.md`: I-0052 has been open since 2026-10-01 with no open story linking it (issues.story_after is unset, so 168h): make one with flai issue story I-0052
+
+### 2026-10-12T14:46:12Z
+Story: S-0362.
 flai check found outside the story:
 `design/issues/I-0052-flai-guard-does-not-refuse-a-sub-agent-s-shell-commands-that-write-files-sed-i-perl-i-tee-redirection.md`: I-0052 has been open since 2026-10-01 with no open story linking it (issues.story_after is unset, so 168h): make one with flai issue story I-0052
 
