@@ -8,6 +8,8 @@
 	// page's own status until the container is reachable again, rather than trusting the fetch to
 	// resolve cleanly. Versions (S-0298) lists the published releases, a read, and deploys a chosen
 	// one as Upgrade does, with its tag: once, on this container, not pinned (ADR-0117, ADR-0118).
+	// A release with no digest list the host's flai can verify is listed as not deployable, with
+	// no deploy (S-0236).
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 
@@ -26,6 +28,10 @@
 		running: boolean;
 		configured: boolean;
 		latest: boolean;
+		/** Set, with signature and reason, when the host's flai cannot verify the release's digest list. */
+		unverifiable?: boolean;
+		signature?: 'missing' | 'bad' | 'unknown-key';
+		reason?: string;
 	};
 
 	// The wait before a stalled restart/upgrade POST is treated as "the container answering it is
@@ -248,7 +254,12 @@
 							<li class="flex items-center gap-2 py-0.5" data-testid="host-panel-version">
 								<span class="font-mono">{r.version}</span>
 								{#if marks.length}<span class="text-muted">{marks.join(', ')}</span>{/if}
-								{#if status.dashboard_enabled && !r.running}
+								{#if r.unverifiable}
+									<span class="text-warn" data-testid="host-panel-version-unverifiable"
+										>not deployable: {r.reason ?? 'no digest list this flai can verify'}</span
+									>
+								{/if}
+								{#if status.dashboard_enabled && !r.running && !r.unverifiable}
 									<button
 										type="button"
 										class="ml-auto rounded border border-line px-2 py-0.5 disabled:opacity-60"

@@ -290,6 +290,53 @@ describe('HostPanel', () => {
 		expect(confirm()).toBeNull();
 	});
 
+	it('marks a release with no digest list this flai can verify as not deployable, with no deploy, and deploys a verifiable one', async () => {
+		api.mockResolvedValueOnce(status());
+		c = mount(HostPanel, { target: document.body });
+		flushSync();
+		await settle();
+		api.mockResolvedValueOnce(
+			answer([
+				release('0.22.7', { latest: true, unverifiable: false }),
+				release('0.22.6', { running: true, configured: true }),
+				release('0.22.5'),
+				release('0.21.0', {
+					unverifiable: true,
+					signature: 'missing',
+					reason: 'it publishes no signed digest list'
+				}),
+				release('0.20.0', { unverifiable: true, signature: 'unknown-key' })
+			])
+		);
+		document.querySelector<HTMLButtonElement>('[data-testid="host-panel-versions-list"]')!.click();
+		await settle();
+		expect(rows()).toEqual([
+			'0.22.7 newest Deploy',
+			'0.22.6 running, configured',
+			'0.22.5 Deploy',
+			'0.21.0 not deployable: it publishes no signed digest list',
+			'0.20.0 not deployable: no digest list this flai can verify'
+		]);
+		expect(
+			[...document.querySelectorAll('[data-testid="host-panel-version-unverifiable"]')].map(
+				(s) => s.textContent
+			)
+		).toEqual([
+			'not deployable: it publishes no signed digest list',
+			'not deployable: no digest list this flai can verify'
+		]);
+		// no control of any kind on an unverifiable row could ask the host to deploy it
+		const items = document.querySelectorAll('[data-testid="host-panel-version"]');
+		expect(items[3].querySelectorAll('button, a')).toHaveLength(0);
+		expect(items[4].querySelectorAll('button, a')).toHaveLength(0);
+		expect(deploy('0.21.0')).toBeNull();
+		expect(deploy('0.20.0')).toBeNull();
+
+		deploy('0.22.7')!.click();
+		flushSync();
+		expect(confirmYes().textContent).toBe('Deploy 0.22.7');
+	});
+
 	it('shows flai’s refusal of a release it does not list as published', async () => {
 		await listed();
 		deploy('0.22.5')!.click();
