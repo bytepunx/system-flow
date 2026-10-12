@@ -3,12 +3,18 @@ id: T-1443
 type: task
 nature: improvement
 title: "A test tier's command may hold {importers}, and the manifest's validation accepts it"
-status: backlog
+status: in-progress
 parent: S-0364
 owner: alex
 created: 2026-10-12T14:40:26Z
-updated: 2026-10-12T14:40:26Z
-transitions: []
+updated: 2026-10-12T15:26:58Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:26:57Z
+    by: agent-S-0364
+  - to: in-progress
+    at: 2026-10-12T15:26:58Z
+    by: agent-S-0364
 stream: S-0364
 tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go]

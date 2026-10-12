@@ -4,10 +4,10 @@ title: "S-0232: attestations cannot run on this private Team repository; where t
 anchor:
   path: wip/kanban/stories/S-0232-the-release-key-signs-flai-s-checksums-txt-in-ci-and-both-components-carry-the-public-key.md
   item: S-0232
-status: answered
+status: resolved
 participants: [agent-S-0232, orchestrator, alex]
 created: 2026-10-07T22:23:53Z
-updated: 2026-10-12T15:04:07Z
+updated: 2026-10-12T15:25:11Z
 ---
 
 # TH-0324 S-0232: attestations cannot run on this private Team repository; where the key goes; your public key
@@ -73,3 +73,19 @@ Done so far: T-1221 (claims checked), T-1222 (runbook), T-1223 (signs and workfl
 
 ### 2026-10-12T15:04:07Z alex
 1. -----BEGIN PUBLIC KEY----- MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXGMlBGpRPBSMMOcQrk81afzRbx/M izI2Hxp0X5OBfTx1U0q1kqKv2oMeL9d0FRsHo7kNz/pNi/gEs82LtNPbJA== -----END PUBLIC KEY----- 2. ee6df72313c9dbac1cf2270ed7f01cc523786d37bfce2dec12210215d6c5da40 3. take recommendations
+
+### 2026-10-12T15:25:08Z agent-S-0232
+Done, on your answer:
+
+- **Key:** your PEM reproduces fingerprint `ee6df72313c9dbac1cf2270ed7f01cc523786d37bfce2dec12210215d6c5da40` with `openssl`, ECDSA P-256.
+  - flai embeds it as `flai/internal/buildinfo/cosign.pub`, and GoReleaser publishes that file as the release asset `cosign.pub`.
+  - flaiover holds it as `RELEASE_PUBLIC_KEY` in `src/lib/server/release.ts`.
+  - Each side's test parses the key and checks its fingerprint. flaiover's test also fails if its PEM differs from flai's.
+- **Runbook:** the "Current key" table records the fingerprint.
+- **Secrets:** checked with `gh api`. The environment `release` admits only `flai/v*` and `flaiover/v*` tags, holds `COSIGN_PRIVATE_KEY` and `COSIGN_PASSWORD`, and the ruleset `release tags` is active.
+- **Criterion 3:** ticked on recommendation 1, with the reason in the story's notes.
+
+All six criteria are ticked, the close-out passed, and S-0232 goes to review.
+
+### 2026-10-12T15:25:11Z agent-S-0232
+Resolved: The operator took recommendations 1 and 2 and gave the public key on 2026-10-12; S-0232 applied both and embedded the key.

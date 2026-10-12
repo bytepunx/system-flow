@@ -24,15 +24,15 @@ touches: [flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/release
 after: [T-1222]
 usage:
   source: log
-  seconds: 80
+  seconds: 81
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 137
-      cache_read: 3659181
-      cache_write: 8711
-      cost: 1.6189
+      input: 31
+      output: 8197
+      cache_read: 3601600
+      cache_write: 79715
+      cost: 1.4848
 ---
 # T-1225 The release public key is a PEM constant in flai's buildinfo and in flaiover's release module, parsed by a test in each and checked identical
 

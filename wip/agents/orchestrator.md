@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 375.5792
-accrued_seconds: 332794
-tasks_completed: 354
-last_run: 2026-10-12T15:17:09Z
+accrued_cost: 376.8889
+accrued_seconds: 333338
+tasks_completed: 356
+last_run: 2026-10-12T15:26:13Z
 ---
 
 # Orchestrator activity
@@ -2489,6 +2489,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0365
 - Seconds: 391
 - Cost: 1.4674 USD, estimated
+
+### 2026-10-12T15:17:41Z
+
+- Summary: Under judgement, published 2 pending stories worth 20 USD/week: S-0362 (7.5) and S-0365 (12.5). Versions: flai 1.40.4→1.40.5 (flai/v1.40.5) and template 1.0.85→1.0.86 (v1.0.86), pushed. Under promote_to_ready, moved S-0366 to ready (rank 1, 23m under throughput), now that S-0365, which it waits for, is done; S-0241 (rank 2) stays out, blocked. Applied the throughput order: S-0366.
+- Items: S-0362, S-0365, S-0366
+- Seconds: 32
+- Cost: 0.2561 USD, estimated
+
+### 2026-10-12T15:26:13Z
+
+- Summary: My 15:17 move of S-0366 to ready was lost: the story was back in backlog with no transition. Its last write was flai's "replan forecasts after accepted S-0365" (9f3c1442), stamped 15:17:00, which seems to have overwritten the move. S-0232 has moved to review, which lifts S-0364's hold. Under promote_to_ready, moved S-0364 (rank 1, 21m) and S-0366 (rank 2, 23m) to ready. Applied the throughput order: S-0364, S-0366. The operator may want an issue for the lost move.
+- Items: S-0364, S-0366
+- Seconds: 512
+- Cost: 1.0536 USD, estimated
 
 ## Refusals
 

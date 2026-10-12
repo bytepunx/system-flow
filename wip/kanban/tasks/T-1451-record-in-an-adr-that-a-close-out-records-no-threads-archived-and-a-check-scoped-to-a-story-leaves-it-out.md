@@ -3,15 +3,35 @@ id: T-1451
 type: task
 nature: improvement
 title: Record in an ADR that a close-out records no threads.archived and a check scoped to a story leaves it out
-status: backlog
+status: done
 parent: S-0366
 owner: alex
 created: 2026-10-12T14:59:32Z
-updated: 2026-10-12T14:59:32Z
-transitions: []
+updated: 2026-10-12T15:27:20Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:26:55Z
+    by: agent-S-0366
+  - to: in-progress
+    at: 2026-10-12T15:26:56Z
+    by: agent-S-0366
+  - to: done
+    at: 2026-10-12T15:27:20Z
+    by: agent-S-0366
 stream: S-0366
 tags: [flai, check, adr]
 touches: [design/adrs, design/adrs/README.md]
+usage:
+  source: log
+  seconds: 24
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 13
+      cache_read: 398887
+      cache_write: 4871
+      cost: 0.1815
 ---
 # T-1451 Record in an ADR that a close-out records no threads.archived and a check scoped to a story leaves it out
 

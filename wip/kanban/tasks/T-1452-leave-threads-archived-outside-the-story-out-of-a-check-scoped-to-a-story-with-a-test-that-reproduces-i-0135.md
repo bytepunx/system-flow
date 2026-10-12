@@ -3,12 +3,18 @@ id: T-1452
 type: task
 nature: improvement
 title: Leave threads.archived outside the story out of a check scoped to a story, with a test that reproduces I-0135
-status: backlog
+status: in-progress
 parent: S-0366
 owner: alex
 created: 2026-10-12T14:59:41Z
-updated: 2026-10-12T14:59:41Z
-transitions: []
+updated: 2026-10-12T15:27:27Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:27:26Z
+    by: agent-S-0366
+  - to: in-progress
+    at: 2026-10-12T15:27:27Z
+    by: agent-S-0366
 stream: S-0366
 tags: [flai, check]
 touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md]

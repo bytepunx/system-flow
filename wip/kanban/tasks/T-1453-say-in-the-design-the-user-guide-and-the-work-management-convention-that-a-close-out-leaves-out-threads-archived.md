@@ -3,12 +3,18 @@ id: T-1453
 type: task
 nature: improvement
 title: Say in the design, the user guide, and the work-management convention that a close-out leaves out threads.archived
-status: backlog
+status: in-progress
 parent: S-0366
 owner: alex
 created: 2026-10-12T14:59:47Z
-updated: 2026-10-12T14:59:47Z
-transitions: []
+updated: 2026-10-12T15:27:28Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:27:27Z
+    by: agent-S-0366
+  - to: in-progress
+    at: 2026-10-12T15:27:28Z
+    by: agent-S-0366
 stream: S-0366
 tags: [flai, check, docs]
 touches: [design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md]

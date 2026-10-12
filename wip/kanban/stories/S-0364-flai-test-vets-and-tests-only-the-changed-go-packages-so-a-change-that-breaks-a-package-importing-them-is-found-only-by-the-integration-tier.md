@@ -3,11 +3,17 @@ id: S-0364
 type: story
 nature: improvement
 title: flai test vets and tests only the changed Go packages, so a change that breaks a package importing them is found only by the integration tier
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-12T14:12:31Z
-updated: 2026-10-12T15:17:00Z
-transitions: []
+updated: 2026-10-12T15:26:09Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:26:03Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T15:26:09Z
+    by: agent-S-0364
 tags: [cli]
 topics: [testing]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/verify/importers.go, flai/internal/verify/importers_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go, system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, design/issues/I-0128-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 46
+      seconds: 302
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 14
-          output: 87
-          cache_read: 1772395
-          cache_write: 24321
-          cost: 0.453
+          input: 26
+          output: 243
+          cache_read: 3854990
+          cache_write: 31459
+          cost: 0.9798
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m

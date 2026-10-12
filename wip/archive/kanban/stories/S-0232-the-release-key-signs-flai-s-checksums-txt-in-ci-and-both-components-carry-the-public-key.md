@@ -3,11 +3,11 @@ id: S-0232
 type: story
 nature: feature
 title: The release key signs flai's checksums.txt in CI and both components carry the public key
-status: in-progress
+status: done
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-12T15:06:37Z
+updated: 2026-10-12T15:27:44Z
 transitions:
   - to: ready
     at: 2026-10-07T22:14:01Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-07T22:14:07Z
     by: agent-S-0232
+  - to: review
+    at: 2026-10-12T15:25:28Z
+    by: agent-S-0232
+  - to: done
+    at: 2026-10-12T15:27:44Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md, flai/internal/buildinfo/cosign.pub]
+touches: [".github/workflows/release-flai.yml", flai/.goreleaser.yaml, flaiover/src/lib/server/release.ts, design/tech/ci.md, design/system/release-signing.md, flaiover/src/lib/server/release.test.ts, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/I-0129-an-empty-narrative-file-under-wip-agents-makes-every-flai-stream-log-in-the-project-fail.md, flai/internal/buildinfo/cosign.pub, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/I-0134-flai-check-finds-issues-no-story-outside-the-story-at-close-out.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,8 +31,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1863
-  estimated: true
+  seconds: 3022
   turns:
     - day: 2026-10-07
       ceremony: 7
@@ -37,9 +42,9 @@ usage:
       hand_edits: 2
       work: 95
     - day: 2026-10-12
-      ceremony: 1
-      hand_edits: 3
-      work: 21
+      ceremony: 4
+      hand_edits: 5
+      work: 34
   models:
     - model: claude-haiku-4-5-20251001
       input: 210085
@@ -48,11 +53,11 @@ usage:
       cache_write: 0
       cost: 0.2639
     - model: claude-opus-5-5
-      input: 608
-      output: 151102
-      cache_read: 66260360
-      cache_write: 1613768
-      cost: 30.0234
+      input: 646
+      output: 169095
+      cache_read: 74298891
+      cache_write: 1644480
+      cost: 30.6314
   strategic:
     - kind: orchestrator
       seconds: 823
@@ -127,3 +132,17 @@ Forecast: 1h. flai replays the delivery from the pull order whenever it changes.
 - The first delivery was flai's playout at its cycle factor of 6.85. It does not count the operator's key-generation step in criterion 1, which can delay it.
 
 Cost of delay: 2.63 USD a week, as `flai cod` gives it: this story's 1h share of the 9h30m forecast over E-0015's eight open stories, of the epic's 25 USD a week penalty, which the operator set on TH-0312. Kept as given: each story closes part of one exposure, and that exposure is closed only when the chain is done, so a share by work fits.
+
+### Accepted by the orchestrator
+
+- Verified: 339ac9aa153805d52303ec301802070b6bd37e69
+- At: 2026-10-12T15:27:44Z
+
+Verdict: pass at 339ac9aa153805d52303ec301802070b6bd37e69; flai verify passed every step at that commit, the verifier matched all six criteria to the diff (criterion 3's step is conditional on a public repository, as the operator took on TH-0324), and no private key or secret value is in it.
+
+- 1: docs/operators/runbooks/release-key.md, docs/operators/runbooks/README.md, docs/operators/settings.md
+- 2: flai/.goreleaser.yaml, .github/workflows/release-flai.yml
+- 3: .github/workflows/release-flai.yml
+- 4: flai/internal/buildinfo/cosign.pub, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts
+- 5: design/system/release-signing.md
+- 6: design/tech/ci.md

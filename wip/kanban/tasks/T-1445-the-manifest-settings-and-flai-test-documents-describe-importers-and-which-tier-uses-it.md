@@ -3,12 +3,18 @@ id: T-1445
 type: task
 nature: improvement
 title: "The manifest, settings, and flai test documents describe {importers} and which tier uses it"
-status: backlog
+status: in-progress
 parent: S-0364
 owner: alex
 created: 2026-10-12T14:40:44Z
-updated: 2026-10-12T14:40:44Z
-transitions: []
+updated: 2026-10-12T15:26:59Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:26:58Z
+    by: agent-S-0364
+  - to: in-progress
+    at: 2026-10-12T15:26:59Z
+    by: agent-S-0364
 stream: S-0364
 tags: [cli]
 touches: [design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md]

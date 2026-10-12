@@ -3,11 +3,17 @@ id: S-0366
 type: story
 nature: improvement
 title: "flai check finds `threads.archived` outside the story at close-out"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-12T14:12:35Z
-updated: 2026-10-12T15:17:00Z
-transitions: []
+updated: 2026-10-12T15:26:09Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:26:03Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T15:26:09Z
+    by: agent-S-0366
 tags: [flai, check]
 touches: [design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0135-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [S-0365]
@@ -17,20 +23,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 74
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 1
+      hand_edits: 1
+      work: 12
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 176
+      cache_read: 1340681
+      cache_write: 122594
+      cost: 0.6579
   strategic:
     - kind: orchestrator
-      seconds: 488
+      seconds: 754
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 62
-          output: 959
-          cache_read: 9187373
-          cache_write: 25492
-          cost: 2.3226
+          input: 76
+          output: 1128
+          cache_read: 11605842
+          cache_write: 35403
+          cost: 2.9348
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
