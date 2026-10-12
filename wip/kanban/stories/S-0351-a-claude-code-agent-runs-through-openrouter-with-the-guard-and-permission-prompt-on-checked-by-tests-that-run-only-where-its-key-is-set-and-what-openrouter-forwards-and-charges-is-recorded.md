@@ -3,12 +3,15 @@ id: S-0351
 type: story
 nature: feature
 title: A claude-code agent runs through OpenRouter with the guard and permission_prompt on, checked by tests that run only where its key is set, and what OpenRouter forwards and charges is recorded
-status: backlog
+status: ready
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:44:52Z
-updated: 2026-10-12T17:56:45Z
-transitions: []
+updated: 2026-10-12T17:57:47Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:57:39Z
+    by: orchestrator
 tags: [cli]
 topics: [agents, testing]
 touches: [flai/internal/serve/gateway_test.go, flai/internal/serve/claudecheck.go, scripts/gateway-smoke.sh, scripts/smoke.sh, docs/contributors/index.md, design/system/agent-adapters.md]
@@ -18,16 +21,20 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 0
+  models: []
 cost_of_delay:
   value: 49.78
   by: planner-E-0019
   at: 2026-10-08T09:00:19Z
 forecast:
   duration: 45m
-  delivery: 2026-10-12T23:57:00Z
-  basis: "Its own forecast of 45m; 9th in the pull order with an in-progress limit of 5, behind S-0373, S-0236, S-0238, S-0239, S-0241, S-0304, S-0305 and S-0306."
+  delivery: 2026-10-12T23:07:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0370 and S-0373."
   by: flai
-  at: 2026-10-12T17:56:45Z
+  at: 2026-10-12T17:57:47Z
 finalized:
   by: alex
   at: 2026-10-08T08:51:59Z

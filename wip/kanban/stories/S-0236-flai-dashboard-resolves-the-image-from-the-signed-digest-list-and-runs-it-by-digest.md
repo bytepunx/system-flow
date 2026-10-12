@@ -3,12 +3,15 @@ id: S-0236
 type: story
 nature: feature
 title: flai dashboard resolves the image from the signed digest list and runs it by digest
-status: backlog
+status: ready
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T17:56:45Z
-transitions: []
+updated: 2026-10-12T17:57:47Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:57:39Z
+    by: orchestrator
 tags: [cli]
 topics: [release, security]
 touches: [flai/cmd/dashboard.go, flai/internal/selfupgrade, flai/internal/dashboard, docs/operators/settings.md, docs/users/flai.md, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_versions.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_test.go, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/docker.md, flai/cmd/dashboard_versions_test.go, flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, docs/users/flaiover.md, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go, flai/cmd/dashboard_watch_test.go, docs/operators/runbooks/update.md, docs/users/flai-reference.md]
@@ -39,10 +42,10 @@ cost_of_delay:
   at: 2026-10-07T22:55:27Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-12T19:48:00Z
-  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 5, behind S-0373."
+  delivery: 2026-10-12T19:49:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0370, S-0373 and S-0351."
   by: flai
-  at: 2026-10-12T17:56:45Z
+  at: 2026-10-12T17:57:47Z
 ---
 # S-0236 flai dashboard resolves the image from the signed digest list and runs it by digest
 

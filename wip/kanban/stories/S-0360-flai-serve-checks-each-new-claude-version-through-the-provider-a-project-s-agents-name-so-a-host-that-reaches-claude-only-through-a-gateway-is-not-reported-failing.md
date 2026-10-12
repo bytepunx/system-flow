@@ -7,7 +7,7 @@ status: backlog
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:59:39Z
-updated: 2026-10-12T17:56:45Z
+updated: 2026-10-12T17:57:47Z
 transitions: []
 tags: [cli]
 topics: [agents]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:28Z
 forecast:
   duration: 20m
-  delivery: 2026-10-13T01:08:00Z
-  basis: "Its own forecast of 20m; 17th in the pull order with an in-progress limit of 5, behind S-0373, S-0236, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0351, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357 and S-0358."
+  delivery: 2026-10-13T00:18:00Z
+  basis: "Its own forecast of 20m; 18th in the pull order with an in-progress limit of 5, behind S-0370, S-0373, S-0351, S-0236, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357 and S-0358."
   by: flai
-  at: 2026-10-12T17:56:45Z
+  at: 2026-10-12T17:57:47Z
 ---
 # S-0360 flai serve checks each new claude version through the provider a project's agents name, so a host that reaches Claude only through a gateway is not reported failing
 

@@ -3,11 +3,14 @@ id: S-0370
 type: story
 nature: remediation
 title: flai task done widens touches with a path the commit reverted to main, re-growing a claim the story narrowed
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-12T16:52:44Z
-updated: 2026-10-12T17:56:45Z
-transitions: []
+updated: 2026-10-12T17:57:47Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:57:35Z
+    by: orchestrator
 tags: [cli]
 topics: [touches]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/internal/mcpserver/task.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md]
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-10-12T17:09:21Z
 forecast:
   duration: 21m
-  delivery: 2026-10-13T01:50:00Z
-  basis: "Its own forecast of 21m; 20th in the pull order with an in-progress limit of 5, behind S-0373, S-0236, S-0238, S-0239, S-0241, S-0304, S-0305, S-0306, S-0351, S-0352, S-0353, S-0354, S-0355, S-0356, S-0357, S-0358, S-0360, S-0363 and S-0369."
+  delivery: 2026-10-12T18:22:00Z
+  basis: "Its own forecast of 21m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-12T17:56:45Z
+  at: 2026-10-12T17:57:47Z
 finalized:
   by: orchestrator
   at: 2026-10-12T17:11:28Z
