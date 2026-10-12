@@ -99,7 +99,7 @@ func TestARepositoryIsOfferedImportedAndThenServed(t *testing.T) {
 			ImportRoots: func() []string { return []string{folder} }, ScanEvery: time.Hour, ImportRun: importRun,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {
@@ -167,7 +167,7 @@ func TestARepositoryIsOfferedToARecordedDashboardWithNoProjectServed(t *testing.
 			ImportRoots: func() []string { return []string{folder} }, ScanEvery: time.Hour,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {
@@ -215,7 +215,7 @@ func TestServeStartedInAFolderServesAndOffersWhatIsBelowIt(t *testing.T) {
 			Folder: folder, ScanEvery: time.Hour,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {

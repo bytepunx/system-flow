@@ -111,6 +111,74 @@ func verify(statement, signature, version, commit string, keys []*ecdsa.PublicKe
 	return StampSigned, ""
 }
 
+// PeerFault says why a peer's release stamp is not signed: the words a
+// connection refused with close code 4403 gives after "unsigned peer: "
+// (S-0237).
+type PeerFault string
+
+// The faults of a peer's release stamp.
+const (
+	PeerNoStamp        PeerFault = "missing stamp"
+	PeerBadSignature   PeerFault = "invalid signature"
+	PeerWrongComponent PeerFault = "wrong component"
+)
+
+// PeerStamp is what checking the release stamp a peer sent found.
+type PeerStamp struct {
+	State StampState `json:"state"`
+	// Fault says why a stamp that is not signed is not; empty when it is.
+	Fault PeerFault `json:"fault,omitempty"`
+	// Reason says in full why, for a log.
+	Reason string `json:"reason,omitempty"`
+	// Component, Version, and Commit are what a well-formed statement names,
+	// whether or not its signature verifies: trust them only when State is
+	// signed.
+	Component string `json:"component,omitempty"`
+	Version   string `json:"version,omitempty"`
+	Commit    string `json:"commit,omitempty"`
+}
+
+// VerifyPeerStamp checks a peer's release stamp: that signature signs
+// statement by one of keys, and that statement names component. Unlike
+// VerifyStamp it does not compare the version or the commit with this
+// build's, since the peer is another release. A stamp that is not well
+// formed counts as an invalid signature.
+func VerifyPeerStamp(statement, signature, component string, keys []*ecdsa.PublicKey) PeerStamp {
+	var p PeerStamp
+	if fields := strings.Fields(statement); len(fields) == 3 && strings.Join(fields, " ") == statement {
+		p.Component, p.Version, p.Commit = fields[0], fields[1], fields[2]
+	}
+	invalid := func(reason string) PeerStamp {
+		p.State, p.Fault, p.Reason = StampInvalid, PeerBadSignature, reason
+		return p
+	}
+	switch {
+	case statement == "" && signature == "":
+		p.State, p.Fault, p.Reason = StampMissing, PeerNoStamp, "the peer sent no release stamp"
+		return p
+	case signature == "":
+		return invalid("a statement without a signature")
+	case statement == "":
+		return invalid("a signature without a statement")
+	}
+	sig, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		return invalid("the signature is not base64")
+	}
+	if !signedByOneOf(statement, sig, keys) {
+		return invalid("the signature does not verify against the release key")
+	}
+	if p.Component == "" {
+		return invalid(fmt.Sprintf("the statement %q is not %q", statement, component+" <version> <commit>"))
+	}
+	if p.Component != component {
+		p.State, p.Fault, p.Reason = StampInvalid, PeerWrongComponent, fmt.Sprintf("the statement names %s, not %s", p.Component, component)
+		return p
+	}
+	p.State = StampSigned
+	return p
+}
+
 func signedByOneOf(statement string, sig []byte, keys []*ecdsa.PublicKey) bool {
 	sum := sha256.Sum256([]byte(statement))
 	for _, k := range keys {

@@ -4,12 +4,17 @@ package channeltest
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,17 +24,65 @@ import (
 )
 
 // Dashboard accepts flai's connection, does the handshake with Key, and
-// hands each proven connection to Proven.
+// hands each proven connection to Proven. It answers hello with a release
+// stamp, "flaiover <Version> <commit>" signed by a key it generates, which
+// Keys verify: a client given Keys as its ReleaseKeys accepts it (S-0237).
 type Dashboard struct {
 	URL    string
 	Proven chan *Conn
+	// Keys verify the stamps Sign makes and the one it answers with by default.
+	Keys []*ecdsa.PublicKey
+
+	signer  *ecdsa.PrivateKey
+	mu      sync.Mutex
+	release *channel.Release // what it answers hello with; nil sends none
+	refuse  string           // when set, the fault each hello is closed with
 }
+
+// Version is what the dashboard's default stamp and its answer to hello name.
+const Version = "9.9.9"
 
 // Conn is one proven connection from a flai.
 type Conn struct {
 	Project string
 	Kind    string // what hello said: empty for a project, channel.KindCandidate for one offered for import
+	// Release is the stamp flai sent in hello; nil when it sent none.
+	Release *channel.Release
 	ws      *websocket.Conn
+}
+
+// Sign returns statement as a release stamp signed by the dashboard's key,
+// as cosign sign-blob signs: ECDSA P-256 over its SHA-256, ASN.1 DER, base64.
+func (d *Dashboard) Sign(statement string) channel.Release {
+	sum := sha256.Sum256([]byte(statement))
+	sig, err := ecdsa.SignASN1(rand.Reader, d.signer, sum[:])
+	if err != nil {
+		panic("channeltest: sign a release stamp: " + err.Error())
+	}
+	return channel.Release{Statement: statement, Signature: base64.StdEncoding.EncodeToString(sig)}
+}
+
+// Answer sets the stamp the dashboard answers hello with from now on; nil
+// answers without one, as a dashboard of protocol 1 does.
+func (d *Dashboard) Answer(r *channel.Release) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.release = r
+}
+
+// Refuse closes every hello from now on with channel.CloseUnsigned and the
+// reason "unsigned peer: <fault>", as a dashboard that refuses an unsigned
+// flai does; an empty fault answers hello again.
+func (d *Dashboard) Refuse(fault string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.refuse = fault
+}
+
+func (d *Dashboard) answer() (*channel.Release, string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.release, d.refuse
 }
 
 type msg struct {
@@ -41,10 +94,16 @@ type msg struct {
 	Error   *channel.Error  `json:"error,omitempty"`
 }
 
-// New starts a dashboard that holds key.
+// New starts a dashboard that holds key and answers with a signed stamp.
 func New(t *testing.T, key string) *Dashboard {
 	t.Helper()
-	d := &Dashboard{Proven: make(chan *Conn, 16)}
+	signer, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := &Dashboard{Proven: make(chan *Conn, 16), Keys: []*ecdsa.PublicKey{&signer.PublicKey}, signer: signer}
+	stamp := d.Sign("flaiover " + Version + " 0ef6d26")
+	d.release = &stamp
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != channel.Path {
 			http.NotFound(w, r)
@@ -61,16 +120,27 @@ func New(t *testing.T, key string) *Dashboard {
 		}
 		var hello msg
 		var hp struct {
-			Nonce   string          `json:"nonce"`
-			Project channel.Project `json:"project"`
-			Kind    string          `json:"kind"`
+			Nonce   string           `json:"nonce"`
+			Project channel.Project  `json:"project"`
+			Kind    string           `json:"kind"`
+			Release *channel.Release `json:"release"`
 		}
 		_ = json.Unmarshal(data, &hello)
 		_ = json.Unmarshal(hello.Params, &hp)
+		release, refuse := d.answer()
+		if refuse != "" {
+			_ = c.Close(channel.CloseUnsigned, channel.UnsignedReason+": "+refuse)
+			return
+		}
 		b := make([]byte, 16)
 		_, _ = rand.Read(b)
 		mine := hex.EncodeToString(b)
-		res, _ := json.Marshal(map[string]string{"nonce": mine, "proof": channel.Proof([]byte(key), "dashboard", hp.Nonce, mine), "dashboard": "test"})
+		res, _ := json.Marshal(struct {
+			Nonce     string           `json:"nonce"`
+			Proof     string           `json:"proof"`
+			Dashboard string           `json:"dashboard"`
+			Release   *channel.Release `json:"release,omitempty"`
+		}{mine, channel.Proof([]byte(key), "dashboard", hp.Nonce, mine), Version, release})
 		out, _ := json.Marshal(msg{JSONRPC: "2.0", ID: hello.ID, Result: res})
 		_ = c.Write(ctx, websocket.MessageText, out)
 		_, data, err = c.Read(ctx)
@@ -85,7 +155,7 @@ func New(t *testing.T, key string) *Dashboard {
 			_ = c.Close(websocket.StatusPolicyViolation, "bad proof")
 			return
 		}
-		d.Proven <- &Conn{Project: hp.Project.Key, Kind: hp.Kind, ws: c}
+		d.Proven <- &Conn{Project: hp.Project.Key, Kind: hp.Kind, Release: hp.Release, ws: c}
 		<-ctx.Done()
 	}))
 	t.Cleanup(srv.Close)

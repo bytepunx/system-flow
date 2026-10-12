@@ -8,6 +8,7 @@ package channel
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -25,11 +26,13 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 )
 
-// Protocol is the version both sides name in hello.
-const Protocol = 1
+// Protocol is the version both sides name in hello. Protocol 2 carries each
+// side's release stamp (S-0237).
+const Protocol = 2
 
 // CloseHeld is the close code a dashboard refuses a flai with when the
 // project it connected for is held there by another flai that answers
@@ -38,6 +41,56 @@ const CloseHeld websocket.StatusCode = 4409
 
 // ErrHeld is what a connection the dashboard closed with CloseHeld ends with.
 var ErrHeld = errors.New("the dashboard refused this flai: another flai serves the project there and answers")
+
+// CloseUnsigned is the close code either side refuses the other with when
+// the release stamp it sent in hello is missing, does not verify, or names
+// another component (ADR-0070, S-0237). The reason is UnsignedReason and the
+// fault, such as "unsigned peer: missing stamp". A flai so refused, or that
+// so refused its dashboard, waits HeldBackoff before it dials again.
+const CloseUnsigned websocket.StatusCode = 4403
+
+// UnsignedReason begins the reason of a close with CloseUnsigned.
+const UnsignedReason = "unsigned peer"
+
+// ErrUnsigned is what a connection that either side closed with
+// CloseUnsigned ends with, wrapped in a *RefusedError that says which side
+// refused and why.
+var ErrUnsigned = errors.New(UnsignedReason)
+
+// Who refused a connection as unsigned, in State.RefusedBy.
+const (
+	RefusedByDashboard = "dashboard" // the dashboard refused this flai
+	RefusedByFlai      = "flai"      // this flai refused the dashboard
+)
+
+// RefusedError is a connection closed with CloseUnsigned.
+type RefusedError struct {
+	By     string // RefusedByDashboard or RefusedByFlai
+	Reason string // the fault after "unsigned peer: ", or "unsigned" when the close gave none
+	// PeerVersion is the dashboard's version when it named one.
+	PeerVersion string
+}
+
+func (e *RefusedError) Error() string {
+	if e.By == RefusedByFlai {
+		return "flai refused the dashboard: " + UnsignedReason + ": " + e.Reason
+	}
+	return "the dashboard refused this flai: " + UnsignedReason + ": " + e.Reason
+}
+
+// Unwrap makes a refusal ErrUnsigned to errors.Is.
+func (e *RefusedError) Unwrap() error { return ErrUnsigned }
+
+// Release is a release stamp as hello carries it: the statement
+// "<component> <version> <commit>" and its signature by the release key, in
+// base64 (design/system/release-signing.md).
+type Release struct {
+	Statement string `json:"statement"`
+	Signature string `json:"signature"`
+}
+
+// peerComponent is the component the dashboard's stamp must name.
+const peerComponent = "flaiover"
 
 // MaxMessage caps one message in either direction, where the dashboard's
 // buffer for a flai command's output was (16 MiB).
@@ -108,6 +161,18 @@ type State struct {
 	Since     string `json:"since,omitempty"`      // when the current connection was proven
 	LastError string `json:"last_error,omitempty"` // why the last attempt ended
 	Attempts  int    `json:"attempts"`             // connections that ended since the last proven one
+	// RefusedBy says which side refused the other as unsigned at the last
+	// attempt, RefusedByDashboard or RefusedByFlai, and RefusedReason why:
+	// "missing stamp", "invalid signature", "wrong component <name>", or
+	// "unsigned" when the dashboard's close said no more. Both are cleared
+	// once a connection is proven (S-0237).
+	RefusedBy     string `json:"refused_by,omitempty"`
+	RefusedReason string `json:"refused_reason,omitempty"`
+	// PeerVersion is the dashboard's version, from its stamp or its answer to
+	// hello, when it named one; PeerSigned says whether the connected
+	// dashboard's stamp verified.
+	PeerVersion string `json:"peer_version,omitempty"`
+	PeerSigned  bool   `json:"peer_signed,omitempty"`
 }
 
 // Client keeps one connection to one dashboard alive.
@@ -121,14 +186,25 @@ type Client struct {
 	// Kind is said in hello: empty for a project, KindCandidate for a
 	// repository offered for import (S-0098).
 	Kind string
+	// Release is this flai's release stamp, sent in hello; the zero value, a
+	// development build's, sends none (S-0237).
+	Release Release
+	// ReleaseKeys verify the dashboard's release stamp; buildinfo.ReleaseKeys()
+	// when nil. Tests give keys they generate.
+	ReleaseKeys []*ecdsa.PublicKey
+	// AllowUnsigned admits a dashboard that sent no release stamp; false, the
+	// default, refuses it. A stamp that does not verify or names another
+	// component is refused either way. See refuses.
+	AllowUnsigned bool
 
 	// Tests shorten these.
 	MaxBytes   int // cap on one message, MaxMessage when zero
 	PingEvery  time.Duration
 	MinBackoff time.Duration
 	MaxBackoff time.Duration
-	// HeldBackoff is how long a flai the dashboard refused with CloseHeld
-	// waits before it dials again; a minute when zero.
+	// HeldBackoff is how long a flai the dashboard refused with CloseHeld,
+	// or that either side refused with CloseUnsigned, waits before it dials
+	// again; a minute when zero.
 	HeldBackoff time.Duration
 	Now         func() time.Time
 	// Slow is how long a request may take before its "request answered"
@@ -240,6 +316,27 @@ func (c *Client) defaults() {
 	if c.Logger == nil {
 		c.Logger = slog.New(slog.DiscardHandler)
 	}
+	if c.ReleaseKeys == nil {
+		// Without keys no stamp verifies, so every dashboard is refused.
+		keys, err := buildinfo.ReleaseKeys()
+		if err != nil {
+			c.Logger.Error("release keys unreadable; every dashboard will be refused", "component", "channel", "url", c.URL, "project", c.Project.Key, "err", err.Error())
+		}
+		c.ReleaseKeys = keys
+	}
+}
+
+// refuses is the one place that decides whether the dashboard's checked
+// stamp closes the connection: every stamp that is not signed, except a
+// missing one when AllowUnsigned admits it.
+func (c *Client) refuses(p buildinfo.PeerStamp) bool {
+	switch p.State {
+	case buildinfo.StampSigned:
+		return false
+	case buildinfo.StampMissing:
+		return !c.AllowUnsigned
+	}
+	return true
 }
 
 // State reports the connection as it is now.
@@ -258,7 +355,8 @@ func (c *Client) setState(f func(*State)) {
 // Run connects and serves until ctx ends, reconnecting with backoff and
 // jitter. A connection that held for a while resets the backoff. One the
 // dashboard refused because another flai holds the project waits
-// HeldBackoff instead (S-0184).
+// HeldBackoff instead (S-0184), and so does one that either side refused as
+// unsigned (S-0237).
 func (c *Client) Run(ctx context.Context) {
 	c.defaults()
 	c.setState(func(s *State) { s.URL = c.URL })
@@ -268,15 +366,26 @@ func (c *Client) Run(ctx context.Context) {
 		started := c.Now()
 		err := c.serveOnce(ctx)
 		held := errors.Is(err, ErrHeld)
+		var refused *RefusedError
+		unsigned := errors.As(err, &refused)
+		proven := false
 		c.setState(func(s *State) {
+			proven = s.Since != ""
 			s.Connected, s.Since, s.Attempts = false, "", s.Attempts+1
 			if err != nil {
 				s.LastError = err.Error()
 			}
-			if held {
+			if held || unsigned {
 				s.LastError += "; trying again in " + c.HeldBackoff.String()
 			}
+			if unsigned {
+				s.RefusedBy, s.RefusedReason, s.PeerVersion, s.PeerSigned = refused.By, refused.Reason, refused.PeerVersion, false
+			}
 		})
+		if proven {
+			// a refusal after a proven connection is a new one, said again
+			lastLogged = "\x00"
+		}
 		if ctx.Err() != nil || c.isDraining() {
 			return
 		}
@@ -287,6 +396,14 @@ func (c *Client) Run(ctx context.Context) {
 			if msg := errText(err); msg != lastLogged {
 				lastLogged = msg
 				c.Logger.Warn("dashboard refused this flai: another flai holds the project", "component", "channel", "url", c.URL, "project", c.Project.Key, "retry_after", c.HeldBackoff.String())
+			}
+		case unsigned:
+			wait = jitter(c.HeldBackoff)
+			// said once per refusal, not at every retry that meets the same one
+			if msg := errText(err) + "\x00" + refused.PeerVersion; msg != lastLogged {
+				lastLogged = msg
+				c.Logger.Error("connection refused as unsigned", "component", "channel", "url", c.URL, "project", c.Project.Key,
+					"refused_by", refused.By, "reason", refused.Reason, "peer_version", refused.PeerVersion, "retry_after", c.HeldBackoff.String())
 			}
 		default:
 			if c.Now().Sub(started) > 2*c.MaxBackoff {
@@ -366,6 +483,8 @@ type helloParams struct {
 	// Kind is empty for a project, and KindCandidate for a repository offered
 	// for import (S-0098), which answers only the import methods.
 	Kind string `json:"kind,omitempty"`
+	// Release is this flai's release stamp, absent for a development build.
+	Release *Release `json:"release,omitempty"`
 }
 
 // KindCandidate marks a connection for a repository that is not a system-flow
@@ -376,6 +495,50 @@ type helloResult struct {
 	Nonce     string `json:"nonce"`
 	Proof     string `json:"proof"`
 	Dashboard string `json:"dashboard,omitempty"`
+	// Release is the dashboard's release stamp; a dashboard of protocol 1
+	// sends none, and is refused as unsigned.
+	Release *Release `json:"release,omitempty"`
+}
+
+// dashboardRefusal reads a close with CloseUnsigned from the dashboard as its
+// refusal of this flai, with the fault its reason gives; nil for any other end.
+func dashboardRefusal(err error) *RefusedError {
+	var ce websocket.CloseError
+	if !errors.As(err, &ce) || ce.Code != CloseUnsigned {
+		return nil
+	}
+	reason := "unsigned"
+	if fault, ok := strings.CutPrefix(ce.Reason, UnsignedReason+": "); ok && fault != "" {
+		reason = fault
+	}
+	return &RefusedError{By: RefusedByDashboard, Reason: reason}
+}
+
+// checkDashboard verifies the release stamp in the dashboard's answer to
+// hello, and returns the refusal to close with when refuses says so.
+func (c *Client) checkDashboard(hr helloResult) (buildinfo.PeerStamp, *RefusedError) {
+	var stamp Release
+	if hr.Release != nil {
+		stamp = *hr.Release
+	}
+	p := buildinfo.VerifyPeerStamp(stamp.Statement, stamp.Signature, peerComponent, c.ReleaseKeys)
+	if !c.refuses(p) {
+		return p, nil
+	}
+	reason := string(p.Fault)
+	if p.Fault == buildinfo.PeerWrongComponent {
+		reason += " " + p.Component
+	}
+	return p, &RefusedError{By: RefusedByFlai, Reason: reason, PeerVersion: peerVersion(p, hr)}
+}
+
+// peerVersion is the version the dashboard's stamp names, or else the one
+// its answer to hello does.
+func peerVersion(p buildinfo.PeerStamp, hr helloResult) string {
+	if p.Version != "" {
+		return p.Version
+	}
+	return hr.Dashboard
 }
 
 // serveOnce dials, proves, and serves requests until the connection ends.
@@ -424,13 +587,20 @@ func (c *Client) serveOnce(ctx context.Context) error {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	params, _ := json.Marshal(helloParams{Protocol: Protocol, Nonce: mine, Flai: c.Version, Project: c.Project, Methods: names, Kind: c.Kind})
+	hp := helloParams{Protocol: Protocol, Nonce: mine, Flai: c.Version, Project: c.Project, Methods: names, Kind: c.Kind}
+	if c.Release != (Release{}) {
+		hp.Release = &c.Release
+	}
+	params, _ := json.Marshal(hp)
 	if err := send(message{ID: json.RawMessage(`"hello"`), Method: "hello", Params: params}); err != nil {
 		return err
 	}
 	hctx, hdone := context.WithTimeout(ctx, 10*time.Second)
 	_, data, err := conn.Read(hctx)
 	hdone()
+	if refused := dashboardRefusal(err); refused != nil {
+		return refused
+	}
 	if err != nil {
 		return fmt.Errorf("no answer to hello: %w", err)
 	}
@@ -449,12 +619,21 @@ func (c *Client) serveOnce(ctx context.Context) error {
 		_ = conn.Close(websocket.StatusPolicyViolation, "not my dashboard")
 		return errors.New("the dashboard did not prove it holds the agent credential; is something else listening on this port?")
 	}
+	// The dashboard's stamp is checked before this flai proves itself: an
+	// unsigned dashboard is told nothing more (S-0237).
+	peer, refused := c.checkDashboard(hr)
+	if refused != nil {
+		_ = conn.Close(CloseUnsigned, UnsignedReason+": "+refused.Reason)
+		return refused
+	}
 	proof, _ := json.Marshal(map[string]string{"proof": Proof(c.Key, "flai", hr.Nonce, mine)})
 	if err := send(message{Method: "hello.prove", Params: proof}); err != nil {
 		return err
 	}
 	c.setState(func(s *State) {
 		s.Connected, s.Since, s.LastError = true, c.Now().UTC().Format(time.RFC3339), ""
+		s.RefusedBy, s.RefusedReason = "", ""
+		s.PeerVersion, s.PeerSigned = peerVersion(peer, hr), peer.State == buildinfo.StampSigned
 	})
 	c.mu.Lock()
 	c.notify = func(method string, params any) error {
@@ -498,6 +677,9 @@ func (c *Client) serveOnce(ctx context.Context) error {
 		_, data, err := conn.Read(ctx)
 		if websocket.CloseStatus(err) == CloseHeld {
 			return ErrHeld
+		}
+		if refused := dashboardRefusal(err); refused != nil {
+			return refused
 		}
 		if err != nil {
 			return err

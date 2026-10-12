@@ -76,6 +76,40 @@ func TestVerifyStampTriesEveryKey(t *testing.T) {
 	}
 }
 
+// S-0237: a peer's stamp is checked for its signature and its component,
+// never against this build's version or commit.
+func TestVerifyPeerStamp(t *testing.T) {
+	release, other := testKey(t), testKey(t)
+	keys := []*ecdsa.PublicKey{&release.PublicKey}
+	peer := "flaiover 2.3.0 1a2b3c4"
+	for _, c := range []struct {
+		name, statement, signature string
+		state                      StampState
+		fault                      PeerFault
+		version                    string
+	}{
+		{"signed by the release key, another release than this build", peer, sign(t, release, peer), StampSigned, "", "2.3.0"},
+		{"missing", "", "", StampMissing, PeerNoStamp, ""},
+		{"signed by another key", peer, sign(t, other, peer), StampInvalid, PeerBadSignature, "2.3.0"},
+		{"another statement's signature", peer, sign(t, release, "flaiover 2.3.1 1a2b3c4"), StampInvalid, PeerBadSignature, "2.3.0"},
+		{"wrong component", "flai 2.3.0 1a2b3c4", sign(t, release, "flai 2.3.0 1a2b3c4"), StampInvalid, PeerWrongComponent, "2.3.0"},
+		{"statement only", peer, "", StampInvalid, PeerBadSignature, "2.3.0"},
+		{"signature only", "", sign(t, release, peer), StampInvalid, PeerBadSignature, ""},
+		{"signature not base64", peer, "not base64!", StampInvalid, PeerBadSignature, "2.3.0"},
+		{"malformed statement", "flaiover 2.3.0", sign(t, release, "flaiover 2.3.0"), StampInvalid, PeerBadSignature, ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			p := VerifyPeerStamp(c.statement, c.signature, "flaiover", keys)
+			if p.State != c.state || p.Fault != c.fault || p.Version != c.version || (p.State == StampSigned) != (p.Reason == "") {
+				t.Errorf("got %+v, want state %s fault %q version %q", p, c.state, c.fault, c.version)
+			}
+		})
+	}
+	if p := VerifyPeerStamp("flai 2.3.0 1a2b3c4", sign(t, release, "flai 2.3.0 1a2b3c4"), "flaiover", keys); p.Component != "flai" || !strings.Contains(p.Reason, "names flai, not flaiover") {
+		t.Errorf("a wrong component does not say which: %+v", p)
+	}
+}
+
 func TestDevelopment(t *testing.T) {
 	for v, want := range map[string]bool{
 		"dev": true, "": true, "0.0.0-0ef6d26": true, "0.0.0": true,

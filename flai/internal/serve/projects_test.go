@@ -89,7 +89,7 @@ func TestAnUnavailableProjectIsReportedOnceAndServedWhenItComesBack(t *testing.T
 			Logger: slog.New(slog.NewTextHandler(logs, nil)),
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {
@@ -139,7 +139,7 @@ func TestARemovedProjectIsSaidToBeRemovedBeforeItsConnectionEnds(t *testing.T) {
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				// the test dashboard answers no ping: none is sent while the test runs
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {

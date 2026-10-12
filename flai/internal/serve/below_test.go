@@ -198,7 +198,7 @@ func TestServeServesTheProjectsBelowTheImportRoots(t *testing.T) {
 			ImportRoots: func() []string { return []string{named} }, ScanEvery: time.Hour,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("test", nil), Version: "test", MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {

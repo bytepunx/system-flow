@@ -33,7 +33,7 @@ func scratchProject(t *testing.T, key string) (root, keyFile string) {
 	return root, keyFile
 }
 
-func run(t *testing.T, dir Dir) {
+func run(t *testing.T, dir Dir, dash *channeltest.Dashboard) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -41,7 +41,7 @@ func run(t *testing.T, dir Dir) {
 		done <- Run(ctx, Options{Dir: dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: 20 * time.Millisecond,
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {
@@ -50,6 +50,28 @@ func run(t *testing.T, dir Dir) {
 			t.Errorf("Run: %v", err)
 		}
 	})
+}
+
+// S-0237: each client flai serve builds sends this build's release stamp in
+// hello and verifies the dashboard's with the embedded release key.
+func TestTheDefaultClientCarriesTheStampAndTheReleaseKey(t *testing.T) {
+	statement, signature := buildinfo.ReleaseStatement, buildinfo.ReleaseSignature
+	buildinfo.ReleaseStatement, buildinfo.ReleaseSignature = "flai 1.43.0 a1825d8", "c2lnbmF0dXJl"
+	t.Cleanup(func() { buildinfo.ReleaseStatement, buildinfo.ReleaseSignature = statement, signature })
+	want, err := buildinfo.ReleaseKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := defaultClient(Options{Version: "1.43.0", Now: time.Now, Logger: slog.New(slog.DiscardHandler)}, Entry{Key: "harbour", URL: "http://127.0.0.1:4242"}, []byte("s3cret"))
+	if c.Release != (channel.Release{Statement: "flai 1.43.0 a1825d8", Signature: "c2lnbmF0dXJl"}) {
+		t.Errorf("the client sends %+v, want the build's stamp", c.Release)
+	}
+	if len(c.ReleaseKeys) != 1 || !c.ReleaseKeys[0].Equal(want[0]) {
+		t.Errorf("the client verifies with %v, want the embedded release key", c.ReleaseKeys)
+	}
+	if c.AllowUnsigned {
+		t.Error("the client admits an unsigned dashboard")
+	}
 }
 
 func TestRegistryRoundTrip(t *testing.T) {
@@ -91,7 +113,7 @@ func TestServesRegisteredProjectsAndFollowsTheRegistry(t *testing.T) {
 	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: rootA, URL: dash.URL, KeyFile: keyA}); err != nil {
 		t.Fatal(err)
 	}
-	run(t, dir)
+	run(t, dir, dash)
 	conn := dash.Wait(t)
 	if conn.Project != "harbour" {
 		t.Errorf("hello named %q", conn.Project)
@@ -213,7 +235,7 @@ func TestAProjectThatStopsLoadingAnswersItsRequestInFlightBeforeItIsDropped(t *t
 				methods["test.publish"] = publish
 				// the test dashboard answers no ping: none is sent while the test runs
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: methods, Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: methods, Version: "test", PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {
@@ -262,7 +284,7 @@ func TestASharedCredentialDoesNotLetOneProjectAnswerForAnother(t *testing.T) {
 	if err := dir.Register(Entry{Key: "lighthouse", Name: "lighthouse", Root: rootB, URL: dash.URL, KeyFile: keyB}); err != nil {
 		t.Fatal(err)
 	}
-	run(t, dir)
+	run(t, dir, dash)
 	first, second := dash.Wait(t), dash.Wait(t)
 	byProject := map[string]*channeltest.Conn{first.Project: first, second.Project: second}
 	harbour, lighthouse := byProject["harbour"], byProject["lighthouse"]
@@ -317,7 +339,7 @@ func TestAChangedFileReachesTheDashboardAsANotification(t *testing.T) {
 	if err := dir.Register(Entry{Key: "harbour", Name: "harbour", Root: root, URL: dash.URL, KeyFile: key}); err != nil {
 		t.Fatal(err)
 	}
-	run(t, dir)
+	run(t, dir, dash)
 	conn := dash.Wait(t)
 	time.Sleep(80 * time.Millisecond)                                                     // the watcher has its first look
 	_ = os.WriteFile(filepath.Join(root, "src/main.go"), []byte("package main\n"), 0o644) // not the dashboard's business
@@ -368,7 +390,7 @@ func TestServeTellsTheDashboardWhenAStorysAgentStartsAndEnds(t *testing.T) {
 			Agent: func(string) AgentConfig { return AgentConfig{Enabled: true, Command: []string{stub}, Name: "builder"} },
 			NewClient: func(e Entry, key []byte) *channel.Client {
 				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping: none is sent while the test runs */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
 			}})
 	}()
 	t.Cleanup(func() {

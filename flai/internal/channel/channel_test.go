@@ -2,8 +2,14 @@ package channel
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -29,11 +35,43 @@ type fakeDashboard struct {
 	conns  []*websocket.Conn
 	proven chan *websocket.Conn
 	failed chan string
+	// keys verify what signer signs: the stamp it answers with by default.
+	keys   []*ecdsa.PublicKey
+	signer *ecdsa.PrivateKey
+	// release is the stamp it answers hello with, nil for none; refuse,
+	// when set, is the fault it closes hello with instead; hellos are the
+	// hellos it read.
+	release *Release
+	refuse  string
+	hellos  []helloParams
+}
+
+// sign makes a release stamp of statement with the dashboard's key.
+func (d *fakeDashboard) sign(statement string) *Release {
+	d.t.Helper()
+	sum := sha256.Sum256([]byte(statement))
+	sig, err := ecdsa.SignASN1(rand.Reader, d.signer, sum[:])
+	if err != nil {
+		d.t.Fatal(err)
+	}
+	return &Release{Statement: statement, Signature: base64.StdEncoding.EncodeToString(sig)}
+}
+
+func (d *fakeDashboard) answer(r *Release, refuse string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.release, d.refuse = r, refuse
 }
 
 func newFakeDashboard(t *testing.T, key string) *fakeDashboard {
 	t.Helper()
-	d := &fakeDashboard{t: t, key: []byte(key), proven: make(chan *websocket.Conn, 8), failed: make(chan string, 8)}
+	signer, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := &fakeDashboard{t: t, key: []byte(key), proven: make(chan *websocket.Conn, 8), failed: make(chan string, 8),
+		keys: []*ecdsa.PublicKey{&signer.PublicKey}, signer: signer}
+	d.release = d.sign("flaiover 2.3.0 1a2b3c4")
 	d.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != Path {
 			http.NotFound(w, r)
@@ -52,8 +90,16 @@ func newFakeDashboard(t *testing.T, key string) *fakeDashboard {
 		var hp helloParams
 		_ = json.Unmarshal(data, &hello)
 		_ = json.Unmarshal(hello.Params, &hp)
+		d.mu.Lock()
+		d.hellos = append(d.hellos, hp)
+		release, refuse := d.release, d.refuse
+		d.mu.Unlock()
+		if refuse != "" {
+			_ = c.Close(CloseUnsigned, UnsignedReason+": "+refuse)
+			return
+		}
 		mine := nonce()
-		res, _ := json.Marshal(helloResult{Nonce: mine, Proof: Proof(d.key, "dashboard", hp.Nonce, mine), Dashboard: "test"})
+		res, _ := json.Marshal(helloResult{Nonce: mine, Proof: Proof(d.key, "dashboard", hp.Nonce, mine), Dashboard: "test", Release: release})
 		out, _ := json.Marshal(message{JSONRPC: "2.0", ID: hello.ID, Result: res})
 		_ = c.Write(ctx, websocket.MessageText, out)
 		_, data, err = c.Read(ctx)
@@ -122,9 +168,9 @@ func testMethods() map[string]Method {
 	}}
 }
 
-func startClient(t *testing.T, url, key string, p Project) *Client {
+func startClient(t *testing.T, url, key string, p Project, keys []*ecdsa.PublicKey) *Client {
 	t.Helper()
-	c := &Client{URL: url, Key: []byte(key), Project: p, Methods: testMethods(), Version: "test",
+	c := &Client{URL: url, Key: []byte(key), Project: p, Methods: testMethods(), Version: "test", ReleaseKeys: keys,
 		PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -148,7 +194,7 @@ func waitProven(t *testing.T, d *fakeDashboard) *websocket.Conn {
 
 func TestHandshakeAndProjectInfo(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
-	c := startClient(t, d.srv.URL, "s3cret", project(t))
+	c := startClient(t, d.srv.URL, "s3cret", project(t), d.keys)
 	conn := waitProven(t, d)
 
 	got := d.ask(conn, "1", "project.info", `{"project":"harbour"}`)
@@ -172,7 +218,7 @@ func TestHandshakeAndProjectInfo(t *testing.T) {
 
 func TestAnImpostorGetsNothingAndIsNamed(t *testing.T) {
 	d := newFakeDashboard(t, "not-the-key")
-	c := startClient(t, d.srv.URL, "s3cret", project(t))
+	c := startClient(t, d.srv.URL, "s3cret", project(t), d.keys)
 	select {
 	case msg := <-d.failed: // the client hung up instead of proving itself
 		if !strings.Contains(msg, "no proof") {
@@ -194,7 +240,7 @@ func TestAnImpostorGetsNothingAndIsNamed(t *testing.T) {
 
 func TestReconnectsAfterTheDashboardGoesAway(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
-	c := startClient(t, d.srv.URL, "s3cret", project(t))
+	c := startClient(t, d.srv.URL, "s3cret", project(t), d.keys)
 	first := waitProven(t, d)
 	_ = first.Close(websocket.StatusGoingAway, "restart")
 	second := waitProven(t, d)
@@ -211,7 +257,7 @@ func TestReconnectsAfterTheDashboardGoesAway(t *testing.T) {
 // project is not dialled again at once, and the state says why.
 func TestBacksOffWhenTheDashboardSaysTheProjectIsHeld(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
-	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test",
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), ReleaseKeys: d.keys, Project: project(t), Methods: testMethods(), Version: "test",
 		PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, HeldBackoff: 600 * time.Millisecond}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -260,7 +306,7 @@ func lastProven(t *testing.T, d *fakeDashboard) *websocket.Conn {
 func TestAnAnswerOverTheCapIsAnError(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
 	p := project(t)
-	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: p, Version: "test", MaxBytes: 4096,
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), ReleaseKeys: d.keys, Project: p, Version: "test", MaxBytes: 4096,
 		Methods: map[string]Method{"big": func(context.Context, Project, json.RawMessage) (any, *Error) {
 			return strings.Repeat("x", 8192), nil
 		}}}
@@ -277,7 +323,7 @@ func TestAnAnswerOverTheCapIsAnError(t *testing.T) {
 func TestACancelledRequestStops(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
 	stopped := make(chan struct{})
-	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Version: "test",
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), ReleaseKeys: d.keys, Project: project(t), Version: "test",
 		Methods: map[string]Method{"slow": func(ctx context.Context, _ Project, _ json.RawMessage) (any, *Error) {
 			<-ctx.Done()
 			close(stopped)
@@ -321,7 +367,7 @@ func (l *lockedBuffer) String() string {
 func TestEachRequestIsTimedBeneathTheTransport(t *testing.T) {
 	d := newFakeDashboard(t, "s3cret")
 	var logs lockedBuffer
-	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Version: "test", Slow: time.Nanosecond,
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), ReleaseKeys: d.keys, Project: project(t), Version: "test", Slow: time.Nanosecond,
 		Logger: slog.New(slog.NewJSONHandler(&logs, nil)),
 		Methods: map[string]Method{"board.get": func(ctx context.Context, _ Project, _ json.RawMessage) (any, *Error) {
 			defer perf.Track(ctx, "items.list")()
@@ -351,5 +397,202 @@ func TestEachRequestIsTimedBeneathTheTransport(t *testing.T) {
 		ev["bytes"] != float64(len(`{"board":"ok"}`)) || ev["duration_ms"] == nil ||
 		!strings.Contains(phases, "items.list=") || !strings.Contains(phases, "encode=") {
 		t.Errorf("event %v", ev)
+	}
+}
+
+// refusals are the "connection refused as unsigned" events in logs.
+func refusals(t *testing.T, logs *lockedBuffer) []map[string]any {
+	t.Helper()
+	var out []map[string]any
+	for _, line := range strings.Split(logs.String(), "\n") {
+		var ev map[string]any
+		if json.Unmarshal([]byte(line), &ev) == nil && ev["msg"] == "connection refused as unsigned" {
+			out = append(out, ev)
+		}
+	}
+	return out
+}
+
+func waitState(t *testing.T, c *Client, what string, ok func(State) bool) State {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if st := c.State(); ok(st) {
+			return st
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("%s: state %+v", what, c.State())
+	return State{}
+}
+
+func runClient(t *testing.T, c *Client) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { c.Run(ctx); close(done) }()
+	t.Cleanup(func() { cancel(); <-done })
+}
+
+// S-0237: hello carries flai's stamp under protocol 2, and a dashboard whose
+// stamp verifies and names flaiover is served, its version and that it is
+// signed in the state.
+func TestASignedDashboardConnects(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	own := Release{Statement: "flai 1.43.0 a1825d8", Signature: "c2lnbmF0dXJl"}
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "1.43.0",
+		Release: own, ReleaseKeys: d.keys, PingEvery: 50 * time.Millisecond, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+	runClient(t, c)
+	waitProven(t, d)
+	d.mu.Lock()
+	hello := d.hellos[0]
+	d.mu.Unlock()
+	if hello.Protocol != 2 || hello.Release == nil || *hello.Release != own {
+		t.Errorf("hello said protocol %d and release %+v, want 2 and %+v", hello.Protocol, hello.Release, own)
+	}
+	st := waitState(t, c, "connected", func(s State) bool { return s.Connected })
+	if !st.PeerSigned || st.PeerVersion != "2.3.0" || st.RefusedBy != "" || st.RefusedReason != "" {
+		t.Errorf("state: %+v", st)
+	}
+}
+
+// S-0237: a dashboard whose stamp is missing, as a protocol 1 dashboard's
+// answer is, does not verify, or names another component, is closed with
+// 4403 before flai proves itself; the state says flai refused it and why,
+// and one error says so with the dashboard's version.
+func TestAnUnsignedDashboardIsRefusedBeforeTheProof(t *testing.T) {
+	for _, c := range []struct {
+		name    string
+		release func(d *fakeDashboard) *Release
+		reason  string
+		version string
+	}{
+		{"an answer without release, as protocol 1 sends", func(*fakeDashboard) *Release { return nil }, "missing stamp", "test"},
+		{"signed by another key", func(d *fakeDashboard) *Release {
+			other, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return (&fakeDashboard{t: d.t, signer: other}).sign("flaiover 2.3.0 1a2b3c4")
+		}, "invalid signature", "2.3.0"},
+		{"not base64", func(*fakeDashboard) *Release {
+			return &Release{Statement: "flaiover 2.3.0 1a2b3c4", Signature: "not base64!"}
+		}, "invalid signature", "2.3.0"},
+		{"wrong component", func(d *fakeDashboard) *Release { return d.sign("flai 2.3.0 1a2b3c4") }, "wrong component flai", "2.3.0"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			d := newFakeDashboard(t, "s3cret")
+			d.answer(c.release(d), "")
+			var logs lockedBuffer
+			cl := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys,
+				Logger: slog.New(slog.NewJSONHandler(&logs, nil)), MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+			runClient(t, cl)
+			select {
+			case msg := <-d.failed:
+				if !strings.Contains(msg, "no proof") || !strings.Contains(msg, "4403") || !strings.Contains(msg, "unsigned peer: "+c.reason) {
+					t.Errorf("the dashboard read %q, want a close with 4403 and the reason before any proof", msg)
+				}
+			case <-d.proven:
+				t.Fatal("flai proved itself to an unsigned dashboard")
+			case <-time.After(5 * time.Second):
+				t.Fatal("nothing happened")
+			}
+			st := waitState(t, cl, "refused", func(s State) bool { return s.RefusedBy != "" })
+			if st.Connected || st.RefusedBy != RefusedByFlai || st.RefusedReason != c.reason || st.PeerVersion != c.version || st.PeerSigned ||
+				!strings.Contains(st.LastError, "flai refused the dashboard: unsigned peer: "+c.reason) || !strings.Contains(st.LastError, "trying again in 1m0s") {
+				t.Errorf("state: %+v", st)
+			}
+			said := refusals(t, &logs)
+			if len(said) != 1 || said[0]["level"] != "ERROR" || said[0]["refused_by"] != "flai" || said[0]["reason"] != c.reason ||
+				said[0]["peer_version"] != c.version || said[0]["component"] != "channel" {
+				t.Errorf("logged %v, want one error with the reason and the peer's version", said)
+			}
+			d.mu.Lock()
+			defer d.mu.Unlock()
+			if len(d.hellos) != 1 || d.hellos[0].Release != nil {
+				t.Errorf("hellos %+v, want one, and no stamp from a development build", d.hellos)
+			}
+		})
+	}
+}
+
+// S-0237: a dashboard that closes hello with 4403 refused this flai: flai
+// waits the held back-off before it dials again, says so once however often
+// it is refused, and clears the refusal once it is served.
+func TestADashboardThatRefusesThisFlaiIsDialledAgainAfterTheHeldBackoff(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	signed := d.sign("flaiover 2.3.0 1a2b3c4")
+	d.answer(signed, "missing stamp")
+	var logs lockedBuffer
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys,
+		Logger: slog.New(slog.NewJSONHandler(&logs, nil)), MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, HeldBackoff: 600 * time.Millisecond}
+	runClient(t, c)
+	st := waitState(t, c, "refused", func(s State) bool { return s.RefusedBy != "" })
+	refused := time.Now()
+	if st.Connected || st.RefusedBy != RefusedByDashboard || st.RefusedReason != "missing stamp" || st.PeerVersion != "" ||
+		!strings.Contains(st.LastError, "the dashboard refused this flai: unsigned peer: missing stamp") || !strings.Contains(st.LastError, "trying again in 600ms") {
+		t.Errorf("state: %+v", st)
+	}
+	hellos := func() int {
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		return len(d.hellos)
+	}
+	waitFor := func(n int) {
+		deadline := time.Now().Add(5 * time.Second)
+		for hellos() < n {
+			if time.Now().After(deadline) {
+				t.Fatalf("%d hellos, want %d", hellos(), n)
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}
+	waitFor(2)
+	// jitter spreads the wait over [HeldBackoff/2, HeldBackoff)
+	if waited := time.Since(refused); waited < 250*time.Millisecond {
+		t.Errorf("dialled again after %v, not after the held back-off", waited)
+	}
+	waitFor(3)
+	if said := refusals(t, &logs); len(said) != 1 || said[0]["level"] != "ERROR" || said[0]["refused_by"] != "dashboard" || said[0]["reason"] != "missing stamp" {
+		t.Errorf("logged %v, want one error for the same refusal met %d times", said, hellos())
+	}
+
+	d.answer(signed, "")
+	waitProven(t, d)
+	st = waitState(t, c, "served", func(s State) bool { return s.Connected })
+	if st.RefusedBy != "" || st.RefusedReason != "" || !st.PeerSigned || st.PeerVersion != "2.3.0" {
+		t.Errorf("the refusal outlived the connection: %+v", st)
+	}
+}
+
+// A close with 4403 that gives no fault still reads as the dashboard's refusal.
+func TestDashboardRefusal(t *testing.T) {
+	for reason, want := range map[string]string{"unsigned peer: invalid signature": "invalid signature", "unsigned peer": "unsigned", "": "unsigned"} {
+		got := dashboardRefusal(websocket.CloseError{Code: CloseUnsigned, Reason: reason})
+		if got == nil || got.By != RefusedByDashboard || got.Reason != want || !errors.Is(got, ErrUnsigned) {
+			t.Errorf("close reason %q: %+v, want the dashboard's refusal with %q", reason, got, want)
+		}
+	}
+	if got := dashboardRefusal(websocket.CloseError{Code: CloseHeld, Reason: "unsigned peer: missing stamp"}); got != nil {
+		t.Errorf("a close with 4409 read as an unsigned refusal: %+v", got)
+	}
+}
+
+// The gate: AllowUnsigned admits a dashboard without a stamp, never one whose
+// stamp does not verify or names another component.
+func TestAllowUnsignedAdmitsOnlyAMissingStamp(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	d.answer(nil, "")
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys, AllowUnsigned: true,
+		MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+	runClient(t, c)
+	waitProven(t, d)
+	if st := waitState(t, c, "connected", func(s State) bool { return s.Connected }); st.PeerSigned || st.RefusedBy != "" {
+		t.Errorf("state: %+v", st)
+	}
+	for _, r := range []*Release{d.sign("flai 2.3.0 1a2b3c4"), {Statement: "flaiover 2.3.0 1a2b3c4", Signature: "not base64!"}} {
+		if _, refused := c.checkDashboard(helloResult{Release: r}); refused == nil {
+			t.Errorf("AllowUnsigned admitted %+v", r)
+		}
 	}
 }

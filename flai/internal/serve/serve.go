@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
@@ -269,10 +270,7 @@ func Run(ctx context.Context, o Options) error {
 		o.DrainGrace = DefaultDrainGrace
 	}
 	if o.NewClient == nil {
-		o.NewClient = func(e Entry, key []byte) *channel.Client {
-			return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
-				Methods: hostapi.MethodsFor(o.Version, o.Now, o.Host), Version: o.Version, Logger: o.Logger}
-		}
+		o.NewClient = func(e Entry, key []byte) *channel.Client { return defaultClient(o, e, key) }
 	}
 	if st, alive := o.Dir.ReadStatus(o.Now()); alive && st.PID != os.Getpid() {
 		return fmt.Errorf("flai serve is already running (pid %d, since %s)", st.PID, st.Started)
@@ -522,6 +520,21 @@ func Run(ctx context.Context, o Options) error {
 		case <-tick.C:
 		}
 	}
+}
+
+// defaultClient is the client for one project when the options name no
+// other: it sends this build's release stamp in hello, none for a
+// development build, and verifies the dashboard's with the embedded release
+// key (S-0237).
+func defaultClient(o Options, e Entry, key []byte) *channel.Client {
+	keys, err := buildinfo.ReleaseKeys()
+	if err != nil {
+		keys = nil // the client reads them again and logs why it cannot
+	}
+	return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root},
+		Methods: hostapi.MethodsFor(o.Version, o.Now, o.Host), Version: o.Version, Logger: o.Logger,
+		Release:     channel.Release{Statement: buildinfo.ReleaseStatement, Signature: buildinfo.ReleaseSignature},
+		ReleaseKeys: keys}
 }
 
 // watchedPaths are the manifest's three folders and the manifest itself:
