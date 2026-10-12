@@ -3,11 +3,11 @@ id: T-1389
 type: task
 nature: improvement
 title: Each adapter gives its reader, and usage.Read, the task shares, empty wakes, and turns are measured from events
-status: in-progress
+status: done
 parent: S-0352
 owner: alex
 created: 2026-10-08T08:46:02Z
-updated: 2026-10-12T20:49:34Z
+updated: 2026-10-12T20:59:49Z
 transitions:
   - to: ready
     at: 2026-10-12T20:49:21Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T20:49:24Z
     by: agent-S-0352
+  - to: done
+    at: 2026-10-12T20:59:49Z
+    by: agent-S-0352
 stream: S-0352
 tags: [cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/usage/log.go, flai/internal/usage/log_test.go, flai/internal/usage/turns.go, flai/internal/usage/turns_test.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go, flai/internal/serve/usage.go, flai/internal/serve/usage_test.go, flai/internal/serve/activity.go]
 after: [T-1387, T-1388]
+usage:
+  source: log
+  seconds: 625
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 138
+      output: 763
+      cache_read: 9765420
+      cache_write: 214989
+      cost: 4.5464
 ---
 # T-1389 Each adapter gives its reader, and usage.Read, the task shares, empty wakes, and turns are measured from events
 

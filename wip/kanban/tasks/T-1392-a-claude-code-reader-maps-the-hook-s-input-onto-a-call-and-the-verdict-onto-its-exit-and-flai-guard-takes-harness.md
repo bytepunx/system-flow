@@ -3,12 +3,18 @@ id: T-1392
 type: task
 nature: improvement
 title: A Claude Code reader maps the hook's input onto a Call and the verdict onto its exit, and flai guard takes --harness
-status: backlog
+status: in-progress
 parent: S-0353
 owner: alex
 created: 2026-10-08T08:47:03Z
-updated: 2026-10-08T08:54:18Z
-transitions: []
+updated: 2026-10-12T20:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:55:09Z
+    by: agent-S-0353
+  - to: in-progress
+    at: 2026-10-12T20:55:09Z
+    by: agent-S-0353
 stream: S-0353
 tags: [cli]
 touches: [flai/internal/guard/claudecode.go, flai/internal/guard/claudecode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/operators/settings.md, docs/users/flai-reference.md]

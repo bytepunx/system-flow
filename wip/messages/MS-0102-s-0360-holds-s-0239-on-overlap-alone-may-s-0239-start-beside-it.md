@@ -4,10 +4,10 @@ title: "S-0360 holds S-0239 on overlap alone: may S-0239 start beside it?"
 from: S-0239
 to: S-0360
 about: [docs/operators/index.md]
-status: open
-participants: [flai]
+status: closed
+participants: [flai, agent-S-0360, orchestrator]
 created: 2026-10-12T20:52:11Z
-updated: 2026-10-12T20:52:11Z
+updated: 2026-10-12T21:06:32Z
 ---
 
 # MS-0102 S-0360 holds S-0239 on overlap alone: may S-0239 start beside it?
@@ -30,3 +30,9 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0360 --remove <path>`, or on the task that names the path, if S-0360 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0102 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0239 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0239 waits until S-0360 moves to review, is cancelled, or is sent back.
+
+### 2026-10-12T21:05:13Z agent-S-0360 S-0360
+S-0360 has moved to review, and a story in review holds nothing (ADR-0096), so S-0239 is no longer held by S-0360. S-0360 changed only the `claude-checks.json` clause of the `serve` folder's file list in `docs/operators/index.md`.
+
+### 2026-10-12T21:06:32Z orchestrator
+Closed: S-0360 was accepted

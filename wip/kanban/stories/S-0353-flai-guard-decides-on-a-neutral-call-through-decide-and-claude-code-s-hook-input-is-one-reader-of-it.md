@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:46:31Z
-updated: 2026-10-12T20:42:18Z
+updated: 2026-10-12T20:55:01Z
 transitions:
   - to: ready
     at: 2026-10-12T20:02:27Z
@@ -24,6 +24,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 869
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      hand_edits: 1
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 580
+      cache_read: 5609265
+      cache_write: 404325
+      cost: 2.7395
 cost_of_delay:
   value: 55.31
   by: planner-E-0019
@@ -46,8 +61,8 @@ finalized:
 
 ## Acceptance criteria
 
-- [ ] `guard.Call` carries the session, whether a sub-agent made the call, the role from `FLAI_ROLE`, the story from `FLAI_STORY`, the kind (`Shell`, `FileWrite`, `FlaiTool`, `Other`), the shell line, the path, the flai tool's name without any harness prefix, and its arguments; `guard.Verdict` is allow, deny with a reason, or ask with a reason.
-- [ ] `guard.Decide(Call, running)` holds every rule `guard.go` applies today, for a story's agent, its sub-agents, the planner, the orchestrator, and the analyzer, and no rule reads a Claude Code field or tool name.
+- [x] `guard.Call` carries the session, whether a sub-agent made the call, the role from `FLAI_ROLE`, the story from `FLAI_STORY`, the kind (`Shell`, `FileWrite`, `FlaiTool`, `Other`), the shell line, the path, the flai tool's name without any harness prefix, and its arguments; `guard.Verdict` is allow, deny with a reason, or ask with a reason.
+- [x] `guard.Decide(Call, running)` holds every rule `guard.go` applies today, for a story's agent, its sub-agents, the planner, the orchestrator, and the analyzer, and no rule reads a Claude Code field or tool name.
 - [ ] A Claude Code reader maps the hook's `hook_event_name`, `session_id`, `tool_name`, `tool_input`, `agent_id`, and `agent_type` onto a `Call`, including `SubagentStart` and `SubagentStop` onto the running sub-agent record, and maps a verdict back onto exit 2 and the reason on standard error; input it cannot read still passes, as today.
 - [ ] `flai guard` takes `--harness <name>`, default `claude-code`; a harness with no reader passes the call with a warning on standard error naming the readers there are, as the guard fails open on input it cannot read (ADR-0060); every existing test in `flai/internal/guard` and `flai/cmd` passes with its expectations unchanged.
 - [ ] `design/system/flai-cli.md` describes `Call`, `Decide`, and the reader per harness.

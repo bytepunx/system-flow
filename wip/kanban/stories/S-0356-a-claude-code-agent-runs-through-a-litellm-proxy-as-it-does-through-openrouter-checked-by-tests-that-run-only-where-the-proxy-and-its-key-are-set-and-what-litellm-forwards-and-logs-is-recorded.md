@@ -24,6 +24,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1030
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      hand_edits: 1
+      work: 17
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 431
+      cache_read: 3333563
+      cache_write: 352652
+      cost: 1.6799
 cost_of_delay:
   value: 33.19
   by: planner-E-0019

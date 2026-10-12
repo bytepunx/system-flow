@@ -3,12 +3,18 @@ id: T-1403
 type: task
 nature: feature
 title: The smoke tier runs the LiteLLM check where the proxy and its key are set, and the contributor guide lists its variables
-status: backlog
+status: in-progress
 parent: S-0356
 owner: alex
 created: 2026-10-08T08:49:53Z
-updated: 2026-10-08T08:49:53Z
-transitions: []
+updated: 2026-10-12T21:06:26Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:06:26Z
+    by: agent-S-0356
+  - to: in-progress
+    at: 2026-10-12T21:06:26Z
+    by: agent-S-0356
 stream: S-0356
 tags: [cli]
 touches: [scripts/gateway-smoke.sh, docs/contributors/index.md]

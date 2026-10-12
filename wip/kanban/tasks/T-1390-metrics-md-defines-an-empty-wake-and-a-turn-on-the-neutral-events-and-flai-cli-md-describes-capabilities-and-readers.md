@@ -3,16 +3,36 @@ id: T-1390
 type: task
 nature: improvement
 title: metrics.md defines an empty wake and a turn on the neutral events, and flai-cli.md describes capabilities and readers
-status: backlog
+status: done
 parent: S-0352
 owner: alex
 created: 2026-10-08T08:46:07Z
-updated: 2026-10-08T08:46:07Z
-transitions: []
+updated: 2026-10-12T21:03:34Z
+transitions:
+  - to: ready
+    at: 2026-10-12T21:00:42Z
+    by: agent-S-0352
+  - to: in-progress
+    at: 2026-10-12T21:00:42Z
+    by: agent-S-0352
+  - to: done
+    at: 2026-10-12T21:03:34Z
+    by: agent-S-0352
 stream: S-0352
 tags: [cli]
 touches: [design/system/metrics.md, design/system/flai-cli.md]
 after: [T-1389]
+usage:
+  source: log
+  seconds: 168
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 286
+      cache_read: 2453646
+      cache_write: 104723
+      cost: 1.1655
 ---
 # T-1390 metrics.md defines an empty wake and a turn on the neutral events, and flai-cli.md describes capabilities and readers
 

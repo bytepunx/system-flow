@@ -3,11 +3,11 @@ id: S-0360
 type: story
 nature: improvement
 title: flai serve checks each new claude version through the provider a project's agents name, so a host that reaches Claude only through a gateway is not reported failing
-status: in-progress
+status: done
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:59:39Z
-updated: 2026-10-12T20:49:54Z
+updated: 2026-10-12T21:06:32Z
 transitions:
   - to: ready
     at: 2026-10-12T20:03:43Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-12T20:40:20Z
     by: agent-S-0360
+  - to: review
+    at: 2026-10-12T21:05:07Z
+    by: agent-S-0360
+  - to: done
+    at: 2026-10-12T21:06:32Z
+    by: orchestrator
 tags: [cli]
 topics: [agents]
-touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md]
+touches: [flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0143-flai-check-finds-board-order-outside-the-story-at-close-out.md, design/issues/summary.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md]
 after: [S-0351]
 agent:
   harness: claude-code
@@ -26,20 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 562
-  estimated: true
+  seconds: 1508
   turns:
     - day: 2026-10-12
-      ceremony: 2
-      hand_edits: 1
-      work: 27
+      ceremony: 3
+      hand_edits: 2
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 104
-      output: 581
-      cache_read: 6020850
-      cache_write: 296861
-      cost: 2.8741
+      input: 134
+      output: 60077
+      cache_read: 9218609
+      cache_write: 335637
+      cost: 5.4015
   strategic:
     - kind: orchestrator
       seconds: 189
@@ -103,3 +108,16 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 Forecast: 20m. `flai forecast` gave 12m, 85.5 s per unit over 11 small improvement stories, size 8. It is raised because the check moves from once per host to once per provider, with a fake `claude` in its tests.
 
 Cost of delay: 22.12 USD a week, as `flai cod` works it out: 20m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: d8cd9b6dd0edd68d1376b72b906cf669ce9df361
+- At: 2026-10-12T21:06:32Z
+
+Verdict: pass at d8cd9b6dd0edd68d1376b72b906cf669ce9df361; flai verify passed every step at that commit, the verifier matched all five criteria to the diff, and no key or secret value is in it.
+
+- 1: flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go
+- 2: flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go
+- 3: flai/internal/serve/claudecheck.go, flai/internal/serve/claudecheck_test.go
+- 4: flai/internal/serve/claudecheck_test.go
+- 5: design/system/flai-cli.md, design/system/agent-adapters.md, docs/users/flai.md, docs/operators/index.md

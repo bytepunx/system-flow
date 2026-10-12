@@ -31,7 +31,7 @@ usage:
       output: 262
       cache_read: 790920
       cache_write: 49392
-      cost: 0.3824
+      cost: 0.3829
 ---
 # T-1388 Each adapter states its capabilities, claude-code all of them and command none
 

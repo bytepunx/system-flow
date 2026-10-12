@@ -24,15 +24,15 @@ touches: [design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md
 after: [T-1426]
 usage:
   source: log
-  seconds: 39
+  seconds: 44
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 73
-      cache_read: 970976
-      cache_write: 13071
-      cost: 0.4477
+      input: 14
+      output: 6264
+      cache_read: 961249
+      cache_write: 34998
+      cost: 0.5632
 ---
 # T-1427 flai-cli.md describes the claude version check per provider
 

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 311
-      cache_read: 2694864
-      cache_write: 126797
-      cost: 1.2837
+      input: 40
+      output: 17963
+      cache_read: 2756317
+      cache_write: 100354
+      cost: 1.615
 ---
 # T-1426 The claude version check runs through the project's provider, records the provider per version, and skips a provider whose key is unset
 

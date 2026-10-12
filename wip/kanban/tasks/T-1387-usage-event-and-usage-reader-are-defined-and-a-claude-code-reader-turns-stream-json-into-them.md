@@ -23,15 +23,15 @@ tags: [cli]
 touches: [flai/internal/usage/event.go, flai/internal/usage/claudecode.go, flai/internal/usage/claudecode_test.go]
 usage:
   source: log
-  seconds: 485
+  seconds: 490
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 406
-      cache_read: 3008504
-      cache_write: 125716
-      cost: 1.4259
+      input: 75
+      output: 416
+      cache_read: 3146580
+      cache_write: 139120
+      cost: 1.4968
 ---
 # T-1387 usage.Event and usage.Reader are defined, and a Claude Code reader turns stream-json into them
 
