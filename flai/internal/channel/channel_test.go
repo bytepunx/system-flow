@@ -649,20 +649,25 @@ func allowedUnsigned(logs *lockedBuffer) []map[string]any {
 	return out
 }
 
-// S-0239: with the allowance a connection records the sides it admitted
-// without a stamp, flai then the dashboard, and warns once naming them; a
-// signed pair records and says nothing.
-func TestTheAllowanceRecordsAndWarnsOfTheUnsignedSides(t *testing.T) {
+// S-0239: a proven connection records its sides without a stamp, flai then
+// the dashboard, and warns once naming them. This flai records itself
+// whatever its own allowance, since the dashboard's let it through; the
+// dashboard only when this flai's allowance admitted it. A signed pair
+// records and says nothing.
+func TestAConnectionRecordsAndWarnsOfTheUnsignedSides(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		own       Release
 		dashboard bool // the dashboard answers with its signed stamp
+		allow     bool // this flai's allowance
 		want      []string
 	}{
-		{"a dashboard without a stamp", signedFlai, false, []string{UnsignedDashboard}},
-		{"a development build of flai", Release{}, true, []string{UnsignedFlai}},
-		{"both", Release{}, false, []string{UnsignedFlai, UnsignedDashboard}},
-		{"a signed pair", signedFlai, true, nil},
+		{"a dashboard without a stamp", signedFlai, false, true, []string{UnsignedDashboard}},
+		{"a development build of flai", Release{}, true, true, []string{UnsignedFlai}},
+		{"a development build of flai, its allowance off", Release{}, true, false, []string{UnsignedFlai}},
+		{"both", Release{}, false, true, []string{UnsignedFlai, UnsignedDashboard}},
+		{"a signed pair", signedFlai, true, true, nil},
+		{"a signed pair, the allowance off", signedFlai, true, false, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := newFakeDashboard(t, "s3cret")
@@ -671,7 +676,7 @@ func TestTheAllowanceRecordsAndWarnsOfTheUnsignedSides(t *testing.T) {
 			}
 			var logs lockedBuffer
 			c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys,
-				Release: tc.own, AllowUnsigned: allowed, Logger: slog.New(slog.NewJSONHandler(&logs, nil)),
+				Release: tc.own, AllowUnsigned: func() bool { return tc.allow }, Logger: slog.New(slog.NewJSONHandler(&logs, nil)),
 				PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
 			runClient(t, c)
 			waitProven(t, d)

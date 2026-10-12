@@ -734,11 +734,10 @@ func describeServeImage(v serve.ImageVerdict, from imageProvenance) string {
 		}
 		return fmt.Sprintf("  flai serve: dials it, signed (flaiover %s, %s)\n", v.Release, v.Digest)
 	case serve.ImageUnlisted:
-		digests := "no RepoDigests"
-		if len(v.RepoDigests) > 0 {
-			digests = strings.Join(v.RepoDigests, ", ")
+		if v.Allowed {
+			return fmt.Sprintf("  flai serve: dials it as unsigned is allowed: %s\n", unsignedImageOf(v))
 		}
-		return fmt.Sprintf("  flai serve: refused it: the dashboard runs an unsigned image %s (%s); it does not dial it\n", v.Image, digests)
+		return fmt.Sprintf("  flai serve: refused it: %s; it does not dial it\n", unsignedImageOf(v))
 	case serve.ImageNotMeasured:
 		return fmt.Sprintf("  flai serve: image not measured: %s; the release stamp alone is checked\n", v.Reason)
 	}

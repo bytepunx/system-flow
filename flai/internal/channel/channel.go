@@ -180,9 +180,11 @@ type State struct {
 	// dashboard's stamp verified.
 	PeerVersion string `json:"peer_version,omitempty"`
 	PeerSigned  bool   `json:"peer_signed,omitempty"`
-	// Unsigned are the sides of the open connection that Client.AllowUnsigned
-	// admitted without a release stamp, UnsignedFlai then UnsignedDashboard;
-	// none for a signed pair, and cleared when the connection ends (S-0239).
+	// Unsigned are the sides of the open connection that have no release
+	// stamp, UnsignedFlai then UnsignedDashboard: this flai whenever it has
+	// none, as the dashboard's allowance let it through, and the dashboard
+	// when Client.AllowUnsigned admitted it without one; none for a signed
+	// pair, and cleared when the connection ends (S-0239).
 	Unsigned []string `json:"unsigned,omitempty"`
 }
 
@@ -365,19 +367,16 @@ func refuses(p buildinfo.PeerStamp, allow bool) bool {
 	return true
 }
 
-// unsignedSides are the sides of a connection the allowance admitted without
-// a stamp: this flai when it has none, the dashboard when it sent none.
-// Without the allowance no connection has an unsigned side, since one would
-// have been refused.
+// unsignedSides are the sides of a proven connection that have no stamp:
+// this flai whenever it has none, whatever allow says, since the dashboard's
+// allowance let it through; the dashboard when it sent none, which only
+// allow, this side's allowance, admits.
 func (c *Client) unsignedSides(allow bool, peer buildinfo.PeerStamp) []string {
-	if !allow {
-		return nil
-	}
 	var out []string
 	if c.Release == (Release{}) {
 		out = append(out, UnsignedFlai)
 	}
-	if peer.State == buildinfo.StampMissing {
+	if allow && peer.State == buildinfo.StampMissing {
 		out = append(out, UnsignedDashboard)
 	}
 	return out

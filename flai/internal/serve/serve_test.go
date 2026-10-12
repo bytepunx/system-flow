@@ -690,7 +690,7 @@ func (lab *imageLab) unsignedWarns() []map[string]any {
 
 // S-0239: with the allowance in force for the project, by the host's setting
 // or by the manifest's over the host's, a local build with no RepoDigests is
-// dialled and still recorded as unlisted; a dashboard without a stamp is
+// dialled and recorded as unlisted and allowed; a dashboard without a stamp is
 // accepted; the unsigned sides reach the status; and one warn names them for
 // each connection, again for a new one.
 func TestServeDialsAnUnlistedImageWithTheAllowance(t *testing.T) {
@@ -711,8 +711,8 @@ func TestServeDialsAnUnlistedImageWithTheAllowance(t *testing.T) {
 			if c := st.Connections[lab.root]; !slices.Equal(c.Unsigned, want) || c.RefusedBy != "" || c.PeerSigned {
 				t.Errorf("connection %+v, want unsigned %v", c, want)
 			}
-			if v := st.Images[lab.root]; v.Kind != ImageUnlisted {
-				t.Errorf("verdict %+v, want unlisted though dialled", v)
+			if v := st.Images[lab.root]; v.Kind != ImageUnlisted || !v.Allowed {
+				t.Errorf("verdict %+v, want unlisted and allowed", v)
 			}
 			data, err := os.ReadFile(filepath.Join(string(lab.dir), "state.json"))
 			if err != nil {
@@ -755,6 +755,9 @@ func TestServeRefusesAnUnlistedImageWithoutTheAllowance(t *testing.T) {
 			if c := st.Connections[lab.root]; c.Connected || c.RefusedBy != channel.RefusedByFlai || c.Unsigned != nil {
 				t.Errorf("connection %+v, want refused by flai", c)
 			}
+			if v := st.Images[lab.root]; v.Allowed {
+				t.Errorf("verdict %+v, want not allowed", v)
+			}
 			if said := lab.unsignedWarns(); len(said) != 0 {
 				t.Errorf("logged %v", said)
 			}
@@ -770,6 +773,7 @@ func TestTheAllowanceTakesEffectAtTheNextDial(t *testing.T) {
 	lab.refusedAttempts(t, 1)
 	allow.Store(true)
 	lab.dash.Wait(t)
+	lab.status(t, "the verdict says the unlisted image was dialled as allowed", func(st Status) bool { return st.Images[lab.root].Allowed })
 }
 
 // S-0239: a signed pair with the allowance on records and logs nothing of it:
@@ -781,8 +785,8 @@ func TestASignedPairWithTheAllowanceShowsNothing(t *testing.T) {
 	if c := st.Connections[lab.root]; c.Unsigned != nil || !c.PeerSigned {
 		t.Errorf("connection %+v, want signed with no unsigned side", c)
 	}
-	if v := st.Images[lab.root]; v.Kind != ImageListed {
-		t.Errorf("verdict %+v, want listed", v)
+	if v := st.Images[lab.root]; v.Kind != ImageListed || v.Allowed {
+		t.Errorf("verdict %+v, want listed, not allowed", v)
 	}
 	if said := lab.unsignedWarns(); len(said) != 0 {
 		t.Errorf("a signed pair logged %v", said)

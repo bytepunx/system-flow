@@ -216,17 +216,17 @@ export function admitsPeerStamp(stamp: PeerStampCheck, allowUnsigned: boolean): 
 export type UnsignedSide = 'flai' | 'dashboard';
 
 /**
- * Which sides of an admitted connection the allowance let through unsigned: `flai` when it sent no
- * stamp, `dashboard` when this build has none to answer with. None while unsigned is not allowed.
+ * Which sides of an admitted connection have no stamp: `flai` when it sent none, which only this
+ * dashboard's allowance admits; `dashboard` whenever this build has none to answer with, allowed here
+ * or not, since flai's allowance let it through.
  */
 export function unsignedSides(
 	peer: PeerStampCheck,
 	ownStamp: HelloStamp | null,
 	allowUnsigned: boolean
 ): UnsignedSide[] {
-	if (!allowUnsigned) return [];
 	const sides: UnsignedSide[] = [];
-	if (peer.state === 'missing') sides.push('flai');
+	if (allowUnsigned && peer.state === 'missing') sides.push('flai');
 	if (ownStamp === null) sides.push('dashboard');
 	return sides;
 }

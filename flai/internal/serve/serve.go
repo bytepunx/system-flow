@@ -320,19 +320,17 @@ func (l *ImageLists) check(ctx context.Context, docker execx.Runner, url string)
 }
 
 // imageVerdicts are each project's last image verdict, by root, recorded by
-// the gate before each dial and reported in the status, and whether the
-// allowance was in force when it was judged.
+// the gate before each dial and reported in the status.
 type imageVerdicts struct {
-	mu      sync.Mutex
-	by      map[string]ImageVerdict
-	allowed map[string]bool
+	mu sync.Mutex
+	by map[string]ImageVerdict
 }
 
 // gate is what a project's client asks before each dial, reconnections
 // included (S-0238): it judges the image the dashboard container runs and
 // records the verdict. An unlisted image is refused, and the channel logs and
 // shows the refusal, unless the allowance is in force for the project, when
-// it is dialled and still recorded as unlisted (S-0239); a listed one is
+// it is dialled and recorded as unlisted and Allowed (S-0239); a listed one is
 // dialled, and so is one not measured, whose dashboard the release stamp
 // check alone then admits or refuses. Every retry of a refused dial looks
 // again, so a container restarted from a listed image, or a setting turned
@@ -341,26 +339,25 @@ func (iv *imageVerdicts) gate(o Options, e Entry) func(context.Context) error {
 	docker := dockerOf(o)
 	return func(ctx context.Context) error {
 		v := o.Images.check(ctx, docker, e.URL)
-		allowed := o.allowsUnsigned(e.Root)
-		if iv.record(e.Root, v, allowed) {
-			logVerdict(o.Logger, e, v, allowed)
+		v.Allowed = v.Kind == ImageUnlisted && o.allowsUnsigned(e.Root)
+		if iv.record(e.Root, v) {
+			logVerdict(o.Logger, e, v)
 		}
-		if v.Kind == ImageUnlisted && !allowed {
+		if v.Kind == ImageUnlisted && !v.Allowed {
 			return errors.New(unsignedImage(v))
 		}
 		return nil
 	}
 }
 
-// record keeps v as root's verdict, judged with the allowance as allowed, and
-// reports whether either differs from the last.
-func (iv *imageVerdicts) record(root string, v ImageVerdict, allowed bool) bool {
+// record keeps v as root's verdict and reports whether it differs from the
+// last.
+func (iv *imageVerdicts) record(root string, v ImageVerdict) bool {
 	iv.mu.Lock()
 	defer iv.mu.Unlock()
 	was, ok := iv.by[root]
-	wasAllowed := iv.allowed[root]
-	iv.by[root], iv.allowed[root] = v, allowed
-	return !ok || !sameVerdict(was, v) || wasAllowed != allowed
+	iv.by[root] = v
+	return !ok || !sameVerdict(was, v)
 }
 
 // of are the verdicts of roots that have one; nil when none has.
@@ -381,16 +378,17 @@ func (iv *imageVerdicts) of(roots []string) map[string]ImageVerdict {
 
 func sameVerdict(a, b ImageVerdict) bool {
 	return a.Kind == b.Kind && a.Container == b.Container && a.Image == b.Image && a.Version == b.Version &&
-		slices.Equal(a.RepoDigests, b.RepoDigests) && a.Digest == b.Digest && a.Release == b.Release && a.Reason == b.Reason
+		slices.Equal(a.RepoDigests, b.RepoDigests) && a.Digest == b.Digest && a.Release == b.Release && a.Reason == b.Reason &&
+		a.Allowed == b.Allowed
 }
 
 // logVerdict says a project's new verdict once. An unlisted one is said here
 // only when the allowance dials it; otherwise the channel logs the refusal it
 // causes, with this reason.
-func logVerdict(log *slog.Logger, e Entry, v ImageVerdict, allowed bool) {
+func logVerdict(log *slog.Logger, e Entry, v ImageVerdict) {
 	switch v.Kind {
 	case ImageUnlisted:
-		if allowed {
+		if v.Allowed {
 			log.Info("dashboard image is on no verified digest list; dialled as unsigned is allowed", "component", "serve", "root", e.Root, "key", e.Key,
 				"container", v.Container, "image", v.Image, "reason", v.Reason)
 		}
@@ -442,7 +440,7 @@ func Run(ctx context.Context, o Options) error {
 	draining := map[string]*running{}
 	var drains sync.WaitGroup
 	unavailable := map[string]string{}
-	images := &imageVerdicts{by: map[string]ImageVerdict{}, allowed: map[string]bool{}}
+	images := &imageVerdicts{by: map[string]ImageVerdict{}}
 	offered := &offers{o: o, running: map[string]*running{}, images: images}
 	var mu sync.Mutex
 	// Each Claude Code that flai serve may start an agent with is checked

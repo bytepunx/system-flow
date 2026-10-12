@@ -222,8 +222,9 @@ export type AgentStatus = {
 	flai?: string;
 	/** Whether the connected flai's release stamp verified (S-0237). */
 	signed?: boolean;
-	/** Which sides of the connection FLAIOVER_ALLOW_UNSIGNED let through unsigned (S-0239); absent for
-	 * a signed pair and while no flai is connected. */
+	/** Which sides of the connection have no stamp (S-0239): flai when FLAIOVER_ALLOW_UNSIGNED let it
+	 * through, this dashboard whenever its build has none; absent for a signed pair and while no flai
+	 * is connected. */
 	unsigned?: UnsignedSide[];
 	/** The last flai refused for this project as unsigned, until a signed one is adopted. */
 	refused?: Refusal;
@@ -246,8 +247,8 @@ export type ConnectedProject = {
 	candidate?: boolean;
 	/** Whether the connected flai's release stamp verified; set only while connected (S-0237). */
 	signed?: boolean;
-	/** Which sides the allowance let through unsigned; set only while connected, and only when any
-	 * is (S-0239). */
+	/** Which sides have no stamp, as release.ts unsignedSides says; set only while connected, and
+	 * only when any is (S-0239). */
 	unsigned?: UnsignedSide[];
 	/** The last flai refused for this project as unsigned, until a signed one is adopted. */
 	refused?: Refusal;
@@ -283,7 +284,7 @@ type ConnInfo = {
 	missing: string[];
 	candidate?: boolean;
 	signed: boolean;
-	/** Set only when the allowance let a side through unsigned. */
+	/** Set only when a side has no stamp, as release.ts unsignedSides says. */
 	unsigned?: UnsignedSide[];
 };
 

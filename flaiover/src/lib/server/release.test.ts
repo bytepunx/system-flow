@@ -289,8 +289,10 @@ describe('the development case (S-0239)', () => {
 		expect(unsignedSides(signed, own, true)).toEqual([]);
 	});
 
-	it('names no side while unsigned is not allowed', () => {
-		expect(unsignedSides(signed, null, false)).toEqual([]);
-		expect(unsignedSides(missing, null, false)).toEqual([]);
+	it('names its own missing stamp while unsigned is not allowed, since flai let it through, and never flai', () => {
+		expect(unsignedSides(signed, null, false)).toEqual(['dashboard']);
+		expect(unsignedSides(missing, null, false)).toEqual(['dashboard']);
+		expect(unsignedSides(missing, own, false)).toEqual([]);
+		expect(unsignedSides(signed, own, false)).toEqual([]);
 	});
 });

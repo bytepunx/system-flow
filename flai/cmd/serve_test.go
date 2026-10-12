@@ -305,7 +305,8 @@ var imageConnections = map[string]channel.State{
 }
 
 // S-0238: each verdict on the dashboard's image is one line, in the words
-// flai dashboard status uses; a kind this flai does not know is said by none.
+// flai dashboard status uses; an unlisted one dialled under the allowance
+// says so (S-0239); a kind this flai does not know is said by none.
 func TestImageVerdictLineSaysEachVerdict(t *testing.T) {
 	for _, c := range []struct {
 		v    serve.ImageVerdict
@@ -315,6 +316,10 @@ func TestImageVerdictLineSaysEachVerdict(t *testing.T) {
 		{imageVerdicts["/p/quay"], "image: the dashboard runs an unsigned image sha256:c0c0 (no RepoDigests); flai does not dial it"},
 		{serve.ImageVerdict{Kind: serve.ImageUnlisted, Image: "sha256:e4e4", RepoDigests: []string{"ghcr.io/x/flaiover@sha256:f5f5", "ghcr.io/x/flaiover@sha256:a6a6"}},
 			"image: the dashboard runs an unsigned image sha256:e4e4 (ghcr.io/x/flaiover@sha256:f5f5, ghcr.io/x/flaiover@sha256:a6a6); flai does not dial it"},
+		{serve.ImageVerdict{Kind: serve.ImageUnlisted, Image: "sha256:c0c0", Allowed: true},
+			"image: the dashboard runs an unsigned image sha256:c0c0 (no RepoDigests); dialled, as unsigned is allowed"},
+		{serve.ImageVerdict{Kind: serve.ImageUnlisted, Image: "sha256:e4e4", RepoDigests: []string{"ghcr.io/x/flaiover@sha256:f5f5"}, Allowed: true},
+			"image: the dashboard runs an unsigned image sha256:e4e4 (ghcr.io/x/flaiover@sha256:f5f5); dialled, as unsigned is allowed"},
 		{imageVerdicts["/p/harbour"], "image: not measured: docker is not on PATH where flai serve runs; the release stamp alone is checked"},
 		{serve.ImageVerdict{Kind: "weighed"}, ""},
 	} {
@@ -389,9 +394,9 @@ func TestServeStatusSaysEachProjectsImageVerdict(t *testing.T) {
 	}
 }
 
-// unsignedConnections are open connections dashboard.allow_unsigned admitted
-// with this flai unsigned, the dashboard unsigned, and both, and a signed
-// pair, as channel.Client records them (S-0239).
+// unsignedConnections are open connections an allowance admitted with this
+// flai unsigned, the dashboard unsigned, and both, and a signed pair, as
+// channel.Client records them (S-0239).
 var unsignedConnections = map[string]channel.State{
 	"/p/pier":    {URL: "http://127.0.0.1:4245", Connected: true, Since: "2026-10-12T17:00:02Z", PeerVersion: "1.2.4", PeerSigned: true, Unsigned: []string{channel.UnsignedFlai}},
 	"/p/dock":    {URL: "http://127.0.0.1:4244", Connected: true, Since: "2026-10-12T17:00:00Z", Unsigned: []string{channel.UnsignedDashboard}},

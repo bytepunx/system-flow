@@ -564,9 +564,9 @@ Before `flai serve` dials a dashboard, it asks Docker which image the dashboard'
 
 | Where | What it says |
 |-------|--------------|
-| `flai serve status` | Under each project: `image: signed, flaiover <release>, <digest>`, `image: the dashboard runs an unsigned image <image ID> (<RepoDigests>); flai does not dial it`, or `image: not measured: <reason>; the release stamp alone is checked`. A refused project's line reads `not connected: flai refused the dashboard: the dashboard runs an unsigned image …`, with the reason. `images` by project folder in `--json` |
+| `flai serve status` | Under each project: `image: signed, flaiover <release>, <digest>`, `image: the dashboard runs an unsigned image <image ID> (<RepoDigests>); flai does not dial it`, `image: the dashboard runs an unsigned image <image ID> (<RepoDigests>); dialled, as unsigned is allowed` ([Allowing unsigned builds](#allowing-unsigned-builds-s-0239)), or `image: not measured: <reason>; the release stamp alone is checked`. A refused project's line reads `not connected: flai refused the dashboard: the dashboard runs an unsigned image …`, with the reason. `images` by project folder in `--json` |
 | `flai host status` | The same image line under `serve`, after the project's folder; `images` in `--json` |
-| `flai dashboard status` | Below the digest line: `flai serve: dials it, signed`, `flai serve: refused it: the dashboard runs an unsigned image …; it does not dial it`, or `flai serve: image not measured: <reason>; the release stamp alone is checked`; `serve_image` in `--json` |
+| `flai dashboard status` | Below the digest line: `flai serve: dials it, signed`, `flai serve: refused it: the dashboard runs an unsigned image …; it does not dial it`, `flai serve: dials it as unsigned is allowed: the dashboard runs an unsigned image …`, or `flai serve: image not measured: <reason>; the release stamp alone is checked`; `serve_image` in `--json` |
 
 What to do with an unsigned image: run a signed release with `flai dashboard upgrade`, or pin one with `flai config set dashboard.tag X.Y.Z` and then `flai dashboard upgrade`. If nobody meant to change the image, find out who restarted the container from another one, or moved its tag, before you run it again. `flai dashboard --build` and `make flaiover-image` build an image with no `RepoDigests`, so flai does not dial it unless you allow unsigned builds ([Allowing unsigned builds](#allowing-unsigned-builds-s-0239)). The [flai guide](../users/flai.md#flai-serve-flai-on-the-host-for-the-dashboards) has each line and what it means.
 
@@ -584,7 +584,7 @@ What it lets through:
 
 | Who | Without the allowance | With it |
 |-----|-----------------------|---------|
-| `flai serve`, before it dials | Does not dial an image no signed list names | Dials it. `serve.log` says so once, at `info`: `dashboard image is on no verified digest list; dialled as unsigned is allowed` |
+| `flai serve`, before it dials | Does not dial an image no signed list names | Dials it. `serve.log` says so once, at `info`: `dashboard image is on no verified digest list; dialled as unsigned is allowed`. `flai serve status` says `image: the dashboard runs an unsigned image <image ID> (<RepoDigests>); dialled, as unsigned is allowed`, and `flai dashboard status` says `flai serve: dials it as unsigned is allowed: the dashboard runs an unsigned image <image ID> (<RepoDigests>)`; `allowed` in the verdict in `--json` |
 | `flai serve`, on the connection | Refuses a dashboard that sends no stamp | Accepts it |
 | The dashboard, on the connection | Refuses a flai that sends no stamp | Accepts it, when its container was started with `FLAIOVER_ALLOW_UNSIGNED=1` |
 
@@ -609,7 +609,7 @@ How each side learns it:
     unsigned not allowed: flaiover already runs, started without FLAIOVER_ALLOW_UNSIGNED=1, which only a start gives; set dashboard.allow_unsigned and run flai dashboard restart
   ```
 
-Allowed is never silent. Each connection it lets through names its unsigned sides: `flai`, when the flai on the host has no release stamp, and `dashboard`, when the dashboard sent none. Both can be unsigned at once: `flai and dashboard`. A signed pair shows nothing, with the setting on or off: the allowance permits, it does not downgrade.
+Allowed is never silent. Each connection it lets through names its unsigned sides: `flai`, when the flai on the host has no release stamp, and `dashboard`, when the dashboard sent none. Both can be unsigned at once: `flai and dashboard`. A side without a stamp names itself whether or not its own allowance is on, since the other side's let it through; it names the other side only when its own allowance admitted it. So flai and the dashboard name the same sides. A signed pair shows nothing, with the setting on or off: the allowance permits, it does not downgrade.
 
 | Where | What it says |
 |-------|--------------|

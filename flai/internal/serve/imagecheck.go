@@ -43,6 +43,9 @@ type ImageVerdict struct {
 	Digest      string    `json:"digest,omitempty"`       // listed: the digest, sha256:…, a verified list names
 	Release     string    `json:"release,omitempty"`      // listed: the flaiover release whose verified list names Digest
 	Reason      string    `json:"reason,omitempty"`       // unlisted and not measured: why, in words for a log and a status line
+	// Allowed is set on an unlisted image dialled because dashboard.allow_unsigned
+	// is in force for the project (S-0239).
+	Allowed bool `json:"allowed,omitempty"`
 }
 
 // ListFetcher fetches version's digest list from its flaiover release,

@@ -629,8 +629,8 @@ func TestDashboardStatusShowsTheDigestAndItsRelease(t *testing.T) {
 }
 
 // S-0238: beside the digest, status says what flai serve did with the image at
-// its last dial: dials it, signed; refused it, unsigned; or not measured, with
-// why. The verdict is this project's, else any project's, as one container
+// its last dial: dials it, signed; refused it, unsigned; dials it, unsigned,
+// as unsigned is allowed (S-0239); or not measured, with why. The verdict is this project's, else any project's, as one container
 // serves them all; there is none while flai serve does not run.
 func TestDashboardStatusSaysWhatFlaiServeDidWithTheImage(t *testing.T) {
 	root := dashboardProject(t)
@@ -698,6 +698,12 @@ func TestDashboardStatusSaysWhatFlaiServeDidWithTheImage(t *testing.T) {
 			lines:   localLine + "  flai serve: refused it: the dashboard runs an unsigned image " + id + " (no RepoDigests); it does not dial it\n",
 		},
 		{
+			name:    "unlisted, dialled as unsigned is allowed",
+			digests: []string{},
+			images:  map[string]serve.ImageVerdict{root: {Kind: serve.ImageUnlisted, Image: id, Reason: "its image has no RepoDigests", Allowed: true}},
+			lines:   localLine + "  flai serve: dials it as unsigned is allowed: the dashboard runs an unsigned image " + id + " (no RepoDigests)\n",
+		},
+		{
 			name:   "not measured",
 			images: map[string]serve.ImageVerdict{root: {Kind: serve.ImageNotMeasured, Reason: "docker is not on PATH where flai serve runs"}},
 			lines:  signedLine + "  flai serve: image not measured: docker is not on PATH where flai serve runs; the release stamp alone is checked\n",
@@ -715,7 +721,7 @@ func TestDashboardStatusSaysWhatFlaiServeDidWithTheImage(t *testing.T) {
 			want = tc.images["/elsewhere"]
 		}
 		if v == nil || v.Kind != want.Kind || v.Image != want.Image || !slices.Equal(v.RepoDigests, want.RepoDigests) ||
-			v.Digest != want.Digest || v.Release != want.Release || v.Reason != want.Reason {
+			v.Digest != want.Digest || v.Release != want.Release || v.Reason != want.Reason || v.Allowed != want.Allowed {
 			t.Errorf("%s: serve_image %+v, want %+v", tc.name, v, want)
 		}
 		if !strings.Contains(out, tc.lines) || strings.Count(out, "flai serve:") != 1 {

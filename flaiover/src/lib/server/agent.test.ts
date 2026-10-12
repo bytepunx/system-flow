@@ -860,6 +860,25 @@ describe('the registry under FLAIOVER_ALLOW_UNSIGNED', () => {
 		});
 	});
 
+	it('records the dashboard as unsigned with the variable unset when this build has no stamp, and warns once', async () => {
+		const warn = vi.spyOn(log(), 'warn');
+		const { registry, hub, url } = await start(undefined, { stamp: null });
+		const signed = await connect(url, KEY);
+		cleanup.push(() => signed.ws.terminate());
+		expect(hub.status()).toMatchObject({ connected: true, signed: true, unsigned: ['dashboard'] });
+		expect(registry.list()[0].unsigned).toEqual(['dashboard']);
+		expect(warn.mock.calls.filter(warnsUnsigned)).toEqual([
+			[
+				expect.objectContaining({
+					component: 'agent',
+					project: 'harbour',
+					unsigned: ['dashboard']
+				}),
+				expect.any(String)
+			]
+		]);
+	});
+
 	it('records nothing for a signed pair when it is 1, and warns nothing', async () => {
 		const warn = vi.spyOn(log(), 'warn');
 		const { registry, hub, url } = await start('1');

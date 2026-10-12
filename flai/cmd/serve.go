@@ -330,8 +330,8 @@ func (a *app) printServeStatus() error {
 const unsignedImagePhrase = "the dashboard runs an unsigned image"
 
 // printUnsignedAllowed prints, under root's project in flai serve status,
-// which sides of its open connection dashboard.allow_unsigned admitted
-// without a release stamp; nothing for a signed pair or no connection.
+// which sides of its open connection have no release stamp, as an allowance
+// admitted them; nothing for a signed pair or no connection.
 func (a *app) printUnsignedAllowed(st serveStatus, root string) {
 	if !st.Running {
 		return
@@ -341,9 +341,10 @@ func (a *app) printUnsignedAllowed(st serveStatus, root string) {
 	}
 }
 
-// allowedUnsigned are the sides of an open connection that
-// dashboard.allow_unsigned admitted without a release stamp (S-0239); none
-// for a signed pair, or a connection not open.
+// allowedUnsigned are the sides of an open connection that have no release
+// stamp (S-0239): flai whenever it has none, as the dashboard's allowance let
+// it through, and the dashboard when dashboard.allow_unsigned admitted it;
+// none for a signed pair, or a connection not open.
 func allowedUnsigned(c channel.State) []string {
 	if !c.Connected {
 		return nil
@@ -376,21 +377,31 @@ func (a *app) printImageVerdict(st serveStatus, root string) {
 
 // imageVerdictLine says in one line what flai serve concluded about the
 // image the dashboard container runs (S-0238): signed, unsigned and not
-// dialled, or not measured; "" for a kind this flai does not know.
+// dialled, unsigned and dialled as allowed (S-0239), or not measured; "" for
+// a kind this flai does not know.
 func imageVerdictLine(v serve.ImageVerdict) string {
 	switch v.Kind {
 	case serve.ImageListed:
 		return fmt.Sprintf("image: signed, flaiover %s, %s", v.Release, v.Digest)
 	case serve.ImageUnlisted:
-		digests := "no RepoDigests"
-		if len(v.RepoDigests) > 0 {
-			digests = strings.Join(v.RepoDigests, ", ")
+		if v.Allowed {
+			return fmt.Sprintf("image: %s; dialled, as unsigned is allowed", unsignedImageOf(v))
 		}
-		return fmt.Sprintf("image: %s %s (%s); flai does not dial it", unsignedImagePhrase, v.Image, digests)
+		return fmt.Sprintf("image: %s; flai does not dial it", unsignedImageOf(v))
 	case serve.ImageNotMeasured:
 		return fmt.Sprintf("image: not measured: %s; the release stamp alone is checked", v.Reason)
 	}
 	return ""
+}
+
+// unsignedImageOf names v, an unlisted image, and its RepoDigests:
+// "the dashboard runs an unsigned image <image> (<digests>)".
+func unsignedImageOf(v serve.ImageVerdict) string {
+	digests := "no RepoDigests"
+	if len(v.RepoDigests) > 0 {
+		digests = strings.Join(v.RepoDigests, ", ")
+	}
+	return fmt.Sprintf("%s %s (%s)", unsignedImagePhrase, v.Image, digests)
 }
 
 // refusal says which side refused the other as unsigned at a connection's
