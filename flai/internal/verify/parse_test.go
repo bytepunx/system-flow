@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -110,6 +111,42 @@ func TestPlainIsTheLastLinesAndTheExitStatus(t *testing.T) {
 	got = parse(Tier{Name: "lint", Format: FormatGolangciJSON}, output{err: errors.New(`exec: "golangci-lint": executable file not found in $PATH`)}, env{})
 	if len(got) != 1 || got[0].Message != `exec: "golangci-lint": executable file not found in $PATH` {
 		t.Errorf("a tier that cannot start: %s", show(got))
+	}
+}
+
+func TestPlainNamesTheFailuresAheadOfItsLastLines(t *testing.T) {
+	fails := []string{
+		"--- FAIL: TestX (0.00s)",
+		"    x_test.go:7: Add(2, 3) = -1, want 5",
+		"        the sum is wrong",
+	}
+	pkg := "FAIL\texample.com/pkg\t0.01s"
+	lines := slices.Concat([]string{"ok  \texample.com/a\t0.01s"}, fails, []string{"FAIL", pkg})
+	for i := range 25 {
+		lines = append(lines, fmt.Sprintf("ok  \texample.com/p%d\t0.01s", i))
+	}
+	lines = append(lines, "FAIL")
+	got := parse(Tier{Name: "test"}, output{combined: strings.Join(lines, "\n") + "\n", exit: 1}, env{})
+	kept := slices.Concat(fails, []string{pkg}, lines[len(lines)-plainLines:])
+	want := []Finding{{Name: "test", Message: strings.Join(kept, "\n") + "\nexit status 1"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("a failing package ahead of the last lines: %s", show(got))
+	}
+
+	short := strings.Join(fails, "\n") + "\n" + pkg
+	got = parse(Tier{Name: "test"}, output{combined: short, exit: 1}, env{})
+	if want := short + "\nexit status 1"; len(got) != 1 || got[0].Message != want {
+		t.Errorf("failures within the last lines are not repeated: %s", show(got))
+	}
+
+	var many []string
+	for i := range failLines + 5 {
+		many = append(many, fmt.Sprintf("--- FAIL: Test%d (0.00s)", i))
+	}
+	got = parse(Tier{Name: "test"}, output{combined: strings.Join(many, "\n") + strings.Repeat("\nok", plainLines), exit: 1}, env{})
+	want = []Finding{{Name: "test", Message: strings.Join(many[:failLines], "\n") + "\n… 5 more lines" + strings.Repeat("\nok", plainLines) + "\nexit status 1"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("more failures than are kept: %s", show(got))
 	}
 }
 

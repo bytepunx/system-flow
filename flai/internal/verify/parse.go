@@ -13,6 +13,10 @@ import (
 // plainLines is how many of a command's last lines a plain finding keeps.
 const plainLines = 20
 
+// failLines is how many lines naming a failure, from ahead of its last
+// lines, a plain finding keeps.
+const failLines = 20
+
 // messageLines is how many lines a parsed finding's message keeps.
 const messageLines = 10
 
@@ -61,18 +65,39 @@ func parse(t Tier, out output, e env) []Finding {
 	return got
 }
 
-// plain is a tier's failure told by its last lines and its exit status, or
-// by why it could not run.
+// plain is a tier's failure told by the lines naming a failure ahead of its
+// last lines, its last lines, and its exit status, or by why it could not run.
 func plain(name string, out output) Finding {
-	tail := lastLines(out.combined, plainLines)
+	lines := strings.Split(strings.TrimRight(out.combined, " \t\r\n"), "\n")
+	head := max(len(lines)-plainLines, 0)
+	var parts []string
+	if fails := failures(lines[:head]); len(fails) > 0 {
+		parts = append(parts, firstLines(fails, failLines))
+	}
+	if tail := strings.Join(lines[head:], "\n"); tail != "" {
+		parts = append(parts, tail)
+	}
 	status := fmt.Sprintf("exit status %d", out.exit)
 	if out.err != nil {
 		status = out.err.Error()
 	}
-	if tail != "" {
-		status = tail + "\n" + status
+	return Finding{Name: name, Message: strings.Join(append(parts, status), "\n")}
+}
+
+// failures are the lines of go test's output that name a failure: each
+// --- FAIL line with the indented lines under it, each FAIL line naming a
+// package, and each panic line.
+func failures(lines []string) []string {
+	var got []string
+	under := false
+	for _, line := range lines {
+		t := strings.TrimSpace(line)
+		under = strings.HasPrefix(t, "--- FAIL: ") || under && strings.HasPrefix(line, "    ")
+		if under || strings.HasPrefix(line, "FAIL\t") || strings.HasPrefix(t, "panic:") {
+			got = append(got, line)
+		}
 	}
-	return Finding{Name: name, Message: status}
+	return got
 }
 
 // parseGofmt is a finding for each file gofmt -l lists, after one for each
@@ -155,9 +180,14 @@ func lastLines(s string, n int) string {
 // clip is s trimmed to its first messageLines lines, with a note of how
 // many more there were.
 func clip(s string) string {
-	lines := strings.Split(strings.TrimSpace(s), "\n")
-	if len(lines) <= messageLines {
+	return firstLines(strings.Split(strings.TrimSpace(s), "\n"), messageLines)
+}
+
+// firstLines are the first n of lines, with a note of how many more there
+// were.
+func firstLines(lines []string, n int) string {
+	if len(lines) <= n {
 		return strings.Join(lines, "\n")
 	}
-	return strings.Join(lines[:messageLines], "\n") + fmt.Sprintf("\n… %d more lines", len(lines)-messageLines)
+	return strings.Join(lines[:n], "\n") + fmt.Sprintf("\n… %d more lines", len(lines)-n)
 }
