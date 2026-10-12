@@ -6,7 +6,7 @@ status: open
 count: 1
 first_reported: 2026-10-06T19:45:52Z
 last_reported: 2026-10-06T19:45:52Z
-updated: 2026-10-06T19:45:52Z
+updated: 2026-10-12T16:52:42Z
 ---
 
 # I-0091 A thread entry's author is whatever --by says, so an agent with a shell could answer a permission thread as the owner
@@ -26,3 +26,5 @@ Found reviewing S-0284, not seen happening. permission_prompt lets a write under
 ## Remediation
 
 Directions to weigh: flai refuses a `--by` that is not the session's own name when `FLAI_AGENT` is set, so that an agent's entries always carry its name; and `flai guard` refuses a story's agent `flai thread reply`, `resolve`, and `confirm` with a `--by` at all. Either leaves the operator's own session, where `FLAI_AGENT` is unset, free to name itself. The dashboard already writes the operator's name itself.
+
+Story S-0369 remediates this issue, created from it at 2026-10-12T16:52:42Z.
