@@ -12,8 +12,8 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/ask"
 	"github.com/bytepunx/system-flow/flai/internal/protected"
-	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -42,9 +42,6 @@ var permissionPoll = time.Second
 // (ADR-0124): below Claude Code's idle timeout for an MCP call, 30 minutes
 // over stdio and 5 over HTTP (I-0103). Tests shorten it.
 var permissionWait = 4 * time.Minute
-
-// permissionWords are the first words of an answer that allow the write.
-var permissionWords = []string{"allow", "yes", "approve", "approved", "ok"}
 
 // PermissionIn is Claude Code's permission request.
 type PermissionIn struct {
@@ -221,155 +218,23 @@ func orQuoted(name string) string {
 	return name
 }
 
-// askOperator asks on a thread on the story showing the change for an answer
-// from the story's owner or the project's owner (ADR-0097; anyone but the
-// agent when neither is named), and resolves the thread with what was
-// decided. The agent's own entry and another agent's are not answers. It asks
-// on the open thread in which the agent asked the same request before, and
-// opens one only when there is none, so an answer given after an earlier
-// call stopped waiting is taken (ADR-0124). Unanswered within permissionWait,
-// or when the session ends, it refuses the write and leaves the thread open.
+// askOperator maps Claude Code's request onto the hold-and-ask (ADR-0130),
+// bounded by permissionWait, and its answer onto Claude Code's decision.
 func (s *server) askOperator(ctx context.Context, story *workitem.Item, in PermissionIn, rel string) PermissionOut {
-	request := permissionRequest(s.agent, story.ID, story.Owner, s.repo.Manifest.Owner, in, rel)
-	th, asked, err := s.askedBefore(story.ID, request)
-	if err != nil {
-		return deny("could not read %s's threads for an earlier ask of this write: %v", story.ID, err)
+	asker := ask.Asker{Repo: s.repo, Now: s.now, Poll: permissionPoll, Closing: s.closing, Logger: s.logger}
+	if ok, why := asker.Hold(ctx, permissionRequest(s.agent, story, in, rel), permissionWait); !ok {
+		return deny("%s", why)
 	}
-	if th == nil {
-		th, err = threads.New(s.repo, threads.NewOptions{
-			Title:  fmt.Sprintf("Allow %s %s?", in.ToolName, rel),
-			On:     story.ID,
-			Author: s.agent,
-			Text:   request,
-			Now:    s.now(),
-		})
-		if err != nil {
-			return deny("could not ask the operator on a thread: %v", err)
-		}
-		_ = s.mirror(th)
-		// Only entries after the opening one can answer: the content shown may
-		// itself hold lines that read as entries.
-		asked = len(th.Entries())
-	}
-	answer, ok := s.awaitAnswer(ctx, th.ID, asked, answerers(story.Owner, s.repo.Manifest.Owner))
-	if !ok {
-		return deny("No answer on %s yet, so %s was not written. The thread stays open, and the owner's answer is taken when you make the same write again. Go on with work that does not need this write. When nothing else is left, write your narrative's Current state and Next steps naming %s, and end: flai serve starts you again when it is answered.", th.ID, rel, th.ID)
-	}
-	if allowed(answer.Text) {
-		s.settle(th.ID, fmt.Sprintf("allowed by %s: %s may %s %s", answer.Author, s.agent, in.ToolName, rel))
-		return allow(in.Input)
-	}
-	s.settle(th.ID, fmt.Sprintf("refused by %s: %s was not written", answer.Author, rel))
-	return deny("the operator refused: %s", answer.Text)
+	return allow(in.Input)
 }
 
-// answerers are who may answer a permission thread: the story's owner and the
-// project's owner, those named, each once (I-0081). None means anyone.
-func answerers(owner, projectOwner string) []string {
-	var who []string
-	for _, name := range []string{owner, projectOwner} {
-		if name != "" && !slices.Contains(who, name) {
-			who = append(who, name)
-		}
-	}
-	return who
-}
+// claudeProtects is why a person must answer, as Claude Code has it.
+const claudeProtects = "Claude Code protects the path and does not write it without a person's approval."
 
-// askedBefore is the open thread on the story whose opening entries are the
-// agent's request, the same tool, path, and input, and how many entries that
-// request reads as; nil when the agent has not asked it.
-func (s *server) askedBefore(storyID, request string) (*threads.Thread, int, error) {
-	all, err := threads.For(s.repo, storyID)
-	if err != nil {
-		return nil, 0, err
-	}
-	for _, th := range all {
-		if !th.Open() {
-			continue
-		}
-		opening := openingEntries(th.Created, s.agent, request)
-		if entries := th.Entries(); len(entries) >= len(opening) && sameEntries(entries[:len(opening)], opening) {
-			return th, len(opening), nil
-		}
-	}
-	return nil, 0, nil
-}
-
-// openingEntries are the entries a thread that author opened at created with
-// text reads as, its body opening as threads.New writes it: one, unless the
-// content shown holds lines that read as entries.
-func openingEntries(created, author, text string) []threads.Entry {
-	body := fmt.Sprintf("### %s %s\n%s\n", created, author, strings.TrimSpace(text))
-	return (&threads.Thread{Body: body}).Entries()
-}
-
-func sameEntries(a, b []threads.Entry) bool {
-	return slices.EqualFunc(a, b, func(x, y threads.Entry) bool {
-		return x.At == y.At && x.Author == y.Author && x.Text == y.Text && x.Recommendation == y.Recommendation
-	})
-}
-
-// awaitAnswer reads the thread, at once and then every permissionPoll, until
-// an entry after the first asked ones is by one of who, never the agent (by
-// anyone but the agent when who is empty), the session ends, or
-// permissionWait passes.
-func (s *server) awaitAnswer(ctx context.Context, id string, asked int, who []string) (threads.Entry, bool) {
-	bound := time.NewTimer(permissionWait)
-	defer bound.Stop()
-	tick := time.NewTicker(permissionPoll)
-	defer tick.Stop()
-	for {
-		// An error is the thread being written, or gone for a moment: it is
-		// read again on the next tick.
-		if th, err := threads.Get(s.repo, id); err == nil {
-			if answer, ok := s.answerOn(th, asked, who); ok {
-				return answer, true
-			}
-		}
-		select {
-		case <-ctx.Done():
-			return threads.Entry{}, false
-		case <-s.closing: // nil, and so never ready, unless the server was given one
-			return threads.Entry{}, false
-		case <-bound.C:
-			return threads.Entry{}, false
-		case <-tick.C:
-		}
-	}
-}
-
-// answerOn is the first entry after the first asked ones by one of who, never
-// the agent (by anyone but the agent when who is empty).
-func (s *server) answerOn(th *threads.Thread, asked int, who []string) (threads.Entry, bool) {
-	entries := th.Entries()
-	for i := asked; i < len(entries); i++ {
-		if a := entries[i].Author; a != s.agent && (len(who) == 0 || slices.Contains(who, a)) {
-			return entries[i], true
-		}
-	}
-	return threads.Entry{}, false
-}
-
-// settle resolves the thread as the agent, unless the operator resolved it.
-func (s *server) settle(id, reason string) {
-	th, err := threads.Get(s.repo, id)
-	if err != nil || !th.Open() {
-		return
-	}
-	if th, err = threads.Resolve(s.repo, id, s.agent, reason, s.now()); err == nil {
-		_ = s.mirror(th)
-	} else if s.logger != nil {
-		s.logger.Warn("permission thread not resolved", "component", "mcp", "agent", s.agent, "thread", id, "err", err.Error())
-	}
-}
-
-// allowed reports whether an answer's first word lets the write through.
-func allowed(text string) bool {
-	words := strings.Fields(strings.ToLower(text))
-	if len(words) == 0 {
-		return false
-	}
-	return slices.Contains(permissionWords, strings.TrimRight(words[0], ".,;:!?"))
+// permissionRequest is Claude Code's request for the agent to write rel in
+// the story's worktree, with the change its input would make.
+func permissionRequest(agent string, story *workitem.Item, in PermissionIn, rel string) ask.Request {
+	return ask.Request{Story: story.ID, Owner: story.Owner, Agent: agent, Tool: in.ToolName, Path: rel, Why: claudeProtects, Change: changeText(in)}
 }
 
 var backticks = regexp.MustCompile("`+")
@@ -401,30 +266,10 @@ func str(m map[string]any, key string) string {
 	return v
 }
 
-// answeredBy names who may answer, as the request says it: the story's owner,
-// and the project's owner too when the two differ; empty when neither is named.
-func answeredBy(owner, projectOwner string) string {
-	switch {
-	case owner != "" && projectOwner != "" && owner != projectOwner:
-		return fmt.Sprintf("%s, the story's owner, or %s, the project's owner", owner, projectOwner)
-	case owner != "":
-		return owner + ", the story's owner"
-	case projectOwner != "":
-		return projectOwner + ", the project's owner"
-	}
-	return ""
-}
-
-// permissionRequest is the thread's first entry: who asks, why a person must
-// answer, who may and how, and the change itself.
-func permissionRequest(agent, story, owner, projectOwner string, in PermissionIn, rel string) string {
+// changeText shows what the tool call would write: the whole content, each
+// edit's old and new text, or the notebook cell's source.
+func changeText(in PermissionIn) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s asks to %s `%s` in %s's worktree. Claude Code protects the path and does not write it without a person's approval.\n\n", agent, in.ToolName, rel, story)
-	if who := answeredBy(owner, projectOwner); who != "" {
-		fmt.Fprintf(&b, "Reply `allow`, as %s, to let it write. Anything else refuses it, and your words go back to the agent as the reason; a reply by anyone else is not an answer.\n\n", who)
-	} else {
-		b.WriteString("Reply `allow` to let it write. Anything else refuses it, and your words go back to the agent as the reason.\n\n")
-	}
 	switch in.ToolName {
 	case "Write":
 		fmt.Fprintf(&b, "The whole content it would write:\n\n%s\n", fenced(str(in.Input, "content")))

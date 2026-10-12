@@ -14,6 +14,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/ask"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -471,11 +472,11 @@ func TestPermissionRequestNamesWhoMayAnswer(t *testing.T) {
 		{"", "alex", "Reply `allow`, as alex, the project's owner, to let it write.", []string{"alex"}},
 		{"", "", "Reply `allow` to let it write.", nil},
 	} {
-		text := permissionRequest("claude", "S-0001", c.owner, c.project, PermissionIn{ToolName: "Write"}, ".claude/x")
+		text := permissionRequest("claude", &workitem.Item{ID: "S-0001", Owner: c.owner}, PermissionIn{ToolName: "Write"}, ".claude/x").Text(c.project)
 		if !strings.Contains(text, c.says) {
 			t.Errorf("owners %q and %q: the request does not say %q:\n%s", c.owner, c.project, c.says, text)
 		}
-		if who := answerers(c.owner, c.project); !reflect.DeepEqual(who, c.who) {
+		if who := ask.Answerers(c.owner, c.project); !reflect.DeepEqual(who, c.who) {
 			t.Errorf("owners %q and %q: answerers %q, want %q", c.owner, c.project, who, c.who)
 		}
 	}
@@ -712,7 +713,7 @@ func TestPermissionPromptLeavesTheThreadOpenWhenTheSessionEnds(t *testing.T) {
 
 func TestAllowedReadsTheFirstWord(t *testing.T) {
 	for text, want := range map[string]bool{"allow": true, "Yes!": true, "OK, go": true, "approved.": true, "allowed": false, "no": false, "": false, "not ok": false} {
-		if allowed(text) != want {
+		if ask.Allowed(text) != want {
 			t.Errorf("allowed(%q) = %v", text, !want)
 		}
 	}
