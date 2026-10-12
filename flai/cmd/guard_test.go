@@ -243,6 +243,40 @@ func TestGuardRefusesASubAgentsWriteUnderClaudeWhileAutoApproveIsOff(t *testing.
 	}
 }
 
+// I-0052, S-0368, ADR-0141: flai guard refuses a read-only sub-agent, one
+// whose definition in the project names neither Edit nor Write, a shell
+// command that writes a file outside the temporary folder, with exit 2; a
+// write to /tmp, and a general-purpose sub-agent's sed -i, pass.
+func TestGuardRefusesAReadOnlySubAgentsShellWrite(t *testing.T) {
+	root := tempProject(t)
+	agents := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(agents, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agents, "verifier.md"), []byte("---\nname: verifier\ntools: Read, Grep, Glob, Bash\n---\n\nYou review.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bash := func(agent, command string) string {
+		in, _ := json.Marshal(map[string]any{"tool_name": "Bash", "tool_input": map[string]string{"command": command}, "agent_type": agent, "agent_id": "a1"})
+		return string(in)
+	}
+	for _, c := range []struct {
+		in   string
+		code int
+		err  string
+	}{
+		{bash("verifier", "sed -i s/a/b/ x.go"), 2, `a sub-agent (verifier) cannot run "sed -i s/a/b/ x.go": it reads, and it writes no file but under the temporary folder (ADR-0141); this writes x.go. Put the correction in your final message`},
+		{bash("Explore", "echo x > notes.md"), 2, "this writes notes.md"},
+		{bash("verifier", "go test ./... > /tmp/out 2>&1"), 0, ""},
+		{bash("general-purpose", "sed -i s/a/b/ x.go"), 0, ""},
+	} {
+		_, errOut, code := runStdin(t, root, c.in, "guard")
+		if code != c.code || (c.err == "" && errOut != "") || !strings.Contains(errOut, c.err) {
+			t.Errorf("%s: code %d, stderr %q", c.in, code, errOut)
+		}
+	}
+}
+
 // S-0208, TH-0096, S-0218, S-0299: this repository's settings and the
 // template's run the guard before Bash and flai's MCP tools in every session,
 // and before Edit, MultiEdit, Write, and NotebookEdit in a planner's, an

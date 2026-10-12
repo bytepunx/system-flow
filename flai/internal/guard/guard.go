@@ -25,6 +25,13 @@
 // The sub-agent puts the file's content in its final message instead, for
 // the story's agent to write.
 //
+// A read-only sub-agent, one whose definition grants neither Edit nor Write,
+// as the explorer's and the verifier's do, or Claude Code's Explore or Plan,
+// writes no file through the shell but under the temporary folder (S-0368,
+// ADR-0141): a redirection, tee, sed -i, perl -i, cp, mv, rm, and the like,
+// or a formatter's write flag, to any other target is refused it. A task
+// sub-agent edits files by design, and writes through the shell as before.
+//
 // A planner session, one flai serve starts with the role plan, is held to
 // planning (strategic-agents.md): its own calls, which carry no agent ID,
 // may read, write work items and threads through flai, and move an item to
@@ -503,6 +510,11 @@ const (
 // AutoApprove says the operator enabled the project's auto-approve host
 // action; while it is off a sub-agent's write of a file in a .claude/ folder
 // is refused (S-0299).
+//
+// ReadOnly says whether a sub-agent of a type is read-only, as ReadOnlyAgents
+// reads it from a project's definitions; such a sub-agent's shell command
+// that writes a file outside the temporary folder is refused (S-0368,
+// ADR-0141). A nil ReadOnly holds no sub-agent read-only.
 type Guard struct {
 	Commands    []string
 	Role        string
@@ -515,6 +527,7 @@ type Guard struct {
 	Running     func() ([]SubAgent, error)
 	ThreadOpen  func() (bool, error)
 	AutoApprove bool
+	ReadOnly    func(agentType string) bool
 }
 
 // ThreadOpener says who opened the thread with an ID in r's wip/threads, in
@@ -1026,9 +1039,17 @@ func (g Guard) Decide(e Event) Refusal {
 	if e.ToolName != "Bash" {
 		return Refusal{}
 	}
-	for _, words := range commands(e.ToolInput.Command) {
-		if why, _ := g.refuse(words, subAgent); why != "" {
-			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. Put what you need done in your final message; the story's agent does it.", who, strings.Join(words, " "), why)}
+	readOnly := g.ReadOnly != nil && g.ReadOnly(e.AgentType)
+	for _, c := range parse(e.ToolInput.Command) {
+		run := strings.Join(c.words, " ")
+		if why, _ := g.refuse(c.words, subAgent); why != "" {
+			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. Put what you need done in your final message; the story's agent does it.", who, run, why)}
+		}
+		if !readOnly {
+			continue
+		}
+		if file := written(c); file != "" {
+			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot run %q: it reads, and it writes no file but under the temporary folder (ADR-0141); this writes %s. Put the correction in your final message; the story's agent makes it.", who, run, file)}
 		}
 	}
 	return Refusal{}
@@ -1404,28 +1425,81 @@ type heredoc struct {
 // find each program a line runs and the words after it. A heredoc's body is
 // input, not commands, so it is left out, unless a shell is named on the
 // line that opens it, as in bash <<EOF or cat <<EOF | sh, when its body is
-// split as a script (S-0246).
+// split as a script (S-0246). A redirection's operator stays in its word, so
+// that 2>&1, &>f, and >|f split no command, and so does find's and xargs's
+// {} (S-0368).
 func commands(line string) [][]string {
 	var out [][]string
-	var words []string
+	for _, c := range parse(line) {
+		out = append(out, c.words)
+	}
+	return out
+}
+
+// simple is one simple command of a line, as parse splits it: its words, its
+// arguments, the words without its redirections and their targets, and the
+// files its output redirections write, as written (S-0368). A descriptor
+// duplication, such as 2>&1 or >&2, writes no file.
+type simple struct {
+	words, args, targets []string
+}
+
+// The kinds of word a redirection operator written apart from its target
+// waits for.
+const (
+	noTarget = iota
+	fileTarget
+	dupTarget
+	inputTarget
+)
+
+// parse splits a shell command line into simple commands, as commands
+// describes: a > or < outside quotes and arithmetic begins a redirection,
+// with the descriptor number or & before it, and its target is the rest of
+// its word or, when nothing follows the operator, the next word.
+func parse(line string) []simple {
+	var out []simple
+	var cur simple
 	var word strings.Builder
 	inWord := false
 	var quote rune
 	var pending []heredoc
 	start, arith, skip := 0, 0, 0
+	redir, awaits := -1, noTarget
 	end := func() {
-		if inWord {
-			words = append(words, word.String())
-			word.Reset()
-			inWord = false
+		if !inWord {
+			return
 		}
+		w := word.String()
+		cur.words = append(cur.words, w)
+		switch {
+		case redir >= 0:
+			if redir > 0 {
+				cur.args = append(cur.args, w[:redir])
+			}
+			target, kind := operator(w[redir:])
+			if target == "" {
+				awaits = kind
+			} else if kind == fileTarget || kind == dupTarget && !descriptor(target) {
+				cur.targets = append(cur.targets, target)
+			}
+		case awaits != noTarget:
+			if awaits == fileTarget || awaits == dupTarget && !descriptor(w) {
+				cur.targets = append(cur.targets, w)
+			}
+			awaits = noTarget
+		default:
+			cur.args = append(cur.args, w)
+		}
+		word.Reset()
+		inWord, redir = false, -1
 	}
 	split := func() {
 		end()
-		if len(words) > 0 {
-			out = append(out, words)
+		if len(cur.words) > 0 {
+			out = append(out, cur)
 		}
-		words = nil
+		cur, awaits = simple{}, noTarget
 	}
 	for i, r := range line {
 		if i < skip {
@@ -1452,8 +1526,8 @@ func commands(line string) [][]string {
 		case r == '\n' && len(pending) > 0:
 			split()
 			body, next := bodies(line, i+1, pending)
-			if slices.ContainsFunc(out[start:], runsShell) {
-				out = append(out, commands(body)...)
+			if slices.ContainsFunc(out[start:], func(c simple) bool { return runsShell(c.words) }) {
+				out = append(out, parse(body)...)
 			}
 			pending, start, skip = nil, len(out), next
 		case r == '(' && strings.HasPrefix(line[i:], "(("):
@@ -1462,6 +1536,15 @@ func commands(line string) [][]string {
 		case r == ')' && arith > 0 && strings.HasPrefix(line[i:], "))"):
 			arith--
 			split()
+		case (r == '&' || r == '|') && redir >= 0 && line[i-1] == '>', r == '&' && redir >= 0 && line[i-1] == '<':
+			word.WriteRune(r)
+		case r == '{' && strings.HasPrefix(line[i:], "{}"):
+			word.WriteString("{}")
+			inWord, skip = true, i+2
+		case r == '&' && strings.HasPrefix(line[i+1:], ">"):
+			end()
+			word.WriteRune(r)
+			inWord = true
 		case r == ';' || r == '&' || r == '|' || r == '\n' || r == '(' || r == ')' || r == '`' || r == '{' || r == '}':
 			split()
 			if r == '\n' {
@@ -1472,12 +1555,41 @@ func commands(line string) [][]string {
 		case r == ' ' || r == '\t':
 			end()
 		default:
+			if (r == '>' || r == '<') && arith == 0 && redir < 0 {
+				redir = word.Len()
+				if strings.Trim(word.String(), "0123456789&") == "" {
+					redir = 0
+				}
+			}
 			word.WriteRune(r)
 			inWord = true
 		}
 	}
 	split()
 	return out
+}
+
+// operator reads a redirection written from its operator on, as 2>, >>f, or
+// >&2: its target, "" when the next word is, and what kind the target is.
+func operator(w string) (target string, kind int) {
+	w = strings.TrimLeft(w, "0123456789&")
+	if rest, ok := strings.CutPrefix(w, "<"); ok {
+		return strings.TrimLeft(rest, "<>&"), inputTarget
+	}
+	w = strings.TrimPrefix(w, ">")
+	switch {
+	case strings.HasPrefix(w, "&"):
+		return w[1:], dupTarget
+	case strings.HasPrefix(w, ">"), strings.HasPrefix(w, "|"):
+		return w[1:], fileTarget
+	}
+	return w, fileTarget
+}
+
+// descriptor says whether a duplication's target is a descriptor, as in
+// >&2, 2>&1-, or >&-, rather than a file, as in >&out.txt.
+func descriptor(target string) bool {
+	return strings.Trim(strings.TrimSuffix(target, "-"), "0123456789") == ""
 }
 
 // opens reads the heredoc operator at line[i:], << or <<-, and the delimiter

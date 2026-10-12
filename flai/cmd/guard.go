@@ -63,6 +63,23 @@ agent to write. A configuration or project it cannot read counts
 auto-approve as off. The story's agent's own writes, and every write
 outside a .claude/ folder, pass.
 
+A read-only sub-agent's shell command that writes a file outside the
+temporary folder is refused (S-0368, ADR-0141). A sub-agent is read-only
+when its definition in the project, .claude/agents/<agent_type>.md, has a
+tools line naming none of Edit, MultiEdit, NotebookEdit, and Write, as the
+explorer's and the verifier's do, or when it is Claude Code's Explore or
+Plan; the definition is read on each call. A command writes through a
+redirection (>, >>, >|, &>, N>), tee, sed -i, perl -i, cp, mv, rm, touch,
+mkdir, rmdir, truncate, ln, install, patch, dd of=, gofmt -w, goimports -w,
+go fmt, prettier --write, eslint --fix, or golangci-lint --fix, and passes
+when each file it writes is a path written out under /tmp, the system
+temporary folder, or /dev, or the redirection duplicates a descriptor
+(2>&1). A relative path, or one held in a variable, is refused. The refusal
+names the command and the file and tells the sub-agent to put the
+correction in its final message. Every other sub-agent, a task sub-agent
+and general-purpose among them, writes through the shell as before, as it
+does when the definition or the project cannot be read.
+
 No sub-agent, and no session flai serve starts (FLAI_STARTED_BY=flai-serve,
 FLAI_ROLE, or FLAI_STORY set), changes the manifest's shared paths: the MCP
 tool shared_paths_edit and flai shared add and remove are refused, because
@@ -214,6 +231,9 @@ session, where none of those is set, a file edit does not run it.`,
 			if g.Role == "" && g.Story != "" && e.AgentID == "" {
 				a.holdWaits(&g, e.SessionID)
 			}
+			if e.AgentID != "" && e.ToolName == "Bash" {
+				g.ReadOnly = a.guardReadOnly()
+			}
 			r := g.Decide(e)
 			if r.Why == "" {
 				return nil
@@ -259,6 +279,19 @@ func (a *app) guardAutoApprove() bool {
 		return false
 	}
 	return cfg.ActionEnabled(hostapi.ActionAutoApprove, mainRootOf(repo))
+}
+
+// guardReadOnly says which sub-agents are read-only, from the definitions of
+// the project the hook runs in (S-0368, ADR-0141). Outside a project it is
+// logged at debug and holds Claude Code's built-in Explore and Plan alone
+// read-only, so that every other sub-agent's shell writes pass.
+func (a *app) guardReadOnly() func(string) bool {
+	repo, err := a.guardProject()
+	if err != nil {
+		a.logger().Debug("project unreadable, only Explore and Plan are taken as read-only", "component", "guard", "err", err.Error())
+		return guard.ReadOnlyAgents("")
+	}
+	return guard.ReadOnlyAgents(repo.Root)
 }
 
 // recordSubAgent notes in the project's .flai-cache/guard that e's

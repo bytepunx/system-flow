@@ -989,6 +989,92 @@ func TestCommands(t *testing.T) {
 	}
 }
 
+// S-0368: a redirection's operator stays in its word, so that 2>&1, &>f, and
+// >|f split no command, while &, |, &&, and || still do; find's {} is a word,
+// and a group's braces still split.
+func TestCommandsKeepARedirectionWhole(t *testing.T) {
+	for _, c := range []struct{ line, want string }{
+		{"a & b", "a; b"},
+		{"a | b", "a; b"},
+		{"a && b", "a; b"},
+		{"a || b", "a; b"},
+		{"a|&b", "a; b"},
+		{"go test ./... 2>&1 | tail", "go test ./... 2>&1; tail"},
+		{"cmd > /dev/null 2>&1", "cmd > /dev/null 2>&1"},
+		{"cmd &>f && ls", "cmd &>f; ls"},
+		{"cmd&>>f", "cmd &>>f"},
+		{"echo x >|f; ls", "echo x >|f; ls"},
+		{"echo x >&2 & wait", "echo x >&2; wait"},
+		{"cat <&3", "cat <&3"},
+		{"find . -exec rm {} ;", "find . -exec rm {}"},
+		{"{ a; b; }", "a; b"},
+	} {
+		var got []string
+		for _, words := range commands(c.line) {
+			got = append(got, strings.Join(words, " "))
+		}
+		if strings.Join(got, "; ") != c.want {
+			t.Errorf("%q: got %q, want %q", c.line, strings.Join(got, "; "), c.want)
+		}
+	}
+}
+
+// I-0052, S-0368, ADR-0141: a read-only sub-agent, the verifier here, is
+// refused a shell command that writes a file outside the temporary folder,
+// naming the command and the file; a write under /tmp or /dev, a descriptor
+// duplication, and a heredoc's text that reads like a redirection pass. A
+// sub-agent that is not read-only writes through the shell as before, and so
+// does every sub-agent when ReadOnly is nil.
+func TestAReadOnlySubAgentWritesNoFileThroughTheShell(t *testing.T) {
+	gr := Guard{Commands: g.Commands, ReadOnly: func(agentType string) bool { return agentType == "verifier" }}
+	for _, c := range []struct{ line, run, file string }{
+		{"sed -i s/a/b/ x.go", "sed -i s/a/b/ x.go", "x.go"},
+		{"perl -pi -e s/a/b/ x.go", "perl -pi -e s/a/b/ x.go", "x.go"},
+		{"echo hi | tee x.md", "tee x.md", "x.md"},
+		{"echo x > f", "echo x > f", "f"},
+		{"echo x >>f", "echo x >>f", "f"},
+		{"go test ./... 2> out.txt", "go test ./... 2> out.txt", "out.txt"},
+		{"cat > f <<EOF\nbody\nEOF", "cat > f", "f"},
+		{"gofmt -w x.go", "gofmt -w x.go", "x.go"},
+		{"rm x", "rm x", "x"},
+		{"bash -c 'echo x > f'", "bash -c echo x > f", "f"},
+		{`echo x > "$TMPDIR/x"`, "echo x > $TMPDIR/x", "$TMPDIR/x"},
+		{"git diff > d.patch", "git diff > d.patch", "d.patch"},
+	} {
+		why := gr.Check(bash("verifier", c.line))
+		want := fmt.Sprintf("a sub-agent (verifier) cannot run %q: it reads, and it writes no file but under the temporary folder (ADR-0141); this writes %s. Put the correction in your final message; the story's agent makes it.", c.run, c.file)
+		if why != want {
+			t.Errorf("%q: got %q, want %q", c.line, why, want)
+		}
+		if why := gr.Check(bash("general-purpose", c.line)); why != "" {
+			t.Errorf("general-purpose, %q refused: %s", c.line, why)
+		}
+		if why := g.Check(bash("verifier", c.line)); why != "" {
+			t.Errorf("nil ReadOnly, %q refused: %s", c.line, why)
+		}
+	}
+	for _, line := range []string{
+		"go test ./... > /tmp/out",
+		"go test ./... 2>&1 | tail",
+		"cmd > /dev/null 2>&1",
+		"git diff",
+		"cat <<EOF\n> not a redirect\nEOF",
+		"grep -r '>' .",
+		"echo hi | tee /tmp/log >/dev/null",
+		"mkdir -p /tmp/v && cp x.go /tmp/v/",
+		"scripts/flai.sh verify S-0368 --last",
+		"sed -n 's/a/b/p' x.go",
+	} {
+		if why := gr.Check(bash("verifier", line)); why != "" {
+			t.Errorf("%q refused: %s", line, why)
+		}
+	}
+	// the git and flai rules come first, as before
+	if why := gr.Check(bash("verifier", "git commit -m x > /tmp/log")); !strings.Contains(why, "ADR-0060") {
+		t.Errorf("git commit: %q", why)
+	}
+}
+
 // S-0246, I-0058: a heredoc's body is input to the command that opens it,
 // not commands, so its text is left out, unless a shell on its line reads
 // it. Each case is the line and the commands it splits into, joined.
