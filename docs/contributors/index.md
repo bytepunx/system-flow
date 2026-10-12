@@ -54,12 +54,16 @@ Run `make install-tools` once, from any tree: it installs the pinned golangci-li
 
 ### Gateway checks
 
-The gateway checks run `claude -p` through a gateway with the `claude-code` adapter's arguments, `flai guard`, and `permission_prompt` on, and log what the gateway charged beside Claude Code's `total_cost_usd`. Each run spends real money on the gateway's key. `scripts/gateway-smoke.sh`, the smoke tier's last step, runs the check of each gateway whose key is set and prints one line naming the variable of each it skips. The integration tier leaves them to it, and `make test` never runs them. A close-out whose branch changes `flai/` runs the smoke tier, so on a host with a key each such close-out spends one run.
+The gateway checks run `claude -p` through a gateway with the `claude-code` adapter's arguments, `flai guard`, and `permission_prompt` on, and log what the gateway charged beside Claude Code's `total_cost_usd`. Each run spends real money on the gateway's key. `scripts/gateway-smoke.sh`, the smoke tier's last step, runs the check of each gateway whose variables are set and prints one line for each it skips, naming the variables missing. The integration tier leaves them to it, and `make test` never runs them. A close-out whose branch changes `flai/` runs the smoke tier, so on a host with a key each such close-out spends one run.
 
 | Variable | Default | What |
 |----------|---------|------|
 | `OPENROUTER_API_KEY` | none: the check skips | The OpenRouter key the check runs on |
 | `FLAI_TEST_OPENROUTER_HAIKU` | `anthropic/claude-haiku-4.5` | The OpenRouter model `haiku` resolves to |
+| `LITELLM_BASE_URL` | none: the check skips | The LiteLLM proxy's root, such as `http://127.0.0.1:4000`; the check runs once through its unified `/v1/messages` and once through its `/anthropic` pass-through |
+| `LITELLM_API_KEY` | none: the check skips | The proxy's virtual key the check runs on |
+| `FLAI_TEST_LITELLM_HAIKU` | `anthropic/claude-haiku-4-5` | The proxy's model `haiku` resolves to on the unified route; the pass-through takes it without `anthropic/`, as Anthropic's own model ID |
+| `LITELLM_MASTER_KEY` | none: the spend log is not read | The proxy's master key, the only key that reads `/spend/logs`; without it the check logs the virtual key's spend from `/key/info` alone |
 | `FLAI_TEST_GATEWAY_BUDGET` | `1.00` | The run's `max_budget_usd`, held to Claude Code's own count, which runs three to four times what OpenRouter charges; a run costs about $0.06 at OpenRouter |
 
 Give the key a credit limit of its own on OpenRouter's keys page, so that a run gone wrong cannot spend past it, then run one check:
@@ -68,7 +72,13 @@ Give the key a credit limit of its own on OpenRouter's keys page, so that a run 
 OPENROUTER_API_KEY=sk-or-... FLAI_TEST_GATEWAY_BUDGET=0.50 scripts/gateway-smoke.sh
 ```
 
-What the OpenRouter check found is in [agent-adapters.md](../../design/system/agent-adapters.md) § Checked against OpenRouter.
+For LiteLLM, `scripts/litellm.sh up` starts a local proxy and issues a virtual key with a `max_budget` (`LITELLM_MAX_BUDGET`, default 5 USD per 30 days), so a run gone wrong cannot spend past it. `scripts/env.sh` reads the key file it writes, so `scripts/gateway-smoke.sh` runs the LiteLLM check with no variable set by hand. The master key stays in `.flai-cache/litellm/admin.env`; set `LITELLM_MASTER_KEY` from it for one run when you want the spend log's rows:
+
+```sh
+LITELLM_MASTER_KEY="$(sed -n 's/^LITELLM_MASTER_KEY=//p' .flai-cache/litellm/admin.env)" scripts/gateway-smoke.sh
+```
+
+What each check found is in [agent-adapters.md](../../design/system/agent-adapters.md) § Checked against OpenRouter and § Checked against LiteLLM.
 
 An agent `flai serve` starts gets flai serve's environment without `FLAI_HOST_URL`, `FLAI_HOST_TOKEN`, and `FLAI_CONFIG`, plus `FLAI_AGENT`, `FLAI_STORY`, `FLAI_SESSION`, and `FLAI_STARTED_BY`. A `flai serve` it runs to try a change, with a `--config` of its own, does not reach the operator's host. `scripts/flaiover-dev.sh` gives the dev server the dashboard token file that `flai dashboard token --json` names.
 
