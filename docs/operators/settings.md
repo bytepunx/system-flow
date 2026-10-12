@@ -35,6 +35,7 @@ Keys `flai config set` reaches:
 | `dashboard.port` | `4242` | The host port the dashboard is published on |
 | `dashboard.bind` | `0.0.0.0` | The host address it is published on; `127.0.0.1` keeps it to this machine ([Security posture](index.md#security-posture)) |
 | `dashboard.no_restart` | `false` | `true` stops flai host restarting a dashboard that is gone or not answering ([The dashboard's watch](index.md#the-dashboards-watch)) |
+| `dashboard.allow_unsigned` | `false` | `true` allows unsigned builds ([ADR-0070](../../design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)): flai dials a dashboard whose image is on no signed list and accepts a dashboard that sends no release stamp, and `flai dashboard` starts the container with `FLAIOVER_ALLOW_UNSIGNED=1`, so the dashboard accepts a flai with no stamp. A stamp that does not verify is refused either way, and the credential is always checked. While it is in force, `flai serve` logs a `warn`, the statuses say `unsigned allowed`, and the dashboard shows a banner ([The image flai dials](index.md#the-image-flai-dials-s-0238)) |
 | `dashboard.push_key` | empty | Retired and ignored; `flai dashboard` names it while it is set ([Upgrading from a release that mounted the repository](index.md#upgrading-from-a-release-that-mounted-the-repository)) |
 | `dashboard.push_known_hosts` | empty | Retired and ignored, as `dashboard.push_key` |
 | `cache_dir` | `~/.flai/cache`, or `FLAI_CACHE_DIR` when the file is created | Where git templates are cloned |
@@ -89,6 +90,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `dashboard.port` | the configuration's | The host port, likewise |
 | `dashboard.bind` | the configuration's | The host address, likewise |
 | `dashboard.autocommit` | `true` | Commit documents saved from the dashboard, one path per commit |
+| `dashboard.allow_unsigned` | the configuration's | `true` or `false` allows unsigned builds for this project, or refuses them, over `dashboard.allow_unsigned` in the configuration; unset leaves the configuration's |
 | `dashboard.notify_url` | unset | A webhook the dashboard posts new inbox entries to |
 | `checks[].name` | none | A check a story in review is run with, when the host names none ([The checks host action](index.md#the-checks-host-action-s-0082)) |
 | `checks[].command` | none | Its argument list |
@@ -238,6 +240,7 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 | `FLAIOVER_AGENT_KEY_FILE` | `/run/secrets/flaiover_agent_key`, mounted read-only | The credential flai on the host proves itself with ([The connection from flai on the host](index.md#the-connection-from-flai-on-the-host)) |
 | `FLAIOVER_METRICS_PUBLIC` | unset | `true` lets `/metrics` be read without the token ([Telemetry](index.md#telemetry)) |
 | `FLAIOVER_AUTH` | unset | `off` turns authentication off, outside production only (`NODE_ENV` not `production`); for development |
+| `FLAIOVER_ALLOW_UNSIGNED` | unset | `1`, and only `1`, serves a flai that sends no release stamp, and shows the banner; `flai dashboard` sets it when `dashboard.allow_unsigned` is in force or with `--build` |
 | `PORT` | `3000` | The port the server listens on inside the container |
 | `HOST` | `0.0.0.0` | The address it listens on inside the container |
 | `PROTOCOL_HEADER` | `x-forwarded-proto` | The header a TLS-terminating proxy names the original scheme in ([How the dashboard knows whether it is served over HTTPS](index.md#how-the-dashboard-knows-whether-it-is-served-over-https)) |

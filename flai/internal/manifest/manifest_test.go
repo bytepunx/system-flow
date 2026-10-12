@@ -45,6 +45,50 @@ func TestLoadAndFind(t *testing.T) {
 	}
 }
 
+// S-0239: dashboard.allow_unsigned in the manifest is in force over the host
+// configuration's either way, and its absence leaves the host's.
+func TestAllowUnsigned(t *testing.T) {
+	head := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	silent := loaded(t, []byte(head+"dashboard:\n  port: 4242\n"))
+	on := loaded(t, []byte(head+"dashboard:\n  allow_unsigned: true\n"))
+	off := loaded(t, []byte(head+"dashboard:\n  allow_unsigned: false\n"))
+	cases := []struct {
+		name string
+		d    Dashboard
+		host bool
+		want bool
+	}{
+		{"silent, host off", silent.Dashboard, false, false},
+		{"silent, host on", silent.Dashboard, true, true},
+		{"true over false", on.Dashboard, false, true},
+		{"false over true", off.Dashboard, true, false},
+		{"true over true", on.Dashboard, true, true},
+		{"false over false", off.Dashboard, false, false},
+	}
+	for _, c := range cases {
+		if got := c.d.AllowUnsignedOr(c.host); got != c.want {
+			t.Errorf("%s: AllowUnsignedOr(%v) = %v, want %v", c.name, c.host, got, c.want)
+		}
+	}
+	for _, m := range []Manifest{on, off} {
+		data, err := yaml.Marshal(Manifest{Dashboard: m.Dashboard})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var again Manifest
+		if err := yaml.Unmarshal(data, &again); err != nil || !reflect.DeepEqual(again.Dashboard, m.Dashboard) {
+			t.Errorf("YAML round trip: %v\n%s\n%+v", err, data, again.Dashboard)
+		}
+	}
+	data, err := yaml.Marshal(Manifest{Dashboard: silent.Dashboard})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "allow_unsigned") {
+		t.Errorf("unset allow_unsigned is written:\n%s", data)
+	}
+}
+
 // S-0082: checks: is optional and round-trips as a list of named argument
 // lists, the operator's choice of where to name them when the host's own
 // configuration names none.

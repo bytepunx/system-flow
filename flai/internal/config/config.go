@@ -248,6 +248,9 @@ type Dashboard struct {
 	// NoRestart stops flai host from restarting a dashboard that is gone or
 	// not answering (S-0184). Off by default: the host restarts it.
 	NoRestart bool `json:"no_restart"`
+	// AllowUnsigned lets flai dial a dashboard that is no signed release and
+	// lets the dashboard accept a flai that is none (ADR-0070). Off by default.
+	AllowUnsigned bool `json:"allow_unsigned"`
 	// PushKey is an SSH private key on this host that the container may push
 	// acceptances with (ADR-0026). Empty, the default, gives it nothing. It is
 	// a fact about one machine, so it lives here and never in the manifest.
@@ -370,7 +373,7 @@ func Save(path string, cfg Config) error {
 func Keys() []string {
 	return []string{
 		"template.repo", "template.ref",
-		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind", "dashboard.no_restart", "dashboard.push_key", "dashboard.push_known_hosts",
+		"dashboard.image", "dashboard.tag", "dashboard.port", "dashboard.bind", "dashboard.no_restart", "dashboard.allow_unsigned", "dashboard.push_key", "dashboard.push_known_hosts",
 		"cache_dir", "author",
 		"worktrees.relative_paths",
 	}

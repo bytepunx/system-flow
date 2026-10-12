@@ -916,6 +916,9 @@ type Dashboard struct {
 	Bind  string `yaml:"bind"` // host address to publish on; default 0.0.0.0
 	// Autocommit commits documents saved from the dashboard; nil means true (ADR-0023).
 	Autocommit *bool `yaml:"autocommit,omitempty"`
+	// AllowUnsigned, when set, is this project's dashboard.allow_unsigned over
+	// the host configuration's (ADR-0070); nil leaves the host's.
+	AllowUnsigned *bool `yaml:"allow_unsigned,omitempty"`
 	// NotifyURL, when set, is where the dashboard's server posts new inbox
 	// entries (S-0042). flai itself never calls it.
 	NotifyURL string `yaml:"notify_url,omitempty"`
@@ -924,6 +927,15 @@ type Dashboard struct {
 // Autocommit reports whether documents saved from the dashboard are committed.
 func (m Manifest) Autocommit() bool {
 	return m.Dashboard.Autocommit == nil || *m.Dashboard.Autocommit
+}
+
+// AllowUnsignedOr reports whether unsigned dashboards and flais are allowed
+// for this project, given the host configuration's dashboard.allow_unsigned.
+func (d Dashboard) AllowUnsignedOr(host bool) bool {
+	if d.AllowUnsigned != nil {
+		return *d.AllowUnsigned
+	}
+	return host
 }
 
 // Load parses the manifest at path.

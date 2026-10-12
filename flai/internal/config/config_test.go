@@ -81,6 +81,37 @@ func TestSetAndGetRoundTrip(t *testing.T) {
 	}
 }
 
+// S-0239: dashboard.allow_unsigned is off on a fresh host and config set turns
+// it on and off again as a bool.
+func TestAllowUnsigned(t *testing.T) {
+	cfg := Default()
+	if got, err := cfg.Get("dashboard.allow_unsigned"); err != nil || got != false {
+		t.Fatalf("fresh dashboard.allow_unsigned = %v, %v; want false", got, err)
+	}
+	on, err := cfg.Set("dashboard.allow_unsigned", "true")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := on.Get("dashboard.allow_unsigned"); err != nil || got != true || !on.Dashboard.AllowUnsigned {
+		t.Fatalf("after set true: %v, %v, field %v", got, err, on.Dashboard.AllowUnsigned)
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, on); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil || !back.Dashboard.AllowUnsigned {
+		t.Fatalf("save/load lost allow_unsigned: %+v, %v", back.Dashboard, err)
+	}
+	off, err := back.Set("dashboard.allow_unsigned", "false")
+	if err != nil || off.Dashboard.AllowUnsigned {
+		t.Fatalf("after set false: %+v, %v", off.Dashboard, err)
+	}
+	if _, err := cfg.Set("dashboard.allow_unsigned", "yes please"); err == nil {
+		t.Fatal("expected error for a value that is not a bool")
+	}
+}
+
 func TestSetRejectsBadInput(t *testing.T) {
 	cfg := Default()
 	if _, err := cfg.Set("dashboard.port", "http"); err == nil {
