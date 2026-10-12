@@ -82,6 +82,12 @@ type Request struct {
 	// Shares are the shares in force that cleared a hold on the story, each
 	// made by the agent of the story that held it (ADR-0134); none otherwise.
 	Shares []Share
+	// ProviderName and Provider are where the agent's model calls go, the
+	// provider its agent names, resolved and checked by the caller
+	// (ADR-0129); empty and nil when it names none, and the harness calls
+	// its own default.
+	ProviderName string
+	Provider     *manifest.Provider
 }
 
 // Share is the sharing of paths that cleared a hold on the story an agent is
@@ -142,6 +148,12 @@ type Start struct {
 	Harness string
 	Argv    []string // program first
 	Env     []string // added to flai serve's own
+	// EnvFrom maps a variable of the child's to the name of a variable of
+	// flai serve's own environment, whose value flai serve copies into it as
+	// it spawns the child: a provider's key (ADR-0129). An adapter never
+	// reads a key, and neither Argv nor Env ever carries one, so a Start can
+	// be logged and recorded whole.
+	EnvFrom map[string]string
 }
 
 // Adapter builds the command for one harness.

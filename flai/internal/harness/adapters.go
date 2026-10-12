@@ -49,7 +49,8 @@ var claudeCodeTakes = map[string]option{
 // orchestrator's as its orchestrator definition (S-0218), and an analyzer's
 // as its analyzer definition (S-0223), each with flai guard on its file
 // edits and the same handler, which denies anything outside a story's
-// worktree.
+// worktree. Every session whose agent names a provider calls it rather
+// than Anthropic (claudeCodeProvider).
 func (claudeCode) Start(r Request, host Host) (Start, error) {
 	var model string
 	var config map[string]string
@@ -60,6 +61,11 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 	if err != nil {
 		return Start{}, err
 	}
+	penv, from, err := claudeCodeProvider(r)
+	if err != nil {
+		return Start{}, err
+	}
+	env = append(env, penv...)
 	opts, err := options(ClaudeCode, config, claudeCodeTakes)
 	if err != nil {
 		return Start{}, err
@@ -111,7 +117,40 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 		argv = append(argv, "--agent", claudeCodeStrategic[r.Role])
 	}
 	argv = append(argv, permissionArgs(host)...)
-	return Start{Harness: ClaudeCode, Argv: argv, Env: env}, nil
+	return Start{Harness: ClaudeCode, Argv: argv, Env: env, EnvFrom: from}, nil
+}
+
+// claudeCodeModels are the variables that set what claude's model aliases
+// mean, by the alias a provider's models name.
+var claudeCodeModels = []struct{ alias, env string }{
+	{"opus", "ANTHROPIC_DEFAULT_OPUS_MODEL"},
+	{"sonnet", "ANTHROPIC_DEFAULT_SONNET_MODEL"},
+	{"haiku", "ANTHROPIC_DEFAULT_HAIKU_MODEL"},
+}
+
+// claudeCodeProvider is what claude needs to call the agent's provider
+// rather than Anthropic (ADR-0129): its base URL, an empty
+// ANTHROPIC_API_KEY so that a key flai serve inherited is not sent to the
+// gateway, and what each alias the provider's models name means; and, to
+// be copied from flai serve's environment as the child is spawned, the
+// provider's key as ANTHROPIC_AUTH_TOKEN. Nothing when the agent names no
+// provider. claude speaks anthropic-messages alone, so a provider that
+// speaks another api is refused.
+func claudeCodeProvider(r Request) ([]string, map[string]string, error) {
+	p := r.Provider
+	if p == nil {
+		return nil, nil, nil
+	}
+	if p.API != manifest.APIAnthropicMessages {
+		return nil, nil, fmt.Errorf("the agent's provider %[1]s speaks %[2]s, and claude-code speaks %[3]s alone; if the gateway speaks %[3]s too, say so with flai serve agent provider %[1]s --api %[3]s, or name another provider in the agent", r.ProviderName, p.API, manifest.APIAnthropicMessages)
+	}
+	env := []string{"ANTHROPIC_BASE_URL=" + p.BaseURL, "ANTHROPIC_API_KEY="}
+	for _, m := range claudeCodeModels {
+		if model, ok := p.Models[m.alias]; ok {
+			env = append(env, m.env+"="+model)
+		}
+	}
+	return env, map[string]string{"ANTHROPIC_AUTH_TOKEN": p.KeyEnv}, nil
 }
 
 // ClaudeCodeHost is host with claude-code's defaults where the operator set
@@ -294,7 +333,9 @@ func definition(data []byte) (map[string]any, error) {
 }
 
 // command is the operator's own command (S-0079): run as it stands, with
-// {story}, {root}, {model}, and {harness} replaced in its arguments. The
+// {story}, {root}, {model}, {harness}, and {provider} replaced in its
+// program and arguments, {provider} by the name of the agent's provider, or
+// nothing when it names none (ADR-0129). The
 // story's config is not interpreted: it is handed over as FLAI_AGENT_CONFIG,
 // a JSON object, for the command to read if it wants, and its roles as
 // FLAI_AGENT_ROLES, when it has any (S-0189). Started again after
@@ -303,7 +344,11 @@ func definition(data []byte) (map[string]any, error) {
 // Started as the planner, it has FLAI_ROLE and FLAI_ITEM, and {story} is
 // empty (S-0208); started as the orchestrator, FLAI_ROLE alone (S-0218);
 // started as the analyzer, FLAI_ROLE, and FLAI_FOCUS when it was asked for
-// one (S-0223), since the command has no prompt to say it.
+// one (S-0223), since the command has no prompt to say it. When the agent
+// names a provider, it has FLAI_PROVIDER, its name, FLAI_PROVIDER_API,
+// FLAI_PROVIDER_BASE_URL, and FLAI_PROVIDER_KEY_ENV, the name of the
+// variable that holds its key, which the command reads itself: flai hands
+// it no key, and refuses no api (ADR-0129).
 type command struct{}
 
 // DefaultHost is nothing: the command has no default, the operator writes it.
@@ -329,7 +374,11 @@ func (command) Start(r Request, host Host) (Start, error) {
 	if harness == "" {
 		harness = Command
 	}
-	rep := strings.NewReplacer("{story}", r.Story, "{root}", r.Root, "{model}", model, "{harness}", harness)
+	provider := ""
+	if r.Provider != nil {
+		provider = r.ProviderName
+	}
+	rep := strings.NewReplacer("{story}", r.Story, "{root}", r.Root, "{model}", model, "{harness}", harness, "{provider}", provider)
 	argv := []string{rep.Replace(host.Program)}
 	for _, a := range host.Args {
 		argv = append(argv, rep.Replace(a))
@@ -355,6 +404,9 @@ func (command) Start(r Request, host Host) (Start, error) {
 	env = append(env, role...)
 	if r.Focus != "" {
 		env = append(env, "FLAI_FOCUS="+r.Focus)
+	}
+	if p := r.Provider; p != nil {
+		env = append(env, "FLAI_PROVIDER="+r.ProviderName, "FLAI_PROVIDER_API="+p.API, "FLAI_PROVIDER_BASE_URL="+p.BaseURL, "FLAI_PROVIDER_KEY_ENV="+p.KeyEnv)
 	}
 	return Start{Harness: Command, Argv: argv, Env: env}, nil
 }

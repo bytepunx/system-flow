@@ -1898,3 +1898,147 @@ func TestAnAgentStartedOnAShareIsToldTheSplit(t *testing.T) {
 		}
 	}
 }
+
+// litellm is a provider as ResolveProvider answers one: an Anthropic-shaped
+// gateway with models for opus and sonnet, and none for haiku.
+func litellm() *manifest.Provider {
+	return &manifest.Provider{API: manifest.APIAnthropicMessages, BaseURL: "http://127.0.0.1:4000", KeyEnv: "LITELLM_VIRTUAL_KEY",
+		Models: map[string]string{"opus": "anthropic/claude-opus-5-5", "sonnet": "anthropic/claude-sonnet-5"}}
+}
+
+// withProvider is r with the agent's provider litellm.
+func withProvider(r Request) Request {
+	r.ProviderName, r.Provider = "litellm", litellm()
+	return r
+}
+
+// ADR-0129: with a provider, claude-code calls the gateway at its base URL,
+// with the aliases its models name and an empty Anthropic key, and has flai
+// serve copy the key from the variable key_env names; the Start holds the
+// name, never the key. With none, it sets nothing of the kind.
+func TestClaudeCodeCallsTheAgentsProvider(t *testing.T) {
+	t.Setenv("LITELLM_VIRTUAL_KEY", "sk-sentinel-never-in-a-start")
+	a := &manifest.Agent{Harness: ClaudeCode, Model: "opus", Provider: "litellm"}
+	st, err := (claudeCode{}).Start(req(a), Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range st.Env {
+		if strings.HasPrefix(e, "ANTHROPIC_") {
+			t.Errorf("no provider, yet %q is set", e)
+		}
+	}
+	if st.EnvFrom != nil {
+		t.Errorf("no provider, yet EnvFrom %v", st.EnvFrom)
+	}
+
+	st, err = (claudeCode{}).Start(withProvider(req(a)), Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"ANTHROPIC_BASE_URL=http://127.0.0.1:4000", "ANTHROPIC_API_KEY=", "ANTHROPIC_DEFAULT_OPUS_MODEL=anthropic/claude-opus-5-5", "ANTHROPIC_DEFAULT_SONNET_MODEL=anthropic/claude-sonnet-5"}
+	if !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+	if len(st.EnvFrom) != 1 || st.EnvFrom["ANTHROPIC_AUTH_TOKEN"] != "LITELLM_VIRTUAL_KEY" {
+		t.Errorf("EnvFrom %v, want ANTHROPIC_AUTH_TOKEN from LITELLM_VIRTUAL_KEY", st.EnvFrom)
+	}
+	if got := after(st.Argv, "--model"); got != "opus" {
+		t.Errorf("--model = %q, want the agent's own", got)
+	}
+	for _, s := range append(slices.Clone(st.Argv), st.Env...) {
+		if strings.Contains(s, "sk-sentinel") {
+			t.Fatalf("the key is in the start: %q", s)
+		}
+	}
+	for _, e := range st.Env {
+		if strings.Contains(e, "LITELLM_VIRTUAL_KEY") {
+			t.Errorf("the key's variable is assigned in Env: %q", e)
+		}
+	}
+}
+
+// ADR-0129: claude speaks anthropic-messages alone, so a provider that
+// speaks another api is refused, naming the provider and the fix.
+func TestClaudeCodeRefusesAProviderItCannotSpeak(t *testing.T) {
+	r := withProvider(req(&manifest.Agent{Harness: ClaudeCode, Provider: "litellm"}))
+	r.Provider.API = manifest.APIOpenAIChat
+	_, err := (claudeCode{}).Start(r, Host{})
+	if err == nil {
+		t.Fatal("an openai-chat provider: started")
+	}
+	for _, want := range []string{"provider litellm speaks openai-chat", "claude-code speaks anthropic-messages", "flai serve agent provider litellm --api anthropic-messages", "name another provider in the agent"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("refusal lacks %q: %v", want, err)
+		}
+	}
+}
+
+// ADR-0129: a strategic agent's session goes through the same Start, and so
+// calls its provider the same way.
+func TestClaudeCodeStartsAStrategicAgentOnItsProvider(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".claude", "agents")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "planner.md"), []byte("---\nname: planner\ndescription: Plans one item.\ntools: Read\n---\n\nYou are the planner.\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := withProvider(planReq("E-0016", &manifest.Agent{Harness: ClaudeCode, Provider: "litellm"}))
+	r.Root = root
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"FLAI_ROLE=plan", "FLAI_ITEM=E-0016", "ANTHROPIC_BASE_URL=http://127.0.0.1:4000", "ANTHROPIC_API_KEY=", "ANTHROPIC_DEFAULT_OPUS_MODEL=anthropic/claude-opus-5-5", "ANTHROPIC_DEFAULT_SONNET_MODEL=anthropic/claude-sonnet-5"}
+	if !slices.Equal(st.Env, want) {
+		t.Errorf("env %q, want %q", st.Env, want)
+	}
+	if st.EnvFrom["ANTHROPIC_AUTH_TOKEN"] != "LITELLM_VIRTUAL_KEY" {
+		t.Errorf("EnvFrom %v", st.EnvFrom)
+	}
+}
+
+// ADR-0129: the operator's command is told the provider's name, api, base
+// URL, and the name of its key's variable, and gets {provider} in its
+// arguments, whatever the api; it reads the key itself. With no provider it
+// is told nothing of one.
+func TestTheOperatorsCommandGetsTheProvider(t *testing.T) {
+	t.Setenv("LITELLM_VIRTUAL_KEY", "sk-sentinel-never-in-a-start")
+	host := Host{Program: "run-agent", Args: []string{"--provider={provider}", "{story}"}}
+	st, err := (command{}).Start(req(nil), host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"run-agent", "--provider=", "S-0104"}; !slices.Equal(st.Argv, want) {
+		t.Errorf("no provider: argv %q, want %q", st.Argv, want)
+	}
+	for _, e := range st.Env {
+		if strings.HasPrefix(e, "FLAI_PROVIDER") {
+			t.Errorf("no provider, yet %q is set", e)
+		}
+	}
+	r := withProvider(req(&manifest.Agent{Provider: "litellm"}))
+	r.Provider.API = manifest.APIOpenAIChat
+	st, err = (command{}).Start(r, host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"run-agent", "--provider=litellm", "S-0104"}; !slices.Equal(st.Argv, want) {
+		t.Errorf("argv %q, want %q", st.Argv, want)
+	}
+	for _, want := range []string{"FLAI_PROVIDER=litellm", "FLAI_PROVIDER_API=openai-chat", "FLAI_PROVIDER_BASE_URL=http://127.0.0.1:4000", "FLAI_PROVIDER_KEY_ENV=LITELLM_VIRTUAL_KEY"} {
+		if !slices.Contains(st.Env, want) {
+			t.Errorf("env lacks %q: %q", want, st.Env)
+		}
+	}
+	if st.EnvFrom != nil {
+		t.Errorf("the command reads its key itself, yet EnvFrom %v", st.EnvFrom)
+	}
+	for _, s := range append(slices.Clone(st.Argv), st.Env...) {
+		if strings.Contains(s, "sk-sentinel") {
+			t.Fatalf("the key is in the start: %q", s)
+		}
+	}
+}
