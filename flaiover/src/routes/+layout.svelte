@@ -7,6 +7,7 @@
 	import SiteMenu from '$lib/components/SiteMenu.svelte';
 	import HostFlai from '$lib/components/HostFlai.svelte';
 	import HostFlaiBanner from '$lib/components/HostFlaiBanner.svelte';
+	import UnsignedBanner from '$lib/components/UnsignedBanner.svelte';
 	import { hostFlai } from '$lib/hostflai.svelte';
 	import { projectState } from '$lib/project.svelte';
 	import ProjectSwitcher from '$lib/components/ProjectSwitcher.svelte';
@@ -84,7 +85,7 @@
 			{/snippet}
 		</SiteMenu>
 	</header>
-	{#if page.url.pathname !== '/login'}<HostFlaiBanner />{/if}
+	{#if page.url.pathname !== '/login'}<HostFlaiBanner /><UnsignedBanner />{/if}
 	<main class="mx-auto max-w-6xl px-4 py-6">
 		{#key projectState.current}
 			{#if projectState.project?.candidate}
