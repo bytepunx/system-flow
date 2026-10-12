@@ -7,7 +7,7 @@ count: 4
 cost: 9m
 first_reported: 2026-10-08T10:21:38Z
 last_reported: 2026-10-12T15:29:49Z
-updated: 2026-10-12T15:29:49Z
+updated: 2026-10-12T16:52:49Z
 ---
 
 # I-0125 A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
@@ -34,3 +34,5 @@ Story: S-0337.
 S-0337 was blocked for four days (TH-0390) with no branch content, and flai serve restarted its agent 12 times between 2026-10-08 and 2026-10-12 for messages on MS-0045, MS-0046, MS-0049, and MS-0054. Most were "changed paths" notices from another story's task done that could not affect a story with no commits. Others were the other agent's acknowledgement of a settled split, or a "Closed: ... was accepted" entry, which awaits no one. Asking in the conversation not to be told about further commits on the same files changed nothing, because the next task done sent another notice. A notice to a story that has no commits on its branch, or one that is blocked on a thread, could be held until the story can act on it.
 
 ## Remediation
+
+Story S-0372 remediates this issue, created from it at 2026-10-12T16:52:49Z.
