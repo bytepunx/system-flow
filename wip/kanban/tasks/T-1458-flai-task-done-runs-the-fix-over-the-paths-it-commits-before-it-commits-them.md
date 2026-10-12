@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 57
-      cache_read: 1108922
-      cache_write: 14287
-      cost: 0.5073
+      input: 18
+      output: 7036
+      cache_read: 1111852
+      cache_write: 30773
+      cost: 0.5542
 ---
 # T-1458 flai task done runs the fix over the paths it commits, before it commits them
 

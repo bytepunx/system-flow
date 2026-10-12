@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 416.8118
-accrued_seconds: 340156
-tasks_completed: 396
-last_run: 2026-10-12T17:19:54Z
+accrued_cost: 426.4281
+accrued_seconds: 341287
+tasks_completed: 405
+last_run: 2026-10-12T17:38:45Z
 ---
 
 # Orchestrator activity
@@ -2783,6 +2783,69 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0350
 - Seconds: 125
 - Cost: 1.5444 USD, estimated
+
+### 2026-10-12T17:20:08Z
+
+- Summary: Under judgement, publishing S-0350 (1 pending, 32.08 USD/week): complete, and inert for a host with no provider configured.
+- Items: S-0350
+- Seconds: 14
+- Cost: 0.1577 USD, estimated
+
+### 2026-10-12T17:20:17Z
+
+- Summary: Published S-0350 as flai 1.43.0→1.44.0 (flai/v1.44.0), pushed. Under judgement, with 1 pending story at 32.08 USD/week.
+- Items: S-0350
+- Seconds: 9
+- Cost: 0.0000 USD
+
+### 2026-10-12T17:24:50Z
+
+- Summary: Recommended an answer on TH-0422, citing design/conventions/work-management.md § Rules
+- Items: S-0372
+- Seconds: 273
+- Cost: 4.1769 USD, estimated
+
+### 2026-10-12T17:24:52Z
+
+- Summary: Under plan_backlog_stories, recommended approval on TH-0422 (planner-S-0372's plan) and left it open for the operator. The plan changes ADR-0120's definition of awaiting with a new ADR, and edits a baseline rule in work-management.md and its template copy; both are decisions not yet recorded. Figures: 1h (flai's 34m raised with reason), 90 USD/week. S-0372 stays a draft. Next plan candidate: S-0373.
+- Items: S-0372
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-12T17:29:44Z
+
+- Summary: Answered TH-0423, citing design/system/agent-narrative.md
+- Items: S-0373
+- Seconds: 292
+- Cost: 2.1369 USD, estimated
+
+### 2026-10-12T17:30:05Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0423, planner-S-0373's plan: WriteIndex lists an unreadable narrative instead of failing, as it already does for activity documents. Four tasks in three layers; 30m forecast (flai's 19m raised with reason), 12.50 USD/week. Under finalize_drafts, finalized S-0373. Started the planner for S-0374. Remaining drafts S-0360, S-0363, S-0369, S-0371, and S-0372 await the operator's answers.
+- Items: S-0373, S-0374
+- Seconds: 21
+- Cost: 0.3330 USD, estimated
+
+### 2026-10-12T17:30:22Z
+
+- Summary: Under promote_to_ready, moved S-0373 to ready (rank 1, 30m under throughput); S-0241 (rank 2) stays out, blocked. Applied the throughput order.
+- Items: S-0373
+- Seconds: 17
+- Cost: 0.3336 USD, estimated
+
+### 2026-10-12T17:37:26Z
+
+- Summary: Answered TH-0411, citing no source
+- Items: S-0364
+- Seconds: 424
+- Cost: 1.8413 USD, estimated
+
+### 2026-10-12T17:38:45Z
+
+- Summary: S-0367 reached review. MCP verify still refused, since the MCP server is still the 1.40.1 process although PATH flai is 1.43.0; I corrected my resolve of TH-0411 to ask for an MCP restart. CLI flai verify passed every step at the head 7bfd0d9a, and the verifier matched all four criteria. The dry-run is blocked: docs/users/flai-reference.md, the generated reference, is outside S-0367's touches (it is in claims.shared, which does not count for acceptance). Opened TH-0424 asking for flai touches S-0367 --add docs/users/flai-reference.md.
+- Items: S-0367
+- Seconds: 79
+- Cost: 0.6369 USD, estimated
 
 ## Refusals
 

@@ -3,11 +3,11 @@ id: T-1248
 type: task
 nature: feature
 title: The dashboard verifies flai's release stamp in hello before the proof, answers with its own, and closes an unsigned flai with 4403
-status: in-progress
+status: done
 parent: S-0237
 owner: alex
 created: 2026-10-07T23:00:26Z
-updated: 2026-10-12T17:20:03Z
+updated: 2026-10-12T17:20:21Z
 transitions:
   - to: ready
     at: 2026-10-12T17:05:52Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-12T17:05:53Z
     by: agent-S-0237
+  - to: done
+    at: 2026-10-12T17:20:21Z
+    by: agent-S-0237
 stream: S-0237
 tags: [dashboard]
 touches: [flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/server/project-events.test.ts]
+usage:
+  source: log
+  seconds: 868
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 99
+      output: 539
+      cache_read: 5881156
+      cache_write: 161370
+      cost: 2.7378
 ---
 # T-1248 The dashboard verifies flai's release stamp in hello before the proof, answers with its own, and closes an unsigned flai with 4403
 

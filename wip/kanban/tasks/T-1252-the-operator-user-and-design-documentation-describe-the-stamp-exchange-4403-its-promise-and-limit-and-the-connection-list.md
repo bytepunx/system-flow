@@ -3,16 +3,36 @@ id: T-1252
 type: task
 nature: feature
 title: The operator, user, and design documentation describe the stamp exchange, 4403, its promise and limit, and the connection list
-status: backlog
+status: done
 parent: S-0237
 owner: alex
 created: 2026-10-07T23:01:03Z
-updated: 2026-10-07T23:01:03Z
-transitions: []
+updated: 2026-10-12T17:41:56Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:36:05Z
+    by: agent-S-0237
+  - to: in-progress
+    at: 2026-10-12T17:36:05Z
+    by: agent-S-0237
+  - to: done
+    at: 2026-10-12T17:41:56Z
+    by: agent-S-0237
 stream: S-0237
 tags: [cli, dashboard]
 touches: [docs/operators/index.md, docs/users/flaiover.md, docs/users/flai.md, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/system/flai-cli.md, design/system/release-signing.md]
 after: [T-1249, T-1250, T-1251]
+usage:
+  source: log
+  seconds: 351
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 526
+      cache_read: 5343229
+      cache_write: 165555
+      cost: 2.496
 ---
 # T-1252 The operator, user, and design documentation describe the stamp exchange, 4403, its promise and limit, and the connection list
 

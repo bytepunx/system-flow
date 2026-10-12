@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 71
-      output: 447
-      cache_read: 3357999
-      cache_write: 113668
-      cost: 1.5681
+      input: 56
+      output: 21746
+      cache_read: 3436601
+      cache_write: 95116
+      cost: 1.7128
 ---
 # T-1457 The manifest's markdown tier fixes with lint-md.sh --fix, and the docs and an ADR say what fix_command does
 

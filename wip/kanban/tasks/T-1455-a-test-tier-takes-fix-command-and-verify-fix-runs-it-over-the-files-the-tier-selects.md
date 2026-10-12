@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 372
-      cache_read: 2555281
-      cache_write: 94160
-      cost: 1.1967
+      input: 43
+      output: 16596
+      cache_read: 2622688
+      cache_write: 72589
+      cost: 1.3072
 ---
 # T-1455 A test tier takes fix_command, and verify.Fix runs it over the files the tier selects
 

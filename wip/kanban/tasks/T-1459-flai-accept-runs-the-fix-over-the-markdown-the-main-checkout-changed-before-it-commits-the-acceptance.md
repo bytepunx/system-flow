@@ -24,15 +24,15 @@ touches: [flai/cmd/accept.go, flai/cmd/accept_fix_test.go, flai/cmd/accept_markd
 after: [T-1470]
 usage:
   source: log
-  seconds: 579
+  seconds: 582
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 340
-      cache_read: 2609686
-      cache_write: 106364
-      cost: 1.2268
+      input: 44
+      output: 17013
+      cache_read: 2688621
+      cache_write: 74414
+      cost: 1.34
 ---
 # T-1459 flai accept runs the fix over the markdown the main checkout changed, before it commits the acceptance
 

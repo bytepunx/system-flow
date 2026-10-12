@@ -3,16 +3,36 @@ id: T-1461
 type: task
 nature: remediation
 title: flai guard refuses a read-only sub-agent's shell command that writes a file, with tests that reproduce I-0052
-status: backlog
+status: done
 parent: S-0368
 owner: alex
 created: 2026-10-12T16:57:30Z
-updated: 2026-10-12T16:57:30Z
-transitions: []
+updated: 2026-10-12T17:35:04Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:21:55Z
+    by: agent-S-0368
+  - to: in-progress
+    at: 2026-10-12T17:21:56Z
+    by: agent-S-0368
+  - to: done
+    at: 2026-10-12T17:35:04Z
+    by: agent-S-0368
 stream: S-0368
 tags: [guard, flai]
 touches: [flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/internal/guard/writes.go, flai/internal/guard/writes_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md]
 after: [T-1460]
+usage:
+  source: log
+  seconds: 788
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 37879
+      cache_read: 4111922
+      cache_write: 183426
+      cost: 2.7686
 ---
 # T-1461 flai guard refuses a read-only sub-agent's shell command that writes a file, with tests that reproduce I-0052
 

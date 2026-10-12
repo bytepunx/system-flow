@@ -3,11 +3,11 @@ id: T-1464
 type: task
 nature: feature
 title: The local release server serves checksums.txt.sig and cosign.pub, and the smoke test verifies its test-signed releases with a test build of flai
-status: in-progress
+status: done
 parent: S-0233
 owner: alex
 created: 2026-10-12T17:04:34Z
-updated: 2026-10-12T17:17:12Z
+updated: 2026-10-12T17:27:59Z
 transitions:
   - to: ready
     at: 2026-10-12T17:17:12Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T17:17:12Z
     by: agent-S-0233
+  - to: done
+    at: 2026-10-12T17:27:59Z
+    by: agent-S-0233
 stream: S-0233
 tags: []
 touches: [flai/internal/releaseserver/releaseserver.go, flai/internal/releaseserver/releaseserver_test.go, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, flai/internal/selfupgrade/signature.go, scripts/install-test.sh, flai/cmd/installsh_test.go]
 after: [T-1228]
+usage:
+  source: log
+  seconds: 647
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 21542
+      cache_read: 2364701
+      cache_write: 95095
+      cost: 1.4723
 ---
 # T-1464 The local release server serves checksums.txt.sig and cosign.pub, and the smoke test verifies its test-signed releases with a test build of flai
 

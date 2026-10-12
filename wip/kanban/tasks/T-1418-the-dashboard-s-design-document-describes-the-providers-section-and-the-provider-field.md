@@ -24,15 +24,15 @@ touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]
 after: [T-1416, T-1417]
 usage:
   source: log
-  seconds: 143
+  seconds: 144
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 279
-      cache_read: 2576765
-      cache_write: 93161
-      cost: 1.205
+      input: 48
+      output: 14988
+      cache_read: 2640304
+      cache_write: 82368
+      cost: 1.3404
 ---
 # T-1418 The dashboard's design document describes the Providers section and the provider field
 

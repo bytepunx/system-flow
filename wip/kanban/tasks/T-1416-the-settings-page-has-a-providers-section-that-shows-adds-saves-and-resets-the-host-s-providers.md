@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 383
-      cache_read: 3975811
-      cache_write: 125308
-      cost: 1.8509
+      input: 73
+      output: 23022
+      cache_read: 4055620
+      cache_write: 126521
+      cost: 2.0589
 ---
 # T-1416 The Settings page has a Providers section that shows, adds, saves, and resets the host's providers
 

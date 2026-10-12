@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 210
-      cache_read: 2268283
-      cache_write: 119429
-      cost: 1.0776
+      input: 46
+      output: 21513
+      cache_read: 2361420
+      cache_write: 94963
+      cost: 1.4703
 ---
 # T-1226 selfupgrade verifies checksums.txt.sig with crypto/ecdsa and the embedded key before the archive's hash, and refuses what it cannot verify
 

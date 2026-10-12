@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 196
-      cache_read: 1240378
-      cache_write: 64214
-      cost: 0.5888
+      input: 23
+      output: 7324
+      cache_read: 1290126
+      cache_write: 40247
+      cost: 0.655
 ---
 # T-1417 AgentFields has a provider field, with the project's default as its placeholder, sent only when typed
 

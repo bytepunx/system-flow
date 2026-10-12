@@ -3,11 +3,11 @@ id: S-0233
 type: story
 nature: feature
 title: flai self-upgrade, flai host upgrade, and install.sh verify the release's signature before installing it
-status: in-progress
+status: done
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-12T17:04:34Z
+updated: 2026-10-12T17:44:10Z
 transitions:
   - to: ready
     at: 2026-10-12T16:53:33Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-12T16:53:40Z
     by: agent-S-0233
+  - to: review
+    at: 2026-10-12T17:36:40Z
+    by: agent-S-0233
+  - to: done
+    at: 2026-10-12T17:44:10Z
+    by: alex
 tags: [cli]
 topics: [release, security]
-touches: [flai/internal/selfupgrade, flai/cmd/selfupgrade.go, install.sh, docs/users/flai.md, docs/operators, ".github/workflows/system-flow-check.yml", flai/cmd/host.go, flai/cmd/selfupgrade_test.go, scripts/install-test.sh, design/system/flai-cli.md, flai/cmd/host_versions_test.go, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/runbooks/install.md, docs/operators/runbooks/update.md]
+touches: [flai/internal/selfupgrade, flai/cmd/selfupgrade.go, install.sh, docs/users/flai.md, docs/operators, ".github/workflows/system-flow-check.yml", flai/cmd/host.go, flai/cmd/selfupgrade_test.go, scripts/install-test.sh, design/system/flai-cli.md, flai/cmd/host_versions_test.go, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/runbooks/install.md, docs/operators/runbooks/update.md, flai/cmd/installsh_test.go, flai/internal/buildinfo/releasekey.go, flai/internal/buildinfo/releasekey_test.go, flai/internal/releaseserver/releaseserver.go, flai/internal/releaseserver/releaseserver_test.go, design/system/release-signing.md, design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md, design/issues/summary.md]
 after: [S-0232]
 agent:
   harness: claude-code
@@ -26,20 +32,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1376
-  estimated: true
+  seconds: 2593
   turns:
     - day: 2026-10-12
       ceremony: 1
-      hand_edits: 1
-      work: 25
+      hand_edits: 2
+      work: 43
   models:
     - model: claude-opus-5-5
-      input: 216
-      output: 1011
-      cache_read: 10234581
-      cache_write: 512508
-      cost: 4.8503
+      input: 428
+      output: 201473
+      cache_read: 22115561
+      cache_write: 889364
+      cost: 13.7699
   strategic:
     - kind: planner
       seconds: 35
@@ -85,12 +90,12 @@ forecast:
 A release is installed only when its `checksums.txt` was signed by a key the installer knows (ADR-0070). `flai self-upgrade` and `flai host upgrade` verify with the standard library and the public key in the binary; `install.sh` verifies with `openssl`. What cannot be verified is not installed, and the reason is said.
 
 ## Acceptance criteria
-- [ ] `flai self-upgrade` and `flai host upgrade` download `checksums.txt.sig` beside `checksums.txt`, verify the ECDSA P-256 signature over the file with `crypto/ecdsa` and the embedded key before checking the archive's hash, and refuse with a message naming the release and the reason when the signature is missing or does not verify.
-- [ ] A release signed by a key the binary does not know is refused with the version of the newest release the binary can verify, to install first.
-- [ ] `install.sh` downloads the signature and verifies it with `openssl dgst -sha256 -verify` before the checksum; it refuses when `openssl` is absent or the signature fails, and says so.
-- [ ] Tests cover a good signature, a bad one, a missing one, and an unknown key, with a test key pair under `testdata/`; `system-flow-check.yml`'s install and self-upgrade step passes against the latest release.
-- [ ] `docs/users/flai.md` and the operator documentation say what is verified and what a refusal means.
-- [ ] `flai self-upgrade --list` and `flai host versions`, with `--json`, mark each flai release whose signature this binary cannot verify, such as one from before signing, and the Updates page shows it as not installable and offers no way to install it.
+- [x] `flai self-upgrade` and `flai host upgrade` download `checksums.txt.sig` beside `checksums.txt`, verify the ECDSA P-256 signature over the file with `crypto/ecdsa` and the embedded key before checking the archive's hash, and refuse with a message naming the release and the reason when the signature is missing or does not verify.
+- [x] A release signed by a key the binary does not know is refused with the version of the newest release the binary can verify, to install first.
+- [x] `install.sh` downloads the signature and verifies it with `openssl dgst -sha256 -verify` before the checksum; it refuses when `openssl` is absent or the signature fails, and says so.
+- [x] Tests cover a good signature, a bad one, a missing one, and an unknown key, with a test key pair under `testdata/`; `system-flow-check.yml`'s install and self-upgrade step passes against the latest release.
+- [x] `docs/users/flai.md` and the operator documentation say what is verified and what a refusal means.
+- [x] `flai self-upgrade --list` and `flai host versions`, with `--json`, mark each flai release whose signature this binary cannot verify, such as one from before signing, and the Updates page shows it as not installable and offers no way to install it.
 
 ## Tasks
 - T-1226 selfupgrade verifies checksums.txt.sig with crypto/ecdsa and the embedded key before the archive's hash, and refuses what it cannot verify

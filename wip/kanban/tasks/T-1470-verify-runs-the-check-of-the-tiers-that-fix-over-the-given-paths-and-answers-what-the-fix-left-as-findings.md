@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 24
-      cache_read: 463917
-      cache_write: 4012
-      cost: 0.2113
+      input: 8
+      output: 2931
+      cache_read: 463197
+      cache_write: 12820
+      cost: 0.2309
 ---
 # T-1470 verify runs the check of the tiers that fix over the given paths and answers what the fix left as findings
 

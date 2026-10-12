@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 57
-      output: 323
-      cache_read: 2503859
-      cache_write: 121853
-      cost: 1.186
+      input: 42
+      output: 16447
+      cache_read: 2599193
+      cache_write: 71938
+      cost: 1.2955
 ---
 # T-1456 flai stream sync runs the fix over what the branch changes right after its rebase, and commits what it fixed
 

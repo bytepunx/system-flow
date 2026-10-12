@@ -3,11 +3,11 @@ id: T-1230
 type: task
 nature: feature
 title: The user, operator, and design documentation say what an upgrade and install.sh verify and what a refusal means
-status: in-progress
+status: done
 parent: S-0233
 owner: alex
 created: 2026-10-07T22:40:45Z
-updated: 2026-10-12T17:17:11Z
+updated: 2026-10-12T17:28:20Z
 transitions:
   - to: ready
     at: 2026-10-12T17:17:10Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T17:17:11Z
     by: agent-S-0233
+  - to: done
+    at: 2026-10-12T17:28:20Z
+    by: agent-S-0233
 stream: S-0233
 tags: [cli]
 touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/install.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/system/release-signing.md]
 after: [T-1227, T-1228]
+usage:
+  source: log
+  seconds: 669
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 90
+      output: 42475
+      cache_read: 4662459
+      cache_write: 187498
+      cost: 2.903
 ---
 # T-1230 The user, operator, and design documentation say what an upgrade and install.sh verify and what a refusal means
 

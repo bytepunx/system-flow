@@ -3,11 +3,11 @@ id: T-1471
 type: task
 nature: improvement
 title: The docs and ADR-0139 say that flai accept refuses on markdown the fix left, naming its files, lines, and errors
-status: in-progress
+status: done
 parent: S-0367
 owner: alex
 created: 2026-10-12T17:07:47Z
-updated: 2026-10-12T17:19:43Z
+updated: 2026-10-12T17:20:47Z
 transitions:
   - to: ready
     at: 2026-10-12T17:19:43Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T17:19:43Z
     by: agent-S-0367
+  - to: done
+    at: 2026-10-12T17:20:47Z
+    by: agent-S-0367
 stream: S-0367
 tags: []
-touches: [design/system/flai-cli.md, docs/users/flai.md, design/adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md, design/system/project-manifest.md, docs/operators/settings.md]
+touches: [design/system/flai-cli.md, docs/users/flai.md, design/adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md, design/system/project-manifest.md, docs/operators/settings.md, design/adrs]
 after: [T-1459]
+usage:
+  source: log
+  seconds: 64
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 9487
+      cache_read: 1499226
+      cache_write: 41494
+      cost: 0.7472
 ---
 # T-1471 The docs and ADR-0139 say that flai accept refuses on markdown the fix left, naming its files, lines, and errors
 

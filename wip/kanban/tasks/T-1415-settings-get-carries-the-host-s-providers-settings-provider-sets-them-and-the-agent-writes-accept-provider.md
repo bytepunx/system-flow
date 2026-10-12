@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 521
-      cache_read: 4418570
-      cache_write: 133988
-      cost: 2.0546
+      input: 81
+      output: 25556
+      cache_read: 4502056
+      cache_write: 140448
+      cost: 2.2856
 ---
 # T-1415 settings.get carries the host's providers, settings.provider sets them, and the agent writes accept provider
 

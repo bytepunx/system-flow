@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 78
-      output: 391
-      cache_read: 3495227
-      cache_write: 130652
-      cost: 1.6364
+      input: 69
+      output: 32668
+      cache_read: 3585957
+      cache_write: 144207
+      cost: 2.2327
 ---
 # T-1227 install.sh verifies checksums.txt.sig with openssl and the embedded public key before the checksum, and refuses without openssl
 

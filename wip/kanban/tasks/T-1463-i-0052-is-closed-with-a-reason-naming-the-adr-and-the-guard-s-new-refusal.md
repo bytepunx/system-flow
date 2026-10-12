@@ -3,16 +3,36 @@ id: T-1463
 type: task
 nature: remediation
 title: I-0052 is closed with a reason naming the ADR and the guard's new refusal
-status: backlog
+status: done
 parent: S-0368
 owner: alex
 created: 2026-10-12T16:57:45Z
-updated: 2026-10-12T16:57:45Z
-transitions: []
+updated: 2026-10-12T17:37:33Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:37:15Z
+    by: agent-S-0368
+  - to: in-progress
+    at: 2026-10-12T17:37:16Z
+    by: agent-S-0368
+  - to: done
+    at: 2026-10-12T17:37:33Z
+    by: agent-S-0368
 stream: S-0368
 tags: [guard, issues]
 touches: [design/issues/I-0052-flai-guard-does-not-refuse-a-sub-agent-s-shell-commands-that-write-files-sed-i-perl-i-tee-redirection.md, design/issues/summary.md]
 after: [T-1461, T-1462]
+usage:
+  source: log
+  seconds: 17
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 9907
+      cache_read: 1075456
+      cache_write: 47974
+      cost: 0.7241
 ---
 # T-1463 I-0052 is closed with a reason naming the ADR and the guard's new refusal
 

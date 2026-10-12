@@ -3,11 +3,11 @@ id: T-1460
 type: task
 nature: improvement
 title: An ADR refining ADR-0060 proposes which sub-agents flai guard refuses a shell write and which commands count as one, and agent-adapters.md records it
-status: in-progress
+status: done
 parent: S-0368
 owner: alex
 created: 2026-10-12T16:57:18Z
-updated: 2026-10-12T17:19:23Z
+updated: 2026-10-12T17:21:27Z
 transitions:
   - to: ready
     at: 2026-10-12T17:19:22Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-12T17:19:23Z
     by: agent-S-0368
+  - to: done
+    at: 2026-10-12T17:21:27Z
+    by: agent-S-0368
 stream: S-0368
 tags: [guard, adr, design]
-touches: [design/adrs/README.md, design/system/agent-adapters.md]
+touches: [design/adrs/README.md, design/system/agent-adapters.md, design/adrs/0141-flai-guard-refuses-a-read-only-sub-agent-a-shell-command-that-writes-a-file.md]
+usage:
+  source: log
+  seconds: 124
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 8859
+      cache_read: 961684
+      cache_write: 42899
+      cost: 0.6475
 ---
 # T-1460 An ADR refining ADR-0060 proposes which sub-agents flai guard refuses a shell write and which commands count as one, and agent-adapters.md records it
 

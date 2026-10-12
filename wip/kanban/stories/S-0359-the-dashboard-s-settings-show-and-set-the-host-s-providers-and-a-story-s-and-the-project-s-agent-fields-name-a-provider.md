@@ -3,17 +3,20 @@ id: S-0359
 type: story
 nature: feature
 title: The dashboard's settings show and set the host's providers, and a story's and the project's agent fields name a provider
-status: in-progress
+status: review
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:52:44Z
-updated: 2026-10-12T17:16:49Z
+updated: 2026-10-12T17:32:55Z
 transitions:
   - to: ready
     at: 2026-10-12T16:53:33Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-12T16:54:32Z
+    by: agent-S-0359
+  - to: review
+    at: 2026-10-12T17:32:55Z
     by: agent-S-0359
 tags: [cli, dashboard]
 topics: [agents]
@@ -26,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1336
-  estimated: true
+  seconds: 2316
   turns:
     - day: 2026-10-12
-      ceremony: 3
-      hand_edits: 3
-      work: 47
+      ceremony: 4
+      hand_edits: 4
+      work: 56
   models:
     - model: claude-opus-5-5
-      input: 322
-      output: 1832
-      cache_read: 16283270
-      cache_write: 571036
-      cost: 7.6066
+      input: 354
+      output: 111207
+      cache_read: 19590394
+      cache_write: 611150
+      cost: 9.9455
   strategic:
     - kind: orchestrator
       seconds: 7

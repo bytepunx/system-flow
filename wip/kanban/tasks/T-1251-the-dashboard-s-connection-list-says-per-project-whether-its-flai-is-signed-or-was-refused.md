@@ -3,16 +3,36 @@ id: T-1251
 type: task
 nature: feature
 title: The dashboard's connection list says per project whether its flai is signed or was refused
-status: backlog
+status: done
 parent: S-0237
 owner: alex
 created: 2026-10-07T23:00:52Z
-updated: 2026-10-07T23:00:52Z
-transitions: []
+updated: 2026-10-12T17:35:40Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:21:46Z
+    by: agent-S-0237
+  - to: in-progress
+    at: 2026-10-12T17:21:47Z
+    by: agent-S-0237
+  - to: done
+    at: 2026-10-12T17:35:40Z
+    by: agent-S-0237
 stream: S-0237
 tags: [dashboard]
 touches: [flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts, flaiover/src/lib/settings.ts]
 after: [T-1248]
+usage:
+  source: log
+  seconds: 833
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 401
+      cache_read: 3552163
+      cache_write: 96599
+      cost: 1.6533
 ---
 # T-1251 The dashboard's connection list says per project whether its flai is signed or was refused
 

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T17:04:18Z
+updated: 2026-10-12T17:35:39Z
 transitions:
   - to: ready
     at: 2026-10-12T16:53:33Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0237
 tags: [cli, dashboard]
 topics: [release, security]
-touches: [flai/internal/channel, flaiover/src/lib/server/agent.ts, docs/operators, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/HostFlaiBanner.svelte, flaiover/src/lib/components/HostFlaiBanner.svelte.test.ts, flai/cmd/serve.go, flai/cmd/host.go, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/settings.ts, flai/internal/buildinfo/stamp.go, flai/internal/buildinfo/stamp_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts, flai/cmd/serve_test.go, flai/cmd/host_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md]
+touches: [flai/internal/channel, flaiover/src/lib/server/agent.ts, docs/operators, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/HostFlaiBanner.svelte, flaiover/src/lib/components/HostFlaiBanner.svelte.test.ts, flai/cmd/serve.go, flai/cmd/host.go, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/settings.ts, flai/internal/buildinfo/stamp.go, flai/internal/buildinfo/stamp_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts, flai/cmd/serve_test.go, flai/cmd/host_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md, flai/internal/serve/below_test.go, flai/internal/serve/candidates_test.go, flai/internal/serve/outdated_test.go, flai/internal/serve/projects_test.go, flaiover/src/lib/server/project-events.test.ts, flai/cmd/dashboard_agent.go, flai/cmd/dashboard_agent_test.go, flai/cmd/serve_status_below.go, flai/cmd/serve_status_below_test.go, flaiover/src/lib/components/HostFlai.svelte, flaiover/src/lib/components/HostFlai.svelte.test.ts]
 after: [S-0235]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2280
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 4
+      hand_edits: 2
+      work: 64
+  models:
+    - model: claude-opus-5-5
+      input: 482
+      output: 2910
+      cache_read: 28418588
+      cache_write: 892023
+      cost: 13.2805
   strategic:
     - kind: orchestrator
       seconds: 387

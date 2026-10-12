@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 217
-      cache_read: 2507781
-      cache_write: 126415
-      cost: 1.1888
+      input: 50
+      output: 23733
+      cache_read: 2605193
+      cache_write: 104766
+      cost: 1.6221
 ---
 # T-1228 flai self-upgrade --list and flai host versions mark each release this binary cannot verify, and flai host upgrade reports the refusal
 

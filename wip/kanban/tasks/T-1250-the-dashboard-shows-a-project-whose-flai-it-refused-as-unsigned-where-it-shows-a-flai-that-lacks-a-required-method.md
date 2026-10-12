@@ -3,16 +3,36 @@ id: T-1250
 type: task
 nature: feature
 title: The dashboard shows a project whose flai it refused as unsigned where it shows a flai that lacks a required method
-status: backlog
+status: done
 parent: S-0237
 owner: alex
 created: 2026-10-07T23:00:46Z
-updated: 2026-10-07T23:00:46Z
-transitions: []
+updated: 2026-10-12T17:35:38Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:21:44Z
+    by: agent-S-0237
+  - to: in-progress
+    at: 2026-10-12T17:21:45Z
+    by: agent-S-0237
+  - to: done
+    at: 2026-10-12T17:35:38Z
+    by: agent-S-0237
 stream: S-0237
 tags: [dashboard]
-touches: [flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/HostFlaiBanner.svelte, flaiover/src/lib/components/HostFlaiBanner.svelte.test.ts]
+touches: [flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/HostFlaiBanner.svelte, flaiover/src/lib/components/HostFlaiBanner.svelte.test.ts, flaiover/src/lib/components/HostFlai.svelte, flaiover/src/lib/components/HostFlai.svelte.test.ts]
 after: [T-1248]
+usage:
+  source: log
+  seconds: 833
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 215
+      cache_read: 1810307
+      cache_write: 62081
+      cost: 0.8484
 ---
 # T-1250 The dashboard shows a project whose flai it refused as unsigned where it shows a flai that lacks a required method
 

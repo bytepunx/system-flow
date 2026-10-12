@@ -3,16 +3,36 @@ id: T-1462
 type: task
 nature: improvement
 title: docs/users/flai.md says which sub-agents flai guard refuses a shell write, what counts as one, and what passes
-status: backlog
+status: done
 parent: S-0368
 owner: alex
 created: 2026-10-12T16:57:39Z
-updated: 2026-10-12T16:57:39Z
-transitions: []
+updated: 2026-10-12T17:35:10Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:21:56Z
+    by: agent-S-0368
+  - to: in-progress
+    at: 2026-10-12T17:21:57Z
+    by: agent-S-0368
+  - to: done
+    at: 2026-10-12T17:35:10Z
+    by: agent-S-0368
 stream: S-0368
 tags: [guard, docs]
 touches: [docs/users/flai.md]
 after: [T-1460]
+usage:
+  source: log
+  seconds: 793
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 7907
+      cache_read: 858376
+      cache_write: 38291
+      cost: 0.578
 ---
 # T-1462 docs/users/flai.md says which sub-agents flai guard refuses a shell write, what counts as one, and what passes
 

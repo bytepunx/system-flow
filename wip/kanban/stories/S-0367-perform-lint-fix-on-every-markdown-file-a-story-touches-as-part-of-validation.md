@@ -3,10 +3,10 @@ id: S-0367
 type: story
 nature: improvement
 title: Perform lint fix on every markdown file a story touches as part of validation
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-12T16:48:56Z
-updated: 2026-10-12T17:09:12Z
+updated: 2026-10-12T17:32:10Z
 transitions:
   - to: ready
     at: 2026-10-12T16:48:58Z
@@ -14,8 +14,11 @@ transitions:
   - to: in-progress
     at: 2026-10-12T16:49:57Z
     by: agent-S-0367
+  - to: review
+    at: 2026-10-12T17:32:10Z
+    by: agent-S-0367
 tags: [cli]
-touches: [flai/cmd, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/verify/fix.go, flai/internal/verify/fix_test.go, flai/internal/verify/manifest.go, flai/internal/verify/verify.go, flai/internal/storygit/fix.go, flai/internal/storygit/fix_test.go, flai/internal/storygit/sync.go, design/adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, system-flow.yaml, template/CHANGELOG.md, template/root/system-flow.yaml.tmpl, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
+touches: [flai/cmd, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/verify/fix.go, flai/internal/verify/fix_test.go, flai/internal/verify/manifest.go, flai/internal/verify/verify.go, flai/internal/storygit/fix.go, flai/internal/storygit/fix_test.go, flai/internal/storygit/sync.go, design/adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md, design/adrs/README.md, design/system/flai-cli.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, system-flow.yaml, template/CHANGELOG.md, template/root/system-flow.yaml.tmpl, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, design/adrs/0140-flai-accept-refuses-an-acceptance-whose-files-a-tier-with-a-fix-command-still.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,32 +26,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1779
-  estimated: true
+  seconds: 2545
   turns:
     - day: 2026-10-12
-      ceremony: 2
-      test_runs: 2
-      hand_edits: 5
-      work: 53
+      ceremony: 3
+      test_runs: 3
+      hand_edits: 7
+      work: 68
   models:
     - model: claude-opus-5-5
-      input: 332
-      output: 1941
-      cache_read: 17839865
-      cache_write: 616364
-      cost: 8.3361
+      input: 380
+      output: 148086
+      cache_read: 23402093
+      cache_write: 647705
+      cost: 11.6639
   strategic:
     - kind: orchestrator
-      seconds: 443
+      seconds: 522
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 110
-          cache_read: 2015371
-          cache_write: 4401
-          cost: 0.5092
+          input: 12
+          output: 125
+          cache_read: 3352549
+          cache_write: 9097
+          cost: 0.8475
+        - model: claude-sonnet-5-5
+          input: 16
+          output: 86
+          cache_read: 296239
+          cache_write: 73249
+          cost: 0.2986
 cost_of_delay:
   inputs:
     penalty_per_week: 50
@@ -62,9 +70,10 @@ cost_of_delay:
 Run `scripts/lint-md.sh --fix [markdown file]` for every markdown file that gets touched as part of a story to prevent bad markdown from slipping into main and breaking build checks.
 
 ## Acceptance criteria
-- [ ] All markdown files get a lint fix call made on them if they were modified as part of a story
-- [ ] Any markdown files outside of a story that get added also get the lint fix call
-- [ ] Lint fix should get called right after a rebase to ensure that old files with bad markdown don't continue polluting recently changed markdown files
+- [x] All markdown files get a lint fix call made on them if they were modified as part of a story
+- [x] Any markdown files outside of a story that get added also get the lint fix call
+- [x] Lint fix should get called right after a rebase to ensure that old files with bad markdown don't continue polluting recently changed markdown files
+- [x] Markdown the fix cannot fix blocks the review from being accepted, naming the files, lines, and errors, so that the operator can correct them (TH-0413)
 
 ## Tasks
 - T-1455 A test tier takes fix_command, and verify.Fix runs it over the files the tier selects
@@ -76,3 +85,11 @@ Run `scripts/lint-md.sh --fix [markdown file]` for every markdown file that gets
 - T-1471 The docs and ADR-0139 say that flai accept refuses on markdown the fix left, naming its files, lines, and errors
 
 ## Notes
+
+- The fix is a test tier's `fix_command`. This repository's `markdown` tier runs `[scripts/lint-md.sh, --fix, "{files}"]` (ADR-0139).
+- When the fix runs:
+  - `flai task done` runs it before it commits.
+  - Every clean `flai stream sync`, and `flai accept`'s rebase, runs it right after the rebase over every file the branch changes, and commits what it rewrote.
+  - `flai accept` runs it over the main checkout's uncommitted files.
+- Criterion 2 is the markdown `flai accept` commits from the main checkout, as the operator confirmed on TH-0413.
+- Criterion 4 is the operator's decision on TH-0413, added here (ADR-0140). The markdown editor they asked for alongside it is the draft story S-0378.
