@@ -4,11 +4,11 @@
 // sub-agent reads; it does not change a work item, a thread, a conversation
 // with another story's agent (S-0331), or the repository's history, because
 // the story's agent alone acts for the story (ADR-0059). The story's agent's
-// own calls carry no agent ID and are never
-// refused. The guard is not a shell: it finds the programs a command line
-// runs well enough to stop a sub-agent that follows its instructions
-// carelessly, not one that sets out to hide a command (a backslash inside a
-// name, a command held in a variable).
+// own calls carry no agent ID and are refused only as said below. The guard
+// is not a shell: it finds the programs a command line runs well enough to
+// stop a sub-agent that follows its instructions carelessly, not one that
+// sets out to hide a command (a backslash inside a name, a command held in a
+// variable).
 //
 // A sub-agent may write an ADR, a document like the design and the code it
 // edits, with flai adr new, topics, and accept, or the MCP tool adr_new, but
@@ -33,9 +33,9 @@
 // sub-agent edits files by design, and writes through the shell as before.
 //
 // A planner session, one flai serve starts with the role plan, is held to
-// planning (strategic-agents.md): its own calls, which carry no agent ID,
-// may read, write work items and threads through flai, and move an item to
-// backlog, but not edit files with Edit, Write, or NotebookEdit, move an
+// planning (strategic-agents.md): its own calls, which carry no agent ID, may
+// read, write work items and threads through flai as itself, and move an item
+// to backlog, but not edit files with Edit, Write, or NotebookEdit, move an
 // item further, accept, publish, work a story, or change the repository's
 // history. A story it creates is a draft for the operator to finalize
 // (S-0209). Its sub-agents are held as every sub-agent is.
@@ -60,12 +60,12 @@
 //
 // An analyzer session, one flai serve starts with the role analyze, is held
 // to its report (S-0223): its own calls may read, flai stats among them, log
-// its activities, and open and reply to threads, and may edit, with Edit,
-// Write, or NotebookEdit, only a file under the manifest's design folder's
-// analysis/, its report and the folder's README.md that lists it. It files
-// and bumps an issue for each actionable finding (S-0224), with flai issue
-// new and bump or the MCP tools issue_new and issue_bump, which write the
-// issue through flai, never through a file edit. It authors no stories:
+// its activities, and open and reply to threads as itself, and may edit, with
+// Edit, Write, or NotebookEdit, only a file under the manifest's design
+// folder's analysis/, its report and the folder's README.md that lists it. It
+// files and bumps an issue for each actionable finding (S-0224), with flai
+// issue new and bump or the MCP tools issue_new and issue_bump, which write
+// the issue through flai, never through a file edit. It authors no stories:
 // item_new, item_edit, item_move, issue_story, and flai issue story, story,
 // epic, and task are refused it, as is every other write through flai, flai
 // issue close among them, and git's. Its sub-agents, the explorer it hands
@@ -87,6 +87,14 @@
 // reports work items and threads, not sub-agents, so it would run to its
 // timeout. Record keeps each session's running sub-agents, from Claude
 // Code's SubagentStart and SubagentStop hooks.
+//
+// A story's agent, the planner, and the analyzer write only as themselves
+// (S-0369, ADR-0143): an entry's author is whatever --by, else FLAI_AGENT,
+// says, and permission_prompt takes an answer by its author, so their own
+// Bash call is refused when a flai command's --by or --placed-by names
+// another, or when it sets, empties, or unsets FLAI_AGENT or FLAI_SESSION to
+// anything but their own. Their own name is FLAI_AGENT as the hook sees it,
+// or the name flai serve gives the run; the orchestrator keeps its own rule.
 //
 // No session flai serve starts, and no sub-agent, changes the manifest's
 // shared paths, with shared_paths_edit or flai shared add or remove
@@ -515,6 +523,13 @@ const (
 // reads it from a project's definitions; such a sub-agent's shell command
 // that writes a file outside the temporary folder is refused (S-0368,
 // ADR-0141). A nil ReadOnly holds no sub-agent read-only.
+//
+// Agent, Session, and Item are the hook's FLAI_AGENT, FLAI_SESSION, and
+// FLAI_ITEM. A story's agent, the planner, and the analyzer write only as
+// Agent or the name flai serve gives the run, agent-<Story>, planner-<Item>,
+// or analyzer, and only in Session: their own call that names another author
+// with --by or --placed-by, or sets, empties, or unsets FLAI_AGENT or
+// FLAI_SESSION to anything but these, is refused (S-0369, ADR-0143).
 type Guard struct {
 	Commands    []string
 	Role        string
@@ -528,6 +543,9 @@ type Guard struct {
 	ThreadOpen  func() (bool, error)
 	AutoApprove bool
 	ReadOnly    func(agentType string) bool
+	Agent       string
+	Session     string
+	Item        string
 }
 
 // ThreadOpener says who opened the thread with an ID in r's wip/threads, in
@@ -1008,17 +1026,20 @@ func (g Guard) Decide(e Event) Refusal {
 		if e.ToolName == MCPPrefix+ReleasePublish && g.Role != RoleOrchestrate && g.Role != RolePlan && g.Role != RoleAnalyze {
 			return Refusal{Why: "only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes}
 		}
+		var why string
 		switch g.Role {
 		case RolePlan:
-			return Refusal{Why: g.plan(e)}
+			why = g.plan(e)
 		case RoleAnalyze:
-			return Refusal{Why: g.analyze(e)}
+			why = g.analyze(e)
 		case RoleOrchestrate:
 			return g.orchestrate(e)
 		case "":
-			return Refusal{Why: g.wait(e)}
+			why = g.wait(e)
 		}
-		return Refusal{}
+		// a call its role refuses whoever it names is refused for the role's
+		// reason, so that leaving out --by does not meet a second refusal
+		return Refusal{Why: cmp.Or(why, g.authors(e))}
 	}
 	who := e.AgentType
 	if who == "" {

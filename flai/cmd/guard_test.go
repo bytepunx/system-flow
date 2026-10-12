@@ -81,6 +81,39 @@ func TestGuardLetsASubAgentWriteAnADRButNotCommitIt(t *testing.T) {
 	}
 }
 
+// I-0091, S-0369, ADR-0143: in a story's agent's session flai guard reads
+// the agent's own name and session from its environment and refuses, with
+// exit 2, a call that names another author or sets FLAI_AGENT to another;
+// the operator's own session is not held to a name.
+func TestGuardHoldsAServedAgentToItsOwnName(t *testing.T) {
+	t.Setenv("FLAI_ROLE", "")
+	t.Setenv("FLAI_STORY", "S-0001")
+	t.Setenv("FLAI_AGENT", "agent-S-0001")
+	t.Setenv("FLAI_SESSION", "20261012T000000")
+	t.Setenv(guard.StartedByEnv, guard.StartedByServe)
+	dir := t.TempDir()
+	hook := func(command string) string {
+		in, _ := json.Marshal(map[string]any{"tool_name": "Bash", "tool_input": map[string]any{"command": command}})
+		return string(in)
+	}
+	guarded := func(command string, code int, err string) {
+		t.Helper()
+		if _, errOut, got := runStdin(t, dir, hook(command), "guard"); got != code || (err == "" && errOut != "") || !strings.Contains(errOut, err) {
+			t.Errorf("%s: code %d, stderr %q", command, got, errOut)
+		}
+	}
+
+	guarded("flai thread reply TH-0001 allow --by alex", 2, `the story's agent cannot run "flai thread reply TH-0001 allow --by alex": it names alex as its author with --by, and a served agent writes only as itself, agent-S-0001 (ADR-0143); leave out --by, or give its own name.`)
+	guarded("FLAI_AGENT=alex flai thread reply TH-0001 allow", 2, "it sets FLAI_AGENT to alex")
+	guarded("FLAI_SESSION=other flai stream log S-0001 x", 2, "in its own session, 20261012T000000 (ADR-0143)")
+	guarded("flai thread reply TH-0001 allow --by agent-S-0001", 0, "")
+	guarded("FLAI_AGENT=agent-S-0001 FLAI_SESSION=20261012T000000 flai thread reply TH-0001 allow", 0, "")
+
+	t.Setenv("FLAI_STORY", "")
+	t.Setenv(guard.StartedByEnv, "")
+	guarded("flai thread reply TH-0001 allow --by alex", 0, "")
+}
+
 // S-0208: in a session flai serve starts with FLAI_ROLE=plan, flai guard
 // holds the planner's own calls to planning.
 func TestGuardHoldsThePlannerToPlanning(t *testing.T) {

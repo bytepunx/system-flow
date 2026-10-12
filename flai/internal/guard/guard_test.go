@@ -24,12 +24,20 @@ func bash(agent, cmd string) Event {
 	return e
 }
 
-func TestTheStorysAgentIsNeverRefused(t *testing.T) {
+// The story's agent's own calls pass, but those that name an author or a
+// session other than its own (S-0369, ADR-0143, authors_test.go), its wait on
+// its sub-agents (S-0285), and a change of the shared paths (ADR-0096).
+func TestTheStorysAgentIsRefusedOnlyAnotherName(t *testing.T) {
 	main := Event{ToolName: "mcp__flai__item_move", AgentType: "planner"} // a session started with --agent has a type, not an ID
-	for _, e := range []Event{main, bash("", "flai move S-0001 review && git commit -m x")} {
-		if why := g.Check(e); why != "" {
-			t.Errorf("%+v refused: %s", e, why)
+	for _, gr := range []Guard{g, storysAgent} {
+		for _, e := range []Event{main, bash("", "flai move S-0001 review && git commit -m x"), bash("", "flai move S-0001 review --by agent-S-0001")} {
+			if why := gr.Check(e); why != "" {
+				t.Errorf("%+v refused: %s", e, why)
+			}
 		}
+	}
+	if why := storysAgent.Check(bash("", "flai move S-0001 review --by alex")); !strings.Contains(why, "ADR-0143") {
+		t.Errorf("another name: %q", why)
 	}
 }
 

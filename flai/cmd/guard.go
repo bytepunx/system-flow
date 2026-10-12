@@ -45,7 +45,7 @@ command run through env, sudo, timeout, xargs, find -exec, or a shell's -c
 is found too. A heredoc's text (cat <<EOF, python3 - <<'EOF') is input, not
 commands, and is not looked at, unless a shell on its line reads it (bash
 <<EOF, cat <<EOF | sh). The story's agent's own calls carry no agent_id and pass, save
-the wait below, as does anything it cannot read: the guard fails open. An
+one that names another author or session and the wait below, as does anything it cannot read: the guard fails open. An
 input whose hook_event_name is neither SubagentStart nor SubagentStop is a
 PreToolUse's, named or not. It is not a shell, and
 a command hidden on purpose (a backslash in its name, a variable holding
@@ -79,6 +79,22 @@ names the command and the file and tells the sub-agent to put the
 correction in its final message. Every other sub-agent, a task sub-agent
 and general-purpose among them, writes through the shell as before, as it
 does when the definition or the project cannot be read.
+
+A story's agent, the planner, and the analyzer, sessions flai serve
+starts (FLAI_STORY, FLAI_STARTED_BY=flai-serve, or FLAI_ROLE plan or
+analyze), write only as themselves (S-0369, ADR-0143): their own Bash call
+is refused when a flai command's --by or --placed-by names another (--by on
+order, a policy, and on stats, a grouping, names no author; an empty one
+falls back to FLAI_AGENT), or when it sets FLAI_AGENT or FLAI_SESSION to
+anything but its own, the empty value and one held in a variable included,
+before a command, after export, declare, typeset, local, readonly, or env,
+or unsets either with unset or env -u, or clears both with env -i, in a
+shell's -c script, an eval, or a heredoc a shell reads as well. Its own name is the hook's
+FLAI_AGENT, or the name flai serve gives the run: agent-S-nnnn,
+planner-<FLAI_ITEM>, or analyzer; its own session is the hook's
+FLAI_SESSION. A call its role refuses anyway is refused for the role's
+reason. The orchestrator, which writes to a thread only as itself under
+its own rule, and the operator's own session are not held to a name.
 
 No sub-agent, and no session flai serve starts (FLAI_STARTED_BY=flai-serve,
 FLAI_ROLE, or FLAI_STORY set), changes the manifest's shared paths: the MCP
@@ -205,7 +221,8 @@ session, where none of those is set, a file edit does not run it.`,
 				a.recordSubAgent(e)
 				return nil
 			}
-			g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY"), Served: os.Getenv(guard.StartedByEnv) == guard.StartedByServe}
+			g := guard.Guard{Role: os.Getenv("FLAI_ROLE"), Story: os.Getenv("FLAI_STORY"), Served: os.Getenv(guard.StartedByEnv) == guard.StartedByServe,
+				Agent: os.Getenv("FLAI_AGENT"), Session: os.Getenv("FLAI_SESSION"), Item: os.Getenv("FLAI_ITEM")}
 			for _, c := range cmd.Root().Commands() {
 				g.Commands = append(g.Commands, c.Name())
 			}
