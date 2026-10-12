@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T20:01:45Z
+updated: 2026-10-12T20:33:25Z
 transitions:
   - to: ready
     at: 2026-10-12T18:29:30Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0238
 tags: [cli]
 topics: [release, security]
-touches: [flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/imagecheck.go, flai/internal/serve/imagecheck_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/cmd/dashboard_test.go, docs/operators/index.md, docs/users/flai-reference.md, design/system/release-signing.md]
+touches: [flai/cmd/serve.go, flai/cmd/dashboard.go, docs/operators, docs/users/flai.md, flai/cmd/host.go, design/system/flai-cli.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/internal/serve/imagecheck.go, flai/internal/serve/imagecheck_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/cmd/serve_test.go, flai/cmd/host_test.go, flai/cmd/dashboard_test.go, docs/operators/index.md, docs/users/flai-reference.md, design/system/release-signing.md, flai/internal/serve/candidates.go, flai/cmd/serve_status_below.go]
 after: [S-0236]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1907
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 2
+      hand_edits: 1
+      work: 30
+  models:
+    - model: claude-opus-5-5
+      input: 284
+      output: 1713
+      cache_read: 12191518
+      cache_write: 958744
+      cost: 5.9764
   strategic:
     - kind: orchestrator
       seconds: 294

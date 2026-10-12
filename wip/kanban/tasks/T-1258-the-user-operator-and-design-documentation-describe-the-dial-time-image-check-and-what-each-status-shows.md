@@ -3,12 +3,18 @@ id: T-1258
 type: task
 nature: feature
 title: The user, operator, and design documentation describe the dial-time image check and what each status shows
-status: backlog
+status: in-progress
 parent: S-0238
 owner: alex
 created: 2026-10-07T23:06:10Z
-updated: 2026-10-07T23:06:10Z
-transitions: []
+updated: 2026-10-12T20:33:38Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:33:38Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T20:33:38Z
+    by: system-flow
 stream: S-0238
 tags: [cli]
 touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, design/system/flai-cli.md, design/system/release-signing.md]

@@ -3,15 +3,35 @@ id: T-1254
 type: task
 nature: feature
 title: The channel client asks a gate before each dial, and a refusal skips the dial, records why, and waits a minute
-status: backlog
+status: done
 parent: S-0238
 owner: alex
 created: 2026-10-07T23:05:40Z
-updated: 2026-10-07T23:05:40Z
-transitions: []
+updated: 2026-10-12T20:06:44Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:02:16Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T20:02:17Z
+    by: system-flow
+  - to: done
+    at: 2026-10-12T20:06:44Z
+    by: agent-S-0238
 stream: S-0238
 tags: [cli]
 touches: [flai/internal/channel/channel.go, flai/internal/channel/channel_test.go]
+usage:
+  source: log
+  seconds: 267
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 147
+      cache_read: 763124
+      cache_write: 74139
+      cost: 0.3805
 ---
 # T-1254 The channel client asks a gate before each dial, and a refusal skips the dial, records why, and waits a minute
 

@@ -3,18 +3,27 @@ id: S-0351
 type: story
 nature: feature
 title: A claude-code agent runs through OpenRouter with the guard and permission_prompt on, checked by tests that run only where its key is set, and what OpenRouter forwards and charges is recorded
-status: ready
+status: done
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:44:52Z
-updated: 2026-10-12T20:03:53Z
+updated: 2026-10-12T20:40:10Z
 transitions:
   - to: ready
     at: 2026-10-12T17:57:39Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T20:09:02Z
+    by: agent-S-0351
+  - to: review
+    at: 2026-10-12T20:38:52Z
+    by: agent-S-0351
+  - to: done
+    at: 2026-10-12T20:40:10Z
+    by: orchestrator
 tags: [cli]
 topics: [agents, testing]
-touches: [flai/internal/serve/gateway_test.go, flai/internal/serve/claudecheck.go, scripts/gateway-smoke.sh, scripts/smoke.sh, docs/contributors/index.md, design/system/agent-adapters.md]
+touches: [flai/internal/serve/gateway_test.go, flai/internal/serve/claudecheck.go, scripts/gateway-smoke.sh, scripts/smoke.sh, docs/contributors/index.md, design/system/agent-adapters.md, scripts/README.md, scripts/integration.sh]
 after: [S-0350]
 agent:
   harness: claude-code
@@ -23,8 +32,18 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 0
-  models: []
+  seconds: 1804
+  turns:
+    - day: 2026-10-12
+      hand_edits: 2
+      work: 39
+  models:
+    - model: claude-opus-5-5
+      input: 182
+      output: 85978
+      cache_read: 13726206
+      cache_write: 436374
+      cost: 7.3881
 cost_of_delay:
   value: 49.78
   by: planner-E-0019
@@ -47,12 +66,12 @@ The finding of S-0339 leaves two facts unchecked that the later stories' contrac
 
 ## Acceptance criteria
 
-- [ ] A Go test in `flai/internal/serve` builds a scratch project with one story in progress, `flai guard` registered in its `.claude/settings.json`, and auto-approve on. It runs `claude -p` through OpenRouter with the `claude-code` adapter's arguments and a provider entry for OpenRouter. It passes when a protected `Write` goes through `permission_prompt`, a sub-agent's work-item write is refused by the guard, the `haiku` alias resolves through `models`, and the run ends with a `result`.
-- [ ] The test runs only when `OPENROUTER_API_KEY` is set and `claude` is on `PATH`, caps its spend with `max_budget_usd`, and otherwise skips with a message naming what is missing; the integration tier passes on a host without the key.
-- [ ] `scripts/gateway-smoke.sh`, called from `scripts/smoke.sh`, runs the check verbosely when the key is set and prints one line saying it was skipped and why when it is not; the smoke tier passes on a host without the key.
-- [ ] The test reads OpenRouter's `/api/v1/generation` for the run's calls and `/api/v1/key` before and after, and logs the gateway's cost beside the run's `total_cost_usd`.
-- [ ] `design/system/agent-adapters.md` gains a section with the date, the `claude` version, and the answers: which beta headers and body fields reached the model, whether the aliases resolved, whether the message IDs in the stream match OpenRouter's generation IDs, and the gateway's cost against `total_cost_usd`. Each open item the run settles is no longer marked to check.
-- [ ] `docs/contributors/index.md` says how to run the gateway checks with a key and a spend cap.
+- [x] A Go test in `flai/internal/serve` builds a scratch project with one story in progress, `flai guard` registered in its `.claude/settings.json`, and auto-approve on. It runs `claude -p` through OpenRouter with the `claude-code` adapter's arguments and a provider entry for OpenRouter. It passes when a protected `Write` goes through `permission_prompt`, a sub-agent's work-item write is refused by the guard, the `haiku` alias resolves through `models`, and the run ends with a `result`.
+- [x] The test runs only when `OPENROUTER_API_KEY` is set and `claude` is on `PATH`, caps its spend with `max_budget_usd`, and otherwise skips with a message naming what is missing; the integration tier passes on a host without the key.
+- [x] `scripts/gateway-smoke.sh`, called from `scripts/smoke.sh`, runs the check verbosely when the key is set and prints one line saying it was skipped and why when it is not; the smoke tier passes on a host without the key.
+- [x] The test reads OpenRouter's `/api/v1/generation` for the run's calls and `/api/v1/key` before and after, and logs the gateway's cost beside the run's `total_cost_usd`.
+- [x] `design/system/agent-adapters.md` gains a section with the date, the `claude` version, and the answers: which beta headers and body fields reached the model, whether the aliases resolved, whether the message IDs in the stream match OpenRouter's generation IDs, and the gateway's cost against `total_cost_usd`. Each open item the run settles is no longer marked to check.
+- [x] `docs/contributors/index.md` says how to run the gateway checks with a key and a spend cap.
 
 ## Tasks
 
@@ -81,3 +100,17 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 Forecast: 45m. `flai forecast` gave 24m from only 3 medium feature stories. It is raised for the live `claude -p` runs through OpenRouter, two of its APIs read, and the findings written up. The operator's key is a wait on a thread, not agent time.
 
 Cost of delay: 49.78 USD a week, as `flai cod` works it out: 45m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: 3d3da9e7a121e269d01ef18945472ad389cce504
+- At: 2026-10-12T20:40:10Z
+
+Verdict: pass at 3d3da9e7a121e269d01ef18945472ad389cce504; flai verify passed every step at that commit, the verifier matched all six criteria to the diff, the live OpenRouter check ran and its findings are recorded, and no key or secret value is in it.
+
+- 1: flai/internal/serve/gateway_test.go, flai/internal/serve/claudecheck.go
+- 2: flai/internal/serve/gateway_test.go, scripts/integration.sh
+- 3: scripts/gateway-smoke.sh, scripts/smoke.sh
+- 4: flai/internal/serve/gateway_test.go
+- 5: design/system/agent-adapters.md
+- 6: docs/contributors/index.md, scripts/README.md

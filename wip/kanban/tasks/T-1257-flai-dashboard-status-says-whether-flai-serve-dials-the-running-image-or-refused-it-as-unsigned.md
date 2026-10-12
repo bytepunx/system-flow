@@ -3,16 +3,36 @@ id: T-1257
 type: task
 nature: feature
 title: flai dashboard status says whether flai serve dials the running image or refused it as unsigned
-status: backlog
+status: done
 parent: S-0238
 owner: alex
 created: 2026-10-07T23:05:59Z
-updated: 2026-10-07T23:05:59Z
-transitions: []
+updated: 2026-10-12T20:33:29Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:23:23Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T20:23:24Z
+    by: system-flow
+  - to: done
+    at: 2026-10-12T20:33:29Z
+    by: agent-S-0238
 stream: S-0238
 tags: [cli]
 touches: [flai/cmd/dashboard.go, flai/cmd/dashboard_test.go]
 after: [T-1255]
+usage:
+  source: log
+  seconds: 601
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 409
+      cache_read: 2705010
+      cache_write: 199610
+      cost: 1.3201
 ---
 # T-1257 flai dashboard status says whether flai serve dials the running image or refused it as unsigned
 

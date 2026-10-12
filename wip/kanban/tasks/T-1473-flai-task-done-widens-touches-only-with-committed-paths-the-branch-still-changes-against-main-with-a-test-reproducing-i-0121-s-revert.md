@@ -3,16 +3,36 @@ id: T-1473
 type: task
 nature: remediation
 title: flai task done widens touches only with committed paths the branch still changes against main, with a test reproducing I-0121's revert
-status: backlog
+status: done
 parent: S-0370
 owner: alex
 created: 2026-10-12T17:09:57Z
-updated: 2026-10-12T17:09:57Z
-transitions: []
+updated: 2026-10-12T20:35:49Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:06:12Z
+    by: agent-S-0370
+  - to: in-progress
+    at: 2026-10-12T20:06:14Z
+    by: agent-S-0370
+  - to: done
+    at: 2026-10-12T20:35:49Z
+    by: agent-S-0370
 stream: S-0370
 tags: [cli]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/internal/mcpserver/task.go, docs/users/flai-reference.md]
 after: [T-1472]
+usage:
+  source: log
+  seconds: 1773
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 459
+      cache_read: 3460758
+      cache_write: 385738
+      cost: 1.7481
 ---
 # T-1473 flai task done widens touches only with committed paths the branch still changes against main, with a test reproducing I-0121's revert
 

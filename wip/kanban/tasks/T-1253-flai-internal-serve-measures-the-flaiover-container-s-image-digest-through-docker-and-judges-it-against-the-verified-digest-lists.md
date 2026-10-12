@@ -3,15 +3,35 @@ id: T-1253
 type: task
 nature: feature
 title: flai/internal/serve measures the flaiover container's image digest through Docker and judges it against the verified digest lists
-status: backlog
+status: done
 parent: S-0238
 owner: alex
 created: 2026-10-07T23:05:33Z
-updated: 2026-10-07T23:05:33Z
-transitions: []
+updated: 2026-10-12T20:06:48Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:02:15Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T20:02:16Z
+    by: system-flow
+  - to: done
+    at: 2026-10-12T20:06:48Z
+    by: agent-S-0238
 stream: S-0238
 tags: [cli]
 touches: [flai/internal/serve/imagecheck.go, flai/internal/serve/imagecheck_test.go]
+usage:
+  source: log
+  seconds: 272
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 186
+      cache_read: 1228453
+      cache_write: 127776
+      cost: 0.6164
 ---
 # T-1253 flai/internal/serve measures the flaiover container's image digest through Docker and judges it against the verified digest lists
 

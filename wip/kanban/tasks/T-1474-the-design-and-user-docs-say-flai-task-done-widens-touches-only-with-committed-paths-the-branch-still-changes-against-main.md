@@ -3,16 +3,36 @@ id: T-1474
 type: task
 nature: remediation
 title: The design and user docs say flai task done widens touches only with committed paths the branch still changes against main
-status: backlog
+status: done
 parent: S-0370
 owner: alex
 created: 2026-10-12T17:10:05Z
-updated: 2026-10-12T17:10:05Z
-transitions: []
+updated: 2026-10-12T20:35:56Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:06:12Z
+    by: agent-S-0370
+  - to: in-progress
+    at: 2026-10-12T20:06:14Z
+    by: agent-S-0370
+  - to: done
+    at: 2026-10-12T20:35:56Z
+    by: agent-S-0370
 stream: S-0370
 tags: [cli, docs]
 touches: [design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1472]
+usage:
+  source: log
+  seconds: 1773
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 152
+      cache_read: 781167
+      cache_write: 46670
+      cost: 0.3762
 ---
 # T-1474 The design and user docs say flai task done widens touches only with committed paths the branch still changes against main
 

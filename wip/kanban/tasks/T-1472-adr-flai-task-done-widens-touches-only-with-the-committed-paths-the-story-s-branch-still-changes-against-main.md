@@ -3,15 +3,35 @@ id: T-1472
 type: task
 nature: remediation
 title: "ADR: flai task done widens touches only with the committed paths the story's branch still changes against main"
-status: backlog
+status: done
 parent: S-0370
 owner: alex
 created: 2026-10-12T17:09:44Z
-updated: 2026-10-12T17:09:44Z
-transitions: []
+updated: 2026-10-12T20:06:02Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:05:25Z
+    by: agent-S-0370
+  - to: in-progress
+    at: 2026-10-12T20:05:26Z
+    by: agent-S-0370
+  - to: done
+    at: 2026-10-12T20:06:02Z
+    by: agent-S-0370
 stream: S-0370
 tags: [cli]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0144-flai-task-done-widens-touches-only-with-the-committed-paths-the-story-s-branch.md]
+usage:
+  source: log
+  seconds: 36
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 73
+      cache_read: 710432
+      cache_write: 4463
+      cost: 0.3249
 ---
 # T-1472 ADR: flai task done widens touches only with the committed paths the story's branch still changes against main
 

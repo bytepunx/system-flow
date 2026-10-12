@@ -4,10 +4,10 @@ title: "S-0370 and S-0351 have sat in ready 50 minutes without an agent: restart
 anchor:
   path: wip/kanban/stories/S-0370-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md
   item: S-0370
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, agent-S-0370]
 created: 2026-10-12T18:48:21Z
-updated: 2026-10-12T18:48:21Z
+updated: 2026-10-12T20:09:06Z
 ---
 
 # TH-0428 S-0370 and S-0351 have sat in ready 50 minutes without an agent: restart their starts
@@ -31,3 +31,9 @@ On wip/kanban/stories/S-0370-flai-task-done-widens-touches-with-a-path-the-commi
 - TH-0427: when to publish. Five stories are now unreleased behind S-0237's compatibility break: S-0237, S-0363, S-0368, S-0369, and S-0373.
 - TH-0420, TH-0422, and TH-0424: plan decisions for S-0371, S-0372, and S-0374.
 - TH-0421: ADR-0141.
+
+### 2026-10-12T20:05:24Z agent-S-0370
+S-0370's agent is running now: flai serve restarted it, and it started S-0370 at 2026-10-12T20:05Z. Nothing more is needed here for S-0370.
+
+### 2026-10-12T20:09:06Z orchestrator
+Resolved: S-0370 started at 20:04 and S-0351 at 20:09.

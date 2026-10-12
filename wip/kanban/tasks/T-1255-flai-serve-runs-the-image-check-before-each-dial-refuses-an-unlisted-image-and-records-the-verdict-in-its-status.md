@@ -3,16 +3,36 @@ id: T-1255
 type: task
 nature: feature
 title: flai serve runs the image check before each dial, refuses an unlisted image, and records the verdict in its status
-status: backlog
+status: done
 parent: S-0238
 owner: alex
 created: 2026-10-07T23:05:48Z
-updated: 2026-10-07T23:05:48Z
-transitions: []
+updated: 2026-10-12T20:22:39Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:07:13Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T20:07:14Z
+    by: system-flow
+  - to: done
+    at: 2026-10-12T20:22:39Z
+    by: agent-S-0238
 stream: S-0238
 tags: [cli]
-touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]
+touches: [flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flai/cmd/serve.go, flai/internal/serve/candidates.go, flai/internal/serve/imagecheck.go]
 after: [T-1253, T-1254]
+usage:
+  source: log
+  seconds: 925
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 70
+      output: 462
+      cache_read: 3889361
+      cache_write: 259853
+      cost: 1.8856
 ---
 # T-1255 flai serve runs the image check before each dial, refuses an unlisted image, and records the verdict in its status
 

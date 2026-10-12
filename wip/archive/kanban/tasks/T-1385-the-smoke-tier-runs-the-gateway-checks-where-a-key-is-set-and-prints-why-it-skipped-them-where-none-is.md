@@ -3,16 +3,36 @@ id: T-1385
 type: task
 nature: feature
 title: The smoke tier runs the gateway checks where a key is set and prints why it skipped them where none is
-status: backlog
+status: done
 parent: S-0351
 owner: alex
 created: 2026-10-08T08:45:10Z
-updated: 2026-10-08T08:45:10Z
-transitions: []
+updated: 2026-10-12T20:28:52Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:27:17Z
+    by: agent-S-0351
+  - to: in-progress
+    at: 2026-10-12T20:27:19Z
+    by: agent-S-0351
+  - to: done
+    at: 2026-10-12T20:28:52Z
+    by: agent-S-0351
 stream: S-0351
 tags: [cli]
-touches: [scripts/gateway-smoke.sh, scripts/smoke.sh, docs/contributors/index.md]
+touches: [scripts/gateway-smoke.sh, scripts/smoke.sh, docs/contributors/index.md, scripts/README.md, scripts/integration.sh]
 after: [T-1384]
+usage:
+  source: log
+  seconds: 93
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 5961
+      cache_read: 951708
+      cache_write: 30256
+      cost: 0.5123
 ---
 # T-1385 The smoke tier runs the gateway checks where a key is set and prints why it skipped them where none is
 

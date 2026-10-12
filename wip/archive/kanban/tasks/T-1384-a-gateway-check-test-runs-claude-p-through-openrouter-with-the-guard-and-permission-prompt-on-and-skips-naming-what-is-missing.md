@@ -3,15 +3,35 @@ id: T-1384
 type: task
 nature: feature
 title: A gateway check test runs claude -p through OpenRouter with the guard and permission_prompt on, and skips naming what is missing
-status: backlog
+status: done
 parent: S-0351
 owner: alex
 created: 2026-10-08T08:45:02Z
-updated: 2026-10-08T08:45:02Z
-transitions: []
+updated: 2026-10-12T20:26:38Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:10:10Z
+    by: agent-S-0351
+  - to: in-progress
+    at: 2026-10-12T20:10:11Z
+    by: agent-S-0351
+  - to: done
+    at: 2026-10-12T20:26:38Z
+    by: agent-S-0351
 stream: S-0351
 tags: [cli]
 touches: [flai/internal/serve/gateway_test.go, flai/internal/serve/claudecheck.go]
+usage:
+  source: log
+  seconds: 987
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 44230
+      cache_read: 7061295
+      cache_write: 224488
+      cost: 3.8007
 ---
 # T-1384 A gateway check test runs claude -p through OpenRouter with the guard and permission_prompt on, and skips naming what is missing
 

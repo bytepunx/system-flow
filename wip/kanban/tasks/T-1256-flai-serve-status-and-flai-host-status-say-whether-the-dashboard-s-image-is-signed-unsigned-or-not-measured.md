@@ -3,16 +3,36 @@ id: T-1256
 type: task
 nature: feature
 title: flai serve status and flai host status say whether the dashboard's image is signed, unsigned, or not measured
-status: backlog
+status: done
 parent: S-0238
 owner: alex
 created: 2026-10-07T23:05:55Z
-updated: 2026-10-07T23:05:55Z
-transitions: []
+updated: 2026-10-12T20:33:25Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:23:22Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T20:23:23Z
+    by: system-flow
+  - to: done
+    at: 2026-10-12T20:33:25Z
+    by: agent-S-0238
 stream: S-0238
 tags: [cli]
-touches: [flai/cmd/serve.go, flai/cmd/serve_test.go, flai/cmd/host.go, flai/cmd/host_test.go]
+touches: [flai/cmd/serve.go, flai/cmd/serve_test.go, flai/cmd/host.go, flai/cmd/host_test.go, flai/cmd/serve_status_below.go]
 after: [T-1255]
+usage:
+  source: log
+  seconds: 602
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 311
+      cache_read: 2080708
+      cache_write: 168781
+      cost: 1.0223
 ---
 # T-1256 flai serve status and flai host status say whether the dashboard's image is signed, unsigned, or not measured
 

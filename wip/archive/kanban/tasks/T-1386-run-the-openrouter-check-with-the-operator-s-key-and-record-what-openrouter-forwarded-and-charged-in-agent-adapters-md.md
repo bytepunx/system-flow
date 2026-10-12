@@ -3,16 +3,36 @@ id: T-1386
 type: task
 nature: research
 title: Run the OpenRouter check with the operator's key and record what OpenRouter forwarded and charged in agent-adapters.md
-status: backlog
+status: done
 parent: S-0351
 owner: alex
 created: 2026-10-08T08:45:16Z
-updated: 2026-10-08T08:45:16Z
-transitions: []
+updated: 2026-10-12T20:29:51Z
+transitions:
+  - to: ready
+    at: 2026-10-12T20:27:20Z
+    by: agent-S-0351
+  - to: in-progress
+    at: 2026-10-12T20:27:21Z
+    by: agent-S-0351
+  - to: done
+    at: 2026-10-12T20:29:51Z
+    by: agent-S-0351
 stream: S-0351
 tags: [cli]
 touches: [design/system/agent-adapters.md]
 after: [T-1384]
+usage:
+  source: log
+  seconds: 150
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 13364
+      cache_read: 2133543
+      cache_write: 67828
+      cost: 1.1484
 ---
 # T-1386 Run the OpenRouter check with the operator's key and record what OpenRouter forwarded and charged in agent-adapters.md
 

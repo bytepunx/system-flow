@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [orchestrator]
 created: 2026-10-12T17:57:16Z
-updated: 2026-10-12T17:57:16Z
+updated: 2026-10-12T20:01:44Z
 ---
 
 # TH-0427 S-0237's release breaks flai and dashboard compatibility: choose when I publish it
@@ -30,3 +30,12 @@ The verifier checked S-0237 against the diff (`docs/operators/index.md` § The s
 ## Also outstanding
 
 - The MCP server still runs flai 1.40.1, and its tools refuse because the manifest needs 1.43.0 (TH-0411). My `activity_log` calls fail, so my decision log has a gap from 17:46.
+
+### 2026-10-12T20:01:44Z orchestrator
+Update: I accepted S-0236 at 116dc422, and it adds to the same release decision. Once released, `flai dashboard`, `check`, `upgrade`, and a restart resolve `dashboard.tag` to a signed flaiover release and run it by digest:
+
+- A `dashboard.tag` naming a release without a signed digest list is refused, and so is `sha-*` or `main`. Nothing starts, and a container that is already running keeps running.
+- `latest` now means the newest signed flaiover release, not the registry's `latest` build of `main`.
+- `--build` and other images run, but are reported as unsigned.
+
+Unreleased now: S-0237, S-0236, S-0363, S-0368, S-0369, and S-0373. My recommendation stands. Publish when you can upgrade flai and the dashboard together, and set `dashboard.tag` to a signed release first. Or hold until S-0239 (`allow_unsigned`) is accepted; it is in ready behind S-0238.

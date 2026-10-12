@@ -3,26 +3,41 @@ id: S-0370
 type: story
 nature: remediation
 title: flai task done widens touches with a path the commit reverted to main, re-growing a claim the story narrowed
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-12T16:52:44Z
-updated: 2026-10-12T20:03:53Z
+updated: 2026-10-12T20:05:43Z
 transitions:
   - to: ready
     at: 2026-10-12T17:57:35Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T20:04:40Z
+    by: agent-S-0370
 tags: [cli]
 topics: [touches]
-touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/internal/mcpserver/task.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md]
+touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/internal/mcpserver/task.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0121-flai-task-done-widens-touches-with-a-path-the-commit-reverted-to-main-re-growing-a-claim-the-story-narrowed.md, design/issues/summary.md, design/adrs/0144-flai-task-done-widens-touches-only-with-the-committed-paths-the-story-s-branch.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1871
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 2
+      hand_edits: 1
+      work: 21
+  models:
+    - model: claude-opus-5-5
+      input: 148
+      output: 839
+      cache_read: 6185657
+      cache_write: 573926
+      cost: 3.072
   strategic:
     - kind: orchestrator
       seconds: 220
