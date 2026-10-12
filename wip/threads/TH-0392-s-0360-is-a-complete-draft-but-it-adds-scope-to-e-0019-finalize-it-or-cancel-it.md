@@ -4,10 +4,10 @@ title: "S-0360 is a complete draft, but it adds scope to E-0019: finalize it or 
 anchor:
   path: wip/kanban/stories/S-0360-flai-serve-checks-each-new-claude-version-through-the-provider-a-project-s-agents-name-so-a-host-that-reaches-claude-only-through-a-gateway-is-not-reported-failing.md
   item: S-0360
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-09T14:17:47Z
-updated: 2026-10-09T14:17:47Z
+updated: 2026-10-12T15:30:22Z
 ---
 
 # TH-0392 S-0360 is a complete draft, but it adds scope to E-0019: finalize it or cancel it
@@ -31,3 +31,6 @@ These are consistent with its criteria.
 Why I did not finalize it: the planner proposed it on TH-0386 as an addition to E-0019, a change of scope. You finalized the other eleven E-0019 stories on 2026-10-08 and left this one as a draft. A change of scope is yours to decide, so I leave it as a draft.
 
 If you do not want it, cancel it. It holds nothing meanwhile: it waits for S-0351 either way.
+
+### 2026-10-12T15:30:22Z alex
+Resolved.

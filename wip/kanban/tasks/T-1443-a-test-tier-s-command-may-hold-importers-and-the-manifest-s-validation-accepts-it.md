@@ -3,11 +3,11 @@ id: T-1443
 type: task
 nature: improvement
 title: "A test tier's command may hold {importers}, and the manifest's validation accepts it"
-status: in-progress
+status: done
 parent: S-0364
 owner: alex
 created: 2026-10-12T14:40:26Z
-updated: 2026-10-12T15:26:58Z
+updated: 2026-10-12T15:31:17Z
 transitions:
   - to: ready
     at: 2026-10-12T15:26:57Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-12T15:26:58Z
     by: agent-S-0364
+  - to: done
+    at: 2026-10-12T15:31:17Z
+    by: agent-S-0364
 stream: S-0364
 tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go]
+usage:
+  source: log
+  seconds: 259
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 5156
+      cache_read: 767939
+      cache_write: 30704
+      cost: 0.4563
 ---
 # T-1443 A test tier's command may hold {importers}, and the manifest's validation accepts it
 

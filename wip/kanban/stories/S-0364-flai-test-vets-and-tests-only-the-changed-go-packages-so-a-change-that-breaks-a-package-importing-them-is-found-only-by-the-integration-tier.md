@@ -3,16 +3,19 @@ id: S-0364
 type: story
 nature: improvement
 title: flai test vets and tests only the changed Go packages, so a change that breaks a package importing them is found only by the integration tier
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-12T14:12:31Z
-updated: 2026-10-12T15:26:09Z
+updated: 2026-10-12T15:42:23Z
 transitions:
   - to: ready
     at: 2026-10-12T15:26:03Z
     by: orchestrator
   - to: in-progress
     at: 2026-10-12T15:26:09Z
+    by: agent-S-0364
+  - to: review
+    at: 2026-10-12T15:42:23Z
     by: agent-S-0364
 tags: [cli]
 topics: [testing]
@@ -23,20 +26,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 987
+  turns:
+    - day: 2026-10-12
+      ceremony: 2
+      hand_edits: 2
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 182
+      output: 55559
+      cache_read: 8274245
+      cache_write: 330827
+      cost: 4.9164
   strategic:
     - kind: orchestrator
-      seconds: 302
+      seconds: 514
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 243
-          cache_read: 3854990
-          cache_write: 31459
-          cost: 0.9798
+          input: 44
+          output: 466
+          cache_read: 7354049
+          cache_write: 36305
+          cost: 1.8631
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -62,8 +76,8 @@ finalized:
 This story remediates [I-0128](../../../design/issues/I-0128-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md), "flai test vets and tests only the changed Go packages, so a change that breaks a package importing them is found only by the integration tier". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0128 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0128 is closed with `flai issue close I-0128 --reason` saying what fixed it
+- [x] The cause I-0128 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0128 is closed with `flai issue close I-0128 --reason` saying what fixed it
 
 ## Tasks
 - T-1443 A test tier's command may hold {importers}, and the manifest's validation accepts it
@@ -74,6 +88,11 @@ This story remediates [I-0128](../../../design/issues/I-0128-flai-test-vets-and-
 ## Notes
 
 Cost of delay inputs set by flai from I-0128. time_lost_per_cycle 10m: 10m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-08T10:50:48Z, 4.1 days before this story; under one cycle counts as one).
+
+### Delivery
+
+- `flai test flai/internal/workitem` now runs `vet` on `.`, `./cmd`, and every other package that imports `internal/workitem`, in 2.5s on this host; before, it vetted `./internal/workitem` alone.
+- A flai older than this story's release refuses the manifest once `vet` names `{importers}`: `flai check --strict` reports `manifest.tests` on `system-flow.yaml`, and `flai test`, the MCP `test` and `verify` tools, refuse to run any tier. The host ran 1.40.1 when this was found. Publish this story's release and run `flai host upgrade` right after accepting it. The close-out is not affected: `scripts/flai.sh` builds flai from the tree.
 
 ### Planning
 

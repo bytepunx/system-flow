@@ -3,15 +3,41 @@ id: T-1216
 type: task
 nature: feature
 title: An ADR and metrics.md define the coordination values flai stats reports per week
-status: backlog
+status: done
 parent: S-0337
 owner: alex
 created: 2026-10-07T20:17:17Z
-updated: 2026-10-07T20:17:17Z
-transitions: []
+updated: 2026-10-12T15:46:17Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:35:39Z
+    by: agent-S-0337
+  - to: in-progress
+    at: 2026-10-12T15:35:40Z
+    by: agent-S-0337
+  - to: done
+    at: 2026-10-12T15:46:17Z
+    by: agent-S-0337
 stream: S-0337
 tags: [flai]
 touches: [design/adrs, design/system/metrics.md]
+usage:
+  source: log
+  seconds: 637
+  estimated: true
+  models:
+    - model: claude-haiku-5-5
+      input: 102
+      output: 479
+      cache_read: 6957780
+      cache_write: 229241
+      cost: 0.428
+    - model: claude-opus-5-5
+      input: 52
+      output: 287
+      cache_read: 2362932
+      cache_write: 98011
+      cost: 2.1239
 ---
 # T-1216 An ADR and metrics.md define the coordination values flai stats reports per week
 

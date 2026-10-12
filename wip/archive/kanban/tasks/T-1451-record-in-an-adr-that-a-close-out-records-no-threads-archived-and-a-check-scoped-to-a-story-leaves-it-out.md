@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 13
-      cache_read: 398887
-      cache_write: 4871
-      cost: 0.1815
+      input: 8
+      output: 2376
+      cache_read: 393868
+      cache_write: 18297
+      cost: 0.2501
 ---
 # T-1451 Record in an ADR that a close-out records no threads.archived and a check scoped to a story leaves it out
 

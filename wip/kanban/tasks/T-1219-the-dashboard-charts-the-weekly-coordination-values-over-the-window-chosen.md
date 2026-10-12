@@ -3,12 +3,15 @@ id: T-1219
 type: task
 nature: feature
 title: The dashboard charts the weekly coordination values over the window chosen
-status: backlog
+status: ready
 parent: S-0337
 owner: alex
 created: 2026-10-07T20:17:32Z
-updated: 2026-10-07T20:17:32Z
-transitions: []
+updated: 2026-10-12T15:35:43Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:35:43Z
+    by: agent-S-0337
 stream: S-0337
 tags: [flaiover]
 touches: [flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]

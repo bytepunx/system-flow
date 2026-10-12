@@ -3,10 +3,10 @@ id: S-0366
 type: story
 nature: improvement
 title: "flai check finds `threads.archived` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T14:12:35Z
-updated: 2026-10-12T15:26:09Z
+updated: 2026-10-12T15:48:40Z
 transitions:
   - to: ready
     at: 2026-10-12T15:26:03Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T15:26:09Z
     by: agent-S-0366
+  - to: review
+    at: 2026-10-12T15:42:39Z
+    by: agent-S-0366
+  - to: done
+    at: 2026-10-12T15:48:40Z
+    by: alex
 tags: [flai, check]
 touches: [design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0135-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [S-0365]
@@ -24,20 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 74
-  estimated: true
+  seconds: 1008
   turns:
     - day: 2026-10-12
       ceremony: 1
       hand_edits: 1
-      work: 12
+      work: 31
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 176
-      cache_read: 1340681
-      cache_write: 122594
-      cost: 0.6579
+      input: 140
+      output: 39851
+      cache_read: 6606428
+      cache_write: 306898
+      cost: 4.1943
   strategic:
     - kind: orchestrator
       seconds: 754
@@ -74,8 +79,8 @@ finalized:
 This story remediates [I-0135](../../../design/issues/I-0135-flai-check-finds-threads-archived-outside-the-story-at-close-out.md), "flai check finds `threads.archived` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0135 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0135 is closed with `flai issue close I-0135 --reason` saying what fixed it
+- [x] The cause I-0135 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0135 is closed with `flai issue close I-0135 --reason` saying what fixed it
 
 ## Tasks
 - T-1451 Record in an ADR that a close-out records no threads.archived and a check scoped to a story leaves it out

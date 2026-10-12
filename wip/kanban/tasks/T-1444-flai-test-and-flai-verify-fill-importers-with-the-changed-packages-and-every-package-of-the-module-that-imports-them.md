@@ -3,16 +3,36 @@ id: T-1444
 type: task
 nature: improvement
 title: "flai test and flai verify fill {importers} with the changed packages and every package of the module that imports them"
-status: backlog
+status: done
 parent: S-0364
 owner: alex
 created: 2026-10-12T14:40:37Z
-updated: 2026-10-12T14:40:37Z
-transitions: []
+updated: 2026-10-12T15:35:21Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:31:33Z
+    by: agent-S-0364
+  - to: in-progress
+    at: 2026-10-12T15:31:34Z
+    by: agent-S-0364
+  - to: done
+    at: 2026-10-12T15:35:21Z
+    by: agent-S-0364
 stream: S-0364
 tags: [cli]
 touches: [flai/internal/verify/importers.go, flai/internal/verify/importers_test.go, flai/internal/verify/select.go, flai/internal/verify/select_test.go, flai/internal/verify/verify.go]
 after: [T-1443]
+usage:
+  source: log
+  seconds: 227
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 9155
+      cache_read: 1363457
+      cache_write: 54515
+      cost: 0.8101
 ---
 # T-1444 flai test and flai verify fill {importers} with the changed packages and every package of the module that imports them
 

@@ -17,7 +17,7 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 16801
+  seconds: 17827
   estimated: true
   turns:
     - day: 2026-10-07
@@ -36,14 +36,22 @@ usage:
       ceremony: 1
       work: 1
     - day: 2026-10-12
-      work: 7
+      ceremony: 1
+      hand_edits: 2
+      work: 32
   models:
+    - model: claude-haiku-5-5
+      input: 102
+      output: 479
+      cache_read: 6957780
+      cache_write: 229241
+      cost: 0.428
     - model: claude-opus-5-5
-      input: 2774
-      output: 956080
-      cache_read: 165088677
-      cache_write: 5592765
-      cost: 87.4164
+      input: 2930
+      output: 956979
+      cache_read: 174167847
+      cache_write: 5899132
+      cost: 95.5163
   strategic:
     - kind: planner
       seconds: 1011

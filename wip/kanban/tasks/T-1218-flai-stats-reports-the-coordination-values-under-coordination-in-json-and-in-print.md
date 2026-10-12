@@ -3,22 +3,28 @@ id: T-1218
 type: task
 nature: feature
 title: flai stats reports the coordination values under coordination, in JSON and in print
-status: backlog
+status: in-progress
 parent: S-0337
 owner: alex
 created: 2026-10-07T20:17:26Z
-updated: 2026-10-07T20:21:18Z
-transitions: []
+updated: 2026-10-12T15:48:17Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:35:42Z
+    by: agent-S-0337
+  - to: in-progress
+    at: 2026-10-12T15:48:17Z
+    by: agent-S-0337
 stream: S-0337
 tags: [flai]
 touches: [flai/internal/metrics/coordination.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go]
-after: [T-1217]
+after: [T-1216, T-1217]
 ---
 # T-1218 flai stats reports the coordination values under coordination, in JSON and in print
 
 ## Work
 
-Compute and report what T-1216 defines. It waits for T-1217, whose log it reads.
+Compute and report what T-1216 defines. It waits for T-1216, whose definitions it computes, and T-1217, whose log it reads.
 
 - `statsread.Read` loads the message files and the conflict log into `metrics.Options`, beside the threads and the activities it loads today; one it cannot read is logged and its values left out, as the commits are.
 - `flai/internal/metrics/coordination.go` works out each value per week of the window from them and the transitions.

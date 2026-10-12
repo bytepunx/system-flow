@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:31Z
-updated: 2026-10-08T11:04:51Z
+updated: 2026-10-12T15:48:11Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:33Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0337
 tags: [flai, flaiover]
 topics: [cli, dashboard, git]
-touches: [design/adrs, design/system/metrics.md, flai/internal/storygit/conflicts.go, flai/internal/storygit/conflicts_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/internal/metrics/coordination.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, design/system/flai-cli.md]
+touches: [design/adrs, design/system/metrics.md, flai/internal/storygit/conflicts.go, flai/internal/storygit/conflicts_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/internal/metrics/coordination.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md, design/issues/I-0137-a-host-crash-during-flai-story-start-leaves-the-story-s-branch-ref-worktree-and-narrative-as-empty-files-and-no-agent-can-repair-the-ref.md]
 after: [S-0332, S-0333, S-0334]
 agent:
   harness: claude-code
@@ -26,7 +26,8 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 394
+  seconds: 1420
+  estimated: true
   turns:
     - day: 2026-10-08
       ceremony: 1
@@ -37,14 +38,22 @@ usage:
       ceremony: 1
       work: 1
     - day: 2026-10-12
-      work: 7
+      ceremony: 1
+      hand_edits: 2
+      work: 32
   models:
+    - model: claude-haiku-5-5
+      input: 102
+      output: 479
+      cache_read: 6957780
+      cache_write: 229241
+      cost: 0.428
     - model: claude-opus-5-5
-      input: 148
-      output: 23895
-      cache_read: 6013916
-      cache_write: 494459
-      cost: 5.6369
+      input: 304
+      output: 24794
+      cache_read: 15093086
+      cache_write: 800826
+      cost: 13.7368
   strategic:
     - kind: orchestrator
       seconds: 443
@@ -84,9 +93,9 @@ Measure whether E-0018 does what it set out to: more stories running at once wit
 
 ## Acceptance criteria
 
-- [ ] An ADR records the new values, and `design/system/metrics.md` defines each: conversations opened, closed by agreement, escalated, and closed with their story, per week; conflicts found by a trial merge, and conflicts met by a rebase at sync or at acceptance, per week; and stories started on a share, with the hold time each would have waited, per week.
+- [x] An ADR records the new values, and `design/system/metrics.md` defines each: conversations opened, closed by agreement, escalated, and closed with their story, per week; conflicts found by a trial merge, and conflicts met by a rebase at sync or at acceptance, per week; and stories started on a share, with the hold time each would have waited, per week.
 - [ ] `flai stats --json` reports them under `coordination`, from the message files, the sync and acceptance logs, and the board, and `flai stats` prints them.
-- [ ] A rebase that stops on conflicts at `flai stream sync` or `flai accept` is recorded with its story, the paths, and the time, where `flai stats` reads it.
+- [x] A rebase that stops on conflicts at `flai stream sync` or `flai accept` is recorded with its story, the paths, and the time, where `flai stats` reads it.
 - [ ] The dashboard's charts page charts the weekly values over the window chosen (ADR-0054).
 - [ ] `docs/users/flai.md` and `docs/users/flaiover.md` describe them.
 

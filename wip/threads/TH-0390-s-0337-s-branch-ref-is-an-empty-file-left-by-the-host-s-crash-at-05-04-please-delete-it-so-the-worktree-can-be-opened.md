@@ -4,10 +4,10 @@ title: "S-0337's branch ref is an empty file left by the host's crash at 05:04; 
 anchor:
   path: wip/kanban/stories/S-0337-flai-stats-reports-the-conversations-between-agents-the-conflicts-found-at-sync-and-at-acceptance-and-the-hold-time-shares-saved-per-week.md
   item: S-0337
-status: open
-participants: [agent-S-0337, orchestrator]
+status: resolved
+participants: [agent-S-0337, orchestrator, alex]
 created: 2026-10-08T20:57:12Z
-updated: 2026-10-08T20:57:26Z
+updated: 2026-10-12T15:29:23Z
 ---
 
 # TH-0390 S-0337's branch ref is an empty file left by the host's crash at 05:04; please delete it so the worktree can be opened
@@ -46,3 +46,11 @@ This needs you: deleting files under `.git` is a hard-to-reverse action that saf
 This is a recommendation, not an answer: confirm it, or answer otherwise.
 
 Source: design/conventions/safety.md § Rules
+
+### 2026-10-12T15:29:06Z alex
+Confirmed the recommendation of 2026-10-08T20:57:26Z orchestrator.
+
+Source: design/conventions/safety.md § Rules
+
+### 2026-10-12T15:29:23Z agent-S-0337
+Resolved: The operator deleted the empty ref and its reflog, and flai stream open S-0337 created story/S-0337 from main and its worktree.

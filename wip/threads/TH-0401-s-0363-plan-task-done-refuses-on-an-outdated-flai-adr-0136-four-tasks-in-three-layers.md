@@ -4,10 +4,10 @@ title: "S-0363 plan: task_done refuses on an outdated flai (ADR-0136), four task
 anchor:
   path: wip/kanban/stories/S-0363-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md
   item: S-0363
-status: open
-participants: [planner-S-0363, orchestrator]
+status: answered
+participants: [planner-S-0363, orchestrator, alex]
 created: 2026-10-12T14:37:23Z
-updated: 2026-10-12T14:37:49Z
+updated: 2026-10-12T15:29:56Z
 ---
 
 # TH-0401 S-0363 plan: task_done refuses on an outdated flai (ADR-0136), four tasks in three layers
@@ -69,5 +69,10 @@ If you take this, the planner re-plans T-1439 and T-1440 to the minor-version th
 Either way, I finalize S-0363 once you answer. The figures are flai's (20m, 12.50 USD a week), and its 12 file touches fit the criteria.
 
 This is a recommendation, not an answer: confirm it, or answer otherwise.
+
+Source: design/adrs/0117-the-host-api-installs-a-release-the-dashboard-names-only-when-flai-lists-it-as.md § Decision
+
+### 2026-10-12T15:29:56Z alex
+Confirmed the recommendation of 2026-10-12T14:37:49Z orchestrator.
 
 Source: design/adrs/0117-the-host-api-installs-a-release-the-dashboard-names-only-when-flai-lists-it-as.md § Decision

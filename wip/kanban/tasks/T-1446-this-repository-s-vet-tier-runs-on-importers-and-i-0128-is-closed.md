@@ -3,16 +3,36 @@ id: T-1446
 type: task
 nature: improvement
 title: "This repository's vet tier runs on {importers}, and I-0128 is closed"
-status: backlog
+status: done
 parent: S-0364
 owner: alex
 created: 2026-10-12T14:40:50Z
-updated: 2026-10-12T14:40:50Z
-transitions: []
+updated: 2026-10-12T15:36:58Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:35:38Z
+    by: agent-S-0364
+  - to: in-progress
+    at: 2026-10-12T15:35:38Z
+    by: agent-S-0364
+  - to: done
+    at: 2026-10-12T15:36:58Z
+    by: agent-S-0364
 stream: S-0364
 tags: [cli]
 touches: [system-flow.yaml, design/issues/I-0128-flai-test-vets-and-tests-only-the-changed-go-packages-so-a-change-that-breaks-a-package-importing-them-is-found-only-by-the-integration-tier.md, design/issues/summary.md]
 after: [T-1444]
+usage:
+  source: log
+  seconds: 80
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 9608
+      cache_read: 1430850
+      cache_write: 57209
+      cost: 0.8502
 ---
 # T-1446 This repository's vet tier runs on {importers}, and I-0128 is closed
 

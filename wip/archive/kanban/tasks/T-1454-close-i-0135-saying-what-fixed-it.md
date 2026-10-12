@@ -3,16 +3,30 @@ id: T-1454
 type: task
 nature: improvement
 title: Close I-0135 saying what fixed it
-status: backlog
+status: done
 parent: S-0366
 owner: alex
 created: 2026-10-12T14:59:53Z
-updated: 2026-10-12T14:59:53Z
-transitions: []
+updated: 2026-10-12T15:37:54Z
+transitions:
+  - to: ready
+    at: 2026-10-12T15:37:51Z
+    by: agent-S-0366
+  - to: in-progress
+    at: 2026-10-12T15:37:52Z
+    by: agent-S-0366
+  - to: done
+    at: 2026-10-12T15:37:54Z
+    by: agent-S-0366
 stream: S-0366
 tags: [flai, issues]
 touches: [design/issues/I-0135-flai-check-finds-threads-archived-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-1452, T-1453]
+usage:
+  source: log
+  seconds: 2
+  estimated: true
+  models: []
 ---
 # T-1454 Close I-0135 saying what fixed it
 
