@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 374.1118
-accrued_seconds: 332403
-tasks_completed: 353
-last_run: 2026-10-12T15:10:37Z
+accrued_cost: 375.5792
+accrued_seconds: 332794
+tasks_completed: 354
+last_run: 2026-10-12T15:17:09Z
 ---
 
 # Orchestrator activity
@@ -2482,6 +2482,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0362
 - Seconds: 252
 - Cost: 0.5618 USD, estimated
+
+### 2026-10-12T15:17:09Z
+
+- Summary: Accepted S-0365 at 2d9efc42 under accept_reviews. flai verify passed every step at the branch head, and the verifier matched both criteria (1: ScopeToStory leaves out issues.no-story outside the story, with tests in scope_test.go and check_test.go and ADR-0136, docs and convention updated in both copies; 2: I-0134 closed). Every file is within its touches, and the dry-run had no blocker. flai told S-0232 and S-0337 about the overlaps.
+- Items: S-0365
+- Seconds: 391
+- Cost: 1.4674 USD, estimated
 
 ## Refusals
 

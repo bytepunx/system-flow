@@ -7,7 +7,7 @@ status: backlog
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T15:10:25Z
+updated: 2026-10-12T15:17:00Z
 transitions: []
 tags: [cli]
 topics: [release, security]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-07T22:55:27Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-12T18:37:00Z
-  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0232, S-0337, S-0365, S-0233, S-0234 and S-0235."
+  delivery: 2026-10-12T18:44:00Z
+  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0232, S-0337, S-0233, S-0234 and S-0235."
   by: flai
-  at: 2026-10-12T15:10:25Z
+  at: 2026-10-12T15:17:00Z
 ---
 # S-0236 flai dashboard resolves the image from the signed digest list and runs it by digest
 
