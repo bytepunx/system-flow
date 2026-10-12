@@ -80,12 +80,12 @@ func (e *SignatureError) Summary() string {
 	return "its signature does not verify, so it may have been altered"
 }
 
-// trustedKeys are the keys a release's signature must verify against:
-// Options.Keys, else the release key embedded in the binary and the test key
-// a test build was linked with, which no release build is.
-func (o Options) trustedKeys() ([]*ecdsa.PublicKey, error) {
-	if len(o.Keys) > 0 {
-		return o.Keys, nil
+// TrustedKeys answers the keys a release's signature must verify against:
+// opt.Keys, else the release key embedded in the binary and the test key a
+// test build was linked with, which no release build is.
+func TrustedKeys(opt Options) ([]*ecdsa.PublicKey, error) {
+	if len(opt.Keys) > 0 {
+		return opt.Keys, nil
 	}
 	keys, err := buildinfo.ReleaseKeys()
 	if err != nil {
@@ -104,7 +104,7 @@ func (o Options) trustedKeys() ([]*ecdsa.PublicKey, error) {
 // a *SignatureError, or the failure to download or to read the trusted keys.
 func VerifyRelease(ctx context.Context, opt Options, rel *Release) error {
 	opt.defaults()
-	keys, err := opt.trustedKeys()
+	keys, err := TrustedKeys(opt)
 	if err != nil {
 		return fmt.Errorf("verify the signature of release %s: %w", rel.Tag, err)
 	}
@@ -115,9 +115,13 @@ func VerifyRelease(ctx context.Context, opt Options, rel *Release) error {
 // verifiedSums answers rel's checksums.txt once its signature verifies against
 // one of keys, else a *SignatureError saying why not.
 func (o Options) verifiedSums(ctx context.Context, rel *Release, keys []*ecdsa.PublicKey) ([]byte, error) {
-	sums, sig, err := o.signedSums(ctx, rel)
+	sums, encoded, err := FetchSigned(ctx, o, *rel, checksumsName)
 	if err != nil {
 		return nil, err
+	}
+	sig, err := decodeSignature(encoded)
+	if err != nil {
+		return nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: signatureName + " is not base64"}
 	}
 	if signedByOneOf(sums, sig, keys) {
 		return sums, nil
@@ -140,30 +144,39 @@ func (o Options) verifiedSums(ctx context.Context, rel *Release, keys []*ecdsa.P
 	return nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: "neither a key this flai trusts nor the release's " + publicKeyName + " verifies it"}
 }
 
-// signedSums downloads rel's checksums.txt and the signature over it, decoded
-// from the base64 cosign writes.
-func (o Options) signedSums(ctx context.Context, rel *Release) (sums, sig []byte, err error) {
-	sumsAsset, ok := rel.Asset(checksumsName)
-	if !ok {
-		return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureMissing, Reason: "it publishes no " + checksumsName}
+// FetchSigned downloads rel's asset name and its signature, the asset
+// name+".sig", answering the signature as published: the base64 text cosign
+// sign-blob writes, which VerifyBlob reads. A release that does not publish
+// both is refused with a *SignatureError of kind SignatureMissing; a failed
+// download is answered as one, not as a refusal.
+func FetchSigned(ctx context.Context, opt Options, rel Release, name string) (data, sig []byte, err error) {
+	sigName := name + ".sig"
+	for _, n := range []string{name, sigName} {
+		if _, ok := rel.Asset(n); !ok {
+			return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureMissing, Reason: "it publishes no " + n}
+		}
 	}
-	sigAsset, ok := rel.Asset(signatureName)
-	if !ok {
-		return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureMissing, Reason: "it publishes no " + signatureName}
-	}
-	sums, err = o.getBytes(ctx, sumsAsset.URL)
+	data, err = FetchAsset(ctx, opt, rel, name)
 	if err != nil {
-		return nil, nil, fmt.Errorf("download %s of release %s: %w", checksumsName, rel.Tag, err)
+		return nil, nil, err
 	}
-	encoded, err := o.getBytes(ctx, sigAsset.URL)
+	sig, err = FetchAsset(ctx, opt, rel, sigName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("download %s of release %s: %w", signatureName, rel.Tag, err)
+		return nil, nil, err
 	}
-	sig, err = base64.StdEncoding.DecodeString(strings.TrimSpace(string(encoded)))
-	if err != nil {
-		return nil, nil, &SignatureError{Tag: rel.Tag, Kind: SignatureBad, Reason: signatureName + " is not base64"}
-	}
-	return sums, sig, nil
+	return data, sig, nil
+}
+
+// VerifyBlob reports whether sig, a signature as FetchSigned answers it,
+// verifies data against one of keys.
+func VerifyBlob(data, sig []byte, keys []*ecdsa.PublicKey) bool {
+	decoded, err := decodeSignature(sig)
+	return err == nil && signedByOneOf(data, decoded, keys)
+}
+
+// decodeSignature is the ASN.1 signature in the base64 text cosign writes.
+func decodeSignature(sig []byte) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(strings.TrimSpace(string(sig)))
 }
 
 // withBridge adds to refused, an unknown-key refusal, the newest published
@@ -180,7 +193,7 @@ func (o Options) withBridge(ctx context.Context, refused *SignatureError, keys [
 		if rel.Tag == refused.Tag {
 			continue
 		}
-		sums, sig, err := o.signedSums(ctx, rel)
+		sums, sig, err := FetchSigned(ctx, o, *rel, checksumsName)
 		var unverifiable *SignatureError
 		switch {
 		case errors.As(err, &unverifiable):
@@ -188,7 +201,7 @@ func (o Options) withBridge(ctx context.Context, refused *SignatureError, keys [
 		case err != nil:
 			return fmt.Errorf("%w; looking for a release this flai can verify failed: %w", refused, err)
 		}
-		if signedByOneOf(sums, sig, keys) {
+		if VerifyBlob(sums, sig, keys) {
 			refused.Bridge = rel.Version
 			return refused
 		}

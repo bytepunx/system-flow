@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -35,13 +36,16 @@ func tarball(t *testing.T, name string, content []byte) []byte {
 
 // fakeGitHub serves flai releases over two pages of the releases API, newest
 // first by publish date as the API does, mixed with what is not published: a
-// draft, a prerelease, a suffixed version, a leading zero, and a flaiover
-// release. Every flai release publishes checksums.txt signed by the trusted
-// test key, and that key as cosign.pub. It serves the flaiover tags over two
-// pages of matching refs.
-func fakeGitHub(t *testing.T, archive, sums []byte, wantToken string) *httptest.Server {
+// draft, a prerelease, a suffixed version, and a leading zero. Every flai
+// release publishes checksums.txt signed by the trusted test key, and that key
+// as cosign.pub. Among them it serves flaiover releases: 9.0.0, whose digest
+// list is signed by the trusted test key; 0.40.0, from before signing, whose
+// list has no signature; and a draft, a prerelease, and a suffixed version. It
+// serves the flaiover tags over two pages of matching refs. It answers only a
+// request with the token "tok", as a private repository does.
+func fakeGitHub(t *testing.T, archive, sums []byte) *httptest.Server {
 	t.Helper()
-	return fakeGitHubBehind(t, archive, sums, wantToken, func(h http.Handler) http.Handler { return h })
+	return fakeGitHubBehind(t, archive, sums, "tok", func(h http.Handler) http.Handler { return h })
 }
 
 // fakeGitHubBehind is fakeGitHub with front standing before its handler.
@@ -49,6 +53,7 @@ func fakeGitHubBehind(t *testing.T, archive, sums []byte, wantToken string, fron
 	t.Helper()
 	sig := sign(t, privateKey(t, "trusted"), sums)
 	pub := testdataFile(t, "trusted.pub")
+	listSig := sign(t, privateKey(t, "trusted"), digestList("9.0.0"))
 	var srv *httptest.Server
 	srv = httptest.NewServer(front(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if wantToken != "" && r.Header.Get("Authorization") != "Bearer "+wantToken {
@@ -58,6 +63,13 @@ func fakeGitHubBehind(t *testing.T, archive, sums []byte, wantToken string, fron
 		assets := func(v string) string {
 			return fmt.Sprintf(`"assets":[{"name":"checksums.txt","url":"%s/assets/sums"},{"name":"checksums.txt.sig","url":"%s/assets/sig"},{"name":"cosign.pub","url":"%s/assets/pub"},{"name":"flai_%s_linux_amd64.tar.gz","url":"%s/assets/archive"},{"name":"flai_%s_windows_amd64.zip","url":"%s/assets/zip"}]`, srv.URL, srv.URL, srv.URL, v, srv.URL, v, srv.URL)
 		}
+		dashboardAssets := func(v string, signed bool) string {
+			list := fmt.Sprintf(`{"name":"flaiover_%s.digests","url":"%s/assets/flaiover/%s/flaiover_%s.digests"}`, v, srv.URL, v, v)
+			if signed {
+				list += fmt.Sprintf(`,{"name":"flaiover_%s.digests.sig","url":"%s/assets/flaiover/%s/flaiover_%s.digests.sig"}`, v, srv.URL, v, v)
+			}
+			return `"assets":[` + list + `]`
+		}
 		page := r.URL.Query().Get("page")
 		switch {
 		case r.URL.Path == "/repos/o/r/releases" && page == "":
@@ -66,10 +78,10 @@ func fakeGitHubBehind(t *testing.T, archive, sums []byte, wantToken string, fron
 				return
 			}
 			w.Header().Set("Link", fmt.Sprintf(`<%s/repos/o/r/releases?per_page=100&page=2>; rel="next", <%s/repos/o/r/releases?per_page=100&page=2>; rel="last"`, srv.URL, srv.URL))
-			fmt.Fprintf(w, `[{"tag_name":"flaiover/v9.0.0","assets":[]},{"tag_name":"flai/v1.12.0","draft":true,"published_at":null,%s},{"tag_name":"flai/v1.9.0","published_at":"2026-09-01T10:00:00Z",%s},{"tag_name":"flai/v1.11.0-rc.1","published_at":"2026-08-30T10:00:00Z",%s}]`, assets("1.12.0"), assets("1.9.0"), assets("1.11.0-rc.1"))
+			fmt.Fprintf(w, `[{"tag_name":"flaiover/v9.1.0","draft":true,"published_at":null,%s},{"tag_name":"flaiover/v9.0.0","published_at":"2026-09-02T10:00:00Z",%s},{"tag_name":"flai/v1.12.0","draft":true,"published_at":null,%s},{"tag_name":"flai/v1.9.0","published_at":"2026-09-01T10:00:00Z",%s},{"tag_name":"flaiover/v9.1.0-rc.1","published_at":"2026-08-31T10:00:00Z",%s},{"tag_name":"flai/v1.11.0-rc.1","published_at":"2026-08-30T10:00:00Z",%s}]`, dashboardAssets("9.1.0", true), dashboardAssets("9.0.0", true), assets("1.12.0"), assets("1.9.0"), dashboardAssets("9.1.0-rc.1", true), assets("1.11.0-rc.1"))
 		case r.URL.Path == "/repos/o/r/releases" && page == "2":
 			w.Header().Set("Link", fmt.Sprintf(`<%s/repos/o/r/releases?per_page=100&page=1>; rel="prev", <%s/repos/o/r/releases?per_page=100&page=1>; rel="first"`, srv.URL, srv.URL))
-			fmt.Fprintf(w, `[{"tag_name":"flai/v1.11.0","prerelease":true,"published_at":"2026-08-20T10:00:00Z",%s},{"tag_name":"flai/v1.10.0","published_at":"2026-08-10T10:00:00Z",%s},{"tag_name":"flai/v01.13.0","published_at":"2026-08-05T10:00:00Z","assets":[]},{"tag_name":"flai/v1.0.0","published_at":"2026-01-02T10:00:00Z",%s}]`, assets("1.11.0"), assets("1.10.0"), assets("1.0.0"))
+			fmt.Fprintf(w, `[{"tag_name":"flai/v1.11.0","prerelease":true,"published_at":"2026-08-20T10:00:00Z",%s},{"tag_name":"flaiover/v0.41.0","prerelease":true,"published_at":"2026-08-15T10:00:00Z",%s},{"tag_name":"flai/v1.10.0","published_at":"2026-08-10T10:00:00Z",%s},{"tag_name":"flai/v01.13.0","published_at":"2026-08-05T10:00:00Z","assets":[]},{"tag_name":"flaiover/v0.40.0","published_at":"2026-08-01T10:00:00Z",%s},{"tag_name":"flai/v1.0.0","published_at":"2026-01-02T10:00:00Z",%s}]`, assets("1.11.0"), dashboardAssets("0.41.0", true), assets("1.10.0"), dashboardAssets("0.40.0", false), assets("1.0.0"))
 		case r.URL.Path == "/repos/o/r/git/matching-refs/tags/flaiover/v" && page == "":
 			w.Header().Set("Link", fmt.Sprintf(`<%s/repos/o/r/git/matching-refs/tags/flaiover/v?page=2>; rel="next"`, srv.URL))
 			_, _ = w.Write([]byte(`[{"ref":"refs/tags/flaiover/v0.9.0"},{"ref":"refs/tags/flaiover/v0.39.0"},{"ref":"refs/tags/flaiover/v0.40.0-rc1"}]`))
@@ -87,6 +99,21 @@ func fakeGitHubBehind(t *testing.T, archive, sums []byte, wantToken string, fron
 			_, _ = w.Write(sig)
 		case r.URL.Path == "/assets/pub":
 			_, _ = w.Write(pub)
+		case strings.HasPrefix(r.URL.Path, "/assets/flaiover/"):
+			if r.Header.Get("Accept") != "application/octet-stream" {
+				http.Error(w, "wrong accept", http.StatusBadRequest)
+				return
+			}
+			switch r.URL.Path {
+			case "/assets/flaiover/9.0.0/flaiover_9.0.0.digests":
+				_, _ = w.Write(digestList("9.0.0"))
+			case "/assets/flaiover/9.0.0/flaiover_9.0.0.digests.sig":
+				_, _ = w.Write(listSig)
+			case "/assets/flaiover/0.40.0/flaiover_0.40.0.digests":
+				_, _ = w.Write(digestList("0.40.0"))
+			default:
+				http.NotFound(w, r)
+			}
 		default:
 			http.NotFound(w, r)
 		}
@@ -155,7 +182,7 @@ func versions(rels []Release) string {
 }
 
 func TestList(t *testing.T) {
-	srv := fakeGitHub(t, nil, nil, "tok")
+	srv := fakeGitHub(t, nil, nil)
 	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok"}
 
 	flai, err := List(context.Background(), opt, TagPrefix)
@@ -186,8 +213,144 @@ func TestList(t *testing.T) {
 	}
 }
 
+// digestList is the digest list fakeGitHub serves for a flaiover version.
+func digestList(version string) []byte {
+	return []byte("ghcr.io/bytepunx/flaiover:" + version + " sha256:" + strings.Repeat("a", 64) + "\n")
+}
+
+func TestDashboardReleases(t *testing.T) {
+	srv := fakeGitHub(t, nil, nil)
+	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok"}
+	ctx := context.Background()
+
+	dashboard, err := List(ctx, opt, DashboardTagPrefix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := versions(dashboard); got != "9.0.0 0.40.0" {
+		t.Errorf("published flaiover releases across pages, newest first by semver: %q", got)
+	}
+	want := time.Date(2026, 9, 2, 10, 0, 0, 0, time.UTC)
+	if dashboard[0].Tag != "flaiover/v9.0.0" || !dashboard[0].Published.Equal(want) || len(dashboard[0].Assets) != 2 {
+		t.Errorf("newest with its digest list and signature: %+v", dashboard[0])
+	}
+
+	for _, v := range []string{"", "latest"} {
+		rel, err := Find(ctx, opt, DashboardTagPrefix, v)
+		if err != nil || rel.Tag != "flaiover/v9.0.0" {
+			t.Errorf("%q finds the newest: %+v %v", v, rel, err)
+		}
+	}
+	for _, v := range []string{"0.40.0", "v0.40.0", "flaiover/v0.40.0"} {
+		rel, err := Find(ctx, opt, DashboardTagPrefix, v)
+		if err != nil || rel.Tag != "flaiover/v0.40.0" || rel.Version != "0.40.0" || len(rel.Assets) != 1 {
+			t.Errorf("%q finds that release with its assets: %+v %v", v, rel, err)
+		}
+	}
+	for _, v := range []string{"9.1.0", "0.41.0", "9.1.0-rc.1", "1.10.0"} {
+		_, err := Find(ctx, opt, DashboardTagPrefix, v)
+		if err == nil || !strings.Contains(err.Error(), "resolve flaiover "+v+": o/r has no published release tagged flaiover/v"+v) || !strings.Contains(err.Error(), "published are 9.0.0, 0.40.0:") {
+			t.Errorf("%s is not a published flaiover release and is refused by name: %v", v, err)
+		}
+	}
+	if _, err := Find(ctx, opt, "nothing/v", ""); err == nil || !strings.Contains(err.Error(), "no published nothing release in o/r") {
+		t.Errorf("a prefix with no published release says so: %v", err)
+	}
+	if _, err := Find(ctx, Options{Repo: "o/r", APIBase: srv.URL}, DashboardTagPrefix, ""); err == nil || !strings.Contains(err.Error(), "list the flaiover/v releases of o/r") {
+		t.Errorf("an unauthorized find names what it listed: %v", err)
+	}
+}
+
+func TestFetchAsset(t *testing.T) {
+	srv := fakeGitHub(t, nil, nil)
+	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok"}
+	ctx := context.Background()
+	rel, err := Find(ctx, opt, DashboardTagPrefix, "9.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := FetchAsset(ctx, opt, rel, "flaiover_9.0.0.digests")
+	if err != nil || !bytes.Equal(data, digestList("9.0.0")) {
+		t.Errorf("the named asset, with the token: %q %v", data, err)
+	}
+	if _, err := FetchAsset(ctx, opt, rel, "flaiover_9.0.0.sbom"); err == nil || !strings.Contains(err.Error(), "release flaiover/v9.0.0 has no asset flaiover_9.0.0.sbom") {
+		t.Errorf("a missing asset names the release and the asset: %v", err)
+	}
+	_, err = FetchAsset(ctx, Options{Repo: "o/r", APIBase: srv.URL}, rel, "flaiover_9.0.0.digests")
+	if err == nil || !strings.Contains(err.Error(), "download flaiover_9.0.0.digests of release flaiover/v9.0.0") || !strings.Contains(err.Error(), "set GITHUB_TOKEN") {
+		t.Errorf("a failed download names the asset, the release, and what to do: %v", err)
+	}
+}
+
+func TestFetchSignedAndVerifyBlob(t *testing.T) {
+	srv := fakeGitHub(t, nil, nil)
+	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok"}
+	ctx := context.Background()
+	rel, err := Find(ctx, opt, DashboardTagPrefix, "9.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, sig, err := FetchSigned(ctx, opt, rel, "flaiover_9.0.0.digests")
+	if err != nil || !bytes.Equal(data, digestList("9.0.0")) {
+		t.Fatalf("the asset and its signature: %q %v", data, err)
+	}
+	if !VerifyBlob(data, sig, trustedKeys(t)) {
+		t.Error("a list signed by a trusted key verifies")
+	}
+	unknown, err := parsePublicKey(testdataFile(t, "unknown.pub"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, tc := range map[string]struct {
+		data, sig []byte
+		keys      []*ecdsa.PublicKey
+	}{
+		"altered after signing":      {append(bytes.Clone(data), 'x'), sig, trustedKeys(t)},
+		"signed by an untrusted key": {data, sig, []*ecdsa.PublicKey{unknown}},
+		"a signature not base64":     {data, []byte("not a signature!\n"), trustedKeys(t)},
+		"no key to verify against":   {data, sig, nil},
+	} {
+		if VerifyBlob(tc.data, tc.sig, tc.keys) {
+			t.Errorf("%s: verified", name)
+		}
+	}
+
+	old, err := Find(ctx, opt, DashboardTagPrefix, "0.40.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"flaiover_0.40.0.digests", "flaiover_0.40.0.sbom"} {
+		_, _, err = FetchSigned(ctx, opt, old, name)
+		if se := refusal(t, err, SignatureMissing); se.Tag != "flaiover/v0.40.0" || !strings.Contains(err.Error(), "release flaiover/v0.40.0 is not installed: it publishes no ") {
+			t.Errorf("%s: a release without the asset or its signature is refused by name: %v", name, err)
+		}
+	}
+	if _, _, err = FetchSigned(ctx, opt, old, "flaiover_0.40.0.digests"); err == nil || !strings.Contains(err.Error(), "it publishes no flaiover_0.40.0.digests.sig") {
+		t.Errorf("names the missing signature: %v", err)
+	}
+}
+
+func TestTrustedKeys(t *testing.T) {
+	keys := trustedKeys(t)
+	got, err := TrustedKeys(Options{Keys: keys})
+	if err != nil || len(got) != 1 || !got[0].Equal(keys[0]) {
+		t.Errorf("Options.Keys when given: %v %v", got, err)
+	}
+	embedded, err := TrustedKeys(Options{})
+	if err != nil || len(embedded) == 0 {
+		t.Fatalf("the embedded release key otherwise: %v %v", embedded, err)
+	}
+	for _, k := range embedded {
+		if k.Equal(keys[0]) {
+			t.Error("the test key is not trusted by default")
+		}
+	}
+}
+
 func TestResolvePinned(t *testing.T) {
-	srv := fakeGitHub(t, nil, nil, "tok")
+	srv := fakeGitHub(t, nil, nil)
 	for _, pin := range []string{"1.9.0", "v1.9.0", "flai/v1.9.0"} {
 		rel, err := Resolve(context.Background(), Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", Version: pin})
 		if err != nil || rel.Tag != "flai/v1.9.0" || rel.Version != "1.9.0" {
@@ -233,7 +396,7 @@ func TestResolveDownloadReplace(t *testing.T) {
 	archive := tarball(t, "flai", content)
 	sum := sha256.Sum256(archive)
 	sums := []byte(hex.EncodeToString(sum[:]) + "  flai_1.10.0_linux_amd64.tar.gz\n" + "deadbeef  flai_1.0.0_linux_amd64.tar.gz\n")
-	srv := fakeGitHub(t, archive, sums, "tok")
+	srv := fakeGitHub(t, archive, sums)
 	opt := Options{Repo: "o/r", APIBase: srv.URL, Token: "tok", OS: "linux", Arch: "amd64", Keys: trustedKeys(t)}
 
 	rel, err := Resolve(context.Background(), opt)

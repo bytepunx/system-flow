@@ -1,5 +1,6 @@
-// Package selfupgrade lists the published flai releases and dashboard tags,
-// and installs a flai release over the running binary: it resolves the newest
+// Package selfupgrade lists the published flai and dashboard releases and the
+// dashboard tags, fetches a release's assets and their signatures, and
+// installs a flai release over the running binary: it resolves the newest
 // published flai/v* GitHub release (or a pinned published one), downloads
 // checksums.txt and its signature through the release asset API (which works
 // for private repositories with a token), verifies the signature with the
@@ -120,24 +121,35 @@ const shownVersions = 10
 // Resolve finds the newest published flai release, or the pinned version when
 // it is published.
 func Resolve(ctx context.Context, opt Options) (*Release, error) {
-	opt.defaults()
-	published, err := List(ctx, opt, TagPrefix)
+	rel, err := Find(ctx, opt, TagPrefix, opt.Version)
 	if err != nil {
 		return nil, err
 	}
+	return &rel, nil
+}
+
+// Find answers the published release of prefix at version, or the newest when
+// version is "" or "latest".
+func Find(ctx context.Context, opt Options, prefix, version string) (Release, error) {
+	opt.defaults()
+	published, err := List(ctx, opt, prefix)
+	if err != nil {
+		return Release{}, err
+	}
+	product := strings.TrimSuffix(prefix, "/v")
 	if len(published) == 0 {
-		return nil, fmt.Errorf("no published flai release in %s: no release tagged %sX.Y.Z that is neither a draft nor a prerelease; check the repository the releases come from", opt.Repo, TagPrefix)
+		return Release{}, fmt.Errorf("no published %s release in %s: no release tagged %sX.Y.Z that is neither a draft nor a prerelease; check the repository the releases come from", product, opt.Repo, prefix)
 	}
-	if opt.Version == "" {
-		return &published[0], nil
+	if version == "" || version == "latest" {
+		return published[0], nil
 	}
-	v := strings.TrimPrefix(strings.TrimPrefix(opt.Version, TagPrefix), "v")
-	for i := range published {
-		if published[i].Version == v {
-			return &published[i], nil
+	v := strings.TrimPrefix(strings.TrimPrefix(version, prefix), "v")
+	for _, rel := range published {
+		if rel.Version == v {
+			return rel, nil
 		}
 	}
-	return nil, fmt.Errorf("resolve flai %s: %s has no published release tagged %s%s (drafts and prereleases are not published); published are %s: choose one of them, or give no version for the newest", v, opt.Repo, TagPrefix, v, VersionList(published))
+	return Release{}, fmt.Errorf("resolve %s %s: %s has no published release tagged %s%s (drafts and prereleases are not published); published are %s: choose one of them, or give no version for the newest", product, v, opt.Repo, prefix, v, VersionList(published))
 }
 
 // VersionList names the newest published versions, and how many older ones
@@ -263,6 +275,20 @@ func (r *Release) Asset(name string) (Asset, bool) {
 	return Asset{}, false
 }
 
+// FetchAsset downloads the named asset of rel into memory.
+func FetchAsset(ctx context.Context, opt Options, rel Release, name string) ([]byte, error) {
+	opt.defaults()
+	a, ok := rel.Asset(name)
+	if !ok {
+		return nil, fmt.Errorf("release %s has no asset %s; check the release on GitHub, or choose a release that publishes it", rel.Tag, name)
+	}
+	data, err := opt.getBytes(ctx, a.URL)
+	if err != nil {
+		return nil, fmt.Errorf("download %s of release %s: %w", name, rel.Tag, err)
+	}
+	return data, nil
+}
+
 // Download verifies the signature over the release's checksums.txt, then
 // fetches the platform archive, verifies it against checksums.txt, and returns
 // the extracted flai binary. A release it cannot verify is refused with a
@@ -275,7 +301,7 @@ func Download(ctx context.Context, opt Options, rel *Release) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("release %s has no asset %s", rel.Tag, name)
 	}
-	keys, err := opt.trustedKeys()
+	keys, err := TrustedKeys(opt)
 	if err != nil {
 		return nil, fmt.Errorf("verify the signature of release %s: %w", rel.Tag, err)
 	}
