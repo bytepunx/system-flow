@@ -227,7 +227,7 @@ func claudeVersion(ctx context.Context, program string) (string, error) {
 // why the check failed, "" when it passed, and errs only when the check
 // could not be made.
 func (c *claudeChecker) run(ctx context.Context, host harness.Host, flai, version string) (string, error) {
-	s, err := newClaudeScratch(gitOf(c.o), c.o.Now())
+	s, err := newClaudeScratch(gitOf(c.o), c.o.Now(), nil)
 	if err != nil {
 		return "", fmt.Errorf("the scratch project could not be made: %w", err)
 	}
@@ -262,11 +262,17 @@ func (c *claudeChecker) run(ctx context.Context, host harness.Host, flai, versio
 // runClaude runs argv in dir, as an agent's environment has it, for at most
 // claudeCheckTimeout, and returns what it printed.
 func runClaude(ctx context.Context, dir string, argv []string) (string, error) {
+	return runClaudeWith(ctx, dir, argv, append(agentEnv(os.Environ()), "FLAI_AGENT="+claudeCheckAgent, "FLAI_STARTED_BY=flai-serve"))
+}
+
+// runClaudeWith runs argv in dir with env as its whole environment, for at
+// most claudeCheckTimeout, and returns what it printed.
+func runClaudeWith(ctx context.Context, dir string, argv, env []string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, claudeCheckTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
-	cmd.Env = append(agentEnv(os.Environ()), "FLAI_AGENT="+claudeCheckAgent, "FLAI_STARTED_BY=flai-serve")
+	cmd.Env = env
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	cmd.WaitDelay = 5 * time.Second
@@ -339,9 +345,10 @@ type claudeScratch struct {
 
 // newClaudeScratch makes a project in a temporary folder, a git repository
 // with one story in progress and its worktree's folder, and a flai
-// configuration of its own beside it with auto-approve on. The operator's
-// configuration is not read or changed.
-func newClaudeScratch(git execx.Runner, now time.Time) (s claudeScratch, err error) {
+// configuration of its own beside it with auto-approve on. files are written
+// into the project too, by their slash-separated paths below its root. The
+// operator's configuration is not read or changed.
+func newClaudeScratch(git execx.Runner, now time.Time, files map[string]string) (s claudeScratch, err error) {
 	tmp, err := os.MkdirTemp("", "flai-claude-check-")
 	if err != nil {
 		return s, err
@@ -365,6 +372,15 @@ func newClaudeScratch(git execx.Runner, now time.Time) (s claudeScratch, err err
 	m := "version: 1\nname: flai-check\nkey: flai-check\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
 	if err := os.WriteFile(filepath.Join(s.root, manifest.File), []byte(m), 0o644); err != nil {
 		return s, err
+	}
+	for name, content := range files {
+		path := filepath.Join(s.root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return s, err
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			return s, err
+		}
 	}
 	if _, err := git.Run(s.root, "git", "init", "-q"); err != nil {
 		return s, err
