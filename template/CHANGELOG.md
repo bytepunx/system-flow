@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.86 - 2026-10-12
+
+- S-0365 A close-out records no `issues.no-story` (patch, ADR-0136): `work-management.md` says that an `issues.no-story` outside the story, an open issue no open story links, is left out of a close-out's check, as an `item.archive` and a `board.wip-limit` are, since it names that issue, not the story, and only the operator's choice of a story for that issue clears it. It needs a flai that has it; an older flai still records every `issues.no-story` at close-out.
+
 ## 1.0.85 - 2026-10-08
 
 - S-0342 A test tier the manifest marks as covered by another is skipped when both are selected, so verify does not run the short Go tests and then the full suite (patch).
