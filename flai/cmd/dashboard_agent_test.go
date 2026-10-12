@@ -209,3 +209,15 @@ func TestDashboardSharesOneContainerAcrossProjects(t *testing.T) {
 		t.Errorf("nothing left registered: %+v", entries)
 	}
 }
+
+// flai dashboard status says which side refused the other as unsigned in the
+// words flai serve status uses, not flai serve's raw last error (S-0237).
+func TestHostFlaiDescribesARefusalInServeStatusWords(t *testing.T) {
+	h := hostFlaiStatus{HostRunning: true, Running: true, PID: 7, Registered: true,
+		LastError: "flai refused the dashboard: unsigned peer: missing stamp; trying again in 1m0s",
+		Refused:   "flai refused the dashboard: unsigned (missing stamp)"}
+	want := "  host flai: flai serve runs (pid 7) but is not connected: flai refused the dashboard: unsigned (missing stamp)\n"
+	if got := h.describe(); got != want {
+		t.Errorf("describe() = %q, want %q", got, want)
+	}
+}

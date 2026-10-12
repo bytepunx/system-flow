@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -168,5 +169,113 @@ func TestServeWarnsOnceWithoutAValidReleaseStamp(t *testing.T) {
 				t.Errorf("reason %q, want %q", r, c.reason)
 			}
 		})
+	}
+}
+
+// writeServeState writes flai serve's state beside cfg as a serve that runs
+// now, in this process, would.
+func writeServeState(t *testing.T, cfg string, st serve.Status) {
+	t.Helper()
+	now := time.Now().UTC().Format(time.RFC3339)
+	st.PID, st.Started, st.Updated = os.Getpid(), now, now
+	data, err := json.Marshal(st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := serve.DirFor(cfg)
+	if err := os.MkdirAll(string(dir), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(string(dir), "state.json"), data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// refusedConnections are a connection the dashboard refused as unsigned, one
+// this flai refused, and one connected, as channel.Client records them.
+var refusedConnections = map[string]channel.State{
+	"/p/harbour": {URL: "http://127.0.0.1:4242", Attempts: 2, RefusedBy: channel.RefusedByDashboard, RefusedReason: "missing stamp",
+		LastError: "the dashboard refused this flai: unsigned peer: missing stamp; trying again in 1m0s"},
+	"/p/quay": {URL: "http://127.0.0.1:4243", Attempts: 1, RefusedBy: channel.RefusedByFlai, RefusedReason: "wrong component flai", PeerVersion: "1.2.3",
+		LastError: "flai refused the dashboard: unsigned peer: wrong component flai; trying again in 1m0s"},
+	"/p/dock": {URL: "http://127.0.0.1:4244", Connected: true, Since: "2026-10-12T17:00:00Z", PeerVersion: "1.2.4", PeerSigned: true},
+}
+
+// S-0237: flai serve status says which side refused the other as unsigned,
+// with the reason and the dashboard's version where known, in place of the
+// bare last error, for a registered project and one served from the folder;
+// a connected project is shown as before, and --json carries the fields.
+func TestServeStatusSaysWhichSideRefusedTheOtherAsUnsigned(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	for key, root := range map[string]string{"harbour": tempProject(t), "dock": tempProject(t)} {
+		if err := os.WriteFile(filepath.Join(root, "k"), []byte("credential"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := serve.DirFor(cfg).Register(serve.Entry{Key: key, Name: key, Root: root, URL: "http://127.0.0.1:4242", KeyFile: filepath.Join(root, "k")}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	projects, err := serve.DirFor(cfg).Projects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	conns := map[string]channel.State{"/p/quay": refusedConnections["/p/quay"]}
+	for _, p := range projects {
+		conns[p.Root] = refusedConnections["/p/"+p.Key]
+	}
+	writeServeState(t, cfg, serve.Status{Version: "test", Connections: conns, Folder: "/p",
+		FolderProjects: []serve.Entry{{Key: "quay", Root: "/p/quay", URL: "http://127.0.0.1:4243"}}})
+	out, _, _ := runIn(t, home, "serve", "status")
+	for _, want := range []string{
+		"harbour  http://127.0.0.1:4242  not connected: the dashboard refused this flai: unsigned (missing stamp)\n",
+		"quay  http://127.0.0.1:4243  not connected: flai refused the dashboard: unsigned (wrong component flai, dashboard 1.2.3)\n",
+		"dock  http://127.0.0.1:4242  connected since 2026-10-12T17:00:00Z\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "unsigned peer") || strings.Contains(out, "trying again") {
+		t.Errorf("the bare last error printed beside the refusal:\n%s", out)
+	}
+	js, _, _ := runIn(t, home, "serve", "status", "--json")
+	var st serveStatus
+	if err := json.Unmarshal([]byte(js), &st); err != nil || st.Status == nil {
+		t.Fatalf("json: %v %s", err, js)
+	}
+	if got := st.Status.Connections["/p/quay"]; got != refusedConnections["/p/quay"] {
+		t.Errorf("flai's refusal: %+v", got)
+	}
+	for _, p := range projects {
+		if got := st.Status.Connections[p.Root]; got != refusedConnections["/p/"+p.Key] {
+			t.Errorf("%s: %+v", p.Key, got)
+		}
+	}
+	for _, field := range []string{`"refused_by": "dashboard"`, `"refused_by": "flai"`, `"refused_reason": "missing stamp"`, `"peer_version": "1.2.3"`, `"peer_signed": true`} {
+		if !strings.Contains(js, field) {
+			t.Errorf("--json lacks %s:\n%s", field, js)
+		}
+	}
+}
+
+// A close that gave no reason and a dashboard that named no version are said
+// without the parentheses rather than with an empty or repeated reason.
+func TestRefusalLeavesOutWhatIsNotKnown(t *testing.T) {
+	for _, c := range []struct {
+		state channel.State
+		want  string
+	}{
+		{channel.State{}, ""},
+		{channel.State{LastError: "dial tcp: connection refused"}, ""},
+		{channel.State{RefusedBy: channel.RefusedByDashboard, RefusedReason: "unsigned"}, "the dashboard refused this flai: unsigned"},
+		{channel.State{RefusedBy: channel.RefusedByDashboard, RefusedReason: "invalid signature"}, "the dashboard refused this flai: unsigned (invalid signature)"},
+		{channel.State{RefusedBy: channel.RefusedByFlai, RefusedReason: "missing stamp"}, "flai refused the dashboard: unsigned (missing stamp)"},
+		{channel.State{RefusedBy: channel.RefusedByFlai, RefusedReason: "invalid signature", PeerVersion: "1.2.3"}, "flai refused the dashboard: unsigned (invalid signature, dashboard 1.2.3)"},
+	} {
+		if got := refusal(c.state); got != c.want {
+			t.Errorf("refusal(%+v) = %q, want %q", c.state, got, c.want)
+		}
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
@@ -71,7 +72,8 @@ func TestServeStatusShowsWhatServeServesBelowTheImportRoots(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", cfg)
 	now := time.Now().UTC().Format(time.RFC3339)
 	st := serve.Status{PID: os.Getpid(), Version: "test", Started: now, Updated: now,
-		ImportProjects: []serve.Entry{{Key: "blog", Root: "/g/blog", URL: "http://127.0.0.1:4242"}},
+		ImportProjects: []serve.Entry{{Key: "blog", Root: "/g/blog", URL: "http://127.0.0.1:4242"}, {Key: "quay", Root: "/g/quay", URL: "http://127.0.0.1:4242"}},
+		Connections:    map[string]channel.State{"/g/quay": {RefusedBy: channel.RefusedByDashboard, RefusedReason: "missing stamp"}},
 		Unserved:       []serve.Found{{Entry: serve.Entry{Root: "/g/twin"}, Reason: "its key blog is served already, for /g/blog"}}}
 	data, _ := json.Marshal(st)
 	dir := serve.DirFor(cfg)
@@ -84,6 +86,8 @@ func TestServeStatusShowsWhatServeServesBelowTheImportRoots(t *testing.T) {
 	out, _, _ := runIn(t, home, "serve", "status")
 	for _, want := range []string{
 		"served from the folders named for import (flai serve import list):\n  blog  http://127.0.0.1:4242  not connected\n    /g/blog\n",
+		// S-0237: a project the dashboard refused says so
+		"  quay  http://127.0.0.1:4242  not connected: the dashboard refused this flai: unsigned (missing stamp)\n    /g/quay\n",
 		"not served:\n  /g/twin\n    its key blog is served already, for /g/blog\n",
 	} {
 		if !strings.Contains(out, want) {

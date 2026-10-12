@@ -8,12 +8,14 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sort"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -259,6 +261,8 @@ func (a *app) printServeStatus() error {
 		} else if st.Running {
 			if c, ok := st.Status.Connections[p.Root]; ok && c.Connected {
 				line = "connected since " + c.Since
+			} else if why := refusal(c); why != "" {
+				line = "not connected: " + why
 			} else if ok && c.LastError != "" {
 				line = "not connected: " + c.LastError
 			}
@@ -277,6 +281,8 @@ func (a *app) printServeStatus() error {
 			line := "not connected"
 			if c, ok := st.Status.Connections[p.Root]; ok && c.Connected {
 				line = "connected since " + c.Since
+			} else if why := refusal(c); why != "" {
+				line = "not connected: " + why
 			}
 			fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
 		}
@@ -289,6 +295,31 @@ func (a *app) printServeStatus() error {
 		}
 	}
 	return nil
+}
+
+// refusal says which side refused the other as unsigned at a connection's
+// last attempt, with the reason and the dashboard's version where known
+// (S-0237); "" when the last attempt was not refused.
+func refusal(c channel.State) string {
+	line := "the dashboard refused this flai: unsigned"
+	switch c.RefusedBy {
+	case "":
+		return ""
+	case channel.RefusedByFlai:
+		line = "flai refused the dashboard: unsigned"
+	}
+	var detail []string
+	// "unsigned" is the reason of a close that said no more
+	if c.RefusedReason != "" && c.RefusedReason != "unsigned" {
+		detail = append(detail, c.RefusedReason)
+	}
+	if c.PeerVersion != "" {
+		detail = append(detail, "dashboard "+c.PeerVersion)
+	}
+	if len(detail) > 0 {
+		line += " (" + strings.Join(detail, ", ") + ")"
+	}
+	return line
 }
 
 // ensureServeUnderHost has flai host run flai serve: it starts the host

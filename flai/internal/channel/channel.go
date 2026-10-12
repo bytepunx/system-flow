@@ -380,6 +380,9 @@ func (c *Client) Run(ctx context.Context) {
 			}
 			if unsigned {
 				s.RefusedBy, s.RefusedReason, s.PeerVersion, s.PeerSigned = refused.By, refused.Reason, refused.PeerVersion, false
+			} else {
+				// the refusal was the last attempt's; this one ended otherwise
+				s.RefusedBy, s.RefusedReason = "", ""
 			}
 		})
 		if proven {

@@ -116,7 +116,10 @@ type hostFlaiStatus struct {
 	Connected   bool   `json:"connected"`
 	ConnSince   string `json:"connected_since,omitempty"`
 	LastError   string `json:"last_error,omitempty"`
-	Projects    int    `json:"projects"`
+	// Refused says which side refused the other as unsigned, in the words
+	// flai serve status uses (S-0237).
+	Refused  string `json:"refused,omitempty"`
+	Projects int    `json:"projects"`
 }
 
 func (a *app) hostFlai(root string) hostFlaiStatus {
@@ -138,6 +141,7 @@ func (a *app) hostFlai(root string) hostFlaiStatus {
 		out.Running, out.PID, out.Since = true, st.Status.PID, st.Status.Started
 		if c, ok := st.Status.Connections[root]; ok {
 			out.Connected, out.ConnSince, out.LastError = c.Connected, c.Since, c.LastError
+			out.Refused = refusal(c)
 		}
 	}
 	return out
@@ -153,6 +157,8 @@ func (h hostFlaiStatus) describe() string {
 		return fmt.Sprintf("  host flai: flai serve runs (pid %d, since %s, %d project(s)) but this project is not registered with it; restart the dashboard\n", h.PID, h.Since, h.Projects)
 	case h.Connected:
 		return fmt.Sprintf("  host flai: connected since %s (flai serve pid %d, running since %s, serving %d project(s))\n", h.ConnSince, h.PID, h.Since, h.Projects)
+	case h.Refused != "":
+		return fmt.Sprintf("  host flai: flai serve runs (pid %d) but is not connected: %s\n", h.PID, h.Refused)
 	case h.LastError != "":
 		return fmt.Sprintf("  host flai: flai serve runs (pid %d) but is not connected: %s\n", h.PID, h.LastError)
 	}

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -353,6 +354,11 @@ func (a *app) describeHost(st host.Status) {
 		} else if c.State != "running" && c.LastExit != "" {
 			fmt.Fprintf(a.out, "    last exit: %s\n", c.LastExit)
 		}
+		if c.Name == host.Serve {
+			for _, line := range a.serveRefusals() {
+				fmt.Fprintf(a.out, "    %s\n", line)
+			}
+		}
 	}
 	if d := st.Dashboard; d != nil {
 		line := d.State
@@ -370,6 +376,24 @@ func (a *app) describeHost(st host.Status) {
 			fmt.Fprintf(a.out, "    last error: %s\n", d.LastError)
 		}
 	}
+}
+
+// serveRefusals are the projects whose connection flai serve's state says was
+// refused as unsigned at its last attempt, one line each, by root, in the
+// words of flai serve status (S-0237); none when flai serve does not run.
+func (a *app) serveRefusals() []string {
+	st, alive := a.serveDir().ReadStatus(time.Now())
+	if !alive {
+		return nil
+	}
+	var out []string
+	for root, c := range st.Connections {
+		if why := refusal(c); why != "" && !c.Connected {
+			out = append(out, root+": "+why)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // ensureHost starts flai host detached unless one runs for this config. A

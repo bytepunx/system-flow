@@ -36,6 +36,8 @@ func (a *app) printBelowImportRoots(st serveStatus) {
 			line := "not connected"
 			if c, ok := st.Status.Connections[p.Root]; ok && c.Connected {
 				line = "connected since " + c.Since
+			} else if why := refusal(c); why != "" {
+				line = "not connected: " + why
 			}
 			fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
 		}

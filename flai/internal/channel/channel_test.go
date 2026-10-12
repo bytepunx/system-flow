@@ -565,6 +565,22 @@ func TestADashboardThatRefusesThisFlaiIsDialledAgainAfterTheHeldBackoff(t *testi
 	}
 }
 
+// A refusal is the last attempt's: one that ends otherwise, such as a
+// dashboard that is gone, clears it from State, so status says why now.
+func TestARefusalIsClearedByAnAttemptThatEndsOtherwise(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	d.answer(d.sign("flaiover 2.3.0 1a2b3c4"), "missing stamp")
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys,
+		MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, HeldBackoff: 50 * time.Millisecond}
+	runClient(t, c)
+	waitState(t, c, "refused", func(s State) bool { return s.RefusedBy != "" })
+	d.srv.Close()
+	st := waitState(t, c, "cleared", func(s State) bool { return s.RefusedBy == "" && s.Attempts > 1 })
+	if st.Connected || st.RefusedReason != "" || strings.Contains(st.LastError, UnsignedReason) {
+		t.Errorf("state: %+v", st)
+	}
+}
+
 // A close with 4403 that gives no fault still reads as the dashboard's refusal.
 func TestDashboardRefusal(t *testing.T) {
 	for reason, want := range map[string]string{"unsigned peer: invalid signature": "invalid signature", "unsigned peer": "unsigned", "": "unsigned"} {
