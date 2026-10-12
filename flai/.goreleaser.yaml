@@ -29,11 +29,18 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
       - -trimpath
+    # The release stamp (S-0235): the release workflow signs "flai <version>
+    # <commit>" from these same Version and Commit values and passes the line
+    # and its signature in the environment; a snapshot has neither and carries
+    # no stamp. GoReleaser joins the entries into one -ldflags string, which go
+    # splits on spaces outside quotes, so the statement's -X is quoted.
     ldflags:
       - -s -w
       - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Version={{ if .IsSnapshot }}{{ .Version }}{{ else }}{{ trimprefix .Tag "flai/v" }}{{ end }}
       - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Commit={{ .ShortCommit }}
       - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.Date={{ .Date }}
+      - -X "github.com/bytepunx/system-flow/flai/internal/buildinfo.ReleaseStatement={{ envOrDefault "FLAI_RELEASE_STATEMENT" "" }}"
+      - -X github.com/bytepunx/system-flow/flai/internal/buildinfo.ReleaseSignature={{ envOrDefault "FLAI_RELEASE_SIGNATURE" "" }}
 
 archives:
   - id: flai

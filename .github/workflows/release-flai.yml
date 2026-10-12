@@ -48,6 +48,30 @@ jobs:
             fi
           done
           exit "$missing"
+      # The release stamp (S-0235): the release key signs the line
+      # "flai <version> <commit>", no newline, and GoReleaser's ldflags write
+      # the line and its signature into buildinfo, which flai verifies against
+      # its own Version and Commit. Those come from .goreleaser.yaml, so this
+      # line must be built the same way or every release warns about itself:
+      # the version is the tag less flai/v, as trimprefix gives it, and the
+      # commit is git show's %h, the command GoReleaser's git pipe takes
+      # .ShortCommit from, in the same checkout. The files stay outside the
+      # tree so that GoReleaser finds it clean.
+      - name: Sign the release stamp
+        id: stamp
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          version="${GITHUB_REF_NAME#flai/v}"
+          commit="$(git show --format=%h --quiet HEAD)"
+          printf '%s' "flai $version $commit" >"$RUNNER_TEMP/stamp.txt"
+          cosign sign-blob --key env://COSIGN_PRIVATE_KEY \
+            --use-signing-config=false --new-bundle-format=false \
+            --tlog-upload=false --output-signature "$RUNNER_TEMP/stamp.sig" \
+            --yes "$RUNNER_TEMP/stamp.txt"
+          echo "statement=$(cat "$RUNNER_TEMP/stamp.txt")" >>"$GITHUB_OUTPUT"
+          echo "signature=$(tr -d '\n' <"$RUNNER_TEMP/stamp.sig")" >>"$GITHUB_OUTPUT"
       # The monorepo tags flai/vX.Y.Z. GoReleaser OSS cannot strip the
       # prefix, so .goreleaser.yaml derives the version from the tag with
       # trimprefix and validation of the tag as semver is skipped here.
@@ -62,6 +86,8 @@ jobs:
           GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          FLAI_RELEASE_STATEMENT: ${{ steps.stamp.outputs.statement }}
+          FLAI_RELEASE_SIGNATURE: ${{ steps.stamp.outputs.signature }}
       # A keyless provenance statement for anyone with gh. Artifact
       # attestations are available only to public repositories on the Team
       # plan (design/system/release-signing.md), so the step is skipped while
