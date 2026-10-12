@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-10-07
+updated: 2026-10-12
 status: draft
 ---
 
@@ -34,6 +34,24 @@ Every script in `scripts/` sources `scripts/env.sh`, which sets this environment
 | `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `FLAI_TEST_LITELLM_HAIKU` | From `.flai-cache/litellm/litellm.env` when `scripts/litellm.sh up` has written it and the environment does not already set them: the local LiteLLM proxy and its budgeted virtual key, for the gateway tests and the agents `flai serve` starts |
 
 Run `make install-tools` once, from any tree: it installs the pinned golangci-lint v2 and GoReleaser into the main checkout's `bin/`, so every story worktree lints with them. `make flai-test` names the golangci-lint it runs and stops if it is not v2.
+
+### Gateway checks
+
+The gateway checks run `claude -p` through a gateway with the `claude-code` adapter's arguments, `flai guard`, and `permission_prompt` on, and log what the gateway charged beside Claude Code's `total_cost_usd`. Each run spends real money on the gateway's key. `scripts/gateway-smoke.sh`, the smoke tier's last step, runs the check of each gateway whose key is set and prints one line naming the variable of each it skips. The integration tier leaves them to it, and `make test` never runs them. A close-out whose branch changes `flai/` runs the smoke tier, so on a host with a key each such close-out spends one run.
+
+| Variable | Default | What |
+|----------|---------|------|
+| `OPENROUTER_API_KEY` | none: the check skips | The OpenRouter key the check runs on |
+| `FLAI_TEST_OPENROUTER_HAIKU` | `anthropic/claude-haiku-4.5` | The OpenRouter model `haiku` resolves to |
+| `FLAI_TEST_GATEWAY_BUDGET` | `1.00` | The run's `max_budget_usd`, held to Claude Code's own count, which runs three to four times what OpenRouter charges; a run costs about $0.06 at OpenRouter |
+
+Give the key a credit limit of its own on OpenRouter's keys page, so that a run gone wrong cannot spend past it, then run one check:
+
+```sh
+OPENROUTER_API_KEY=sk-or-... FLAI_TEST_GATEWAY_BUDGET=0.50 scripts/gateway-smoke.sh
+```
+
+What the OpenRouter check found is in [agent-adapters.md](../../design/system/agent-adapters.md) § Checked against OpenRouter.
 
 An agent `flai serve` starts gets flai serve's environment without `FLAI_HOST_URL`, `FLAI_HOST_TOKEN`, and `FLAI_CONFIG`, plus `FLAI_AGENT`, `FLAI_STORY`, `FLAI_SESSION`, and `FLAI_STARTED_BY`. A `flai serve` it runs to try a change, with a `--config` of its own, does not reach the operator's host. `scripts/flaiover-dev.sh` gives the dev server the dashboard token file that `flai dashboard token --json` names.
 
