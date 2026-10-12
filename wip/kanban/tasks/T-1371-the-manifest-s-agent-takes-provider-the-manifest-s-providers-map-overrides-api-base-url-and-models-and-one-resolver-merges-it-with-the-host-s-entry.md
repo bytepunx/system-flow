@@ -28,10 +28,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 104
-      output: 582
-      cache_read: 5782553
-      cache_write: 162378
-      cost: 2.6773
+      output: 32204
+      cache_read: 5899319
+      cache_write: 158762
+      cost: 2.7748
 ---
 # T-1371 The manifest's agent takes provider, the manifest's providers map overrides api, base_url, and models, and one resolver merges it with the host's entry
 

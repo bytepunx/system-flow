@@ -24,15 +24,15 @@ touches: [design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/fl
 after: [T-1218]
 usage:
   source: log
-  seconds: 368
+  seconds: 370
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 414
-      cache_read: 2789902
-      cache_write: 99741
-      cost: 2.4939
+      input: 45
+      output: 15267
+      cache_read: 2841041
+      cache_write: 92568
+      cost: 1.4903
 ---
 # T-1220 The guides and the dashboard design describe the coordination values and their chart
 

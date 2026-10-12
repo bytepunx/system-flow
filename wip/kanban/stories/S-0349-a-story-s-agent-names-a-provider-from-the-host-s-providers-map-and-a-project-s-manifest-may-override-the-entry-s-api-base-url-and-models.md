@@ -7,7 +7,7 @@ status: review
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:42:40Z
-updated: 2026-10-12T16:41:00Z
+updated: 2026-10-12T16:50:22Z
 transitions:
   - to: ready
     at: 2026-10-12T15:50:18Z
@@ -18,6 +18,12 @@ transitions:
   - to: review
     at: 2026-10-12T16:41:00Z
     by: agent-S-0349
+  - to: in-progress
+    at: 2026-10-12T16:50:13Z
+    by: alex
+  - to: review
+    at: 2026-10-12T16:50:22Z
+    by: alex
 tags: [cli, template]
 topics: [agents]
 touches: [flai/internal/manifest/provider.go, flai/internal/manifest/provider_test.go, flai/internal/manifest/agent.go, flai/internal/manifest/agent_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/agent.go, flai/cmd/agent_test.go, flai/cmd/edit.go, flai/cmd/edit_test.go, flai/internal/itemedit/itemedit.go, flai/internal/mcpserver/items_write.go, flai/internal/mcpserver/items_write_test.go, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/project-manifest.md, design/system/work-hierarchy.md, design/system/flai-cli.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/check/check.go, flai/internal/check/providers_test.go, flai/internal/workitem/front-matter-fields.txt, flai/cmd/items.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/folder.go]
@@ -28,31 +34,30 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2570
-  estimated: true
+  seconds: 2937
   turns:
     - day: 2026-10-12
-      ceremony: 4
-      hand_edits: 1
-      work: 48
+      ceremony: 5
+      hand_edits: 2
+      work: 53
   models:
     - model: claude-opus-5-5
-      input: 430
-      output: 2374
-      cache_read: 23467850
-      cache_write: 682740
-      cost: 10.8762
+      input: 454
+      output: 141129
+      cache_read: 25853126
+      cache_write: 695759
+      cost: 12.1602
   strategic:
     - kind: orchestrator
-      seconds: 6
+      seconds: 18
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 14
-          cache_read: 421718
-          cache_write: 2450
-          cost: 0.1069
+          input: 5
+          output: 26
+          cache_read: 1167448
+          cache_write: 5586
+          cost: 0.2957
 cost_of_delay:
   value: 60.84
   by: planner-E-0019
@@ -113,3 +118,4 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 Forecast: 55m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 33. It stands: four tasks of plain schema and command work.
 
 Cost of delay: 60.84 USD a week, as `flai cod` works it out: 55m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands. The value of the epic arrives with this story, S-0350, and S-0351, which their `after` already put first.
+- 2026-10-12T16:50:13Z: moved to in-progress: Files are out-of-sync

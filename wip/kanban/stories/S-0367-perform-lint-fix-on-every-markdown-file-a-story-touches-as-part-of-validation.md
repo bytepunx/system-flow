@@ -3,11 +3,17 @@ id: S-0367
 type: story
 nature: improvement
 title: Perform lint fix on every markdown file a story touches as part of validation
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-12T16:48:56Z
-updated: 2026-10-12T16:48:56Z
-transitions: []
+updated: 2026-10-12T16:49:57Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:48:58Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-12T16:49:57Z
+    by: agent-S-0367
 tags: [cli]
 touches: [flai/cmd]
 agent:
@@ -15,6 +21,21 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 443
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 8
+          output: 110
+          cache_read: 2015371
+          cache_write: 4401
+          cost: 0.5092
 cost_of_delay:
   inputs:
     penalty_per_week: 50

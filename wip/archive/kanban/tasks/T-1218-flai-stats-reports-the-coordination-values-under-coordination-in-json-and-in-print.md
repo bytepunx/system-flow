@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 106
-      output: 641
-      cache_read: 7353835
-      cache_write: 157459
-      cost: 6.4823
+      input: 117
+      output: 39684
+      cache_read: 7384878
+      cache_write: 240616
+      cost: 3.8739
 ---
 # T-1218 flai stats reports the coordination values under coordination, in JSON and in print
 

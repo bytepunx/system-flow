@@ -3,10 +3,10 @@ id: E-0018
 type: epic
 nature: feature
 title: Improve Inter-Agent Coordination Via Inboxes
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T20:05:16Z
-updated: 2026-10-08T04:31:41Z
+updated: 2026-10-12T16:51:13Z
 transitions:
   - to: ready
     at: 2026-10-07T20:05:17Z
@@ -14,10 +14,16 @@ transitions:
   - to: in-progress
     at: 2026-10-07T20:24:33Z
     by: agent-S-0330
+  - to: review
+    at: 2026-10-12T16:49:50Z
+    by: agent-S-0337
+  - to: done
+    at: 2026-10-12T16:51:13Z
+    by: orchestrator
 tags: []
 usage:
   source: sum
-  seconds: 19522
+  seconds: 21655
   estimated: true
   turns:
     - day: 2026-10-07
@@ -36,23 +42,29 @@ usage:
       ceremony: 1
       work: 1
     - day: 2026-10-12
-      ceremony: 3
+      ceremony: 5
       test_runs: 1
-      hand_edits: 2
-      work: 52
+      hand_edits: 3
+      work: 72
   models:
     - model: claude-haiku-5-5
-      input: 102
-      output: 479
-      cache_read: 6957780
-      cache_write: 229241
-      cost: 0.4355
+      input: 104
+      output: 51657
+      cache_read: 7187021
+      cache_write: 231005
+      cost: 0.5442
     - model: claude-opus-5-5
-      input: 3190
-      output: 958424
-      cache_read: 189941904
-      cache_write: 6326268
-      cost: 109.4981
+      input: 3248
+      output: 1142571
+      cache_read: 198225855
+      cache_write: 6373939
+      cost: 102.3169
+    - model: claude-sonnet-5-5
+      input: 44
+      output: 10806
+      cache_read: 1515436
+      cache_write: 104919
+      cost: 0.522
   strategic:
     - kind: planner
       seconds: 1011
@@ -122,3 +134,5 @@ The ultimate goal here is to allow for greater system-wide throughput without in
 
 Possible ways inboxes could be used by agents - determining opportunities for clearer boundaries and separation of concerns so that there is less shared/overlapping code. This may add some additional duration to the work but should save total time in process by making the codebase easier to evolve independently.
 - 2026-10-07T20:24:33Z: moved to in-progress: follows S-0330, which moved to in-progress
+- 2026-10-12T16:49:50Z: moved to review: follows S-0337, which moved to review
+- 2026-10-12T16:51:13Z: moved to done: follows S-0337, which moved to done

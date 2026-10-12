@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 392.2956
-accrued_seconds: 336959
-tasks_completed: 368
-last_run: 2026-10-12T16:26:34Z
+accrued_cost: 396.7364
+accrued_seconds: 338318
+tasks_completed: 372
+last_run: 2026-10-12T16:49:13Z
 ---
 
 # Orchestrator activity
@@ -2587,6 +2587,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0313, S-0234
 - Seconds: 1160
 - Cost: 3.8966 USD, estimated
+
+### 2026-10-12T16:41:15Z
+
+- Summary: Accepted S-0235 at 43124fc3 under accept_reviews. flai verify passed every step at the branch head. The verifier matched all five criteria and found no secret in the diff: the flai and flaiover release stamps signed in CI, verified at start with a warning, tested on both sides, and documented. The dry-run had no blocker. One unverified risk, noted: flai's workflow signs the commit as %h, while GoReleaser stamps .ShortCommit; a mismatch would make the release warn about itself. flai told S-0337 and S-0349 about the overlaps.
+- Items: S-0235
+- Seconds: 881
+- Cost: 3.5540 USD, estimated
+
+### 2026-10-12T16:41:26Z
+
+- Summary: Under judgement, did not publish: release_evaluate gives 1 pending (S-0235), 2.7 USD/week. S-0235 changes both release workflows again, and I do not know yet whether flai/v1.41.0, the first signed release, built in CI. I publish it once the operator answers TH-0411 (host upgraded to 1.41.x), or with the next acceptance after that. The only candidate, S-0241 (rank 1, 2h), stays out, blocked.
+- Items: S-0235
+- Seconds: 11
+- Cost: 0.0000 USD
+
+### 2026-10-12T16:41:50Z
+
+- Summary: S-0349 reached review with verify passed at its head 11cdc21a, but I accepted S-0235 seven seconds later, and S-0235 changed four docs S-0349 changes. The branch now lacks main, and accepting would rebase into a likely conflict I could not abort. Opened TH-0412 on S-0349 recommending the operator move it back to in-progress for a sync; I accept it once it is synced and verified.
+- Items: S-0349, S-0235
+- Seconds: 24
+- Cost: 0.3776 USD, estimated
+
+### 2026-10-12T16:49:13Z
+
+- Summary: The operator moved S-0367 (lint fix on every markdown file a story touches) straight to ready. Under order_ready, applied the throughput order: S-0367 alone, which has no forecast duration (flai order lists it as missing). It is not a plan candidate, since it is not in the backlog.
+- Items: S-0367
+- Seconds: 443
+- Cost: 0.5092 USD, estimated
 
 ## Refusals
 

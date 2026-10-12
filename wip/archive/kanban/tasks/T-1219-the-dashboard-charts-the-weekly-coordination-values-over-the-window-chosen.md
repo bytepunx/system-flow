@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 65
-      output: 308
-      cache_read: 3512504
-      cache_write: 148382
-      cost: 3.1594
+      input: 57
+      output: 19341
+      cache_read: 3599285
+      cache_write: 117273
+      cost: 1.8881
 ---
 # T-1219 The dashboard charts the weekly coordination values over the window chosen
 

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 326
-      cache_read: 3399467
-      cache_write: 131439
-      cost: 3.0472
+      input: 55
+      output: 18655
+      cache_read: 3471491
+      cache_write: 113109
+      cost: 1.821
 ---
 # T-1217 A rebase that stops on conflicts at flai stream sync or flai accept is logged with its story, paths, and time
 

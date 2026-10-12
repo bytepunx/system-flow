@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 92
-      output: 634
-      cache_read: 5102602
-      cache_write: 127014
-      cost: 2.3552
+      input: 91
+      output: 28329
+      cache_read: 5189493
+      cache_write: 139660
+      cost: 2.4409
 ---
 # T-1373 flai agent, flai edit, flai manifest set, and the MCP item_new and item_edit agent take provider
 

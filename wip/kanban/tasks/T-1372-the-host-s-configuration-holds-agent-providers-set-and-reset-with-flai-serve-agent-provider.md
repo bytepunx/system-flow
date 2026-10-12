@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 380
-      cache_read: 3458470
-      cache_write: 116709
-      cost: 1.6101
+      input: 62
+      output: 19367
+      cache_read: 3547754
+      cache_write: 95477
+      cost: 1.6687
 ---
 # T-1372 The host's configuration holds agent.providers, set and reset with flai serve agent provider
 

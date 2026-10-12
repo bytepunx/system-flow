@@ -24,15 +24,15 @@ touches: [docs/users/flai.md, design/system/project-manifest.md, design/system/w
 after: [T-1373]
 usage:
   source: log
-  seconds: 333
+  seconds: 337
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 128
-      output: 571
-      cache_read: 6653665
-      cache_write: 138556
-      cost: 3.0588
+      input: 118
+      output: 36793
+      cache_read: 6740117
+      cache_write: 181390
+      cost: 3.1703
 ---
 # T-1374 The user and design documents describe the provider, and the template's manifest shows provider and providers
 

@@ -3,11 +3,11 @@ id: S-0337
 type: story
 nature: feature
 title: flai stats reports the conversations between agents, the conflicts found at sync and at acceptance, and the hold time shares saved, per week
-status: in-progress
+status: done
 parent: E-0018
 owner: alex
 created: 2026-10-07T20:11:31Z
-updated: 2026-10-12T16:28:21Z
+updated: 2026-10-12T16:51:13Z
 transitions:
   - to: ready
     at: 2026-10-08T08:51:33Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-08T11:04:51Z
     by: agent-S-0337
+  - to: review
+    at: 2026-10-12T16:49:50Z
+    by: agent-S-0337
+  - to: done
+    at: 2026-10-12T16:51:13Z
+    by: orchestrator
 tags: [flai, flaiover]
 topics: [cli, dashboard, git]
 touches: [design/adrs, design/system/metrics.md, flai/internal/storygit/conflicts.go, flai/internal/storygit/conflicts_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/accept.go, flai/cmd/accept_conflict_test.go, flai/internal/metrics/coordination.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md, design/issues/I-0137-a-host-crash-during-flai-story-start-leaves-the-story-s-branch-ref-worktree-and-narrative-as-empty-files-and-no-agent-can-repair-the-ref.md, design/issues/I-0140-testactivitywriterstaketurns-fails-about-one-run-in-three-two-writers-that-both-find-the-activity-lock-stale-can-both-take-it-and-an-entry-is-lost.md, design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story-at-close-out.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md]
@@ -26,8 +32,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3115
-  estimated: true
+  seconds: 5248
   turns:
     - day: 2026-10-08
       ceremony: 1
@@ -38,23 +43,29 @@ usage:
       ceremony: 1
       work: 1
     - day: 2026-10-12
-      ceremony: 3
+      ceremony: 5
       test_runs: 1
-      hand_edits: 2
-      work: 52
+      hand_edits: 3
+      work: 72
   models:
     - model: claude-haiku-5-5
-      input: 102
-      output: 479
-      cache_read: 6957780
-      cache_write: 229241
-      cost: 0.4355
+      input: 104
+      output: 51657
+      cache_read: 7187021
+      cache_write: 231005
+      cost: 0.5442
     - model: claude-opus-5-5
-      input: 564
-      output: 26239
-      cache_read: 30867143
-      cache_write: 1227962
-      cost: 27.7186
+      input: 622
+      output: 210386
+      cache_read: 39151094
+      cache_write: 1275633
+      cost: 20.5374
+    - model: claude-sonnet-5-5
+      input: 44
+      output: 10806
+      cache_read: 1515436
+      cache_write: 104919
+      cost: 0.522
   strategic:
     - kind: orchestrator
       seconds: 443
@@ -139,3 +150,16 @@ Touches:
 Forecast 51m: `flai forecast` gave it on 2026-10-08, 104 s per unit over 33 done large-band feature stories, times size 29 (5 criteria, 24 touches). It stands; the 54m of the first plan came from 114 s per unit over 29 stories.
 
 Cost of delay 277.17 USD a week: `flai cod` gave its share of E-0018's 1000 USD a week, 51m of the 3h4m forecast over the four open stories (S-0334, S-0336, S-0337, S-0338). It stands.
+
+### Accepted by the orchestrator
+
+- Verified: 92061fe7220da96b5cc4d52823bf31a66023f34e
+- At: 2026-10-12T16:51:13Z
+
+Verdict: pass at 92061fe7220da96b5cc4d52823bf31a66023f34e; flai verify passed every step at that commit, and the verifier matched all five criteria to the diff; metrics.md changes with ADR-0138.
+
+- 1: design/adrs/0138-flai-stats-reports-per-week-the-conversations-between-agents-and-how-they-ended.md, design/adrs/README.md, design/system/metrics.md
+- 2: flai/internal/metrics/coordination.go, flai/internal/metrics/coordination_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go
+- 3: flai/internal/storygit/conflicts.go, flai/internal/storygit/conflicts_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/accept.go, flai/cmd/accept_conflict_test.go
+- 4: flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/routes/charts/[kind]/+page.svelte, flaiover/src/routes/charts/[kind]/charts.svelte.test.ts
+- 5: docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md

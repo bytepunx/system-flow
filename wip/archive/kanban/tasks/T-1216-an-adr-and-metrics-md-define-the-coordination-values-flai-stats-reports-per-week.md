@@ -27,17 +27,23 @@ usage:
   estimated: true
   models:
     - model: claude-haiku-5-5
-      input: 102
-      output: 479
-      cache_read: 6957780
-      cache_write: 229241
-      cost: 0.4355
+      input: 104
+      output: 51657
+      cache_read: 7187021
+      cache_write: 231005
+      cost: 0.5442
     - model: claude-opus-5-5
-      input: 52
-      output: 287
-      cache_read: 2362932
-      cache_write: 98011
-      cost: 2.1239
+      input: 38
+      output: 13002
+      cache_read: 2419537
+      cache_write: 78834
+      cost: 1.2692
+    - model: claude-sonnet-5-5
+      input: 44
+      output: 10806
+      cache_read: 1515436
+      cache_write: 104919
+      cost: 0.522
 ---
 # T-1216 An ADR and metrics.md define the coordination values flai stats reports per week
 
