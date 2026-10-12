@@ -196,3 +196,37 @@ export function verifyPeerStamp(
 	if (named !== component) return invalid('wrong-component', { component: named });
 	return { ...base, state: 'signed', component: named, version };
 }
+
+// The development case (S-0239, release-signing.md § The development case): `flai dashboard` gives a
+// container it starts with the allowance on, or from `--build`, FLAIOVER_ALLOW_UNSIGNED=1, and the
+// dashboard then serves a flai that sent no stamp. A stamp that does not verify or names another
+// component is refused either way, and the credential is proven either way.
+
+/** Whether the environment allows a flai without a stamp: FLAIOVER_ALLOW_UNSIGNED is exactly `1`. */
+export function allowsUnsigned(env: Record<string, string | undefined> = process.env): boolean {
+	return env.FLAIOVER_ALLOW_UNSIGNED === '1';
+}
+
+/** Whether a flai with this checked stamp is served: signed, or missing while unsigned is allowed. */
+export function admitsPeerStamp(stamp: PeerStampCheck, allowUnsigned: boolean): boolean {
+	return stamp.state === 'signed' || (stamp.state === 'missing' && allowUnsigned);
+}
+
+/** A side of the channel that is unsigned: the connected flai, or this dashboard's own build. */
+export type UnsignedSide = 'flai' | 'dashboard';
+
+/**
+ * Which sides of an admitted connection the allowance let through unsigned: `flai` when it sent no
+ * stamp, `dashboard` when this build has none to answer with. None while unsigned is not allowed.
+ */
+export function unsignedSides(
+	peer: PeerStampCheck,
+	ownStamp: HelloStamp | null,
+	allowUnsigned: boolean
+): UnsignedSide[] {
+	if (!allowUnsigned) return [];
+	const sides: UnsignedSide[] = [];
+	if (peer.state === 'missing') sides.push('flai');
+	if (ownStamp === null) sides.push('dashboard');
+	return sides;
+}

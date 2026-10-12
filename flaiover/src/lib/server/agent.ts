@@ -22,13 +22,17 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { log } from './log';
 import { commit, version } from './metrics';
 import {
+	admitsPeerStamp,
+	allowsUnsigned,
 	checkReleaseStamp,
 	helloStamp,
 	PEER_COMPONENT,
 	RELEASE_PUBLIC_KEY,
+	unsignedSides,
 	verifyPeerStamp,
 	type HelloStamp,
-	type PeerStampCheck
+	type PeerStampCheck,
+	type UnsignedSide
 } from './release';
 import type { PlanRun } from '$lib/activity';
 import type { AnalyzerRun, OrchestratorRun } from '$lib/strategic';
@@ -218,6 +222,9 @@ export type AgentStatus = {
 	flai?: string;
 	/** Whether the connected flai's release stamp verified (S-0237). */
 	signed?: boolean;
+	/** Which sides of the connection FLAIOVER_ALLOW_UNSIGNED let through unsigned (S-0239); absent for
+	 * a signed pair and while no flai is connected. */
+	unsigned?: UnsignedSide[];
 	/** The last flai refused for this project as unsigned, until a signed one is adopted. */
 	refused?: Refusal;
 	/** The project the connected flai serves. Not called project: respond() stamps that on every body. */
@@ -239,6 +246,9 @@ export type ConnectedProject = {
 	candidate?: boolean;
 	/** Whether the connected flai's release stamp verified; set only while connected (S-0237). */
 	signed?: boolean;
+	/** Which sides the allowance let through unsigned; set only while connected, and only when any
+	 * is (S-0239). */
+	unsigned?: UnsignedSide[];
 	/** The last flai refused for this project as unsigned, until a signed one is adopted. */
 	refused?: Refusal;
 };
@@ -273,6 +283,8 @@ type ConnInfo = {
 	missing: string[];
 	candidate?: boolean;
 	signed: boolean;
+	/** Set only when the allowance let a side through unsigned. */
+	unsigned?: UnsignedSide[];
 };
 
 export type AgentOptions = {
@@ -292,7 +304,7 @@ export type RegistryOptions = AgentOptions & {
 	peerKeys?: readonly string[];
 	/** Whether a flai that sent no stamp is served, marked unsigned, rather than closed with
 	 * CLOSE_UNSIGNED. A stamp that does not verify or names another component is refused either way.
-	 * Off unless given. */
+	 * Off unless given; `registry` gives it from FLAIOVER_ALLOW_UNSIGNED. */
 	allowUnsigned?: boolean;
 };
 
@@ -447,6 +459,16 @@ export class AgentHub extends EventEmitter {
 			{ component: 'agent', flai: info.flai, project: info.project.key, signed: info.signed },
 			'host flai connected'
 		);
+		if (info.unsigned)
+			log().warn(
+				{
+					component: 'agent',
+					project: info.project.key,
+					flai: info.flai,
+					unsigned: info.unsigned
+				},
+				'host flai connected unsigned'
+			);
 		let alive = true;
 		ws.on('pong', () => (alive = true));
 		const ping = setInterval(() => {
@@ -654,6 +676,7 @@ export class AgentRegistry extends EventEmitter {
 				since: st.since,
 				...(h.candidate ? { candidate: true } : {}),
 				...(st.signed !== undefined ? { signed: st.signed } : {}),
+				...(st.unsigned ? { unsigned: st.unsigned } : {}),
 				...(st.refused ? { refused: st.refused } : {})
 			});
 		}
@@ -712,6 +735,7 @@ export class AgentRegistry extends EventEmitter {
 		let theirs = '';
 		let hello: Hello = {};
 		let signed = false;
+		let unsigned: UnsignedSide[] = [];
 		let done = false;
 		const finish = () => {
 			if (!done) {
@@ -750,9 +774,9 @@ export class AgentRegistry extends EventEmitter {
 				// The release stamp is judged before the credential (S-0237): an unsigned flai, an older
 				// one without the field among them, is closed before it is sent a nonce to prove against.
 				const stamp = verifyPeerStamp(p.release, PEER_COMPONENT, this.peerKeys);
+				if (!admitsPeerStamp(stamp, this.allowUnsigned)) return this.refuseUnsigned(ws, p, stamp);
 				signed = stamp.state === 'signed';
-				if (!signed && !(stamp.state === 'missing' && this.allowUnsigned))
-					return this.refuseUnsigned(ws, p, stamp);
+				unsigned = unsignedSides(stamp, this.stamp, this.allowUnsigned);
 				theirs = p.nonce;
 				hello = p;
 				mine = randomBytes(16).toString('hex');
@@ -800,7 +824,8 @@ export class AgentRegistry extends EventEmitter {
 							(m) => !(Array.isArray(hello.methods) ? hello.methods : []).includes(m)
 						),
 				candidate,
-				signed
+				signed,
+				...(unsigned.length ? { unsigned } : {})
 			});
 		};
 		ws.on('message', onMessage);
@@ -834,9 +859,10 @@ export class AgentRegistry extends EventEmitter {
 let reg: AgentRegistry | null = null;
 
 /**
- * The process-wide registry. The shared credential comes from FLAIOVER_AGENT_KEY_FILE, read once, and
- * the stamp it answers hello with from the image's own (S-0235), unless opt, taken by the call that
- * makes it, gives one; a test that connects its own flai gives opt its keys.
+ * The process-wide registry. The shared credential comes from FLAIOVER_AGENT_KEY_FILE, read once, the
+ * stamp it answers hello with from the image's own (S-0235), and whether it serves a flai with no stamp
+ * from FLAIOVER_ALLOW_UNSIGNED (S-0239), each unless opt, taken by the call that makes it, gives one; a
+ * test that connects its own flai gives opt its keys.
  */
 export function registry(
 	env: Record<string, string | undefined> = process.env,
@@ -854,7 +880,8 @@ export function registry(
 	}
 	const stamp =
 		opt.stamp !== undefined ? opt.stamp : helloStamp(checkReleaseStamp({ version, commit }, env));
-	reg = new AgentRegistry(key, { ...opt, stamp });
+	const allowUnsigned = opt.allowUnsigned ?? allowsUnsigned(env);
+	reg = new AgentRegistry(key, { ...opt, stamp, allowUnsigned });
 	return reg;
 }
 

@@ -8,12 +8,15 @@ import {
 	PEER_COMPONENT,
 	RELEASE_PUBLIC_KEY,
 	RELEASE_STAMP_FILE,
+	admitsPeerStamp,
+	allowsUnsigned,
 	checkReleaseStamp,
 	helloStamp,
 	isDevelopmentVersion,
 	readStampFile,
 	releaseStampPath,
 	stampWarrantsWarning,
+	unsignedSides,
 	verifyPeerStamp,
 	verifyReleaseStamp,
 	type ReleaseStamp,
@@ -245,5 +248,49 @@ describe("a peer's release stamp (S-0237)", () => {
 		const missing = verifyReleaseStamp({ kind: 'absent', path: '/stamp' }, build, [ours.pem]);
 		expect(helloStamp(missing)).toBeNull();
 		expect(helloStamp(verifyText('flaiover 1.2.3 abc1234\n'))).toBeNull();
+	});
+});
+
+// S-0239: FLAIOVER_ALLOW_UNSIGNED=1, given by flai dashboard to a container it starts as a development
+// build, lets a flai with no stamp through; nothing else does, and a stamp that fails is refused anyway.
+describe('the development case (S-0239)', () => {
+	function peerStamp(statement: string, key = ours.privateKey) {
+		return { statement, signature: sign('sha256', Buffer.from(statement), key).toString('base64') };
+	}
+	const check = (stamp: unknown) => verifyPeerStamp(stamp, PEER_COMPONENT, [ours.pem]);
+	const signed = check(peerStamp('flai 9.9.9 fedcba9'));
+	const missing = check(undefined);
+	const badSignature = check(peerStamp('flai 9.9.9 fedcba9', theirs.privateKey));
+	const wrongComponent = check(peerStamp('flaiover 1.2.3 abc1234'));
+	const own = { statement: 'flaiover 1.2.3 abc1234', signature: 'c2lnbmVk' };
+
+	it('allows unsigned only when FLAIOVER_ALLOW_UNSIGNED is exactly 1', () => {
+		expect(allowsUnsigned({ FLAIOVER_ALLOW_UNSIGNED: '1' })).toBe(true);
+		for (const value of [undefined, '', '0', 'true', 'yes', ' 1', '1 '])
+			expect(allowsUnsigned({ FLAIOVER_ALLOW_UNSIGNED: value }), String(value)).toBe(false);
+		expect(allowsUnsigned({})).toBe(false);
+	});
+
+	it('admits a missing stamp only while allowed, a signed one always, a failing one never', () => {
+		expect(admitsPeerStamp(signed, false)).toBe(true);
+		expect(admitsPeerStamp(signed, true)).toBe(true);
+		expect(admitsPeerStamp(missing, false)).toBe(false);
+		expect(admitsPeerStamp(missing, true)).toBe(true);
+		for (const stamp of [badSignature, wrongComponent]) {
+			expect(admitsPeerStamp(stamp, false), stamp.reason!).toBe(false);
+			expect(admitsPeerStamp(stamp, true), stamp.reason!).toBe(false);
+		}
+	});
+
+	it('names each side the allowance let through unsigned, and none for a signed pair', () => {
+		expect(unsignedSides(missing, own, true)).toEqual(['flai']);
+		expect(unsignedSides(signed, null, true)).toEqual(['dashboard']);
+		expect(unsignedSides(missing, null, true)).toEqual(['flai', 'dashboard']);
+		expect(unsignedSides(signed, own, true)).toEqual([]);
+	});
+
+	it('names no side while unsigned is not allowed', () => {
+		expect(unsignedSides(signed, null, false)).toEqual([]);
+		expect(unsignedSides(missing, null, false)).toEqual([]);
 	});
 });

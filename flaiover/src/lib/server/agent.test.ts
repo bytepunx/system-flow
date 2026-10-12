@@ -1,7 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import http from 'node:http';
 import { generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import WebSocket from 'ws';
 import {
 	AgentError,
@@ -13,8 +16,11 @@ import {
 	PROTOCOL,
 	proof,
 	REQUIRED_METHODS,
+	registry as processRegistry,
+	resetAgent,
 	type RegistryOptions
 } from './agent';
+import { log } from './log';
 
 const KEY = 'agent-credential-for-tests';
 
@@ -687,7 +693,7 @@ describe('AgentRegistry and AgentHub', () => {
 			release: undefined
 		});
 		cleanup.push(() => flai.ws.terminate());
-		expect(hub.status()).toMatchObject({ connected: true, signed: false });
+		expect(hub.status()).toMatchObject({ connected: true, signed: false, unsigned: ['flai'] });
 		expect(hub.status().refused).toBeUndefined();
 	});
 
@@ -735,5 +741,138 @@ describe('AgentRegistry and AgentHub', () => {
 		expect(registry.list()).toHaveLength(8);
 		expect(registry.peek('p9')).toBeUndefined();
 		expect(registry.solo().status()).toEqual({ configured: true, connected: false });
+	});
+});
+
+// S-0239: the process registry reads FLAIOVER_ALLOW_UNSIGNED, which flai dashboard gives a container
+// it starts as a development build, and each connection records which side it let through unsigned.
+describe('the registry under FLAIOVER_ALLOW_UNSIGNED', () => {
+	const cleanup: (() => void)[] = [];
+	afterEach(() => {
+		for (const f of cleanup.splice(0)) f();
+		vi.restoreAllMocks();
+	});
+
+	const keyFile = join(mkdtempSync(join(tmpdir(), 'flaiover-agent-')), 'agent-key');
+	writeFileSync(keyFile, KEY);
+
+	/** The process registry, made from env as the server makes it, on a real HTTP server. */
+	async function start(allow: string | undefined, opt: RegistryOptions = {}) {
+		resetAgent();
+		const env = { FLAIOVER_AGENT_KEY_FILE: keyFile, FLAIOVER_ALLOW_UNSIGNED: allow };
+		const registry = processRegistry(env, { peerKeys: [release.pem], stamp: DASHBOARD, ...opt });
+		const s = await serve(registry);
+		cleanup.push(() => {
+			resetAgent();
+			s.server.close();
+		});
+		return { registry, hub: registry.hub('harbour'), ...s };
+	}
+
+	/** Whether a call to warn is the one that says a connection was let through unsigned. */
+	const warnsUnsigned = ([fields]: unknown[]) =>
+		typeof fields === 'object' && fields !== null && 'unsigned' in fields;
+
+	/** A flai with no stamp, as scripts/flai.sh builds one, that completes the handshake. */
+	async function unstamped(url: string, key = KEY) {
+		const flai = await connect(url, key, undefined, {}, REQUIRED_METHODS, undefined, {
+			release: undefined
+		});
+		cleanup.push(() => flai.ws.terminate());
+		return flai;
+	}
+
+	it('closes a flai with no stamp with 4403 when the variable is unset or anything but 1', async () => {
+		for (const allow of [undefined, '', '0', 'true']) {
+			const { hub, url } = await start(allow);
+			const refused = await sayHello(url, {});
+			expect(refused, String(allow)).toMatchObject({
+				code: CLOSE_UNSIGNED,
+				reason: 'unsigned peer: missing stamp'
+			});
+			expect(hub.status().connected, String(allow)).toBe(false);
+			for (const f of cleanup.splice(0)) f();
+		}
+	});
+
+	it('serves a flai with no stamp when it is 1, recorded as the unsigned side flai, and warns once', async () => {
+		const warn = vi.spyOn(log(), 'warn');
+		const { registry, hub, url } = await start('1');
+		await unstamped(url);
+		expect(hub.status()).toMatchObject({ connected: true, signed: false, unsigned: ['flai'] });
+		expect(registry.list()).toEqual([
+			expect.objectContaining({
+				key: 'harbour',
+				connected: true,
+				signed: false,
+				unsigned: ['flai']
+			})
+		]);
+		expect(warn.mock.calls.filter(warnsUnsigned)).toEqual([
+			[
+				{ component: 'agent', project: 'harbour', flai: '9.9.9', unsigned: ['flai'] },
+				expect.any(String)
+			]
+		]);
+	});
+
+	it('forgets which side was unsigned once the flai disconnects', async () => {
+		const { registry, hub, url } = await start('1');
+		const flai = await unstamped(url);
+		flai.ws.terminate();
+		await flai.closed;
+		await new Promise((r) => setTimeout(r, 20));
+		expect(hub.status().connected).toBe(false);
+		expect(hub.status().unsigned).toBeUndefined();
+		expect(registry.list()[0].unsigned).toBeUndefined();
+	});
+
+	it('still refuses a bad signature or another component when it is 1', async () => {
+		const { url } = await start('1');
+		for (const stamped of [stamp('flai 9.9.9 abc1234', other.privateKey), DASHBOARD]) {
+			const refused = await sayHello(url, { release: stamped });
+			expect(refused.code, stamped.statement).toBe(CLOSE_UNSIGNED);
+		}
+	});
+
+	it('still refuses the wrong credential when it is 1, signed or not', async () => {
+		const { hub, url } = await start('1');
+		const withoutStamp = await unstamped(url, 'some-other-key');
+		expect(await withoutStamp.closed).toBe(4401);
+		const signed = await connect(url, 'some-other-key');
+		expect(await signed.closed).toBe(4401);
+		expect(hub.status().connected).toBe(false);
+	});
+
+	it('records the dashboard as unsigned when this build has no stamp of its own, beside flai when both are', async () => {
+		const { hub, url } = await start('1', { stamp: null });
+		const signed = await connect(url, KEY);
+		cleanup.push(() => signed.ws.terminate());
+		expect(hub.status()).toMatchObject({ connected: true, signed: true, unsigned: ['dashboard'] });
+		signed.ws.terminate();
+		await signed.closed;
+		await new Promise((r) => setTimeout(r, 20));
+		await unstamped(url);
+		expect(hub.status()).toMatchObject({
+			connected: true,
+			signed: false,
+			unsigned: ['flai', 'dashboard']
+		});
+	});
+
+	it('records nothing for a signed pair when it is 1, and warns nothing', async () => {
+		const warn = vi.spyOn(log(), 'warn');
+		const { registry, hub, url } = await start('1');
+		const flai = await connect(url, KEY);
+		cleanup.push(() => flai.ws.terminate());
+		expect(hub.status()).toMatchObject({ connected: true, signed: true });
+		expect(hub.status().unsigned).toBeUndefined();
+		expect(registry.list()[0].unsigned).toBeUndefined();
+		expect(warn.mock.calls.filter(warnsUnsigned)).toEqual([]);
+	});
+
+	it('lets an explicit option win over the variable', async () => {
+		const { url } = await start('1', { allowUnsigned: false });
+		expect((await sayHello(url, {})).code).toBe(CLOSE_UNSIGNED);
 	});
 });
