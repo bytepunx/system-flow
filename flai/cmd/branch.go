@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -143,11 +145,12 @@ func nonNil(l []string) []string {
 
 // syncStoryBranch rebases the story branch onto the main branch inside its
 // worktree with storygit.Rebase, the rebase of flai stream sync without its
-// checks (ADR-0069, ADR-0098). A refusal or a rebase left for the agent is
-// a *syncStopped, with the conflicting paths when there are any.
+// checks (ADR-0069, ADR-0098), its lint fix included (S-0367). A refusal or
+// a rebase left for the agent is a *syncStopped, with the conflicting paths
+// when there are any.
 func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conflicts []string, err error) {
 	// the rebase reads only the story's ID
-	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Files: issues.SyncFiles(repo, id, a.runner, a.now), Log: a.logger()})
+	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Files: issues.SyncFiles(repo, id, a.runner, a.now), Fix: a.checkoutFix(context.Background()), Log: a.logger()})
 	if err != nil {
 		return res.Base, nil, err
 	}
@@ -155,6 +158,14 @@ func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conf
 		return res.Base, res.Conflicts, syncStoppedFrom(res)
 	}
 	return res.Base, nil, nil
+}
+
+// checkoutFix runs the fix commands of the tiers a story's worktree declares
+// over the paths a sync gives it, as the lint fix after the rebase (S-0367).
+func (a *app) checkoutFix(ctx context.Context) storygit.FixFunc {
+	return func(dir string, paths []string) ([]string, error) {
+		return verify.CheckoutFix(ctx, dir, paths, a.logger())
+	}
 }
 
 // mergeStoryBranch brings a story's branch into the main branch: the

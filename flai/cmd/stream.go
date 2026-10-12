@@ -160,6 +160,14 @@ written again, and the fold is committed on the branch as
 names each issue file merged and each issue folded; with --json, merged lists
 the files and folded each fold's from and into.
 
+Then it runs the fix command of each test tier in system-flow.yaml (fix_command)
+over the files the branch changes against the main branch, deleted ones left
+out, so that what the rebase brought into them is fixed with them, and commits
+what the fixes rewrote on the branch as "chore: [S-nnnn] fix the lint of the
+files the branch changes, after the sync". flai accept fixes the same way. A
+fix that fails is logged and the sync stands. The report names the files
+fixed; with --json, fixed lists them.
+
 After a clean rebase it trial-merges the branch with the branch of every other
 story in progress or in review (git merge-tree --write-tree, git 2.38 or
 newer), writing nothing to any worktree, and lists each branch it conflicts
@@ -190,7 +198,7 @@ so that they are widened with flai touches.`,
 			if err != nil {
 				return err
 			}
-			res, err := storygit.Sync(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: it, Now: a.now(), Files: issues.SyncFiles(repo, it.ID, a.runner, a.now), Log: a.logger()})
+			res, err := storygit.Sync(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: it, Now: a.now(), Files: issues.SyncFiles(repo, it.ID, a.runner, a.now), Fix: a.checkoutFix(cmd.Context()), Log: a.logger()})
 			// conflicts is null here unless the rebase waits, as it always was
 			if err != nil {
 				if a.jsonOut {
@@ -211,7 +219,7 @@ so that they are widened with flai touches.`,
 			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": true,
-					"merged": res.Merged, "folded": res.Folded,
+					"merged": res.Merged, "folded": res.Folded, "fixed": res.Fixed,
 					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "outside_touches": res.Outside})
 			}
 			fmt.Fprintf(a.out, "%s is rebased onto %s\n", res.Branch, res.Base)

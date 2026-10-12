@@ -1218,3 +1218,87 @@ func TestPrintSyncChecksNamesTheMergedFilesAndTheFolds(t *testing.T) {
 		t.Errorf("report:\n%s\nwant:\n%s", out.String(), want)
 	}
 }
+
+// The text report names the files whose lint the sync fixed and committed.
+func TestPrintSyncChecksNamesTheFilesFixed(t *testing.T) {
+	var out strings.Builder
+	printSyncChecks(&out, &workitem.Item{ID: "S-0002"}, storygit.SyncResult{Fixed: []string{"docs/a.md", "docs/b.md"}})
+	if want := "fixed the lint of 2 files and committed it: docs/a.md, docs/b.md\n"; out.String() != want {
+		t.Errorf("report:\n%s\nwant:\n%s", out.String(), want)
+	}
+}
+
+// fixSubject is the subject of the lint fix's commit on S-0001's branch.
+const fixSubject = "chore: [S-0001] fix the lint of the files the branch changes, after the sync"
+
+// fixProject is syncProject whose manifest declares a tier over docs whose
+// fix command writes "good" into each file it is given, committed on main.
+func fixProject(t *testing.T) string {
+	t.Helper()
+	root := syncProject(t)
+	m, err := os.ReadFile(filepath.Join(root, "system-flow.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tiers := "tests:\n  - name: md\n    command: [\"true\"]\n    paths: [\"docs/**\"]\n" +
+		"    fix_command: [sh, -c, 'for f; do printf \"good\\n\" > \"$f\"; done', sh, \"{files}\"]\n"
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), append(m, tiers...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "chore: a fix command")
+	return root
+}
+
+// S-0367: flai stream sync runs the manifest's fix commands over the files
+// the branch changes right after its rebase, not over those only main
+// changed, and commits what they rewrote on the branch.
+func TestSyncFixesTheLintOfTheFilesTheBranchChanges(t *testing.T) {
+	root := fixProject(t)
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/new.md", "bad\n")
+	commitIn(t, root, "docs/main.md", "bad\n")
+
+	js, errOut, code := runIn(t, wt, "--json", "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("sync: %d %s %s", code, js, errOut)
+	}
+	var res struct {
+		OK    bool     `json:"ok"`
+		Fixed []string `json:"fixed"`
+	}
+	if err := json.Unmarshal([]byte(js), &res); err != nil || !res.OK || strings.Join(res.Fixed, ",") != "docs/new.md" {
+		t.Fatalf("sync --json: %v %s", err, js)
+	}
+	if got := gitIn(t, wt, "log", "-1", "--format=%s"); got != fixSubject {
+		t.Errorf("the branch's last commit: %q", got)
+	}
+	if got := gitIn(t, wt, "show", "HEAD:docs/new.md"); got != "good" {
+		t.Errorf("docs/new.md committed as %q", got)
+	}
+	if got := gitIn(t, wt, "show", "HEAD:docs/main.md"); got != "bad" {
+		t.Errorf("main's docs/main.md was fixed on the branch: %q", got)
+	}
+	if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
+		t.Errorf("the worktree is not clean after the sync: %s", st)
+	}
+}
+
+// flai accept fixes the same way before it merges the branch, so the fix
+// reaches main with the story.
+func TestAcceptFixesTheLintOfTheFilesTheBranchChanges(t *testing.T) {
+	root := fixProject(t)
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/new.md", "bad\n")
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 0 {
+		t.Fatalf("accept: %d %s", code, errOut)
+	}
+	if got := gitIn(t, root, "show", "main:docs/new.md"); got != "good" {
+		t.Errorf("main's docs/new.md: %q", got)
+	}
+	if got := gitIn(t, root, "log", "--format=%s", "main"); !strings.Contains(got, fixSubject) {
+		t.Errorf("main lacks the fix's commit:\n%s", got)
+	}
+}

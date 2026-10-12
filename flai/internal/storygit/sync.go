@@ -188,6 +188,9 @@ type SyncOptions struct {
 	// Files is what the rebase resolves itself: the generated files, the
 	// files it merges, and the fold after a clean rebase.
 	Files Files
+	// Fix runs the project's fix commands over the files the branch changes
+	// after the clean rebase and fold; nil fixes nothing.
+	Fix FixFunc
 	// Again is the command a stop tells the agent to run once it is
 	// resolved; flai stream sync <story> when empty.
 	Again string
@@ -235,6 +238,9 @@ type SyncResult struct {
 	// Folded is what the fold after the clean rebase folded and committed on
 	// the branch (ADR-0126).
 	Folded []Folded `json:"folded"`
+	// Fixed is the files the lint fix after the clean rebase rewrote and
+	// committed on the branch (S-0367).
+	Fixed []string `json:"fixed"`
 	// Branches is the trial merge with every other open story's branch.
 	Branches []BranchCheck `json:"branches"`
 	// TrialMergeSkipped says why the trial merge did not run, when it did not.
@@ -257,8 +263,10 @@ func (s SyncResult) RebaseInProgress() bool {
 // conflict the rebase is left in progress for the agent. A refusal or a stop
 // is a result, with how to continue and abort; an error is a sync that could
 // not be tried, a rebase git failed without stopping, or a fold written but
-// not committed. After a clean rebase it folds what the branch added into
-// what the main branch has, committing the fold on the branch, then
+// not committed, or a lint fix written but not committed. After a clean
+// rebase it folds what the branch added into what the main branch has,
+// committing the fold on the branch, runs the project's fix commands over the
+// files the branch changes, committing what they rewrote (S-0367), then
 // trial-merges the branch with
 // every other open story's, telling each conflicting pair in its
 // conversation (ADR-0121), and lists what the branch changed outside the
@@ -291,9 +299,9 @@ func Sync(o SyncOptions) (SyncResult, error) {
 	return res, nil
 }
 
-// Rebase is Sync's rebase and fold without the checks after them, as flai
-// accept runs it before merging the branch. It writes no line of the conflict
-// log, which its caller writes with where the stop was met.
+// Rebase is Sync's rebase, fold, and lint fix without the checks after them,
+// as flai accept runs it before merging the branch. It writes no line of the
+// conflict log, which its caller writes with where the stop was met.
 func Rebase(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
@@ -301,7 +309,7 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 	repo, id := o.Repo, o.Story.ID
 	path := repo.WorktreePath(id)
 	res := SyncResult{Story: id, Branch: Branch(id), Worktree: relPath(repo.MainRoot, path),
-		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Merged: []string{}, Folded: []Folded{}, Branches: []BranchCheck{}, Outside: []string{}}
+		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Merged: []string{}, Folded: []Folded{}, Fixed: []string{}, Branches: []BranchCheck{}, Outside: []string{}}
 	if _, err := os.Stat(path); err != nil {
 		return res, fmt.Errorf("%s has no worktree at %s; open one with flai stream open %s", id, res.Worktree, id)
 	}
@@ -335,7 +343,10 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		}
 	}
 	res.Synced = true
-	return res, fold(o, path, &res)
+	if err := fold(o, path, &res); err != nil {
+		return res, err
+	}
+	return res, fix(o, path, &res)
 }
 
 // fold runs the fold after the clean rebase in the story's worktree at path
@@ -594,17 +605,7 @@ func changedByBoth(conflicts, mine, theirs []string) []string {
 // branchChanges is the paths branch changed since it left base, from the
 // merge base of the two.
 func branchChanges(r execx.Runner, root, base, branch string) ([]string, error) {
-	diff, err := r.Run(root, "git", "diff", "--name-only", base+"..."+branch)
-	if err != nil {
-		return nil, err
-	}
-	out := []string{}
-	for _, p := range strings.Split(diff, "\n") {
-		if p = strings.TrimSpace(p); p != "" {
-			out = append(out, p)
-		}
-	}
-	return out, nil
+	return nameOnly(r, root, "diff", "--name-only", base+"..."+branch)
 }
 
 // outsideClaim is the paths of changed, what story's branch changed since it

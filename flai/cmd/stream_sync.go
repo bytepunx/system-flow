@@ -23,10 +23,10 @@ func syncStoppedFrom(res storygit.SyncResult) *syncStopped {
 }
 
 // printSyncChecks says, one line each, the issue files the rebase merged and
-// the issues it folded (ADR-0126), how story's branch merges with the other
-// open branches, with the conversation that tells a conflicting pair and the
-// old conflict thread a clean pair resolved, and what it changed outside the
-// story's claim.
+// the issues it folded (ADR-0126), the files whose lint it fixed (S-0367),
+// how story's branch merges with the other open branches, with the
+// conversation that tells a conflicting pair and the old conflict thread a
+// clean pair resolved, and what it changed outside the story's claim.
 func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult) {
 	mine := storyBranch(story.ID)
 	for _, p := range res.Merged {
@@ -34,6 +34,9 @@ func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult)
 	}
 	for _, f := range res.Folded {
 		fmt.Fprintf(w, "folded %s into %s\n", f.From, f.Into)
+	}
+	if len(res.Fixed) > 0 {
+		fmt.Fprintf(w, "fixed the lint of %s and committed it: %s\n", plural(len(res.Fixed), "file"), strings.Join(res.Fixed, ", "))
 	}
 	if res.TrialMergeSkipped != "" {
 		fmt.Fprintf(w, "no trial merge with the other open story branches: %s\n", res.TrialMergeSkipped)
