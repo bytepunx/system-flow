@@ -3,10 +3,10 @@ id: S-0341
 type: story
 nature: improvement
 title: flai verify resumes at the tier that failed when the branch head and its base are unchanged, so a retry re-runs the failure and not the tiers that passed
-status: review
+status: done
 owner: alex
 created: 2026-10-08T07:59:12Z
-updated: 2026-10-08T09:41:28Z
+updated: 2026-10-12T14:12:27Z
 transitions:
   - to: ready
     at: 2026-10-08T07:59:29Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-08T09:41:28Z
     by: agent-S-0341
+  - to: done
+    at: 2026-10-12T14:12:27Z
+    by: alex
 tags: [cli]
 topics: [testing]
 touches: [flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/verify/run.go, flai/internal/verify/run_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, scripts/close-out.sh, docs/users/flai.md, design/system/flai-cli.md, flai/internal/verify/verify.go, docs/users/flai-reference.md, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flaiover/src/lib/components/Review.svelte, docs/users/flaiover.md, docs/operators/settings.md, design/issues/I-0108-flai-task-done-commits-every-uncommitted-file-in-the-story-worktree-so-closing-one-task-of-a-layer-sweeps-its-siblings-work-into-its-commit.md, design/issues/summary.md, design/issues/I-0119-the-close-out-s-last-check-that-the-branch-contains-main-fails-when-flai-commits-wip-on-main-during-its-run.md]
@@ -43,15 +46,15 @@ usage:
       cost: 11.2066
   strategic:
     - kind: orchestrator
-      seconds: 758
+      seconds: 768
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 71
-          output: 1186
-          cache_read: 22442834
-          cache_write: 64030
-          cost: 5.5484
+          input: 75
+          output: 1208
+          cache_read: 22595110
+          cache_write: 86421
+          cost: 5.5924
         - model: claude-sonnet-5-5
           input: 24
           output: 128

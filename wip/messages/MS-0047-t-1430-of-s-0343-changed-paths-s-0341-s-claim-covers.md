@@ -4,10 +4,10 @@ title: T-1430 of S-0343 changed paths S-0341's claim covers
 from: S-0343
 to: S-0341
 about: [design/system/flai-cli.md, docs/users/flaiover.md]
-status: open
-participants: [agent-S-0343]
+status: closed
+participants: [agent-S-0343, alex]
 created: 2026-10-09T16:45:14Z
-updated: 2026-10-09T16:45:52Z
+updated: 2026-10-12T14:12:27Z
 ---
 
 # MS-0047 T-1430 of S-0343 changed paths S-0341's claim covers
@@ -25,3 +25,6 @@ T-1430, flai's host channel offers board.archive, which archives the done or can
 T-1432 of S-0343 changed paths S-0341's claim covers.
 
 T-1432, The cancelled lane's menu offers Archive All and a cancelled card's menu offers Archive, committed 21501e1 on story/S-0343, `feat: [S-0343] the cancelled lane offers Archive All and a cancelled card offers Archive`, changing `docs/users/flaiover.md`. It reaches the main branch when S-0343 is accepted; `git show 21501e1` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-10-12T14:12:27Z alex
+Closed: S-0341 was accepted

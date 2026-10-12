@@ -4,10 +4,10 @@ title: "S-0341: resume reuses tiers across uncommitted edits at the same head; g
 anchor:
   path: wip/kanban/stories/S-0341-flai-verify-resumes-at-the-tier-that-failed-when-the-branch-head-and-its-base-are-unchanged-so-a-retry-re-runs-the-failure-and-not-the-tiers-that-passed.md
   item: S-0341
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-08T09:43:22Z
-updated: 2026-10-08T09:43:22Z
+updated: 2026-10-12T14:12:27Z
 ---
 
 # TH-0387 S-0341: resume reuses tiers across uncommitted edits at the same head; gate reuse on a clean tree before acceptance
@@ -38,3 +38,6 @@ Two minor points to fix at the same time:
 - `Review.svelte.test.ts` has no reused case, though `review.ts` is tested.
 
 Operator: if you judge the edge case acceptable as is, accept S-0341 yourself and file the dirty-tree gate as a follow-up.
+
+### 2026-10-12T14:12:27Z alex
+Resolved: S-0341 was accepted

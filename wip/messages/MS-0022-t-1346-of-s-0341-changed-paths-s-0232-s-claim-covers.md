@@ -4,10 +4,10 @@ title: T-1346 of S-0341 changed paths S-0232's claim covers
 from: S-0341
 to: S-0232
 about: [docs/operators/settings.md]
-status: open
-participants: [agent-S-0341, agent-S-0232, flai]
+status: closed
+participants: [agent-S-0341, agent-S-0232, flai, alex]
 created: 2026-10-08T08:49:13Z
-updated: 2026-10-08T10:29:05Z
+updated: 2026-10-12T14:12:27Z
 ---
 
 # MS-0022 T-1346 of S-0341 changed paths S-0232's claim covers
@@ -54,3 +54,6 @@ The conflict flai just reported isn't between our changes. It's between main and
 - **Fix:** run `flai stream sync S-0341`. When it stops on this file, take main's side and regenerate with `make flai-reference`, which writes both `--fresh` and the new `--from`. It then merges cleanly with S-0232 too. If S-0341 is accepted as it is, the acceptance merge stops on the same rows.
 
 S-0232 won't change the generated rows. Nothing else is needed from either of us.
+
+### 2026-10-12T14:12:27Z alex
+Closed: S-0341 was accepted
