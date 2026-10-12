@@ -177,7 +177,7 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 | Key | Set with | Meaning |
 |-----|----------|---------|
 | `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `auto-publish`, `agent`, `dashboard`, `checks`, `settings`, `host`, `plan`, `orchestrate`, `analyze`, `auto-approve`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do; `auto-publish` and `auto-approve` are shell only, and the dashboard neither shows nor changes them |
-| `agent.command` | `flai serve agent set -- <program> [args...]`, `flai serve agent clear` | What is started for a ready story that names no harness: an argument list, never run through a shell, with `{story}`, `{root}`, `{model}`, and `{harness}` replaced |
+| `agent.command` | `flai serve agent set -- <program> [args...]`, `flai serve agent clear` | What is started for a ready story that names no harness: an argument list, never run through a shell, with `{story}`, `{root}`, `{model}`, `{harness}`, and `{provider}` replaced |
 | `agent.name` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents it starts, `agent` when empty; the story is appended, as in `agent-S-0104` |
 | `agent.auto_restarts` | `flai serve agent set --auto-restarts <n>` | How many times in a row `flai serve` restarts a story's agent on its own after it fails with its story in progress, 2 when unset, 0 never; past it, `flai serve` opens a thread on the story for you ([ADR-0108](../../design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md)) |
 | `agent.attended_minutes` | none | Retired ([ADR-0043](../../design/adrs/0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md)): a configuration that sets it still loads, and nothing reads it. `flai serve agent set --attended-minutes` is accepted and does nothing |
@@ -372,7 +372,26 @@ A project may override, in `system-flow.yaml` under `providers.<name>`, an entry
 
 `--provider` on `flai agent set`, `flai story new`, and `flai edit` checks the name's shape only: lower-case letters, digits, `.`, `_`, and `-`. `flai edit --clear-agent` clears it with the rest. The planner's and the analyzer's agents take it in their JSON, such as `flai manifest set planning.agent='{"provider":"litellm"}'`, and the MCP tools `item_new` and `item_edit` in their `agent`. Whether the host has an entry for the name is the start's to check, not these commands'.
 
-No agent is started through a provider yet. This flai records the provider and keeps the entries. S-0350 has `flai serve` read the variable `key_env` names and set the harness's environment from the entry when it starts the agent. It will refuse a provider the host has no entry for, naming `flai serve agent provider <name>`, and an entry that, with the project's override laid over it, lacks `api`, `base_url`, or `key_env` or holds a value that is not valid. Until then `flai serve` starts an agent that names a provider as one that names none.
+`flai serve` starts every agent that names a provider through it: a story's agent, the planner, the orchestrator, and the analyzer (S-0350). At each start it takes the host's entry, lays the project's override over it, and sets the agent's environment from the result:
+
+| Harness | What the agent's process gets |
+|---------|-------------------------------|
+| `claude-code` | `ANTHROPIC_BASE_URL`, the entry's `base_url`. `ANTHROPIC_AUTH_TOKEN`, the key, copied from the variable `key_env` names. `ANTHROPIC_API_KEY` set empty, so a key in `flai serve`'s own environment is not sent to the gateway. `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, and `ANTHROPIC_DEFAULT_HAIKU_MODEL`, each only when the entry's `models` name `opus`, `sonnet`, or `haiku`. The entry's `api` must be `anthropic-messages` |
+| your command | `FLAI_PROVIDER`, the provider's name, which also replaces `{provider}` in the program and arguments. `FLAI_PROVIDER_API`, `FLAI_PROVIDER_BASE_URL`, and `FLAI_PROVIDER_KEY_ENV`, the name of the variable that holds the key, never the key. The command inherits `flai serve`'s environment and reads the key from that variable itself. Any `api` |
+
+The key reaches the agent's process alone. `flai serve` reads it when it starts the process and puts it in that process's environment. Its record of the run, in `serve/agents.json`, keeps the provider's name and the variable's name. No log, journal entry, work item, or thread holds the key.
+
+The start is refused when one of these holds. The refusal is recorded as a start that failed, as an unknown harness is, and says the fix:
+
+| Refused when | Fix |
+|--------------|-----|
+| The host has no entry for the provider | `flai serve agent provider <name> --api <api> --base-url <url> --key-env <variable>`, or name another provider in the agent |
+| The entry, with the project's override laid over it, lacks `api`, `base_url`, or `key_env`, or holds a value that is not valid | Set the field with `flai serve agent provider <name>`, or mend the override in `system-flow.yaml` |
+| The harness is `claude-code` and the `api` is not `anthropic-messages` | `flai serve agent provider <name> --api anthropic-messages` if the gateway speaks it, or name another provider |
+| The variable `key_env` names is unset or empty in `flai serve`'s environment | Set it in the environment `flai host` or `flai serve` runs in ([operator guide](../operators/index.md#starting-an-agent-when-a-story-becomes-ready)), or name the variable that holds the key with `--key-env` |
+| `system-flow.yaml` cannot be read | Mend it; `flai check` says what is wrong |
+
+An agent that names no provider is started as before: the harness uses its own default, and `system-flow.yaml` is not read for it. `CLAUDE_CODE_SUBAGENT_MODEL` is not set, and the `fallback_model` option is not checked against the provider's models.
 
 ### Moving work
 
