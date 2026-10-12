@@ -3,11 +3,11 @@ id: I-0136
 title: An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
 class: efficiency
 status: open
-count: 2
+count: 3
 cost: 6m
 first_reported: 2026-10-12T15:19:01Z
-last_reported: 2026-10-12T16:28:21Z
-updated: 2026-10-12T16:28:21Z
+last_reported: 2026-10-12T16:43:24Z
+updated: 2026-10-12T16:43:24Z
 ---
 
 # I-0136 An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
@@ -24,5 +24,9 @@ S-0232's close-out passed every step twice on 2026-10-12 (about 6 minutes each: 
 ### 2026-10-12T16:28:21Z
 Story: S-0337.
 S-0337's second close-out passed every tier, including about 4 minutes of integration and 1.5 minutes of the flaiover tier. Its final `flai verify --sync-only` then failed, because 15 commits had reached main during the run with changes outside wip/, such as .github/workflows/release-flaiover.yml and issue files. The branch had to be synced and the whole close-out run a third time.
+
+### 2026-10-12T16:43:24Z
+Story: S-0337.
+On S-0337's fourth close-out, every tier passed again. S-0235 was then accepted during the run, with 9 commits that changed .github/workflows, design/system/flai-cli.md, and other paths. The final sync check failed again. That is twice in one story, about 12 minutes of tiers run again, each time with the branch rebasing onto main cleanly.
 
 ## Remediation
