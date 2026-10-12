@@ -324,7 +324,6 @@ describe('NewItemForm', () => {
 		expect(sent).toBeDefined();
 		expect(sent).not.toHaveProperty('agent');
 
-		sent = undefined;
 		type(q<HTMLInputElement>('agent-provider'), 'openrouter');
 		q<HTMLFormElement>('new-item').dispatchEvent(
 			new Event('submit', { bubbles: true, cancelable: true })
