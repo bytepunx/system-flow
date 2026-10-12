@@ -77,6 +77,10 @@ type AgentConfig struct {
 	// Harnesses are the program and arguments each harness runs with on this
 	// host, the command among them when one is set (S-0104).
 	Harnesses map[string]harness.Host
+	// Providers are the host's providers, the configuration's
+	// agent.providers: where the model calls of an agent that names one go,
+	// with the project's manifest's overrides laid over (ADR-0129).
+	Providers map[string]manifest.Provider
 	// Flai is this flai's executable: the agents reach flai's MCP server
 	// through it.
 	Flai string
@@ -122,7 +126,13 @@ type AgentRun struct {
 	Model   string `json:"model,omitempty"`
 	Command string `json:"command"` // the program's name, not its arguments
 	Agent   string `json:"agent"`
-	PID     int    `json:"pid,omitempty"`
+	// Provider is the provider the run's agent named, which its model calls
+	// went through, and KeyEnv the variable of flai serve's environment its
+	// key was copied from, never the key (ADR-0129); both empty when it named
+	// none, and on runs before S-0350.
+	Provider string `json:"provider,omitempty"`
+	KeyEnv   string `json:"key_env,omitempty"`
+	PID      int    `json:"pid,omitempty"`
 	// Start is when the process started as the system counts it (clock
 	// ticks since boot on Linux), which tells it from another given the same
 	// PID since (S-0170); 0 where it is not known, and on runs before it.
@@ -1086,13 +1096,13 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if story.Asked == nil && story.Commit == "" {
 		shares = sharedWith(l.entry.Root, story.ID) // a resumed session knows them; a commit needs none
 	}
-	spec, err := adapter.Start(harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
+	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
 		Session: run.Session, Answered: run.Answered, Restart: story.Restart, AutoRestart: autoRestart(story.AutoRestarts, cfg.AutoRestarts), Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun,
-		Shares: shares}, cfg.host(name))
+		Shares: shares})
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, story.ID, now, append([]string{"FLAI_STORY=" + story.ID}, spec.Env...))
+	cmd, out, err := l.spawn(ctx, run, spec.Argv, story.ID, now, slices.Concat([]string{"FLAI_STORY=" + story.ID}, spec.Env, keys))
 	if err != nil {
 		return fail(err)
 	}
@@ -1130,6 +1140,86 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		l.measure(story.ID)
 	})
 	return true
+}
+
+// startOf is what adapter starts for req, the run of the harness name, with
+// the provider the agent names resolved into req and recorded on run, and the
+// variables that carry the provider's key into the child (ADR-0129): every
+// start, a story's agent's and a strategic agent's, builds its command here.
+// The keys go to spawn's env and nowhere else, not run, a log line, the
+// journal, or an error, so that a key flai serve holds reaches the child
+// alone. A refusal is the start's failure, as an adapter's refusal is.
+func (l *launcher) startOf(cfg AgentConfig, run *AgentRun, adapter harness.Adapter, name string, req harness.Request) (harness.Start, []string, error) {
+	if err := l.provide(cfg, run, &req); err != nil {
+		return harness.Start{}, nil, err
+	}
+	spec, err := adapter.Start(req, cfg.host(name))
+	if err != nil {
+		return harness.Start{}, nil, err
+	}
+	keys, err := providerKeys(req, spec, os.LookupEnv)
+	if err != nil {
+		return harness.Start{}, nil, err
+	}
+	return spec, keys, nil
+}
+
+// provide resolves the provider req's agent names, from the host's providers
+// with the project's manifest's overrides laid over, into req, and records
+// its name and its key's variable on run. It refuses a name the host has no
+// entry for, an entry that is not whole, and a manifest that cannot be read:
+// a start without its overrides could send the agent's model calls to
+// another gateway than the project says. Nothing when the agent names none,
+// and the manifest is not read.
+func (l *launcher) provide(cfg AgentConfig, run *AgentRun, req *harness.Request) error {
+	if req.Agent == nil || req.Agent.Provider == "" {
+		return nil
+	}
+	name := req.Agent.Provider
+	run.Provider = name
+	m, err := manifest.Load(filepath.Join(l.entry.Root, manifest.File))
+	if err != nil {
+		return fmt.Errorf("read the project's %s for the overrides of provider %s: %w; mend it (flai check says what is wrong) and start the agent again", manifest.File, name, err)
+	}
+	p, err := manifest.ResolveProvider(name, cfg.Providers, m.Providers)
+	if err != nil {
+		return err
+	}
+	req.ProviderName, req.Provider = name, p
+	run.KeyEnv = p.KeyEnv
+	return nil
+}
+
+// providerKeys are the variables that carry the key of req's provider into
+// the child: each of spec.EnvFrom, child=value, its value that of the
+// variable of flai serve's own environment it names, as lookup reads it, in
+// the order of the child's variables. It refuses a start whose provider's
+// key_env, or a variable EnvFrom names, is unset or empty, naming the
+// variable and the fix, never a value. A command adapter's child reads the
+// key from the variable key_env names itself, so the variable is checked
+// whatever the harness.
+func providerKeys(req harness.Request, spec harness.Start, lookup func(string) (string, bool)) ([]string, error) {
+	var vars []string
+	if req.Provider != nil && req.Provider.KeyEnv != "" {
+		vars = append(vars, req.Provider.KeyEnv)
+	}
+	children := slices.Sorted(maps.Keys(spec.EnvFrom))
+	for _, child := range children {
+		if v := spec.EnvFrom[child]; !slices.Contains(vars, v) {
+			vars = append(vars, v)
+		}
+	}
+	for _, v := range vars {
+		if value, ok := lookup(v); !ok || value == "" {
+			return nil, fmt.Errorf("provider %[1]s's key is read from %[2]s, which is unset or empty in flai serve's environment: set %[2]s in the environment flai host or flai serve runs in and start the agent again, or name the variable that holds the key with flai serve agent provider %[1]s --key-env <variable>", req.ProviderName, v)
+		}
+	}
+	keys := make([]string, 0, len(children))
+	for _, child := range children {
+		value, _ := lookup(spec.EnvFrom[child])
+		keys = append(keys, child+"="+value)
+	}
+	return keys, nil
 }
 
 // sharedWith are the shares in force on which story is the held side, each
@@ -1194,7 +1284,9 @@ func (l *launcher) openLog(subject string, at time.Time) (*os.File, error) {
 // the session started at, FLAI_STARTED_BY, and env. It sets run's command,
 // log, PID, and process start, and has the launcher wait for it unless it
 // hands its agents over. It records nothing: the caller does, as started or
-// as failed with the error.
+// as failed with the error. env may carry a provider's key (startOf), so it
+// goes into the child's environment and nowhere else: not the log, run, or
+// an error.
 func (l *launcher) spawn(ctx context.Context, run *AgentRun, argv []string, subject string, at time.Time, env []string) (*exec.Cmd, *os.File, error) {
 	run.Command = filepath.Base(argv[0])
 	out, err := l.openLog(subject, at)

@@ -501,6 +501,7 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		Analyze:      cfg.ActionEnabled(hostapi.ActionAnalyze, root),
 		Command:      cfg.Agent.Command,
 		Harnesses:    hosts,
+		Providers:    cfg.Agent.Providers,
 		Name:         cfg.Agent.Name,
 		AutoRestarts: cfg.Agent.AutoRestartLimit(),
 	}

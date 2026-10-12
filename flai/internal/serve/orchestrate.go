@@ -219,8 +219,9 @@ func (r *orchestrator) stop(run *AgentRun) {
 // orchestrate starts the orchestrator with agent, records the run, journals
 // it, and returns why it was refused before it could be started, "" when it
 // was not. It is refused when the agent names no harness and no command is
-// set on the host, and when the harness refuses the request, as claude-code
-// does without the project's orchestrator definition. A refusal that is
+// set on the host, when the harness refuses the request, as claude-code
+// does without the project's orchestrator definition, and when the agent's
+// provider cannot be had or its key is not set (ADR-0129). A refusal that is
 // said, the one returned last time, is not recorded, journalled, or logged
 // again.
 func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, said string) string {
@@ -254,12 +255,12 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 	if err != nil {
 		return refuse(err)
 	}
-	spec, err := adapter.Start(harness.Request{Role: conventions.RoleOrchestrate, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
-		Name: run.Agent, Flai: cfg.Flai, Session: run.Session}, cfg.host(name))
+	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RoleOrchestrate, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
+		Name: run.Agent, Flai: cfg.Flai, Session: run.Session})
 	if err != nil {
 		return refuse(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityOrchestrator, now, spec.Env)
+	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityOrchestrator, now, append(spec.Env, keys...))
 	if err != nil {
 		fail(err)
 		return ""

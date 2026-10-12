@@ -140,12 +140,12 @@ func (l *launcher) analyze(ctx context.Context, cfg AgentConfig, agent *manifest
 	if err != nil {
 		return fail(err)
 	}
-	spec, err := adapter.Start(harness.Request{Role: conventions.RoleAnalyze, Focus: focus, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
-		Name: run.Agent, Flai: cfg.Flai, Session: run.Session}, cfg.host(name))
+	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RoleAnalyze, Focus: focus, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
+		Name: run.Agent, Flai: cfg.Flai, Session: run.Session})
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityAnalyzer, now, spec.Env)
+	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityAnalyzer, now, append(spec.Env, keys...))
 	if err != nil {
 		return fail(err)
 	}

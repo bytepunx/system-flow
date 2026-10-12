@@ -160,12 +160,12 @@ func (l *launcher) plan(ctx context.Context, cfg AgentConfig, item string, agent
 	if err != nil {
 		return fail(err)
 	}
-	spec, err := adapter.Start(harness.Request{Role: conventions.RolePlan, Item: item, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
-		Name: run.Agent, Flai: cfg.Flai, Session: run.Session}, cfg.host(name))
+	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RolePlan, Item: item, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
+		Name: run.Agent, Flai: cfg.Flai, Session: run.Session})
 	if err != nil {
 		return fail(err)
 	}
-	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityPlanner, now, spec.Env)
+	cmd, out, err := l.spawn(ctx, run, spec.Argv, workitem.ActivityPlanner, now, append(spec.Env, keys...))
 	if err != nil {
 		return fail(err)
 	}

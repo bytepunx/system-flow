@@ -105,7 +105,7 @@ func newAgentLab(t *testing.T) *agentLab {
 	script := "#!/bin/sh\n" +
 		"trap 'touch \"" + lab.outDir + "/ended-$$\"; exit 143' TERM\n" +
 		"out=\"" + lab.outDir + "/$FLAI_STORY.txt\"\n" +
-		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; echo \"host: ${FLAI_HOST_URL-unset} ${FLAI_HOST_TOKEN-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; } > \"$out\"\n" +
+		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; echo \"host: ${FLAI_HOST_URL-unset} ${FLAI_HOST_TOKEN-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; echo \"gateway: ${ANTHROPIC_BASE_URL-unset} ${ANTHROPIC_AUTH_TOKEN-unset}\"; } > \"$out\"\n" +
 		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n" +
 		"touch \"" + lab.outDir + "/ended-$$\"\n"
 	if err := os.WriteFile(lab.stub, []byte(script), 0o755); err != nil {
@@ -2008,4 +2008,146 @@ func TestAStoryStartedOnAShareIsToldTheSplit(t *testing.T) {
 	if got, _ := os.ReadFile(filepath.Join(lab.outDir, other+".txt")); !strings.Contains(string(got), "You are builder-"+other) || strings.Contains(string(got), "works on a share") {
 		t.Errorf("a story started on no share is told of one:\n%s", got)
 	}
+}
+
+// providerLab is an agentLab whose stories' agents run claude-code, its
+// program the stub, with the host's provider gateway, whose key is in
+// S0350_GATEWAY_KEY (ADR-0129).
+func providerLab(t *testing.T) *agentLab {
+	t.Helper()
+	lab := newAgentLab(t)
+	lab.cfg.Command = nil
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+	lab.cfg.Providers = map[string]manifest.Provider{
+		"gateway": {API: manifest.APIAnthropicMessages, BaseURL: "https://gateway.example.com", KeyEnv: "S0350_GATEWAY_KEY"},
+		"keyless": {API: manifest.APIAnthropicMessages, BaseURL: "https://keyless.example.com", KeyEnv: "S0350_UNSET_KEY"},
+		"empty":   {API: manifest.APIAnthropicMessages, BaseURL: "https://empty.example.com", KeyEnv: "S0350_EMPTY_KEY"},
+		"openai":  {API: manifest.APIOpenAIChat, BaseURL: "https://openai.example.com", KeyEnv: "S0350_GATEWAY_KEY"},
+	}
+	return lab
+}
+
+// S-0350, ADR-0129: a story's agent that names a provider is started with
+// the provider's base URL, the project's override laid over the host's, and
+// the key copied from flai serve's environment into the child's alone: the
+// run records the provider and its key's variable, and the key is in no run
+// log, record, journal entry, or line flai serve logs.
+func TestAStorysProviderKeyReachesItsAgentAlone(t *testing.T) {
+	const key = "sk-sentinel-S0350-never-logged"
+	t.Setenv("S0350_GATEWAY_KEY", key)
+	lab := providerLab(t)
+	ctx := context.Background()
+	id := lab.readyWith("Through the gateway", &manifest.Agent{Harness: harness.ClaudeCode, Provider: "gateway"})
+	lab.l.look(ctx, false)
+	waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+	if got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt")); !strings.Contains(string(got), "gateway: https://gateway.example.com "+key+"\n") {
+		t.Errorf("the agent was not given the provider's URL and key:\n%s", got)
+	}
+	r := lab.run(id)
+	if r.Provider != "gateway" || r.KeyEnv != "S0350_GATEWAY_KEY" || r.PID == 0 || r.Error != "" {
+		t.Errorf("run: %+v", r)
+	}
+	record, _ := os.ReadFile(lab.o.Dir.agents())
+	if !strings.Contains(string(record), `"provider": "gateway"`) || !strings.Contains(string(record), `"key_env": "S0350_GATEWAY_KEY"`) {
+		t.Errorf("the start record names no provider:\n%s", record)
+	}
+	runLog, err := os.ReadFile(r.Log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for what, text := range map[string]string{"the run log": string(runLog), "serve/agents.json": string(record), "the journal": fmt.Sprintf("%+v", lab.entries()), "flai serve's log": lab.logText()} {
+		if strings.Contains(text, key) {
+			t.Errorf("%s holds the key:\n%s", what, text)
+		}
+	}
+
+	// the project's manifest overrides the host's base URL
+	m, _ := os.ReadFile(filepath.Join(lab.root, manifest.File))
+	if err := os.WriteFile(filepath.Join(lab.root, manifest.File), append(m, "providers:\n  gateway:\n    base_url: https://project.example.com\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	over := lab.readyWith("Through the project's gateway", &manifest.Agent{Harness: harness.ClaudeCode, Provider: "gateway"})
+	lab.l.look(ctx, false)
+	waitFor(t, "it ended", func() bool { r := lab.run(over); return r != nil && !r.live() })
+	if got, _ := os.ReadFile(filepath.Join(lab.outDir, over+".txt")); !strings.Contains(string(got), "gateway: https://project.example.com "+key+"\n") {
+		t.Errorf("the project's override was not laid over the host's entry:\n%s", got)
+	}
+}
+
+// S-0350, ADR-0129: a story's agent whose provider the host has no entry for,
+// whose key's variable is unset or empty in flai serve's environment, or
+// whose api its harness cannot speak, is not started: the run fails as an
+// adapter's refusal does, saying what to set, and no process is started.
+func TestAStorysAgentIsRefusedAProviderItCannotHave(t *testing.T) {
+	t.Setenv("S0350_GATEWAY_KEY", "sk-sentinel")
+	t.Setenv("S0350_EMPTY_KEY", "")
+	lab := providerLab(t)
+	ctx := context.Background()
+	for _, c := range []struct {
+		provider string
+		want     []string
+	}{
+		{"keyless", []string{"S0350_UNSET_KEY", "unset or empty in flai serve's environment", "flai serve agent provider keyless --key-env <variable>"}},
+		{"empty", []string{"S0350_EMPTY_KEY", "flai serve agent provider empty --key-env <variable>"}},
+		{"nowhere", []string{`provider "nowhere" has no entry on this host`, "flai serve agent provider nowhere"}},
+		{"openai", []string{"claude-code speaks anthropic-messages alone", "flai serve agent provider openai --api anthropic-messages"}},
+	} {
+		id := lab.readyWith("Through "+c.provider, &manifest.Agent{Harness: harness.ClaudeCode, Provider: c.provider})
+		lab.l.look(ctx, false)
+		r := lab.run(id)
+		if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.Provider != c.provider || !strings.HasPrefix(r.Why, "could not be started: ") {
+			t.Fatalf("%s: run %+v", c.provider, r)
+		}
+		for _, want := range c.want {
+			if !strings.Contains(r.Why, want) {
+				t.Errorf("%s: %q does not say %q", c.provider, r.Why, want)
+			}
+		}
+		if _, err := os.Stat(filepath.Join(lab.outDir, id+".txt")); err == nil {
+			t.Errorf("%s: the agent was started", c.provider)
+		}
+		if j := lab.entries(); j[len(j)-1].Outcome != "failed" || !strings.Contains(j[len(j)-1].Detail, id+" could not be started") {
+			t.Errorf("%s: journal %+v", c.provider, j[len(j)-1])
+		}
+	}
+	if strings.Contains(lab.logText(), "sk-sentinel") {
+		t.Errorf("flai serve's log holds a key:\n%s", lab.logText())
+	}
+}
+
+// S-0350, ADR-0129: a strategic agent's provider is resolved, and refused,
+// as a story's agent's is: the planner, through the operator's command,
+// records its provider, and is refused while the key's variable is unset.
+func TestThePlannersProviderIsResolvedAsAStorysAgentsIs(t *testing.T) {
+	lab := planLab(t)
+	lab.cfg.Providers = map[string]manifest.Provider{"gateway": {API: manifest.APIOpenAIChat, BaseURL: "https://gateway.example.com", KeyEnv: "S0350_PLANNER_KEY"}}
+	agent := &manifest.Agent{Provider: "gateway"}
+	start := func(id string) bool {
+		lab.l.mu.Lock()
+		defer lab.l.mu.Unlock()
+		return lab.l.plan(context.Background(), lab.cfg, id, agent, TriggerAsked)
+	}
+	id := lab.epic.ID
+	if start(id) {
+		t.Fatal("the planner was started without its provider's key")
+	}
+	r := lab.planRun(id)
+	if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.Provider != "gateway" || !strings.Contains(r.Why, "S0350_PLANNER_KEY") || !strings.Contains(r.Why, "flai serve agent provider gateway --key-env") {
+		t.Fatalf("refused: %+v", r)
+	}
+	if j := lab.entries(); len(j) != 1 || j[0].Outcome != "failed" || !strings.Contains(j[0].Detail, "the planner for "+id+" could not be started") {
+		t.Errorf("journal: %+v", j)
+	}
+	if _, err := os.Stat(filepath.Join(lab.outDir, "plan-"+id+".txt")); err == nil {
+		t.Error("the planner was started")
+	}
+
+	t.Setenv("S0350_PLANNER_KEY", "sk-sentinel")
+	if !start(id) {
+		t.Fatalf("not started with the key set: %+v", lab.planRun(id))
+	}
+	if r := lab.planRun(id); r.Provider != "gateway" || r.KeyEnv != "S0350_PLANNER_KEY" || r.PID == 0 {
+		t.Errorf("run: %+v", r)
+	}
+	lab.given(id)
 }
