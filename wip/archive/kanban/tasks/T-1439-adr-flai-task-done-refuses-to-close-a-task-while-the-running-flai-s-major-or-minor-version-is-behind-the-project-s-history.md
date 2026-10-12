@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 18
-      cache_read: 272036
-      cache_write: 2969
-      cost: 0.1247
+      input: 5
+      output: 1250
+      cache_read: 269106
+      cache_write: 10428
+      cost: 0.1493
 ---
 # T-1439 ADR: flai task done refuses to close a task while the running flai's major or minor version is behind the project's history
 

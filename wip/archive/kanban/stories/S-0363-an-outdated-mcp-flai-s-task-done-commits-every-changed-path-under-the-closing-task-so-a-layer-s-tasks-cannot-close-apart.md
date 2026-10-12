@@ -3,10 +3,10 @@ id: S-0363
 type: story
 nature: remediation
 title: An outdated MCP flai's task_done commits every changed path under the closing task, so a layer's tasks cannot close apart
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T14:12:30Z
-updated: 2026-10-12T18:26:19Z
+updated: 2026-10-12T18:37:41Z
 transitions:
   - to: ready
     at: 2026-10-12T17:59:16Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:13:33Z
     by: agent-S-0363
+  - to: review
+    at: 2026-10-12T18:36:24Z
+    by: agent-S-0363
+  - to: done
+    at: 2026-10-12T18:37:41Z
+    by: orchestrator
 tags: [cli]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go, flai/cmd/task_done.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md, design/issues/summary.md, design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md]
 agent:
@@ -23,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 764
-  estimated: true
+  seconds: 1386
   turns:
     - day: 2026-10-12
-      ceremony: 2
+      ceremony: 4
       hand_edits: 1
-      work: 33
+      work: 40
   models:
     - model: claude-opus-5-5
-      input: 148
-      output: 1031
-      cache_read: 7017872
-      cache_write: 345506
-      cost: 3.3384
+      input: 172
+      output: 43510
+      cache_read: 9364353
+      cache_write: 362875
+      cost: 5.1955
   strategic:
     - kind: orchestrator
       seconds: 226
@@ -73,7 +78,7 @@ finalized:
 This story remediates [I-0127](../../../design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md), "An outdated MCP flai's task_done commits every changed path under the closing task, so a layer's tasks cannot close apart". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0127 describes no longer occurs, with a test that reproduces it where one fits
+- [x] The cause I-0127 describes no longer occurs, with a test that reproduces it where one fits
 - [x] I-0127 is closed with `flai issue close I-0127 --reason` saying what fixed it
 
 ## Tasks
@@ -121,3 +126,13 @@ Figures:
 
 - Forecast 20m, delivery 2026-10-13T02:24Z: `flai forecast` as given. It is the median of 82 s per unit of size over 23 done large-band remediation stories on claude-opus-5-5, times size 14 (2 criteria, 12 touches). An ADR, a check of a few lines over an existing function, two tests, three doc sections, and an issue close fit that, so it is not adjusted.
 - Cost of delay 12.50 USD a week: `flai cod` from flai's input, 5m lost per 168h cycle at 150 USD an hour. It is not adjusted. The issue has one instance, and its specific defect is fixed in the installed flai.
+
+### Accepted by the orchestrator
+
+- Verified: 79634bd36d2ed9f7b1a61a969c04eff8326406df
+- At: 2026-10-12T18:37:41Z
+
+Verdict: pass at 79634bd36d2ed9f7b1a61a969c04eff8326406df; flai verify passed every step at that commit, and the verifier matched both criteria to the diff, with the threshold the operator confirmed on TH-0401 (major or minor refuses, patch warns, dev build never refused).
+
+- 1: flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task_test.go, flai/cmd/task_done.go, design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md
+- 2: design/issues/I-0127-an-outdated-mcp-flai-s-task-done-commits-every-changed-path-under-the-closing-task-so-a-layer-s-tasks-cannot-close-apart.md, design/issues/summary.md

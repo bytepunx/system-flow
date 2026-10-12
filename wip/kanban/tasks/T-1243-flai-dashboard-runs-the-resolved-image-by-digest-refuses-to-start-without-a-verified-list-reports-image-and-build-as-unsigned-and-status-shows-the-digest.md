@@ -3,12 +3,18 @@ id: T-1243
 type: task
 nature: feature
 title: flai dashboard runs the resolved image by digest, refuses to start without a verified list, reports --image and --build as unsigned, and status shows the digest
-status: backlog
+status: in-progress
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:54:07Z
-updated: 2026-10-07T22:54:07Z
-transitions: []
+updated: 2026-10-12T18:37:05Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:37:04Z
+    by: agent-S-0236
+  - to: in-progress
+    at: 2026-10-12T18:37:05Z
+    by: agent-S-0236
 stream: S-0236
 tags: [cli]
 touches: [flai/cmd/dashboard.go, flai/cmd/dashboard_test.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_watch_test.go]

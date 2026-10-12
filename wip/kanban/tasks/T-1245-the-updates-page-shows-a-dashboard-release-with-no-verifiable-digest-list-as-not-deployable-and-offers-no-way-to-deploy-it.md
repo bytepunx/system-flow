@@ -3,12 +3,18 @@ id: T-1245
 type: task
 nature: feature
 title: The Updates page shows a dashboard release with no verifiable digest list as not deployable and offers no way to deploy it
-status: backlog
+status: in-progress
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:54:20Z
-updated: 2026-10-12T18:17:31Z
-transitions: []
+updated: 2026-10-12T18:37:06Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:37:05Z
+    by: agent-S-0236
+  - to: in-progress
+    at: 2026-10-12T18:37:06Z
+    by: agent-S-0236
 stream: S-0236
 tags: [dashboard]
 touches: [flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, docs/users/flaiover.md]

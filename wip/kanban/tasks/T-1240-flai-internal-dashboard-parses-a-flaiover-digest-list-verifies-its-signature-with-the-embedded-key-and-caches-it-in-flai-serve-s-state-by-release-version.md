@@ -24,7 +24,7 @@ touches: [flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_te
 after: [T-1239]
 usage:
   source: log
-  seconds: 245
+  seconds: 246
   estimated: true
   models:
     - model: claude-opus-5-5
@@ -32,7 +32,7 @@ usage:
       output: 205
       cache_read: 1208658
       cache_write: 72893
-      cost: 0.581
+      cost: 0.5811
 ---
 # T-1240 flai/internal/dashboard parses a flaiover digest list, verifies its signature with the embedded key, and caches it in flai serve's state by release version
 

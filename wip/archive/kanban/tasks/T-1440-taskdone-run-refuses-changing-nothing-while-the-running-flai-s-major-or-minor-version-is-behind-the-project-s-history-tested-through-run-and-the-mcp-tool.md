@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 59
-      output: 305
-      cache_read: 2555740
-      cache_write: 114466
-      cost: 1.2106
+      input: 48
+      output: 12141
+      cache_read: 2612950
+      cache_write: 101254
+      cost: 1.4497
 ---
 # T-1440 taskdone.Run refuses, changing nothing, while the running flai's major or minor version is behind the project's history, tested through Run and the MCP tool
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 24
-      cache_read: 206883
-      cache_write: 255
-      cost: 0.0939
+      input: 4
+      output: 942
+      cache_read: 202694
+      cache_write: 7855
+      cost: 0.1125
 ---
 # T-1442 Close I-0127 as fixed by task_done's refusal while the running flai is older than the project's history
 

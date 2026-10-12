@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 275
-      cache_read: 1323956
-      cache_write: 73392
-      cost: 0.6336
+      input: 25
+      output: 6353
+      cache_read: 1367386
+      cache_write: 52987
+      cost: 0.7587
 ---
 # T-1441 The design, user, and operator docs say flai task done refuses while the running flai's major or minor version is behind the project's history
 

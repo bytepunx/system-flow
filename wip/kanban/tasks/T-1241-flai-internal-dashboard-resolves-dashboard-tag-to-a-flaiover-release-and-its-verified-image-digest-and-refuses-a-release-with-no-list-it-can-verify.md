@@ -3,11 +3,11 @@ id: T-1241
 type: task
 nature: feature
 title: flai/internal/dashboard resolves dashboard.tag to a flaiover release and its verified image digest, and refuses a release with no list it can verify
-status: in-progress
+status: done
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:53:42Z
-updated: 2026-10-12T18:26:45Z
+updated: 2026-10-12T18:34:39Z
 transitions:
   - to: ready
     at: 2026-10-12T18:26:44Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:26:45Z
     by: agent-S-0236
+  - to: done
+    at: 2026-10-12T18:34:39Z
+    by: agent-S-0236
 stream: S-0236
 tags: [cli]
-touches: [flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go]
+touches: [flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go, flai/internal/selfupgrade/signature.go]
 after: [T-1239, T-1240]
+usage:
+  source: log
+  seconds: 474
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 256
+      cache_read: 1943617
+      cache_write: 99550
+      cost: 0.9264
 ---
 # T-1241 flai/internal/dashboard resolves dashboard.tag to a flaiover release and its verified image digest, and refuses a release with no list it can verify
 

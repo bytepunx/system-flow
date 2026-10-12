@@ -3,11 +3,11 @@ id: T-1242
 type: task
 nature: feature
 title: flai dashboard versions marks each dashboard release with no digest list this binary can verify, in its table and its JSON
-status: in-progress
+status: done
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:53:48Z
-updated: 2026-10-12T18:26:47Z
+updated: 2026-10-12T18:36:53Z
 transitions:
   - to: ready
     at: 2026-10-12T18:26:46Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:26:47Z
     by: agent-S-0236
+  - to: done
+    at: 2026-10-12T18:36:53Z
+    by: agent-S-0236
 stream: S-0236
 tags: [cli]
 touches: [flai/cmd/dashboard_versions.go, flai/cmd/dashboard_versions_test.go]
 after: [T-1239, T-1240]
+usage:
+  source: log
+  seconds: 472
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 327
+      cache_read: 2345802
+      cache_write: 103524
+      cost: 1.1105
 ---
 # T-1242 flai dashboard versions marks each dashboard release with no digest list this binary can verify, in its table and its JSON
 

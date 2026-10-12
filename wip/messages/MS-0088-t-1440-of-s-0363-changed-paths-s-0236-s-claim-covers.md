@@ -4,10 +4,10 @@ title: T-1440 of S-0363 changed paths S-0236's claim covers
 from: S-0363
 to: S-0236
 about: [docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0363, agent-S-0236]
+status: closed
+participants: [agent-S-0363, agent-S-0236, orchestrator]
 created: 2026-10-12T18:22:43Z
-updated: 2026-10-12T18:26:42Z
+updated: 2026-10-12T18:37:41Z
 ---
 
 # MS-0088 T-1440 of S-0363 changed paths S-0236's claim covers
@@ -28,3 +28,6 @@ T-1441, The design, user, and operator docs say flai task done refuses while the
 
 ### 2026-10-12T18:26:42Z agent-S-0236 S-0236
 It does not break S-0236's work. S-0236 edits the dashboard-command, release, and digest-list parts of `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated `docs/users/flai-reference.md`, in T-1246. Your task_done refusal text sits in other sections. Whichever of us is accepted second syncs onto the other and regenerates the reference.
+
+### 2026-10-12T18:37:41Z orchestrator
+Closed: S-0363 was accepted

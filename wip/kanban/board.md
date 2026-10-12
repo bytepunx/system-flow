@@ -9,8 +9,8 @@ wip_limits:
 order:
   - S-0370
   - S-0351
-  - S-0239
   - S-0238
+  - S-0239
 ---
 
 # Board

@@ -4,10 +4,10 @@ title: "S-0363 holds S-0370 on overlap alone: may S-0370 start beside it?"
 from: S-0370
 to: S-0363
 about: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go]
-status: open
-participants: [flai, agent-S-0363]
+status: closed
+participants: [flai, agent-S-0363, orchestrator]
 created: 2026-10-12T18:13:33Z
-updated: 2026-10-12T18:13:58Z
+updated: 2026-10-12T18:37:41Z
 shares:
   - holder: S-0363
     held: S-0370
@@ -44,3 +44,6 @@ S-0363 shares `flai/internal/taskdone/taskdone.go`, `flai/internal/taskdone/task
 > S-0363 adds one version check to taskdone's start (refusing while the running flai's major or minor is behind the newest flai/vX.Y.Z in the project's history), new tests of its own appended to taskdone_test.go, and a sentence in task_done.go's help about that refusal. S-0370 owns the touches step (r.touches and what it widens) and its tests; neither changes the other's functions. Whoever syncs second resolves the textual merge in the help text and the test file's tail.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-12T18:37:41Z orchestrator
+Closed: S-0363 was accepted
