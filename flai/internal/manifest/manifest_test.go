@@ -739,6 +739,11 @@ func TestTestErrors(t *testing.T) {
 		{"another placeholder", []TestTier{with(func(x *TestTier) { x.Command = []string{"go", "{story}"} })}, `tests[0].command (tier "unit") argument {story} is not a placeholder flai fills`},
 		{"a placeholder inside", []TestTier{with(func(x *TestTier) { x.Command = []string{"vitest", "--dir={files}"} })}, `argument "--dir={files}" holds a placeholder inside it`},
 		{"a placeholder under all", []TestTier{with(func(x *TestTier) { x.AllCommand = []string{"go", "test", "{packages}"} })}, `tests[0].all_command (tier "unit") argument {packages} is a placeholder`},
+		// S-0364: {importers} is refused where {packages} is, and every
+		// refusal names all three placeholders.
+		{"another placeholder names all three", []TestTier{with(func(x *TestTier) { x.Command = []string{"go", "{story}"} })}, "argument {story} is not a placeholder flai fills; write {packages}, {files}, or {importers}, or remove it"},
+		{"importers inside", []TestTier{with(func(x *TestTier) { x.Command = []string{"go", "test", "./{importers}"} })}, `argument "./{importers}" holds a placeholder inside it, which flai does not fill; write {packages}, {files}, or {importers} as an argument of its own`},
+		{"importers under all", []TestTier{with(func(x *TestTier) { x.AllCommand = []string{"go", "test", "{importers}"} })}, `tests[0].all_command (tier "unit") argument {importers} is a placeholder, and all_command runs for no paths; write it without {packages}, {files}, or {importers}`},
 		{"an absolute dir", []TestTier{with(func(x *TestTier) { x.Dir = "/srv/flai" })}, `tests[0].dir (tier "unit") "/srv/flai" is an absolute path`},
 		{"a dir outside", []TestTier{with(func(x *TestTier) { x.Dir = "../other" })}, `"../other" leaves the repository`},
 		{"a dir not clean", []TestTier{with(func(x *TestTier) { x.Dir = "flai/./web/" })}, "is not a clean path"},
@@ -765,6 +770,7 @@ func TestTestErrors(t *testing.T) {
 		with(func(x *TestTier) { x.Paths, x.AllOnly = nil, true }),
 		with(func(x *TestTier) { x.Dir = "flaiover/web" }),
 		with(func(x *TestTier) { x.Command = []string{"go", "vet", "{packages}", "{files}"} }),
+		with(func(x *TestTier) { x.Command = []string{"go", "test", "{importers}"} }),
 		with(func(x *TestTier) { x.Command = []string{"sh", "-c", "echo ${HOME}"} }),
 	} {
 		if errs := (Manifest{Tests: []TestTier{tier}}).TestErrors(); len(errs) != 0 {

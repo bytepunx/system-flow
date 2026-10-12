@@ -599,9 +599,9 @@ type TestTier struct {
 	// Name names the tier, unique among the project's tiers.
 	Name string `yaml:"name" json:"name"`
 	// Command is an argument list, run as it stands, never through a shell.
-	// An argument that is PlaceholderPackages or PlaceholderFiles alone
-	// stands for what the tier's paths selected; nothing else is
-	// interpreted.
+	// An argument that is PlaceholderPackages, PlaceholderFiles, or
+	// PlaceholderImporters alone stands for what the tier's paths selected;
+	// nothing else is interpreted.
 	Command []string `yaml:"command" json:"command"`
 	// Dir is the folder the command runs in, relative to the repository
 	// root; empty means the root.
@@ -631,7 +631,19 @@ const (
 	PlaceholderPackages = "{packages}"
 	// PlaceholderFiles stands for the files the tier selected.
 	PlaceholderFiles = "{files}"
+	// PlaceholderImporters stands for the packages PlaceholderPackages names
+	// and every package of the same module that imports one of them,
+	// directly or through other packages, in its own files or its test
+	// files.
+	PlaceholderImporters = "{importers}"
 )
+
+// tierPlaceholders are the placeholders a tier's command may hold, in the
+// order they are listed to the operator.
+var tierPlaceholders = []string{PlaceholderPackages, PlaceholderFiles, PlaceholderImporters}
+
+// tierPlaceholderList names tierPlaceholders in a sentence.
+const tierPlaceholderList = PlaceholderPackages + ", " + PlaceholderFiles + ", or " + PlaceholderImporters
 
 // The values of a tier's format.
 const (
@@ -839,13 +851,13 @@ func commandProblems(field string, args []string, placeholders bool) []string {
 	}
 	for _, a := range args[1:] {
 		switch {
-		case (a == PlaceholderPackages || a == PlaceholderFiles) && !placeholders:
-			errs = append(errs, fmt.Sprintf("%s argument %s is a placeholder, and all_command runs for no paths; write it without %s or %s", field, a, PlaceholderPackages, PlaceholderFiles))
-		case a == PlaceholderPackages || a == PlaceholderFiles:
+		case slices.Contains(tierPlaceholders, a) && !placeholders:
+			errs = append(errs, fmt.Sprintf("%s argument %s is a placeholder, and all_command runs for no paths; write it without %s", field, a, tierPlaceholderList))
+		case slices.Contains(tierPlaceholders, a):
 		case placeholder.MatchString(a):
-			errs = append(errs, fmt.Sprintf("%s argument %s is not a placeholder flai fills; write %s or %s, or remove it", field, a, PlaceholderPackages, PlaceholderFiles))
-		case strings.Contains(a, PlaceholderPackages) || strings.Contains(a, PlaceholderFiles):
-			errs = append(errs, fmt.Sprintf("%s argument %q holds a placeholder inside it, which flai does not fill; write %s or %s as an argument of its own", field, a, PlaceholderPackages, PlaceholderFiles))
+			errs = append(errs, fmt.Sprintf("%s argument %s is not a placeholder flai fills; write %s, or remove it", field, a, tierPlaceholderList))
+		case slices.ContainsFunc(tierPlaceholders, func(p string) bool { return strings.Contains(a, p) }):
+			errs = append(errs, fmt.Sprintf("%s argument %q holds a placeholder inside it, which flai does not fill; write %s as an argument of its own", field, a, tierPlaceholderList))
 		}
 	}
 	return errs
