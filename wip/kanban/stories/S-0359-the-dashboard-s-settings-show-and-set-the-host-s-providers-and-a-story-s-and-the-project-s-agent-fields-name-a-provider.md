@@ -92,7 +92,7 @@ S-0349 puts providers on the host and `provider` on an agent, set from a shell. 
 ## Notes
 
 - Whether the key's variable is set is a yes or no, so that the page can say why a start would be refused without holding the key.
-- The page's line for an unset key says an agent that names the provider is refused at start. S-0350 builds that refusal; until it is accepted, flai serve starts such an agent without its provider.
+- The page's line for an unset key says an agent that names the provider is refused at start, as S-0350 made flai serve do.
 - Criterion 4's Reset is the button labelled **Remove**: a reset removes the provider's entry whole, and the page's other sections label a removal so.
 - The strategic agents' form (`StrategicSettings.svelte`) does not use `AgentFields` and has no provider input; a provider the manifest gives a strategic agent is kept on a save. The goal names the default agent, a new story, and a story's agent only.
 
