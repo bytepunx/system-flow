@@ -2060,7 +2060,7 @@ flai dashboard --port 8080 --pull
 flai dashboard --attach        # follow the logs; Ctrl-C leaves the container running
 flai dashboard --build         # build flaiover:local from this monorepo and run that
 flai dashboard --bind 127.0.0.1  # this host only (default: every interface)
-flai dashboard status          # running, not answering, or gone, from a probe of /_health; the image's digest and release
+flai dashboard status          # running, not answering, or gone, from a probe of /_health; the image's digest and release; whether flai serve dials it
 flai dashboard logs [-f]
 flai dashboard stop
 flai dashboard restart         # start the image that runs again, never a newer one a check pulled
@@ -2098,7 +2098,7 @@ When the releases cannot be reached and no list of the release is kept, `flai da
 
 `flai dashboard versions` marks each release this flai cannot verify `not deployable:` with the reason. With `--json` such a release has `unverifiable: true`, `signature` (`missing`, `bad`, or `unknown-key`), and `reason`. To check, the list downloads each release's digest list and signature; a download that fails fails the list. The dashboard's Updates page shows such a release as not deployable and offers no way to deploy it ([flaiover guide](flaiover.md#host)).
 
-`--build`, and `--image` naming another repository, such as a mirror or `flaiover` from `make flaiover-image`, run `image:tag` as given. No list names them, so `flai dashboard`, `check`, and `upgrade` report them unsigned.
+`--build`, and `--image` naming another repository, such as a mirror or `flaiover` from `make flaiover-image`, run `image:tag` as given. No list names them, so `flai dashboard`, `check`, and `upgrade` report them unsigned, and `flai serve` does not dial them ([flai serve](#flai-serve-flai-on-the-host-for-the-dashboards)).
 
 With `--json`, `flai dashboard` has `image`, the reference it started, `signed`, `release`, and `cached_list` when the list kept was used. `status` has `digest`, `release`, and `signed`; `check` has `image`, `signed`, and `release`; `upgrade` has `signed` and `release`, and its `to` is the reference by digest.
 
@@ -2168,6 +2168,37 @@ The brackets hold the reason (`missing stamp`, `invalid signature`, or `wrong co
 ```text
   host flai: flai serve runs (pid 4242) but is not connected: flai refused the dashboard: unsigned (missing stamp)
 ```
+
+Before each dial, and before each reconnection, `flai serve` also asks Docker which image the `flaiover` container runs, and dials only an image a signed digest list names (S-0238, [the operators guide](../operators/index.md#the-image-flai-dials-s-0238)). It compares the image's `RepoDigests` with the lists flai keeps in `dashboard-digests` ([What the dashboard verifies](#what-the-dashboard-verifies)). When none of the container's version is kept, it fetches and verifies that version's list first. The connections that offer repositories for import are checked the same way. `flai serve status` shows the verdict on an `image:` line under each project:
+
+```text
+  harbour  http://127.0.0.1:4242  connected since 2026-10-12T20:01:45Z
+    /p/harbour
+    image: signed, flaiover 0.42.3, sha256:0dce07ffc38f1fecc91cbb659524525db687eb12030bea40209f2ecf3636f15d
+```
+
+| The image line says | It means | Do |
+|---------------------|----------|----|
+| `image: signed, flaiover <release>, <digest>` | That release's verified digest list names the image. flai dials it. | Nothing. |
+| `image: the dashboard runs an unsigned image <image ID> (<RepoDigests>); flai does not dial it` | No verified list names the image. A local build has no `RepoDigests` and says `no RepoDigests`. So do a mirror, a build of `main`, and a container someone restarted from another image. | Run a signed release: `flai dashboard upgrade`, or set `dashboard.tag` to a release with `flai config set dashboard.tag X.Y.Z` and run `flai dashboard upgrade`. If you did not change the image, find out who restarted the container from another one. |
+| `image: not measured: <reason>; the release stamp alone is checked` | flai could not ask Docker what the dashboard runs: the dashboard is on another host, `docker` is not on `PATH` where `flai serve` runs, no container `flaiover` is on this host, `docker inspect` failed, or `flai serve` could not load its release keys. flai dials, and the release stamp check above still applies. | Nothing, for a dashboard on another host or a `flai serve` with no Docker. Otherwise fix what the reason names. |
+
+While an image is refused, the project's line reads `not connected: flai refused the dashboard: the dashboard runs an unsigned image <image ID> (<RepoDigests>): <reason>`. `serve.log` gets one `error`, `flai refused to dial the dashboard`, with the reason, once per refusal, not at every retry. flai looks again a minute later, and every minute after, so a container restarted from a signed image is dialled at the next look without restarting `flai serve`. `--json` carries `images`, by project folder: `kind` (`listed`, `unlisted`, or `not-measured`), `container`, `image`, `version`, `repo_digests`, `digest`, `release`, and `reason`.
+
+`flai host status` prints the same image line under its `serve` row, after the project's folder, and `--json` has `images`:
+
+```text
+    /p/harbour: image: signed, flaiover 0.42.3, sha256:0dce07ffc38f1fecc91cbb659524525db687eb12030bea40209f2ecf3636f15d
+```
+
+`flai dashboard status` says what `flai serve` did with the running image, below the digest line, once `flai serve` has checked it. `--json` has it as `serve_image`:
+
+```text
+  digest: sha256:0dce07ffc38f1fecc91cbb659524525db687eb12030bea40209f2ecf3636f15d (flaiover 0.42.3, on a signed list)
+  flai serve: dials it, signed
+```
+
+When `flai serve` matched another digest or release than the line above names, `dials it, signed` is followed by `(flaiover <release>, <digest>)`. The other two forms are `flai serve: refused it: the dashboard runs an unsigned image <image ID> (<RepoDigests>); it does not dial it` and `flai serve: image not measured: <reason>; the release stamp alone is checked`. Each means what the table says.
 
 `flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; `push` lets the board publish when you press Publish:
 
