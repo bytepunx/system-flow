@@ -354,7 +354,7 @@ The flai on the host serves MCP and starts agents. When a flai release is accept
 
 `flai dashboard` starts a second thing beside the container: `flai serve`, run by `flai host`, which opens a WebSocket to the dashboard's `/agent` endpoint and keeps it open. Over it the dashboard asks flai for named things and flai answers. The direction is deliberate: the container is given no socket, pipe, or address of the host's, and cannot start a conversation with it. It is the only way the dashboard reaches the project: everything it reads and everything it changes goes over it, and the container holds no file of the project ([ADR-0031](../../design/adrs/0031-the-dashboard-s-container-holds-nothing-of-the-project-a-port-and-two-secrets.md)). The image holds no `flai`, no `git`, and no `ssh`; commits made from the board are made by `flai serve` on the host as you, with your git configuration, and carry the dashboard's trailer. The one file of its own the image carries beyond the server is `LICENSE.md`, the terms it is distributed under, shown under Host › License (S-0231).
 
-- **The credential.** `flai dashboard` creates one agent credential per user, kept beside `flai serve`'s own state, not any one project's `.flai-cache` (S-0080, [ADR-0033](../../design/adrs/0033-one-login-token-and-one-agent-credential-per-user-serve-every-project.md)), and mounts it read-only into the shared container at `/run/secrets/flaiover_agent_key`. It is not the login token and opens nothing but `/agent`. It never travels: `flai serve` sends a nonce, the dashboard answers with its own nonce and an HMAC of both under the credential, and `flai serve` answers with the mirror HMAC. A flai that dials a port something else is listening on gives nothing away and says so in `flai serve status`; a client that cannot prove the credential is dropped before it is served anything. Sharing the credential across projects proves who `flai serve` is, not which project a given connection may answer for: every request still names its project, and flai refuses one that does not match what that connection's `hello` declared. Before either side proves the credential, each checks the other's release stamp, and refuses a build that is not a release with close code 4403 ([The stamp on the connection](#the-stamp-on-the-connection-s-0237)). Before it dials at all, `flai serve` asks Docker which image the container runs and does not dial one no signed digest list names ([The image flai dials](#the-image-flai-dials-s-0238)).
+- **The credential.** `flai dashboard` creates one agent credential per user, kept beside `flai serve`'s own state, not any one project's `.flai-cache` (S-0080, [ADR-0033](../../design/adrs/0033-one-login-token-and-one-agent-credential-per-user-serve-every-project.md)), and mounts it read-only into the shared container at `/run/secrets/flaiover_agent_key`. It is not the login token and opens nothing but `/agent`. It never travels: `flai serve` sends a nonce, the dashboard answers with its own nonce and an HMAC of both under the credential, and `flai serve` answers with the mirror HMAC. A flai that dials a port something else is listening on gives nothing away and says so in `flai serve status`; a client that cannot prove the credential is dropped before it is served anything. Sharing the credential across projects proves who `flai serve` is, not which project a given connection may answer for: every request still names its project, and flai refuses one that does not match what that connection's `hello` declared. Before either side proves the credential, each checks the other's release stamp, and refuses a build that is not a release with close code 4403 ([The stamp on the connection](#the-stamp-on-the-connection-s-0237)). Before it dials at all, `flai serve` asks Docker which image the container runs and does not dial one no signed digest list names ([The image flai dials](#the-image-flai-dials-s-0238)). `dashboard.allow_unsigned` lets a development build through on purpose, and says so wherever the connection is shown ([Allowing unsigned builds](#allowing-unsigned-builds-s-0239)).
 - **Who can reach `/agent`.** Anyone who can reach the dashboard's port can open the socket, and gets nothing without the credential. A request with an `Origin` header is refused outright, so no page in a browser can try. One connection per project per credential. While the flai a project has answers, a newer flai for the same project is refused: the dashboard pings the one it has, and if that answers within two seconds it closes the newcomer with code 4409 (S-0184, [ADR-0063](../../design/adrs/0063-the-dashboard-refuses-a-second-flai-for-a-project-with-close-code-4409-while.md)). The refused flai waits a minute before it tries again. Its log says once that another flai holds the project, and `flai serve status` shows it as the last error. A flai refused with 4403, or that refused the dashboard with it, because a release stamp is missing or wrong, waits the same minute (S-0237). A holder that does not answer the ping is replaced, so a frozen `flai serve` loses the project at once. This is what keeps a `flai serve` you run by hand, or one with another configuration, from taking a project away from the host's. To move a project to another flai, stop the one that has it. A different project registered with the same `flai serve` opens its own connection alongside it.
 - **What can be asked.** Only the methods `flai serve` offers (`flai hostapi` lists them), each checked against the project that connection's `hello` named. There is no method that takes a command line or a file path of the caller's choosing, and the dashboard cannot add one. What a holder of the dashboard token can do is what the dashboard's pages can do, as before; what a compromised container can do is call those same methods and nothing more: it has no file of any project, no `git`, and no credential. Whatever it sends is validated as data (an item ID, a state, a Markdown path under the project's three folders, text) and reaches a command only as `--flag=value` or after `--`. It cannot choose who a change is recorded as.
 - **When it is not there.** Pings every 4 seconds in both directions; a `flai serve` that is frozen or gone is marked so within ten seconds, a restarted container is reconnected within a second, and requests in flight fail with a clear error. Tried on Linux under WSL2 with Docker Engine. On macOS and Windows with Docker Desktop nothing differs in principle, since flai dials the published port on the host as a browser does, but it has **not been tried** there; on Windows `flai serve` runs in its own process group and `flai serve stop` ends it without a graceful signal.
@@ -466,7 +466,7 @@ Making the package public on GHCR removes the need for a token entirely; that is
 
 `ghcr.io/bytepunx/flaiover` is built from `flaiover/Dockerfile` at the repository root: the SvelteKit build on `node:24-alpine` and nothing else (no `flai`, no `git`, no `ssh`; the label `dev.system-flow.flai` names the flai of the commit it was built and tested with), listening on `3000`, running as an unprivileged user by default and working under any `--user`. Tags: `latest` (main), `X.Y.Z` and `X` from `flaiover/vX.Y.Z` release tags, and `sha-<commit>`. While the repository is private the package is too: `docker login ghcr.io` with a token that has `read:packages` before `flai dashboard` can pull it. The container writes nothing that outlives it: it has no volume, and its only home is `/tmp`.
 
-Build locally with `make flaiover-image` (tag `flaiover:local`) and run it with `flai dashboard --image flaiover --tag local`.
+Build locally with `make flaiover-image` (tag `flaiover:local`) and run it with `flai dashboard --image flaiover --tag local`. A local build is on no signed list and has no release stamp, so `flai serve` dials it only with `dashboard.allow_unsigned` on ([Allowing unsigned builds](#allowing-unsigned-builds-s-0239)).
 
 ## Telemetry
 
@@ -512,7 +512,7 @@ Each component checks its own stamp at start. It verifies the signature with the
 | flai | The last line of `flai version`: `release: signed`, `release: development build, no stamp`, `release: missing stamp`, or `release: invalid stamp: <reason>`; `release` in `flai version --json` ([flai version](../users/flai.md#version)) | `flai serve` logs `release stamp not valid`, with the state and the reason |
 | Dashboard | The `signed` label of `flaiover_build_info` on `/metrics` ([Telemetry](#telemetry)), and `release_stamp` on the `server started` log line | The server logs `release stamp not verified`, with the state, the reason, and the file |
 
-A development build has no stamp and is not warned about at start: a flai whose version is `dev` or starts `0.0.0`, and a dashboard whose `FLAIOVER_VERSION` is unset or starts `0.0.0`. An image built from `main` or by `flai dashboard --build` reports the newest release tag as its version, so it warns once at start. That is expected for a dashboard you build yourself. On the connection, a build with no stamp is refused, whatever its version ([The stamp on the connection](#the-stamp-on-the-connection-s-0237)).
+A development build has no stamp and is not warned about at start: a flai whose version is `dev` or starts `0.0.0`, and a dashboard whose `FLAIOVER_VERSION` is unset or starts `0.0.0`. An image built from `main` or by `flai dashboard --build` reports the newest release tag as its version, so it warns once at start. That is expected for a dashboard you build yourself. On the connection, a build with no stamp is refused, whatever its version ([The stamp on the connection](#the-stamp-on-the-connection-s-0237)), unless you allow unsigned builds ([Allowing unsigned builds](#allowing-unsigned-builds-s-0239)).
 
 What the stamp proves, and what it does not:
 
@@ -551,7 +551,7 @@ What to do:
 - **Run released builds of both, from the same release, and upgrade them together.** A flai or a dashboard older than this release sends no stamp, so the other refuses it as `missing stamp`, both ways.
 - **The dashboard.** Pin a release tag with `flai config set dashboard.tag X.Y.Z`, then run `flai dashboard upgrade`, or run `flai dashboard upgrade --published --tag X.Y.Z`. Versions on the dashboard's Updates page deploys a release too, but only while flai is connected to it, since the page reaches the host through flai. The registry's `latest` and `sha-*` image tags are builds of `main` and carry no stamp, but `dashboard.tag: latest` is the newest flaiover release, run by the digest its signed list names (S-0236).
 - **flai.** `flai host upgrade` installs the newest release and restarts everything it runs. Otherwise install with `install.sh` or `flai self-upgrade`, then run `flai serve stop` and `flai dashboard`.
-- **A development build is refused.** A flai from `scripts/flai.sh` or `goreleaser --snapshot`, and an image from `flai dashboard --build`, `make flaiover-image`, or `main`, carry no stamp.
+- **A development build is refused by default.** A flai from `scripts/flai.sh` or `goreleaser --snapshot`, and an image from `flai dashboard --build`, `make flaiover-image`, or `main`, carry no stamp. To run one on purpose, allow unsigned builds ([Allowing unsigned builds](#allowing-unsigned-builds-s-0239)).
 - **`invalid signature` or `wrong component` from a build you installed as a release** means the release key did not sign it for that component. Replace it with a release from the steps above.
 
 ### The image flai dials (S-0238)
@@ -568,7 +568,57 @@ Before `flai serve` dials a dashboard, it asks Docker which image the dashboard'
 | `flai host status` | The same image line under `serve`, after the project's folder; `images` in `--json` |
 | `flai dashboard status` | Below the digest line: `flai serve: dials it, signed`, `flai serve: refused it: the dashboard runs an unsigned image …; it does not dial it`, or `flai serve: image not measured: <reason>; the release stamp alone is checked`; `serve_image` in `--json` |
 
-What to do with an unsigned image: run a signed release with `flai dashboard upgrade`, or pin one with `flai config set dashboard.tag X.Y.Z` and then `flai dashboard upgrade`. If nobody meant to change the image, find out who restarted the container from another one, or moved its tag, before you run it again. `flai dashboard --build` and `make flaiover-image` build an image with no `RepoDigests`, so flai does not dial it. The [flai guide](../users/flai.md#flai-serve-flai-on-the-host-for-the-dashboards) has each line and what it means.
+What to do with an unsigned image: run a signed release with `flai dashboard upgrade`, or pin one with `flai config set dashboard.tag X.Y.Z` and then `flai dashboard upgrade`. If nobody meant to change the image, find out who restarted the container from another one, or moved its tag, before you run it again. `flai dashboard --build` and `make flaiover-image` build an image with no `RepoDigests`, so flai does not dial it unless you allow unsigned builds ([Allowing unsigned builds](#allowing-unsigned-builds-s-0239)). The [flai guide](../users/flai.md#flai-serve-flai-on-the-host-for-the-dashboards) has each line and what it means.
+
+### Allowing unsigned builds (S-0239)
+
+A development build carries no release stamp, and a dashboard image you build is on no signed digest list. By default both are refused: [The stamp on the connection](#the-stamp-on-the-connection-s-0237) and [The image flai dials](#the-image-flai-dials-s-0238) say how. `dashboard.allow_unsigned` lets them through on purpose ([ADR-0070](../../design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)). It is for development builds only: a flai you build from source, and a dashboard image from `flai dashboard --build`. A release of flai with the published dashboard image needs no allowance. The settings are in [settings.md](settings.md).
+
+| Where you set it | How | What it covers |
+|------------------|-----|----------------|
+| The host's flai configuration | `flai config set dashboard.allow_unsigned true`, with the configuration of the `flai serve` that dials the dashboard | Every project that flai serves |
+| The project's `system-flow.yaml` | `dashboard.allow_unsigned: true`, or `false` | That project, over the host's setting |
+| One start of the container | `flai dashboard --allow-unsigned` | That start only; it writes nothing to the configuration |
+
+What it lets through:
+
+| Who | Without the allowance | With it |
+|-----|-----------------------|---------|
+| `flai serve`, before it dials | Does not dial an image no signed list names | Dials it. `serve.log` says so once, at `info`: `dashboard image is on no verified digest list; dialled as unsigned is allowed` |
+| `flai serve`, on the connection | Refuses a dashboard that sends no stamp | Accepts it |
+| The dashboard, on the connection | Refuses a flai that sends no stamp | Accepts it, when its container was started with `FLAIOVER_ALLOW_UNSIGNED=1` |
+
+What it does not let through:
+
+- **A bad stamp.** A stamp that does not verify, or names another component, is refused with close code 4403 either way, as `invalid signature` or `wrong component <name>`. The allowance admits a missing stamp only.
+- **A peer without the credential.** Both sides prove the agent credential either way. The allowance changes nothing about who can connect.
+
+How each side learns it:
+
+- **flai serve** reads the allowance again before each dial, the project's manifest over the host's configuration. Turning it on takes effect at the next dial, within a minute of a refusal. Nothing needs a restart.
+- **The dashboard** learns it only when its container starts. `flai dashboard` starts the container with `--env FLAIOVER_ALLOW_UNSIGNED=1` when the allowance is in force for the project, with `--build`, or with `--allow-unsigned`, and prints:
+
+  ```text
+    unsigned allowed: started with FLAIOVER_ALLOW_UNSIGNED=1, it serves a flai with no release stamp
+  ```
+
+- **Restarts keep it.** The container's record keeps it, so `flai dashboard restart`, `flai dashboard upgrade`, and the host's watch start the container again the same way. `restart` and `upgrade` also add it when the setting is on now. They never remove it: only a fresh start does, `flai dashboard stop` once no other project is registered, then `flai dashboard` with the allowance off.
+- **A running container is not changed.** When the container already runs without it, `flai dashboard` says so and starts nothing:
+
+  ```text
+    unsigned not allowed: flaiover already runs, started without FLAIOVER_ALLOW_UNSIGNED=1, which only a start gives; set dashboard.allow_unsigned and run flai dashboard restart
+  ```
+
+Allowed is never silent. Each connection it lets through names its unsigned sides: `flai`, when the flai on the host has no release stamp, and `dashboard`, when the dashboard sent none. Both can be unsigned at once: `flai and dashboard`. A signed pair shows nothing, with the setting on or off: the allowance permits, it does not downgrade.
+
+| Where | What it says |
+|-------|--------------|
+| flai's log, `serve.log` | One `warn` per connection, `connection allowed unsigned`, with `url`, `project`, and `unsigned`, the sides |
+| The dashboard's log, `flai dashboard logs` | One `warn` per connection, `host flai connected unsigned`, with `project`, `flai`, and `unsigned` |
+| `flai serve status` | Under the project: `unsigned allowed: flai`, `unsigned allowed: dashboard`, or `unsigned allowed: flai and dashboard`; `unsigned` in the project's connection in `--json` |
+| `flai host status` | Under `serve`: `<folder>: unsigned allowed: <sides>`; `unsigned`, by folder, in `--json` |
+| `flai dashboard status` | `unsigned allowed: <sides>` under the `host flai` line. The container's line, `unsigned allowed: started with FLAIOVER_ALLOW_UNSIGNED=1, it serves a flai with no release stamp`, unless this project's flai is connected as a signed pair. `allow_unsigned` and `host_flai.unsigned` in `--json` |
+| The dashboard | A banner on every page of the project, which cannot be dismissed, headed `unsigned allowed: <sides>`, and `(unsigned allowed: <sides>)` beside the project in the switcher ([users guide](../users/flaiover.md#unsigned-builds)) |
 
 ## Requirements
 

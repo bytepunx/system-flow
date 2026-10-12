@@ -41,7 +41,7 @@ At the right of the header the dashboard says whether a flai on the host has it 
 
 Writes go the same way: a move, a new story, a saved document, an acceptance are asked of flai on the host, which does them with your own git identity and, for commits made for you, the dashboard's trailer. The dashboard's image holds no flai and no git. Throughout this guide, "when the dashboard can write" means while flai on the host has it connected. If the flai on the host is older than the dashboard, the banner says what it lacks and asks you to upgrade flai. If the connection is lost in the middle of an acceptance, the page says the acceptance may have completed on the host: reload the board before trying again.
 
-The dashboard and the flai on the host each check the other's release stamp when flai connects, and refuse a build that is not a release (S-0237). A development build of either carries no stamp and is refused. When this dashboard refuses the flai on the host:
+The dashboard and the flai on the host each check the other's release stamp when flai connects, and refuse a build that is not a release (S-0237). A development build of either carries no stamp and is refused, unless the operator allows unsigned builds on the host (see [Unsigned builds](#unsigned-builds)). When this dashboard refuses the flai on the host:
 
 - The badge reads "host flai: refused (unsigned)", with what to do as its tooltip.
 - The banner on every page of that project reads "This dashboard refused the flai on the host as unsigned, so the project cannot be shown.", with the reason and what to do under it:
@@ -54,6 +54,18 @@ The dashboard and the flai on the host each check the other's release stamp when
 - The refusal stays until a signed flai for that project connects. While a flai is connected, no refusal is shown.
 
 When it is flai that refuses this dashboard, the dashboard only sees no flai connect, and says "host flai: not connected". `flai serve status` on the host says "flai refused the dashboard: unsigned", with the reason. Either way, run a released dashboard and a released flai from the same release; the [operators guide](../operators/index.md#the-stamp-on-the-connection-s-0237) says how.
+
+### Unsigned builds
+
+The operator can let development builds connect on purpose, with `dashboard.allow_unsigned` on the host (S-0239, [the operators guide](../operators/index.md#allowing-unsigned-builds-s-0239)). While a project's connection was let through that way, a banner under the header names the side with no release stamp, on every page of that project but the login page. It has no X: it stays while the connection does. It reads, for the flai on the host:
+
+```text
+unsigned allowed: flai
+The flai on the host is a development build, with no release stamp.
+The host lets it through on purpose, with dashboard.allow_unsigned; a release of flai with the published dashboard image needs no allowance and shows no banner.
+```
+
+For this dashboard's own build, the heading is `unsigned allowed: dashboard` and the second line "This dashboard is a development build, with no release stamp." With both, the heading is `unsigned allowed: flai and dashboard` and both lines show. A released flai and a released dashboard show no banner, whatever the host allows.
 
 ## Notices
 
@@ -71,6 +83,7 @@ The switcher also says, per project, whether its flai is signed, that is, whethe
 |-------|---------------|
 | "(signed)" | Connected, and its flai's release stamp verified |
 | "(unsigned)" | Connected, and its flai's release stamp did not verify |
+| "(unsigned allowed: flai)", "(unsigned allowed: dashboard)", "(unsigned allowed: flai and dashboard)" | Connected because the host allows unsigned builds, with the sides that have no release stamp ([Unsigned builds](#unsigned-builds)); in place of "(signed)" or "(unsigned)" |
 | "(refused: unsigned flai)" | Not connected: this dashboard refused its flai as unsigned |
 | "(served, not connected)" | Not connected, for another reason |
 

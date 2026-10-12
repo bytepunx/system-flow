@@ -22,6 +22,23 @@ This monorepo builds itself with its own conventions. Start with the root `CLAUD
 3. Keep the narrative's current state and next steps true as you go, with `flai stream state`.
 4. Meet the definition of done in [workflow.md](../../design/system/workflow.md), move the story to `review`, open a pull request that names the story.
 
+## Running the dashboard from source
+
+This repository builds both sides from source: flai from `scripts/flai.sh`, with no release stamp, and the dashboard from `flai dashboard --build`, an image on no signed digest list. flai and the dashboard refuse such builds unless unsigned builds are allowed ([Allowing unsigned builds](../operators/index.md#allowing-unsigned-builds-s-0239)). Allow them in the configuration `scripts/flai.sh` uses, `.flai-cache/config.json`:
+
+```sh
+scripts/flai.sh config set dashboard.allow_unsigned true
+scripts/flai.sh dashboard --build
+```
+
+When the `flai serve` that dials the dashboard runs with another configuration, such as the installed flai's `~/.flai/config.json`, set it there too: `flai config set dashboard.allow_unsigned true`. `flai serve` reads it before each dial and needs no restart. `--build` starts the container with `FLAIOVER_ALLOW_UNSIGNED=1`, so the dashboard accepts a flai with no stamp.
+
+Expect it to be shown, never silent:
+
+- A banner on every dashboard page, headed `unsigned allowed: flai`, `unsigned allowed: dashboard`, or `unsigned allowed: flai and dashboard`, and the same words beside the project in the switcher.
+- `unsigned allowed: <sides>` in `flai serve status`, `flai host status`, and `flai dashboard status`.
+- One `warn` per connection in `serve.log`, `connection allowed unsigned`.
+
 ## Tools and environment
 
 Every script in `scripts/` sources `scripts/env.sh`, which sets this environment:
