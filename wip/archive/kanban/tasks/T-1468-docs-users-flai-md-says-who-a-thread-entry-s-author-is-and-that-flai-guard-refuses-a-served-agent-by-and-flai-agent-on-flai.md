@@ -3,16 +3,36 @@ id: T-1468
 type: task
 nature: improvement
 title: docs/users/flai.md says who a thread entry's author is and that flai guard refuses a served agent --by and FLAI_AGENT on flai
-status: backlog
+status: done
 parent: S-0369
 owner: alex
 created: 2026-10-12T17:06:01Z
-updated: 2026-10-12T17:06:01Z
-transitions: []
+updated: 2026-10-12T18:41:16Z
+transitions:
+  - to: ready
+    at: 2026-10-12T18:40:51Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-12T18:40:51Z
+    by: system-flow
+  - to: done
+    at: 2026-10-12T18:41:16Z
+    by: agent-S-0369
 stream: S-0369
 tags: [flai, docs]
 touches: [docs/users/flai.md]
 after: [T-1466, T-1467]
+usage:
+  source: log
+  seconds: 25
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 7105
+      cache_read: 1096579
+      cache_write: 34761
+      cost: 0.5952
 ---
 # T-1468 docs/users/flai.md says who a thread entry's author is and that flai guard refuses a served agent --by and FLAI_AGENT on flai
 

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 127
-      cache_read: 798852
-      cache_write: 50532
-      cost: 0.3851
+      input: 12
+      output: 5412
+      cache_read: 835301
+      cache_write: 26478
+      cost: 0.4534
 ---
 # T-1465 An ADR refining ADR-0060 and ADR-0097 decides that flai guard refuses a served agent a flai command that names who wrote it, and agent-adapters.md and strategic-agents.md record it
 

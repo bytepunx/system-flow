@@ -3,10 +3,10 @@ id: S-0369
 type: story
 nature: improvement
 title: A thread entry's author is whatever --by says, so an agent with a shell could answer a permission thread as the owner
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T16:52:42Z
-updated: 2026-10-12T18:26:43Z
+updated: 2026-10-12T18:47:33Z
 transitions:
   - to: ready
     at: 2026-10-12T18:00:46Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:13:51Z
     by: agent-S-0369
+  - to: review
+    at: 2026-10-12T18:46:14Z
+    by: system-flow
+  - to: done
+    at: 2026-10-12T18:47:33Z
+    by: orchestrator
 tags: [flai, guard, threads]
 topics: [cli, conventions]
 touches: [design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/issues/I-0091-a-thread-entry-s-author-is-whatever-by-says-so-an-agent-with-a-shell-could-answer-a-permission-thread-as-the-owner.md, design/issues/summary.md, flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, design/adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md]
@@ -24,19 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 776
-  estimated: true
+  seconds: 1960
   turns:
     - day: 2026-10-12
-      hand_edits: 1
-      work: 33
+      ceremony: 1
+      hand_edits: 3
+      work: 57
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 792
-      cache_read: 4915592
-      cache_write: 256213
-      cost: 2.3448
+      input: 238
+      output: 105438
+      cache_read: 16272067
+      cache_write: 515812
+      cost: 8.8317
   strategic:
     - kind: planner
       seconds: 496
@@ -91,8 +97,8 @@ This story remediates [I-0091](../../../design/issues/I-0091-a-thread-entry-s-au
 Directions to weigh: flai refuses a `--by` that is not the session's own name when `FLAI_AGENT` is set, so that an agent's entries always carry its name; and `flai guard` refuses a story's agent `flai thread reply`, `resolve`, and `confirm` with a `--by` at all. Either leaves the operator's own session, where `FLAI_AGENT` is unset, free to name itself. The dashboard already writes the operator's name itself.
 
 ## Acceptance criteria
-- [ ] The cause I-0091 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0091 is closed with `flai issue close I-0091 --reason` saying what fixed it
+- [x] The cause I-0091 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0091 is closed with `flai issue close I-0091 --reason` saying what fixed it
 
 ## Tasks
 - T-1465 An ADR refining ADR-0060 and ADR-0097 decides that flai guard refuses a served agent a flai command that names who wrote it, and agent-adapters.md and strategic-agents.md record it
@@ -137,3 +143,13 @@ Figures:
 
 - **Forecast: 45m, delivery 2026-10-13T02:21:00Z.** `flai forecast` gave 21m: 78 s a unit over 61 large-band improvement stories, times size 16. Raised as S-0368's was, because this story adds an ADR and the guard's first rule on a story's own agent's `Bash` calls. It also changes the planner's and analyzer's rules and fixes `threadAuthor`. The delivery is flai's 01:57Z plus the extra 24m.
 - **Cost of delay: 10 USD a week**, as `flai cod` works it out from the orchestrator's `penalty_per_week: 10` (TH-0416). Kept as is: I-0091 has one instance, found in review, and no measured cost.
+
+### Accepted by the orchestrator
+
+- Verified: f6ef19c1b518598b0fcda4856d10bb3060da0902
+- At: 2026-10-12T18:47:33Z
+
+Verdict: pass at f6ef19c1b518598b0fcda4856d10bb3060da0902; flai verify passed every step at that commit, and the verifier matched both criteria to the diff; the guard follows the narrowing the operator confirmed on TH-0418 (an agent's own name passes, another name is refused), recorded in ADR-0143.
+
+- 1: flai/internal/guard/authors.go, flai/internal/guard/authors_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, flai/cmd/thread.go, flai/cmd/thread_test.go, design/adrs/README.md, design/system/agent-adapters.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md
+- 2: design/issues/I-0091-a-thread-entry-s-author-is-whatever-by-says-so-an-agent-with-a-shell-could-answer-a-permission-thread-as-the-owner.md, design/issues/summary.md

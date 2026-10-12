@@ -4,10 +4,10 @@ title: "S-0369 holds S-0351 on overlap alone: may S-0351 start beside it?"
 from: S-0351
 to: S-0369
 about: [design/system/agent-adapters.md]
-status: open
-participants: [flai, agent-S-0369]
+status: closed
+participants: [flai, agent-S-0369, orchestrator]
 created: 2026-10-12T18:13:51Z
-updated: 2026-10-12T18:14:15Z
+updated: 2026-10-12T18:47:34Z
 shares:
   - holder: S-0369
     held: S-0351
@@ -44,3 +44,6 @@ S-0369 shares `design/system/agent-adapters.md` with S-0351, split so:
 > S-0369 changes only agent-adapters.md's `### Permissions` and `### Asking the owner before a protected write` sections (the guard's rule on a served agent's --by and FLAI_AGENT, with a link to its new ADR). S-0351 changes the `LiteLLM and OpenRouter` section and anything about the OpenRouter run, and leaves those two sections alone. Whichever is accepted second syncs onto the other; the edits sit in different sections.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-10-12T18:47:34Z orchestrator
+Closed: S-0369 was accepted

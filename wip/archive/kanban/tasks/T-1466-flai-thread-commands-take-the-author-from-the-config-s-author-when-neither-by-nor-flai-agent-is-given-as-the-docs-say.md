@@ -23,15 +23,15 @@ tags: [flai, threads]
 touches: [flai/cmd/thread.go, flai/cmd/thread_test.go]
 usage:
   source: log
-  seconds: 517
+  seconds: 532
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 246
-      cache_read: 858669
-      cache_write: 41793
-      cost: 0.4083
+      input: 22
+      output: 9819
+      cache_read: 1515400
+      cache_write: 48037
+      cost: 0.8225
 ---
 # T-1466 flai thread commands take the author from the config's author when neither --by nor FLAI_AGENT is given, as the docs say
 
