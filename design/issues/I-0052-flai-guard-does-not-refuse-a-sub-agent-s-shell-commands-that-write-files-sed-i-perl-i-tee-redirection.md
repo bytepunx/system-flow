@@ -7,7 +7,7 @@ count: 1
 cost: 0m
 first_reported: 2026-10-01T11:13:30Z
 last_reported: 2026-10-01T11:13:30Z
-updated: 2026-10-01T11:13:30Z
+updated: 2026-10-12T16:52:41Z
 ---
 
 # I-0052 flai guard does not refuse a sub-agent's shell commands that write files (sed -i, perl -i, tee, redirection)
@@ -21,3 +21,5 @@ flai guard does not refuse a sub-agent's shell commands that write files (sed -i
 S-0189's pre-review verifier found that criterion 3 (a verifier never makes the corrections it finds) is enforced for git and flai writes, MCP writes, and by the verifier having no Edit or Write, but a sub-agent with Bash could still write a file through the shell. No sub-agent has been seen doing it; ADR-0060 says the guard is not a shell.
 
 ## Remediation
+
+Story S-0368 remediates this issue, created from it at 2026-10-12T16:52:41Z.
