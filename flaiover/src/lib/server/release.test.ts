@@ -5,13 +5,16 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+	PEER_COMPONENT,
 	RELEASE_PUBLIC_KEY,
 	RELEASE_STAMP_FILE,
 	checkReleaseStamp,
+	helloStamp,
 	isDevelopmentVersion,
 	readStampFile,
 	releaseStampPath,
 	stampWarrantsWarning,
+	verifyPeerStamp,
 	verifyReleaseStamp,
 	type ReleaseStamp,
 	type StampBuild
@@ -156,5 +159,91 @@ describe('the release stamp (S-0235)', () => {
 		const text = stampText('flaiover 1.2.3 abc1234');
 		const stamp = verifyReleaseStamp({ kind: 'read', path: '/stamp', text }, build);
 		expect(stamp.reason).toBe('bad-signature');
+	});
+});
+
+// S-0237: flai's stamp arrives in hello as {statement, signature}; the dashboard checks the signature
+// and the component, and leaves flai's version and commit alone.
+describe("a peer's release stamp (S-0237)", () => {
+	function peerStamp(statement: string, key = ours.privateKey) {
+		return { statement, signature: sign('sha256', Buffer.from(statement), key).toString('base64') };
+	}
+	const check = (stamp: unknown) => verifyPeerStamp(stamp, PEER_COMPONENT, [ours.pem]);
+
+	it('is signed when the release key signed a flai statement, whatever its version and commit', () => {
+		expect(PEER_COMPONENT).toBe('flai');
+		expect(check(peerStamp('flai 9.9.9 fedcba9'))).toEqual({
+			state: 'signed',
+			reason: null,
+			component: 'flai',
+			version: '9.9.9'
+		});
+		expect(verifyPeerStamp(peerStamp('flai 1.0.0 abc'), 'flai', [theirs.pem, ours.pem]).state).toBe(
+			'signed'
+		);
+	});
+
+	it('is invalid when another key signed it, and keeps the version it claims', () => {
+		expect(check(peerStamp('flai 9.9.9 fedcba9', theirs.privateKey))).toEqual({
+			state: 'invalid',
+			reason: 'bad-signature',
+			component: null,
+			version: '9.9.9'
+		});
+		const signature = peerStamp('flai 9.9.9 fedcba9').signature;
+		expect(check({ statement: 'flai 9.9.8 fedcba9', signature }).reason).toBe('bad-signature');
+	});
+
+	it('is invalid when it names another component, and says which', () => {
+		expect(check(peerStamp('flaiover 1.2.3 abc1234'))).toEqual({
+			state: 'invalid',
+			reason: 'wrong-component',
+			component: 'flaiover',
+			version: null
+		});
+	});
+
+	it('is malformed unless it is a statement of three fields and a base64 signature', () => {
+		const { signature } = peerStamp('flai 9.9.9 fedcba9');
+		for (const stamp of [
+			'flai 9.9.9 fedcba9',
+			{ statement: 'flai 9.9.9 fedcba9' },
+			{ statement: 7, signature },
+			{ statement: 'flai 9.9.9 fedcba9', signature: 'not base64!' },
+			peerStamp('flai 9.9.9'),
+			peerStamp('flai  9.9.9 fedcba9'),
+			peerStamp('flai 9.9.9 ')
+		]) {
+			expect(check(stamp), JSON.stringify(stamp)).toMatchObject({
+				state: 'invalid',
+				reason: 'malformed',
+				version: null
+			});
+		}
+	});
+
+	it('is missing when hello has no stamp, or an empty one from a development build', () => {
+		for (const stamp of [undefined, null, { statement: '', signature: '' }])
+			expect(check(stamp)).toEqual({
+				state: 'missing',
+				reason: null,
+				component: null,
+				version: null
+			});
+	});
+
+	it('verifies with the embedded release key by default, which no test key satisfies', () => {
+		expect(verifyPeerStamp(peerStamp('flai 9.9.9 fedcba9'), 'flai').reason).toBe('bad-signature');
+	});
+
+	it("answers hello with the dashboard's own stamp when it holds one well formed", () => {
+		const text = stampText('flaiover 1.2.3 abc1234');
+		expect(helloStamp(verifyText(text))).toEqual({
+			statement: 'flaiover 1.2.3 abc1234',
+			signature: text.split('\n')[1]
+		});
+		const missing = verifyReleaseStamp({ kind: 'absent', path: '/stamp' }, build, [ours.pem]);
+		expect(helloStamp(missing)).toBeNull();
+		expect(helloStamp(verifyText('flaiover 1.2.3 abc1234\n'))).toBeNull();
 	});
 });

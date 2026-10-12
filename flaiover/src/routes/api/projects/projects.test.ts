@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import http from 'node:http';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -62,6 +62,8 @@ function connect(
 }
 
 describe('/api/projects (S-0080)', () => {
+	// These fake flais carry no release stamp; signing is agent.test.ts's (S-0237).
+	beforeEach(() => void registry(process.env, { allowUnsigned: true }));
 	afterEach(() => resetAgent());
 
 	it('is empty when nothing has connected', async () => {

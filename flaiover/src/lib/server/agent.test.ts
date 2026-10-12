@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import http from 'node:http';
+import { generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import WebSocket from 'ws';
 import {
@@ -7,14 +8,37 @@ import {
 	AgentRegistry,
 	ANALYZER,
 	CLOSE_HELD,
+	CLOSE_UNSIGNED,
 	ORCHESTRATOR,
+	PROTOCOL,
 	proof,
-	REQUIRED_METHODS
+	REQUIRED_METHODS,
+	type RegistryOptions
 } from './agent';
 
 const KEY = 'agent-credential-for-tests';
 
-type Flai = { ws: WebSocket; requests: Record<string, unknown>[]; closed: Promise<number> };
+// S-0237: every flai here sends a stamp signed by a release key the test makes, and the registry is
+// given that key in place of the embedded one, so a flai is signed unless a test says otherwise.
+function keyPair() {
+	const { publicKey, privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+	return { pem: publicKey.export({ type: 'spki', format: 'pem' }).toString(), privateKey };
+}
+const release = keyPair();
+const other = keyPair();
+function stamp(statement: string, key: KeyObject = release.privateKey) {
+	return { statement, signature: sign('sha256', Buffer.from(statement), key).toString('base64') };
+}
+const SIGNED = stamp('flai 9.9.9 abc1234');
+const DASHBOARD = stamp('flaiover 1.2.3 def5678');
+
+type Flai = {
+	ws: WebSocket;
+	requests: Record<string, unknown>[];
+	closed: Promise<number>;
+	/** The dashboard's answer to hello. */
+	hello?: Record<string, unknown>;
+};
 
 /** A registry on a real HTTP server, the way server.js wires it. */
 async function serve(registry: AgentRegistry) {
@@ -53,11 +77,12 @@ function connect(
 					id: 'hello',
 					method: 'hello',
 					params: {
-						protocol: 1,
+						protocol: PROTOCOL,
 						nonce: mine,
 						flai: '9.9.9',
 						project,
 						methods,
+						release: SIGNED,
 						...extra
 					}
 				})
@@ -67,6 +92,7 @@ function connect(
 			const m = JSON.parse(data.toString());
 			if (!proven) {
 				proven = true;
+				flai.hello = m.result;
 				if (m.result.proof !== proof(KEY, 'dashboard', mine, m.result.nonce))
 					return reject(new Error('the dashboard did not prove itself'));
 				ws.send(
@@ -88,13 +114,45 @@ function connect(
 	});
 }
 
+/** A flai that only says hello, as a refused one gets no further: how the dashboard closed, and
+ * everything it sent first. No release stamp unless params gives one. */
+function sayHello(
+	url: string,
+	params: Record<string, unknown>
+): Promise<{ code: number; reason: string; messages: unknown[] }> {
+	return new Promise((resolve, reject) => {
+		const ws = new WebSocket(url);
+		const messages: unknown[] = [];
+		ws.on('open', () =>
+			ws.send(
+				JSON.stringify({
+					jsonrpc: '2.0',
+					id: 'hello',
+					method: 'hello',
+					params: {
+						protocol: PROTOCOL,
+						nonce: 'c'.repeat(32),
+						flai: '9.9.9',
+						project: { key: 'harbour', name: 'Harbour' },
+						methods: REQUIRED_METHODS,
+						...params
+					}
+				})
+			)
+		);
+		ws.on('message', (data) => messages.push(JSON.parse(data.toString())));
+		ws.on('close', (code, reason) => resolve({ code, reason: reason.toString(), messages }));
+		ws.on('error', reject);
+	});
+}
+
 describe('AgentRegistry and AgentHub', () => {
 	const cleanup: (() => void)[] = [];
 	afterEach(() => {
 		for (const f of cleanup.splice(0)) f();
 	});
-	async function setup(opt = {}) {
-		const registry = new AgentRegistry(KEY, opt);
+	async function setup(opt: RegistryOptions = {}) {
+		const registry = new AgentRegistry(KEY, { peerKeys: [release.pem], stamp: DASHBOARD, ...opt });
 		const s = await serve(registry);
 		cleanup.push(() => {
 			registry.close();
@@ -543,5 +601,139 @@ describe('AgentRegistry and AgentHub', () => {
 		});
 		cleanup.push(() => back.ws.terminate());
 		expect(registry.list().map((p) => p.key)).toEqual(['harbour', 'quay']);
+	});
+
+	// S-0237: flai's release stamp is judged before the credential, and the dashboard answers with its own.
+	it('answers a signed flai with its own stamp, adopts it, and marks it signed', async () => {
+		const { registry, hub, url } = await setup();
+		const flai = await connect(url, KEY);
+		cleanup.push(() => flai.ws.terminate());
+		expect(PROTOCOL).toBe(2);
+		expect(flai.hello).toMatchObject({ release: DASHBOARD });
+		expect(hub.status()).toMatchObject({ connected: true, signed: true });
+		expect(hub.status().refused).toBeUndefined();
+		expect(registry.list()).toEqual([
+			expect.objectContaining({ key: 'harbour', connected: true, signed: true })
+		]);
+	});
+
+	it('answers without a stamp when it has none, as a development build', async () => {
+		const { url } = await setup({ stamp: null });
+		const flai = await connect(url, KEY);
+		cleanup.push(() => flai.ws.terminate());
+		expect(flai.hello).toHaveProperty('nonce');
+		expect(flai.hello).not.toHaveProperty('release');
+	});
+
+	it('closes an unsigned flai with 4403 before the proof, and keeps the refusal against its project', async () => {
+		const { registry, url } = await setup();
+		const cases: { params: Record<string, unknown>; reason: string; flai: string }[] = [
+			{ params: {}, reason: 'missing stamp', flai: '9.9.9' },
+			// a flai from before the stamp: protocol 1, no field, refused as unsigned, not as malformed
+			{ params: { protocol: 1, flai: '1.40.0' }, reason: 'missing stamp', flai: '1.40.0' },
+			{
+				params: { release: { statement: '', signature: '' } },
+				reason: 'missing stamp',
+				flai: '9.9.9'
+			},
+			{ params: { release: DASHBOARD }, reason: 'wrong component flaiover', flai: '9.9.9' },
+			{
+				params: { release: stamp('flai 9.9.8 abc1234', other.privateKey) },
+				reason: 'invalid signature',
+				flai: '9.9.8'
+			},
+			{
+				params: { release: { statement: 'flai 9.9.9', signature: SIGNED.signature } },
+				reason: 'invalid signature',
+				flai: '9.9.9'
+			}
+		];
+		for (const c of cases) {
+			const refused = await sayHello(url, c.params);
+			// closed with nothing sent: no nonce to prove against, and no proof of the dashboard's
+			expect(refused, c.reason).toEqual({
+				code: CLOSE_UNSIGNED,
+				reason: `unsigned peer: ${c.reason}`,
+				messages: []
+			});
+			const kept = registry.peek('harbour')?.status().refused;
+			expect(kept, c.reason).toMatchObject({ reason: c.reason, flai: c.flai });
+			expect(new Date(kept!.at).toISOString()).toBe(kept!.at);
+		}
+		expect(CLOSE_UNSIGNED).toBe(4403);
+		const [row] = registry.list();
+		expect(row).toMatchObject({
+			key: 'harbour',
+			connected: false,
+			refused: { reason: 'invalid signature', flai: '9.9.9' }
+		});
+		expect(row.signed).toBeUndefined();
+	});
+
+	it('forgets the refusal once a signed flai for the project is adopted', async () => {
+		const { hub, url } = await setup();
+		await sayHello(url, {});
+		expect(hub.status()).toMatchObject({ connected: false, refused: { reason: 'missing stamp' } });
+		const flai = await connect(url, KEY);
+		cleanup.push(() => flai.ws.terminate());
+		expect(hub.status()).toMatchObject({ connected: true, signed: true });
+		expect(hub.status().refused).toBeUndefined();
+	});
+
+	it('serves an unsigned flai, an older one too, marked unsigned, when told to allow it', async () => {
+		const { hub, url } = await setup({ allowUnsigned: true });
+		const flai = await connect(url, KEY, undefined, {}, REQUIRED_METHODS, undefined, {
+			protocol: 1,
+			release: undefined
+		});
+		cleanup.push(() => flai.ws.terminate());
+		expect(hub.status()).toMatchObject({ connected: true, signed: false });
+		expect(hub.status().refused).toBeUndefined();
+	});
+
+	it('refuses a stamp that does not verify or names another component even when told to allow unsigned', async () => {
+		const { url } = await setup({ allowUnsigned: true });
+		for (const release of [stamp('flai 9.9.9 abc1234', other.privateKey), DASHBOARD]) {
+			const refused = await sayHello(url, { release });
+			expect(refused.code, release.statement).toBe(CLOSE_UNSIGNED);
+		}
+	});
+
+	it('still refuses a protocol it does not speak as a protocol, not as unsigned', async () => {
+		const { url } = await setup();
+		const refused = await sayHello(url, { protocol: 3, release: SIGNED });
+		expect(refused).toMatchObject({ code: 4400, reason: 'protocol' });
+		expect(refused.messages).toEqual([
+			expect.objectContaining({
+				error: expect.objectContaining({ message: 'this dashboard speaks protocol 2, flai sent 3' })
+			})
+		]);
+	});
+
+	it('makes a project known by its refusal alone, without making a proven one ambiguous', async () => {
+		const { registry, url } = await setup(); // harbour, named here, is the one project
+		await sayHello(url, { project: { key: 'quay', name: 'Quay' } });
+		expect(registry.peek('quay')?.status()).toMatchObject({
+			connected: false,
+			refused: { reason: 'missing stamp' }
+		});
+		expect(registry.list().map((p) => p.key)).toEqual(['harbour', 'quay']);
+		expect(registry.solo()).toBe(registry.peek('harbour'));
+	});
+
+	it('is the one project when a refusal is all it knows, and keeps at most eight such', async () => {
+		const registry = new AgentRegistry(KEY, { peerKeys: [release.pem] });
+		const s = await serve(registry);
+		cleanup.push(() => {
+			registry.close();
+			s.server.close();
+		});
+		await sayHello(s.url, { project: { key: 'p0', name: '' } });
+		expect(registry.solo()).toBe(registry.peek('p0'));
+		expect(registry.solo().status().refused?.reason).toBe('missing stamp');
+		for (let i = 1; i < 10; i++) await sayHello(s.url, { project: { key: `p${i}`, name: '' } });
+		expect(registry.list()).toHaveLength(8);
+		expect(registry.peek('p9')).toBeUndefined();
+		expect(registry.solo().status()).toEqual({ configured: true, connected: false });
 	});
 });

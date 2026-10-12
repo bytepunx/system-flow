@@ -20,12 +20,24 @@ import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { log } from './log';
-import { version } from './metrics';
+import { commit, version } from './metrics';
+import {
+	checkReleaseStamp,
+	helloStamp,
+	PEER_COMPONENT,
+	RELEASE_PUBLIC_KEY,
+	verifyPeerStamp,
+	type HelloStamp,
+	type PeerStampCheck
+} from './release';
 import type { PlanRun } from '$lib/activity';
 import type { AnalyzerRun, OrchestratorRun } from '$lib/strategic';
 
 export const AGENT_PATH = '/agent';
-export const PROTOCOL = 1;
+/** Protocol 2 carries each side's release stamp in hello (S-0237). */
+export const PROTOCOL = 2;
+/** A flai from before the release stamp: its hello is read far enough to refuse it as unsigned. */
+const UNSTAMPED_PROTOCOL = 1;
 /** What an 'agent' event names in place of a story when the project's orchestrator started or ended. */
 export const ORCHESTRATOR = 'orchestrator';
 /** What an 'agent' event names in place of a story when the project's analyzer started or ended. */
@@ -188,12 +200,26 @@ export type StrategicStatus = {
 	};
 };
 
+/** Why the dashboard last closed a flai for a project with CLOSE_UNSIGNED (S-0237), kept after it went. */
+export type Refusal = {
+	/** When, as an ISO timestamp. */
+	at: string;
+	/** `missing stamp`, `invalid signature`, or `wrong component <name>`. */
+	reason: string;
+	/** The version that flai named: its stamp's, when the statement names flai, else its hello's. */
+	flai: string;
+};
+
 export type AgentStatus = {
 	/** false when the dashboard was given no agent credential (an older flai started it). */
 	configured: boolean;
 	connected: boolean;
 	since?: string;
 	flai?: string;
+	/** Whether the connected flai's release stamp verified (S-0237). */
+	signed?: boolean;
+	/** The last flai refused for this project as unsigned, until a signed one is adopted. */
+	refused?: Refusal;
 	/** The project the connected flai serves. Not called project: respond() stamps that on every body. */
 	serves?: { key: string; name: string };
 	/** Methods this dashboard needs and the connected flai does not offer: it is older than the dashboard. */
@@ -211,6 +237,10 @@ export type ConnectedProject = {
 	since?: string;
 	/** Offered for import, not a project yet (S-0098). */
 	candidate?: boolean;
+	/** Whether the connected flai's release stamp verified; set only while connected (S-0237). */
+	signed?: boolean;
+	/** The last flai refused for this project as unsigned, until a signed one is adopted. */
+	refused?: Refusal;
 };
 
 type Pending = {
@@ -227,12 +257,22 @@ type Message = {
 	result?: unknown;
 	error?: { code: number; message: string; data?: Record<string, unknown> };
 };
+/** What a flai's hello says of itself, beyond its protocol and nonce. */
+type Hello = {
+	flai?: string;
+	project?: { key?: string; name?: string };
+	methods?: unknown;
+	kind?: unknown;
+	/** Its release stamp (S-0237); absent from a flai without one, or older than protocol 2. */
+	release?: unknown;
+};
 type ConnInfo = {
 	since: string;
 	flai: string;
 	project: { key: string; name: string };
 	missing: string[];
 	candidate?: boolean;
+	signed: boolean;
 };
 
 export type AgentOptions = {
@@ -244,11 +284,40 @@ export type AgentOptions = {
 	probeMs?: number;
 };
 
+/** The registry's options: the hubs' own, and what it is told of release stamps (S-0237). */
+export type RegistryOptions = AgentOptions & {
+	/** The dashboard's own stamp, answered to every hello; none for a development build. */
+	stamp?: HelloStamp | null;
+	/** The keys a flai's stamp must verify against: the embedded release key unless a test gives its own. */
+	peerKeys?: readonly string[];
+	/** Whether a flai that sent no stamp is served, marked unsigned, rather than closed with
+	 * CLOSE_UNSIGNED. A stamp that does not verify or names another component is refused either way.
+	 * Off unless given. */
+	allowUnsigned?: boolean;
+};
+
 /** The close code a flai is refused with when the project it connected for is held by a flai that
  * answers (S-0184). flai backs off on it instead of dialling again at once. 4000 is the code of one
  * that is replaced because it stopped answering. */
 export const CLOSE_HELD = 4409;
 export const CLOSE_REPLACED = 4000;
+/** The close code a flai is refused with, before the credential proof, when its release stamp is
+ * missing, does not verify, or names another component (S-0237, ADR-0070). flai backs off on it as on
+ * CLOSE_HELD. */
+export const CLOSE_UNSIGNED = 4403;
+
+/** How many projects a refusal alone may make known: hello names its project before the proof, so
+ * anyone who can reach /agent can name one, and what they name is kept no more than this. */
+const MAX_REFUSED_ONLY = 8;
+/** How much of what an unproven hello names is kept or logged. */
+const MAX_UNPROVEN_FIELD = 128;
+
+/** What a refusal says of a stamp that did not verify. */
+function unsignedReason(stamp: PeerStampCheck): string {
+	if (stamp.state === 'missing') return 'missing stamp';
+	if (stamp.reason === 'wrong-component') return `wrong component ${stamp.component}`;
+	return 'invalid signature';
+}
 
 export function proof(key: string, role: string, first: string, second: string): string {
 	return createHmac('sha256', key).update(`${role}|${first}|${second}`).digest('hex');
@@ -288,6 +357,9 @@ export class AgentHub extends EventEmitter {
 	/** Whether its flai said the project is no longer served (S-0121): unregistered with flai serve
 	 * project remove or flai dashboard stop. A new connection for the key clears it. */
 	removed = false;
+	/** The last flai refused for this project as unsigned (S-0237): kept after its socket closed, since
+	 * a refused flai is never adopted, and cleared when a signed one is. */
+	refused: Refusal | null = null;
 
 	constructor(opt: AgentOptions & { configured?: boolean } = {}) {
 		super();
@@ -298,9 +370,10 @@ export class AgentHub extends EventEmitter {
 
 	status(): AgentStatus {
 		if (!this.configuredFlag) return { configured: false, connected: false };
-		if (!this.conn || !this.info) return { configured: true, connected: false };
+		const refused = this.refused ? { refused: this.refused } : {};
+		if (!this.conn || !this.info) return { configured: true, connected: false, ...refused };
 		const { project, ...rest } = this.info;
-		return { configured: true, connected: true, ...rest, serves: project };
+		return { configured: true, connected: true, ...rest, serves: project, ...refused };
 	}
 
 	/**
@@ -369,8 +442,9 @@ export class AgentHub extends EventEmitter {
 		this.info = info;
 		this.candidate = info.candidate === true;
 		this.removed = false;
+		if (info.signed) this.refused = null;
 		log().info(
-			{ component: 'agent', flai: info.flai, project: info.project.key },
+			{ component: 'agent', flai: info.flai, project: info.project.key, signed: info.signed },
 			'host flai connected'
 		);
 		let alive = true;
@@ -520,16 +594,25 @@ export class AgentRegistry extends EventEmitter {
 	private handshakeMs: number;
 	private maxUnproven: number;
 	private opt: AgentOptions;
+	private stamp: HelloStamp | null;
+	private peerKeys: readonly string[];
+	private allowUnsigned: boolean;
+	/** Projects known here only because a flai for them was refused, none adopted since (S-0237). */
+	private refusedOnly = new Set<string>();
 
 	constructor(
 		private key: string | null,
-		opt: AgentOptions = {}
+		opt: RegistryOptions = {}
 	) {
 		super();
 		this.setMaxListeners(0); // one Repo per project listens, however many projects there are
-		this.opt = opt;
+		const { stamp, peerKeys, allowUnsigned, ...hubOpt } = opt;
+		this.opt = hubOpt;
 		this.handshakeMs = opt.handshakeMs ?? 5000;
 		this.maxUnproven = opt.maxUnproven ?? 4;
+		this.stamp = stamp ?? null;
+		this.peerKeys = peerKeys ?? [RELEASE_PUBLIC_KEY];
+		this.allowUnsigned = allowUnsigned ?? false;
 	}
 
 	/** The project's hub, made the first time it is asked for. Every project shares the credential,
@@ -540,7 +623,10 @@ export class AgentRegistry extends EventEmitter {
 		if (!h) {
 			h = new AgentHub({ ...this.opt, configured: this.key !== null });
 			this.hubs.set(key, h);
-			h.on('connected', () => this.emit('connected', key));
+			h.on('connected', () => {
+				this.refusedOnly.delete(key);
+				this.emit('connected', key);
+			});
 			h.on('gone', () => this.emit('gone', key));
 			h.on('change', (path: string) => this.emit('change', key, path));
 			h.on('agent', (story: string) => this.emit('agent', key, story));
@@ -566,7 +652,9 @@ export class AgentRegistry extends EventEmitter {
 				name: st.serves?.name ?? key,
 				connected: st.connected,
 				since: st.since,
-				...(h.candidate ? { candidate: true } : {})
+				...(h.candidate ? { candidate: true } : {}),
+				...(st.signed !== undefined ? { signed: st.signed } : {}),
+				...(st.refused ? { refused: st.refused } : {})
 			});
 		}
 		return out.sort((a, b) => a.key.localeCompare(b.key));
@@ -588,10 +676,14 @@ export class AgentRegistry extends EventEmitter {
 	 */
 	solo(): AgentHub {
 		// a repository offered for import is not a project a request with no ?project= could mean
-		const known = [...this.hubs.entries()]
+		const usable = [...this.hubs.entries()]
 			.filter(([, h]) => !h.candidate && !(h.removed && !h.status().connected))
 			.map(([k]) => k);
+		const known = usable.filter((k) => !this.refusedOnly.has(k));
 		if (known.length === 1) return this.hubs.get(known[0])!;
+		// a project whose only flai so far was refused is the one project only while no other is known:
+		// it was named before any proof, so it never makes a proven project ambiguous (S-0237)
+		if (known.length === 0 && usable.length === 1) return this.hubs.get(usable[0])!;
 		if (!this.pending) this.pending = new AgentHub({ configured: this.key !== null });
 		return this.pending;
 	}
@@ -618,12 +710,8 @@ export class AgentRegistry extends EventEmitter {
 		this.unproven++;
 		let mine = '';
 		let theirs = '';
-		let hello: {
-			flai?: string;
-			project?: { key?: string; name?: string };
-			methods?: unknown;
-			kind?: unknown;
-		} = {};
+		let hello: Hello = {};
+		let signed = false;
 		let done = false;
 		const finish = () => {
 			if (!done) {
@@ -643,10 +731,10 @@ export class AgentRegistry extends EventEmitter {
 				return ws.close(4400, 'not JSON');
 			}
 			if (!mine) {
-				const p = (m.params ?? {}) as { protocol?: number; nonce?: string } & typeof hello;
+				const p = (m.params ?? {}) as { protocol?: number; nonce?: string } & Hello;
 				if (m.method !== 'hello' || typeof p.nonce !== 'string' || !p.nonce)
 					return ws.close(4400, 'hello first');
-				if (p.protocol !== PROTOCOL) {
+				if (p.protocol !== PROTOCOL && p.protocol !== UNSTAMPED_PROTOCOL) {
 					ws.send(
 						JSON.stringify({
 							jsonrpc: '2.0',
@@ -659,6 +747,12 @@ export class AgentRegistry extends EventEmitter {
 					);
 					return ws.close(4400, 'protocol');
 				}
+				// The release stamp is judged before the credential (S-0237): an unsigned flai, an older
+				// one without the field among them, is closed before it is sent a nonce to prove against.
+				const stamp = verifyPeerStamp(p.release, PEER_COMPONENT, this.peerKeys);
+				signed = stamp.state === 'signed';
+				if (!signed && !(stamp.state === 'missing' && this.allowUnsigned))
+					return this.refuseUnsigned(ws, p, stamp);
 				theirs = p.nonce;
 				hello = p;
 				mine = randomBytes(16).toString('hex');
@@ -669,7 +763,8 @@ export class AgentRegistry extends EventEmitter {
 						result: {
 							nonce: mine,
 							proof: proof(key, 'dashboard', theirs, mine),
-							dashboard: version
+							dashboard: version,
+							...(this.stamp ? { release: this.stamp } : {})
 						}
 					})
 				);
@@ -704,10 +799,30 @@ export class AgentRegistry extends EventEmitter {
 					: REQUIRED_METHODS.filter(
 							(m) => !(Array.isArray(hello.methods) ? hello.methods : []).includes(m)
 						),
-				candidate
+				candidate,
+				signed
 			});
 		};
 		ws.on('message', onMessage);
+	}
+
+	/** Close a flai whose stamp did not verify with CLOSE_UNSIGNED, and keep why against its project. */
+	private refuseUnsigned(ws: WebSocket, hello: Hello, stamp: PeerStampCheck): void {
+		const reason = unsignedReason(stamp);
+		const flai = (stamp.version ?? String(hello.flai ?? '')).slice(0, MAX_UNPROVEN_FIELD);
+		const project = String(hello.project?.key ?? '').slice(0, MAX_UNPROVEN_FIELD);
+		log().warn({ component: 'agent', project, flai, reason }, 'host flai refused: unsigned peer');
+		if (project) this.keepRefusal(project, { at: new Date().toISOString(), reason, flai });
+		ws.close(CLOSE_UNSIGNED, `unsigned peer: ${reason}`);
+	}
+
+	/** Keep a refusal against the project, making it known when it was not, within MAX_REFUSED_ONLY. */
+	private keepRefusal(project: string, refusal: Refusal): void {
+		if (!this.hubs.has(project)) {
+			if (this.refusedOnly.size >= MAX_REFUSED_ONLY) return;
+			this.refusedOnly.add(project);
+		}
+		this.hub(project).refused = refusal;
 	}
 
 	close(): void {
@@ -718,8 +833,15 @@ export class AgentRegistry extends EventEmitter {
 
 let reg: AgentRegistry | null = null;
 
-/** The process-wide registry. The shared credential comes from FLAIOVER_AGENT_KEY_FILE, read once. */
-export function registry(env: Record<string, string | undefined> = process.env): AgentRegistry {
+/**
+ * The process-wide registry. The shared credential comes from FLAIOVER_AGENT_KEY_FILE, read once, and
+ * the stamp it answers hello with from the image's own (S-0235), unless opt, taken by the call that
+ * makes it, gives one; a test that connects its own flai gives opt its keys.
+ */
+export function registry(
+	env: Record<string, string | undefined> = process.env,
+	opt: RegistryOptions = {}
+): AgentRegistry {
 	if (reg) return reg;
 	let key: string | null = null;
 	const file = env.FLAIOVER_AGENT_KEY_FILE;
@@ -730,7 +852,9 @@ export function registry(env: Record<string, string | undefined> = process.env):
 			log().warn({ component: 'agent', err: String(err) }, 'agent credential unreadable');
 		}
 	}
-	reg = new AgentRegistry(key);
+	const stamp =
+		opt.stamp !== undefined ? opt.stamp : helloStamp(checkReleaseStamp({ version, commit }, env));
+	reg = new AgentRegistry(key, { ...opt, stamp });
 	return reg;
 }
 

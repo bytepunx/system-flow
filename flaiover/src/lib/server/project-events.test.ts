@@ -109,6 +109,8 @@ describe('live changes per project (S-0095)', () => {
 		dir = mkdtempSync(join(tmpdir(), 'flaiover-events-'));
 		writeFileSync(join(dir, 'agent-key'), KEY + '\n');
 		process.env.FLAIOVER_AGENT_KEY_FILE = join(dir, 'agent-key');
+		// These fake flais carry no release stamp; signing is agent.test.ts's (S-0237).
+		registry(process.env, { allowUnsigned: true });
 		server = http.createServer((_req, res) => res.end('ok'));
 		server.on('upgrade', (req, socket, head) => registry().handleUpgrade(req, socket, head));
 		await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));

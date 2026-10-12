@@ -76,6 +76,13 @@ export function readStampFile(path: string): StampFile {
 
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 
+/** Whether one of the keys signed the statement with the base64 ASN.1 DER signature. */
+function signedBy(statement: string, signature: string, keys: readonly string[]): boolean {
+	return keys.some((key) =>
+		verify('sha256', Buffer.from(statement), key, Buffer.from(signature, 'base64'))
+	);
+}
+
 /** Verify a stamp file's content against the build and the release keys; no I/O. */
 export function verifyReleaseStamp(
 	file: StampFile,
@@ -106,10 +113,7 @@ export function verifyReleaseStamp(
 	});
 	const fields = statement.split(' ');
 	if (fields.length !== 3) return invalid('malformed');
-	const signed = keys.some((key) =>
-		verify('sha256', Buffer.from(statement), key, Buffer.from(signature, 'base64'))
-	);
-	if (!signed) return invalid('bad-signature');
+	if (!signedBy(statement, signature, keys)) return invalid('bad-signature');
 	const [component, version, commit] = fields;
 	if (component !== STAMP_COMPONENT) return invalid('wrong-component');
 	if (version !== build.version) return invalid('version-mismatch');
@@ -130,4 +134,65 @@ export function checkReleaseStamp(
 /** Whether the server warns at start: a build with a version and no valid stamp. */
 export function stampWarrantsWarning(stamp: ReleaseStamp): boolean {
 	return !stamp.development && stamp.state !== 'signed';
+}
+
+// A peer's stamp (S-0237, release-signing.md § A release stamp in hello): flai sends its own in hello
+// and the dashboard answers with its, each as the statement and its signature. A peer's stamp is
+// checked for the release key's signature and the component it names, never for its version or
+// commit, which are the peer's own and need not be the dashboard's.
+
+/** A stamp as hello carries it, each way. */
+export type HelloStamp = { statement: string; signature: string };
+
+/** The component name a flai's stamp must carry. */
+export const PEER_COMPONENT = 'flai';
+
+export type PeerStampReason = 'malformed' | 'bad-signature' | 'wrong-component';
+
+/** What a peer's stamp says, once checked. */
+export type PeerStampCheck = {
+	state: StampState;
+	/** Why the stamp is invalid; null unless state is invalid. */
+	reason: PeerStampReason | null;
+	/** The component a signed statement names; null when it is missing, malformed, or unsigned. */
+	component: string | null;
+	/** The version a statement of the expected component names, signed or not; null otherwise. */
+	version: string | null;
+};
+
+/** The stamp the dashboard answers hello with: its own, when it holds one well formed, else none. */
+export function helloStamp(stamp: ReleaseStamp): HelloStamp | null {
+	if (stamp.statement === null || stamp.signature === null) return null;
+	return { statement: stamp.statement, signature: stamp.signature };
+}
+
+/** Check the stamp a peer sent, as it arrived, for the expected component and the keys; no I/O. */
+export function verifyPeerStamp(
+	stamp: unknown,
+	component: string,
+	keys: readonly string[] = [RELEASE_PUBLIC_KEY]
+): PeerStampCheck {
+	const base = { reason: null, component: null, version: null };
+	if (stamp === undefined || stamp === null) return { ...base, state: 'missing' };
+	const { statement, signature } = stamp as Partial<Record<keyof HelloStamp, unknown>>;
+	// a development build sends the field with nothing in it
+	if (statement === '' && signature === '') return { ...base, state: 'missing' };
+	const invalid = (
+		reason: PeerStampReason,
+		more: Partial<PeerStampCheck> = {}
+	): PeerStampCheck => ({
+		...base,
+		state: 'invalid',
+		reason,
+		...more
+	});
+	if (typeof statement !== 'string' || typeof signature !== 'string' || !BASE64.test(signature))
+		return invalid('malformed');
+	const fields = statement.split(' ');
+	if (fields.length !== 3 || fields.some((f) => !f)) return invalid('malformed');
+	const [named, version] = fields;
+	const claimed = named === component ? version : null;
+	if (!signedBy(statement, signature, keys)) return invalid('bad-signature', { version: claimed });
+	if (named !== component) return invalid('wrong-component', { component: named });
+	return { ...base, state: 'signed', component: named, version };
 }
