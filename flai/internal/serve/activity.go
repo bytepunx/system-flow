@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
@@ -194,7 +195,9 @@ func readActivity(d Dir, root, key, kind string) (*activityMeasure, error) {
 	if len(logs) == 0 {
 		return m, nil
 	}
-	if m.rec, err = usage.Read(logs...); err != nil {
+	// read as claude-code's, the harness that runs a strategic agent from its
+	// definition (Capabilities.StrategicAgents)
+	if m.rec, err = usage.Read(harness.Adapters[harness.ClaudeCode].Reader(), logs...); err != nil {
 		return nil, err
 	}
 	if m.rates, err = d.Rates(); err != nil {

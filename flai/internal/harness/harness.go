@@ -20,6 +20,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -188,6 +189,9 @@ type Adapter interface {
 	Start(req Request, host Host) (Start, error)
 	// Capabilities are what flai serve may count on the harness to do.
 	Capabilities() Capabilities
+	// Reader is a fresh reader of the harness's log into usage events, for
+	// the logs of one measurement read in order (ADR-0130).
+	Reader() usage.Reader
 }
 
 // Adapters are the harnesses flai can start, by name.

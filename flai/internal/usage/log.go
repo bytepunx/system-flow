@@ -2,7 +2,6 @@ package usage
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,39 +9,42 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
-// Measuring an agent's usage from its log (S-0143). Claude Code writes
-// stream-json, one event per line, and two kinds of event say what was spent:
+// Measuring an agent's usage from its log (S-0143). The reader of the
+// harness that wrote the log turns its lines into events (ADR-0130), and two
+// kinds of event say what was spent:
 //
-//   - result, at the end of each run, reports per model the tokens and the
-//     cost of the whole session so far, subagents included. A session resumed
-//     in a later run (after an answer) reports its totals again, cumulative,
-//     so a session's newest result is its total.
-//   - assistant, once per content block of each call to the model, with the
-//     call's timestamp, message id, model, and usage. Its input and cache
-//     tokens are exact once the repeats are dropped; its output tokens are the
-//     first chunk's only, so they are a lower bound.
+//   - End, at the end of each run, reports per model the tokens and the cost
+//     of the whole session so far, subagents included. A session resumed in
+//     a later run (after an answer) reports its totals again, cumulative, so
+//     a session's newest End is its total.
+//   - Call, for each line of each call to the model, with the call's time,
+//     message ID, model, and tokens. A message logged over several lines is
+//     one call, with the most any of its lines says of each kind of token.
+//     With Claude Code its input and cache tokens are exact; its output
+//     tokens are the first chunk's only, so they are a lower bound.
 //
 // A session's reported totals are taken as they are. What came after a
-// session's newest result, a run still going or one that died, is counted
-// from its calls and its cost estimated.
+// session's newest End, a run still going or one that died, is counted from
+// its calls and its cost estimated.
 //
-// A sub-agent's calls are in its story's agent's session and carry
-// parent_tool_use_id, the ID of the Agent (or Task) tool_use that started it
-// (S-0230, I-0054). A task is given each session's reported totals in the
-// share of their calls' input and cache tokens that are its own: the calls
-// of the sub-agents started for it, wherever they fall in time, and an even
-// share, among the tasks in progress at the time, of every other call made
-// while it was in progress. It is marked estimated.
+// A sub-agent's calls are in its story's agent's session and carry the ID of
+// the tool call that started it, an Agent (or Task) call, as their
+// ParentCall (S-0230, I-0054). A task is given each session's reported
+// totals in the share of their calls' input and cache tokens that are its
+// own: the calls of the sub-agents started for it, wherever they fall in
+// time, and an even share, among the tasks in progress at the time, of every
+// other call made while it was in progress. It is marked estimated.
 //
 // A story's empty wakes (S-0272, ADR-0105) are counted as the logs are read:
 // each call to the flai MCP tool wait_for_events by the session's own agent,
-// a tool_use without parent_tool_use_id, is paired by its ID with its
-// tool_result, and counted when that result is not an error and reports
-// timed_out with no events, no changed paths, and no end. A call whose result
-// is not in the logs is not counted.
+// a ToolCall with no ParentCall, is paired by its ID with its ToolResult, and
+// counted when that result is not an error and reports timed_out with no
+// events, no changed paths, and no end. A call whose result is not in the
+// logs is not counted.
 //
 // A story's turns (S-0293) are gathered as the logs are read, each message of
 // the session's own agent with the tools it called, and classified and
@@ -57,10 +59,10 @@ type call struct {
 	model   string
 	session string
 	usage   Model
-	// agent is the ID of the tool_use that started the sub-agent that made
+	// agent is the ID of the tool call that started the sub-agent that made
 	// it; empty for the session's own agent.
 	agent string
-	// covered says a result reported after it counts it.
+	// covered says an End reported after it counts it.
 	covered bool
 }
 
@@ -73,8 +75,8 @@ type Run struct {
 	Path  string    `json:"path"`
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
-	// Result is the final text of the run's newest result event; empty when
-	// it has none or that event carries no text.
+	// Result is the final text of the run's newest End; empty when it has
+	// none or that End carries no text.
 	Result string `json:"result,omitempty"`
 }
 
@@ -82,12 +84,12 @@ type Run struct {
 type Record struct {
 	Runs  []Run
 	calls []call
-	// reported is each session's newest result, by model.
+	// reported is each session's newest End, by model.
 	reported map[string]map[string]Model
-	// started are the sub-agents' starts, by the ID of their tool_use.
+	// started are the sub-agents' starts, by the ID of their tool call.
 	started map[string]start
 	// waits are the session's own agent's wait_for_events calls whose result
-	// has not been read yet, by the ID of their tool_use.
+	// has not been read yet, by the ID of their tool call.
 	waits map[string]bool
 	// emptied are the IDs of those calls whose result was an empty wake.
 	emptied map[string]bool
@@ -97,93 +99,32 @@ type Record struct {
 	turnByID map[string]int
 }
 
-// waitTool is the name Claude Code gives the flai MCP tool wait_for_events.
-const waitTool = "mcp__flai__wait_for_events"
-
 // start is what started a sub-agent: its Agent call's description and
 // prompt, or, when the call was not seen, the description its calls carry.
 type start struct {
 	description, prompt string
 }
 
-// Read reads the logs, oldest run first. A log that is missing is skipped:
-// flai serve may not have written it yet.
-func Read(paths ...string) (*Record, error) {
+// Read reads the logs with r, the reader of the harness that wrote them,
+// oldest run first. A log that is missing is skipped: flai serve may not
+// have written it yet.
+func Read(r Reader, paths ...string) (*Record, error) {
 	rec := &Record{
 		reported: map[string]map[string]Model{}, started: map[string]start{}, waits: map[string]bool{},
 		emptied: map[string]bool{}, turnByID: map[string]int{},
 	}
 	byID := map[string]int{} // message id to its index in calls
 	for _, p := range paths {
-		if err := rec.read(p, byID); err != nil {
+		if err := rec.read(r, p, byID); err != nil {
 			return nil, err
 		}
 	}
 	return rec, nil
 }
 
-// line is the part of a stream-json event usage is measured from.
-type line struct {
-	Type      string `json:"type"`
-	Subtype   string `json:"subtype"`
-	Timestamp string `json:"timestamp"`
-	// Result is a result event's final text.
-	Result    string `json:"result"`
-	SessionID string `json:"session_id"`
-	Model     string `json:"model"`
-	// ParentToolUseID is the tool_use that started the sub-agent the event
-	// is from; empty for the session's own agent.
-	ParentToolUseID string `json:"parent_tool_use_id"`
-	// TaskDescription is the description of the Agent call that started
-	// the sub-agent the event is from.
-	TaskDescription string `json:"task_description"`
-	Message         *struct {
-		ID      string `json:"id"`
-		Model   string `json:"model"`
-		Content []struct {
-			Type  string `json:"type"`
-			ID    string `json:"id"`
-			Name  string `json:"name"`
-			Input struct {
-				Description string `json:"description"`
-				Prompt      string `json:"prompt"`
-				// Command is a Bash call's, FilePath the file an Edit,
-				// Write, or MultiEdit call changes.
-				Command  string `json:"command"`
-				FilePath string `json:"file_path"`
-			} `json:"input"`
-			// ToolUseID and IsError are a tool_result's: the tool_use it
-			// answers, and whether the call failed.
-			ToolUseID string `json:"tool_use_id"`
-			IsError   bool   `json:"is_error"`
-		} `json:"content"`
-		Usage *struct {
-			Input      int64 `json:"input_tokens"`
-			Output     int64 `json:"output_tokens"`
-			CacheRead  int64 `json:"cache_read_input_tokens"`
-			CacheWrite int64 `json:"cache_creation_input_tokens"`
-		} `json:"usage"`
-	} `json:"message"`
-	ModelUsage map[string]struct {
-		Input      int64   `json:"inputTokens"`
-		Output     int64   `json:"outputTokens"`
-		CacheRead  int64   `json:"cacheReadInputTokens"`
-		CacheWrite int64   `json:"cacheCreationInputTokens"`
-		Cost       float64 `json:"costUSD"`
-	} `json:"modelUsage"`
-	CostUSD float64 `json:"total_cost_usd"`
-	Usage   *struct {
-		Input      int64 `json:"input_tokens"`
-		Output     int64 `json:"output_tokens"`
-		CacheRead  int64 `json:"cache_read_input_tokens"`
-		CacheWrite int64 `json:"cache_creation_input_tokens"`
-	} `json:"usage"`
-}
-
-// Only these events are decoded; every other line is passed over unread.
-var wanted = [][]byte{[]byte(`"type":"assistant"`), []byte(`"type":"user"`), []byte(`"type":"result"`), []byte(`"subtype":"init"`)}
-
-func (rec *Record) read(path string, byID map[string]int) error {
+// eachLine hands each line of the log at path to read; a log that is
+// missing has none.
+func eachLine(path string, read func(line []byte)) error {
 	f, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -192,44 +133,56 @@ func (rec *Record) read(path string, byID map[string]int) error {
 		return fmt.Errorf("reading the agent log %s: %w", path, err)
 	}
 	defer func() { _ = f.Close() }()
-	run := Run{Path: path}
-	model := "" // the session's model, for a result that names none
 	r := bufio.NewReaderSize(f, 256<<10)
 	for {
 		raw, err := r.ReadBytes('\n')
-		if len(raw) > 0 && raw[0] == '{' && wantedLine(raw) {
-			var e line
-			if json.Unmarshal(raw, &e) == nil {
-				if at, perr := time.Parse(time.RFC3339Nano, e.Timestamp); perr == nil {
-					if run.Start.IsZero() || at.Before(run.Start) {
-						run.Start = at
-					}
-					if at.After(run.End) {
-						run.End = at
-					}
-				}
-				switch {
-				case e.Type == "system" && e.Subtype == "init":
-					model = e.Model
-				case e.Type == "assistant":
-					rec.addStarts(e)
-					rec.addWaits(e)
-					rec.addTurn(e)
-					rec.addCall(e, byID)
-				case e.Type == "user":
-					rec.addWakes(e, raw)
-				case e.Type == "result":
-					run.Result = e.Result
-					rec.addResult(e, model)
-				}
-			}
+		if len(raw) > 0 {
+			read(raw)
 		}
 		if errors.Is(err, io.EOF) {
-			break
+			return nil
 		}
 		if err != nil {
 			return fmt.Errorf("reading the agent log %s: %w", path, err)
 		}
+	}
+}
+
+func (rec *Record) read(r Reader, path string, byID map[string]int) error {
+	run := Run{Path: path}
+	model := "" // the session's model, for an End that names none
+	err := eachLine(path, func(line []byte) {
+		events, _ := r.Read(line)
+		for _, e := range events {
+			if !e.At.IsZero() {
+				if run.Start.IsZero() || e.At.Before(run.Start) {
+					run.Start = e.At
+				}
+				if e.At.After(run.End) {
+					run.End = e.At
+				}
+			}
+			switch e.Kind {
+			case SessionStart:
+				model = e.Model
+			case Call:
+				rec.addDescribed(e)
+				rec.addTurn(e)
+				rec.addCall(e, byID)
+			case ToolCall:
+				rec.addStart(e)
+				rec.addWait(e)
+				rec.addTool(e)
+			case ToolResult:
+				rec.addWake(e)
+			case End:
+				run.Result = e.Result
+				rec.addResult(e, model)
+			}
+		}
+	})
+	if err != nil {
+		return err
 	}
 	if !run.Start.IsZero() {
 		rec.Runs = append(rec.Runs, run)
@@ -237,170 +190,129 @@ func (rec *Record) read(path string, byID map[string]int) error {
 	return nil
 }
 
-func wantedLine(raw []byte) bool {
-	for _, w := range wanted {
-		if bytes.Contains(raw, w) {
-			return true
-		}
+// addStart records the sub-agent a tool call starts: an Agent or Task call.
+func (rec *Record) addStart(e Event) {
+	if (e.Tool == "Agent" || e.Tool == "Task") && e.ToolID != "" {
+		rec.started[e.ToolID] = start{description: e.Description, prompt: e.Prompt}
 	}
-	return false
 }
 
-// addStarts records the sub-agents an event starts, and the description of
-// the one it is from when its start was not seen.
-func (rec *Record) addStarts(e line) {
-	if e.Message != nil {
-		for _, b := range e.Message.Content {
-			if b.Type == "tool_use" && (b.Name == "Agent" || b.Name == "Task") && b.ID != "" {
-				rec.started[b.ID] = start{description: b.Input.Description, prompt: b.Input.Prompt}
-			}
-		}
-	}
-	if p := e.ParentToolUseID; p != "" && e.TaskDescription != "" {
+// addDescribed records the description of the sub-agent a call is from when
+// its start was not seen.
+func (rec *Record) addDescribed(e Event) {
+	if p := e.ParentCall; p != "" && e.ParentDescription != "" {
 		if _, ok := rec.started[p]; !ok {
-			rec.started[p] = start{description: e.TaskDescription}
+			rec.started[p] = start{description: e.ParentDescription}
 		}
 	}
 }
 
-// addWaits records the wait_for_events calls the session's own agent makes
-// in an event; a sub-agent's are left out.
-func (rec *Record) addWaits(e line) {
-	if e.Message == nil || e.ParentToolUseID != "" {
+// addWait records a wait_for_events call the session's own agent makes; a
+// sub-agent's is left out.
+func (rec *Record) addWait(e Event) {
+	if e.ParentCall == "" && e.Tool == waitTool && e.ToolID != "" {
+		rec.waits[e.ToolID] = true
+	}
+}
+
+// addWake pairs a tool's result with the wait_for_events call waiting for
+// it, and counts it when it was an empty wake.
+func (rec *Record) addWake(e Event) {
+	if !rec.waits[e.ToolID] {
 		return
 	}
-	for _, b := range e.Message.Content {
-		if b.Type == "tool_use" && b.Name == waitTool && b.ID != "" {
-			rec.waits[b.ID] = true
-		}
+	delete(rec.waits, e.ToolID)
+	if !e.IsError && emptyWake(e.Result) {
+		rec.emptied[e.ToolID] = true
 	}
 }
 
-// addWakes pairs the tool_results of an event with the wait_for_events
-// calls waiting for them, and counts those that were empty wakes. Only a
-// result that answers such a call has its content decoded, from raw.
-func (rec *Record) addWakes(e line, raw []byte) {
-	if e.Message == nil || len(rec.waits) == 0 {
+// addTurn opens the turn of a call's message, at its first call, when the
+// session's own agent made it; a sub-agent's is left out.
+func (rec *Record) addTurn(e Event) {
+	if e.MessageID == "" || e.ParentCall != "" {
 		return
 	}
-	for _, b := range e.Message.Content {
-		if b.Type != "tool_result" || !rec.waits[b.ToolUseID] {
-			continue
-		}
-		delete(rec.waits, b.ToolUseID)
-		if !b.IsError && emptyWake(raw, b.ToolUseID) {
-			rec.emptied[b.ToolUseID] = true
-		}
+	if _, ok := rec.turnByID[e.MessageID]; !ok {
+		rec.turnByID[e.MessageID] = len(rec.turns)
+		rec.turns = append(rec.turns, turn{at: e.At})
 	}
 }
 
-// addTurn gathers the tools the session's own agent calls in an event into
-// the turn of its message, which the first event of the message opens; a
-// sub-agent's are left out.
-func (rec *Record) addTurn(e line) {
-	if e.Message == nil || e.Message.ID == "" || e.ParentToolUseID != "" {
+// addTool gathers a tool call of the session's own agent into the turn of
+// its message, which a call of the message opened.
+func (rec *Record) addTool(e Event) {
+	if e.MessageID == "" || e.ParentCall != "" {
 		return
 	}
-	i, ok := rec.turnByID[e.Message.ID]
-	if !ok {
-		at, _ := time.Parse(time.RFC3339Nano, e.Timestamp)
-		i = len(rec.turns)
-		rec.turnByID[e.Message.ID] = i
-		rec.turns = append(rec.turns, turn{at: at})
-	}
-	for _, b := range e.Message.Content {
-		if b.Type == "tool_use" {
-			rec.turns[i].calls = append(rec.turns[i].calls, toolCall{id: b.ID, name: b.Name, command: b.Input.Command, path: b.Input.FilePath})
-		}
-	}
+	rec.addTurn(e)
+	i := rec.turnByID[e.MessageID]
+	rec.turns[i].calls = append(rec.turns[i].calls, toolCall{id: e.ToolID, name: e.Tool, command: e.Command, path: e.Path})
 }
 
-// emptyWake says the tool_result for id in the event raw reports that the
-// wait timed out with no events, no changed paths, and no end. Its content
-// is the tool's JSON as a string, or in a list of text blocks.
-func emptyWake(raw []byte, id string) bool {
-	var e struct {
-		Message struct {
-			Content []struct {
-				Type      string          `json:"type"`
-				ToolUseID string          `json:"tool_use_id"`
-				Content   json.RawMessage `json:"content"`
-			} `json:"content"`
-		} `json:"message"`
-	}
-	if json.Unmarshal(raw, &e) != nil {
-		return false
-	}
-	for _, b := range e.Message.Content {
-		if b.Type != "tool_result" || b.ToolUseID != id {
-			continue
+// emptyWake says the text of a wait_for_events result reports that the wait
+// timed out with no events, no changed paths, and no end: the first JSON
+// object in it says so.
+func emptyWake(text string) bool {
+	d := json.NewDecoder(strings.NewReader(text))
+	for {
+		var r struct {
+			TimedOut bool              `json:"timed_out"`
+			Events   []json.RawMessage `json:"events"`
+			Changed  []json.RawMessage `json:"changed"`
+			End      bool              `json:"end"`
 		}
-		var texts []string
-		var text string
-		var blocks []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
-		}
+		err := d.Decode(&r)
+		var notObject *json.UnmarshalTypeError
 		switch {
-		case json.Unmarshal(b.Content, &text) == nil:
-			texts = []string{text}
-		case json.Unmarshal(b.Content, &blocks) == nil:
-			for _, t := range blocks {
-				if t.Type == "text" {
-					texts = append(texts, t.Text)
-				}
-			}
+		case err == nil:
+			return r.TimedOut && len(r.Events) == 0 && len(r.Changed) == 0 && !r.End
+		case !errors.As(err, &notObject):
+			return false
 		}
-		for _, t := range texts {
-			var r struct {
-				TimedOut bool              `json:"timed_out"`
-				Events   []json.RawMessage `json:"events"`
-				Changed  []json.RawMessage `json:"changed"`
-				End      bool              `json:"end"`
-			}
-			if json.Unmarshal([]byte(t), &r) == nil {
-				return r.TimedOut && len(r.Events) == 0 && len(r.Changed) == 0 && !r.End
-			}
-		}
-		return false
 	}
-	return false
 }
 
-func (rec *Record) addCall(e line, byID map[string]int) {
-	if e.Message == nil || e.Message.Usage == nil || e.Message.ID == "" {
+// addCall counts a call to the model once per message: a repeat of its ID,
+// another line of the message, keeps the most any line said.
+func (rec *Record) addCall(e Event, byID map[string]int) {
+	if e.Tokens == nil || e.MessageID == "" {
 		return
 	}
-	u := e.Message.Usage
-	got := Model{Model: e.Message.Model, Input: u.Input, Output: u.Output, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite}
-	if i, ok := byID[e.Message.ID]; ok {
-		// a repeat for another content block: keep the most it said
+	u := e.Tokens
+	got := Model{Model: e.Model, Input: u.Input, Output: u.Output, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite}
+	if i, ok := byID[e.MessageID]; ok {
 		c := &rec.calls[i]
 		c.usage.Input, c.usage.Output = max(c.usage.Input, got.Input), max(c.usage.Output, got.Output)
 		c.usage.CacheRead, c.usage.CacheWrite = max(c.usage.CacheRead, got.CacheRead), max(c.usage.CacheWrite, got.CacheWrite)
 		return
 	}
-	at, _ := time.Parse(time.RFC3339Nano, e.Timestamp)
-	byID[e.Message.ID] = len(rec.calls)
-	rec.calls = append(rec.calls, call{at: at, model: got.Model, session: e.SessionID, usage: got, agent: e.ParentToolUseID})
+	byID[e.MessageID] = len(rec.calls)
+	rec.calls = append(rec.calls, call{at: e.At, model: got.Model, session: e.Session, usage: got, agent: e.ParentCall})
 }
 
-func (rec *Record) addResult(e line, model string) {
+// addResult keeps what an End reports as its session's totals, by model, or
+// for model, the session's, when it reports no breakdown by model.
+func (rec *Record) addResult(e Event, model string) {
 	totals := map[string]Model{}
-	for name, m := range e.ModelUsage {
-		totals[name] = Model{Model: name, Input: m.Input, Output: m.Output, CacheRead: m.CacheRead, CacheWrite: m.CacheWrite, Cost: m.Cost}
+	for _, m := range e.Models {
+		totals[m.Model] = m
 	}
-	if len(totals) == 0 && e.Usage != nil && model != "" {
+	if len(totals) == 0 && e.Tokens != nil && model != "" {
 		// a harness that reports no model breakdown: the session's model
-		u := e.Usage
-		totals[model] = Model{Model: model, Input: u.Input, Output: u.Output, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite, Cost: e.CostUSD}
+		u := e.Tokens
+		m := Model{Model: model, Input: u.Input, Output: u.Output, CacheRead: u.CacheRead, CacheWrite: u.CacheWrite}
+		if e.CostUSD != nil {
+			m.Cost = *e.CostUSD
+		}
+		totals[model] = m
 	}
 	if len(totals) == 0 {
 		return
 	}
-	rec.reported[e.SessionID] = totals
+	rec.reported[e.Session] = totals
 	for i := range rec.calls {
-		if rec.calls[i].session == e.SessionID {
+		if rec.calls[i].session == e.Session {
 			rec.calls[i].covered = true
 		}
 	}
@@ -438,7 +350,7 @@ func (r Rates) Merge(o Rates) Rates {
 }
 
 // Total is everything the record says was spent, with SourceLog, and the
-// empty wakes and the turns by day its logs hold; nil when it says nothing. What no result
+// empty wakes and the turns by day its logs hold; nil when it says nothing. What no End
 // reported is priced at rates, or at the record's own when rates has none
 // for its model.
 func (rec *Record) Total(rates Rates) *Usage {
@@ -467,7 +379,7 @@ func (rec *Record) Total(rates Rates) *Usage {
 	return u
 }
 
-// estimate prices a call no result reported at its model's rate; with no
+// estimate prices a call no End reported at its model's rate; with no
 // rate its cost is left at nothing.
 func estimate(m Model, rates Rates) Model {
 	m.Cost = float64(m.Tokens()) * rates[m.Model]
@@ -500,7 +412,7 @@ func (rec *Record) Tasks(spans map[string][]Span, rates Rates) map[string]*Usage
 		}
 		return out[id]
 	}
-	owner := map[string]string{} // a sub-agent's tool_use ID to its task
+	owner := map[string]string{} // a sub-agent's tool call ID to its task
 	for _, c := range rec.calls {
 		k := key{c.session, c.model}
 		if c.covered {
@@ -624,34 +536,36 @@ func (s start) task(ids map[string]string) string {
 	return ""
 }
 
-// ReadRates are the rates the results in the logs report, read without the
-// rest of each log.
-func ReadRates(paths ...string) (Rates, error) {
+// endSkimmer is a Reader that tells, without decoding a line, whether it may
+// hold an End, so that ReadRates decodes no other line.
+type endSkimmer interface {
+	// MayEnd says the line may hold an End.
+	MayEnd(line []byte) bool
+}
+
+// ReadRates are the rates the Ends in the logs report, read with r, the
+// reader of the harness that wrote them; when r can skim, without the rest
+// of each log.
+func ReadRates(r Reader, paths ...string) (Rates, error) {
 	rec := &Record{reported: map[string]map[string]Model{}}
+	skim, _ := r.(endSkimmer)
 	for _, p := range paths {
-		f, err := os.Open(p)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		if err != nil {
-			return nil, fmt.Errorf("reading the agent log %s: %w", p, err)
-		}
-		r := bufio.NewReaderSize(f, 256<<10)
-		for {
-			raw, err := r.ReadBytes('\n')
-			if len(raw) > 0 && raw[0] == '{' && bytes.Contains(raw, []byte(`"type":"result"`)) {
-				var e line
-				if json.Unmarshal(raw, &e) == nil && e.Type == "result" {
+		err := eachLine(p, func(line []byte) {
+			if skim != nil && !skim.MayEnd(line) {
+				return
+			}
+			events, _ := r.Read(line)
+			for _, e := range events {
+				if e.Kind == End {
 					// a session per log is enough to weigh the rates by
-					e.SessionID = p + "\x00" + e.SessionID
+					e.Session = p + "\x00" + e.Session
 					rec.addResult(e, "")
 				}
 			}
-			if err != nil {
-				break
-			}
+		})
+		if err != nil {
+			return nil, err
 		}
-		_ = f.Close()
 	}
 	return rec.Rates(), nil
 }

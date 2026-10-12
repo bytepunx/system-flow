@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -46,6 +48,10 @@ func (lab *agentLab) taskWorked(story, title string, from, to time.Time) string 
 	return tk.ID
 }
 
+// claudeCode is a story's agent that runs claude-code, whose logs are its
+// stream-json.
+var claudeCode = &manifest.Agent{Harness: harness.ClaudeCode}
+
 func (lab *agentLab) usageOf(id string) *usage.Usage {
 	lab.t.Helper()
 	it, err := lab.repo.Get(id)
@@ -59,7 +65,7 @@ func (lab *agentLab) usageOf(id string) *usage.Usage {
 // progress, and its epic is summed again.
 func TestMeasureWritesAStoryItsTasksAndItsEpic(t *testing.T) {
 	lab := newAgentLab(t)
-	story := lab.backlog("Measured", nil)
+	story := lab.backlog("Measured", claudeCode)
 	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
 	first := lab.taskWorked(story, "first", t0.Add(time.Minute), t0.Add(5*time.Minute))
 	second := lab.taskWorked(story, "second", t0.Add(5*time.Minute), t0.Add(20*time.Minute))
@@ -121,7 +127,7 @@ func TestMeasureWritesAStoryItsTasksAndItsEpic(t *testing.T) {
 // spent on it, and on its epic, and measuring again writes nothing.
 func TestMeasureKeepsWhatThePlannerSpent(t *testing.T) {
 	lab := newAgentLab(t)
-	story := lab.backlog("Planned", nil)
+	story := lab.backlog("Planned", claudeCode)
 	planned := &usage.Usage{Source: usage.SourceLog, Seconds: 61, Estimated: true, Models: []usage.Model{{Model: "claude-opus-5-5", Input: 2, Output: 300, CacheRead: 2000, Cost: 0.5}}}
 	if _, err := lab.repo.ChargeStrategic(story, workitem.ActivityPlanner, planned); err != nil {
 		t.Fatal(err)
@@ -151,6 +157,34 @@ func TestMeasureKeepsWhatThePlannerSpent(t *testing.T) {
 	}
 }
 
+// ADR-0130: the logs of a story whose agent ran the operator's command are
+// read by the command's reader, which reads nothing, whatever they hold: the
+// story whose agent names no harness, the one that names it, and the one
+// that names claude-code whose newest run the command ran.
+func TestMeasureReadsNothingOfACommandsLog(t *testing.T) {
+	lab := newAgentLab(t)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	logs := filepath.Join(string(lab.o.Dir), "agents")
+	_ = os.MkdirAll(logs, 0o700)
+	ran := lab.backlog("Ran by the command", claudeCode)
+	lab.o.Dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Story: ran, Harness: harness.Command, Agent: "builder-" + ran, Started: t0.Format(time.RFC3339), Ended: t0.Add(time.Hour).Format(time.RFC3339)})
+	})
+	for _, story := range []string{lab.backlog("No harness", nil), lab.backlog("The command", &manifest.Agent{Harness: harness.Command}), ran} {
+		log := streamCall("s", "m0", t0, 1000) + "\n" + streamResult("s", 1000, 1.0) + "\n"
+		if err := os.WriteFile(filepath.Join(logs, "t-"+story+"-20260929T100000Z.log"), []byte(log), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		m, err := Measure(lab.o.Dir, lab.root, "t", story, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(m.Logs) != 1 || m.Usage != nil || len(m.Changed) != 0 || lab.usageOf(story) != nil {
+			t.Errorf("%s measured %+v, usage %+v; want its log and nothing measured", story, m, lab.usageOf(story))
+		}
+	}
+}
+
 // subAgentCall is a call of opus in session s at at by the sub-agent the
 // tool_use parent started, or by the story's agent when parent is empty,
 // with content blocks.
@@ -168,7 +202,7 @@ func subAgentCall(id, parent string, at time.Time, read int, blocks string) stri
 // their overlap, and together come to no more than the story.
 func TestMeasureGivesEachTaskItsSubAgentAndAShareOfTheStorysAgent(t *testing.T) {
 	lab := newAgentLab(t)
-	story := lab.backlog("Planned", nil)
+	story := lab.backlog("Planned", claudeCode)
 	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
 	first := lab.taskWorked(story, "first", t0.Add(time.Minute), t0.Add(10*time.Minute))
 	second := lab.taskWorked(story, "second", t0.Add(time.Minute), t0.Add(20*time.Minute))
@@ -208,8 +242,8 @@ func diff(a, b float64) float64 {
 	return b - a
 }
 
-// usageStub is an agent that writes a call to its log, stays while held,
-// and ends with its session's totals.
+// usageStub is claude-code's program: an agent that writes a call to its
+// log, stays while held, and ends with its session's totals.
 func (lab *agentLab) usageStub() {
 	lab.t.Helper()
 	stub := filepath.Join(lab.outDir, "usage-agent")
@@ -222,7 +256,7 @@ func (lab *agentLab) usageStub() {
 	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
 		lab.t.Fatal(err)
 	}
-	lab.cfg.Command = []string{stub}
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: stub}}
 }
 
 // A task done while its story's agent runs is measured at the next look, and
@@ -232,7 +266,7 @@ func TestAnAgentsStoryIsMeasuredWhenATaskIsDoneAndWhenItEnds(t *testing.T) {
 	ctx := context.Background()
 	lab.usageStub()
 	lab.hold()
-	story := lab.ready("Worked")
+	story := lab.readyWith("Worked", claudeCode)
 	lab.l.look(ctx, false)
 	waitFor(t, "the agent runs", func() bool { return lab.run(story).live() })
 	lab.move(story, workitem.InProgress)

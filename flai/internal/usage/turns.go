@@ -8,11 +8,12 @@ import (
 )
 
 // A story's turns (S-0293). A turn is one call to the model by the session's
-// own agent, an assistant message without parent_tool_use_id, that uses at
-// least one tool; Claude Code repeats a message once per content block, so
-// a turn's tool calls are gathered across the repeats of its message ID, and
-// its time is its first event's. Each turn is put in the first class it
-// matches:
+// own agent, a message whose events have no ParentCall, that makes at least
+// one ToolCall; a harness may log a message over several lines, as
+// Claude Code does one per content block, so a turn's tool calls are
+// gathered across the events of its message ID, and its time is its first
+// event's. The tools are named as the harness names them. Each turn is put
+// in the first class it matches:
 //
 //  1. test_runs: a Bash call runs a test, lint, or format tool by hand, in its
 //     command with heredoc bodies and quoted strings removed.
@@ -118,9 +119,9 @@ func tidyTurns(days []TurnDay) []TurnDay {
 	return days
 }
 
-// toolCall is one tool_use of a turn.
+// toolCall is one tool call of a turn.
 type toolCall struct {
-	// id is the tool_use's ID, name the tool's.
+	// id is the tool call's ID, name the tool's.
 	id, name string
 	// command is a Bash call's command; path the file an Edit, Write, or
 	// MultiEdit call changes.

@@ -6,13 +6,16 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/harness"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // What agents spent (S-0143, ADR-0051). flai serve keeps the log of every
 // agent it starts, named for the project's key, the story, and the time it
-// started. From those logs it measures a story whole, and each of the
+// started. From those logs, read by the reader of the harness the story's
+// agent ran with (ADR-0130), it measures a story whole, and each of the
 // story's tasks from the calls of the sub-agents started for it and its
 // share of the rest over the intervals it was in progress (S-0230), and
 // writes their usage into the front matter: when an agent it started ends,
@@ -62,7 +65,23 @@ func (d Dir) Rates() (usage.Rates, error) {
 	if err != nil {
 		return nil, err
 	}
-	return usage.ReadRates(paths...)
+	// claude-code is the harness that reports what its calls cost
+	return usage.ReadRates(harness.Adapters[harness.ClaudeCode].Reader(), paths...)
+}
+
+// logReader is the reader of the logs of story's agent: that of the harness
+// its newest run recorded, or when none did, of the harness its agent names,
+// as harness.For resolves it, the operator's command when it names none.
+func logReader(d Dir, root string, story *workitem.Item) (usage.Reader, error) {
+	a := story.Agent
+	if run := d.AgentStates()[root].Stories[story.ID]; run != nil && run.Harness != "" {
+		a = &manifest.Agent{Harness: run.Harness}
+	}
+	_, adapter, err := harness.For(a, true)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read the logs of %s's agent: %w", story.ID, err)
+	}
+	return adapter.Reader(), nil
 }
 
 // Measured is what the logs say a story and its tasks spent.
@@ -95,13 +114,18 @@ func Measure(d Dir, root, key, story string, write bool) (*Measured, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := repo.Get(story); err != nil {
+	it, err := repo.Get(story)
+	if err != nil {
 		return nil, err
 	}
 	if len(logs) == 0 {
 		return out, nil
 	}
-	rec, err := usage.Read(logs...)
+	r, err := logReader(d, root, it)
+	if err != nil {
+		return nil, err
+	}
+	rec, err := usage.Read(r, logs...)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +190,7 @@ func Measure(d Dir, root, key, story string, write bool) (*Measured, error) {
 	if err := put(story, out.Usage); err != nil {
 		return out, err
 	}
-	it, err := repo.Get(story)
+	it, err = repo.Get(story)
 	if err != nil {
 		return out, err
 	}

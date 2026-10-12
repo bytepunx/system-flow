@@ -27,12 +27,18 @@ import (
 // Each line's timestamp, session_id, parent_tool_use_id, and task_description
 // are on every event it holds.
 
+// waitTool is the name Claude Code gives the flai MCP tool wait_for_events.
+const waitTool = "mcp__flai__wait_for_events"
+
 // resultTools are the tools whose result the measurement reads.
 var resultTools = []string{waitTool}
 
+// claudeCodeEnd marks the one record that holds an End.
+var claudeCodeEnd = []byte(`"type":"result"`)
+
 // claudeCodeRecords mark the records that hold events, so that no other line
 // is decoded.
-var claudeCodeRecords = [][]byte{[]byte(`"type":"assistant"`), []byte(`"type":"user"`), []byte(`"type":"result"`), []byte(`"subtype":"init"`)}
+var claudeCodeRecords = [][]byte{[]byte(`"type":"assistant"`), []byte(`"type":"user"`), claudeCodeEnd, []byte(`"subtype":"init"`)}
 
 // claudeCodeReader reads one measurement's Claude Code logs, in order: it
 // keeps the IDs of the calls whose result it reads, as a result's line does
@@ -127,6 +133,11 @@ func (r *claudeCodeReader) Read(line []byte) ([]Event, bool) {
 		return []Event{end(l, base)}, true
 	}
 	return nil, false
+}
+
+// MayEnd says a line may be a result record, the one that holds an End.
+func (r *claudeCodeReader) MayEnd(line []byte) bool {
+	return len(line) > 0 && line[0] == '{' && bytes.Contains(line, claudeCodeEnd)
 }
 
 // calls are the Call of an assistant line and a ToolCall for each tool it

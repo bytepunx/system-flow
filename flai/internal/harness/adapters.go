@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
 // ClaudeCode is Anthropic's Claude Code, run headless (claude -p).
@@ -42,6 +43,9 @@ func (claudeCode) DefaultHost() Host {
 func (claudeCode) Capabilities() Capabilities {
 	return Capabilities{Resume: true, Guard: true, Ask: true, RoleModels: true, StrategicAgents: true, Cost: true}
 }
+
+// Reader reads claude's stream-json.
+func (claudeCode) Reader() usage.Reader { return usage.ClaudeCode() }
 
 var claudeCodeTakes = map[string]option{
 	"effort":         {flag: "--effort", value: regexp.MustCompile(`^(low|medium|high|xhigh|max)$`), says: "low, medium, high, xhigh, or max"},
@@ -365,6 +369,15 @@ func (command) DefaultHost() Host { return Host{} }
 // Capabilities are none: flai can neither resume, guard, ask, nor read the
 // operator's command.
 func (command) Capabilities() Capabilities { return Capabilities{} }
+
+// Reader reads nothing: flai does not know what the operator's command logs.
+func (command) Reader() usage.Reader { return unread{} }
+
+// unread is a reader of a log flai cannot read: no line of it is a record.
+type unread struct{}
+
+// Read is no event.
+func (unread) Read([]byte) ([]usage.Event, bool) { return nil, false }
 
 // Start replaces the placeholders in the operator's command.
 func (command) Start(r Request, host Host) (Start, error) {

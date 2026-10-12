@@ -64,7 +64,7 @@ var run1 = []string{
 }
 
 func TestTotalOfOneRunIsWhatItsResultReports(t *testing.T) {
-	rec, err := Read(writeLog(t, "a.log", run1...))
+	rec, err := Read(ClaudeCode(), writeLog(t, "a.log", run1...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestAResumedSessionCountsItsNewestResultOnly(t *testing.T) {
 		`{"type":"result","subtype":"success","session_id":"s","modelUsage":{`+
 			`"claude-opus-5-5":{"inputTokens":13,"outputTokens":500,"cacheReadInputTokens":9000,"cacheCreationInputTokens":500,"costUSD":1.7},`+
 			`"claude-haiku-4-5":{"inputTokens":5,"outputTokens":50,"cacheReadInputTokens":200,"cacheCreationInputTokens":100,"costUSD":0.3}}}`)
-	rec, err := Read(first, second)
+	rec, err := Read(ClaudeCode(), first, second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestARunWithNoResultIsEstimated(t *testing.T) {
 		`{"type":"system","subtype":"init","model":"claude-opus-5-5","session_id":"t"}`,
 		assistant("t", "n1", opus, "2026-09-29T12:00:00Z", 2, 2, 4512, 0),
 		assistant("t", "n2", "claude-fable-5-1", "2026-09-29T12:00:30Z", 1, 1, 100, 0))
-	rec, err := Read(first, second)
+	rec, err := Read(ClaudeCode(), first, second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func window(rec *Record, from, to time.Time) *Usage {
 // A task worked alone is given each session's reported totals in the share
 // of its calls' input and cache tokens that fall in its window.
 func TestAWindowIsApportioned(t *testing.T) {
-	rec, err := Read(writeLog(t, "a.log", run1...))
+	rec, err := Read(ClaudeCode(), writeLog(t, "a.log", run1...))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestAWindowIsApportioned(t *testing.T) {
 }
 
 func TestAMissingLogIsSkipped(t *testing.T) {
-	rec, err := Read(filepath.Join(t.TempDir(), "gone.log"))
+	rec, err := Read(ClaudeCode(), filepath.Join(t.TempDir(), "gone.log"))
 	if err != nil || rec.Total(nil) != nil {
 		t.Fatalf("rec %+v err %v", rec, err)
 	}
@@ -201,7 +201,7 @@ func TestARunKeepsItsNewestResultsText(t *testing.T) {
 		`{"type":"result","subtype":"success","session_id":"s","result":"an answer"}`,
 		`{"type":"result","subtype":"error_max_turns","session_id":"s"}`)
 	going := writeLog(t, "c.log", assistant("s", "m4", opus, "2026-09-29T12:00:00Z", 1, 1, 10, 0))
-	rec, err := Read(answered, silent, going)
+	rec, err := Read(ClaudeCode(), answered, silent, going)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +249,7 @@ func TestSummaryAndCount(t *testing.T) {
 
 func TestWindowsAddUpAndRatesComeFromResultsAlone(t *testing.T) {
 	p := writeLog(t, "a.log", run1...)
-	rec, err := Read(p)
+	rec, err := Read(ClaudeCode(), p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,12 +258,18 @@ func TestWindowsAddUpAndRatesComeFromResultsAlone(t *testing.T) {
 	if both.Source != SourceLog || diff(both.Cost(), 1.5) > 1e-3 || both.Seconds != 600 {
 		t.Errorf("windows = %+v", both)
 	}
-	rates, err := ReadRates(p, filepath.Join(t.TempDir(), "gone.log"))
+	rates, err := ReadRates(ClaudeCode(), p, filepath.Join(t.TempDir(), "gone.log"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if diff(rates[opus], 1.2/4912) > 1e-12 || diff(rates[haiku], 0.3/355) > 1e-12 {
 		t.Errorf("rates = %v", rates)
+	}
+	// a reader that cannot skim a line for an End is read whole, to the
+	// same rates
+	whole, err := ReadRates(struct{ Reader }{ClaudeCode()}, p)
+	if err != nil || len(whole) != len(rates) || whole[opus] != rates[opus] || whole[haiku] != rates[haiku] {
+		t.Errorf("rates read whole = %v (%v), want %v", whole, err, rates)
 	}
 }
 
@@ -302,7 +308,7 @@ func span(from, to string) Span {
 // given their sub-agent's calls, wherever they fall, and half of the story's
 // agent's calls while both were in progress; together no more than the story.
 func TestTasksInProgressAtOnceShareTheStorysAgentAndKeepTheirSubAgents(t *testing.T) {
-	rec, err := Read(writeLog(t, "a.log",
+	rec, err := Read(ClaudeCode(), writeLog(t, "a.log",
 		opusCall("a0", "2026-09-29T10:00:00Z", 1000, "", "", ""),
 		// one message starts both, a block a line; T-2 is the second task
 		// unpadded, and the description wins over a prompt naming another
@@ -358,7 +364,7 @@ func TestASubAgentIsNamedByItsPromptOrForNoTask(t *testing.T) {
 		opusCall("d1", "2026-09-29T10:06:00Z", 400, "toolu_D", "Task sub-agent: T-0003 docs", ""),
 		result(3500))
 	second := writeLog(t, "b.log", opusCall("p2", "2026-09-29T10:08:00Z", 700, "toolu_P", "Implement the parser", ""))
-	rec, err := Read(first, second)
+	rec, err := Read(ClaudeCode(), first, second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -407,7 +413,7 @@ const timedOut = `{"changed":[],"events":[],"events_omitted":0,"timed_out":true}
 // events, no changed paths, and no end; its content is the tool's JSON as a
 // string or in text blocks. Nothing else counts, and no task carries any.
 func TestEmptyWakesAreTheOwnAgentsWaitsThatTimedOutWithNothing(t *testing.T) {
-	rec, err := Read(writeLog(t, "a.log",
+	rec, err := Read(ClaudeCode(), writeLog(t, "a.log",
 		// counted: the content a string, then a list of text blocks
 		waitCall("m1", "2026-09-29T10:00:00Z", "w1", ""),
 		toolResult("2026-09-29T10:30:00Z", "w1", quoted(timedOut), false),
@@ -450,7 +456,7 @@ func TestEmptyWakesAreTheOwnAgentsWaitsThatTimedOutWithNothing(t *testing.T) {
 		t.Errorf("tasks = %+v, want T-0001 with no empty wakes", tasks)
 	}
 	// a measurement counts afresh over the logs it reads, never adding
-	again, err := Read(writeLog(t, "b.log", waitCall("m1", "2026-09-29T10:00:00Z", "w1", ""), toolResult("2026-09-29T10:30:00Z", "w1", quoted(timedOut), false)))
+	again, err := Read(ClaudeCode(), writeLog(t, "b.log", waitCall("m1", "2026-09-29T10:00:00Z", "w1", ""), toolResult("2026-09-29T10:30:00Z", "w1", quoted(timedOut), false)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -475,7 +481,7 @@ func bashUse(id, command string) string {
 // repeat's, counted per UTC day by class; a sub-agent's and a message that
 // calls no tool are left out, and no task carries any.
 func TestTurnsAreTheOwnAgentsToolMessagesCountedByDayAndClass(t *testing.T) {
-	rec, err := Read(writeLog(t, "a.log",
+	rec, err := Read(ClaudeCode(), writeLog(t, "a.log",
 		// 2026-10-03: a test run beside ceremony
 		opusCall("m1", "2026-10-03T10:00:00Z", 100, "", "", bashUse("b1", "cd flai && go test ./... 2>&1 | tail -5")+","+bashUse("b2", "git status")),
 		// ceremony, its second call in a repeat on the next day, a test

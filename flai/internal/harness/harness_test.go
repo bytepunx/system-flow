@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/usage"
 )
 
 func req(a *manifest.Agent) Request {
@@ -150,6 +151,30 @@ func TestEachAdapterStatesItsCapabilities(t *testing.T) {
 	for name := range want {
 		if _, ok := Adapters[name]; !ok {
 			t.Errorf("capabilities pinned for %q, which is not an adapter", name)
+		}
+	}
+}
+
+// ADR-0130: claude-code's reader reads its stream-json into events, a fresh
+// reader each time; the command's reads nothing of the same log.
+func TestEachAdapterGivesItsReader(t *testing.T) {
+	wait := []byte(`{"type":"assistant","timestamp":"2026-10-12T10:00:00Z","session_id":"s","message":{"id":"m1","model":"claude-opus-5-5",` +
+		`"content":[{"type":"tool_use","id":"w1","name":"mcp__flai__wait_for_events","input":{}}],"usage":{"input_tokens":1,"output_tokens":1}}}`)
+	woken := []byte(`{"type":"user","timestamp":"2026-10-12T10:30:00Z","session_id":"s","message":{"content":[{"type":"tool_result","tool_use_id":"w1","content":"{\"timed_out\":true}"}]}}`)
+	cc := Adapters[ClaudeCode].Reader()
+	events, ok := cc.Read(wait)
+	if !ok || len(events) != 2 || events[0].Kind != usage.Call || events[0].MessageID != "m1" || events[1].Kind != usage.ToolCall || events[1].ToolID != "w1" {
+		t.Fatalf("claude-code read %+v, %v; want the call and its tool call", events, ok)
+	}
+	if got, _ := cc.Read(woken); len(got) != 1 || got[0].Result != `{"timed_out":true}` {
+		t.Errorf("claude-code read the wait's result as %+v, want its text", got)
+	}
+	if got, _ := Adapters[ClaudeCode].Reader().Read(woken); len(got) != 1 || got[0].Result != "" {
+		t.Errorf("a fresh reader read %+v, want the result of a wait it has not seen unread", got)
+	}
+	for _, line := range [][]byte{wait, woken} {
+		if got, ok := Adapters[Command].Reader().Read(line); ok || got != nil {
+			t.Errorf("the command's reader read %+v, %v; want nothing", got, ok)
 		}
 	}
 }
