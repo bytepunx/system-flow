@@ -3,11 +3,11 @@ id: T-1288
 type: task
 nature: improvement
 title: The manifest and settings docs say what a plain finding keeps
-status: in-progress
+status: done
 parent: S-0313
 owner: alex
 created: 2026-10-07T23:39:37Z
-updated: 2026-10-12T15:55:57Z
+updated: 2026-10-12T15:56:34Z
 transitions:
   - to: ready
     at: 2026-10-12T15:55:57Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-12T15:55:57Z
     by: agent-S-0313
+  - to: done
+    at: 2026-10-12T15:56:34Z
+    by: agent-S-0313
 stream: S-0313
 tags: [docs]
 touches: [design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md]
 after: [T-1286, T-1287]
+usage:
+  source: log
+  seconds: 37
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 38
+      cache_read: 734896
+      cache_write: 6468
+      cost: 0.3336
 ---
 # T-1288 The manifest and settings docs say what a plain finding keeps
 

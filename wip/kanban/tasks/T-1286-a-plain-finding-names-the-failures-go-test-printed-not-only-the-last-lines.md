@@ -23,7 +23,7 @@ tags: [flai, verify]
 touches: [flai/internal/verify/parse.go, flai/internal/verify/parse_test.go]
 usage:
   source: log
-  seconds: 183
+  seconds: 184
   estimated: true
   models:
     - model: claude-opus-5-5

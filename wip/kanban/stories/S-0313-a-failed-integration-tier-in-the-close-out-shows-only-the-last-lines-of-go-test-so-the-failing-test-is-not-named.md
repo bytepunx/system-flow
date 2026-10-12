@@ -6,7 +6,7 @@ title: A failed integration tier in the close-out shows only the last lines of g
 status: in-progress
 owner: alex
 created: 2026-10-07T14:26:02Z
-updated: 2026-10-12T15:52:19Z
+updated: 2026-10-12T15:56:50Z
 transitions:
   - to: ready
     at: 2026-10-12T15:50:17Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0313
 tags: []
 topics: [testing]
-touches: [flai/internal/verify/parse.go, flai/internal/verify/parse_test.go, scripts/integration.sh, system-flow.yaml, scripts/README.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/summary.md]
+touches: [flai/internal/verify/parse.go, flai/internal/verify/parse_test.go, scripts/integration.sh, system-flow.yaml, scripts/README.md, design/system/project-manifest.md, docs/operators/settings.md, docs/users/flai.md, design/issues/I-0113-a-failed-integration-tier-in-the-close-out-shows-only-the-last-lines-of-go-test-so-the-failing-test-is-not-named.md, design/issues/summary.md, design/issues/I-0114-flai-verify-s-integration-tier-keeps-only-the-last-lines-of-go-test-s-output-so-the-failing-test-is-not-named.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,18 +24,18 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 255
+  seconds: 334
   estimated: true
   turns:
     - day: 2026-10-12
-      work: 18
+      work: 30
   models:
     - model: claude-opus-5-5
-      input: 60
-      output: 289
-      cache_read: 2509411
-      cache_write: 186997
-      cost: 1.2134
+      input: 84
+      output: 389
+      cache_read: 4658884
+      cache_write: 226241
+      cost: 2.1982
   strategic:
     - kind: orchestrator
       seconds: 289

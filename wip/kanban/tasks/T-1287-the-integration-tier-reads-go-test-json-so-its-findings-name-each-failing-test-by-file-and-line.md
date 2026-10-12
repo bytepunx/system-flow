@@ -23,15 +23,15 @@ tags: [scripts, verify]
 touches: [scripts/integration.sh, system-flow.yaml, scripts/README.md]
 usage:
   source: log
-  seconds: 182
+  seconds: 200
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 6
-      output: 32
-      cache_read: 449256
-      cache_write: 8031
-      cost: 0.2058
+      input: 10
+      output: 41
+      cache_read: 771197
+      cache_write: 20050
+      cost: 0.356
 ---
 # T-1287 The integration tier reads go test -json, so its findings name each failing test by file and line
 
