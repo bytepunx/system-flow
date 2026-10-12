@@ -6,7 +6,7 @@ status: open
 count: 5
 first_reported: 2026-10-12T15:41:38Z
 last_reported: 2026-10-12T16:21:18Z
-updated: 2026-10-12T16:21:18Z
+updated: 2026-10-12T16:52:58Z
 ---
 
 # I-0139 flai check finds `markdown.MD012` outside the story at close-out
@@ -42,3 +42,5 @@ flai check found outside the story:
 `wip/archive/agents/S-0232.md`: MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]
 
 ## Remediation
+
+Story S-0376 remediates this issue, created from it at 2026-10-12T16:52:58Z.
