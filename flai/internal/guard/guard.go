@@ -35,10 +35,11 @@
 // A planner session, one flai serve starts with the role plan, is held to
 // planning (strategic-agents.md): its own calls, which carry no agent ID, may
 // read, write work items and threads through flai as itself, and move an item
-// to backlog, but not edit files with Edit, Write, or NotebookEdit, move an
-// item further, accept, publish, work a story, or change the repository's
-// history. A story it creates is a draft for the operator to finalize
-// (S-0209). Its sub-agents are held as every sub-agent is.
+// to backlog, but not edit files with Edit, MultiEdit, Write, or
+// NotebookEdit, move an item further, accept, publish, work a story, or
+// change the repository's history. A story it creates is a draft for the
+// operator to finalize (S-0209). Its sub-agents are held as every sub-agent
+// is.
 //
 // An orchestrator session, one flai serve starts with the role orchestrate,
 // is held to the permissions the operator gives it in the manifest's
@@ -61,11 +62,12 @@
 // An analyzer session, one flai serve starts with the role analyze, is held
 // to its report (S-0223): its own calls may read, flai stats among them, log
 // its activities, and open and reply to threads as itself, and may edit, with
-// Edit, Write, or NotebookEdit, only a file under the manifest's design
-// folder's analysis/, its report and the folder's README.md that lists it. It
-// files and bumps an issue for each actionable finding (S-0224), with flai
-// issue new and bump or the MCP tools issue_new and issue_bump, which write
-// the issue through flai, never through a file edit. It authors no stories:
+// Edit, MultiEdit, Write, or NotebookEdit, only a file under the manifest's
+// design folder's analysis/, its report and the folder's README.md that lists
+// it. It files and bumps an issue for each actionable finding (S-0224), with
+// flai issue new and bump or the MCP tools issue_new and issue_bump, which
+// write the issue through flai, never through a file edit. It authors no
+// stories:
 // item_new, item_edit, item_move, issue_story, and flai issue story, story,
 // epic, and task are refused it, as is every other write through flai, flai
 // issue close among them, and git's. Its sub-agents, the explorer it hands
@@ -115,7 +117,6 @@ import (
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
-	"github.com/bytepunx/system-flow/flai/internal/protected"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -137,32 +138,13 @@ type Event struct {
 }
 
 // Input is the part of a tool call's input the guard reads: Bash's command;
-// item_move's item and the state it moves the item to, plan's item, and the
-// thread of thread_reply and thread_resolve; item_new's type and whether it
-// makes a story a draft, and item_edit's draft; whether thread_reply is a
-// recommendation and the source it cites; and the file Edit or Write
-// changes, or the notebook NotebookEdit does. Fields are the names of every
-// field the input gives, whatever the guard reads of it, so that an
-// item_edit that finalizes a draft is told from one that changes more, and a
-// draft false given from one left out. CostOfDelay is item_edit's
-// cost_of_delay, each key it gives with its value as given, so that an edit
-// that gives a story cost of delay inputs is told from one that sets a value
-// or removes one (S-0328); it is nil when cost_of_delay is not an object.
-// Commit is adr_new's commit, which a sub-agent may not give true (S-0287,
-// ADR-0127).
+// the file Edit or Write changes, or the notebook NotebookEdit does; and a
+// flai tool's Args. UnmarshalJSON fills Args' Fields and CostOfDelay.
 type Input struct {
-	Command        string                     `json:"command"`
-	ID             string                     `json:"id"`
-	To             string                     `json:"to"`
-	Type           string                     `json:"type"`
-	Draft          bool                       `json:"draft"`
-	Commit         bool                       `json:"commit"`
-	Recommendation bool                       `json:"recommendation"`
-	Source         string                     `json:"source"`
-	FilePath       string                     `json:"file_path"`
-	NotebookPath   string                     `json:"notebook_path"`
-	Fields         []string                   `json:"-"`
-	CostOfDelay    map[string]json.RawMessage `json:"-"`
+	Command      string `json:"command"`
+	FilePath     string `json:"file_path"`
+	NotebookPath string `json:"notebook_path"`
+	Args
 }
 
 // UnmarshalJSON decodes a tool call's input, the names of its fields, and
@@ -302,12 +284,10 @@ var cliPlans = map[string][]string{
 	"touches": nil,
 }
 
-// fileEdits are the tools that change files, which the planner never uses,
-// and the analyzer only on its report (S-0223).
-var fileEdits = []string{"Edit", "NotebookEdit", "Write"}
-
-// fileWrites are the tools a sub-agent writes a file with, none of which it
-// may point at a file in a .claude/ folder while auto-approve is off.
+// fileWrites are Claude Code's tools that write a file, each a FileWrite
+// call: the planner and the orchestrator never use them, the analyzer only
+// on its report (S-0223), and a sub-agent on a file in a .claude/ folder only
+// while auto-approve is on.
 var fileWrites = []string{"Edit", "MultiEdit", "NotebookEdit", "Write"}
 
 // moveValues are the flags of flai move, flai's own among them, that take
@@ -866,7 +846,7 @@ func ordersByPolicy(words []string) bool {
 // finalizesDraft says whether item_edit's input finalizes a draft and
 // changes nothing else: it gives draft false, and no field but the item, its
 // hash, and its project besides.
-func finalizesDraft(in Input) bool {
+func finalizesDraft(in Args) bool {
 	return !in.Draft && slices.Contains(in.Fields, "draft") &&
 		!slices.ContainsFunc(in.Fields, func(f string) bool { return !slices.Contains(finalizeFields, f) })
 }
@@ -876,7 +856,7 @@ func finalizesDraft(in Input) bool {
 // input or more, none null or an empty string, which removes it, and no other
 // key, value among them; and no field but the story, its hash, and its
 // project besides. Whether the story may have them is flai's to judge.
-func setsCostInputs(in Input) bool {
+func setsCostInputs(in Args) bool {
 	if !isStory(in.ID) || len(in.CostOfDelay) == 0 ||
 		slices.ContainsFunc(in.Fields, func(f string) bool { return !slices.Contains(costFields, f) }) {
 		return false
@@ -1017,63 +997,31 @@ func drafted(words []string) bool {
 // Check says why a call is refused, or "" when it is not.
 func (g Guard) Check(e Event) string { return g.Decide(e).Why }
 
-// Decide decides on a call: the zero Refusal lets it through.
+// Decide decides on a Claude Code call, as Decide does on the Call it
+// makes: the zero Refusal lets it through.
 func (g Guard) Decide(e Event) Refusal {
-	if r := g.shared(e); r.Why != "" {
-		return r
-	}
-	if e.AgentID == "" {
-		if e.ToolName == MCPPrefix+ReleasePublish && g.Role != RoleOrchestrate && g.Role != RolePlan && g.Role != RoleAnalyze {
-			return Refusal{Why: "only the orchestrator calls " + ReleasePublish + ": " + orchestratorPublishes}
-		}
-		var why string
-		switch g.Role {
-		case RolePlan:
-			why = g.plan(e)
-		case RoleAnalyze:
-			why = g.analyze(e)
-		case RoleOrchestrate:
-			return g.orchestrate(e)
-		case "":
-			why = g.wait(e)
-		}
-		// a call its role refuses whoever it names is refused for the role's
-		// reason, so that leaving out --by does not meet a second refusal
-		return Refusal{Why: cmp.Or(why, g.authors(e))}
-	}
-	who := e.AgentType
-	if who == "" {
-		who = "unnamed"
-	}
-	if file, ok := ProtectedWrite(e); ok && !g.AutoApprove {
-		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot use %s on %s: a path Claude Code protects, such as a file in a .claude/ folder or .mcp.json, is written only with the operator's approval on a thread, which would hold this call, and the layer with it, until they answer (ADR-0086, ADR-0106). Put the file's whole new content in your final message; the story's agent writes it.", who, e.ToolName, file)}
-	}
-	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
-		switch {
-		case tool == ADRNew && e.ToolInput.Commit:
-			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot call %s with commit true: %s; call it without commit %s. Put what you need done in your final message; the story's agent does it.", who, tool, commitsADR, leavesADRToIt)}
-		case slices.Contains(MCPReads, tool), slices.Contains(MCPStoryReads, tool), tool == ADRNew:
-			return Refusal{}
-		}
-		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot call %s: it reads, and only the story's agent changes work items, threads, and conversations with other stories or reads the inbox (ADR-0059). Put what you need done, or the question for the designer, in your final message.", who, tool)}
-	}
-	if e.ToolName != "Bash" {
+	v := Decide(g, g.call(e))
+	if v.Outcome == Allow {
 		return Refusal{}
 	}
-	readOnly := g.ReadOnly != nil && g.ReadOnly(e.AgentType)
-	for _, c := range parse(e.ToolInput.Command) {
-		run := strings.Join(c.words, " ")
-		if why, _ := g.refuse(c.words, subAgent); why != "" {
-			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. Put what you need done in your final message; the story's agent does it.", who, run, why)}
-		}
-		if !readOnly {
-			continue
-		}
-		if file := written(c); file != "" {
-			return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot run %q: it reads, and it writes no file but under the temporary folder (ADR-0141); this writes %s. Put the correction in your final message; the story's agent makes it.", who, run, file)}
-		}
+	return Refusal{Why: v.Reason, Call: v.Call, Needs: v.Needs}
+}
+
+// call is the Call e makes, in g's role and story: Bash runs a command line,
+// fileWrites write their file_path or notebook_path, and a tool of
+// MCPPrefix is a flai tool; a call with an agent ID is a sub-agent's.
+func (g Guard) call(e Event) Call {
+	c := Call{Session: e.SessionID, Subagent: e.AgentID != "", Agent: e.AgentType, Role: g.Role, Story: g.Story, Name: e.ToolName}
+	tool, flai := strings.CutPrefix(e.ToolName, MCPPrefix)
+	switch {
+	case e.ToolName == "Bash":
+		c.Kind, c.Command = Shell, e.ToolInput.Command
+	case slices.Contains(fileWrites, e.ToolName):
+		c.Kind, c.Path = FileWrite, cmp.Or(e.ToolInput.FilePath, e.ToolInput.NotebookPath)
+	case flai:
+		c.Kind, c.Tool, c.Args = FlaiTool, tool, e.ToolInput.Args
 	}
-	return Refusal{}
+	return c
 }
 
 // ProtectedWrite says whether e writes a path Claude Code protects other than
@@ -1081,17 +1029,7 @@ func (g Guard) Decide(e Event) Refusal {
 // file (S-0299, ADR-0106): Claude Code asks a person before any such write,
 // so that a sub-agent's would wait on a thread for the operator.
 // permission_prompt refuses a path in .git at once, so that one never waits.
-func ProtectedWrite(e Event) (string, bool) {
-	if !slices.Contains(fileWrites, e.ToolName) {
-		return "", false
-	}
-	file := cmp.Or(e.ToolInput.FilePath, e.ToolInput.NotebookPath)
-	if file == "" {
-		return "", false
-	}
-	clean := filepath.Clean(file)
-	return file, protected.Path(clean) && !protected.Git(clean)
-}
+func ProtectedWrite(e Event) (string, bool) { return protectedWrite(Guard{}.call(e)) }
 
 // waitsOnSubAgents ends the refusal of a story's agent's wait_for_events: why
 // it would not return, and how to wait instead.
@@ -1101,8 +1039,8 @@ const waitsOnSubAgents = "wait_for_events reports work items and threads, not su
 // (S-0285): wait_for_events while a sub-agent of its session runs, unless a
 // thread on its story or one of its tasks is open, so that it waits on the
 // designer, whose answer the call returns on.
-func (g Guard) wait(e Event) string {
-	if g.Story == "" || e.ToolName != MCPPrefix+"wait_for_events" || g.Running == nil {
+func (g Guard) wait(c Call) string {
+	if c.Story == "" || c.Kind != FlaiTool || c.Tool != "wait_for_events" || g.Running == nil {
 		return ""
 	}
 	running, err := g.Running()
@@ -1122,35 +1060,35 @@ func (g Guard) wait(e Event) string {
 		}
 		names[i] = fmt.Sprintf("%s %s", who, s.ID)
 	}
-	return fmt.Sprintf("the story's agent cannot call wait_for_events while its sub-agents run (%s) and no thread on %s awaits the designer: %s", strings.Join(names, ", "), g.Story, waitsOnSubAgents)
+	return fmt.Sprintf("the story's agent cannot call wait_for_events while its sub-agents run (%s) and no thread on %s awaits the designer: %s", strings.Join(names, ", "), c.Story, waitsOnSubAgents)
 }
 
 // orchestrate decides on the orchestrator's own call under its permissions.
-func (g Guard) orchestrate(e Event) Refusal {
-	if slices.Contains(fileEdits, e.ToolName) {
-		call := strings.TrimSpace(e.ToolName + " " + e.ToolInput.FilePath)
-		return refusedOrchestrator(call, "use "+e.ToolName, nevers("it acts through flai and never edits a file"), "")
-	}
-	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
-		in := e.ToolInput
+func (g Guard) orchestrate(c Call) Verdict {
+	switch c.Kind {
+	case FileWrite:
+		call := strings.TrimSpace(c.Name + " " + c.Path)
+		return refusedOrchestrator(call, "use "+c.Name, nevers("it acts through flai and never edits a file"), "")
+	case FlaiTool:
+		tool, in := c.Tool, c.Args
 		call, what := strings.Join(strings.Fields(tool+" "+in.ID+" "+in.To), " "), "call "+tool
 		var needs, never string
 		switch {
 		case slices.Contains(MCPReads, tool), slices.Contains(MCPOrchestrates, tool):
-			return Refusal{}
+			return Verdict{}
 		case tool == "thread_reply", tool == "thread_resolve":
-			c := threadCall{verb: strings.TrimPrefix(tool, "thread_"), id: in.ID, recommendation: in.Recommendation, sourced: cites(in.Source)}
-			why, permit := g.thread(c)
+			tc := threadCall{verb: strings.TrimPrefix(tool, "thread_"), id: in.ID, recommendation: in.Recommendation, sourced: cites(in.Source)}
+			why, permit := g.thread(tc)
 			if why == "" {
-				return Refusal{}
+				return Verdict{}
 			}
-			if c.recommendation {
+			if tc.recommendation {
 				call += " recommendation"
 			}
-			if c.sourced {
+			if tc.sourced {
 				call += " source " + strings.TrimSpace(in.Source)
 			}
-			return refusedOrchestrator(call, threadDoes(c), why, permit)
+			return refusedOrchestrator(call, threadDoes(tc), why, permit)
 		case tool == "plan":
 			what = "plan " + in.ID
 			switch {
@@ -1192,29 +1130,26 @@ func (g Guard) orchestrate(e Event) Refusal {
 		case !g.Permissions.Allows(needs):
 			return refusedOrchestrator(call, what, off(needs), needs)
 		}
-		return Refusal{}
-	}
-	if e.ToolName != "Bash" {
-		return Refusal{}
-	}
-	r := g.orchestration()
-	for _, words := range commands(e.ToolInput.Command) {
-		if why, needs := g.refuse(words, r); why != "" {
-			call := strings.Join(words, " ")
-			return refusedOrchestrator(call, fmt.Sprintf("run %q", call), why, needs)
+	case Shell:
+		r := g.orchestration()
+		for _, words := range commands(c.Command) {
+			if why, needs := g.refuse(words, r); why != "" {
+				call := strings.Join(words, " ")
+				return refusedOrchestrator(call, fmt.Sprintf("run %q", call), why, needs)
+			}
 		}
 	}
-	return Refusal{}
+	return Verdict{}
 }
 
 // refusedOrchestrator is the orchestrator's refusal of call, said as what,
 // for why; needs is the permission that would allow it, "" when none would.
-func refusedOrchestrator(call, what, why, needs string) Refusal {
-	r := Refusal{Call: call, Why: fmt.Sprintf("the orchestrator cannot %s: %s. %s", what, why, askOperator)}
+func refusedOrchestrator(call, what, why, needs string) Verdict {
+	v := Verdict{Outcome: Deny, Call: call, Reason: fmt.Sprintf("the orchestrator cannot %s: %s. %s", what, why, askOperator)}
 	if needs != "" {
-		r.Needs = "orchestration.permissions." + needs
+		v.Needs = "orchestration.permissions." + needs
 	}
-	return r
+	return v
 }
 
 // off says the orchestrator is refused a call for want of the permission
@@ -1230,29 +1165,27 @@ func nevers(why string) string {
 }
 
 // plan says why the planner's own call is refused, or "" when it is not.
-func (g Guard) plan(e Event) string {
-	if slices.Contains(fileEdits, e.ToolName) {
-		return fmt.Sprintf("the planner cannot use %s: %s", e.ToolName, planner)
-	}
-	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
-		switch {
-		case tool == "item_new" && e.ToolInput.Type == "story" && !e.ToolInput.Draft:
+func (g Guard) plan(c Call) string {
+	switch c.Kind {
+	case FileWrite:
+		return fmt.Sprintf("the planner cannot use %s: %s", c.Name, planner)
+	case FlaiTool:
+		switch tool, in := c.Tool, c.Args; {
+		case tool == "item_new" && in.Type == "story" && !in.Draft:
 			return fmt.Sprintf("the planner cannot create a story that is not a draft: %s; %s", drafts, planner)
 		case slices.Contains(MCPReads, tool), slices.Contains(MCPPlans, tool):
 			return ""
-		case tool == "item_move" && e.ToolInput.To == Backlog:
+		case tool == "item_move" && in.To == Backlog:
 			return ""
 		case tool == "item_move":
-			return fmt.Sprintf("the planner cannot move %s to %s: %s", e.ToolInput.ID, e.ToolInput.To, planner)
+			return fmt.Sprintf("the planner cannot move %s to %s: %s", in.ID, in.To, planner)
 		}
-		return fmt.Sprintf("the planner cannot call %s: %s", tool, planner)
-	}
-	if e.ToolName != "Bash" {
-		return ""
-	}
-	for _, words := range commands(e.ToolInput.Command) {
-		if why, _ := g.refuse(words, planning); why != "" {
-			return fmt.Sprintf("the planner cannot run %q: %s; %s", strings.Join(words, " "), why, planner)
+		return fmt.Sprintf("the planner cannot call %s: %s", c.Tool, planner)
+	case Shell:
+		for _, words := range commands(c.Command) {
+			if why, _ := g.refuse(words, planning); why != "" {
+				return fmt.Sprintf("the planner cannot run %q: %s; %s", strings.Join(words, " "), why, planner)
+			}
 		}
 	}
 	return ""
@@ -1260,42 +1193,36 @@ func (g Guard) plan(e Event) string {
 
 // analyze says why the analyzer's own call is refused, or "" when it is not
 // (S-0223).
-func (g Guard) analyze(e Event) string {
-	if slices.Contains(fileEdits, e.ToolName) {
-		file := e.ToolInput.FilePath
-		if file == "" {
-			file = e.ToolInput.NotebookPath
-		}
-		if g.inReports(file) {
+func (g Guard) analyze(c Call) string {
+	switch c.Kind {
+	case FileWrite:
+		if g.inReports(c.Path) {
 			return ""
 		}
 		folder := "the design folder's analysis/"
 		if g.Reports != "" {
 			folder = strings.TrimSuffix(g.Reports, "/") + "/"
 		}
-		return fmt.Sprintf("the analyzer cannot use %s on %s: it edits only its report and the index, under %s; %s", e.ToolName, cmp.Or(file, "no file"), folder, analyzer)
-	}
-	if tool, ok := strings.CutPrefix(e.ToolName, MCPPrefix); ok {
+		return fmt.Sprintf("the analyzer cannot use %s on %s: it edits only its report and the index, under %s; %s", c.Name, cmp.Or(c.Path, "no file"), folder, analyzer)
+	case FlaiTool:
 		switch {
-		case slices.Contains(MCPReads, tool), slices.Contains(MCPAnalyzes, tool):
+		case slices.Contains(MCPReads, c.Tool), slices.Contains(MCPAnalyzes, c.Tool):
 			return ""
-		case slices.Contains(itemWrites, tool):
-			return fmt.Sprintf("the analyzer cannot call %s: %s; %s", tool, authorsNoStories, analyzer)
+		case slices.Contains(itemWrites, c.Tool):
+			return fmt.Sprintf("the analyzer cannot call %s: %s; %s", c.Tool, authorsNoStories, analyzer)
 		}
-		return fmt.Sprintf("the analyzer cannot call %s: %s", tool, analyzer)
-	}
-	if e.ToolName != "Bash" {
-		return ""
-	}
-	for _, words := range commands(e.ToolInput.Command) {
-		if why, _ := g.refuse(words, analyzing); why != "" {
-			return fmt.Sprintf("the analyzer cannot run %q: %s; %s", strings.Join(words, " "), why, analyzer)
+		return fmt.Sprintf("the analyzer cannot call %s: %s", c.Tool, analyzer)
+	case Shell:
+		for _, words := range commands(c.Command) {
+			if why, _ := g.refuse(words, analyzing); why != "" {
+				return fmt.Sprintf("the analyzer cannot run %q: %s; %s", strings.Join(words, " "), why, analyzer)
+			}
 		}
 	}
 	return ""
 }
 
-// inReports says whether file, as Edit, Write, or NotebookEdit names it, is
+// inReports says whether file, as a FileWrite call names it, is
 // under the reports folder: taken from Root when it is relative, cleaned, and
 // with the symbolic links along the part of it that exists resolved, as the
 // folder's are, so that neither .. nor a link leads out of it.

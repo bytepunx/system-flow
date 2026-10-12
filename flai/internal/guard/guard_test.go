@@ -519,7 +519,7 @@ func TestThePlannerNeitherAcceptsNorPublishesNorEditsCode(t *testing.T) {
 			t.Errorf("%s: %q", tool, why)
 		}
 	}
-	for _, tool := range fileEdits {
+	for _, tool := range fileWrites {
 		if why := planGuard.Check(Event{ToolName: tool}); !strings.Contains(why, "the planner cannot use "+tool+":") || !strings.Contains(why, "strategic-agents.md") {
 			t.Errorf("%s: %q", tool, why)
 		}
@@ -895,7 +895,7 @@ func TestTheOrchestratorNeverEditsFilesOrWritesBeyondItsPermissions(t *testing.T
 	for _, tool := range []string{"item_new", "item_edit", "thread_resolve", "wait_for_work", "agent_start", "agent_restart", "issue_story"} {
 		refused = append(refused, itemOf(tool, "", ""))
 	}
-	for _, tool := range fileEdits {
+	for _, tool := range fileWrites {
 		refused = append(refused, Event{ToolName: tool})
 	}
 	for _, c := range []string{

@@ -68,7 +68,7 @@ func TestAServedAgentWritesOnlyAsItself(t *testing.T) {
 		for _, c := range refused {
 			// a call the planner's or the analyzer's role refuses too is
 			// refused for the role's reason
-			if why := s.guard.authors(bash("", c)); !strings.HasPrefix(why, s.name+" cannot run ") || !strings.Contains(why, "ADR-0143") {
+			if why := s.guard.authors(s.guard.call(bash("", c))); !strings.HasPrefix(why, s.name+" cannot run ") || !strings.Contains(why, "ADR-0143") {
 				t.Errorf("%s %q: %q", s.name, c, why)
 			}
 			if why := s.guard.Check(bash("", c)); !strings.HasPrefix(why, s.name+" cannot run ") {
@@ -134,7 +134,7 @@ func TestAServedAgentNamesItself(t *testing.T) {
 	// flai order --by is the planner's read; this rule leaves --by alone on
 	// it whatever the role's rules make of the call
 	for _, c := range []string{"flai order --by cod", "flai order --by=wsjf --apply", "flai stats --by nature"} {
-		if why := itsPlanner.authors(bash("", c)); why != "" {
+		if why := itsPlanner.authors(itsPlanner.call(bash("", c))); why != "" {
 			t.Errorf("the planner %q: %s", c, why)
 		}
 	}
@@ -152,7 +152,8 @@ func TestAServedAgentNamesItself(t *testing.T) {
 			t.Errorf("the analyzer %q refused: %s", c, why)
 		}
 	}
-	if why := (Guard{Commands: g.Commands, Role: RoleAnalyze}).authors(bash("", "flai thread reply TH-0001 x --by analyzer")); why != "" {
+	analyzer := Guard{Commands: g.Commands, Role: RoleAnalyze}
+	if why := analyzer.authors(analyzer.call(bash("", "flai thread reply TH-0001 x --by analyzer"))); why != "" {
 		t.Errorf("the analyzer by its run's name: %s", why)
 	}
 }

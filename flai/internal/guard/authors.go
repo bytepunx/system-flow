@@ -45,41 +45,41 @@ var declarers = []string{"declare", "export", "local", "readonly", "typeset"}
 // leaveIdentities ends a refusal of a change to the environment.
 const leaveIdentities = "leave FLAI_AGENT and FLAI_SESSION as flai serve set them"
 
-// authors says why a served agent's own Bash call is refused, or "" when it
+// authors says why a served agent's own shell call is refused, or "" when it
 // is not (S-0369, ADR-0143): a story's agent's, the planner's, or the
 // analyzer's call that names an author other than its own with --by or
 // --placed-by, or sets, empties, or unsets FLAI_AGENT or FLAI_SESSION to
 // anything but its own, in any simple command of the line.
-func (g Guard) authors(e Event) string {
-	if e.AgentID != "" || e.ToolName != "Bash" || !g.heldToSelf() {
+func (g Guard) authors(c Call) string {
+	if c.Subagent || c.Kind != Shell || !g.heldToSelf(c) {
 		return ""
 	}
-	for _, words := range commands(e.ToolInput.Command) {
-		if why := g.impersonates(words); why != "" {
-			return fmt.Sprintf("%s cannot run %q: %s.", g.who(), strings.Join(words, " "), why)
+	for _, words := range commands(c.Command) {
+		if why := g.impersonates(c, words); why != "" {
+			return fmt.Sprintf("%s cannot run %q: %s.", g.who(c), strings.Join(words, " "), why)
 		}
 	}
 	return ""
 }
 
-// heldToSelf says whether the session is one ADR-0143 holds to its own name:
+// heldToSelf says whether c's session is one ADR-0143 holds to its own name:
 // a story's agent, or another session flai serve started with no role, the
 // planner, or the analyzer.
-func (g Guard) heldToSelf() bool {
-	return g.Role == RolePlan || g.Role == RoleAnalyze || g.Role == "" && g.served()
+func (g Guard) heldToSelf(c Call) bool {
+	return c.Role == RolePlan || c.Role == RoleAnalyze || c.Role == "" && g.served(c)
 }
 
 // selves are the names a served agent writes as: Agent, the hook's
 // FLAI_AGENT, and the name flai serve gives its run, agent-<Story>,
 // planner-<Item>, or analyzer.
-func (g Guard) selves() []string {
+func (g Guard) selves(c Call) []string {
 	var run string
 	switch {
-	case g.Role == "" && g.Story != "":
-		run = "agent-" + workitem.CanonicalID(g.Story)
-	case g.Role == RolePlan && g.Item != "":
+	case c.Role == "" && c.Story != "":
+		run = "agent-" + workitem.CanonicalID(c.Story)
+	case c.Role == RolePlan && g.Item != "":
 		run = workitem.ActivityPlanner + "-" + workitem.CanonicalID(g.Item)
-	case g.Role == RoleAnalyze:
+	case c.Role == RoleAnalyze:
 		run = workitem.ActivityAnalyzer
 	}
 	var names []string
@@ -92,21 +92,21 @@ func (g Guard) selves() []string {
 }
 
 // own says whether name is one a served agent writes as; "" never is.
-func (g Guard) own(name string) bool {
-	return name != "" && slices.Contains(g.selves(), name)
+func (g Guard) own(c Call, name string) bool {
+	return name != "" && slices.Contains(g.selves(c), name)
 }
 
 // writesAs says, in a refusal, whom and where a served agent writes as:
 // itself, by its names, for FLAI_AGENT and an author, and its own session for
 // FLAI_SESSION.
-func (g Guard) writesAs(variable string) string {
+func (g Guard) writesAs(c Call, variable string) string {
 	if variable == sessionEnv {
 		if g.Session == "" {
 			return "a served agent writes only in its own session"
 		}
 		return "a served agent writes only in its own session, " + g.Session
 	}
-	if names := g.selves(); len(names) > 0 {
+	if names := g.selves(c); len(names) > 0 {
 		return "a served agent writes only as itself, " + strings.Join(names, " or ")
 	}
 	return "a served agent writes only as itself"
@@ -120,12 +120,12 @@ func (g Guard) writesAs(variable string) string {
 // or eval, runs. A declarer and unset, builtins no wrapper runs, count only
 // as the program; env, flai, a shell, and eval count wherever they stand, as
 // refuse finds them.
-func (g Guard) impersonates(words []string) string {
+func (g Guard) impersonates(c Call, words []string) string {
 	program := true
 	for i, w := range words {
 		if assignment.MatchString(w) {
 			if program {
-				if why := g.assigns(w); why != "" {
+				if why := g.assigns(c, w); why != "" {
 					return why
 				}
 			}
@@ -136,7 +136,7 @@ func (g Guard) impersonates(words []string) string {
 		case program && slices.Contains(declarers, w):
 			for _, a := range rest {
 				if assignment.MatchString(a) {
-					if why := g.assigns(a); why != "" {
+					if why := g.assigns(c, a); why != "" {
 						return why
 					}
 				}
@@ -144,28 +144,28 @@ func (g Guard) impersonates(words []string) string {
 		case program && w == "unset":
 			for _, a := range rest {
 				if slices.Contains(identities, a) {
-					return g.unsets(a)
+					return g.unsets(c, a)
 				}
 			}
 		case base == "env":
-			if why := g.env(rest); why != "" {
+			if why := g.env(c, rest); why != "" {
 				return why
 			}
 		case slices.Contains(shells, base):
 			for j, f := range rest {
 				if shellFlags.MatchString(f) && j+1 < len(rest) {
-					if why := g.impersonatesIn(rest[j+1]); why != "" {
+					if why := g.impersonatesIn(c, rest[j+1]); why != "" {
 						return why
 					}
 					break
 				}
 			}
 		case base == "eval":
-			if why := g.impersonatesIn(strings.Join(rest, " ")); why != "" {
+			if why := g.impersonatesIn(c, strings.Join(rest, " ")); why != "" {
 				return why
 			}
 		case base == "flai", base == "flai.sh":
-			if why := g.names(rest); why != "" {
+			if why := g.names(c, rest); why != "" {
 				return why
 			}
 		}
@@ -175,9 +175,9 @@ func (g Guard) impersonates(words []string) string {
 }
 
 // impersonatesIn checks each simple command of a script a shell is given.
-func (g Guard) impersonatesIn(text string) string {
-	for _, c := range commands(text) {
-		if why := g.impersonates(c); why != "" {
+func (g Guard) impersonatesIn(c Call, text string) string {
+	for _, words := range commands(text) {
+		if why := g.impersonates(c, words); why != "" {
 			return why
 		}
 	}
@@ -189,7 +189,7 @@ func (g Guard) impersonatesIn(text string) string {
 // --placed-by, each as its last occurrence gives it. An empty value falls
 // back to FLAI_AGENT and passes; so does a word flai that runs none of its
 // commands, or asks for help.
-func (g Guard) names(rest []string) string {
+func (g Guard) names(c Call, rest []string) string {
 	cmd, _ := subcommands(rest, authorValues)
 	if !slices.Contains(g.Commands, cmd) || slices.Contains(rest, "--help") || slices.Contains(rest, "-h") {
 		return ""
@@ -198,8 +198,8 @@ func (g Guard) names(rest []string) string {
 		if f == "--by" && slices.Contains(byNamesNoAuthor, cmd) {
 			continue
 		}
-		if v := value(rest, f); v != "" && !g.own(v) {
-			return fmt.Sprintf("it names %s as its author with %s, and %s (ADR-0143); leave out %s, or give its own name", v, f, g.writesAs(agentEnv), f)
+		if v := value(rest, f); v != "" && !g.own(c, v) {
+			return fmt.Sprintf("it names %s as its author with %s, and %s (ADR-0143); leave out %s, or give its own name", v, f, g.writesAs(c, agentEnv), f)
 		}
 	}
 	return ""
@@ -210,26 +210,26 @@ func (g Guard) names(rest []string) string {
 // session not its own, the empty value included. The guard reads a word up
 // to a $, so a value held in a variable or a command substitution reads as
 // empty, and is not its own.
-func (g Guard) assigns(w string) string {
+func (g Guard) assigns(c Call, w string) string {
 	name, v, _ := strings.Cut(w, "=")
-	if !slices.Contains(identities, name) || name == agentEnv && g.own(v) || name == sessionEnv && v != "" && v == g.Session {
+	if !slices.Contains(identities, name) || name == agentEnv && g.own(c, v) || name == sessionEnv && v != "" && v == g.Session {
 		return ""
 	}
 	set := "to " + v
 	if v == "" {
 		set = "to nothing, or to a value the guard cannot read, such as a variable's"
 	}
-	return fmt.Sprintf("it sets %s %s, and %s (ADR-0143); %s", name, set, g.writesAs(name), leaveIdentities)
+	return fmt.Sprintf("it sets %s %s, and %s (ADR-0143); %s", name, set, g.writesAs(c, name), leaveIdentities)
 }
 
 // unsets says why removing a variable of identities from the environment is
 // refused.
-func (g Guard) unsets(variable string) string {
+func (g Guard) unsets(c Call, variable string) string {
 	so := ""
 	if variable == agentEnv {
 		so = ", so that flai would write as the config's author"
 	}
-	return fmt.Sprintf("it unsets %s%s, and %s (ADR-0143); %s", variable, so, g.writesAs(variable), leaveIdentities)
+	return fmt.Sprintf("it unsets %s%s, and %s (ADR-0143); %s", variable, so, g.writesAs(c, variable), leaveIdentities)
 }
 
 // env says why env's own words, its flags and assignments before the command
@@ -237,39 +237,39 @@ func (g Guard) unsets(variable string) string {
 // --ignore-environment, which clear FLAI_AGENT; -u or --unset of FLAI_AGENT or
 // FLAI_SESSION; an assignment of either not the agent's own; and the same in
 // -S's string, which env splits into its words.
-func (g Guard) env(args []string) string {
+func (g Guard) env(c Call, args []string) string {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
 		case a == "-" || a == "--ignore-environment":
-			return g.clears()
+			return g.clears(c)
 		case a == "--unset" || a == "--chdir" || a == "--split-string":
 			if i+1 == len(args) {
 				return ""
 			}
 			i++
-			if why := g.envValue(a, args[i]); why != "" {
+			if why := g.envValue(c, a, args[i]); why != "" {
 				return why
 			}
 		case strings.HasPrefix(a, "--"):
 			flag, v, _ := strings.Cut(a, "=")
-			if why := g.envValue(flag, v); why != "" {
+			if why := g.envValue(c, flag, v); why != "" {
 				return why
 			}
 		case strings.HasPrefix(a, "-"):
 			flag, v, ok := envShort(a)
 			if flag == "-i" {
-				return g.clears()
+				return g.clears(c)
 			}
 			if ok && v == "" && i+1 < len(args) {
 				i++
 				v = args[i]
 			}
-			if why := g.envValue(flag, v); why != "" {
+			if why := g.envValue(c, flag, v); why != "" {
 				return why
 			}
 		case assignment.MatchString(a):
-			if why := g.assigns(a); why != "" {
+			if why := g.assigns(c, a); why != "" {
 				return why
 			}
 		default:
@@ -298,20 +298,20 @@ func envShort(cluster string) (flag, v string, takes bool) {
 // envValue says why one of env's flags with its value writes as another:
 // -u or --unset of a variable of identities, or -S's or --split-string's
 // string, read as env's words.
-func (g Guard) envValue(flag, v string) string {
+func (g Guard) envValue(c Call, flag, v string) string {
 	switch flag {
 	case "-u", "--unset":
 		if slices.Contains(identities, v) {
-			return g.unsets(v)
+			return g.unsets(c, v)
 		}
 	case "-S", "--split-string":
-		return g.env(strings.Fields(v))
+		return g.env(c, strings.Fields(v))
 	}
 	return ""
 }
 
 // clears says why env -i is refused: it runs its command with no
 // FLAI_AGENT.
-func (g Guard) clears() string {
-	return fmt.Sprintf("it clears the environment, so that flai would write as the config's author, and %s (ADR-0143); %s", g.writesAs(agentEnv), leaveIdentities)
+func (g Guard) clears(c Call) string {
+	return fmt.Sprintf("it clears the environment, so that flai would write as the config's author, and %s (ADR-0143); %s", g.writesAs(c, agentEnv), leaveIdentities)
 }

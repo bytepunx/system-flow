@@ -1,6 +1,7 @@
 package guard
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 	"strings"
@@ -47,24 +48,24 @@ var sharing = rules{
 	},
 }
 
-// served says whether flai serve started the session: Served says so, and so
+// served says whether flai serve started c's session: Served says so, and so
 // do a role or a story, which only flai serve sets.
-func (g Guard) served() bool { return g.Served || g.Role != "" || g.Story != "" }
+func (g Guard) served(c Call) bool { return g.Served || c.Role != "" || c.Story != "" }
 
 // shared decides on a call that changes the shared paths, made by a sub-agent
-// or in a session flai serve started: the zero Refusal when the call changes
+// or in a session flai serve started: the zero Verdict when the call changes
 // nothing there or the operator's own session makes it. The orchestrator's
 // own refusal names the call, so that its activity document logs it.
-func (g Guard) shared(e Event) Refusal {
-	if e.AgentID == "" && !g.served() {
-		return Refusal{}
+func (g Guard) shared(c Call) Verdict {
+	if !c.Subagent && !g.served(c) {
+		return Verdict{}
 	}
 	var call, what string
-	switch e.ToolName {
-	case MCPPrefix + SharedPathsEdit:
+	switch {
+	case c.Kind == FlaiTool && c.Tool == SharedPathsEdit:
 		call, what = SharedPathsEdit, "call "+SharedPathsEdit
-	case "Bash":
-		for _, words := range commands(e.ToolInput.Command) {
+	case c.Kind == Shell:
+		for _, words := range commands(c.Command) {
 			if why, _ := g.refuse(words, sharing); why != "" {
 				call = strings.Join(words, " ")
 				what = fmt.Sprintf("run %q", call)
@@ -73,34 +74,30 @@ func (g Guard) shared(e Event) Refusal {
 		}
 	}
 	if call == "" {
-		return Refusal{}
+		return Verdict{}
 	}
-	if e.AgentID != "" {
-		who := e.AgentType
-		if who == "" {
-			who = "unnamed"
-		}
-		return Refusal{Why: fmt.Sprintf("a sub-agent (%s) cannot %s: %s. Put the change you need in your final message.", who, what, operatorsList)}
+	if c.Subagent {
+		return deny(fmt.Sprintf("a sub-agent (%s) cannot %s: %s. Put the change you need in your final message.", cmp.Or(c.Agent, "unnamed"), what, operatorsList))
 	}
-	r := Refusal{Why: fmt.Sprintf("%s cannot %s: %s. %s", g.who(), what, operatorsList, askForShared)}
-	if g.Role == RoleOrchestrate {
-		r.Call = call
+	v := deny(fmt.Sprintf("%s cannot %s: %s. %s", g.who(c), what, operatorsList, askForShared))
+	if c.Role == RoleOrchestrate {
+		v.Call = call
 	}
-	return r
+	return v
 }
 
-// who names the session flai serve started, in a refusal.
-func (g Guard) who() string {
+// who names the session flai serve started, in a refusal of c.
+func (g Guard) who(c Call) string {
 	switch {
-	case g.Role == RolePlan:
+	case c.Role == RolePlan:
 		return "the planner"
-	case g.Role == RoleOrchestrate:
+	case c.Role == RoleOrchestrate:
 		return "the orchestrator"
-	case g.Role == RoleAnalyze:
+	case c.Role == RoleAnalyze:
 		return "the analyzer"
-	case g.Role != "":
-		return "a session flai serve started with the role " + g.Role
-	case g.Story != "":
+	case c.Role != "":
+		return "a session flai serve started with the role " + c.Role
+	case c.Story != "":
 		return "the story's agent"
 	}
 	return "a session flai serve started"
