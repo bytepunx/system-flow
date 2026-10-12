@@ -292,6 +292,7 @@ func (a *app) printServeStatus() error {
 			}
 		}
 		fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
+		a.printUnsignedAllowed(st, p.Root)
 		a.printImageVerdict(st, p.Root)
 		if m, ok := st.MCP[p.Root]; ok {
 			fmt.Fprintf(a.out, "    mcp: %s (pid %d); flai mcp status prints an agent's configuration\n", m.URL, m.PID)
@@ -310,6 +311,7 @@ func (a *app) printServeStatus() error {
 				line = "not connected: " + why
 			}
 			fmt.Fprintf(a.out, "  %s  %s  %s\n    %s\n", p.Key, p.URL, line, p.Root)
+			a.printUnsignedAllowed(st, p.Root)
 			a.printImageVerdict(st, p.Root)
 		}
 	}
@@ -326,6 +328,38 @@ func (a *app) printServeStatus() error {
 // unsignedImagePhrase opens the reason flai serve's image gate refuses a dial
 // with, and the image line of an unlisted verdict (S-0238).
 const unsignedImagePhrase = "the dashboard runs an unsigned image"
+
+// printUnsignedAllowed prints, under root's project in flai serve status,
+// which sides of its open connection dashboard.allow_unsigned admitted
+// without a release stamp; nothing for a signed pair or no connection.
+func (a *app) printUnsignedAllowed(st serveStatus, root string) {
+	if !st.Running {
+		return
+	}
+	if line := unsignedAllowedLine(allowedUnsigned(st.Status.Connections[root])); line != "" {
+		fmt.Fprintf(a.out, "    %s\n", line)
+	}
+}
+
+// allowedUnsigned are the sides of an open connection that
+// dashboard.allow_unsigned admitted without a release stamp (S-0239); none
+// for a signed pair, or a connection not open.
+func allowedUnsigned(c channel.State) []string {
+	if !c.Connected {
+		return nil
+	}
+	return c.Unsigned
+}
+
+// unsignedAllowedLine says the sides allowed unsigned in the words of the
+// dashboard's project switcher: "unsigned allowed: flai", "unsigned allowed:
+// dashboard", or "unsigned allowed: flai and dashboard"; "" for none.
+func unsignedAllowedLine(sides []string) string {
+	if len(sides) == 0 {
+		return ""
+	}
+	return "unsigned allowed: " + strings.Join(sides, " and ")
+}
 
 // printImageVerdict prints root's image verdict under its project in flai
 // serve status; nothing when flai serve has none for it.

@@ -388,3 +388,88 @@ func TestServeStatusSaysEachProjectsImageVerdict(t *testing.T) {
 		}
 	}
 }
+
+// unsignedConnections are open connections dashboard.allow_unsigned admitted
+// with this flai unsigned, the dashboard unsigned, and both, and a signed
+// pair, as channel.Client records them (S-0239).
+var unsignedConnections = map[string]channel.State{
+	"/p/pier":    {URL: "http://127.0.0.1:4245", Connected: true, Since: "2026-10-12T17:00:02Z", PeerVersion: "1.2.4", PeerSigned: true, Unsigned: []string{channel.UnsignedFlai}},
+	"/p/dock":    {URL: "http://127.0.0.1:4244", Connected: true, Since: "2026-10-12T17:00:00Z", Unsigned: []string{channel.UnsignedDashboard}},
+	"/p/harbour": {URL: "http://127.0.0.1:4242", Connected: true, Since: "2026-10-12T17:00:01Z", Unsigned: []string{channel.UnsignedFlai, channel.UnsignedDashboard}},
+	"/p/quay":    {URL: "http://127.0.0.1:4243", Connected: true, Since: "2026-10-12T17:00:03Z", PeerVersion: "1.2.4", PeerSigned: true},
+}
+
+// S-0239: the sides allowed unsigned are said in the dashboard switcher's
+// words, and nothing is said for a signed pair or a connection not open.
+func TestUnsignedAllowedLineSaysTheSides(t *testing.T) {
+	for _, c := range []struct {
+		state channel.State
+		want  string
+	}{
+		{unsignedConnections["/p/pier"], "unsigned allowed: flai"},
+		{unsignedConnections["/p/dock"], "unsigned allowed: dashboard"},
+		{unsignedConnections["/p/harbour"], "unsigned allowed: flai and dashboard"},
+		{unsignedConnections["/p/quay"], ""},
+		{channel.State{Unsigned: []string{channel.UnsignedFlai}}, ""},
+		{channel.State{}, ""},
+	} {
+		if got := unsignedAllowedLine(allowedUnsigned(c.state)); got != c.want {
+			t.Errorf("unsignedAllowedLine(allowedUnsigned(%+v)) = %q, want %q", c.state, got, c.want)
+		}
+	}
+}
+
+// S-0239: flai serve status says "unsigned allowed" with the side under each
+// project whose connection was admitted unsigned, registered, served from the
+// folder, or from a folder named for import, and nothing for a signed pair;
+// --json carries the sides as status.connections.<root>.unsigned.
+func TestServeStatusSaysUnsignedAllowedWithTheSide(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	roots := map[string]string{"harbour": tempProject(t), "dock": tempProject(t)}
+	for key, root := range roots {
+		if err := os.WriteFile(filepath.Join(root, "k"), []byte("credential"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := serve.DirFor(cfg).Register(serve.Entry{Key: key, Name: key, Root: root, URL: "http://127.0.0.1:4242", KeyFile: filepath.Join(root, "k")}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	conns := map[string]channel.State{"/p/pier": unsignedConnections["/p/pier"], "/p/quay": unsignedConnections["/p/quay"]}
+	for key, root := range roots {
+		conns[root] = unsignedConnections["/p/"+key]
+	}
+	writeServeState(t, cfg, serve.Status{Version: "test", Connections: conns, Folder: "/p",
+		FolderProjects: []serve.Entry{{Key: "pier", Root: "/p/pier", URL: "http://127.0.0.1:4245"}},
+		ImportProjects: []serve.Entry{{Key: "quay", Root: "/p/quay", URL: "http://127.0.0.1:4243"}}})
+	out, _, _ := runIn(t, home, "serve", "status")
+	for _, want := range []string{
+		"  harbour  http://127.0.0.1:4242  connected since 2026-10-12T17:00:01Z\n    " + roots["harbour"] + "\n    unsigned allowed: flai and dashboard\n",
+		"  dock  http://127.0.0.1:4242  connected since 2026-10-12T17:00:00Z\n    " + roots["dock"] + "\n    unsigned allowed: dashboard\n",
+		"  pier  http://127.0.0.1:4245  connected since 2026-10-12T17:00:02Z\n    /p/pier\n    unsigned allowed: flai\n",
+		"  quay  http://127.0.0.1:4243  connected since 2026-10-12T17:00:03Z\n    /p/quay\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+	if n := strings.Count(out, "unsigned allowed"); n != 3 {
+		t.Errorf("%d unsigned allowed lines, want 3 (none for the signed pair):\n%s", n, out)
+	}
+	js, _, _ := runIn(t, home, "serve", "status", "--json")
+	var st serveStatus
+	if err := json.Unmarshal([]byte(js), &st); err != nil || st.Status == nil {
+		t.Fatalf("json: %v %s", err, js)
+	}
+	for root, want := range conns {
+		if got := st.Status.Connections[root].Unsigned; !reflect.DeepEqual(got, want.Unsigned) {
+			t.Errorf("%s: unsigned = %v, want %v", root, got, want.Unsigned)
+		}
+	}
+	for _, field := range []string{`"unsigned": [`, `"flai"`, `"dashboard"`} {
+		if !strings.Contains(js, field) {
+			t.Errorf("--json lacks %s:\n%s", field, js)
+		}
+	}
+}

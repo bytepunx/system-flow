@@ -296,6 +296,10 @@ type hostStatus struct {
 	// runs, by project root, as its status has them (S-0238); none when flai
 	// serve does not run or has checked none.
 	Images map[string]serve.ImageVerdict `json:"images,omitempty"`
+	// Unsigned are, by project root, the sides of each open connection that
+	// dashboard.allow_unsigned admitted without a release stamp, as flai
+	// serve's status has them (S-0239); none for a signed pair.
+	Unsigned map[string][]string `json:"unsigned,omitempty"`
 }
 
 func (a *app) readHostStatus(ctx context.Context) hostStatus {
@@ -305,6 +309,14 @@ func (a *app) readHostStatus(ctx context.Context) hostStatus {
 		out.Running, out.Status = true, &st
 		if serveSt, alive := a.serveDir().ReadStatus(time.Now()); alive {
 			out.Images = serveSt.Images
+			for root, c := range serveSt.Connections {
+				if sides := allowedUnsigned(c); len(sides) > 0 {
+					if out.Unsigned == nil {
+						out.Unsigned = map[string][]string{}
+					}
+					out.Unsigned[root] = sides
+				}
+			}
 		}
 		return out
 	}
@@ -389,8 +401,9 @@ func (a *app) describeHost(st host.Status) {
 
 // serveProjectLines are, by root, in the words of flai serve status, each
 // project whose connection flai serve's state says was refused as unsigned at
-// its last attempt (S-0237), and beside it its dashboard image's verdict
-// (S-0238); none when flai serve does not run.
+// its last attempt (S-0237) or is open with an unsigned side allowed
+// (S-0239), and beside it its dashboard image's verdict (S-0238); none when
+// flai serve does not run.
 func (a *app) serveProjectLines() []string {
 	st, alive := a.serveDir().ReadStatus(time.Now())
 	if !alive {
@@ -400,6 +413,8 @@ func (a *app) serveProjectLines() []string {
 	for root, c := range st.Connections {
 		if why := refusal(c); why != "" && !c.Connected {
 			lines[root] = append(lines[root], root+": "+why)
+		} else if line := unsignedAllowedLine(allowedUnsigned(c)); line != "" {
+			lines[root] = append(lines[root], root+": "+line)
 		}
 	}
 	for root, v := range st.Images {

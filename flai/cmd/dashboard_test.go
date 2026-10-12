@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -1888,5 +1889,81 @@ func TestDashboardRestartAndUpgradeKeepTheAllowance(t *testing.T) {
 	delete(f.running, "flaiover")
 	if err := a.dashboardWatch().Restart(context.Background()); err != nil || strings.Contains(lastRunOf(f), allowUnsignedEnv) {
 		t.Errorf("flai host's restart without: %v\n%s", err, lastRunOf(f))
+	}
+}
+
+// S-0239: flai dashboard status says "unsigned allowed" with the side under
+// the host flai's connection, and, from the container's record, that it was
+// started with FLAIOVER_ALLOW_UNSIGNED=1 unless the connection is a signed
+// pair; a signed pair, with the allowance on or off, shows neither. --json
+// carries the sides as host_flai.unsigned and the record as allow_unsigned.
+func TestDashboardStatusSaysUnsignedAllowedWithTheSide(t *testing.T) {
+	for _, allow := range []bool{false, true} {
+		root := dashboardProject(t)
+		cfg := os.Getenv("FLAI_CONFIG")
+		f := &fakeRunner{images: map[string]bool{}, running: map[string]bool{}}
+		args := []string{"dashboard"}
+		if allow {
+			args = append(args, "--allow-unsigned")
+		}
+		if _, errOut, code := runWith(t, root, f, args...); code != 0 {
+			t.Fatalf("start: %s", errOut)
+		}
+		for _, tc := range []struct {
+			name      string
+			conns     map[string]channel.State
+			line      string // under the host flai's line, which ends the output
+			container bool   // the record's line is said
+		}{
+			{name: "this flai unsigned", conns: map[string]channel.State{root: {Connected: true, Since: "2026-10-12T17:00:00Z", Unsigned: []string{channel.UnsignedFlai}}},
+				line: "    unsigned allowed: flai\n", container: allow},
+			{name: "the dashboard unsigned", conns: map[string]channel.State{root: {Connected: true, Since: "2026-10-12T17:00:00Z", Unsigned: []string{channel.UnsignedDashboard}}},
+				line: "    unsigned allowed: dashboard\n", container: allow},
+			{name: "both unsigned", conns: map[string]channel.State{root: {Connected: true, Since: "2026-10-12T17:00:00Z", Unsigned: []string{channel.UnsignedFlai, channel.UnsignedDashboard}}},
+				line: "    unsigned allowed: flai and dashboard\n", container: allow},
+			{name: "not connected", conns: map[string]channel.State{}, container: allow},
+			{name: "a signed pair", conns: map[string]channel.State{root: {Connected: true, Since: "2026-10-12T17:00:00Z", PeerSigned: true}}},
+		} {
+			name := fmt.Sprintf("allow %v, %s", allow, tc.name)
+			writeServeState(t, cfg, serve.Status{Version: "test", Connections: tc.conns})
+			out, errOut, code := runWith(t, root, f, "dashboard", "status")
+			if code != 0 {
+				t.Fatalf("%s: status: %d %s", name, code, errOut)
+			}
+			if tc.line != "" && !strings.HasSuffix(out, "project(s))\n"+tc.line) {
+				t.Errorf("%s: want %q under the host flai's line:\n%s", name, tc.line, out)
+			}
+			if got := strings.Contains(out, startedAllowingUnsignedLine); got != tc.container {
+				t.Errorf("%s: says it was started with %s=1: %v, want %v:\n%s", name, allowUnsignedEnv, got, tc.container, out)
+			}
+			want := 0
+			if tc.line != "" {
+				want++
+			}
+			if tc.container {
+				want++
+			}
+			if n := strings.Count(out, "unsigned allowed"); n != want {
+				t.Errorf("%s: %d unsigned allowed lines, want %d:\n%s", name, n, want, out)
+			}
+
+			js, errOut, code := runWith(t, root, f, "dashboard", "status", "--json")
+			var st struct {
+				AllowUnsigned bool           `json:"allow_unsigned"`
+				HostFlai      hostFlaiStatus `json:"host_flai"`
+			}
+			if code != 0 || json.Unmarshal([]byte(js), &st) != nil {
+				t.Fatalf("%s: status --json: %d %s %s", name, code, js, errOut)
+			}
+			if st.AllowUnsigned != allow {
+				t.Errorf("%s: allow_unsigned %v, want %v: %s", name, st.AllowUnsigned, allow, js)
+			}
+			if wantSides := tc.conns[root].Unsigned; !slices.Equal(st.HostFlai.Unsigned, wantSides) {
+				t.Errorf("%s: host_flai.unsigned %v, want %v: %s", name, st.HostFlai.Unsigned, wantSides, js)
+			}
+			if len(tc.conns[root].Unsigned) == 0 && strings.Contains(js, `"unsigned"`) {
+				t.Errorf("%s: --json carries unsigned sides for none: %s", name, js)
+			}
+		}
 	}
 }

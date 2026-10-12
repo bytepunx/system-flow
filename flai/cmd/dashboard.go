@@ -588,7 +588,7 @@ func (a *app) runDashboard(ctx context.Context, image, tag string, port int, bin
 		fmt.Fprintf(a.out, "flaiover running at %s (%s)\n  log in with: %s\n  container %s, image %s, for %s\n    it is given this port, its login token, and the host flai's credential, and no file of any project (ADR-0031)\n  token: %s (flai dashboard token to print or rotate)\n  stop with: flai dashboard stop\n", url, reach, loginURL(url, token), s.Name, img.Ref, s.Root, tokenPath(dir))
 		fmt.Fprint(a.out, img.describe())
 		if s.AllowUnsigned {
-			fmt.Fprintf(a.out, "  unsigned allowed: started with %s=1, it serves a flai with no release stamp\n", allowUnsignedEnv)
+			fmt.Fprint(a.out, startedAllowingUnsignedLine)
 		}
 	}
 	fmt.Fprint(a.out, allowNote)
@@ -813,6 +813,17 @@ func newDashboardStopCmd(a *app) *cobra.Command {
 	}
 }
 
+// startedAllowingUnsignedLine is what flai dashboard and its status say of a
+// container started with allowUnsignedEnv=1 (S-0239).
+const startedAllowingUnsignedLine = "  unsigned allowed: started with " + allowUnsignedEnv + "=1, it serves a flai with no release stamp\n"
+
+// startedAllowingUnsigned is whether the container recorded as name was
+// started with allowUnsignedEnv=1, as its record says.
+func (a *app) startedAllowingUnsigned(name string) bool {
+	r, ok := readDashboardRecord(string(a.serveDir()))
+	return ok && r.Name == name && r.AllowUnsigned
+}
+
 func newDashboardStatusCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
@@ -829,7 +840,12 @@ serve did with that image at its last dial (S-0238): dials it, signed;
 refused it, as the dashboard runs an unsigned image no signed list names; or
 image not measured, as Docker where flai serve runs cannot say what the
 dashboard runs, with why, so the release stamp alone is checked. --json gives
-that verdict as serve_image.`,
+that verdict as serve_image. Under dashboard.allow_unsigned (S-0239) it says
+"unsigned allowed: started with FLAIOVER_ALLOW_UNSIGNED=1" for a container
+started so, and under the host flai's connection the sides it admitted
+without a release stamp: "unsigned allowed: flai", "dashboard", or "flai and
+dashboard"; a signed pair shows neither. --json gives the container's as
+allow_unsigned and the connection's sides as host_flai.unsigned.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.projectOrNone()
@@ -867,6 +883,8 @@ that verdict as serve_image.`,
 			if err != nil {
 				return err
 			}
+			hostFlai := a.hostFlai(s.Root)
+			allowing := running && a.startedAllowingUnsigned(s.Name)
 			names := make([]string, len(served))
 			for i, p := range served {
 				names[i] = p.Key
@@ -889,7 +907,10 @@ that verdict as serve_image.`,
 				if judged {
 					out["serve_image"] = verdict
 				}
-				out["host_flai"] = a.hostFlai(s.Root)
+				if allowing {
+					out["allow_unsigned"] = true
+				}
+				out["host_flai"] = hostFlai
 				return a.printJSON(out)
 			}
 			if running {
@@ -905,6 +926,11 @@ that verdict as serve_image.`,
 				fmt.Fprint(a.out, from.describe())
 				if judged {
 					fmt.Fprint(a.out, describeServeImage(verdict, from))
+				}
+				// a signed pair shows nothing of the allowance: it permits, it does not downgrade
+				signedPair := hostFlai.Connected && len(hostFlai.Unsigned) == 0
+				if allowing && !signedPair {
+					fmt.Fprint(a.out, startedAllowingUnsignedLine)
 				}
 				if len(names) > 0 {
 					fmt.Fprintf(a.out, "  serves: %s\n", strings.Join(names, ", "))
@@ -924,9 +950,9 @@ that verdict as serve_image.`,
 					fmt.Fprintf(a.out, "  this container was started by an older flai and still has a project mounted (%s%s); restart it: flai dashboard stop, then flai dashboard\n", first, more)
 				}
 				if repo == nil {
-					fmt.Fprint(a.out, a.hostFlai(s.Root).describeFolder())
+					fmt.Fprint(a.out, hostFlai.describeFolder())
 				} else {
-					fmt.Fprint(a.out, a.hostFlai(s.Root).describe())
+					fmt.Fprint(a.out, hostFlai.describe())
 				}
 			} else {
 				fmt.Fprintf(a.out, "%s gone: no container runs; start it with flai dashboard\n", s.Name)

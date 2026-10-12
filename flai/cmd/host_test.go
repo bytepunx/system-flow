@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
@@ -101,5 +102,58 @@ func TestHostStatusJSONCarriesEachProjectsImageVerdict(t *testing.T) {
 		if !strings.Contains(js, field) {
 			t.Errorf("--json lacks %s:\n%s", field, js)
 		}
+	}
+}
+
+// S-0239: flai host status says under its serve child "unsigned allowed" with
+// the side for each project whose connection was admitted unsigned, and
+// nothing for a signed pair; --json carries the sides by root.
+func TestHostStatusSaysUnsignedAllowedWithTheSide(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfg)
+	st := host.Status{Children: []host.Child{
+		{Name: host.Serve, State: "running", PID: 41, Since: "2026-10-12T17:00:00Z", Version: "1.44.0"},
+	}}
+	writeServeState(t, cfg, serve.Status{Version: "1.44.0", Connections: unsignedConnections})
+	var out bytes.Buffer
+	(&app{configPath: cfg, out: &out}).describeHost(st)
+	want := "  serve: running since 2026-10-12T17:00:00Z (pid 41, flai 1.44.0)\n" +
+		"    /p/dock: unsigned allowed: dashboard\n" +
+		"    /p/harbour: unsigned allowed: flai and dashboard\n" +
+		"    /p/pier: unsigned allowed: flai\n"
+	if got := out.String(); got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	hst, err := json.Marshal(host.Status{PID: os.Getpid(), Version: "1.44.0", Started: now, Updated: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(string(host.DirFor(cfg)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(string(host.DirFor(cfg)), "state.json"), hst, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	js, _, code := runIn(t, home, "host", "status", "--json")
+	var hs hostStatus
+	if err := json.Unmarshal([]byte(js), &hs); err != nil || code != 0 || !hs.Running {
+		t.Fatalf("json (exit %d): %v %s", code, err, js)
+	}
+	wantSides := map[string][]string{"/p/dock": {"dashboard"}, "/p/harbour": {"flai", "dashboard"}, "/p/pier": {"flai"}}
+	if !reflect.DeepEqual(hs.Unsigned, wantSides) {
+		t.Errorf("unsigned = %v, want %v (none for the signed pair)", hs.Unsigned, wantSides)
+	}
+
+	writeServeState(t, cfg, serve.Status{Version: "1.44.0", Connections: map[string]channel.State{"/p/quay": unsignedConnections["/p/quay"]}})
+	out.Reset()
+	(&app{configPath: cfg, out: &out}).describeHost(st)
+	if strings.Contains(out.String(), "unsigned") {
+		t.Errorf("a signed pair said unsigned:\n%s", out.String())
+	}
+	if js, _, _ := runIn(t, home, "host", "status", "--json"); strings.Contains(js, `"unsigned"`) {
+		t.Errorf("--json carries unsigned for a signed pair:\n%s", js)
 	}
 }
