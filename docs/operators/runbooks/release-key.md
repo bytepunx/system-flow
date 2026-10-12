@@ -1,6 +1,6 @@
 ---
 title: "Runbook: the release signing key"
-updated: 2026-10-07
+updated: 2026-10-12
 status: active
 ---
 
@@ -129,7 +129,7 @@ Why both: `bytepunx/system-flow` is a private repository on GitHub Team, where a
 
    `openssl ec -pubin -in cosign.pub -outform DER | openssl dgst -sha256` gives the same.
 2. Add a row to [Current key](#current-key) with the fingerprint and today's date.
-3. Give `cosign.pub` to the agent working the story, or paste it yourself into `flai/internal/buildinfo/releasekey.go` and `flaiover/src/lib/server/release.ts`. The two must be identical; a test checks it. The release workflows publish it as a release asset.
+3. Put `cosign.pub` in the two sources, or give it to the agent working the story: copy the file to `flai/internal/buildinfo/cosign.pub`, which flai embeds, and paste the same PEM into `RELEASE_PUBLIC_KEY` in `flaiover/src/lib/server/release.ts`. A flaiover test fails when the two differ, and a test on each side fails when the fingerprint is not the one under [Current key](#current-key). flai's release publishes the file as the asset `cosign.pub`.
 
 `cosign.pub` is not secret. Keep a copy wherever is convenient.
 
@@ -139,7 +139,7 @@ An operator compares this fingerprint with the one a release's notes give, befor
 
 | Fingerprint (SHA-256 of the DER public key) | Created | Replaces |
 |---------------------------------------------|---------|----------|
-| not generated yet | not generated yet | not generated yet |
+| `ee6df72313c9dbac1cf2270ed7f01cc523786d37bfce2dec12210215d6c5da40` | 2026-10-12 | none, the first key |
 
 ## Destroy the local private key
 

@@ -95,3 +95,8 @@ release:
   name_template: 'flai v{{ trimprefix .Tag "flai/v" }}'
   header: |
     flai {{ trimprefix .Tag "flai/v" }}, the system-flow CLI. Install with `go install github.com/bytepunx/system-flow/flai@{{ .Tag }}` or download a binary below.
+  # The release key's public half, the file flai embeds, published beside
+  # checksums.txt.sig; docs/operators/runbooks/release-key.md gives its
+  # fingerprint to compare.
+  extra_files:
+    - glob: internal/buildinfo/cosign.pub
