@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-07
+updated: 2026-10-12
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -161,6 +161,8 @@ It records why under a `### Planning` heading in the story's Notes: where each t
 | File tools | | `Edit`, `Write`, `NotebookEdit` |
 
 Each refusal names the rule broken and says to ask the operator on the item, or put it in the final summary. Other shell commands pass, as a sub-agent's do (ADR-0060). The planner's sub-agents are held as every sub-agent is. With `story new`, the last `--draft` decides: bare, or with a value that parses as true.
+
+The planner writes as itself alone ([ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)). The guard refuses it a flai command whose `--by` or `--placed-by` names another, and any assignment of `FLAI_AGENT` or `FLAI_SESSION` other than its own, or `unset` of either, anywhere on the command line. Its own name is the hook's `FLAI_AGENT`, or `planner-<item>` from `FLAI_ITEM`; its own session is the hook's `FLAI_SESSION`. The orchestrator keeps its own `--by` rule ([Its permissions and the guard](#its-permissions-and-the-guard)).
 
 Claude Code runs a hook only for the tools its matcher names. `.claude/settings.json` has two `PreToolUse` entries: `Bash|mcp__flai__.*` runs the guard in every session; `Edit|MultiEdit|Write|NotebookEdit` runs it only when `FLAI_ROLE` is `plan`, `orchestrate` (S-0218, [Its permissions and the guard](#its-permissions-and-the-guard)), or `analyze` (S-0223, [The analyzer's guard](#the-analyzers-guard)), or when `FLAI_STORY` is set, so that a story's sub-agents write no file in a `.claude/` folder (S-0299, [ADR-0102](../adrs/0102-while-auto-approve-is-off-flai-guard-refuses-a-story-s-sub-agent-a-write-to-a.md)), and exits at once in the operator's own session. The template's file runs the installed `flai guard`; this repository's runs `scripts/flai.sh guard`.
 
@@ -588,6 +590,8 @@ The analyzer writes its issues through flai alone, never by editing a file under
 | git | the reads a sub-agent has | every other git command |
 
 A file's path is taken from the project's root when it is relative, cleaned, and resolved along the part of it that exists, symbolic links followed, as the folder's is (`inReports`), so that neither `..` nor a link leads out of the folder. A refused edit names the folder. Each refusal says that the analyzer files or bumps an issue for each actionable finding with `flai issue new` and `bump` and edits nothing but its report and the index, and to put what it found, and the stories it would suggest, in its report, or ask the operator with `thread_open`. Other shell commands pass, as a sub-agent's do (ADR-0060), so a file written through the shell is not seen. The analyzer's sub-agents, the explorer among them, are held as every sub-agent is.
+
+The analyzer writes as itself alone, as the planner does ([The guard](#the-guard), [ADR-0143](../adrs/0143-flai-guard-refuses-a-story-s-agent-the-planner-and-the-analyzer-a-call-that.md)): a `--by` or `--placed-by` naming another, an assignment of `FLAI_AGENT` or `FLAI_SESSION` other than its own, and `unset` of either are refused. Its own name is the hook's `FLAI_AGENT`, or `analyzer`.
 
 `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `analyze`, as for `plan` and `orchestrate` ([The guard](#the-guard)). A project that keeps its old settings has an analyzer whose file edits the guard does not see.
 
