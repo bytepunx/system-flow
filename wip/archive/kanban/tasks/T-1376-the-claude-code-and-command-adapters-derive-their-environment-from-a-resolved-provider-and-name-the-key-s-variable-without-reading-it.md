@@ -3,15 +3,35 @@ id: T-1376
 type: task
 nature: feature
 title: The claude-code and command adapters derive their environment from a resolved provider and name the key's variable without reading it
-status: backlog
+status: done
 parent: S-0350
 owner: alex
 created: 2026-10-08T08:43:59Z
-updated: 2026-10-08T08:43:59Z
-transitions: []
+updated: 2026-10-12T16:56:53Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:54:34Z
+    by: agent-S-0350
+  - to: in-progress
+    at: 2026-10-12T16:54:35Z
+    by: agent-S-0350
+  - to: done
+    at: 2026-10-12T16:56:53Z
+    by: agent-S-0350
 stream: S-0350
 tags: [cli]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go]
+usage:
+  source: log
+  seconds: 138
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 8224
+      cache_read: 1309429
+      cache_write: 56840
+      cost: 0.785
 ---
 # T-1376 The claude-code and command adapters derive their environment from a resolved provider and name the key's variable without reading it
 

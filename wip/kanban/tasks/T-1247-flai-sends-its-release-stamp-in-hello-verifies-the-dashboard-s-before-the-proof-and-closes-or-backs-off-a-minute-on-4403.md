@@ -3,12 +3,18 @@ id: T-1247
 type: task
 nature: feature
 title: flai sends its release stamp in hello, verifies the dashboard's before the proof, and closes or backs off a minute on 4403
-status: backlog
+status: in-progress
 parent: S-0237
 owner: alex
 created: 2026-10-07T23:00:18Z
-updated: 2026-10-07T23:00:18Z
-transitions: []
+updated: 2026-10-12T17:05:51Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:05:51Z
+    by: agent-S-0237
+  - to: in-progress
+    at: 2026-10-12T17:05:51Z
+    by: agent-S-0237
 stream: S-0237
 tags: [cli]
 touches: [flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flai/internal/channel/channeltest/dashboard.go, flai/internal/buildinfo/stamp.go, flai/internal/buildinfo/stamp_test.go, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go]

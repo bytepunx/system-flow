@@ -3,16 +3,36 @@ id: T-1228
 type: task
 nature: feature
 title: flai self-upgrade --list and flai host versions mark each release this binary cannot verify, and flai host upgrade reports the refusal
-status: backlog
+status: done
 parent: S-0233
 owner: alex
 created: 2026-10-07T22:40:31Z
-updated: 2026-10-07T22:40:31Z
-transitions: []
+updated: 2026-10-12T17:16:33Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:04:36Z
+    by: agent-S-0233
+  - to: in-progress
+    at: 2026-10-12T17:04:37Z
+    by: agent-S-0233
+  - to: done
+    at: 2026-10-12T17:16:33Z
+    by: agent-S-0233
 stream: S-0233
 tags: [cli]
 touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/signature.go, flai/internal/selfupgrade/signature_test.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, flai/cmd/host.go, flai/cmd/host_versions_test.go]
 after: [T-1226]
+usage:
+  source: log
+  seconds: 716
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 217
+      cache_read: 2507781
+      cache_write: 126415
+      cost: 1.1888
 ---
 # T-1228 flai self-upgrade --list and flai host versions mark each release this binary cannot verify, and flai host upgrade reports the refusal
 

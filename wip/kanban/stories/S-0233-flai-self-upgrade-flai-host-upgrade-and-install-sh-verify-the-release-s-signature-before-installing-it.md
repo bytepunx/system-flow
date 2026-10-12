@@ -3,12 +3,18 @@ id: S-0233
 type: story
 nature: feature
 title: flai self-upgrade, flai host upgrade, and install.sh verify the release's signature before installing it
-status: backlog
+status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:23Z
-updated: 2026-10-12T16:51:13Z
-transitions: []
+updated: 2026-10-12T17:04:34Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:53:33Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T16:53:40Z
+    by: agent-S-0233
 tags: [cli]
 topics: [release, security]
 touches: [flai/internal/selfupgrade, flai/cmd/selfupgrade.go, install.sh, docs/users/flai.md, docs/operators, ".github/workflows/system-flow-check.yml", flai/cmd/host.go, flai/cmd/selfupgrade_test.go, scripts/install-test.sh, design/system/flai-cli.md, flai/cmd/host_versions_test.go, flaiover/src/lib/components/HostProcesses.svelte, flaiover/src/lib/components/HostProcesses.svelte.test.ts, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/runbooks/install.md, docs/operators/runbooks/update.md]
@@ -19,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1376
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 1
+      hand_edits: 1
+      work: 25
+  models:
+    - model: claude-opus-5-5
+      input: 216
+      output: 1011
+      cache_read: 10234581
+      cache_write: 512508
+      cost: 4.8503
   strategic:
     - kind: planner
       seconds: 35
@@ -40,15 +58,15 @@ usage:
           cache_write: 110135
           cost: 0.6065
     - kind: orchestrator
-      seconds: 272
+      seconds: 278
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 34
-          output: 472
-          cache_read: 2279538
-          cache_write: 29521
-          cost: 0.569
+          input: 36
+          output: 489
+          cache_read: 2701551
+          cache_write: 30649
+          cost: 0.6757
 cost_of_delay:
   value: 3.29
   by: planner-E-0015
@@ -80,6 +98,7 @@ A release is installed only when its `checksums.txt` was signed by a key the ins
 - T-1228 flai self-upgrade --list and flai host versions mark each release this binary cannot verify, and flai host upgrade reports the refusal
 - T-1229 The Updates page shows a flai release this binary cannot verify as not installable and offers no way to install it
 - T-1230 The user, operator, and design documentation say what an upgrade and install.sh verify and what a refusal means
+- T-1464 The local release server serves checksums.txt.sig and cosign.pub, and the smoke test verifies its test-signed releases with a test build of flai
 
 ## Notes
 

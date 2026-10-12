@@ -3,15 +3,35 @@ id: T-1226
 type: task
 nature: feature
 title: selfupgrade verifies checksums.txt.sig with crypto/ecdsa and the embedded key before the archive's hash, and refuses what it cannot verify
-status: backlog
+status: done
 parent: S-0233
 owner: alex
 created: 2026-10-07T22:40:03Z
-updated: 2026-10-07T22:40:03Z
-transitions: []
+updated: 2026-10-12T17:04:02Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:54:52Z
+    by: agent-S-0233
+  - to: in-progress
+    at: 2026-10-12T16:54:53Z
+    by: agent-S-0233
+  - to: done
+    at: 2026-10-12T17:04:02Z
+    by: agent-S-0233
 stream: S-0233
 tags: [cli]
 touches: [flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, flai/internal/selfupgrade/signature.go, flai/internal/selfupgrade/signature_test.go, flai/internal/selfupgrade/testdata]
+usage:
+  source: log
+  seconds: 549
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 210
+      cache_read: 2268283
+      cache_write: 119429
+      cost: 1.0776
 ---
 # T-1226 selfupgrade verifies checksums.txt.sig with crypto/ecdsa and the embedded key before the archive's hash, and refuses what it cannot verify
 

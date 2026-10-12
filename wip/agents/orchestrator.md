@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 398.3802
-accrued_seconds: 338492
-tasks_completed: 375
-last_run: 2026-10-12T16:52:10Z
+accrued_cost: 415.2674
+accrued_seconds: 340031
+tasks_completed: 395
+last_run: 2026-10-12T17:17:49Z
 ---
 
 # Orchestrator activity
@@ -2636,6 +2636,146 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0349
 - Seconds: 17
 - Cost: 0.3922 USD, estimated
+
+### 2026-10-12T16:53:16Z
+
+- Summary: The operator accepted S-0349 themselves, which settles TH-0412. Under judgement, published S-0349 (1 pending, 60.84 USD/week) as flai 1.42.0→1.43.0 (flai/v1.43.0) and template 1.0.87→1.0.88 (v1.0.88), pushed. New issue stories S-0368 to S-0372 are being created; I plan them once creation settles.
+- Items: S-0349
+- Seconds: 66
+- Cost: 0.5286 USD, estimated
+
+### 2026-10-12T16:53:47Z
+
+- Summary: Under promote_to_ready, moved four candidates to ready in flai promote --candidates order under throughput: S-0350 (rank 1, 29m), S-0359 (rank 2, 37m), S-0233 (rank 3, 1h15m), S-0237 (rank 4, 1h30m). S-0241 (rank 5) stays out, blocked. flai serve pulled S-0350 and S-0233 at once; applied the throughput order to the rest: S-0359, S-0237. Under plan_backlog_stories, started the planner for S-0368, first of ten new issue stories (S-0368 to S-0377) flai plan --candidates lists.
+- Items: S-0350, S-0359, S-0233, S-0237, S-0368
+- Seconds: 31
+- Cost: 0.5333 USD, estimated
+
+### 2026-10-12T16:54:34Z
+
+- Summary: Answered TH-0414, citing no source
+- Items: S-0368
+- Seconds: 47
+- Cost: 0.8062 USD, estimated
+
+### 2026-10-12T16:54:36Z
+
+- Summary: Under plan_backlog_stories, set the cost of delay input planner-S-0368 recommended on TH-0414: penalty_per_week 10 USD on S-0368 (I-0052, one instance at no measured cost; no reason for the 0 or 25 alternatives). Replied and resolved the thread.
+- Items: S-0368
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-12T16:54:46Z
+
+- Summary: Answered TH-0414, citing no source
+- Items: S-0368
+- Seconds: 10
+- Cost: 0.0000 USD
+
+### 2026-10-12T16:54:48Z
+
+- Summary: Correction: the S-0368 cost of delay input was not set. item_edit was refused because flai check found narrative.state on S-0359 (just started, its narrative still the template's placeholders). My TH-0414 reply and resolve had gone out in the same batch, so I posted a correction there. I retry once S-0359's narrative is written.
+- Items: S-0368, S-0359
+- Seconds: 2
+- Cost: 0.1355 USD, estimated
+
+### 2026-10-12T16:55:12Z
+
+- Summary: Answered TH-0414, citing no source
+- Items: S-0368
+- Seconds: 24
+- Cost: 0.2726 USD, estimated
+
+### 2026-10-12T16:55:14Z
+
+- Summary: Under plan_backlog_stories, set penalty_per_week 10 USD on S-0368 on the retry, after S-0359's narrative was written. Replied and resolved TH-0414.
+- Items: S-0368
+- Seconds: 2
+- Cost: 0.1365 USD, estimated
+
+### 2026-10-12T16:58:43Z
+
+- Summary: Answered TH-0415, citing design/adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md
+- Items: S-0368
+- Seconds: 209
+- Cost: 3.4593 USD, estimated
+
+### 2026-10-12T16:58:57Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0415, planner-S-0368's plan: an ADR refining ADR-0060, then the guard refuses read-only sub-agents' shell writes (enforcing ADR-0059), docs, and the close of I-0052. Four tasks in three layers. Figures: 45m forecast (flai's 19m raised with a stated reason), 10 USD/week. Under finalize_drafts, finalized S-0368; it is held on overlap with S-0233 and S-0350, so not promoted. Started the planner for S-0369.
+- Items: S-0368, S-0369
+- Seconds: 14
+- Cost: 0.1420 USD, estimated
+
+### 2026-10-12T16:59:30Z
+
+- Summary: Answered TH-0416, citing no source
+- Items: S-0369
+- Seconds: 33
+- Cost: 0.4271 USD, estimated
+
+### 2026-10-12T16:59:34Z
+
+- Summary: Under plan_backlog_stories, set the cost of delay input planner-S-0369 recommended on TH-0416: penalty_per_week 10 USD on S-0369 (I-0091, never occurred; matches S-0368's input for a guard gap of the same kind). Replied and resolved the thread.
+- Items: S-0369
+- Seconds: 4
+- Cost: 0.1427 USD, estimated
+
+### 2026-10-12T17:07:40Z
+
+- Summary: Recommended an answer on TH-0418, citing design/conventions/tooling.md § Rules
+- Items: S-0369
+- Seconds: 486
+- Cost: 2.6006 USD, estimated
+
+### 2026-10-12T17:07:43Z
+
+- Summary: Under plan_backlog_stories, recommended on TH-0418 (planner-S-0369's plan) and left it open for the operator. The plan adds the guard's first rule on a story's own agent (ADR-0060 lets those calls pass), a decision not yet recorded. As drafted, it would refuse any FLAI_AGENT set for flai, which conflicts with tooling.md's rule to set FLAI_AGENT. I recommended narrowing it to refuse only an author other than the agent's own name, and keeping T-1466. S-0369 stays a draft. Its figures: 45m, 10 USD/week.
+- Items: S-0369
+- Seconds: 3
+- Cost: 0.1466 USD, estimated
+
+### 2026-10-12T17:07:50Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0370 (task done widens touches with a path the commit reverted), next on flai plan --candidates.
+- Items: S-0370
+- Seconds: 7
+- Cost: 0.1480 USD, estimated
+
+### 2026-10-12T17:11:12Z
+
+- Summary: Answered TH-0419, citing design/adrs/0128-flai-task-done-commits-the-paths-the-closing-task-covers-and-those-no-other.md
+- Items: S-0370
+- Seconds: 202
+- Cost: 3.1315 USD, estimated
+
+### 2026-10-12T17:11:45Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0419, planner-S-0370's plan: task done widens touches only with paths the branch still changes against main, with an ADR narrowing ADR-0107/0128 and I-0121's own remedy. Four tasks in three layers; figures are flai's (21m, 12.50 USD/week). Under finalize_drafts, finalized S-0370. Under promote_to_ready, moved S-0368 to ready (rank 1, 45m); S-0241 (rank 2) stays out, blocked. Applied the throughput order. Started the planner for S-0371.
+- Items: S-0370, S-0368, S-0371
+- Seconds: 33
+- Cost: 0.4543 USD, estimated
+
+### 2026-10-12T17:17:40Z
+
+- Summary: Recommended an answer on TH-0420, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+- Items: S-0371
+- Seconds: 355
+- Cost: 3.6667 USD, estimated
+
+### 2026-10-12T17:17:42Z
+
+- Summary: Under plan_backlog_stories, recommended on TH-0420 (planner-S-0371's plan) and left it open for the operator. The plan adds a new refusal to flai accept for a branch that undoes main's change. That is a new acceptance condition beyond ADR-0093, with no override for intended removals. I recommended a --keep-removal override recorded in the ADR. S-0371 stays a draft. Its figures: 45m (flai's 26m raised with reason), 25 USD/week.
+- Items: S-0371
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-12T17:17:49Z
+
+- Summary: Under plan_backlog_stories, started the planner for S-0372 (a settled conversation between two stories' agents keeps waking each in turn), next on flai plan --candidates.
+- Items: S-0372
+- Seconds: 7
+- Cost: 0.1557 USD, estimated
 
 ## Refusals
 

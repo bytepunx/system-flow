@@ -3,21 +3,54 @@ id: S-0359
 type: story
 nature: feature
 title: The dashboard's settings show and set the host's providers, and a story's and the project's agent fields name a provider
-status: backlog
+status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:52:44Z
-updated: 2026-10-12T16:51:13Z
-transitions: []
+updated: 2026-10-12T17:16:49Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:53:33Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T16:54:32Z
+    by: agent-S-0359
 tags: [cli, dashboard]
 topics: [agents]
-touches: [flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/components/AgentFields.svelte, flaiover/src/lib/components/ItemEditor.svelte, flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/agent.ts, flaiover/src/lib/agent.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
+touches: [flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/settings.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/components/AgentFields.svelte, flaiover/src/lib/components/ItemEditor.svelte, flaiover/src/lib/components/NewItemForm.svelte, flaiover/src/lib/agent.ts, flaiover/src/lib/agent.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/ItemEditor.svelte.test.ts, flaiover/src/lib/components/NewItemForm.svelte.test.ts, design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md]
 after: [S-0349]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1336
+  estimated: true
+  turns:
+    - day: 2026-10-12
+      ceremony: 3
+      hand_edits: 3
+      work: 47
+  models:
+    - model: claude-opus-5-5
+      input: 322
+      output: 1832
+      cache_read: 16283270
+      cache_write: 571036
+      cost: 7.6066
+  strategic:
+    - kind: orchestrator
+      seconds: 7
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 3
+          output: 21
+          cache_read: 689288
+          cache_write: 2649
+          cost: 0.1745
 cost_of_delay:
   value: 40.93
   by: planner-E-0019
@@ -40,12 +73,12 @@ S-0349 puts providers on the host and `provider` on an agent, set from a shell. 
 
 ## Acceptance criteria
 
-- [ ] `settings.get`'s `host` carries `agent.providers`, each entry's `api`, `base_url`, `key_env`, `models`, and whether `key_env` is set in `flai serve`'s environment, never its value.
-- [ ] `settings.provider` sets or resets an entry through `flai serve agent provider`, refuses what that command refuses, and is host-wide, as `settings.harness` is.
-- [ ] `settings.default_agent`, `settings.manifest`, and the item writes that take an agent accept `provider`, and their refusal text names it among the agent's keys.
-- [ ] The Settings page has a Providers section: each entry with its fields, a line saying whether its key's variable is set, Save and Reset, and a form to add one; read-only with the enabling command while `settings` is off.
-- [ ] `AgentFields` has a provider field with the project's default as its placeholder, used wherever the agent is edited, and sends it only when typed.
-- [ ] Tests cover the read, the write and a refusal in `writes_test.go`, and the section and the field in the flaiover tests; `design/system/flaiover-dashboard.md` describes both.
+- [x] `settings.get`'s `host` carries `agent.providers`, each entry's `api`, `base_url`, `key_env`, `models`, and whether `key_env` is set in `flai serve`'s environment, never its value.
+- [x] `settings.provider` sets or resets an entry through `flai serve agent provider`, refuses what that command refuses, and is host-wide, as `settings.harness` is.
+- [x] `settings.default_agent`, `settings.manifest`, and the item writes that take an agent accept `provider`, and their refusal text names it among the agent's keys.
+- [x] The Settings page has a Providers section: each entry with its fields, a line saying whether its key's variable is set, Save and Reset, and a form to add one; read-only with the enabling command while `settings` is off.
+- [x] `AgentFields` has a provider field with the project's default as its placeholder, used wherever the agent is edited, and sends it only when typed.
+- [x] Tests cover the read, the write and a refusal in `writes_test.go`, and the section and the field in the flaiover tests; `design/system/flaiover-dashboard.md` describes both.
 
 ## Tasks
 

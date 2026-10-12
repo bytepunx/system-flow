@@ -3,16 +3,36 @@ id: T-1456
 type: task
 nature: improvement
 title: flai stream sync runs the fix over what the branch changes right after its rebase, and commits what it fixed
-status: backlog
+status: done
 parent: S-0367
 owner: alex
 created: 2026-10-12T16:52:53Z
-updated: 2026-10-12T16:52:53Z
-transitions: []
+updated: 2026-10-12T17:06:42Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:57:57Z
+    by: agent-S-0367
+  - to: in-progress
+    at: 2026-10-12T16:57:57Z
+    by: agent-S-0367
+  - to: done
+    at: 2026-10-12T17:06:42Z
+    by: agent-S-0367
 stream: S-0367
 tags: []
 touches: [flai/internal/storygit/sync.go, flai/internal/storygit/fix.go, flai/internal/storygit/fix_test.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/branch.go, flai/cmd/stream_sync_test.go]
 after: [T-1455]
+usage:
+  source: log
+  seconds: 525
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 57
+      output: 323
+      cache_read: 2503859
+      cache_write: 121853
+      cost: 1.186
 ---
 # T-1456 flai stream sync runs the fix over what the branch changes right after its rebase, and commits what it fixed
 

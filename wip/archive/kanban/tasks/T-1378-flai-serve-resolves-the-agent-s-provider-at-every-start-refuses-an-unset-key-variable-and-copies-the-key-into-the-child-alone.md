@@ -3,16 +3,36 @@ id: T-1378
 type: task
 nature: feature
 title: flai serve resolves the agent's provider at every start, refuses an unset key variable, and copies the key into the child alone
-status: backlog
+status: done
 parent: S-0350
 owner: alex
 created: 2026-10-08T08:44:04Z
-updated: 2026-10-08T08:52:54Z
-transitions: []
+updated: 2026-10-12T17:04:00Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:57:05Z
+    by: agent-S-0350
+  - to: in-progress
+    at: 2026-10-12T16:57:05Z
+    by: agent-S-0350
+  - to: done
+    at: 2026-10-12T17:04:00Z
+    by: agent-S-0350
 stream: S-0350
 tags: [cli]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/cmd/serve_actions.go]
 after: [T-1376]
+usage:
+  source: log
+  seconds: 415
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 18237
+      cache_read: 2903547
+      cache_write: 126038
+      cost: 1.7408
 ---
 # T-1378 flai serve resolves the agent's provider at every start, refuses an unset key variable, and copies the key into the child alone
 

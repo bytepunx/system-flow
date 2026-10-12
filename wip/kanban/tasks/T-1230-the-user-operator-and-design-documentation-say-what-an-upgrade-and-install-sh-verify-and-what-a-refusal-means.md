@@ -3,15 +3,21 @@ id: T-1230
 type: task
 nature: feature
 title: The user, operator, and design documentation say what an upgrade and install.sh verify and what a refusal means
-status: backlog
+status: in-progress
 parent: S-0233
 owner: alex
 created: 2026-10-07T22:40:45Z
-updated: 2026-10-07T22:40:45Z
-transitions: []
+updated: 2026-10-12T17:17:11Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:17:10Z
+    by: agent-S-0233
+  - to: in-progress
+    at: 2026-10-12T17:17:11Z
+    by: agent-S-0233
 stream: S-0233
 tags: [cli]
-touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/install.md, docs/operators/runbooks/update.md, design/system/flai-cli.md]
+touches: [docs/users/flai.md, docs/users/flai-reference.md, docs/operators/runbooks/install.md, docs/operators/runbooks/update.md, design/system/flai-cli.md, design/system/release-signing.md]
 after: [T-1227, T-1228]
 ---
 # T-1230 The user, operator, and design documentation say what an upgrade and install.sh verify and what a refusal means

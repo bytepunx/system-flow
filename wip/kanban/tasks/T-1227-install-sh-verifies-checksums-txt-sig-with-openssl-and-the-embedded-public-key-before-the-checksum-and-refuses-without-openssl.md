@@ -3,15 +3,35 @@ id: T-1227
 type: task
 nature: feature
 title: install.sh verifies checksums.txt.sig with openssl and the embedded public key before the checksum, and refuses without openssl
-status: backlog
+status: done
 parent: S-0233
 owner: alex
 created: 2026-10-07T22:40:21Z
-updated: 2026-10-07T22:40:21Z
-transitions: []
+updated: 2026-10-12T17:04:09Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:54:53Z
+    by: agent-S-0233
+  - to: in-progress
+    at: 2026-10-12T16:54:54Z
+    by: agent-S-0233
+  - to: done
+    at: 2026-10-12T17:04:09Z
+    by: agent-S-0233
 stream: S-0233
 tags: [cli]
 touches: [install.sh, scripts/install-test.sh, flai/internal/selfupgrade/installsh_test.go, ".github/workflows/system-flow-check.yml"]
+usage:
+  source: log
+  seconds: 555
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 391
+      cache_read: 3495227
+      cache_write: 130652
+      cost: 1.6364
 ---
 # T-1227 install.sh verifies checksums.txt.sig with openssl and the embedded public key before the checksum, and refuses without openssl
 

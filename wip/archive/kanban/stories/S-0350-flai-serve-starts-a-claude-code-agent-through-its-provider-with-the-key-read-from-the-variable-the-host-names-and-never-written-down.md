@@ -3,21 +3,59 @@ id: S-0350
 type: story
 nature: feature
 title: flai serve starts a claude-code agent through its provider, with the key read from the variable the host names and never written down
-status: backlog
+status: done
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:43:50Z
-updated: 2026-10-12T16:52:40Z
-transitions: []
+updated: 2026-10-12T17:19:46Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:53:33Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T16:53:40Z
+    by: agent-S-0350
+  - to: review
+    at: 2026-10-12T17:18:23Z
+    by: agent-S-0350
+  - to: done
+    at: 2026-10-12T17:19:46Z
+    by: orchestrator
 tags: [cli]
 topics: [agents]
-touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/cmd/serve_actions.go, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md]
+touches: [flai/internal/harness/harness.go, flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/cmd/serve_actions.go, docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, docs/operators/settings.md]
 after: [S-0349]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1498
+  turns:
+    - day: 2026-10-12
+      ceremony: 3
+      hand_edits: 2
+      work: 34
+  models:
+    - model: claude-opus-5-5
+      input: 218
+      output: 73319
+      cache_read: 11673560
+      cache_write: 506730
+      cost: 6.9987
+  strategic:
+    - kind: orchestrator
+      seconds: 7
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 2
+          output: 17
+          cache_read: 422014
+          cache_write: 1128
+          cost: 0.1067
 cost_of_delay:
   value: 32.08
   by: planner-E-0019
@@ -40,11 +78,11 @@ With S-0349 a story's agent names a provider and flai can resolve it, but nothin
 
 ## Acceptance criteria
 
-- [ ] With a provider whose `api` is `anthropic-messages`, the `claude-code` adapter sets `ANTHROPIC_BASE_URL` to `base_url`, `ANTHROPIC_AUTH_TOKEN` from the variable `key_env` names, `ANTHROPIC_API_KEY` to the empty string, and `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, and `ANTHROPIC_DEFAULT_HAIKU_MODEL` from `models`' `opus`, `sonnet`, and `haiku`; with no provider it sets none of them, as today.
-- [ ] The `command` adapter gets `FLAI_PROVIDER`, `FLAI_PROVIDER_API`, `FLAI_PROVIDER_BASE_URL`, and `FLAI_PROVIDER_KEY_ENV`, and `{provider}` in its arguments; it reads the key itself.
-- [ ] `flai serve` refuses a start whose provider the host lacks, whose `key_env` variable is unset or empty in its environment, or whose `api` the harness cannot speak, and the refusal names the setting or variable that fixes it, for a story's agent and for the planner, the orchestrator, and the analyzer.
-- [ ] The key's value is in no log, no work item, no thread, and no start record: the adapter names the variable to copy, and `flai serve` copies the value into the child's environment as it spawns it; a test reads the run log and the start record of a start with a provider and finds no key.
-- [ ] `docs/users/flai.md` says what a provider sets and refuses; `docs/operators/index.md` says the key's variable must be in the environment `flai host` or `flai serve` runs in; `design/system/flai-cli.md` describes the start.
+- [x] With a provider whose `api` is `anthropic-messages`, the `claude-code` adapter sets `ANTHROPIC_BASE_URL` to `base_url`, `ANTHROPIC_AUTH_TOKEN` from the variable `key_env` names, `ANTHROPIC_API_KEY` to the empty string, and `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_SONNET_MODEL`, and `ANTHROPIC_DEFAULT_HAIKU_MODEL` from `models`' `opus`, `sonnet`, and `haiku`; with no provider it sets none of them, as today.
+- [x] The `command` adapter gets `FLAI_PROVIDER`, `FLAI_PROVIDER_API`, `FLAI_PROVIDER_BASE_URL`, and `FLAI_PROVIDER_KEY_ENV`, and `{provider}` in its arguments; it reads the key itself.
+- [x] `flai serve` refuses a start whose provider the host lacks, whose `key_env` variable is unset or empty in its environment, or whose `api` the harness cannot speak, and the refusal names the setting or variable that fixes it, for a story's agent and for the planner, the orchestrator, and the analyzer.
+- [x] The key's value is in no log, no work item, no thread, and no start record: the adapter names the variable to copy, and `flai serve` copies the value into the child's environment as it spawns it; a test reads the run log and the start record of a start with a provider and finds no key.
+- [x] `docs/users/flai.md` says what a provider sets and refuses; `docs/operators/index.md` says the key's variable must be in the environment `flai host` or `flai serve` runs in; `design/system/flai-cli.md` describes the start.
 
 ## Tasks
 
@@ -74,3 +112,16 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 Forecast: 29m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 17. It stands.
 
 Cost of delay: 32.08 USD a week, as `flai cod` works it out: 29m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: 2c644431613903dfc1be793ecbf440efa6afa9cb
+- At: 2026-10-12T17:19:46Z
+
+Verdict: pass at 2c644431613903dfc1be793ecbf440efa6afa9cb; flai verify passed every step at that commit, the verifier matched all five criteria to the diff, and no secret value is in it (the key passes only into the child's environment). Minor, not a criterion: docs/operators/index.md's command bullet omits the new {provider} placeholder.
+
+- 1: flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go
+- 2: flai/internal/harness/adapters.go, flai/internal/harness/harness_test.go
+- 3: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/plan.go, flai/internal/serve/orchestrate.go, flai/internal/serve/analyze.go, flai/cmd/serve_actions.go
+- 4: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go
+- 5: docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md, docs/operators/settings.md

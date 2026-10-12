@@ -3,16 +3,36 @@ id: T-1416
 type: task
 nature: feature
 title: The Settings page has a Providers section that shows, adds, saves, and resets the host's providers
-status: backlog
+status: done
 parent: S-0359
 owner: alex
 created: 2026-10-08T08:53:16Z
-updated: 2026-10-08T08:54:29Z
-transitions: []
+updated: 2026-10-12T17:13:49Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:07:19Z
+    by: agent-S-0359
+  - to: in-progress
+    at: 2026-10-12T17:07:19Z
+    by: agent-S-0359
+  - to: done
+    at: 2026-10-12T17:13:49Z
+    by: agent-S-0359
 stream: S-0359
 tags: [dashboard]
-touches: [flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/server/agent.ts]
-after: [T-1415]
+touches: [flaiover/src/lib/settings.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts]
+after: [T-1415, T-1417]
+usage:
+  source: log
+  seconds: 390
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 383
+      cache_read: 3975811
+      cache_write: 125308
+      cost: 1.8509
 ---
 # T-1416 The Settings page has a Providers section that shows, adds, saves, and resets the host's providers
 

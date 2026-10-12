@@ -3,15 +3,35 @@ id: T-1455
 type: task
 nature: improvement
 title: A test tier takes fix_command, and verify.Fix runs it over the files the tier selects
-status: backlog
+status: done
 parent: S-0367
 owner: alex
 created: 2026-10-12T16:52:33Z
-updated: 2026-10-12T16:52:33Z
-transitions: []
+updated: 2026-10-12T16:57:25Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:53:17Z
+    by: agent-S-0367
+  - to: in-progress
+    at: 2026-10-12T16:53:17Z
+    by: agent-S-0367
+  - to: done
+    at: 2026-10-12T16:57:25Z
+    by: agent-S-0367
 stream: S-0367
 tags: []
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go, flai/internal/verify/fix.go, flai/internal/verify/fix_test.go, flai/internal/verify/manifest.go, flai/internal/verify/verify.go]
+usage:
+  source: log
+  seconds: 248
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 372
+      cache_read: 2555281
+      cache_write: 94160
+      cost: 1.1967
 ---
 # T-1455 A test tier takes fix_command, and verify.Fix runs it over the files the tier selects
 

@@ -3,16 +3,36 @@ id: T-1380
 type: task
 nature: feature
 title: The user, operator, and design documents say what a provider sets at start, what it refuses, and where its key's variable must be
-status: backlog
+status: done
 parent: S-0350
 owner: alex
 created: 2026-10-08T08:44:15Z
-updated: 2026-10-08T08:44:15Z
-transitions: []
+updated: 2026-10-12T17:06:50Z
+transitions:
+  - to: ready
+    at: 2026-10-12T17:04:07Z
+    by: agent-S-0350
+  - to: in-progress
+    at: 2026-10-12T17:04:08Z
+    by: agent-S-0350
+  - to: done
+    at: 2026-10-12T17:06:50Z
+    by: agent-S-0350
 stream: S-0350
 tags: [cli]
 touches: [docs/users/flai.md, docs/operators/index.md, design/system/flai-cli.md]
 after: [T-1378]
+usage:
+  source: log
+  seconds: 162
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 15634
+      cache_read: 2489232
+      cache_write: 108053
+      cost: 1.4924
 ---
 # T-1380 The user, operator, and design documents say what a provider sets at start, what it refuses, and where its key's variable must be
 

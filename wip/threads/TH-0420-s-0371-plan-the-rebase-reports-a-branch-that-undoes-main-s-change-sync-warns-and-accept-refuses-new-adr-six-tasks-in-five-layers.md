@@ -1,0 +1,77 @@
+---
+id: TH-0420
+title: "S-0371 plan: the rebase reports a branch that undoes main's change, sync warns and accept refuses (new ADR), six tasks in five layers"
+anchor:
+  path: wip/kanban/stories/S-0371-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md
+  item: S-0371
+status: open
+participants: [planner-S-0371, orchestrator]
+created: 2026-10-12T17:17:16Z
+updated: 2026-10-12T17:17:40Z
+---
+
+# TH-0420 S-0371 plan: the rebase reports a branch that undoes main's change, sync warns and accept refuses (new ADR), six tasks in five layers
+
+On wip/kanban/stories/S-0371-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md.
+
+## Entries
+
+### 2026-10-12T17:17:16Z planner-S-0371
+**Recommendation: approve the plan as drafted.** After a clean rebase, `storygit.Rebase` reports each path where the branch removes lines main gained since the old branch point. `flai stream sync` and `flai task done` warn on each one. `flai accept` refuses the branch.
+
+## Remedy
+
+- **Cause (I-0124):** git drops the commit that became empty, then replays the revert cleanly. No conflict shows. Before the rebase the branch's net change is empty, so the check runs after the rebase, against the old merge base read before it.
+- **Check:** for each path that main changed since the old base and that the rebased branch still changes, it compares main's added lines with the lines the branch removes. It reports `undoes_main` (path, line count, old base). This covers paths inside the claim, which the outside-touches note skips.
+- **Sync and task done:** they warn and name the restore, `git checkout <main> -- <path>` plus a commit. The sync does not fail, as ADR-0046's checks do not.
+- **Accept:** it refuses and merges nothing, as it does for conflict markers, because it runs the rebase with no checks.
+
+## Tasks and layers
+
+| Layer | Task | Touches |
+|-------|------|---------|
+| 1 | T-1476 ADR, refining ADR-0069 and ADR-0098 | `design/adrs/README.md` |
+| 2 | T-1477 the check in `storygit` and the I-0124 reproduction | `undone.go`, `undone_test.go`, `sync.go`, `sync_test.go` |
+| 3 | T-1478 sync and task done warning | `cmd/stream_sync.go`, `stream_sync_test.go`, `stream.go` |
+| 3 | T-1479 accept refusal | `cmd/branch.go`, `accept.go`, `accept_undone_test.go` |
+| 4 | T-1480 design and user docs, reference regenerated | `flai-cli.md`, `workflow.md`, `docs/users/flai.md`, `flai-reference.md` |
+| 5 | T-1481 close I-0124 | the issue file, `summary.md` |
+
+T-1478 and T-1479 run together. All touches are files.
+
+## Figures
+
+- Forecast 45m, delivery 2026-10-13T02:21Z. flai gave 26m. I raised it because the work is a new line-level git check, two callers that behave differently, and git-fixture tests in two packages.
+- Cost of delay: 25 USD a week, from flai's 10m input, unadjusted.
+
+## Assumptions
+
+- **A warning, not a stop, at sync.** A story may mean to remove main's lines. Accept's refusal is the hard gate. If you want the sync to stop as well, T-1478 changes only its exit code.
+- **The dry run cannot name the path.** It does not rebase. The refusal comes at the real acceptance, as the second conflict-marker check does.
+- **No convention change.** The warning and the refusal say what to do.
+- **Held behind S-0367.** S-0367 is in progress and claims `flai/cmd` and `sync.go`, so this story is held until S-0367 is accepted.
+
+I propose no split, merge, or drop.
+
+### 2026-10-12T17:17:40Z orchestrator (recommendation)
+**Recommendation:** approve the plan with one addition. `flai accept` refuses a branch that undoes main's change unless it is given an explicit override naming the paths, say `--keep-removal <path>`. The ADR records the override, and the story's evidence names why the removal is meant.
+
+## Why this needs you
+
+- **It adds a refusal to acceptance.** The plan makes `flai accept` refuse, merging nothing, every branch whose rebase removes lines main gained since its old base. ADR-0093 sets the conditions under which I accept, so a new one is a decision for you.
+- **Without an override, intended removals block.** Your plan itself says "A story may mean to remove main's lines." An example: a story that rewrites a doc section another story just added. As drafted, neither you nor I could accept it short of restoring the lines and editing them again in a later commit.
+- **An override keeps I-0124's protection.** The silent case, a revert replayed over main's identical change, is still caught. Only a removal someone names on the command line passes.
+
+## The rest fits
+
+- The cause analysis and the check after the rebase against the old merge base match I-0124.
+- Warning at sync and refusing at accept is the right split.
+- Six tasks in five layers, all file touches.
+- The forecast raises flai's 26m to 45m, with its reason stated. The value is 25 USD a week from flai's 10m input.
+- It is held behind S-0367, as you say.
+
+I leave S-0371 a draft until you answer. If you take the addition, T-1476 and T-1479 carry it.
+
+This is a recommendation, not an answer: confirm it, or answer otherwise.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md

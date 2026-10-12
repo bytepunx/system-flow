@@ -3,16 +3,36 @@ id: T-1457
 type: task
 nature: improvement
 title: The manifest's markdown tier fixes with lint-md.sh --fix, and the docs and an ADR say what fix_command does
-status: backlog
+status: done
 parent: S-0367
 owner: alex
 created: 2026-10-12T16:52:55Z
-updated: 2026-10-12T16:52:55Z
-transitions: []
+updated: 2026-10-12T17:07:15Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:57:58Z
+    by: agent-S-0367
+  - to: in-progress
+    at: 2026-10-12T16:57:59Z
+    by: agent-S-0367
+  - to: done
+    at: 2026-10-12T17:07:15Z
+    by: agent-S-0367
 stream: S-0367
 tags: []
 touches: [system-flow.yaml, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, design/adrs]
 after: [T-1455]
+usage:
+  source: log
+  seconds: 556
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 447
+      cache_read: 3357999
+      cache_write: 113668
+      cost: 1.5681
 ---
 # T-1457 The manifest's markdown tier fixes with lint-md.sh --fix, and the docs and an ADR say what fix_command does
 

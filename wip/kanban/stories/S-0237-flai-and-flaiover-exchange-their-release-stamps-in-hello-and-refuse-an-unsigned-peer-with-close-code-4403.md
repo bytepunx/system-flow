@@ -3,12 +3,18 @@ id: S-0237
 type: story
 nature: feature
 title: flai and flaiover exchange their release stamps in hello and refuse an unsigned peer with close code 4403
-status: backlog
+status: in-progress
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T16:52:40Z
-transitions: []
+updated: 2026-10-12T17:04:18Z
+transitions:
+  - to: ready
+    at: 2026-10-12T16:53:33Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-12T17:04:18Z
+    by: agent-S-0237
 tags: [cli, dashboard]
 topics: [release, security]
 touches: [flai/internal/channel, flaiover/src/lib/server/agent.ts, docs/operators, docs/users/flaiover.md, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/hostflai.svelte.ts, flaiover/src/lib/components/HostFlaiBanner.svelte, flaiover/src/lib/components/HostFlaiBanner.svelte.test.ts, flai/cmd/serve.go, flai/cmd/host.go, design/system/dashboard-host-channel.md, design/system/flaiover-dashboard.md, flai/internal/serve/serve.go, flai/internal/serve/serve_test.go, flaiover/src/routes/api/projects/+server.ts, flaiover/src/routes/api/projects/projects.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/settings.ts, flai/internal/buildinfo/stamp.go, flai/internal/buildinfo/stamp_test.go, flaiover/src/lib/server/release.ts, flaiover/src/lib/server/release.test.ts, flaiover/src/routes/api/agent/+server.ts, flaiover/src/routes/api/agent/agent.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts, flai/cmd/serve_test.go, flai/cmd/host_test.go, docs/users/flai.md, design/system/flai-cli.md, design/system/release-signing.md]
@@ -24,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 381
+      seconds: 387
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 433
-          cache_read: 3118479
-          cache_write: 11596
-          cost: 0.7713
+          input: 29
+          output: 450
+          cache_read: 3540492
+          cache_write: 12724
+          cost: 0.878
 cost_of_delay:
   value: 3.95
   by: planner-E-0015
