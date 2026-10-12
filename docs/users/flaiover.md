@@ -41,6 +41,20 @@ At the right of the header the dashboard says whether a flai on the host has it 
 
 Writes go the same way: a move, a new story, a saved document, an acceptance are asked of flai on the host, which does them with your own git identity and, for commits made for you, the dashboard's trailer. The dashboard's image holds no flai and no git. Throughout this guide, "when the dashboard can write" means while flai on the host has it connected. If the flai on the host is older than the dashboard, the banner says what it lacks and asks you to upgrade flai. If the connection is lost in the middle of an acceptance, the page says the acceptance may have completed on the host: reload the board before trying again.
 
+The dashboard and the flai on the host each check the other's release stamp when flai connects, and refuse a build that is not a release (S-0237). A development build of either carries no stamp and is refused. When this dashboard refuses the flai on the host:
+
+- The badge reads "host flai: refused (unsigned)", with what to do as its tooltip.
+- The banner on every page of that project reads "This dashboard refused the flai on the host as unsigned, so the project cannot be shown.", with the reason and what to do under it:
+
+  ```text
+  this dashboard refused flai 1.43.0 on the host: unsigned (missing stamp); install a release of flai on the host with flai host upgrade, or with flai self-upgrade and then flai serve stop and flai dashboard; a development build of flai carries no stamp and is refused
+  ```
+
+- The reason is `missing stamp`, `invalid signature`, or `wrong component <name>`. It says "a flai" in place of "flai 1.43.0" when the flai named no version.
+- The refusal stays until a signed flai for that project connects. While a flai is connected, no refusal is shown.
+
+When it is flai that refuses this dashboard, the dashboard only sees no flai connect, and says "host flai: not connected". `flai serve status` on the host says "flai refused the dashboard: unsigned", with the reason. Either way, run a released dashboard and a released flai from the same release; the [operators guide](../operators/index.md#the-stamp-on-the-connection-s-0237) says how.
+
 ## Notices
 
 What an action did is said in a banner on the page: a move on the board, a ticked criterion or a save on an item's page, an accepted ADR, a saved document, a publish. The banner stays until your next action there, or until you dismiss it with the X at its right. Banners that say how things stand, such as flai not being connected, an acceptance not yet pushed, or what is ready to publish, have no X: they go when what they say stops being true.
@@ -50,6 +64,17 @@ What an action did is said in a banner on the page: a move on the board, a ticke
 One dashboard, and one `flai serve` on the host, can serve several projects. The header always has a project switcher showing the project you are looking at, even when there is only one. It lists the projects, then, under "Not imported yet", the repositories on the host that can be imported (see below). Pick another project and every screen changes to it where you are, without reloading. The board you are on shows the other project's board and follows its changes from then on, and the inbox count and the host flai badge follow too. Your choice is remembered in this browser and shown in the page's address and in the header's links, so a bookmark or a copied link opens on the same project. Nobody sees your inbox, board, or documents mixed with another project's; picking one shows that one and nothing else.
 
 To add a project, run `flai dashboard` in it on the host: when the dashboard is already running, that only registers the project with the running `flai serve`, which connects it within a second or two, and it joins the switcher by itself (the list is looked at again every 30 seconds, and whenever you open the switcher). The project needs a `key` in its `system-flow.yaml`; `flai check` says how to add one. If a project you expect is missing, its flai has not connected here yet: `flai serve status` on the host says why. A project `flai serve` serves that is not connected stays in the switcher as "(served, not connected)", with the reason when you hover over it, and a link beside the switcher ("1 not connected: why?") opens [Settings](#settings), where each project's state says why. Projects can also be served and removed there, without a shell.
+
+The switcher also says, per project, whether its flai is signed, that is, whether its [release stamp](#host-flai) verified (S-0237). The label after the project's name:
+
+| Label | What it means |
+|-------|---------------|
+| "(signed)" | Connected, and its flai's release stamp verified |
+| "(unsigned)" | Connected, and its flai's release stamp did not verify |
+| "(refused: unsigned flai)" | Not connected: this dashboard refused its flai as unsigned |
+| "(served, not connected)" | Not connected, for another reason |
+
+For a refused project, the option's tooltip and its line in the "N not connected: why?" link's tooltip give the reason and the version that flai named, such as `Quay: refused: unsigned flai: missing stamp (flai 1.43.0)`. Its state on the Settings page reads `not connected: refused: unsigned flai:` and the reason.
 
 A repository that is not a system-flow project yet can be imported from the board, once the operator has named the folder it is in on the host (`flai serve import add ~/git`, in the operators guide). It appears in the switcher and the project list as "(not imported)". Picking it asks whether to import it and says which tests will run. **Not now** tells you to select a different project; nothing is remembered, so picking the repository again asks again. **Import** adds the standard's folders and files to the repository (nothing that is there is overwritten), runs its tests, and commits the import if they pass. The page then shows the project it has become. If a test fails, nothing is committed: the page shows what failed, the imported files wait in the repository to be fixed and committed, and **Open the project** shows it, since it is a project either way. A repository with uncommitted changes is refused until they are committed or stashed.
 

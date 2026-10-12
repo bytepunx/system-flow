@@ -2086,6 +2086,25 @@ A git repository with a `system-flow.yaml` below a folder named with `flai serve
 
 It needs no root and no configuration. `flai dashboard stop`, like `flai serve project remove`, takes the project out of it and leaves it running for your other projects; `flai serve stop` stops it until `flai serve start`, and `flai host stop` stops it with everything else. `flai dashboard status` has a `host flai` line: connected and since when, or why not. The dashboard shows the same at the right of its header, and "host flai: not connected" there means `flai serve` is not running or cannot reach the dashboard: `flai serve status` says which. Its list of projects, its list of removed projects (`removed.json`), its state, and its log (`serve.log`) are in a folder named `serve` beside flai's config file, `~/.flai/serve` unless `FLAI_CONFIG` points elsewhere.
 
+flai and the dashboard check each other's release stamp when flai connects, and refuse a build that is not a release with close code 4403 (S-0237, [the operators guide](../operators/index.md#the-stamp-on-the-connection-s-0237)). flai then waits a minute before it dials that project again. For a project refused at its last attempt, `flai serve status` says which side refused the other, in place of the bare last error:
+
+```text
+  harbour  http://127.0.0.1:4242  not connected: the dashboard refused this flai: unsigned (missing stamp)
+  quay  http://127.0.0.1:4243  not connected: flai refused the dashboard: unsigned (wrong component flai, dashboard 1.2.3)
+```
+
+The brackets hold the reason (`missing stamp`, `invalid signature`, or `wrong component <name>`) and the dashboard's version, each left out when it is not known. Projects served from the folder and from the import folders say the same. `--json` carries `refused_by` (`dashboard` or `flai`), `refused_reason`, `peer_version`, and `peer_signed` in `connections[<root>]`, beside `last_error`. `flai host status` prints one line per refused project under its `serve` row, by folder:
+
+```text
+    /p/harbour: the dashboard refused this flai: unsigned (missing stamp)
+```
+
+`flai dashboard status` says it on its `host flai` line, and in `refused` under `host_flai` in `--json`:
+
+```text
+  host flai: flai serve runs (pid 4242) but is not connected: flai refused the dashboard: unsigned (missing stamp)
+```
+
 `flai serve` does what a dashboard asks only among the methods flai offers, and what touches your credentials is off until you turn it on. These *host actions* are yours to enable, by name, in a shell on the host; `push` lets the board publish when you press Publish:
 
 ```bash

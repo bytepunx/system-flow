@@ -248,7 +248,7 @@ The stamp is what lets flaiover say anything about flai at all, since the contai
 
 ### The stamp as built (S-0235)
 
-S-0235 builds the stamp into both components, and each checks its own at start. Nothing is exchanged in `hello` yet and nothing is refused; that is S-0237.
+S-0235 builds the stamp into both components, and each checks its own at start. S-0237 exchanges the stamps in `hello` and refuses an unsigned peer; see [The exchange as built](#the-exchange-as-built-s-0237).
 
 | | flai | flaiover |
 |-|------|----------|
@@ -265,6 +265,23 @@ S-0235 builds the stamp into both components, and each checks its own at start. 
 A stamp is in one of three states: `signed`, `missing`, or `invalid`. It is invalid when its signature does not verify against the release key, when it is malformed, or when it names another component, version, or commit than the build reports. The last check is why each workflow builds the statement from the same values the build reports: `release-flaiover.yml` fails the image job when the statement does not name the build ("Stamp names this build"), and so does the Dockerfile. A stamp that named another build would make every start of the release warn about itself.
 
 Only release tags carry a stamp. `latest` and `sha-*` from `main`, a `goreleaser --snapshot`, `scripts/flai.sh`, and an image from `flai dashboard --build`, `make flaiover-image`, or `scripts/flaiover-image.sh` carry none. A flai from `scripts/flai.sh` is a development build and says nothing. An image built from `main` or by `flai dashboard --build` reports the newest `flaiover/v*` tag as its version, so it warns once at start. [The development case](#the-development-case) below, built by S-0239, is where such a build is allowed on purpose. The Dockerfile fails a build given one of the two build arguments without the other.
+
+### The exchange as built (S-0237)
+
+S-0237 exchanges the stamps in `hello`, as [A release stamp in `hello`](#a-release-stamp-in-hello) designed, with two differences. Neither side checks the version or the commit a stamp names, only its signature and its component. And no allowance for a development build exists yet: [The development case](#the-development-case) is S-0239, so until it lands a development build of either side is refused.
+
+| | flai | flaiover |
+|-|------|----------|
+| Sends | `release: {statement, signature}` in `hello`, from `buildinfo.ReleaseStatement` and `ReleaseSignature`; absent for a development build | `release` in its answer to `hello`, from `/app/release-stamp` when it holds one well formed (`helloStamp`); absent otherwise |
+| Checks | the dashboard's, with `buildinfo.VerifyPeerStamp`, for the component `flaiover`, after the dashboard's proof and before it sends `hello.prove` | flai's, with `verifyPeerStamp`, for the component `flai`, before it sends its nonce, so an unsigned flai has nothing to prove against |
+| An older peer | a protocol 1 dashboard answers without `release` and is refused as `missing stamp` | a protocol 1 `hello` is read far enough to be refused as `missing stamp` |
+| Refuses with | close code 4403 (`CloseUnsigned` in `internal/channel`), reason `unsigned peer: <fault>` | the same (`CLOSE_UNSIGNED` in `$lib/server/agent.ts`) |
+| After a refusal | waits a minute before it dials that project again (`HeldBackoff`), from either side's refusal, as after 4409 | keeps the refusal on the project's hub as `refused`, `{at, reason, flai}`, until a signed flai for it is adopted; at most eight projects are known from a refusal alone, since `hello` names its project before any proof |
+| Logs | one `error` per refusal, `connection refused as unsigned`, with `refused_by`, `reason`, and `peer_version`, not repeated at every retry | one `warn` per refusal, `host flai refused: unsigned peer`, with `project`, `flai`, and `reason` |
+| Records | `refused_by` (`dashboard` or `flai`), `refused_reason`, `peer_version`, and `peer_signed` in the connection's state, cleared once a connection is proven | `signed` on a connected flai, and `refused` |
+| Shows | `flai serve status`, `flai host status`, and `flai dashboard status`: `the dashboard refused this flai: unsigned` or `flai refused the dashboard: unsigned`, then `(<reason>, dashboard <version>)` after a space, each part left out when not known | `/api/agent`'s error, shown by the banner and the header badge `host flai: refused (unsigned)`; `signed` and `refused` on each project in `/api/projects`, shown by the project switcher as `(signed)`, `(unsigned)`, or `(refused: unsigned flai)` |
+
+The fault is `missing stamp`, `invalid signature` (malformed, or signed by no release key flai or the image carries), or `wrong component <name>`. The version a refusal names is the stamp's when it names one, else the one `hello` gave. A dashboard that flai refuses keeps nothing of it: to the dashboard it is a socket closed before the proof, and it shows only that no flai is connected. The operator documentation states the promise and its limit as the table under [What a running process can prove about itself](#what-a-running-process-can-prove-about-itself) does, in [docs/operators](../../docs/operators/index.md#the-release-stamp).
 
 ### The development case
 
