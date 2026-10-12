@@ -129,11 +129,14 @@ type Log struct {
 }
 
 // Touches is what the touches step added to the task's touches and to the
-// story's, and the stories in progress the story's claim grew into.
+// story's, the committed paths it left out because the story's branch no
+// longer changes them against the main branch (ADR-0144), and the stories in
+// progress the story's claim grew into.
 type Touches struct {
-	Task     []string               `json:"task"`
-	Story    []string               `json:"story"`
-	Overlaps []itemedit.Overlapping `json:"overlaps"`
+	Task      []string               `json:"task"`
+	Story     []string               `json:"story"`
+	Unchanged []string               `json:"unchanged"`
+	Overlaps  []itemedit.Overlapping `json:"overlaps"`
 }
 
 // Check is flai check --strict scoped to the story (ADR-0085): Findings are
@@ -555,18 +558,36 @@ func (r *run) log() error {
 	return nil
 }
 
-// touches adds the paths the commit changed that the task's touches do not
+// touches adds the paths the commit changed that the story's branch still
+// changes against the main branch (ADR-0144) and the task's touches do not
 // cover to the task, and those the story's do not cover to the story, as
 // flai touches --add records them; the wip folder is flai's and is left out,
-// and so is each path the commit step left for another task (ADR-0128).
+// and so is each path the commit step left for another task (ADR-0128). The
+// committed paths the branch no longer changes are listed in
+// Touches.Unchanged. It never removes a touch.
 func (r *run) touches() error {
-	t := &Touches{Task: []string{}, Story: []string{}, Overlaps: []itemedit.Overlapping{}}
+	t := &Touches{Task: []string{}, Story: []string{}, Unchanged: []string{}, Overlaps: []itemedit.Overlapping{}}
 	r.res.Touches = t
 	if r.res.Commit == nil {
 		return nil
 	}
+	branch, err := r.branchChanges()
+	if err != nil {
+		return err
+	}
+	var paths []string
+	for _, p := range r.res.Commit.Paths {
+		if slices.Contains(branch, p) {
+			paths = append(paths, p)
+		} else {
+			t.Unchanged = append(t.Unchanged, p)
+		}
+	}
+	if len(paths) == 0 {
+		return nil
+	}
 	w, err := itemedit.WidenStory(itemedit.WidenOptions{
-		Repo: r.o.Repo, Story: r.story.ID, Task: r.task.ID, Paths: r.res.Commit.Paths, By: r.o.Agent, Now: r.o.Now,
+		Repo: r.o.Repo, Story: r.story.ID, Task: r.task.ID, Paths: paths, By: r.o.Agent, Now: r.o.Now,
 	})
 	t.Task, t.Story, t.Overlaps = w.Task, w.Story, w.Overlaps
 	if err != nil {
@@ -577,6 +598,20 @@ func (r *run) touches() error {
 		r.logger.Warn("overlap notices not sent", "component", "touches", "item", r.story.ID, "err", w.Untold)
 	}
 	return nil
+}
+
+// branchChanges is the paths the story's branch changes against its merge
+// base with the main branch, both sides of a rename included (ADR-0144).
+func (r *run) branchChanges() ([]string, error) {
+	base, err := storygit.MainBranch(r.o.Runner, mainRoot(r.o.Repo))
+	if err != nil {
+		return nil, fmt.Errorf("read the main branch's name in the main checkout to list what %s changes against it and widen the touches: %w; fix what git says and run %s again", storygit.Branch(r.story.ID), err, r.again())
+	}
+	out, err := r.git("diff", "--name-only", "--no-renames", "-z", base+"...HEAD")
+	if err != nil {
+		return nil, fmt.Errorf("list the paths %s changes against %s in %s to widen the touches: %w; fix what git says and run %s again", storygit.Branch(r.story.ID), base, r.rel(r.wt), err, r.again())
+	}
+	return nulSeparated(out), nil
 }
 
 // check runs flai check --strict on the worktree, scoped to the story as the

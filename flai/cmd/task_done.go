@@ -49,9 +49,12 @@ fails stops the run; the steps after it are not done.
    be repeated after a stop.
 5. Log: an entry in the story's narrative: --log when given, else the
    message's subject line, else "Closed T-nnnn: <title>".
-6. Touches: the paths the commit changed that the task's touches, or the
-   story's, do not cover are added to each, as flai touches records them.
-   A path left is never added.
+6. Touches: the paths the commit changed that the story's branch still
+   changes against the main branch, and the task's touches, or the story's,
+   do not cover, are added to each, as flai touches records them
+   (ADR-0144). A committed path the branch no longer changes, reverted to
+   the main branch's version, is listed as unchanged and not added. A path
+   left is never added, and no touch is removed.
 7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note.
 8. Inbox: the agent's inbox, as the MCP tool inbox answers it.
@@ -183,6 +186,13 @@ func (a *app) printTaskDone(res taskdone.Result) {
 		}
 		if len(t.Story) > 0 {
 			fmt.Fprintf(w, "touches: added to %s: %s\n", res.Story, strings.Join(t.Story, ", "))
+		}
+		if len(t.Unchanged) > 0 {
+			base := "the main branch"
+			if res.Sync != nil && res.Sync.Base != "" {
+				base = res.Sync.Base
+			}
+			fmt.Fprintf(w, "touches: not added, unchanged against %s: %s\n", base, strings.Join(t.Unchanged, ", "))
 		}
 		printOverlapping(w, t.Overlaps)
 	}

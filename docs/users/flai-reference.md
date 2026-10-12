@@ -3415,9 +3415,12 @@ Close a task in one call (ADR-0107). flai finds the task's story and works in th
    be repeated after a stop.
 5. Log: an entry in the story's narrative: --log when given, else the
    message's subject line, else "Closed T-nnnn: <title>".
-6. Touches: the paths the commit changed that the task's touches, or the
-   story's, do not cover are added to each, as flai touches records them.
-   A path left is never added.
+6. Touches: the paths the commit changed that the story's branch still
+   changes against the main branch, and the task's touches, or the story's,
+   do not cover, are added to each, as flai touches records them
+   (ADR-0144). A committed path the branch no longer changes, reverted to
+   the main branch's version, is listed as unchanged and not added. A path
+   left is never added, and no touch is removed.
 7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note.
 8. Inbox: the agent's inbox, as the MCP tool inbox answers it.

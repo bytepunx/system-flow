@@ -183,7 +183,7 @@ func TestRunClosesATaskInOneCall(t *testing.T) {
 	if _, err := os.Stat(messages.Dir(repo)); !os.IsNotExist(err) {
 		t.Errorf("a conversation was written: %v", err)
 	}
-	for _, want := range []string{`"stopped":""`, `"left":[]`, `"told":[]`, `"followed":[]`, `"warnings":[]`, `"overlaps":[]`, `"notes":[`} {
+	for _, want := range []string{`"stopped":""`, `"left":[]`, `"told":[]`, `"followed":[]`, `"warnings":[]`, `"unchanged":[]`, `"overlaps":[]`, `"notes":[`} {
 		if !strings.Contains(string(data), want) {
 			t.Errorf("json lacks %s: %s", want, data)
 		}
@@ -552,6 +552,65 @@ func TestRunLeavesOnlyAnOpenSiblingsPaths(t *testing.T) {
 				t.Errorf("%s touches %v", it.ID, got)
 			}
 		})
+	}
+}
+
+// I-0121, ADR-0144: a story whose first close changed README.md narrows its
+// touches and the task's, and its second close reverts README.md to main's
+// version. The touches step leaves README.md out of the touches, the branch
+// no longer changing it against main, and lists it as unchanged; the paths
+// the branch still changes widen them as before.
+func TestRunWidensTouchesOnlyWithPathsTheBranchStillChanges(t *testing.T) {
+	repo, wt := project(t)
+	setTouches(t, repo, "T-003", "src/one")
+	second := newTask(t, repo, "Revert", "src/two.go")
+	write(t, wt, "src/one/a.go", "package one\n")
+	write(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
+	first, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 one"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Stopped != "" || first.Touches == nil || strings.Join(first.Touches.Story, ",") != "README.md,src/one/a.go" || len(first.Touches.Unchanged) != 0 {
+		t.Fatalf("first: stopped at %q: %s, touches %+v", first.Stopped, first.Error, first.Touches)
+	}
+	// the story leaves README.md to another story: it narrows the touches and
+	// reverts the file in the next task's close
+	setTouches(t, repo, "T-003", "src/one")
+	setTouches(t, repo, "S-004", "src/one/a.go")
+	git(t, wt, "checkout", "main", "--", "README.md")
+	write(t, wt, "docs/README.md", "# Docs\n\nChanged too.\n")
+	write(t, wt, "src/two.go", "package two\n")
+
+	o := options(repo, "fix: [S-004] leave README.md to main")
+	o.Task = second
+	res, err := Run(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "README.md,docs/README.md,src/two.go" {
+		t.Fatalf("stopped at %q: %s, commit %+v", res.Stopped, res.Error, res.Commit)
+	}
+	if diff := git(t, wt, "diff", "--name-only", "main...HEAD"); diff != "docs/README.md\nsrc/one/a.go\nsrc/two.go" {
+		t.Fatalf("the branch changes %q against main", diff)
+	}
+	if res.Touches == nil || strings.Join(res.Touches.Unchanged, ",") != "README.md" || strings.Join(res.Touches.Task, ",") != "docs/README.md" || strings.Join(res.Touches.Story, ",") != "docs/README.md,src/two.go" {
+		t.Errorf("touches: %+v", res.Touches)
+	}
+	if got := get(t, repo, second).Touches; strings.Join(got, ",") != "src/two.go,docs/README.md" {
+		t.Errorf("%s touches %v", second, got)
+	}
+	if got := get(t, repo, "S-004").Touches; strings.Join(got, ",") != "src/one/a.go,docs/README.md,src/two.go" {
+		t.Errorf("S-004 touches %v", got)
+	}
+	if got := get(t, repo, "T-003").Touches; strings.Join(got, ",") != "src/one" {
+		t.Errorf("T-003 touches %v", got)
+	}
+	data, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"unchanged":["README.md"]`) {
+		t.Errorf("json: %s", data)
 	}
 }
 
