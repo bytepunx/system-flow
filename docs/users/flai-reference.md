@@ -63,7 +63,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [unblock](#flai-unblock) | Close the open blocked interval on an item |
 | [upgrade](#flai-upgrade) | Bring this project to the latest template version |
 | [verify](#flai-verify) | Run a story's close-out steps and the tiers its branch selects, in its worktree, and answer one result |
-| [version](#flai-version) | Print version, commit, and build date |
+| [version](#flai-version) | Print version, commit, build date, and whether the build is a signed release |
 
 ## flai
 
@@ -135,7 +135,7 @@ Subcommands:
 - [unblock](#flai-unblock): Close the open blocked interval on an item
 - [upgrade](#flai-upgrade): Bring this project to the latest template version
 - [verify](#flai-verify): Run a story's close-out steps and the tiers its branch selects, in its worktree, and answer one result
-- [version](#flai-version): Print version, commit, and build date
+- [version](#flai-version): Print version, commit, build date, and whether the build is a signed release
 
 ### flai accept
 
@@ -3831,7 +3831,7 @@ Flags:
 
 ### flai version
 
-Print version, commit, and build date.
+Print version, commit, build date, and whether the build is a signed release.
 
 ```text
 flai version

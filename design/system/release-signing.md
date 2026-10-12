@@ -241,6 +241,26 @@ The stamp is a small statement CI signs with the release key before the build, a
 
 The stamp is what lets flaiover say anything about flai at all, since the container can measure nothing on the host; and it is what covers flai's side when Docker is out of reach. It is checked by both for symmetry and because it costs nothing more once the key is in both sources. Its promise is stated above and should be written the same way in the operator documentation: it names the peer's release and refuses builds that are not one; it does not defend against someone who holds the credential.
 
+### The stamp as built (S-0235)
+
+S-0235 builds the stamp into both components, and each checks its own at start. Nothing is exchanged in `hello` yet and nothing is refused; that is S-0237.
+
+| | flai | flaiover |
+|-|------|----------|
+| Statement | `flai <version> <commit>`, one line, no newline | `flaiover <version> <commit>`, the same |
+| Version and commit | the tag less `flai/v`, and `git show --format=%h`, the command GoReleaser takes `.ShortCommit` from | the tag less `flaiover/v`, and `git rev-parse --short HEAD`, as the image job computes `FLAI_COMMIT` |
+| Signed by | `release-flai.yml`, step "Sign the release stamp", before GoReleaser | `release-flaiover.yml`, job `release-key`, step "Sign the release statement", on a `flaiover/v*` tag only, in the environment `release` |
+| Signature | `cosign sign-blob` with the release key and the three flags that sign `checksums.txt`: base64 of an ASN.1 DER ECDSA P-256 signature over the statement's SHA-256 | the same |
+| Carried as | `buildinfo.ReleaseStatement` and `buildinfo.ReleaseSignature`, set by `flai/.goreleaser.yaml`'s `ldflags` from `FLAI_RELEASE_STATEMENT` and `FLAI_RELEASE_SIGNATURE` | `/app/release-stamp`, two lines, the statement and the signature, written by `flaiover/Dockerfile` from the build arguments `FLAIOVER_STAMP_STATEMENT` and `FLAIOVER_STAMP_SIGNATURE`; `FLAIOVER_RELEASE_STAMP` names another file |
+| Checked by | `buildinfo.OwnStamp`, against every release key flai carries, and the build's own `Version` and `Commit` | `checkReleaseStamp` in `flaiover/src/lib/server/release.ts`, with `node:crypto`, against the image's `FLAIOVER_VERSION` and `FLAIOVER_COMMIT` |
+| Shown | `flai version` (`release: signed`, `development build, no stamp`, `missing stamp`, or `invalid stamp: <reason>`), and `release` in `flai version --json` | the label `signed` (`true` or `false`) on `flaiover_build_info`, and `release_stamp` on the `server started` line |
+| Warns | `flai serve`, once at start: `release stamp not valid`, with `state` and `reason` | the server, once at start: `release stamp not verified`, with `state`, `reason`, and `path` |
+| A development build | version `dev`, empty, or starting `0.0.0`: no stamp, never warned about | `FLAIOVER_VERSION` unset, `0.0.0`, or `0.0.0-…`: the same |
+
+A stamp is in one of three states: `signed`, `missing`, or `invalid`. It is invalid when its signature does not verify against the release key, when it is malformed, or when it names another component, version, or commit than the build reports. The last check is why each workflow builds the statement from the same values the build reports: `release-flaiover.yml` fails the image job when the statement does not name the build ("Stamp names this build"), and so does the Dockerfile. A stamp that named another build would make every start of the release warn about itself.
+
+Only release tags carry a stamp. `latest` and `sha-*` from `main`, a `goreleaser --snapshot`, `scripts/flai.sh`, and an image from `flai dashboard --build`, `make flaiover-image`, or `scripts/flaiover-image.sh` carry none. A flai from `scripts/flai.sh` is a development build and says nothing. An image built from `main` or by `flai dashboard --build` reports the newest `flaiover/v*` tag as its version, so it warns once at start. [The development case](#the-development-case) below, built by S-0239, is where such a build is allowed on purpose. The Dockerfile fails a build given one of the two build arguments without the other.
+
 ### The development case
 
 This repository runs flai from `scripts/flai.sh`, with no version and no stamp, and its dashboard from `flai dashboard --build`, an image with no digest on any list. Every contributor and every project on the template that builds its own flai is in the same position, so unsigned must be allowed on purpose, in one place, and visible.

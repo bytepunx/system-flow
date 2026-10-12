@@ -232,13 +232,14 @@ Do not set these yourself; a command you write for `flai serve agent set` may re
 | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | unset: no traces | Where traces are sent over OTLP/HTTP |
 | `OTEL_SERVICE_NAME` | `flaiover` | The service name on its spans |
 | `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` | the OpenTelemetry SDK's | Sampling |
-| `FLAIOVER_VERSION`, `FLAIOVER_COMMIT` | baked into the image | The release and commit `flaiover_build_info` reports; not for changing |
+| `FLAIOVER_VERSION`, `FLAIOVER_COMMIT` | baked into the image | The release and commit `flaiover_build_info` reports, beside its `signed` label, and the release stamp must name; not for changing |
+| `FLAIOVER_RELEASE_STAMP` | unset: `/app/release-stamp` | The file holding the image's release stamp, which the server checks at start ([The release stamp](index.md#the-release-stamp)); for a build that keeps it elsewhere |
 | `PROJECT_DIR` | the working directory | The project the development server and tests ask flai about; names nothing in the container |
 | `FLAIOVER_LICENSE` | unset: `LICENSE.md` beside the server (`/app/LICENSE.md` in the image), else one directory up | The license file the Host › License page and `GET /api/license` show (S-0231); for a build that keeps it elsewhere |
 | `--publish` | `<dashboard.bind>:<dashboard.port>:3000` | Where the host reaches the container |
 | `--user` | your user and group | So that the two secret files, readable only by you, can be read |
 
-Build arguments, for an image built with `flai dashboard --build` or `make flaiover-image`: `FLAIOVER_VERSION` and `FLAI_VERSION` from the newest `flaiover/v*` and `flai/v*` tags, `FLAI_COMMIT` the commit, and `FLAI_DATE` the build time. `flai dashboard --build` sets them.
+Build arguments, for an image built with `flai dashboard --build` or `make flaiover-image`: `FLAIOVER_VERSION` and `FLAI_VERSION` from the newest `flaiover/v*` and `flai/v*` tags, `FLAI_COMMIT` the commit, and `FLAI_DATE` the build time. `flai dashboard --build` sets them. `FLAIOVER_STAMP_STATEMENT` and `FLAIOVER_STAMP_SIGNATURE` are the release stamp, which only the release workflow gives, both or neither; a local build has none.
 
 ## Release signing secrets
 

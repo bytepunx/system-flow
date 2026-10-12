@@ -210,7 +210,18 @@ flai version
 flai version --json
 ```
 
-Prints the version, commit, build date, and Go version.
+Prints the version, commit, build date, and Go version, and whether the build is a signed release.
+
+A release of flai carries a release stamp: the line `flai <version> <commit>`, signed with the release key in CI before the build (S-0235). flai checks it against the release key it carries and its own version and commit. The last line of `flai version` says what it found:
+
+| Line | Meaning |
+|------|---------|
+| `release: signed` | The stamp is valid: this build is the release it names |
+| `release: development build, no stamp` | A build with no release version (`dev`, empty, or starting `0.0.0`), such as one from `scripts/flai.sh` or `goreleaser --snapshot`. It has no stamp, and nothing warns about it |
+| `release: missing stamp` | A build that claims a release version and has no stamp |
+| `release: invalid stamp: <reason>` | The stamp does not verify against the release key, or names another component, version, or commit |
+
+`flai version --json` adds `release`: `statement` and `signature` as built in (empty when there are none), `state` (`signed`, `missing`, or `invalid`), `reason` when it is invalid, and `development`. `flai serve` checks the same stamp at start: a build with a release version and no valid stamp logs one warning, `release stamp not valid`, with the state and the reason, and runs on. What the stamp proves and what it does not is in [The release stamp](../operators/index.md#the-release-stamp) of the operators guide.
 
 ## License
 

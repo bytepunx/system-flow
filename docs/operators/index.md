@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-08
+updated: 2026-10-12
 status: active
 ---
 
@@ -475,7 +475,7 @@ flaiover follows the logging and telemetry conventions.
 | Logs | stdout, one JSON event per line | `ts`, `level`, `service`, `component`, `msg`, and fields; one line per request with `trace_id` (or `request_id` when tracing is off), `method`, `route`, `path`, `status`, `duration_ms`; `LOG_LEVEL` (`debug`, `info`, `warn`, `error`), `LOG_FORMAT=text` for key-value text outside production |
 | Liveness | `GET /_health` | Always 200 while the process runs; touches nothing |
 | Readiness | `GET /_ready` | Checks that flai on the host is connected (`host_flai`) and, through it, the project's manifest (`project`), with a two second timeout each; 503 names the failing check. Since S-0162 it asks for nothing more than the manifest, so a probe costs flai under a millisecond |
-| Metrics | `GET /metrics` | Prometheus format: `flaiover_http_requests_total{method,route,status}`, `flaiover_http_request_duration_seconds` (histogram), `flaiover_http_requests_in_flight`, `flaiover_build_info{version,commit}` (the flaiover release tag and commit baked into the image), plus Node process metrics prefixed `flaiover_`. Route labels are SvelteKit route ids, never paths with IDs |
+| Metrics | `GET /metrics` | Prometheus format: `flaiover_http_requests_total{method,route,status}`, `flaiover_http_request_duration_seconds` (histogram), `flaiover_http_requests_in_flight`, `flaiover_build_info{version,commit,signed}` (the flaiover release tag and commit baked into the image, and `signed`, `true` when the image's [release stamp](#the-release-stamp) verified at start and `false` otherwise), plus Node process metrics prefixed `flaiover_`. Route labels are SvelteKit route ids, never paths with IDs |
 | Traces | OTLP/HTTP | Exported only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; one server span per request named `<method> <path>` with W3C context taken from the incoming headers; standard `OTEL_*` variables apply (`OTEL_SERVICE_NAME`, `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG`) |
 
 Local stack: `docker compose -f flaiover/compose.yaml up --build` runs the dashboard on <http://localhost:4242>, given the login token's file from `~/.flai/serve/dashboard.token` (set `DASHBOARD_TOKEN_FILE` to the `file` that `flai dashboard token --json` names when flai runs with another config), next to `grafana/otel-lgtm` (collector, Tempo, Prometheus, Loki, Grafana on <http://localhost:3001>), with traces exported to it by default.
@@ -498,6 +498,28 @@ What to do:
 - On a machine only you use, bind it to loopback. For access from elsewhere, keep it on loopback and put a tunnel you trust (cloudflared, Tailscale, an SSH forward, a TLS reverse proxy) in front of it.
 - Enable host actions only when you want them from the board, and `settings --all-projects` only on a dashboard that nobody else can reach.
 - Share the login link only with people you would let commit as you. Rotate the token (`flai dashboard token --rotate`, or from the Settings page) when someone should no longer have it, or when in doubt; rotation ends every other session.
+
+### The release stamp
+
+Every release of flai and of the dashboard carries a release stamp (S-0235). Before the build, CI signs one line, `<component> <version> <commit>`, with the release key. flai carries the line and its signature in the binary. The dashboard's image keeps them as the file `/app/release-stamp`. Only a release tag is stamped: `latest` and `sha-*` from `main`, an image from `flai dashboard --build` or `make flaiover-image`, and a flai built from source carry none. The key's fingerprint is under [Current key](runbooks/release-key.md#current-key) in the release key runbook.
+
+Each component checks its own stamp at start. It verifies the signature with the release key it carries, and checks that the line names the component, version, and commit it reports. A build that reports a release version and has no valid stamp is warned about once, and runs on.
+
+| Component | Where you see the stamp | The warning at start |
+|-----------|-------------------------|----------------------|
+| flai | The last line of `flai version`: `release: signed`, `release: development build, no stamp`, `release: missing stamp`, or `release: invalid stamp: <reason>`; `release` in `flai version --json` ([flai version](../users/flai.md#version)) | `flai serve` logs `release stamp not valid`, with the state and the reason |
+| Dashboard | The `signed` label of `flaiover_build_info` on `/metrics` ([Telemetry](#telemetry)), and `release_stamp` on the `server started` log line | The server logs `release stamp not verified`, with the state, the reason, and the file |
+
+A development build has no stamp and is not warned about: a flai whose version is `dev` or starts `0.0.0`, and a dashboard whose `FLAIOVER_VERSION` is unset or starts `0.0.0`. An image built from `main` or by `flai dashboard --build` reports the newest release tag as its version, so it warns once at start. That is expected for a dashboard you build yourself.
+
+What the stamp proves, and what it does not:
+
+- **It names the release.** A valid stamp is a statement the release key signed, naming the component and its version. When flai and the dashboard exchange stamps on the connection (S-0237), it names the peer's release and refuses builds that are not one. Today each component only checks its own and reports it; nothing is refused.
+- **It does not prove that the peer is that release, against anyone who holds a release binary and the credential.** A running process cannot prove which code it runs. Whoever holds the agent credential and can run code on the host or in the container can copy a real stamp into a build that is not that release. It does not defend against someone who holds the credential.
+- **The credential stays the boundary of the channel.** The agent credential is what keeps the connection yours ([The connection from flai on the host](#the-connection-from-flai-on-the-host)), and signing does not move it.
+- **What it stops is the honest mistake.** A flai built from a branch pointed at a production dashboard, a local image left running, or a release of one talking to a snapshot of the other, made visible by name.
+
+The design is in [Signing releases and verifying the peer](../../design/system/release-signing.md#verifying-the-peer).
 
 ## Requirements
 
