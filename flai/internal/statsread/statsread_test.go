@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -163,5 +165,78 @@ func TestReadStopsOnAnUnreadableThread(t *testing.T) {
 	}
 	if _, _, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler)); err == nil || !strings.Contains(err.Error(), "cannot read the threads") {
 		t.Errorf("an unreadable thread: %v", err)
+	}
+}
+
+// writeFile writes data to the path under the project's root, making its
+// folder.
+func writeFile(t *testing.T, path, data string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// conversationDoc is a conversation between S-0001 and S-0002 with one entry.
+const conversationDoc = "---\nid: MS-0001\ntitle: Hello\nfrom: S-0001\nto: S-0002\nstatus: open\nparticipants: [agent]\n" +
+	"created: 2026-10-01T09:00:00Z\nupdated: 2026-10-01T09:00:00Z\n---\n\n### 2026-10-01T09:00:00Z agent S-0001\n\nHello.\n"
+
+// S-0337: Read loads the conversations under wip/messages and the conflict
+// log, leaving out with a warning a conversation it cannot read.
+func TestReadLoadsTheConversationsAndTheConflictLog(t *testing.T) {
+	repo := project(t)
+	writeFile(t, filepath.Join(messages.Dir(repo), "MS-0001-hello.md"), conversationDoc)
+	writeFile(t, filepath.Join(messages.Dir(repo), "MS-0002-bad.md"), "---\nid: [\n---\n")
+	if err := storygit.AppendConflict(repo.CacheDir(), storygit.Conflict{At: time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC), Story: "S-0001", Where: storygit.WhereSync, Paths: []string{"a"}}); err != nil {
+		t.Fatal(err)
+	}
+	var logged bytes.Buffer
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.NewJSONHandler(&logged, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(opt.Conversations) != 1 || opt.Conversations[0].ID != "MS-0001" || len(opt.Conversations[0].Entries()) != 1 {
+		t.Errorf("conversations = %+v, want MS-0001 alone", opt.Conversations)
+	}
+	if opt.ConflictsUnreadable || len(opt.Conflicts) != 1 || opt.Conflicts[0].Where != storygit.WhereSync {
+		t.Errorf("conflicts = %+v unreadable %v, want the sync line", opt.Conflicts, opt.ConflictsUnreadable)
+	}
+	var skipped map[string]any
+	for _, ev := range warnings(t, &logged) {
+		if ev["msg"] == "cannot read some conversations" {
+			skipped = ev
+		}
+	}
+	if skipped == nil || skipped["level"] != "WARN" || skipped["count"] != float64(1) || skipped["err"] == nil || skipped["detail"] == nil {
+		t.Errorf("want a warning naming the conversation left out, got %s", logged.String())
+	}
+}
+
+// S-0337: a missing conflict log means no conflicts and is no warning; one
+// that cannot be read sets ConflictsUnreadable and is warned of.
+func TestReadWarnsOfAConflictLogItCannotRead(t *testing.T) {
+	repo := project(t)
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+	if err != nil || opt.ConflictsUnreadable || opt.Conflicts != nil {
+		t.Errorf("a missing log: %v, unreadable %v, %v", err, opt.ConflictsUnreadable, opt.Conflicts)
+	}
+	writeFile(t, storygit.ConflictsPath(repo.CacheDir()), "{not json\n")
+	var logged bytes.Buffer
+	_, opt, err = Read(execx.System{}, repo, slog.New(slog.NewJSONHandler(&logged, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !opt.ConflictsUnreadable || opt.Conflicts != nil {
+		t.Errorf("a bad log: unreadable %v, %v", opt.ConflictsUnreadable, opt.Conflicts)
+	}
+	warned := false
+	for _, ev := range warnings(t, &logged) {
+		warned = warned || (ev["level"] == "WARN" && ev["component"] == "stats" && ev["err"] != nil && ev["detail"] != nil && strings.Contains(ev["err"].(string), "conflict log"))
+	}
+	if !warned {
+		t.Errorf("no warning of the bad log: %s", logged.String())
 	}
 }

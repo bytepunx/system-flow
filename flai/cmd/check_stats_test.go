@@ -513,7 +513,7 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &rep); err != nil {
 		t.Fatal(err)
 	}
-	for _, key := range []string{"forecasts", "cost_of_delay", "waiting", "claims", "strategic_days", "turns"} {
+	for _, key := range []string{"forecasts", "cost_of_delay", "waiting", "claims", "strategic_days", "turns", "coordination"} {
 		if len(rep[key]) == 0 || string(rep[key]) == "null" {
 			t.Errorf("--json lacks %s", key)
 		}
@@ -632,6 +632,10 @@ func TestStatsReportsPlanningWaitingAndClaims(t *testing.T) {
 	if code != 0 || strings.Contains(out, "touches drift") || strings.Contains(out, "exact touches") {
 		t.Errorf("text outside git: %d\n%s", code, out)
 	}
+	// with no conversation and no conflict log, nothing to coordinate (S-0337)
+	if strings.Contains(out, "coordination") {
+		t.Errorf("a coordination section with nothing in it:\n%s", out)
+	}
 	// the dashboard's read answers the same and warns the same
 	if _, rerr := sameAnswer(t, root, hostapi.Host{}, "stats.get", `{}`, "stats"); rerr != nil {
 		t.Errorf("stats.get outside git: %+v", rerr)
@@ -668,5 +672,128 @@ func TestStatsPrintsHeldByReasonAndExactTouches(t *testing.T) {
 	printClaims(&app{out: &out}, rep)
 	if out.Len() != 0 {
 		t.Errorf("claims with nothing held, outside git:\n%s", out.String())
+	}
+}
+
+// S-0337: flai stats prints the coordination section after the claims, from
+// the conversations under wip/messages and the conflict log, and --json and
+// the dashboard's read carry it under coordination.
+func TestStatsReportsCoordination(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("LOG_FORMAT", "json")
+	root := tempProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	story := func(title string, moves ...string) *workitem.Item {
+		t.Helper()
+		it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Owner: "t", Now: time.Now()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Created = "2026-09-28T09:00:00Z"
+		it.Transitions = []workitem.Transition{{To: workitem.Backlog, At: it.Created, By: "t"}}
+		for i := 0; i < len(moves); i += 2 {
+			it.Transitions = append(it.Transitions, workitem.Transition{To: moves[i], At: moves[i+1], By: "t"})
+		}
+		it.Status = it.Transitions[len(it.Transitions)-1].To
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+		return it
+	}
+	// S-0001 holds S-0002 until it moves to review, 20 hours after S-0002
+	// starts on its share
+	story("Holder", workitem.InProgress, "2026-09-28T10:00:00Z", workitem.Review, "2026-10-01T06:00:00Z", workitem.Done, "2026-10-01T10:00:00Z")
+	story("Held", workitem.Ready, "2026-09-29T09:00:00Z", workitem.InProgress, "2026-09-30T10:00:00Z")
+	conv := "---\nid: MS-0001\ntitle: S-0001 holds S-0002\nfrom: S-0002\nto: S-0001\nstatus: closed\nparticipants: [flai, agent, alex]\n" +
+		"created: 2026-09-29T09:00:00Z\nupdated: 2026-10-01T10:00:00Z\nshares:\n" +
+		"  - holder: S-0001\n    held: S-0002\n    paths: [flai]\n    split: S-0002 changes flai/cmd\n    by: agent\n    at: 2026-09-30T08:00:00Z\n---\n\n" +
+		"### 2026-09-29T09:00:00Z flai S-0002\n\nS-0001 holds S-0002 on overlap.\n\n" +
+		"### 2026-09-29T12:00:00Z agent S-0002\n\nAsked the operator on TH-0001, `wip/threads/TH-0001.md`, since we do not agree.\n\n" +
+		"### 2026-10-01T10:00:00Z alex\n\nClosed: S-0001 was accepted\n"
+	if err := os.MkdirAll(filepath.Join(root, "wip", "messages"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "wip", "messages", "MS-0001-s-0001-holds-s-0002.md"), []byte(conv), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	log := `{"at":"2026-09-29T10:00:00Z","story":"S-0001","other":"S-0002","where":"trial","paths":["a","b"]}
+{"at":"2026-09-30T11:00:00Z","story":"S-0002","where":"sync","paths":["a"]}
+{"at":"2026-10-01T09:00:00Z","story":"S-0001","where":"accept","paths":["b"]}
+`
+	if err := os.MkdirAll(repo.CacheDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo.CacheDir(), "conflicts.jsonl"), []byte(log), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC)
+
+	out, errOut, code := runInAt(t, root, at, "stats", "--json")
+	if code != 0 {
+		t.Fatalf("stats --json: %s", errOut)
+	}
+	var rep struct {
+		Coordination metrics.Coordination `json:"coordination"`
+	}
+	if err := json.Unmarshal([]byte(out), &rep); err != nil {
+		t.Fatal(err)
+	}
+	c := rep.Coordination
+	// the 30 days to the 3rd of October span ISO weeks 36 to 40
+	if !c.Logged || len(c.Weeks) != 5 || c.Weeks[0].Week != "2026-W36" || c.Weeks[4].Week != "2026-W40" || c.Weeks[4].Start != "2026-09-28" {
+		t.Fatalf("coordination weeks: %+v", c)
+	}
+	want := metrics.CoordinationWeek{
+		Week: "2026-W40", Start: "2026-09-28",
+		Conversations: metrics.ConversationCounts{Opened: 1, Agreed: 1, Escalated: 1, ClosedWithStory: 1},
+		Conflicts:     &metrics.ConflictCounts{Found: 1, FoundPaths: 2, MetSync: 1, MetSyncPaths: 1, MetAccept: 1, MetAcceptPaths: 1},
+		Shares:        metrics.ShareCounts{Started: 1, HeldSeconds: 20 * 3600},
+	}
+	if got := c.Weeks[4]; got.Conflicts == nil || *got.Conflicts != *want.Conflicts || got.Conversations != want.Conversations || got.Shares != want.Shares {
+		t.Errorf("week 40 = %+v %+v, want %+v %+v", got, got.Conflicts, want, want.Conflicts)
+	}
+
+	out, _, code = runInAt(t, root, at, "stats")
+	// the coordination section comes last, after the claims
+	wantText := "\ncoordination:\n" +
+		"  conflicts      found 1 (2 paths) · met at sync 1 (1 path) · met at accept 1 (1 path)\n" +
+		"  conversations  opened 1 · agreed 1 · escalated 1 · closed with story 1\n" +
+		"  shares         started 1 · hold saved 20h\n" +
+		"  by week:\n" +
+		"    2026-W40 (2026-09-28)  conflicts found 1 (2 paths) · met at sync 1 (1 path) · met at accept 1 (1 path); " +
+		"conversations opened 1 · agreed 1 · escalated 1 · closed with story 1; shares started 1 · hold saved 20h\n"
+	if claims := strings.Index(out, "\nclaims:\n"); code != 0 || claims < 0 || !strings.HasSuffix(out[claims:], wantText) {
+		t.Errorf("text: %d, want it to end with %q, got %q", code, wantText, out[max(0, len(out)-len(wantText)-200):])
+	}
+	// the dashboard's read answers the same
+	if _, rerr := sameAnswer(t, root, hostapi.Host{}, "stats.get", `{}`, "stats"); rerr != nil {
+		t.Errorf("stats.get: %+v", rerr)
+	}
+
+	// a conflict log that cannot be read is warned of, and said so
+	if err := os.WriteFile(filepath.Join(repo.CacheDir(), "conflicts.jsonl"), []byte("{not json\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runInAt(t, root, at, "stats")
+	if code != 0 || !strings.Contains(out, "\ncoordination:\n  conflicts      the conflict log could not be read; none are counted\n") ||
+		!strings.Contains(out, "    2026-W40 (2026-09-28)  conversations opened 1 ·") || !strings.Contains(errOut, "conflict log") {
+		t.Errorf("an unreadable log: %d\n%s\n%s", code, out, errOut)
+	}
+}
+
+// S-0337: with an unreadable conflict log and nothing else, the coordination
+// section still says the log could not be read, and has no weeks.
+func TestPrintCoordinationSaysTheLogCouldNotBeRead(t *testing.T) {
+	var out bytes.Buffer
+	printCoordination(&app{out: &out}, metrics.Coordination{Weeks: []metrics.CoordinationWeek{{Week: "2026-W40", Start: "2026-09-28"}}})
+	want := "\ncoordination:\n" +
+		"  conflicts      the conflict log could not be read; none are counted\n" +
+		"  conversations  opened 0 · agreed 0 · escalated 0 · closed with story 0\n" +
+		"  shares         started 0 · hold saved 0m\n"
+	if out.String() != want {
+		t.Errorf("coordination:\n%q\nwant\n%q", out.String(), want)
 	}
 }

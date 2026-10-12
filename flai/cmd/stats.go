@@ -38,7 +38,12 @@ threads and in review, by the week, and the story agents' empty wakes,
 ADR-0105), claims (in progress and held by the day
 against the limit; under claims.weeks the time held by reason and the share of
 stories with exact touches, by the week; and each story's touches against the
-files its commits changed, ADR-0113), and strategic_days (the strategic agents' cost and time beside delivery).
+files its commits changed, ADR-0113), strategic_days (the strategic agents' cost and time beside delivery),
+and coordination (by the week, the conversations between stories opened,
+agreed, escalated, and closed with a story; the conflicts a trial merge found
+against those a rebase met at sync or at acceptance, from
+.flai-cache/conflicts.jsonl; and the stories started on a share with the hold
+each saved, ADR-0138).
 What strategic agents spent on items is reported apart from what agents did,
 under usage.strategic and each item's usage.strategic, beside the project's
 usage.cost_per_agent_hour and each item's expected_cost (ADR-0083). Each
@@ -51,7 +56,8 @@ story's (S-0227). turns counts the story agents' turns in each class
 day of it, and per story, from the stories' usage.turns, which flai serve
 measures from its agents' logs (S-0293).
 Touches drift and the exact touches need git; without it flai stats warns and
-leaves them out.`,
+leaves them out. A conflict log it cannot read is warned of too, and
+coordination.logged is false and its weeks carry no conflicts.`,
 		Example: `  flai stats
   flai stats --since 90d --by nature
   flai stats --type task --json
@@ -124,6 +130,97 @@ func printSummary(a *app, rep *metrics.Report) {
 	printWaiting(a, rep.Waiting)
 	printTurns(a, rep.Turns)
 	printClaims(a, rep)
+	printCoordination(a, rep.Coordination)
+}
+
+// printCoordination prints, over the window, the conflicts found against
+// those met at sync and at acceptance, how the conversations between stories
+// went, and the stories started on a share with the hold they saved, then
+// each week with any (S-0337). It prints nothing when there is nothing to
+// count and the conflict log could be read.
+func printCoordination(a *app, c metrics.Coordination) {
+	var total metrics.CoordinationWeek
+	if c.Logged {
+		total.Conflicts = &metrics.ConflictCounts{}
+	}
+	var busy []metrics.CoordinationWeek
+	for _, w := range c.Weeks {
+		if coordinationCounted(w) {
+			busy = append(busy, w)
+		}
+		addConversations(&total.Conversations, w.Conversations)
+		if total.Conflicts != nil && w.Conflicts != nil {
+			addConflicts(total.Conflicts, *w.Conflicts)
+		}
+		total.Shares.Started += w.Shares.Started
+		total.Shares.HeldSeconds += w.Shares.HeldSeconds
+	}
+	if len(busy) == 0 && c.Logged {
+		return
+	}
+	fmt.Fprintln(a.out, "\ncoordination:")
+	if c.Logged {
+		fmt.Fprintf(a.out, "  %-14s %s\n", "conflicts", conflictsText(*total.Conflicts))
+	} else {
+		fmt.Fprintf(a.out, "  %-14s the conflict log could not be read; none are counted\n", "conflicts")
+	}
+	fmt.Fprintf(a.out, "  %-14s %s\n", "conversations", conversationsText(total.Conversations))
+	fmt.Fprintf(a.out, "  %-14s %s\n", "shares", sharesText(total.Shares))
+	if len(busy) == 0 {
+		return
+	}
+	fmt.Fprintln(a.out, "  by week:")
+	for _, w := range busy {
+		parts := []string{"conversations " + conversationsText(w.Conversations), "shares " + sharesText(w.Shares)}
+		if w.Conflicts != nil {
+			parts = append([]string{"conflicts " + conflictsText(*w.Conflicts)}, parts...)
+		}
+		fmt.Fprintf(a.out, "    %s (%s)  %s\n", w.Week, w.Start, strings.Join(parts, "; "))
+	}
+}
+
+// coordinationCounted reports whether a week of coordination counts anything.
+func coordinationCounted(w metrics.CoordinationWeek) bool {
+	if w.Conversations != (metrics.ConversationCounts{}) || w.Shares != (metrics.ShareCounts{}) {
+		return true
+	}
+	return w.Conflicts != nil && *w.Conflicts != (metrics.ConflictCounts{})
+}
+
+// addConversations adds the counts of b to a.
+func addConversations(a *metrics.ConversationCounts, b metrics.ConversationCounts) {
+	a.Opened += b.Opened
+	a.Agreed += b.Agreed
+	a.Escalated += b.Escalated
+	a.ClosedWithStory += b.ClosedWithStory
+}
+
+// addConflicts adds the counts of b to a.
+func addConflicts(a *metrics.ConflictCounts, b metrics.ConflictCounts) {
+	a.Found += b.Found
+	a.FoundPaths += b.FoundPaths
+	a.MetSync += b.MetSync
+	a.MetSyncPaths += b.MetSyncPaths
+	a.MetAccept += b.MetAccept
+	a.MetAcceptPaths += b.MetAcceptPaths
+}
+
+// conflictsText is the conflicts found by a trial merge against those met at
+// sync and at acceptance, each with its paths.
+func conflictsText(c metrics.ConflictCounts) string {
+	return fmt.Sprintf("found %d (%s) · met at sync %d (%s) · met at accept %d (%s)",
+		c.Found, plural(c.FoundPaths, "path"), c.MetSync, plural(c.MetSyncPaths, "path"), c.MetAccept, plural(c.MetAcceptPaths, "path"))
+}
+
+// conversationsText is how many conversations opened, agreed, escalated,
+// and closed with a story.
+func conversationsText(c metrics.ConversationCounts) string {
+	return fmt.Sprintf("opened %d · agreed %d · escalated %d · closed with story %d", c.Opened, c.Agreed, c.Escalated, c.ClosedWithStory)
+}
+
+// sharesText is how many stories started on a share and the hold they saved.
+func sharesText(s metrics.ShareCounts) string {
+	return fmt.Sprintf("started %d · hold saved %s", s.Started, metrics.Human(s.HeldSeconds))
 }
 
 // printTurns prints, when the stories' agents took any turn in the window,

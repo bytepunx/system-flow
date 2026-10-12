@@ -6,9 +6,12 @@ package statsread
 import (
 	"fmt"
 	"log/slog"
+	"path/filepath"
+	"sort"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -18,10 +21,13 @@ import (
 // Read returns every item, archived ones too, and the options read from the
 // project: the strategic agents' activity documents, the threads, the
 // issues, the manifest's projects, the board's in-progress limit and pull
-// order, planning.default_duration, and the files each story's commits
-// changed. The caller sets the window and grouping. When git
-// cannot be read, Commits stays nil, which leaves claims.drift out, and Read
-// logs a warning saying so on log; any other read that fails stops it.
+// order, planning.default_duration, the files each story's commits
+// changed, the conversations between stories, and the conflict log. The
+// caller sets the window and grouping. When git cannot be read, Commits stays
+// nil, which leaves claims.drift out; a conversation that cannot be read is
+// left out; and a conflict log that cannot be read sets ConflictsUnreadable,
+// which leaves coordination's conflicts out. Read logs a warning on log for
+// each; any other read that fails stops it.
 func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.Item, metrics.Options, error) {
 	var opt metrics.Options
 	items, err := repo.List(true)
@@ -51,5 +57,44 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 		log.Warn("cannot read the stories' commits for touches drift", "component", "stats", "err", err.Error(),
 			"detail", "claims.drift is left out; run flai stats in the project's git checkout, with git installed, to compare touches with commits")
 	}
+	opt.Conversations = conversations(repo, log)
+	conflicts, err := storygit.ReadConflicts(repo.CacheDir())
+	if err != nil {
+		log.Warn("cannot read the conflict log", "component", "stats", "err", err.Error(),
+			"detail", "coordination's conflicts are left out and coordination.logged is false; correct or remove the line the error names in "+storygit.ConflictsPath(repo.CacheDir()))
+	}
+	opt.Conflicts, opt.ConflictsUnreadable = conflicts, err != nil
 	return items, opt, nil
+}
+
+// conversations reads every conversation under wip/messages in the main
+// checkout, in ID order, whatever its status. One that cannot be read is
+// left out with a warning on log, so that flai stats never fails on one.
+func conversations(repo *workitem.Repo, log *slog.Logger) []*messages.Conversation {
+	files, err := filepath.Glob(filepath.Join(messages.Dir(repo), "MS-*.md"))
+	if err != nil {
+		log.Warn("cannot list the conversations", "component", "stats", "err", err.Error(),
+			"detail", "coordination's conversations and shares are left out")
+		return nil
+	}
+	sort.Strings(files)
+	var out []*messages.Conversation
+	var skipped []string
+	var first error
+	for _, f := range files {
+		c, err := messages.Read(f)
+		if err != nil {
+			skipped = append(skipped, f)
+			if first == nil {
+				first = err
+			}
+			continue
+		}
+		out = append(out, c)
+	}
+	if len(skipped) > 0 {
+		log.Warn("cannot read some conversations", "component", "stats", "count", len(skipped), "paths", skipped, "err", first.Error(),
+			"detail", "coordination leaves them out; run flai check to see what is wrong with each")
+	}
+	return out
 }

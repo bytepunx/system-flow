@@ -9,6 +9,8 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -47,6 +49,13 @@ type Options struct {
 	// ready column's cost of delay is projected from (S-0213).
 	Order    []string
 	Fallback time.Duration
+	// Conversations are those between stories under wip/messages, whatever
+	// their status; Conflicts are the conflict log's lines; and
+	// ConflictsUnreadable says the log could not be read, false when it is
+	// missing. Each is read by the caller (S-0337).
+	Conversations       []*messages.Conversation
+	Conflicts           []storygit.Conflict
+	ConflictsUnreadable bool
 }
 
 // ItemMetrics are the per-item derived values.
@@ -190,6 +199,9 @@ type Report struct {
 	// Turns is the story agents' turns per class over the window, per day,
 	// and per story (S-0293).
 	Turns Turns `json:"turns"`
+	// Coordination is the conversations between stories, the conflicts
+	// found and met, and the stories started on a share, per week (S-0337).
+	Coordination Coordination `json:"coordination"`
 }
 
 // Compute derives every metric from the items.
@@ -285,6 +297,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Claims = claims(items, all, start, opt, replay)
 	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
 	rep.Turns = turns(all, start, opt.Now)
+	rep.Coordination = coordination(all, opt.Conversations, opt.Conflicts, !opt.ConflictsUnreadable, start, opt.Now)
 	// Empty lists serialise as [] rather than null, so consumers can iterate
 	// without guarding every field (S-0045).
 	if rep.Items == nil {
