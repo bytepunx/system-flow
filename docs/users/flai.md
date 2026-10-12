@@ -182,11 +182,12 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 | `agent.auto_restarts` | `flai serve agent set --auto-restarts <n>` | How many times in a row `flai serve` restarts a story's agent on its own after it fails with its story in progress, 2 when unset, 0 never; past it, `flai serve` opens a thread on the story for you ([ADR-0108](../../design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md)) |
 | `agent.attended_minutes` | none | Retired ([ADR-0043](../../design/adrs/0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md)): a configuration that sets it still loads, and nothing reads it. `flai serve agent set --attended-minutes` is accepted and does nothing |
 | `agent.harnesses.<name>.program`, `agent.harnesses.<name>.args` | `flai serve agent harness <name> --program <path> -- [args...]`, `--reset` | The program a harness is on this host, and the arguments that replace its adapter's defaults and say what the agent may do |
+| `agent.providers.<name>` | `flai serve agent provider <name> --api --base-url --key-env [--model alias=name]...`, `--reset` | Where the model calls of an agent that names provider `<name>` go: the API, the URL, the name of the variable that holds the key, and model aliases. See [Where its model's calls go](#where-its-models-calls-go-a-provider) |
 | `checks.commands` | `flai serve checks set --name <name> -- <program> [args...]`, `flai serve checks clear [name]` | The named commands a story in review is checked with, in order, in its worktree; empty means the manifest's `checks:` |
 | `checks.timeout_minutes` | `flai serve checks timeout <minutes>` | The bound on one run of every check together; 15 when unset |
 | `import_roots` | `flai serve import add <folder>`, `flai serve import remove <folder>` | The folders whose git repositories the board offers to import, and whose repositories with a `system-flow.yaml` `flai serve` serves |
 
-`flai serve agent show`, `flai serve checks show`, `flai serve import list`, and `flai serve actions` print them. The [operator guide](../operators/index.md) says what enabling each host action gives a dashboard.
+`flai serve agent show`, `flai serve agent provider`, `flai serve checks show`, `flai serve import list`, and `flai serve actions` print them. The [operator guide](../operators/index.md) says what enabling each host action gives a dashboard.
 
 Environment variables flai reads:
 
@@ -343,6 +344,35 @@ flai agent clear
 A story's agent says what will work it: the harness that runs the agent (such as `claude-code`), the model, and options for that harness as `key=value`, which flai passes on without reading them ([ADR-0037](../../design/adrs/0037-a-story-carries-its-agent-copied-from-the-project-s-default-when-it-is-made.md)). The project's default lives in `system-flow.yaml` under `agent`. Every story created while it is set gets a copy in its front matter, with whatever `--harness`, `--model`, or `--agent-config` you give on `flai story new` laid over it. The copy belongs to the story. Changing the default later affects only stories made after it; to move an open story to another model, edit it. `flai show` and `flai edit --show` print a story's agent. Epics and tasks have none.
 
 A project with no default and no story with an agent has no `agent` keys at all, and an older flai reads it as before. Once a story has one, use a flai that knows about agents (`flai self-upgrade`).
+
+#### Where its model's calls go: a provider
+
+```bash
+flai serve agent provider litellm --api anthropic-messages --base-url http://127.0.0.1:4000 --key-env LITELLM_API_KEY
+flai serve agent provider litellm --model opus=anthropic/claude-opus-5-5 --model sonnet=anthropic/claude-sonnet-5
+flai serve agent provider                                    # every provider on this host
+flai agent set --provider litellm                            # every new story's agent names it
+flai story new "Invoice PDF export" --provider openrouter
+flai edit S-0007 --provider litellm
+flai serve agent provider litellm --reset
+```
+
+An agent may name a provider beside its harness and model: the gateway its model's calls go to, such as a LiteLLM proxy or OpenRouter ([ADR-0129](../../design/adrs/0129-a-story-s-agent-names-a-provider-beside-its-harness-and-model-and-the-providers.md)). With none, the harness uses its own default, as before. The name refers to an entry on the host, in flai's configuration under `agent.providers`, which you set with `flai serve agent provider <name>`:
+
+| Flag | Field | What it is |
+|------|-------|------------|
+| `--api` | `api` | What the provider speaks: `anthropic-messages`, `openai-chat`, or `openai-responses` |
+| `--base-url` | `base_url` | Where it answers: an absolute `http` or `https` URL with no user or password in it |
+| `--key-env` | `key_env` | The name of the environment variable on this host that holds the provider's key, such as `LITELLM_API_KEY`. It is never the key: no flag takes a key, and flai never writes one to the configuration. A value that is not a variable's name is refused, and the error does not repeat it |
+| `--model alias=name` | `models` | Optional, repeated: a model alias of the harness, such as `opus`, and the model's name on the provider. Given at all, it replaces the entry's aliases |
+
+A new entry needs `--api`, `--base-url`, and `--key-env`. On an entry that exists, the flags you give change those fields and leave the rest. `--reset` removes the entry. With a name and no flag, the entry is printed; with no name, every entry; `--json` prints them as JSON. `flai serve agent clear` keeps the providers. Every key is in the [settings index](../operators/settings.md).
+
+A project may override, in `system-flow.yaml` under `providers.<name>`, an entry's `api`, `base_url`, and `models`, for every host it runs on. The host's entry supplies the rest, and the project's models are merged over the host's alias by alias. `key_env` is the host's alone, since it names a variable of the host's environment: `flai check` refuses it in the manifest (`manifest.providers`), and so does `flai manifest set`, each naming `flai serve agent provider <name> --key-env`. See [project-manifest.md](../../design/system/project-manifest.md).
+
+`--provider` on `flai agent set`, `flai story new`, and `flai edit` checks the name's shape only: lower-case letters, digits, `.`, `_`, and `-`. `flai edit --clear-agent` clears it with the rest. The planner's and the analyzer's agents take it in their JSON, such as `flai manifest set planning.agent='{"provider":"litellm"}'`, and the MCP tools `item_new` and `item_edit` in their `agent`. Whether the host has an entry for the name is the start's to check, not these commands'.
+
+No agent is started through a provider yet. This flai records the provider and keeps the entries. S-0350 has `flai serve` read the variable `key_env` names and set the harness's environment from the entry when it starts the agent. It will refuse a provider the host has no entry for, naming `flai serve agent provider <name>`, and an entry that, with the project's override laid over it, lacks `api`, `base_url`, or `key_env` or holds a value that is not valid. Until then `flai serve` starts an agent that names a provider as one that names none.
 
 ### Moving work
 

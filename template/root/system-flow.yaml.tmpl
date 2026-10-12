@@ -36,6 +36,16 @@ tests: # the test tiers, cheapest first, that flai test runs for the paths each 
     command: [scripts/smoke.sh]
     format: plain
     all_only: true
+# agent: # the agent every new story gets a copy of; flai agent set writes it
+#   harness: claude-code
+#   model: claude-opus-5-5
+#   provider: litellm # where the model's calls go: an entry flai serve agent provider sets on the host; unset, the harness's own
+# providers: # this project's override of a host's provider entry: api, base_url, and models only; key_env is the host's
+#   litellm:
+#     api: anthropic-messages # anthropic-messages, openai-chat, or openai-responses
+#     base_url: https://litellm.example.com
+#     models: # the harness's model aliases and their names on the provider
+#       opus: anthropic/claude-opus-5-5
 claims:
   shared: # paths many stories change in their own sections or new files: an overlap inside one holds no story; flai shared edits them
     - {{ .layout.design }}/adrs
