@@ -3,16 +3,36 @@ id: T-1246
 type: task
 nature: feature
 title: The user, operator, and design documentation say that dashboard.tag names a signed flaiover release run by digest, and what a refusal means
-status: backlog
+status: done
 parent: S-0236
 owner: alex
 created: 2026-10-07T22:54:36Z
-updated: 2026-10-07T22:54:36Z
-transitions: []
+updated: 2026-10-12T19:33:16Z
+transitions:
+  - to: ready
+    at: 2026-10-12T19:16:36Z
+    by: agent-S-0236
+  - to: in-progress
+    at: 2026-10-12T19:16:37Z
+    by: agent-S-0236
+  - to: done
+    at: 2026-10-12T19:33:16Z
+    by: agent-S-0236
 stream: S-0236
 tags: [docs]
-touches: [docs/operators/settings.md, docs/operators/runbooks/update.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/docker.md]
+touches: [docs/operators/settings.md, docs/operators/runbooks/update.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/docker.md, design/system/release-signing.md, flai/cmd/dashboard.go, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_versions.go, docs/operators/index.md]
 after: [T-1244, T-1245]
+usage:
+  source: log
+  seconds: 999
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 107
+      output: 57795
+      cache_read: 7854571
+      cache_write: 335376
+      cost: 4.6023
 ---
 # T-1246 The user, operator, and design documentation say that dashboard.tag names a signed flaiover release run by digest, and what a refusal means
 

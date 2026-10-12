@@ -2940,3 +2940,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `git tag --points-at 135506ae`
 - Needs: none
+
+### 2026-10-12T18:47:52Z
+
+- Call: `flai serve status 2>&1`
+- Needs: none

@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-12T18:47:34Z
+updated: 2026-10-12T20:01:35Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0236](S-0236.md) | flai dashboard resolves the image from the signed digest list and runs it by digest | in-progress | agent-S-0236 | 2026-10-12T18:37:10Z |
 
 ## Strategic agents
 

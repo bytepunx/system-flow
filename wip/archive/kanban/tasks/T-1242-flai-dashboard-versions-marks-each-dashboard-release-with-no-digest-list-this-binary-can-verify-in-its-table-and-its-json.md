@@ -24,15 +24,15 @@ touches: [flai/cmd/dashboard_versions.go, flai/cmd/dashboard_versions_test.go]
 after: [T-1239, T-1240]
 usage:
   source: log
-  seconds: 472
+  seconds: 606
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 327
-      cache_read: 2345802
-      cache_write: 103524
-      cost: 1.1105
+      input: 36
+      output: 19434
+      cache_read: 2641196
+      cache_write: 112774
+      cost: 1.5476
 ---
 # T-1242 flai dashboard versions marks each dashboard release with no digest list this binary can verify, in its table and its JSON
 

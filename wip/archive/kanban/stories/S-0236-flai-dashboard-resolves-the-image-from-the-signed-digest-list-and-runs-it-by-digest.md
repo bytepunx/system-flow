@@ -3,11 +3,11 @@ id: S-0236
 type: story
 nature: feature
 title: flai dashboard resolves the image from the signed digest list and runs it by digest
-status: in-progress
+status: done
 parent: E-0015
 owner: arobson
 created: 2026-10-02T12:37:24Z
-updated: 2026-10-12T18:13:47Z
+updated: 2026-10-12T20:01:35Z
 transitions:
   - to: ready
     at: 2026-10-12T17:57:39Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-12T18:13:47Z
     by: agent-S-0236
+  - to: review
+    at: 2026-10-12T19:59:46Z
+    by: agent-S-0236
+  - to: done
+    at: 2026-10-12T20:01:35Z
+    by: orchestrator
 tags: [cli]
 topics: [release, security]
-touches: [flai/cmd/dashboard.go, flai/internal/selfupgrade, flai/internal/dashboard, docs/operators/settings.md, docs/users/flai.md, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_versions.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_test.go, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/docker.md, flai/cmd/dashboard_versions_test.go, flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, docs/users/flaiover.md, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go, flai/cmd/dashboard_watch_test.go, docs/operators/runbooks/update.md, docs/users/flai-reference.md]
+touches: [flai/cmd/dashboard.go, flai/internal/selfupgrade, flai/internal/dashboard, docs/operators/settings.md, docs/users/flai.md, flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard_versions.go, flai/cmd/dashboard_watch.go, flai/cmd/dashboard_test.go, design/system/flai-cli.md, design/system/flaiover-dashboard.md, design/tech/docker.md, flai/cmd/dashboard_versions_test.go, flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, docs/users/flaiover.md, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/selfupgrade_test.go, flai/internal/dashboard/digests.go, flai/internal/dashboard/digests_test.go, flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go, flai/internal/dashboard/resolve.go, flai/internal/dashboard/resolve_test.go, flai/cmd/dashboard_watch_test.go, docs/operators/runbooks/update.md, docs/users/flai-reference.md, design/system/release-signing.md, docs/operators/index.md]
 after: [S-0233, S-0234]
 agent:
   harness: claude-code
@@ -26,25 +32,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1256
-  estimated: true
+  seconds: 6374
   turns:
     - day: 2026-10-12
-      hand_edits: 1
-      work: 38
+      ceremony: 1
+      hand_edits: 3
+      work: 86
   models:
     - model: claude-haiku-5-5
-      input: 56
-      output: 270
-      cache_read: 2594841
-      cache_write: 157508
-      cost: 0.1678
+      input: 58
+      output: 25546
+      cache_read: 2752349
+      cache_write: 165721
+      cost: 0.2179
     - model: claude-opus-5-5
-      input: 210
-      output: 1434
-      cache_read: 9754376
-      cache_write: 542894
-      cost: 4.6688
+      input: 604
+      output: 324869
+      cache_read: 44150848
+      cache_write: 1885164
+      cost: 25.8698
+    - model: claude-sonnet-5-5
+      input: 30
+      output: 10207
+      cache_read: 912560
+      cache_write: 98049
+      cost: 0.4385
   strategic:
     - kind: orchestrator
       seconds: 325
@@ -74,12 +86,12 @@ forecast:
 `flai dashboard`, `flai dashboard check`, and `flai dashboard upgrade` choose the image from a flaiover release's signed digest list, verified with the public key in the binary, and pull and run it by digest (ADR-0070), so that only a signed release of the dashboard is started unless the operator allowed otherwise.
 
 ## Acceptance criteria
-- [ ] `flai dashboard` resolves `dashboard.tag` to a flaiover release through the release client `self-upgrade` uses (`latest` is the newest release; a version is that release), downloads and verifies its digest list, and pulls and runs `ghcr.io/bytepunx/flaiover@sha256:…`; a list that is missing or does not verify refuses to start the container and says why.
-- [ ] `flai dashboard check` and `flai dashboard upgrade` compare the running container's digest with the list's and upgrade by digest; `flai dashboard status` shows the digest and whether it is on a signed list.
-- [ ] The verified list is cached beside `flai serve`'s state with its release version, for the dial-time check to read.
-- [ ] `--image` naming another registry or `--build` run what they name, as today, and are reported as unsigned; refusing or allowing them is the next story's.
-- [ ] Tests cover resolution, verification, refusal, and the cache; `docs/operators/settings.md` and `docs/users/flai.md` describe the new meaning of `dashboard.tag`.
-- [ ] `flai dashboard versions`, with `--json`, marks each dashboard release with no digest list this binary can verify, such as one from before signing, and the Updates page shows it as not deployable and offers no way to deploy it.
+- [x] `flai dashboard` resolves `dashboard.tag` to a flaiover release through the release client `self-upgrade` uses (`latest` is the newest release; a version is that release), downloads and verifies its digest list, and pulls and runs `ghcr.io/bytepunx/flaiover@sha256:…`; a list that is missing or does not verify refuses to start the container and says why.
+- [x] `flai dashboard check` and `flai dashboard upgrade` compare the running container's digest with the list's and upgrade by digest; `flai dashboard status` shows the digest and whether it is on a signed list.
+- [x] The verified list is cached beside `flai serve`'s state with its release version, for the dial-time check to read.
+- [x] `--image` naming another registry or `--build` run what they name, as today, and are reported as unsigned; refusing or allowing them is the next story's.
+- [x] Tests cover resolution, verification, refusal, and the cache; `docs/operators/settings.md` and `docs/users/flai.md` describe the new meaning of `dashboard.tag`.
+- [x] `flai dashboard versions`, with `--json`, marks each dashboard release with no digest list this binary can verify, such as one from before signing, and the Updates page shows it as not deployable and offers no way to deploy it.
 
 ## Tasks
 - T-1239 selfupgrade lists the flaiover GitHub releases with their assets and downloads a release's asset
@@ -90,6 +102,7 @@ forecast:
 - T-1244 flai dashboard check and upgrade compare the running container's digest with the verified list and upgrade by digest
 - T-1245 The Updates page shows a dashboard release with no verifiable digest list as not deployable and offers no way to deploy it
 - T-1246 The user, operator, and design documentation say that dashboard.tag names a signed flaiover release run by digest, and what a refusal means
+- T-1498 A restart resolves an older record's by-tag reference to the signed repository and runs it by digest
 
 ## Notes
 
@@ -121,3 +134,17 @@ Forecast: 1h30m, raised from 1h15m. flai replays the delivery from the pull orde
 - Delivery: flai played this story out at 02:01 with its own 58m; 2026-10-08T02:33Z adds the 32m more this forecast gives.
 
 Cost of delay: 3.95 USD a week, as `flai cod` gives it after the forecast changed, up from 3.29. It is this story's 1h30m share of the 9h30m forecast over E-0015's eight open stories, applied to the epic's 25 USD a week penalty, which the operator set on TH-0312. Kept as given: each story closes part of one exposure, and that exposure closes only when the chain is done, so a share by work fits.
+
+### Accepted by the orchestrator
+
+- Verified: 116dc422277c30f39cddee8f79df0d8f80e5afa8
+- At: 2026-10-12T20:01:35Z
+
+Verdict: pass at 116dc422277c30f39cddee8f79df0d8f80e5afa8; flai verify passed every step at that commit, the verifier matched all six criteria to the diff, and no private key or secret value is in it.
+
+- 1: flai/cmd/dashboard.go, flai/internal/dashboard/resolve.go, flai/internal/dashboard/digests.go, flai/internal/selfupgrade/selfupgrade.go, flai/internal/selfupgrade/signature.go
+- 2: flai/cmd/dashboard_upgrade.go, flai/cmd/dashboard.go, flai/cmd/dashboard_test.go
+- 3: flai/internal/dashboard/cache.go, flai/internal/dashboard/cache_test.go
+- 4: flai/cmd/dashboard.go, flai/cmd/dashboard_test.go
+- 5: flai/internal/dashboard/resolve_test.go, flai/internal/dashboard/digests_test.go, docs/operators/settings.md, docs/users/flai.md, docs/operators/runbooks/update.md, docs/users/flai-reference.md
+- 6: flai/cmd/dashboard_versions.go, flai/cmd/dashboard_versions_test.go, flaiover/src/lib/components/HostPanel.svelte, flaiover/src/lib/components/HostPanel.svelte.test.ts, docs/users/flaiover.md

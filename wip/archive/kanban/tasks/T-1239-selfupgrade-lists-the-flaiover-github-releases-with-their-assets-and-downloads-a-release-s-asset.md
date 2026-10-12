@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 224
-      cache_read: 1992693
-      cache_write: 104229
-      cost: 0.9507
+      input: 28
+      output: 15124
+      cache_read: 2055460
+      cache_write: 87765
+      cost: 1.2044
 ---
 # T-1239 selfupgrade lists the flaiover GitHub releases with their assets and downloads a release's asset
 

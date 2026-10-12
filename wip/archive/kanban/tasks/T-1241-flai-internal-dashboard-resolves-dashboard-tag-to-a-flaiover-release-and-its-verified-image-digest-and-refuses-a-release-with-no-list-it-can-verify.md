@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 256
-      cache_read: 1943617
-      cache_write: 99550
-      cost: 0.9264
+      input: 27
+      output: 14737
+      cache_read: 2002753
+      cache_write: 85514
+      cost: 1.1735
 ---
 # T-1241 flai/internal/dashboard resolves dashboard.tag to a flaiover release and its verified image digest, and refuses a release with no list it can verify
 

@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 205
-      cache_read: 1208658
-      cache_write: 72893
-      cost: 0.5811
+      input: 17
+      output: 9243
+      cache_read: 1256216
+      cache_write: 53638
+      cost: 0.7361
 ---
 # T-1240 flai/internal/dashboard parses a flaiover digest list, verifies its signature with the embedded key, and caches it in flai serve's state by release version
 
