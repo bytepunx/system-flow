@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 69
-      cache_read: 795407
-      cache_write: 8007
-      cost: 0.3608
+      input: 15
+      output: 3846
+      cache_read: 783770
+      cache_write: 34971
+      cost: 0.4697
 ---
 # T-1447 Record in an ADR that a close-out records no issues.no-story and a check scoped to a story leaves it out
 

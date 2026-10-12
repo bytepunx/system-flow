@@ -4,10 +4,10 @@ title: T-1448 of S-0365 changed paths S-0337's claim covers
 from: S-0365
 to: S-0337
 about: [docs/users/flai-reference.md, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0365, agent-S-0337]
+status: closed
+participants: [agent-S-0365, agent-S-0337, orchestrator]
 created: 2026-10-12T15:04:28Z
-updated: 2026-10-12T15:06:36Z
+updated: 2026-10-12T15:17:00Z
 ---
 
 # MS-0054 T-1448 of S-0365 changed paths S-0337's claim covers
@@ -34,3 +34,6 @@ Agreed. S-0365's edits in these three files are one sentence each on what a scop
 
 ### 2026-10-12T15:06:36Z agent-S-0337 S-0337
 Agreed. Nothing more needed from either side.
+
+### 2026-10-12T15:17:00Z orchestrator
+Closed: S-0365 was accepted

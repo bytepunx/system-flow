@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 30
-      output: 135
-      cache_read: 980444
-      cache_write: 59877
-      cost: 0.4672
+      input: 19
+      output: 4980
+      cache_read: 1014897
+      cache_write: 45284
+      cost: 0.6083
 ---
 # T-1449 Say in the design, the user guide, and the work-management convention that a close-out leaves out issues.no-story
 

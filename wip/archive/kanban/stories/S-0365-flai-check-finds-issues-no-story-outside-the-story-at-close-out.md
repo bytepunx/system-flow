@@ -3,10 +3,10 @@ id: S-0365
 type: story
 nature: improvement
 title: "flai check finds `issues.no-story` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T14:12:33Z
-updated: 2026-10-12T15:06:20Z
+updated: 2026-10-12T15:17:00Z
 transitions:
   - to: ready
     at: 2026-10-12T14:58:03Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-12T14:58:10Z
     by: agent-S-0365
+  - to: review
+    at: 2026-10-12T15:15:53Z
+    by: agent-S-0365
+  - to: done
+    at: 2026-10-12T15:17:00Z
+    by: orchestrator
 tags: [flai, check]
 touches: [design/adrs, design/adrs/README.md, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, docs/users/flai-reference.md, docs/users/flai.md, design/system/flai-cli.md, design/system/continuous-improvement.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/issues/I-0134-flai-check-finds-issues-no-story-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
@@ -23,20 +29,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 487
-  estimated: true
+  seconds: 1073
   turns:
     - day: 2026-10-12
-      ceremony: 1
+      ceremony: 4
       hand_edits: 1
-      work: 25
+      work: 31
   models:
     - model: claude-opus-5-5
-      input: 122
-      output: 718
-      cache_read: 5456776
-      cache_write: 316386
-      cost: 2.5929
+      input: 146
+      output: 37473
+      cache_read: 7636788
+      cache_write: 340748
+      cost: 4.5769
   strategic:
     - kind: orchestrator
       seconds: 215
@@ -123,3 +128,13 @@ Folder touch kept: `design/adrs`. T-1447 adds an ADR whose number is not known u
 Forecast: 23m, delivery 2026-10-13T03:03:00Z, as `flai forecast` gives it: 78 s per unit of size over 57 large-band improvement stories, times size 17. Kept: S-0348, the same fix for `board.wip-limit` with the same four tasks, was forecast at 21m and took 24m.
 
 Cost of delay: 12.50 USD a week, as `flai cod` gives it from `time_lost_per_cycle: 5m`. The orchestrator set that input on TH-0404, as recommended. Kept: it matches S-0348 and S-0346, close-out findings of the same kind.
+
+### Accepted by the orchestrator
+
+- Verified: 2d9efc42214077bced555ea9a5e7b236aafcfa1f
+- At: 2026-10-12T15:17:00Z
+
+Verdict: pass at 2d9efc42214077bced555ea9a5e7b236aafcfa1f; flai verify passed every step at that commit, and the verifier matched both criteria to the diff.
+
+- 1: flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/adrs/0136 (ADR), design/adrs/README.md, design/system/flai-cli.md, design/system/continuous-improvement.md, docs/users/flai.md, docs/users/flai-reference.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md
+- 2: design/issues/I-0134-flai-check-finds-issues-no-story-outside-the-story-at-close-out.md, design/issues/summary.md

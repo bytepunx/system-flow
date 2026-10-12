@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 349
-      cache_read: 1924321
-      cache_write: 96763
-      cost: 0.9078
+      input: 38
+      output: 9675
+      cache_read: 1971685
+      cache_write: 87975
+      cost: 1.1817
 ---
 # T-1448 Leave issues.no-story outside the story out of a check scoped to a story, with a test that reproduces I-0134
 
