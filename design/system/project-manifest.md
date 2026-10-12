@@ -136,7 +136,9 @@ Rules:
   - `fix_command` (S-0367, [ADR-0139](../adrs/0139-a-test-tier-s-fix-command-rewrites-the-files-a-story-changes-before-flai-task.md)), an argument list that rewrites in place the files the tier selects, so that what flai commits is fixed. It runs as `command` runs: never through a shell, in `dir`, with the same placeholders, filled for the existing files the tier's `paths` select among the paths flai is about to commit. Its exit status is ignored: a command that cannot start or exits non-zero is logged at warn and stops nothing, and the tier's `command` still reports what is left. flai runs it in three places:
     - `flai task done`, over the paths it is about to commit, before it commits them.
     - `flai stream sync`, and the rebase `flai accept` runs on the story's branch, after a clean rebase, over every file the branch changes against the main branch. What it changed is committed on the branch as `chore: [S-nnnn] fix the lint of the files the branch changes, after the sync`.
-    - `flai accept`, in the main checkout, over the paths it has not committed, just before its `git add -A` and commit.
+    - `flai accept`, in the main checkout, over the paths it has not committed, at preflight and again just before its `git add -A` and commit.
+
+    What a fix leaves refuses an acceptance ([ADR-0140](../adrs/0140-flai-accept-refuses-an-acceptance-whose-files-a-tier-with-a-fix-command-still.md)): `flai accept` runs the `command` of each tier that has a `fix_command` over the main checkout's uncommitted files at preflight, and over the files the branch changes after its rebase and fix, and refuses when one fails, naming each file, line, and error.
 
     This repository's `markdown` tier has `fix_command: [scripts/lint-md.sh, --fix, "{files}"]`. The template's manifest has none.
   - `covers`, the names of the tiers whose tests this one runs too (S-0342).

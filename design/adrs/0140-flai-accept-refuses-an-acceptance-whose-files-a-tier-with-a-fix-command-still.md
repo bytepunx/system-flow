@@ -6,6 +6,7 @@ date: 2026-10-12
 supersedes: []
 superseded_by: []
 refines: [ADR-0139]
+topics: [cli, template]
 ---
 
 # ADR-0140 flai accept refuses an acceptance whose files a tier with a fix_command still fails on after the fix, naming each file, line, and error
