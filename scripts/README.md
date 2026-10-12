@@ -28,6 +28,7 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `install-tools.sh` | Installs golangci-lint v2 and GoReleaser into `bin/`, pnpm into `.flai-cache/pnpm` |
 | `flaiover-install.sh` | `pnpm install --frozen-lockfile` in `flaiover/`. With `--if-needed`, only when `flaiover/node_modules` is missing or older than `pnpm-lock.yaml`, as in a story worktree, which `git worktree add` makes without it; it says so, and pnpm's output goes, on stderr |
 | `flaiover-dev.sh` | Dev server against this repository (`PROJECT_DIR` defaults to the root) |
+| `flaiover-digests.sh` | `<image> <version> <index-digest>`: prints the flaiover release's digest list (`design/system/release-signing.md`, "The digest list") from the index in the registry, with `docker buildx imagetools` and `jq`; `release-flaiover.yml` signs and publishes it on a `flaiover/v*` tag |
 | `flaiover-build.sh` | Production build (adapter-node) |
 | `flaiover-test.sh` | `flaiover-install.sh --if-needed`, then prettier, eslint, svelte-check, vitest |
 | `flaiover-image.sh` | Builds the flaiover image locally as `flaiover:local` from the repo root |

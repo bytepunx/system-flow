@@ -10,9 +10,50 @@ permissions:
   contents: read
   packages: write
 
+# A push to main builds and pushes latest and sha-* and nothing else: release-key
+# and release run only on a flaiover/v* tag. On a tag, release-key runs first so
+# that a tag without the release key fails before anything is pushed; then image
+# builds and pushes; then release writes, signs, and publishes the digest list
+# and signs and attests the image (design/system/release-signing.md).
 jobs:
-  image:
+  release-key:
+    if: startsWith(github.ref, 'refs/tags/flaiover/v')
     runs-on: ubuntu-latest
+    # The release key's secrets, COSIGN_PRIVATE_KEY and COSIGN_PASSWORD, live
+    # in the environment `release`, which only flai/v* and flaiover/v* tags
+    # may deploy to (docs/operators/runbooks/release-key.md).
+    environment: release
+    permissions: {}
+    steps:
+      # An unsigned release is no release: fail before building when the key
+      # or its password is missing.
+      - name: Release key present
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          missing=0
+          for name in COSIGN_PRIVATE_KEY COSIGN_PASSWORD; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "::error::secret $name is not set in the environment release; see docs/operators/runbooks/release-key.md"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+  image:
+    needs: release-key
+    # On main release-key is skipped, and a skipped need would skip this job
+    # too; this condition runs it unless release-key failed or the run was
+    # cancelled.
+    if: ${{ !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      version: ${{ steps.flai.outputs.flaiover }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,11 +78,18 @@ jobs:
       - name: flai version for the bundled binary
         id: flai
         run: |
-          echo "version=$(git describe --tags --match 'flai/v*' --abbrev=0 | sed 's|flai/v||')" >> "$GITHUB_OUTPUT"
-          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-          echo "flaiover=$(git describe --tags --match 'flaiover/v*' --abbrev=0 2>/dev/null | sed 's|flaiover/v||' || echo 0.0.0)" >> "$GITHUB_OUTPUT"
-          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-      - uses: docker/build-push-action@v6
+          {
+            echo "version=$(git describe --tags --match 'flai/v*' --abbrev=0 | sed 's|flai/v||')"
+            echo "commit=$(git rev-parse --short HEAD)"
+            echo "flaiover=$(git describe --tags --match 'flaiover/v*' --abbrev=0 2>/dev/null | sed 's|flaiover/v||' || echo 0.0.0)"
+            echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_OUTPUT"
+      # Its digest output is the image index's digest, since two platforms are
+      # pushed: what the digest list's index line, cosign, and the attestation
+      # name.
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: flaiover/Dockerfile
@@ -56,3 +104,115 @@ jobs:
             FLAIOVER_VERSION=${{ steps.flai.outputs.flaiover }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  release:
+    needs: image
+    if: startsWith(github.ref, 'refs/tags/flaiover/v')
+    runs-on: ubuntu-latest
+    environment: release
+    # contents for the GitHub release; packages for cosign's signature and the
+    # attestation pushed to GHCR; id-token, attestations, and artifact-metadata
+    # (its storage record) for the attestation, as actions/attest documents.
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      IMAGE: ghcr.io/bytepunx/flaiover
+      DIGEST: ${{ needs.image.outputs.digest }}
+      VERSION: ${{ needs.image.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned: the sign flags below are cosign v3's, and v4 removes two of
+      # them (design/system/release-signing.md). The installer has no moving
+      # v4 tag.
+      - uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v3.1.3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # For docker buildx imagetools, which reads the index's manifests.
+      - uses: docker/setup-buildx-action@v3
+      # The list names the image by the tag the version gives it, so the
+      # version image read from git must be the one this tag carries.
+      - name: Digest list
+        run: |
+          if [ "$GITHUB_REF_NAME" != "flaiover/v$VERSION" ]; then
+            echo "::error::the image was built as flaiover $VERSION, not $GITHUB_REF_NAME"
+            exit 1
+          fi
+          scripts/flaiover-digests.sh "$IMAGE" "$VERSION" "$DIGEST" > "flaiover_${VERSION}.digests"
+          cat "flaiover_${VERSION}.digests"
+      # As flai's checksums.txt is signed (flai/.goreleaser.yaml): a key pair
+      # from the environment, no Rekor entry, one base64 signature in a file
+      # of its own. The three flags keep that in cosign v3.
+      - name: Sign the digest list
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: >-
+          cosign sign-blob --key env://COSIGN_PRIVATE_KEY
+          --use-signing-config=false --new-bundle-format=false --tlog-upload=false
+          --output-signature "flaiover_${VERSION}.digests.sig" --yes "flaiover_${VERSION}.digests"
+      # The same key and the same three flags on the image, by its index
+      # digest and not each platform's (no --recursive): without a signing
+      # config nothing is fetched from TUF, without the upload nothing goes to
+      # Rekor, and without the new bundle format the signature is the
+      # sha256-<digest>.sig tag in GHCR that cosign v2 and v3 both read.
+      # Anyone verifies with:
+      #   cosign verify --key cosign.pub --insecure-ignore-tlog=true ghcr.io/bytepunx/flaiover@sha256:…
+      - name: Sign the image
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: >-
+          cosign sign --key env://COSIGN_PRIVATE_KEY
+          --use-signing-config=false --new-bundle-format=false --tlog-upload=false
+          --yes "$IMAGE@$DIGEST"
+      # A keyless provenance statement for anyone with gh, pushed to GHCR beside
+      # the image: gh attestation verify oci://ghcr.io/bytepunx/flaiover@sha256:…
+      # --owner bytepunx. Artifact attestations are available only to public
+      # repositories on the Team plan (design/system/release-signing.md), so the
+      # step is skipped while bytepunx/system-flow is private.
+      - uses: actions/attest-build-provenance@v4
+        if: ${{ !github.event.repository.private }}
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ env.DIGEST }}
+          push-to-registry: true
+      # --latest=false keeps the repository's latest release flai's, which
+      # flai self-upgrade and install.sh look for. cosign.pub is the key flai
+      # embeds; the notes give its fingerprint to compare with
+      # docs/operators/runbooks/release-key.md.
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          list="flaiover_${VERSION}.digests"
+          fingerprint=$(openssl pkey -pubin -in flai/internal/buildinfo/cosign.pub -outform DER | openssl dgst -sha256 -r | cut -d' ' -f1)
+          cat > notes.md <<EOF
+          flaiover ${VERSION}, the system-flow dashboard, as the image \`${IMAGE}:${VERSION}\`, index \`${DIGEST}\`.
+
+          \`${list}\` lists the image's digests, the index's and each platform's, with the reference they were pushed under. \`${list}.sig\` is its signature by the release key, whose public half is \`cosign.pub\`, fingerprint \`${fingerprint}\` (SHA-256 of the DER public key; compare it with docs/operators/runbooks/release-key.md).
+
+          Verify the list with cosign:
+
+              cosign verify-blob --key cosign.pub --signature ${list}.sig --insecure-ignore-tlog ${list}
+
+          or with openssl:
+
+              openssl base64 -d -A -in ${list}.sig -out ${list}.der
+              openssl dgst -sha256 -verify cosign.pub -signature ${list}.der ${list}
+
+          Verify the image's signature in the registry:
+
+              cosign verify --key cosign.pub --insecure-ignore-tlog=true ${IMAGE}@${DIGEST}
+          EOF
+          gh release create "$GITHUB_REF_NAME" --verify-tag --latest=false \
+            --title "flaiover v$VERSION" --notes-file notes.md \
+            "$list" "$list.sig" flai/internal/buildinfo/cosign.pub
