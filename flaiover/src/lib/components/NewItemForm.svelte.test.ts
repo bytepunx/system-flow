@@ -298,6 +298,41 @@ describe('NewItemForm', () => {
 		expect(q('refusal').textContent).toContain('agent config: "nonsense" is not key=value');
 	});
 
+	// S-0359: the provider field shows the project's default and is sent only when typed
+	it("shows the project's default provider and sends the story's only when typed", async () => {
+		let sent: Record<string, unknown> | undefined;
+		backend((body) => {
+			sent = body;
+			return ok({ item: { id: 'S-0100' } });
+		});
+		const inner = api.getMockImplementation()!;
+		api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) =>
+			url === '/api/manifest'
+				? ok({ agent: { harness: 'claude-code', provider: 'litellm' } })
+				: inner(url, init)
+		);
+		c = mount(NewItemForm, { target: document.body, props: { oncreated: vi.fn() } });
+		await settle();
+		expect(q<HTMLInputElement>('agent-provider').placeholder).toBe('litellm');
+		expect(q('agent-default').textContent).toContain('project default: claude-code, via litellm');
+		type(q<HTMLInputElement>('title'), 'With the default provider');
+		type(q<HTMLTextAreaElement>('body'), '## Goal\nG\n');
+		q<HTMLFormElement>('new-item').dispatchEvent(
+			new Event('submit', { bubbles: true, cancelable: true })
+		);
+		await settle();
+		expect(sent).toBeDefined();
+		expect(sent).not.toHaveProperty('agent');
+
+		sent = undefined;
+		type(q<HTMLInputElement>('agent-provider'), 'openrouter');
+		q<HTMLFormElement>('new-item').dispatchEvent(
+			new Event('submit', { bubbles: true, cancelable: true })
+		);
+		await settle();
+		expect(sent?.agent).toEqual({ provider: 'openrouter' });
+	});
+
 	// S-0204: a closed cost of delay panel in the manifest's currency; only the inputs given are sent
 	describe('the cost of delay panel', () => {
 		const withCurrency = (sent: { body?: Record<string, unknown> }, currency?: string) => {

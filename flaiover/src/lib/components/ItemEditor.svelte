@@ -60,6 +60,7 @@
 	// the story's own agent (S-0103), which a save replaces
 	let harness = $state('');
 	let model = $state('');
+	let provider = $state('');
 	let agentConfig = $state('');
 	let cost = $state(costFields());
 	let body = $state('');
@@ -88,6 +89,7 @@
 		parent = v.parent ?? '';
 		harness = v.agent?.harness ?? '';
 		model = v.agent?.model ?? '';
+		provider = v.agent?.provider ?? '';
 		agentConfig = configText(v.agent?.config);
 		cost = costFields(v.cost_of_delay);
 		body = v.body;
@@ -127,7 +129,7 @@
 			const next =
 				'error' in parsed
 					? view.agent
-					: agentFrom(harness, model, parsed.config, view.agent?.roles);
+					: agentFrom(harness, model, parsed.config, view.agent?.roles, provider);
 			if (!sameAgent(next, view.agent)) out.agent = next ?? null;
 		}
 		if (view.type !== 'task') {
@@ -347,6 +349,7 @@
 			<AgentFields
 				bind:harness
 				bind:model
+				bind:provider
 				bind:config={agentConfig}
 				defaults={view.default_agent}
 				note="Empty fields leave this story without them; the default applies only to new stories"

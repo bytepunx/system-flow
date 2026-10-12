@@ -42,7 +42,7 @@ usage:
 - `ItemEditor.svelte` and `NewItemForm.svelte` bind it and send it with the agent; the Settings page's default agent binds it in the Providers section task, which owns `SettingsPanel.svelte`.
 - `agent.test.ts`: built with and without a provider, equality, and the summary.
 
-It waits for T-1415, whose writes accept `provider`. It runs together with T-1416, which touches other files.
+It waits for no task: S-0349 already made flai's agent writes accept `provider`, so it runs together with T-1415, which touches only Go files.
 
 ## Done when
 
@@ -50,4 +50,4 @@ It waits for T-1415, whose writes accept `provider`. It runs together with T-141
 
 ## Notes
 
-Layer 2 of S-0359.
+Layer 1 of S-0359.

@@ -44,7 +44,7 @@ usage:
 - The default agent's `AgentFields` on this page binds T-1417's `provider` and sends it through `settings.default_agent`.
 - `SettingsPanel.svelte.test.ts`: the section read-only and writable, a save's payload, a reset, the unset key line, and a default agent with a provider.
 
-It waits for T-1415, whose read and write it calls. It runs together with T-1417, which touches other files; the binding of the default agent's provider works once both are in.
+It waits for T-1415, whose read and write it calls, and for T-1417, whose provider field on `AgentFields` the default agent binds and whose component its tests render.
 
 ## Done when
 

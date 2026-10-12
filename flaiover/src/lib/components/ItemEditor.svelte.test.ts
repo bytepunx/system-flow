@@ -266,6 +266,37 @@ describe('ItemEditor (S-0085)', () => {
 		expect(sent()).toEqual({ agent: null, hash: view.hash });
 	});
 
+	// S-0359: the story's provider is shown over the project's default, sent when typed, and
+	// left out of the agent when emptied
+	it("edits the story's provider, with the project's default as its placeholder", async () => {
+		const withProvider = {
+			...view,
+			agent: { harness: 'claude-code', model: 'claude-opus-5-5', provider: 'litellm' },
+			default_agent: { harness: 'claude-code', model: 'claude-opus-5-5', provider: 'openrouter' }
+		};
+		api.mockImplementation((_url: string, init?: { method?: string }) =>
+			Promise.resolve(
+				init?.method === 'PUT' ? answer(200, { changed: ['agent'] }) : answer(200, withProvider)
+			)
+		);
+		await mountIt();
+		const provider = document.querySelector<HTMLInputElement>('[data-testid="agent-provider"]')!;
+		expect(provider.value).toBe('litellm');
+		expect(provider.placeholder).toBe('openrouter');
+		type('[data-testid="agent-provider"]', 'openrouter');
+		await submit();
+		expect(sent()).toEqual({
+			agent: { harness: 'claude-code', model: 'claude-opus-5-5', provider: 'openrouter' },
+			hash: view.hash
+		});
+		type('[data-testid="agent-provider"]', '');
+		await submit();
+		expect(sent()).toEqual({
+			agent: { harness: 'claude-code', model: 'claude-opus-5-5' },
+			hash: view.hash
+		});
+	});
+
 	// S-0204: an epic's or story's cost of delay inputs in a closed panel; a save sends the changed
 	// inputs, an emptied one as "", and never the planner's value
 	describe('the cost of delay panel', () => {

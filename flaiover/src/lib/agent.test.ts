@@ -38,4 +38,31 @@ describe('agent helpers (S-0103)', () => {
 		expect(agentLine(a)).toBe('claude-code, claude-opus-5-5; explore: haiku; verify: sonnet');
 		expect(agentLine({ roles: { verify: { model: 'sonnet' } } })).toBe('default; verify: sonnet');
 	});
+	it('carries the provider only when one is typed, compares it, and shows it (S-0359)', () => {
+		expect(agentFrom('claude-code', 'm', {}, undefined, ' litellm ')).toEqual({
+			harness: 'claude-code',
+			model: 'm',
+			provider: 'litellm'
+		});
+		expect(agentFrom('claude-code', 'm', {}, undefined, '  ')).toEqual({
+			harness: 'claude-code',
+			model: 'm'
+		});
+		expect(agentFrom('', '', {}, undefined, 'openrouter')).toEqual({ provider: 'openrouter' });
+		const viaLitellm = { model: 'm', provider: 'litellm' };
+		expect(sameAgent(viaLitellm, { model: 'm' })).toBe(false);
+		expect(sameAgent(viaLitellm, { ...viaLitellm })).toBe(true);
+		expect(sameAgent(viaLitellm, { model: 'm', provider: 'openrouter' })).toBe(false);
+		expect(sameAgent({ model: 'm', provider: '' }, { model: 'm' })).toBe(true);
+		expect(
+			agentLine({
+				harness: 'claude-code',
+				model: 'claude-opus-5-5',
+				provider: 'litellm',
+				config: { effort: 'high' },
+				roles: { verify: { model: 'sonnet' } }
+			})
+		).toBe('claude-code, claude-opus-5-5, via litellm, effort=high; verify: sonnet');
+		expect(agentLine({ provider: 'openrouter' })).toBe('via openrouter');
+	});
 });

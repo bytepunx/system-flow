@@ -1,12 +1,14 @@
 <script lang="ts">
 	// A story's agent (S-0103): the harness that runs it, the model, and options for the harness, one
 	// key=value a line. The project's default shows as placeholders; what is typed here overrides it
-	// for this story.
+	// for this story. The provider (S-0359) names the host's provider the model's calls go to; empty,
+	// the agent names none.
 	import { agentLine, type Agent } from '$lib/agent';
 
 	let {
 		harness = $bindable(''),
 		model = $bindable(''),
+		provider = $bindable(''),
 		config = $bindable(''),
 		defaults,
 		note,
@@ -14,6 +16,7 @@
 	}: {
 		harness?: string;
 		model?: string;
+		provider?: string;
 		config?: string;
 		defaults?: Agent;
 		note?: string;
@@ -31,7 +34,7 @@
 
 <fieldset class="rounded border border-line p-3 text-sm" data-testid="agent-fields">
 	<legend class="px-1 text-xs text-muted">agent: who works this story</legend>
-	<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 		<label class="block">
 			<span class="mb-1 block text-xs text-muted">harness</span>
 			<input
@@ -48,6 +51,15 @@
 				bind:value={model}
 				placeholder={defaults?.model ?? 'claude-opus-5-5'}
 				data-testid="agent-model"
+			/>
+		</label>
+		<label class="block">
+			<span class="mb-1 block text-xs text-muted">provider</span>
+			<input
+				class="w-full rounded border border-line-strong bg-surface px-2 py-1"
+				bind:value={provider}
+				placeholder={defaults?.provider ?? 'none'}
+				data-testid="agent-provider"
 			/>
 		</label>
 		<label class="block">

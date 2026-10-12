@@ -48,6 +48,7 @@
 	// a story's agent over the project's default (S-0103): only what is typed is sent
 	let harness = $state('');
 	let model = $state('');
+	let provider = $state('');
 	let agentConfig = $state('');
 	let defaultAgent = $state<Agent | undefined>(undefined);
 	// the cost of delay inputs (S-0204), in the manifest's currency; only those given are sent
@@ -129,7 +130,7 @@
 				error = `agent config: ${parsed.error}`;
 				return;
 			}
-			agent = agentFrom(harness, model, parsed.config);
+			agent = agentFrom(harness, model, parsed.config, undefined, provider);
 		}
 		busy = true;
 		try {
@@ -275,6 +276,7 @@
 		<AgentFields
 			bind:harness
 			bind:model
+			bind:provider
 			bind:config={agentConfig}
 			defaults={defaultAgent}
 			note="Leave a field empty for the default; what you type is this story's"
