@@ -2,6 +2,7 @@
 
 ## 1.0.90 - 2026-10-12
 
+- S-0239 dashboard.allow_unsigned lets a development build connect, shown on every page and in every status (patch).
 - S-0239 The operators guide says how to allow unsigned builds (patch, ADR-0070): `docs/operators/index.md` gains a section on the dashboard and `dashboard.allow_unsigned`, set in the host's flai configuration, in `system-flow.yaml` for one project, or for one start with `flai dashboard --allow-unsigned`. With it, flai dials a dashboard image on no signed list and accepts a dashboard with no release stamp, and the dashboard, started with `FLAIOVER_ALLOW_UNSIGNED=1`, accepts a flai with none; a stamp that does not verify is still refused, and the credential is still proven. It is shown as `unsigned allowed: <sides>` in a banner on every dashboard page and in the three statuses, and as a `warn` per connection. It needs a flai that has it; an older flai ignores `dashboard.allow_unsigned` and refuses `--allow-unsigned`.
 
 ## 1.0.89 - 2026-10-12
