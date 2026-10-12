@@ -14,6 +14,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/dashboard"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -59,6 +61,10 @@ type Status struct {
 	// Unavailable are the registered projects not served, by root, and why
 	// (S-0121): the folder is gone or has no manifest, say.
 	Unavailable map[string]string `json:"unavailable,omitempty"`
+	// Images are each served project's last verdict on the image its
+	// dashboard container runs, by root, as Connections are (S-0238): listed,
+	// unlisted and so not dialled, or not measured, with why.
+	Images map[string]ImageVerdict `json:"images,omitempty"`
 }
 
 // Dir is the directory that holds the registry and the state.
@@ -208,6 +214,22 @@ type Options struct {
 	// answer the requests in flight before its connection ends (I-0107);
 	// DefaultDrainGrace when zero.
 	DrainGrace time.Duration
+	// Images are the verified digest lists the image the dashboard container
+	// runs is judged against before each dial of a project's dashboard
+	// (S-0238); nil judges none. Docker runs docker for that check, the
+	// system's docker when nil.
+	Images *ImageLists
+	Docker execx.Runner
+}
+
+// ImageLists are what flai serve judges the dashboard's image against: the
+// verified digest lists cached beside its state and how a missing one is
+// fetched, or Err, why it has none it can verify, which leaves every image
+// not measured, with Err as the reason, and the release stamp check alone.
+type ImageLists struct {
+	Cache dashboard.Cache
+	Fetch ListFetcher
+	Err   error
 }
 
 // DefaultDrainGrace is how long a dropped project's requests in flight may
@@ -253,6 +275,103 @@ func gitOf(o Options) execx.Runner {
 	return o.Git
 }
 
+// dockerOf is the runner that asks docker, the system's when the options name none.
+func dockerOf(o Options) execx.Runner {
+	if o.Docker == nil {
+		return execx.System{}
+	}
+	return o.Docker
+}
+
+// check judges the image the dashboard at url runs, or, when l has no list it
+// can verify, says it was not measured and why.
+func (l *ImageLists) check(ctx context.Context, docker execx.Runner, url string) ImageVerdict {
+	if l.Err != nil {
+		return notMeasured(ImageVerdict{}, "flai serve has no verified digest list to judge it by: "+l.Err.Error())
+	}
+	return CheckImage(ctx, ImageCheck{Runner: docker, URL: url, Cache: l.Cache, Fetch: l.Fetch})
+}
+
+// imageVerdicts are each project's last image verdict, by root, recorded by
+// the gate before each dial and reported in the status.
+type imageVerdicts struct {
+	mu sync.Mutex
+	by map[string]ImageVerdict
+}
+
+// gate is what a project's client asks before each dial, reconnections
+// included (S-0238): it judges the image the dashboard container runs and
+// records the verdict. An unlisted image is refused, and the channel logs and
+// shows the refusal; a listed one is dialled, and so is one not measured,
+// whose dashboard the release stamp check alone then admits or refuses. Every
+// retry of a refused dial looks again, so a container restarted from a listed
+// image is dialled at the next.
+func (iv *imageVerdicts) gate(o Options, e Entry) func(context.Context) error {
+	docker := dockerOf(o)
+	return func(ctx context.Context) error {
+		v := o.Images.check(ctx, docker, e.URL)
+		if iv.record(e.Root, v) {
+			logVerdict(o.Logger, e, v)
+		}
+		if v.Kind == ImageUnlisted {
+			return errors.New(unsignedImage(v))
+		}
+		return nil
+	}
+}
+
+// record keeps v as root's verdict and reports whether it differs from the last.
+func (iv *imageVerdicts) record(root string, v ImageVerdict) bool {
+	iv.mu.Lock()
+	defer iv.mu.Unlock()
+	was, ok := iv.by[root]
+	iv.by[root] = v
+	return !ok || !sameVerdict(was, v)
+}
+
+// of are the verdicts of roots that have one; nil when none has.
+func (iv *imageVerdicts) of(roots []string) map[string]ImageVerdict {
+	iv.mu.Lock()
+	defer iv.mu.Unlock()
+	var out map[string]ImageVerdict
+	for _, root := range roots {
+		if v, ok := iv.by[root]; ok {
+			if out == nil {
+				out = map[string]ImageVerdict{}
+			}
+			out[root] = v
+		}
+	}
+	return out
+}
+
+func sameVerdict(a, b ImageVerdict) bool {
+	return a.Kind == b.Kind && a.Container == b.Container && a.Image == b.Image && a.Version == b.Version &&
+		slices.Equal(a.RepoDigests, b.RepoDigests) && a.Digest == b.Digest && a.Release == b.Release && a.Reason == b.Reason
+}
+
+// logVerdict says a project's new verdict once. An unlisted one is not said
+// here: the channel logs the refusal it causes, with this reason.
+func logVerdict(log *slog.Logger, e Entry, v ImageVerdict) {
+	switch v.Kind {
+	case ImageListed:
+		log.Info("dashboard image is on a verified digest list", "component", "serve", "root", e.Root, "key", e.Key,
+			"container", v.Container, "image", v.Image, "digest", v.Digest, "release", v.Release)
+	case ImageNotMeasured:
+		log.Info("dashboard image not measured; the release stamp check alone admits it", "component", "serve", "root", e.Root, "key", e.Key,
+			"reason", v.Reason)
+	}
+}
+
+// unsignedImage is why the gate refuses v, an unlisted image, in one line.
+func unsignedImage(v ImageVerdict) string {
+	digests := "no RepoDigests"
+	if len(v.RepoDigests) > 0 {
+		digests = strings.Join(v.RepoDigests, ", ")
+	}
+	return fmt.Sprintf("the dashboard runs an unsigned image %s (%s): %s", v.Image, digests, v.Reason)
+}
+
 // Run serves every registered project until ctx ends. The registry is read
 // again every tick, so a project registered while it runs is picked up and
 // one that was removed or changed is dropped.
@@ -282,8 +401,9 @@ func Run(ctx context.Context, o Options) error {
 	// not served again until its drain is over.
 	draining := map[string]*running{}
 	var drains sync.WaitGroup
-	offered := &offers{o: o, running: map[string]*running{}}
 	unavailable := map[string]string{}
+	images := &imageVerdicts{by: map[string]ImageVerdict{}}
+	offered := &offers{o: o, running: map[string]*running{}, images: images}
 	var mu sync.Mutex
 	// Each Claude Code that flai serve may start an agent with is checked
 	// against permission_prompt once (S-0286, ADR-0106): at the first look
@@ -405,6 +525,10 @@ func Run(ctx context.Context, o Options) error {
 			clientCtx, stop := context.WithCancel(ctx)
 			cctx, stopLooks := context.WithCancel(clientCtx)
 			r := &running{entry: e, client: o.NewClient(e, []byte(strings.TrimSpace(string(key)))), stop: stop, stopLooks: stopLooks, done: make(chan struct{})}
+			if o.Images != nil {
+				// the dashboard's image is judged before each dial (S-0238)
+				r.client.BeforeDial = images.gate(o, e)
+			}
 			clients[root] = r
 			watcher := &watch.Watcher{Root: e.Root, Paths: watchedPaths(e.Root), Every: o.WatchEvery}
 			starter := newLauncher(o, e)
@@ -482,9 +606,12 @@ func Run(ctx context.Context, o Options) error {
 	writeStatus := func() {
 		mu.Lock()
 		st := Status{PID: os.Getpid(), Version: o.Version, Started: started, Updated: o.Now().UTC().Format(time.RFC3339), Connections: map[string]channel.State{}}
+		roots := make([]string, 0, len(clients))
 		for root, r := range clients {
 			st.Connections[root] = r.client.State()
+			roots = append(roots, root)
 		}
+		st.Images = images.of(roots)
 		st.Offered = offered.found
 		st.Folder = o.Folder
 		st.FolderProjects, st.ImportProjects, st.Unserved = offered.placement()

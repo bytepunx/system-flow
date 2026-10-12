@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/dashboard"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -51,6 +52,20 @@ func (a *app) serveMCP() serve.MCP {
 		return nil
 	}
 	return hostMCP{c: c}
+}
+
+// serveImageLists are what flai serve judges the dashboard's image against
+// before each dial (S-0238): the verified digest lists flai dashboard caches
+// beside flai serve's state, and the flaiover releases it fetches a missing
+// one from. Keys that cannot be read leave every image not measured, with why.
+func (a *app) serveImageLists() *serve.ImageLists {
+	opt := dashboardReleases()
+	opt.Token = a.githubToken()
+	cache, err := a.dashboardCache(opt)
+	if err != nil {
+		return &serve.ImageLists{Err: err}
+	}
+	return &serve.ImageLists{Cache: cache, Fetch: serve.ResolverFetcher(dashboard.Resolver{Releases: opt, Cache: cache}, signedDashboardImage)}
 }
 
 // warnReleaseStamp logs once, at start, when a build that claims a release
@@ -120,7 +135,8 @@ there does.`,
 			}
 			servePprof(ctx, a.logger())
 			warnReleaseStamp(a.logger(), buildinfo.OwnStamp())
-			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, ImportRoots: a.importRoots})
+			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, ImportRoots: a.importRoots,
+				Images: a.serveImageLists(), Docker: a.runner})
 		},
 	}
 	c.Flags().IntVar(&exitWith, "exit-with", 0, "stop when the process with this PID is gone")

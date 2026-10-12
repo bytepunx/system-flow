@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -441,4 +442,197 @@ func TestServeTellsTheDashboardWhenAStorysAgentStartsAndEnds(t *testing.T) {
 		run := dir.AgentStates()[root].Stories[st.ID]
 		return run != nil && !run.live()
 	})
+}
+
+// lockedDocker is a fake docker that a test may swap while flai serve asks
+// it, as a container restarted from another image would change its answers.
+type lockedDocker struct {
+	mu sync.Mutex
+	d  *fakeDocker
+}
+
+func (l *lockedDocker) set(d *fakeDocker) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.d = d
+}
+
+func (l *lockedDocker) Run(dir, name string, args ...string) (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.d.Run(dir, name, args...)
+}
+
+func (l *lockedDocker) RunInput(dir, name, input string, args ...string) (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.d.RunInput(dir, name, input, args...)
+}
+
+func (l *lockedDocker) LookPath(name string) (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.d.LookPath(name)
+}
+
+// imageLab is flai serve judging the dashboard's image with docker and the
+// verified lists of flaiover imgVersion, cached and signed by a key it trusts.
+type imageLab struct {
+	dir    Dir
+	root   string
+	dash   *channeltest.Dashboard
+	docker *lockedDocker
+	logs   *syncBuffer
+}
+
+func newImageLab(t *testing.T, docker *fakeDocker) *imageLab {
+	t.Helper()
+	key := imgKey(t)
+	cache := imgCache(t, key)
+	cachePut(t, cache, key)
+	lab := &imageLab{dir: DirFor(filepath.Join(t.TempDir(), "config.json")), dash: channeltest.New(t, "s3cret"),
+		docker: &lockedDocker{d: docker}, logs: &syncBuffer{}}
+	root, keyFile := scratchProject(t, "harbour")
+	lab.root = root
+	if err := lab.dir.Register(Entry{Key: "harbour", Name: "harbour", Root: root, URL: lab.dash.URL, KeyFile: keyFile}); err != nil {
+		t.Fatal(err)
+	}
+	logger := slog.New(slog.NewJSONHandler(lab.logs, nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- Run(ctx, Options{Dir: lab.dir, Version: "test", Every: 20 * time.Millisecond, WatchEvery: time.Hour, Logger: logger,
+			Images: &ImageLists{Cache: cache, Fetch: noFetch(t)}, Docker: lab.docker,
+			NewClient: func(e Entry, key []byte) *channel.Client {
+				return &channel.Client{URL: e.URL, Key: key, Project: channel.Project{Key: e.Key, Name: e.Name, Root: e.Root}, Logger: logger,
+					Methods: hostapi.Methods("test", nil), Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond,
+					HeldBackoff: 20 * time.Millisecond, ReleaseKeys: lab.dash.Keys}
+			}})
+	}()
+	t.Cleanup(func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Errorf("Run: %v", err)
+		}
+	})
+	return lab
+}
+
+// status waits until flai serve's status satisfies ok, and returns it.
+func (lab *imageLab) status(t *testing.T, what string, ok func(Status) bool) Status {
+	t.Helper()
+	var st Status
+	waitFor(t, what, func() bool {
+		st, _ = lab.dir.ReadStatus(time.Now())
+		return ok(st)
+	})
+	return st
+}
+
+// refusedAttempts waits until the client has been refused at least n times
+// with the image unlisted in the status, and returns the status.
+func (lab *imageLab) refusedAttempts(t *testing.T, n int) Status {
+	t.Helper()
+	return lab.status(t, "the unlisted image is refused, again at each retry", func(st Status) bool {
+		return st.Images[lab.root].Kind == ImageUnlisted && st.Connections[lab.root].Attempts >= n
+	})
+}
+
+// S-0238: a dashboard whose container runs an image a verified digest list
+// names is dialled, and the status says which release lists it.
+func TestServeDialsADashboardRunningAListedImage(t *testing.T) {
+	lab := newImageLab(t, dockerWith(t, imgVersion, []string{imgRepo + "@" + imgAMD64}))
+
+	if conn := lab.dash.Wait(t); conn.Project != "harbour" {
+		t.Fatalf("hello named %q", conn.Project)
+	}
+	st := lab.status(t, "the verdict is in the status", func(st Status) bool { return st.Images[lab.root].Kind != "" })
+	if v := st.Images[lab.root]; v.Kind != ImageListed || v.Digest != imgAMD64 || v.Release != imgVersion || v.Image != imgID {
+		t.Fatalf("verdict %+v, want listed at %s by flaiover %s", v, imgAMD64, imgVersion)
+	}
+}
+
+// S-0238: an image no verified list names, or a local build with no
+// RepoDigests, is not dialled: the refusal names the image and its digests,
+// is logged once at error however often it is met again, and the verdict is
+// in the status.
+func TestServeRefusesADashboardRunningAnUnlistedImage(t *testing.T) {
+	cases := []struct {
+		name    string
+		docker  *fakeDocker
+		digests string
+	}{
+		{"unlisted digest", dockerWith(t, imgVersion, []string{imgRepo + "@" + imgOther}), imgRepo + "@" + imgOther},
+		{"no RepoDigests", dockerWith(t, "0.0.0", nil), "no RepoDigests"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			lab := newImageLab(t, tc.docker)
+
+			st := lab.refusedAttempts(t, 3)
+			select {
+			case conn := <-lab.dash.Proven:
+				t.Fatalf("flai dialled a dashboard running an unlisted image, for %q", conn.Project)
+			default:
+			}
+			want := "the dashboard runs an unsigned image " + imgID + " (" + tc.digests + "): "
+			c := st.Connections[lab.root]
+			if c.Connected || c.RefusedBy != channel.RefusedByFlai || !strings.HasPrefix(c.RefusedReason, want) {
+				t.Fatalf("connection %+v, want refused by flai with a reason beginning %q", c, want)
+			}
+			if v := st.Images[lab.root]; v.Image != imgID || v.Container != imgContainer || v.Reason == "" {
+				t.Fatalf("verdict %+v, want the image %s of the container %s and why", v, imgID, imgContainer)
+			}
+			var errs int
+			lines := bufio.NewScanner(strings.NewReader(lab.logs.String()))
+			for lines.Scan() {
+				var ev map[string]any
+				if json.Unmarshal(lines.Bytes(), &ev) == nil && ev["level"] == "ERROR" {
+					errs++
+					if why, _ := ev["reason"].(string); !strings.HasPrefix(why, want) {
+						t.Errorf("the error event says %v, want the reason beginning %q", ev, want)
+					}
+				}
+			}
+			if errs != 1 {
+				t.Fatalf("%d error events over %d refused attempts, want 1:\n%s", errs, c.Attempts, lab.logs.String())
+			}
+		})
+	}
+}
+
+// S-0238: a dashboard Docker here cannot inspect is dialled, the release
+// stamp check alone admitting it, and the status says it was not measured.
+func TestServeDialsADashboardItCannotInspectAndSaysItWasNotMeasured(t *testing.T) {
+	lab := newImageLab(t, &fakeDocker{absent: true})
+
+	lab.dash.Wait(t)
+	st := lab.status(t, "the verdict is in the status", func(st Status) bool { return st.Images[lab.root].Kind != "" })
+	if v := st.Images[lab.root]; v.Kind != ImageNotMeasured || !strings.Contains(v.Reason, "not on PATH") {
+		t.Fatalf("verdict %+v, want not measured because docker is not on PATH", v)
+	}
+	data, err := os.ReadFile(filepath.Join(string(lab.dir), "state.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"kind": "not-measured"`) {
+		t.Errorf("the status file does not say not-measured under kind:\n%s", data)
+	}
+}
+
+// S-0238: a container restarted from a listed image is dialled at the next
+// look after the refusal of the unlisted one it ran before.
+func TestServeDialsOnceTheContainerRunsAListedImage(t *testing.T) {
+	lab := newImageLab(t, dockerWith(t, imgVersion, []string{imgRepo + "@" + imgOther}))
+	lab.refusedAttempts(t, 1)
+
+	lab.docker.set(dockerWith(t, imgVersion, []string{imgRepo + "@" + imgARM64}))
+
+	lab.dash.Wait(t)
+	st := lab.status(t, "the listed verdict and the connection are in the status", func(st Status) bool {
+		return st.Images[lab.root].Kind == ImageListed && st.Connections[lab.root].Connected
+	})
+	if c := st.Connections[lab.root]; c.RefusedBy != "" {
+		t.Errorf("connection %+v still says it was refused", c)
+	}
 }

@@ -35,14 +35,14 @@ const (
 
 // ImageVerdict is what an image check found about the dashboard container.
 type ImageVerdict struct {
-	Kind        ImageKind
-	Container   string   // the container's ID; "" when not measured before Docker named one
-	Image       string   // the image ID the container runs, sha256:…; "" as Container
-	Version     string   // the container's FLAIOVER_VERSION, X.Y.Z; "" when it carries none
-	RepoDigests []string // the image's RepoDigests, <repository>@sha256:…; none for a local build
-	Digest      string   // listed: the digest, sha256:…, a verified list names
-	Release     string   // listed: the flaiover release whose verified list names Digest
-	Reason      string   // unlisted and not measured: why, in words for a log and a status line
+	Kind        ImageKind `json:"kind"`
+	Container   string    `json:"container,omitempty"`    // the container's ID; "" when not measured before Docker named one
+	Image       string    `json:"image,omitempty"`        // the image ID the container runs, sha256:…; "" as Container
+	Version     string    `json:"version,omitempty"`      // the container's FLAIOVER_VERSION, X.Y.Z; "" when it carries none
+	RepoDigests []string  `json:"repo_digests,omitempty"` // the image's RepoDigests, <repository>@sha256:…; none for a local build
+	Digest      string    `json:"digest,omitempty"`       // listed: the digest, sha256:…, a verified list names
+	Release     string    `json:"release,omitempty"`      // listed: the flaiover release whose verified list names Digest
+	Reason      string    `json:"reason,omitempty"`       // unlisted and not measured: why, in words for a log and a status line
 }
 
 // ListFetcher fetches version's digest list from its flaiover release,
