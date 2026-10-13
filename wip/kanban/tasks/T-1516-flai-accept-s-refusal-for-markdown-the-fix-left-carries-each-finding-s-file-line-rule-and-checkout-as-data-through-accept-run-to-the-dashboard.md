@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 91
-      output: 468
-      cache_read: 4187442
-      cache_write: 140642
-      cost: 1.9811
+      input: 74
+      output: 28195
+      cache_read: 4296879
+      cache_write: 115178
+      cost: 2.0769
 ---
 # T-1516 flai accept's refusal for markdown the fix left carries each finding's file, line, rule, and checkout as data, through accept.run to the dashboard
 

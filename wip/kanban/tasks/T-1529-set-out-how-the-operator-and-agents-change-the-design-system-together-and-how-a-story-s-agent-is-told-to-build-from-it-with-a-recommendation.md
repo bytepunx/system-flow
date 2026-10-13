@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 101
-      output: 35582
-      cache_read: 5050230
-      cache_write: 175548
-      cost: 2.7836
+      input: 96
+      output: 33209
+      cache_read: 5052639
+      cache_write: 163167
+      cost: 2.6664
 ---
 # T-1529 Set out how the operator and agents change the design system together, and how a story's agent is told to build from it, with a recommendation
 

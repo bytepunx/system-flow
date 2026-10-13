@@ -27,11 +27,17 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 111
-      output: 499
-      cache_read: 5294201
-      cache_write: 163041
-      cost: 2.4979
+      input: 94
+      output: 35551
+      cache_read: 5417894
+      cache_write: 145226
+      cost: 2.6188
+    - model: claude-sonnet-5-5
+      input: 28
+      output: 9243
+      cache_read: 758743
+      cache_write: 82249
+      cost: 0.374
 ---
 # T-1514 flai doc show and doc save take --story and edit the file in that story's worktree, committing on its branch
 

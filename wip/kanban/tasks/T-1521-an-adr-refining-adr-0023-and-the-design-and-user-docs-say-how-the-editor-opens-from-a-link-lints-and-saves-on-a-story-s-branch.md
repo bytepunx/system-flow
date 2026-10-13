@@ -24,15 +24,15 @@ touches: [design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.m
 after: [T-1520]
 usage:
   source: log
-  seconds: 227
+  seconds: 232
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 68
-      output: 410
-      cache_read: 3555945
-      cache_write: 136989
-      cost: 1.6904
+      input: 63
+      output: 24057
+      cache_read: 3666301
+      cache_write: 98275
+      cost: 1.7721
 ---
 # T-1521 An ADR refining ADR-0023 and the design and user docs say how the editor opens from a link, lints, and saves on a story's branch
 

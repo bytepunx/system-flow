@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 99
-      output: 515
-      cache_read: 4501655
-      cache_write: 130154
-      cost: 2.1202
+      input: 79
+      output: 30174
+      cache_read: 4598417
+      cache_write: 123260
+      cost: 2.2227
 ---
 # T-1515 flai doc lint and the host method doc.lint answer the markdown findings of content as it is edited
 

@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 117
-      output: 41529
-      cache_read: 5894254
-      cache_write: 204886
-      cost: 3.2488
+      input: 112
+      output: 38759
+      cache_read: 5897066
+      cache_write: 190436
+      cost: 3.112
 ---
 # T-1527 Record what the dashboard's theme, document editor, and site menu, and the prime pack, offer a design system tool today
 

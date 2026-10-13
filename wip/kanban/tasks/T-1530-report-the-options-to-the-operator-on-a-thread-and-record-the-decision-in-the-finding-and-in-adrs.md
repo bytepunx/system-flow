@@ -21,15 +21,15 @@ touches: [design/system/design-system-tool.md, design/adrs, design/adrs/README.m
 after: [T-1529]
 usage:
   source: log
-  seconds: 75
+  seconds: 112
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 16100
-      cache_read: 2285161
-      cache_write: 79433
-      cost: 1.2595
+      input: 73
+      output: 25143
+      cache_read: 3825406
+      cache_write: 123535
+      cost: 2.0188
 ---
 # T-1530 Report the options to the operator on a thread and record the decision in the finding and in ADRs
 

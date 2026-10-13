@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 405
-      cache_read: 4387501
-      cache_write: 110461
-      cost: 2.0588
+      input: 77
+      output: 29302
+      cache_read: 4465527
+      cache_write: 119698
+      cost: 2.1585
 ---
 # T-1519 Repository file links in rendered markdown, threads, reports, and plain refusal text open the editor at the line they name
 

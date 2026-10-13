@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 535.8921
-accrued_seconds: 401323
-tasks_completed: 442
-last_run: 2026-10-13T18:17:09Z
+accrued_cost: 542.0663
+accrued_seconds: 409145
+tasks_completed: 446
+last_run: 2026-10-13T20:27:31Z
 ---
 
 # Orchestrator activity
@@ -3105,6 +3105,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0380
 - Seconds: 4
 - Cost: 0.0357 USD, estimated
+
+### 2026-10-13T18:51:27Z
+
+- Summary: Under accept_reviews, accepted S-0356 at ffd7ac9be921. flai verify passed every step at the branch head; the verifier matched criteria 1-2 to gateway_test.go, 3 to gateway-smoke.sh, 4 to agent-adapters.md and litellm.sh, 5 to the operators and contributors guides, diff within touches, no secret; the dry run had no blocker. Merged, done, archived, committed; S-0378 told of its overlap on design/issues/summary.md.
+- Items: S-0356
+- Seconds: 2058
+- Cost: 1.4975 USD, estimated
+
+### 2026-10-13T18:51:37Z
+
+- Summary: Under publish, release_evaluate after S-0356's acceptance: policy judgement, 1 pending (S-0356), 33.19 USD/week, not met by itself. Decided not to publish yet: S-0356 changes only a test, scripts, and docs, and S-0378 has closed all eight tasks and is in close-out, so I hold to bundle both in one release. Ready column unchanged: S-0357 no longer waits on S-0356 but is held on overlap with S-0378.
+- Items: S-0356
+- Seconds: 10
+- Cost: 0.0856 USD, estimated
+
+### 2026-10-13T19:13:56Z
+
+- Summary: S-0357 started (shared with S-0378 via MS-0110); the ready column is now empty, so there is nothing to order. Under promote_to_ready, S-0241 (rank 1, 2h) stays out: blocked. No other candidate: S-0358 waits on S-0357; the rest are drafts or lack a forecast and value.
+- Items: S-0357
+- Seconds: 1339
+- Cost: 1.0013 USD, estimated
+
+### 2026-10-13T20:27:31Z
+
+- Summary: S-0378 has no agent: flai serve stopped restarting it after 3 ends (TH-0446, flai serve's thread, left to the operator). Its narrative says the close-out passed at 8c81484d and the move to review is refused only on its open question, TH-0436, which carries my recommendation awaiting the operator's confirmation (save on a story's branch, ADR-0145, and exit 4). Once confirmed, a restart moves it to review. Nothing for me to do: I neither confirm nor restart agents.
+- Items: S-0378
+- Seconds: 4415
+- Cost: 3.5898 USD, estimated
 
 ## Refusals
 

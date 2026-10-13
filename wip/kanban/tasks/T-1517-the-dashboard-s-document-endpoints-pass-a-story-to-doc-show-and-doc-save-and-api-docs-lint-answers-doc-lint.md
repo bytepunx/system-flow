@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 90
-      output: 442
-      cache_read: 3665270
-      cache_write: 121263
-      cost: 1.7333
+      input: 65
+      output: 24667
+      cache_read: 3759242
+      cache_write: 100766
+      cost: 1.8171
 ---
 # T-1517 The dashboard's document endpoints pass a story to doc.show and doc.save, and /api/docs/lint answers doc.lint
 

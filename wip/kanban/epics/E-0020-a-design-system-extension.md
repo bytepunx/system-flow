@@ -18,12 +18,12 @@ tags: [dashboard, cli]
 topics: [design]
 usage:
   source: sum
-  seconds: 1455
+  seconds: 1492
   turns:
     - day: 2026-10-13
       ceremony: 2
       hand_edits: 2
-      work: 35
+      work: 41
   models:
     - model: claude-haiku-5-5
       input: 58701
@@ -32,11 +32,11 @@ usage:
       cache_write: 0
       cost: 0.0175
     - model: claude-opus-5-5
-      input: 334
-      output: 118061
-      cache_read: 16756567
-      cache_write: 582464
-      cost: 9.236
+      input: 348
+      output: 120304
+      cache_read: 18303715
+      cache_write: 591088
+      cost: 9.6593
   strategic:
     - kind: planner
       seconds: 898

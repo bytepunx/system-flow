@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 152
-      output: 699
-      cache_read: 9773835
-      cache_write: 167145
-      cost: 4.5502
+      input: 170
+      output: 64760
+      cache_read: 9869257
+      cache_write: 264545
+      cost: 4.7704
 ---
 # T-1520 A refused acceptance lists the markdown the fix left as editor links, and the operator accepts again from the same page once they are saved
 

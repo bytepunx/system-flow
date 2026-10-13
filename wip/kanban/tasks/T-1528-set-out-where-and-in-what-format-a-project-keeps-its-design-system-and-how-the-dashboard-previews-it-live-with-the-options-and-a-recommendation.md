@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 13417
-      cache_read: 1904299
-      cache_write: 66194
-      cost: 1.0496
+      input: 36
+      output: 12522
+      cache_read: 1905207
+      cache_write: 61526
+      cost: 1.0054
 ---
 # T-1528 Set out where and in what format a project keeps its design system, and how the dashboard previews it live, with the options and a recommendation
 

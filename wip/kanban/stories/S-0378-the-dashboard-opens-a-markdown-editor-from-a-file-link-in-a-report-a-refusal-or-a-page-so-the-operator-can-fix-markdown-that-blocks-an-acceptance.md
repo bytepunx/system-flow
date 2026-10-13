@@ -6,7 +6,7 @@ title: The dashboard opens a markdown editor from a file link in a report, a ref
 status: in-progress
 owner: alex
 created: 2026-10-12T17:07:24Z
-updated: 2026-10-13T18:47:09Z
+updated: 2026-10-13T19:12:53Z
 transitions:
   - to: ready
     at: 2026-10-13T17:29:37Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0378
 tags: [dashboard, cli]
 topics: [markdown]
-touches: [flai/cmd/doc.go, flai/cmd/doc_test.go, flai/cmd/doc_lint.go, flai/cmd/doc_lint_test.go, flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/accept_fix_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/docs.go, flai/internal/hostapi/docs_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/writes.test.ts, flaiover/src/routes/api/docs/edit/+server.ts, flaiover/src/routes/api/docs/file/+server.ts, flaiover/src/routes/api/docs/file/save.test.ts, flaiover/src/routes/api/docs/lint/+server.ts, flaiover/src/routes/api/docs/lint/lint.test.ts, flaiover/src/lib/components/DocEditor.svelte, flaiover/src/lib/components/DocEditor.svelte.test.ts, flaiover/src/lib/components/EditorDialog.svelte, flaiover/src/lib/components/EditorDialog.svelte.test.ts, flaiover/src/lib/editor.svelte.ts, flaiover/src/lib/edit.ts, flaiover/src/lib/edit.test.ts, flaiover/src/routes/+layout.svelte, "flaiover/src/routes/edit/[...path]/+page.svelte", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte", design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/settings.md, flaiover/src/lib/components/DismissibleNotice.svelte, flaiover/src/lib/components/DismissibleNotice.svelte.test.ts, design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md, design/issues/summary.md]
+touches: [flai/cmd/doc.go, flai/cmd/doc_test.go, flai/cmd/doc_lint.go, flai/cmd/doc_lint_test.go, flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/accept_fix_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/docs.go, flai/internal/hostapi/docs_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/writes.test.ts, flaiover/src/routes/api/docs/edit/+server.ts, flaiover/src/routes/api/docs/file/+server.ts, flaiover/src/routes/api/docs/file/save.test.ts, flaiover/src/routes/api/docs/lint/+server.ts, flaiover/src/routes/api/docs/lint/lint.test.ts, flaiover/src/lib/components/DocEditor.svelte, flaiover/src/lib/components/DocEditor.svelte.test.ts, flaiover/src/lib/components/EditorDialog.svelte, flaiover/src/lib/components/EditorDialog.svelte.test.ts, flaiover/src/lib/editor.svelte.ts, flaiover/src/lib/edit.ts, flaiover/src/lib/edit.test.ts, flaiover/src/routes/+layout.svelte, "flaiover/src/routes/edit/[...path]/+page.svelte", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte", design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/settings.md, flaiover/src/lib/components/DismissibleNotice.svelte, flaiover/src/lib/components/DismissibleNotice.svelte.test.ts, design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md, design/issues/summary.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/I-0146-testthegateisaskedoneveryattempt-fails-now-and-then-the-state-reads-refused-before-the-second-refusal-is-logged.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,31 +24,36 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3988
-  estimated: true
+  seconds: 6419
   turns:
     - day: 2026-10-13
-      ceremony: 1
-      hand_edits: 5
-      work: 57
+      ceremony: 6
+      hand_edits: 6
+      work: 122
   models:
     - model: claude-opus-5-5
-      input: 800
-      output: 4010
-      cache_read: 40275457
-      cache_write: 1196978
-      cost: 18.9832
+      input: 984
+      output: 357097
+      cache_read: 54191900
+      cache_write: 1594685
+      cost: 27.5391
+    - model: claude-sonnet-5-5
+      input: 28
+      output: 9243
+      cache_read: 758743
+      cache_write: 82249
+      cost: 0.374
   strategic:
     - kind: orchestrator
-      seconds: 770
+      seconds: 5185
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 113
-          output: 1938
-          cache_read: 11328128
-          cache_write: 33814
-          cost: 2.8646
+          input: 257
+          output: 4370
+          cache_read: 25621134
+          cache_write: 58805
+          cost: 6.4544
 cost_of_delay:
   inputs:
     penalty_per_week: 25
@@ -75,10 +80,10 @@ When an acceptance is refused because markdown the lint fix cannot fix still has
 
 ## Acceptance criteria
 
-- [ ] A repository file link shown inline in a report, a refusal, a thread, or a page opens the file in a markdown editor in the dashboard, at the line the link names when it names one.
-- [ ] The editor shows the markdown lint findings of the file as it is edited, with their lines and rules.
-- [ ] Saving writes the file through flai on the host (ADR-0023), on the branch or checkout the link names, and refuses a save that conflicts with a change made meanwhile.
-- [ ] After the findings that blocked an acceptance are corrected and saved, the acceptance can be made again from the same page.
+- [x] A repository file link shown inline in a report, a refusal, a thread, or a page opens the file in a markdown editor in the dashboard, at the line the link names when it names one.
+- [x] The editor shows the markdown lint findings of the file as it is edited, with their lines and rules.
+- [x] Saving writes the file through flai on the host (ADR-0023), on the branch or checkout the link names, and refuses a save that conflicts with a change made meanwhile.
+- [x] After the findings that blocked an acceptance are corrected and saved, the acceptance can be made again from the same page.
 
 ## Tasks
 - T-1514 flai doc show and doc save take --story and edit the file in that story's worktree, committing on its branch

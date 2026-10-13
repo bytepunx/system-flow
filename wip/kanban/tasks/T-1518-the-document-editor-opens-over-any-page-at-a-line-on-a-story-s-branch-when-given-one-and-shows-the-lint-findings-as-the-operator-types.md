@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 315
-      cache_read: 2412191
-      cache_write: 110865
-      cost: 1.1549
+      input: 43
+      output: 16436
+      cache_read: 2504874
+      cache_write: 67143
+      cost: 1.2108
 ---
 # T-1518 The document editor opens over any page at a line, on a story's branch when given one, and shows the lint findings as the operator types
 
