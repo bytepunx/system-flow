@@ -6,7 +6,7 @@ title: "flai check finds `markdown.MD012` outside the story at close-out"
 status: in-progress
 owner: alex
 created: 2026-10-12T16:52:58Z
-updated: 2026-10-13T17:17:01Z
+updated: 2026-10-13T17:20:32Z
 transitions:
   - to: ready
     at: 2026-10-13T17:16:55Z
@@ -16,16 +16,28 @@ transitions:
     by: agent-S-0376
 tags: [flai, narrative, issues]
 topics: [markdown, narrative, planning]
-touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/flai-cli.md, design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/flai-cli.md, design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story-at-close-out.md, design/issues/summary.md, docs/users/flai.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 206
+  estimated: true
+  turns:
+    - day: 2026-10-13
+      test_runs: 4
+      hand_edits: 1
+      work: 27
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 585
+      cache_read: 4289976
+      cache_write: 174971
+      cost: 2.0525
   strategic:
     - kind: orchestrator
       seconds: 461
@@ -62,8 +74,8 @@ finalized:
 This story remediates [I-0139](../../../design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story-at-close-out.md), "flai check finds `markdown.MD012` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0139 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0139 is closed with `flai issue close I-0139 --reason` saying what fixed it
+- [x] The cause I-0139 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0139 is closed with `flai issue close I-0139 --reason` saying what fixed it
 
 ## Tasks
 - T-1506 flai stream answer leaves one blank line where it removes an open question, and refuses a save the markdown lint rejects

@@ -3,10 +3,10 @@ id: S-0377
 type: story
 nature: remediation
 title: "TestActivityWritersTakeTurns fails about one run in three: two writers that both find the activity lock stale can both take it, and an entry is lost"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T16:53:00Z
-updated: 2026-10-13T17:07:32Z
+updated: 2026-10-13T17:26:49Z
 transitions:
   - to: ready
     at: 2026-10-13T16:49:07Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-13T16:49:14Z
     by: agent-S-0377
+  - to: review
+    at: 2026-10-13T17:26:00Z
+    by: agent-S-0377
+  - to: done
+    at: 2026-10-13T17:26:49Z
+    by: orchestrator
 tags: [flai, concurrency, strategic-agents]
-touches: [flai/internal/filelock/filelock.go, flai/internal/filelock/filelock_unix.go, flai/internal/filelock/filelock_windows.go, flai/internal/filelock/filelock_test.go, flai/go.mod, design/tech/go-libraries.md, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, design/system/strategic-agents.md, design/issues/I-0140-testactivitywriterstaketurns-fails-about-one-run-in-three-two-writers-that-both-find-the-activity-lock-stale-can-both-take-it-and-an-entry-is-lost.md, design/issues/summary.md]
+touches: [flai/internal/filelock/filelock.go, flai/internal/filelock/filelock_unix.go, flai/internal/filelock/filelock_windows.go, flai/internal/filelock/filelock_test.go, flai/go.mod, design/tech/go-libraries.md, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, design/system/strategic-agents.md, design/issues/I-0140-testactivitywriterstaketurns-fails-about-one-run-in-three-two-writers-that-both-find-the-activity-lock-stale-can-both-take-it-and-an-entry-is-lost.md, design/issues/summary.md, flai/cmd/guard_test.go, flai/cmd/promote_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,19 +29,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1095
-  estimated: true
+  seconds: 2223
   turns:
     - day: 2026-10-13
-      hand_edits: 2
-      work: 24
+      ceremony: 2
+      test_runs: 1
+      hand_edits: 3
+      work: 33
   models:
     - model: claude-opus-5-5
-      input: 154
-      output: 917
-      cache_read: 5577542
-      cache_write: 375291
-      cost: 2.7349
+      input: 188
+      output: 61103
+      cache_read: 8616369
+      cache_write: 412314
+      cost: 5.6265
   strategic:
     - kind: orchestrator
       seconds: 37
@@ -110,3 +117,13 @@ Touches, where each came from:
 Forecast: flai's 5m rests on size 2, two criteria and no touches, since the story declared none. It is raised to 1h. The work is a new package for two platforms, three call sites, a test that kills a child process holding the lock, and a close-out whose tiers take about ten minutes. Delivery is flai's 18:10Z, the start it played out from the pull order, plus that hour.
 
 Cost of delay: 37.50 USD a week stands. It is flai cod's figure from flai's 15m time-lost input: 15m per 168h cycle at 150 USD an hour. The input was left as flai set it.
+
+### Accepted by the orchestrator
+
+- Verified: d3a204fc86c68b33ffafdc7014b425c50573f8a6
+- At: 2026-10-13T17:26:49Z
+
+Verdict: meets all criteria (verifier at d3a204fc86c68b33ffafdc7014b425c50573f8a6; flai verify passed every step at that commit)
+
+- 1: flai/internal/filelock/filelock.go, flai/internal/filelock/filelock_unix.go, flai/internal/filelock/filelock_windows.go, flai/internal/filelock/filelock_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/go.mod, design/tech/go-libraries.md, design/system/strategic-agents.md
+- 2: design/issues/I-0140-testactivitywriterstaketurns-fails-about-one-run-in-three-two-writers-that-both-find-the-activity-lock-stale-can-both-take-it-and-an-entry-is-lost.md, design/issues/summary.md

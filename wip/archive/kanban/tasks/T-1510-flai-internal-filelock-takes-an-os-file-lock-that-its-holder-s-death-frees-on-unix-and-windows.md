@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 175
-      cache_read: 1132657
-      cache_write: 61640
-      cost: 0.5487
+      input: 25
+      output: 8252
+      cache_read: 1163671
+      cache_write: 55684
+      cost: 0.7599
 ---
 # T-1510 flai/internal/filelock takes an OS file lock that its holder's death frees, on unix and Windows
 

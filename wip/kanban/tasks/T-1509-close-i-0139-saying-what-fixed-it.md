@@ -3,16 +3,36 @@ id: T-1509
 type: task
 nature: remediation
 title: Close I-0139 saying what fixed it
-status: backlog
+status: done
 parent: S-0376
 owner: alex
 created: 2026-10-13T16:44:24Z
-updated: 2026-10-13T16:44:24Z
-transitions: []
+updated: 2026-10-13T17:20:26Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:20:18Z
+    by: agent-S-0376
+  - to: in-progress
+    at: 2026-10-13T17:20:18Z
+    by: agent-S-0376
+  - to: done
+    at: 2026-10-13T17:20:26Z
+    by: agent-S-0376
 stream: S-0376
 tags: [issues]
 touches: [design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-1508]
+usage:
+  source: log
+  seconds: 6
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 48
+      cache_read: 374947
+      cache_write: 2039
+      cost: 0.1733
 ---
 # T-1509 Close I-0139 saying what fixed it
 

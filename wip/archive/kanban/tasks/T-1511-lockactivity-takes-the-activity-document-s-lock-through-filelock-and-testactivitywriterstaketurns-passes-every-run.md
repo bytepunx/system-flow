@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 196
-      cache_read: 1046112
-      cache_write: 95281
-      cost: 0.5244
+      input: 24
+      output: 7887
+      cache_read: 1112127
+      cache_write: 53218
+      cost: 0.7262
 ---
 # T-1511 lockActivity takes the activity document's lock through filelock, and TestActivityWritersTakeTurns passes every run
 

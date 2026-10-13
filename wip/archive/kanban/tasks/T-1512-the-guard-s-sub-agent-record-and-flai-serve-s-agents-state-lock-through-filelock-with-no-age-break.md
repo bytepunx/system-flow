@@ -7,7 +7,7 @@ status: done
 parent: S-0377
 owner: alex
 created: 2026-10-13T16:48:18Z
-updated: 2026-10-13T17:06:38Z
+updated: 2026-10-13T17:18:12Z
 transitions:
   - to: ready
     at: 2026-10-13T16:53:46Z
@@ -20,7 +20,7 @@ transitions:
     by: agent-S-0377
 stream: S-0377
 tags: [flai, concurrency, guard, serve]
-touches: [flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go]
+touches: [flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/internal/serve/restart.go, flai/internal/serve/restart_test.go, flai/cmd/guard_test.go, flai/cmd/promote_test.go]
 after: [T-1510]
 usage:
   source: log
@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 258
-      cache_read: 1497166
-      cache_write: 85063
-      cost: 0.7269
+      input: 34
+      output: 10933
+      cache_read: 1541652
+      cache_write: 73772
+      cost: 1.0067
 ---
 # T-1512 The guard's sub-agent record and flai serve's agents state lock through filelock, with no age break
 

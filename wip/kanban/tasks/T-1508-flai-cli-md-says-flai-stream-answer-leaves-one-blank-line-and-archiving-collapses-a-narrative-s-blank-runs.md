@@ -3,16 +3,36 @@ id: T-1508
 type: task
 nature: improvement
 title: flai-cli.md says flai stream answer leaves one blank line and archiving collapses a narrative's blank runs
-status: backlog
+status: done
 parent: S-0376
 owner: alex
 created: 2026-10-13T16:44:17Z
-updated: 2026-10-13T16:44:17Z
-transitions: []
+updated: 2026-10-13T17:20:14Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:19:52Z
+    by: agent-S-0376
+  - to: in-progress
+    at: 2026-10-13T17:19:53Z
+    by: agent-S-0376
+  - to: done
+    at: 2026-10-13T17:20:14Z
+    by: agent-S-0376
 stream: S-0376
 tags: [docs]
-touches: [design/system/flai-cli.md]
+touches: [design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1506, T-1507]
+usage:
+  source: log
+  seconds: 21
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 105
+      cache_read: 871495
+      cache_write: 11113
+      cost: 0.4057
 ---
 # T-1508 flai-cli.md says flai stream answer leaves one blank line and archiving collapses a narrative's blank runs
 

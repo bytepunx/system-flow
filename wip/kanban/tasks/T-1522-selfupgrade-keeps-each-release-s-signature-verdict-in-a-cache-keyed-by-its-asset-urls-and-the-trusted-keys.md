@@ -23,7 +23,7 @@ tags: [flai, cli, release]
 touches: [flai/internal/selfupgrade/verdictcache.go, flai/internal/selfupgrade/verdictcache_test.go, flai/internal/selfupgrade/signature.go]
 usage:
   source: log
-  seconds: 223
+  seconds: 224
   estimated: true
   models:
     - model: claude-opus-5-5
@@ -31,7 +31,7 @@ usage:
       output: 147
       cache_read: 1131753
       cache_write: 72893
-      cost: 0.5534
+      cost: 0.5538
 ---
 # T-1522 selfupgrade keeps each release's signature verdict in a cache keyed by its asset URLs and the trusted keys
 

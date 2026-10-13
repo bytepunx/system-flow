@@ -3,15 +3,35 @@ id: T-1506
 type: task
 nature: remediation
 title: flai stream answer leaves one blank line where it removes an open question, and refuses a save the markdown lint rejects
-status: backlog
+status: done
 parent: S-0376
 owner: alex
 created: 2026-10-13T16:43:59Z
-updated: 2026-10-13T16:43:59Z
-transitions: []
+updated: 2026-10-13T17:18:49Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:17:40Z
+    by: agent-S-0376
+  - to: in-progress
+    at: 2026-10-13T17:17:41Z
+    by: agent-S-0376
+  - to: done
+    at: 2026-10-13T17:18:49Z
+    by: agent-S-0376
 stream: S-0376
 tags: [flai, narrative]
 touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go]
+usage:
+  source: log
+  seconds: 68
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 69
+      cache_read: 541740
+      cache_write: 5958
+      cost: 0.2518
 ---
 # T-1506 flai stream answer leaves one blank line where it removes an open question, and refuses a save the markdown lint rejects
 

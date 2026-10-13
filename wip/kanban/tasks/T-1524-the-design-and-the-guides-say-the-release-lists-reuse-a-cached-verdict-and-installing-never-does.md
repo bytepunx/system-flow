@@ -3,12 +3,18 @@ id: T-1524
 type: task
 nature: improvement
 title: The design and the guides say the release lists reuse a cached verdict and installing never does
-status: backlog
+status: in-progress
 parent: S-0379
 owner: alex
 created: 2026-10-13T17:02:31Z
-updated: 2026-10-13T17:02:31Z
-transitions: []
+updated: 2026-10-13T17:24:20Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:24:19Z
+    by: agent-S-0379
+  - to: in-progress
+    at: 2026-10-13T17:24:20Z
+    by: agent-S-0379
 stream: S-0379
 tags: [flai, docs, release]
 touches: [design/system/flai-cli.md, design/system/release-signing.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/runbooks/backup.md]

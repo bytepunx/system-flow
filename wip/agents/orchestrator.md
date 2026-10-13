@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 519.5367
-accrued_seconds: 396952
-tasks_completed: 424
-last_run: 2026-10-13T17:03:54Z
+accrued_cost: 521.7526
+accrued_seconds: 397733
+tasks_completed: 427
+last_run: 2026-10-13T17:16:59Z
 ---
 
 # Orchestrator activity
@@ -2979,6 +2979,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0379
 - Seconds: 14
 - Cost: 0.2157 USD, estimated
+
+### 2026-10-13T17:16:44Z
+
+- Summary: Under accept_reviews, accepted S-0375 at 0797010753f9. flai verify passed every step at the branch head; the verifier matched criterion 1 to the atomicfile, narrative, storygit, stream, and storystart changes with their tests and four docs, and criterion 2 to I-0137's close; the dry run had no blocker. Merged, done, archived, committed.
+- Items: S-0375
+- Seconds: 766
+- Cost: 2.0392 USD, estimated
+
+### 2026-10-13T17:16:52Z
+
+- Summary: Under publish, release_evaluate after S-0375's acceptance: policy judgement, 1 pending (S-0375), 75 USD/week, not met by itself. Decided not to publish yet: S-0377, a self-contained remediation, has closed every task and is in close-out, so I hold to bundle both in one release rather than publish twice within minutes.
+- Items: S-0375
+- Seconds: 8
+- Cost: 0.0585 USD, estimated
+
+### 2026-10-13T17:16:59Z
+
+- Summary: Under promote_to_ready, moved S-0376 to ready (rank 1, 20m under throughput), no longer held now that S-0375 is accepted; S-0241 (rank 2) stays out, blocked. Applied the throughput order: S-0376 (20m), S-0357 (42m).
+- Items: S-0376
+- Seconds: 7
+- Cost: 0.1182 USD, estimated
 
 ## Refusals
 

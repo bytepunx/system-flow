@@ -3,15 +3,35 @@ id: T-1507
 type: task
 nature: remediation
 title: Archiving a narrative collapses each run of blank lines outside fenced code to one, so no archived narrative carries an MD012 finding
-status: backlog
+status: done
 parent: S-0376
 owner: alex
 created: 2026-10-13T16:44:09Z
-updated: 2026-10-13T16:44:09Z
-transitions: []
+updated: 2026-10-13T17:19:48Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:17:41Z
+    by: agent-S-0376
+  - to: in-progress
+    at: 2026-10-13T17:17:42Z
+    by: agent-S-0376
+  - to: done
+    at: 2026-10-13T17:19:48Z
+    by: agent-S-0376
 stream: S-0376
 tags: [flai, narrative]
 touches: [flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go]
+usage:
+  source: log
+  seconds: 126
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 18
+      output: 144
+      cache_read: 1291371
+      cache_write: 21882
+      cost: 0.6037
 ---
 # T-1507 Archiving a narrative collapses each run of blank lines outside fenced code to one, so no archived narrative carries an MD012 finding
 

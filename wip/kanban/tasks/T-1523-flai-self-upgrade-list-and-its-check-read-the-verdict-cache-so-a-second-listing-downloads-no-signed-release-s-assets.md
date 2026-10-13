@@ -3,11 +3,11 @@ id: T-1523
 type: task
 nature: improvement
 title: flai self-upgrade --list and its check read the verdict cache, so a second listing downloads no signed release's assets
-status: in-progress
+status: done
 parent: S-0379
 owner: alex
 created: 2026-10-13T17:02:21Z
-updated: 2026-10-13T17:09:11Z
+updated: 2026-10-13T17:24:09Z
 transitions:
   - to: ready
     at: 2026-10-13T17:09:11Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:09:11Z
     by: agent-S-0379
+  - to: done
+    at: 2026-10-13T17:24:09Z
+    by: agent-S-0379
 stream: S-0379
 tags: [flai, cli, release]
-touches: [flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go]
+touches: [flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, docs/users/flai-reference.md]
 after: [T-1522]
+usage:
+  source: log
+  seconds: 895
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 239
+      cache_read: 2855421
+      cache_write: 105392
+      cost: 1.361
 ---
 # T-1523 flai self-upgrade --list and its check read the verdict cache, so a second listing downloads no signed release's assets
 

@@ -4,10 +4,10 @@ title: "S-0356: the LiteLLM proxy's upstream Anthropic key is a placeholder, so 
 anchor:
   path: wip/kanban/stories/S-0356-a-claude-code-agent-runs-through-a-litellm-proxy-as-it-does-through-openrouter-checked-by-tests-that-run-only-where-the-proxy-and-its-key-are-set-and-what-litellm-forwards-and-logs-is-recorded.md
   item: S-0356
-status: open
+status: answered
 participants: [agent-S-0356, orchestrator, alex]
 created: 2026-10-12T21:05:51Z
-updated: 2026-10-13T16:48:30Z
+updated: 2026-10-13T17:26:32Z
 ---
 
 # TH-0429 S-0356: the LiteLLM proxy's upstream Anthropic key is a placeholder, so no run reaches the model
@@ -113,5 +113,10 @@ This changes S-0356's scope, so it is your decision, not mine:
 **What it cannot show:** the design records that Anthropic does not support Claude Code on non-Claude models. So a free model's run proves what LiteLLM forwards and logs, not how a Claude model behaves behind it. A failed step by the free model is recorded as the model's, not as a LiteLLM defect, as the agent proposes.
 
 **Alternative:** `mock_response` costs nothing but makes no tool calls. It would prove only that the proxy answers, so it does not meet criterion 1.
+
+Source: design/system/agent-adapters.md § Claude Code over a gateway
+
+### 2026-10-13T17:26:32Z alex
+Confirmed the recommendation of 2026-10-13T16:48:30Z orchestrator.
 
 Source: design/system/agent-adapters.md § Claude Code over a gateway

@@ -6,7 +6,7 @@ title: flai self-upgrade --list and flai host versions download two assets for e
 status: in-progress
 owner: alex
 created: 2026-10-12T17:44:10Z
-updated: 2026-10-13T17:03:57Z
+updated: 2026-10-13T17:24:09Z
 transitions:
   - to: ready
     at: 2026-10-13T17:03:48Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0379
 tags: [flai, cli, release]
 topics: [cli, release, security]
-touches: [flai/internal/selfupgrade/verdictcache.go, flai/internal/selfupgrade/verdictcache_test.go, flai/internal/selfupgrade/signature.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, design/system/flai-cli.md, design/system/release-signing.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/runbooks/backup.md, design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md, design/issues/summary.md]
+touches: [flai/internal/selfupgrade/verdictcache.go, flai/internal/selfupgrade/verdictcache_test.go, flai/internal/selfupgrade/signature.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, design/system/flai-cli.md, design/system/release-signing.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/runbooks/backup.md, design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md, design/issues/summary.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +24,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 308
+  seconds: 1213
   estimated: true
   turns:
     - day: 2026-10-13
       ceremony: 1
       hand_edits: 1
-      work: 16
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 320
-      cache_read: 2658092
-      cache_write: 199384
-      cost: 1.3128
+      input: 128
+      output: 567
+      cache_read: 5663328
+      cache_write: 315812
+      cost: 2.7484
   strategic:
     - kind: orchestrator
       seconds: 273

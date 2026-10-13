@@ -24,15 +24,15 @@ touches: [design/issues/I-0140-testactivitywriterstaketurns-fails-about-one-run-
 after: [T-1511, T-1512]
 usage:
   source: log
-  seconds: 4
+  seconds: 6
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 48
-      cache_read: 368044
-      cache_write: 2349
-      cost: 0.1702
+      input: 8
+      output: 2559
+      cache_read: 360888
+      cache_write: 17269
+      cost: 0.2357
 ---
 # T-1513 Close I-0140, saying the OS file lock in flai/internal/filelock fixed it
 
