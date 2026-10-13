@@ -451,6 +451,8 @@ func TestServeAgentProvider(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", cfgPath)
 	const key = "sk-never-shown-0123456789"
 	t.Setenv("LITELLM_API_KEY", key)
+	const masterKey = "sk-master-never-shown-0123456789"
+	t.Setenv("LITELLM_MASTER_KEY", masterKey)
 	root := tempProject(t)
 	var seen strings.Builder
 	run := func(args ...string) (string, string, int) {
@@ -494,8 +496,23 @@ func TestServeAgentProvider(t *testing.T) {
 	if got := saved()["litellm"]; !reflect.DeepEqual(got, want) {
 		t.Errorf("--api alone keeps the rest: %+v", got)
 	}
-	if js, _, _ := run("litellm", "--json"); !strings.Contains(js, `"litellm": {`) || !strings.Contains(js, `"key_env": "LITELLM_API_KEY"`) {
+	if js, _, _ := run("litellm", "--json"); !strings.Contains(js, `"litellm": {`) || !strings.Contains(js, `"key_env": "LITELLM_API_KEY"`) || strings.Contains(js, "spend_key_env") {
 		t.Errorf("--json: %s", js)
+	}
+	// S-0357: --spend-key-env names the variable of the key that reads the
+	// spend log, shown where set, and an empty value clears it
+	out, errOut, code = run("litellm", "--spend-key-env", "LITELLM_MASTER_KEY")
+	if code != 0 || !strings.Contains(out, "its key in the variable LITELLM_API_KEY\n  spend log read with the key in the variable LITELLM_MASTER_KEY\n  model haiku:") {
+		t.Errorf("--spend-key-env: %d %s %s", code, out, errOut)
+	}
+	if got, w := saved()["litellm"], (manifest.Provider{API: want.API, BaseURL: want.BaseURL, KeyEnv: want.KeyEnv, SpendKeyEnv: "LITELLM_MASTER_KEY", Models: want.Models}); !reflect.DeepEqual(got, w) {
+		t.Errorf("--spend-key-env keeps the rest: %+v", got)
+	}
+	if js, _, _ := run("litellm", "--json"); !strings.Contains(js, `"spend_key_env": "LITELLM_MASTER_KEY"`) {
+		t.Errorf("--json with spend_key_env: %s", js)
+	}
+	if out, _, _ := run("litellm", "--spend-key-env", ""); strings.Contains(out, "spend log") || !reflect.DeepEqual(saved()["litellm"], want) {
+		t.Errorf("--spend-key-env \"\" clears it: %s %+v", out, saved()["litellm"])
 	}
 	for _, bad := range []struct {
 		args []string
@@ -504,6 +521,7 @@ func TestServeAgentProvider(t *testing.T) {
 		{[]string{"litellm", "--api", "bedrock"}, "is not an API flai speaks"},
 		{[]string{"litellm", "--base-url", "litellm.example.com"}, "is not an absolute http or https URL"},
 		{[]string{"litellm", "--key-env", "litellm-key"}, "is not the name of an environment variable"},
+		{[]string{"litellm", "--spend-key-env", masterKey}, "spend_key_env is not the name of an environment variable"},
 		{[]string{"litellm", "--model", "opus"}, "is not alias=name"},
 		{[]string{"--api", "openai-chat"}, "name the provider"},
 		{[]string{"litellm", "--reset", "--api", "openai-chat"}, "--reset takes no other flag"},
@@ -527,7 +545,7 @@ func TestServeAgentProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(seen.String()+string(data), key) {
+	if strings.Contains(seen.String()+string(data), key) || strings.Contains(seen.String()+string(data), masterKey) {
 		t.Errorf("the key is in what flai printed or wrote:\n%s\n%s", seen.String(), data)
 	}
 }
@@ -772,14 +790,17 @@ func TestServeSettingsShowEachHarnessGuardAndDenyProtected(t *testing.T) {
 }
 
 // S-0359, ADR-0129: settings.get's host carries the host's providers, each
-// entry's fields and whether the variable its key_env names is set and not
-// empty in flai serve's environment, never the variable's value.
+// entry's fields and whether the variables its key_env and spend_key_env
+// (S-0357) name are set and not empty in flai serve's environment, never a
+// variable's value.
 func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
 	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
 	t.Setenv("FLAI_CONFIG", cfgPath)
 	const key = "sk-never-shown-0123456789"
 	t.Setenv("LITELLM_API_KEY", key)
 	t.Setenv("OPENROUTER_API_KEY", "")
+	const masterKey = "sk-master-never-shown-0123456789"
+	t.Setenv("LITELLM_MASTER_KEY", masterKey)
 	t.Setenv("FLAI_TEST_UNSET_GATEWAY_KEY", "") // restored after the test, unset in it
 	if err := os.Unsetenv("FLAI_TEST_UNSET_GATEWAY_KEY"); err != nil {
 		t.Fatal(err)
@@ -793,8 +814,8 @@ func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
 			t.Fatal(err)
 		}
 		got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
-		if strings.Contains(string(got), key) {
-			t.Errorf("the key is in the settings: %s", got)
+		if strings.Contains(string(got), key) || strings.Contains(string(got), masterKey) {
+			t.Errorf("a key is in the settings: %s", got)
 		}
 		var out struct {
 			Agent map[string]any `json:"agent"`
@@ -808,18 +829,18 @@ func TestServeSettingsShowTheProvidersNeverTheirKeys(t *testing.T) {
 		t.Errorf("no provider set is an empty object: %s", got)
 	}
 	for _, args := range [][]string{
-		{"litellm", "--api", "anthropic-messages", "--base-url", "http://127.0.0.1:4000", "--key-env", "LITELLM_API_KEY", "--model", "opus=anthropic/claude-opus-5-5"},
+		{"litellm", "--api", "anthropic-messages", "--base-url", "http://127.0.0.1:4000", "--key-env", "LITELLM_API_KEY", "--spend-key-env", "LITELLM_MASTER_KEY", "--model", "opus=anthropic/claude-opus-5-5"},
 		{"openrouter", "--api", "openai-chat", "--base-url", "https://openrouter.ai/api/v1", "--key-env", "OPENROUTER_API_KEY"},
-		{"gateway", "--api", "openai-responses", "--base-url", "https://gw.example.com", "--key-env", "FLAI_TEST_UNSET_GATEWAY_KEY"},
+		{"gateway", "--api", "openai-responses", "--base-url", "https://gw.example.com", "--key-env", "FLAI_TEST_UNSET_GATEWAY_KEY", "--spend-key-env", "FLAI_TEST_UNSET_GATEWAY_KEY"},
 	} {
 		if _, errOut, code := runIn(t, root, append([]string{"serve", "agent", "provider"}, args...)...); code != 0 {
 			t.Fatalf("set %s: %s", args[0], errOut)
 		}
 	}
 	got, _ := json.Marshal(agent()["providers"])
-	want := `{"gateway":{"api":"openai-responses","base_url":"https://gw.example.com","key_env":"FLAI_TEST_UNSET_GATEWAY_KEY","key_set":false,"models":{}},` +
-		`"litellm":{"api":"anthropic-messages","base_url":"http://127.0.0.1:4000","key_env":"LITELLM_API_KEY","key_set":true,"models":{"opus":"anthropic/claude-opus-5-5"}},` +
-		`"openrouter":{"api":"openai-chat","base_url":"https://openrouter.ai/api/v1","key_env":"OPENROUTER_API_KEY","key_set":false,"models":{}}}`
+	want := `{"gateway":{"api":"openai-responses","base_url":"https://gw.example.com","key_env":"FLAI_TEST_UNSET_GATEWAY_KEY","key_set":false,"models":{},"spend_key_env":"FLAI_TEST_UNSET_GATEWAY_KEY","spend_key_set":false},` +
+		`"litellm":{"api":"anthropic-messages","base_url":"http://127.0.0.1:4000","key_env":"LITELLM_API_KEY","key_set":true,"models":{"opus":"anthropic/claude-opus-5-5"},"spend_key_env":"LITELLM_MASTER_KEY","spend_key_set":true},` +
+		`"openrouter":{"api":"openai-chat","base_url":"https://openrouter.ai/api/v1","key_env":"OPENROUTER_API_KEY","key_set":false,"models":{},"spend_key_env":"","spend_key_set":false}}`
 	if string(got) != want {
 		t.Errorf("providers:\n%s\nwant\n%s", got, want)
 	}

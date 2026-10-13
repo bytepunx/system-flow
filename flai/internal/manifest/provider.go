@@ -11,15 +11,18 @@ import (
 
 // Provider is where a story's agent's model calls go (ADR-0129): the API a
 // gateway speaks, its base URL, the name of the host's environment variable
-// that holds its key, and the harness's model aliases on it. The host's
-// configuration holds each entry whole, under agent.providers; a project's
-// manifest, under providers, may override an entry's api, base_url, and
-// models, never key_env. It never holds a key.
+// that holds its key, the name of the one that holds a key that can read the
+// gateway's spend log where the agent's own key cannot (ADR-0132), and the
+// harness's model aliases on it. The host's configuration holds each entry
+// whole, under agent.providers, spend_key_env optional; a project's manifest,
+// under providers, may override an entry's api, base_url, and models, never
+// key_env or spend_key_env. It never holds a key.
 type Provider struct {
-	API     string            `yaml:"api,omitempty" json:"api,omitempty"`
-	BaseURL string            `yaml:"base_url,omitempty" json:"base_url,omitempty"`
-	KeyEnv  string            `yaml:"key_env,omitempty" json:"key_env,omitempty"`
-	Models  map[string]string `yaml:"models,omitempty" json:"models,omitempty"`
+	API         string            `yaml:"api,omitempty" json:"api,omitempty"`
+	BaseURL     string            `yaml:"base_url,omitempty" json:"base_url,omitempty"`
+	KeyEnv      string            `yaml:"key_env,omitempty" json:"key_env,omitempty"`
+	SpendKeyEnv string            `yaml:"spend_key_env,omitempty" json:"spend_key_env,omitempty"`
+	Models      map[string]string `yaml:"models,omitempty" json:"models,omitempty"`
 }
 
 // The APIs a provider may speak.
@@ -38,8 +41,8 @@ var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 // Problems are what is wrong with the values p sets, one phrase each, each
 // beginning with what, the entry's key such as providers.litellm: an api flai
 // does not know, a base_url that is not an absolute http or https URL, a
-// key_env that is not a variable's name, and a model alias or name that is
-// not one. What p leaves out is not checked.
+// key_env or spend_key_env that is not a variable's name, and a model alias
+// or name that is not one. What p leaves out is not checked.
 func (p Provider) Problems(what string) []string {
 	var errs []string
 	if p.API != "" && !slices.Contains(ProviderAPIs, p.API) {
@@ -52,8 +55,13 @@ func (p Provider) Problems(what string) []string {
 	}
 	// The value is not quoted: one that is not a variable's name may be the
 	// key itself, pasted in its place.
-	if p.KeyEnv != "" && !envNamePattern.MatchString(p.KeyEnv) {
-		errs = append(errs, fmt.Sprintf("%s.key_env is not the name of an environment variable; write one such as LITELLM_API_KEY (letters, digits, _, not beginning with a digit), never the key", what))
+	for _, v := range []struct{ key, value, example string }{
+		{"key_env", p.KeyEnv, "LITELLM_API_KEY"},
+		{"spend_key_env", p.SpendKeyEnv, "LITELLM_MASTER_KEY"},
+	} {
+		if v.value != "" && !envNamePattern.MatchString(v.value) {
+			errs = append(errs, fmt.Sprintf("%s.%s is not the name of an environment variable; write one such as %s (letters, digits, _, not beginning with a digit), never the key", what, v.key, v.example))
+		}
 	}
 	for _, alias := range sortedKeys(p.Models) {
 		switch model := p.Models[alias]; {
@@ -90,8 +98,8 @@ func providerNameProblem(what, name string) string {
 }
 
 // ProviderErrors are what is wrong with the manifest's providers, one sentence
-// each: a name that is not one, a value Problems refuses, and a key_env, which
-// is the host's to set.
+// each: a name that is not one, a value Problems refuses, and a key_env or
+// spend_key_env, which is the host's to set.
 func (m Manifest) ProviderErrors() []string {
 	var errs []string
 	for _, name := range sortedKeys(m.Providers) {
@@ -105,6 +113,10 @@ func (m Manifest) ProviderErrors() []string {
 			errs = append(errs, fmt.Sprintf("%s.key_env is the host's: it names a variable of the host's environment, which a committed manifest cannot know; remove it here and set it with flai serve agent provider %s --key-env <variable>", what, name))
 			p.KeyEnv = ""
 		}
+		if p.SpendKeyEnv != "" {
+			errs = append(errs, fmt.Sprintf("%s.spend_key_env is the host's: it names a variable of the host's environment, which a committed manifest cannot know; remove it here and set it with flai serve agent provider %s --spend-key-env <variable>", what, name))
+			p.SpendKeyEnv = ""
+		}
 		errs = append(errs, p.Problems(what)...)
 	}
 	return errs
@@ -113,7 +125,7 @@ func (m Manifest) ProviderErrors() []string {
 // HostProviderProblems are what is wrong with the host's providers, the
 // configuration's agent.providers, one sentence each: a name that is not one,
 // a value Problems refuses, and an entry without the api, base_url, or key_env
-// every host entry sets.
+// every host entry sets; its spend_key_env is optional.
 func HostProviderProblems(providers map[string]Provider) []string {
 	var errs []string
 	for _, name := range sortedKeys(providers) {
@@ -147,7 +159,7 @@ func incomplete(what, name string, p Provider) []string {
 // ResolveProvider is the provider name stands for: a copy of the host's entry
 // with the project's override for it laid over, its api and base_url where
 // the project sets them and its models merged alias by alias, the project's
-// winning. Nil for no name. It refuses a name the host has no entry for, and
+// winning; its key_env and spend_key_env are the host's. Nil for no name. It refuses a name the host has no entry for, and
 // an entry that, merged, lacks what a whole entry sets or sets a value
 // Problems refuses. Neither map is changed.
 func ResolveProvider(name string, host, project map[string]Provider) (*Provider, error) {

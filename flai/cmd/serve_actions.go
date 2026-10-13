@@ -850,7 +850,7 @@ func newServeAgentProviderCmd(a *app) *cobra.Command {
 	var models []string
 	var reset bool
 	c := &cobra.Command{
-		Use:   "provider [<name>] [--api <api>] [--base-url <url>] [--key-env <variable>] [--model <alias>=<name>]... [--reset]",
+		Use:   "provider [<name>] [--api <api>] [--base-url <url>] [--key-env <variable>] [--spend-key-env <variable>] [--model <alias>=<name>]... [--reset]",
 		Short: "Set where the model calls of a story's agent that names a provider go: its API, its URL, and the variable that holds its key",
 		Long: `A story's agent may name a provider, such as litellm or openrouter, beside
 its harness and model; you say here what that is on this host. --api is what
@@ -858,26 +858,29 @@ the provider speaks (` + strings.Join(manifest.ProviderAPIs, ", ") + `), --base-
 where it answers, and --key-env the name of the environment variable that
 holds its key. No flag takes a key: the key stays in that variable, which
 flai serve reads when it starts the agent, and is never written to the
-configuration. --model <alias>=<name>, repeated, maps the harness's model
-aliases to names on the provider; given at all, it replaces the entry's
-aliases.
+configuration. --spend-key-env, optional, names the variable of a key that
+can read the gateway's spend log where the agent's own key cannot, such as
+LiteLLM's master key; an empty value clears it. --model <alias>=<name>,
+repeated, maps the harness's model aliases to names on the provider; given
+at all, it replaces the entry's aliases.
 
 A new entry needs --api, --base-url, and --key-env; on an entry that is
 set, the flags given change those fields and leave the rest. --reset removes
 the entry. With a name and no flag, the entry is shown; with no name, every
 entry. A project's manifest may override an entry's api, base_url, and
-models under providers.<name>, never its key_env.`,
+models under providers.<name>, never its key_env or spend_key_env.`,
 		Example: `  flai serve agent provider
   flai serve agent provider litellm --api anthropic-messages --base-url http://127.0.0.1:4000 --key-env LITELLM_API_KEY
   flai serve agent provider openrouter --api openai-chat --base-url https://openrouter.ai/api/v1 --key-env OPENROUTER_API_KEY --model opus=anthropic/claude-opus-5-5 --model sonnet=anthropic/claude-sonnet-5
   flai serve agent provider litellm --base-url https://litellm.example.com
+  flai serve agent provider litellm --spend-key-env LITELLM_MASTER_KEY
   flai serve agent provider litellm --reset`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			changed := func(flags ...string) bool {
 				return slices.ContainsFunc(flags, cmd.Flags().Changed)
 			}
-			given := changed("api", "base-url", "key-env", "model")
+			given := changed("api", "base-url", "key-env", "spend-key-env", "model")
 			if len(args) == 0 {
 				if given || reset {
 					return fmt.Errorf("name the provider, such as litellm: flai serve agent provider <name> --api <api> --base-url <url> --key-env <variable>")
@@ -908,6 +911,9 @@ models under providers.<name>, never its key_env.`,
 				if changed("key-env") {
 					entry.KeyEnv = p.KeyEnv
 				}
+				if changed("spend-key-env") {
+					entry.SpendKeyEnv = p.SpendKeyEnv
+				}
 				if changed("model") {
 					if entry.Models, err = providerModels(models); err != nil {
 						return err
@@ -926,6 +932,7 @@ models under providers.<name>, never its key_env.`,
 	c.Flags().StringVar(&p.API, "api", "", "what the provider speaks: "+strings.Join(manifest.ProviderAPIs, ", "))
 	c.Flags().StringVar(&p.BaseURL, "base-url", "", "the provider's absolute http or https URL, with no user or password in it")
 	c.Flags().StringVar(&p.KeyEnv, "key-env", "", "the name of the environment variable that holds the provider's key, such as LITELLM_API_KEY; never the key")
+	c.Flags().StringVar(&p.SpendKeyEnv, "spend-key-env", "", "the name of the environment variable that holds a key that can read the provider's spend log where the agent's key cannot, such as LITELLM_MASTER_KEY; never the key; empty clears it")
 	c.Flags().StringArrayVar(&models, "model", nil, "a model alias and its name on the provider, alias=name (repeatable; replaces the entry's aliases)")
 	c.Flags().BoolVar(&reset, "reset", false, "remove the provider's entry")
 	return c
@@ -948,7 +955,7 @@ func providerModels(pairs []string) (map[string]string, error) {
 
 // showProviders prints the host's provider name, or every one when name is
 // empty: what each speaks, where, and the name of the variable that holds its
-// key, never the key.
+// key and, where set, of the one that holds its spend log's key, never a key.
 func (a *app) showProviders(name string) error {
 	cfg, _, err := a.loadConfig()
 	if err != nil {
@@ -980,6 +987,9 @@ func (a *app) showProviders(name string) error {
 	for _, n := range slices.Sorted(maps.Keys(providers)) {
 		p := providers[n]
 		fmt.Fprintf(a.out, "provider %s: %s at %s, its key in the variable %s\n", n, p.API, p.BaseURL, p.KeyEnv)
+		if p.SpendKeyEnv != "" {
+			fmt.Fprintf(a.out, "  spend log read with the key in the variable %s\n", p.SpendKeyEnv)
+		}
 		for _, alias := range slices.Sorted(maps.Keys(p.Models)) {
 			fmt.Fprintf(a.out, "  model %s: %s\n", alias, p.Models[alias])
 		}
@@ -988,20 +998,25 @@ func (a *app) showProviders(name string) error {
 }
 
 // hostProviders are the host's providers for the dashboard's settings page
-// (S-0359): each entry's fields and whether the variable its key_env names is
-// set and not empty in lookup's environment, never the variable's value.
+// (S-0359): each entry's fields and whether the variables its key_env and
+// spend_key_env name are set and not empty in lookup's environment, never a
+// variable's value.
 func hostProviders(set map[string]manifest.Provider, lookup func(string) (string, bool)) map[string]any {
+	isSet := func(name string) bool {
+		if name == "" {
+			return false
+		}
+		value, ok := lookup(name)
+		return ok && value != ""
+	}
 	out := map[string]any{}
 	for name, p := range set {
 		models := p.Models
 		if models == nil {
 			models = map[string]string{}
 		}
-		value, ok := "", false
-		if p.KeyEnv != "" {
-			value, ok = lookup(p.KeyEnv)
-		}
-		out[name] = map[string]any{"api": p.API, "base_url": p.BaseURL, "key_env": p.KeyEnv, "models": models, "key_set": ok && value != ""}
+		out[name] = map[string]any{"api": p.API, "base_url": p.BaseURL, "key_env": p.KeyEnv, "models": models, "key_set": isSet(p.KeyEnv),
+			"spend_key_env": p.SpendKeyEnv, "spend_key_set": isSet(p.SpendKeyEnv)}
 	}
 	return out
 }

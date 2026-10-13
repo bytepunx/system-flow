@@ -10,7 +10,7 @@ import (
 // S-0349: an entry's values are checked only where they are set, each refusal
 // naming the key and what to write.
 func TestProviderProblems(t *testing.T) {
-	good := Provider{API: APIAnthropicMessages, BaseURL: "http://127.0.0.1:4000", KeyEnv: "LITELLM_API_KEY", Models: map[string]string{"opus": "anthropic/claude-opus-5-5", "haiku": "claude-haiku-4-5@2026"}}
+	good := Provider{API: APIAnthropicMessages, BaseURL: "http://127.0.0.1:4000", KeyEnv: "LITELLM_API_KEY", SpendKeyEnv: "LITELLM_MASTER_KEY", Models: map[string]string{"opus": "anthropic/claude-opus-5-5", "haiku": "claude-haiku-4-5@2026"}}
 	if errs := good.Problems("providers.litellm"); len(errs) != 0 {
 		t.Errorf("good: %v", errs)
 	}
@@ -29,6 +29,8 @@ func TestProviderProblems(t *testing.T) {
 		{Provider{BaseURL: "https://me:secret@litellm.example.com"}, `providers.litellm.base_url carries a user or password`},
 		{Provider{KeyEnv: "1KEY"}, `providers.litellm.key_env is not the name of an environment variable`},
 		{Provider{KeyEnv: "LITELLM-KEY"}, `providers.litellm.key_env is not the name of an environment variable`},
+		{Provider{SpendKeyEnv: "1KEY"}, `providers.litellm.spend_key_env is not the name of an environment variable; write one such as LITELLM_MASTER_KEY`},
+		{Provider{SpendKeyEnv: "LITELLM MASTER KEY"}, `providers.litellm.spend_key_env is not the name of an environment variable`},
 		{Provider{Models: map[string]string{"": "claude-opus-5-5"}}, `providers.litellm.models alias "" is not a name`},
 		{Provider{Models: map[string]string{"opus": ""}}, `providers.litellm.models.opus "" is not a model ID`},
 		{Provider{Models: map[string]string{"opus": "has space"}}, `providers.litellm.models.opus "has space" is not a model ID`},
@@ -40,7 +42,7 @@ func TestProviderProblems(t *testing.T) {
 	}
 	// A key pasted where its variable's name goes, or a password in the URL,
 	// is never repeated in the message.
-	for _, p := range []Provider{{KeyEnv: "sk-or-v1-0123456789"}, {BaseURL: "https://me:sk-or-v1-0123456789@litellm.example.com"}} {
+	for _, p := range []Provider{{KeyEnv: "sk-or-v1-0123456789"}, {SpendKeyEnv: "sk-or-v1-0123456789"}, {BaseURL: "https://me:sk-or-v1-0123456789@litellm.example.com"}} {
 		if errs := p.Problems("providers.litellm"); len(errs) != 1 || strings.Contains(errs[0], "sk-or-v1-0123456789") {
 			t.Errorf("%+v: got %q, want one problem without the secret", p, errs)
 		}
@@ -56,6 +58,11 @@ func TestHostProviderProblems(t *testing.T) {
 	}
 	if errs := HostProviderProblems(nil); len(errs) != 0 {
 		t.Errorf("none: %v", errs)
+	}
+	withSpend := whole
+	withSpend.SpendKeyEnv = "OPENROUTER_MANAGEMENT_KEY"
+	if errs := HostProviderProblems(map[string]Provider{"openrouter": withSpend}); len(errs) != 0 {
+		t.Errorf("whole, with the optional spend_key_env: %v", errs)
 	}
 	got := strings.Join(HostProviderProblems(map[string]Provider{"litellm": {Models: map[string]string{"opus": "x y"}}}), "\n")
 	for _, w := range []string{
@@ -129,6 +136,28 @@ func TestResolveProvider(t *testing.T) {
 	}
 	if _, err := ResolveProvider("bare", map[string]Provider{"bare": {API: APIOpenAIChat}}, nil); err == nil || !strings.Contains(err.Error(), "has no key_env") {
 		t.Errorf("a host entry that is not whole: %v", err)
+	}
+}
+
+// S-0357, ADR-0132: spend_key_env names a variable of the host's environment,
+// so a manifest entry that sets it is refused with the command that sets it
+// on the host, and the variable's value, which may be the key pasted in its
+// place, is never repeated; a resolved provider keeps the host's.
+func TestSpendKeyEnvIsTheHosts(t *testing.T) {
+	const pasted = "sk-litellm-master-0123456789"
+	for _, v := range []string{"LITELLM_MASTER_KEY", pasted} {
+		errs := (Manifest{Providers: map[string]Provider{"litellm": {SpendKeyEnv: v}}}).ProviderErrors()
+		if len(errs) != 1 || !strings.Contains(errs[0], "providers.litellm.spend_key_env is the host's") ||
+			!strings.Contains(errs[0], "flai serve agent provider litellm --spend-key-env <variable>") || strings.Contains(errs[0], pasted) {
+			t.Errorf("spend_key_env %q in a manifest: %q", v, errs)
+		}
+	}
+	host := map[string]Provider{"litellm": {API: APIAnthropicMessages, BaseURL: "http://127.0.0.1:4000", KeyEnv: "LITELLM_API_KEY", SpendKeyEnv: "LITELLM_MASTER_KEY"}}
+	for _, project := range []map[string]Provider{nil, {"litellm": {BaseURL: "https://litellm.example.com", SpendKeyEnv: "PROJECT_KEY"}}} {
+		got, err := ResolveProvider("litellm", host, project)
+		if err != nil || got.SpendKeyEnv != "LITELLM_MASTER_KEY" {
+			t.Errorf("project %+v: %+v, %v; want the host's spend_key_env", project, got, err)
+		}
 	}
 }
 
