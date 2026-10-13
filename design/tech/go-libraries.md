@@ -1,6 +1,6 @@
 ---
 title: Go libraries
-updated: 2026-10-06
+updated: 2026-10-13
 status: active
 topics: [go]
 ---
@@ -15,6 +15,7 @@ Versions are pinned in `flai/go.mod`; the ones here are the majors we track.
 | `github.com/goccy/go-yaml` | v1.19 | Parse and write front matter, `system-flow.yaml`, `template.yaml` | Actively maintained, preserves comments better than `gopkg.in/yaml.v3`, which is archived |
 | `github.com/coder/websocket` | v1.8 | `flai serve`: the WebSocket flai opens to the dashboard's agent endpoint (ADR-0029, S-0072); also the stand-in dashboard in `internal/channel/channeltest` | Maintained (ISC), no dependencies, context-aware reads and writes, concurrent writers, a ping API; `gorilla/websocket` is stable but slow-moving and deadline-driven |
 | `github.com/modelcontextprotocol/go-sdk` | v1.8.0 | `flai mcp`: MCP server, stdio transport and, since S-0076, its Streamable HTTP handler in both modes (`internal/mcphttp`); typed tools with inferred JSON schemas; in-memory transports and its own client in tests | The official SDK, maintained with the specification; hand-rolling JSON-RPC and schema inference would be the alternative |
+| `golang.org/x/sys` | v0.48.0 | `internal/filelock` on Windows: `LockFileEx` and `UnlockFileEx`, the lock the system frees when its holder dies (I-0140, S-0377); unix uses `syscall.Flock` from the standard library | Standard extended library, already in the module through `x/term`; `syscall` on Windows has no `LockFileEx`, and a lock made by creating a file and broken by its age lets two writers both take it |
 | `golang.org/x/term` | v0.46 | Detect whether stdin is a terminal, to decide between prompting and defaults | Standard extended library |
 | `github.com/adrg/xdg` | v0.5 | Not used: config is fixed at `~/.flai` by decision | Listed so nobody adds it |
 
