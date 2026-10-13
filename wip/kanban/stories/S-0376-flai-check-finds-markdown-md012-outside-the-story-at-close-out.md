@@ -3,11 +3,17 @@ id: S-0376
 type: story
 nature: improvement
 title: "flai check finds `markdown.MD012` outside the story at close-out"
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-12T16:52:58Z
-updated: 2026-10-13T17:16:35Z
-transitions: []
+updated: 2026-10-13T17:17:01Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:16:55Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-13T17:17:01Z
+    by: agent-S-0376
 tags: [flai, narrative, issues]
 topics: [markdown, narrative, planning]
 touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/flai-cli.md, design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 454
+      seconds: 461
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 65
-          output: 951
-          cache_read: 3829556
-          cache_write: 25667
-          cost: 0.9722
+          input: 69
+          output: 1019
+          cache_read: 4295721
+          cache_write: 28202
+          cost: 1.0904
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -41,10 +47,10 @@ cost_of_delay:
   at: 2026-10-13T16:45:11Z
 forecast:
   duration: 20m
-  delivery: 2026-10-13T18:51:00Z
-  basis: "Its own forecast of 20m; 10th in the pull order with an in-progress limit of 5, behind S-0356, S-0377, S-0379, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372 and S-0374."
+  delivery: 2026-10-13T17:39:00Z
+  basis: "Its own forecast of 20m; 1st in the pull order with an in-progress limit of 5, behind S-0356, S-0377 and S-0379."
   by: flai
-  at: 2026-10-13T17:16:35Z
+  at: 2026-10-13T17:16:57Z
 finalized:
   by: orchestrator
   at: 2026-10-13T16:45:39Z
