@@ -103,3 +103,63 @@ func TestAStreamBegunOnAnotherHostIsReopened(t *testing.T) {
 		t.Errorf("--no-branch has nothing to reopen: %d %s", code, errOut)
 	}
 }
+
+// A host crash during a story's start leaves its branch ref, its worktree
+// and the worktree's registration as empty files (I-0137). flai stream open
+// takes up the narrative over that worktree, which git does not know, and,
+// since the branch holds no commits, makes both again from the main branch.
+func TestAStreamIsReopenedOverAWorktreeACrashLeft(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("FLAI_AGENT", "agent-S-0001")
+	t.Setenv("FLAI_SESSION", "crashed")
+	root := tempProject(t)
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/archive", "design", "docs"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+		_ = os.WriteFile(filepath.Join(root, d, ".gitkeep"), nil, 0o644)
+	}
+	_ = os.WriteFile(filepath.Join(root, ".gitignore"), []byte(".flai-cache/\n"), 0o644)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+	if _, errOut, code := runIn(t, root, "epic", "new", "Epic"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "story", "new", "Crashed", "--epic", "E-0001"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if _, errOut, code := runIn(t, root, "stream", "open", "S-0001"); code != 0 {
+		t.Fatal(errOut)
+	}
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	gitDir := filepath.Join(root, ".git")
+	for _, p := range []string{wt, filepath.Join(gitDir, "worktrees", "S-0001"), filepath.Join(gitDir, "refs", "heads", "story", "S-0001"), filepath.Join(gitDir, "logs", "refs", "heads", "story", "S-0001")} {
+		err := filepath.WalkDir(p, func(f string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			return os.WriteFile(f, nil, 0o644)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("FLAI_SESSION", "after")
+
+	out, errOut, code := runIn(t, root, "stream", "open", "S-0001")
+	if code != 0 || !strings.Contains(out, "reopened wip/agents/S-0001.md") || !strings.Contains(out, "branch story/S-0001 (new, from the main branch) checked out at .flai-cache/worktrees/S-0001") {
+		t.Fatalf("reopen over a crashed start: %d %s %s", code, out, errOut)
+	}
+	if gitIn(t, wt, "rev-parse", "--abbrev-ref", "HEAD") != "story/S-0001" {
+		t.Error("the worktree should be on a new story branch")
+	}
+	n, err := workitem.ReadNarrative(filepath.Join(root, "wip", "agents", "S-0001.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n.Session != "after" || !strings.Contains(n.Body, "Stream opened.") {
+		t.Errorf("the narrative should be kept and record who reopened it: %+v", n)
+	}
+}

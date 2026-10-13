@@ -7,6 +7,8 @@ package storygit
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -45,6 +47,54 @@ func MainBranch(r execx.Runner, mainRoot string) (string, error) {
 func BranchExists(r execx.Runner, root, branch string) bool {
 	_, err := r.Run(root, "git", "rev-parse", "--verify", "--quiet", "refs/heads/"+branch)
 	return err == nil
+}
+
+// brokenStoryRef is the git directory root's worktrees share and, relative
+// to it, the loose ref file of story id's branch when that is there but
+// resolves to no commit, as a crash while git wrote it leaves it (I-0137).
+// ref is "" when the branch resolves or has no loose file, as a packed ref or
+// a reftable repository has none, and there is nothing to repair. Such a ref
+// holds no commits, so removing it loses no work.
+func brokenStoryRef(r execx.Runner, mainRoot, id string) (common, ref string, err error) {
+	branch := Branch(id)
+	if BranchExists(r, mainRoot, branch) {
+		return "", "", nil
+	}
+	if common, err = commonDir(r, mainRoot); err != nil {
+		return "", "", err
+	}
+	ref = filepath.Join("refs", "heads", filepath.FromSlash(branch))
+	if info, statErr := os.Lstat(filepath.Join(common, ref)); statErr == nil && info.Mode().IsRegular() {
+		return common, ref, nil
+	}
+	// no such file; a reftable repository's refs/heads is a file, which
+	// fails the stat too
+	return common, "", nil
+}
+
+// commonDir is the git directory root's worktrees share, absolute.
+func commonDir(r execx.Runner, root string) (string, error) {
+	out, err := r.Run(root, "git", "rev-parse", "--git-common-dir")
+	if err != nil {
+		return "", fmt.Errorf("could not find the git directory of %s: %w", root, err)
+	}
+	if !filepath.IsAbs(out) {
+		out = filepath.Join(root, out)
+	}
+	return filepath.Clean(out), nil
+}
+
+// IsWorktree reports whether git knows dir as the top of a work tree. A
+// folder with no .git of its own is inside the main checkout's instead, and
+// one whose .git file is empty, as a crash leaves it (I-0137), or names a
+// registration git no longer has, is not a repository at all.
+func IsWorktree(r execx.Runner, dir string) bool {
+	top, err := r.Run(dir, "git", "rev-parse", "--show-toplevel")
+	if err != nil {
+		return false
+	}
+	want, err := filepath.EvalSymlinks(dir)
+	return err == nil && filepath.Clean(filepath.FromSlash(top)) == want
 }
 
 // Remote is the remote a story's branch is fetched from: origin when the

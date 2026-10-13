@@ -117,6 +117,164 @@ func TestOpenReusesAnExistingWorktree(t *testing.T) {
 	}
 }
 
+// zeroFiles leaves every file under root at zero bytes, as the host crash of
+// I-0137 left what a story's start had written.
+func zeroFiles(t *testing.T, root string) {
+	t.Helper()
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		return os.WriteFile(p, nil, 0o644)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// crashStart opens story id and leaves what its start wrote as I-0137 found
+// it: the branch's ref and reflog, the worktree's files and its .git file,
+// and its registration in .git/worktrees, all empty.
+func crashStart(t *testing.T, repo *workitem.Repo, id string) Opened {
+	t.Helper()
+	opened, err := Open(OpenOptions{Runner: execx.System{}, Repo: repo, Story: id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gitDir := filepath.Join(repo.MainRoot, ".git")
+	for _, p := range []string{opened.Worktree, filepath.Join(gitDir, "worktrees", id), filepath.Join(gitDir, "refs", "heads", "story", id), filepath.Join(gitDir, "logs", "refs", "heads", "story", id)} {
+		zeroFiles(t, p)
+	}
+	if BranchExists(execx.System{}, repo.MainRoot, opened.Branch) {
+		t.Fatal("an empty ref should not resolve")
+	}
+	return opened
+}
+
+// What a crash during a story's start leaves (I-0137), an empty branch ref
+// and reflog and a worktree and registration of empty files, holds no
+// commits: Open removes it, logs what it removed, and opens the story again
+// from the main branch.
+func TestOpenRepairsWhatACrashedStartLeft(t *testing.T) {
+	repo := openRepo(t)
+	crashed := crashStart(t, repo, "S-0001")
+	var log bytes.Buffer
+	got, err := Open(OpenOptions{Runner: execx.System{}, Repo: repo, Story: "S-0001", Log: slog.New(slog.NewTextHandler(&log, nil))})
+	if err != nil {
+		t.Fatalf("Open over a crashed start: %v", err)
+	}
+	want := Opened{Branch: crashed.Branch, Worktree: crashed.Worktree, From: FromMain}
+	if got != want {
+		t.Errorf("Open = %+v, want %+v", got, want)
+	}
+	if h := headOf(t, got.Worktree); h != "story/S-0001" {
+		t.Errorf("worktree is on %q", h)
+	}
+	if b, err := os.ReadFile(filepath.Join(got.Worktree, "a.md")); err != nil || string(b) != "one\n" {
+		t.Errorf("the worktree should hold the main branch's files: %q %v", b, err)
+	}
+	if !IsWorktree(execx.System{}, got.Worktree) {
+		t.Error("git should know the worktree")
+	}
+	regs, err := os.ReadDir(filepath.Join(repo.MainRoot, ".git", "worktrees"))
+	if err != nil || len(regs) != 1 || regs[0].Name() != "S-0001" {
+		t.Errorf("the empty registration should be pruned and the worktree registered as S-0001: %v %v", regs, err)
+	}
+	l := log.String()
+	for _, field := range []string{"level=WARN", "component=git", "worktree=.flai-cache/worktrees/S-0001", "ref=.git/refs/heads/story/S-0001", "reflog=removed"} {
+		if !strings.Contains(l, field) {
+			t.Errorf("the log should carry %s: %s", field, l)
+		}
+	}
+}
+
+// A folder git does not know as the story's worktree, whose branch holds
+// commits, may hold work: Open refuses it, says how to clear it, and removes
+// nothing.
+func TestOpenRefusesAnUnknownFolderWhoseBranchHoldsCommits(t *testing.T) {
+	repo := openRepo(t)
+	git(t, repo.MainRoot, "checkout", "-q", "-b", "story/S-0001")
+	commitFiles(t, repo.MainRoot, "feat: [S-0001] begun", "docs/begun.md")
+	git(t, repo.MainRoot, "checkout", "-q", "main")
+	wt := repo.WorktreePath("S-0001")
+	if err := os.MkdirAll(wt, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, wt, ".git", "")
+	write(t, wt, "work.md", "work\n")
+
+	_, err := Open(OpenOptions{Runner: execx.System{}, Repo: repo, Story: "S-0001", FromRemote: true})
+	if err == nil || !strings.Contains(err.Error(), ".flai-cache/worktrees/S-0001") || !strings.Contains(err.Error(), "rm -rf "+wt) || !strings.Contains(err.Error(), "flai stream open S-0001") {
+		t.Fatalf("Open = %v, want a refusal naming the folder and how to clear it", err)
+	}
+	if b, err := os.ReadFile(filepath.Join(wt, "work.md")); err != nil || string(b) != "work\n" {
+		t.Errorf("the folder should be left as it was: %q %v", b, err)
+	}
+	if !BranchExists(execx.System{}, repo.MainRoot, "story/S-0001") {
+		t.Error("the branch should be left as it was")
+	}
+}
+
+// A crash after git made the branch, whose ref is synced, can still leave the
+// checkout's files empty: a folder git does not know whose every file is
+// empty holds no work, so Open makes the worktree again on the branch.
+func TestOpenRepairsAnEmptyWorktreeOverAWholeBranch(t *testing.T) {
+	repo := openRepo(t)
+	git(t, repo.MainRoot, "branch", "story/S-0001", "main")
+	wt := repo.WorktreePath("S-0001")
+	if err := os.MkdirAll(filepath.Join(wt, "docs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(t, wt, ".git", "")
+	write(t, wt, "a.md", "")
+	write(t, wt, "docs/b.md", "")
+
+	got, err := Open(OpenOptions{Runner: execx.System{}, Repo: repo, Story: "S-0001"})
+	if err != nil {
+		t.Fatalf("Open over an empty worktree: %v", err)
+	}
+	if got.From != FromLocal || headOf(t, got.Worktree) != "story/S-0001" {
+		t.Errorf("Open = %+v, want the local story/S-0001", got)
+	}
+	if b, err := os.ReadFile(filepath.Join(got.Worktree, "a.md")); err != nil || string(b) != "one\n" {
+		t.Errorf("the worktree should hold the branch's files: %q %v", b, err)
+	}
+}
+
+// A broken branch ref with no worktree is removed and the branch made again
+// from the main branch; a reflog with entries is kept, and git appends to it.
+func TestOpenRepairsABrokenRefAlone(t *testing.T) {
+	repo := openRepo(t)
+	main, err := (execx.System{}).Run(repo.MainRoot, "git", "rev-parse", "main")
+	if err != nil {
+		t.Fatal(main, err)
+	}
+	gitDir := filepath.Join(repo.MainRoot, ".git")
+	for _, d := range []string{"refs/heads/story", "logs/refs/heads/story"} {
+		if err := os.MkdirAll(filepath.Join(gitDir, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(t, gitDir, "refs/heads/story/S-0001", "")
+	entry := strings.Repeat("0", len(main)) + " " + main + " t <t@t> 1700000000 +0000\tbranch: Created from main\n"
+	write(t, gitDir, "logs/refs/heads/story/S-0001", entry)
+	var log bytes.Buffer
+
+	got, err := Open(OpenOptions{Runner: execx.System{}, Repo: repo, Story: "S-0001", Log: slog.New(slog.NewTextHandler(&log, nil))})
+	if err != nil {
+		t.Fatalf("Open over a broken ref: %v", err)
+	}
+	if got.From != FromMain || headOf(t, got.Worktree) != "story/S-0001" {
+		t.Errorf("Open = %+v, want a new story/S-0001 from main", got)
+	}
+	if b, err := os.ReadFile(filepath.Join(gitDir, "logs/refs/heads/story/S-0001")); err != nil || !strings.HasPrefix(string(b), entry) || strings.Count(string(b), "\n") != 2 {
+		t.Errorf("the reflog should keep its entry and gain the new branch's: %q %v", b, err)
+	}
+	if l := log.String(); !strings.Contains(l, "ref=.git/refs/heads/story/S-0001") || !strings.Contains(l, "reflog=kept") {
+		t.Errorf("log: %s", l)
+	}
+}
+
 // A story begun on another host is fetched from the remote when this clone
 // has no branch for it (ADR-0064), past a worktree removed without git.
 func TestOpenFetchesTheBranchFromTheRemote(t *testing.T) {

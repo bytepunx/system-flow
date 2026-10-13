@@ -101,13 +101,18 @@ too.`,
 }
 
 // canReopen reports whether stream open may take up story's existing
-// narrative: only to check out a worktree it does not have (ADR-0064).
+// narrative: only to check out a worktree it does not have (ADR-0064). A
+// folder git does not know as a worktree, as a crash during a start leaves it
+// (I-0137), is none; storygit.Open makes it again or says why not.
 func (a *app) canReopen(repo *workitem.Repo, story string, noBranch bool) bool {
 	if noBranch || !a.inGitWorkTree(repo.MainRoot) {
 		return false
 	}
-	_, err := os.Stat(repo.WorktreePath(story))
-	return os.IsNotExist(err)
+	wt := repo.WorktreePath(story)
+	if _, err := os.Stat(wt); err != nil {
+		return os.IsNotExist(err)
+	}
+	return !storygit.IsWorktree(a.runner, wt)
 }
 
 // fromSays says where a reopened story's branch came from, when it did not
