@@ -118,6 +118,40 @@ describe('acceptance and diff endpoints over the channel', () => {
 		expect(out[0]).toEqual({ event: 'error', status: 500, error: message });
 	});
 
+	// ADR-0140, S-0378: a refusal for lint the fix left carries each finding, so the page can open
+	// each file at its line; the message stays beside it.
+	it('ends a refusal for unfixed lint with its findings as data', async () => {
+		const finding = {
+			tier: 'markdown',
+			checkout: 'story',
+			story: 'S-0041',
+			path: 'docs/bad.md',
+			line: 2,
+			column: 3,
+			level: 'error',
+			rule: 'MD009',
+			alias: 'no-trailing-spaces',
+			message: 'Trailing spaces [Expected: 0; Actual: 1]'
+		};
+		const reason =
+			'S-0041 cannot be accepted: the files story/S-0041 changes hold lint the fix of the markdown tier could not fix:';
+		script = {
+			error: new AgentError(502, `rule: ${reason}`, -32010, {
+				id: 'S-0041',
+				reason,
+				findings: [finding]
+			})
+		};
+		const out = await lines(await post('S-0041', {}));
+		expect(out).toHaveLength(1);
+		expect(out[0]).toEqual({
+			event: 'error',
+			status: 422,
+			error: `rule: ${reason}`,
+			data: { id: 'S-0041', reason, findings: [finding] }
+		});
+	});
+
 	it('says the acceptance may have completed when the connection is lost on the way', async () => {
 		script = {
 			progress: [{ level: 'INFO', msg: 'acceptance step', step: 'merged', detail: 'merged' }],

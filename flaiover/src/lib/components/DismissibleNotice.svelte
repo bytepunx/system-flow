@@ -4,13 +4,15 @@
 	// the next action's notice shows again. Notices that show state, not an action's outcome, are
 	// not dismissible and do not use this. A time flai names in its answer shows in the local zone.
 	import { localTimes } from '$lib/localtime';
+	import { linkSegments, type LinkOptions } from '$lib/filelinks';
 
 	let {
 		text,
 		ondismiss,
 		class: classes = '',
 		role = 'status',
-		testid
+		testid,
+		links
 	}: {
 		text: string;
 		ondismiss: () => void;
@@ -19,11 +21,21 @@
 		role?: 'status' | 'alert';
 		/** Set on the text, so that its textContent is the notice without the X. */
 		testid?: string;
+		/** Given, each repository file the text names opens in the editor at its line, on this story's branch (S-0378). */
+		links?: LinkOptions;
 	} = $props();
 </script>
 
 <div class="flex items-start gap-2 {classes}" {role}>
-	<p class="min-w-0 flex-1" data-testid={testid}>{localTimes(text)}</p>
+	<p class="min-w-0 flex-1" data-testid={testid}>
+		{#if links}{#each linkSegments(localTimes(text), links) as s, i (i)}{#if s.edit}<button
+						type="button"
+						class="cursor-pointer underline"
+						aria-label={s.edit.label}
+						title={s.edit.label}
+						onclick={s.edit.open}>{s.text}</button
+					>{:else}{s.text}{/if}{/each}{:else}{localTimes(text)}{/if}
+	</p>
 	<button
 		type="button"
 		class="shrink-0 cursor-pointer px-1 leading-none opacity-70 hover:opacity-100"

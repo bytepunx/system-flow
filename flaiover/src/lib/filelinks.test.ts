@@ -87,6 +87,16 @@ describe('linkSegments', () => {
 		expect(threadRef).toEqual({ text: 'wip/threads/TH-0001.md' });
 	});
 
+	it('opens a wip file on the main checkout, never on the story', () => {
+		const [ref] = linkSegments('wip/kanban/stories/S-0378-x.md:3', { story: 'S-0378' });
+		ref.edit!.open();
+		expect(openEditor).toHaveBeenCalledWith({
+			path: 'wip/kanban/stories/S-0378-x.md',
+			line: 3,
+			story: undefined
+		});
+	});
+
 	it('labels a reference without a line by its path', () => {
 		expect(editLabel({ path: 'docs/a.md' })).toBe('Edit docs/a.md');
 	});

@@ -147,6 +147,15 @@
 	let hold = $state<Hold | undefined>();
 	// What the story's agent is doing, for its threads to say it is working on a reply (S-0154).
 	let activity = $state<StoryActivity | undefined>();
+	// The story whose branch a file named in the body or a thread saves on from the editor (S-0378):
+	// an open story's, while its worktree holds the branch.
+	const branch = $derived(
+		item?.type === 'story' &&
+			!item.archived &&
+			(item.status === 'in-progress' || item.status === 'review')
+			? item.id
+			: undefined
+	);
 	const narrative = $derived(
 		item?.type === 'story'
 			? `wip/${item.archived ? 'archive/agents' : 'agents'}/${item.id}.md`
@@ -205,7 +214,7 @@
 		html = next;
 		rendered = next + canEdit;
 		await tick();
-		if (content) await enhance(content, themeState.dark);
+		if (content) await enhance(content, themeState.dark, { story: branch });
 		if (canEdit) wireCriteria();
 	}
 
@@ -401,6 +410,7 @@
 					class="mt-2 rounded border border-line-strong bg-raised p-2 text-sm"
 					testid="item-notice"
 					text={notice}
+					links={{ story: branch }}
 					ondismiss={() => (notice = null)}
 				/>{/if}
 			{#if item.type === 'story' && item.status === 'review'}
@@ -490,6 +500,7 @@
 			{/if}
 			<Threads
 				on={item.id}
+				story={branch}
 				{writable}
 				select={page.url.searchParams.get('thread') ?? undefined}
 				agent={item.type === 'story' ? activity : undefined}

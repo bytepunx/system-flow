@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import DismissibleNotice from './DismissibleNotice.svelte';
 
+const openEditor = vi.fn();
+vi.mock('$lib/editor.svelte', () => ({ openEditor: (t: unknown) => openEditor(t) }));
+
 describe('DismissibleNotice (S-0151)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	afterEach(() => {
@@ -26,6 +29,33 @@ describe('DismissibleNotice (S-0151)', () => {
 		expect(ondismiss).not.toHaveBeenCalled();
 		x.click();
 		expect(ondismiss).toHaveBeenCalledOnce();
+	});
+
+	it('given links, opens each file a refusal names in the editor at its line, on the story (S-0378)', () => {
+		c = mount(DismissibleNotice, {
+			target: document.body,
+			props: {
+				text: 'S-0378 cannot be accepted:\n  markdown: docs/users/flai.md:12: MD009',
+				ondismiss: () => {},
+				role: 'alert',
+				testid: 'said',
+				links: { story: 'S-0378' }
+			}
+		});
+		flushSync();
+		const said = document.querySelector('[data-testid="said"]')!;
+		expect(said.textContent).toBe(
+			'S-0378 cannot be accepted:\n  markdown: docs/users/flai.md:12: MD009'
+		);
+		const link = said.querySelector<HTMLButtonElement>('button')!;
+		expect(link.textContent).toBe('docs/users/flai.md:12');
+		expect(link.getAttribute('aria-label')).toBe('Edit docs/users/flai.md at line 12');
+		link.click();
+		expect(openEditor).toHaveBeenCalledWith({
+			path: 'docs/users/flai.md',
+			line: 12,
+			story: 'S-0378'
+		});
 	});
 
 	it('takes the alert role for a refusal', () => {

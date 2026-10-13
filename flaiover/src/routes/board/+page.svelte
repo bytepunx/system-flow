@@ -65,7 +65,8 @@
 
 	const states = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'];
 	let board = $state<Board | null>(null);
-	let notice = $state<{ kind: 'error' | 'warn' | 'ok'; text: string } | null>(null);
+	// story, on a refused move, is the item's whose branch the files the refusal names are fixed on.
+	let notice = $state<{ kind: 'error' | 'warn' | 'ok'; text: string; story?: string } | null>(null);
 	let dragging = $state<string | null>(null);
 	let over = $state<string | null>(null);
 
@@ -475,7 +476,12 @@
 			body: JSON.stringify({ to, reason, include_uncommitted: includeUncommitted || undefined })
 		});
 		const body = await r.json();
-		if (!r.ok) notice = { kind: 'error', text: body.error ?? r.statusText };
+		if (!r.ok)
+			notice = {
+				kind: 'error',
+				text: body.error ?? r.statusText,
+				story: id.startsWith('S-') ? id : undefined
+			};
 		else if (body.warnings?.length)
 			notice = { kind: 'warn', text: `${id} → ${to}. ${body.warnings.join(' ')}` };
 		else if (body.tags?.length)
@@ -607,6 +613,7 @@
 		role={notice.kind === 'error' ? 'alert' : 'status'}
 		testid="board-notice"
 		text={notice.text}
+		links={{ story: notice.story }}
 		ondismiss={() => (notice = null)}
 	/>
 {/if}

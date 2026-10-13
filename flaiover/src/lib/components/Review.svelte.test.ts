@@ -4,6 +4,10 @@ import Review from './Review.svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
+const openEditor = vi.fn();
+vi.mock('$lib/editor.svelte', () => ({
+	openEditor: (...args: unknown[]) => openEditor(...args)
+}));
 vi.mock('$app/paths', () => ({
 	resolve: (route: string, params: Record<string, string>) =>
 		route.replace('[...path]', params.path ?? '').replace('[id]', params.id ?? '')
@@ -153,6 +157,7 @@ describe('Review', () => {
 		if (c) unmount(c);
 		c = undefined;
 		api.mockReset();
+		openEditor.mockReset();
 		document.body.innerHTML = '';
 	});
 
@@ -288,6 +293,156 @@ describe('Review', () => {
 		expect(alert).toContain(message);
 		expect(alert).toContain('S-0041 is review');
 		expect(document.body.textContent).not.toContain('is accepted');
+	});
+
+	// ADR-0140, S-0378: a refusal for lint the fix left lists each finding as a link that opens the
+	// editor at its line, on the story's branch for the story's files; Accept is on again once each
+	// listed file has been saved.
+	describe('a refusal for lint the fix left', () => {
+		const finding = (over: Record<string, unknown>) => ({
+			tier: 'markdown',
+			checkout: 'story',
+			story: 'S-0041',
+			path: 'docs/bad.md',
+			line: 2,
+			column: 3,
+			level: 'error',
+			rule: 'MD009',
+			alias: 'no-trailing-spaces',
+			message: 'Trailing spaces [Expected: 0; Actual: 1]',
+			...over
+		});
+		// The first acceptance is refused with the findings; the next is accepted.
+		const refuse = (findings: unknown[]) => {
+			const refusal = ndjson([
+				{
+					event: 'error',
+					status: 422,
+					error: 'rule: S-0041 cannot be accepted: docs/bad.md:2: Trailing spaces',
+					data: { id: 'S-0041', reason: 'S-0041 cannot be accepted', findings }
+				}
+			]);
+			const accepted = ndjson([{ event: 'done', result: { id: 'S-0041', status: 'done' } }]);
+			let answers = 0;
+			backend({ accept: () => (++answers > 1 ? accepted : refusal) });
+		};
+		const link = (label: string) =>
+			document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+		const words = (e: Element) => (e.textContent ?? '').replace(/\s+/g, ' ').trim();
+		const saveLast = () => {
+			const target = openEditor.mock.calls.at(-1)![0] as {
+				path: string;
+				onsaved: (s: unknown) => void;
+			};
+			target.onsaved({ path: target.path, commit: 'abc1234', committed: true });
+			flushSync();
+		};
+
+		it('lists each finding with its rule and message, each file a link to the editor at its line', async () => {
+			refuse([
+				finding({}),
+				finding({
+					checkout: 'main',
+					story: undefined,
+					path: 'design/notes.md',
+					line: 7,
+					rule: 'MD041',
+					alias: 'first-line-heading',
+					message: 'First line in a file should be a top-level heading'
+				})
+			]);
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Accept').click();
+			await settle();
+			const list = document.querySelector('[data-testid="accept-findings"]')!;
+			const rows = [...list.querySelectorAll('[data-testid="accept-finding"]')].map(words);
+			expect(rows[0]).toContain('docs/bad.md:2');
+			expect(rows[0]).toContain('MD009/no-trailing-spaces');
+			expect(rows[0]).toContain('Trailing spaces [Expected: 0; Actual: 1]');
+			expect(rows[1]).toContain('design/notes.md:7');
+			expect(rows[1]).toContain('MD041/first-line-heading');
+			expect(link('Edit docs/bad.md at line 2')).toBeTruthy();
+			expect(link('Edit design/notes.md at line 7')).toBeTruthy();
+			// the refusal's text is not repeated beside its findings
+			expect(list.textContent).not.toContain('rule: S-0041');
+		});
+
+		it('opens a story’s file on its branch, and a main-checkout file without a story', async () => {
+			refuse([
+				finding({}),
+				finding({ checkout: 'main', story: undefined, path: 'design/notes.md', line: 7 })
+			]);
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Accept').click();
+			await settle();
+			link('Edit docs/bad.md at line 2').click();
+			expect(openEditor).toHaveBeenLastCalledWith(
+				expect.objectContaining({ path: 'docs/bad.md', line: 2, story: 'S-0041' })
+			);
+			link('Edit design/notes.md at line 7').click();
+			const main = openEditor.mock.calls.at(-1)![0];
+			expect(main).toMatchObject({ path: 'design/notes.md', line: 7 });
+			expect(main.story).toBeUndefined();
+		});
+
+		it('turns Accept on again once each listed file is saved, and accepts from the same page', async () => {
+			refuse([
+				finding({}),
+				finding({
+					line: 9,
+					rule: 'MD012',
+					alias: 'no-multiple-blanks',
+					message: 'Multiple blanks'
+				}),
+				finding({ checkout: 'main', story: undefined, path: 'design/notes.md', line: 7 })
+			]);
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Accept').click();
+			await settle();
+			expect(button('Accept').disabled).toBe(true);
+			link('Edit docs/bad.md at line 2').click();
+			saveLast();
+			expect(document.querySelectorAll('[data-testid="finding-saved"]')).toHaveLength(2);
+			expect(button('Accept').disabled).toBe(true);
+			link('Edit design/notes.md at line 7').click();
+			saveLast();
+			expect(button('Accept').disabled).toBe(false);
+			button('Accept').click();
+			await settle();
+			expect(calls('/accept')).toHaveLength(2);
+			expect(document.body.textContent).toContain('S-0041 is accepted');
+		});
+
+		it('leaves Accept on for a file the editor cannot open, shown without a link', async () => {
+			refuse([finding({ path: 'flaiover/README.md', line: 1 })]);
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Accept').click();
+			await settle();
+			expect(document.body.textContent).toContain('flaiover/README.md:1');
+			expect(document.querySelector('button[aria-label^="Edit flaiover"]')).toBeNull();
+			expect(button('Accept').disabled).toBe(false);
+		});
+	});
+
+	it('links the files another refusal names to the editor on the story’s branch', async () => {
+		const message =
+			'rebase of story/S-0041 onto main stopped with conflicts in docs/users/flai.md:12';
+		backend({ accept: () => ndjson([{ event: 'error', status: 500, error: message }]) });
+		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+		await settle();
+		button('Accept').click();
+		await settle();
+		const label = 'Edit docs/users/flai.md at line 12';
+		const open = document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+		expect(open.closest('pre')!.textContent).toContain(message);
+		open.click();
+		expect(openEditor).toHaveBeenCalledWith(
+			expect.objectContaining({ path: 'docs/users/flai.md', line: 12, story: 'S-0041' })
+		);
 	});
 
 	it('keeps accept disabled for blockers and until uncommitted files are chosen', async () => {

@@ -5,7 +5,9 @@ import type { RequestHandler } from './$types';
  * POST { include_uncommitted? }: accept the item as the designer (flai's accept.run on the host,
  * S-0075) and stream what happens as newline-delimited JSON (S-0041): { event: "progress", step, msg }
  * for each step flai logs, { event: "warning", msg } for its warnings, then { event: "done", result }
- * or { event: "error", error, status } with flai's message verbatim. The steps arrive as progress
+ * or { event: "error", error, status, data? } with flai's message verbatim, and what flai sent with
+ * it as data: a refusal for lint the fix left, { id, reason, findings }, each finding a file to
+ * open and correct (ADR-0140, S-0378). The steps arrive as progress
  * notifications over the channel while the acceptance runs. The HTTP status is 200 once the stream
  * starts; the last line says how it ended. When the connection to flai is lost on the way the
  * acceptance may still have completed on the host, and the error says how to find out.
@@ -38,6 +40,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			} catch (e) {
 				const status = e instanceof RepoError ? e.status : 500;
 				const lost = status === 502 || status === 504;
+				const data = e instanceof RepoError ? e.data : undefined;
 				send({
 					event: 'error',
 					status,
@@ -45,7 +48,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
 						(e instanceof Error ? e.message : String(e)) +
 						(lost
 							? '. The acceptance may have completed on the host: reload the board, or run flai board there, before trying again.'
-							: '')
+							: ''),
+					...(data ? { data } : {})
 				});
 			}
 			controller.close();

@@ -20,6 +20,8 @@
 	import { render, enhance } from '$lib/markdown';
 	import { localTime } from '$lib/localtime';
 	import { themeState } from '$lib/theme.svelte';
+	import { editable, editLabel, fileRef, linkSegments, type LinkSegment } from '$lib/filelinks';
+	import { openEditor } from '$lib/editor.svelte';
 	import { tick } from 'svelte';
 
 	type Item = {
@@ -58,6 +60,20 @@
 		} | null;
 	};
 	type Progress = { step: string; msg: string };
+	/** A finding of the lint the fix left, as flai's refusal of the acceptance gives it (ADR-0140). */
+	type Finding = {
+		tier: string;
+		/** main, or story: the story's branch holds the file, and story names it. */
+		checkout: string;
+		story?: string;
+		path: string;
+		line?: number;
+		column?: number;
+		level?: string;
+		rule?: string;
+		alias?: string;
+		message: string;
+	};
 	type CheckStep = {
 		name: string;
 		command?: string;
@@ -97,6 +113,10 @@
 	// verifier passed (ADR-0093). An older flai sends neither.
 	let result = $state<{ tags?: string[]; by?: string; verified?: string } | null>(null);
 	let failure = $state<string | null>(null);
+	// A refusal for lint the fix left (S-0378): each finding, and the files saved in the editor since,
+	// by fileKey. Accept is on again once each file the editor can open has been saved.
+	let findings = $state<Finding[]>([]);
+	let saved = $state<string[]>([]);
 
 	let sendingBack = $state(false);
 	let reason = $state('');
@@ -139,6 +159,16 @@
 	const inReview = $derived(item?.status === 'review');
 	const needsChoice = $derived(!!preview?.uncommitted?.length && !include);
 	const chosen = $derived(issues.filter((r) => r.checked));
+	// A main-checkout finding is saved without a story; a story's on its branch.
+	const storyOf = (f: Finding) => (f.checkout === 'story' ? f.story : undefined);
+	const fileKey = (f: Finding) => `${storyOf(f) ?? ''}:${f.path}`;
+	// The editor opens a markdown file under the layout's folders that flai lets it edit.
+	const opens = (f: Finding) => !!fileRef(f.path) && editable(f.path);
+	// Another refusal's text, each file it names opening the editor on the story's branch.
+	const refusal = $derived(failure ? linkSegments(failure, { story: id }) : []);
+	const unsaved = $derived(
+		[...new Set(findings.filter(opens).map(fileKey))].filter((k) => !saved.includes(k))
+	);
 	const canAccept = $derived(
 		writable &&
 			inReview &&
@@ -147,8 +177,26 @@
 			!!preview &&
 			!preview.blockers?.length &&
 			!preview.worktree_uncommitted?.length &&
-			!needsChoice
+			!needsChoice &&
+			!unsaved.length
 	);
+
+	function findingsOf(data: unknown): Finding[] {
+		const list = (data as { findings?: unknown } | undefined)?.findings;
+		return Array.isArray(list) ? (list as Finding[]) : [];
+	}
+
+	function openFinding(f: Finding) {
+		const key = fileKey(f);
+		openEditor({
+			path: f.path,
+			line: f.line,
+			story: storyOf(f),
+			onsaved: () => {
+				if (!saved.includes(key)) saved = [...saved, key];
+			}
+		});
+	}
 
 	async function get<T>(path: string): Promise<T> {
 		const r = await api(path);
@@ -173,6 +221,8 @@
 		currentStateHtml = nextStepsHtml = '';
 		progress = [];
 		warnings = [];
+		findings = [];
+		saved = [];
 		issues = [];
 		issuesError = null;
 		made = [];
@@ -399,6 +449,8 @@
 		const toMake = chosen;
 		running = true;
 		failure = null;
+		findings = [];
+		saved = [];
 		progress = [];
 		warnings = [];
 		try {
@@ -416,7 +468,10 @@
 					progress = [...progress, { step: String(l.step), msg: String(l.msg) }];
 				else if (l.event === 'warning') warnings = [...warnings, String(l.msg)];
 				else if (l.event === 'done') result = (l.result ?? {}) as typeof result;
-				else if (l.event === 'error') failure = String(l.error);
+				else if (l.event === 'error') {
+					failure = String(l.error);
+					findings = findingsOf(l.data);
+				}
 			});
 			if (!result && !failure) failure = 'the acceptance ended without a result';
 		} catch (e) {
@@ -450,6 +505,22 @@
 		}
 	}
 </script>
+
+<!-- A refusal's text, each file it names a control that opens the editor at its line (S-0378). -->
+{#snippet linked(segments: LinkSegment[])}
+	{#each segments as s, i (i)}
+		{#if s.edit}
+			<button
+				type="button"
+				class="cursor-pointer underline"
+				aria-label={s.edit.label}
+				onclick={s.edit.open}>{s.text}</button
+			>
+		{:else}
+			{s.text}
+		{/if}
+	{/each}
+{/snippet}
 
 {#if error}
 	<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
@@ -713,10 +784,43 @@
 			{#each warnings as w (w)}
 				<p class="mt-2 rounded border border-warn bg-warn-soft p-2 text-warn">{w}</p>
 			{/each}
-			{#if failure}
+			{#if failure && findings.length}
+				<div
+					class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger"
+					role="alert"
+					data-testid="accept-findings"
+				>
+					<p class="font-medium">Not accepted. {item.id} is {item.status}.</p>
+					<p>The fix left lint in this markdown: correct each file at its line and save it.</p>
+					<p>Accept is on again once each file is saved.</p>
+					<ul class="mt-1 space-y-1 font-mono text-xs">
+						{#each findings as f, i (i)}
+							{@const where = f.line ? `${f.path}:${f.line}` : f.path}
+							<li data-testid="accept-finding">
+								{#if opens(f)}
+									<button
+										type="button"
+										class="cursor-pointer underline"
+										aria-label={editLabel({ path: f.path, line: f.line })}
+										onclick={() => openFinding(f)}>{where}</button
+									>
+								{:else}
+									<span class="font-medium">{where}</span>
+								{/if}
+								{#if storyOf(f)}<span class="text-muted">on {storyOf(f)}'s branch</span>{/if}
+								{#if f.rule}<span>{f.alias ? `${f.rule}/${f.alias}` : f.rule}</span>{/if}
+								<span class="whitespace-pre-wrap">{f.message}</span>
+								{#if saved.includes(fileKey(f))}
+									<span class="text-good" data-testid="finding-saved">saved</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{:else if failure}
 				<div class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger" role="alert">
 					<p class="font-medium">Not accepted. {item.id} is {item.status}. flai said:</p>
-					<pre class="mt-1 font-mono text-xs whitespace-pre-wrap">{failure}</pre>
+					<pre class="mt-1 font-mono text-xs whitespace-pre-wrap">{@render linked(refusal)}</pre>
 				</div>
 			{/if}
 

@@ -91,10 +91,13 @@ export function editLabel(ref: FileRef): string {
 export function editLink(ref: FileRef, opts: LinkOptions = {}): EditLink | null {
 	if (!editable(ref.path, opts.layout)) return null;
 	const { path, line } = ref;
+	// wip lives on the main checkout, never on a story's branch (ADR-0019): flai refuses it with one.
+	const wip = folder((opts.layout ?? DEFAULT_LAYOUT).wip) + '/';
+	const story = path.startsWith(wip) ? undefined : opts.story;
 	return {
 		...ref,
 		label: editLabel(ref),
-		open: () => openEditor({ path, line, story: opts.story })
+		open: () => openEditor({ path, line, story })
 	};
 }
 
