@@ -3,11 +3,17 @@ id: S-0378
 type: story
 nature: feature
 title: The dashboard opens a markdown editor from a file link in a report, a refusal, or a page, so the operator can fix markdown that blocks an acceptance
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-12T17:07:24Z
-updated: 2026-10-13T17:29:30Z
-transitions: []
+updated: 2026-10-13T17:29:43Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:29:37Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-13T17:29:43Z
+    by: agent-S-0378
 tags: [dashboard, cli]
 topics: [markdown]
 touches: [flai/cmd/doc.go, flai/cmd/doc_test.go, flai/cmd/doc_lint.go, flai/cmd/doc_lint_test.go, flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/accept_fix_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/docs.go, flai/internal/hostapi/docs_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/writes.test.ts, flaiover/src/routes/api/docs/edit/+server.ts, flaiover/src/routes/api/docs/file/+server.ts, flaiover/src/routes/api/docs/file/save.test.ts, flaiover/src/routes/api/docs/lint/+server.ts, flaiover/src/routes/api/docs/lint/lint.test.ts, flaiover/src/lib/components/DocEditor.svelte, flaiover/src/lib/components/DocEditor.svelte.test.ts, flaiover/src/lib/components/EditorDialog.svelte, flaiover/src/lib/components/EditorDialog.svelte.test.ts, flaiover/src/lib/editor.svelte.ts, flaiover/src/lib/edit.ts, flaiover/src/lib/edit.test.ts, flaiover/src/routes/+layout.svelte, "flaiover/src/routes/edit/[...path]/+page.svelte", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte", design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
@@ -22,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 615
+      seconds: 770
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 85
-          output: 1496
-          cache_read: 7698952
-          cache_write: 25719
-          cost: 1.9476
+          input: 113
+          output: 1938
+          cache_read: 11328128
+          cache_write: 33814
+          cost: 2.8646
 cost_of_delay:
   inputs:
     penalty_per_week: 25

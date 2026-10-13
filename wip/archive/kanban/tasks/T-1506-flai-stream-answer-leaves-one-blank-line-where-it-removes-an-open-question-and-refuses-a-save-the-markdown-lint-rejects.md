@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 69
-      cache_read: 541740
-      cache_write: 5958
-      cost: 0.2518
+      input: 7
+      output: 1678
+      cache_read: 529921
+      cache_write: 17773
+      cost: 0.2818
 ---
 # T-1506 flai stream answer leaves one blank line where it removes an open question, and refuses a save the markdown lint rejects
 

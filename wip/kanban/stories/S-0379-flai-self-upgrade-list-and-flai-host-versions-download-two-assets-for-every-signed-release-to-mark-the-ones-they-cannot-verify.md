@@ -6,7 +6,7 @@ title: flai self-upgrade --list and flai host versions download two assets for e
 status: in-progress
 owner: alex
 created: 2026-10-12T17:44:10Z
-updated: 2026-10-13T17:24:09Z
+updated: 2026-10-13T17:31:19Z
 transitions:
   - to: ready
     at: 2026-10-13T17:03:48Z
@@ -24,20 +24,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1213
+  seconds: 1640
   estimated: true
   turns:
     - day: 2026-10-13
       ceremony: 1
       hand_edits: 1
-      work: 24
+      work: 32
   models:
     - model: claude-opus-5-5
-      input: 128
-      output: 567
-      cache_read: 5663328
-      cache_write: 315812
-      cost: 2.7484
+      input: 180
+      output: 975
+      cache_read: 8114247
+      cache_write: 421059
+      cost: 3.9254
   strategic:
     - kind: orchestrator
       seconds: 273
@@ -74,8 +74,8 @@ finalized:
 This story remediates [I-0142](../../../design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md), "flai self-upgrade --list and flai host versions download two assets for every signed release to mark the ones they cannot verify". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0142 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0142 is closed with `flai issue close I-0142 --reason` saying what fixed it
+- [x] The cause I-0142 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0142 is closed with `flai issue close I-0142 --reason` saying what fixed it
 
 ## Tasks
 - T-1522 selfupgrade keeps each release's signature verdict in a cache keyed by its asset URLs and the trusted keys

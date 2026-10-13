@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:49:40Z
-updated: 2026-10-12T22:07:23Z
+updated: 2026-10-13T17:30:28Z
 transitions:
   - to: ready
     at: 2026-10-12T20:02:59Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0356
 tags: [cli]
 topics: [agents, testing]
-touches: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0144-the-local-litellm-proxy-s-upstream-anthropic-key-is-a-placeholder-so-a-gateway-check-through-it-reaches-no-model.md, design/issues/summary.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md]
+touches: [flai/internal/serve/gateway_test.go, scripts/gateway-smoke.sh, docs/contributors/index.md, docs/operators/index.md, design/system/agent-adapters.md, design/issues/I-0144-the-local-litellm-proxy-s-upstream-anthropic-key-is-a-placeholder-so-a-gateway-check-through-it-reaches-no-model.md, design/issues/summary.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, scripts/litellm.sh]
 after: [S-0351]
 agent:
   harness: claude-code
@@ -26,21 +26,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1572
+  seconds: 1792
+  estimated: true
   turns:
     - day: 2026-10-12
       ceremony: 2
       hand_edits: 1
       work: 46
     - day: 2026-10-13
-      work: 7
+      hand_edits: 2
+      work: 25
   models:
     - model: claude-opus-5-5
-      input: 160
-      output: 74527
-      cache_read: 14502364
-      cache_write: 735349
-      cost: 9.745
+      input: 200
+      output: 74839
+      cache_read: 20781817
+      cache_write: 765042
+      cost: 13.7604
   strategic:
     - kind: orchestrator
       seconds: 167
@@ -74,10 +76,10 @@ S-0351 checks Claude Code against OpenRouter. This story runs the same check aga
 
 ## Acceptance criteria
 
-- [ ] `TestGatewayLiteLLM` in `flai/internal/serve` runs the S-0351 check once through the proxy's unified `/v1/messages` and once through `/anthropic`, each with a provider entry for that route, when `LITELLM_BASE_URL` and `LITELLM_API_KEY` are set and `claude` is on `PATH`, and skips naming what is missing otherwise; the integration tier passes on a host without them.
+- [ ] `TestGatewayLiteLLM` in `flai/internal/serve` runs the S-0351 check through the proxy's unified `/v1/messages`, by default to a free OpenRouter model, and through `/anthropic` only when `FLAI_TEST_LITELLM_PASSTHROUGH=1` names a real Anthropic upstream (skipping it, saying so, otherwise), each with a provider entry for that route, when `LITELLM_BASE_URL` and `LITELLM_API_KEY` are set and `claude` is on `PATH`, and skips naming what is missing otherwise; the integration tier passes on a host without them.
 - [x] The test reads `/spend/logs` for the key after each run and logs the gateway's spend, and whether a row carries the session's ID, beside `total_cost_usd`.
 - [x] `scripts/gateway-smoke.sh` runs it where the variables are set and prints the skip line where they are not; the smoke tier passes on a host without them.
-- [ ] `design/system/agent-adapters.md` gains a LiteLLM section beside S-0351's, with the date, the proxy's version, and the answers for each route: fields forwarded, aliases resolved, session join, and the gateway's spend against `total_cost_usd`. It says which route a provider entry should use.
+- [ ] `design/system/agent-adapters.md` gains a LiteLLM section beside S-0351's, with the date, the proxy's version, and the answers for each route run: fields forwarded, aliases resolved, session join, and the gateway's spend against `total_cost_usd` (which reads $0 on a free model); a route not run is recorded as such, with the reason. It says which route a provider entry should use.
 - [ ] `docs/operators/index.md` shows a provider entry for a local LiteLLM proxy and the virtual key it needs; `docs/contributors/index.md` lists the variables.
 
 ## Tasks
@@ -85,10 +87,12 @@ S-0351 checks Claude Code against OpenRouter. This story runs the same check aga
 - T-1402 TestGatewayLiteLLM runs the gateway check through the proxy's unified and pass-through routes and reads its spend log
 - T-1403 The smoke tier runs the LiteLLM check where the proxy and its key are set, and the contributor guide lists its variables
 - T-1404 Run the LiteLLM check against the operator's proxy and record what each route forwarded and logged, and the provider entry to use
+- T-1526 The local proxy reaches OpenRouter's free models and the LiteLLM check defaults to one, with the pass-through opt-in
 
 ## Notes
 
 - The proxy is the operator's to run, free, from Docker or `litellm --config`, with a virtual key carrying a `max_budget` (E-0019's notes). Without it in the agent's environment, the story's agent asks on a thread.
+- Criteria 1 and 4 were reworded on 2026-10-13 by the operator's confirmation on TH-0429: LiteLLM is not there to buy Claude, so the check runs free, through the unified route to `openrouter/nvidia/nemotron-3-super-120b-a12b:free`, and the `/anthropic` pass-through, which reaches only Anthropic, is opt-in. A step the free model fails is recorded as the model's, not as a LiteLLM defect.
 - The epic orders LiteLLM after the neutral contracts. This story needs only S-0351's test, so it may run beside S-0352 to S-0354; the pull order is the operator's.
 
 ### Planning

@@ -3,12 +3,18 @@ id: T-1514
 type: task
 nature: feature
 title: flai doc show and doc save take --story and edit the file in that story's worktree, committing on its branch
-status: backlog
+status: in-progress
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:56:25Z
-updated: 2026-10-13T16:56:25Z
-transitions: []
+updated: 2026-10-13T17:30:37Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:30:36Z
+    by: agent-S-0378
+  - to: in-progress
+    at: 2026-10-13T17:30:37Z
+    by: agent-S-0378
 stream: S-0378
 tags: [cli]
 touches: [flai/cmd/doc.go, flai/cmd/doc_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]

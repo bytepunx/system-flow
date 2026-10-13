@@ -31,7 +31,7 @@ usage:
       output: 147
       cache_read: 1131753
       cache_write: 72893
-      cost: 0.5538
+      cost: 0.554
 ---
 # T-1522 selfupgrade keeps each release's signature verdict in a cache keyed by its asset URLs and the trusted keys
 

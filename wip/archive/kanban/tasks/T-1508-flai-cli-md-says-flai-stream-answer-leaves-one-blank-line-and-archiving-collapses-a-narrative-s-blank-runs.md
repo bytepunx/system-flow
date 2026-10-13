@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 105
-      cache_read: 871495
-      cache_write: 11113
-      cost: 0.4057
+      input: 12
+      output: 2705
+      cache_read: 853965
+      cache_write: 28641
+      cost: 0.4541
 ---
 # T-1508 flai-cli.md says flai stream answer leaves one blank line and archiving collapses a narrative's blank runs
 

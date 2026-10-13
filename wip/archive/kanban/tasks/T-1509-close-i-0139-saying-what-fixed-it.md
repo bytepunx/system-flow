@@ -24,15 +24,15 @@ touches: [design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story
 after: [T-1508]
 usage:
   source: log
-  seconds: 6
+  seconds: 8
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 48
-      cache_read: 374947
-      cache_write: 2039
-      cost: 0.1733
+      input: 5
+      output: 1155
+      cache_read: 364752
+      cache_write: 12233
+      cost: 0.1939
 ---
 # T-1509 Close I-0139 saying what fixed it
 

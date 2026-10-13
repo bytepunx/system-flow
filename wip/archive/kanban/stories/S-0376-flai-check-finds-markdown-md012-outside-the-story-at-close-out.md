@@ -3,10 +3,10 @@ id: S-0376
 type: story
 nature: improvement
 title: "flai check finds `markdown.MD012` outside the story at close-out"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T16:52:58Z
-updated: 2026-10-13T17:20:32Z
+updated: 2026-10-13T17:35:35Z
 transitions:
   - to: ready
     at: 2026-10-13T17:16:55Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:17:01Z
     by: agent-S-0376
+  - to: review
+    at: 2026-10-13T17:34:45Z
+    by: agent-S-0376
+  - to: done
+    at: 2026-10-13T17:35:35Z
+    by: orchestrator
 tags: [flai, narrative, issues]
 topics: [markdown, narrative, planning]
 touches: [flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/flai-cli.md, design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story-at-close-out.md, design/issues/summary.md, docs/users/flai.md]
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 206
-  estimated: true
+  seconds: 1074
   turns:
     - day: 2026-10-13
+      ceremony: 2
       test_runs: 4
       hand_edits: 1
-      work: 27
+      work: 31
   models:
     - model: claude-opus-5-5
-      input: 64
-      output: 585
-      cache_read: 4289976
-      cache_write: 174971
-      cost: 2.0525
+      input: 78
+      output: 18019
+      cache_read: 5689212
+      cache_write: 190809
+      cost: 3.025
   strategic:
     - kind: orchestrator
       seconds: 461
@@ -106,3 +112,13 @@ Overlap: S-0375, in progress, claims `narrative.go` and `narrative_test.go` (its
 Forecast: flai forecast gave 13m (84 s per unit of size over 12 done medium improvement stories, times size 9). I raised it to 20m. There are four tasks, and T-1507 is a fence-aware rewrite of the archive move with a new test file. S-0346, a three-task story of the same kind, took 13m in progress. Delivery is moved 7m later than flai's 17:57Z to match.
 
 Cost of delay: 25 USD a week, flai cod's value from the 10m of time lost per cycle the orchestrator set on TH-0432, at 150 USD an hour. It stands as flai gave it.
+
+### Accepted by the orchestrator
+
+- Verified: e2abd6e24c3a827c9ce59f92292f15a68eaf1034
+- At: 2026-10-13T17:35:35Z
+
+Verdict: meets all criteria (verifier at e2abd6e24c3a827c9ce59f92292f15a68eaf1034; flai verify passed every step at that commit)
+
+- 1: flai/internal/workitem/narrative.go, flai/internal/workitem/narrative_test.go, flai/internal/workitem/archive.go, flai/internal/workitem/archive_test.go, design/system/flai-cli.md, docs/users/flai.md
+- 2: design/issues/I-0139-flai-check-finds-markdown-md012-outside-the-story-at-close-out.md, design/issues/summary.md

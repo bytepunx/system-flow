@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 144
-      cache_read: 1291371
-      cache_write: 21882
-      cost: 0.6037
+      input: 17
+      output: 4024
+      cache_read: 1270634
+      cache_write: 42615
+      cost: 0.6756
 ---
 # T-1507 Archiving a narrative collapses each run of blank lines outside fenced code to one, so no archived narrative carries an MD012 finding
 

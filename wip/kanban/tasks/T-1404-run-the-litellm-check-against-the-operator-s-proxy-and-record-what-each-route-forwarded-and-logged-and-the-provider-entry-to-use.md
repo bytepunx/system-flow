@@ -3,16 +3,22 @@ id: T-1404
 type: task
 nature: research
 title: Run the LiteLLM check against the operator's proxy and record what each route forwarded and logged, and the provider entry to use
-status: backlog
+status: in-progress
 parent: S-0356
 owner: alex
 created: 2026-10-08T08:49:57Z
-updated: 2026-10-08T08:49:57Z
-transitions: []
+updated: 2026-10-13T17:30:44Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:30:43Z
+    by: agent-S-0356
+  - to: in-progress
+    at: 2026-10-13T17:30:44Z
+    by: agent-S-0356
 stream: S-0356
 tags: [cli]
 touches: [design/system/agent-adapters.md, docs/operators/index.md]
-after: [T-1402]
+after: [T-1526]
 ---
 # T-1404 Run the LiteLLM check against the operator's proxy and record what each route forwarded and logged, and the provider entry to use
 

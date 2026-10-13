@@ -3,16 +3,36 @@ id: T-1525
 type: task
 nature: remediation
 title: Close I-0142 with the reason that the release lists cache each signed release's verdict
-status: backlog
+status: done
 parent: S-0379
 owner: alex
 created: 2026-10-13T17:02:35Z
-updated: 2026-10-13T17:02:35Z
-transitions: []
+updated: 2026-10-13T17:31:15Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:31:08Z
+    by: agent-S-0379
+  - to: in-progress
+    at: 2026-10-13T17:31:08Z
+    by: agent-S-0379
+  - to: done
+    at: 2026-10-13T17:31:15Z
+    by: agent-S-0379
 stream: S-0379
 tags: [flai, issues]
 touches: [design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md, design/issues/summary.md]
 after: [T-1523, T-1524]
+usage:
+  source: log
+  seconds: 5
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 20
+      cache_read: 215441
+      cache_write: 979
+      cost: 0.0995
 ---
 # T-1525 Close I-0142 with the reason that the release lists cache each signed release's verdict
 

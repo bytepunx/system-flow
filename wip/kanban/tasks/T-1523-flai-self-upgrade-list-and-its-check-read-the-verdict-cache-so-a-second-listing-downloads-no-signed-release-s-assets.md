@@ -24,7 +24,7 @@ touches: [flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, docs/users/flai
 after: [T-1522]
 usage:
   source: log
-  seconds: 895
+  seconds: 898
   estimated: true
   models:
     - model: claude-opus-5-5
@@ -32,7 +32,7 @@ usage:
       output: 239
       cache_read: 2855421
       cache_write: 105392
-      cost: 1.361
+      cost: 1.3616
 ---
 # T-1523 flai self-upgrade --list and its check read the verdict cache, so a second listing downloads no signed release's assets
 

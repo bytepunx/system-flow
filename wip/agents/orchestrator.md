@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 524.1990
-accrued_seconds: 398329
-tasks_completed: 428
-last_run: 2026-10-13T17:26:55Z
+accrued_cost: 525.1800
+accrued_seconds: 398496
+tasks_completed: 430
+last_run: 2026-10-13T17:29:42Z
 ---
 
 # Orchestrator activity
@@ -3007,6 +3007,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0377
 - Seconds: 596
 - Cost: 2.4464 USD, estimated
+
+### 2026-10-13T17:27:07Z
+
+- Summary: Under publish, policy judgement: released S-0375 and S-0377 (2 pending, 112.5 USD/week) as flai 1.47.0 → 1.47.1 (patch), tag flai/v1.47.1, pushed. Reason: two complete, verified remediations (I-0137, I-0140 closed), nothing held by whole_epics.
+- Items: S-0375, S-0377
+- Seconds: 12
+- Cost: 0.0640 USD, estimated
+
+### 2026-10-13T17:29:42Z
+
+- Summary: The operator finalized S-0378. Under promote_to_ready, moved S-0378 to ready (rank 1, 1h45m under throughput); S-0241 (rank 2) stays out, blocked. Applied the throughput order: S-0357 (42m), S-0378 (1h45m).
+- Items: S-0378
+- Seconds: 155
+- Cost: 0.9170 USD, estimated
 
 ## Refusals
 
