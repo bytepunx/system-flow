@@ -589,3 +589,95 @@ usage:
 ---
 # S-0001 S
 `
+
+// ADR-0132: where an item's cost came from is written after estimated, read
+// back the same, refused when it is none of the three, and not written when
+// it is empty.
+func TestPricedByIsWrittenAndReadBack(t *testing.T) {
+	parsed, err := ParseItem(pricedDoc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := parsed.Validate(); err != nil {
+		t.Error(err)
+	}
+	if parsed.Usage.PricedBy != usage.PricedGateway {
+		t.Errorf("priced by %q, want gateway", parsed.Usage.PricedBy)
+	}
+	if got := parsed.Marshal(); got != pricedDoc {
+		t.Errorf("round trip:\n%s", got)
+	}
+	parsed.Usage.PricedBy = ""
+	if got := parsed.Marshal(); strings.Contains(got, "priced_by") {
+		t.Errorf("no priced_by written as:\n%s", got)
+	}
+	parsed.Usage.PricedBy = "guess"
+	if got := strings.Join(usageErrors(parsed.Usage), "; "); !strings.Contains(got, `usage.priced_by "guess" must be gateway, harness, or estimate`) {
+		t.Errorf("errors %q lack the unknown priced_by", got)
+	}
+	for _, by := range usage.PricedSources {
+		parsed.Usage.PricedBy = by
+		if errs := usageErrors(parsed.Usage); len(errs) != 0 {
+			t.Errorf("priced_by %s refused: %v", by, errs)
+		}
+	}
+}
+
+const pricedDoc = `---
+id: S-0001
+type: story
+nature: feature
+title: S
+status: ready
+parent: E-0001
+owner: alex
+created: 2026-09-15T20:00:00Z
+updated: 2026-09-15T20:00:00Z
+transitions:
+  - to: ready
+    at: 2026-09-15T20:00:00Z
+    by: alex
+tags: []
+usage:
+  source: log
+  seconds: 1083
+  estimated: true
+  priced_by: gateway
+  models:
+    - model: claude-opus-5-5
+      input: 256
+      output: 89342
+      cache_read: 0
+      cache_write: 0
+      cost: 1.5
+---
+# S-0001 S
+`
+
+// ADR-0132: an epic's usage is priced by the least certain of its stories',
+// an older story's read by whether it is estimated.
+func TestAnEpicIsPricedByItsLeastCertainStory(t *testing.T) {
+	r, s, t2 := usageProject(t)
+	s.Usage = spent(500, 9, false)
+	s.Usage.PricedBy = usage.PricedGateway
+	if err := r.Save(s); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.TransitionAll(t2, Done, "test", "", t0, false); err != nil {
+		t.Fatal(err)
+	}
+	epic, _ := r.Get("E-0001")
+	if epic.Usage.PricedBy != usage.PricedHarness {
+		t.Errorf("epic priced by %q, want harness: the gateway story's and the older unestimated story's least certain", epic.Usage.PricedBy)
+	}
+	data, _ := os.ReadFile(epic.Path)
+	if !strings.Contains(string(data), "usage:\n  source: sum\n  seconds: 600\n  priced_by: harness\n  models:\n") {
+		t.Errorf("epic front matter:\n%s", data)
+	}
+	if err := epic.Validate(); err != nil {
+		t.Error(err)
+	}
+	if again, err := r.RollUp(t2); err != nil || len(again) != 0 {
+		t.Errorf("a second roll-up changed %v (%v)", again, err)
+	}
+}

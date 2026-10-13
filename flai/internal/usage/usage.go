@@ -21,6 +21,37 @@ const (
 	SourceSum = "sum"
 )
 
+// Where an item's cost came from (ADR-0132), from the most certain to the
+// least.
+const (
+	// PricedGateway is a cost the provider's gateway charged, read from its
+	// spend log.
+	PricedGateway = "gateway"
+	// PricedHarness is a cost the harness reported on its own figures.
+	PricedHarness = "harness"
+	// PricedEstimate is a cost flai estimated or apportioned.
+	PricedEstimate = "estimate"
+)
+
+// PricedSources are where an item's cost may have come from, the least
+// certain first.
+var PricedSources = []string{PricedEstimate, PricedHarness, PricedGateway}
+
+// LeastCertain is the less certain of two sources of a cost: estimate below
+// harness below gateway. An empty one is no source and gives the other; a
+// value it does not know counts as less certain than an estimate.
+func LeastCertain(a, b string) string {
+	switch {
+	case a == "":
+		return b
+	case b == "":
+		return a
+	case slices.Index(PricedSources, b) < slices.Index(PricedSources, a):
+		return b
+	}
+	return a
+}
+
 // Model is what one model spent.
 type Model struct {
 	Model      string `yaml:"model" json:"model"`
@@ -58,6 +89,11 @@ type Usage struct {
 	// Estimated says some of the cost was not reported by the harness but
 	// estimated or apportioned.
 	Estimated bool `yaml:"estimated,omitempty" json:"estimated,omitempty"`
+	// PricedBy says where the cost came from: PricedGateway, PricedHarness,
+	// or PricedEstimate (ADR-0132); a sum's is the least certain of its
+	// parts'. It is empty on usage written before it, and on a sum none of
+	// whose parts names one: Priced reads those.
+	PricedBy string `yaml:"priced_by,omitempty" json:"priced_by,omitempty"`
 	// EmptyWakes counts the wait_for_events calls of the item's agents that
 	// timed out with nothing to report (S-0272, ADR-0105): measured on a
 	// story from its agents' logs, summed on an epic, none on a task.
@@ -110,6 +146,21 @@ func (s Strategic) Cost() float64 {
 // count.
 func (u *Usage) Empty() bool { return u == nil || (len(u.Models) == 0 && u.Seconds == 0) }
 
+// Priced is where the cost came from: PricedBy, or when that is empty, as
+// usage written before it reads, PricedEstimate when it is estimated and
+// PricedHarness when it is not; empty for no usage.
+func (u *Usage) Priced() string {
+	switch {
+	case u == nil:
+		return ""
+	case u.PricedBy != "":
+		return u.PricedBy
+	case u.Estimated:
+		return PricedEstimate
+	}
+	return PricedHarness
+}
+
 // Nothing says neither agents nor strategic agents spent anything.
 func (u *Usage) Nothing() bool { return u.Empty() && (u == nil || len(u.Strategic) == 0) }
 
@@ -133,16 +184,17 @@ func (u *Usage) Clone() *Usage {
 
 // Split is u in n shares that add up to it, in order: its seconds and each
 // model's tokens in whole numbers, the remainder going to the first shares,
-// and each model's cost over n (ADR-0095). Each share keeps u's source and
-// estimate and leaves its Strategic, its empty wakes, and its turns out,
-// since a call is not apportioned (ADR-0105); n below one gives none.
+// and each model's cost over n (ADR-0095). Each share keeps u's source,
+// estimate, and where its cost came from, and leaves its Strategic, its
+// empty wakes, and its turns out, since a call is not apportioned
+// (ADR-0105); n below one gives none.
 func (u *Usage) Split(n int) []*Usage {
 	if u == nil || n < 1 {
 		return nil
 	}
 	shares := make([]*Usage, n)
 	for i := range shares {
-		s := &Usage{Source: u.Source, Seconds: part(u.Seconds, i, n), Estimated: u.Estimated, Models: make([]Model, len(u.Models))}
+		s := &Usage{Source: u.Source, Seconds: part(u.Seconds, i, n), Estimated: u.Estimated, PricedBy: u.PricedBy, Models: make([]Model, len(u.Models))}
 		for j, m := range u.Models {
 			s.Models[j] = Model{
 				Model: m.Model, Input: part(m.Input, i, n), Output: part(m.Output, i, n),
@@ -245,10 +297,21 @@ func (u *Usage) AddStrategic(kind string, o *Usage) {
 }
 
 // Add adds o to u, model by model, its empty wakes, and its turns day by
-// day; o's Strategic is left out.
+// day; o's Strategic is left out. Where u's cost came from becomes the least
+// certain of u's and o's, counting only usage with models; it stays empty
+// while neither names one, since Priced then reads the sum as it reads its
+// parts.
 func (u *Usage) Add(o *Usage) {
 	if o == nil {
 		return
+	}
+	if len(o.Models) > 0 {
+		switch {
+		case len(u.Models) == 0:
+			u.PricedBy = o.PricedBy
+		case u.PricedBy != "" || o.PricedBy != "":
+			u.PricedBy = LeastCertain(u.Priced(), o.Priced())
+		}
 	}
 	u.Seconds += o.Seconds
 	u.EmptyWakes += o.EmptyWakes
@@ -352,7 +415,8 @@ func Sum(of ...*Usage) *Usage {
 	return out
 }
 
-// Same says a and b say the same, what strategic agents spent included.
+// Same says a and b say the same, what strategic agents spent included, and
+// where their cost came from as Priced reads it.
 func Same(a, b *Usage) bool {
 	if a.Nothing() || b.Nothing() {
 		return a.Nothing() && b.Nothing()
@@ -365,7 +429,7 @@ func Same(a, b *Usage) bool {
 	if a.Empty() || b.Empty() {
 		return a.Empty() && b.Empty()
 	}
-	return a.Source == b.Source && a.Seconds == b.Seconds && a.Estimated == b.Estimated && a.EmptyWakes == b.EmptyWakes && slices.Equal(a.Models, b.Models) &&
+	return a.Source == b.Source && a.Seconds == b.Seconds && a.Estimated == b.Estimated && a.Priced() == b.Priced() && a.EmptyWakes == b.EmptyWakes && slices.Equal(a.Models, b.Models) &&
 		slices.Equal(a.Turns, b.Turns)
 }
 

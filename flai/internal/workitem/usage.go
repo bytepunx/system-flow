@@ -2,6 +2,7 @@ package workitem
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +29,9 @@ func usageBlock(u *usage.Usage) string {
 	fmt.Fprintf(&b, "  seconds: %d\n", u.Seconds)
 	if u.Estimated {
 		b.WriteString("  estimated: true\n")
+	}
+	if u.PricedBy != "" {
+		fmt.Fprintf(&b, "  priced_by: %s\n", Scalar(u.PricedBy))
 	}
 	if u.EmptyWakes > 0 {
 		fmt.Fprintf(&b, "  empty_wakes: %d\n", u.EmptyWakes)
@@ -93,6 +97,9 @@ func usageErrors(u *usage.Usage) []string {
 	var errs []string
 	if u.Source != usage.SourceLog && u.Source != usage.SourceSum {
 		errs = append(errs, fmt.Sprintf("usage.source %q must be %s or %s", u.Source, usage.SourceLog, usage.SourceSum))
+	}
+	if u.PricedBy != "" && !slices.Contains(usage.PricedSources, u.PricedBy) {
+		errs = append(errs, fmt.Sprintf("usage.priced_by %q must be %s, %s, or %s", u.PricedBy, usage.PricedGateway, usage.PricedHarness, usage.PricedEstimate))
 	}
 	if u.Seconds < 0 {
 		errs = append(errs, "usage.seconds is negative")
@@ -171,8 +178,8 @@ func modelErrors(path string, models []usage.Model) []string {
 	return errs
 }
 
-// Summed is the sum of the usage of id's children, whatever their state;
-// nil when none has any.
+// Summed is the sum of the usage of id's children, whatever their state,
+// priced by the least certain of theirs; nil when none has any.
 func Summed(items []*Item, id string) *usage.Usage {
 	var of []*usage.Usage
 	for _, c := range Children(items, id) {

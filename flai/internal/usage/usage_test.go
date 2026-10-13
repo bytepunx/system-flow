@@ -237,3 +237,96 @@ func TestSplitAddsUpToTheWhole(t *testing.T) {
 		t.Error("no shares, or a share of nothing, is not none")
 	}
 }
+
+// ADR-0132: where a cost came from is summed as the least certain of the
+// parts, estimate below harness below gateway.
+func TestLeastCertainOrdersEstimateHarnessGateway(t *testing.T) {
+	for _, c := range []struct{ a, b, want string }{
+		{PricedGateway, PricedHarness, PricedHarness},
+		{PricedHarness, PricedGateway, PricedHarness},
+		{PricedGateway, PricedEstimate, PricedEstimate},
+		{PricedEstimate, PricedHarness, PricedEstimate},
+		{PricedGateway, PricedGateway, PricedGateway},
+		{"", PricedGateway, PricedGateway},
+		{PricedHarness, "", PricedHarness},
+		{"", "", ""},
+		{"guess", PricedEstimate, "guess"},
+	} {
+		if got := LeastCertain(c.a, c.b); got != c.want {
+			t.Errorf("LeastCertain(%q, %q) = %q, want %q", c.a, c.b, got, c.want)
+		}
+	}
+}
+
+func priced(by string, estimated bool) *Usage {
+	u := agents(10, Model{Model: "a", Input: 1, Cost: 1})
+	u.PricedBy, u.Estimated = by, estimated
+	return u
+}
+
+// ADR-0132: usage written before priced_by reads as harness, or as estimate
+// when it is estimated, and sums as it reads.
+func TestPricedReadsAnOlderUsageByEstimated(t *testing.T) {
+	if got := priced("", false).Priced(); got != PricedHarness {
+		t.Errorf("older usage, not estimated, priced by %q, want harness", got)
+	}
+	if got := priced("", true).Priced(); got != PricedEstimate {
+		t.Errorf("older usage, estimated, priced by %q, want estimate", got)
+	}
+	if got := priced(PricedGateway, true).Priced(); got != PricedGateway {
+		t.Errorf("usage priced by gateway reads %q", got)
+	}
+	if got := (*Usage)(nil).Priced(); got != "" {
+		t.Errorf("no usage priced by %q, want none", got)
+	}
+	for _, c := range []struct {
+		name  string
+		parts []*Usage
+		by    string
+		read  string
+	}{
+		{"gateway and harness", []*Usage{priced(PricedGateway, false), priced(PricedHarness, false)}, PricedHarness, PricedHarness},
+		{"gateway and estimate", []*Usage{priced(PricedGateway, false), priced(PricedEstimate, true), priced(PricedHarness, false)}, PricedEstimate, PricedEstimate},
+		{"gateway alone", []*Usage{priced(PricedGateway, false), priced(PricedGateway, false)}, PricedGateway, PricedGateway},
+		{"gateway and an older harness", []*Usage{priced(PricedGateway, false), priced("", false)}, PricedHarness, PricedHarness},
+		{"an older estimate and gateway", []*Usage{priced("", true), priced(PricedGateway, false)}, PricedEstimate, PricedEstimate},
+		{"older parts only", []*Usage{priced("", false), priced("", true)}, "", PricedEstimate},
+		{"older harness only", []*Usage{priced("", false), priced("", false)}, "", PricedHarness},
+		{"gateway and an estimate that spent nothing", []*Usage{priced(PricedGateway, false), {Source: SourceLog, Seconds: 5, PricedBy: PricedEstimate}}, PricedGateway, PricedGateway},
+	} {
+		sum := Sum(c.parts...)
+		if sum.PricedBy != c.by || sum.Priced() != c.read {
+			t.Errorf("%s: sum priced by %q, reads %q; want %q, %q", c.name, sum.PricedBy, sum.Priced(), c.by, c.read)
+		}
+	}
+	into := agents(0)
+	into.Add(priced(PricedGateway, false))
+	into.Add(priced(PricedHarness, false))
+	if into.PricedBy != PricedHarness {
+		t.Errorf("add priced by %q, want harness", into.PricedBy)
+	}
+}
+
+// ADR-0132: where a cost came from is kept on each share and on a clone, and
+// Same compares it as Priced reads it.
+func TestPricedByIsSplitClonedAndCompared(t *testing.T) {
+	u := priced(PricedGateway, true)
+	for i, s := range u.Split(3) {
+		if s.PricedBy != PricedGateway {
+			t.Errorf("share %d priced by %q, want gateway", i, s.PricedBy)
+		}
+	}
+	if c := u.Clone(); c.PricedBy != PricedGateway || !Same(u, c) {
+		t.Errorf("clone priced by %q", c.PricedBy)
+	}
+	if Same(u, priced(PricedEstimate, true)) {
+		t.Error("usage that differs only in where its cost came from is the same")
+	}
+	if !Same(priced("", false), priced(PricedHarness, false)) || !Same(priced("", true), priced(PricedEstimate, true)) {
+		t.Error("an older usage differs from one that names what it reads as")
+	}
+	u.AddStrategic("planner", priced(PricedGateway, false))
+	if u.Strategic[0].Kind != "planner" || u.PricedBy != PricedGateway {
+		t.Errorf("a strategic charge changed where the agents' cost came from: %+v", u)
+	}
+}
