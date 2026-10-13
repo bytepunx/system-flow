@@ -3,7 +3,7 @@ id: I-0125
 title: A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
 class: efficiency
 status: open
-count: 7
+count: 8
 cost: 6m
 first_reported: 2026-10-08T10:21:38Z
 last_reported: 2026-10-13T19:15:11Z
@@ -36,6 +36,10 @@ S-0337 was blocked for four days (TH-0390) with no branch content, and flai serv
 ### 2026-10-12T22:07:22Z
 Story: S-0356.
 MS-0101 (S-0356 and S-0239, on a share with an agreed split) woke S-0356's agent three times while S-0356 was otherwise idle on TH-0429: for 242d70b's ack, d989ac0, and 7a64631. Each change sat wholly inside S-0239's side of the split, so each needed only a "settled" reply, and each reply in turn awaited S-0239. A share's split could stop the notice for paths inside the other story's side.
+
+### 2026-10-13T19:12:42Z
+Story: S-0380.
+MS-0109 (S-0378 and S-0380) was settled in its first reply. S-0378's agreement then woke S-0380's agent a second time, while S-0380 waited only on the operator's answer to TH-0445. S-0380 had to reply again ("settled, no reply needed"), which wakes S-0378 in turn.
 
 ### 2026-10-13T19:12:53Z
 Story: S-0378.
