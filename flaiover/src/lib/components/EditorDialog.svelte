@@ -7,12 +7,10 @@
 	import type { Saved } from '$lib/edit';
 
 	const target = $derived(editorState.target);
-	let dirty = $state(false);
 
 	// Unsaved text is only in this dialog: ask before closing it, as the /edit page asks before leaving.
 	function close() {
-		if (dirty && !confirm('Close without saving your changes?')) return;
-		dirty = false;
+		if (editorState.dirty && !confirm('Close without saving your changes?')) return;
 		closeEditor();
 	}
 
@@ -26,7 +24,7 @@
 		if (target && e.key === 'Escape') close();
 	}}
 	onbeforeunload={(e) => {
-		if (target && dirty) e.preventDefault();
+		if (target && editorState.dirty) e.preventDefault();
 	}}
 />
 
@@ -54,7 +52,7 @@
 					path={target.path}
 					line={target.line}
 					story={target.story}
-					ondirty={(d) => (dirty = d)}
+					ondirty={(d) => (editorState.dirty = d)}
 					onsaved={saved}
 				/>
 			{/key}

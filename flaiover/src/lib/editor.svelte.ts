@@ -12,19 +12,27 @@ export type EditorTarget = {
 	onsaved?: (saved: Saved) => void;
 };
 
-/** The document open in the editor dialog, or null when it is closed. */
+/** The document open in the editor dialog, or null when it is closed, and whether it has unsaved changes. */
 export class EditorState {
 	target = $state.raw<EditorTarget | null>(null);
+	dirty = $state(false);
 }
 
 export const editorState = new EditorState();
 
-/** Open a document in the editor dialog over the current page. */
+/**
+ * Open a document in the editor dialog over the current page. A link in the open document's own
+ * preview or threads would replace it: with unsaved changes, ask first, and keep it when told no.
+ */
 export function openEditor(target: EditorTarget): void {
+	const replace = 'Open another document without saving your changes?';
+	if (editorState.target && editorState.dirty && !confirm(replace)) return;
+	editorState.dirty = false;
 	editorState.target = { ...target };
 }
 
 /** Close the editor dialog at once, unsaved changes or not; the dialog's own close asks first. */
 export function closeEditor(): void {
+	editorState.dirty = false;
 	editorState.target = null;
 }

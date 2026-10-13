@@ -108,6 +108,24 @@ describe('EditorDialog', () => {
 		expect(dialog()).toBeNull();
 	});
 
+	it('asks before a link replaces a document with unsaved changes, and keeps it when told no', async () => {
+		backend();
+		const ask = vi.spyOn(window, 'confirm').mockReturnValue(false);
+		c = mount(EditorDialog, { target: document.body });
+		openEditor({ path: 'docs/users/guide.md' });
+		await settle();
+		type(bodyBox(), DOC + 'more\n');
+		openEditor({ path: 'docs/users/other.md', line: 2 });
+		flushSync();
+		expect(ask).toHaveBeenCalledWith('Open another document without saving your changes?');
+		expect(editorState.target?.path).toBe('docs/users/guide.md');
+		ask.mockReturnValue(true);
+		openEditor({ path: 'docs/users/other.md', line: 2 });
+		flushSync();
+		expect(editorState.target?.path).toBe('docs/users/other.md');
+		expect(editorState.dirty).toBe(false);
+	});
+
 	it('calls onsaved after flai accepted the save', async () => {
 		backend();
 		const onsaved = vi.fn();

@@ -4,7 +4,8 @@
 	// without it, every thread of the project, each linking to its anchor, and no
 	// new thread, which needs an anchor (the threads page, S-0173).
 	import { api } from '$lib/api';
-	import { render, slug } from '$lib/markdown';
+	import { markdownInto, slug } from '$lib/markdown';
+	import { editLink, type EditLink } from '$lib/filelinks';
 	import { resolve } from '$app/paths';
 	import { onMount, tick } from 'svelte';
 	import { follow } from '$lib/events';
@@ -39,7 +40,8 @@
 		writable = true,
 		compose,
 		select,
-		agent
+		agent,
+		story
 	}: {
 		on?: string;
 		headings?: string[];
@@ -50,6 +52,8 @@
 		select?: string;
 		/** What the story's agent is doing, on a story's page (S-0154). */
 		agent?: StoryActivity;
+		/** The story whose branch a file a thread names is saved on when opened in the editor from here (S-0378). */
+		story?: string;
 	} = $props();
 
 	let threads = $state<Thread[]>([]);
@@ -159,6 +163,7 @@
 	// flai ends an entry that cites a source with a `Source: <path> § <heading>` paragraph; it is
 	// shown as a link to the document and heading instead (ADR-0090).
 	const body = (e: Entry) => (e.source ? e.text.replace(/\n\nSource: [^\n]*$/, '') : e.text);
+	const edit = (path: string) => editLink({ path }, { story });
 	const sourceHref = (s: Source) =>
 		resolve('/docs/[...path]', { path: s.path }) + (s.heading ? `#${slug(s.heading)}` : '');
 	const badge: Record<Thread['status'], string> = {
@@ -167,6 +172,29 @@
 		resolved: 'bg-raised text-ink-soft  '
 	};
 </script>
+
+<!-- Beside a file a thread names, a control that opens it in the editor (S-0378). -->
+{#snippet editButton(link: EditLink | null)}
+	{#if link}
+		<button
+			type="button"
+			class="ml-1 rounded px-1 text-xs text-muted hover:text-ink"
+			data-edit={link.path}
+			aria-label={link.label}
+			title={link.label}
+			onclick={link.open}
+			><svg
+				viewBox="0 0 16 16"
+				width="12"
+				height="12"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				aria-hidden="true"><path d="M11 2.5 13.5 5 5 13.5H2.5V11z" /></svg
+			></button
+		>
+	{/if}
+{/snippet}
 
 <!-- One thread at a time (S-0133). The pager reads `← n of m →` and sits beside the heading,
      with a second one under the thread for a reader who has scrolled to its end (S-0153). -->
@@ -271,7 +299,7 @@
 						class="text-xs underline"
 						href={resolve('/docs/[...path]', { path: t.anchor.path })}
 						data-anchor={t.anchor.path}>{t.anchor.path}</a
-					>
+					>{@render editButton(edit(t.anchor.path))}
 				{/if}
 			</header>
 			<!-- A long thread shows its last entries, the earlier ones behind a toggle (S-0153). -->
@@ -304,22 +332,21 @@
 								>{/if}
 						</div>
 						<!-- Entries are markdown, as they are in the thread's file (S-0126). Authors write
-						     repository paths, so relative links resolve from the root. -->
+						     repository paths, so relative links resolve from the root, and each file an
+						     entry links or names in code opens in the editor (S-0378). -->
 						<div
 							class="prose prose-sm mt-0.5 max-w-[85%] rounded-lg border px-3 py-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 {e.operator
 								? 'border-primary bg-primary-soft'
 								: 'border-line bg-raised'}"
-						>
-							<!-- eslint-disable-next-line svelte/no-at-html-tags -- repository markdown, rendered client side as every document is -->
-							{@html render(body(e), '')}
-						</div>
+							{@attach markdownInto(body(e), '', { story })}
+						></div>
 						{#if e.source}
 							<!-- eslint-disable svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the heading added to it -->
 							<p class="mt-0.5 text-xs text-muted" data-source>
 								Source:
 								<a class="underline" href={sourceHref(e.source)}
 									>{e.source.path}{e.source.heading ? ` § ${e.source.heading}` : ''}</a
-								>
+								>{@render editButton(edit(e.source.path))}
 							</p>
 							<!-- eslint-enable svelte/no-navigation-without-resolve -->
 						{/if}

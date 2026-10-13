@@ -8,6 +8,7 @@
 	// action is off or a run goes.
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
+	import { editLink } from '$lib/filelinks';
 	import {
 		ANALYZER_FOCUSES,
 		type ActivityEntry,
@@ -63,8 +64,26 @@
 	}
 </script>
 
+<!-- A report, linked on the documents page, with a control beside it that opens it in the editor (S-0378). -->
 {#snippet docLink(path: string)}
-	<a class="underline" href={resolve('/docs/[...path]', { path })}>{path}</a>
+	{@const edit = editLink({ path })}
+	<a class="underline" href={resolve('/docs/[...path]', { path })}>{path}</a>{#if edit}<button
+			type="button"
+			class="ml-1 rounded px-1 text-xs text-muted hover:text-ink"
+			data-edit={edit.path}
+			aria-label={edit.label}
+			title={edit.label}
+			onclick={edit.open}
+			><svg
+				viewBox="0 0 16 16"
+				width="12"
+				height="12"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				aria-hidden="true"><path d="M11 2.5 13.5 5 5 13.5H2.5V11z" /></svg
+			></button
+		>{/if}
 {/snippet}
 
 {#snippet controls()}
