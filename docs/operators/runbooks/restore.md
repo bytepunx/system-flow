@@ -1,6 +1,6 @@
 ---
 title: "Runbook: restore"
-updated: 2026-09-24
+updated: 2026-10-13
 status: active
 ---
 
@@ -35,6 +35,8 @@ From what [backup.md](backup.md) made. On another machine, or where the projects
    ```
 
    Clone it at the path it had, so that the registry and the host actions, which name it by path, still find it. A clone that survived needs none of this.
+
+   A host crash during a story's start can leave the story in progress with an empty narrative, a `story/S-0042` that names no commit, and a worktree whose files are all empty. Run `flai stream open S-0042` in the project: it repairs them and makes the branch and the worktree again. It refuses, naming the folder, when the branch holds commits and the folder holds a file with content, as that may be work. Check that the folder holds nothing you need, remove it with `rm -rf .flai-cache/worktrees/S-0042`, and run `flai stream open S-0042` again ([flai.md](../../users/flai.md#starting-a-story)).
 5. Start again and check:
 
    ```bash

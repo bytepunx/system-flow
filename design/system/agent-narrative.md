@@ -1,6 +1,6 @@
 ---
 title: Agent narrative
-updated: 2026-10-12
+updated: 2026-10-13
 status: active
 topics: [all]
 ---
@@ -155,3 +155,5 @@ A fresh agent resuming after a crash:
 5. Continue from the first next step.
 
 The measure of a good narrative is that step 5 needs no human input.
+
+A host crash during a start can leave the narrative empty, the story's branch resolving to no commit, and its worktree a folder git does not know whose files are all empty (I-0137). Run the start again with `flai stream open S-nnnn`, since the story is in progress already: an empty narrative, or one holding only whitespace, is written afresh from the template, and the branch and worktree are made again. A narrative with any content is kept, and a worktree folder that may hold work is refused, naming it ([flai-cli.md](flai-cli.md#commands), S-0375).
