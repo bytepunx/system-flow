@@ -6,7 +6,7 @@ title: "flai check finds `markdown.MD012` outside the story at close-out"
 status: backlog
 owner: alex
 created: 2026-10-12T16:52:58Z
-updated: 2026-10-13T17:03:51Z
+updated: 2026-10-13T17:16:35Z
 transitions: []
 tags: [flai, narrative, issues]
 topics: [markdown, narrative, planning]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-13T16:45:11Z
 forecast:
   duration: 20m
-  delivery: 2026-10-13T18:44:00Z
-  basis: "Its own forecast of 20m; 11th in the pull order with an in-progress limit of 5, behind S-0356, S-0375, S-0377, S-0379, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372 and S-0374."
+  delivery: 2026-10-13T18:51:00Z
+  basis: "Its own forecast of 20m; 10th in the pull order with an in-progress limit of 5, behind S-0356, S-0377, S-0379, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372 and S-0374."
   by: flai
-  at: 2026-10-13T17:03:51Z
+  at: 2026-10-13T17:16:35Z
 finalized:
   by: orchestrator
   at: 2026-10-13T16:45:39Z

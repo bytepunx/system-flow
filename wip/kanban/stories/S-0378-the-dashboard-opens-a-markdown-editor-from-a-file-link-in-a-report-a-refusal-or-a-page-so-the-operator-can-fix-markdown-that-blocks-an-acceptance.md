@@ -6,7 +6,7 @@ title: The dashboard opens a markdown editor from a file link in a report, a ref
 status: backlog
 owner: alex
 created: 2026-10-12T17:07:24Z
-updated: 2026-10-13T17:03:51Z
+updated: 2026-10-13T17:16:35Z
 transitions: []
 tags: [dashboard, cli]
 topics: [markdown]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-13T16:58:49Z
 forecast:
   duration: 1h45m
-  delivery: 2026-10-13T20:34:00Z
-  basis: "Its own forecast of 1h45m; 12th in the pull order with an in-progress limit of 5, behind S-0356, S-0375, S-0377, S-0379, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372, S-0374 and S-0376."
+  delivery: 2026-10-13T20:36:00Z
+  basis: "Its own forecast of 1h45m; 11th in the pull order with an in-progress limit of 5, behind S-0356, S-0377, S-0379, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372, S-0374 and S-0376."
   by: flai
-  at: 2026-10-13T17:03:51Z
+  at: 2026-10-13T17:16:35Z
 ---
 # S-0378 The dashboard opens a markdown editor from a file link in a report, a refusal, or a page, so the operator can fix markdown that blocks an acceptance
 
