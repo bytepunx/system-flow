@@ -6,7 +6,7 @@ title: flai stream sync replays a story's revert of its own change over an ident
 status: backlog
 owner: alex
 created: 2026-10-12T16:52:47Z
-updated: 2026-10-13T02:56:22Z
+updated: 2026-10-13T02:56:46Z
 transitions: []
 tags: [cli]
 topics: [cli]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-12T17:16:59Z
 forecast:
   duration: 45m
-  delivery: 2026-10-13T03:57:00Z
-  basis: "Its own forecast of 45m; 8th in the pull order with an in-progress limit of 5, behind S-0356, S-0357, S-0241, S-0304, S-0305, S-0306, S-0355 and S-0358."
+  delivery: 2026-10-13T03:58:00Z
+  basis: "Its own forecast of 45m; 8th in the pull order with an in-progress limit of 5, behind S-0356, S-0355, S-0357, S-0241, S-0304, S-0305, S-0306 and S-0358."
   by: flai
-  at: 2026-10-13T02:56:22Z
+  at: 2026-10-13T02:56:46Z
 ---
 # S-0371 flai stream sync replays a story's revert of its own change over an identical change on main, undoing main's
 

@@ -3,12 +3,18 @@ id: S-0355
 type: story
 nature: feature
 title: A harness that cannot run the guard or hold a call to ask runs a story's agent but none of its roles, unless the host sets guard none for it, and each refusal names what lifts it
-status: backlog
+status: in-progress
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:48:54Z
-updated: 2026-10-13T02:56:22Z
-transitions: []
+updated: 2026-10-13T02:56:50Z
+transitions:
+  - to: ready
+    at: 2026-10-13T02:56:43Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-13T02:56:50Z
+    by: agent-S-0355
 tags: [cli, dashboard]
 topics: [agents]
 touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
@@ -24,10 +30,10 @@ cost_of_delay:
   at: 2026-10-08T09:00:31Z
 forecast:
   duration: 34m
-  delivery: 2026-10-13T03:41:00Z
-  basis: "Its own forecast of 34m; 6th in the pull order with an in-progress limit of 5, behind S-0356, S-0357, S-0241, S-0304, S-0305 and S-0306."
+  delivery: 2026-10-13T03:37:00Z
+  basis: "Its own forecast of 34m; 1st in the pull order with an in-progress limit of 5, behind S-0356."
   by: flai
-  at: 2026-10-13T02:56:22Z
+  at: 2026-10-13T02:56:46Z
 finalized:
   by: alex
   at: 2026-10-08T08:52:24Z
