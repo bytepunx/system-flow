@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -157,12 +158,70 @@ func checkAutoRestarts(n int) error {
 	return nil
 }
 
-// HarnessHost is the program a harness is and the operator's arguments to it.
+// HarnessHost is the program a harness is, the operator's arguments to it,
+// and what the operator lifts on it.
 type HarnessHost struct {
 	Program string `json:"program,omitempty"`
 	// Args replace the adapter's defaults when set, even to an empty list;
 	// nil leaves them.
 	Args *[]string `json:"args,omitempty"`
+	// Guard GuardNone is the operator taking the risk that a story's
+	// sub-agents run without flai guard on a harness that cannot run it
+	// (ADR-0131); empty leaves such a story refused. No other value is taken.
+	Guard string `json:"guard,omitempty"`
+	// DenyProtected is the operator's say that their arguments for the
+	// harness already deny the protected paths in the harness's own
+	// vocabulary, which flai cannot read (ADR-0131).
+	DenyProtected bool `json:"deny_protected,omitempty"`
+}
+
+// GuardNone is the one value HarnessHost.Guard takes: the harness's story
+// sub-agents run unguarded.
+const GuardNone = "none"
+
+// WithHarness returns the settings with the harness name's entry set to h,
+// refusing a guard that is not GuardNone or empty; an entry that sets
+// nothing is removed. The map is copied.
+func (a AgentStart) WithHarness(name string, h HarnessHost) (AgentStart, error) {
+	if err := checkGuard(name, h.Guard); err != nil {
+		return a, err
+	}
+	next := maps.Clone(a.Harnesses)
+	if next == nil {
+		next = map[string]HarnessHost{}
+	}
+	if h == (HarnessHost{}) {
+		delete(next, name)
+	} else {
+		next[name] = h
+	}
+	if len(next) == 0 {
+		next = nil
+	}
+	a.Harnesses = next
+	return a, nil
+}
+
+// checkHarnesses refuses a harness entry whose guard checkGuard refuses.
+func checkHarnesses(harnesses map[string]HarnessHost) error {
+	var errs []string
+	for _, name := range slices.Sorted(maps.Keys(harnesses)) {
+		if err := checkGuard(name, harnesses[name].Guard); err != nil {
+			errs = append(errs, err.Error())
+		}
+	}
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "; "))
+	}
+	return nil
+}
+
+// checkGuard refuses a harness's guard that is neither GuardNone nor empty.
+func checkGuard(name, guard string) error {
+	if guard == "" || guard == GuardNone {
+		return nil
+	}
+	return fmt.Errorf("agent.harnesses.%s.guard is %q: the only guard flai takes is %q, which lets a story's sub-agents run unguarded on a harness that cannot run flai guard (ADR-0131); set it with flai serve agent harness %s --guard none, or clear it with --guard \"\"", name, guard, GuardNone, name)
 }
 
 // ChecksConfig is the operator's say about running checks for a story in
@@ -314,8 +373,8 @@ func Load(path string) (cfg Config, created bool, err error) {
 }
 
 // Parse decodes JSON into a Config, rejecting unknown keys, a negative
-// agent.auto_restarts, and an agent.providers entry that is not whole or sets
-// a value flai refuses.
+// agent.auto_restarts, an agent.harnesses guard other than none, and an
+// agent.providers entry that is not whole or sets a value flai refuses.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -328,14 +387,21 @@ func Parse(data []byte) (Config, error) {
 			return Config{}, err
 		}
 	}
+	if err := checkHarnesses(cfg.Agent.Harnesses); err != nil {
+		return Config{}, err
+	}
 	if err := checkProviders(cfg.Agent.Providers); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
 }
 
-// Save writes cfg to path atomically, creating parent directories.
+// Save writes cfg to path atomically, creating parent directories. It
+// refuses an agent.harnesses guard other than none, which Load would refuse.
 func Save(path string, cfg Config) error {
+	if err := checkHarnesses(cfg.Agent.Harnesses); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("create config dir: %w", err)
 	}

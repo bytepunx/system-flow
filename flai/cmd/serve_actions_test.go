@@ -337,6 +337,86 @@ func TestServeAgentHarness(t *testing.T) {
 	}
 }
 
+// S-0355 (ADR-0131): a harness's guard none and deny_protected are set and
+// cleared on the host, the command's among them, each flag changing only its
+// own field; --reset clears both; the command's program stays flai serve agent
+// set's; and a guard other than none is refused, naming what sets it.
+func TestServeAgentHarnessGuardAndDenyProtected(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	harnesses := func() map[string]config.HarnessHost {
+		cfg, _, err := (&app{}).loadConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Agent.Harnesses
+	}
+	runIn(t, root, "serve", "agent", "set", "--", "run-agent", "{story}")
+	out, errOut, code := runIn(t, root, "serve", "agent", "harness", "command", "--guard", "none")
+	if code != 0 || !strings.Contains(out, "harness command: the command above\n  guard: none, so a story's sub-agents run without flai guard") {
+		t.Fatalf("guard none on the command: %d %s %s", code, out, errOut)
+	}
+	out, _, _ = runIn(t, root, "serve", "agent", "harness", "command", "--deny-protected")
+	if got := harnesses()["command"]; got != (config.HarnessHost{Guard: config.GuardNone, DenyProtected: true}) {
+		t.Errorf("--deny-protected keeps the guard: %+v", got)
+	}
+	if !strings.Contains(out, "  deny_protected: your arguments deny the protected paths") {
+		t.Errorf("show says deny_protected: %s", out)
+	}
+	if got := (&app{}).agentConfig(root).Harnesses["command"]; got.Program != "run-agent" || strings.Join(got.Args, " ") != "{story}" {
+		t.Errorf("the command's program is still flai serve agent set's: %+v", got)
+	}
+	out, _, _ = runIn(t, root, "serve", "agent", "show", "--json")
+	var shown struct {
+		Harnesses map[string]struct {
+			Program       string
+			Args          []string
+			Guard         string `json:"guard"`
+			DenyProtected bool   `json:"deny_protected"`
+		} `json:"harnesses"`
+	}
+	if err := json.Unmarshal([]byte(out), &shown); err != nil {
+		t.Fatalf("show --json: %v %s", err, out)
+	}
+	if got := shown.Harnesses["command"]; got.Program != "run-agent" || strings.Join(got.Args, " ") != "{story}" || got.Guard != "none" || !got.DenyProtected {
+		t.Errorf("show --json gives the command's guard and deny_protected: %s", out)
+	}
+	runIn(t, root, "serve", "agent", "harness", "command", "--guard", "")
+	if got := harnesses()["command"]; got != (config.HarnessHost{DenyProtected: true}) {
+		t.Errorf(`--guard "" clears only the guard: %+v`, got)
+	}
+	runIn(t, root, "serve", "agent", "harness", "command", "--deny-protected=false")
+	if _, ok := harnesses()["command"]; ok {
+		t.Errorf("an entry that lifts nothing is removed: %+v", harnesses())
+	}
+	// on claude-code, beside its program; --reset clears both
+	runIn(t, root, "serve", "agent", "harness", "claude-code", "--program", "/opt/claude")
+	runIn(t, root, "serve", "agent", "harness", "claude-code", "--guard", "none", "--deny-protected")
+	if got := harnesses()["claude-code"]; got.Program != "/opt/claude" || got.Guard != config.GuardNone || !got.DenyProtected {
+		t.Errorf("guard and deny_protected keep the program: %+v", got)
+	}
+	runIn(t, root, "serve", "agent", "harness", "command", "--guard", "none")
+	runIn(t, root, "serve", "agent", "harness", "command", "--reset")
+	runIn(t, root, "serve", "agent", "harness", "claude-code", "--reset")
+	if got := harnesses(); got != nil {
+		t.Errorf("--reset clears guard and deny_protected: %+v", got)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "agent", "harness", "claude-code", "--guard", "off"); code == 0 || !strings.Contains(errOut, `flai serve agent harness claude-code --guard none, or clear it with --guard`) {
+		t.Errorf("a guard other than none is refused, naming what sets it: %d %s", code, errOut)
+	}
+	for _, bad := range [][]string{{"command", "--program", "x"}, {"command", "--", "x"}, {"command", "--reset", "--guard", "none"}, {"--guard", "none"}, {"--deny-protected"}} {
+		if _, _, code := runIn(t, root, append([]string{"serve", "agent", "harness"}, bad...)...); code == 0 {
+			t.Errorf("%q was taken", bad)
+		}
+	}
+	if _, errOut, _ := runIn(t, root, "serve", "agent", "harness", "command", "--program", "x"); !strings.Contains(errOut, "flai serve agent set") {
+		t.Errorf("the command's program points at flai serve agent set: %s", errOut)
+	}
+	if got := harnesses(); got != nil {
+		t.Errorf("a refusal changes nothing: %+v", got)
+	}
+}
+
 // S-0349 (ADR-0129): a provider's entry is the operator's, set, shown,
 // changed field by field, and removed on the host; a new entry is whole, a
 // refused value changes nothing, clear keeps the providers, and nothing the

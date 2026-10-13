@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-12
+updated: 2026-10-13
 status: active
 ---
 
@@ -2491,7 +2491,7 @@ Subcommands:
 
 - [clear](#flai-serve-agent-clear): Remove the command and the name; the harnesses, the providers, and the restart limit stay
 - [commit](#flai-serve-agent-commit): Start an agent to commit what a story in review left uncommitted in its worktree
-- [harness](#flai-serve-agent-harness): Set the program a harness is and the arguments that say what its agent may do
+- [harness](#flai-serve-agent-harness): Set the program a harness is, the arguments that say what its agent may do, and what you lift on it
 - [provider](#flai-serve-agent-provider): Set where the model calls of a story's agent that names a provider go: its API, its URL, and the variable that holds its key
 - [restart](#flai-serve-agent-restart): Start a new agent for a story in ready or in progress whose agent dropped or failed, or that has none here
 - [set](#flai-serve-agent-set): Set the command, as an argument list after --, the name, or how many times a story's agent is restarted on its own
@@ -2529,13 +2529,19 @@ flai serve agent commit S-0140
 
 ##### flai serve agent harness
 
-Set the program a harness is and the arguments that say what its agent may do.
+Set the program a harness is, the arguments that say what its agent may do, and what you lift on it.
 
 ```text
-flai serve agent harness [<name>] [--program <path>] [--reset] [-- args...] [flags]
+flai serve agent harness [<name>] [--program <path>] [--guard none|""] [--deny-protected=true|false] [--reset] [-- args...] [flags]
 ```
 
-A story names its harness, such as claude-code; you say here what that is on this host. --program is what is run, and the arguments after -- replace the adapter's defaults, which say what the agent may do (for claude-code: --permission-mode acceptEdits --allowedTools Bash,mcp\_\_flai). "--" with nothing after it runs it with none. --reset goes back to the defaults. With no name, every harness is shown.
+A story names its harness, such as claude-code; you say here what that is on this host. --program is what is run, and the arguments after -- replace the adapter's defaults, which say what the agent may do (for claude-code: --permission-mode acceptEdits --allowedTools Bash,mcp\_\_flai). "--" with nothing after it runs it with none. --reset goes back to the defaults and clears --guard and --deny-protected. With no name, every harness is shown.
+
+On a harness that cannot run flai guard, a story whose agent has roles is refused (ADR-0131). --guard none lifts that: the story's sub-agents run unguarded, so a sub-agent could move items, write threads, or commit, which only the story's agent should. --guard "" puts the refusal back; no other value is taken.
+
+On a harness that cannot ask before a protected write, a start is refused unless the project's auto-approve host action is on. --deny-protected says that your arguments for the harness already deny the protected paths in its own vocabulary, which flai cannot read, so flai starts the agent on a harness that cannot ask before a protected write; --deny-protected=false takes it back.
+
+The command harness takes only --guard, --deny-protected, and --reset: its program and arguments are set with flai serve agent set.
 
 Examples:
 
@@ -2544,14 +2550,20 @@ flai serve agent harness
 flai serve agent harness claude-code --program /opt/claude/bin/claude
 flai serve agent harness claude-code -- --permission-mode acceptEdits --allowedTools Bash,Edit,mcp__flai
 flai serve agent harness claude-code --reset
+flai serve agent harness command --guard none
+flai serve agent harness command --guard ""
+flai serve agent harness command --deny-protected
+flai serve agent harness command --deny-protected=false
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--deny-protected` | your arguments for the harness deny the protected paths, so flai starts the agent on a harness that cannot ask before a protected write |
+| `--guard` string | none lets a story's sub-agents run unguarded on a harness that cannot run flai guard; "" puts the refusal back |
 | `--program` string | the program the harness is on this host |
-| `--reset` | go back to the adapter's program and arguments |
+| `--reset` | go back to the adapter's program and arguments, and lift nothing |
 
 ##### flai serve agent provider
 

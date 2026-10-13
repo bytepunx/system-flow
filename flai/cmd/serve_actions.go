@@ -416,9 +416,22 @@ func (a *app) showAgentCommand() error {
 		if cmd == nil {
 			cmd = []string{}
 		}
-		hosts := map[string]harness.Host{}
+		type shown struct {
+			harness.Host
+			Guard         string `json:"guard,omitempty"`
+			DenyProtected bool   `json:"deny_protected,omitempty"`
+		}
+		hosts := map[string]shown{}
 		for _, name := range settable() {
-			hosts[name] = a.harnessHost(cfg, name)
+			set := cfg.Agent.Harnesses[name]
+			hosts[name] = shown{a.harnessHost(cfg, name), set.Guard, set.DenyProtected}
+		}
+		if set, ok := cfg.Agent.Harnesses[harness.Command]; ok {
+			var h harness.Host
+			if len(cfg.Agent.Command) > 0 {
+				h = harness.Host{Program: cfg.Agent.Command[0], Args: cfg.Agent.Command[1:]}
+			}
+			hosts[harness.Command] = shown{h, set.Guard, set.DenyProtected}
 		}
 		return a.printJSON(map[string]any{"command": cmd, "name": cfg.Agent.Name, "harnesses": hosts, "auto_restarts": cfg.Agent.AutoRestartLimit(), "enabled_here": enabled})
 	}
@@ -427,9 +440,14 @@ func (a *app) showAgentCommand() error {
 	} else {
 		fmt.Fprintf(a.out, "command: %s\n  run as it stands, in the project's directory, never through a shell\n", quoteArgs(cfg.Agent.Command))
 	}
+	if set, ok := cfg.Agent.Harnesses[harness.Command]; ok {
+		fmt.Fprintf(a.out, "harness %s: the command above\n", harness.Command)
+		printLifts(a, set)
+	}
 	for _, name := range settable() {
 		h := a.harnessHost(cfg, name)
 		fmt.Fprintf(a.out, "harness %s: %s\n", name, quoteArgs(append([]string{h.Program}, h.Args...)))
+		printLifts(a, cfg.Agent.Harnesses[name])
 	}
 	fmt.Fprintf(a.out, "automatic restarts: %s\n  of a story's agent that ends with its story in progress; set with --auto-restarts\n", autoRestartsSaid(cfg.Agent))
 	if here != "" {
@@ -440,6 +458,17 @@ func (a *app) showAgentCommand() error {
 		}
 	}
 	return nil
+}
+
+// printLifts prints what the operator lifts on a harness, under its line in
+// show: guard none and deny_protected, each with what it gives up (ADR-0131).
+func printLifts(a *app, set config.HarnessHost) {
+	if set.Guard == config.GuardNone {
+		fmt.Fprintln(a.out, "  guard: none, so a story's sub-agents run without flai guard where the harness cannot run it, and could move items, write threads, or commit")
+	}
+	if set.DenyProtected {
+		fmt.Fprintln(a.out, "  deny_protected: your arguments deny the protected paths, so flai starts the agent where the harness cannot ask before a protected write")
+	}
 }
 
 // autoRestartsSaid is the restart limit as show prints it: the count, and
@@ -688,33 +717,58 @@ func quoteArgs(args []string) string {
 }
 
 // flai serve agent harness: the operator's program and arguments for a
-// harness a story may name (S-0104). Arguments after -- replace the
-// adapter's defaults, even with none; --reset goes back to the defaults.
+// harness a story may name (S-0104), and what they lift on it (ADR-0131).
+// Arguments after -- replace the adapter's defaults, even with none; --guard
+// and --deny-protected change only themselves; --reset goes back to the
+// defaults and lifts nothing. The command takes only --guard,
+// --deny-protected, and --reset: its program is flai serve agent set's.
 func newServeAgentHarnessCmd(a *app) *cobra.Command {
-	var program string
-	var reset bool
+	var program, guard string
+	var reset, denyProtected bool
 	c := &cobra.Command{
-		Use:   "harness [<name>] [--program <path>] [--reset] [-- args...]",
-		Short: "Set the program a harness is and the arguments that say what its agent may do",
+		Use:   "harness [<name>] [--program <path>] [--guard none|\"\"] [--deny-protected=true|false] [--reset] [-- args...]",
+		Short: "Set the program a harness is, the arguments that say what its agent may do, and what you lift on it",
 		Long: `A story names its harness, such as claude-code; you say here what that is on
 this host. --program is what is run, and the arguments after -- replace the
 adapter's defaults, which say what the agent may do (for claude-code:
 --permission-mode acceptEdits --allowedTools Bash,mcp__flai). "--" with
-nothing after it runs it with none. --reset goes back to the defaults. With
-no name, every harness is shown.`,
+nothing after it runs it with none. --reset goes back to the defaults and
+clears --guard and --deny-protected. With no name, every harness is shown.
+
+On a harness that cannot run flai guard, a story whose agent has roles is
+refused (ADR-0131). --guard none lifts that: the story's sub-agents run
+unguarded, so a sub-agent could move items, write threads, or commit, which
+only the story's agent should. --guard "" puts the refusal back; no other
+value is taken.
+
+On a harness that cannot ask before a protected write, a start is refused
+unless the project's auto-approve host action is on. --deny-protected says
+that your arguments for the harness already deny the protected paths in its
+own vocabulary, which flai cannot read, so flai starts the agent on a harness
+that cannot ask before a protected write; --deny-protected=false takes it
+back.
+
+The command harness takes only --guard, --deny-protected, and --reset: its
+program and arguments are set with flai serve agent set.`,
 		Example: `  flai serve agent harness
   flai serve agent harness claude-code --program /opt/claude/bin/claude
   flai serve agent harness claude-code -- --permission-mode acceptEdits --allowedTools Bash,Edit,mcp__flai
-  flai serve agent harness claude-code --reset`,
+  flai serve agent harness claude-code --reset
+  flai serve agent harness command --guard none
+  flai serve agent harness command --guard ""
+  flai serve agent harness command --deny-protected
+  flai serve agent harness command --deny-protected=false`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			guardSet, denySet := cmd.Flags().Changed("guard"), cmd.Flags().Changed("deny-protected")
 			dash := cmd.ArgsLenAtDash()
 			names, rest := args, []string(nil)
 			if dash >= 0 {
 				names, rest = args[:dash], args[dash:]
 			}
+			known := append(settable(), harness.Command)
 			if len(names) == 0 {
-				if dash >= 0 || program != "" || reset {
-					return fmt.Errorf("name the harness: %s", strings.Join(settable(), ", "))
+				if dash >= 0 || program != "" || reset || guardSet || denySet {
+					return fmt.Errorf("name the harness: %s", strings.Join(known, ", "))
 				}
 				return a.showAgentCommand()
 			}
@@ -722,21 +776,21 @@ no name, every harness is shown.`,
 				return fmt.Errorf("one harness at a time; arguments for it go after --")
 			}
 			name := names[0]
-			if !slices.Contains(settable(), name) {
-				return fmt.Errorf("there is no harness %q to set; there are: %s (the command is set with flai serve agent set)", name, strings.Join(settable(), ", "))
+			if !slices.Contains(known, name) {
+				return fmt.Errorf("there is no harness %q to set; there are: %s", name, strings.Join(known, ", "))
+			}
+			if name == harness.Command && (program != "" || dash >= 0) {
+				return fmt.Errorf("the command's program and arguments are set with flai serve agent set -- <program> [args...]; flai serve agent harness command takes only --guard, --deny-protected, and --reset")
+			}
+			if reset && (program != "" || dash >= 0 || guardSet || denySet) {
+				return fmt.Errorf("--reset takes neither --program, --guard, --deny-protected, nor arguments")
 			}
 			cfg, path, err := a.loadConfig()
 			if err != nil {
 				return err
 			}
-			if cfg.Agent.Harnesses == nil {
-				cfg.Agent.Harnesses = map[string]config.HarnessHost{}
-			}
 			h := cfg.Agent.Harnesses[name]
 			if reset {
-				if program != "" || dash >= 0 {
-					return fmt.Errorf("--reset takes neither --program nor arguments")
-				}
 				h = config.HarnessHost{}
 			}
 			if program != "" {
@@ -746,10 +800,14 @@ no name, every harness is shown.`,
 				list := append([]string{}, rest...)
 				h.Args = &list
 			}
-			if h.Program == "" && h.Args == nil {
-				delete(cfg.Agent.Harnesses, name)
-			} else {
-				cfg.Agent.Harnesses[name] = h
+			if guardSet {
+				h.Guard = guard
+			}
+			if denySet {
+				h.DenyProtected = denyProtected
+			}
+			if cfg.Agent, err = cfg.Agent.WithHarness(name, h); err != nil {
+				return err
 			}
 			if err := config.Save(path, cfg); err != nil {
 				return err
@@ -758,7 +816,9 @@ no name, every harness is shown.`,
 		},
 	}
 	c.Flags().StringVar(&program, "program", "", "the program the harness is on this host")
-	c.Flags().BoolVar(&reset, "reset", false, "go back to the adapter's program and arguments")
+	c.Flags().StringVar(&guard, "guard", "", `none lets a story's sub-agents run unguarded on a harness that cannot run flai guard; "" puts the refusal back`)
+	c.Flags().BoolVar(&denyProtected, "deny-protected", false, "your arguments for the harness deny the protected paths, so flai starts the agent on a harness that cannot ask before a protected write")
+	c.Flags().BoolVar(&reset, "reset", false, "go back to the adapter's program and arguments, and lift nothing")
 	return c
 }
 

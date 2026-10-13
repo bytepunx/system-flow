@@ -316,6 +316,59 @@ func TestAgentProviders(t *testing.T) {
 	}
 }
 
+// S-0355 (ADR-0131): a harness's guard none and deny_protected round-trip
+// through a save and a load, an entry that sets nothing is removed, and a
+// guard other than none is refused when set, saved, and loaded, saying what
+// sets it.
+func TestHarnessGuardAndDenyProtected(t *testing.T) {
+	c := Default()
+	agent, err := c.Agent.WithHarness("command", HarnessHost{Guard: GuardNone, DenyProtected: true})
+	if err != nil {
+		t.Fatalf("guard none: %v", err)
+	}
+	if c.Agent.Harnesses != nil {
+		t.Errorf("WithHarness copies the map: %+v", c.Agent.Harnesses)
+	}
+	c.Agent = agent
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, c); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := back.Agent.Harnesses["command"]; got != (HarnessHost{Guard: GuardNone, DenyProtected: true}) {
+		t.Errorf("round trip: %+v", back.Agent.Harnesses)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"guard": "none"`) || !strings.Contains(string(data), `"deny_protected": true`) {
+		t.Errorf("written as agent.harnesses.command.guard and deny_protected: %s", data)
+	}
+	if cleared, err := back.Agent.WithHarness("command", HarnessHost{}); err != nil || cleared.Harnesses != nil {
+		t.Errorf("an entry that sets nothing is removed: %+v %v", cleared.Harnesses, err)
+	}
+	want := `agent.harnesses.claude-code.guard is "off"`
+	how := `flai serve agent harness claude-code --guard none, or clear it with --guard ""`
+	if _, err := back.Agent.WithHarness("claude-code", HarnessHost{Guard: "off"}); err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), how) {
+		t.Errorf("a guard other than none is refused when set, saying what sets it: %v", err)
+	}
+	if _, err := Parse([]byte(`{"agent":{"harnesses":{"claude-code":{"guard":"off"}}}}`)); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("a guard other than none in the file is refused on load: %v", err)
+	}
+	bad := back
+	bad.Agent.Harnesses = map[string]HarnessHost{"claude-code": {Guard: "off"}}
+	if err := Save(path, bad); err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("a guard other than none is refused on save: %v", err)
+	}
+	if again, _, err := Load(path); err != nil || again.Agent.Harnesses["command"].Guard != GuardNone {
+		t.Errorf("a refused save leaves the file: %+v %v", again.Agent.Harnesses, err)
+	}
+}
+
 // S-0082: checks round-trips as a list of named argument lists, and, like
 // agent, stays out of Keys() and unreachable by flai config set.
 func TestChecksRoundTrip(t *testing.T) {

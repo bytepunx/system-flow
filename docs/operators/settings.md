@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-12
+updated: 2026-10-13
 status: active
 ---
 
@@ -52,6 +52,8 @@ Keys only the `flai serve` commands on the host change, or the dashboard's Setti
 | `agent.attended_minutes` | `6` | `flai serve agent set --attended-minutes` | How recent a sign of someone attending must be, and how long it holds a ready story back |
 | `agent.harnesses.<name>.program` | the harness's own program, `claude` for `claude-code` | `flai serve agent harness <name> --program` | The binary a harness runs on this host |
 | `agent.harnesses.<name>.args` | the adapter's, `--permission-mode acceptEdits --allowedTools Bash,mcp__flai` for `claude-code` | `flai serve agent harness <name> -- ...`, `--reset` | What an agent that harness starts may do |
+| `agent.harnesses.<name>.guard` | empty: on a harness that cannot run `flai guard`, a story whose agent has roles is refused | `flai serve agent harness <name> --guard none`, `--guard ""`, `--reset`; the `command` harness takes it too | `none` is your taking the risk that a story's sub-agents run unguarded on that harness, where a sub-agent could move items, write threads, or commit; no other value is taken ([ADR-0131](../../design/adrs/0131-a-harness-without-a-guard-hook-runs-a-story-s-agent-but-none-of-its-roles.md)) |
+| `agent.harnesses.<name>.deny_protected` | `false`: on a harness that cannot ask before a protected write, a start is refused unless the project's `auto-approve` is on | `flai serve agent harness <name> --deny-protected`, `--deny-protected=false`, `--reset`; the `command` harness takes it too | Your say that your arguments for that harness already deny the protected paths in its own vocabulary, which flai cannot read, so flai starts its agent ([ADR-0131](../../design/adrs/0131-a-harness-without-a-guard-hook-runs-a-story-s-agent-but-none-of-its-roles.md)) |
 | `agent.providers.<name>.api` | none: no provider is set | `flai serve agent provider <name> --api`, `--reset` | What the provider a story's agent may name speaks: `anthropic-messages`, `openai-chat`, or `openai-responses`. A new entry needs `api`, `base_url`, and `key_env`; a project may override `api`, `base_url`, and `models` under its manifest's `providers.<name>` ([ADR-0129](../../design/adrs/0129-a-story-s-agent-names-a-provider-beside-its-harness-and-model-and-the-providers.md)) |
 | `agent.providers.<name>.base_url` | none | `flai serve agent provider <name> --base-url` | Where the provider answers, an absolute `http` or `https` URL with no user or password in it |
 | `agent.providers.<name>.key_env` | none | `flai serve agent provider <name> --key-env` | The name of the environment variable on this host that holds the provider's key, which `flai serve` reads when it starts the agent. The key itself is never written to the configuration, and no flag takes it |
@@ -318,6 +320,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--current` | [flai stream state](../users/flai-reference.md#flai-stream-state) |
 | `--defaults` | [flai new](../users/flai-reference.md#flai-new) |
 | `--deliver` | [flai release](../users/flai-reference.md#flai-release) |
+| `--deny-protected` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
 | `--dir` | [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--draft` | [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--drafts` | [flai promote](../users/flai-reference.md#flai-promote) |
@@ -334,6 +337,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--fresh` | [flai verify](../users/flai-reference.md#flai-verify) |
 | `--from` | [flai checks tail](../users/flai-reference.md#flai-checks-tail), [flai message escalate](../users/flai-reference.md#flai-message-escalate), [flai message reply](../users/flai-reference.md#flai-message-reply), [flai message send](../users/flai-reference.md#flai-message-send), [flai message share](../users/flai-reference.md#flai-message-share), [flai serve agent stream](../users/flai-reference.md#flai-serve-agent-stream) |
 | `--grace-seconds` | [flai checks cancel](../users/flai-reference.md#flai-checks-cancel) |
+| `--guard` | [flai serve agent harness](../users/flai-reference.md#flai-serve-agent-harness) |
 | `--harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai guard](../users/flai-reference.md#flai-guard), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--hash` | [flai criteria tick](../users/flai-reference.md#flai-criteria-tick), [flai criteria untick](../users/flai-reference.md#flai-criteria-untick), [flai doc save](../users/flai-reference.md#flai-doc-save), [flai edit](../users/flai-reference.md#flai-edit) |
 | `--heading` | [flai doc show](../users/flai-reference.md#flai-doc-show), [flai thread new](../users/flai-reference.md#flai-thread-new) |
