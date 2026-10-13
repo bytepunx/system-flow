@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 427.4501
-accrued_seconds: 341729
-tasks_completed: 406
-last_run: 2026-10-12T17:46:07Z
+accrued_cost: 519.5367
+accrued_seconds: 396952
+tasks_completed: 424
+last_run: 2026-10-13T17:03:54Z
 ---
 
 # Orchestrator activity
@@ -2853,6 +2853,132 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0233, S-0359, S-0367
 - Seconds: 442
 - Cost: 1.0220 USD, estimated
+
+### 2026-10-13T08:35:17Z
+
+- Summary: run ended
+- Items: none
+- Seconds: 53350
+- Cost: 86.6352 USD, estimated
+
+### 2026-10-13T16:33:13Z
+
+- Summary: Run started. Under plan_backlog_stories, started the planner for S-0375, first of five stories flai plan --candidates lists (S-0375 to S-0379). Under finalize_drafts, left S-0371, S-0372, S-0374 drafts: complete per flai promote --drafts, but their plan threads TH-0420, TH-0422, TH-0424 carry my recommendations on unrecorded decisions awaiting the operator. Under promote_to_ready, S-0241 (rank 1, 2h) stays out: blocked. Nothing in review; ready column unchanged.
+- Items: S-0375
+- Seconds: 32
+- Cost: 0.2122 USD, estimated
+
+### 2026-10-13T16:37:57Z
+
+- Summary: Answered TH-0431, citing no source
+- Items: S-0375
+- Seconds: 284
+- Cost: 0.3386 USD, estimated
+
+### 2026-10-13T16:38:12Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0431, planner-S-0375's plan: durable atomic writes, an empty narrative written afresh, stream open repairs a ref and worktree holding no commits. Six tasks in three layers; figures are flai's (1h, 75 USD/week). Under finalize_drafts, finalized S-0375 (complete per flai promote --drafts). Under promote_to_ready, moved S-0375 to ready (rank 1, 1h under throughput); S-0241 (rank 2) stays out, blocked. Applied the throughput order: S-0357 (42m), S-0375 (1h). Started the planner for S-0376.
+- Items: S-0375, S-0376
+- Seconds: 15
+- Cost: 0.1656 USD, estimated
+
+### 2026-10-13T16:42:57Z
+
+- Summary: Answered TH-0432, citing no source
+- Items: S-0376
+- Seconds: 285
+- Cost: 0.3733 USD, estimated
+
+### 2026-10-13T16:43:01Z
+
+- Summary: Under plan_backlog_stories, set S-0376's cost of delay input time_lost_per_cycle 10m, planner-S-0376's recommended figure on TH-0432 (no reason given for its 5m or 15m alternatives), and resolved TH-0432. The planner works out the value.
+- Items: S-0376
+- Seconds: 4
+- Cost: 0.0295 USD, estimated
+
+### 2026-10-13T16:45:34Z
+
+- Summary: Answered TH-0433, citing no source
+- Items: S-0376
+- Seconds: 153
+- Cost: 0.4355 USD, estimated
+
+### 2026-10-13T16:45:44Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0433, planner-S-0376's plan: stream answer and archive leave no double blank lines in a narrative. Four tasks in three layers; figures are flai's (20m, 25 USD/week). Under finalize_drafts, finalized S-0376 (complete per flai promote --drafts). It is not promoted: held on overlap with S-0375 (narrative.go). S-0241 stays out, blocked. Started the planner for S-0377.
+- Items: S-0376, S-0377
+- Seconds: 10
+- Cost: 0.1022 USD, estimated
+
+### 2026-10-13T16:48:31Z
+
+- Summary: Recommended an answer on TH-0429, citing design/system/agent-adapters.md § Claude Code over a gateway
+- Items: S-0356
+- Seconds: 167
+- Cost: 0.3946 USD, estimated
+
+### 2026-10-13T16:48:34Z
+
+- Summary: Under answer_threads autonomous, posted a recommendation on TH-0429 (S-0356), escalating to the operator: confirm the agent's plan to route LiteLLM's unified route to a free OpenRouter model and make the /anthropic pass-through opt-in. It changes criteria 1 and 4, a change of scope, so it is the operator's decision. Source: agent-adapters.md § Claude Code over a gateway.
+- Items: S-0356
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-13T16:48:58Z
+
+- Summary: Answered TH-0434, citing no source
+- Items: S-0377
+- Seconds: 24
+- Cost: 0.1204 USD, estimated
+
+### 2026-10-13T16:49:13Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0434, planner-S-0377's plan: an OS file lock in a new flai/internal/filelock replaces the three age-broken lock files (T-1512's two extra writers share I-0140's cause, so no change of scope). Four tasks in three layers; figures are flai's (1h, 37.50 USD/week). Under finalize_drafts, finalized S-0377. Under promote_to_ready, moved S-0377 to ready (rank 1, 1h under throughput); S-0241 (rank 2) stays out, blocked. Applied the throughput order: S-0357 (42m), S-0377 (1h). Started the planner for S-0378.
+- Items: S-0377, S-0378
+- Seconds: 15
+- Cost: 0.2148 USD, estimated
+
+### 2026-10-13T16:49:38Z
+
+- Summary: Answered TH-0435, citing no source
+- Items: S-0378
+- Seconds: 25
+- Cost: 0.2634 USD, estimated
+
+### 2026-10-13T16:49:40Z
+
+- Summary: Under plan_backlog_stories, set S-0378's cost of delay input penalty_per_week 25 USD, planner-S-0378's recommended figure on TH-0435 (no reason given for its 10m time-lost or 50 penalty alternatives), and resolved TH-0435. The planner works out the value.
+- Items: S-0378
+- Seconds: 2
+- Cost: 0.0445 USD, estimated
+
+### 2026-10-13T16:59:18Z
+
+- Summary: Recommended an answer on TH-0436, citing design/adrs/0023-documents-are-saved-through-flai.md § Decision
+- Items: S-0378
+- Seconds: 578
+- Cost: 1.4833 USD, estimated
+
+### 2026-10-13T16:59:23Z
+
+- Summary: Under plan_backlog_stories, recommended approval on TH-0436 (planner-S-0378's plan) and left it open for the operator. The plan saves dashboard edits on a story's branch through a new ADR refining ADR-0023, and gives flai accept --json a new exit code 4, both decisions not yet recorded. Figures: 1h45m (flai's 1h24m raised with reason), 25 USD/week. S-0378 stays a draft. Started the planner for S-0379, the last story flai plan --candidates lists.
+- Items: S-0378, S-0379
+- Seconds: 5
+- Cost: 0.0980 USD, estimated
+
+### 2026-10-13T17:03:40Z
+
+- Summary: Answered TH-0437, citing design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md § Decision
+- Items: S-0379
+- Seconds: 257
+- Cost: 0.9598 USD, estimated
+
+### 2026-10-13T17:03:54Z
+
+- Summary: Under plan_backlog_stories, approved and resolved TH-0437, planner-S-0379's plan: the release lists cache each signed release's verdict, installs still verify from the network (ADR-0070 unchanged). Four tasks in four layers; figures are flai's (40m, 12.50 USD/week). Under finalize_drafts, finalized S-0379. Under promote_to_ready, moved S-0379 to ready (rank 1, 40m under throughput); S-0241 (rank 2) stays out, blocked. Applied the throughput order: S-0379 (40m), S-0357 (42m). All five plan candidates are now planned.
+- Items: S-0379
+- Seconds: 14
+- Cost: 0.2157 USD, estimated
 
 ## Refusals
 

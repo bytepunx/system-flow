@@ -19,7 +19,7 @@ topics: [cli, agents]
 touches: [flai/internal/harness, flai/internal/serve, flai/internal/guard, flai/internal/usage, flai/internal/mcpserver/permission.go, flai/internal/protected/protected.go, flai/internal/manifest/agent.go, flai/internal/hostapi/settings.go, design/system/metrics.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md]
 usage:
   source: sum
-  seconds: 21953
+  seconds: 22249
   turns:
     - day: 2026-10-12
       ceremony: 27
@@ -28,25 +28,25 @@ usage:
     - day: 2026-10-13
       ceremony: 1
       hand_edits: 2
-      work: 37
+      work: 44
   models:
     - model: claude-opus-5-5
-      input: 2738
-      output: 1021829
-      cache_read: 161927586
-      cache_write: 5772186
-      cost: 88.7545
+      input: 2754
+      output: 1029464
+      cache_read: 163986455
+      cache_write: 6058751
+      cost: 91.6116
   strategic:
     - kind: orchestrator
-      seconds: 868
+      seconds: 1035
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 156
-          output: 1979
-          cache_read: 33841454
-          cache_write: 134536
-          cost: 8.4735
+          input: 178
+          output: 2327
+          cache_read: 35390471
+          cache_write: 150490
+          cost: 8.8681
         - model: claude-sonnet-5-5
           input: 17
           output: 90
