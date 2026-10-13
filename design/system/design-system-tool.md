@@ -279,3 +279,105 @@ Not now. They need the project's Svelte compiler and Tailwind build over its sou
 ### Recommendation
 
 Option 1, a same-origin blank frame the page fills: the gallery compiled with the dashboard against the fixed vocabulary, its stylesheet built apart and written into the frame, the project's tokens as `--ds-*` values in one `<style>`, light and dark as two panels. It is isolated completely, adds nothing to the container, and follows a change with no compile. If the `?inline` stylesheet does not hold, use a route outside the root layout instead. Option 3 is the later way to preview markup the vocabulary cannot express, and option 4 the way to preview the project's own components, only if the operator asks for that.
+
+## Working on it together
+
+The operator decides the design system; agents propose changes and apply them. Each way of working is weighed for how a decision is reviewed, recorded, and undone, what is new to build, and how it fits the board.
+
+### Options
+
+| Option | Reviewed | Recorded | Undone | New to build | Fit with the board |
+|--------|----------|----------|--------|--------------|--------------------|
+| 1. The operator edits tokens on the Design page, the preview following each change, and saves through `doc.save` on main | By the operator as they type, with contrast beside each token; no second reader | A commit of the document on main, as every dashboard save is ([ADR-0023](../adrs/0023-documents-are-saved-through-flai.md)) | Another save, or a revert of the commit | A token editor and a front matter round trip on the page (S-0383); the stylesheet written with the save (below) | Outside it: no story, no WIP slot, no close-out |
+| 2. A proposal is a story whose branch changes the document; the Design page previews the branch's tokens beside main's, and the operator tweaks them on the branch | On the Design page beside main's, then on the review page's diff (`stream.diff`) | The story, its narrative, its branch's commits, its acceptance | Before acceptance, send it back or cancel it; after, another story or a revert | Reading the document from a story's worktree and listing open proposals (S-0384); saving on the branch is S-0378's | It is the board: claims, WIP limit, close-out, acceptance |
+| 3. A thread on a heading of the document | In the thread | Under `wip/threads`, anchored to the document and heading | Resolve it | Nothing in flai; the Design page reuses the document page's threads | Beside it: no agent is started for it (below) |
+| 4. Draft variants outside git, under `.flai-cache` or `wip/`, which the operator switches between | On the page only | Under `.flai-cache`, on one host and in no history; under `wip/`, a new kind of file with its own schema and check | Delete the variant | A store, host methods to read and write it, a picker, and a way to promote a variant to the document | None: a variant is no item, and prime does not give it to an agent |
+
+- **S-0378**, in progress on `story/S-0378`, gives option 2 its reads and writes. `flai doc show` and `flai doc save` take `--story`: the file resolves in the story's worktree, the check runs there, and the save commits that one path on the story's branch; a wip path, or a story with no worktree, is refused (T-1514). The dashboard's `/api/docs/edit` and `PUT /api/docs/file` pass `story` (T-1517), the editor opens on a story's branch (T-1518), and T-1521 records it as an ADR refining ADR-0023. Option 2 depends on S-0378's acceptance. A story's worktree exists while it is open, so the operator tweaks a proposal while it is in progress or in review.
+- **The stylesheet goes with every token save.** `doc.save` refuses any finding the new content introduces, on any path (`flai/internal/docedit/docedit.go`). S-0385 as drafted adds `design.stale`, a finding when the stylesheet differs from the tokens. A token save that leaves the stylesheet as it was introduces it, so every save from the Design page, on main or on a branch, would be refused. So whenever flai writes the document's tokens, it writes the stylesheet the manifest names in the same commit, and `design.stale` is left to hand edits. On main that is a file of a sub-project changed by a dashboard save, outside any story: a new kind of write, for the ADR that refines ADR-0023.
+- **Threads.** `thread.new` takes a document and a heading (`flai/internal/hostapi/writes.go`), and `/docs/<path>` shows a document's threads with a composer per heading (`Threads.svelte`, [ADR-0020](../adrs/0020-files-plus-mcp.md)). Every agent's inbox counts such a thread as awaiting it while the last entry is not its own (`flai/internal/inbox/inbox.go`). But flai serve starts agents for stories, and restarts a story's agent only for a thread on that story (`asking` in `flai/internal/serve/agents.go`). The orchestrator answers threads while its permission is on, and edits no file. A thread on the document discusses and records; it does not get the document changed. A thread on a proposal story reaches that story's agent.
+- **Variants.** Option 1 already lets the operator try values without saving. Keeping the unsaved values in the browser across a reload gives most of what a store would, with nothing on the host.
+
+### Asking for a change from the page
+
+A form on the Design page makes a story as the board's new-item form does: `item.new` with a title, a body, `topics`, and `touches`, made in backlog and moved to ready (`flaiover/src/lib/components/NewItemForm.svelte`, `movesTo` in `flaiover/src/lib/lanes.ts`). The form writes the goal from the operator's words and fixed criteria: the tokens as asked, the stylesheet in step, the UI's tests passing. Its touches are the document and the stylesheet, and it may carry the values the operator tried on the page as a YAML block in the body, for the agent to start from.
+
+The story meets the definition of ready as made: a goal, criteria as checkboxes, an open epic if it has one, and not a draft (`work-management.md`). It needs no finalizing. `draft` marks a story an agent wrote ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)), and `finalized` records who took a draft on ([ADR-0077](../adrs/0077-a-story-that-was-a-draft-records-who-finalized-it-and-when-and-the-dashboard.md)); the operator wrote this one. A design story the planner drafts waits for the operator's finalize, as any draft does.
+
+### Two changes at once
+
+A design story claims the document's path, and a second ready story that claims it is held until the first is accepted ([ADR-0046](../adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)). That is right for one shared document, where two branches editing the same YAML conflict line by line. Two gaps remain:
+
+- A story that widens its touches to the document while open holds only ready stories, never an open one. Two open branches can then change the document, and `flai stream sync`'s trial merge reports the conflict to both in their conversation.
+- The stylesheet lies inside the UI sub-project. A story that claims the sub-project by name overlaps every design story, since a sub-project's path is a prefix of the stylesheet's, so design stories and UI stories wait on each other. Narrow touches on both sides keep them apart.
+
+### Tokens and guidance
+
+| | A token change | A guidance change |
+|-|----------------|-------------------|
+| What changes | Front matter values, and the stylesheet with them | The body's prose |
+| Seen before saving | On the gallery | In the editor's preview |
+| Reviewed | Beside main's on the Design page, and in the diff | In the diff |
+| Reaches code | At once, through the stylesheet | Through the agents that read it |
+| Saved | On main or on a proposal's branch (§ Recommendation) | On main through the editor, as any document, or on a story's branch |
+
+### Recommendation
+
+Options 1, 2, and 3; not 4.
+
+- **1, for the operator's own decisions.** Try freely; save to main, flai writing the stylesheet with the tokens. It is the shortest path from a decision to the code, and the operator reviews every change on this board anyway. Its cost is a code file changed on main without a story's close-out. If every code change must pass through a story, token saves go on a proposal's branch instead, and option 1 is for trying, not saving: a choice for the operator.
+- **2, for what an agent proposes or applies**, and for a change the operator asks for from the form. Review, history, and undo stay the board's.
+- **3, for discussion.** The Design page lists the document's threads by heading and opens one on a heading. A request that needs an agent becomes a story, which the thread names.
+- **Not 4.** Option 1's unsaved edits give what it would, and a store outside git is lost to history and unseen by agents.
+
+## How agents build from it
+
+An agent building UI needs the token names and the guidance on when to use each, more than the values. It should get them without being told, and its code should not drift from the document.
+
+### Options
+
+| Option | What the agent gets | What it needs | Cost | What it leaves open |
+|--------|---------------------|---------------|------|---------------------|
+| 1. Prime: the document's topics name the UI sub-project | A brief, title, first paragraph, and outline, with no tokens (§ Today); the whole file, front matter included, when the story names it | For the whole file on every UI story, a link in each story, or a rule in prime | The tokens are a few KB; with the guidance, likely under an eighth of the budget, 10 KB at 80 KB, which [ADR-0050](../adrs/0050-a-document-a-story-names-only-by-its-path-written-out-is-briefed-when-it-is.md) loads whole (an estimate) | A link depends on whoever writes the story |
+| 2. A baseline convention, `design-system.md` | The rules: token utilities only, no raw colour or size, change the tokens on the branch rather than hard-code | A template file, and a rule that gives it only where a design system exists | One short convention in each UI story's pack | Advice; only the verifier holds an agent to it |
+| 3. A stylesheet flai writes from the tokens, which the manifest names, and `design.stale` when it falls behind | Utilities for the tokens and no others of the project's: `bg-primary` exists, a colour outside the tokens has none | S-0385 | Small | Arbitrary values such as `bg-[#3b82f6]` still compile |
+| 4. A lint that flags raw values in components | A finding on each arbitrary value or hex in `.svelte` and `.css` outside the generated file | A scanner of sub-project code, which `flai check` does not read today, or a rule in the project's own linter declared in the manifest's `tests` | Medium; false positives on layout values such as `grid-cols-[...]`, SVG, and chart palettes such as flaiover's `palette.ts` | Nothing 2 and 3 leave, at a price |
+
+- **Which stories.** The document's `topics` already say which stories it reaches (§ Today). S-0386 as drafted adds a record of the sub-projects the document governs, written by `flai design init --project`. That is a second list beside `topics`, and the two can disagree. Use the topics.
+- **The whole document.** Prime loads the design system document whole for every story its topics reach, as if the story named it, and briefs it above ADR-0050's threshold, where the convention tells the agent to read it with `doc_get`. A rule the agent must remember to follow is the failure the operator reports.
+- **The convention, where it applies.** A baseline convention ships with `topics: [all]` ([conventions.md § Topics](conventions.md#topics)) and cannot name a project's UI. Prime gives `design-system.md` to exactly the stories the document reaches, and leaves it out where the project has no design system document. Its `roles` are `[story, verify]` ([ADR-0068](../adrs/0068-a-convention-s-roles-list-every-agent-that-reads-it-the-story-s-agent-included.md)), so that the verifier checks a UI diff against it.
+- **What the convention says.** Build UI from the token utilities. No arbitrary value or hex for colour, type, spacing, radius, or shadow, and no colour in a `style` attribute. When the UI needs a value the tokens lack, change the document on the story's branch, widen the touches to it and the stylesheet, run `flai design css --write`, and say why in the guidance; the operator sees it on the Design page before accepting. Ask on a thread first when the change alters what a role means.
+- **On a proposal's branch.** The agent edits the tokens, runs `flai design css --write`, and commits both. A forgotten write stops its close-out, provided `design.stale` names the document as well as the stylesheet: the close-out's check, scoped to the story, prints a finding on a file the story did not change as a note and goes on (`work-management.md`), so a branch that changed only the document would pass.
+- **On main.** flai writes the stylesheet with every token save, and branches stop at close-out, so `design.stale` appears on main only after a hand edit there. The generated file should be whole, imported by the UI's own stylesheet, so that no hand-written CSS sits in it. How it selects the dark values, by a media query, a class, or an attribute as the project's `dark:` variant does, is S-0385's to settle.
+- **The lint, later.** Option 3 removes most reasons for a raw value, and option 2 with the verifier catches the rest at review. Add a lint when `design/issues` shows raw values getting through, as a rule in the project's own linter rather than in flai, which reads no code today.
+
+### Recommendation
+
+Option 3 first, then 1 and 2 together; 4 deferred. The stylesheet makes the tokens the easy path and catches drift; prime then gives each UI story the whole document and the convention, chosen by one list, the document's topics. Build order: the stylesheet with S-0385, before the Design page saves anything; prime and the convention with S-0386, without its record of governed sub-projects.
+
+## Recommendation
+
+Build in this order:
+
+1. **The document and its check** ([Where a project keeps its design system](#where-a-project-keeps-its-design-system)): `design/system/design-system.md`, tokens in its front matter, `design.tokens`, `flai design init`, `show`, and `css`, and `design.get`. S-0381.
+2. **The stylesheet** ([How agents build from it](#how-agents-build-from-it)): `design.stylesheet`, `flai design css --write`, `design.stale` naming the document and the stylesheet, and flai writing the stylesheet whenever it writes the tokens. S-0385, before S-0383, whose save depends on it.
+3. **The Design group and its preview** ([Previewing it live](#previewing-it-live-without-building-the-project)): a blank same-origin frame the page fills, the gallery against the fixed vocabulary, the tokens as `--ds-*` values. S-0382.
+4. **Editing on the page** ([Working on it together](#working-on-it-together), option 1): the preview follows before saving, and the save writes the document and the stylesheet. S-0383.
+5. **Proposals and threads** (options 2 and 3): the branch's tokens beside main's, the open proposals listed, the request form, the document's threads on the page. S-0384, after S-0378 is accepted.
+6. **Agents' use** ([How agents build from it](#how-agents-build-from-it)): prime loads the document whole and gives the convention to the stories its topics reach; the baseline convention in the template and here. S-0386, without the governed sub-projects.
+7. **Not now:** a store of variants, the project's own components, the browser build of Tailwind, and a lint of raw values.
+
+What it does to the current ADRs: [ADR-0023](../adrs/0023-documents-are-saved-through-flai.md) is refined again, beyond S-0378's refinement, for a save that writes the stylesheet with the document. [ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md) and ADR-0050 are refined for the design system document loaded whole by topics. [ADR-0029](../adrs/0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md), ADR-0046, and ADR-0074 stand.
+
+Questions only the operator can answer, each with the recommended answer first:
+
+1. **Format and name.** Tokens in the front matter of `design/system/design-system.md`, guidance in its body; or a fenced block in the body, a DTCG file, or the UI's stylesheet as the source.
+2. **Colour syntax.** Six-digit hex and `oklch()`; or hex only; or any CSS colour, which flai cannot always compute contrast for.
+3. **Roles.** The fixed set of colour roles the gallery is written against, extras allowed; or free names, which the gallery cannot style.
+4. **Contrast.** Reported on the Design page and by `flai design`, not a check finding; or a finding, which refuses a save while the operator tries a colour.
+5. **Scope.** One design system per project, a document per UI sub-project later; or one per UI sub-project now.
+6. **Fonts.** System stacks, and Google Fonts loaded into the preview by family name only when the document asks; or system stacks only.
+7. **Preview isolation.** A blank same-origin frame the page fills, a route outside the root layout as the fallback; or the browser build of Tailwind; or the project's own build on the host.
+8. **Where the operator's token save lands.** On main, flai writing the stylesheet in the same commit; or only on a proposal's branch, so that every code change passes a story.
+9. **Working together.** Edits on the page, proposals as stories, and threads on the document; or those and a store of variants.
+10. **Agents' use.** The generated stylesheet with `design.stale`, the document whole and the convention for the stories its topics reach, the lint deferred; or briefs and the convention only; or the lint now.
