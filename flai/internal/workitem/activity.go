@@ -15,6 +15,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 )
 
 // The strategic agents (ADR-0075) that each keep one activity document under
@@ -495,38 +496,14 @@ func cleanActivityEntry(kind string, e ActivityEntry) (ActivityEntry, error) {
 	return e, nil
 }
 
-// activityLockAge is how old a lock on an activity document is when it is
-// taken as left behind by a flai that died holding it.
-const activityLockAge = 10 * time.Second
-
-// lockActivity takes the lock on kind's activity document, a file in
-// .flai-cache that one writer at a time creates, so that two flai processes
-// writing the document at once, such as flai serve logging an activity and
-// flai guard a refusal, do not lose each other's entry. It waits while
-// another holds the lock, and removes a lock older than activityLockAge.
+// lockActivity takes the lock on kind's activity document, an operating
+// system lock on a file in .flai-cache, so that two flai processes writing
+// the document at once, such as flai serve logging an activity and flai
+// guard a refusal, do not lose each other's entry. It waits while another
+// holds the lock. The lock is freed when its holder exits, so none is left
+// behind and none is broken for its age.
 func (r *Repo) lockActivity(kind string) (unlock func(), err error) {
-	path := filepath.Join(r.CacheDir(), "activity-"+kind+".lock")
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return nil, err
-	}
-	for {
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-		if err == nil {
-			if err := f.Close(); err != nil {
-				_ = os.Remove(path)
-				return nil, err
-			}
-			return func() { _ = os.Remove(path) }, nil
-		}
-		if !errors.Is(err, os.ErrExist) {
-			return nil, err
-		}
-		if st, err := os.Stat(path); err == nil && time.Since(st.ModTime()) > activityLockAge {
-			_ = os.Remove(path)
-			continue
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	return filelock.Lock(filepath.Join(r.CacheDir(), "activity-"+kind+".lock"), 0)
 }
 
 func unknownActivityKind(kind string) error {

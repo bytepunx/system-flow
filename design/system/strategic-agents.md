@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-12
+updated: 2026-10-13
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -460,7 +460,7 @@ A call a permission would allow is refused while that permission is off, and the
 
 Thread calls are held by who opened the thread as well (S-0220). On a thread it opened, the orchestrator follows up and resolves whatever its permissions, but never recommends or answers its own question. On another's, it replies only as `answer_threads` allows, and never resolves it, save a thread a story's planner opened while `plan_backlog_stories` is on, which it may answer and resolve. It never confirms a recommendation, which is the operator's alone, and never writes as another (`--by`). The guard reads who opened a thread from the thread itself, and takes a thread it cannot read as another's ([Answering threads](#answering-threads-s-0220)). The MCP tool `plan` and `flai plan`, asked by the orchestrator, are also checked in flai (`orchestratorPlans`): the item must be an epic `flai plan --candidates` lists, with `plan_backlog_epics` on, or a story it lists, with `plan_backlog_stories` on ([What it does with each permission](#what-it-does-with-each-permission-s-0219)). The orchestrator is journalled as who asked. The `plan` host action must be on as well, since the planner is started as `serve.Plan` starts any. Every other agent `flai serve` started is still refused the tool.
 
-Each refusal of the orchestrator's own call is appended to `wip/agents/orchestrator.md` under `## Refusals`, after `## Log`, by `Repo.AppendRefusal`: a heading with the time to the second, `- Call:` with the call refused in one code span, and `- Needs:` with the permission, or `none`. A refusal has no seconds or cost and adds nothing to the document's totals. A refusal that cannot be logged is warned of and refused all the same. Each writer of an activity document takes a lock per activity kind in `.flai-cache`, so that flai serve logging a run and the guard logging a refusal at the same time do not lose each other's entry; a lock older than ten seconds is taken as left behind.
+Each refusal of the orchestrator's own call is appended to `wip/agents/orchestrator.md` under `## Refusals`, after `## Log`, by `Repo.AppendRefusal`: a heading with the time to the second, `- Call:` with the call refused in one code span, and `- Needs:` with the permission, or `none`. A refusal has no seconds or cost and adds nothing to the document's totals. A refusal that cannot be logged is warned of and refused all the same. Each writer of an activity document takes a lock per activity kind in `.flai-cache`, so that flai serve logging a run and the guard logging a refusal at the same time do not lose each other's entry. The lock is an operating-system lock on the file, freed when the writer exits, so no lock is left behind and none is broken for its age (I-0140).
 
 `.claude/settings.json` runs the guard on `Edit|MultiEdit|Write|NotebookEdit` when `FLAI_ROLE` is `plan`, `orchestrate`, or `analyze` ([The guard](#the-guard)).
 

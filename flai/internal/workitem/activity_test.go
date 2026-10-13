@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 )
 
@@ -235,9 +236,10 @@ func TestReadActivityRefusalsAreStrict(t *testing.T) {
 	}
 }
 
-// S-0218: writers of one activity document take turns under its lock, so
-// none loses another's entry, and a lock left behind by a flai that died is
-// taken over once it is old.
+// S-0218, I-0140: writers of one activity document take turns under its
+// lock, so none loses another's entry; the lock file a flai that died left
+// behind neither stops nor splits them, whatever its age, and the lock is
+// free once they are done.
 func TestActivityWritersTakeTurns(t *testing.T) {
 	r := newProject(t)
 	lock := filepath.Join(r.CacheDir(), "activity-orchestrator.lock")
@@ -245,10 +247,6 @@ func TestActivityWritersTakeTurns(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(lock, nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	old := time.Now().Add(-time.Minute)
-	if err := os.Chtimes(lock, old, old); err != nil {
 		t.Fatal(err)
 	}
 	var wg sync.WaitGroup
@@ -275,9 +273,11 @@ func TestActivityWritersTakeTurns(t *testing.T) {
 	if len(a.Entries) != 6 || len(a.Refusals) != 6 || a.TasksCompleted != 6 || a.AccruedSeconds != 6 {
 		t.Errorf("an entry was lost: %d entries, %d refusals, %+v", len(a.Entries), len(a.Refusals), a)
 	}
-	if _, err := os.Stat(lock); !os.IsNotExist(err) {
-		t.Errorf("the lock is left behind: %v", err)
+	unlock, err := filelock.Lock(lock, 100*time.Millisecond)
+	if err != nil {
+		t.Fatalf("the lock is left held: %v", err)
 	}
+	unlock()
 }
 
 func TestActivityMissingIsEmpty(t *testing.T) {
