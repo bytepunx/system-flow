@@ -439,7 +439,8 @@ func TestGuardRecordsASessionsSubAgents(t *testing.T) {
 	if _, errOut, code := runStdin(t, root, strings.Replace(subAgentHook("SubagentStart", "c3", "x"), `"s1"`, `"../s1"`, 1), "guard"); code != 0 || errOut != "" {
 		t.Errorf("unsafe session: code %d, stderr %q", code, errOut)
 	}
-	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+	// s1's lock file stays once freed (S-0377); nothing else is written
+	if entries, _ := os.ReadDir(dir); len(entries) != 1 || entries[0].Name() != "s1.json.lock" {
 		t.Errorf("unsafe session recorded: %v", entries)
 	}
 	// outside a project it warns and fails open

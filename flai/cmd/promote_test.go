@@ -10,13 +10,19 @@ import (
 	"testing"
 )
 
-// treeOf reads every file under root, by its path.
+// treeOf reads every file under root, by its path, but the lock files in
+// .flai-cache: an OS file lock's file stays once it is freed (S-0377), and is
+// not the board.
 func treeOf(t *testing.T, root string) map[string]string {
 	t.Helper()
+	cache := filepath.Join(root, ".flai-cache") + string(filepath.Separator)
 	out := map[string]string{}
 	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
+		}
+		if strings.HasPrefix(p, cache) && strings.HasSuffix(p, ".lock") {
+			return nil
 		}
 		data, err := os.ReadFile(p)
 		out[p] = string(data)
