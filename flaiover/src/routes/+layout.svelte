@@ -12,6 +12,7 @@
 	import { projectState } from '$lib/project.svelte';
 	import ProjectSwitcher from '$lib/components/ProjectSwitcher.svelte';
 	import ImportPrompt from '$lib/components/ImportPrompt.svelte';
+	import EditorDialog from '$lib/components/EditorDialog.svelte';
 	import { page } from '$app/state';
 
 	let { children } = $props();
@@ -95,4 +96,6 @@
 			{/if}
 		{/key}
 	</main>
+	<!-- The document editor over any page: links open it with openEditor (S-0378). -->
+	{#if page.url.pathname !== '/login'}<EditorDialog />{/if}
 </div>

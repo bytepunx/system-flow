@@ -26,10 +26,16 @@ const json = (body: unknown, status = 200) => ({
 });
 
 type Reply = ReturnType<typeof json>;
-/** Route the mocked api by URL and method; `put` answers the save. */
-function backend(doc: Record<string, unknown>, put?: () => Reply, items: unknown[] = []) {
+/** Route the mocked api by URL and method; `put` answers the save, `lint` the lint of what is sent. */
+function backend(
+	doc: Record<string, unknown>,
+	put?: () => Reply,
+	items: unknown[] = [],
+	lint: (content: string) => Reply = () => json({ findings: [] })
+) {
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
 		if (init?.method === 'PUT') return put ? put() : json({});
+		if (url.startsWith('/api/docs/lint')) return lint(JSON.parse(init!.body!).content);
 		if (url.startsWith('/api/docs/edit')) return json(doc);
 		if (url.startsWith('/api/items')) return json(items);
 		if (url.startsWith('/api/threads')) return json([]);
@@ -244,5 +250,110 @@ describe('DocEditor', () => {
 		// the Threads composer is open with that heading selected
 		const select = document.querySelector('select') as HTMLSelectElement | null;
 		expect(select?.value).toBe('Shape');
+	});
+
+	it('opens with the caret at the start of the line it is given', async () => {
+		backend({ path: 'design/system/plan.md', content: DOC, hash: 'h1', mode: 'full' });
+		c = mount(DocEditor, {
+			target: document.body,
+			props: { path: 'design/system/plan.md', line: 8 } // file line 8 is "## Shape"
+		});
+		await settle();
+		const box = bodyBox();
+		expect(document.activeElement).toBe(box);
+		expect(box.selectionStart).toBe(box.value.indexOf('## Shape'));
+		expect(box.selectionEnd).toBe(box.selectionStart);
+	});
+
+	it('lists the lint findings of the text as loaded and as edited, and goes to one on a click', async () => {
+		const lints: string[] = [];
+		backend(
+			{ path: 'design/system/plan.md', content: DOC, hash: 'h1', mode: 'full' },
+			undefined,
+			[],
+			(content) => {
+				lints.push(content);
+				return json({
+					path: 'design/system/plan.md',
+					findings: content.includes('better')
+						? []
+						: [
+								{
+									line: 8,
+									rule: 'MD022',
+									alias: 'blanks-around-headings',
+									message: 'Headings should be surrounded by blank lines'
+								}
+							]
+				});
+			}
+		);
+		c = mount(DocEditor, { target: document.body, props: { path: 'design/system/plan.md' } });
+		await settle();
+		const panel = () => document.querySelector('[data-testid="doc-editor-lint"]')!;
+		expect(panel().textContent).toContain('subset of the markdownlint rules');
+		expect(panel().textContent).toContain('markdown tier decides at acceptance');
+		expect(panel().textContent).toContain('line 8');
+		expect(panel().textContent).toContain('MD022/blanks-around-headings');
+		expect(panel().textContent).toContain('surrounded by blank lines');
+		expect(lints).toEqual([DOC]);
+
+		panel().querySelector('button')!.click();
+		await settle();
+		const box = bodyBox();
+		expect(document.activeElement).toBe(box);
+		expect(box.selectionStart).toBe(box.value.indexOf('## Shape'));
+
+		type(box, box.value.replace('text', 'better text'));
+		await settle();
+		expect(lints).toHaveLength(1); // a pause in typing comes first
+		await new Promise((r) => setTimeout(r, 450));
+		await settle();
+		expect(lints.at(-1)).toBe(DOC.replace('text', 'better text'));
+		expect(panel().textContent).toContain('No findings');
+	});
+
+	it('shows no lint at all when the host flai has no doc.lint', async () => {
+		backend(
+			{ path: 'design/system/plan.md', content: DOC, hash: 'h1', mode: 'full' },
+			undefined,
+			[],
+			() => json({ error: 'the host flai lacks doc.lint' }, 501)
+		);
+		c = mount(DocEditor, { target: document.body, props: { path: 'design/system/plan.md' } });
+		await settle();
+		expect(api.mock.calls.some((call) => String(call[0]).startsWith('/api/docs/lint'))).toBe(true);
+		expect(document.querySelector('[data-testid="doc-editor-lint"]')).toBeNull();
+		expect(document.body.textContent).not.toContain('lacks doc.lint');
+	});
+
+	it('reads and saves on the story branch it is given, and says so', async () => {
+		backend({ path: 'docs/users/flai.md', content: DOC, hash: 'h1', mode: 'full' }, () =>
+			json({ hash: 'h2', committed: true, commit: 'abc1234' })
+		);
+		const onsaved = vi.fn();
+		c = mount(DocEditor, {
+			target: document.body,
+			props: { path: 'docs/users/flai.md', story: 'S-0378', onsaved }
+		});
+		await settle();
+		const gets = () =>
+			api.mock.calls.map((call) => String(call[0])).filter((u) => u.startsWith('/api/docs/edit'));
+		expect(gets()).toEqual(['/api/docs/edit?path=docs%2Fusers%2Fflai.md&story=S-0378']);
+		expect(document.querySelector('[data-testid="doc-editor-branch"]')?.textContent).toContain(
+			'story/S-0378'
+		);
+		type(bodyBox(), bodyBox().value + 'fixed\n');
+		saveButton().click();
+		await settle();
+		expect(sent()).toMatchObject({ path: 'docs/users/flai.md', hash: 'h1', story: 'S-0378' });
+		expect(gets()).toHaveLength(2);
+		expect(gets()[1]).toContain('&story=S-0378');
+		expect(onsaved).toHaveBeenCalledWith({
+			path: 'docs/users/flai.md',
+			hash: 'h2',
+			commit: 'abc1234',
+			committed: true
+		});
 	});
 });

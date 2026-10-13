@@ -52,3 +52,41 @@ export function headingsOf(body: string): string[] {
 	}
 	return out;
 }
+
+/** The offset of the start of a 1-based line of text, clamped to the first and the last line. */
+export function offsetOfLine(text: string, line: number): number {
+	let offset = 0;
+	for (let n = 1; n < line; n++) {
+		const next = text.indexOf('\n', offset);
+		if (next < 0) break;
+		offset = next + 1;
+	}
+	return offset;
+}
+
+/** The 1-based line of text that holds an offset. */
+export function lineAt(text: string, offset: number): number {
+	let line = 1;
+	const end = Math.min(Math.max(offset, 0), text.length);
+	for (let i = 0; i < end; i++) if (text[i] === '\n') line++;
+	return line;
+}
+
+/** Where a line of the whole file falls in the editor: in the front matter, or in the body, as a 1-based line of that part. */
+export type Located = { part: 'frontMatter' | 'body'; line: number };
+
+/**
+ * A 1-based line of the file, as a link or a lint finding names it, located in
+ * the parts splitRaw makes: the opening and closing --- lines count as the
+ * front matter's first and last line.
+ */
+export function locate(frontMatter: string | null, fileLine: number): Located {
+	if (frontMatter === null) return { part: 'body', line: Math.max(fileLine, 1) };
+	const fmLines = lineAt(frontMatter, frontMatter.length) - (frontMatter.endsWith('\n') ? 1 : 0);
+	if (fileLine <= fmLines + 2)
+		return { part: 'frontMatter', line: Math.min(Math.max(fileLine - 1, 1), Math.max(fmLines, 1)) };
+	return { part: 'body', line: fileLine - fmLines - 2 };
+}
+
+/** What a save that flai accepted answers, for whoever opened the editor. */
+export type Saved = { path: string; hash?: string; commit?: string; committed?: boolean };

@@ -1,13 +1,23 @@
 <script lang="ts">
 	// Editor for one document (ADR-0023, S-0040). flai decides what may be
 	// edited and whether a save is accepted; this component shows the text,
-	// a preview with the explorer's renderer, and what flai answered.
+	// a preview with the explorer's renderer, and what flai answered. It opens
+	// at a line, saves on a story's branch when given one, and lists flai's
+	// markdown lint findings as the text is edited (S-0378).
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
-	import { tick } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import { themeState } from '$lib/theme.svelte';
 	import { render, enhance } from '$lib/markdown';
-	import { compose, headingAt, headingsOf, splitRaw } from '$lib/edit';
+	import {
+		compose,
+		headingAt,
+		headingsOf,
+		locate,
+		offsetOfLine,
+		splitRaw,
+		type Saved
+	} from '$lib/edit';
 	import { touching, type Worker } from '$lib/touches';
 	import Threads from '$lib/components/Threads.svelte';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
@@ -21,8 +31,24 @@
 	};
 	type Finding = { level: string; rule: string; path: string; line: number; message: string };
 	type Conflict = { current: string; hash: string; diff?: string };
+	type LintFinding = { line: number; rule: string; alias?: string; message: string };
 
-	let { path, ondirty }: { path: string; ondirty?: (dirty: boolean) => void } = $props();
+	let {
+		path,
+		line,
+		story,
+		ondirty,
+		onsaved
+	}: {
+		path: string;
+		/** The 1-based line of the file to put the caret on once it is loaded. */
+		line?: number;
+		/** The story whose branch (story/S-nnnn) the document is read from and saved on. */
+		story?: string;
+		ondirty?: (dirty: boolean) => void;
+		/** Called after flai accepted a save. */
+		onsaved?: (saved: Saved) => void;
+	} = $props();
 
 	let doc = $state<Doc | null>(null);
 	let frontMatter = $state<string | null>(null);
@@ -39,6 +65,13 @@
 	let threadHeading = $state<string | undefined>(undefined);
 	let html = $state('');
 	let preview: HTMLElement | undefined = $state();
+	let bodyBox: HTMLTextAreaElement | undefined = $state();
+	let frontMatterBox: HTMLTextAreaElement | undefined = $state();
+	let lint = $state<LintFinding[]>([]);
+	let lintError = $state<string | null>(null);
+	// The host's flai answered 501: it has no doc.lint, so the editor shows no findings.
+	let lintMissing = $state(false);
+	let lintRun = 0;
 
 	const content = $derived(compose(frontMatter, body));
 	const dirty = $derived(doc !== null && content !== doc.content);
@@ -56,26 +89,102 @@
 		findings = [];
 	}
 
-	async function load(target: string) {
+	const editUrl = (target: string, on?: string) =>
+		`/api/docs/edit?path=${encodeURIComponent(target)}` +
+		(on ? `&story=${encodeURIComponent(on)}` : '');
+
+	async function load(target: string, on?: string, at?: number) {
 		error = notice = null;
 		doc = null;
 		try {
-			const r = await api(`/api/docs/edit?path=${encodeURIComponent(target)}`);
+			const r = await api(editUrl(target, on));
 			const data = await r.json();
 			if (!r.ok) throw new Error(data.error ?? r.statusText);
 			adopt(data);
+			if (at) await goTo(at);
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		}
 	}
 
+	/** Put the caret at the start of a line of the file and scroll it into view. */
+	async function goTo(fileLine: number) {
+		await tick();
+		if (!doc) return;
+		const spot = locate(frontMatter, fileLine);
+		// Front matter flai owns is shown read-only, not in a box: its lines go to the body's first.
+		const inFrontMatter = spot.part === 'frontMatter' && !!frontMatterBox;
+		const box = inFrontMatter ? frontMatterBox : bodyBox;
+		if (!box) return;
+		const lineNo = spot.part === 'body' || inFrontMatter ? spot.line : 1;
+		const at = offsetOfLine(inFrontMatter ? (frontMatter ?? '') : body, lineNo);
+		box.focus();
+		box.setSelectionRange(at, at);
+		// A textarea does not scroll to a caret set from code: estimate from the line height, a third
+		// of the way down. Wrapped long lines above it make this land a little short.
+		const height = parseFloat(getComputedStyle(box).lineHeight) || 20;
+		box.scrollTop = Math.max(0, (lineNo - 1) * height - box.clientHeight / 3);
+		box.scrollIntoView?.({ block: 'nearest' });
+		if (!inFrontMatter) caretHeading = headingAt(body, at);
+	}
+
 	$effect(() => {
 		const target = path;
+		const on = story;
 		acknowledged = false;
-		void load(target);
+		void load(
+			target,
+			on,
+			untrack(() => line)
+		);
 		api('/api/items?archived=false')
 			.then(async (r) => (workers = r.ok ? await r.json() : []))
 			.catch(() => (workers = []));
+	});
+
+	// A new line for the document already open moves the caret there.
+	$effect(() => {
+		const at = line;
+		if (at && untrack(() => doc)) void goTo(at);
+	});
+
+	// flai's markdown lint of the text as it is: at once for the text as loaded, and a pause after
+	// typing stops otherwise. The newest answer wins.
+	$effect(() => {
+		const text = content;
+		const loaded = doc;
+		if (!loaded || loaded.mode === 'none' || lintMissing || !loaded.path.endsWith('.md')) return;
+		const run = ++lintRun;
+		const timer = setTimeout(
+			async () => {
+				try {
+					const r = await api('/api/docs/lint', {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ path: loaded.path, content: text })
+					});
+					if (run !== lintRun) return;
+					if (r.status === 501) {
+						lintMissing = true;
+						lint = [];
+						return;
+					}
+					const data = await r.json().catch(() => ({}));
+					if (run !== lintRun) return;
+					if (!r.ok) {
+						lintError = `Could not lint: ${data.error ?? r.statusText}`;
+						return;
+					}
+					lint = data.findings ?? [];
+					lintError = null;
+				} catch (e) {
+					if (run === lintRun)
+						lintError = `Could not lint: ${e instanceof Error ? e.message : String(e)}`;
+				}
+			},
+			text === loaded.content ? 0 : 400
+		);
+		return () => clearTimeout(timer);
 	});
 
 	// Preview with the explorer's renderer, a beat after typing stops.
@@ -103,7 +212,8 @@
 					path: doc.path,
 					content,
 					hash: overHash ?? doc.hash,
-					message: message || undefined
+					message: message || undefined,
+					story
 				})
 			});
 			const data = await r.json().catch(() => ({}));
@@ -124,9 +234,16 @@
 							? `Saved, but not committed: ${String(data.commit_error).split('\n')[0]}`
 							: 'Saved. Not committed: this project leaves dashboard edits uncommitted, or it is not a git repository.';
 				message = '';
+				const saved: Saved = {
+					path: doc.path,
+					hash: data.hash,
+					commit: data.commit,
+					committed: data.committed
+				};
 				// flai may have set the updated date; take what is on disk now.
-				const fresh = await api(`/api/docs/edit?path=${encodeURIComponent(doc.path)}`);
+				const fresh = await api(editUrl(doc.path, story));
 				if (fresh.ok) adopt(await fresh.json());
+				onsaved?.(saved);
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -160,6 +277,9 @@
 		<a class="font-mono text-sm underline" href={resolve('/docs/[...path]', { path: doc.path })}
 			>{doc.path}</a
 		>
+		{#if story}<span class="text-xs text-muted" data-testid="doc-editor-branch"
+				>saves on branch <span class="font-mono">story/{story}</span></span
+			>{/if}
 		{#if dirty}<span class="text-xs text-warn">unsaved changes</span>{/if}
 	</div>
 
@@ -201,6 +321,7 @@
 						class="h-28 w-full rounded border border-line bg-ground p-2 font-mono text-xs"
 						aria-label="Front matter (YAML)"
 						spellcheck="false"
+						bind:this={frontMatterBox}
 						bind:value={frontMatter}></textarea>
 				{/if}
 			</section>
@@ -213,6 +334,7 @@
 					class="h-[60vh] w-full rounded border border-line bg-ground p-2 font-mono text-sm"
 					aria-label="Body (markdown)"
 					spellcheck="true"
+					bind:this={bodyBox}
 					bind:value={body}
 					onkeyup={caret}
 					onclick={caret}></textarea>
@@ -228,6 +350,36 @@
 				</article>
 			</section>
 		</div>
+
+		{#if !lintMissing && doc.path.endsWith('.md')}
+			<section class="mt-3 text-xs" data-testid="doc-editor-lint" aria-live="polite">
+				<h2 class="font-medium text-muted">
+					Markdown lint: flai's subset of the markdownlint rules, with this project's configuration.
+					The markdown tier decides at acceptance.
+				</h2>
+				{#if lintError}
+					<p class="mt-1 text-muted">{lintError}</p>
+				{:else if lint.length}
+					<ul class="mt-1 max-h-40 overflow-y-auto rounded border border-line">
+						{#each lint as f, i (i)}
+							<li>
+								<button
+									type="button"
+									class="flex w-full gap-2 px-2 py-0.5 text-left font-mono hover:bg-surface"
+									title="Go to line {f.line}"
+									onclick={() => goTo(f.line)}
+									><span class="text-muted">line {f.line}</span><span class="text-warn"
+										>{f.rule}{f.alias ? `/${f.alias}` : ''}</span
+									><span class="font-sans">{f.message}</span></button
+								>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p class="mt-1 text-muted">No findings.</p>
+				{/if}
+			</section>
+		{/if}
 
 		{#if notice}
 			<DismissibleNotice
