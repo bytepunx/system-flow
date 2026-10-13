@@ -348,3 +348,108 @@ func TestStartOpensTheBranchAndWorktree(t *testing.T) {
 		t.Errorf("result: %+v", res)
 	}
 }
+
+// zeroFiles leaves every file under root at zero bytes, as the host crash of
+// I-0137 left what a story's start had written.
+func zeroFiles(t *testing.T, root string) {
+	t.Helper()
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		return os.WriteFile(p, nil, 0o644)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A host crash during a story's start (I-0137) leaves its narrative, branch
+// ref and reflog, worktree, and worktree registration as empty files. Once
+// the operator moves the story back to ready, starting it again writes the
+// narrative afresh from the template and checks a new branch out from the
+// main branch in a working worktree. Integration: it runs real git.
+func TestStartRecoversWhatACrashedStartLeft(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	gittest.Identity(t, "t", "t@t")
+	f := newFixture(t, true)
+	s := f.story(t, "One", workitem.NewOptions{}, workitem.Ready)
+	root := f.repo.Root
+	git := func(args ...string) string {
+		t.Helper()
+		out, err := (execx.System{}).Run(root, "git", args...)
+		if err != nil {
+			t.Fatal(out, err)
+		}
+		return strings.TrimSpace(out)
+	}
+	write(t, root, ".gitignore", ".flai-cache/\n")
+	git("init", "-q", "-b", "main")
+	git("add", "-A")
+	git("commit", "-q", "-m", "project")
+	mainHead := git("rev-parse", "main")
+
+	crashed, err := Start(context.Background(), f.options(s.ID, execx.System{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	gitDir := filepath.Join(root, ".git")
+	for _, p := range []string{
+		f.repo.NarrativePath(s.ID),
+		crashed.Worktree,
+		filepath.Join(gitDir, "worktrees", s.ID),
+		filepath.Join(gitDir, "refs", "heads", "story", s.ID),
+		filepath.Join(gitDir, "logs", "refs", "heads", "story", s.ID),
+	} {
+		zeroFiles(t, p)
+	}
+	if storygit.BranchExists(execx.System{}, root, crashed.Branch) {
+		t.Fatal("an empty ref should not resolve")
+	}
+	// The move to in-progress comes before the stream is opened, so the
+	// crash leaves the story in progress, and Start refuses it. The
+	// operator moves it back a column (ADR-0055) to start it again; the
+	// in-progress path, flai stream open, is covered in cmd.
+	if _, err := f.repo.Transition(f.get(t, s.ID), workitem.Ready, "alex", "the host crashed during its start (I-0137)", clock); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := Start(context.Background(), f.options(s.ID, execx.System{}))
+	if err != nil {
+		t.Fatalf("Start over a crashed start: %v", err)
+	}
+	if res.Branch != storygit.Branch(s.ID) || res.Worktree != f.repo.WorktreePath(s.ID) || res.From != storygit.FromMain {
+		t.Errorf("branch %q, worktree %q, from %q", res.Branch, res.Worktree, res.From)
+	}
+	if f.get(t, s.ID).Status != workitem.InProgress || res.Pack == nil || res.Inbox == nil {
+		t.Errorf("result: %+v", res)
+	}
+	narrative, err := os.ReadFile(f.repo.NarrativePath(s.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, section := range []string{"## Current state", "## Next steps", "## Log"} {
+		if !strings.Contains(string(narrative), section) {
+			t.Errorf("the narrative should be written afresh from the template, with %s:\n%s", section, narrative)
+		}
+	}
+	if n, err := workitem.ReadNarrative(f.repo.NarrativePath(s.ID)); err != nil || n.Agent != "agent-"+s.ID {
+		t.Errorf("narrative %+v: %v", n, err)
+	}
+	if b := git("rev-parse", res.Branch); b != mainHead {
+		t.Errorf("%s is at %s, want main's head %s", res.Branch, b, mainHead)
+	}
+	head, err := (execx.System{}).Run(res.Worktree, "git", "rev-parse", "--abbrev-ref", "HEAD")
+	if err != nil || strings.TrimSpace(head) != res.Branch {
+		t.Errorf("the worktree is on %q: %v", head, err)
+	}
+	plan, err := os.ReadFile(filepath.Join(res.Worktree, "design/system/plan.md"))
+	if err != nil || string(plan) != "---\ntitle: Plan\n---\n\n# Plan\n\n## Shape\ntext\n" {
+		t.Errorf("the worktree should hold the main branch's files: %q %v", plan, err)
+	}
+}
