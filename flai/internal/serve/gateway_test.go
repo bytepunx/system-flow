@@ -31,10 +31,11 @@ import (
 // the claude-code adapter's own arguments and a provider entry for a
 // gateway, in a scratch project with flai guard registered and auto-approve
 // on. The OpenRouter check runs only where OPENROUTER_API_KEY is set and
-// claude is on PATH; the LiteLLM check, by the proxy's unified API and by
-// its Anthropic pass-through, only where LITELLM_BASE_URL and
-// LITELLM_API_KEY are set and claude is on PATH. Each spends real money on
-// its key, capped by max_budget_usd.
+// claude is on PATH; the LiteLLM check, by the proxy's unified API and, when
+// FLAI_TEST_LITELLM_PASSTHROUGH=1, by its Anthropic pass-through, only where
+// LITELLM_BASE_URL and LITELLM_API_KEY are set and claude is on PATH. Each
+// spends on its key, capped by max_budget_usd, but the LiteLLM check's
+// default model is a free one.
 
 const (
 	// gatewayKeyEnv holds the OpenRouter key the check runs on.
@@ -76,10 +77,15 @@ const (
 	// its spend log.
 	litellmMasterEnv = "LITELLM_MASTER_KEY"
 	// litellmHaikuEnv and litellmHaikuDefault are the slug the haiku alias
-	// resolves to by the unified API; the pass-through takes it without its
-	// anthropic/ prefix, as Anthropic's own model ID.
+	// resolves to by the unified API: by default a free OpenRouter model, so
+	// the check spends nothing (TH-0429).
 	litellmHaikuEnv     = "FLAI_TEST_LITELLM_HAIKU"
-	litellmHaikuDefault = "anthropic/claude-haiku-4-5"
+	litellmHaikuDefault = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+	// litellmPassThroughEnv set to 1 runs the pass-through too: it forwards
+	// the body to Anthropic as is, so it needs the proxy's upstream Anthropic
+	// key and takes Anthropic's own model ID, litellmPassThroughHaiku.
+	litellmPassThroughEnv   = "FLAI_TEST_LITELLM_PASSTHROUGH"
+	litellmPassThroughHaiku = "claude-haiku-4-5"
 	// litellmSpendLag bounds the wait for the key's spend to count the run:
 	// the proxy writes spend in batches.
 	litellmSpendLag = 2 * time.Minute
@@ -417,15 +423,16 @@ func TestGatewayOpenRouter(t *testing.T) {
 	})
 }
 
-// S-0356: the same check through a LiteLLM proxy, by both of its routes to
-// Anthropic: its unified API, which maps the slug through the proxy's model
-// list, and its Anthropic pass-through, which forwards the body to Anthropic
-// as is and so takes Anthropic's own model ID. After each run it logs the
+// S-0356: the same check through a LiteLLM proxy: by its unified API, which
+// translates and maps the slug through the proxy's model list, and, when
+// FLAI_TEST_LITELLM_PASSTHROUGH=1, by its Anthropic pass-through, which
+// forwards the body to Anthropic as is and so takes Anthropic's own model
+// ID and the proxy's upstream Anthropic key. After each run it logs the
 // key's spend and, with the master key, the proxy's spend log rows for the
 // run and whether they carry the run's session ID.
 func TestGatewayLiteLLM(t *testing.T) {
 	if testing.Short() {
-		t.Skip("runs claude -p through a LiteLLM proxy, a paid call")
+		t.Skip("runs claude -p through a LiteLLM proxy, a call out of this host")
 	}
 	claude, claudeErr := exec.LookPath("claude")
 	if missing := gatewayMissing(os.Getenv, claudeErr, litellmBaseEnv, litellmKeyEnv); missing != "" {
@@ -437,11 +444,15 @@ func TestGatewayLiteLLM(t *testing.T) {
 	slug := envOr(litellmHaikuEnv, litellmHaikuDefault)
 	for _, c := range []struct {
 		name, route, baseURL, slug string
+		optIn                      bool
 	}{
-		{"unified", "LiteLLM (unified)", root, slug},
-		{"pass-through", "LiteLLM (Anthropic pass-through)", root + "/anthropic", strings.TrimPrefix(slug, "anthropic/")},
+		{"unified", "LiteLLM (unified)", root, slug, false},
+		{"pass-through", "LiteLLM (Anthropic pass-through)", root + "/anthropic", litellmPassThroughHaiku, true},
 	} {
 		t.Run(c.name, func(t *testing.T) {
+			if c.optIn && os.Getenv(litellmPassThroughEnv) != "1" {
+				t.Skip("the pass-through reaches only Anthropic, a paid upstream: set " + litellmPassThroughEnv + "=1 where the proxy has an Anthropic key")
+			}
 			ctx := context.Background()
 			var before litellmKeyInfo
 			var beforeErr error

@@ -13,9 +13,9 @@
 # checkout when run from a story worktree:
 #
 #   admin.env     the master key, the salt key, the Postgres password, and the
-#                 upstream ANTHROPIC_API_KEY; read by docker compose and this
-#                 script only, never exported to agents (mode 0600). Only the
-#                 master key may read /spend/logs (a virtual key gets 401), so
+#                 upstream OPENROUTER_API_KEY and ANTHROPIC_API_KEY; read by
+#                 docker compose and this script only, never exported to
+#                 agents (mode 0600). Only the master key may read /spend/logs (a virtual key gets 401), so
 #                 `spend` reads it here for whoever holds the virtual key.
 #   litellm.env   THE KEY FILE: LITELLM_BASE_URL, LITELLM_API_KEY (a virtual key
 #                 with a budget), and FLAI_TEST_LITELLM_HAIKU, as the gateway
@@ -24,15 +24,19 @@
 #                 agent flai serve starts has them. In any other shell:
 #                 . .flai-cache/litellm/litellm.env
 #   config.yaml   the proxy's model list: every Anthropic model, upstream to
-#                 Anthropic with the key in admin.env
+#                 Anthropic, and every OpenRouter model as openrouter/<slug>,
+#                 upstream to OpenRouter, each with its key in admin.env
 #   compose.yaml  the two services, bound to 127.0.0.1 only
 #
 # Inputs, on the first `up` (kept in admin.env afterwards):
-#   ANTHROPIC_API_KEY     required: the upstream key the proxy spends
+#   OPENROUTER_API_KEY    the upstream key for openrouter/<slug>; the gateway
+#                         check's default model is a free one, so it spends nothing
+#   ANTHROPIC_API_KEY     the upstream key for Anthropic's models and the
+#                         /anthropic pass-through; one of the two is required
 #   LITELLM_PORT          host port, default 4000
 #   LITELLM_IMAGE         default ghcr.io/berriai/litellm:main-stable; pin a tag
 #   LITELLM_MAX_BUDGET    the virtual key's budget in USD per 30 days, default 5
-#   LITELLM_HAIKU_MODEL   default anthropic/claude-haiku-4-5
+#   LITELLM_HAIKU_MODEL   default openrouter/nvidia/nemotron-3-super-120b-a12b:free
 #
 # POSIX sh. Needs docker with the compose plugin, curl, jq, and openssl.
 set -eu
@@ -59,21 +63,22 @@ readvar() { sed -n "s/^$1=//p" "$2" 2>/dev/null | head -n1; }
 admin() {
   mkdir -p "$DIR"
   if [ ! -f "$ADMIN" ]; then
-    [ -n "${ANTHROPIC_API_KEY:-}" ] || die "set ANTHROPIC_API_KEY, the upstream key the proxy spends, for the first up"
+    [ -n "${OPENROUTER_API_KEY:-}${ANTHROPIC_API_KEY:-}" ] || die "set OPENROUTER_API_KEY or ANTHROPIC_API_KEY, an upstream key the proxy spends, for the first up"
     ( umask 077; cat > "$ADMIN" <<EOT
 LITELLM_MASTER_KEY=sk-$(openssl rand -hex 24)
 LITELLM_SALT_KEY=sk-$(openssl rand -hex 24)
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
-ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 LITELLM_PORT=${LITELLM_PORT:-4000}
 LITELLM_IMAGE=${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-stable}
 LITELLM_MAX_BUDGET=${LITELLM_MAX_BUDGET:-5}
-LITELLM_HAIKU_MODEL=${LITELLM_HAIKU_MODEL:-anthropic/claude-haiku-4-5}
+LITELLM_HAIKU_MODEL=${LITELLM_HAIKU_MODEL:-openrouter/nvidia/nemotron-3-super-120b-a12b:free}
 EOT
     )
-    say "wrote $ADMIN (master key, salt key, database password, upstream key)"
+    say "wrote $ADMIN (master key, salt key, database password, upstream keys)"
   else
-    for v in ANTHROPIC_API_KEY LITELLM_PORT LITELLM_IMAGE LITELLM_MAX_BUDGET LITELLM_HAIKU_MODEL; do
+    for v in OPENROUTER_API_KEY ANTHROPIC_API_KEY LITELLM_PORT LITELLM_IMAGE LITELLM_MAX_BUDGET LITELLM_HAIKU_MODEL; do
       eval "val=\${$v:-}"
       if [ -n "$val" ] && [ "$val" != "$(readvar "$v" "$ADMIN")" ]; then
         tmp="$ADMIN.tmp"
@@ -108,6 +113,10 @@ model_list:
   # Any other Anthropic model, by its provider-prefixed name (ADR-0129's models map).
   - model_name: "anthropic/*"
     litellm_params: { model: "anthropic/*", api_key: os.environ/ANTHROPIC_API_KEY }
+  # Any OpenRouter model, as openrouter/<slug>, upstream to OpenRouter: its
+  # free models let the gateway check run end to end for nothing (TH-0429).
+  - model_name: "openrouter/*"
+    litellm_params: { model: "openrouter/*", api_key: os.environ/OPENROUTER_API_KEY }
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/DATABASE_URL
@@ -138,7 +147,8 @@ services:
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       LITELLM_SALT_KEY: ${LITELLM_SALT_KEY}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD}@db:5432/litellm
       STORE_MODEL_IN_DB: "False"
     volumes:
