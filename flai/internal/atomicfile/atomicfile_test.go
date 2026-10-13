@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -80,5 +81,53 @@ func TestWriteFileKeepsTheModeAndLeavesNothingBehind(t *testing.T) {
 	entries, _ := os.ReadDir(dir)
 	if len(entries) != 1 {
 		t.Errorf("left behind: %v", entries)
+	}
+}
+
+// I-0137: WriteFile writes the content and mode given, replaces what was there,
+// and leaves no temporary file; the syncs it adds for a crash cannot be
+// simulated here, only that they do not fail on a real folder.
+func TestWriteFileReplacesTheContentAndLeavesNoTemporaryFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "S-0337.md")
+	if err := WriteFile(path, []byte("first\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteFile(path, []byte("second, longer\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "second, longer\n" {
+		t.Errorf("content: got %q, want %q", data, "second, longer\n")
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Errorf("mode: got %v, want %v", info.Mode().Perm(), os.FileMode(0o600))
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "S-0337.md" {
+		t.Errorf("folder holds %v, want only S-0337.md", entries)
+	}
+}
+
+func TestSyncDirSyncsAFolderAndReportsOneThatIsMissing(t *testing.T) {
+	dir := t.TempDir()
+	if err := syncDir(dir); err != nil {
+		t.Errorf("syncing %s: %v", dir, err)
+	}
+	if runtime.GOOS == "windows" {
+		return
+	}
+	if err := syncDir(filepath.Join(dir, "missing")); err == nil {
+		t.Error("syncing a folder that does not exist must fail")
 	}
 }
