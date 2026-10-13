@@ -3,11 +3,11 @@ id: S-0355
 type: story
 nature: feature
 title: A harness that cannot run the guard or hold a call to ask runs a story's agent but none of its roles, unless the host sets guard none for it, and each refusal names what lifts it
-status: in-progress
+status: done
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:48:54Z
-updated: 2026-10-13T02:56:50Z
+updated: 2026-10-13T04:03:53Z
 transitions:
   - to: ready
     at: 2026-10-13T02:56:43Z
@@ -15,15 +15,36 @@ transitions:
   - to: in-progress
     at: 2026-10-13T02:56:50Z
     by: agent-S-0355
+  - to: review
+    at: 2026-10-13T04:02:53Z
+    by: agent-S-0355
+  - to: done
+    at: 2026-10-13T04:03:53Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [agents]
-touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md]
+touches: [flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, flai/internal/serve/serve_test.go, flaiover/src/lib/settings.ts]
 after: [S-0352, S-0359]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 3977
+  turns:
+    - day: 2026-10-13
+      ceremony: 1
+      hand_edits: 2
+      work: 37
+  models:
+    - model: claude-opus-5-5
+      input: 400
+      output: 142999
+      cache_read: 20680376
+      cache_write: 802070
+      cost: 11.6275
 cost_of_delay:
   value: 37.61
   by: planner-E-0019
@@ -46,12 +67,12 @@ With S-0352 each adapter states whether its harness runs the guard and can hold 
 
 ## Acceptance criteria
 
-- [ ] The host's `agent.harnesses.<name>` takes `guard: none`, set and cleared with `flai serve agent harness <name> --guard none` and `--guard ""`, and through the dashboard's `settings.harness`; any other value is refused.
-- [ ] Before it starts a story's agent, `flai serve` reads the adapter's capabilities. Without `Guard`, a story whose agent has `roles` is refused, naming the harness and `flai serve agent harness <name> --guard none`; with `guard: none` set it starts, and the start log says the roles run unguarded.
-- [ ] Without `Ask`, a start is refused unless the project's `auto-approve` host action is on or the host's `deny_protected` for the harness is set, and the refusal names both; tests cover each case for the `command` harness and none of them changes a `claude-code` start.
-- [ ] The refusal reaches the story's agent status as any refused start does, so that the dashboard's story page shows it; a test reads it there.
-- [ ] The Settings page shows and sets a harness's guard, with a line saying what `none` gives up.
-- [ ] `docs/operators/settings.md` indexes `agent.harnesses.<name>.guard` and `deny_protected` and `TestSettingsIndexIsComplete` passes; `docs/users/flai.md` says what a harness without a guard loses; `design/system/flai-cli.md` describes the checks.
+- [x] The host's `agent.harnesses.<name>` takes `guard: none`, set and cleared with `flai serve agent harness <name> --guard none` and `--guard ""`, and through the dashboard's `settings.harness`; any other value is refused.
+- [x] Before it starts a story's agent, `flai serve` reads the adapter's capabilities. Without `Guard`, a story whose agent has `roles` is refused, naming the harness and `flai serve agent harness <name> --guard none`; with `guard: none` set it starts, and the start log says the roles run unguarded.
+- [x] Without `Ask`, a start is refused unless the project's `auto-approve` host action is on or the host's `deny_protected` for the harness is set, and the refusal names both; tests cover each case for the `command` harness and none of them changes a `claude-code` start.
+- [x] The refusal reaches the story's agent status as any refused start does, so that the dashboard's story page shows it; a test reads it there.
+- [x] The Settings page shows and sets a harness's guard, with a line saying what `none` gives up.
+- [x] `docs/operators/settings.md` indexes `agent.harnesses.<name>.guard` and `deny_protected` and `TestSettingsIndexIsComplete` passes; `docs/users/flai.md` says what a harness without a guard loses; `design/system/flai-cli.md` describes the checks.
 
 ## Tasks
 
@@ -83,3 +104,17 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 Forecast: 34m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 20. It stands.
 
 Cost of delay: 37.61 USD a week, as `flai cod` works it out: 34m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: c73faa7b5b2033b8fff9f1bafb5edde5a14540f1
+- At: 2026-10-13T04:03:53Z
+
+Verdict: pass at c73faa7b5b2033b8fff9f1bafb5edde5a14540f1; flai verify passed every step at that commit, and the verifier matched all 6 criteria to the diff.
+
+- 1: flai/internal/config/config.go, flai/internal/config/config_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go
+- 2: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/cmd/serve_actions.go
+- 3: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/serve/serve_test.go
+- 4: flai/internal/serve/agents.go, flai/internal/serve/agents_test.go
+- 5: flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/lib/settings.ts, flai/cmd/serve_actions.go
+- 6: docs/operators/settings.md, docs/users/flai.md, design/system/flai-cli.md, docs/users/flai-reference.md

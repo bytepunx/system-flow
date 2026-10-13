@@ -3,16 +3,36 @@ id: T-1400
 type: task
 nature: feature
 title: settings.harness and the Settings page show and set a harness's guard and deny_protected
-status: backlog
+status: done
 parent: S-0355
 owner: alex
 created: 2026-10-08T08:49:20Z
-updated: 2026-10-08T08:49:20Z
-transitions: []
+updated: 2026-10-13T03:51:51Z
+transitions:
+  - to: ready
+    at: 2026-10-13T03:37:54Z
+    by: agent-S-0355
+  - to: in-progress
+    at: 2026-10-13T03:37:54Z
+    by: agent-S-0355
+  - to: done
+    at: 2026-10-13T03:51:51Z
+    by: agent-S-0355
 stream: S-0355
 tags: [cli, dashboard]
-touches: [flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts]
-after: [T-1398]
+touches: [flai/internal/hostapi/settings.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flaiover/src/lib/settings.ts]
+after: [T-1398, T-1399]
+usage:
+  source: log
+  seconds: 837
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 127
+      output: 45417
+      cache_read: 6568191
+      cache_write: 254741
+      cost: 3.6929
 ---
 # T-1400 settings.harness and the Settings page show and set a harness's guard and deny_protected
 

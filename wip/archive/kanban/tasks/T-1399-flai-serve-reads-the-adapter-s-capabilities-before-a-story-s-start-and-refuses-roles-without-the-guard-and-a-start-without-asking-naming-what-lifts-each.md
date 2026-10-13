@@ -3,16 +3,36 @@ id: T-1399
 type: task
 nature: feature
 title: flai serve reads the adapter's capabilities before a story's start and refuses roles without the guard and a start without asking, naming what lifts each
-status: backlog
+status: done
 parent: S-0355
 owner: alex
 created: 2026-10-08T08:49:09Z
-updated: 2026-10-08T08:53:02Z
-transitions: []
+updated: 2026-10-13T03:37:47Z
+transitions:
+  - to: ready
+    at: 2026-10-13T03:16:46Z
+    by: agent-S-0355
+  - to: in-progress
+    at: 2026-10-13T03:16:47Z
+    by: agent-S-0355
+  - to: done
+    at: 2026-10-13T03:37:47Z
+    by: agent-S-0355
 stream: S-0355
 tags: [cli]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/cmd/serve_actions.go]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/serve_test.go]
 after: [T-1398]
+usage:
+  source: log
+  seconds: 1260
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 121
+      output: 43314
+      cache_read: 6264016
+      cache_write: 242944
+      cost: 3.5219
 ---
 # T-1399 flai serve reads the adapter's capabilities before a story's start and refuses roles without the guard and a start without asking, naming what lifts each
 
