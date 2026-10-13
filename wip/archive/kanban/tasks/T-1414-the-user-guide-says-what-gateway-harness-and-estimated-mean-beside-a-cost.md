@@ -3,16 +3,36 @@ id: T-1414
 type: task
 nature: feature
 title: The user guide says what gateway, harness, and estimated mean beside a cost
-status: backlog
+status: done
 parent: S-0358
 owner: alex
 created: 2026-10-08T08:51:52Z
-updated: 2026-10-08T08:51:52Z
-transitions: []
+updated: 2026-10-13T21:45:52Z
+transitions:
+  - to: ready
+    at: 2026-10-13T21:45:04Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-13T21:45:05Z
+    by: system-flow
+  - to: done
+    at: 2026-10-13T21:45:52Z
+    by: system-flow
 stream: S-0358
 tags: [cli]
 touches: [docs/users/flai.md]
 after: [T-1412]
+usage:
+  source: log
+  seconds: 47
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 3909
+      cache_read: 634263
+      cache_write: 22599
+      cost: 0.3543
 ---
 # T-1414 The user guide says what gateway, harness, and estimated mean beside a cost
 

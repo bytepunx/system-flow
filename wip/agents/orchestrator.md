@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 542.8290
-accrued_seconds: 412823
-tasks_completed: 447
-last_run: 2026-10-13T21:28:53Z
+accrued_cost: 543.1730
+accrued_seconds: 412856
+tasks_completed: 449
+last_run: 2026-10-13T21:29:26Z
 ---
 
 # Orchestrator activity
@@ -3141,6 +3141,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 3678
 - Cost: 0.7627 USD, estimated
 
+### 2026-10-13T21:29:16Z
+
+- Summary: Under publish, policy judgement: released S-0356 and S-0357 (2 pending, 79.65 USD/week) as flai 1.47.2 → 1.48.0 (minor), tag flai/v1.48.0, pushed. Reason: two complete, verified E-0019 stories that belong together (LiteLLM check, gateway pricing with priced_by), nothing held by whole_epics; S-0378 is stalled awaiting the operator on TH-0436.
+- Items: S-0356, S-0357
+- Seconds: 23
+- Cost: 0.1134 USD, estimated
+
+### 2026-10-13T21:29:26Z
+
+- Summary: Under promote_to_ready, moved S-0358 to ready (rank 1, 30m under throughput), no longer held now that S-0357 is accepted; S-0241 (rank 2) stays out, blocked. Applied the throughput order: S-0358 (30m). (A first try with the output piped through tail was refused by flai guard; the plain flai order --by throughput --apply --json passed.)
+- Items: S-0358
+- Seconds: 10
+- Cost: 0.2306 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -3236,4 +3250,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-12T21:27:42Z
 
 - Call: `git merge-tree --write-tree --name-only main story/S-0352 >/dev/null 2>&1`
+- Needs: none
+
+### 2026-10-13T21:29:20Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
 - Needs: none

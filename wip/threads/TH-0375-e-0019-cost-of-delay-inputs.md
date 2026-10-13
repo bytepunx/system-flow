@@ -4,10 +4,10 @@ title: E-0019 cost of delay inputs
 anchor:
   path: wip/kanban/epics/E-0019-agent-adapters-for-litellm-and-openrouter.md
   item: E-0019
-status: answered
-participants: [planner-E-0019, alex]
+status: resolved
+participants: [planner-E-0019, alex, orchestrator]
 created: 2026-10-08T08:39:05Z
-updated: 2026-10-08T08:46:18Z
+updated: 2026-10-13T22:00:19Z
 ---
 
 # TH-0375 E-0019 cost of delay inputs
@@ -37,3 +37,6 @@ I am drafting the stories and tasks meanwhile. Each story's cost of delay value 
 
 ### 2026-10-08T08:46:18Z alex
 I set the penalty to 500 because with the Claude subscription cap, the only way to continue each week is to pay for very expensive API tokens.
+
+### 2026-10-13T22:00:19Z orchestrator
+Resolved: S-0358 was accepted

@@ -3,16 +3,36 @@ id: T-1413
 type: task
 nature: feature
 title: The dashboard's usage lines and spend table show the source beside each cost
-status: backlog
+status: done
 parent: S-0358
 owner: alex
 created: 2026-10-08T08:51:49Z
-updated: 2026-10-08T08:51:49Z
-transitions: []
+updated: 2026-10-13T21:47:50Z
+transitions:
+  - to: ready
+    at: 2026-10-13T21:45:03Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-13T21:45:04Z
+    by: system-flow
+  - to: done
+    at: 2026-10-13T21:47:50Z
+    by: system-flow
 stream: S-0358
 tags: [dashboard]
-touches: [flaiover/src/lib/usage.ts, flaiover/src/lib/usage.test.ts, flaiover/src/lib/components/SpendTable.svelte, flaiover/src/lib/components/SpendTable.svelte.test.ts]
+touches: [flaiover/src/lib/usage.ts, flaiover/src/lib/usage.test.ts, flaiover/src/lib/components/SpendTable.svelte, flaiover/src/lib/components/SpendTable.svelte.test.ts, flaiover/src/lib/viz/charts.ts]
 after: [T-1412]
+usage:
+  source: log
+  seconds: 166
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 9825
+      cache_read: 1594077
+      cache_write: 56797
+      cost: 0.8906
 ---
 # T-1413 The dashboard's usage lines and spend table show the source beside each cost
 

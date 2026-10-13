@@ -3,21 +3,58 @@ id: S-0358
 type: story
 nature: feature
 title: flai stats, flai show, and the dashboard show what priced each cost, and metrics.md defines priced_by and its sum
-status: backlog
+status: done
 parent: E-0019
 owner: alex
 created: 2026-10-08T08:51:30Z
-updated: 2026-10-13T21:28:43Z
-transitions: []
+updated: 2026-10-13T22:00:19Z
+transitions:
+  - to: ready
+    at: 2026-10-13T21:29:19Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-13T21:29:26Z
+    by: agent-S-0358
+  - to: review
+    at: 2026-10-13T21:59:34Z
+    by: system-flow
+  - to: done
+    at: 2026-10-13T22:00:19Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [usage, metrics]
-touches: [design/system/metrics.md, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/metrics/spend.go, flai/internal/metrics/spend_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/cmd/stats.go, flai/cmd/items.go, flaiover/src/lib/usage.ts, flaiover/src/lib/usage.test.ts, flaiover/src/lib/components/SpendTable.svelte, flaiover/src/lib/components/SpendTable.svelte.test.ts, docs/users/flai.md]
+touches: [design/system/metrics.md, flai/internal/metrics/usage.go, flai/internal/metrics/usage_test.go, flai/internal/metrics/spend.go, flai/internal/metrics/spend_test.go, flai/internal/usage/usage.go, flai/internal/usage/usage_test.go, flai/cmd/stats.go, flai/cmd/items.go, flaiover/src/lib/usage.ts, flaiover/src/lib/usage.test.ts, flaiover/src/lib/components/SpendTable.svelte, flaiover/src/lib/components/SpendTable.svelte.test.ts, docs/users/flai.md, flaiover/src/lib/viz/charts.ts, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md]
 after: [S-0357]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 1823
+  turns:
+    - day: 2026-10-13
+      hand_edits: 1
+      work: 57
+  models:
+    - model: claude-opus-5-5
+      input: 172
+      output: 55896
+      cache_read: 9068794
+      cache_write: 323119
+      cost: 5.0665
+  strategic:
+    - kind: orchestrator
+      seconds: 10
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 8
+          output: 102
+          cache_read: 914935
+          cache_write: 4717
+          cost: 0.2306
 cost_of_delay:
   value: 33.19
   by: planner-E-0019
@@ -40,10 +77,10 @@ S-0357 records `priced_by` on each item's usage. [ADR-0132](../../../design/adrs
 
 ## Acceptance criteria
 
-- [ ] `design/system/metrics.md` defines `priced_by` (`gateway`, `harness`, `estimate`), its sum up the hierarchy as the least certain source, how an item written before it reads, and the cost per source `flai stats` adds to its usage totals and to spend over time.
-- [ ] `flai stats --json` carries `priced_by` on each item's usage and the cost per source in the window's totals and in each spend bucket; `flai stats` and `flai show` print the source beside a cost, as `(gateway)`, `(harness)`, or `(estimated)`.
-- [ ] The dashboard's usage lines and spend table show the source beside each cost, and an item with no `priced_by` shows as today.
-- [ ] Tests in `flai/internal/metrics`, `flai/internal/usage`, and the two flaiover files cover the three sources and an older item; `docs/users/flai.md` says what each source means.
+- [x] `design/system/metrics.md` defines `priced_by` (`gateway`, `harness`, `estimate`), its sum up the hierarchy as the least certain source, how an item written before it reads, and the cost per source `flai stats` adds to its usage totals and to spend over time.
+- [x] `flai stats --json` carries `priced_by` on each item's usage and the cost per source in the window's totals and in each spend bucket; `flai stats` and `flai show` print the source beside a cost, as `(gateway)`, `(harness)`, or `(estimated)`.
+- [x] The dashboard's usage lines and spend table show the source beside each cost, and an item with no `priced_by` shows as today.
+- [x] Tests in `flai/internal/metrics`, `flai/internal/usage`, and the two flaiover files cover the three sources and an older item; `docs/users/flai.md` says what each source means.
 
 ## Tasks
 
@@ -73,3 +110,14 @@ Planned by planner-E-0019 on 2026-10-08. Every touch is a file; no folder touch 
 Forecast: 30m, as `flai forecast` gives it, 100 s per unit over 34 done feature stories on claude-opus-5-5 in the large band, times size 18. It stands.
 
 Cost of delay: 33.19 USD a week, as `flai cod` works it out: 30m of the 7h32m forecast over E-0019's 12 stories, of the operator's 500 USD a week penalty. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: 300bfacfa17cbd2896772d36dd7aefbaad7ebb0a
+- At: 2026-10-13T22:00:19Z
+
+Verdict: meets all criteria; metrics.md change covered by ADR-0132, diff within touches, no secret committed, flai verify passed every step at 300bfacfa17c.
+- 1: design/system/metrics.md
+- 2: flai/internal/metrics/usage.go, flai/internal/metrics/spend.go, flai/internal/usage/usage.go, flai/cmd/stats.go
+- 3: flaiover/src/lib/usage.ts, flaiover/src/lib/components/SpendTable.svelte, flaiover/src/lib/viz/charts.ts
+- 4: flai/internal/metrics/usage_test.go, flai/internal/metrics/spend_test.go, flai/internal/usage/usage_test.go, flaiover/src/lib/usage.test.ts, flaiover/src/lib/components/SpendTable.svelte.test.ts, docs/users/flai.md

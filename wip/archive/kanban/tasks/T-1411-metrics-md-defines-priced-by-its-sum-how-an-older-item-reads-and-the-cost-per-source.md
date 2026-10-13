@@ -3,15 +3,35 @@ id: T-1411
 type: task
 nature: feature
 title: metrics.md defines priced_by, its sum, how an older item reads, and the cost per source
-status: backlog
+status: done
 parent: S-0358
 owner: alex
 created: 2026-10-08T08:51:37Z
-updated: 2026-10-08T08:51:37Z
-transitions: []
+updated: 2026-10-13T21:31:37Z
+transitions:
+  - to: ready
+    at: 2026-10-13T21:30:28Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-13T21:30:29Z
+    by: system-flow
+  - to: done
+    at: 2026-10-13T21:31:37Z
+    by: system-flow
 stream: S-0358
 tags: [cli]
 touches: [design/system/metrics.md]
+usage:
+  source: log
+  seconds: 68
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 5652
+      cache_read: 916938
+      cache_write: 32670
+      cost: 0.5123
 ---
 # T-1411 metrics.md defines priced_by, its sum, how an older item reads, and the cost per source
 
