@@ -5,19 +5,127 @@ package serve
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
+
+// agentsWriterEnv tells this test binary, run as a child by
+// TestAgentsStateKeepsEveryWriteOfManyProcesses, to be a process of its own
+// that records runs in serve/agents.json, as flai serve agent restart does,
+// and exit: its value is the writer's number.
+const agentsWriterEnv = "FLAI_SERVE_TEST_AGENTS_WRITER"
+
+// agentsWriterDir is the child writer's serve folder.
+const agentsWriterDir = "FLAI_SERVE_TEST_AGENTS_DIR"
+
+// agentsWrites is how many runs each writer records.
+const agentsWrites = 25
+
+func TestMain(m *testing.M) {
+	writer := os.Getenv(agentsWriterEnv)
+	if writer == "" {
+		os.Exit(m.Run())
+	}
+	n, err := strconv.Atoi(writer)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
+	writeAgents(Dir(os.Getenv(agentsWriterDir)), n)
+	os.Exit(0)
+}
+
+// writeAgents records agentsWrites runs of writer's own stories in d, each
+// with a read and a write of the whole state.
+func writeAgents(d Dir, writer int) {
+	for i := range agentsWrites {
+		d.updateAgent("/p", func(s *AgentState) { s.put(&AgentRun{Story: fmt.Sprintf("S-%d%03d", writer, i)}) })
+	}
+}
+
+// S-0377: flai serve and the processes flai serve agent restart runs record
+// runs in serve/agents.json at once; each reads the state and writes it back
+// under the lock, and no run is lost (I-0140).
+func TestAgentsStateKeepsEveryWriteOfManyProcesses(t *testing.T) {
+	d := Dir(t.TempDir())
+	const children = 4
+	var wg sync.WaitGroup
+	errs := make(chan error, children)
+	for w := 1; w <= children; w++ {
+		wg.Go(func() {
+			cmd := exec.Command(os.Args[0], "-test.run=^$")
+			cmd.Env = append(os.Environ(), agentsWriterEnv+"="+strconv.Itoa(w), agentsWriterDir+"="+string(d))
+			if out, err := cmd.CombinedOutput(); err != nil {
+				errs <- fmt.Errorf("writer %d: %w: %s", w, err, out)
+			}
+		})
+	}
+	wg.Go(func() { writeAgents(d, children+1) })
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Fatal(err)
+	}
+	got := d.AgentStates()["/p"].Stories
+	if want := (children + 1) * agentsWrites; len(got) != want {
+		t.Fatalf("%d of %d runs recorded: writes were lost", len(got), want)
+	}
+	for w := 1; w <= children+1; w++ {
+		for i := range agentsWrites {
+			if id := fmt.Sprintf("S-%d%03d", w, i); got[id] == nil {
+				t.Errorf("run of %s lost", id)
+			}
+		}
+	}
+}
+
+// S-0377: a lock on serve/agents.json that another process holds is waited
+// for however old its file is (I-0140).
+func TestAgentsStateWaitsForAHeldLockWhateverItsAge(t *testing.T) {
+	d := Dir(t.TempDir())
+	lock := d.agents() + ".lock"
+	unlock, err := filelock.Lock(lock, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(lock, old, old); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		d.updateAgent("/p", func(s *AgentState) { s.put(&AgentRun{Story: "S-0001"}) })
+		close(done)
+	}()
+	select {
+	case <-done:
+		t.Fatal("wrote the state while another process held the lock")
+	case <-time.After(200 * time.Millisecond):
+	}
+	unlock()
+	<-done
+	if d.AgentStates()["/p"].Stories["S-0001"] == nil {
+		t.Error("the run was not recorded once the lock was free")
+	}
+	if _, err := os.Stat(lock); err != nil {
+		t.Errorf("the lock file is gone: %v", err)
+	}
+}
 
 // agentSession is a story's agent's flai mcp, in process: a fresh server on
 // the lab's project, as the agent's harness starts one with each session.

@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -213,28 +213,15 @@ func queue(o Options, e Entry, run *AgentRun) *AgentRun {
 	return &queued
 }
 
-// lockFile holds path, made for the purpose, until the returned func is
-// called: processes that write the same state take turns. A lock older than
-// staleLock is the leftover of a process that died holding it, and is taken.
+// lockFile holds the lock at path, an OS file lock, until the returned
+// func is called: processes that write the same state take turns. A holder
+// that dies frees it, so it is never broken for its age (I-0140).
 func lockFile(path string) (unlock func()) {
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-		if err == nil {
-			_ = f.Close()
-			return func() { _ = os.Remove(path) }
-		}
-		if info, serr := os.Stat(path); serr == nil && time.Since(info.ModTime()) > staleLock {
-			_ = os.Remove(path)
-			continue
-		}
-		if !errors.Is(err, os.ErrExist) || time.Now().After(deadline) {
-			// Write without it rather than not at all: the state is advice to
-			// the dashboard, and a lost race costs one run's record.
-			return func() {}
-		}
-		time.Sleep(10 * time.Millisecond)
+	unlock, err := filelock.Lock(path, 5*time.Second)
+	if err != nil {
+		// Write without it rather than not at all: the state is advice to
+		// the dashboard, and a lost race costs one run's record.
+		return func() {}
 	}
+	return unlock
 }
-
-const staleLock = 10 * time.Second

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 )
 
 // RecordDir is the folder, under a project's .flai-cache in its main
@@ -34,14 +35,11 @@ type record struct {
 var sessionName = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 // recordLockWait is how long RecordChange waits for another flai guard to
-// finish with a session's record; recordLockAge is how old a lock is when it
-// is taken as left behind by a flai guard that died holding it. A record is
-// held for a read and a write of a few lines, so either is far longer than
-// any holder needs.
-const (
-	recordLockWait = 10 * time.Second
-	recordLockAge  = 5 * time.Second
-)
+// finish with a session's record. A record is held for a read and a write of
+// a few lines, so it is far longer than any holder needs. The lock is the
+// operating system's, freed when its holder dies, and never broken for its
+// age (I-0140).
+const recordLockWait = 10 * time.Second
 
 // SubAgentChange is a sub-agent starting, or stopping, in a session, as a
 // harness reports it: the session's ID, and the sub-agent's ID and the name
@@ -57,8 +55,9 @@ type SubAgentChange struct {
 // sub-agent started at at, or stopped, in the record of ch's session. Each
 // sub-agent of a layer starts in a hook process of its own, often in the same
 // second, so the record is read and written under a lock and replaced in one
-// step. A record left with no sub-agent running is removed. A session ID that
-// is not a safe file name, or a change with no sub-agent ID, is ignored.
+// step. A record left with no sub-agent running is removed; its lock file
+// stays. A session ID that is not a safe file name, or a change with no
+// sub-agent ID, is ignored.
 func RecordChange(dir string, ch SubAgentChange, at time.Time) error {
 	if !sessionName.MatchString(ch.Session) || ch.ID == "" {
 		return nil
@@ -67,7 +66,7 @@ func RecordChange(dir string, ch SubAgentChange, at time.Time) error {
 		return fmt.Errorf("record of session %s: %w", ch.Session, err)
 	}
 	path := filepath.Join(dir, ch.Session+".json")
-	unlock, err := lockRecord(path + ".lock")
+	unlock, err := filelock.Lock(path+".lock", recordLockWait)
 	if err != nil {
 		return fmt.Errorf("record of session %s: %w", ch.Session, err)
 	}
@@ -121,31 +120,4 @@ func readRecord(path string) (record, error) {
 		return r, fmt.Errorf("%s: %w: remove it, and the guard starts a new record at the session's next sub-agent", path, err)
 	}
 	return r, nil
-}
-
-// lockRecord takes the lock at path, a file one writer at a time creates,
-// waiting while another holds it, and taking one older than recordLockAge.
-func lockRecord(path string) (unlock func(), err error) {
-	deadline := time.Now().Add(recordLockWait)
-	for {
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-		if err == nil {
-			if err := f.Close(); err != nil {
-				_ = os.Remove(path)
-				return nil, err
-			}
-			return func() { _ = os.Remove(path) }, nil
-		}
-		if !errors.Is(err, os.ErrExist) {
-			return nil, err
-		}
-		if st, err := os.Stat(path); err == nil && time.Since(st.ModTime()) > recordLockAge {
-			_ = os.Remove(path)
-			continue
-		}
-		if time.Now().After(deadline) {
-			return nil, fmt.Errorf("%s is held by another flai guard after %s: remove it if none runs", path, recordLockWait)
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
 }

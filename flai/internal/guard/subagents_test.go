@@ -10,6 +10,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/filelock"
 )
 
 // started is a SubagentStart in session s1 for the sub-agent id.
@@ -43,8 +45,10 @@ func TestRecordKeepsTheSessionsRunningSubAgents(t *testing.T) {
 			t.Errorf("after %s of %s: %+v, want %+v", s.e.HookEventName, s.e.AgentID, got, s.want)
 		}
 	}
-	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
-		t.Errorf("left in %s: %v", dir, entries)
+	// The lock file stays: removing it would let two writers lock two files
+	// at one path (I-0140).
+	if entries, _ := os.ReadDir(dir); len(entries) != 1 || entries[0].Name() != "s1.json.lock" {
+		t.Errorf("left in %s: %v, want only the lock file", dir, entries)
 	}
 }
 
@@ -125,26 +129,93 @@ func TestRecordKeepsEveryStartOfALayer(t *testing.T) {
 	}
 }
 
-// S-0285: a lock left by a guard that died holding it is taken once it is
-// old.
-func TestRecordTakesALockLeftBehind(t *testing.T) {
+// S-0377: a layer's sub-agents start and stop at once, each in a hook
+// process of its own, with the lock file an hour old; each change reads the
+// record and writes it back, and none is lost (I-0140).
+func TestRecordKeepsEveryChangeOfALayer(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), RecordDir)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
+	const n = 16
+	for i := range n {
+		if err := RecordChange(dir, SubAgentChange{Session: "s1", ID: fmt.Sprintf("old%02d", i)}, time.Now()); err != nil {
+			t.Fatal(err)
+		}
 	}
 	lock := filepath.Join(dir, "s1.json.lock")
 	if err := os.WriteFile(lock, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	old := time.Now().Add(-time.Minute)
+	old := time.Now().Add(-time.Hour)
 	if err := os.Chtimes(lock, old, old); err != nil {
 		t.Fatal(err)
 	}
-	if err := Record(dir, started("a1", "verifier"), time.Now()); err != nil {
+	var wg sync.WaitGroup
+	errs := make(chan error, 2*n)
+	for i := range n {
+		wg.Go(func() {
+			errs <- RecordChange(dir, SubAgentChange{Session: "s1", ID: fmt.Sprintf("old%02d", i), Stopped: true}, time.Now())
+		})
+		wg.Go(func() {
+			errs <- RecordChange(dir, SubAgentChange{Session: "s1", ID: fmt.Sprintf("new%02d", i)}, time.Now())
+		})
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := Running(dir, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := make([]string, 0, len(got))
+	for _, s := range got {
+		ids = append(ids, s.ID)
+	}
+	slices.Sort(ids)
+	want := make([]string, 0, n)
+	for i := range n {
+		want = append(want, fmt.Sprintf("new%02d", i))
+	}
+	if !slices.Equal(ids, want) {
+		t.Errorf("running %v, want %v: changes were lost", ids, want)
+	}
+}
+
+// S-0377: a lock another flai guard holds is waited for however old its
+// file is, and a lock file no guard holds is free at once (I-0140).
+func TestRecordWaitsForAHeldLockWhateverItsAge(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), RecordDir)
+	lock := filepath.Join(dir, "s1.json.lock")
+	unlock, err := filelock.Lock(lock, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(lock, old, old); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- Record(dir, started("a1", "verifier"), time.Now()) }()
+	select {
+	case err := <-done:
+		t.Fatalf("recorded while another guard held the lock: %v", err)
+	case <-time.After(200 * time.Millisecond):
+	}
+	unlock()
+	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
 	if got, _ := Running(dir, "s1"); len(got) != 1 {
 		t.Errorf("running %+v", got)
+	}
+	start := time.Now()
+	if err := Record(dir, started("a2", "verifier"), time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if waited := time.Since(start); waited > time.Second {
+		t.Errorf("waited %s for a lock file no guard holds", waited)
 	}
 }
 
