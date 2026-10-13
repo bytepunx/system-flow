@@ -161,3 +161,42 @@ func TestTheRateIsPerMinuteOfAgentWork(t *testing.T) {
 		}
 	}
 }
+
+func TestSpendIsPricedByTheLeastCertainPerBucket(t *testing.T) {
+	st := Compute(pricedItems(), Options{Now: now}).Usage.Spend[workitem.Story]
+	if st.PricedBy != usage.PricedEstimate || st.CostBySource != (CostBySource{Gateway: 1, Harness: 18, Estimate: 12}) {
+		t.Errorf("stories over the window = %+v", st.Pricing)
+	}
+	for i, want := range []struct {
+		by   string
+		cost CostBySource
+	}{
+		{usage.PricedHarness, CostBySource{Gateway: 1, Harness: 2}}, // gateway and harness
+		{usage.PricedEstimate, CostBySource{Estimate: 12}},          // an estimate and an older estimate
+		{"", CostBySource{Harness: 16}},                             // older only, and one without a model
+		{"", CostBySource{}},                                        // nothing done
+	} {
+		if b := st.Buckets[i]; b.PricedBy != want.by || b.CostBySource != want.cost {
+			t.Errorf("bucket %s priced by %q, %+v; want %q, %+v", b.At, b.PricedBy, b.CostBySource, want.by, want.cost)
+		}
+	}
+	raw, err := json.Marshal(st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"priced_by":"harness","cost_by_source":{"gateway":1,"harness":2,"estimate":0},"mean_tokens"`,
+		`"at":"2026-08-28T00:00:00Z","items":0,"tokens":0,"cost":0,"seconds":0,"cost_by_source":{"gateway":0,"harness":0,"estimate":0}`} {
+		if !strings.Contains(string(raw), key) {
+			t.Errorf("the stories' JSON lacks %s: %s", key, raw)
+		}
+	}
+	for _, b := range append([]Bucket{{Models: st.Models}}, st.Buckets...) {
+		raw, err := json.Marshal(b.Models)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(raw), "priced_by") || strings.Contains(string(raw), "cost_by_source") {
+			t.Errorf("a model's share says where the cost came from: %s", raw)
+		}
+	}
+}

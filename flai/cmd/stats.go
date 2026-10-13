@@ -603,12 +603,8 @@ func printUsage(a *app, typ string, u metrics.UsageReport) {
 
 // printAgentUsage prints what agents spent on the items done in the window.
 func printAgentUsage(a *app, typ string, u metrics.UsageReport) {
-	estimated := ""
-	if u.Estimated {
-		estimated = " (estimated in part)"
-	}
 	fmt.Fprintf(a.out, "  usage: %s tokens · $%.2f%s · %s of agent work, over %d done\n",
-		usage.Count(u.Tokens), u.Cost, estimated, (time.Duration(u.Seconds) * time.Second).String(), u.Items)
+		usage.Count(u.Tokens), u.Cost, costMark(u), (time.Duration(u.Seconds) * time.Second).String(), u.Items)
 	if s := u.Spend[typ]; s != nil && s.Items > 0 {
 		fmt.Fprintf(a.out, "    per %s %s\n", typ, strings.Join(averages(s.Spend), " · "))
 	}
@@ -619,6 +615,34 @@ func printAgentUsage(a *app, typ string, u metrics.UsageReport) {
 		}
 		fmt.Fprintf(a.out, "    %s  %s tokens · $%.2f%s (%d)\n", m.Model, usage.Count(m.Tokens), m.Cost, rate, m.Items)
 	}
+}
+
+// costMark is what the usage totals show beside their cost (S-0358): where
+// it came from, with the cost per source when more than one source priced
+// it; for items none of which names a source, "(estimated in part)" when any
+// is estimated, as before.
+func costMark(u metrics.UsageReport) string {
+	if u.PricedBy == "" {
+		if u.Estimated {
+			return " (estimated in part)"
+		}
+		return ""
+	}
+	mark := usage.Mark(u.PricedBy, u.Estimated)
+	var parts []string
+	c := u.CostBySource
+	for _, s := range []struct {
+		name string
+		cost float64
+	}{{"gateway", c.Gateway}, {"harness", c.Harness}, {"estimated", c.Estimate}} {
+		if s.cost > 0 {
+			parts = append(parts, fmt.Sprintf("%s $%.2f", s.name, s.cost))
+		}
+	}
+	if len(parts) < 2 {
+		return mark
+	}
+	return strings.TrimSuffix(mark, ")") + "; " + strings.Join(parts, ", ") + ")"
 }
 
 // averages says what a spend comes to per item, with the agent time an item

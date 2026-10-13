@@ -433,13 +433,23 @@ func Same(a, b *Usage) bool {
 		slices.Equal(a.Turns, b.Turns)
 }
 
-// Summary says in a line what was spent: tokens, cost, time, and where the
-// numbers came from.
-func (u *Usage) Summary() string {
-	cost := fmt.Sprintf("$%.2f", u.Cost())
-	if u.Estimated {
-		cost += " (estimated)"
+// Mark is what a reader shows beside a cost (S-0358): " (gateway)",
+// " (harness)", or " (estimated)" for where it came from; with none named,
+// " (estimated)" when it is estimated and nothing otherwise.
+func Mark(pricedBy string, estimated bool) string {
+	switch {
+	case pricedBy == PricedEstimate, pricedBy == "" && estimated:
+		return " (estimated)"
+	case pricedBy != "":
+		return " (" + pricedBy + ")"
 	}
+	return ""
+}
+
+// Summary says in a line what was spent: tokens, cost and where it came
+// from, time, and where the numbers came from.
+func (u *Usage) Summary() string {
+	cost := fmt.Sprintf("$%.2f", u.Cost()) + Mark(u.PricedBy, u.Estimated)
 	from := "measured from its agents' logs"
 	if u.Source == SourceSum {
 		from = "summed from its children"

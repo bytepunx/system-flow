@@ -330,3 +330,28 @@ func TestPricedByIsSplitClonedAndCompared(t *testing.T) {
 		t.Errorf("a strategic charge changed where the agents' cost came from: %+v", u)
 	}
 }
+
+// S-0358: a cost is marked with where it came from, and usage written before
+// priced_by is marked as it was, estimated or not at all.
+func TestSummaryMarksWhereTheCostCameFrom(t *testing.T) {
+	for _, c := range []struct {
+		name      string
+		u         *Usage
+		mark, sum string
+	}{
+		{"gateway", priced(PricedGateway, false), " (gateway)", "$1.00 (gateway) · "},
+		{"gateway, estimated", priced(PricedGateway, true), " (gateway)", "$1.00 (gateway) · "},
+		{"harness", priced(PricedHarness, false), " (harness)", "$1.00 (harness) · "},
+		{"estimate", priced(PricedEstimate, true), " (estimated)", "$1.00 (estimated) · "},
+		{"older, estimated", priced("", true), " (estimated)", "$1.00 (estimated) · "},
+		{"older, not estimated", priced("", false), "", "$1.00 · "},
+	} {
+		if got := Mark(c.u.PricedBy, c.u.Estimated); got != c.mark {
+			t.Errorf("%s: mark %q, want %q", c.name, got, c.mark)
+		}
+		want := "1 tokens · " + c.sum + "10s of agent work · measured from its agents' logs"
+		if got := c.u.Summary(); got != want {
+			t.Errorf("%s: summary %q, want %q", c.name, got, want)
+		}
+	}
+}

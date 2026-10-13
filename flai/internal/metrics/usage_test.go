@@ -255,3 +255,88 @@ func TestExpectedCostIsTheForecastOrEstimateAtTheCostPerAgentHour(t *testing.T) 
 		}
 	}
 }
+
+// pricedItems are stories priced by each source, two written before
+// priced_by, one estimated and one not, and one priced by the gateway whose
+// agents worked without a model (S-0358).
+func pricedItems() []*workitem.Item {
+	priced := func(by string, estimated bool, cost float64) *usage.Usage {
+		u := spend(600, opusSpent(100, cost))
+		u.PricedBy, u.Estimated = by, estimated
+		return u
+	}
+	idle := spend(60)
+	idle.PricedBy = usage.PricedEstimate
+	return []*workitem.Item{
+		doneWith("S-0001", "2026-08-25T09:00:00Z", priced(usage.PricedGateway, false, 1)),
+		doneWith("S-0002", "2026-08-25T10:00:00Z", priced(usage.PricedHarness, false, 2)),
+		doneWith("S-0003", "2026-08-26T09:00:00Z", priced(usage.PricedEstimate, true, 4)),
+		doneWith("S-0004", "2026-08-26T10:00:00Z", priced("", true, 8)),
+		doneWith("S-0005", "2026-08-27T09:00:00Z", priced("", false, 16)),
+		doneWith("S-0006", "2026-08-27T10:00:00Z", idle),
+	}
+}
+
+func TestTheCostIsTotalledBySourceAndPricedByTheLeastCertain(t *testing.T) {
+	rep := Compute(pricedItems(), Options{Now: now})
+	u := rep.Usage
+	if u.PricedBy != usage.PricedEstimate || !near(u.Cost, 31) {
+		t.Errorf("totals priced by %q, cost %v", u.PricedBy, u.Cost)
+	}
+	// the older S-0004 reads as an estimate and S-0005 as the harness's; the
+	// idle S-0006 adds nothing
+	c := u.CostBySource
+	if !near(c.Gateway, 1) || !near(c.Harness, 18) || !near(c.Estimate, 12) || !near(c.Gateway+c.Harness+c.Estimate, u.Cost) {
+		t.Errorf("cost by source = %+v", c)
+	}
+	per := map[string]ItemMetrics{}
+	for _, m := range rep.Items {
+		per[m.ID] = m
+	}
+	for id, want := range map[string]string{"S-0001": "gateway", "S-0002": "harness", "S-0003": "estimate", "S-0004": "", "S-0005": ""} {
+		if got := per[id].Usage.PricedBy; got != want {
+			t.Errorf("%s priced by %q, want %q", id, got, want)
+		}
+	}
+	raw, err := json.Marshal(rep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"id":"S-0001"`, `"estimated":true,"priced_by":"estimate","empty_wakes":0`,
+		`"estimated":true,"priced_by":"estimate","cost_by_source":{"gateway":1,"harness":18,"estimate":12},"models":`} {
+		if !strings.Contains(string(raw), key) {
+			t.Errorf("the report's JSON lacks %s", key)
+		}
+	}
+	raw, err = json.Marshal(per["S-0004"].Usage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "priced_by") {
+		t.Errorf("an older item's usage names a source: %s", raw)
+	}
+	raw, err = json.Marshal(u.Models)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "priced_by") || strings.Contains(string(raw), "cost_by_source") {
+		t.Errorf("a model's totals say where the cost came from: %s", raw)
+	}
+	// while none of them names a source, neither do the totals, and their
+	// cost per source is still there
+	older := Compute(pricedItems()[3:5], Options{Now: now}).Usage
+	raw, err = json.Marshal(older)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if older.PricedBy != "" || strings.Contains(string(raw), "priced_by") || !strings.Contains(string(raw), `"cost_by_source":{"gateway":0,"harness":16,"estimate":8}`) {
+		t.Errorf("older items' totals = %s", raw)
+	}
+	raw, err = json.Marshal(Compute(nil, Options{Now: now}).Usage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"cost_by_source":{"gateway":0,"harness":0,"estimate":0}`) {
+		t.Errorf("an empty report's totals lack a cost per source: %s", raw)
+	}
+}

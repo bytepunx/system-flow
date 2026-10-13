@@ -69,6 +69,7 @@ type Bucket struct {
 	// At is the bucket's start.
 	At string `json:"at"`
 	Spend
+	Pricing
 	// MeanTokens and MeanCost are the running means per bucket, from the
 	// first bucket of the series to this one.
 	MeanTokens float64 `json:"mean_tokens"`
@@ -84,6 +85,7 @@ type Bucket struct {
 // in all and over time.
 type TypeSpend struct {
 	Spend
+	Pricing
 	Models  []ModelShare `json:"models"`
 	Buckets []Bucket     `json:"buckets"`
 	// Strategic is what strategic agents spent on them, apart from the
@@ -136,12 +138,13 @@ func (t *tally) spend() Spend {
 	}
 }
 
-// group is a set of items and each model's share of them, and what
-// strategic agents spent on them. An item on which agents spent nothing adds
-// only to the last.
+// group is a set of items and each model's share of them, where the set's
+// cost came from, and what strategic agents spent on them. An item on which
+// agents spent nothing adds only to the last.
 type group struct {
 	all       tally
 	models    map[string]*tally
+	pricing   Pricing
 	strategic StrategicSpend
 }
 
@@ -152,6 +155,7 @@ func (g *group) add(it *workitem.Item) {
 		return
 	}
 	g.all.add(u.Tokens(), u.Cost(), u.Seconds, u.Estimated)
+	g.pricing.add(u)
 	if g.models == nil {
 		g.models = map[string]*tally{}
 	}
@@ -258,7 +262,7 @@ func typeSpend(list []completion, now time.Time, bucket string) *TypeSpend {
 		}
 		g.add(c.it)
 	}
-	ts.Spend = window.all.spend()
+	ts.Spend, ts.Pricing = window.all.spend(), window.pricing
 	ts.Models = window.shares()
 	ts.Strategic = window.strategic.rounded()
 	var tokens, cost float64
@@ -273,7 +277,7 @@ func typeSpend(list []completion, now time.Time, bucket string) *TypeSpend {
 		tokens += float64(g.all.tokens)
 		cost += g.all.cost
 		ts.Buckets = append(ts.Buckets, Bucket{
-			At: at.Format(workitem.TimeFormat), Spend: g.all.spend(),
+			At: at.Format(workitem.TimeFormat), Spend: g.all.spend(), Pricing: g.pricing,
 			MeanTokens: tokens / float64(n), MeanCost: cost / float64(n), Models: g.shares(),
 			Strategic: g.strategic.rounded(),
 		})

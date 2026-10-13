@@ -38,6 +38,9 @@ type ItemUsage struct {
 	TokensPerMinute *float64 `json:"tokens_per_minute,omitempty"`
 	TokensPerHour   *float64 `json:"tokens_per_hour,omitempty"`
 	Estimated       bool     `json:"estimated,omitempty"`
+	// PricedBy is where the agents' cost came from, absent when the item
+	// names none (S-0358).
+	PricedBy string `json:"priced_by,omitempty"`
 	// EmptyWakes is the item's usage's empty wakes, 0 when it has none
 	// (S-0272, ADR-0105).
 	EmptyWakes int          `json:"empty_wakes"`
@@ -99,6 +102,48 @@ type StrategicTotals struct {
 	Kinds []StrategicKindSpend `json:"kinds"`
 }
 
+// CostBySource is the agents' cost of a set of items under each item's read
+// source, (*usage.Usage).Priced (S-0358); the three add up to the set's cost.
+type CostBySource struct {
+	Gateway  float64 `json:"gateway"`
+	Harness  float64 `json:"harness"`
+	Estimate float64 `json:"estimate"`
+}
+
+// Pricing is where the agents' cost of a set of items came from (S-0358):
+// PricedBy, the least certain of the items' read sources, empty while none of
+// them names one, and the cost per source. A model's share of a set has none.
+type Pricing struct {
+	PricedBy     string       `json:"priced_by,omitempty"`
+	CostBySource CostBySource `json:"cost_by_source"`
+	// named says an item names its source; least is the least certain read
+	// source of all of them.
+	named bool
+	least string
+}
+
+// add adds an item's agents' cost under its read source, one flai does not
+// know as an estimate; usage without models adds nothing.
+func (p *Pricing) add(u *usage.Usage) {
+	if u == nil || len(u.Models) == 0 {
+		return
+	}
+	source := u.Priced()
+	switch source {
+	case usage.PricedGateway:
+		p.CostBySource.Gateway += u.Cost()
+	case usage.PricedHarness:
+		p.CostBySource.Harness += u.Cost()
+	default:
+		p.CostBySource.Estimate += u.Cost()
+	}
+	p.named = p.named || u.PricedBy != ""
+	p.least = usage.LeastCertain(p.least, source)
+	if p.named {
+		p.PricedBy = p.least
+	}
+}
+
 // SpendPoint is one item done, in order of completion, with what had been
 // done and spent by then.
 type SpendPoint struct {
@@ -119,6 +164,7 @@ type UsageReport struct {
 	Cost      float64 `json:"cost"`
 	Seconds   int64   `json:"seconds"`
 	Estimated bool    `json:"estimated,omitempty"`
+	Pricing
 	// Models are the same per model, in order of name.
 	Models []ModelSpend `json:"models"`
 	// Done is completion against time and cost: every item done in the
@@ -154,7 +200,8 @@ func itemUsage(u *usage.Usage) *ItemUsage {
 	if u.Nothing() {
 		return nil
 	}
-	out := &ItemUsage{Source: u.Source, Tokens: u.Tokens(), Cost: u.Cost(), Seconds: u.Seconds, Estimated: u.Estimated, EmptyWakes: u.EmptyWakes, Models: []ModelSpend{}, Strategic: []ItemStrategic{}}
+	out := &ItemUsage{Source: u.Source, Tokens: u.Tokens(), Cost: u.Cost(), Seconds: u.Seconds, Estimated: u.Estimated, PricedBy: u.PricedBy, EmptyWakes: u.EmptyWakes,
+		Models: []ModelSpend{}, Strategic: []ItemStrategic{}}
 	out.TokensPerMinute, out.TokensPerHour = perMinute(out.Tokens, u.Seconds), perHour(out.Tokens, u.Seconds)
 	for _, m := range u.Models {
 		out.Models = append(out.Models, ModelSpend{Model: m.Model, Tokens: m.Tokens(), Cost: m.Cost,
@@ -290,6 +337,7 @@ func spendReport(items []*workitem.Item, start, now time.Time) UsageReport {
 		rep.Cost += u.Cost()
 		rep.Seconds += u.Seconds
 		rep.Estimated = rep.Estimated || u.Estimated
+		rep.add(u)
 		at := d.at.Format(workitem.TimeFormat)
 		rep.Done = append(rep.Done, SpendPoint{At: at, ID: d.it.ID, Done: rep.Items, Tokens: rep.Tokens, Cost: rep.Cost})
 		for _, m := range u.Models {
