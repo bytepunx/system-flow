@@ -3,6 +3,7 @@ package workitem
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -107,15 +108,21 @@ func (e *StreamExistsError) Error() string {
 	return fmt.Sprintf("stream %s already exists at %s", e.ID, e.Path)
 }
 
-// OpenStream creates the narrative for a story from the template. It fails
-// with a *StreamExistsError if one already exists.
+// OpenStream creates the narrative for a story from the template. A
+// narrative that is empty or holds only whitespace, as a crash mid-write
+// leaves one (I-0137), counts as none and is written afresh; one with any
+// other content fails with a *StreamExistsError and is left as it is.
 func (r *Repo) OpenStream(story *Item, opt StreamOptions) (*Narrative, error) {
 	if story.Type != Story {
 		return nil, fmt.Errorf("%s is a %s; streams belong to stories", story.ID, story.Type)
 	}
 	path := r.NarrativePath(story.ID)
-	if _, err := os.Stat(path); err == nil {
-		return nil, &StreamExistsError{ID: story.ID, Path: path}
+	replacing := false
+	if info, err := os.Stat(path); err == nil {
+		if !blankFile(path, info) {
+			return nil, &StreamExistsError{ID: story.ID, Path: path}
+		}
+		replacing = true
 	}
 	now := opt.Now.UTC().Format(TimeFormat)
 	doc, err := r.renderItemTemplate("narrative", map[string]any{
@@ -137,7 +144,21 @@ func (r *Repo) OpenStream(story *Item, opt StreamOptions) (*Narrative, error) {
 	if err := n.Save(); err != nil {
 		return nil, err
 	}
+	if replacing {
+		slog.Default().Info("empty narrative replaced from the template",
+			"component", "workitem", "story", story.ID, "path", path)
+	}
 	return &n, nil
+}
+
+// blankFile reports whether the file at path is a regular file holding
+// nothing but whitespace. A file it cannot read is not blank.
+func blankFile(path string, info os.FileInfo) bool {
+	if !info.Mode().IsRegular() {
+		return false
+	}
+	data, err := os.ReadFile(path)
+	return err == nil && strings.TrimSpace(string(data)) == ""
 }
 
 // ReopenStream takes up a story's narrative that exists already, as on a

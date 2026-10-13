@@ -455,3 +455,69 @@ func TestIndexListsAnUnreadableNarrative(t *testing.T) {
 		t.Errorf("the story's own log on its empty narrative: %v, want an error naming the file", err)
 	}
 }
+
+// I-0137: a crash mid-write left a story's narrative empty, and stream open
+// refused it as existing while reopen could not read it. An empty or
+// whitespace-only narrative is written afresh from the template, and the
+// replacement is logged.
+func TestOpenStreamWritesOverABlankNarrative(t *testing.T) {
+	for name, blank := range map[string]string{"empty": "", "whitespace": " \n\t\n\n"} {
+		t.Run(name, func(t *testing.T) {
+			r := newProject(t)
+			s := mustCreate(t, r, Story, "Crashed", "")
+			path := r.NarrativePath(s.ID)
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, []byte(blank), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			logs := captureWarnings(t)
+			n, err := r.OpenStream(s, StreamOptions{Agent: "bot", Session: "abc", Now: t0})
+			if err != nil {
+				t.Fatalf("open over a %s narrative: %v", name, err)
+			}
+			got, err := ReadNarrative(path)
+			if err != nil {
+				t.Fatalf("narrative written afresh does not read: %v", err)
+			}
+			if got.Stream != s.ID || got.Agent != "bot" || n.Path != path {
+				t.Errorf("narrative: %+v", got)
+			}
+			for _, section := range []string{"# S-0001 Crashed", "## Current state", "## Next steps", "## Open questions", "## Log"} {
+				if !strings.Contains(got.Body, section) {
+					t.Errorf("narrative lacks %q:\n%s", section, got.Body)
+				}
+			}
+			for _, field := range []string{"level=INFO", "component=workitem", "story=S-0001", "path="} {
+				if !strings.Contains(logs.String(), field) {
+					t.Errorf("log lacks %s: %q", field, logs.String())
+				}
+			}
+		})
+	}
+}
+
+// I-0137: a narrative with any content, even front matter that does not
+// parse, may be the agent's work: OpenStream still refuses it and leaves
+// every byte as it was.
+func TestOpenStreamRefusesANarrativeWithContent(t *testing.T) {
+	r := newProject(t)
+	s := mustCreate(t, r, Story, "Kept", "")
+	path := r.NarrativePath(s.ID)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "\n  half a front matter: [\nNotes the agent wrote.\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := r.OpenStream(s, StreamOptions{Agent: "bot", Now: t0})
+	var exists *StreamExistsError
+	if !errors.As(err, &exists) || exists.Path != path {
+		t.Errorf("open over a narrative with content: %v, want a *StreamExistsError naming %s", err, path)
+	}
+	if got := readFile(t, path); got != content {
+		t.Errorf("narrative changed:\n%q\nwant\n%q", got, content)
+	}
+}
