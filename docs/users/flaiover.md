@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-12
+updated: 2026-10-13
 status: active
 ---
 
@@ -170,7 +170,9 @@ A story in review has a review page: open it from the card in the review column,
 - Verification: the story's last `flai verify`, which its agent ran through the close-out before moving it to review ([Verify a story before review](flai.md#verify-a-story-before-review)). It says whether it passed every step or the step it stopped at, the commit it verified and the main branch it was verified against, when, and how long it took. Each step follows, in the order it ran, with its state (passed, failed, not reached, or reused) and its duration; a test or lint step is marked `tier`. A reused tier passed in an earlier run at the same commit and main branch, and was not run again ([Verify a story before review](flai.md#verify-a-story-before-review) says when). In place of its duration it shows `from` and when that run began, in the browser's time zone, as `from 2026-10-08 05:12 EDT`. Its state is a lighter green than a pass. Under the step that failed are its findings, each with its file, line, and message. The findings of `flai check` outside the story are notes that do not fail it, collapsed under a line that counts them. When the commit is not the branch's head, the result is older than the branch. The page only shows the result; it has no button to run it. When the story has no stored result, the section is not shown.
 - The threads on the story, where you can ask before deciding.
 
-**Accept** runs the acceptance as you, the project's owner, and shows each step as it completes: the branch merged, the story moved to done, the archive, the commit. Nothing is tagged or pushed by acceptance: the page says the accepted work stays local until it is published, from **Publish** on the board or with `flai release --pending` on the host. If flai refuses or fails, for example a rebase that stops on a conflict or an unticked criterion, the page shows flai's message word for word, and the story is still in review. Once accepted, the page says who accepted it: `S-0031 is accepted by alex.`
+**Accept** runs the acceptance as you, the project's owner, and shows each step as it completes: the branch merged, the story moved to done, the archive, the commit. Nothing is tagged or pushed by acceptance: the page says the accepted work stays local until it is published, from **Publish** on the board or with `flai release --pending` on the host. If flai refuses or fails, for example a rebase that stops on a conflict or an unticked criterion, the page shows flai's message word for word, and the story is still in review. Each file the message names opens in the editor.
+
+**Fixing markdown that blocks an acceptance.** When the acceptance is refused for markdown its lint fix could not fix ([Accept and release](flai.md#accept-and-release)), the page lists each finding: the file and line, the rule, and the message. Click a file to open it in the editor at that line, on the story's branch when the story's branch holds it, otherwise on `main`. Correct it and save, and the finding is marked saved. Once every listed file is saved, **Accept** is enabled again; press it to accept, with no reload. A refusal shown on the board or on the item page links each file it names to the editor too. Once accepted, the page says who accepted it: `S-0031 is accepted by alex.`
 
 **Who accepted.** A done story's page says who accepted it and on which day, under its type and status: `Accepted by alex on 2026-10-06`. With `accept_reviews` on, the orchestrator accepts stories in review itself ([When the orchestrator accepts](flai.md#when-the-orchestrator-accepts), [ADR-0093](../../design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md)). A story it accepted says `Accepted by orchestrator`, and the line links to its evidence: the section `Accepted by the orchestrator` in the story's Notes, with the commit its verifier passed, when, the verdict, and the files that meet each criterion. The history lists each move with who made it, as before.
 
@@ -429,7 +431,13 @@ Saving does three things. flai checks the repository with your change in place, 
 
 When a story in progress or in review says it touches the document, the editor warns you, as the document page does, and asks you to tick a box before the first save: your edit lands on `main`, and that story's branch will meet it at its next sync. Click anywhere in the body and "Open a thread on" names the heading you are under, so a question can be attached to the section it is about.
 
-The editor asks before you leave with unsaved changes. Creating, renaming, and deleting documents is not something it does. Commits made here are not pushed; they reach the remote with the next publish, as a story accepted from the board does.
+**From a link.** A pencil beside a link to a markdown file, or beside a file name in code such as `design/system/overview.md:42`, opens the editor over the page you are on, with the cursor on that line. Following the link itself still shows the rendered document. Pages, threads, the analyzer's reports, and refusals on the board, an item page, and the review page have them. Files the editor cannot edit have none: the archive, threads, issues, and `wip/agents/index.md`. Close the editor to go back to the page. A link of the form `/edit/<path>?line=42` opens the editor in a tab of its own.
+
+**On a story's branch.** On the page of a story in progress or in review, a design or docs file named in its body or its threads opens on the story's branch: the editor says `saves on branch story/S-nnnn`, and the save is committed there, in the story's worktree, not on `main` ([ADR-0145](../../design/adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md)). A file under `wip/` always opens on `main`, where it lives.
+
+**Lint as you type.** Under the text the editor lists the markdown lint findings, each with its line, its rule, and the message, when it opens and after each pause in typing. Click one to put the cursor on its line. They are flai's subset of the markdownlint rules with the project's configuration; the project's markdown tier still decides when a story is accepted. With a flai on the host too old to lint, the list is not shown.
+
+The editor asks before you leave, close it, or open another document with unsaved changes. Creating, renaming, and deleting documents is not something it does. Commits made here are not pushed; they reach the remote with the next publish, as a story accepted from the board does.
 
 ### Editing a story or an epic
 
