@@ -31,7 +31,19 @@ else its prompt, names, and an even share, among the tasks in progress at
 the time, of every other call made while it was in progress (ADR-0071). It
 is marked estimated.
 
-It prints what it finds. --write records it in the items' usage, as flai
+A run through a provider is priced by what its gateway charged, read from
+the gateway's spend log once the run has ended (S-0357, ADR-0132):
+OpenRouter's by the run's generations or the rise in its key's usage, a
+LiteLLM proxy's by the run's sessions or its key within the run's window.
+The gateway's cost replaces the harness's, spread over the run's models by
+their share of it; tokens stay the harness's. A run through no provider
+keeps the harness's cost, or the estimate. A gateway that does not answer
+leaves the harness's cost or the estimate, is warned of as "spend not
+read", and is asked again next time. Each item's usage says where its cost
+came from in priced_by: gateway, harness, or estimate.
+
+It prints what it finds; --json lists, under unread, the runs through a
+provider whose gateway did not say what it charged. --write records it in the items' usage, as flai
 serve does when an agent ends, and sums the story's epic again. --all
 measures every story of the project flai serve has kept a log for, to fill
 in stories worked before flai measured them. Use the flai your flai serve
