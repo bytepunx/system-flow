@@ -1,14 +1,17 @@
 package selfupgrade
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
@@ -96,6 +99,25 @@ func TrustedKeys(opt Options) ([]*ecdsa.PublicKey, error) {
 		return nil, err
 	}
 	return append(keys, linked...), nil
+}
+
+// KeysFingerprint identifies a set of trusted keys whatever their order: the
+// hex SHA-256 of their sorted PKIX DER encodings, which delimit themselves.
+func KeysFingerprint(keys []*ecdsa.PublicKey) (string, error) {
+	ders := make([][]byte, 0, len(keys))
+	for _, k := range keys {
+		der, err := x509.MarshalPKIXPublicKey(k)
+		if err != nil {
+			return "", fmt.Errorf("fingerprint the trusted release keys: %w", err)
+		}
+		ders = append(ders, der)
+	}
+	slices.SortFunc(ders, bytes.Compare)
+	h := sha256.New()
+	for _, der := range ders {
+		h.Write(der)
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // VerifyRelease checks that rel's checksums.txt is signed by a key this binary
