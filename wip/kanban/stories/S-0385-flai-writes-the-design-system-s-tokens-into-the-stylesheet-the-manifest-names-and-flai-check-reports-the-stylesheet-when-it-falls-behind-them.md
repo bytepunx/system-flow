@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:14Z
-updated: 2026-10-13T17:52:16Z
+updated: 2026-10-13T18:51:22Z
 transitions: []
 tags: [cli]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:52:16Z
 forecast:
   duration: 27m
-  delivery: 2026-10-13T22:11:00Z
-  basis: "flai's 27m: 95 s per unit over 50 done large feature stories on claude-opus-5-5, times size 17; it stands."
-  by: planner-E-0020
-  at: 2026-10-13T17:52:16Z
+  delivery: 2026-10-13T21:22:00Z
+  basis: "Its own forecast of 27m; 14th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372, S-0374, S-0381, S-0382, S-0383 and S-0384."
+  by: flai
+  at: 2026-10-13T18:51:22Z
 ---
 # S-0385 flai writes the design system's tokens into the stylesheet the manifest names, and flai check reports the stylesheet when it falls behind them
 

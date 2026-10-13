@@ -6,7 +6,7 @@ title: An acceptance on main during a close-out's tiers fails its final sync che
 status: backlog
 owner: alex
 created: 2026-10-12T16:52:54Z
-updated: 2026-10-13T17:46:54Z
+updated: 2026-10-13T18:51:22Z
 transitions: []
 tags: [cli]
 topics: [cli, conventions, template, testing]
@@ -58,10 +58,10 @@ cost_of_delay:
   at: 2026-10-12T17:35:05Z
 forecast:
   duration: 1h
-  delivery: 2026-10-13T19:51:00Z
-  basis: "Its own forecast of 1h; 9th in the pull order with an in-progress limit of 5, behind S-0356, S-0378, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371 and S-0372."
+  delivery: 2026-10-13T20:40:00Z
+  basis: "Its own forecast of 1h; 9th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371 and S-0372."
   by: flai
-  at: 2026-10-13T17:46:54Z
+  at: 2026-10-13T18:51:22Z
 ---
 # S-0374 An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
 

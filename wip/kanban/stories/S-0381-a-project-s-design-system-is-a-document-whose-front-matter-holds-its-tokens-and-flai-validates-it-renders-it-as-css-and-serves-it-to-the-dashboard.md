@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:24Z
-updated: 2026-10-13T17:51:23Z
+updated: 2026-10-13T18:51:22Z
 transitions: []
 tags: [cli]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:51:23Z
 forecast:
   duration: 45m
-  delivery: 2026-10-13T21:38:00Z
-  basis: "flai's 34m (95 s per unit over 50 large feature stories on claude-opus-5-5, size 21) raised to 45m: a new package, a check rule, a command group, and a host method across six tasks in four layers."
-  by: planner-E-0020
-  at: 2026-10-13T17:51:23Z
+  delivery: 2026-10-13T20:50:00Z
+  basis: "Its own forecast of 45m; 10th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372 and S-0374."
+  by: flai
+  at: 2026-10-13T18:51:22Z
 ---
 # S-0381 A project's design system is a document whose front matter holds its tokens, and flai validates it, renders it as CSS, and serves it to the dashboard
 

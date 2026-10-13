@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:47Z
-updated: 2026-10-13T17:51:49Z
+updated: 2026-10-13T18:51:22Z
 transitions: []
 tags: [dashboard]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:51:49Z
 forecast:
   duration: 30m
-  delivery: 2026-10-13T23:11:00Z
-  basis: flai's 24m (95 s per unit over 50 large feature stories on claude-opus-5-5, size 15) raised a quarter to 30m for a front matter round trip and new Svelte components with tests.
-  by: planner-E-0020
-  at: 2026-10-13T17:51:49Z
+  delivery: 2026-10-13T22:24:00Z
+  basis: "Its own forecast of 30m; 12th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372, S-0374, S-0381 and S-0382."
+  by: flai
+  at: 2026-10-13T18:51:22Z
 ---
 # S-0383 The operator changes the design system's tokens on the Design page, sees the preview follow before saving, and saves through flai
 

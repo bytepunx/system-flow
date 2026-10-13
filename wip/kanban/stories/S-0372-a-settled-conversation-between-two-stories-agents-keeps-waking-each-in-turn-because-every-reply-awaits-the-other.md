@@ -6,7 +6,7 @@ title: A settled conversation between two stories' agents keeps waking each in t
 status: backlog
 owner: alex
 created: 2026-10-12T16:52:49Z
-updated: 2026-10-13T17:46:54Z
+updated: 2026-10-13T18:51:22Z
 transitions: []
 tags: [flai, messages, serve]
 topics: [cli, conventions]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-12T17:24:12Z
 forecast:
   duration: 1h
-  delivery: 2026-10-13T19:35:00Z
-  basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 5, behind S-0356, S-0378, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358 and S-0371."
+  delivery: 2026-10-13T20:21:00Z
+  basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358 and S-0371."
   by: flai
-  at: 2026-10-13T17:46:54Z
+  at: 2026-10-13T18:51:22Z
 ---
 # S-0372 A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
 

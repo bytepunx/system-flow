@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:35Z
-updated: 2026-10-13T17:51:37Z
+updated: 2026-10-13T18:51:22Z
 transitions: []
 tags: [dashboard]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:51:37Z
 forecast:
   duration: 50m
-  delivery: 2026-10-13T22:35:00Z
-  basis: flai's 39m (95 s per unit over 50 large feature stories on claude-opus-5-5, size 24) raised about a quarter to 50m for new Svelte components with component tests and an isolated preview.
-  by: planner-E-0020
-  at: 2026-10-13T17:51:37Z
+  delivery: 2026-10-13T21:49:00Z
+  basis: "Its own forecast of 50m; 11th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372, S-0374 and S-0381."
+  by: flai
+  at: 2026-10-13T18:51:22Z
 ---
 # S-0382 The dashboard's Design group shows a project's design system and previews its tokens live on sample components
 

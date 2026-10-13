@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:03Z
-updated: 2026-10-13T17:52:06Z
+updated: 2026-10-13T18:51:22Z
 transitions: []
 tags: [dashboard, cli]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:52:06Z
 forecast:
   duration: 1h5m
-  delivery: 2026-10-14T00:24:00Z
-  basis: "flai's 50m (95 s per unit over 50 large feature stories on claude-opus-5-5, size 31) raised about a quarter to 1h5m: it spans flai and flaiover, runs both test tiers, and has eight tasks in five layers."
-  by: planner-E-0020
-  at: 2026-10-13T17:52:06Z
+  delivery: 2026-10-13T23:40:00Z
+  basis: "Its own forecast of 1h5m; 13th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372, S-0374, S-0381, S-0382 and S-0383."
+  by: flai
+  at: 2026-10-13T18:51:22Z
 ---
 # S-0384 An agent's proposal for the design system is a story whose branch changes it, and the Design page previews that branch beside the main branch's before the operator accepts it
 
