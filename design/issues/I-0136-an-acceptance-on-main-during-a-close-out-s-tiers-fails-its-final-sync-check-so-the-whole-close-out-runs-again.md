@@ -3,11 +3,11 @@ id: I-0136
 title: An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
 class: efficiency
 status: open
-count: 7
+count: 8
 cost: 6m
 first_reported: 2026-10-12T15:19:01Z
-last_reported: 2026-10-13T17:38:42Z
-updated: 2026-10-13T17:38:42Z
+last_reported: 2026-10-13T19:01:02Z
+updated: 2026-10-13T19:01:02Z
 ---
 
 # I-0136 An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
@@ -44,6 +44,10 @@ S-0352's close-out passed every step and tier (integration 5m25s, smoke 1m56s), 
 ### 2026-10-13T17:38:42Z
 Story: S-0379.
 S-0379's close-out passed every tier (integration 5m7s, smoke 1m39s), then its final sync check found main 7 commits ahead after S-0376's acceptance, so the whole close-out runs again.
+
+### 2026-10-13T19:01:02Z
+Story: S-0378.
+S-0378's close-out passed every tier (integration 4m47s, smoke 1m29s), then stopped at the final sync check: main had gained 9 commits during the run. The sync and a second full run followed.
 
 ## Remediation
 
