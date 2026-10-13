@@ -1,6 +1,6 @@
 ---
 title: System design index
-updated: 2026-10-04
+updated: 2026-10-13
 status: active
 ---
 
@@ -31,5 +31,6 @@ Living documents describing system-flow as it currently is. Read them in this or
 | [server-performance.md](server-performance.md) | The finding of S-0152: how a request's time is measured beneath its transport, what the dashboard's methods and the MCP tools take on this repository, and the seven causes of the pauses, each with a story |
 | [release-signing.md](release-signing.md) | The finding of S-0193: how flai and flaiover are released, upgraded, and connected today, the ways to sign a release and verify it at upgrade and at image run, what each side can verify about the other at connection time, the recommendation, and the operator's decision |
 | [agent-adapters.md](agent-adapters.md) | The finding of S-0339: where flai is tied to Anthropic and Claude Code today, what LiteLLM and OpenRouter offer and the harnesses that drive them, the abstractions that free flai's intent from a vendor and the recommendation, and the operator's decision and the epic |
+| [design-system-tool.md](design-system-tool.md) | The finding of S-0380: what the dashboard's theme, document editor, and site menu, the host methods, and the prime pack offer a design system tool today, where and in what format a project keeps its design system, how the dashboard previews it live, how the operator and agents work on it together, and the operator's decision |
 | [devex.md](devex.md) | Developer experience and operations components shipped by the template |
 | [brief.md](brief.md) | The original brief, kept verbatim for reference |
