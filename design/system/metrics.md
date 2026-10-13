@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-12
+updated: 2026-10-13
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -58,13 +58,33 @@ What strategic agents spent on an item, its `usage.strategic` ([ADR-0083](../adr
 | Token rate | Tokens over agent minutes; absent when `seconds` is 0 |
 | Per model | The same for each model the item lists: its tokens, its cost, and its tokens over the item's agent minutes |
 | Estimated | The item's `estimated` |
+| Priced by | The item's `priced_by`, where its cost came from: `gateway`, `harness`, or `estimate`; absent when the item names none. [Where a cost came from](#where-a-cost-came-from-s-0358) defines it and how an item without one reads |
 | Empty wakes | The item's `usage.empty_wakes`, 0 without one: on a story, the [empty wakes](#waiting) its agents' logs held when flai serve last measured it; on an epic, its stories' summed; a task carries none ([ADR-0105](../adrs/0105-a-story-s-empty-wakes-the-wait-for-events-calls-of-its-agents-that-timed-out.md), S-0272). Their aggregates are under [Waiting](#waiting), not here. The turns of the story's agent, `usage.turns`, are not among the usage values; they are under [Turns](#turns-s-0293) |
 
 Aggregates cover the items of the report's type that entered `done` in the window and carry usage; cancelled items are left out:
 
-- **Totals**: items, tokens, cost, agent seconds, and whether any is estimated.
+- **Totals**: items, tokens, cost, agent seconds, whether any is estimated, and where their cost came from: the cost per source and the set's source, as [Where a cost came from](#where-a-cost-came-from-s-0358) defines them.
 - **Per model**: for each model, the items it worked on, its tokens and cost over them, and its tokens over the agent minutes of those items.
 - **Completion against time and cost**: the items in order of `completed` (then ID), each point carrying `completed`, the ID, and the cumulative count of items, tokens, and cost up to and including it. Per model, the same over the items that model worked on, counting that model's tokens and cost. Reported for scripts; no chart draws it since [ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md).
+
+### Where a cost came from (S-0358)
+
+An item's `usage.priced_by` names where its agents' cost came from ([ADR-0132](../adrs/0132-a-story-s-cost-comes-from-its-provider-s-spend-log-when-it-has-a-provider-from.md), S-0357). Its three sources run from the least certain to the most:
+
+| Source | Meaning |
+|--------|---------|
+| `estimate` | flai estimated the cost from its rates, or apportioned it |
+| `harness` | The harness reported the cost itself, as Claude Code does from its own price table |
+| `gateway` | The provider's spend log charged it: what the gateway billed for the run's calls |
+
+| Rule | Definition |
+|------|------------|
+| Sum | An item summed from its children, or a set of items, has the least certain source among those whose usage has models: `estimate` below `harness` below `gateway`. Usage without models adds nothing to it. While none of them names a source, the sum names none either |
+| Read source | What a source rule reads: `priced_by` when the item names one; otherwise, as usage written before S-0357 reads, `estimate` when `estimated` is true and `harness` when it is not |
+| Mark | What a reader shows beside a cost: `(gateway)`, `(harness)`, or `(estimated)` for the item's or the set's `priced_by`; with none, `(estimated)` when `estimated` is true and nothing otherwise, as before S-0358 |
+| Cost by source | Over a set of items, the sum of their agents' cost under each item's read source, every source present, zero when none of the set's cost came from it. The three add up to the set's cost |
+
+A sum uses the read source of each part only once a part names one, so a set of items written before S-0357 names no source and is marked as it was. `priced_by` is the agents' cost's alone: what strategic agents spent is always estimated and stays apart ([Strategic usage](#strategic-usage)). Costs by source are not rounded, as cost is not.
 
 ### Strategic usage
 
@@ -113,6 +133,7 @@ A set of items, whether those of a bucket, of a type over the window, or of eith
 |-------|------------|
 | Items, tokens, cost, seconds | Their count and the sums of their tokens, cost, and agent seconds. For a model: the items it worked on, its own tokens and cost, and those items' agent seconds |
 | Estimated | Whether any of them is |
+| Priced by, cost by source | Their sum's source and their cost per source, as [Where a cost came from](#where-a-cost-came-from-s-0358) defines them. A model's set has neither |
 | Tokens per item | Tokens over items: the mean an item took |
 | Cost per item | Cost over items |
 | Minutes per item | Agent seconds over items, in minutes: the mean agent time an item took. Absent also when none of them took agent time ([ADR-0057](../adrs/0057-the-dashboard-charts-agent-time-and-cost-per-item-per-model-over-time-instead.md)) |
@@ -125,6 +146,8 @@ A value is absent when its divisor is zero.
 Each type over the window, and each point of its series, also has `strategic`: `items`, the items among them that carry strategic usage, and `tokens`, `cost`, and `seconds`, what strategic agents spent on those, summed over every kind ([ADR-0083](../adrs/0083-a-planner-activity-s-usage-is-charged-to-the-item-it-planned-and-the-items.md)). It is always present, zeros when nothing was spent, and no other value of the type or the point counts it: the values above, the models, and the running means are the agents' alone.
 
 `flai stats --json` carries each item's usage under `items[].usage`, with its `strategic` list and, since S-0272, `empty_wakes`, and its expected cost under `items[].expected_cost`; and the aggregates under `usage`: `items`, `tokens`, `cost`, `seconds`, `estimated`, `models`, `done`, `by_model`, since S-0163 `bucket` (`hour`, `day`, or `week`) and `spend`, and since S-0225 `strategic` and `cost_per_agent_hour`. `spend` has the keys `epic`, `story`, and `task`, each with the values of its items over the window (`items`, `tokens`, `cost`, `seconds`, `estimated`, `tokens_per_item`, `cost_per_item`, `minutes_per_item`, `tokens_per_minute`, `tokens_per_dollar`), the same per model under `models`, its `strategic`, and the series under `buckets`: each point has `at`, the same values, `mean_tokens`, `mean_cost`, its `models`, and its `strategic`. A rate is `tokens_per_minute`. `tokens_per_hour`, sixty times that, stays beside it on items and models for what was written to flai 1.25.
+
+Since S-0358, `items[].usage` carries `priced_by` when the item names one, and leaves it out otherwise; `usage`, each type under `spend`, and each of its `buckets` carry `priced_by`, their sum's source, left out when it names none, and `cost_by_source`, always present, an object with the keys `gateway`, `harness`, and `estimate`, each a cost in US dollars. Per-model entries carry neither.
 
 ## Strategic agents (S-0206)
 
