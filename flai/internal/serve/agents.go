@@ -88,6 +88,53 @@ type AgentConfig struct {
 	// agent that ended with its story in progress, on its own; 0 never does
 	// (S-0294, ADR-0108).
 	AutoRestarts int
+	// Lifts are what the operator lifts on each harness on this host, the
+	// command among them, by harness name (ADR-0131).
+	Lifts map[string]HarnessLifts
+	// AutoApprove is whether the auto-approve host action is enabled for the
+	// project: a protected write is allowed without asking (ADR-0086).
+	AutoApprove bool
+}
+
+// HarnessLifts are what the operator lifts on one harness, taking the risk
+// that comes with it (ADR-0131).
+type HarnessLifts struct {
+	// GuardNone lets a story's roles run without flai guard on a harness
+	// that cannot run it.
+	GuardNone bool
+	// DenyProtected is the operator's say that their arguments for the
+	// harness deny the protected paths, so a harness that cannot ask before
+	// a protected write may start a story's agent.
+	DenyProtected bool
+}
+
+// startAllowed says whether a story's agent, with agent's roles, may start
+// on harness name, which can do what caps says, under cfg's lifts
+// (ADR-0131), and, when its roles then run without flai guard, the words
+// that say so in the start's journal entry and log line. A harness
+// that cannot run the guard is refused a story with roles unless the host
+// sets guard none for it; one that cannot ask before a protected write is
+// refused unless the project's auto-approve host action is on or the host
+// sets deny_protected for it. Each refusal names what lifts it, and both
+// are given when both hold.
+func startAllowed(name string, caps harness.Capabilities, agent *manifest.Agent, cfg AgentConfig) (unguarded string, err error) {
+	lifts := cfg.Lifts[name]
+	var refused []string
+	if !caps.Guard && agent != nil && len(agent.Roles) > 0 {
+		roles := strings.Join(slices.Sorted(maps.Keys(agent.Roles)), ", ")
+		if lifts.GuardNone {
+			unguarded = fmt.Sprintf("its roles (%s) run without flai guard (guard: none on harness %s, ADR-0131)", roles, name)
+		} else {
+			refused = append(refused, fmt.Sprintf("harness %[1]s cannot run flai guard, so the story's roles (%[2]s) cannot run; flai serve agent harness %[1]s --guard none runs them unguarded (ADR-0131)", name, roles))
+		}
+	}
+	if !caps.Ask && !cfg.AutoApprove && !lifts.DenyProtected {
+		refused = append(refused, fmt.Sprintf("harness %[1]s cannot ask before a protected write, so flai serve does not start a story's agent on it; turn on the project's auto-approve host action (flai serve enable auto-approve), or say your arguments for it deny the protected paths with flai serve agent harness %[1]s --deny-protected (ADR-0131)", name))
+	}
+	if len(refused) > 0 {
+		return "", errors.New(strings.Join(refused, "; and "))
+	}
+	return unguarded, nil
 }
 
 // host is what harness name runs with: the operator's, or for the command
@@ -1050,7 +1097,9 @@ func agentEnv(env []string) []string {
 var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS"}
 
 // start starts an agent for story, or starts again the one that ended asking
-// in story.Asked, for story.Answer, and says whether it did.
+// in story.Asked, for story.Answer, and says whether it did. What its
+// harness cannot do refuses it as startAllowed says (ADR-0131), as any
+// failed start is refused.
 func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory) bool {
 	now := l.now().UTC()
 	name := cfg.Name
@@ -1092,6 +1141,10 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if err != nil {
 		return fail(err)
 	}
+	unguarded, err := startAllowed(name, adapter.Capabilities(), story.Agent, cfg)
+	if err != nil {
+		return fail(err)
+	}
 	var shares []harness.Share
 	if story.Asked == nil && story.Commit == "" {
 		shares = sharedWith(l.entry.Root, story.ID) // a resumed session knows them; a commit needs none
@@ -1127,10 +1180,15 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if story.AutoRestarts > 0 {
 		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s on its own, automatic restart %d of %d, its last agent having ended in progress (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, story.AutoRestarts, cfg.AutoRestarts, run.PID, run.Log)
 	}
+	said := []any{"story", story.ID, "harness", run.Harness, "command", run.Command, "pid", run.PID}
+	if unguarded != "" {
+		entry.Detail += "; " + unguarded
+		said = append(said, "roles", unguarded)
+	}
 	if l.record != nil {
 		l.record(entry)
 	}
-	l.log("agent started", "story", story.ID, "harness", run.Harness, "command", run.Command, "pid", run.PID)
+	l.log("agent started", said...)
 	l.await(cmd, out, run.PID, func(code int) {
 		ended := *run
 		ended.Ended, ended.Exit = l.now().UTC().Format(time.RFC3339), &code

@@ -111,7 +111,10 @@ func newAgentLab(t *testing.T) *agentLab {
 	if err := os.WriteFile(lab.stub, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	lab.cfg = AgentConfig{Enabled: true, Command: []string{lab.stub, "work on {story}", "--root={root}", "$(echo not a shell)"}, Name: "builder"}
+	// The command cannot ask before a protected write: the operator says
+	// their arguments deny the protected paths, so it starts (ADR-0131).
+	lab.cfg = AgentConfig{Enabled: true, Command: []string{lab.stub, "work on {story}", "--root={root}", "$(echo not a shell)"}, Name: "builder",
+		Lifts: map[string]HarnessLifts{harness.Command: {DenyProtected: true}}}
 	o := Options{Dir: Dir(filepath.Join(t.TempDir(), "serve")), Logger: slog.New(slog.NewTextHandler(&lab.logs, nil)), Now: time.Now,
 		Agent: func(string) AgentConfig { return lab.cfg },
 		Host: hostapi.Host{Record: func(e hostapi.Entry) {
@@ -2150,4 +2153,159 @@ func TestThePlannersProviderIsResolvedAsAStorysAgentsIs(t *testing.T) {
 		t.Errorf("run: %+v", r)
 	}
 	lab.given(id)
+}
+
+// S-0355, ADR-0131: what a harness cannot do refuses a story's agent unless
+// the operator lifts it: roles without the guard unless guard none is set,
+// which the start then says; a start without asking unless auto-approve is
+// on or deny_protected is set; both refusals at once when both hold, each
+// naming what lifts it. A harness that can do both is never refused.
+func TestStartAllowedWeighsWhatAHarnessCannotDo(t *testing.T) {
+	none := harness.Adapters[harness.Command].Capabilities()
+	claude := harness.Adapters[harness.ClaudeCode].Capabilities()
+	roles := &manifest.Agent{Roles: map[string]manifest.Role{manifest.RoleVerify: {Model: "sonnet"}, manifest.RoleExplore: {Model: "haiku"}}}
+	lift := func(l HarnessLifts) map[string]HarnessLifts { return map[string]HarnessLifts{harness.Command: l} }
+	guardRefusal := "harness command cannot run flai guard, so the story's roles (explore, verify) cannot run; flai serve agent harness command --guard none runs them unguarded (ADR-0131)"
+	askRefusal := "harness command cannot ask before a protected write, so flai serve does not start a story's agent on it; turn on the project's auto-approve host action (flai serve enable auto-approve), or say your arguments for it deny the protected paths with flai serve agent harness command --deny-protected (ADR-0131)"
+	unguarded := "its roles (explore, verify) run without flai guard (guard: none on harness command, ADR-0131)"
+	for _, c := range []struct {
+		name      string
+		harness   string
+		caps      harness.Capabilities
+		agent     *manifest.Agent
+		cfg       AgentConfig
+		unguarded string
+		refused   string
+	}{
+		{"roles without the guard", harness.Command, none, roles, AgentConfig{Lifts: lift(HarnessLifts{DenyProtected: true})}, "", guardRefusal},
+		{"roles with guard none", harness.Command, none, roles, AgentConfig{Lifts: lift(HarnessLifts{GuardNone: true, DenyProtected: true})}, unguarded, ""},
+		{"no roles needs no guard", harness.Command, none, &manifest.Agent{Model: "m"}, AgentConfig{AutoApprove: true}, "", ""},
+		{"no ask", harness.Command, none, nil, AgentConfig{}, "", askRefusal},
+		{"no ask, auto-approve on", harness.Command, none, nil, AgentConfig{AutoApprove: true}, "", ""},
+		{"no ask, deny_protected", harness.Command, none, nil, AgentConfig{Lifts: lift(HarnessLifts{DenyProtected: true})}, "", ""},
+		{"another harness's lifts lift nothing", harness.Command, none, nil, AgentConfig{Lifts: map[string]HarnessLifts{harness.ClaudeCode: {DenyProtected: true}}}, "", askRefusal},
+		{"neither", harness.Command, none, roles, AgentConfig{}, "", guardRefusal + "; and " + askRefusal},
+		{"claude-code with roles", harness.ClaudeCode, claude, roles, AgentConfig{}, "", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := startAllowed(c.harness, c.caps, c.agent, c.cfg)
+			if c.refused != "" {
+				if err == nil || err.Error() != c.refused || got != "" {
+					t.Errorf("startAllowed = %q, %v; want refused with\n%s", got, err, c.refused)
+				}
+				return
+			}
+			if err != nil || got != c.unguarded {
+				t.Errorf("startAllowed = %q, %v; want %q", got, err, c.unguarded)
+			}
+		})
+	}
+}
+
+// S-0355, ADR-0131: a story on the command harness, which can neither run
+// flai guard nor ask, is refused before its agent starts unless the
+// operator lifts what it lacks: the refusal is the run's failure, in the
+// journal and in the story's agent status as the dashboard's story page
+// reads it, and no process is started. Lifted, it starts, and a start
+// whose roles run unguarded says so in the journal and the log.
+func TestACommandStartIsRefusedWhatItsHarnessCannotDo(t *testing.T) {
+	ctx := context.Background()
+	verify := &manifest.Agent{Roles: map[string]manifest.Role{manifest.RoleVerify: {Model: "sonnet"}}}
+	refused := func(t *testing.T, lab *agentLab, id string, want ...string) {
+		t.Helper()
+		r := lab.run(id)
+		if r == nil || r.Outcome != OutcomeFailed || r.PID != 0 || r.Harness != harness.Command || !strings.HasPrefix(r.Why, "could not be started: harness command cannot ") {
+			t.Fatalf("run %+v", r)
+		}
+		a := Activity(lab.root, lab.state())[id]
+		if a.State != ActivityFailed {
+			t.Errorf("the story's agent status: %+v", a)
+		}
+		for _, w := range want {
+			if !strings.Contains(a.Why, w) {
+				t.Errorf("the story's agent status %q does not say %q", a.Why, w)
+			}
+		}
+		if j := lab.entries(); len(j) == 0 || j[len(j)-1].Outcome != "failed" || !strings.Contains(j[len(j)-1].Detail, "an agent for "+id+" could not be started: harness command cannot ") {
+			t.Errorf("journal: %+v", j)
+		}
+		if _, err := os.Stat(filepath.Join(lab.outDir, id+".txt")); err == nil {
+			t.Error("the agent was started")
+		}
+	}
+	started := func(t *testing.T, lab *agentLab, id string) hostapi.Entry {
+		t.Helper()
+		waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && r.PID != 0 && !r.live() })
+		j := lab.entries()
+		if len(j) == 0 || j[len(j)-1].Outcome != "done" || !strings.Contains(j[len(j)-1].Detail, "started stub-agent (command) for "+id) {
+			t.Fatalf("journal: %+v", j)
+		}
+		return j[len(j)-1]
+	}
+	t.Run("roles without the guard are refused", func(t *testing.T) {
+		lab := newAgentLab(t)
+		id := lab.readyWith("Roles", verify)
+		lab.l.look(ctx, false)
+		refused(t, lab, id, "harness command cannot run flai guard", "roles (verify)", "flai serve agent harness command --guard none")
+	})
+	t.Run("roles with guard none start unguarded, and say so", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.cfg.Lifts = map[string]HarnessLifts{harness.Command: {GuardNone: true, DenyProtected: true}}
+		id := lab.readyWith("Roles unguarded", verify)
+		lab.l.look(ctx, false)
+		e := started(t, lab, id)
+		said := "its roles (verify) run without flai guard (guard: none on harness command, ADR-0131)"
+		if !strings.Contains(e.Detail, said) {
+			t.Errorf("the journal does not say the roles run unguarded: %q", e.Detail)
+		}
+		if !strings.Contains(lab.logText(), `msg="agent started"`) || !strings.Contains(lab.logText(), `roles="`+said+`"`) {
+			t.Errorf("the log does not say the roles run unguarded:\n%s", lab.logText())
+		}
+	})
+	t.Run("without asking it is refused", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.cfg.Lifts = nil
+		id := lab.ready("No ask")
+		lab.l.look(ctx, false)
+		refused(t, lab, id, "harness command cannot ask before a protected write", "flai serve enable auto-approve", "flai serve agent harness command --deny-protected")
+	})
+	t.Run("auto-approve on starts it", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.cfg.Lifts, lab.cfg.AutoApprove = nil, true
+		id := lab.ready("Auto-approved")
+		lab.l.look(ctx, false)
+		if e := started(t, lab, id); strings.Contains(e.Detail, "without flai guard") {
+			t.Errorf("a start with no roles says they run unguarded: %q", e.Detail)
+		}
+	})
+	t.Run("deny_protected starts it", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.cfg.Lifts = map[string]HarnessLifts{harness.Command: {DenyProtected: true}}
+		id := lab.ready("Denied")
+		lab.l.look(ctx, false)
+		started(t, lab, id)
+	})
+}
+
+// S-0355, ADR-0131: a claude-code start, whose harness runs flai guard and
+// asks, is unchanged with nothing lifted: a story with roles starts, and
+// nothing says they run unguarded.
+func TestAClaudeCodeStartIsUnchangedByWhatOtherHarnessesCannotDo(t *testing.T) {
+	lab := newAgentLab(t)
+	lab.cfg.Command, lab.cfg.Lifts, lab.cfg.AutoApprove = nil, nil, false
+	lab.cfg.Flai = "/usr/local/bin/flai"
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+	id := lab.readyWith("Worked by claude", &manifest.Agent{Harness: harness.ClaudeCode, Roles: map[string]manifest.Role{manifest.RoleVerify: {Harness: harness.ClaudeCode}}})
+	lab.l.look(context.Background(), false)
+	waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+	if r := lab.run(id); r.PID == 0 || r.Error != "" || r.Harness != harness.ClaudeCode {
+		t.Fatalf("run: %+v", r)
+	}
+	j := lab.entries()
+	if len(j) != 1 || j[0].Outcome != "done" || strings.Contains(j[0].Detail, "without flai guard") {
+		t.Errorf("journal: %+v", j)
+	}
+	if strings.Contains(lab.logText(), "without flai guard") {
+		t.Errorf("the log says the roles run unguarded:\n%s", lab.logText())
+	}
 }

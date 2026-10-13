@@ -417,6 +417,30 @@ func TestServeAgentHarnessGuardAndDenyProtected(t *testing.T) {
 	}
 }
 
+// S-0355 (ADR-0131): flai serve is told at every look what the operator
+// lifts on each harness, the command's among them, and whether the
+// project's auto-approve host action is on.
+func TestServeAgentConfigCarriesTheLiftsAndAutoApprove(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	runIn(t, root, "serve", "agent", "set", "--", "run-agent", "{story}")
+	if got := (&app{}).agentConfig(root); len(got.Lifts) != 0 || got.AutoApprove {
+		t.Errorf("nothing lifted: %+v %v", got.Lifts, got.AutoApprove)
+	}
+	runIn(t, root, "serve", "agent", "harness", "command", "--guard", "none")
+	runIn(t, root, "serve", "agent", "harness", "claude-code", "--deny-protected")
+	got := (&app{}).agentConfig(root).Lifts
+	if got["command"] != (serve.HarnessLifts{GuardNone: true}) || got["claude-code"] != (serve.HarnessLifts{DenyProtected: true}) {
+		t.Errorf("lifts: %+v", got)
+	}
+	if _, errOut, code := runIn(t, root, "serve", "enable", "auto-approve"); code != 0 {
+		t.Fatal(errOut)
+	}
+	if !(&app{}).agentConfig(root).AutoApprove {
+		t.Error("auto-approve is on for the project")
+	}
+}
+
 // S-0349 (ADR-0129): a provider's entry is the operator's, set, shown,
 // changed field by field, and removed on the host; a new entry is whole, a
 // refused value changes nothing, clear keeps the providers, and nothing the
@@ -1111,6 +1135,7 @@ func TestServeAgentRestartQueuesWhenTheLimitIsFull(t *testing.T) {
 	}
 	runIn(t, root, "serve", "enable", "agent")
 	runIn(t, root, "serve", "agent", "set", "--", "true", "{story}")
+	runIn(t, root, "serve", "agent", "harness", "command", "--deny-protected") // the command cannot ask (ADR-0131)
 	if out, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1"); code != 0 {
 		t.Fatalf("start: %d %s %s", code, out, errOut)
 	}
@@ -1168,6 +1193,12 @@ func TestServeAgentStartStartsAReadyStorysAgent(t *testing.T) {
 		t.Errorf("nothing to start it with: %d %s", code, errOut)
 	}
 	runIn(t, root, "serve", "agent", "set", "--", "true", "{story}")
+	// S-0355 (ADR-0131): the command cannot ask before a protected write, so
+	// it starts only once the operator lifts that
+	if _, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1"); code == 0 || !strings.Contains(errOut, "harness command cannot ask before a protected write") || !strings.Contains(errOut, "flai serve agent harness command --deny-protected") {
+		t.Errorf("started where nothing lifts asking: %d %s", code, errOut)
+	}
+	runIn(t, root, "serve", "agent", "harness", "command", "--deny-protected")
 	out, errOut, code := runIn(t, root, "serve", "agent", "start", "S-1")
 	if code != 0 || !strings.HasPrefix(out, "started true (command) for S-0001 as agent-S-0001") {
 		t.Fatalf("start: %d %s %s", code, out, errOut)
@@ -1289,6 +1320,7 @@ func TestTheMCPServerStartsAStorysAgentUnderTheAgentAction(t *testing.T) {
 	}
 	runIn(t, root, "serve", "enable", "agent")
 	runIn(t, root, "serve", "agent", "set", "--", "true", "{story}")
+	runIn(t, root, "serve", "agent", "harness", "command", "--deny-protected") // the command cannot ask (ADR-0131)
 	got, err := a.mcpAgents(ctx, "restart", root, "S-0001", "agent-ops")
 	if err != nil || got.Story != "S-0001" || got.PID == 0 || got.Command != "true" {
 		t.Fatalf("a story in progress with no agent here: %+v %v", got, err)

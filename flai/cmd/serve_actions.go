@@ -521,6 +521,10 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	if len(cfg.Agent.Command) > 0 {
 		hosts[harness.Command] = harness.Host{Program: cfg.Agent.Command[0], Args: cfg.Agent.Command[1:]}
 	}
+	lifts := map[string]serve.HarnessLifts{}
+	for name, set := range cfg.Agent.Harnesses {
+		lifts[name] = serve.HarnessLifts{GuardNone: set.Guard == config.GuardNone, DenyProtected: set.DenyProtected}
+	}
 	self, _ := os.Executable()
 	return serve.AgentConfig{
 		Flai:         self,
@@ -533,6 +537,8 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 		Providers:    cfg.Agent.Providers,
 		Name:         cfg.Agent.Name,
 		AutoRestarts: cfg.Agent.AutoRestartLimit(),
+		Lifts:        lifts,
+		AutoApprove:  cfg.ActionEnabled(hostapi.ActionAutoApprove, root),
 	}
 }
 
