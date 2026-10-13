@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:47Z
-updated: 2026-10-13T18:51:22Z
+updated: 2026-10-13T21:28:43Z
 transitions: []
 tags: [dashboard]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:51:49Z
 forecast:
   duration: 30m
-  delivery: 2026-10-13T22:24:00Z
-  basis: "Its own forecast of 30m; 12th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0357, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372, S-0374, S-0381 and S-0382."
+  delivery: 2026-10-14T00:26:00Z
+  basis: "Its own forecast of 30m; 11th in the pull order with an in-progress limit of 5, behind S-0378, S-0380, S-0241, S-0304, S-0305, S-0306, S-0358, S-0371, S-0372, S-0374, S-0381 and S-0382."
   by: flai
-  at: 2026-10-13T18:51:22Z
+  at: 2026-10-13T21:28:43Z
 ---
 # S-0383 The operator changes the design system's tokens on the Design page, sees the preview follow before saving, and saves through flai
 
