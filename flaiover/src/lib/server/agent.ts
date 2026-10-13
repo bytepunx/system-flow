@@ -77,6 +77,7 @@ export const REQUIRED_METHODS = [
 	'messages.get',
 	'docs.tree',
 	'doc.get',
+	'doc.lint',
 	'adrs.list',
 	'activity.get',
 	'activity.document',

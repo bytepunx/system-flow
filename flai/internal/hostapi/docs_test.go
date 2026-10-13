@@ -1,6 +1,7 @@
 package hostapi
 
 import (
+	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -234,5 +235,82 @@ func TestAdrsList(t *testing.T) {
 	if len(list) != 2 || list[0].ID != "ADR-0001" || list[0].Date != "2026-09-01" || list[0].SupersededBy[0] != "ADR-0002" ||
 		list[1].Supersedes[0] != "ADR-0001" || list[1].Refines[0] != "ADR-0001" || list[1].Path != "design/adrs/0002-second.md" || len(list[0].Refines) != 0 {
 		t.Errorf("%+v", list)
+	}
+}
+
+// lintParams is doc.lint's params for path and content, encoded.
+func lintParams(t *testing.T, path, content string) string {
+	t.Helper()
+	data, err := json.Marshal(map[string]string{"path": path, "content": content})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+func withLintConfig(t *testing.T) channel.Project {
+	t.Helper()
+	p := withDocs(t)
+	if err := os.WriteFile(filepath.Join(p.Root, ".markdownlint.yaml"), []byte("default: true\nMD013: false\nMD041: false\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// TestDocLint: doc.lint answers the findings of the content the editor
+// holds, by line and rule, and an empty list for clean content, whether or
+// not the file is there yet (S-0378).
+func TestDocLint(t *testing.T) {
+	p := withLintConfig(t)
+	var got DocLint
+	if err := call(t, p, "doc.lint", lintParams(t, "design/system/overview.md", "# Title\n\n\n## Same\n\ntext \n\n## Same\n"), &got); err != nil {
+		t.Fatal(err)
+	}
+	want := []LintFinding{
+		{Line: 3, Rule: "MD012", Alias: "no-multiple-blanks", Message: "Multiple consecutive blank lines [Expected: 1; Actual: 2]"},
+		{Line: 6, Rule: "MD009", Alias: "no-trailing-spaces", Message: "Trailing spaces [Expected: 0 or 2; Actual: 1]"},
+		{Line: 8, Rule: "MD024", Alias: "no-duplicate-heading", Message: `Multiple headings with the same content [Context: "Same"]`},
+	}
+	if got.Path != "design/system/overview.md" || len(got.Findings) != len(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+	for i, f := range got.Findings {
+		if f != want[i] {
+			t.Errorf("finding %d: %+v, want %+v", i, f, want[i])
+		}
+	}
+	for _, path := range []string{"design/system/overview.md", "docs/users/new.md", "wip/agents/S-0001.md"} {
+		var clean DocLint
+		if err := call(t, p, "doc.lint", lintParams(t, path, "# Title\n\ntext\n"), &clean); err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		if clean.Findings == nil || len(clean.Findings) != 0 {
+			t.Errorf("%s: clean content answers %+v, want an empty list", path, clean.Findings)
+		}
+	}
+}
+
+// TestDocLintWithoutAConfiguration: a project with no markdownlint
+// configuration has nothing to lint by, so no findings.
+func TestDocLintWithoutAConfiguration(t *testing.T) {
+	var got DocLint
+	if err := call(t, withDocs(t), "doc.lint", lintParams(t, "docs/users/index.md", "# A\n\n\n# B \n"), &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Findings) != 0 {
+		t.Errorf("findings %+v without a configuration", got.Findings)
+	}
+}
+
+// TestDocLintRefusesAPathOutsideTheFolders: doc.lint has doc.get's guard on
+// the words of the path.
+func TestDocLintRefusesAPathOutsideTheFolders(t *testing.T) {
+	p := withLintConfig(t)
+	for _, path := range []string{"../outside.md", "design/../../outside.md", "/etc/passwd", "secret.md", "src/notes.md",
+		"system-flow.yaml", "design/system/diagram.png", "", ".git/config", "design/system/../../secret.md"} {
+		var got DocLint
+		if err := call(t, p, "doc.lint", lintParams(t, path, "# Title\n"), &got); err == nil || err.Code != channel.CodeInvalidParams {
+			t.Errorf("%q: %+v, want code %d", path, err, channel.CodeInvalidParams)
+		}
 	}
 }

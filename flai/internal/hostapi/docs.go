@@ -17,6 +17,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -281,6 +282,45 @@ func str(v any, fallback string) string {
 	return fmt.Sprint(v)
 }
 
+// LintFinding is one markdown lint finding of a document as it is edited
+// (S-0378): its line, the rule's ID and first alias, and markdownlint's
+// message, with the detail and context it gives.
+type LintFinding struct {
+	Line    int    `json:"line"`
+	Rule    string `json:"rule"`  // MD024
+	Alias   string `json:"alias"` // no-duplicate-heading
+	Message string `json:"message"`
+}
+
+// DocLint is what the lint finds in a document's content: none is an empty
+// list.
+type DocLint struct {
+	Path     string        `json:"path"`
+	Findings []LintFinding `json:"findings"`
+}
+
+// LintDoc lints content, meant for the Markdown file rel under the design,
+// docs, or wip folder, with the markdownlint configuration in root and the
+// subset of its rules flai implements (ADR-0061). The file need not exist:
+// what is linted is the content given, and the markdown tier stays the
+// authority at acceptance. A project without a configuration has no findings.
+func LintDoc(root, rel, content string) (DocLint, *channel.Error) {
+	clean, e := docRel(channel.Project{Root: root}, rel)
+	if e != nil {
+		return DocLint{}, e
+	}
+	cfg, err := mdlint.Load(root)
+	if err != nil {
+		return DocLint{}, failed(fmt.Errorf("read the project's markdownlint configuration to lint %s: %w; fix the file", clean, err))
+	}
+	out := DocLint{Path: clean, Findings: []LintFinding{}}
+	for _, f := range cfg.Lint(content) {
+		msg := strings.TrimPrefix(f.String(), f.Rule+"/"+f.Alias+" ")
+		out.Findings = append(out.Findings, LintFinding{Line: f.Line, Rule: f.Rule, Alias: f.Alias, Message: msg})
+	}
+	return out, nil
+}
+
 var adrFile = regexp.MustCompile(`^\d{4}-.*\.md$`)
 
 func docMethods() map[string]channel.Method {
@@ -315,6 +355,24 @@ func docMethods() map[string]channel.Method {
 			}
 			fm, body := frontMatter(string(data))
 			return Doc{Path: filepath.ToSlash(filepath.Clean(in.Path)), FrontMatter: fm, Body: body, Raw: string(data)}, nil
+		},
+
+		// doc.lint: the markdown lint findings of a document's content as the
+		// editor holds it, in process, since it is asked on each pause in typing.
+		"doc.lint": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			var in struct {
+				Path    string `json:"path"`
+				Content string `json:"content"`
+			}
+			if e := params(raw, &in); e != nil {
+				return nil, e
+			}
+			defer perf.Track(ctx, "doc.lint")()
+			res, e := LintDoc(p.Root, in.Path, in.Content)
+			if e != nil {
+				return nil, e
+			}
+			return res, nil
 		},
 
 		// adrs.list: the decisions, from their front matter; the template (0000) is not one.
