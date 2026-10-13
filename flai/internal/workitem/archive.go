@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
+
+	"github.com/bytepunx/system-flow/flai/internal/atomicfile"
 )
 
 // ArchivePlan lists what Archive would move.
@@ -108,7 +112,7 @@ func (r *Repo) Archive(plan *ArchivePlan) error {
 	}
 	for _, src := range plan.Narratives {
 		dest := filepath.Join(r.ArchiveDir(), "agents", filepath.Base(src))
-		if err := moveFile(src, dest); err != nil {
+		if err := moveNarrative(src, dest); err != nil {
 			return err
 		}
 	}
@@ -123,6 +127,50 @@ func moveFile(src, dest string) error {
 		return fmt.Errorf("%s already exists", dest)
 	}
 	return os.Rename(src, dest)
+}
+
+// moveNarrative moves a narrative into the archive with each run of blank
+// lines outside fenced code collapsed to one: no story owns an archived
+// narrative, so a markdownlint MD012 finding a hand edit left in it would
+// stay for good (I-0139).
+func moveNarrative(src, dest string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		return err
+	}
+	if fileExists(dest) {
+		return fmt.Errorf("%s already exists", dest)
+	}
+	if err := atomicfile.WriteFile(dest, []byte(collapseBlankRuns(string(data))), 0o644); err != nil {
+		return err
+	}
+	return os.Remove(src)
+}
+
+var fenceOpen = regexp.MustCompile("^ {0,3}(`{3,}|~{3,})")
+
+// collapseBlankRuns leaves one blank line where text has two or more in a
+// row, except inside a fenced code block, and every other line as it was.
+func collapseBlankRuns(text string) string {
+	lines := strings.Split(text, "\n")
+	out := make([]string, 0, len(lines))
+	fence := ""
+	for i, l := range lines {
+		if fence != "" {
+			if t := strings.TrimSpace(l); strings.HasPrefix(t, fence) && strings.Trim(t, fence[:1]) == "" {
+				fence = ""
+			}
+		} else if m := fenceOpen.FindStringSubmatch(l); m != nil {
+			fence = m[1]
+		} else if i > 0 && strings.TrimSpace(l) == "" && strings.TrimSpace(lines[i-1]) == "" {
+			continue
+		}
+		out = append(out, l)
+	}
+	return strings.Join(out, "\n")
 }
 
 func fileExists(p string) bool {
