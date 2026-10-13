@@ -1144,7 +1144,7 @@ flai archive               # everything done or cancelled that is safe to move
 flai archive S-0001         # one story with its tasks and narrative
 ```
 
-Archiving resolves every thread still open or answered on an item it moves, with the entry `Resolved: S-0001 was archived` by you, since nothing acts on a question about an archived item ([ADR-0109](../../design/adrs/0109-archiving-an-item-resolves-the-threads-still-open-on-it.md)). `flai archive` commits nothing, the threads included. `--dry-run` names the threads it would resolve, and `--json` lists them in `resolved_threads`.
+Archiving resolves every thread still open or answered on an item it moves, with the entry `Resolved: S-0001 was archived` by you, since nothing acts on a question about an archived item ([ADR-0109](../../design/adrs/0109-archiving-an-item-resolves-the-threads-still-open-on-it.md)). A narrative is archived with each run of blank lines outside fenced code collapsed to one, so no archived narrative keeps a markdownlint MD012 finding that no story could clear. `flai archive` commits nothing, the threads included. `--dry-run` names the threads it would resolve, and `--json` lists them in `resolved_threads`.
 
 Archiving a story also closes each of its open conversations with another story ([Messages between stories](#messages-between-stories)), with the entry `Closed: S-0001 was archived`, and prints `closed MS-0004, open with S-0002`. `--dry-run` says `would close` for the same, and `--json` lists them in `closed_messages`.
 
