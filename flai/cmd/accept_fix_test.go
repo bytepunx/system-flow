@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,10 @@ import (
 // badCheck is a tier command that fails, naming path:line, on each of its
 // files that holds BAD.
 const badCheck = `[sh, -c, 'rc=0; for f; do if grep -q BAD "$f"; then grep -n BAD "$f" | sed "s|^|$f:|"; rc=1; fi; done; exit $rc', sh, "{files}"]`
+
+// mdCheck is a tier command that fails, printing a line as markdownlint-cli2
+// does, on each of its files that holds BAD.
+const mdCheck = `[sh, -c, 'rc=0; for f; do n=$(grep -n BAD "$f" | head -n 1 | cut -d: -f1); if [ -n "$n" ]; then echo "$f:$n:3 error MD009/no-trailing-spaces Trailing spaces [Expected: 0; Actual: 1]"; rc=1; fi; done; exit $rc', sh, "{files}"]`
 
 // lintProject is syncProject with tiers appended to its manifest and
 // committed. Integration: it runs real git.
@@ -144,6 +149,74 @@ func TestAcceptRefusesTheMainCheckoutsLintBeforeAnythingChanges(t *testing.T) {
 	}
 }
 
+// acceptRefusal runs flai accept id --json in root and answers its exit code
+// and the refusal it printed.
+func acceptRefusal(t *testing.T, root, id string) (int, unfixedRefusal) {
+	t.Helper()
+	out, errOut, code := runIn(t, root, "--json", "accept", id)
+	var got struct {
+		Refused unfixedRefusal `json:"refused"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("accept --json printed no refusal: %v\n%s\n%s", err, out, errOut)
+	}
+	return code, got.Refused
+}
+
+// S-0378: with --json, a branch whose markdown the fix leaves failing is
+// refused with exit 4 and each finding as data, naming the story's branch as
+// where to correct it.
+func TestAcceptJSONRefusesABranchsLintWithEachFinding(t *testing.T) {
+	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"docs/**\"]\n    fix_command: [\"true\"]\n")
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/bad.md", "fine\nBAD line\n")
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+
+	code, r := acceptRefusal(t, root, "S-0001")
+	if code != exitDocRefused {
+		t.Errorf("exit %d, want %d", code, exitDocRefused)
+	}
+	want := unfixedFinding{Tier: "markdown", Checkout: "story", Story: "S-0001", Path: "docs/bad.md", Line: 2, Column: 3, Level: "error",
+		Rule: "MD009", Alias: "no-trailing-spaces", Message: "Trailing spaces [Expected: 0; Actual: 1]"}
+	if r.ID != "S-0001" || len(r.Findings) != 1 || r.Findings[0] != want {
+		t.Errorf("the refusal's data: %+v, want the finding %+v", r, want)
+	}
+	if strings.HasPrefix(r.Reason, "rule:") || !strings.Contains(r.Reason, "docs/bad.md:2:3 error MD009") || !strings.Contains(r.Reason, "flai accept S-0001 again") {
+		t.Errorf("the reason is not the text refusal: %q", r.Reason)
+	}
+	if got := storyStatus(t, root, "S-0001"); got != "review" {
+		t.Errorf("S-0001 is %q, not in review", got)
+	}
+}
+
+// S-0378: with --json, an uncommitted main-checkout file whose markdown the
+// fix leaves failing is refused with exit 4, naming the main checkout.
+func TestAcceptJSONRefusesTheMainCheckoutsLintWithEachFinding(t *testing.T) {
+	root := lintProject(t, "  - name: markdown\n    command: "+mdCheck+"\n    paths: [\"wip/notes/**\"]\n    fix_command: [\"true\"]\n")
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/new.md", "new\n")
+	issueStoryInReview(t, root, "S-0001", "T-0001")
+	if err := os.MkdirAll(filepath.Join(root, "wip/notes"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "wip/notes/n.md"), []byte("BAD\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	code, r := acceptRefusal(t, root, "S-0001")
+	if code != exitDocRefused {
+		t.Errorf("exit %d, want %d", code, exitDocRefused)
+	}
+	if len(r.Findings) != 1 || r.Findings[0].Checkout != "main" || r.Findings[0].Story != "" ||
+		r.Findings[0].Path != "wip/notes/n.md" || r.Findings[0].Line != 1 || r.Findings[0].Rule != "MD009" {
+		t.Errorf("the refusal's findings: %+v", r.Findings)
+	}
+	// without --json the refusal is the text it was, with exit 1
+	if _, errOut, code := runIn(t, root, "accept", "S-0001"); code != 1 || !strings.Contains(errOut, "wip/notes/n.md:1:3 error MD009") {
+		t.Errorf("without --json: exit %d\n%s", code, errOut)
+	}
+}
+
 func TestUnfixedErrorNamesEachFinding(t *testing.T) {
 	res := verify.Result{Tiers: []verify.TierResult{
 		{Name: "go", State: verify.Passed},
@@ -154,7 +227,8 @@ func TestUnfixedErrorNamesEachFinding(t *testing.T) {
 		}},
 		{Name: "later", State: verify.NotReached},
 	}}
-	err := unfixedError("S-0009", "the main checkout's uncommitted files", "in the main checkout", res)
+	at := unfixedAt{root: "/repo", checkout: checkoutMain, where: "the main checkout's uncommitted files", fixIn: "in the main checkout"}
+	err := unfixedError("S-0009", at, res)
 	want := "rule: S-0009 cannot be accepted: the main checkout's uncommitted files hold lint the fix of the markdown tier could not fix:\n" +
 		"  wip/a.md:3: trailing spaces (markdown, MD009)\n" +
 		"  wip/b.md: no line (markdown)\n" +
@@ -163,5 +237,46 @@ func TestUnfixedErrorNamesEachFinding(t *testing.T) {
 		"correct them in the main checkout and run flai accept S-0009 again"
 	if err.Error() != want {
 		t.Errorf("got:\n%s\nwant:\n%s", err, want)
+	}
+}
+
+// S-0378: each markdownlint-cli2 line of a plain tier's output is a finding
+// with its path, line, column, level, rule, and alias when it gives them,
+// and the checkout to correct it in; other lines are none.
+func TestUnfixedErrorGivesEachMarkdownlintLineAsData(t *testing.T) {
+	out := "lint-md: markdownlint-cli2 0.20.0\n" +
+		"Summary: 3 error(s)\n" +
+		"docs/a.md:3 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]\n" +
+		"docs/a.md:7:1 error MD004/ul-style Unordered list style [Expected: asterisk; Actual: dash]\n" +
+		"/wt/sub/b.md:1 MD041/first-line-heading/first-line-h1 First line in a file should be a top-level heading\n" +
+		"c.md:2:5 warning MD013 Line length\n" +
+		"exit status 1"
+	res := verify.Result{Tiers: []verify.TierResult{
+		{Name: "markdown", Dir: "sub", State: verify.Failed, Findings: []verify.Finding{{Name: "markdown", Message: out}}},
+		{Name: "go", State: verify.Failed, Findings: []verify.Finding{{Name: "errcheck", Path: "x.go", Line: 4, Message: "unchecked "}}},
+	}}
+	at := unfixedAt{root: "/wt", checkout: checkoutStory, story: "S-0009", where: "the files story/S-0009 changes", fixIn: "in the worktree"}
+	got := unfixedError("S-0009", at, res).Findings
+	story := unfixedFinding{Checkout: "story", Story: "S-0009"}
+	want := []unfixedFinding{
+		{Path: "sub/docs/a.md", Line: 3, Level: "error", Rule: "MD012", Alias: "no-multiple-blanks", Message: "Multiple consecutive blank lines [Expected: 1; Actual: 2]"},
+		{Path: "sub/docs/a.md", Line: 7, Column: 1, Level: "error", Rule: "MD004", Alias: "ul-style", Message: "Unordered list style [Expected: asterisk; Actual: dash]"},
+		{Path: "sub/b.md", Line: 1, Rule: "MD041", Alias: "first-line-heading", Message: "First line in a file should be a top-level heading"},
+		{Path: "sub/c.md", Line: 2, Column: 5, Level: "warning", Rule: "MD013", Message: "Line length"},
+		{Tier: "go", Path: "x.go", Line: 4, Rule: "errcheck", Message: "unchecked"},
+	}
+	for i := range want {
+		if want[i].Tier == "" {
+			want[i].Tier = "markdown"
+		}
+		want[i].Checkout, want[i].Story = story.Checkout, story.Story
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d findings, want %d: %+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("finding %d:\n got %+v\nwant %+v", i, got[i], want[i])
+		}
 	}
 }

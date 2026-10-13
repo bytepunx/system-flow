@@ -91,7 +91,10 @@ not committed before anything changes and again before step 3's commit, and
 step 0's rebase runs it over what the story branch changes. When a tier's
 check still fails on those files, the acceptance is refused with each file,
 line, and error, before anything changes or before the merge; correct them
-and accept again. --dry-run runs neither.
+and accept again. --dry-run runs neither. With --json that refusal exits 4
+and prints {"refused": {"id", "reason", "findings"}}, each finding with its
+tier, checkout (main, or story with the story's ID), path, line, column,
+level, rule, alias, and message, as markdownlint-cli2 gives them (S-0378).
 
 --by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless
 orchestration.permissions.accept_reviews is on; under FLAI_ROLE=orchestrate no
@@ -119,7 +122,7 @@ orchestrator in the story's Notes. With --dry-run the evidence is optional.`,
 			}
 			res, err := a.acceptItem(repo, it, o)
 			if err != nil {
-				return err
+				return a.acceptRefused(err)
 			}
 			return a.printAccept(res)
 		},

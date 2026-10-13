@@ -1369,8 +1369,10 @@ func itemSpecs() map[string]spec {
 
 		// accept.run is the operator's acceptance, or with by: orchestrator
 		// the orchestrator's, with the commit its verifier passed and its
-		// evidence (ADR-0093).
-		"accept.run": {progress: true, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// evidence (ADR-0093). flai's refusal for lint the fix left (exit 4,
+		// ADR-0140) is Refused, with each finding, its file, line, rule, and
+		// checkout, as data, so the dashboard opens each file (S-0378).
+		"accept.run": {progress: true, exits: map[int]int{4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID                 string `json:"id"`
 				IncludeUncommitted bool   `json:"include_uncommitted"`

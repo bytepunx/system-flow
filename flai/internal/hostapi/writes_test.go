@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -552,6 +553,42 @@ func TestAcceptanceSendsEachStepAsProgress(t *testing.T) {
 	_, _ = writeMethods(rec.run, time.Now, Host{})["item.move"](ctx, p, json.RawMessage(good["item.move"].params))
 	if len(steps) != 0 {
 		t.Errorf("a move sent progress: %v", steps)
+	}
+}
+
+// S-0378: flai accept's refusal for lint the fix left, exit 4, is Refused
+// with each finding, a main checkout's and a story branch's, as the error's
+// data, and its progress still ends with the error event.
+func TestAcceptRunRefusedForUnfixedLintCarriesTheFindings(t *testing.T) {
+	p := withDocs(t)
+	reason := "S-0001 cannot be accepted: the files story/S-0001 changes hold lint the fix of the markdown tier could not fix:\n  markdown: docs/a.md:2:3 error MD009/no-trailing-spaces Trailing spaces\ncorrect them in .flai-cache/worktrees/S-0001, commit them on story/S-0001, and run flai accept S-0001 again"
+	stdout := `{"refused":{"id":"S-0001","reason":` + strconv.Quote(reason) + `,"findings":[` +
+		`{"tier":"markdown","checkout":"main","path":"wip/notes/n.md","line":1,"rule":"MD041","alias":"first-line-heading","message":"First line in a file should be a top-level heading"},` +
+		`{"tier":"markdown","checkout":"story","story":"S-0001","path":"docs/a.md","line":2,"column":3,"level":"error","rule":"MD009","alias":"no-trailing-spaces","message":"Trailing spaces"}]}}`
+	rec := &recorder{ran: Ran{Exit: 4, Stdout: []byte(stdout), Events: []map[string]any{
+		{"level": "INFO", "msg": "acceptance step"},
+		{"level": "FATAL", "msg": "command failed", "err": "rule: " + reason},
+	}}}
+	var steps []string
+	ctx := channel.WithProgress(context.Background(), func(v any) { steps = append(steps, v.(map[string]any)["msg"].(string)) })
+	_, e := writeMethods(rec.run, time.Now, Host{})["accept.run"](ctx, p, json.RawMessage(good["accept.run"].params))
+	if e == nil || e.Code != Refused || e.Message != reason {
+		t.Fatalf("exit 4 should be Refused with flai's reason: %+v", e)
+	}
+	data, _ := e.Data.(map[string]any)
+	findings, _ := data["findings"].([]any)
+	if data["id"] != "S-0001" || data["reason"] != reason || len(findings) != 2 {
+		t.Fatalf("the error's data: %+v", e.Data)
+	}
+	inMain, story := findings[0].(map[string]any), findings[1].(map[string]any)
+	if inMain["checkout"] != "main" || inMain["path"] != "wip/notes/n.md" || inMain["line"] != float64(1) || inMain["rule"] != "MD041" || inMain["story"] != nil {
+		t.Errorf("the main checkout's finding: %+v", inMain)
+	}
+	if story["checkout"] != "story" || story["story"] != "S-0001" || story["path"] != "docs/a.md" || story["line"] != float64(2) || story["rule"] != "MD009" || story["message"] != "Trailing spaces" {
+		t.Errorf("the story branch's finding: %+v", story)
+	}
+	if strings.Join(steps, "|") != "acceptance step|command failed" {
+		t.Errorf("progress should end with the error event: %v", steps)
 	}
 }
 
