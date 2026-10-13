@@ -2,12 +2,12 @@
 id: I-0140
 title: "TestActivityWritersTakeTurns fails about one run in three: two writers that both find the activity lock stale can both take it, and an entry is lost"
 class: defect
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-10-12T16:22:16Z
 last_reported: 2026-10-12T16:22:16Z
-updated: 2026-10-12T16:53:00Z
+updated: 2026-10-13T17:07:24Z
 ---
 
 # I-0140 TestActivityWritersTakeTurns fails about one run in three: two writers that both find the activity lock stale can both take it, and an entry is lost
@@ -24,3 +24,4 @@ S-0337's close-out stopped at the integration tier with flai/internal/workitem T
 ## Remediation
 
 Story S-0377 remediates this issue, created from it at 2026-10-12T16:53:00Z.
+Closed 2026-10-13T17:07:24Z: S-0377 fixed it. lockActivity, the guard's sub-agent record (RecordChange), and flai serve's lockFile now take an operating-system file lock through flai/internal/filelock: flock(2) on unix, LockFileEx on Windows, on a lock file that stays in place. The kernel frees the lock when its holder exits, so no lock is ever broken by its age and two writers cannot both hold it. TestActivityWritersTakeTurns passed 350 runs in a row under -race, where the old code lost an entry. TestLockFreedWhenHolderDies shows that a killed holder's lock is taken at once.
