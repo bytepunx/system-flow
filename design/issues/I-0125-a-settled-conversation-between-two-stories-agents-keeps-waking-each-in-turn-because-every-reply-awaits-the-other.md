@@ -3,11 +3,11 @@ id: I-0125
 title: A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
 class: efficiency
 status: open
-count: 6
-cost: 7m
+count: 7
+cost: 6m
 first_reported: 2026-10-08T10:21:38Z
-last_reported: 2026-10-13T19:12:53Z
-updated: 2026-10-13T19:12:53Z
+last_reported: 2026-10-13T19:15:11Z
+updated: 2026-10-13T19:15:11Z
 ---
 
 # I-0125 A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
@@ -40,6 +40,10 @@ MS-0101 (S-0356 and S-0239, on a share with an agreed split) woke S-0356's agent
 ### 2026-10-13T19:12:53Z
 Story: S-0378.
 MS-0109 between S-0378 and S-0380: S-0378 agreed nothing changes, S-0380 replied "Settled ... no reply is needed", and the conversation still awaited S-0378, so flai serve started S-0378's agent again to read a reply that needed no answer.
+
+### 2026-10-13T19:15:11Z
+Story: S-0378.
+MS-0110: S-0357 agreed to the shared split on docs/operators/settings.md, which left the settled conversation awaiting S-0378; its closing reply in turn awaits S-0357 and woke S-0378 from waiting on TH-0436.
 
 ## Remediation
 
