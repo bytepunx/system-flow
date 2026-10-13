@@ -151,3 +151,131 @@ No rule reads a document's other front matter keys. The walk skips the conventio
 ### What describes a project's design system
 
 Nothing. A search on 2026-10-13 of `design/`, `docs/`, `template/`, `flai/`, and `flaiover/src` for "design system", "design-system", and design token files found no document, convention, command, host method, or manifest key for a project's design system. The template carries no sub-project scaffold (`template/projects` is empty) and no stylesheet or Tailwind configuration, and its `design/system` holds only an overview and an index. The only mentions are E-0020's own backlog stories and tasks under `wip/kanban`.
+
+## Where a project keeps its design system
+
+A design system here is tokens, the values code uses, and guidance, the words that say when to use which. Both need one source that `flai check` validates, the dashboard reads through a host method, and prime gives an agent.
+
+### Options
+
+| Option | Documentation standard | Host methods | `flai check` | What an agent reads | What code uses |
+|--------|------------------------|--------------|--------------|---------------------|----------------|
+| 1. Tokens in the front matter of `design/system/design-system.md`, guidance in its body | Fits: Markdown with YAML front matter in the builders' folder | `doc.get` returns the tokens parsed into a map; `doc.save` saves them byte for byte | One `design.tokens` rule reads the front matter; a bad token then refuses a dashboard save for free | Named or selected by topics, it loads whole, front matter included; a brief gives the guidance's outline, not the tokens | A rendered `@theme` block (S-0385's subject) |
+| 2. A folder, `design/design-system/`, tokens and guidance in several files | Bends it: a folder the standard does not list, needing a README and a convention line | `doc.get` reads any `.md` under design, file by file | The documentation walk reads it; a rule must join several files | `LoadDocs` does not read subfolders: prime never selects it | As 1 |
+| 3. Tokens in a fenced `yaml` block in one document's body | Fits | `doc.get` returns the block as body text; the dashboard parses it itself | As 1, after finding the block | As 1; the tokens also fill a brief's ranked sections | As 1 |
+| 4. A DTCG `design.tokens.json` beside a guidance document | Breaks it: not Markdown | `doc.get` refuses a file that is not `.md`, and `doc.save` cannot write it: new methods to read and save it | A new walk; no refused save | Prime reads no JSON | Figma Variables, Style Dictionary, and Terrazzo read DTCG; Tailwind does not |
+| 5. A Tailwind v4 stylesheet in the UI sub-project, its `@theme` block the source | Breaks it: CSS outside design | The dashboard cannot read it (ADR-0029); a new method would read a sub-project's file | flai would parse CSS; `@theme` holds one value per variable, so dark values and roles are the file's own convention | Not primed; the guidance lives elsewhere | Exactly what code uses |
+
+The DTCG format's first stable version is 2025.10 ([designtokens.org](https://www.designtokens.org/), read 2026-10-13). It recommends the extension `.tokens` or `.tokens.json`, writes a colour as an object with `colorSpace` and `components`, and expresses light and dark through its Resolver Module, a second file. Interop does not need DTCG as the source: flai can write a `.tokens.json` from option 1 for a project that wants one.
+
+### The token schema
+
+Tokens sit under one key, `tokens`, in namespaces named after Tailwind v4's, so rendering them as `@theme` is a rename:
+
+| Namespace | Tailwind variable | Value | Required |
+|-----------|-------------------|-------|----------|
+| `color.<name>` | `--color-<name>` | `{light, dark}`, or one value for both | The roles below |
+| `font.<name>` | `--font-<name>` | A CSS `font-family` stack | `sans`, `mono` |
+| `text.<step>` | `--text-<step>`, `--text-<step>--line-height` | `{size, line-height}`: a length, and a length or a unitless number | `xs`, `sm`, `base`, `lg`, `xl`, `2xl`, `3xl`, `4xl` |
+| `spacing` | `--spacing` | One length, the step every spacing utility multiplies | Yes |
+| `radius.<name>` | `--radius-<name>` | A length | `sm`, `md`, `lg` |
+| `shadow.<name>` | `--shadow-<name>` | A CSS `box-shadow` whose colours follow the colour rule | `sm`, `md`, `lg` |
+
+Lengths are `rem` or `px`. Tailwind's other namespaces, such as breakpoints, weights, and easing, stay at its defaults until a project asks for them.
+
+**Colour syntaxes.** Two: six-digit hex, `#rrggbb`, and `oklch(L C H)`, with `/ alpha` only in shadows and extra tokens. flai must compute contrast, which is defined on sRGB. Hex is sRGB; oklch converts to it by fixed arithmetic, with no new dependency. oklch is what Tailwind v4's own palette is written in, and it steps evenly in lightness, which makes a dark value easier to derive from a light one. An oklch colour outside sRGB is clipped for contrast and reported. `rgb()`, `hsl()`, and names add nothing hex lacks; `var()`, `color-mix()`, and `light-dark()` must be resolved before contrast can be computed; `color(display-p3 ...)` has no sRGB contrast. A hex value is quoted, since `#` starts a YAML comment; an unquoted one parses as empty and is a finding.
+
+**Semantic roles.** A fixed set of colour roles is required, because the preview's components are written against names they can rely on ([The fixed vocabulary](#the-fixed-vocabulary)): `background`, `surface`, `text`, `text-muted`, `border`, `primary`, `on-primary`, `secondary`, `on-secondary`, `focus`, and the states `success`, `warning`, `danger`, `info`, each with a `-soft` tint for its alert. Any other name is an extra token: validated, rendered, and shown as a swatch. The roles give the pairs flai computes, at the thresholds flaiover's own test uses: text, muted text, and each state on `background`, `surface`, or its tint at 4.5:1; `on-primary` and `on-secondary` on their fill at 4.5:1; `border` and `focus` on `background` at 3:1.
+
+Contrast should not be a `flai check` finding. Every finding a save introduces refuses the save (§ Today), so a contrast rule would stop the operator saving a colour while trying it. Parse errors are findings; contrast is reported by flai's design command and on the Design page.
+
+**One per project.** One design system per project now: the operator's projects have one UI each, and two documents would need a rule for which one an agent follows. A project that grows a second UI with its own visual language can have a document per sub-project later, `design/system/design-system-<sub-project>.md`, each whole rather than inheriting, with topics naming its sub-project so prime gives each UI story its own.
+
+**The name.** `design/system/design-system.md`. No file, link, or code in this repository or the template uses it (searched 2026-10-13), and it is the operator's own term. It sits beside this finding, `design-system-tool.md`, which describes the tool, not a project's design system. Its `topics` name the UI sub-project or its kind, so every story that touches the UI is briefed the guidance.
+
+```yaml
+---
+title: Design system
+updated: 2026-10-13
+status: active
+topics: [web]                  # the UI sub-project, or its kind
+tokens:
+  color:
+    background: { light: "#ffffff", dark: "#0b0f14" }
+    text:       { light: "#111827", dark: "#e5e7eb" }
+    primary:    { light: "oklch(0.52 0.18 255)", dark: "oklch(0.72 0.14 255)" }
+    on-primary: { light: "#ffffff", dark: "#0b0f14" }
+    # ... the other roles
+    brand-sun:  "#f5b700"      # an extra, one value for both themes
+  font:
+    sans: "Inter, ui-sans-serif, system-ui, sans-serif"
+    mono: "ui-monospace, Menlo, monospace"
+  text:
+    base: { size: 1rem, line-height: 1.5rem }
+    # ... xs to 4xl
+  spacing: 0.25rem
+  radius: { sm: 0.25rem, md: 0.375rem, lg: 0.5rem }
+  shadow:
+    sm: "0 1px 2px 0 oklch(0 0 0 / 0.05)"
+---
+```
+
+### Recommendation
+
+Option 1: tokens in the front matter of `design/system/design-system.md`, guidance in its body. It fits the documentation standard, `doc.get` and `doc.save` read and save it as they are, prime selects it by its topics, and one new check rule makes a bad token refuse a save. Option 3 is close; it loses because `doc.get` does not parse the block and the tokens clutter the rendered guidance. Code gets the tokens as a rendered `@theme` block, and Figma or Style Dictionary as a DTCG export, both generated from the document.
+
+## Previewing it live without building the project
+
+The preview shows the project's tokens on sample components, light and dark side by side, and follows a change to a token at once. The components are compiled with the dashboard, because its container holds no compiler and nothing of the project (§ Today).
+
+### The fixed vocabulary
+
+Tailwind generated the dashboard's utilities at its build, from the class names in its sources, and a component compiled with the dashboard can use only those. So the gallery is written against the fixed vocabulary of [The token schema](#the-token-schema), its roles and steps, and a stylesheet of its own maps each to a variable the preview sets from the project's tokens, as `layout.css` maps `--t-*` today:
+
+```css
+@import 'tailwindcss' source(none);
+@source './gallery';
+@theme inline {
+  --color-primary: var(--ds-color-primary);
+  --text-base: var(--ds-text-base);
+  --text-base--line-height: var(--ds-text-base--line-height);
+  --spacing: var(--ds-spacing);
+  --radius-md: var(--ds-radius-md);
+  --font-sans: var(--ds-font-sans);
+}
+```
+
+`source(none)` and `@source` keep that stylesheet to the gallery's own classes. That is general knowledge of Tailwind v4's source detection; how `--spacing` and `--shadow-*` behave through `inline` is to check in the build story. A token change is then a change of `--ds-*` values, with no compile.
+
+- **Tokens outside the vocabulary** are not on components. Extra colours are swatches with their contrast on `background`; extra steps, radii, and shadows are specimens drawn to size.
+- **Fonts.** A font token is a stack, shown as the operator's browser resolves it; a family the browser lacks falls back, and the page says so. A project's own font files are in its sub-project, which the dashboard cannot read. Recommended: system stacks, and Google Fonts loaded into the preview by family name only when the document asks for it, since that sends a request from the operator's browser to Google.
+
+### The gallery
+
+Generic components, written once in flaiover: buttons (primary, secondary, ghost, danger, disabled), inputs (text, select, checkbox, radio, textarea, an error state), a form, a card, an alert per state, a table, navigation (a bar, tabs, breadcrumbs), and type specimens with headings over body text. They are not the project's components; they show its tokens, not its markup.
+
+### Options
+
+| Option | Isolation from the dashboard's theme | A token change reaches it | What the container runs | Light and dark side by side | Cost to build |
+|--------|--------------------------------------|---------------------------|-------------------------|-----------------------------|---------------|
+| 1. A same-origin iframe; the page writes the gallery's stylesheet and a `<style>` of `--ds-*` values into it | Complete: a new document inherits nothing, provided it does not load `layout.css` (below) | By rewriting one `<style>`: a restyle, no compile | Nothing new | Two panels in one frame, each setting its theme's `--ds-*` on its wrapper | Small to medium |
+| 2. A shadow root with the same stylesheet | Partial: inherited properties (`color`, `font-family`, `line-height`) and the dashboard's custom properties cross into it and are reset on `:host`; ancestor selectors such as `[data-theme='dark'] *` do not cross | As 1 | Nothing new | Two wrappers | Small, then pitfalls: `@property` rules in a shadow root are ignored, so Tailwind utilities that rely on registered `--tw-*` initial values (shadows, rings, transforms) misbehave unless the document registers them; `@font-face` in a shadow root is not applied in Chromium |
+| 3. `@tailwindcss/browser` in a frame, the tokens as `@theme` in a `<style type="text/tailwindcss">` | As 1 | By a recompile, in the browser, of the classes in the frame | A new runtime asset, bundled in the image rather than fetched from a CDN, recorded in `design/tech` | As 1 | Small; any class works, so markup needs no fixed vocabulary |
+| 4. flai runs the project's own Vite and Tailwind build on the host and serves the result | Complete | A build per change | Nothing in the container; on the host, the project's toolchain and dependencies, behind a host action the operator enables (ADR-0029) | The project's own way | Large: a host action, a way to carry built assets over the channel, a build per change |
+
+Tailwind's documentation says the browser build "is designed for development purposes only, and is not intended for production" ([Play CDN](https://tailwindcss.com/docs/installation/play-cdn), read 2026-10-13). The shadow DOM facts of option 2 are general knowledge of current browsers and Tailwind v4, not checked here.
+
+A frame at a dashboard route boots the whole app under the root `flaiover/src/routes/+layout.svelte`, which imports `layout.css`, and `flaiover/src/app.html` stamps `data-theme` on the frame's `<html>`. Two ways keep the dashboard's theme out of option 1:
+
+- **A blank frame the page fills.** An `about:blank` frame is same-origin with its page. The page imports the gallery's stylesheet with Vite's `?inline`, so it reaches the dashboard's document as a string and never as a stylesheet, writes it into the frame, and mounts the gallery into the frame's body with Svelte's `mount`. No route and no second app. Whether `@tailwindcss/vite` compiles an `?inline` import, and whether Svelte's event delegation works across the frame, is to check.
+- **A route outside the root layout.** Move the root layout's header and `layout.css` import into a route group, `(app)/+layout.svelte`, and put the frame's page in a group of its own with its own stylesheet. Groups do not change URLs, but every route folder moves, and the frame boots a second copy of the app. Its request is authenticated like any page (`decide` in `flaiover/src/lib/server/auth.ts`), with the `SameSite=Lax` session cookie a same-origin frame sends.
+
+Either way the page sizes the frame to its content, which a same-origin page can read. Token values reach the frame only after the parse `flai check` uses, so none carries `url()` or a stray `}` into the stylesheet. The frame follows the page's own state, so a change shows as the operator types; the document is saved through `doc.save` when the operator saves.
+
+### The project's own components
+
+Not now. They need the project's Svelte compiler and Tailwind build over its sources, which only the host has: option 4, or a component workshop such as Storybook run on the host and reached through flai. Either needs a host action, a way to carry built assets over a channel of named methods (ADR-0029), and a build per change. A cheaper step could come later: HTML snippets with Tailwind classes kept in the guidance, rendered in a frame with option 3.
+
+### Recommendation
+
+Option 1, a same-origin blank frame the page fills: the gallery compiled with the dashboard against the fixed vocabulary, its stylesheet built apart and written into the frame, the project's tokens as `--ds-*` values in one `<style>`, light and dark as two panels. It is isolated completely, adds nothing to the container, and follows a change with no compile. If the `?inline` stylesheet does not hold, use a route outside the root layout instead. Option 3 is the later way to preview markup the vocabulary cannot express, and option 4 the way to preview the project's own components, only if the operator asks for that.
