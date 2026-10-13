@@ -1576,9 +1576,13 @@ func itemSpecs() map[string]spec {
 			return args, "", nil
 		}),
 
-		"doc.show": read(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// doc.show and doc.save read and save in a story's worktree when
+		// story names one (S-0378): they run there, and flai doc refuses a
+		// path under wip, which lives on the main checkout.
+		"doc.show": {reads: true, dir: docDir, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
-				Path string `json:"path"`
+				Path  string `json:"path"`
+				Story string `json:"story"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -1587,15 +1591,23 @@ func itemSpecs() map[string]spec {
 			if e != nil {
 				return nil, "", e
 			}
-			return []string{"doc", "show", "--", rel}, "", nil
-		}),
+			args := []string{"doc", "show"}
+			if in.Story != "" {
+				if e := needStory(in.Story); e != nil {
+					return nil, "", e
+				}
+				args = append(args, "--story="+in.Story)
+			}
+			return append(args, "--", rel), "", nil
+		}},
 
-		"doc.save": {exits: map[int]int{3: Conflict, 4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		"doc.save": {exits: map[int]int{3: Conflict, 4: Refused}, dir: docDir, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				Path    string  `json:"path"`
 				Content *string `json:"content"`
 				Hash    string  `json:"hash"`
 				Message string  `json:"message"`
+				Story   string  `json:"story"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -1613,6 +1625,12 @@ func itemSpecs() map[string]spec {
 			args := []string{"doc", "save", "--hash=" + in.Hash, "--trailer=" + Trailer}
 			if text(in.Message) != "" {
 				args = append(args, "--message="+text(in.Message))
+			}
+			if in.Story != "" {
+				if e := needStory(in.Story); e != nil {
+					return nil, "", e
+				}
+				args = append(args, "--story="+in.Story)
 			}
 			return append(args, "--", rel), *in.Content, nil
 		}},
@@ -2204,23 +2222,42 @@ func testDir(p channel.Project, raw json.RawMessage) (string, *channel.Error) {
 	if e != nil {
 		return "", e
 	}
-	if in.ID == "" {
+	return worktreeDir(p, in.ID, "leave id out to run in the main checkout")
+}
+
+// docDir is the checkout doc.show and doc.save run in: the worktree of the
+// story named, which must exist, or the project's main checkout (S-0378).
+func docDir(p channel.Project, raw json.RawMessage) (string, *channel.Error) {
+	in, e := decode[struct {
+		Story string `json:"story"`
+	}](raw)
+	if e != nil {
+		return "", e
+	}
+	return worktreeDir(p, in.Story, "leave story out to edit the main checkout")
+}
+
+// worktreeDir is the worktree of the item id names, which must exist, or
+// the project's main checkout when id is empty; instead says how to do
+// without one.
+func worktreeDir(p channel.Project, id, instead string) (string, *channel.Error) {
+	if id == "" {
 		return p.Root, nil
 	}
 	repo, err := workitem.Open(p.Root)
 	if err != nil {
 		return "", failed(err)
 	}
-	it, err := repo.Get(in.ID)
+	it, err := repo.Get(id)
 	if errors.Is(err, workitem.ErrNotFound) {
-		return "", &channel.Error{Code: NotFound, Message: fmt.Sprintf("%s is not a work item here; name a story with a worktree, or leave id out to run in the main checkout", in.ID)}
+		return "", &channel.Error{Code: NotFound, Message: fmt.Sprintf("%s is not a work item here; name a story with a worktree, or %s", id, instead)}
 	}
 	if err != nil {
 		return "", failed(err)
 	}
 	wt := repo.WorktreePath(it.ID)
 	if st, err := os.Stat(wt); err != nil || !st.IsDir() {
-		return "", bad("%s has no worktree; open it with flai stream open %s on the host, or leave id out to run in the main checkout", it.ID, it.ID)
+		return "", bad("%s has no worktree; open it with flai stream open %s on the host, or %s", it.ID, it.ID, instead)
 	}
 	return wt, nil
 }

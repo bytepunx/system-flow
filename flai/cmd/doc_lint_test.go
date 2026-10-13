@@ -19,13 +19,6 @@ func lintDoc(t *testing.T, root, stdin string, args ...string) (string, string, 
 	var out, errOut bytes.Buffer
 	a := &app{out: &out, errOut: &errOut, cwd: root}
 	rootCmd := newRootCmdWith(a)
-	// doc.go registers lint beside search, show, and save; until it does, the
-	// test puts it there itself.
-	if doc, _, err := rootCmd.Find([]string{"doc"}); err == nil {
-		if lint, _, _ := doc.Find([]string{"lint"}); lint == doc {
-			doc.AddCommand(newDocLintCmd(a))
-		}
-	}
 	rootCmd.SetArgs(append([]string{"doc", "lint"}, args...))
 	rootCmd.SetIn(strings.NewReader(stdin))
 	code := 0

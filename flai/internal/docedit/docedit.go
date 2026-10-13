@@ -17,6 +17,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -76,7 +77,10 @@ type SaveOptions struct {
 	Message  string   // commit subject after the type prefix; default "edit <path>"
 	Trailers []string // lines appended to the commit message
 	NoCommit bool
-	Now      time.Time
+	// Story, when set, edits the file in that story's worktree and commits
+	// it on the story's branch there (S-0378).
+	Story string
+	Now   time.Time
 }
 
 // Hash is the identity of a document's content for conflict detection.
@@ -90,6 +94,12 @@ func Hash(content string) string {
 // to the main checkout, where wip always lives. It returns the absolute
 // path and the cleaned repository path.
 func Resolve(repo *workitem.Repo, rel string) (abs, clean string, err error) {
+	return resolveIn(repo, rel, "", repo.Root, repo.MainRoot)
+}
+
+// resolveIn is Resolve looking for the file under roots, in order; where
+// ends the message for a file none of them has.
+func resolveIn(repo *workitem.Repo, rel, where string, roots ...string) (abs, clean string, err error) {
 	clean = filepath.ToSlash(filepath.Clean(strings.TrimPrefix(rel, "./")))
 	if clean == "." || strings.HasPrefix(clean, "../") || filepath.IsAbs(clean) || !strings.HasSuffix(clean, ".md") {
 		return "", "", fmt.Errorf("%q is not a markdown path inside the repository", rel)
@@ -104,7 +114,7 @@ func Resolve(repo *workitem.Repo, rel string) (abs, clean string, err error) {
 	if !allowed {
 		return "", "", fmt.Errorf("%q is outside the design, docs, and wip folders", rel)
 	}
-	for _, root := range []string{repo.Root, repo.MainRoot} {
+	for _, root := range roots {
 		if root == "" {
 			continue
 		}
@@ -113,7 +123,7 @@ func Resolve(repo *workitem.Repo, rel string) (abs, clean string, err error) {
 			return p, clean, nil
 		}
 	}
-	return "", "", fmt.Errorf("%s does not exist", clean)
+	return "", "", fmt.Errorf("%s does not exist%s", clean, where)
 }
 
 // ModeOf says how much of a file an editor may change, and why not all of it.
@@ -180,29 +190,39 @@ func acceptedADR(repo *workitem.Repo, abs string) bool {
 	return err == nil && acceptedStatus.MatchString(fm)
 }
 
-// Show loads a document for editing.
-func Show(repo *workitem.Repo, rel string) (*Doc, error) {
-	abs, clean, err := Resolve(repo, rel)
+// Show loads a document for editing, from story's worktree when story is
+// not empty.
+func Show(repo *workitem.Repo, rel, story string) (*Doc, error) {
+	at, err := locate(repo, rel, story)
 	if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(abs)
+	data, err := os.ReadFile(at.abs)
 	if err != nil {
 		return nil, err
 	}
-	mode, reason := ModeOf(repo, abs)
-	return &Doc{Path: clean, Content: string(data), Hash: Hash(string(data)), Mode: mode, Reason: reason}, nil
+	mode, reason := ModeOf(at.repo, at.abs)
+	return &Doc{Path: at.clean, Content: string(data), Hash: Hash(string(data)), Mode: mode, Reason: reason}, nil
 }
 
 var updatedLine = regexp.MustCompile(`(?m)^updated: *(\S+) *$`)
 var itemID = regexp.MustCompile(`^([EST]-\d+)`)
 
-// Save writes content to the document when the rules of ADR-0023 allow it.
-// The error is a *ConflictError or a *RefusedError when that is why.
+// Save writes content to the document when the rules of ADR-0023 allow it;
+// with opt.Story, in that story's worktree, checked there and committed on
+// its branch. The error is a *ConflictError or a *RefusedError when that is
+// why.
 func Save(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOptions) (*Result, error) {
-	abs, clean, err := Resolve(repo, rel)
+	at, err := locate(repo, rel, opt.Story)
 	if err != nil {
 		return nil, err
+	}
+	abs, clean := at.abs, at.clean
+	repo, opt.Story = at.repo, at.story
+	if opt.Story != "" {
+		if err := onStoryBranch(r, repo.Root, opt.Story, clean); err != nil {
+			return nil, err
+		}
 	}
 	if opt.Now.IsZero() {
 		opt.Now = time.Now()
@@ -305,6 +325,79 @@ func Save(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOpti
 	return res, nil
 }
 
+// place is where an edit is made: the repository whose tree holds the
+// file, the file's absolute and clean paths, and the story whose worktree
+// that tree is, if any.
+type place struct {
+	repo       *workitem.Repo
+	abs, clean string
+	story      string
+}
+
+// locate resolves rel for an edit: in the tree flai runs in, or with a
+// story, in that story's worktree only, under a repository rooted there so
+// that the mode, the check, and the commit are the branch's.
+func locate(repo *workitem.Repo, rel, story string) (place, error) {
+	if story == "" {
+		abs, clean, err := Resolve(repo, rel)
+		return place{repo: repo, abs: abs, clean: clean}, err
+	}
+	id, in, err := storyRepo(repo, story)
+	if err != nil {
+		return place{}, err
+	}
+	wip := strings.TrimSuffix(repo.Manifest.Layout["wip"], "/")
+	if c := filepath.ToSlash(filepath.Clean(rel)); wip != "" && (c == wip || strings.HasPrefix(c, wip+"/")) {
+		return place{}, fmt.Errorf("%s is under %s/, which lives on the main checkout, not on %s (ADR-0019); edit it without a story", c, wip, storygit.Branch(id))
+	}
+	abs, clean, err := resolveIn(in, rel, fmt.Sprintf(" in %s's worktree; name a file on %s", id, storygit.Branch(id)), in.Root)
+	if err != nil {
+		return place{}, err
+	}
+	return place{repo: in, abs: abs, clean: clean, story: id}, nil
+}
+
+// storyRepo is story's canonical ID and the repository rooted at its
+// worktree, refusing an item that is not a story and a story that has no
+// worktree.
+func storyRepo(repo *workitem.Repo, story string) (string, *workitem.Repo, error) {
+	it, err := repo.Get(story)
+	if err != nil {
+		return "", nil, fmt.Errorf("edit in %s: %w; name a story of this project", story, err)
+	}
+	if it.Type != workitem.Story {
+		return "", nil, fmt.Errorf("edit in %s: it is a %s; name a story (S-nnnn), whose worktree holds the file", it.ID, it.Type)
+	}
+	wt := repo.WorktreePath(it.ID)
+	if st, err := os.Stat(wt); err != nil || !st.IsDir() {
+		return "", nil, fmt.Errorf("edit in %s: it has no worktree at %s; open it with flai stream open %s, or edit the main checkout without a story", it.ID, wt, it.ID)
+	}
+	in, err := workitem.Open(wt)
+	if err != nil || filepath.Clean(in.Root) != filepath.Clean(wt) {
+		return "", nil, fmt.Errorf("edit in %s: its worktree %s is not a checkout of the project; open it again with flai stream open %s", it.ID, wt, it.ID)
+	}
+	in.TemplateDir, in.Git = repo.TemplateDir, repo.Git
+	return it.ID, in, nil
+}
+
+// onStoryBranch refuses an edit in story's worktree at root when that
+// worktree is a git work tree not on the story's branch, as in the middle of
+// a rebase: the save would land elsewhere than the branch named.
+func onStoryBranch(r execx.Runner, root, story, clean string) error {
+	if _, err := r.Run(root, "git", "rev-parse", "--is-inside-work-tree"); err != nil {
+		return nil //nolint:nilerr // no repository means no branch to be on, by design
+	}
+	want := storygit.Branch(story)
+	got, err := r.Run(root, "git", "symbolic-ref", "--quiet", "--short", "HEAD")
+	if got = strings.TrimSpace(got); err != nil || got != want {
+		if err != nil {
+			got = "a detached HEAD"
+		}
+		return fmt.Errorf("save %s in %s: its worktree is on %s, not %s; finish or abort what is under way there (git status), then save again", clean, story, got, want)
+	}
+	return nil
+}
+
 // commit records one path on the current branch of the checkout at root.
 // inRepo is false when root is not a git work tree, which is not an error.
 func commit(r execx.Runner, root, path, msg string) (sha string, inRepo bool, err error) {
@@ -333,7 +426,10 @@ func commitMessage(repo *workitem.Repo, clean string, opt SaveOptions) string {
 	if subject == "" {
 		subject = "edit " + clean
 	}
-	if m := itemID.FindStringSubmatch(filepath.Base(clean)); m != nil && kind == "chore" {
+	switch m := itemID.FindStringSubmatch(filepath.Base(clean)); {
+	case opt.Story != "":
+		subject = "[" + opt.Story + "] " + subject
+	case m != nil && kind == "chore":
 		subject = "[" + m[1] + "] " + subject
 	}
 	msg := kind + ": " + subject

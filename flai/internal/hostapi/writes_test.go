@@ -206,8 +206,8 @@ var refused = map[string][]string{
 	"thread.reply":       {`{"id":"--by=eve","text":"x",` + rid + `}`, `{"id":"TH-0001","text":"",` + rid + `}`, `{"id":"TH-0001","text":"x","recommend":"--yes",` + rid + `}`},
 	"thread.confirm":     {`{"id":"--by=eve",` + rid + `}`, `{"id":"TH-1; ls",` + rid + `}`, `{"id":"TH-0001"}`},
 	"thread.resolve":     {`{"id":"TH-1; ls",` + rid + `}`},
-	"doc.show":           {`{"path":"../../etc/passwd"}`, `{"path":"system-flow.yaml"}`, `{"path":"-rf.md"}`, `{"path":"src/notes.md"}`},
-	"doc.save":           {`{"path":"design/x.md","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.sh","content":"c","hash":"abcdef0123",` + rid + `}`},
+	"doc.show":           {`{"path":"../../etc/passwd"}`, `{"path":"system-flow.yaml"}`, `{"path":"-rf.md"}`, `{"path":"src/notes.md"}`, `{"path":"design/x.md","story":"--help"}`, `{"path":"design/x.md","story":"T-0001"}`},
+	"doc.save":           {`{"path":"design/x.md","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.sh","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123","story":"S-1 --no-commit",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123","story":"E-0001",` + rid + `}`},
 	"adr.new":            {`{"title":"t","body":"b","status":"final",` + rid + `}`, `{"title":"t","body":"b","refines":["--autocommit"],` + rid + `}`, `{"title":"t","body":"b","supersedes":["0"],` + rid + `}`},
 	"adr.template":       {`[]`},
 	"adr.accept":         {`{"id":"--trailer=x",` + rid + `}`},
@@ -1697,6 +1697,52 @@ func TestTestRunAnswersFlaiTestsResultInAStorysWorktree(t *testing.T) {
 		if got := journal[i]; got.Outcome != w.outcome || got.Detail != w.detail || got.Action != ActionChecks || got.Method != "test.run" {
 			t.Errorf("entry %d: %+v, want %+v", i, got, w)
 		}
+	}
+}
+
+// S-0378: doc.show and doc.save with a story run flai doc --story in that
+// story's worktree, keep exit 3 a conflict, and refuse a story without a
+// worktree before anything runs.
+func TestDocMethodsRunInAStorysWorktree(t *testing.T) {
+	p := withDocs(t) // S-0001 is in the fixture
+	call := func(method, params string, ran Ran) (*recorder, *channel.Error) {
+		rec := &recorder{ran: ran}
+		_, e := writeMethods(rec.run, time.Now, Host{})[method](context.Background(), p, json.RawMessage(params))
+		return rec, e
+	}
+	show := `{"path":"design/system/overview.md","story":"S-0001"}`
+	save := `{"path":"design/system/overview.md","content":"# new\n","hash":"abcdef0123456789","story":"S-0001",` + rid + `}`
+	for method, params := range map[string]string{"doc.show": show, "doc.save": save} {
+		if rec, e := call(method, params, Ran{}); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "S-0001 has no worktree") || !strings.Contains(e.Message, "leave story out") || len(rec.runs) != 0 {
+			t.Errorf("%s for a story with no worktree: %+v", method, e)
+		}
+	}
+	if rec, e := call("doc.show", `{"path":"design/system/overview.md","story":"S-9999"}`, Ran{}); e == nil || e.Code != NotFound || len(rec.runs) != 0 {
+		t.Errorf("a story that is not there: %+v", e)
+	}
+
+	worktree := filepath.Join(p.Root, ".flai-cache", "worktrees", "S-0001")
+	if err := os.MkdirAll(worktree, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rec, e := call("doc.show", show, Ran{Stdout: []byte(`{"path":"design/system/overview.md","hash":"h1"}`)})
+	if e != nil {
+		t.Fatalf("show: %+v", e)
+	}
+	if got := strings.Join(rec.runs[0].Args, " "); got != "doc show --story=S-0001 --json -- design/system/overview.md" || rec.runs[0].Dir != worktree {
+		t.Errorf("show ran %q in %s, want flai doc show --story in %s", got, rec.runs[0].Dir, worktree)
+	}
+	rec, e = call("doc.save", save, Ran{Stdout: []byte(`{"path":"design/system/overview.md","committed":true}`)})
+	if e != nil {
+		t.Fatalf("save: %+v", e)
+	}
+	if got := strings.Join(rec.runs[0].Args, " "); got != "doc save --hash=abcdef0123456789 --trailer="+Trailer+" --story=S-0001 --json -- design/system/overview.md" || rec.runs[0].Dir != worktree || rec.runs[0].Stdin != "# new\n" {
+		t.Errorf("save ran %q in %s with %q, want flai doc save --story in %s", got, rec.runs[0].Dir, rec.runs[0].Stdin, worktree)
+	}
+	fatal := func(msg string) []map[string]any { return []map[string]any{{"level": "FATAL", "err": msg}} }
+	_, e = call("doc.save", save, Ran{Exit: 3, Stdout: []byte(`{"conflict":{"hash":"h2","current":"# theirs\n"}}`), Events: fatal("conflict: design/system/overview.md changed after it was loaded")})
+	if e == nil || e.Code != Conflict || e.Data.(map[string]any)["hash"] != "h2" {
+		t.Errorf("a conflict on the branch: %+v", e)
 	}
 }
 

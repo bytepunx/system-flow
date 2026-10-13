@@ -27,7 +27,7 @@ decides what may be edited, detects a concurrent change by a content hash,
 validates with the check, and commits the one path. flai doc search and
 flai doc show --heading are how an agent reads design on demand (ADR-0049).`,
 	}
-	c.AddCommand(newDocSearchCmd(a), newDocShowCmd(a), newDocSaveCmd(a))
+	c.AddCommand(newDocSearchCmd(a), newDocShowCmd(a), newDocSaveCmd(a), newDocLintCmd(a))
 	return c
 }
 
@@ -85,7 +85,7 @@ path, the size, and the first lines. Read one with flai doc show <path>
 }
 
 func newDocShowCmd(a *app) *cobra.Command {
-	var heading string
+	var heading, story string
 	c := &cobra.Command{
 		Use:   "show <path>",
 		Short: "Print a document with its content hash and what may be edited, or one section of it",
@@ -99,16 +99,21 @@ MCP doc_get tool returns it with a heading (ADR-0049): the text, or with
 a heading path such as "Commands › flai prime" (> also joins), or its anchor
 slug; one that names no section, or more than one, is refused with the
 headings to choose from. A section has no save hash: save edits the whole
-document.`,
+document.
+
+With --story, reads the file in that story's worktree, as it is on its
+branch, for flai doc save --story (S-0378). A story without a worktree, and
+a path under the wip folder, which lives on the main checkout, are refused.`,
 		Example: `  flai doc show design/system/overview.md --json
-  flai doc show design/system/flai-cli.md --heading "Commands › flai prime"`,
+  flai doc show design/system/flai-cli.md --heading "Commands › flai prime"
+  flai doc show design/system/overview.md --story S-0042 --json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			doc, err := docedit.Show(repo, args[0])
+			doc, err := docedit.Show(repo, args[0], story)
 			if err != nil {
 				return err
 			}
@@ -135,6 +140,7 @@ document.`,
 		},
 	}
 	c.Flags().StringVar(&heading, "heading", "", "print only the section under this heading, with the sections below it")
+	c.Flags().StringVar(&story, "story", "", "read the file in this story's worktree (S-nnnn)")
 	return c
 }
 
@@ -149,9 +155,16 @@ save fails as a conflict (exit 3) with the current content, its hash, and a
 diff. Content flai will not save (front matter it owns was changed, or the
 check has an error with it) is refused (exit 4) and the file is left as it
 was. A saved file is committed on its own unless --no-commit is given or
-the project sets dashboard.autocommit: false. Nothing is pushed.`,
-		Example: `  flai doc save docs/users/index.md --hash "$h" --message "clarify install" < new.md`,
-		Args:    cobra.ExactArgs(1),
+the project sets dashboard.autocommit: false. Nothing is pushed.
+
+With --story, saves the file in that story's worktree: the hash and the
+check are the branch's, and the commit is on story/S-nnnn, with the story
+named in its subject; the main checkout is left as it was (S-0378). A story
+without a worktree, a worktree not on its branch, and a path under the wip
+folder, which lives on the main checkout, are refused.`,
+		Example: `  flai doc save docs/users/index.md --hash "$h" --message "clarify install" < new.md
+  flai doc save design/system/overview.md --story S-0042 --hash "$h" < new.md`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
@@ -210,5 +223,6 @@ the project sets dashboard.autocommit: false. Nothing is pushed.`,
 	c.Flags().StringVar(&opt.Message, "message", "", "commit subject after the type prefix (default: edit <path>)")
 	c.Flags().StringArrayVar(&opt.Trailers, "trailer", nil, "line appended to the commit message (repeatable)")
 	c.Flags().BoolVar(&opt.NoCommit, "no-commit", false, "save without committing")
+	c.Flags().StringVar(&opt.Story, "story", "", "save the file in this story's worktree and commit it on its branch (S-nnnn)")
 	return c
 }

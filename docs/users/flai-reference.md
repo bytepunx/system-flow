@@ -1037,9 +1037,34 @@ The save path for documents edited in the dashboard (ADR-0023). flai decides wha
 
 Subcommands:
 
+- [lint](#flai-doc-lint): Lint markdown given on standard input as the document at path, and print its findings
 - [save](#flai-doc-save): Save a document from standard input: conflict check, flai check, commit
 - [search](#flai-doc-search): Rank the sections of design and docs against a query
 - [show](#flai-doc-show): Print a document with its content hash and what may be edited, or one section of it
+
+#### flai doc lint
+
+Lint markdown given on standard input as the document at path, and print its findings.
+
+```text
+flai doc lint <path> --stdin [flags]
+```
+
+Reads the content on standard input and lints it, as the Markdown file at path under the design, docs, or wip folder, with the project's markdownlint configuration and the subset of its rules flai implements (ADR-0061). The file need not exist and is not read: an editor sends what it holds. It is what the dashboard's editor shows as the operator types, through the host method doc.lint; the project's markdown tier stays the authority at acceptance. A project without a markdownlint configuration has no findings.
+
+Prints each finding as path:line rule/alias message, or with --json {"path": ..., "findings": [{"line", "rule", "alias", "message"}]}, an empty list for clean content. The exit status is 0 for clean content, 1 when it has findings, and 2 when it could not be linted: no --stdin, a path outside the three folders, or a configuration that cannot be read.
+
+Examples:
+
+```bash
+flai doc lint docs/users/index.md --stdin --json < edited.md
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--stdin` | lint the content on standard input (required) |
 
 #### flai doc save
 
@@ -1051,10 +1076,13 @@ flai doc save <path> --hash <sha256> [flags]
 
 Reads the new content on standard input. --hash is the hash flai doc show gave for the content the editor loaded; when the file no longer has it the save fails as a conflict (exit 3) with the current content, its hash, and a diff. Content flai will not save (front matter it owns was changed, or the check has an error with it) is refused (exit 4) and the file is left as it was. A saved file is committed on its own unless --no-commit is given or the project sets dashboard.autocommit: false. Nothing is pushed.
 
+With --story, saves the file in that story's worktree: the hash and the check are the branch's, and the commit is on story/S-nnnn, with the story named in its subject; the main checkout is left as it was (S-0378). A story without a worktree, a worktree not on its branch, and a path under the wip folder, which lives on the main checkout, are refused.
+
 Examples:
 
 ```bash
 flai doc save docs/users/index.md --hash "$h" --message "clarify install" < new.md
+flai doc save design/system/overview.md --story S-0042 --hash "$h" < new.md
 ```
 
 Flags:
@@ -1064,6 +1092,7 @@ Flags:
 | `--hash` string | hash of the content the editor loaded (from flai doc show) |
 | `--message` string | commit subject after the type prefix (default: edit &lt;path&gt;) |
 | `--no-commit` | save without committing |
+| `--story` string | save the file in this story's worktree and commit it on its branch (S-nnnn) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 
 #### flai doc search
@@ -1101,11 +1130,14 @@ Modes: full (body and front matter: design and docs), body (flai owns the front 
 
 With --heading, prints only that section and the sections below it, as the MCP doc\_get tool returns it with a heading (ADR-0049): the text, or with --json its path, heading path, line, size, and text. A heading is its text, a heading path such as "Commands › flai prime" (&gt; also joins), or its anchor slug; one that names no section, or more than one, is refused with the headings to choose from. A section has no save hash: save edits the whole document.
 
+With --story, reads the file in that story's worktree, as it is on its branch, for flai doc save --story (S-0378). A story without a worktree, and a path under the wip folder, which lives on the main checkout, are refused.
+
 Examples:
 
 ```bash
 flai doc show design/system/overview.md --json
 flai doc show design/system/flai-cli.md --heading "Commands › flai prime"
+flai doc show design/system/overview.md --story S-0042 --json
 ```
 
 Flags:
@@ -1113,6 +1145,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--heading` string | print only the section under this heading, with the sections below it |
+| `--story` string | read the file in this story's worktree (S-nnnn) |
 
 ### flai edit
 

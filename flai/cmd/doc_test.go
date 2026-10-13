@@ -64,9 +64,9 @@ func docProject(t *testing.T) string {
 	return root
 }
 
-func showDoc(t *testing.T, root, path string) (content, hash, mode string) {
+func showDoc(t *testing.T, root, path string, flags ...string) (content, hash, mode string) {
 	t.Helper()
-	out, errOut, code := runIn(t, root, "doc", "show", path, "--json")
+	out, errOut, code := runIn(t, root, append([]string{"doc", "show", path, "--json"}, flags...)...)
 	if code != 0 {
 		t.Fatalf("doc show %s: %s", path, errOut)
 	}
@@ -249,6 +249,97 @@ func TestDocSaveRefusedByTheCheckRestoresTheFile(t *testing.T) {
 	}
 	if st := gitIn(t, root, "status", "--porcelain"); st != "" {
 		t.Errorf("nothing should be left behind: %q", st)
+	}
+}
+
+// storyWorktreeIn opens S-0001's worktree on story/S-0001 in a docProject and
+// commits a change to the plan there, so that the branch's plan is not the
+// main checkout's.
+func storyWorktreeIn(t *testing.T, root string) string {
+	t.Helper()
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	gitIn(t, root, "worktree", "add", "-q", "-b", "story/S-0001", wt)
+	plan := filepath.Join(wt, "design/system/plan.md")
+	_ = os.WriteFile(plan, []byte(strings.Replace(designDoc, "text\n", "branch text\n", 1)), 0o644)
+	gitIn(t, wt, "commit", "-q", "-am", "docs: [S-0001] branch plan")
+	return wt
+}
+
+// S-0378: flai doc save --story writes and commits the file on the story's
+// branch in its worktree, leaves the main checkout as it was, and refuses a
+// stale hash as a conflict.
+func TestDocSaveWithAStoryCommitsOnItsBranch(t *testing.T) {
+	root := docProject(t)
+	wt := storyWorktreeIn(t, root)
+	mainHead := gitIn(t, root, "rev-parse", "HEAD")
+	path := "design/system/plan.md"
+
+	content, hash, mode := showDoc(t, root, path, "--story", "S-0001")
+	if !strings.Contains(content, "branch text") || mode != "full" {
+		t.Fatalf("show --story reads the branch's file: %q %s", content, mode)
+	}
+	edited := strings.Replace(content, "branch text\n", "better branch text\n", 1)
+	out, errOut, code := runStdin(t, root, edited, "doc", "save", path, "--story", "S-0001", "--hash", hash, "--message", "clarify the shape", "--json")
+	if code != 0 {
+		t.Fatalf("save --story: %d %s", code, errOut)
+	}
+	var res struct {
+		Committed bool
+		Commit    string
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil || !res.Committed {
+		t.Fatalf("result: %s", out)
+	}
+	if got := gitIn(t, root, "rev-parse", "--short", "story/S-0001"); got != res.Commit {
+		t.Errorf("the commit %s should be story/S-0001's head, which is %s", res.Commit, got)
+	}
+	if subject := gitIn(t, wt, "log", "-1", "--format=%s"); subject != "docs: [S-0001] clarify the shape" {
+		t.Errorf("subject: %q", subject)
+	}
+	if files := gitIn(t, wt, "show", "--name-only", "--format=", "HEAD"); files != path {
+		t.Errorf("the commit must hold that path only, got %q", files)
+	}
+	if saved, _ := os.ReadFile(filepath.Join(wt, path)); !strings.Contains(string(saved), "better branch text") {
+		t.Errorf("the worktree's file carries the edit:\n%s", saved)
+	}
+	if now, _ := os.ReadFile(filepath.Join(root, path)); string(now) != designDoc {
+		t.Errorf("the main checkout's file is left as it was:\n%s", now)
+	}
+	if gitIn(t, root, "rev-parse", "HEAD") != mainHead || gitIn(t, root, "status", "--porcelain") != "" {
+		t.Error("the main checkout is left as it was")
+	}
+
+	// the hash loaded before that save is stale now
+	out, errOut, code = runStdin(t, root, strings.Replace(content, "branch text\n", "my text\n", 1), "doc", "save", path, "--story", "S-0001", "--hash", hash, "--json")
+	if code != exitDocConflict || !strings.Contains(errOut, "conflict:") || !strings.Contains(out, "better branch text") {
+		t.Fatalf("a stale hash on the branch is a conflict: %d %s %s", code, out, errOut)
+	}
+	if saved, _ := os.ReadFile(filepath.Join(wt, path)); !strings.Contains(string(saved), "better branch text") {
+		t.Errorf("a conflict must not overwrite the other change:\n%s", saved)
+	}
+}
+
+// S-0378: --story refuses a story without a worktree and a path under wip,
+// which lives on the main checkout (ADR-0019).
+func TestDocSaveWithAStoryRefusesWipAndAStoryWithoutAWorktree(t *testing.T) {
+	root := docProject(t)
+	path := "design/system/plan.md"
+	_, hash, _ := showDoc(t, root, path)
+	for _, args := range [][]string{{"doc", "show", path, "--story", "S-0001"}, {"doc", "save", path, "--story", "S-0001", "--hash", hash}} {
+		if _, errOut, code := runStdin(t, root, designDoc, args...); code == 0 || !strings.Contains(errOut, "S-0001: it has no worktree") || !strings.Contains(errOut, "flai stream open S-0001") {
+			t.Errorf("%v without a worktree: %d %s", args, code, errOut)
+		}
+	}
+	wt := storyWorktreeIn(t, root)
+	wip := "wip/kanban/stories/S-0001-editable.md"
+	_, wipHash, _ := showDoc(t, root, wip)
+	for _, args := range [][]string{{"doc", "show", wip, "--story", "S-0001"}, {"doc", "save", wip, "--story", "S-0001", "--hash", wipHash}} {
+		if _, errOut, code := runStdin(t, root, "x\n", args...); code == 0 || !strings.Contains(errOut, "lives on the main checkout, not on story/S-0001") {
+			t.Errorf("%v under wip: %d %s", args, code, errOut)
+		}
+	}
+	if st := gitIn(t, wt, "status", "--porcelain"); st != "" {
+		t.Errorf("nothing is written in the worktree: %q", st)
 	}
 }
 
