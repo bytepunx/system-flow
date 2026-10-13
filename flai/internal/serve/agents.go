@@ -1155,10 +1155,12 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 	if err != nil {
 		return fail(err)
 	}
+	spend := l.spendAtStart(ctx, cfg, run) // before its first call is charged
 	cmd, out, err := l.spawn(ctx, run, spec.Argv, story.ID, now, slices.Concat([]string{"FLAI_STORY=" + story.ID}, spec.Env, keys))
 	if err != nil {
 		return fail(err)
 	}
+	l.keepSpend(run, spend)
 	l.told(run)
 	entry.Outcome, entry.Detail = "done", fmt.Sprintf("started %s (%s) for %s as %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)
 	if run.Answered != "" {
@@ -1195,7 +1197,7 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		judgeRun(l.entry.Root, &ended, &code)
 		l.ended(&ended)
 		l.log("agent ended", "story", story.ID, "pid", run.PID, "exit", code, "outcome", ended.Outcome)
-		l.measure(story.ID)
+		l.measureWith(story.ID, cfg.Providers)
 	})
 	return true
 }
@@ -1357,7 +1359,7 @@ func (l *launcher) spawn(ctx context.Context, run *AgentRun, argv []string, subj
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), argv[0], argv[1:]...)
 	cmd.Dir = l.entry.Root
 	cmd.Stdout, cmd.Stderr = out, out
-	cmd.Env = append(agentEnv(os.Environ()), "FLAI_AGENT="+run.Agent, "FLAI_SESSION="+at.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
+	cmd.Env = append(l.withoutSpendKeys(agentEnv(os.Environ())), "FLAI_AGENT="+run.Agent, "FLAI_SESSION="+at.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
 	cmd.Env = append(cmd.Env, env...)
 	Detach(cmd)
 	if err := cmd.Start(); err != nil {

@@ -109,6 +109,70 @@ func TestAResumedSessionCountsItsNewestResultOnly(t *testing.T) {
 	}
 }
 
+// S-0357: each run holds the harness sessions its log names, in the order
+// they first appear, each once.
+func TestARunHoldsItsSessionsInOrder(t *testing.T) {
+	first := writeLog(t, "a.log", run1...)
+	second := writeLog(t, "b.log",
+		assistant("u", "n1", opus, "2026-09-29T11:00:00Z", 1, 1, 10, 0),
+		assistant("s", "n2", opus, "2026-09-29T11:00:01Z", 1, 1, 10, 0),
+		assistant("u", "n3", opus, "2026-09-29T11:00:02Z", 1, 1, 10, 0))
+	rec, err := Read(ClaudeCode(), first, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rec.Runs) != 2 || !slices.Equal(rec.Runs[0].Sessions, []string{"s"}) || !slices.Equal(rec.Runs[1].Sessions, []string{"u", "s"}) {
+		t.Fatalf("runs = %+v, want sessions [s] and [u s]", rec.Runs)
+	}
+	data, _ := json.Marshal(rec.Runs[1])
+	if !strings.Contains(string(data), `"sessions":["u","s"]`) {
+		t.Errorf("a run's JSON = %s, want its sessions", data)
+	}
+}
+
+// S-0357: each run's totals are what it added to the record's: a resumed
+// session's newest result less what its earlier one reported, and a run's
+// calls no result reported, estimated; together they are the record's total.
+func TestEachRunsTotalsAreWhatItAddedAndSumToTheTotal(t *testing.T) {
+	first := writeLog(t, "a.log", run1...)
+	second := writeLog(t, "b.log",
+		assistant("s", "m4", opus, "2026-09-29T11:00:00Z", 1, 1, 5000, 0),
+		`{"type":"result","subtype":"success","session_id":"s","modelUsage":{`+
+			`"claude-opus-5-5":{"inputTokens":13,"outputTokens":500,"cacheReadInputTokens":9000,"cacheCreationInputTokens":500,"costUSD":1.7},`+
+			`"claude-haiku-4-5":{"inputTokens":5,"outputTokens":50,"cacheReadInputTokens":200,"cacheCreationInputTokens":100,"costUSD":0.3}}}`)
+	third := writeLog(t, "c.log",
+		assistant("t", "n1", opus, "2026-09-29T12:00:00Z", 2, 2, 4512, 0),
+		assistant("t", "n2", opus, "2026-09-29T12:01:00Z", 0, 0, 0, 0))
+	rec, err := Read(ClaudeCode(), first, second, third)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runs := rec.RunTotals(nil)
+	if len(runs) != 3 {
+		t.Fatalf("run totals = %+v, want three", runs)
+	}
+	if runs[0].Cost() != 1.5 || runs[0].Estimated || runs[0].Seconds != 600 || len(runs[0].Models) != 2 {
+		t.Errorf("first run = %+v, want its result's 1.5", runs[0])
+	}
+	if diff(runs[1].Cost(), 0.5) > 1e-9 || runs[1].Estimated || len(runs[1].Models) != 1 || runs[1].Models[0].Model != opus || runs[1].Models[0].CacheRead != 5000 {
+		t.Errorf("second run = %+v, want opus's 0.5 and 5000 cache reads more", runs[1])
+	}
+	// opus reported 1.7 for 10013 tokens; t's call is 4516 tokens
+	if want := 4516 * 1.7 / 10013; !runs[2].Estimated || diff(runs[2].Cost(), want) > 1e-9 || runs[2].Seconds != 60 {
+		t.Errorf("third run = %+v, want estimated at %.4f", runs[2], want)
+	}
+	total := rec.Total(nil)
+	var sum float64
+	var tokens int64
+	for _, u := range runs {
+		sum += u.Cost()
+		tokens += u.Tokens()
+	}
+	if diff(sum, total.Cost()) > 1e-3 || tokens != total.Tokens() {
+		t.Errorf("runs sum to %v and %d tokens, the total is %v and %d", sum, tokens, total.Cost(), total.Tokens())
+	}
+}
+
 // A run with no result, still going or dead, is counted from its calls and
 // its cost estimated at the rate other sessions reported.
 func TestARunWithNoResultIsEstimated(t *testing.T) {

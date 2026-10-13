@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -64,6 +66,16 @@ type call struct {
 	agent string
 	// covered says an End reported after it counts it.
 	covered bool
+	// log is the index of the log it was read from, among those read.
+	log int
+}
+
+// ended is an End's totals for its session, by model, and the index of the
+// log it was read from.
+type ended struct {
+	log     int
+	session string
+	totals  map[string]Model
 }
 
 // weight is how much of a session's reported totals a call is given: its
@@ -78,6 +90,11 @@ type Run struct {
 	// Result is the final text of the run's newest End; empty when it has
 	// none or that End carries no text.
 	Result string `json:"result,omitempty"`
+	// Sessions are the harness session IDs its log holds, in the order they
+	// first appear.
+	Sessions []string `json:"sessions,omitempty"`
+	// log is the index of its log among those read.
+	log int
 }
 
 // Record is what a story's agent logs say, read in the order of their runs.
@@ -86,6 +103,10 @@ type Record struct {
 	calls []call
 	// reported is each session's newest End, by model.
 	reported map[string]map[string]Model
+	// ends are every End's totals, in the order they were read.
+	ends []ended
+	// reading is the index of the log being read.
+	reading int
 	// started are the sub-agents' starts, by the ID of their tool call.
 	started map[string]start
 	// waits are the session's own agent's wait_for_events calls whose result
@@ -114,7 +135,8 @@ func Read(r Reader, paths ...string) (*Record, error) {
 		emptied: map[string]bool{}, turnByID: map[string]int{},
 	}
 	byID := map[string]int{} // message id to its index in calls
-	for _, p := range paths {
+	for i, p := range paths {
+		rec.reading = i
 		if err := rec.read(r, p, byID); err != nil {
 			return nil, err
 		}
@@ -149,11 +171,14 @@ func eachLine(path string, read func(line []byte)) error {
 }
 
 func (rec *Record) read(r Reader, path string, byID map[string]int) error {
-	run := Run{Path: path}
+	run := Run{Path: path, log: rec.reading}
 	model := "" // the session's model, for an End that names none
 	err := eachLine(path, func(line []byte) {
 		events, _ := r.Read(line)
 		for _, e := range events {
+			if e.Session != "" && !slices.Contains(run.Sessions, e.Session) {
+				run.Sessions = append(run.Sessions, e.Session)
+			}
 			if !e.At.IsZero() {
 				if run.Start.IsZero() || e.At.Before(run.Start) {
 					run.Start = e.At
@@ -288,7 +313,7 @@ func (rec *Record) addCall(e Event, byID map[string]int) {
 		return
 	}
 	byID[e.MessageID] = len(rec.calls)
-	rec.calls = append(rec.calls, call{at: e.At, model: got.Model, session: e.Session, usage: got, agent: e.ParentCall})
+	rec.calls = append(rec.calls, call{at: e.At, model: got.Model, session: e.Session, usage: got, agent: e.ParentCall, log: rec.reading})
 }
 
 // addResult keeps what an End reports as its session's totals, by model, or
@@ -311,6 +336,7 @@ func (rec *Record) addResult(e Event, model string) {
 		return
 	}
 	rec.reported[e.Session] = totals
+	rec.ends = append(rec.ends, ended{log: rec.reading, session: e.Session, totals: totals})
 	for i := range rec.calls {
 		if rec.calls[i].session == e.Session {
 			rec.calls[i].covered = true
@@ -377,6 +403,69 @@ func (rec *Record) Total(rates Rates) *Usage {
 	}
 	u.Tidy()
 	return u
+}
+
+// RunTotals are what each of the record's runs spent, in the order of Runs,
+// so that they add up to Total: a run's models are what its sessions'
+// reported totals grew by in it, an End being cumulative over a resumed
+// session, and its calls that no End ever reported, priced at rates as Total
+// prices them. A run is estimated when any of its cost was, and its seconds
+// are its own. What a log with no run holds is its next run's, or the last
+// run's. A model may have spent less than nothing in a run whose session's
+// End reports less of it than an earlier End did.
+func (rec *Record) RunTotals(rates Rates) []*Usage {
+	rates = rec.Rates().Merge(rates)
+	out := make([]*Usage, len(rec.Runs))
+	before, after := map[string]Model{}, -1 // the totals of the runs before, up to the log of the last
+	for k, run := range rec.Runs {
+		last := run.log
+		if k == len(rec.Runs)-1 {
+			last = math.MaxInt
+		}
+		upTo := map[string]map[string]Model{} // each session's newest End up to last
+		for _, e := range rec.ends {
+			if e.log <= last {
+				upTo[e.session] = e.totals
+			}
+		}
+		now := map[string]Model{}
+		add := func(m Model) {
+			sum := now[m.Model]
+			sum.Model = m.Model
+			sum.add(m)
+			now[m.Model] = sum
+		}
+		for _, totals := range upTo {
+			for _, m := range totals {
+				add(m)
+			}
+		}
+		u := &Usage{Source: SourceLog, Seconds: int64(run.End.Sub(run.Start).Seconds())}
+		for _, c := range rec.calls {
+			if c.log > last || c.covered {
+				continue
+			}
+			add(estimate(c.usage, rates))
+			if c.log > after {
+				u.Estimated = true
+			}
+		}
+		for name := range before {
+			if _, ok := now[name]; !ok {
+				now[name] = Model{Model: name}
+			}
+		}
+		for name, m := range now {
+			b := before[name]
+			d := Model{Model: name, Input: m.Input - b.Input, Output: m.Output - b.Output, CacheRead: m.CacheRead - b.CacheRead, CacheWrite: m.CacheWrite - b.CacheWrite, Cost: m.Cost - b.Cost}
+			if d != (Model{Model: name}) {
+				u.Models = append(u.Models, d)
+			}
+		}
+		slices.SortFunc(u.Models, func(a, b Model) int { return strings.Compare(a.Model, b.Model) })
+		out[k], before, after = u, now, last
+	}
+	return out
 }
 
 // estimate prices a call no End reported at its model's rate; with no

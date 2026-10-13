@@ -2,10 +2,14 @@ package serve
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -89,7 +93,7 @@ func TestMeasureWritesAStoryItsTasksAndItsEpic(t *testing.T) {
 		streamResult("s", 4000, 2.0))
 	write("other-"+story+"-20260929T100000Z.log", streamResult("x", 5000, 50))
 
-	m, err := Measure(lab.o.Dir, lab.root, "t", story, true)
+	m, err := Measure(lab.o.Dir, lab.root, "t", story, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +118,7 @@ func TestMeasureWritesAStoryItsTasksAndItsEpic(t *testing.T) {
 	if strings.Join(m.Changed, ",") != strings.Join([]string{first, second, idle, story, lab.epic.ID}, ",") {
 		t.Errorf("changed = %v", m.Changed)
 	}
-	again, err := Measure(lab.o.Dir, lab.root, "t", story, true)
+	again, err := Measure(lab.o.Dir, lab.root, "t", story, nil, true)
 	if err != nil || len(again.Changed) != 0 {
 		t.Errorf("measuring again changed %v (%v)", again.Changed, err)
 	}
@@ -138,7 +142,7 @@ func TestMeasureKeepsWhatThePlannerSpent(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(logs, "t-"+story+"-20260929T100000Z.log"), []byte(streamCall("s", "m0", t0, 1000)+"\n"+streamResult("s", 1000, 1.0)+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	m, err := Measure(lab.o.Dir, lab.root, "t", story, true)
+	m, err := Measure(lab.o.Dir, lab.root, "t", story, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +155,7 @@ func TestMeasureKeepsWhatThePlannerSpent(t *testing.T) {
 			t.Errorf("%s's usage = %+v, want the agent's 1.0 USD and the planner's 0.5 kept", id, u)
 		}
 	}
-	again, err := Measure(lab.o.Dir, lab.root, "t", story, true)
+	again, err := Measure(lab.o.Dir, lab.root, "t", story, nil, true)
 	if err != nil || len(again.Changed) != 0 {
 		t.Errorf("measuring again changed %v (%v), want nothing", again.Changed, err)
 	}
@@ -175,7 +179,7 @@ func TestMeasureReadsNothingOfACommandsLog(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(logs, "t-"+story+"-20260929T100000Z.log"), []byte(log), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		m, err := Measure(lab.o.Dir, lab.root, "t", story, true)
+		m, err := Measure(lab.o.Dir, lab.root, "t", story, nil, true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -221,7 +225,7 @@ func TestMeasureGivesEachTaskItsSubAgentAndAShareOfTheStorysAgent(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(logs, "t-"+story+"-20260929T100000Z.log"), []byte(log), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Measure(lab.o.Dir, lab.root, "t", story, true); err != nil {
+	if _, err := Measure(lab.o.Dir, lab.root, "t", story, nil, true); err != nil {
 		t.Fatal(err)
 	}
 	// of 10000: the first half of a1, b1, and half of a2; the second half
@@ -298,4 +302,394 @@ func (lab *agentLab) logText() string {
 	lab.logs.mu.Lock()
 	defer lab.logs.mu.Unlock()
 	return lab.logs.buf.String()
+}
+
+// fakeSpend is a gateway's spend reader that answers as answer says and
+// keeps what it was asked.
+type fakeSpend struct {
+	mu     sync.Mutex
+	answer func(run usage.RunRef) (*usage.Spent, error)
+	asked  []usage.RunRef
+}
+
+func (f *fakeSpend) Run(_ context.Context, run usage.RunRef) (*usage.Spent, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.asked = append(f.asked, run)
+	return f.answer(run)
+}
+
+func (f *fakeSpend) times() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.asked)
+}
+
+// fakeKeySpend is a fakeSpend that also reads the key's usage, as
+// OpenRouter's reader does.
+type fakeKeySpend struct {
+	*fakeSpend
+	usage float64
+}
+
+func (f fakeKeySpend) KeyUsage(context.Context) (float64, error) { return f.usage, nil }
+
+// costs answers cost for every run.
+func costs(cost float64) func(usage.RunRef) (*usage.Spent, error) {
+	return func(usage.RunRef) (*usage.Spent, error) {
+		return &usage.Spent{Cost: cost, By: usage.SpentBySession}, nil
+	}
+}
+
+// gatewayReads has every gateway read by s for the test, and keeps the key
+// each reader was made with.
+func gatewayReads(t *testing.T, s usage.Spend) *[]string {
+	t.Helper()
+	was := spendFor
+	var mu sync.Mutex
+	keys := &[]string{}
+	spendFor = func(_, key string) usage.Spend {
+		mu.Lock()
+		defer mu.Unlock()
+		*keys = append(*keys, key)
+		return s
+	}
+	t.Cleanup(func() { spendFor = was })
+	return keys
+}
+
+// spendKey is the agent's key to the provider gateway in tests.
+const spendKey = "sk-sentinel-S0357-never-logged"
+
+// gateways are the host's providers in tests: gateway, its key in
+// S0357_KEY, and admin, whose spend log is read with the key in
+// S0357_SPEND_KEY.
+func gateways(t *testing.T) map[string]manifest.Provider {
+	t.Helper()
+	t.Setenv("S0357_KEY", spendKey)
+	return map[string]manifest.Provider{
+		"gateway": {API: manifest.APIAnthropicMessages, BaseURL: "https://gateway.example.com", KeyEnv: "S0357_KEY"},
+		"admin":   {API: manifest.APIAnthropicMessages, BaseURL: "https://admin.example.com", KeyEnv: "S0357_KEY", SpendKeyEnv: "S0357_SPEND_KEY"},
+	}
+}
+
+// agentLog writes the log of a run of story's agent started at stamp, and
+// gives its path.
+func (lab *agentLab) agentLog(story, stamp string, lines ...string) string {
+	lab.t.Helper()
+	dir := filepath.Join(string(lab.o.Dir), "agents")
+	_ = os.MkdirAll(dir, 0o700)
+	p := filepath.Join(dir, "t-"+story+"-"+stamp+".log")
+	if err := os.WriteFile(p, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		lab.t.Fatal(err)
+	}
+	return p
+}
+
+// throughProvider writes the spend record of the run whose log is at log, as
+// its start does.
+func throughProvider(t *testing.T, log string, rec spendRecord) {
+	t.Helper()
+	if err := writeSpend(log, &rec); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func spendOfLog(t *testing.T, log string) (*spendRecord, string) {
+	t.Helper()
+	r, err := readSpend(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(spendPath(log))
+	return r, string(data)
+}
+
+// modelCall is one call to model as Claude Code streams it.
+func modelCall(session, id, model string, at time.Time, read int) string {
+	return strings.Replace(streamCall(session, id, at, read), "claude-opus-5-5", model, 1)
+}
+
+const haiku = "claude-haiku-4-5"
+
+// S-0357, ADR-0132: a run through a provider is priced by its gateway: its
+// cost replaces the harness's, apportioned over the run's models by their
+// share of the harness's cost, with the harness's tokens; the story's task
+// is scaled with it, both priced by the gateway, and its epic sums it. The
+// price is kept beside the log, without the key, and the next measurement
+// asks nothing.
+func TestAGatewayPricesARunThroughAProvider(t *testing.T) {
+	lab := newAgentLab(t)
+	providers := gateways(t)
+	gw := &fakeSpend{answer: costs(4.0)}
+	keys := gatewayReads(t, gw)
+	story := lab.backlog("Through the gateway", claudeCode)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	task := lab.taskWorked(story, "worked", t0.Add(-time.Minute), t0.Add(10*time.Minute))
+	log := lab.agentLog(story, "20260929T100000Z",
+		streamCall("s", "m0", t0, 1000),
+		modelCall("s", "m1", haiku, t0.Add(time.Minute), 1000),
+		`{"type":"result","subtype":"success","session_id":"s","modelUsage":{"claude-opus-5-5":{"inputTokens":1,"outputTokens":300,"cacheReadInputTokens":1000,"cacheCreationInputTokens":0,"costUSD":1.0},`+
+			`"claude-haiku-4-5":{"inputTokens":1,"outputTokens":100,"cacheReadInputTokens":1000,"cacheCreationInputTokens":0,"costUSD":0.25}}}`)
+	throughProvider(t, log, spendRecord{Provider: "gateway"})
+
+	m, err := Measure(lab.o.Dir, lab.root, "t", story, providers, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Unread) != 0 || gw.times() != 1 {
+		t.Fatalf("unread %+v, asked %d times; want the gateway asked once", m.Unread, gw.times())
+	}
+	sum := sha256.Sum256([]byte(spendKey))
+	ref := gw.asked[0]
+	if !slices.Equal(ref.Sessions, []string{"s"}) || !ref.From.Equal(t0) || !ref.To.Equal(t0.Add(time.Minute)) || ref.KeyBefore != nil || ref.KeyHash != hex.EncodeToString(sum[:]) {
+		t.Errorf("asked for %+v, want the run's session, window, and the hash of its key", ref)
+	}
+	if !slices.Equal(*keys, []string{spendKey}) {
+		t.Errorf("the reader was made with %d keys, want the agent's key alone", len(*keys))
+	}
+	su := lab.usageOf(story)
+	if su == nil || su.PricedBy != usage.PricedGateway || !su.Estimated || diff(su.Cost(), 4.0) > 1e-9 || len(su.Models) != 2 {
+		t.Fatalf("story usage = %+v, want the gateway's 4.0 apportioned over two models", su)
+	}
+	if h, o := su.Models[0], su.Models[1]; h.Model != haiku || diff(h.Cost, 0.8) > 1e-9 || o.Model != "claude-opus-5-5" || diff(o.Cost, 3.2) > 1e-9 || o.Output != 300 || o.CacheRead != 1000 {
+		t.Errorf("models = %+v, want haiku 0.8 and opus 3.2 with the harness's tokens", su.Models)
+	}
+	if tu := lab.usageOf(task); tu == nil || tu.PricedBy != usage.PricedGateway || !tu.Estimated || diff(tu.Cost(), 4.0) > 1e-3 {
+		t.Errorf("task usage = %+v, want the story's every call at the gateway's price", tu)
+	}
+	if eu := lab.usageOf(lab.epic.ID); eu == nil || eu.Priced() != usage.PricedGateway || diff(eu.Cost(), 4.0) > 1e-9 {
+		t.Errorf("epic usage = %+v, want its story's, priced by the gateway", eu)
+	}
+	r, text := spendOfLog(t, log)
+	if !r.priced() || *r.Cost != 4.0 || r.By != usage.SpentBySession || r.PricedBy != usage.PricedGateway || r.At == "" || strings.Contains(text, spendKey) {
+		t.Errorf("spend record = %s, want the gateway's price and no key", text)
+	}
+
+	again, err := Measure(lab.o.Dir, lab.root, "t", story, providers, true)
+	if err != nil || len(again.Changed) != 0 || gw.times() != 1 {
+		t.Errorf("measuring again changed %v (%v) and asked %d times, want nothing and once", again.Changed, err, gw.times())
+	}
+}
+
+// S-0357, ADR-0132: a gateway that holds nothing for a run leaves it priced
+// by the harness and says so in flai serve's log, without the key, once;
+// the next measurement asks again, and prices it when the gateway answers.
+func TestAGatewayThatDoesNotAnswerLeavesTheHarnessFigureAndIsAskedAgain(t *testing.T) {
+	lab := newAgentLab(t)
+	lab.cfg.Providers = gateways(t)
+	answer := fmt.Errorf("the gateway's log is empty: %w", usage.ErrNoSpend)
+	gw := &fakeSpend{answer: func(usage.RunRef) (*usage.Spent, error) { return nil, answer }}
+	gatewayReads(t, gw)
+	story := lab.backlog("Unanswered", claudeCode)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	log := lab.agentLog(story, "20260929T100000Z", streamCall("s", "m0", t0, 1000), streamResult("s", 1000, 1.0))
+	before := 10.0
+	throughProvider(t, log, spendRecord{Provider: "gateway", KeyBefore: &before})
+
+	lab.l.measure(story)
+	su := lab.usageOf(story)
+	if su == nil || su.PricedBy != usage.PricedHarness || su.Estimated || su.Cost() != 1.0 {
+		t.Fatalf("story usage = %+v, want the harness's 1.0", su)
+	}
+	said := lab.logText()
+	if n := strings.Count(said, "provider=gateway"); n != 1 || !strings.Contains(said, "level=WARN") || !strings.Contains(said, "log="+filepath.Base(log)) || !strings.Contains(said, "story="+story) || !strings.Contains(said, "is empty") {
+		t.Errorf("flai serve's log says the spend was not read %d times, want once, with the story, log, and reason:\n%s", n, said)
+	}
+	if strings.Contains(said, spendKey) {
+		t.Errorf("flai serve's log holds the key:\n%s", said)
+	}
+	if r, _ := spendOfLog(t, log); r.priced() {
+		t.Errorf("spend record = %+v, want it left unpriced", r)
+	}
+	if ref := gw.asked[0]; ref.KeyBefore == nil || *ref.KeyBefore != 10.0 {
+		t.Errorf("asked for %+v, want the key's usage at the start", ref)
+	}
+
+	gw.answer = costs(1.5)
+	lab.l.measure(story)
+	if gw.times() != 2 {
+		t.Errorf("asked %d times, want again at the next measurement", gw.times())
+	}
+	if su := lab.usageOf(story); su == nil || su.PricedBy != usage.PricedGateway || su.Estimated || su.Cost() != 1.5 {
+		t.Errorf("story usage = %+v, want the gateway's 1.5 for its one model", su)
+	}
+	if r, _ := spendOfLog(t, log); !r.priced() || *r.Cost != 1.5 {
+		t.Errorf("spend record = %+v, want it priced", r)
+	}
+}
+
+// S-0357: a provider whose spend key's variable is unset leaves its run
+// estimated, as its calls were, naming the variable and asking no gateway.
+func TestAMissingSpendKeyLeavesTheRunEstimatedNamingTheVariable(t *testing.T) {
+	lab := newAgentLab(t)
+	providers := gateways(t)
+	t.Setenv("S0357_SPEND_KEY", "")
+	gw := &fakeSpend{answer: costs(9)}
+	gatewayReads(t, gw)
+	story := lab.backlog("Keyless", claudeCode)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	log := lab.agentLog(story, "20260929T100000Z", streamCall("s", "m0", t0, 1000))
+	throughProvider(t, log, spendRecord{Provider: "admin"})
+	m, err := Measure(lab.o.Dir, lab.root, "t", story, providers, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.Unread) != 1 || m.Unread[0].Provider != "admin" || !strings.Contains(m.Unread[0].Reason, "S0357_SPEND_KEY") || strings.Contains(m.Unread[0].Reason, spendKey) || gw.times() != 0 {
+		t.Errorf("unread = %+v, asked %d times; want the variable named and nothing asked", m.Unread, gw.times())
+	}
+	if su := lab.usageOf(story); su == nil || su.PricedBy != usage.PricedEstimate || !su.Estimated {
+		t.Errorf("story usage = %+v, want estimated", su)
+	}
+}
+
+// S-0357: a provider whose gateway keeps no spend log flai reads, such as
+// Anthropic's own API, leaves its run priced by the harness, and nothing is
+// said of it, since there is nothing to read again.
+func TestAProviderWithNoSpendLogIsPricedByTheHarnessQuietly(t *testing.T) {
+	lab := newAgentLab(t)
+	lab.cfg.Providers = gateways(t)
+	gatewayReads(t, nil)
+	story := lab.backlog("Anthropic's own", claudeCode)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	log := lab.agentLog(story, "20260929T100000Z", streamCall("s", "m0", t0, 1000), streamResult("s", 1000, 1.0))
+	throughProvider(t, log, spendRecord{Provider: "gateway"})
+	lab.l.measure(story)
+	if su := lab.usageOf(story); su == nil || su.PricedBy != usage.PricedHarness || su.Cost() != 1.0 {
+		t.Errorf("story usage = %+v, want the harness's 1.0", su)
+	}
+	if said := lab.logText(); strings.Contains(said, "level=WARN") {
+		t.Errorf("flai serve's log warns of a gateway with no spend log:\n%s", said)
+	}
+}
+
+// S-0357: a run with no provider is priced by the harness and asks no
+// gateway.
+func TestARunWithNoProviderIsPricedByTheHarness(t *testing.T) {
+	lab := newAgentLab(t)
+	gw := &fakeSpend{answer: costs(9)}
+	gatewayReads(t, gw)
+	story := lab.backlog("No provider", claudeCode)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	lab.agentLog(story, "20260929T100000Z", streamCall("s", "m0", t0, 1000), streamResult("s", 1000, 1.0))
+	if _, err := Measure(lab.o.Dir, lab.root, "t", story, gateways(t), true); err != nil {
+		t.Fatal(err)
+	}
+	if su := lab.usageOf(story); su == nil || su.PricedBy != usage.PricedHarness || su.Cost() != 1.0 || gw.times() != 0 {
+		t.Errorf("story usage = %+v, asked %d times; want the harness's 1.0 and nothing asked", su, gw.times())
+	}
+}
+
+// S-0357, ADR-0132: a story with a run priced by its gateway, one by the
+// harness, and one estimated is the sum of the three, its harness figure
+// for the first left out, and estimated, the least certain of them.
+func TestAStorysRunsArePricedApartAndSumToTheLeastCertain(t *testing.T) {
+	lab := newAgentLab(t)
+	providers := gateways(t)
+	gw := &fakeSpend{answer: func(run usage.RunRef) (*usage.Spent, error) {
+		if !slices.Equal(run.Sessions, []string{"a"}) {
+			t.Errorf("asked for %+v, want the gateway's run alone", run)
+		}
+		return &usage.Spent{Cost: 2.0, By: usage.SpentBySession}, nil
+	}}
+	gatewayReads(t, gw)
+	story := lab.backlog("Mixed", claudeCode)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	through := lab.agentLog(story, "20260929T100000Z", streamCall("a", "a0", t0, 1000), streamResult("a", 1000, 1.0))
+	lab.agentLog(story, "20260929T110000Z", streamCall("b", "b0", t0.Add(time.Hour), 1000), streamResult("b", 1000, 0.5))
+	lab.agentLog(story, "20260929T120000Z", streamCall("c", "c0", t0.Add(2*time.Hour), 1000))
+	throughProvider(t, through, spendRecord{Provider: "gateway"})
+
+	harnessOnly, err := Measure(lab.o.Dir, lab.root, "t", story, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(harnessOnly.Unread) != 1 || gw.times() != 0 {
+		t.Fatalf("without the host's providers: unread %+v, asked %d times; want the run unread", harnessOnly.Unread, gw.times())
+	}
+	m, err := Measure(lab.o.Dir, lab.root, "t", story, providers, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	su := lab.usageOf(story)
+	if su == nil || su.PricedBy != usage.PricedEstimate || !su.Estimated || diff(su.Cost(), harnessOnly.Usage.Cost()+1.0) > 1e-3 || su.Tokens() != harnessOnly.Usage.Tokens() {
+		t.Errorf("story usage = %+v, want the harness's %v with the first run's 1.0 replaced by the gateway's 2.0, estimated", su, harnessOnly.Usage.Cost())
+	}
+	if len(m.Unread) != 0 || gw.times() != 1 {
+		t.Errorf("unread %+v, asked %d times; want the gateway's run asked once", m.Unread, gw.times())
+	}
+}
+
+// S-0357: a story's newest run, which flai serve's state says went through a
+// provider and which kept no spend record, is not asked for while it goes
+// on, and once it has ended is priced by the gateway, its record written.
+func TestTheNewestRunIsPricedOnceItEnds(t *testing.T) {
+	lab := newAgentLab(t)
+	providers := gateways(t)
+	gw := &fakeSpend{answer: costs(3.0)}
+	gatewayReads(t, gw)
+	story := lab.backlog("Going", claudeCode)
+	t0 := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	log := lab.agentLog(story, "20260929T100000Z", streamCall("s", "m0", t0, 1000), streamResult("s", 1000, 1.0))
+	run := &AgentRun{Story: story, Harness: harness.ClaudeCode, Agent: "builder-" + story, Provider: "gateway", KeyEnv: "S0357_KEY", PID: os.Getpid(), Started: t0.Format(time.RFC3339), Log: log}
+	lab.o.Dir.updateAgent(lab.root, func(s *AgentState) { s.put(run) })
+	if _, err := Measure(lab.o.Dir, lab.root, "t", story, providers, true); err != nil {
+		t.Fatal(err)
+	}
+	if su := lab.usageOf(story); su == nil || su.PricedBy != usage.PricedHarness || gw.times() != 0 {
+		t.Fatalf("while it goes on: usage %+v, asked %d times; want the harness's and nothing asked", su, gw.times())
+	}
+	ended := *run
+	ended.Ended = t0.Add(time.Hour).Format(time.RFC3339)
+	lab.o.Dir.updateAgent(lab.root, func(s *AgentState) { s.put(&ended) })
+	if _, err := Measure(lab.o.Dir, lab.root, "t", story, providers, true); err != nil {
+		t.Fatal(err)
+	}
+	if su := lab.usageOf(story); su == nil || su.PricedBy != usage.PricedGateway || su.Cost() != 3.0 || gw.times() != 1 {
+		t.Errorf("once it ended: usage %+v, asked %d times; want the gateway's 3.0", su, gw.times())
+	}
+	if r, _ := spendOfLog(t, log); !r.priced() || r.Provider != "gateway" {
+		t.Errorf("spend record = %+v, want it written priced", r)
+	}
+}
+
+// S-0357, ADR-0132: a story's agent started through a provider whose reader
+// joins by the key's usage keeps a spend record beside its log with the
+// provider and the key's usage at its start, and no key; the agent is given
+// no spend key's variable.
+func TestAStartThroughAProviderKeepsTheKeysUsage(t *testing.T) {
+	t.Setenv("S0350_GATEWAY_KEY", spendKey)
+	lab := providerLab(t)
+	gw := fakeKeySpend{fakeSpend: &fakeSpend{answer: costs(9)}, usage: 12.5}
+	keys := gatewayReads(t, gw)
+	id := lab.readyWith("Read at the start", &manifest.Agent{Harness: harness.ClaudeCode, Provider: "gateway"})
+	lab.l.look(context.Background(), false)
+	waitFor(t, "it ended", func() bool { r := lab.run(id); return r != nil && !r.live() })
+	r, text := spendOfLog(t, lab.run(id).Log)
+	if r == nil || r.Provider != "gateway" || r.KeyBefore == nil || *r.KeyBefore != 12.5 || r.priced() {
+		t.Fatalf("spend record = %s, want the provider and the key's usage at the start", text)
+	}
+	if strings.Contains(text, spendKey) || strings.Contains(text, "S0350_GATEWAY_KEY") {
+		t.Errorf("spend record holds the key or its variable:\n%s", text)
+	}
+	if !slices.Equal(*keys, []string{spendKey}) {
+		t.Errorf("the reader was made with %d keys, want the agent's", len(*keys))
+	}
+	if strings.Contains(lab.logText(), spendKey) {
+		t.Errorf("flai serve's log holds the key:\n%s", lab.logText())
+	}
+}
+
+// S-0357: the agents flai serve starts are not given a variable a provider
+// names as its spend key's, unless another names it as its key's.
+func TestAgentsAreNotGivenASpendKey(t *testing.T) {
+	lab := newAgentLab(t)
+	lab.cfg.Providers = map[string]manifest.Provider{
+		"admin":  {KeyEnv: "AGENT_KEY", SpendKeyEnv: "MASTER_KEY"},
+		"shared": {KeyEnv: "OTHER_KEY", SpendKeyEnv: "AGENT_KEY"},
+	}
+	got := lab.l.withoutSpendKeys([]string{"PATH=/bin", "MASTER_KEY=m", "AGENT_KEY=a", "OTHER_KEY=o"})
+	if !slices.Equal(got, []string{"PATH=/bin", "AGENT_KEY=a", "OTHER_KEY=o"}) {
+		t.Errorf("env = %v, want the master key alone left out", got)
+	}
 }

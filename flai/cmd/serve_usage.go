@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"maps"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -70,12 +71,19 @@ func (a *app) agentUsage(args []string, all, write bool) error {
 	if len(stories) == 0 {
 		return fmt.Errorf("rule: name a story, or give --all")
 	}
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return err
+	}
 	root := mainRootOf(repo)
 	var out []*serve.Measured
 	for _, id := range stories {
-		m, err := serve.Measure(dir, root, repo.Manifest.Key, id, write)
+		m, err := serve.Measure(dir, root, repo.Manifest.Key, id, cfg.Agent.Providers, write)
 		if err != nil {
 			return fmt.Errorf("measuring %s: %w", id, err)
+		}
+		for _, u := range m.Unread {
+			a.logger().Warn("spend not read", "component", "serve", "story", id, "provider", u.Provider, "log", filepath.Base(u.Log), "err", u.Err)
 		}
 		out = append(out, m)
 	}
