@@ -80,7 +80,7 @@ const (
 	// resolves to by the unified API: by default a free OpenRouter model, so
 	// the check spends nothing (TH-0429).
 	litellmHaikuEnv     = "FLAI_TEST_LITELLM_HAIKU"
-	litellmHaikuDefault = "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+	litellmHaikuDefault = "openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free"
 	// litellmPassThroughEnv set to 1 runs the pass-through too: it forwards
 	// the body to Anthropic as is, so it needs the proxy's upstream Anthropic
 	// key and takes Anthropic's own model ID, litellmPassThroughHaiku.
@@ -632,7 +632,7 @@ func gatewayPrompt(target, content, story string) string {
 1. Use the Write tool once to create the file %[1]s with exactly this content, on one line: %[2]s
 Do not read the file first.
 
-2. Use the Agent tool (named Task in older versions) once, with subagent_type general-purpose and model haiku, and give the sub-agent exactly this prompt: "Call the flai MCP tool %[4]s once, with id %[3]s and title %[5]q. If that tool is not loaded yet, load it with ToolSearch first. Do not retry it and use no other tool. Reply with the exact text the call returned, word for word."
+2. Use the Agent tool (named Task in older versions) once, in the foreground with run_in_background false, with subagent_type general-purpose and model haiku, and give the sub-agent exactly this prompt: "Call the flai MCP tool %[4]s once, with id %[3]s and title %[5]q. If that tool is not loaded yet, load it with ToolSearch first. Do not retry it and use no other tool. Reply with the exact text the call returned, word for word."
 
 Do not call any flai MCP tool yourself, and do not retry either step. When both are done, reply with one line saying what the Write returned and what the sub-agent reported.`, target, content, story, gatewayEditTool, gatewayTitle)
 }

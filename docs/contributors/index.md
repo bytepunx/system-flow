@@ -62,7 +62,7 @@ The gateway checks run `claude -p` through a gateway with the `claude-code` adap
 | `FLAI_TEST_OPENROUTER_HAIKU` | `anthropic/claude-haiku-4.5` | The OpenRouter model `haiku` resolves to |
 | `LITELLM_BASE_URL` | none: the check skips | The LiteLLM proxy's root, such as `http://127.0.0.1:4000`; the check runs through its unified `/v1/messages` |
 | `LITELLM_API_KEY` | none: the check skips | The proxy's virtual key the check runs on |
-| `FLAI_TEST_LITELLM_HAIKU` | `openrouter/nvidia/nemotron-3-super-120b-a12b:free` | The proxy's model `haiku` resolves to on the unified route; the default is a free OpenRouter model, so the check spends nothing |
+| `FLAI_TEST_LITELLM_HAIKU` | `openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free` | The proxy's model `haiku` resolves to on the unified route; the default is a free OpenRouter model, so the check spends nothing |
 | `FLAI_TEST_LITELLM_PASSTHROUGH` | unset: the pass-through skips | `1` runs the check through the proxy's `/anthropic` pass-through too, on `claude-haiku-4-5`; it forwards to Anthropic only, so it needs the proxy's upstream `ANTHROPIC_API_KEY` and spends on it |
 | `LITELLM_MASTER_KEY` | none: the spend log is not read | The proxy's master key, the only key that reads `/spend/logs`; without it the check logs the virtual key's spend from `/key/info` alone |
 | `FLAI_TEST_GATEWAY_BUDGET` | `1.00` | The run's `max_budget_usd`, held to Claude Code's own count, which runs three to four times what OpenRouter charges; a run costs about $0.06 at OpenRouter |
@@ -73,7 +73,7 @@ Give the key a credit limit of its own on OpenRouter's keys page, so that a run 
 OPENROUTER_API_KEY=sk-or-... FLAI_TEST_GATEWAY_BUDGET=0.50 scripts/gateway-smoke.sh
 ```
 
-For LiteLLM, `OPENROUTER_API_KEY=sk-or-... scripts/litellm.sh up` starts a local proxy that reaches OpenRouter's models as `openrouter/<slug>`, Anthropic's too when `ANTHROPIC_API_KEY` is set, and issues a virtual key with a `max_budget` (`LITELLM_MAX_BUDGET`, default 5 USD per 30 days), so a run gone wrong cannot spend past it. `scripts/env.sh` reads the key file it writes, so `scripts/gateway-smoke.sh` runs the LiteLLM check with no variable set by hand. The master key stays in `.flai-cache/litellm/admin.env`; set `LITELLM_MASTER_KEY` from it for one run when you want the spend log's rows:
+For LiteLLM, `OPENROUTER_API_KEY=sk-or-... scripts/litellm.sh up` starts a local proxy that reaches OpenRouter's models as `openrouter-messages/<slug>`, in Anthropic's format through OpenRouter's Anthropic API, Anthropic's too when `ANTHROPIC_API_KEY` is set, and issues a virtual key with a `max_budget` (`LITELLM_MAX_BUDGET`, default 5 USD per 30 days), so a run gone wrong cannot spend past it. `scripts/env.sh` reads the key file it writes, so `scripts/gateway-smoke.sh` runs the LiteLLM check with no variable set by hand. The master key stays in `.flai-cache/litellm/admin.env`; set `LITELLM_MASTER_KEY` from it for one run when you want the spend log's rows:
 
 ```sh
 LITELLM_MASTER_KEY="$(sed -n 's/^LITELLM_MASTER_KEY=//p' .flai-cache/litellm/admin.env)" scripts/gateway-smoke.sh
