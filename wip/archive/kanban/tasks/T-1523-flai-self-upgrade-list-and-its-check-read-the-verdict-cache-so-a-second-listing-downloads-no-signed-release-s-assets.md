@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 239
-      cache_read: 2855421
-      cache_write: 105392
-      cost: 1.3616
+      input: 58
+      output: 20789
+      cache_read: 2905110
+      cache_write: 124174
+      cost: 1.7975
 ---
 # T-1523 flai self-upgrade --list and its check read the verdict cache, so a second listing downloads no signed release's assets
 

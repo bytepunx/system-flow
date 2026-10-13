@@ -4,10 +4,10 @@ title: "S-0371 plan: the rebase reports a branch that undoes main's change, sync
 anchor:
   path: wip/kanban/stories/S-0371-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md
   item: S-0371
-status: open
-participants: [planner-S-0371, orchestrator]
+status: answered
+participants: [planner-S-0371, orchestrator, alex]
 created: 2026-10-12T17:17:16Z
-updated: 2026-10-12T17:17:40Z
+updated: 2026-10-13T17:42:38Z
 ---
 
 # TH-0420 S-0371 plan: the rebase reports a branch that undoes main's change, sync warns and accept refuses (new ADR), six tasks in five layers
@@ -75,3 +75,28 @@ I leave S-0371 a draft until you answer. If you take the addition, T-1476 and T-
 This is a recommendation, not an answer: confirm it, or answer otherwise.
 
 Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md
+
+### 2026-10-13T17:42:13Z alex
+could we instead add a mechanism for resolving this through the dashboard? pushing work down into low level git commands or hand-edited files is an anti-pattern. Give the operator tools to resolve the situation and make suggestions for what that might look like for this scenario.
+
+### 2026-10-13T17:42:38Z orchestrator (recommendation)
+**Recommendation:** yes. Make "a branch undoes main's change" a blocker of the acceptance preview that you resolve on the dashboard, path by path, with flai doing the git work. Here is what that could look like.
+
+## On the review page
+
+- **Each path is a card in the preview's blockers.** It shows the lines main gained since the branch's old base that the branch now removes, side by side with the branch's version. ADR-0093 § Decision already makes each failed condition a preview blocker, so this joins them.
+- **Three actions per path:**
+  1. **Restore main's lines.** flai commits main's version of that path onto `story/S-nnnn` (a new `flai stream restore S-nnnn --path <p>`, behind a host write). The card clears, and the preview runs again.
+  2. **Keep the removal.** You give one line saying why. flai records it in the acceptance evidence, and accept passes that path (`flai accept --keep-removal <p> --reason …`). This is the override I recommended, now as a button.
+  3. **Send back.** This opens a thread on the story naming the paths and moves it back to in-progress, so its agent fixes it.
+- **At sync, a badge, not a stop.** The board card and the story page show "undoes main on N paths", linking to the same view, so you see it before review.
+- **The orchestrator stays out of it.** It never chooses Keep: an undone path stays a blocker until you resolve it, so it waits for you.
+
+## How it fits the board
+
+- **S-0371** keeps the check, the accept refusal, and the two flai commands. Its tasks swap the `git checkout` advice for `flai stream restore` and `--keep-removal`, exposed as host writes, and its ADR records both.
+- **A new story** builds the review-page cards and the badge, after S-0371. It can reuse what S-0378 builds now: refusal findings as data through `accept.run` (T-1516), and findings listed on the review page with Accept enabled again (T-1520). So it waits for S-0378 too.
+
+If you confirm, edit S-0371 or say so here, and its planner will re-plan it to this shape and draft the dashboard story. S-0371 stays a draft meanwhile.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md § Decision

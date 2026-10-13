@@ -28,11 +28,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 356
-      cache_read: 1662251
-      cache_write: 74435
-      cost: 0.7988
+      input: 34
+      output: 12194
+      cache_read: 1704021
+      cache_write: 72836
+      cost: 1.0543
 ---
 # T-1524 The design and the guides say the release lists reuse a cached verdict and installing never does
 

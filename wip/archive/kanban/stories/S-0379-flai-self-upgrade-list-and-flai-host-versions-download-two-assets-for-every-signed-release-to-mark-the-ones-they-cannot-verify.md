@@ -3,10 +3,10 @@ id: S-0379
 type: story
 nature: improvement
 title: flai self-upgrade --list and flai host versions download two assets for every signed release to mark the ones they cannot verify
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T17:44:10Z
-updated: 2026-10-13T17:31:19Z
+updated: 2026-10-13T17:46:54Z
 transitions:
   - to: ready
     at: 2026-10-13T17:03:48Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:03:57Z
     by: agent-S-0379
+  - to: review
+    at: 2026-10-13T17:46:05Z
+    by: agent-S-0379
+  - to: done
+    at: 2026-10-13T17:46:54Z
+    by: orchestrator
 tags: [flai, cli, release]
 topics: [cli, release, security]
-touches: [flai/internal/selfupgrade/verdictcache.go, flai/internal/selfupgrade/verdictcache_test.go, flai/internal/selfupgrade/signature.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, design/system/flai-cli.md, design/system/release-signing.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/runbooks/backup.md, design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md, design/issues/summary.md, docs/users/flai-reference.md]
+touches: [flai/internal/selfupgrade/verdictcache.go, flai/internal/selfupgrade/verdictcache_test.go, flai/internal/selfupgrade/signature.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, design/system/flai-cli.md, design/system/release-signing.md, docs/users/flai.md, docs/operators/settings.md, docs/operators/runbooks/backup.md, design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md, design/issues/summary.md, docs/users/flai-reference.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1640
-  estimated: true
+  seconds: 2543
   turns:
     - day: 2026-10-13
-      ceremony: 1
+      ceremony: 2
       hand_edits: 1
-      work: 32
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 180
-      output: 975
-      cache_read: 8114247
-      cache_write: 421059
-      cost: 3.9254
+      input: 202
+      output: 72287
+      cache_read: 10101671
+      cache_write: 431779
+      cost: 6.2503
   strategic:
     - kind: orchestrator
       seconds: 273
@@ -107,3 +112,13 @@ Touches. The story declared none, and `flai touches suggest` had nothing to star
 Forecast. `flai forecast` gave 19m: 81 s per unit of size over 68 large improvement stories on claude-opus-5-5, times size 14. Raised to 40m, because the four tasks run one after another in four layers, the cache needs four regression tests, and five documents change. The delivery is flai's, moved later by the 21m added.
 
 Cost of delay. The value is 12.50 USD a week, as `flai cod` gives it from flai's 5m input at 150 USD an hour. It stands: one instance so far, but the cost grows with every release, and an unauthenticated host reaches GitHub's 60-request limit within weeks.
+
+### Accepted by the orchestrator
+
+- Verified: 4cd3762f10cc2f314a96eb4d4bffcb6cb4d546b7
+- At: 2026-10-13T17:46:54Z
+
+Verdict: meets all criteria (verifier at 4cd3762f10cc2f314a96eb4d4bffcb6cb4d546b7; flai verify passed every step at that commit; install still verifies from the network)
+
+- 1: flai/internal/selfupgrade/verdictcache.go, flai/internal/selfupgrade/verdictcache_test.go, flai/internal/selfupgrade/signature.go, flai/cmd/selfupgrade.go, flai/cmd/selfupgrade_test.go, design/system/flai-cli.md, design/system/release-signing.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/runbooks/backup.md
+- 2: design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-download-two-assets-for-every-signed-release-to-mark-the-ones-they-cannot-verify.md, design/issues/summary.md

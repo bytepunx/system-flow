@@ -24,15 +24,15 @@ touches: [design/issues/I-0142-flai-self-upgrade-list-and-flai-host-versions-dow
 after: [T-1523, T-1524]
 usage:
   source: log
-  seconds: 5
+  seconds: 7
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 20
-      cache_read: 215441
-      cache_write: 979
-      cost: 0.0995
+      input: 4
+      output: 1520
+      cache_read: 212346
+      cache_write: 9076
+      cost: 0.1314
 ---
 # T-1525 Close I-0142 with the reason that the release lists cache each signed release's verdict
 

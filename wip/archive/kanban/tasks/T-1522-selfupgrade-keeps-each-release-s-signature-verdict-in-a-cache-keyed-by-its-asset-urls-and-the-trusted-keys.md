@@ -27,11 +27,11 @@ usage:
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 147
-      cache_read: 1131753
-      cache_write: 72893
-      cost: 0.554
+      input: 24
+      output: 8458
+      cache_read: 1181991
+      cache_write: 50522
+      cost: 0.7313
 ---
 # T-1522 selfupgrade keeps each release's signature verdict in a cache keyed by its asset URLs and the trusted keys
 

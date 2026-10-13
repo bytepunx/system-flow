@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 525.1800
-accrued_seconds: 398496
-tasks_completed: 430
-last_run: 2026-10-13T17:29:42Z
+accrued_cost: 527.7434
+accrued_seconds: 399272
+tasks_completed: 435
+last_run: 2026-10-13T17:42:42Z
 ---
 
 # Orchestrator activity
@@ -3021,6 +3021,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0378
 - Seconds: 155
 - Cost: 0.9170 USD, estimated
+
+### 2026-10-13T17:35:45Z
+
+- Summary: Under accept_reviews, accepted S-0376 at e2abd6e24c3a. flai verify passed every step at the branch head; the verifier matched criterion 1 to the stream answer and archive fixes in narrative.go and archive.go with their tests and docs, and criterion 2 to I-0139's close; the dry run had no blocker. Merged, done, archived, committed; MS-0107 closed.
+- Items: S-0376
+- Seconds: 359
+- Cost: 1.7901 USD, estimated
+
+### 2026-10-13T17:35:49Z
+
+- Summary: Under publish, release_evaluate after S-0376's acceptance: policy judgement, 1 pending (S-0376), 25 USD/week. Decided not to publish yet: S-0379 has closed every task and is in close-out, so I hold to bundle both.
+- Items: S-0376
+- Seconds: 4
+- Cost: 0.0690 USD, estimated
+
+### 2026-10-13T17:38:01Z
+
+- Summary: Under plan_backlog_epics, asked for the planner on E-0020 (a design system extension, new in the backlog with no stories); flai refused: a planner already runs for it (pid 494177, started 17:37:56Z), likely the operator's. Not retried; its draft stories come to finalize_drafts and plan threads to me if they are story planners'.
+- Items: E-0020
+- Seconds: 132
+- Cost: 0.2791 USD, estimated
+
+### 2026-10-13T17:42:38Z
+
+- Summary: Recommended an answer on TH-0420, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md § Decision
+- Items: S-0371
+- Seconds: 277
+- Cost: 0.4252 USD, estimated
+
+### 2026-10-13T17:42:42Z
+
+- Summary: Under plan_backlog_stories, the operator asked on TH-0420 (S-0371's plan) for a dashboard mechanism instead of git commands. Posted a recommendation, a change of scope left to the operator: an undone path becomes an acceptance-preview blocker resolved per path on the review page (Restore via a new flai stream restore, Keep with a reason via accept --keep-removal, Send back), a badge at sync, and a split into S-0371 (flai side) plus a new dashboard story after S-0371 and S-0378. S-0371 stays a draft.
+- Items: S-0371
+- Seconds: 4
+- Cost: 0.0000 USD
 
 ## Refusals
 
