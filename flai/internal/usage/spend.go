@@ -50,6 +50,9 @@ type RunRef struct {
 	// KeyBefore is the key's usage in US dollars read when the run started,
 	// by the reader's KeyReader; nil when none was read.
 	KeyBefore *float64
+	// KeyHash is the SHA-256 in hex of the key the run's calls used, which
+	// LiteLLM files its spend log rows under; never the key itself.
+	KeyHash string
 }
 
 // Spent is what the gateway charged for a run.
@@ -80,8 +83,9 @@ type KeyReader interface {
 
 // For is the spend reader for a provider whose gateway is at baseURL, called
 // with key: OpenRouter's for openrouter.ai and its subdomains, none for
-// api.anthropic.com, whose harness figure stands, and none for a base URL
-// that does not parse. A nil client is one with a timeout per request.
+// api.anthropic.com, whose harness figure stands, none for a base URL that
+// does not parse, and LiteLLM's for any other host. A nil client is one with
+// a timeout per request.
 func For(baseURL, key string, client *http.Client) Spend {
 	u, err := url.Parse(baseURL)
 	if err != nil || u.Hostname() == "" {
@@ -94,8 +98,7 @@ func For(baseURL, key string, client *http.Client) Spend {
 	case host == "api.anthropic.com":
 		return nil
 	}
-	// LiteLLM's reader, NewLiteLLM(baseURL, key, client), comes with T-1407.
-	return nil
+	return NewLiteLLM(baseURL, key, client)
 }
 
 // spendClient is client, or one with spendTimeout when client is nil.
