@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { cp, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { Repo } from './repo';
+import { AgentError } from './agent';
+import { Repo, storyParam, type Ask } from './repo';
 import { flaiAsk, haveFlai, shell } from './testing';
 import { board } from './board';
 
@@ -623,4 +624,27 @@ describe.skipIf(!haveFlai)('host settings through flai', () => {
 		expect(s.host.import_roots).not.toContain(folder);
 		await rm(folder, { recursive: true, force: true });
 	}, 30000); // about twenty flai processes: 4.6 to 5.1 s on a loaded host, over the 5 s default (S-0116)
+});
+
+describe('documents edited from the dashboard (S-0378)', () => {
+	it("passes a story's ID through, leaves none out, and refuses anything else with 400", () => {
+		expect(storyParam('S-0042')).toBe('S-0042');
+		expect(storyParam('S-004')).toBe('S-004');
+		for (const none of [undefined, null, '']) expect(storyParam(none)).toBeUndefined();
+		for (const bad of ['T-0001', 'E-001', 'S-', 's-0042', 'S-1 --no-commit', '--help', 42, {}])
+			expect(() => storyParam(bad)).toThrow(
+				expect.objectContaining({ status: 400, message: expect.stringContaining('story must be') })
+			);
+	});
+	it('answers a method the host flai does not offer with 501, a read or a write', async () => {
+		const older = (async (method: string) => {
+			throw new AgentError(502, `flai offers no method ${method}`, -32601);
+		}) as unknown as Ask;
+		const r = new Repo('/nowhere', older);
+		await expect(r.docLint('design/x.md', '# X\n')).rejects.toMatchObject({
+			status: 501,
+			message: 'flai offers no method doc.lint'
+		});
+		await expect(r.write('doc.save', {})).rejects.toMatchObject({ status: 501 });
+	});
 });

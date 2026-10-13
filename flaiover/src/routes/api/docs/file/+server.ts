@@ -1,4 +1,4 @@
-import { repo, RepoError } from '$lib/server/repo';
+import { repo, RepoError, storyParam } from '$lib/server/repo';
 import { respond } from '$lib/server/respond';
 import type { RequestHandler } from './$types';
 
@@ -10,13 +10,20 @@ export const GET: RequestHandler = ({ url }) =>
 		return repo().docFile(path);
 	});
 
-type SaveBody = { path?: string; content?: string; hash?: string; message?: string };
+type SaveBody = {
+	path?: string;
+	content?: string;
+	hash?: string;
+	message?: string;
+	story?: unknown;
+};
 
 /**
- * PUT /api/docs/file { path, content, hash, message? }: flai's doc.save on the host, the content as
- * data and never a file the dashboard writes (ADR-0023, S-0075). 409 { error, current, hash, diff }
- * when the file changed since it was loaded; 422 { error, findings } when flai refuses the content.
- * flai holds the rules; this handler passes through.
+ * PUT /api/docs/file { path, content, hash, message?, story? }: flai's doc.save on the host, the
+ * content as data and never a file the dashboard writes (ADR-0023, S-0075), in the story's worktree
+ * and committed on its branch when story names one (S-0378). 409 { error, current, hash, diff } when
+ * the file changed since it was loaded; 422 { error, findings } when flai refuses the content. flai
+ * holds the rules; this handler passes through.
  */
 export const PUT: RequestHandler = ({ request }) =>
 	respond(async () => {
@@ -27,7 +34,8 @@ export const PUT: RequestHandler = ({ request }) =>
 			path: body.path,
 			content: body.content,
 			hash: body.hash,
-			message: body.message
+			message: body.message,
+			story: storyParam(body.story)
 		});
 		return { ...data, log: warnings };
 	});

@@ -149,6 +149,14 @@ export type Ask = <T>(
 /** What a command of flai answered: its JSON, and the warnings it logged. */
 export type Written<T> = { data: T; warnings: string[] };
 
+/** One markdown lint finding of a document's content, as flai's doc.lint gives it (S-0378). */
+export type LintFinding = { line: number; rule: string; alias: string; message: string };
+
+/** What flai's doc.lint answers: the document's path, cleaned, and its findings, [] when clean. */
+export type DocLint = { path: string; findings: LintFinding[] };
+
+/** JSON-RPC's code for a method the host flai does not offer: it is older than this dashboard. */
+const METHOD_NOT_FOUND = -32601;
 /** flai's code for an item or thread that does not exist (internal/hostapi). */
 const NOT_FOUND = -32004;
 const INVALID_PARAMS = -32602;
@@ -158,6 +166,7 @@ const RULE = -32011;
 const DISABLED = -32012; // a host action the operator has not enabled (S-0078)
 const NOT_COMMITTED = -32013; // an import applied but not committed: a test failed (S-0098)
 const STATUS: Record<number, number> = {
+	[METHOD_NOT_FOUND]: 501,
 	[NOT_FOUND]: 404,
 	[INVALID_PARAMS]: 400,
 	[RULE]: 400,
@@ -395,6 +404,14 @@ export class Repo extends EventEmitter {
 	}
 
 	/**
+	 * The markdown lint findings of a document's content as the editor holds it (S-0378), asked
+	 * afresh each time: the content is not a file of the project, so there is nothing to remember.
+	 */
+	async docLint(rel: string, content: string): Promise<DocLint> {
+		return this.ask<DocLint>('doc.lint', { path: rel, content });
+	}
+
+	/**
 	 * Listen for flai's word that a file changed, and for its return: a flai that comes back may have
 	 * missed changes, so everything asked is forgotten and open pages are told to look again.
 	 */
@@ -474,6 +491,20 @@ export class RepoError extends Error {
 	) {
 		super(message);
 	}
+}
+
+/**
+ * The story a document endpoint reads or saves on (S-0378): undefined when none is named, the
+ * main checkout's then, else an ID of S- and digits; anything else is refused with 400.
+ */
+export function storyParam(value: unknown): string | undefined {
+	if (value === undefined || value === null || value === '') return undefined;
+	if (typeof value !== 'string' || !/^S-\d+$/.test(value))
+		throw new RepoError(
+			400,
+			`story must be a story's ID such as S-0042, not ${JSON.stringify(value)}; leave it out to edit the main checkout`
+		);
+	return value;
 }
 
 /** An item as flai marshals it: empty strings and nulls where the front matter had nothing. */

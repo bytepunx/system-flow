@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -108,5 +109,117 @@ describe.skipIf(!existsSync(bin))('document editing endpoints', () => {
 
 	it('requires path, content, and hash', async () => {
 		expect((await save({ path: 'design/system/plan.md' })).status).toBe(400);
+	});
+
+	it('refuses a story that is not a story ID with 400, before asking flai', async () => {
+		for (const story of ['T-0001', 'S-1 --no-commit', '--help', 42]) {
+			const r = await save({ path: 'design/system/plan.md', content: DOC, hash: 'h', story });
+			expect(r.status, String(story)).toBe(400);
+			expect((await r.json()).error).toContain('story must be');
+		}
+		const shown = await GET({
+			url: new URL('http://x/api/docs/edit?path=design/system/plan.md&story=E-001')
+		} as never);
+		expect(shown.status).toBe(400);
+	});
+});
+
+// S-0378: with a story, the editor loads and saves the file in the story's worktree, and the save
+// is committed on story/<id>, through the flai built from this tree, as the dashboard's link names.
+describe.skipIf(!existsSync(bin))("document editing on a story's branch", () => {
+	let dir: string;
+	let wt: string;
+	let GET: Handler;
+	let PUT: Handler;
+	const PLAN = 'design/system/plan.md';
+	const git = (cwd: string, ...args: string[]) =>
+		execFileSync('git', args, { cwd, env: process.env }).toString().trim();
+	const show = async (story: string) =>
+		(
+			await GET({
+				url: new URL(`http://x/api/docs/edit?path=${PLAN}&story=${story}`)
+			} as never)
+		).json();
+	const save = (body: unknown) =>
+		PUT({
+			request: new Request('http://x/api/docs/file', { method: 'PUT', body: JSON.stringify(body) })
+		} as never);
+
+	beforeAll(async () => {
+		for (const v of ['GIT_AUTHOR', 'GIT_COMMITTER']) {
+			vi.stubEnv(`${v}_NAME`, 'Dana Designer');
+			vi.stubEnv(`${v}_EMAIL`, 'dana@example.com');
+		}
+		dir = await mkdtemp(join(tmpdir(), 'flaiover-edit-story-'));
+		await cp(fixture, dir, { recursive: true });
+		await mkdir(join(dir, 'design/system'), { recursive: true });
+		await writeFile(join(dir, PLAN), DOC);
+		await writeFile(join(dir, '.gitignore'), '.flai-cache/\n');
+		git(dir, 'init', '-q', '-b', 'main');
+		git(dir, 'add', '-A');
+		git(dir, 'commit', '-q', '-m', 'init');
+		wt = join(dir, '.flai-cache/worktrees/S-004');
+		git(dir, 'worktree', 'add', '-q', '-b', 'story/S-004', wt);
+		await writeFile(join(wt, PLAN), DOC.replace('text\n', 'branch text\n'));
+		git(wt, 'commit', '-q', '-am', 'docs: [S-004] branch plan');
+		useRepo(new Repo(dir, flaiAsk(dir)));
+		GET = (await import('../edit/+server')).GET as unknown as Handler;
+		PUT = (await import('./+server')).PUT as unknown as Handler;
+	});
+	afterAll(async () => {
+		vi.unstubAllEnvs();
+		useRepo(null);
+		await rm(dir, { recursive: true, force: true });
+	});
+
+	it("loads the story's file and commits the save on its branch, the main checkout left as it was", async () => {
+		const mainHead = git(dir, 'rev-parse', 'HEAD');
+		const doc = await show('S-004');
+		expect(doc).toMatchObject({ path: PLAN, mode: 'full' });
+		expect(doc.content).toContain('branch text');
+		const r = await save({
+			path: PLAN,
+			hash: doc.hash,
+			content: doc.content.replace('branch text', 'better branch text'),
+			message: 'clarify the shape',
+			story: 'S-004'
+		});
+		expect(r.status).toBe(200);
+		const body = await r.json();
+		expect(body).toMatchObject({ path: PLAN, committed: true });
+		expect(git(dir, 'rev-parse', '--short', 'story/S-004')).toBe(body.commit);
+		expect(git(wt, 'log', '-1', '--format=%s')).toBe('docs: [S-004] clarify the shape');
+		expect(await readFile(join(wt, PLAN), 'utf8')).toContain('better branch text');
+		expect(await readFile(join(dir, PLAN), 'utf8')).toBe(DOC);
+		expect(git(dir, 'rev-parse', 'HEAD')).toBe(mainHead);
+	});
+
+	it("answers a stale hash on the story's branch with 409 and the branch's current version", async () => {
+		const doc = await show('S-004');
+		await writeFile(join(wt, PLAN), doc.content.replace('better branch text', 'their text'));
+		const r = await save({
+			path: PLAN,
+			hash: doc.hash,
+			content: doc.content.replace('better branch text', 'my text'),
+			story: 'S-004'
+		});
+		expect(r.status).toBe(409);
+		const body = await r.json();
+		expect(body.current).toContain('their text');
+		expect(body.diff).toContain('+my text');
+		expect(await readFile(join(wt, PLAN), 'utf8')).toContain('their text');
+	});
+
+	it("answers content flai refuses on the story's branch with 422 and its findings", async () => {
+		const doc = await show('S-004');
+		const r = await save({
+			path: PLAN,
+			hash: doc.hash,
+			content: doc.content.replace('title: Plan\n', ''),
+			story: 'S-004'
+		});
+		expect(r.status).toBe(422);
+		expect((await r.json()).findings.map((f: { rule: string }) => f.rule)).toContain('doc.title');
+		expect(await readFile(join(wt, PLAN), 'utf8')).toBe(doc.content);
 	});
 });
