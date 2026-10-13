@@ -1,6 +1,6 @@
 ---
 title: Signing releases and verifying the peer
-updated: 2026-10-12
+updated: 2026-10-13
 status: active
 topics: [cli, dashboard, release, security]
 ---
@@ -37,7 +37,7 @@ Since S-0233, a flai release is installed only when its `checksums.txt` was sign
 - A release it cannot verify is refused, naming it and why: it has no signature, its signature does not verify, or it is signed by a key the binary does not know. For the last, it names the newest published release the binary can verify, to install first. The key is never taken from the release: the release's own `cosign.pub` is read only to tell an unknown key from a bad signature.
 - `install.sh` does the same from a shell, with `curl`, `openssl`, and `sha256sum` or `shasum`, into `FLAI_INSTALL_DIR`, default `~/.flai/bin`. It carries the public key as a PEM string, verifies with `openssl dgst -sha256 -verify` after decoding the signature with `openssl base64 -d -A`, and refuses when `openssl` is absent, the release has no signature, or the signature does not verify.
 - `flai host upgrade` runs the same upgrade for the host's flai, with the key in the host's flai, and restarts `flai serve` and the MCP servers on it (`flai/cmd/host.go`). A refusal restarts nothing.
-- `flai self-upgrade --list`, `flai host versions`, and the dashboard's Updates page mark each release the installing flai cannot verify, and the page offers no way to install it.
+- `flai self-upgrade --list`, `flai host versions`, and the dashboard's Updates page mark each release the installing flai cannot verify, and the page offers no way to install it. The lists may answer from a cache of each release's verdict, kept under `cache_dir` and checked again when the release's assets or the trusted keys change (S-0379, [The verdict cache](flai-cli.md#verifying-a-release-before-it-is-installed)). An install never reads it: it verifies from the network every time.
 - The signature proves that `checksums.txt`, and through its hashes the archive, is what the holder of the release key published. Whoever can write the release's assets without the key, a holder of a token with `contents: write` or a workflow that runs with it outside the `release` environment, can no longer substitute a release that installs. It proves nothing about who holds the key ([Keys](#keys)).
 - The first signed release is flai 1.42.0; every release before it has no signature and is refused, so `--version` cannot go back past it. The check itself came in a later release. A flai without the check installs any release unchecked, the one that brings the check included; every upgrade made by a flai that carries the check is verified.
 

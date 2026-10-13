@@ -38,7 +38,7 @@ Keys `flai config set` reaches:
 | `dashboard.allow_unsigned` | `false` | `true` allows unsigned builds ([ADR-0070](../../design/adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)): flai dials a dashboard whose image is on no signed list and accepts a dashboard that sends no release stamp, and `flai dashboard` starts the container with `FLAIOVER_ALLOW_UNSIGNED=1`, so the dashboard accepts a flai with no stamp. A stamp that does not verify is refused either way, and the credential is always checked. While it is in force, `flai serve` logs a `warn`, the statuses say `unsigned allowed`, and the dashboard shows a banner ([Allowing unsigned builds](index.md#allowing-unsigned-builds-s-0239)) |
 | `dashboard.push_key` | empty | Retired and ignored; `flai dashboard` names it while it is set ([Upgrading from a release that mounted the repository](index.md#upgrading-from-a-release-that-mounted-the-repository)) |
 | `dashboard.push_known_hosts` | empty | Retired and ignored, as `dashboard.push_key` |
-| `cache_dir` | `~/.flai/cache`, or `FLAI_CACHE_DIR` when the file is created | Where git templates are cloned |
+| `cache_dir` | `~/.flai/cache`, or `FLAI_CACHE_DIR` when the file is created | Where git templates are cloned, and where `flai self-upgrade --list` and `--check` keep each release's signature verdict, `releases/verdicts.json` ([What an upgrade verifies](../users/flai.md#what-an-upgrade-verifies)) |
 | `author` | your login name | The default owner of new items and `--by` of transitions and acceptances |
 | `worktrees.relative_paths` | `false` | Link story worktrees with relative paths, git 2.48 or newer ([Relative worktree links](../users/flai.md#relative-worktree-links-opt-in)) |
 
