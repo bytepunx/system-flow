@@ -1,0 +1,28 @@
+---
+id: T-1540
+type: task
+nature: feature
+title: An isolated preview frame styles a gallery of sample components from a set of tokens, in light and dark, apart from the dashboard's theme
+status: backlog
+parent: S-0382
+owner: alex
+created: 2026-10-13T17:47:07Z
+updated: 2026-10-13T17:47:07Z
+transitions: []
+stream: S-0382
+tags: [dashboard]
+touches: [flaiover/src/lib/design/preview.ts, flaiover/src/lib/design/preview.test.ts, flaiover/src/lib/components/design/PreviewFrame.svelte, flaiover/src/lib/components/design/PreviewFrame.svelte.test.ts, flaiover/src/lib/components/design/Gallery.svelte]
+---
+# T-1540 An isolated preview frame styles a gallery of sample components from a set of tokens, in light and dark, apart from the dashboard's theme
+
+## Work
+
+`preview.ts` turns tokens into the custom properties the gallery reads, and works out each colour's contrast against the ground, with tests. `Gallery.svelte` holds the sample components: buttons, inputs, a form, a card, an alert, a table, navigation, and headings with body text, styled only through those properties. `PreviewFrame.svelte` renders the gallery isolated, in the way S-0380 decided (an iframe or a shadow root), in light and dark side by side, and restyles it when the tokens it is given change, with no build. The component test checks that a changed token reaches the frame and that the dashboard's tokens do not. It waits for nothing.
+
+## Done when
+
+- The frame shows the gallery in both themes from given tokens, follows a change at once, and its tests pass.
+
+## Notes
+
+- Layer 1.

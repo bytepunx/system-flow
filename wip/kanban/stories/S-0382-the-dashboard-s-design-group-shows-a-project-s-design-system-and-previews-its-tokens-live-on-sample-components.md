@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:35Z
-updated: 2026-10-13T17:44:35Z
+updated: 2026-10-13T17:47:07Z
 transitions: []
 tags: [dashboard]
 topics: [design]
@@ -36,6 +36,9 @@ The operator opens a new top-level Design group in the dashboard's site menu and
 - [ ] `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` describe the Design group and its page.
 
 ## Tasks
+- T-1538 The dashboard's /api/design endpoint answers design.get through the channel, cached and forgotten when the document changes
+- T-1539 The site menu has a fourth group, Design, whose first page is /design
+- T-1540 An isolated preview frame styles a gallery of sample components from a set of tokens, in light and dark, apart from the dashboard's theme
 
 ## Notes
 
