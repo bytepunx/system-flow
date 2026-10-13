@@ -4,10 +4,10 @@ title: S-0352 needs a sync onto S-0353 before I accept it
 anchor:
   path: wip/kanban/stories/S-0352-each-adapter-states-its-capabilities-and-reads-its-harness-s-log-into-neutral-usage-events-and-flai-measures-usage-from-those-events.md
   item: S-0352
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-12T21:27:59Z
-updated: 2026-10-12T21:27:59Z
+updated: 2026-10-13T02:56:22Z
 ---
 
 # TH-0430 S-0352 needs a sync onto S-0353 before I accept it
@@ -30,3 +30,6 @@ flai move S-0352 in-progress --reason "sync onto S-0353 before acceptance"
 - `flai accept` rebases first. If the rebase stops on a conflict, flai guard lets me run only git's reads, so I could not abort it (as on TH-0397). flai guard also refused me the trial merge (`git merge-tree`), so I cannot tell in advance whether it conflicts.
 
 S-0352 stays in review until then.
+
+### 2026-10-13T02:56:22Z alex
+Resolved: S-0352 was accepted
