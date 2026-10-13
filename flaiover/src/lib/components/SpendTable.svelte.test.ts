@@ -151,6 +151,37 @@ describe('SpendTable', () => {
 		expect(cells()[2].slice(0, 3)).toEqual(['week of 2026-08-03', 'task', '4']);
 	});
 
+	// S-0358: a cost names its source and says what it means; a row that names none is starred as before
+	it('marks a cost with its source, or with a star when estimated and naming none', () => {
+		const all = spendRows(report, 'tokens-spent')[2];
+		const rows = [
+			{ ...all, of: 'gateway', priced_by: 'gateway' as const },
+			{ ...all, of: 'harness', estimated: false, priced_by: 'harness' as const },
+			{ ...all, of: 'estimate', priced_by: 'estimate' as const },
+			{ ...all, of: 'older' },
+			{ ...all, of: 'older, measured', estimated: false }
+		];
+		component = mount(SpendTable, { target: document.body, props: { rows, bucket: 'day' } });
+		flushSync();
+		expect(cells().map((row) => row[4])).toEqual([
+			'$1.75 (gateway)',
+			'$1.75 (harness)',
+			'$1.75 (estimated)',
+			'$1.75*',
+			'$1.75'
+		]);
+		const titles = [...document.querySelectorAll('tbody tr')].map(
+			(tr) => tr.querySelectorAll('td')[4].querySelector('span')?.title
+		);
+		expect(titles).toEqual([
+			"Charged by the provider's gateway",
+			'Reported by the harness, as Claude Code does',
+			'Estimated or apportioned by flai',
+			undefined,
+			undefined
+		]);
+	});
+
 	it('names an hour in the local zone, and a day by its own date (S-0329)', () => {
 		// 02:00 in UTC is 22:00 the evening before in New York, where the tests run
 		const row = { ...spendRows(report, 'tokens-spent')[0], at: '2026-08-05T02:00:00Z' };

@@ -20,10 +20,22 @@ export type StrategicUsage = {
 	models: ModelUsage[];
 };
 
+/** Where an item's or a set's agents' cost came from (S-0358), from the least certain to the most. */
+export type PricedBy = 'estimate' | 'harness' | 'gateway';
+
+/** What each source of a cost means, for a reader to see beside its mark. */
+export const PRICED_BY_MEANING: Record<PricedBy, string> = {
+	estimate: 'Estimated or apportioned by flai',
+	harness: 'Reported by the harness, as Claude Code does',
+	gateway: "Charged by the provider's gateway"
+};
+
 export type Usage = {
 	source: 'log' | 'sum';
 	seconds: number;
 	estimated?: boolean;
+	/** Absent when the item names no source, as usage written before S-0357 does. */
+	priced_by?: PricedBy;
 	models: ModelUsage[];
 	strategic?: StrategicUsage[];
 };
@@ -66,9 +78,15 @@ export function duration(seconds: number): string {
 	return m > 0 ? `${m}m` : `${Math.round(seconds)}s`;
 }
 
+/** The mark beside a cost: its source, or with none, whether it is estimated (S-0358). */
+export function pricedMark(pricedBy: PricedBy | undefined, estimated: boolean | undefined): string {
+	if (pricedBy) return pricedBy === 'estimate' ? ' (estimated)' : ` (${pricedBy})`;
+	return estimated ? ' (estimated)' : '';
+}
+
 /** The usage in a line: tokens, cost, agent time, and where the numbers came from. */
 export function usageLine(u: Usage): string {
-	const cost = dollars(costOf(u)) + (u.estimated ? ' (estimated)' : '');
+	const cost = dollars(costOf(u)) + pricedMark(u.priced_by, u.estimated);
 	const from = u.source === 'sum' ? 'summed from its children' : "measured from its agents' logs";
 	return `${count(tokensOf(u))} tokens · ${cost} · ${duration(u.seconds)} of agent work · ${from}`;
 }

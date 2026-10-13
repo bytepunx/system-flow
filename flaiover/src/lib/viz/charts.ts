@@ -17,7 +17,7 @@ import {
 	type Theme
 } from './palette';
 import { amount } from '$lib/planning';
-import { count, dollars } from '$lib/usage';
+import { count, dollars, type PricedBy } from '$lib/usage';
 import { localDate, localTime } from '$lib/localtime';
 
 export type Distribution = {
@@ -203,6 +203,8 @@ export type Spend = {
 	cost: number;
 	seconds: number;
 	estimated?: boolean;
+	/** Absent when no item of the set names a source, from a model's set, and from a flai older than S-0358. */
+	priced_by?: PricedBy;
 	tokens_per_item?: number;
 	cost_per_item?: number;
 	/** Absent from a flai older than S-0169; see minutesPerItem. */

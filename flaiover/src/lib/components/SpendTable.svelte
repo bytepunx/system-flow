@@ -1,8 +1,9 @@
 <script lang="ts">
 	// The table view of a chart of spend over time (S-0163): what each bucket spent, and what
-	// that comes to per item, per minute of agent work, and per dollar.
+	// that comes to per item, per minute of agent work, and per dollar. A cost names its source
+	// when the row has one (S-0358), and is starred when estimated otherwise.
 	import { bucketLabel, minutesPerItem, type BucketSize, type SpendRow } from '$lib/viz/charts';
-	import { count, dollars } from '$lib/usage';
+	import { count, dollars, pricedMark, PRICED_BY_MEANING } from '$lib/usage';
 
 	let { rows, bucket }: { rows: SpendRow[]; bucket: BucketSize } = $props();
 	const say = (v: number | undefined, as: (n: number) => string) => (v === undefined ? '-' : as(v));
@@ -27,7 +28,9 @@
 				><td class="pr-4 font-mono whitespace-nowrap">{bucketLabel(row.at, bucket)}</td><td
 					class="pr-4">{row.of}</td
 				><td class="pr-4">{row.items}</td><td class="pr-4">{count(row.tokens)}</td><td class="pr-4"
-					>{dollars(row.cost)}{row.estimated ? '*' : ''}</td
+					>{dollars(row.cost)}{#if row.priced_by}<span title={PRICED_BY_MEANING[row.priced_by]}
+							>{pricedMark(row.priced_by, row.estimated)}</span
+						>{:else}{row.estimated ? '*' : ''}{/if}</td
 				><td class="pr-4">{minutes(row.seconds)}</td><td class="pr-4"
 					>{say(row.tokens_per_item, count)}</td
 				><td class="pr-4">{say(row.cost_per_item, dollars)}</td><td class="pr-4"

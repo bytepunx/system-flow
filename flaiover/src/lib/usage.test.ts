@@ -4,6 +4,7 @@ import {
 	dollars,
 	expectedCostLine,
 	modelLine,
+	pricedMark,
 	spent,
 	strategicLines,
 	usageLine,
@@ -37,6 +38,17 @@ describe('usage', () => {
 		expect(modelLine(u.models[0])).toBe(
 			'claude-opus-5-5: 256 in · 89.3K out · 19.7M cache read · 327.6K cache write · $8.13'
 		);
+	});
+	// S-0358: a cost names where it came from, and one that names none reads as before
+	it('marks the cost with its source, or as estimated when it names none', () => {
+		const line = (usage: Usage) => usageLine(usage).split(' · ')[1];
+		expect(line({ ...u, estimated: false, priced_by: 'gateway' })).toBe('$8.13 (gateway)');
+		expect(line({ ...u, estimated: true, priced_by: 'gateway' })).toBe('$8.13 (gateway)');
+		expect(line({ ...u, estimated: false, priced_by: 'harness' })).toBe('$8.13 (harness)');
+		expect(line({ ...u, estimated: true, priced_by: 'estimate' })).toBe('$8.13 (estimated)');
+		expect(line(u)).toBe('$8.13 (estimated)');
+		expect(line({ ...u, estimated: false })).toBe('$8.13');
+		expect(pricedMark(undefined, undefined)).toBe('');
 	});
 	it('counts and prices short', () => {
 		expect([count(950), count(12345), count(2.5e9)]).toEqual(['950', '12.3K', '2.5B']);
