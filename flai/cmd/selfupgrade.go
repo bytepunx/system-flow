@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
 )
@@ -60,8 +61,10 @@ latest, below_minimum (each project and minimum the release is below, left
 out when none), and, for a release this flai cannot verify, unverifiable
 (true), signature (missing, bad, or unknown-key), and reason (all three left
 out for a release it can verify). A release that publishes a signature has
-its checksums.txt and signature downloaded to be checked; one that publishes
-none costs nothing more.`,
+its checksums.txt and signature downloaded to be checked the first time; the
+verdict is kept under cache_dir and reused until those assets or the keys
+this flai trusts change. One that publishes none costs nothing more.
+Installing never reads the kept verdicts: it verifies every time.`,
 		Example: `  flai self-upgrade --check
   flai self-upgrade --list
   flai self-upgrade
@@ -137,14 +140,17 @@ none costs nothing more.`,
 
 // printCheck reports the installed version and rel, the newest or the one
 // asked for, and, when rel is an upgrade, whether this flai can verify it: a
-// check costs rel's checksums.txt and signature only then.
+// check costs rel's checksums.txt and signature only then, and only when no
+// verdict on them is kept.
 func (a *app) printCheck(ctx context.Context, opt selfupgrade.Options, rel *selfupgrade.Release, current, dest string, upToDate bool) error {
 	var refused *selfupgrade.SignatureError
 	if !upToDate {
+		verdicts := selfupgrade.OpenVerdicts(a.verdictsDir())
 		var err error
-		if refused, err = signatureRefusal(ctx, opt, rel); err != nil {
+		if refused, err = signatureRefusal(ctx, verdicts, opt, rel); err != nil {
 			return err
 		}
+		a.saveVerdicts(verdicts)
 	}
 	if a.jsonOut {
 		out := map[string]any{"current": current, "latest": rel.Version, "tag": rel.Tag, "up_to_date": upToDate, "path": dest}
@@ -247,10 +253,12 @@ func (a *app) listFlaiReleases(cmd *cobra.Command, opt selfupgrade.Options, dir 
 	if err != nil {
 		return err
 	}
-	refusals, err := signatureRefusals(cmd.Context(), opt, published)
+	verdicts := selfupgrade.OpenVerdicts(a.verdictsDir())
+	refusals, err := signatureRefusals(cmd.Context(), verdicts, opt, published)
 	if err != nil {
 		return err
 	}
+	a.saveVerdicts(verdicts)
 	mins := a.flaiMinimums()
 	listed := make([]listedFlai, len(published))
 	found := false
@@ -315,10 +323,10 @@ const verifyAtOnce = 8
 // signatureRefusals are, for each of rels, the refusal self-upgrade would give
 // it, nil for a release this flai verifies. A release that publishes no
 // signature costs no download; one that does costs its checksums.txt and
-// signature, and its cosign.pub when no trusted key verifies it. A download
-// that fails fails them all: a release that could not be checked is not one
-// that cannot be verified.
-func signatureRefusals(ctx context.Context, opt selfupgrade.Options, rels []selfupgrade.Release) ([]*selfupgrade.SignatureError, error) {
+// signature, and its cosign.pub when no trusted key verifies it, unless
+// verdicts keeps its verdict. A download that fails fails them all: a release
+// that could not be checked is not one that cannot be verified.
+func signatureRefusals(ctx context.Context, verdicts *selfupgrade.Verdicts, opt selfupgrade.Options, rels []selfupgrade.Release) ([]*selfupgrade.SignatureError, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	refusals := make([]*selfupgrade.SignatureError, len(rels))
@@ -329,7 +337,7 @@ func signatureRefusals(ctx context.Context, opt selfupgrade.Options, rels []self
 		wg.Go(func() {
 			slots <- struct{}{}
 			defer func() { <-slots }()
-			if refusals[i], errs[i] = signatureRefusal(ctx, opt, &rels[i]); errs[i] != nil {
+			if refusals[i], errs[i] = signatureRefusal(ctx, verdicts, opt, &rels[i]); errs[i] != nil {
 				cancel()
 			}
 		})
@@ -350,9 +358,10 @@ func signatureRefusals(ctx context.Context, opt selfupgrade.Options, rels []self
 }
 
 // signatureRefusal is the refusal self-upgrade would give rel, nil when this
-// flai verifies it, or the failure to check it.
-func signatureRefusal(ctx context.Context, opt selfupgrade.Options, rel *selfupgrade.Release) (*selfupgrade.SignatureError, error) {
-	err := selfupgrade.VerifyRelease(ctx, opt, rel)
+// flai verifies it, or the failure to check it; verdicts answers for a
+// release it has checked before. Installing never asks it (I-0142).
+func signatureRefusal(ctx context.Context, verdicts *selfupgrade.Verdicts, opt selfupgrade.Options, rel *selfupgrade.Release) (*selfupgrade.SignatureError, error) {
+	err := verdicts.Verify(ctx, opt, rel)
 	var refused *selfupgrade.SignatureError
 	if errors.As(err, &refused) {
 		return refused, nil
@@ -361,6 +370,24 @@ func signatureRefusal(ctx context.Context, opt selfupgrade.Options, rel *selfupg
 		return nil, fmt.Errorf("check whether this flai can verify release %s: %w", rel.Tag, err)
 	}
 	return nil, nil
+}
+
+// verdictsDir is flai's cache_dir, under which the release signature verdicts
+// that --list and --check read are kept.
+func (a *app) verdictsDir() string {
+	dir := config.Default().CacheDir
+	if cfg, _, err := a.loadConfig(); err == nil {
+		dir = cfg.CacheDir
+	}
+	return config.ExpandHome(dir)
+}
+
+// saveVerdicts keeps the verdicts a listing or a check found; one not kept is
+// warned about, and found again by the next.
+func (a *app) saveVerdicts(verdicts *selfupgrade.Verdicts) {
+	if err := verdicts.Save(); err != nil {
+		a.logger().Warn("release signature verdicts not saved", "component", "selfupgrade", "err", err.Error())
+	}
 }
 
 // projectMinimum is a project's flai.minimum and the name it goes by.

@@ -23,15 +23,32 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 )
 
+// selfUpgradeConfig points FLAI_CONFIG at a new config whose cache_dir is a
+// new temporary folder, so that no test reads or writes ~/.flai/cache, and
+// answers the config's path and that folder.
+func selfUpgradeConfig(t *testing.T) (path, cacheDir string) {
+	t.Helper()
+	path, cacheDir = filepath.Join(t.TempDir(), "cfg.json"), t.TempDir()
+	cfg := config.Default()
+	cfg.CacheDir = cacheDir
+	if err := config.Save(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FLAI_CONFIG", path)
+	return path, cacheDir
+}
+
 func TestSelfUpgradeCommand(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	selfUpgradeConfig(t)
 	t.Setenv("GITHUB_TOKEN", "tok")
 	content := []byte("#!/bin/sh\necho upgraded\n")
 	var buf bytes.Buffer
@@ -223,7 +240,7 @@ func TestSelfUpgradeNeverInstallsIntoAProject(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("a shell script stands in for flai")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	selfUpgradeConfig(t)
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("FLAI_INSTALL_DIR", "")
@@ -288,9 +305,8 @@ func TestTheHostRestartsOnWhatTheUpgradeInstalled(t *testing.T) {
 }
 
 // releasesStandIn answers as GitHub's API does for o/r: the releases given,
-// as JSON, and the refs of the flaiover/v tags given. asked lists the paths
-// requested so far.
-func releasesStandIn(t *testing.T, releases string, flaioverTags ...string) (url string, asked func() []string) {
+// as JSON. asked lists the paths requested so far.
+func releasesStandIn(t *testing.T, releases string) (url string, asked func() []string) {
 	t.Helper()
 	var mu sync.Mutex
 	var paths []string
@@ -298,18 +314,11 @@ func releasesStandIn(t *testing.T, releases string, flaioverTags ...string) (url
 		mu.Lock()
 		paths = append(paths, r.URL.Path)
 		mu.Unlock()
-		switch r.URL.Path {
-		case "/repos/o/r/releases":
-			fmt.Fprint(w, releases)
-		case "/repos/o/r/git/matching-refs/tags/flaiover/v":
-			refs := make([]string, len(flaioverTags))
-			for i, tag := range flaioverTags {
-				refs[i] = `{"ref":"refs/tags/` + tag + `"}`
-			}
-			fmt.Fprint(w, "["+strings.Join(refs, ",")+"]")
-		default:
+		if r.URL.Path != "/repos/o/r/releases" {
 			http.NotFound(w, r)
+			return
 		}
+		fmt.Fprint(w, releases)
 	}))
 	t.Cleanup(srv.Close)
 	return srv.URL, func() []string {
@@ -347,8 +356,7 @@ func withMinimum(t *testing.T, name, minimum string) string {
 // minimum of the project here and of a project flai serve serves, even one
 // whose minimum is above the running flai.
 func TestSelfUpgradeList(t *testing.T) {
-	cfg := filepath.Join(t.TempDir(), "cfg.json")
-	t.Setenv("FLAI_CONFIG", cfg)
+	cfg, _ := selfUpgradeConfig(t)
 	t.Setenv("GITHUB_TOKEN", "tok")
 	oldVersion, oldExe := buildinfo.Version, executablePath
 	t.Cleanup(func() { buildinfo.Version, executablePath = oldVersion, oldExe })
@@ -445,7 +453,7 @@ func TestSelfUpgradeList(t *testing.T) {
 // S-0298: a version that is not published is refused, naming the published
 // ones, before anything is downloaded or replaced.
 func TestSelfUpgradeRefusesAnUnpublishedVersion(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	selfUpgradeConfig(t)
 	t.Setenv("GITHUB_TOKEN", "tok")
 	api, asked := releasesStandIn(t, listedReleases)
 	dir := t.TempDir()
@@ -467,7 +475,7 @@ func TestSelfUpgradeWarnsBelowTheMinimum(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("tar archives are not used on windows")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	selfUpgradeConfig(t)
 	t.Setenv("GITHUB_TOKEN", "tok")
 	here := withMinimum(t, "Here", "1.2.0")
 	api := fakeRelease(t, "1.1.0")
@@ -516,7 +524,7 @@ func noArchiveAsked(t *testing.T, asked func(string) int, versions ...string) {
 // and with --json, where a release it can verify carries no mark; a release
 // with no signature costs no download, and no archive is downloaded.
 func TestSelfUpgradeListMarksUnverifiableReleases(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	selfUpgradeConfig(t)
 	t.Setenv("GITHUB_TOKEN", "tok")
 	oldExe := executablePath
 	t.Cleanup(func() { executablePath = oldExe })
@@ -576,7 +584,7 @@ func TestSelfUpgradeListMarksUnverifiableReleases(t *testing.T) {
 // S-0233: a release whose signature could not be checked is not marked as
 // one that cannot be verified: the list fails, naming it.
 func TestSelfUpgradeListFailsWhenASignatureCannotBeFetched(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	selfUpgradeConfig(t)
 	t.Setenv("GITHUB_TOKEN", "tok")
 	trustTestKey(t)
 	broken := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -599,7 +607,7 @@ func TestSelfUpgradeRefusesAnUnverifiableRelease(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("tar archives are not used on windows")
 	}
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	selfUpgradeConfig(t)
 	t.Setenv("GITHUB_TOKEN", "tok")
 	api, asked := unverifiableReleases(t)
 	dir := t.TempDir()
@@ -633,7 +641,7 @@ func TestSelfUpgradeRefusesAnUnverifiableRelease(t *testing.T) {
 // S-0233: --check says when the upgrade it reports cannot be verified, and
 // checks nothing when there is none to report.
 func TestSelfUpgradeCheckSaysTheUpgradeCannotBeVerified(t *testing.T) {
-	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	selfUpgradeConfig(t)
 	t.Setenv("GITHUB_TOKEN", "tok")
 	oldVersion := buildinfo.Version
 	t.Cleanup(func() { buildinfo.Version = oldVersion })
@@ -663,5 +671,189 @@ func TestSelfUpgradeCheckSaysTheUpgradeCannotBeVerified(t *testing.T) {
 	out, _, _ = runIn(t, dir, "self-upgrade", "--check", "--repo", "o/r", "--api", api)
 	if !strings.Contains(out, "latest is 1.3.0 (up to date)") || asked("/assets/1.3.0/checksums.txt") != before {
 		t.Errorf("up to date, nothing is checked: %s", out)
+	}
+}
+
+// signedAssetsAsked is how many times the checksums.txt, checksums.txt.sig,
+// and cosign.pub of the versions were asked for.
+func signedAssetsAsked(asked func(string) int, versions ...string) int {
+	n := 0
+	for _, v := range versions {
+		for _, name := range []string{"checksums.txt", "checksums.txt.sig", "cosign.pub"} {
+			n += asked("/assets/" + v + "/" + name)
+		}
+	}
+	return n
+}
+
+// I-0142: a second --list marks the same releases as the first without
+// downloading any signed release's checksums.txt or signature again, and
+// --check answers from the same verdicts.
+func TestSelfUpgradeListKeepsEachVerdict(t *testing.T) {
+	_, cache := selfUpgradeConfig(t)
+	t.Setenv("GITHUB_TOKEN", "tok")
+	oldVersion, oldExe := buildinfo.Version, executablePath
+	t.Cleanup(func() { buildinfo.Version, executablePath = oldVersion, oldExe })
+	buildinfo.Version = "1.1.0"
+	installed := filepath.Join(t.TempDir(), "flai")
+	executablePath = func() (string, error) { return installed, nil }
+	api, asked := unverifiableReleases(t)
+	dir := t.TempDir()
+	signed := []string{"1.3.0", "1.2.0", "1.1.0"}
+
+	first, errOut, code := runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api)
+	if code != 0 {
+		t.Fatalf("first list: %d %s", code, errOut)
+	}
+	downloaded := signedAssetsAsked(asked, signed...)
+	if downloaded == 0 {
+		t.Fatal("the first list downloads the signed releases' checksums.txt and signature")
+	}
+	if _, err := os.Stat(filepath.Join(cache, "releases", "verdicts.json")); err != nil {
+		t.Errorf("the verdicts are kept under cache_dir: %v", err)
+	}
+	second, errOut, code := runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api)
+	if code != 0 {
+		t.Fatalf("second list: %d %s", code, errOut)
+	}
+	if n := signedAssetsAsked(asked, signed...); n != downloaded {
+		t.Errorf("the second list downloaded %d signed assets again", n-downloaded)
+	}
+	if second != first {
+		t.Errorf("the second list marks the releases as the first did:\n%s\nwant\n%s", second, first)
+	}
+	out, errOut, code := runIn(t, dir, "self-upgrade", "--check", "--repo", "o/r", "--api", api)
+	if code != 0 || !strings.Contains(out, "latest is 1.3.0 (upgrade available, but not installable: it is signed by a key this flai does not trust") {
+		t.Errorf("check: %d %s %s", code, out, errOut)
+	}
+	if n := signedAssetsAsked(asked, signed...); n != downloaded {
+		t.Errorf("--check downloaded %d signed assets the list had checked", n-downloaded)
+	}
+	noArchiveAsked(t, asked, "1.3.0", "1.2.0", "1.1.0", "1.0.0")
+}
+
+// I-0142: a release whose signature asset is replaced, and so has a new URL,
+// is downloaded and verified again, and marked by the new verdict; a release
+// whose assets are unchanged is not downloaded again.
+func TestSelfUpgradeListChecksAReplacedSignatureAgain(t *testing.T) {
+	selfUpgradeConfig(t)
+	t.Setenv("GITHUB_TOKEN", "tok")
+	trusted := trustTestKey(t)
+	other, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 1.2.0 was published with a signature by a key this flai does not
+	// trust, which is replaced by one the release key makes
+	replaced := flaiRelease(t, "1.2.0", other)
+	replaced.assets["replaced.sig"] = signBlob(t, trusted, replaced.assets["checksums.txt"])
+	assets, asked := serveFlaiReleases(t, replaced, flaiRelease(t, "1.1.0", trusted))
+	releases := func(sig120 string) string {
+		at := func(v, name string) string { return fmt.Sprintf(`"%s/assets/%s/%s"`, assets, v, name) }
+		return `[{"tag_name":"flai/v1.2.0","published_at":"2026-10-09T09:00:00Z","assets":[{"name":"checksums.txt","url":` + at("1.2.0", "checksums.txt") + `},{"name":"checksums.txt.sig","url":` + at("1.2.0", sig120) + `}]},` +
+			`{"tag_name":"flai/v1.1.0","published_at":"2026-10-08T09:00:00Z","assets":[{"name":"checksums.txt","url":` + at("1.1.0", "checksums.txt") + `},{"name":"checksums.txt.sig","url":` + at("1.1.0", "checksums.txt.sig") + `}]}]`
+	}
+	before, _ := releasesStandIn(t, releases("checksums.txt.sig"))
+	after, _ := releasesStandIn(t, releases("replaced.sig"))
+	dir := t.TempDir()
+	list := func(api string) map[string]any {
+		t.Helper()
+		out, errOut, code := runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api, "--json")
+		var listed []map[string]any
+		if err := json.Unmarshal([]byte(out), &listed); code != 0 || err != nil || len(listed) != 2 {
+			t.Fatalf("list: %d %v %s %s", code, err, out, errOut)
+		}
+		return listed[0]
+	}
+
+	if got := list(before); got["signature"] != "bad" {
+		t.Fatalf("1.2.0 before its signature is replaced: %v", got)
+	}
+	unchanged := signedAssetsAsked(asked, "1.1.0")
+	if got := list(after); got["unverifiable"] != nil {
+		t.Errorf("1.2.0 verifies once its signature is replaced: %v", got)
+	}
+	if n := asked("/assets/1.2.0/replaced.sig"); n != 1 {
+		t.Errorf("the replaced signature was downloaded %d times, want 1", n)
+	}
+	if n := signedAssetsAsked(asked, "1.1.0"); n != unchanged {
+		t.Errorf("1.1.0, unchanged, was downloaded again: %d more", n-unchanged)
+	}
+}
+
+// I-0142: a listing whose signature download fails keeps no verdict, so the
+// next listing downloads it again, and keeps the verdict it finds then.
+func TestSelfUpgradeListKeepsNoVerdictFromAFailedDownload(t *testing.T) {
+	_, cache := selfUpgradeConfig(t)
+	t.Setenv("GITHUB_TOKEN", "tok")
+	rel := flaiRelease(t, "1.2.0", trustTestKey(t))
+	var down atomic.Bool
+	down.Store(true)
+	var mu sync.Mutex
+	count := map[string]int{}
+	flaky := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name := strings.TrimPrefix(r.URL.Path, "/")
+		mu.Lock()
+		count[name]++
+		mu.Unlock()
+		if down.Load() {
+			http.Error(w, "down", http.StatusInternalServerError)
+			return
+		}
+		_, _ = w.Write(rel.assets[name])
+	}))
+	t.Cleanup(flaky.Close)
+	asked := func() int {
+		mu.Lock()
+		defer mu.Unlock()
+		return count["checksums.txt"] + count["checksums.txt.sig"]
+	}
+	api, _ := releasesStandIn(t, `[{"tag_name":"flai/v1.2.0","assets":[{"name":"checksums.txt","url":"`+flaky.URL+`/checksums.txt"},{"name":"checksums.txt.sig","url":"`+flaky.URL+`/checksums.txt.sig"}]}]`)
+	dir := t.TempDir()
+	verdicts := filepath.Join(cache, "releases", "verdicts.json")
+
+	if out, errOut, code := runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api); code == 0 {
+		t.Fatalf("the list fails while the download does: %s %s", out, errOut)
+	}
+	if _, err := os.Stat(verdicts); !os.IsNotExist(err) {
+		t.Errorf("a failed download keeps no verdict: %v", err)
+	}
+	failed := asked()
+	down.Store(false)
+	if out, errOut, code := runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api); code != 0 || strings.Contains(out, "not installable") {
+		t.Fatalf("the next list checks 1.2.0: %d %s %s", code, out, errOut)
+	}
+	checked := asked()
+	if checked == failed {
+		t.Error("the next list downloads the signature again")
+	}
+	if _, err := os.Stat(verdicts); err != nil {
+		t.Errorf("the verdict found then is kept: %v", err)
+	}
+	if _, _, code := runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api); code != 0 || asked() != checked {
+		t.Errorf("a third list downloads nothing: %d, %d more", code, asked()-checked)
+	}
+}
+
+// I-0142: installing a release a listing has checked still downloads its
+// checksums.txt and signature and verifies them, rather than reading the
+// listing's verdict.
+func TestSelfUpgradeInstallVerifiesAfterACachedListing(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("tar archives are not used on windows")
+	}
+	selfUpgradeConfig(t)
+	t.Setenv("GITHUB_TOKEN", "tok")
+	api, asked := unverifiableReleases(t)
+	dir := t.TempDir()
+	if _, errOut, code := runIn(t, dir, "self-upgrade", "--list", "--repo", "o/r", "--api", api); code != 0 {
+		t.Fatalf("list: %d %s", code, errOut)
+	}
+	sums, sig := asked("/assets/1.2.0/checksums.txt"), asked("/assets/1.2.0/checksums.txt.sig")
+	if out, errOut, code := runIn(t, dir, "self-upgrade", "--repo", "o/r", "--api", api, "--dir", dir, "--version", "1.2.0"); code != 0 || !strings.Contains(out, "installed flai 1.2.0") {
+		t.Fatalf("install: %d %s %s", code, out, errOut)
+	}
+	if asked("/assets/1.2.0/checksums.txt") == sums || asked("/assets/1.2.0/checksums.txt.sig") != sig+1 {
+		t.Errorf("the install downloads checksums.txt and its signature again: %d to %d, %d to %d", sums, asked("/assets/1.2.0/checksums.txt"), sig, asked("/assets/1.2.0/checksums.txt.sig"))
 	}
 }
