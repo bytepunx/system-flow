@@ -188,6 +188,51 @@ func TestAnswerOpenQuestionRemovesAContinuedBullet(t *testing.T) {
 	}
 }
 
+// I-0139: answering the only open question of a narrative in the template's
+// layout leaves one blank line between ## Open questions and ## Log, not the
+// two that were around the bullet; a bullet between two others leaves them
+// adjacent.
+func TestAnswerOpenQuestionLeavesOneBlankLine(t *testing.T) {
+	r := inProgressStream(t)
+	n, err := r.AnswerOpenQuestion("S-0001", "Which?", "This one.", "alex", t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(n.Body, "## Open questions\n\n## Log") || strings.Contains(n.Body, "\n\n\n") {
+		t.Errorf("want one blank line where the question was:\n%s", n.Body)
+	}
+	if got := readFile(t, n.Path); strings.Contains(got, "\n\n\n") {
+		t.Errorf("saved narrative has two blank lines:\n%s", got)
+	}
+
+	n.Body = strings.Replace(n.Body, "## Open questions\n\n", "## Open questions\n\n- A?\n- B?\n- C?\n\n", 1)
+	if err := n.Save(); err != nil {
+		t.Fatal(err)
+	}
+	n, err = r.AnswerOpenQuestion("S-0001", "B?", "Yes.", "alex", t0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(n.Body, "## Open questions\n\n- A?\n- C?\n\n## Log") {
+		t.Errorf("want the other two questions together:\n%s", n.Body)
+	}
+}
+
+// An answer that would bring a markdown finding is refused, with the rule,
+// and the narrative is left as it was.
+func TestAnswerOpenQuestionRefusesWhatTheLintRejects(t *testing.T) {
+	r := inProgressStream(t)
+	path := r.NarrativePath("S-0001")
+	before := readFile(t, path)
+	var le *mdlint.Error
+	if _, err := r.AnswerOpenQuestion("S-0001", "Which?", "One.\n\n\nTwo.", "alex", t0); !errors.As(err, &le) || le.Findings[0].Rule != "MD012" {
+		t.Fatalf("want an MD012 refusal, got %v", err)
+	}
+	if readFile(t, path) != before {
+		t.Error("a refused answer must write nothing")
+	}
+}
+
 // stateBody is a narrative with something in every section.
 const stateBody = "\n# S-0001 S\n\n## Context\n\nWhy.\n\n## Current state\n\nOld state.\n\n## Next steps\n\n1. Old step.\n\n## Decisions\n\n- One.\n\n## Open questions\n\n- Which?\n\n## Log\n\n### 2026-09-15T20:00:00Z\nStream opened.\n"
 

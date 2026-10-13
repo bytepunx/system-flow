@@ -525,6 +525,7 @@ func (r *Repo) AnswerOpenQuestion(storyID, question, answer, by string, now time
 	if err != nil {
 		return nil, err
 	}
+	was := n.Marshal()
 
 	lines := strings.Split(n.Body, "\n")
 	secStart := -1
@@ -577,6 +578,11 @@ func (r *Repo) AnswerOpenQuestion(storyID, question, answer, by string, now time
 		return nil, fmt.Errorf("%s's narrative has no open question matching %q", n.Stream, question)
 	}
 	lines = append(lines[:bStart], lines[bEnd:]...)
+	// The bullet's blank lines above and below meet where it was: keep one
+	// (markdownlint MD012, I-0139).
+	for bStart > 0 && bStart < len(lines) && strings.TrimSpace(lines[bStart-1]) == "" && strings.TrimSpace(lines[bStart]) == "" {
+		lines = append(lines[:bStart], lines[bStart+1:]...)
+	}
 
 	entry := fmt.Sprintf("- %s: %s — %s (answered by %s)", now.UTC().Format("2006-01-02"), question, strings.TrimSpace(answer), orDefault(by, "designer"))
 	dStart := -1
@@ -605,6 +611,9 @@ func (r *Repo) AnswerOpenQuestion(storyID, question, answer, by string, now time
 		n.Body = strings.Join(out, "\n")
 	}
 	n.Updated = now.UTC().Format(TimeFormat)
+	if err := r.LintGuard(n.Path, was, n.Marshal()); err != nil {
+		return nil, err
+	}
 	if err := n.Save(); err != nil {
 		return nil, err
 	}
