@@ -3,16 +3,33 @@ id: T-1530
 type: task
 nature: research
 title: Report the options to the operator on a thread and record the decision in the finding and in ADRs
-status: backlog
+status: in-progress
 parent: S-0380
 owner: alex
 created: 2026-10-13T17:46:11Z
-updated: 2026-10-13T17:46:11Z
-transitions: []
+updated: 2026-10-13T18:16:23Z
+transitions:
+  - to: ready
+    at: 2026-10-13T18:16:22Z
+    by: agent-S-0380
+  - to: in-progress
+    at: 2026-10-13T18:16:23Z
+    by: agent-S-0380
 stream: S-0380
 tags: [dashboard, cli]
 touches: [design/system/design-system-tool.md, design/adrs, design/adrs/README.md]
 after: [T-1529]
+usage:
+  source: log
+  seconds: 75
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 16100
+      cache_read: 2285161
+      cache_write: 79433
+      cost: 1.2595
 ---
 # T-1530 Report the options to the operator on a thread and record the decision in the finding and in ADRs
 

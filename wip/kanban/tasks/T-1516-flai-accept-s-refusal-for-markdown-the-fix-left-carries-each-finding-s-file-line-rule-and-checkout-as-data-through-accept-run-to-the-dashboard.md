@@ -3,16 +3,36 @@ id: T-1516
 type: task
 nature: feature
 title: flai accept's refusal for markdown the fix left carries each finding's file, line, rule, and checkout as data, through accept.run to the dashboard
-status: backlog
+status: done
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:56:46Z
-updated: 2026-10-13T16:56:46Z
-transitions: []
+updated: 2026-10-13T18:06:15Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:54:58Z
+    by: agent-S-0378
+  - to: in-progress
+    at: 2026-10-13T17:54:59Z
+    by: agent-S-0378
+  - to: done
+    at: 2026-10-13T18:06:15Z
+    by: agent-S-0378
 stream: S-0378
 tags: [cli]
-touches: [flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/accept_fix_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/accept_fix_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai-reference.md]
 after: [T-1514]
+usage:
+  source: log
+  seconds: 676
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 91
+      output: 468
+      cache_read: 4187442
+      cache_write: 140642
+      cost: 1.9811
 ---
 # T-1516 flai accept's refusal for markdown the fix left carries each finding's file, line, rule, and checkout as data, through accept.run to the dashboard
 

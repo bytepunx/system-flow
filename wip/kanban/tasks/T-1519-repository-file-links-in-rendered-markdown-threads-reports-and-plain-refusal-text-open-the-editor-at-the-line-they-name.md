@@ -3,16 +3,36 @@ id: T-1519
 type: task
 nature: feature
 title: Repository file links in rendered markdown, threads, reports, and plain refusal text open the editor at the line they name
-status: backlog
+status: done
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:57:18Z
-updated: 2026-10-13T16:57:18Z
-transitions: []
+updated: 2026-10-13T18:19:39Z
+transitions:
+  - to: ready
+    at: 2026-10-13T18:11:22Z
+    by: agent-S-0378
+  - to: in-progress
+    at: 2026-10-13T18:11:22Z
+    by: agent-S-0378
+  - to: done
+    at: 2026-10-13T18:19:39Z
+    by: agent-S-0378
 stream: S-0378
 tags: [dashboard]
-touches: [flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte]
+touches: [flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/editor.svelte.ts, flaiover/src/lib/components/EditorDialog.svelte, flaiover/src/lib/components/EditorDialog.svelte.test.ts]
 after: [T-1518]
+usage:
+  source: log
+  seconds: 497
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 86
+      output: 405
+      cache_read: 4387501
+      cache_write: 110461
+      cost: 2.0588
 ---
 # T-1519 Repository file links in rendered markdown, threads, reports, and plain refusal text open the editor at the line they name
 

@@ -7,18 +7,43 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:24Z
-updated: 2026-10-13T17:46:50Z
+updated: 2026-10-13T17:51:23Z
 transitions: []
 tags: [cli]
 topics: [design]
-touches: [flai/internal/designsystem/tokens.go, flai/internal/designsystem/tokens_test.go, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go, flai/internal/designsystem/starter.md, flai/internal/check/design.go, flai/internal/check/design_test.go, flai/internal/check/check.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flai/internal/hostapi/hostapi.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/designsystem/tokens.go, flai/internal/designsystem/tokens_test.go, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go, flai/internal/designsystem/starter.md, flai/internal/check/design.go, flai/internal/check/design_test.go, flai/internal/check/check.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/cmd/root.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flai/internal/hostapi/hostapi.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [S-0380]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 55
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 19
+          output: 329
+          cache_read: 2888092
+          cache_write: 4910
+          cost: 0.7293
 draft: true
+cost_of_delay:
+  value: 173.08
+  by: planner-E-0020
+  at: 2026-10-13T17:51:23Z
+forecast:
+  duration: 45m
+  delivery: 2026-10-13T21:38:00Z
+  basis: "flai's 34m (95 s per unit over 50 large feature stories on claude-opus-5-5, size 21) raised to 45m: a new package, a check rule, a command group, and a host method across six tasks in four layers."
+  by: planner-E-0020
+  at: 2026-10-13T17:51:23Z
 ---
 # S-0381 A project's design system is a document whose front matter holds its tokens, and flai validates it, renders it as CSS, and serves it to the dashboard
 
@@ -45,3 +70,17 @@ A project keeps its design system in one markdown document, `design/system/desig
 ## Notes
 
 - Drafted by the planner for E-0020. It assumes S-0380 recommends tokens in the front matter of one markdown document under `design/system`; the story is checked against S-0380's decision before it is finalized.
+
+### Planning
+
+- **Touches.** None declared. All are the planner's, every one a file:
+  - `flai/internal/designsystem/` (`tokens.go`, `css.go`, `starter.md`, with tests): layout, a new package beside `docedit` and `adr`. Criteria 1 and 3.
+  - `flai/internal/check/design.go` with its test, and `check.go`, whose `Run` calls each rule: layout. Criterion 2.
+  - `flai/cmd/design.go` with its test, and `flai/cmd/root.go`, which registers each command group: layout, and co-change (`root.go` changes with new commands). Criteria 1 and 3.
+  - `flai/internal/hostapi/design.go` with its test, and `hostapi.go`, whose method table merges each group's methods: layout. Criterion 4.
+  - `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`: design, as `documentation.md` asks for a new command. Criterion 5.
+- **Co-change.** `flai touches suggest` also lists `docs/operators/index.md`, `docs/operators/settings.md`, the dashboard docs, and `flai/internal/hostapi/writes.go`. None is added: the story adds no setting, no dashboard view, and no write.
+- **No folder touch.**
+- **Layers.** T-1532; then T-1533 and T-1534 together; then T-1535 and T-1536 together; then T-1537.
+- **Forecast: 45m, delivery 2026-10-13T21:38:00Z.** `flai forecast` gave 34m: 95 s per unit of size over 50 done feature stories on claude-opus-5-5 in the large band, times size 21. Raised to 45m: the story starts a package from nothing, with a parser, two renderers with golden tests, a check rule, a command group, and a host method, across six tasks in four layers, which a rate per touch does not weigh. The delivery adds the 11m to flai's 21:27Z.
+- **Cost of delay: 173.08 USD a week.** `flai cod`: 45m of the 5h12m forecast over E-0020's seven open stories, of the epic's 1200 USD a week. It stands.

@@ -3,28 +3,67 @@ id: E-0020
 type: epic
 nature: feature
 title: A Design System Extension
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-13T17:37:49Z
-updated: 2026-10-13T17:45:42Z
-transitions: []
+updated: 2026-10-13T17:53:28Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:53:19Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-13T17:53:28Z
+    by: agent-S-0380
 tags: [dashboard, cli]
 topics: [design]
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 1455
+  turns:
+    - day: 2026-10-13
+      ceremony: 2
+      hand_edits: 2
+      work: 35
+  models:
+    - model: claude-haiku-5-5
+      input: 58701
+      output: 3160
+      cache_read: 0
+      cache_write: 0
+      cost: 0.0175
+    - model: claude-opus-5-5
+      input: 334
+      output: 118061
+      cache_read: 16756567
+      cache_write: 582464
+      cost: 9.236
   strategic:
+    - kind: planner
+      seconds: 898
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 74
+          output: 33814
+          cache_read: 2503250
+          cache_write: 118029
+          cost: 0.1415
+        - model: claude-opus-5-5
+          input: 126
+          output: 71152
+          cache_read: 12098341
+          cache_write: 253452
+          cost: 5.8708
     - kind: orchestrator
-      seconds: 132
+      seconds: 1833
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 81
-          cache_read: 1103288
-          cache_write: 3859
-          cost: 0.2791
+          input: 208
+          output: 3419
+          cache_read: 25510616
+          cache_write: 73598
+          cost: 6.4438
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 8h
@@ -51,3 +90,5 @@ This epic should specify the stories necessary to create a new top-level heading
 - S-0386 A story's agent working on a project's UI is primed with its design system, and a baseline convention tells it to build from the tokens and propose changes on its branch
 
 ## Notes
+- 2026-10-13T17:53:19Z: moved to ready: follows S-0380, which moved to ready
+- 2026-10-13T17:53:28Z: moved to in-progress: follows S-0380, which moved to in-progress

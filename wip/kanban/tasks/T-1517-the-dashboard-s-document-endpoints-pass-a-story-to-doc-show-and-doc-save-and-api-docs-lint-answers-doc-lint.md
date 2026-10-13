@@ -3,16 +3,36 @@ id: T-1517
 type: task
 nature: feature
 title: The dashboard's document endpoints pass a story to doc.show and doc.save, and /api/docs/lint answers doc.lint
-status: backlog
+status: done
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:56:55Z
-updated: 2026-10-13T16:56:55Z
-transitions: []
+updated: 2026-10-13T18:06:19Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:54:59Z
+    by: agent-S-0378
+  - to: in-progress
+    at: 2026-10-13T17:55:00Z
+    by: agent-S-0378
+  - to: done
+    at: 2026-10-13T18:06:19Z
+    by: agent-S-0378
 stream: S-0378
 tags: [dashboard]
 touches: [flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/writes.test.ts, flaiover/src/routes/api/docs/edit/+server.ts, flaiover/src/routes/api/docs/file/+server.ts, flaiover/src/routes/api/docs/file/save.test.ts, flaiover/src/routes/api/docs/lint/+server.ts, flaiover/src/routes/api/docs/lint/lint.test.ts]
 after: [T-1514, T-1515]
+usage:
+  source: log
+  seconds: 679
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 90
+      output: 442
+      cache_read: 3665270
+      cache_write: 121263
+      cost: 1.7333
 ---
 # T-1517 The dashboard's document endpoints pass a story to doc.show and doc.save, and /api/docs/lint answers doc.lint
 

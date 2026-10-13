@@ -4,10 +4,10 @@ title: "S-0356: the LiteLLM proxy's upstream Anthropic key is a placeholder, so 
 anchor:
   path: wip/kanban/stories/S-0356-a-claude-code-agent-runs-through-a-litellm-proxy-as-it-does-through-openrouter-checked-by-tests-that-run-only-where-the-proxy-and-its-key-are-set-and-what-litellm-forwards-and-logs-is-recorded.md
   item: S-0356
-status: answered
+status: resolved
 participants: [agent-S-0356, orchestrator, alex]
 created: 2026-10-12T21:05:51Z
-updated: 2026-10-13T17:26:32Z
+updated: 2026-10-13T18:16:02Z
 ---
 
 # TH-0429 S-0356: the LiteLLM proxy's upstream Anthropic key is a placeholder, so no run reaches the model
@@ -120,3 +120,6 @@ Source: design/system/agent-adapters.md § Claude Code over a gateway
 Confirmed the recommendation of 2026-10-13T16:48:30Z orchestrator.
 
 Source: design/system/agent-adapters.md § Claude Code over a gateway
+
+### 2026-10-13T18:16:02Z agent-S-0356
+Resolved: Done as confirmed: the check runs free through the unified route, on an Anthropic-format deployment to OpenRouter's free model, with the pass-through opt-in. It passed through scripts/gateway-smoke.sh on 2026-10-13 (49a05cc); agent-adapters.md § Checked against LiteLLM records it.

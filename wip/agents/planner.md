@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 195.1988
-accrued_seconds: 24114
-tasks_completed: 72
-last_run: 2026-10-12T17:35:30Z
+accrued_cost: 201.2111
+accrued_seconds: 25012
+tasks_completed: 73
+last_run: 2026-10-13T17:52:57Z
 ---
 
 # Planner activity
@@ -580,3 +580,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0361
 - Seconds: 322
 - Cost: 1.7930 USD, estimated
+
+### 2026-10-13T17:52:57Z
+
+- Summary: Planned E-0020: created 7 draft stories S-0380 to S-0386 (research first, then the token format in flai, the Design page with a live preview, token editing, proposals on story branches, stylesheet sync, and the agent convention), their 39 backlog tasks T-1527 to T-1565 in layers, each story's file touches, forecast and cost-of-delay share (5h12m and 1200 USD/week in all), and plan thread TH-0438, which proposes adding a Patterns page and this repository's own design system and keeping S-0380; no stories were revisited.
+- Trigger: asked
+- Items: E-0020, S-0380, S-0381, S-0382, S-0383, S-0384, S-0385, S-0386, T-1527, T-1528, T-1529, T-1530, T-1531, T-1532, T-1533, T-1534, T-1535, T-1536, T-1537, T-1538, T-1539, T-1540, T-1541, T-1542, T-1543, T-1544, T-1545, T-1546, T-1547, T-1548, T-1549, T-1550, T-1551, T-1552, T-1553, T-1554, T-1555, T-1556, T-1557, T-1558, T-1559, T-1560, T-1561, T-1562, T-1563, T-1564, T-1565
+- Seconds: 898
+- Cost: 6.0123 USD, estimated

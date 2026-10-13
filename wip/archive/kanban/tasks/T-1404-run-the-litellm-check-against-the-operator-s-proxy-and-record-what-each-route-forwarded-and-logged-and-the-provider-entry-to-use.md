@@ -3,11 +3,11 @@ id: T-1404
 type: task
 nature: research
 title: Run the LiteLLM check against the operator's proxy and record what each route forwarded and logged, and the provider entry to use
-status: in-progress
+status: done
 parent: S-0356
 owner: alex
 created: 2026-10-08T08:49:57Z
-updated: 2026-10-13T17:30:44Z
+updated: 2026-10-13T18:15:38Z
 transitions:
   - to: ready
     at: 2026-10-13T17:30:43Z
@@ -15,10 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:30:44Z
     by: agent-S-0356
+  - to: done
+    at: 2026-10-13T18:15:37Z
+    by: agent-S-0356
 stream: S-0356
 tags: [cli]
-touches: [design/system/agent-adapters.md, docs/operators/index.md]
+touches: [design/system/agent-adapters.md, docs/operators/index.md, docs/contributors/index.md, flai/internal/serve/gateway_test.go, scripts/litellm.sh]
 after: [T-1526]
+usage:
+  source: log
+  seconds: 2693
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 82
+      output: 33074
+      cache_read: 10869133
+      cache_write: 229937
+      cost: 4.5355
 ---
 # T-1404 Run the LiteLLM check against the operator's proxy and record what each route forwarded and logged, and the provider entry to use
 

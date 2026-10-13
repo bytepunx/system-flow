@@ -3,15 +3,35 @@ id: T-1527
 type: task
 nature: research
 title: Record what the dashboard's theme, document editor, and site menu, and the prime pack, offer a design system tool today
-status: backlog
+status: done
 parent: S-0380
 owner: alex
 created: 2026-10-13T17:45:54Z
-updated: 2026-10-13T17:45:54Z
-transitions: []
+updated: 2026-10-13T18:00:48Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:54:22Z
+    by: agent-S-0380
+  - to: in-progress
+    at: 2026-10-13T17:54:23Z
+    by: agent-S-0380
+  - to: done
+    at: 2026-10-13T18:00:48Z
+    by: agent-S-0380
 stream: S-0380
 tags: [dashboard, cli]
 touches: [design/system/design-system-tool.md, design/system/README.md]
+usage:
+  source: log
+  seconds: 385
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 117
+      output: 41529
+      cache_read: 5894254
+      cache_write: 204886
+      cost: 3.2488
 ---
 # T-1527 Record what the dashboard's theme, document editor, and site menu, and the prime pack, offer a design system tool today
 

@@ -3,11 +3,11 @@ id: T-1514
 type: task
 nature: feature
 title: flai doc show and doc save take --story and edit the file in that story's worktree, committing on its branch
-status: in-progress
+status: done
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:56:25Z
-updated: 2026-10-13T17:30:37Z
+updated: 2026-10-13T17:49:24Z
 transitions:
   - to: ready
     at: 2026-10-13T17:30:36Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:30:37Z
     by: agent-S-0378
+  - to: done
+    at: 2026-10-13T17:49:24Z
+    by: agent-S-0378
 stream: S-0378
 tags: [cli]
-touches: [flai/cmd/doc.go, flai/cmd/doc_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/cmd/doc.go, flai/cmd/doc_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/doc_lint_test.go, docs/users/flai-reference.md, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 1127
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 111
+      output: 499
+      cache_read: 5294201
+      cache_write: 163041
+      cost: 2.4979
 ---
 # T-1514 flai doc show and doc save take --story and edit the file in that story's worktree, committing on its branch
 

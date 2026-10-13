@@ -3,16 +3,36 @@ id: T-1520
 type: task
 nature: feature
 title: A refused acceptance lists the markdown the fix left as editor links, and the operator accepts again from the same page once they are saved
-status: backlog
+status: done
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:57:27Z
-updated: 2026-10-13T16:57:27Z
-transitions: []
+updated: 2026-10-13T18:32:10Z
+transitions:
+  - to: ready
+    at: 2026-10-13T18:19:45Z
+    by: agent-S-0378
+  - to: in-progress
+    at: 2026-10-13T18:19:45Z
+    by: agent-S-0378
+  - to: done
+    at: 2026-10-13T18:32:10Z
+    by: agent-S-0378
 stream: S-0378
 tags: [dashboard]
-touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte"]
+touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, flaiover/src/lib/components/DismissibleNotice.svelte, flaiover/src/lib/components/DismissibleNotice.svelte.test.ts]
 after: [T-1516, T-1517, T-1519]
+usage:
+  source: log
+  seconds: 745
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 152
+      output: 699
+      cache_read: 9773835
+      cache_write: 167145
+      cost: 4.5502
 ---
 # T-1520 A refused acceptance lists the markdown the fix left as editor links, and the operator accepts again from the same page once they are saved
 

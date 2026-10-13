@@ -3,16 +3,36 @@ id: T-1518
 type: task
 nature: feature
 title: The document editor opens over any page at a line, on a story's branch when given one, and shows the lint findings as the operator types
-status: backlog
+status: done
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:57:08Z
-updated: 2026-10-13T16:57:08Z
-transitions: []
+updated: 2026-10-13T18:06:27Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:55:00Z
+    by: agent-S-0378
+  - to: in-progress
+    at: 2026-10-13T17:55:01Z
+    by: agent-S-0378
+  - to: done
+    at: 2026-10-13T18:06:27Z
+    by: agent-S-0378
 stream: S-0378
 tags: [dashboard]
 touches: [flaiover/src/lib/components/DocEditor.svelte, flaiover/src/lib/components/DocEditor.svelte.test.ts, flaiover/src/lib/components/EditorDialog.svelte, flaiover/src/lib/components/EditorDialog.svelte.test.ts, flaiover/src/lib/editor.svelte.ts, flaiover/src/lib/edit.ts, flaiover/src/lib/edit.test.ts, flaiover/src/routes/+layout.svelte, "flaiover/src/routes/edit/[...path]/+page.svelte"]
 after: [T-1515]
+usage:
+  source: log
+  seconds: 686
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 315
+      cache_read: 2412191
+      cache_write: 110865
+      cost: 1.1549
 ---
 # T-1518 The document editor opens over any page at a line, on a story's branch when given one, and shows the lint findings as the operator types
 

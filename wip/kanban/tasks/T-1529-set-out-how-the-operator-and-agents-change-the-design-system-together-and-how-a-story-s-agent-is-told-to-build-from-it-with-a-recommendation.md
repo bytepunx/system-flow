@@ -3,16 +3,36 @@ id: T-1529
 type: task
 nature: research
 title: Set out how the operator and agents change the design system together, and how a story's agent is told to build from it, with a recommendation
-status: backlog
+status: done
 parent: S-0380
 owner: alex
 created: 2026-10-13T17:46:07Z
-updated: 2026-10-13T17:46:07Z
-transitions: []
+updated: 2026-10-13T18:16:16Z
+transitions:
+  - to: ready
+    at: 2026-10-13T18:07:46Z
+    by: agent-S-0380
+  - to: in-progress
+    at: 2026-10-13T18:07:46Z
+    by: agent-S-0380
+  - to: done
+    at: 2026-10-13T18:16:16Z
+    by: agent-S-0380
 stream: S-0380
 tags: [dashboard, cli]
 touches: [design/system/design-system-tool.md]
 after: [T-1528]
+usage:
+  source: log
+  seconds: 510
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 101
+      output: 35582
+      cache_read: 5050230
+      cache_write: 175548
+      cost: 2.7836
 ---
 # T-1529 Set out how the operator and agents change the design system together, and how a story's agent is told to build from it, with a recommendation
 

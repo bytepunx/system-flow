@@ -3,12 +3,18 @@ id: S-0380
 type: story
 nature: research
 title: Research how a project keeps its design system in the repository, how the dashboard previews it live, and how agents work on it with the operator
-status: backlog
+status: in-progress
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:14Z
-updated: 2026-10-13T17:46:16Z
-transitions: []
+updated: 2026-10-13T18:16:21Z
+transitions:
+  - to: ready
+    at: 2026-10-13T17:53:19Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-13T17:53:28Z
+    by: agent-S-0380
 tags: [dashboard, cli]
 topics: [design]
 touches: [design/system/design-system-tool.md, design/system/README.md, design/adrs, design/adrs/README.md]
@@ -17,7 +23,51 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: log
+  seconds: 1455
+  turns:
+    - day: 2026-10-13
+      ceremony: 2
+      hand_edits: 2
+      work: 35
+  models:
+    - model: claude-haiku-5-5
+      input: 58701
+      output: 3160
+      cache_read: 0
+      cache_write: 0
+      cost: 0.0175
+    - model: claude-opus-5-5
+      input: 334
+      output: 118061
+      cache_read: 16756567
+      cache_write: 582464
+      cost: 9.236
+  strategic:
+    - kind: orchestrator
+      seconds: 1372
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 91
+          output: 1366
+          cache_read: 7078779
+          cache_write: 40279
+          cost: 1.7889
+cost_of_delay:
+  value: 230.77
+  by: planner-E-0020
+  at: 2026-10-13T17:50:58Z
+forecast:
+  duration: 1h
+  delivery: 2026-10-13T20:32:00Z
+  basis: "flai's 36m (234 s per unit over 5 done research stories, size 9) raised to 1h: three questions, ADRs, and an operator decision, as S-0339 needed 1h."
+  by: planner-E-0020
+  at: 2026-10-13T17:50:58Z
+finalized:
+  by: orchestrator
+  at: 2026-10-13T17:53:17Z
 ---
 # S-0380 Research how a project keeps its design system in the repository, how the dashboard previews it live, and how agents work on it with the operator
 
@@ -27,9 +77,9 @@ Settle, before anything is built, how E-0020's Design menu works: where and in w
 
 ## Acceptance criteria
 
-- [ ] A finding, `design/system/design-system-tool.md`, sets out where and in what format a project keeps its design system, its tokens (colours for light and dark, fonts, type scale, spacing, radii, shadows) and its guidance, so that flai can validate it and the dashboard and agents read the same file, with the options considered and how each fits the documentation standard and the host methods, which read and save only markdown.
-- [ ] It sets out how the dashboard previews a project's tokens live on sample components without building the project, isolated from the dashboard's own theme, with the options considered, such as an iframe or a shadow root carrying CSS custom properties over components compiled with the dashboard, or Tailwind's browser build.
-- [ ] It sets out how the operator and agents work on the design system together, such as a proposal on a story's branch previewed beside the main branch's before acceptance, a thread on the document, or an edit from the page, and how a story's agent is told to build its UI from the design system.
+- [x] A finding, `design/system/design-system-tool.md`, sets out where and in what format a project keeps its design system, its tokens (colours for light and dark, fonts, type scale, spacing, radii, shadows) and its guidance, so that flai can validate it and the dashboard and agents read the same file, with the options considered and how each fits the documentation standard and the host methods, which read and save only markdown.
+- [x] It sets out how the dashboard previews a project's tokens live on sample components without building the project, isolated from the dashboard's own theme, with the options considered, such as an iframe or a shadow root carrying CSS custom properties over components compiled with the dashboard, or Tailwind's browser build.
+- [x] It sets out how the operator and agents work on the design system together, such as a proposal on a story's branch previewed beside the main branch's before acceptance, a thread on the document, or an edit from the page, and how a story's agent is told to build its UI from the design system.
 - [ ] It ends with a recommendation, and the operator's decision is recorded on a thread and in ADRs.
 - [ ] E-0020's other stories are checked against the decision, and what each must change is named on the epic's plan thread.
 
@@ -43,3 +93,19 @@ Settle, before anything is built, how E-0020's Design menu works: where and in w
 ## Notes
 
 - Drafted by the planner for E-0020. The epic's other stories assume the recommendation the planner expects (see the epic's plan thread); this story confirms or corrects that.
+
+### Planning
+
+- **Touches.** None declared. All are the planner's:
+
+  | Touch | Source | Why |
+  |-------|--------|-----|
+  | `design/system/design-system-tool.md` | design | The finding, new, in the shape of `agent-adapters.md` (S-0339). Named so it does not clash with a project's own design system document, `design/system/design-system.md` in S-0381. |
+  | `design/system/README.md` | layout | The index lists every finding. |
+  | `design/adrs` | design | Folder touch, kept: T-1530's ADRs get their names only when `flai adr new` numbers them. It is in `claims.shared`, so it holds no ready story (ADR-0096). |
+  | `design/adrs/README.md` | layout | `flai adr new` adds each ADR's row. |
+
+- **Co-change.** `flai touches suggest` lists hub documents (`design/system/flai-cli.md`, `docs/users/flai.md`, `docs/operators/index.md`, the dashboard docs). None is added: a research story changes no behaviour, and the stories after it change those docs.
+- **Layers.** Five, one task each, since every task edits the finding after the one before: T-1527, T-1528, T-1529, T-1530, T-1531.
+- **Forecast: 1h, delivery 2026-10-13T20:32:00Z.** `flai forecast` gave 36m: 234 s per unit of size over 5 done research stories, times size 9. Raised to 1h because it settles three questions, writes ADRs, and waits on the operator's answer, as S-0339, which flai first put at 39m, needed 1h. The delivery adds the 24m to flai's 20:08Z.
+- **Cost of delay: 230.77 USD a week.** `flai cod` gives this story's share of E-0020's 1200 USD a week (the operator's 8h lost per cycle at 150 USD an hour): 1h of the 5h12m forecast over the epic's seven open stories. It stands as worked out.

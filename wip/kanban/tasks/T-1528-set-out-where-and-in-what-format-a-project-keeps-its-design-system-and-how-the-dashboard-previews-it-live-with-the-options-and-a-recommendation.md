@@ -3,16 +3,36 @@ id: T-1528
 type: task
 nature: research
 title: Set out where and in what format a project keeps its design system, and how the dashboard previews it live, with the options and a recommendation
-status: backlog
+status: done
 parent: S-0380
 owner: alex
 created: 2026-10-13T17:46:01Z
-updated: 2026-10-13T17:46:01Z
-transitions: []
+updated: 2026-10-13T18:07:38Z
+transitions:
+  - to: ready
+    at: 2026-10-13T18:00:56Z
+    by: agent-S-0380
+  - to: in-progress
+    at: 2026-10-13T18:00:56Z
+    by: agent-S-0380
+  - to: done
+    at: 2026-10-13T18:07:38Z
+    by: agent-S-0380
 stream: S-0380
 tags: [dashboard, cli]
 touches: [design/system/design-system-tool.md]
 after: [T-1527]
+usage:
+  source: log
+  seconds: 402
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 13417
+      cache_read: 1904299
+      cache_write: 66194
+      cost: 1.0496
 ---
 # T-1528 Set out where and in what format a project keeps its design system, and how the dashboard previews it live, with the options and a recommendation
 

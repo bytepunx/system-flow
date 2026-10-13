@@ -23,15 +23,15 @@ tags: []
 touches: [scripts/litellm.sh, flai/internal/serve/gateway_test.go, docs/contributors/index.md]
 usage:
   source: log
-  seconds: 172
+  seconds: 175
   estimated: true
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 194
-      cache_read: 3846235
-      cache_write: 20762
-      cost: 2.4611
+      input: 29
+      output: 11552
+      cache_read: 3796323
+      cache_write: 80311
+      cost: 1.5841
 ---
 
 # T-1526 The local proxy reaches OpenRouter's free models and the LiteLLM check defaults to one, with the pass-through opt-in

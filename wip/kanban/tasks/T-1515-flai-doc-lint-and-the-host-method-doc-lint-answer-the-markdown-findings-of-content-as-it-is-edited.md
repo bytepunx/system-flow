@@ -3,11 +3,11 @@ id: T-1515
 type: task
 nature: feature
 title: flai doc lint and the host method doc.lint answer the markdown findings of content as it is edited
-status: in-progress
+status: done
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:56:32Z
-updated: 2026-10-13T17:30:38Z
+updated: 2026-10-13T17:49:02Z
 transitions:
   - to: ready
     at: 2026-10-13T17:30:37Z
@@ -15,9 +15,23 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:30:38Z
     by: agent-S-0378
+  - to: done
+    at: 2026-10-13T17:49:02Z
+    by: agent-S-0378
 stream: S-0378
 tags: [cli]
-touches: [flai/cmd/doc_lint.go, flai/cmd/doc_lint_test.go, flai/internal/hostapi/docs.go, flai/internal/hostapi/docs_test.go]
+touches: [flai/cmd/doc_lint.go, flai/cmd/doc_lint_test.go, flai/internal/hostapi/docs.go, flai/internal/hostapi/docs_test.go, flaiover/src/lib/server/agent.ts]
+usage:
+  source: log
+  seconds: 1104
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 99
+      output: 515
+      cache_read: 4501655
+      cache_write: 130154
+      cost: 2.1202
 ---
 # T-1515 flai doc lint and the host method doc.lint answer the markdown findings of content as it is edited
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 528.9960
-accrued_seconds: 399529
-tasks_completed: 436
-last_run: 2026-10-13T17:47:01Z
+accrued_cost: 535.8921
+accrued_seconds: 401323
+tasks_completed: 442
+last_run: 2026-10-13T18:17:09Z
 ---
 
 # Orchestrator activity
@@ -3063,6 +3063,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0379
 - Seconds: 257
 - Cost: 1.2526 USD, estimated
+
+### 2026-10-13T17:47:15Z
+
+- Summary: Under publish, policy judgement: released S-0376 and S-0379 (2 pending, 37.5 USD/week) as flai 1.47.1 → 1.47.2 (patch), tag flai/v1.47.2, pushed. Reason: two complete, verified remediations (I-0139, I-0142 closed), nothing held by whole_epics.
+- Items: S-0376, S-0379
+- Seconds: 14
+- Cost: 0.0759 USD, estimated
+
+### 2026-10-13T17:53:39Z
+
+- Summary: E-0020's planner (run by the operator) drafted S-0380 to S-0386 (TH-0438, the operator's). Under finalize_drafts, finalized S-0380 (research, 1h, 230.77 USD/week), and under promote_to_ready moved it to ready (rank 1, 1h under throughput); E-0020 followed to ready. Applied the throughput order: S-0357 (42m), S-0380 (1h). Left S-0381 to S-0386 drafts, though flai lists them complete: their criteria rest on assumptions S-0380 settles. Opened one thread on each saying so (TH-0439 to TH-0444).
+- Items: S-0380, S-0381, S-0382, S-0383, S-0384, S-0385, S-0386
+- Seconds: 384
+- Cost: 5.1054 USD, estimated
+
+### 2026-10-13T17:54:27Z
+
+- Summary: I've kept the board moving this session: planned all five backlog stories flai listed, accepted four, and published two releases. Three stories are in progress and nothing is in review.
+- Items: none
+- Seconds: 48
+- Cost: 0.4244 USD, estimated
+
+### 2026-10-13T17:55:12Z
+
+- Summary: Run started; board unchanged since 17:54. All permissions on, policy throughput. No plan candidates (S-0304/05/06 planned, unchanged since). Drafts S-0381 to S-0386 stay drafts pending S-0380 (threads TH-0439 to TH-0444); S-0371, S-0372, S-0374 await the operator on their plan threads. Under promote_to_ready, S-0241 (rank 1, 2h) stays out: blocked. TH-0438 is the epic planner's, the operator's; TH-0375 and TH-0429 the operator answered. Nothing in review.
+- Items: none
+- Seconds: 31
+- Cost: 0.2308 USD, estimated
+
+### 2026-10-13T18:17:05Z
+
+- Summary: Recommended an answer on TH-0445, citing design/adrs/0023-documents-are-saved-through-flai.md § Decision
+- Items: S-0380
+- Seconds: 1313
+- Cost: 1.0239 USD, estimated
+
+### 2026-10-13T18:17:09Z
+
+- Summary: Under answer_threads autonomous, posted a recommendation on TH-0445 (S-0380's ten design-system decisions): take all as recommended, flagging choice 8 (token saves on main change the UI stylesheet outside a story) and choice 6 (Google Fonts request). Escalated, not answered: these are decisions not yet recorded. S-0380 waits on the operator.
+- Items: S-0380
+- Seconds: 4
+- Cost: 0.0357 USD, estimated
 
 ## Refusals
 

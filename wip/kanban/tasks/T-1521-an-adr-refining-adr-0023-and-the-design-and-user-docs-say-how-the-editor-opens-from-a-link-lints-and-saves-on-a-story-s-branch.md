@@ -3,16 +3,36 @@ id: T-1521
 type: task
 nature: feature
 title: An ADR refining ADR-0023 and the design and user docs say how the editor opens from a link, lints, and saves on a story's branch
-status: backlog
+status: done
 parent: S-0378
 owner: alex
 created: 2026-10-13T16:57:37Z
-updated: 2026-10-13T16:57:37Z
-transitions: []
+updated: 2026-10-13T18:36:13Z
+transitions:
+  - to: ready
+    at: 2026-10-13T18:32:21Z
+    by: agent-S-0378
+  - to: in-progress
+    at: 2026-10-13T18:32:21Z
+    by: agent-S-0378
+  - to: done
+    at: 2026-10-13T18:36:13Z
+    by: agent-S-0378
 stream: S-0378
 tags: [dashboard, cli, docs]
 touches: [design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
 after: [T-1520]
+usage:
+  source: log
+  seconds: 227
+  estimated: true
+  models:
+    - model: claude-opus-5-5
+      input: 68
+      output: 410
+      cache_read: 3555945
+      cache_write: 136989
+      cost: 1.6904
 ---
 # T-1521 An ADR refining ADR-0023 and the design and user docs say how the editor opens from a link, lints, and saves on a story's branch
 
