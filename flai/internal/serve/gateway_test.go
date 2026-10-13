@@ -529,7 +529,7 @@ func checkGateway(t *testing.T, claude string, route gatewayRoute) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := fmt.Sprintf("flai checked Claude Code %s through %s and permission_prompt.", strings.Fields(string(version))[0], route.name)
+	want := fmt.Sprintf("flai checked Claude Code %s through %s and permission_prompt", strings.Fields(string(version))[0], route.name)
 	prompt := gatewayPrompt(s.target, want, s.story)
 	argv := slices.Clone(spec.Argv)
 	i := slices.Index(argv, "-p")

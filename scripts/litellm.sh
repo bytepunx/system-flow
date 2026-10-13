@@ -115,9 +115,10 @@ model_list:
     litellm_params: { model: "anthropic/*", api_key: os.environ/ANTHROPIC_API_KEY }
   # Any OpenRouter model, as openrouter-messages/<slug>, sent on in Anthropic's
   # format to OpenRouter's Anthropic API; its free models let the gateway
-  # check run end to end for nothing (TH-0429).
+  # check run end to end for nothing (TH-0429). A free model's stream can stall
+  # for minutes; stream_timeout ends one stalled so that Claude Code retries.
   - model_name: "openrouter-messages/*"
-    litellm_params: { model: "anthropic/*", api_base: "https://openrouter.ai/api", api_key: os.environ/OPENROUTER_API_KEY }
+    litellm_params: { model: "anthropic/*", api_base: "https://openrouter.ai/api", api_key: os.environ/OPENROUTER_API_KEY, stream_timeout: 45, timeout: 120 }
   # The same models as openrouter/<slug>, translated to OpenRouter's chat
   # completions; Claude Code's requests stalled there (agent-adapters.md
   # § Checked against LiteLLM), so a provider entry names the one above.
