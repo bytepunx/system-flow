@@ -90,7 +90,7 @@ var good = map[string]struct {
 	"settings.default_agent": {`{"agent":{"harness":"claude-code","model":"claude-opus-5-5","provider":"litellm","config":{"effort":"high"},"roles":{"verify":{"model":"sonnet"}}},` + rid + `}`,
 		"agent set --replace --autocommit --trailer=Co-Authored-By: flaiover <flaiover@localhost> --harness=claude-code --model=claude-opus-5-5 --provider=litellm --config=effort=high --role-model=verify=sonnet --json", ""},
 	"settings.agent":           {`{"name":"builder","attended_minutes":10,"command":["claude","-p","work on {story}; echo $HOME"],` + rid + `}`, "serve agent set --name=builder --json -- claude -p work on {story}; echo $HOME", ""},
-	"settings.harness":         {`{"name":"claude-code","program":"/opt/claude","args":["--permission-mode","acceptEdits"],` + rid + `}`, "serve agent harness claude-code --program=/opt/claude --json -- --permission-mode acceptEdits", ""},
+	"settings.harness":         {`{"name":"claude-code","program":"/opt/claude","args":["--permission-mode","acceptEdits"],"guard":"none","deny_protected":true,` + rid + `}`, "serve agent harness claude-code --program=/opt/claude --guard=none --deny-protected=true --json -- --permission-mode acceptEdits", ""},
 	"settings.check":           {`{"name":"flai","command":["scripts/flai-test.sh","--short"],` + rid + `}`, "serve checks set --name=flai --json -- scripts/flai-test.sh --short", ""},
 	"settings.checks_timeout":  {`{"minutes":20,` + rid + `}`, "serve checks timeout 20 --json", ""},
 	"settings.import":          {`{"folder":"/home/me/git","add":true,` + rid + `}`, "serve import add --json -- /home/me/git", ""},
@@ -243,7 +243,8 @@ var refused = map[string][]string{
 	"settings.agent": {`{"name":"--x",` + rid + `}`, `{"attended_minutes":10,` + rid + `}`, `{"command":[],` + rid + `}`, `{"command":["","x"],` + rid + `}`,
 		`{"command":"claude -p",` + rid + `}`, `{"command":["claude","a\nb"],` + rid + `}`, `{` + rid + `}`},
 	"settings.harness": {`{"name":"command","program":"x",` + rid + `}`, `{"name":"--help","program":"x",` + rid + `}`, `{"name":"claude-code",` + rid + `}`,
-		`{"name":"claude-code","args":["a\nb"],` + rid + `}`, `{"name":"claude-code","args":"--x",` + rid + `}`},
+		`{"name":"claude-code","args":["a\nb"],` + rid + `}`, `{"name":"claude-code","args":"--x",` + rid + `}`, `{"name":"command","args":["x"],"guard":"none",` + rid + `}`,
+		`{"name":"claude-code","guard":"off",` + rid + `}`, `{"name":"claude-code","guard":"--reset",` + rid + `}`, `{"name":"claude-code","deny_protected":"yes",` + rid + `}`},
 	"settings.check":           {`{"name":"--x","command":["a"],` + rid + `}`, `{"name":"a","command":[],` + rid + `}`, `{"name":"a","command":[" "],` + rid + `}`},
 	"settings.checks_timeout":  {`{"minutes":0,` + rid + `}`, `{"minutes":"20",` + rid + `}`},
 	"settings.import":          {`{"folder":"relative/git","add":true,` + rid + `}`, `{"folder":"/a/../b","add":true,` + rid + `}`, `{"folder":"/a",` + rid + `}`},
@@ -987,6 +988,55 @@ func TestSettingsProviderSetsAndResetsThroughFlaiServeAgentProvider(t *testing.T
 	_, e = writeMethods(rec.run, time.Now, Host{Enabled: func(a, root string) bool { return a == ActionSettings && root == p.Root }})["settings.provider"](context.Background(), p, json.RawMessage(`{"name":"litellm","reset":true,"request_id":"req-00000059"}`))
 	if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable settings --all-projects") {
 		t.Errorf("host-wide: enabled for this project only, it is refused: %+v", e)
+	}
+}
+
+// S-0355, ADR-0131: settings.harness sets and clears a harness's guard and
+// deny_protected through flai serve agent harness, the command's among them,
+// each absent field left alone; the command's program and arguments, and a
+// guard other than none or "", are refused before anything runs.
+func TestSettingsHarnessSetsGuardAndDenyProtected(t *testing.T) {
+	p := withDocs(t)
+	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+	m := writeMethods(rec.run, time.Now, Host{Enabled: func(a, _ string) bool { return a == ActionSettings }})["settings.harness"]
+	call := func(params string) *channel.Error {
+		_, e := m(context.Background(), p, json.RawMessage(params))
+		return e
+	}
+	for i, c := range []struct{ params, want string }{
+		{`{"name":"command","guard":"none","deny_protected":true`, "serve agent harness command --guard=none --deny-protected=true --json"},
+		{`{"name":"command","guard":""`, "serve agent harness command --guard= --json"},
+		{`{"name":"command","deny_protected":false,"args":null`, "serve agent harness command --deny-protected=false --json"},
+		{`{"name":"command","reset":true`, "serve agent harness command --reset --json"},
+		{`{"name":"claude-code","program":"/opt/claude","deny_protected":false`, "serve agent harness claude-code --program=/opt/claude --deny-protected=false --json"},
+	} {
+		n := len(rec.runs)
+		if e := call(fmt.Sprintf(`%s,"request_id":"req-%08d"}`, c.params, 61+i)); e != nil {
+			t.Errorf("%s: %+v", c.params, e)
+			continue
+		}
+		if len(rec.runs) != n+1 {
+			t.Errorf("%s ran nothing", c.params)
+			continue
+		}
+		if got := strings.Join(rec.runs[n].Args, " "); got != c.want {
+			t.Errorf("%s ran %q, want %q", c.params, got, c.want)
+		}
+	}
+	n := len(rec.runs)
+	for i, c := range []struct{ params, want string }{
+		{`{"name":"claude-code","guard":"off"`, `guard "off" is not taken: give "none"`},
+		{`{"name":"command","program":"x","guard":"none"`, "the command's program and arguments are set with settings.agent"},
+		{`{"name":"command","args":[],"deny_protected":true`, "the command's program and arguments are set with settings.agent"},
+		{`{"name":"command"`, "nothing to set: give program, args, guard, deny_protected, or reset"},
+	} {
+		e := call(fmt.Sprintf(`%s,"request_id":"req-%08d"}`, c.params, 71+i))
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, c.want) {
+			t.Errorf("%s: %+v, want a refusal saying %q", c.params, e, c.want)
+		}
+	}
+	if len(rec.runs) != n {
+		t.Errorf("a refused call ran: %d commands", len(rec.runs)-n)
 	}
 }
 

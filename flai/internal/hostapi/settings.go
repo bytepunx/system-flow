@@ -451,18 +451,26 @@ func settingsSpecs() map[string]spec {
 
 		// settings.harness: what a harness is on this host, and the arguments
 		// that say what its agent may do; args null leaves them, [] means none.
-		"settings.harness": hostwide("a harness's program or arguments changed", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// guard ("none" or "") and deny_protected are what the operator lifts
+		// on it (ADR-0131); absent leaves them. The command takes only those
+		// and reset: its program and arguments are settings.agent's.
+		"settings.harness": hostwide("a harness's program, arguments, guard, or deny_protected changed", func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			var in struct {
-				Name    string          `json:"name"`
-				Program string          `json:"program"`
-				Args    json.RawMessage `json:"args"`
-				Reset   bool            `json:"reset"`
+				Name          string          `json:"name"`
+				Program       string          `json:"program"`
+				Args          json.RawMessage `json:"args"`
+				Reset         bool            `json:"reset"`
+				Guard         *string         `json:"guard"`
+				DenyProtected *bool           `json:"deny_protected"`
 			}
 			if e := params(raw, &in); e != nil {
 				return nil, "", e
 			}
-			if !harnessName.MatchString(in.Name) || in.Name == "command" {
+			if !harnessName.MatchString(in.Name) {
 				return nil, "", bad("%q is not a harness to set", in.Name)
+			}
+			if in.Name == "command" && (in.Program != "" || (len(in.Args) > 0 && string(in.Args) != "null")) {
+				return nil, "", bad("the command's program and arguments are set with settings.agent; the command harness takes only guard, deny_protected, and reset")
 			}
 			args := []string{"serve", "agent", "harness", in.Name}
 			if in.Reset {
@@ -473,6 +481,15 @@ func settingsSpecs() map[string]spec {
 					return nil, "", e
 				}
 				args = append(args, "--program="+in.Program)
+			}
+			if in.Guard != nil {
+				if *in.Guard != "" && *in.Guard != config.GuardNone {
+					return nil, "", bad("guard %q is not taken: give %q to let the harness's story sub-agents run without flai guard, or \"\" for the default", *in.Guard, config.GuardNone)
+				}
+				args = append(args, "--guard="+*in.Guard)
+			}
+			if in.DenyProtected != nil {
+				args = append(args, "--deny-protected="+strconv.FormatBool(*in.DenyProtected))
 			}
 			if len(in.Args) > 0 && string(in.Args) != "null" {
 				var list []string
@@ -485,7 +502,7 @@ func settingsSpecs() map[string]spec {
 				args = append(append(args, "--"), list...)
 			}
 			if len(args) == 4 {
-				return nil, "", bad("nothing to set: give program, args, or reset")
+				return nil, "", bad("nothing to set: give program, args, guard, deny_protected, or reset")
 			}
 			return args, "", nil
 		}),

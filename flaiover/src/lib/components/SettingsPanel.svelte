@@ -20,6 +20,7 @@
 		replanMeans,
 		sharedQuery,
 		sharedRefusal,
+		type Harness,
 		type ProviderForm,
 		type ServedProject,
 		type SettingsKind,
@@ -43,7 +44,8 @@
 	let dConfig = $state('');
 	let aName = $state('');
 	let aCommand = $state('');
-	let harnessForm = $state<Record<string, { program: string; args: string }>>({});
+	type HarnessForm = { program: string; args: string; guard: string; deny_protected: boolean };
+	let harnessForm = $state<Record<string, HarnessForm>>({});
 	let providerForms = $state<Record<string, ProviderForm>>({});
 	let newProviderName = $state('');
 	let newProvider = $state<ProviderForm>(providerForm());
@@ -77,7 +79,12 @@
 		harnessForm = Object.fromEntries(
 			Object.entries(h.agent.harnesses).map(([n, x]) => [
 				n,
-				{ program: x.program, args: lines(x.args) }
+				{
+					program: x.program,
+					args: lines(x.args),
+					guard: x.guard ?? '',
+					deny_protected: x.deny_protected ?? false
+				}
 			])
 		);
 		providerForms = Object.fromEntries(
@@ -157,6 +164,46 @@
 		const p = view?.host?.agent.providers?.[name];
 		if (p?.key_set) return 'key set';
 		return `${p?.key_env} is not set in flai serve's environment: an agent that names ${name} is refused at start`;
+	}
+	function harnessOf(name: string): Harness | undefined {
+		return view?.host?.agent.harnesses[name];
+	}
+	/** What a harness's heading adds: the command's program is the command above. */
+	function harnessNote(name: string): string {
+		if (name === 'command') return ': the command above';
+		return harnessOf(name)?.set ? '' : ' (defaults)';
+	}
+	/** Whether the host sets anything on a harness, which Back to the defaults clears. */
+	function harnessSet(name: string): boolean {
+		const x = harnessOf(name);
+		return Boolean(x?.set || x?.guard || x?.deny_protected);
+	}
+	/** What guard none gives up, and that it changes nothing on a harness that runs flai guard. */
+	function guardGivesUp(name: string): string {
+		const means =
+			"none: a story's sub-agents run without flai guard, so one could move items, write threads, or commit.";
+		return harnessOf(name)?.guard_capable
+			? `${means} ${name} runs flai guard, so this changes nothing here.`
+			: means;
+	}
+	/** What deny_protected takes on trust, and that it changes nothing on a harness that asks. */
+	function denyGivesUp(name: string): string {
+		const means = 'you say its arguments deny the protected paths; flai cannot check them.';
+		return harnessOf(name)?.ask_capable
+			? `${means} ${name} asks before a protected write, so this changes nothing here.`
+			: means;
+	}
+	// A harness saved through flai serve agent harness: its program, arguments, guard, and
+	// deny_protected as the form holds them. The command's program and arguments are the command
+	// above, saved with the agent, so its box sends only what is lifted on it.
+	function saveHarness(name: string) {
+		const { program, args, guard, deny_protected } = harnessForm[name];
+		const params: Record<string, unknown> = { name, guard, deny_protected };
+		if (name !== 'command') {
+			params.program = program.trim();
+			params.args = argv(args);
+		}
+		void change('harness-' + name, 'harness', params);
 	}
 	function saveAgent() {
 		const params: Record<string, unknown> = {};
@@ -590,41 +637,62 @@
 
 			{#each Object.keys(harnessForm).sort() as name (name)}
 				<div class="mt-4 rounded border border-line p-3" data-testid="harness-{name}">
-					<h3 class="mb-2 font-mono text-xs">
-						harness {name}{h.agent.harnesses[name]?.set ? '' : ' (defaults)'}
-					</h3>
-					<label class="block">
-						<span class="mb-1 block text-xs text-muted">program</span>
-						<input
-							class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-							bind:value={harnessForm[name].program}
-							data-testid="harness-program"
-						/>
-					</label>
+					<h3 class="mb-2 font-mono text-xs">harness {name}{harnessNote(name)}</h3>
+					{#if name !== 'command'}
+						<label class="block">
+							<span class="mb-1 block text-xs text-muted">program</span>
+							<input
+								class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+								bind:value={harnessForm[name].program}
+								data-testid="harness-program"
+							/>
+						</label>
+						<label class="mt-2 block">
+							<span class="mb-1 block text-xs text-muted"
+								>arguments: what its agent may do, one a line</span
+							>
+							<textarea
+								class="h-20 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+								bind:value={harnessForm[name].args}
+								data-testid="harness-args"></textarea>
+						</label>
+					{/if}
 					<label class="mt-2 block">
-						<span class="mb-1 block text-xs text-muted"
-							>arguments: what its agent may do, one a line</span
+						<span class="mb-1 block text-xs text-muted">guard</span>
+						<select
+							class="rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+							bind:value={harnessForm[name].guard}
+							data-testid="harness-guard"
 						>
-						<textarea
-							class="h-20 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-							bind:value={harnessForm[name].args}
-							data-testid="harness-args"></textarea>
+							<option value="">flai guard (default)</option>
+							<option value="none">none</option>
+						</select>
 					</label>
+					<p class="mt-1 text-xs text-muted" data-testid="harness-guard-gives-up">
+						{guardGivesUp(name)}
+					</p>
+					<label class="mt-2 flex items-start gap-2">
+						<input
+							type="checkbox"
+							class="mt-1"
+							bind:checked={harnessForm[name].deny_protected}
+							data-testid="harness-deny-protected"
+						/>
+						<span class="font-mono text-xs">deny_protected</span>
+					</label>
+					<p class="mt-1 text-xs text-muted" data-testid="harness-deny-gives-up">
+						{denyGivesUp(name)}
+					</p>
 					<div class="mt-2 flex gap-2">
 						<button
 							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
 							disabled={!can('harness').ok || busy !== null}
 							data-testid="save-harness"
-							onclick={() =>
-								change('harness-' + name, 'harness', {
-									name,
-									program: harnessForm[name].program.trim(),
-									args: argv(harnessForm[name].args)
-								})}>Save</button
+							onclick={() => saveHarness(name)}>Save</button
 						>
 						<button
 							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-							disabled={!can('harness').ok || busy !== null || !h.agent.harnesses[name]?.set}
+							disabled={!can('harness').ok || busy !== null || !harnessSet(name)}
 							data-testid="reset-harness"
 							onclick={() => change('harness-' + name, 'harness', { name, reset: true })}
 							>Back to the defaults</button

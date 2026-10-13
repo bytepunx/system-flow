@@ -1006,6 +1006,33 @@ func hostProviders(set map[string]manifest.Provider, lookup func(string) (string
 	return out
 }
 
+// hostHarnesses are the host's harnesses for the settings page: each one's
+// program and arguments, with set saying whether the host gives either rather
+// than the adapter's defaults; its guard and deny_protected (ADR-0131); and
+// whether its adapter runs flai guard and can ask before a protected write,
+// where neither lifts anything. The command's program and arguments are flai
+// serve agent set's command, never set here.
+func (a *app) hostHarnesses(cfg config.Config) map[string]any {
+	out := map[string]any{}
+	for _, n := range append(settable(), harness.Command) {
+		var h harness.Host
+		if n != harness.Command {
+			h = a.harnessHost(cfg, n)
+		} else if len(cfg.Agent.Command) > 0 {
+			h = harness.Host{Program: cfg.Agent.Command[0], Args: cfg.Agent.Command[1:]}
+		}
+		args := h.Args
+		if args == nil {
+			args = []string{}
+		}
+		set := cfg.Agent.Harnesses[n]
+		caps := harness.Adapters[n].Capabilities()
+		out[n] = map[string]any{"program": h.Program, "args": args, "set": set.Program != "" || set.Args != nil,
+			"guard": set.Guard, "deny_protected": set.DenyProtected, "guard_capable": caps.Guard, "ask_capable": caps.Ask}
+	}
+	return out
+}
+
 // hostSettings is the host's configuration as it applies to the project at
 // root, for the dashboard's settings page (S-0105). The tokens are not in
 // it: a rotation answers with the new one, once.
@@ -1026,17 +1053,12 @@ func (a *app) hostSettings(root string) any {
 		actions = append(actions, map[string]any{"name": n, "means": hostapi.Actions[n],
 			"here": cfg.ActionEnabled(n, root), "everywhere": cfg.ActionEnabled(n, config.AllProjects)})
 	}
-	harnesses := map[string]any{}
-	for _, n := range settable() {
-		h := a.harnessHost(cfg, n)
-		_, set := cfg.Agent.Harnesses[n]
-		harnesses[n] = map[string]any{"program": h.Program, "args": h.Args, "set": set}
-	}
 	providers := hostProviders(cfg.Agent.Providers, os.LookupEnv)
 	command := cfg.Agent.Command
 	if command == nil {
 		command = []string{}
 	}
+	harnesses := a.hostHarnesses(cfg)
 	checks := cfg.Checks.Commands
 	if checks == nil {
 		checks = []config.NamedCommand{}

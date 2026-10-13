@@ -152,7 +152,9 @@ describe('SettingsPanel (S-0105)', () => {
 			kind: 'harness',
 			name: 'claude-code',
 			program: 'claude',
-			args: ['--permission-mode', 'bypassPermissions']
+			args: ['--permission-mode', 'bypassPermissions'],
+			guard: '',
+			deny_protected: false
 		});
 
 		q<HTMLInputElement>('new-check-name')!.value = 'unit';
@@ -178,6 +180,106 @@ describe('SettingsPanel (S-0105)', () => {
 		q<HTMLButtonElement>('rotate-dashboard')!.click();
 		await settle();
 		expect(q('once-dashboard')!.textContent).toContain('http://x/login#token=abc');
+	});
+
+	describe('a harness’s guard and deny_protected (S-0355, ADR-0131)', () => {
+		const lifted = (): SettingsView => {
+			const v = view(true, true);
+			const harnesses = {
+				'claude-code': {
+					program: 'claude',
+					args: ['--permission-mode', 'acceptEdits'],
+					set: false,
+					guard: '',
+					deny_protected: false,
+					guard_capable: true,
+					ask_capable: true
+				},
+				command: {
+					program: 'run-agent',
+					args: ['{story}'],
+					set: false,
+					guard: 'none',
+					deny_protected: true,
+					guard_capable: false,
+					ask_capable: false
+				}
+			};
+			v.host!.agent.harnesses = harnesses;
+			return v;
+		};
+		const within = <T extends HTMLElement>(box: string, id: string) =>
+			q(box)!.querySelector<T>(`[data-testid="${id}"]`)!;
+
+		it('shows each harness’s guard and deny_protected, with what each gives up', async () => {
+			backend(lifted());
+			await show();
+			expect(within<HTMLSelectElement>('harness-claude-code', 'harness-guard').value).toBe('');
+			const ccDeny = within<HTMLInputElement>('harness-claude-code', 'harness-deny-protected');
+			expect(ccDeny.checked).toBe(false);
+			expect(within('harness-claude-code', 'harness-guard-gives-up').textContent).toContain(
+				'claude-code runs flai guard, so this changes nothing here'
+			);
+			expect(within('harness-claude-code', 'harness-deny-gives-up').textContent).toContain(
+				'claude-code asks before a protected write'
+			);
+			expect(q('harness-claude-code')!.textContent).toContain('(defaults)');
+			const ccReset = within<HTMLButtonElement>('harness-claude-code', 'reset-harness');
+			expect(ccReset.disabled).toBe(true);
+
+			expect(q('harness-command')!.textContent).toContain('harness command: the command above');
+			expect(q('harness-command')!.querySelector('[data-testid="harness-program"]')).toBeNull();
+			expect(q('harness-command')!.querySelector('[data-testid="harness-args"]')).toBeNull();
+			expect(within<HTMLSelectElement>('harness-command', 'harness-guard').value).toBe('none');
+			const cmdDeny = within<HTMLInputElement>('harness-command', 'harness-deny-protected');
+			expect(cmdDeny.checked).toBe(true);
+			const means = within('harness-command', 'harness-guard-gives-up').textContent!;
+			expect(means).toContain(
+				"a story's sub-agents run without flai guard, so one could move items, write threads, or commit"
+			);
+			expect(means).not.toContain('changes nothing here');
+			expect(within('harness-command', 'harness-deny-gives-up').textContent).toContain(
+				'you say its arguments deny the protected paths; flai cannot check them'
+			);
+			expect(within<HTMLButtonElement>('harness-command', 'reset-harness').disabled).toBe(false);
+		});
+
+		it('saves the command’s guard and deny_protected alone, and a harness’s beside its program', async () => {
+			const sent = backend(lifted());
+			await show();
+			const guard = within<HTMLSelectElement>('harness-command', 'harness-guard');
+			guard.value = '';
+			guard.dispatchEvent(new Event('change', { bubbles: true }));
+			const deny = within<HTMLInputElement>('harness-command', 'harness-deny-protected');
+			deny.checked = false;
+			deny.dispatchEvent(new Event('change', { bubbles: true }));
+			within<HTMLButtonElement>('harness-command', 'save-harness').click();
+			await settle();
+			expect(sent[0]).toEqual({
+				kind: 'harness',
+				name: 'command',
+				guard: '',
+				deny_protected: false
+			});
+
+			const cc = within<HTMLSelectElement>('harness-claude-code', 'harness-guard');
+			cc.value = 'none';
+			cc.dispatchEvent(new Event('change', { bubbles: true }));
+			within<HTMLButtonElement>('harness-claude-code', 'save-harness').click();
+			await settle();
+			expect(sent[1]).toEqual({
+				kind: 'harness',
+				name: 'claude-code',
+				program: 'claude',
+				args: ['--permission-mode', 'acceptEdits'],
+				guard: 'none',
+				deny_protected: false
+			});
+
+			within<HTMLButtonElement>('harness-command', 'reset-harness').click();
+			await settle();
+			expect(sent[2]).toEqual({ kind: 'harness', name: 'command', reset: true });
+		});
 	});
 
 	describe('projects (S-0122)', () => {

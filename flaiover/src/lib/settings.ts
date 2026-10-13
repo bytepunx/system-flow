@@ -36,7 +36,20 @@ export const HOSTWIDE: readonly SettingsKind[] = [
 ];
 
 export type HostAction = { name: string; means: string; here: boolean; everywhere: boolean };
-export type Harness = { program: string; args: string[]; set: boolean };
+/**
+ * A harness on the host: its program and arguments, what the operator lifts on it (S-0355,
+ * ADR-0131), and whether its adapter runs flai guard and asks before a protected write, where
+ * neither lift changes anything. The last four are absent from a flai before S-0355.
+ */
+export type Harness = {
+	program: string;
+	args: string[];
+	set: boolean;
+	guard?: string;
+	deny_protected?: boolean;
+	guard_capable?: boolean;
+	ask_capable?: boolean;
+};
 export type NamedCommand = { name: string; command: string[] };
 
 /**
