@@ -810,6 +810,41 @@ describe('the item page (S-0154)', () => {
 		});
 	});
 
+	// S-0388: an open story whose branch undoes main's change says so beside HELD, with the paths'
+	// count, and leads to its review page, where each is kept or restored (ADR-0155).
+	describe('a story whose branch undoes main (S-0388)', () => {
+		const show = async (undoes_main?: string[]) => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154')
+					return answer({ item: story, children: [], ...(undoes_main ? { undoes_main } : {}) });
+				if (url === '/api/board') return answer({ writable: false });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+		};
+		const badge = () => document.querySelector<HTMLAnchorElement>('[data-testid="undoes-main"]');
+
+		it('says one path and links to the review page', async () => {
+			await show(['docs/a.md']);
+			expect(badge()!.textContent!.trim()).toBe('undoes main on 1 path');
+			expect(badge()!.getAttribute('href')).toBe('/review/S-0154');
+			expect(badge()!.closest('[data-testid="item-line"]')).not.toBeNull();
+		});
+
+		it('counts several paths', async () => {
+			await show(['docs/a.md', 'flai/cmd/accept.go', 'design/system/workflow.md']);
+			expect(badge()!.textContent!.trim()).toBe('undoes main on 3 paths');
+			expect(badge()!.getAttribute('href')).toBe('/review/S-0154');
+		});
+
+		it('is not shown when flai sends none', async () => {
+			await show();
+			expect(badge()).toBeNull();
+		});
+	});
+
 	// S-0336: a story's page lists its conversations with other stories' agents under its threads
 	describe("a story's conversations (S-0336)", () => {
 		const conversation = {

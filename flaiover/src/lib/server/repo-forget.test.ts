@@ -176,4 +176,16 @@ describe('itemById', () => {
 			'expected_cost'
 		);
 	});
+
+	// S-0388: the paths a story's branch undoes of main reach the item page; none adds no key.
+	it('passes on the paths the story undoes of main, and none when the list is empty', async () => {
+		const undoes = (undoes_main: unknown) =>
+			vi.fn(async () => ({ ...(answers['item.get'] as object), undoes_main })) as unknown as Ask;
+		const got = await new Repo('/nowhere', undoes(['a.md', 'b.md'])).itemById('S-0001');
+		expect(got.undoes_main).toEqual(['a.md', 'b.md']);
+		for (const none of [[], null, undefined])
+			expect(await new Repo('/nowhere', undoes(none)).itemById('S-0001')).not.toHaveProperty(
+				'undoes_main'
+			);
+	});
 });

@@ -74,6 +74,8 @@
 	let plan = $state<Plan | undefined>();
 	// What the item is expected to cost from its forecast or estimate (ADR-0083), when flai sends it.
 	let expectedCost = $state<ExpectedCost | undefined>();
+	// The paths an open story's branch undoes of main's change (ADR-0155), when flai sends any.
+	let undoesMain = $state<string[]>([]);
 	let html = $state('');
 	let error = $state<string | null>(null);
 	let notice = $state<string | null>(null);
@@ -118,6 +120,9 @@
 		return { by: t.by, on: localDate(t.at), evidence };
 	});
 	const expected = $derived(expectedCostLine(expectedCost));
+	const undoes = $derived(
+		`undoes main on ${undoesMain.length} ${undoesMain.length === 1 ? 'path' : 'paths'}`
+	);
 	// What strategic agents such as the planner spent on the item, apart from its agents (ADR-0083).
 	const strategic = $derived(strategicLines(item?.usage));
 	// The form for another item of this one's type (S-0171): the dashboard makes epics and stories,
@@ -201,6 +206,7 @@
 		children = data.children;
 		plan = data.plan;
 		expectedCost = data.expected_cost;
+		undoesMain = data.undoes_main ?? [];
 		if (writableFor !== item!.id) {
 			writable = (await (await api('/api/board')).json()).writable;
 			writableFor = item!.id;
@@ -389,6 +395,12 @@
 						class="ml-1 font-semibold text-warn"
 						title={hold.reason}
 						data-testid="held">HELD</span
+					>{/if}
+				{#if undoesMain.length}<a
+						class="ml-1 font-semibold text-warn underline"
+						href={resolve('/review/[id]', { id: item.id })}
+						title={undoesMain.join('\n')}
+						data-testid="undoes-main">{undoes}</a
 					>{/if}
 				{#if item.archived}· archived{/if}
 				{#if item.parent}· parent <a

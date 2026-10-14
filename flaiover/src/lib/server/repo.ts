@@ -367,16 +367,22 @@ export class Repo extends EventEmitter {
 
 	/**
 	 * Find an item by ID in any padding (S-32, S-032, S-0032 name the same item), with its children,
-	 * and for a story with tasks its task plan (S-0176).
+	 * for a story with tasks its task plan (S-0176), and for an open story the paths its branch
+	 * undoes of main's change (S-0388).
 	 */
-	async itemById(
-		id: string
-	): Promise<{ item: Item; children: Item[]; plan?: TaskPlan; expected_cost?: ExpectedCost }> {
+	async itemById(id: string): Promise<{
+		item: Item;
+		children: Item[];
+		plan?: TaskPlan;
+		expected_cost?: ExpectedCost;
+		undoes_main?: string[];
+	}> {
 		const got = await this.remember<{
 			item: FlaiItem;
 			children: FlaiItem[] | null;
 			plan?: FlaiPlan;
 			expected_cost?: ExpectedCost;
+			undoes_main?: string[] | null;
 		}>(`item:${id.trim()}`, 'item.get', { id: id.trim() });
 		const plan = planFrom(got.plan);
 		return {
@@ -384,7 +390,9 @@ export class Repo extends EventEmitter {
 			children: (got.children ?? []).map(fromFlai),
 			...(plan ? { plan } : {}),
 			// what the item is expected to cost, priced by flai (ADR-0083)
-			...(got.expected_cost ? { expected_cost: got.expected_cost } : {})
+			...(got.expected_cost ? { expected_cost: got.expected_cost } : {}),
+			// the paths the open story's branch undoes of main's change, from flai's record (ADR-0155)
+			...(got.undoes_main?.length ? { undoes_main: got.undoes_main } : {})
 		};
 	}
 
