@@ -365,7 +365,7 @@ func TestSyncMergesTheFilesItMergesAndRegeneratesFromThem(t *testing.T) {
 			return err
 		}
 		return os.WriteFile(filepath.Join(wt, "docs", "gen.md"), []byte("from "+string(m)), 0o644)
-	}}
+	}, From: func(p string) bool { return p == "docs/m.md" }}
 	o := syncOptions(repo, story, gen)
 	o.Files.Merged = mergedFiles(t, wt)
 
@@ -389,6 +389,32 @@ func TestSyncMergesTheFilesItMergesAndRegeneratesFromThem(t *testing.T) {
 	data, _ := json.Marshal(res)
 	if !strings.Contains(string(data), `"merged":["docs/m.md"]`) || !strings.Contains(string(data), `"folded":[]`) {
 		t.Errorf("json: %s", data)
+	}
+}
+
+// S-0306: a generated file is written again only from the merged files it
+// is written from, so a merge of another file leaves it as the branch has it.
+func TestSyncRegeneratesNoFileTheMergedFilesDoNotFeed(t *testing.T) {
+	repo := syncProject(t)
+	commitFiles(t, repo.MainRoot, "docs: base", "docs/m.md")
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	commitFiles(t, wt, "feat: [S-0001] ours", "docs/m.md")
+	commitFiles(t, repo.MainRoot, "docs: main's", "docs/m.md")
+	gen := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
+		return os.WriteFile(filepath.Join(wt, "docs", "gen.md"), []byte("regenerated\n"), 0o644)
+	}, From: func(p string) bool { return p == "docs/other.md" }}
+	o := syncOptions(repo, story, gen)
+	o.Files.Merged = mergedFiles(t, wt)
+
+	res, err := Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || strings.Join(res.Merged, ",") != "docs/m.md" || len(res.Regenerated) != 0 {
+		t.Fatalf("result: %+v", res)
+	}
+	if _, err := os.Stat(filepath.Join(wt, "docs", "gen.md")); !os.IsNotExist(err) {
+		t.Errorf("docs/gen.md was written: %v", err)
 	}
 }
 

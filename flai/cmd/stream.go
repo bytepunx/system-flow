@@ -191,14 +191,17 @@ the sync). It exits non-zero; with --json it prints uncommitted, conflicts,
 rebase_in_progress, continue, and abort, with ok false.
 
 A stop whose only conflicting paths are generated files, which today is
-design/issues/summary.md alone, and issue files under design/issues does not
-wait for you (ADR-0098, ADR-0126). Sync merges each issue file from the stop's
-three versions by its instances, keeping the instances both sides added and
-adding up the count, then writes summary.md again from the issue files in the
-worktree at that stop, git adds them, and continues the rebase, until the
-rebase finishes or stops on another path. An issue file both sides changed
-some other way, its title or description, say, is not merged: the stop is
-left for you. A stop where other paths conflict too is left for you, and
+design/issues/summary.md alone, issue files under design/issues, and the ADR
+index, design/adrs/README.md, does not wait for you (ADR-0098, ADR-0126,
+ADR-0157). Sync merges each issue file from the stop's three versions by its
+instances, keeping the instances both sides added and adding up the count,
+and the ADR index row by row, keeping the rows both sides added in ADR number
+order, then writes summary.md again from the issue files in the worktree at
+that stop, git adds them, and continues the rebase, until the rebase finishes
+or stops on another path. An issue file both sides changed some other way,
+its title or description, say, or an index row both sides changed
+differently, is not merged: the stop is left for you. A stop where other
+paths conflict too is left for you, and
 lists them all, summary.md included; once the others are resolved, flai issue
 summary run in the worktree writes it. flai accept syncs the same way. A
 rebase already in progress is never continued for you.
@@ -208,8 +211,8 @@ issue on the main branch has too is folded into that issue: its instances,
 count, and cost move into it, the branch's file is deleted, summary.md is
 written again, and the fold is committed on the branch as
 "docs: [S-nnnn] fold I-x into I-y". flai accept folds the same way. The report
-names each issue file merged and each issue folded; with --json, merged lists
-the files and folded each fold's from and into.
+names each file merged, issue file or ADR index, and each issue folded; with
+--json, merged lists the files and folded each fold's from and into.
 
 Then it runs the fix command of each test tier in system-flow.yaml (fix_command)
 over the files the branch changes against the main branch, deleted ones left
@@ -225,9 +228,10 @@ newer), writing nothing to any worktree, and lists each branch it conflicts
 with and the conflicting paths. A pair's conflicts are the paths both branches
 changed since they left the main branch, not what the main branch brought
 since: a path where main has since changed what a branch behind it did is
-that story's own rebase to settle (I-0064). Generated files and issue files are
-left out, so a pair whose only conflicts are summary.md and issue files counts
-as clean. A conflict is told to both
+that story's own rebase to settle (I-0064). Generated files, issue files, and
+the ADR index are left out, so a pair whose only conflicts are summary.md,
+issue files, and design/adrs/README.md counts as clean (ADR-0157). A conflict
+is told to both
 stories in their conversation, not a thread (ADR-0121): flai messages the other
 story from the one that synced, about the conflicting paths, and sync names
 the pair's conversation. A later sync with the same paths adds nothing, and one

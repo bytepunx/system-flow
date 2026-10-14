@@ -98,6 +98,10 @@ type GeneratedFile struct {
 	// Regenerate writes the file again in the story's worktree as it is at
 	// the stop.
 	Regenerate func() error
+	// From says whether a merged file, as git names it, is one the file is
+	// written from, so that a stop that merges it writes the file again; nil
+	// is none.
+	From func(path string) bool
 }
 
 // MergedFiles is the committed files flai merges itself from a stopped
@@ -492,9 +496,8 @@ func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (conflic
 
 // resolvable returns, when every one of conflicts is a generated file or one
 // flai merges, those it merges and the generated files to write again: the
-// conflicting ones, or every one when it merges any, since they are written
-// from the merged files. It reports false otherwise, and for a stop with no
-// conflicts.
+// conflicting ones, and each written from a file it merges. It reports false
+// otherwise, and for a stop with no conflicts.
 func resolvable(conflicts []string, files Files) (merge []string, regen []GeneratedFile, ok bool) {
 	for _, c := range conflicts {
 		if !files.resolves(c) {
@@ -505,7 +508,7 @@ func resolvable(conflicts []string, files Files) (merge []string, regen []Genera
 		}
 	}
 	for _, f := range files.Generated {
-		if len(merge) > 0 || slices.Contains(conflicts, f.Path) {
+		if slices.Contains(conflicts, f.Path) || (f.From != nil && slices.ContainsFunc(merge, f.From)) {
 			regen = append(regen, f)
 		}
 	}

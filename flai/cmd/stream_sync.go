@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"path"
 	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -22,8 +23,18 @@ func syncStoppedFrom(res storygit.SyncResult) *syncStopped {
 	}
 }
 
-// printSyncChecks says, one line each, the issue files the rebase merged and
-// the issues it folded (ADR-0126), the files whose lint it fixed (S-0367),
+// mergedWhat is what a merge of p kept from both sides: the ADR index's rows
+// (ADR-0157), an issue file's instances (ADR-0126).
+func mergedWhat(p string) string {
+	if path.Base(p) == "README.md" && path.Base(path.Dir(p)) == "adrs" {
+		return "rows"
+	}
+	return "instances"
+}
+
+// printSyncChecks says, one line each, the files the rebase merged, issue
+// files by their instances and the ADR index by its rows (ADR-0157), and the
+// issues it folded (ADR-0126), the files whose lint it fixed (S-0367),
 // how story's branch merges with the other open branches, with the
 // conversation that tells a conflicting pair and the old conflict thread a
 // clean pair resolved, each path where the branch undoes the main branch's
@@ -31,7 +42,7 @@ func syncStoppedFrom(res storygit.SyncResult) *syncStopped {
 func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult) {
 	mine := storyBranch(story.ID)
 	for _, p := range res.Merged {
-		fmt.Fprintf(w, "merged %s: kept both sides' instances\n", p)
+		fmt.Fprintf(w, "merged %s: kept both sides' %s\n", p, mergedWhat(p))
 	}
 	for _, f := range res.Folded {
 		fmt.Fprintf(w, "folded %s into %s\n", f.From, f.Into)

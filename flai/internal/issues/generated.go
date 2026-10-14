@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/adrindex"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -25,20 +26,28 @@ func Generated(r *workitem.Repo, story string, now func() time.Time) []storygit.
 			_, err := WriteSummary(wt, now())
 			return err
 		},
+		From: func(p string) bool { return isIssuePath(r, p) },
 	}}
 }
 
 // SyncFiles is what a rebase of story's branch resolves itself in its
 // worktree, run reading git there: the generated files, the issue files it
-// merges by their instances, and the fold of the issues the branch added
-// into the base branch's open issues of the same title (ADR-0098, ADR-0126).
+// merges by their instances, the ADR index it merges row by row, and the
+// fold of the issues the branch added into the base branch's open issues of
+// the same title (ADR-0098, ADR-0126, ADR-0157).
 func SyncFiles(r *workitem.Repo, story string, run execx.Runner, now func() time.Time) storygit.Files {
 	wt := RepoFor(r, story)
+	index := adrindex.Path(r)
 	return storygit.Files{
 		Generated: Generated(r, story, now),
 		Merged: storygit.MergedFiles{
-			Match: func(p string) bool { return isIssuePath(r, p) },
-			Merge: func(p string) error { return mergeStopped(run, wt, p) },
+			Match: func(p string) bool { return p == index || isIssuePath(r, p) },
+			Merge: func(p string) error {
+				if p == index {
+					return mergeStopped(run, wt, p, adrindex.Merge)
+				}
+				return mergeStopped(run, wt, p, Merge)
+			},
 		},
 		Fold: func(base string) ([]storygit.Folded, []string, error) { return foldOnto(run, wt, base, now()) },
 	}
@@ -55,15 +64,14 @@ func isIssuePath(r *workitem.Repo, p string) bool {
 // names it: the folder summary.md is in.
 func issuesFolder(r *workitem.Repo) string { return path.Dir(SummaryPath(r)) }
 
-// mergeStopped writes the issue file p, as git names it, merged by its
-// instances in wt, the worktree whose rebase stopped on it, from the stop's
-// three versions.
-func mergeStopped(run execx.Runner, wt *workitem.Repo, p string) error {
+// mergeStopped writes the file p, as git names it, merged with merge in wt,
+// the worktree whose rebase stopped on it, from the stop's three versions.
+func mergeStopped(run execx.Runner, wt *workitem.Repo, p string, merge func(base, ours, theirs string) (string, error)) error {
 	base, ours, theirs, err := storygit.Stages(run, wt.Root, p)
 	if err != nil {
 		return err
 	}
-	merged, err := Merge(base, ours, theirs)
+	merged, err := merge(base, ours, theirs)
 	if err != nil {
 		return fmt.Errorf("merge %s: %w", p, err)
 	}
