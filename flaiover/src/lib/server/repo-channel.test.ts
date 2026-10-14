@@ -183,7 +183,8 @@ describe('Repo over the channel', () => {
 							draft: true,
 							age_in_column: '1h',
 							age_in_column_seconds: 3600,
-							tasks: { ready: 1, waiting: 2, in_progress: 1, done: 3, layers: 3 }
+							tasks: { ready: 1, waiting: 2, in_progress: 1, done: 3, layers: 3 },
+							undoes_main: ['quay.md']
 						},
 						{
 							id: 'S-0001',
@@ -191,6 +192,7 @@ describe('Repo over the channel', () => {
 							title: 'Berths',
 							nature: 'feature',
 							status: 'ready',
+							undoes_main: null,
 							entered_at: '2026-09-20T07:00:00Z',
 							blocked: true,
 							age_in_column: '2h',
@@ -260,6 +262,9 @@ describe('Repo over the channel', () => {
 		// a draft story says so (S-0201); flai omits the flag otherwise, and so does the card
 		expect(b.columns.ready[0].draft).toBe(true);
 		expect(b.columns.ready[1]).not.toHaveProperty('draft');
+		// the paths a story's branch undoes of main (S-0388); none adds no key
+		expect(b.columns.ready[0].undoes_main).toEqual(['quay.md']);
+		expect(b.columns.ready[1]).not.toHaveProperty('undoes_main');
 		// an archived done card says so, or the done lane cannot leave it out while the clone lags its
 		// remote's tags (I-0060); flai omits the flag otherwise, and so does the card
 		expect(b.columns.done[0].archived).toBe(true);

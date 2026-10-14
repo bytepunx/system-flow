@@ -9,7 +9,10 @@
 	// whose holding stories' agents were asked about the hold names each of them, and a story
 	// started on a share names the shared paths and the holder, each with a link to its conversation
 	// on the messages page (S-0338). Those lines sit in a row under the card's link, drawn as part of
-	// the card, since a link cannot hold another.
+	// the card, since a link cannot hold another. A story whose branch undoes main's change on some
+	// paths says so after DRAFT (S-0388), and a click on it opens the story's review page, where they
+	// are listed; it is not a link, since the card is one, so it navigates itself.
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
 	import { stripeFor, tintFor } from '$lib/cardcolour';
@@ -39,6 +42,7 @@
 		age_seconds: number;
 		tasks?: TaskSummary;
 		shared?: Share[];
+		undoes_main?: string[];
 	};
 
 	let {
@@ -72,6 +76,16 @@
 	const asked = $derived(activity?.hold?.asked ?? []);
 	const shared = $derived(card.type === 'story' ? (card.shared ?? []) : []);
 	const talks = $derived(asked.length > 0 || shared.length > 0);
+	const undoes = $derived(card.type === 'story' ? (card.undoes_main ?? []) : []);
+	const undoesLine = $derived(
+		`undoes main on ${undoes.length} ${undoes.length === 1 ? 'path' : 'paths'}`
+	);
+	// The badge's own navigation, in place of the card's: the review page lists the paths.
+	function toReview(e: Event) {
+		e.preventDefault();
+		e.stopPropagation();
+		void goto(resolve('/review/[id]', { id: card.id }));
+	}
 	// Messages.svelte gives each conversation its ID as an anchor.
 	const conversation = (id: string) => `${resolve('/messages')}#${id}`;
 </script>
@@ -115,6 +129,15 @@
 		{#if card.type === 'story' && card.draft}<span
 				class="font-semibold text-warn"
 				data-testid="draft">DRAFT</span
+			>{/if}
+		{#if undoes.length > 0}<span
+				class="cursor-pointer font-semibold text-warn hover:underline"
+				data-testid="undoes-main"
+				role="link"
+				tabindex="0"
+				title={undoes.join(', ')}
+				onclick={toReview}
+				onkeydown={(e) => e.key === 'Enter' && toReview(e)}>{undoesLine}</span
 			>{/if}
 		{#if activity?.hold}<span class="font-semibold text-warn" data-testid="held"
 				>{holdLine(activity.hold)}</span

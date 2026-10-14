@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
 import BoardCard from './BoardCard.svelte';
 
+const goto = vi.fn();
 vi.mock('$app/paths', () => ({
 	resolve: (route: string, params: Record<string, string>) =>
 		route.replace('[id]', params?.id ?? '')
 }));
+vi.mock('$app/navigation', () => ({ goto: (...args: unknown[]) => goto(...args) }));
 
 const base = {
 	id: 'S-0048',
@@ -34,6 +36,7 @@ describe('BoardCard', () => {
 		if (component) unmount(component);
 		component = undefined;
 		document.body.innerHTML = '';
+		goto.mockReset();
 	});
 
 	it('shows a story’s parent epic at the end of the bottom row, named by its title', () => {
@@ -413,6 +416,66 @@ describe('BoardCard', () => {
 		unmount(component);
 		component = render({ ...base, id: 'T-0755', type: 'task', draft: true });
 		expect(draft()).toBeNull();
+	});
+
+	// S-0388: a story whose branch undoes main's change says on how many paths, after DRAFT, in the
+	// warning colour
+	it('says a story undoes main on one path, after DRAFT, naming it in the title', () => {
+		const badge = () => document.querySelector<HTMLElement>('[data-testid="undoes-main"]');
+		component = render({
+			...base,
+			draft: true,
+			parent: 'E-0016',
+			undoes_main: ['flai/internal/stream/restore.go']
+		});
+		expect(badge()!.textContent).toBe('undoes main on 1 path');
+		expect(badge()!.getAttribute('title')).toBe('flai/internal/stream/restore.go');
+		expect(badge()!.className).toContain('text-warn');
+		expect(badge()!.className).not.toMatch(sizeClass);
+		expect([...details()!.children].map((c) => c.textContent)).toEqual([
+			'improvement',
+			'DRAFT',
+			'undoes main on 1 path',
+			'E-0016'
+		]);
+	});
+
+	it('counts the paths a story undoes of main', () => {
+		component = render({ ...base, undoes_main: ['a.go', 'b.go', 'c.go'] });
+		const badge = document.querySelector<HTMLElement>('[data-testid="undoes-main"]')!;
+		expect(badge.textContent).toBe('undoes main on 3 paths');
+		expect(badge.getAttribute('title')).toBe('a.go, b.go, c.go');
+	});
+
+	it('opens the story’s review page from the badge, in place of the card’s link, and nests no link', () => {
+		const onkeydown = vi.fn();
+		component = render({ ...base, undoes_main: ['a.go'] }, { onkeydown });
+		const badge = document.querySelector<HTMLElement>('[data-testid="undoes-main"]')!;
+		expect(badge.getAttribute('role')).toBe('link');
+		expect(badge.getAttribute('tabindex')).toBe('0');
+		expect(document.querySelectorAll('a')).toHaveLength(1);
+		expect(document.querySelector('a')!.getAttribute('href')).toBe('/items/S-0048');
+		const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+		badge.dispatchEvent(click);
+		expect(goto).toHaveBeenCalledExactlyOnceWith('/review/S-0048');
+		// the card's own navigation to the item does not happen
+		expect(click.defaultPrevented).toBe(true);
+		goto.mockReset();
+		badge.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+		expect(goto).toHaveBeenCalledExactlyOnceWith('/review/S-0048');
+		expect(onkeydown).not.toHaveBeenCalled();
+	});
+
+	it('shows no undoes-main badge on a card without one', () => {
+		const badge = () => document.querySelector('[data-testid="undoes-main"]');
+		component = render(base);
+		expect(badge()).toBeNull();
+		unmount(component);
+		component = render({ ...base, undoes_main: [] });
+		expect(badge()).toBeNull();
+		unmount(component);
+		component = render({ ...base, id: 'T-0160', type: 'task', undoes_main: ['a.go'] });
+		expect(badge()).toBeNull();
 	});
 
 	// S-0177: a story in progress that this host has had no agent for says who began it, and where

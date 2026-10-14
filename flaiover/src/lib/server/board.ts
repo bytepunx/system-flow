@@ -25,6 +25,8 @@ export type Card = {
 	tasks?: TaskSummary;
 	/** The shares in force on a story started on or freed by them (S-0338); absent when none. */
 	shared?: Share[];
+	/** The paths an open story's branch undoes of main's change (ADR-0155, S-0388); absent when none. */
+	undoes_main?: string[];
 };
 
 export type Board = {
@@ -35,10 +37,11 @@ export type Board = {
 };
 
 /** A card as flai's board.get gives it (internal/workitem BoardCard). */
-type FlaiCard = Omit<Card, 'age_seconds' | 'tasks' | 'shared'> & {
+type FlaiCard = Omit<Card, 'age_seconds' | 'tasks' | 'shared' | 'undoes_main'> & {
 	age_in_column_seconds: number;
 	tasks?: TaskSummary | null;
 	shared?: Share[] | null;
+	undoes_main?: string[] | null;
 };
 type FlaiBoard = {
 	columns: Record<string, FlaiCard[] | null>;
@@ -71,7 +74,8 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 			entered_at: c.entered_at,
 			age_seconds: Math.max(0, Math.round((now.getTime() - Date.parse(c.entered_at)) / 1000)),
 			...(c.tasks ? { tasks: c.tasks } : {}),
-			...(c.shared?.length ? { shared: c.shared } : {})
+			...(c.shared?.length ? { shared: c.shared } : {}),
+			...(c.undoes_main?.length ? { undoes_main: c.undoes_main } : {})
 		}));
 	}
 	return {
