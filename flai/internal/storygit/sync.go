@@ -247,6 +247,9 @@ type SyncResult struct {
 	TrialMergeSkipped string `json:"trial_merge_skipped,omitempty"`
 	// Outside is the paths the branch changed outside the story's claim.
 	Outside []string `json:"outside_touches"`
+	// UndoesMain is the paths where this rebase left the branch removing
+	// lines the main branch added since the branch's old base (ADR-0155).
+	UndoesMain []Undone `json:"undoes_main"`
 }
 
 // RebaseInProgress reports whether the result leaves a rebase waiting in the
@@ -300,8 +303,10 @@ func Sync(o SyncOptions) (SyncResult, error) {
 }
 
 // Rebase is Sync's rebase, fold, and lint fix without the checks after them,
-// as flai accept runs it before merging the branch. It writes no line of the
-// conflict log, which its caller writes with where the stop was met.
+// as flai accept runs it before merging the branch. After a clean rebase it
+// finds the paths where the branch now undoes the main branch's change and
+// records them for the story (ADR-0155). It writes no line of the conflict
+// log, which its caller writes with where the stop was met.
 func Rebase(o SyncOptions) (SyncResult, error) {
 	if o.Log == nil {
 		o.Log = slog.New(slog.DiscardHandler)
@@ -309,7 +314,7 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 	repo, id := o.Repo, o.Story.ID
 	path := repo.WorktreePath(id)
 	res := SyncResult{Story: id, Branch: Branch(id), Worktree: relPath(repo.MainRoot, path),
-		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Merged: []string{}, Folded: []Folded{}, Fixed: []string{}, Branches: []BranchCheck{}, Outside: []string{}}
+		Uncommitted: []string{}, Conflicts: []string{}, Regenerated: []string{}, Merged: []string{}, Folded: []Folded{}, Fixed: []string{}, Branches: []BranchCheck{}, Outside: []string{}, UndoesMain: []Undone{}}
 	if _, err := os.Stat(path); err != nil {
 		return res, fmt.Errorf("%s has no worktree at %s; open one with flai stream open %s", id, res.Worktree, id)
 	}
@@ -330,6 +335,12 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		res.Continue = fmt.Sprintf("commit them on %s (or stash them), then run %s again", res.Branch, again(o))
 		return res, nil
 	}
+	// ADR-0155: where the branch left main, to find what the rebase undoes
+	oldBase, err := o.Runner.Run(path, "git", "merge-base", base, "HEAD")
+	if err != nil {
+		o.Log.Warn("the branch's base not read, so what the rebase undoes of the main branch is not checked", "component", "git", "story", id, "err", err)
+		oldBase = ""
+	}
 	if _, err := o.Runner.Run(path, "git", "rebase", base); err != nil {
 		if !RebaseInProgress(o.Runner, path) {
 			return res, err
@@ -343,6 +354,7 @@ func Rebase(o SyncOptions) (SyncResult, error) {
 		}
 	}
 	res.Synced = true
+	checkUndone(o, path, oldBase, &res)
 	if err := fold(o, path, &res); err != nil {
 		return res, err
 	}

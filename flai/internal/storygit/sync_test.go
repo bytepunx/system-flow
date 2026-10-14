@@ -725,3 +725,87 @@ func TestSyncResolvesAnOldConflictThreadAndOpensNone(t *testing.T) {
 		t.Errorf("the conversation is still open: %+v", c.Entries())
 	}
 }
+
+// I-0124, ADR-0155: a branch that changed a path and reverted it, synced
+// after main made the same change, loses its first commit, now empty, and
+// replays the revert cleanly over main's: the sync reports the path main's
+// lines are removed from and records it. A later sync, whose rebase starts
+// past main's change, finds nothing itself, and the record still holds the
+// path until the branch no longer removes main's lines.
+func TestSyncFindsAndRecordsARevertReplayedOverMainsChange(t *testing.T) {
+	repo := syncProject(t)
+	r := execx.System{}
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	oldBase, _ := r.Run(wt, "git", "rev-parse", "HEAD")
+	write(t, wt, "docs/guide.md", "line one\nline two\n")
+	git(t, wt, "commit", "-q", "-am", "feat: [S-0001] line two")
+	write(t, wt, "docs/guide.md", "line one\n")
+	git(t, wt, "commit", "-q", "-am", "revert: [S-0001] line two, as main of the time")
+	write(t, repo.MainRoot, "docs/guide.md", "line one\nline two\n")
+	git(t, repo.MainRoot, "commit", "-q", "-am", "feat: [S-0002] line two")
+
+	res, err := Sync(syncOptions(repo, story))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || res.Stopped != "" {
+		t.Fatalf("the rebase is not clean: %+v", res)
+	}
+	if got, _ := os.ReadFile(filepath.Join(wt, "docs", "guide.md")); string(got) != "line one\n" {
+		t.Fatalf("the revert was not replayed over main's change: %q", got)
+	}
+	want := []Undone{{Path: "docs/guide.md", Lines: []string{"line two"}, OldBase: oldBase}}
+	if !reflect.DeepEqual(res.UndoesMain, want) {
+		t.Fatalf("undoes main: %+v, want %+v", res.UndoesMain, want)
+	}
+	data, _ := json.Marshal(res)
+	if !strings.Contains(string(data), `"undoes_main":[{"path":"docs/guide.md","lines":["line two"],"old_base":"`+oldBase+`"}]`) {
+		t.Errorf("json: %s", data)
+	}
+	recorded := UndoneRecord{Story: "S-0001", Paths: []UndoneEntry{{Undone: want[0], FoundAt: syncClock}}}
+	if got := readRecord(t, repo, "S-0001"); !reflect.DeepEqual(got, recorded) {
+		t.Errorf("record: %+v, want %+v", got, recorded)
+	}
+
+	commitFiles(t, repo.MainRoot, "docs: main moves on", "design/note.md")
+	res, err = Sync(syncOptions(repo, story))
+	if err != nil || !res.Synced || len(res.UndoesMain) != 0 {
+		t.Fatalf("second sync: %+v %v", res, err)
+	}
+	if got, err := RecordedUndone(r, repo, "S-0001"); err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("recorded after the second sync: %+v %v, want %+v", got, err, want)
+	}
+
+	write(t, wt, "docs/guide.md", "line one\nline two\n")
+	git(t, wt, "commit", "-q", "-am", "fix: [S-0001] restore main's line two")
+	if got, err := RecordedUndone(r, repo, "S-0001"); err != nil || len(got) != 0 {
+		t.Errorf("recorded after the restore: %+v %v", got, err)
+	}
+}
+
+// A branch that removes nothing main added since it left main undoes
+// nothing, and has no record.
+func TestSyncFindsNothingUndoneOnABranchThatKeepsMainsChanges(t *testing.T) {
+	repo := syncProject(t)
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	write(t, wt, "docs/guide.md", "line one\nthe branch's line\n")
+	git(t, wt, "commit", "-q", "-am", "feat: [S-0001] the branch's line")
+	write(t, repo.MainRoot, "docs/main.md", "main's\n")
+	write(t, repo.MainRoot, "docs/guide.md", "main's line\nline one\n")
+	git(t, repo.MainRoot, "add", "-A")
+	git(t, repo.MainRoot, "commit", "-q", "-m", "docs: main's lines")
+
+	res, err := Sync(syncOptions(repo, story))
+	if err != nil || !res.Synced {
+		t.Fatalf("sync: %+v %v", res, err)
+	}
+	if res.UndoesMain == nil || len(res.UndoesMain) != 0 {
+		t.Errorf("undoes main: %+v", res.UndoesMain)
+	}
+	if data, _ := json.Marshal(res); !strings.Contains(string(data), `"undoes_main":[]`) {
+		t.Errorf("json: %s", data)
+	}
+	if _, err := os.Stat(UndoneRecordPath(repo.CacheDir(), "S-0001")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a record was written: %v", err)
+	}
+}
