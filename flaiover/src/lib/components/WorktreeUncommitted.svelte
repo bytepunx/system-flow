@@ -1,17 +1,24 @@
 <script lang="ts" module>
 	/**
 	 * The blockers other than flai's own for the worktree's uncommitted paths, which this box shows
-	 * with the way to have them committed (S-0140).
+	 * with the way to have them committed (S-0140), and for the paths the branch undoes of main's
+	 * change, which the review page shows as cards to restore or keep (S-0388).
 	 */
 	export function otherBlockers(preview: {
 		blockers?: string[];
 		worktree_uncommitted?: string[];
+		undoes_main?: { path: string }[];
 	}): string[] {
-		const all = preview.blockers ?? [];
-		if (!preview.worktree_uncommitted?.length) return all;
-		return all.filter(
-			(b) => !(b.startsWith('the worktree ') && b.includes('has uncommitted changes'))
-		);
+		const uncommitted = (b: string) =>
+			!!preview.worktree_uncommitted?.length &&
+			b.startsWith('the worktree ') &&
+			b.includes('has uncommitted changes');
+		// as flai's preview.UndoneBlocker words it (ADR-0155)
+		const undone = (b: string) =>
+			(preview.undoes_main ?? []).some((u) =>
+				b.includes(` undoes the main branch's change to ${u.path}, `)
+			);
+		return (preview.blockers ?? []).filter((b) => !uncommitted(b) && !undone(b));
 	}
 </script>
 

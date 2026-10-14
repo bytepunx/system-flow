@@ -8,9 +8,11 @@
 	import { resolve } from '$app/paths';
 	import {
 		criteriaOf,
+		patchLines,
 		readNdjson,
 		sectionOf,
 		verifyView,
+		type PatchKind,
 		type VerifyReport,
 		type VerifyView
 	} from '$lib/review';
@@ -51,6 +53,8 @@
 		protected?: string[];
 		/** The sentence saying so, present exactly when protected is. */
 		operator_only?: string;
+		/** Paths the branch undoes of main's change: each blocks until restored or kept (ADR-0155). */
+		undoes_main?: Undone[];
 		plan?: {
 			level: string;
 			commits: string[];
@@ -58,6 +62,16 @@
 			skipped?: string;
 			unreleased?: { component: string; files: string[] }[];
 		} | null;
+	};
+	/** A path the branch undoes of main's change, as flai's preview and refusal give it (ADR-0155). */
+	type Undone = { path: string; lines: string[]; old_base: string };
+	/** A file of the story's diff, as /diff gives it and DiffView shows it. */
+	type DiffFile = {
+		path: string;
+		status: string;
+		binary: boolean;
+		truncated: boolean;
+		patch: string;
 	};
 	type Progress = { step: string; msg: string };
 	/** A finding of the lint the fix left, as flai's refusal of the acceptance gives it (ADR-0140). */
@@ -121,6 +135,18 @@
 	let sendingBack = $state(false);
 	let reason = $state('');
 
+	// Paths the branch undoes of main's change (S-0388, ADR-0155): a card each, from the preview or
+	// a refusal. Each is restored, and drops out when the preview runs again; or kept with a reason,
+	// by path, which Accept passes as keep_removals; or the story goes back naming them. keeping
+	// holds the reason typed so far on a card whose Keep is open.
+	let undone = $state<Undone[]>([]);
+	let kept = $state<Record<string, string>>({});
+	let keeping = $state<Record<string, string>>({});
+	let restoring = $state<string | null>(null);
+	let undoneErrors = $state<Record<string, string>>({});
+	let sendingUndone = $state(false);
+	let undoneError = $state<string | null>(null);
+
 	// Issues (S-0198): the open issues no open story links, the story's own
 	// first and checked. Accepting makes a backlog story for each checked one,
 	// once the acceptance has succeeded.
@@ -169,21 +195,43 @@
 	const unsaved = $derived(
 		[...new Set(findings.filter(opens).map(fileKey))].filter((k) => !saved.includes(k))
 	);
+	// an undone path neither kept nor yet restored holds Accept; its blocker is left to the card
+	const unresolved = $derived(undone.filter((u) => !kept[u.path]));
 	const canAccept = $derived(
 		writable &&
 			inReview &&
 			!running &&
 			!result &&
 			!!preview &&
-			!preview.blockers?.length &&
+			!otherBlockers(preview).length &&
 			!preview.worktree_uncommitted?.length &&
+			!unresolved.length &&
 			!needsChoice &&
 			!unsaved.length
 	);
+	const undoneActive = $derived(
+		writable && inReview && !result && !running && !restoring && !sendingUndone
+	);
+
+	// a line of the branch's change, as DiffView colours it
+	const patchLine: Record<PatchKind, string> = {
+		add: 'bg-good-soft text-good',
+		del: 'bg-danger-soft text-danger',
+		hunk: 'text-muted',
+		context: '',
+		note: 'text-muted'
+	};
+	const branchFile = (path: string) =>
+		((diff?.files ?? []) as DiffFile[]).find((f) => f.path === path);
 
 	function findingsOf(data: unknown): Finding[] {
 		const list = (data as { findings?: unknown } | undefined)?.findings;
 		return Array.isArray(list) ? (list as Finding[]) : [];
+	}
+
+	function undoneOf(data: unknown): Undone[] {
+		const list = (data as { undoes_main?: unknown } | undefined)?.undoes_main;
+		return Array.isArray(list) ? (list as Undone[]) : [];
 	}
 
 	function openFinding(f: Finding) {
@@ -229,6 +277,11 @@
 		unmade = [];
 		verify = null;
 		verifyError = null;
+		undone = [];
+		kept = {};
+		keeping = {};
+		undoneErrors = {};
+		undoneError = null;
 		try {
 			item = (await get<{ item: Item }>(`/api/items/${target}`)).item;
 		} catch (e) {
@@ -244,17 +297,108 @@
 				await renderNarrative(target);
 			})
 			.catch(() => (narrative = ''));
-		get<Record<string, unknown>>(`/api/items/${target}/diff`)
-			.then((d) => (diff = d))
-			.catch((e) => (diffError = e instanceof Error ? e.message : String(e)));
+		void loadDiff(target);
 		if (item.status === 'review') {
-			get<Preview>(`/api/items/${target}/acceptance`)
-				.then((p) => (preview = p))
-				.catch((e) => (previewError = e instanceof Error ? e.message : String(e)));
+			void loadPreview(target);
 			void loadIssues(target);
 		}
 		void loadChecks(target);
 		void loadVerify(target);
+	}
+
+	async function loadDiff(target: string) {
+		try {
+			const d = await get<Record<string, unknown>>(`/api/items/${target}/diff`);
+			if (target === id) diff = d;
+		} catch (e) {
+			if (target === id) diffError = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	// The preview's undone paths are the cards: a path restored since drops out (S-0388).
+	async function loadPreview(target: string) {
+		try {
+			const p = await get<Preview>(`/api/items/${target}/acceptance`);
+			if (target !== id) return;
+			preview = p;
+			undone = p.undoes_main ?? [];
+		} catch (e) {
+			if (target === id) previewError = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	// flai's stream.restore commits main's version of the path onto the branch; the preview and the
+	// diff are read again, so its card clears and the branch's changes are as they now are.
+	async function restore(path: string) {
+		restoring = path;
+		delete undoneErrors[path];
+		try {
+			const r = await api(`/api/items/${id}/restore`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ path })
+			});
+			const data = await r.json().catch(() => ({}));
+			if (!r.ok) {
+				undoneErrors[path] = data.error ?? r.statusText;
+				return;
+			}
+			await Promise.all([loadPreview(id), loadDiff(id)]);
+		} catch (e) {
+			undoneErrors[path] = e instanceof Error ? e.message : String(e);
+		} finally {
+			restoring = null;
+		}
+	}
+
+	function keep(path: string) {
+		const why = keeping[path]?.trim();
+		if (!why) return;
+		kept[path] = why;
+		delete keeping[path];
+	}
+
+	// Two calls in order: a thread on the story naming the paths, for its agent; then the move back,
+	// its reason naming them too. The page is loaded again as a send-back does.
+	async function sendBackUndone() {
+		const paths = undone.map((u) => u.path).join(', ');
+		const branch = preview?.branch ?? `story/${id}`;
+		sendingUndone = true;
+		undoneError = null;
+		try {
+			const t = await api('/api/threads', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					on: id,
+					title: `${branch} undoes main's change to ${paths}`,
+					text: `${branch} removes lines main added since the branch left it, in ${paths}. Restore main's version with flai stream restore ${id} --path <path>, or redo the change, then move ${id} to review again (ADR-0155).`
+				})
+			});
+			if (!t.ok) {
+				const data = await t.json().catch(() => ({}));
+				undoneError = `No thread was opened, and ${id} stays in review: ${data.error ?? t.statusText}`;
+				return;
+			}
+			const m = await api(`/api/items/${id}/move`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					to: 'in-progress',
+					reason: `${branch} undoes main's change to ${paths}: restore main's version or redo the change (ADR-0155)`
+				})
+			});
+			if (!m.ok) {
+				const data = await m.json().catch(() => ({}));
+				undoneError = `The thread is open, but ${id} was not moved back: ${data.error ?? m.statusText}`;
+				return;
+			}
+			await load(id);
+		} catch (e) {
+			undoneError = e instanceof Error ? e.message : String(e);
+		} finally {
+			sendingUndone = false;
+		}
 	}
 
 	async function loadVerify(target: string) {
@@ -453,11 +597,17 @@
 		saved = [];
 		progress = [];
 		warnings = [];
+		const keeps = undone
+			.filter((u) => kept[u.path])
+			.map((u) => ({ path: u.path, reason: kept[u.path] }));
 		try {
 			const r = await api(`/api/items/${id}/accept`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ include_uncommitted: include || undefined })
+				body: JSON.stringify({
+					include_uncommitted: include || undefined,
+					keep_removals: keeps.length ? keeps : undefined
+				})
 			});
 			if (!r.ok) {
 				failure = (await r.json().catch(() => ({}))).error ?? r.statusText;
@@ -471,6 +621,9 @@
 				else if (l.event === 'error') {
 					failure = String(l.error);
 					findings = findingsOf(l.data);
+					// a path only the acceptance's own rebase found joins the cards (S-0388)
+					const refused = undoneOf(l.data).filter((u) => !undone.some((x) => x.path === u.path));
+					if (refused.length) undone = [...undone, ...refused];
 				}
 			});
 			if (!result && !failure) failure = 'the acceptance ended without a result';
@@ -694,6 +847,138 @@
 			{:else if !preview && !result}
 				<p class="text-muted">Working it out…</p>
 			{:else if preview}
+				<!-- Each path the branch undoes of main's change, to restore or keep (S-0388, ADR-0155). -->
+				{#each undone as u (u.path)}
+					{@const file = branchFile(u.path)}
+					<div
+						class="mb-2 rounded border p-2 {kept[u.path]
+							? 'border-warn bg-warn-soft'
+							: 'border-danger bg-danger-soft'}"
+						role="group"
+						aria-label="The branch undoes main's change to {u.path}"
+						data-testid="undoes-main"
+					>
+						<p class="font-medium {kept[u.path] ? 'text-warn' : 'text-danger'}">
+							<code>{preview.branch ?? `story/${item.id}`}</code> undoes main's change to
+							<span class="font-mono">{u.path}</span>: it removes {u.lines.length === 1
+								? '1 line'
+								: `${u.lines.length} lines`} main added since the branch left it at
+							<code>{u.old_base.slice(0, 12)}</code>.
+						</p>
+						<div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+							<div class="min-w-0">
+								<h3 class="text-xs text-muted">Main's lines the branch removes</h3>
+								<pre
+									class="mt-1 overflow-x-auto rounded bg-ground p-1 font-mono text-xs leading-snug text-danger"
+									data-testid="undoes-main-lines">{u.lines.join('\n')}</pre>
+							</div>
+							<div class="min-w-0" data-testid="undoes-main-branch">
+								<h3 class="text-xs text-muted">The branch's change to it</h3>
+								{#if diffError}
+									<p class="mt-1 text-muted">{diffError}</p>
+								{:else if !diff}
+									<p class="mt-1 text-muted">Loading…</p>
+								{:else if !file}
+									<p class="mt-1">The branch's version of this path is not in its diff.</p>
+								{:else if !file.patch}
+									<p class="mt-1 text-muted">
+										{file.binary
+											? 'Binary file, no hunks.'
+											: file.truncated
+												? 'Left out for size.'
+												: 'No textual changes.'}
+									</p>
+								{:else}
+									<div
+										class="mt-1 overflow-x-auto rounded bg-ground p-1 font-mono text-xs leading-snug"
+									>
+										<div class="w-max min-w-full">
+											{#each patchLines(file.patch) as l, n (n)}
+												<div class="flex {patchLine[l.kind]}" data-line={l.kind}>
+													<span class="w-5 shrink-0 text-center select-none">{l.sign}</span><span
+														class="pr-2 whitespace-pre">{l.text || ' '}</span
+													>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
+						</div>
+						{#if kept[u.path]}
+							<p class="mt-2" data-testid="undoes-main-kept">
+								Kept: {kept[u.path]}
+								{#if undoneActive}<button
+										type="button"
+										class="ml-2 rounded border border-line-strong bg-surface px-2 py-0.5 text-ink"
+										onclick={() => delete kept[u.path]}>Undo</button
+									>{/if}
+							</p>
+						{:else if keeping[u.path] !== undefined}
+							<div class="mt-2">
+								<label class="block text-xs text-muted" for="keep-{u.path}"
+									>Why the removal is kept (recorded in the story's notes)</label
+								>
+								<input
+									id="keep-{u.path}"
+									type="text"
+									class="mt-1 w-full rounded border border-line bg-ground p-1"
+									bind:value={keeping[u.path]}
+								/>
+								<button
+									type="button"
+									class="mt-1 rounded border border-line-strong bg-surface px-2 py-0.5 text-ink disabled:opacity-50"
+									disabled={!keeping[u.path].trim() || !undoneActive}
+									onclick={() => keep(u.path)}>Keep the removal</button
+								>
+								<button
+									type="button"
+									class="mt-1 rounded border border-line bg-surface px-2 py-0.5 text-ink"
+									onclick={() => delete keeping[u.path]}>Cancel</button
+								>
+							</div>
+						{:else if writable && inReview && !result}
+							<p class="mt-2 flex flex-wrap gap-2">
+								<button
+									type="button"
+									class="rounded border border-line-strong bg-surface px-2 py-0.5 text-ink disabled:opacity-50"
+									disabled={!undoneActive}
+									onclick={() => restore(u.path)}
+									>{restoring === u.path ? 'Restoring…' : "Restore main's version"}</button
+								>
+								<button
+									type="button"
+									class="rounded border border-line-strong bg-surface px-2 py-0.5 text-ink disabled:opacity-50"
+									disabled={!undoneActive}
+									onclick={() => (keeping[u.path] = '')}>Keep</button
+								>
+								<button
+									type="button"
+									class="rounded border border-line-strong bg-surface px-2 py-0.5 text-ink disabled:opacity-50"
+									disabled={!undoneActive}
+									onclick={sendBackUndone}
+									>{sendingUndone ? 'Sending back…' : 'Send back, naming the undone paths'}</button
+								>
+							</p>
+						{/if}
+						{#if undoneErrors[u.path]}
+							<p class="mt-2 text-danger" role="alert">
+								{u.path} was not restored. flai said: {undoneErrors[u.path]}
+							</p>
+						{/if}
+					</div>
+				{/each}
+				{#if undone.length && writable && inReview && !result}
+					<div class="mb-2">
+						{#if unresolved.length}
+							<p class="text-xs text-muted">
+								Accept is on once each of these is restored or kept; or send {item.id} back for its agent
+								to put right.
+							</p>
+						{/if}
+						{#if undoneError}<p class="mt-1 text-danger" role="alert">{undoneError}</p>{/if}
+					</div>
+				{/if}
 				{#if otherBlockers(preview).length}
 					<div
 						class="mb-2 rounded border border-danger bg-danger-soft p-2 text-danger"

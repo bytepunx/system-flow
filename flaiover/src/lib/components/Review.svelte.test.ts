@@ -66,8 +66,11 @@ const DIFF = {
 
 function backend(over: {
 	item?: Record<string, unknown>;
+	/** The acceptance preview, or a function giving it afresh on each read. */
 	preview?: unknown;
 	accept?: () => unknown;
+	restore?: () => unknown;
+	thread?: () => unknown;
 	move?: () => unknown;
 	diff?: () => unknown;
 	checksStatuses?: unknown[];
@@ -112,12 +115,16 @@ function backend(over: {
 		if (url.endsWith('/accept'))
 			return over.accept ? over.accept() : ndjson([{ event: 'done', result: {} }]);
 		if (url.endsWith('/move') && init?.method === 'POST') return over.move ? over.move() : json({});
+		if (url.endsWith('/restore') && init?.method === 'POST')
+			return over.restore ? over.restore() : json({ restored: true });
+		if (url === '/api/threads' && init?.method === 'POST')
+			return over.thread ? over.thread() : json({ id: 'TH-0001' });
 		if (url.endsWith('/diff')) return over.diff ? over.diff() : json(DIFF);
 		if (url.endsWith('/agent') && init?.method === 'POST')
 			return over.agent ? over.agent() : json({ error: 'no agent' }, 400);
 		if (url.endsWith('/acceptance'))
 			return json(
-				over.preview ?? {
+				(typeof over.preview === 'function' ? over.preview() : over.preview) ?? {
 					branch: 'story/S-0041',
 					plan: {
 						level: 'minor',
@@ -425,6 +432,213 @@ describe('Review', () => {
 			expect(document.body.textContent).toContain('flaiover/README.md:1');
 			expect(document.querySelector('button[aria-label^="Edit flaiover"]')).toBeNull();
 			expect(button('Accept').disabled).toBe(false);
+		});
+	});
+
+	// ADR-0155, S-0388: a path the branch undoes of main's change is a card with main's lines beside
+	// the branch's change; it is restored, kept with a reason, or the story goes back naming it.
+	describe('paths the branch undoes of main’s change', () => {
+		const undone = (path: string, lines = ['kept on main']) => ({
+			path,
+			lines,
+			old_base: '0123456789abcdef'
+		});
+		// as flai's preview.UndoneBlocker words it
+		const blocker = (path: string) =>
+			`story/S-0041 undoes the main branch's change to ${path}, removing 1 line main added since the branch left it; restore main's version with flai stream restore S-0041 --path ${path}, keep the removal with flai accept S-0041 --keep-removal ${path} --reason "<why>", or send S-0041 back to in-progress (ADR-0155)`;
+		const previewOf = (...paths: string[]) => ({
+			branch: 'story/S-0041',
+			plan: null,
+			blockers: paths.map(blocker),
+			undoes_main: paths.map((p) => undone(p))
+		});
+		const cards = () => [...document.querySelectorAll<HTMLElement>('[data-testid="undoes-main"]')];
+		const cardOf = (path: string) => cards().find((c) => c.textContent?.includes(path))!;
+		const within = (card: HTMLElement, label: string) =>
+			[...card.querySelectorAll('button')].find((b) =>
+				(b.textContent ?? '').trim().startsWith(label)
+			)!;
+		const words = (e: Element) => (e.textContent ?? '').replace(/\s+/g, ' ').trim();
+		const type = (input: HTMLInputElement, value: string) => {
+			input.value = value;
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			flushSync();
+		};
+		const body = (call: unknown[]) => JSON.parse(String((call[1] as { body: string }).body));
+		const reads = () => api.mock.calls.filter((c) => String(c[0]).endsWith('/acceptance')).length;
+
+		it('shows a card per path: main’s lines beside the branch’s change, and not the blocker twice', async () => {
+			backend({
+				preview: {
+					...previewOf('docs/a.md', 'scripts/gone.sh'),
+					undoes_main: [undone('docs/a.md', ['two', 'kept on main']), undone('scripts/gone.sh')]
+				}
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(cards()).toHaveLength(2);
+			const a = cardOf('docs/a.md');
+			expect(words(a)).toContain("story/S-0041 undoes main's change to docs/a.md");
+			expect(words(a)).toContain('removes 2 lines main added');
+			expect(a.querySelector('[data-testid="undoes-main-lines"]')!.textContent).toBe(
+				'two\nkept on main'
+			);
+			// the branch's version, from the story's diff, shown without opening it
+			const branch = a.querySelector('[data-testid="undoes-main-branch"]')!;
+			expect([...branch.querySelectorAll('[data-line]')].map(words)).toEqual([
+				'@@ -1,2 +1,3 @@',
+				'one',
+				'-two',
+				'+2',
+				'+three'
+			]);
+			expect(words(cardOf('scripts/gone.sh'))).toContain(
+				"The branch's version of this path is not in its diff."
+			);
+			expect(document.body.textContent).not.toContain('This cannot be accepted from here yet');
+			expect(button('Accept').disabled).toBe(true);
+		});
+
+		it('restores a path, reads the preview again, and the card clears', async () => {
+			let restored = false;
+			backend({
+				preview: () => (restored ? previewOf('docs/b.md') : previewOf('docs/a.md', 'docs/b.md')),
+				restore: () => {
+					restored = true;
+					return json({ id: 'S-0041', restored: ['docs/a.md'] });
+				}
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(reads()).toBe(1);
+			within(cardOf('docs/a.md'), "Restore main's version").click();
+			await settle();
+			expect(calls('/api/items/S-0041/restore')).toHaveLength(1);
+			expect(body(calls('/api/items/S-0041/restore')[0])).toEqual({ path: 'docs/a.md' });
+			expect(reads()).toBe(2);
+			expect(cards().map((card) => card.textContent?.includes('docs/b.md'))).toEqual([true]);
+			expect(button('Accept').disabled).toBe(true);
+		});
+
+		it('shows on the card why a restore failed, and keeps the card', async () => {
+			const why = 'the worktree .flai-cache/worktrees/S-0041 has uncommitted changes';
+			backend({ preview: previewOf('docs/a.md'), restore: () => json({ error: why }, 422) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			within(cardOf('docs/a.md'), "Restore main's version").click();
+			await settle();
+			const alert = cardOf('docs/a.md').querySelector('[role="alert"]')!;
+			expect(words(alert)).toContain(`docs/a.md was not restored. flai said: ${why}`);
+			expect(reads()).toBe(1);
+		});
+
+		it('keeps a removal with a reason, which Accept sends as keep_removals', async () => {
+			backend({ preview: previewOf('docs/a.md', 'docs/b.md') });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			for (const path of ['docs/a.md', 'docs/b.md']) {
+				within(cardOf(path), 'Keep').click();
+				flushSync();
+				expect(within(cardOf(path), 'Keep the removal').disabled).toBe(true);
+				type(cardOf(path).querySelector('input')!, `the story rewrites ${path}`);
+				within(cardOf(path), 'Keep the removal').click();
+				flushSync();
+				expect(words(cardOf(path).querySelector('[data-testid="undoes-main-kept"]')!)).toContain(
+					`Kept: the story rewrites ${path}`
+				);
+				// one kept, one open: Accept waits for the second
+				expect(button('Accept').disabled).toBe(path === 'docs/a.md');
+			}
+			// taken back before Accept, then kept again
+			within(cardOf('docs/b.md'), 'Undo').click();
+			flushSync();
+			expect(button('Accept').disabled).toBe(true);
+			within(cardOf('docs/b.md'), 'Keep').click();
+			flushSync();
+			type(cardOf('docs/b.md').querySelector('input')!, 'gone with the old build');
+			within(cardOf('docs/b.md'), 'Keep the removal').click();
+			flushSync();
+			button('Accept').click();
+			await settle();
+			expect(body(calls('/accept')[0])).toEqual({
+				keep_removals: [
+					{ path: 'docs/a.md', reason: 'the story rewrites docs/a.md' },
+					{ path: 'docs/b.md', reason: 'gone with the old build' }
+				]
+			});
+			expect(document.body.textContent).toContain('S-0041 is accepted');
+		});
+
+		it('sends the story back: a thread naming the paths, then the move with that reason', async () => {
+			backend({ preview: previewOf('docs/a.md', 'docs/b.md') });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Send back, naming the undone paths').click();
+			await settle();
+			const order = api.mock.calls
+				.filter((call) => (call[1] as { method?: string })?.method === 'POST')
+				.map((call) => String(call[0]));
+			expect(order).toEqual(['/api/threads', '/api/items/S-0041/move']);
+			const thread = body(calls('/api/threads')[0]);
+			expect(thread.on).toBe('S-0041');
+			expect(thread.title).toContain('docs/a.md, docs/b.md');
+			expect(thread.text).toContain('docs/a.md, docs/b.md');
+			const move = body(calls('/move')[0]);
+			expect(move.to).toBe('in-progress');
+			expect(move.reason).toContain("undoes main's change to docs/a.md, docs/b.md");
+		});
+
+		it('moves nothing when the thread could not be opened, and says so', async () => {
+			backend({
+				preview: previewOf('docs/a.md'),
+				thread: () => json({ error: 'flai is not available' }, 503)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Send back, naming the undone paths').click();
+			await settle();
+			expect(calls('/move')).toHaveLength(0);
+			expect(document.body.textContent).toContain(
+				'No thread was opened, and S-0041 stays in review: flai is not available'
+			);
+		});
+
+		it('shows the cards a refused acceptance names, and holds Accept until each is kept', async () => {
+			const refusal = ndjson([
+				{
+					event: 'error',
+					status: 422,
+					error: "rule: S-0041 cannot be accepted: story/S-0041 undoes main's change to docs/a.md",
+					data: {
+						id: 'S-0041',
+						reason: 'S-0041 cannot be accepted',
+						undoes_main: [undone('docs/a.md')]
+					}
+				}
+			]);
+			const accepted = ndjson([{ event: 'done', result: { id: 'S-0041', status: 'done' } }]);
+			let answers = 0;
+			backend({ accept: () => (++answers > 1 ? accepted : refusal) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(cards()).toHaveLength(0);
+			button('Accept').click();
+			await settle();
+			expect(cards()).toHaveLength(1);
+			expect(
+				cardOf('docs/a.md').querySelector('[data-testid="undoes-main-lines"]')!.textContent
+			).toBe('kept on main');
+			expect(button('Accept').disabled).toBe(true);
+			within(cardOf('docs/a.md'), 'Keep').click();
+			flushSync();
+			type(cardOf('docs/a.md').querySelector('input')!, 'meant');
+			within(cardOf('docs/a.md'), 'Keep the removal').click();
+			flushSync();
+			button('Accept').click();
+			await settle();
+			expect(body(calls('/accept')[1])).toEqual({
+				keep_removals: [{ path: 'docs/a.md', reason: 'meant' }]
+			});
 		});
 	});
 
