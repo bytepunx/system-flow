@@ -1137,6 +1137,29 @@ func TestWaitForEventsEndsAStorysAgentAwaitingAnotherStorysReply(t *testing.T) {
 	}
 }
 
+// A settled conversation awaits neither story (ADR-0154): alone, it does
+// not end the wait, and beside a question to the designer, why names only
+// the question.
+func TestWaitForEventsCountsNoSettledConversationAsAwaitingAReply(t *testing.T) {
+	f, d := storysAgent(t)
+	other := f.otherInProgress(t)
+	c := f.send(t, f.story.ID, other.ID)
+	if _, err := messages.ReplyWith(f.repo, c.ID, other.ID, "agent-"+other.ID, "Agreed.", t0.Add(time.Minute), messages.Marks{Settled: true}); err != nil {
+		t.Fatal(err)
+	}
+	*f.clock = t0.Add(10 * time.Minute)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+	f.holds(t, d)
+
+	th := f.ask(t, f.story.ID)
+	why, _ := f.endsAtOnce(t, d)["why"].(string)
+	if want := f.story.ID + " has " + th.ID + " open to the designer and no task in progress"; !strings.HasPrefix(why, want) {
+		t.Errorf("why names the thread alone:\n  %q\nwant it to start\n  %q", why, want)
+	}
+}
+
 // A question to the designer and a message awaiting another story: why
 // names both.
 func TestWaitForEventsEndsOnAThreadAndAConversation(t *testing.T) {

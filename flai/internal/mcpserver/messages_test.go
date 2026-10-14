@@ -369,6 +369,153 @@ func TestAMessageWakesAWaitingAgent(t *testing.T) {
 	}
 }
 
+// inboxConversations is the messages of an inbox tool's answer.
+func inboxConversations(t *testing.T, fx *fixture) []map[string]any {
+	t.Helper()
+	out, failed := fx.call(t, "inbox", map[string]any{})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	var got []map[string]any
+	list, _ := out["messages"].([]any)
+	for _, m := range list {
+		got = append(got, m.(map[string]any))
+	}
+	return got
+}
+
+// S-0372, ADR-0154: message_reply with settled marks the reply settled, so
+// that the conversation awaits neither story, in its answer and in each
+// story's inbox, until the next message awaits the other story again; the
+// tools and the instructions say what settled is for.
+func TestASettledReplyAwaitsNeitherStory(t *testing.T) {
+	f, other := messagesFixture(t)
+	c, err := messages.Send(f.repo, messages.SendOptions{From: f.story.ID, To: other.ID, Author: "claude", Text: "I changed plan.md.", About: []string{"design/system/plan.md"}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	theirs := sessionAs(t, f, "agent-"+other.ID)
+	out, failed := theirs.call(t, "message_reply", map[string]any{"id": c.ID, "text": "Agreed; it does not break us.", "settled": true})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	replied := conversation(t, out)
+	if replied.Closed || replied.Awaiting != "" || len(replied.Entries) != 2 || replied.Entries[0].Settled || !replied.Entries[1].Settled || replied.Entries[1].Story != other.ID {
+		t.Errorf("a settled reply leaves the conversation open, awaiting neither story, with the entry settled: %+v", replied)
+	}
+	if got := inboxConversations(t, theirs); len(got) != 1 || got[0]["awaiting"] != "" {
+		t.Errorf("the replying story's inbox: awaiting neither story: %v", got)
+	}
+	t.Setenv("FLAI_STORY", f.story.ID)
+	got := inboxConversations(t, f)
+	if len(got) != 1 || got[0]["awaiting"] != "" {
+		t.Errorf("the other story's inbox: awaiting neither story: %v", got)
+	}
+	if len(got) == 1 {
+		if last, _ := got[0]["last"].(map[string]any); last["settled"] != true {
+			t.Errorf("the last entry is settled: %v", got[0])
+		}
+	}
+
+	out, failed = f.call(t, "message_reply", map[string]any{"id": c.ID, "text": "One more thing."})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if again := conversation(t, out); again.Awaiting != other.ID || again.Entries[2].Settled {
+		t.Errorf("the next message awaits the other story again: %+v", again)
+	}
+
+	res, err := f.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range res.Tools {
+		want := map[string]string{"message_reply": "Set it for a reply that asks nothing", "message_get": "none while its newest entry from a story is settled", "wait_for_events": "unless its summary says it is settled", "inbox": "empty while its newest entry from a story is settled"}[tool.Name]
+		if want != "" && !strings.Contains(tool.Description, want) {
+			t.Errorf("%s's description does not say %q: %s", tool.Name, want, tool.Description)
+		}
+		if tool.Name == "message_reply" {
+			schema, _ := json.Marshal(tool.InputSchema)
+			var props struct {
+				Properties map[string]struct {
+					Type string `json:"type"`
+				} `json:"properties"`
+			}
+			if err := json.Unmarshal(schema, &props); err != nil || props.Properties["settled"].Type != "boolean" {
+				t.Errorf("message_reply takes settled, a boolean: %v %s", err, schema)
+			}
+		}
+	}
+	if in := f.cs.InitializeResult().Instructions; !strings.Contains(in, "with settled true: the conversation then awaits neither story") {
+		t.Errorf("the instructions do not say when to settle a reply: %s", in)
+	}
+}
+
+// S-0372, ADR-0154: a held wait_for_events still wakes on a settled reply to
+// the session's story, as an event of kind message whose summary says no
+// reply is owed, not that the agent answer it.
+func TestASettledReplyWakesAWaitingAgentOwingNone(t *testing.T) {
+	f, other := messagesFixture(t)
+	c, err := messages.Send(f.repo, messages.SendOptions{From: f.story.ID, To: other.ID, Author: "claude", Text: "I changed plan.md.", About: []string{"design/system/plan.md"}, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FLAI_STORY", f.story.ID)
+	if _, failed := f.call(t, "inbox", map[string]any{}); failed != "" {
+		t.Fatal(failed)
+	}
+
+	done := make(chan map[string]any, 1)
+	go func() {
+		out, _ := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 3})
+		done <- out
+	}()
+	time.Sleep(150 * time.Millisecond)
+	if _, err := messages.ReplyWith(f.repo, c.ID, other.ID, "agent-"+other.ID, "Agreed; it does not break us.", *f.clock, messages.Marks{Settled: true}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case out := <-done:
+		got := messageEvents(out)
+		if out["timed_out"] == true || len(got) != 1 || got[0]["id"] != c.ID || got[0]["cause"] != other.ID {
+			t.Fatalf("one message event for the settled reply: %v", out)
+		}
+		if summary, _ := got[0]["summary"].(string); !strings.HasSuffix(summary, ", settled: read it with message_get; no reply is owed") || strings.Contains(summary, "message_reply") {
+			t.Errorf("the event says no reply is owed: %q", summary)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("wait_for_events never returned")
+	}
+}
+
+// S-0372, ADR-0154: a story's agent whose only open conversation is settled
+// by the other story, which had asked it something, is not told it owes a
+// reply: its inbox has the conversation awaiting neither story, and the
+// event of the settled entry says no reply is owed.
+func TestAStorysAgentIsNotToldItOwesASettledConversationAReply(t *testing.T) {
+	f, _ := storysAgent(t)
+	other := f.otherInProgress(t)
+	c := f.send(t, other.ID, f.story.ID)
+	*f.clock = t0.Add(10 * time.Minute)
+	if _, err := messages.ReplyWith(f.repo, c.ID, other.ID, "agent-"+other.ID, "Never mind: I found another way.", t0.Add(5*time.Minute), messages.Marks{Settled: true}); err != nil {
+		t.Fatal(err)
+	}
+	out, failed := f.call(t, "wait_for_events", map[string]any{"timeout_seconds": 60})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	got := messageEvents(out)
+	if len(got) != 1 || got[0]["id"] != c.ID {
+		t.Fatalf("the settled entry is an event: %v", out)
+	}
+	if summary, _ := got[0]["summary"].(string); !strings.Contains(summary, "no reply is owed") || strings.Contains(summary, "answer it") {
+		t.Errorf("the event says no reply is owed: %q", summary)
+	}
+	if list := inboxConversations(t, f); len(list) != 1 || list[0]["awaiting"] != "" {
+		t.Errorf("the conversation awaits neither story, not %s: %v", f.story.ID, list)
+	}
+}
+
 // S-0332, ADR-0121: message_escalate, from either story of a conversation,
 // opens a thread on the session's story naming both stories, giving the
 // conversation's path, and quoting the reason, and records it in the

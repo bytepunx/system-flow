@@ -29,10 +29,11 @@ type messageView struct {
 	Awaiting string   `json:"awaiting"`
 	Path     string   `json:"path"`
 	Entries  []struct {
-		At     string `json:"at"`
-		Author string `json:"author"`
-		Story  string `json:"story"`
-		Text   string `json:"text"`
+		At      string `json:"at"`
+		Author  string `json:"author"`
+		Story   string `json:"story"`
+		Text    string `json:"text"`
+		Settled bool   `json:"settled"`
 	} `json:"entries"`
 }
 
@@ -222,6 +223,47 @@ func TestMessageReplyListAndShow(t *testing.T) {
 	}
 	if _, errOut, code := runIn(t, root, "message", "show", "MS-0009"); code == 0 || !strings.Contains(errOut, "conversation MS-0009 not found") {
 		t.Errorf("show of an unknown ID: exit %d, %q", code, errOut)
+	}
+}
+
+// S-0372, ADR-0154: flai message reply --settled marks the reply settled, and
+// the conversation then awaits neither story: reply says so, list prints
+// settled where it would print the story awaited, show marks the entry, and
+// --json gives an empty awaiting and each entry's settled. It stays open, and
+// the next message awaits the other story again.
+func TestMessageReplySettled(t *testing.T) {
+	root, _ := messageProject(t)
+	if _, errOut, code := runIn(t, root, "message", "send", "S-0003", "I changed root.go", "--from", "S-0001", "--by", "agent-S-0001"); code != 0 {
+		t.Fatalf("send: %d %s", code, errOut)
+	}
+	t1 := time.Date(2026, 9, 15, 22, 0, 0, 0, time.UTC)
+
+	out, errOut, code := runInAt(t, root, t1, "message", "reply", "MS-0001", "Agreed; it does not break S-0003", "--settled", "--from", "S-0003", "--by", "agent-S-0003")
+	if code != 0 || out != "MS-0001 is settled and awaits no one (2 entries)\n" {
+		t.Fatalf("reply --settled: %d %q %s", code, out, errOut)
+	}
+	out, _, _ = runIn(t, root, "message", "list")
+	if want := "MS-0001  S-0001 → S-0003  settled          2026-09-15T22:00:00Z  I changed root.go\n"; out != want {
+		t.Errorf("list:\n%s\nwant:\n%s", out, want)
+	}
+	out, _, _ = runIn(t, root, "message", "show", "MS-0001")
+	want := "MS-0001 I changed root.go\n  between S-0001 and S-0003 · open · settled\n" +
+		"\n2026-09-15T21:00:00Z agent-S-0001 S-0001\nI changed root.go\n" +
+		"\n2026-09-15T22:00:00Z agent-S-0003 S-0003 (settled)\nAgreed; it does not break S-0003\n"
+	if out != want {
+		t.Errorf("show:\n%s\nwant:\n%s", out, want)
+	}
+	out, _, _ = runIn(t, root, "message", "show", "ms-1", "--json")
+	if v := decodeMessage(t, out); v.Status != "open" || v.Closed || v.Awaiting != "" || len(v.Entries) != 2 || v.Entries[0].Settled || !v.Entries[1].Settled {
+		t.Errorf("show --json: %+v", v)
+	}
+
+	out, errOut, code = runInAt(t, root, t1, "message", "reply", "MS-0001", "Thanks", "--settled", "--from", "S-0001", "--by", "agent-S-0001", "--json")
+	if v := decodeMessage(t, out); code != 0 || v.Awaiting != "" || len(v.Entries) != 3 || !v.Entries[2].Settled {
+		t.Errorf("reply --settled --json: %d %+v %s", code, v, errOut)
+	}
+	if out, errOut, code = runInAt(t, root, t1, "message", "reply", "MS-0001", "One more thing", "--from", "S-0003", "--by", "agent-S-0003"); code != 0 || out != "MS-0001 awaits S-0001 (4 entries)\n" {
+		t.Errorf("a reply after a settled one awaits the other story again: %d %q %s", code, out, errOut)
 	}
 }
 

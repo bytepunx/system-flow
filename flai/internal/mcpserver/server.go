@@ -924,8 +924,9 @@ func (s *server) endWhy() string {
 
 // awaitingReplies names the conversations of this agent's story that await
 // the other story's reply, each as "MS-0002 awaiting S-0004's agent", in ID
-// order. ok is false, and the agent holds, when one awaits the story's own
-// reply, a message it owes, or the conversations cannot be read.
+// order. A settled one awaits neither story and is left out (ADR-0154). ok
+// is false, and the agent holds, when one awaits the story's own reply, a
+// message it owes, or the conversations cannot be read.
 func (s *server) awaitingReplies() (waiting []string, ok bool) {
 	all, err := messages.For(s.repo, s.story)
 	if err != nil {
@@ -935,7 +936,11 @@ func (s *server) awaitingReplies() (waiting []string, ok bool) {
 		if closed, _ := c.Closed(s.repo); closed {
 			continue
 		}
-		if workitem.CanonicalID(c.Awaiting()) == workitem.CanonicalID(s.story) {
+		awaiting := c.Awaiting()
+		if awaiting == "" {
+			continue
+		}
+		if workitem.CanonicalID(awaiting) == workitem.CanonicalID(s.story) {
 			return nil, false
 		}
 		waiting = append(waiting, fmt.Sprintf("%s awaiting %s's agent", c.ID, c.Other(s.story)))

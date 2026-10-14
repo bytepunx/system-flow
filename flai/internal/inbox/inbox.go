@@ -195,13 +195,14 @@ type MessageSummary struct {
 	About    []string       `json:"about" jsonschema:"the repository paths the conversation is about"`
 	Updated  string         `json:"updated"`
 	Entries  int            `json:"entries"`
-	Last     messages.Entry `json:"last" jsonschema:"the newest entry: its time, author, story, and text"`
-	Awaiting string         `json:"awaiting" jsonschema:"'you' when the conversation awaits this story, whose agent answers it with message_reply before going on, else 'other'"`
+	Last     messages.Entry `json:"last" jsonschema:"the newest entry: its time, author, story, text, and whether it is settled"`
+	Awaiting string         `json:"awaiting" jsonschema:"'you' when the conversation awaits this story, whose agent answers it with message_reply before going on; empty while its newest entry from a story is settled, a reply that asks nothing, so that it awaits neither story and no reply is owed (ADR-0154); else 'other'"`
 	Project  string         `json:"project,omitempty" jsonschema:"the project the conversation is in, when the server serves more than one"`
 }
 
 // Conversations are story's open conversations as its agent sees them, in ID
-// order: one that reads as closed is left out (ADR-0120).
+// order: one that reads as closed is left out (ADR-0120). One that is settled
+// awaits neither story, and its Awaiting is empty (ADR-0154).
 func Conversations(repo *workitem.Repo, story string) ([]MessageSummary, error) {
 	all, err := messages.For(repo, story)
 	if err != nil {
@@ -214,15 +215,20 @@ func Conversations(repo *workitem.Repo, story string) ([]MessageSummary, error) 
 			continue
 		}
 		entries := c.Entries()
-		sum := MessageSummary{ID: c.ID, Title: c.Title, With: otherStory(c, own), About: c.About, Updated: c.Updated, Entries: len(entries), Awaiting: "other"}
+		sum := MessageSummary{ID: c.ID, Title: c.Title, With: otherStory(c, own), About: c.About, Updated: c.Updated, Entries: len(entries)}
 		if sum.About == nil {
 			sum.About = []string{}
 		}
 		if n := len(entries); n > 0 {
 			sum.Last = entries[n-1]
 		}
-		if workitem.CanonicalID(c.Awaiting()) == own {
+		switch awaiting := c.Awaiting(); {
+		case awaiting == "":
+			// settled: it awaits neither story, and Awaiting stays empty
+		case workitem.CanonicalID(awaiting) == own:
 			sum.Awaiting = "you"
+		default:
+			sum.Awaiting = "other"
 		}
 		out = append(out, sum)
 	}
@@ -317,7 +323,8 @@ const Overlapped = "overlapped"
 // agent's story from the other story of a conversation, a new conversation or
 // a reply (S-0331): ID and Title are the conversation's, Cause the sender's
 // story, By its agent, To the paths the conversation is about, comma
-// separated, and At the time of the newest such entry.
+// separated, and At the time of the newest such entry. The summary of a
+// settled entry says that no reply is owed (ADR-0154).
 const Message = "message"
 
 // MaxPaths is how many paths an overlap's summary names; To has them all.
@@ -406,7 +413,7 @@ func CatchUp(repo *workitem.Repo, agent, story string, now time.Time, items []*w
 			if e, ok := lastFromOther(c, workitem.CanonicalID(story), agent); ok {
 				if closed, _ := c.Closed(repo); !closed {
 					m := workitem.Change{ID: c.ID, Type: Message, Title: c.Title, Kind: Message, To: strings.Join(c.About, ","), By: e.Author, Cause: e.Story, At: e.At}
-					noticed(m, Describe(m))
+					noticed(m, describeMessage(m, e.Settled))
 				}
 			}
 		}
@@ -457,17 +464,26 @@ func Describe(c workitem.Change) string {
 	case Overlapped:
 		return c.Cause + " was accepted" + who + " and changed " + namePaths(c.To) + ", which " + c.ID + " " + c.Title + " claims. Run flai stream sync " + c.ID + " and the tests before you go on"
 	case Message:
-		about := ""
-		if c.To != "" {
-			about = " about " + namePaths(c.To)
-		}
-		from := c.Cause + "'s agent"
-		if c.By != "" {
-			from += ", " + c.By + ","
-		}
-		return from + " wrote in " + c.ID + " " + c.Title + about + ": read it with message_get and answer it with message_reply before you go on"
+		return describeMessage(c, false)
 	}
 	return c.ID + " " + c.Kind
+}
+
+// describeMessage says a change of kind message: what to do with an entry
+// that awaits a reply, or, for a settled one, that none is owed (ADR-0154).
+func describeMessage(c workitem.Change, settled bool) string {
+	about := ""
+	if c.To != "" {
+		about = " about " + namePaths(c.To)
+	}
+	from := c.Cause + "'s agent"
+	if c.By != "" {
+		from += ", " + c.By + ","
+	}
+	if settled {
+		return from + " wrote in " + c.ID + " " + c.Title + about + ", settled: read it with message_get; no reply is owed"
+	}
+	return from + " wrote in " + c.ID + " " + c.Title + about + ": read it with message_get and answer it with message_reply before you go on"
 }
 
 // describeGrown says an overlapped change whose cause is not an acceptance:

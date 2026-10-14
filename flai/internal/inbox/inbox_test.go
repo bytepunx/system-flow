@@ -294,3 +294,48 @@ func TestAMessageToTheStoryIsToldOnce(t *testing.T) {
 		t.Errorf("a reply is told too, as the newest entry: %+v", reply)
 	}
 }
+
+// S-0372, ADR-0154: a conversation whose newest entry from a story is settled
+// awaits neither story, so its summary's awaiting is empty for both, and the
+// settled entry is told as a message whose summary says no reply is owed.
+func TestASettledConversationAwaitsNeitherStory(t *testing.T) {
+	f := setup(t)
+	other := f.storyIn(t, "Other", []string{"docs/other"}, workitem.Ready, workitem.InProgress)
+	messageChanges := func() []Event {
+		t.Helper()
+		items, err := f.repo.List(true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		events, _, err := CatchUp(f.repo, "claude", f.story.ID, f.clock, items)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []Event
+		for _, e := range events {
+			if e.Kind == Message {
+				out = append(out, e)
+			}
+		}
+		return out
+	}
+	messageChanges() // the first look sets the cursor
+
+	f.clock = t0.Add(10 * time.Minute)
+	c := f.send(t, f.story, other, "I changed the inbox.", t0.Add(time.Minute))
+	if _, err := messages.ReplyWith(f.repo, c.ID, other.ID, "agent-"+other.ID, "Agreed; nothing breaks here.", t0.Add(5*time.Minute), messages.Marks{Settled: true}); err != nil {
+		t.Fatal(err)
+	}
+	got := messageChanges()
+	want := other.ID + "'s agent, agent-" + other.ID + ", wrote in " + c.ID + " " + c.Title + " about design/system, settled: read it with message_get; no reply is owed"
+	if len(got) != 1 || got[0].ID != c.ID || got[0].Summary != want {
+		t.Fatalf("one message event saying no reply is owed:\n%+v\nwant summary %q", got, want)
+	}
+
+	for _, as := range []struct{ agent, story string }{{"claude", f.story.ID}, {"agent-" + other.ID, other.ID}} {
+		in := f.read(t, Options{Agent: as.agent, Own: as.story})
+		if len(in.Messages) != 1 || in.Messages[0].Awaiting != "" || !in.Messages[0].Last.Settled {
+			t.Errorf("a settled conversation awaits neither story, as %s's agent sees it: %+v", as.story, in.Messages)
+		}
+	}
+}

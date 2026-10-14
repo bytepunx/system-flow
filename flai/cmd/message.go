@@ -21,7 +21,7 @@ func newMessageCmd(a *app) *cobra.Command {
 
 A ready story held on overlap alone with a story in progress has no agent, so flai serve asks the holding story's agent about it in their conversation, and that agent may share the overlapping paths with flai message share, so that the overlap no longer holds (ADR-0134).
 
-A conversation awaits the story that did not write its last message. When the two do not agree, either story's agent asks the operator with flai message escalate, which opens a thread (ADR-0121). It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
+A conversation awaits the story that did not write its last message, unless that message is a settled reply (flai message reply --settled), after which it awaits neither story until the next message from either (ADR-0154). When the two do not agree, either story's agent asks the operator with flai message escalate, which opens a thread (ADR-0121). It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
 
 Messages are kept apart from threads: none appears in flai thread list, among the threads awaiting the operator, or in a narrative's Open questions. A question for the designer is still a thread.`,
 	}
@@ -85,14 +85,18 @@ The sender's story is --from, else FLAI_STORY, else the story in FLAI_AGENT of t
 
 func newMessageReplyCmd(a *app) *cobra.Command {
 	var from, by string
+	var settled bool
 	c := &cobra.Command{
 		Use:   "reply <MS-nnnn> \"<text>\"",
 		Short: "Add a message to a conversation from one of its two stories",
-		Long: `Adds a message to the conversation <MS-nnnn> from one of its two stories, and prints whom it now awaits: the other story.
+		Long: `Adds a message to the conversation <MS-nnnn> from one of its two stories, and prints whom it now awaits: the other story, or no one when the reply is settled.
+
+--settled marks the reply settled, in its heading (ADR-0154): the conversation then awaits neither story, and flai serve starts neither story's agent for it, until the next message from either. Use it for a reply that asks nothing, such as "agreed" or "the change does not break this story", so that the other story's agent is not woken to answer it. The conversation stays open.
 
 The replying story is --from, else FLAI_STORY, else the story in FLAI_AGENT of the form agent-S-nnnn, else the story branch checked out here. A reply is refused from a story that is not one of the two, from a story no longer in progress or in review, and on a conversation that reads as closed, which takes none; nothing is written. The author is --by, else FLAI_AGENT, else the config author.`,
-		Example: `  flai message reply MS-0004 "Yes, it is yours until you push." --from S-0331`,
-		Args:    cobra.ExactArgs(2),
+		Example: `  flai message reply MS-0004 "Yes, it is yours until you push." --from S-0331
+  flai message reply MS-0004 "Agreed; the change does not break S-0331." --settled`,
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
@@ -102,20 +106,39 @@ The replying story is --from, else FLAI_STORY, else the story in FLAI_AGENT of t
 			if err != nil {
 				return err
 			}
-			c, err := messages.Reply(repo, args[0], story, a.threadAuthor(by), args[1], a.now())
+			c, err := messages.ReplyWith(repo, args[0], story, a.threadAuthor(by), args[1], a.now(), messages.Marks{Settled: settled})
 			if err != nil {
 				return err
 			}
 			if a.jsonOut {
 				return a.printJSON(messages.View(repo, c))
 			}
-			fmt.Fprintf(a.out, "%s awaits %s (%d entries)\n", c.ID, c.Awaiting(), len(c.Entries()))
+			fmt.Fprintf(a.out, "%s %s (%d entries)\n", c.ID, awaits(c), len(c.Entries()))
 			return nil
 		},
 	}
 	c.Flags().StringVar(&from, "from", "", fromHelp)
 	c.Flags().StringVar(&by, "by", "", "author (default: FLAI_AGENT, then config author)")
+	c.Flags().BoolVar(&settled, "settled", false, "a reply that asks nothing: the conversation then awaits neither story, and no agent is woken to answer it")
 	return c
+}
+
+// awaits says whom an open conversation awaits, after its ID: the story, or
+// no one while its newest entry from a story is settled (ADR-0154).
+func awaits(c *messages.Conversation) string {
+	if s := c.Awaiting(); s != "" {
+		return "awaits " + s
+	}
+	return "is settled and awaits no one"
+}
+
+// waitState is an open conversation's state in list and show: awaiting the
+// story, or settled while it awaits neither (ADR-0154).
+func waitState(c *messages.Conversation) string {
+	if s := c.Awaiting(); s != "" {
+		return "awaiting " + s
+	}
+	return "settled"
 }
 
 func newMessageEscalateCmd(a *app) *cobra.Command {
@@ -152,7 +175,7 @@ The escalating story is --from, else FLAI_STORY, else the story in FLAI_AGENT of
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"thread": threadJSON(repo, th), "conversation": messages.View(repo, c)})
 			}
-			fmt.Fprintf(a.out, "%s %s\n  %s\n%s awaits %s (%d entries)\n", th.ID, th.Title, relPath(repo.MainRoot, th.Path), c.ID, c.Awaiting(), len(c.Entries()))
+			fmt.Fprintf(a.out, "%s %s\n  %s\n%s %s (%d entries)\n", th.ID, th.Title, relPath(repo.MainRoot, th.Path), c.ID, awaits(c), len(c.Entries()))
 			return nil
 		},
 	}
@@ -188,7 +211,7 @@ Only the story in progress's agent, writing for it, or the operator, its owner, 
 				return a.printJSON(messages.View(repo, c))
 			}
 			sh := c.Shares[len(c.Shares)-1]
-			fmt.Fprintf(a.out, "%s: %s shares %s with %s\n%s awaits %s (%d entries)\n", c.ID, sh.Holder, strings.Join(sh.Paths, ", "), sh.Held, c.ID, c.Awaiting(), len(c.Entries()))
+			fmt.Fprintf(a.out, "%s: %s shares %s with %s\n%s %s (%d entries)\n", c.ID, sh.Holder, strings.Join(sh.Paths, ", "), sh.Held, c.ID, awaits(c), len(c.Entries()))
 			return nil
 		},
 	}
@@ -204,7 +227,7 @@ func newMessageListCmd(a *app) *cobra.Command {
 	c := &cobra.Command{
 		Use:   "list",
 		Short: "List conversations; those still open by default",
-		Long: `Lists conversations in ID order, one a line: its ID, the story that started it and the one it went to, the story it awaits, the time of its last message, and its title.
+		Long: `Lists conversations in ID order, one a line: its ID, the story that started it and the one it went to, the story it awaits (settled when its newest entry from a story is a settled reply, and it awaits neither), the time of its last message, and its title.
 
 By default only the conversations that do not read as closed are listed, those of every story. --story lists only the conversations the story is one of the two of, in any padding; it has no default, so that the operator sees every story's. --all adds the closed ones, each with why it is closed in place of the story it awaits.`,
 		Example: `  flai message list --story S-0330
@@ -233,7 +256,7 @@ By default only the conversations that do not read as closed are listed, those o
 				closed, why := c.Closed(repo)
 				switch {
 				case !closed:
-					rows = append(rows, row{c, "awaiting " + c.Awaiting()})
+					rows = append(rows, row{c, waitState(c)})
 				case all:
 					rows = append(rows, row{c, "closed: " + why})
 				}
@@ -284,7 +307,7 @@ func newMessageShowCmd(a *app) *cobra.Command {
 	return &cobra.Command{
 		Use:   "show <MS-nnnn>",
 		Short: "Print a conversation with every message",
-		Long:  `Prints the conversation <MS-nnnn>: its ID and title; the two stories, its status, and the story it awaits, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, and text. The ID may be given in any padding, such as ms-4.`,
+		Long:  `Prints the conversation <MS-nnnn>: its ID and title; the two stories, its status, and the story it awaits, settled when it awaits neither, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, (settled) on a settled reply (ADR-0154), and text. The ID may be given in any padding, such as ms-4.`,
 		Example: `  flai message show MS-0004
   flai message show ms-4 --json`,
 		Args: cobra.ExactArgs(1),
@@ -300,7 +323,7 @@ func newMessageShowCmd(a *app) *cobra.Command {
 			if a.jsonOut {
 				return a.printJSON(messages.View(repo, c))
 			}
-			state := c.Status + " · awaiting " + c.Awaiting()
+			state := c.Status + " · " + waitState(c)
 			if closed, why := c.Closed(repo); closed {
 				state = "closed: " + why
 			}
@@ -309,7 +332,11 @@ func newMessageShowCmd(a *app) *cobra.Command {
 				fmt.Fprintf(a.out, "  about %s\n", strings.Join(c.About, ", "))
 			}
 			for _, e := range c.Entries() {
-				fmt.Fprintf(a.out, "\n%s\n%s\n", strings.TrimSpace(e.At+" "+e.Author+" "+e.Story), e.Text)
+				heading := strings.TrimSpace(e.At + " " + e.Author + " " + e.Story)
+				if e.Settled {
+					heading += " (settled)"
+				}
+				fmt.Fprintf(a.out, "\n%s\n%s\n", heading, e.Text)
 			}
 			return nil
 		},
