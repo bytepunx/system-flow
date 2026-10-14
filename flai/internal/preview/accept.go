@@ -68,6 +68,25 @@ type Acceptance struct {
 	// ResolvedThreads are the threads still open or answered on what the
 	// acceptance archives, which it resolves (I-0073), or under DryRun would.
 	ResolvedThreads []string `json:"resolved_threads,omitempty"`
+	// UndoesMain are the paths the story's record says its rebased branch
+	// still undoes of the main branch's changes (ADR-0155), each not kept
+	// also in Blockers.
+	UndoesMain []UndonePath `json:"undoes_main,omitempty"`
+}
+
+// UndonePath is a path the story's branch undoes of the main branch's change
+// (ADR-0155): main's lines the branch removes, and the operator's reason when
+// the acceptance keeps the removal.
+type UndonePath struct {
+	storygit.Undone
+	KeptReason string `json:"kept_reason,omitempty"`
+}
+
+// KeptRemoval is a path whose removal of the main branch's lines the operator
+// keeps at acceptance, and why (ADR-0155).
+type KeptRemoval struct {
+	Path   string `json:"path"`
+	Reason string `json:"reason"`
 }
 
 // Accept is what accepting a story or an epic would do, worked out before
@@ -83,7 +102,8 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 
 // AcceptWith is Accept with what the acceptance adds: under
 // opts.Orchestrator, a blocker for each condition of ADR-0093 that fails,
-// beside every blocker Accept reports.
+// beside every blocker Accept reports, and no blocker for a path the branch
+// undoes of main that opts.Keep keeps (ADR-0155).
 func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger, opts AcceptOptions) (*Acceptance, error) {
 	// Without git (a project that is not a repository) acceptance is the
 	// transition and the archive; with git it also merges and commits.
@@ -175,6 +195,18 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 			res.Blockers = append(res.Blockers, fmt.Sprintf("cannot read %s for merge conflict markers: %v", res.Branch, err))
 		} else if b != "" {
 			res.Blockers = append(res.Blockers, b)
+		}
+		// a path the branch undoes of main's change waits for the operator
+		// to restore it or keep the removal (ADR-0155)
+		if undone, err := storygit.RecordedUndone(r, repo, it.ID); err != nil {
+			res.Blockers = append(res.Blockers, fmt.Sprintf("cannot read which paths %s undoes of the main branch's changes: %v", res.Branch, err))
+		} else {
+			res.UndoesMain = UndonePaths(undone, opts.Keep)
+			for _, u := range res.UndoesMain {
+				if u.KeptReason == "" {
+					res.Blockers = append(res.Blockers, UndoneBlocker(it.ID, u.Undone))
+				}
+			}
 		}
 		// a change to a path Claude Code protects takes effect for every
 		// agent once merged, so only the operator accepts it (ADR-0106)
@@ -291,6 +323,32 @@ func ConflictMarkers(r execx.Runner, repo *workitem.Repo, id string) (string, er
 		where = fmt.Sprintf("on %s (open its worktree with flai stream open %s)", branch, id)
 	}
 	return fmt.Sprintf("%s carries merge conflict markers at %s; resolve each conflict %s keeping what both sides meant, remove the markers, commit, and accept again", branch, workitem.Shorten(found, 20), where), nil
+}
+
+// UndonePaths are the paths of undone, each with its reason when keep names
+// it.
+func UndonePaths(undone []storygit.Undone, keep []KeptRemoval) []UndonePath {
+	var out []UndonePath
+	for _, u := range undone {
+		p := UndonePath{Undone: u}
+		for _, k := range keep {
+			if k.Path == u.Path {
+				p.KeptReason = k.Reason
+			}
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+// UndoneBlocker is why story id cannot be accepted while its branch undoes
+// the main branch's change u, naming the ways out (ADR-0155).
+func UndoneBlocker(id string, u storygit.Undone) string {
+	lines := fmt.Sprintf("%d lines", len(u.Lines))
+	if len(u.Lines) == 1 {
+		lines = "1 line"
+	}
+	return fmt.Sprintf("%s undoes the main branch's change to %s, removing %s main added since the branch left it; restore main's version with flai stream restore %s --path %s, keep the removal with flai accept %s --keep-removal %s --reason \"<why>\", or send %s back to in-progress (ADR-0155)", storygit.Branch(id), u.Path, lines, id, u.Path, id, u.Path, id)
 }
 
 // operators are who accept a story whose branch changes a path Claude Code

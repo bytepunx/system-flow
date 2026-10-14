@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -35,6 +36,14 @@ type acceptOptions struct {
 	verified string
 	evidence string
 	stdin    func() io.Reader // the command's standard input, for --evidence -
+	// keepRemovals are the paths whose removal of the main branch's lines the
+	// operator keeps, and reasons why: one per path in order, or one for all
+	// (ADR-0155).
+	keepRemovals []string
+	reasons      []string
+	// sharedReason is the command's own --reason, for flai move, which
+	// defines --reason before the acceptance's flags: one reason for all.
+	sharedReason func() []string
 }
 
 func newAcceptCmd(a *app) *cobra.Command {
@@ -105,11 +114,29 @@ path Claude Code protects, no thread on the story or its tasks is open, and
 --evidence, a Verdict: line and one item "- <n>: <files>" per criterion,
 names a changed file for each of them.
 The evidence is written, with the commit, under ### Accepted by the
-orchestrator in the story's Notes. With --dry-run the evidence is optional.`,
+orchestrator in the story's Notes. With --dry-run the evidence is optional.
+
+A story whose rebased branch undoes the main branch's change to a path, as a
+revert replayed over main's identical change does (ADR-0155, I-0124), is
+refused before anything is merged while the path is not kept: each path flai
+stream sync recorded and its branch still undoes, and each path the
+acceptance's own rebase finds. --dry-run lists each under undoes_main, with
+main's lines the branch removes, and each not kept as a blocker. Restore
+main's version with flai stream restore <id> --path <path>, send the story
+back to in-progress, or, as the operator, keep the removal with
+--keep-removal <path> (repeatable) and --reason "<why>": one --reason per
+--keep-removal in order, or one for them all. A --keep-removal naming a path
+the record does not hold, one without a reason, a reason on more than one
+line, and any with --by orchestrator are refused before anything changes:
+an undone path waits for the operator. Each kept path and its reason are
+written, with the commit, under ### Removals kept in the story's Notes. With
+--json the refusal exits 4 and prints {"refused": {"id", "reason",
+"undoes_main"}}, each path with its path, lines, and old_base.`,
 		Example: `  flai accept S-031 --by alex
   flai accept S-031 --by alex --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
-  flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md`,
+  flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
+  flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -122,7 +149,7 @@ orchestrator in the story's Notes. With --dry-run the evidence is optional.`,
 			}
 			res, err := a.acceptItem(repo, it, o)
 			if err != nil {
-				return a.acceptRefused(err)
+				return a.acceptRefusal(err)
 			}
 			return a.printAccept(res)
 		},
@@ -140,6 +167,17 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 	c.Flags().StringArrayVar(&o.trailers, "trailer", nil, "line appended to the commit message (repeatable)")
 	c.Flags().StringVar(&o.verified, "verified", "", "with --by orchestrator: the commit its verifier passed, the story branch's head")
 	c.Flags().StringVar(&o.evidence, "evidence", "", "with --by orchestrator: file holding its evidence, a Verdict: line and - <n>: <files> per criterion (- reads standard input)")
+	c.Flags().StringArrayVar(&o.keepRemovals, "keep-removal", nil, "as the operator: accept the branch's removal of the main branch's lines at this recorded path, with --reason (repeatable)")
+	if f := c.Flags().Lookup("reason"); f == nil {
+		c.Flags().StringArrayVar(&o.reasons, "reason", nil, "with --keep-removal: why the removal is kept, one per --keep-removal in order or one for all (repeatable)")
+	} else {
+		o.sharedReason = func() []string {
+			if f.Changed {
+				return []string{f.Value.String()}
+			}
+			return nil
+		}
+	}
 	o.stdin = c.InOrStdin
 }
 
@@ -181,7 +219,13 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun {
 		return nil, fmt.Errorf("working tree has uncommitted changes outside wip (%s); commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them", strings.Join(dirty, ", "))
 	}
+	if err := keptHeld(it.ID, res.UndoesMain, opts.Keep); err != nil {
+		return nil, err
+	}
 	if len(res.Blockers) > 0 && !o.dryRun {
+		if left := notKept(res.UndoesMain); len(left) > 0 {
+			return nil, undoneRefused(it.ID, res.Blockers, left)
+		}
 		return nil, fmt.Errorf("%s cannot be accepted yet: %s", it.ID, strings.Join(res.Blockers, "; "))
 	}
 	if o.dryRun {
@@ -207,7 +251,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		if hasBranch {
 			before = a.headOf(repo.MainRoot)
 		}
-		merged, err := a.mergeStoryBranch(repo, it.ID)
+		merged, err := a.mergeStoryBranch(repo, it.ID, opts.Keep)
 		if err != nil {
 			a.logAcceptConflict(repo, it.ID, err)
 			return nil, err
@@ -243,6 +287,10 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		// the story (ADR-0093)
 		if opts.Orchestrator {
 			it.Body = withNotesSection(it.Body, orchestratorNotes(res, a.now()))
+		}
+		// so does each removal of main's lines the operator keeps (ADR-0155)
+		if len(opts.Keep) > 0 {
+			it.Body = withNotesSection(it.Body, keptNotes(opts.Keep, res.By, a.now()))
 		}
 		if err := repo.Save(it); err != nil {
 			return nil, err
@@ -542,8 +590,12 @@ func (a *app) tellAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.
 // the orchestrator, --verified or --evidence for anyone else, the
 // orchestrator's acceptance while orchestration.permissions.accept_reviews is
 // off, and its real run without evidence or with evidence that cannot be read
-// (ADR-0093).
+// (ADR-0093); and --keep-removal as keptRemovals refuses it (ADR-0155).
 func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (preview.AcceptOptions, error) {
+	keep, err := keptRemovals(it.ID, o)
+	if err != nil {
+		return preview.AcceptOptions{}, err
+	}
 	orchestrator := workitem.IsOrchestrator(o.by)
 	switch {
 	case os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate && !orchestrator:
@@ -555,7 +607,7 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	case !orchestrator && (o.verified != "" || o.evidence != ""):
 		return preview.AcceptOptions{}, fmt.Errorf("rule: --verified and --evidence are the orchestrator's acceptance: give them with --by %s, or leave them out", workitem.ActivityOrchestrator)
 	case !orchestrator:
-		return preview.AcceptOptions{}, nil
+		return preview.AcceptOptions{Keep: keep}, nil
 	}
 	if err := repo.OrchestratorPermits(manifest.PermitAcceptReviews, "accepts a story", it.ID); err != nil {
 		return preview.AcceptOptions{}, fmt.Errorf("rule: %w", err)
@@ -612,6 +664,127 @@ func orchestratorNotes(res *preview.Acceptance, now time.Time) string {
 	fmt.Fprintf(&b, "### Accepted by the orchestrator\n\n- Verified: %s\n- At: %s\n", res.Verified, now.UTC().Format(time.RFC3339))
 	if res.Evidence != nil {
 		fmt.Fprintf(&b, "\n%s\n", res.Evidence.Text)
+	}
+	return b.String()
+}
+
+// keptRemovals are o's --keep-removal paths, each with its --reason, after
+// refusing what ADR-0155 does not allow: any keep by the orchestrator, since
+// an undone path waits for the operator; a keep without a reason, an empty
+// one, or one on more than one line; a number of reasons that is neither one
+// nor one per path; a path named twice; and a reason with no keep, for flai
+// accept, whose --reason says only why a removal is kept.
+func keptRemovals(id string, o acceptOptions) ([]preview.KeptRemoval, error) {
+	reasons := o.reasons
+	if o.sharedReason != nil {
+		reasons = o.sharedReason()
+	}
+	if len(o.keepRemovals) == 0 {
+		if len(o.reasons) > 0 {
+			return nil, errors.New("rule: --reason says why a --keep-removal is kept; give it with --keep-removal <path>, or leave it out")
+		}
+		return nil, nil
+	}
+	switch {
+	case workitem.IsOrchestrator(o.by):
+		return nil, fmt.Errorf("rule: the orchestrator keeps no removal of the main branch's lines: a path %s undoes of main waits for the operator, who restores it with flai stream restore %s --path <path> or keeps the removal with flai accept %s --keep-removal <path> --reason \"<why>\" (ADR-0155)", storyBranch(id), id, id)
+	case len(reasons) == 0:
+		return nil, fmt.Errorf("rule: --keep-removal %s needs a --reason saying why the removal of the main branch's lines is kept", strings.Join(o.keepRemovals, ", "))
+	case len(reasons) != 1 && len(reasons) != len(o.keepRemovals):
+		return nil, fmt.Errorf("rule: give one --reason for every --keep-removal, or one per --keep-removal in order: %s for %s", plural(len(reasons), "reason"), plural(len(o.keepRemovals), "path"))
+	}
+	var keep []preview.KeptRemoval
+	for i, p := range o.keepRemovals {
+		p = path.Clean(filepath.ToSlash(p))
+		reason := strings.TrimSpace(reasons[min(i, len(reasons)-1)])
+		switch {
+		case reason == "":
+			return nil, fmt.Errorf("rule: the --reason for --keep-removal %s is empty; say why the removal of the main branch's lines is kept", p)
+		case strings.ContainsAny(reason, "\r\n"):
+			return nil, fmt.Errorf("rule: the --reason for --keep-removal %s spans lines; give it on one line, since it is written as one item under ### Removals kept in the Notes of %s", p, id)
+		case slices.ContainsFunc(keep, func(k preview.KeptRemoval) bool { return k.Path == p }):
+			return nil, fmt.Errorf("rule: --keep-removal %s is given twice; name each path once", p)
+		}
+		keep = append(keep, preview.KeptRemoval{Path: p, Reason: reason})
+	}
+	return keep, nil
+}
+
+// keptHeld refuses a keep of a path that undone, the paths the story's record
+// holds, does not name, naming those it does.
+func keptHeld(id string, undone []preview.UndonePath, keep []preview.KeptRemoval) error {
+	held := make([]string, len(undone))
+	for i, u := range undone {
+		held[i] = u.Path
+	}
+	for _, k := range keep {
+		if slices.Contains(held, k.Path) {
+			continue
+		}
+		holds := "holds no path"
+		if len(held) > 0 {
+			holds = "holds only " + strings.Join(held, ", ")
+		}
+		return fmt.Errorf("rule: --keep-removal %s names a path %s does not undo of the main branch's changes: its record %s; keep only a path flai accept %s --dry-run lists under undoes_main", k.Path, storyBranch(id), holds, id)
+	}
+	return nil
+}
+
+// notKept are the paths of undone the acceptance does not keep.
+func notKept(undone []preview.UndonePath) []preview.UndonePath {
+	var left []preview.UndonePath
+	for _, u := range undone {
+		if u.KeptReason == "" {
+			left = append(left, u)
+		}
+	}
+	return left
+}
+
+// undoneRefusal is the refusal of an acceptance whose story branch undoes
+// the main branch's change to a path the operator does not keep (ADR-0155):
+// its text, and the paths as data for flai accept --json, which prints it as
+// {"refused": {...}} and exits 4.
+type undoneRefusal struct {
+	ID         string               `json:"id"`
+	Reason     string               `json:"reason"`
+	UndoesMain []preview.UndonePath `json:"undoes_main"`
+}
+
+// Error is the refusal's text.
+func (e *undoneRefusal) Error() string { return e.Reason }
+
+// undoneRefused is the refusal of id's acceptance for left, the paths not
+// kept, giving blockers as why, or each path's blocker when blockers is nil.
+func undoneRefused(id string, blockers []string, left []preview.UndonePath) *undoneRefusal {
+	if blockers == nil {
+		for _, u := range left {
+			blockers = append(blockers, preview.UndoneBlocker(id, u.Undone))
+		}
+	}
+	return &undoneRefusal{ID: id, Reason: fmt.Sprintf("%s cannot be accepted yet: %s", id, strings.Join(blockers, "; ")), UndoesMain: left}
+}
+
+// acceptRefusal is err as acceptRefused gives it, and under --json, when err
+// is a refusal for paths the branch undoes of main, that refusal printed as
+// {"refused": {...}} with exit 4, so the dashboard shows each path (ADR-0155).
+func (a *app) acceptRefusal(err error) error {
+	var r *undoneRefusal
+	if !a.jsonOut || !errors.As(err, &r) {
+		return a.acceptRefused(err)
+	}
+	_ = a.printJSON(map[string]any{"refused": r})
+	return &exitError{code: exitDocRefused, msg: err.Error()}
+}
+
+// keptNotes is what an acceptance that keeps removals of the main branch's
+// lines writes under the story's Notes (ADR-0155): each path, who kept it,
+// when, and why.
+func keptNotes(keep []preview.KeptRemoval, by string, now time.Time) string {
+	var b strings.Builder
+	b.WriteString("### Removals kept\n\n")
+	for _, k := range keep {
+		fmt.Fprintf(&b, "- `%s`, kept by %s at %s: %s\n", k.Path, by, now.UTC().Format(time.RFC3339), k.Reason)
 	}
 	return b.String()
 }
@@ -684,6 +857,11 @@ func (a *app) printAccept(acc *accepted) error {
 		if res.OperatorOnly != "" {
 			fmt.Fprintf(a.out, "%s: %s\n", res.OperatorOnly, strings.Join(res.Protected, ", "))
 		}
+		for _, u := range res.UndoesMain {
+			if u.KeptReason != "" {
+				fmt.Fprintf(a.out, "would keep the removal of the main branch's lines at %s: %s\n", u.Path, u.KeptReason)
+			}
+		}
 		if res.Branch != "" {
 			fmt.Fprintf(a.out, "would merge %s into the main branch and remove its worktree\n", res.Branch)
 		}
@@ -718,6 +896,11 @@ func (a *app) printAccept(acc *accepted) error {
 		fmt.Fprintf(a.out, ", %s merged and removed", res.Branch)
 	}
 	fmt.Fprintln(a.out, "; nothing released yet, run flai release --pending to publish")
+	for _, u := range res.UndoesMain {
+		if u.KeptReason != "" {
+			fmt.Fprintf(a.out, "kept the removal of the main branch's lines at %s; the reason is under ### Removals kept in the Notes of %s\n", u.Path, res.ID)
+		}
+	}
 	if res.Evidence != nil {
 		fmt.Fprintf(a.out, "accepted by the orchestrator at %s; its evidence is under ### Accepted by the orchestrator in the Notes of %s\n", short(res.Verified), res.ID)
 	}

@@ -48,6 +48,9 @@ type AcceptOptions struct {
 	Orchestrator bool      // an acceptance by the orchestrator: adds ADR-0093's blockers
 	Verified     string    // the commit the orchestrator's verifier passed, as given
 	Evidence     *Evidence // the orchestrator's evidence, nil when not given
+	// Keep are the paths whose removal of main's lines the operator keeps,
+	// each with its reason (ADR-0155).
+	Keep []KeptRemoval
 }
 
 // Evidence is the markdown an orchestrator writes from its verifier's report:

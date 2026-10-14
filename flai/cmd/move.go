@@ -120,7 +120,7 @@ computes no release; see flai release --pending.`,
 			return nil
 		},
 	}
-	c.Flags().StringVar(&reason, "reason", "", "why (required for cancelled and review → in-progress)")
+	c.Flags().StringVar(&reason, "reason", "", "why (required for cancelled and review → in-progress; for done, why each --keep-removal is kept)")
 	c.Flags().BoolVar(&dryRun, "dry-run", false, "for a move to cancelled: list what would be cancelled with it and change nothing")
 	c.Flags().StringVar(&by, "by", "", "who made the change (default: FLAI_AGENT when set, else the config author)")
 	addAcceptFlags(c, &accept)

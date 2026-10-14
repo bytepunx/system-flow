@@ -145,19 +145,20 @@ func nonNil(l []string) []string {
 
 // syncStoryBranch rebases the story branch onto the main branch inside its
 // worktree with storygit.Rebase, the rebase of flai stream sync without its
-// checks (ADR-0069, ADR-0098), its lint fix included (S-0367). A refusal or
-// a rebase left for the agent is a *syncStopped, with the conflicting paths
-// when there are any.
-func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, conflicts []string, err error) {
+// checks (ADR-0069, ADR-0098), its lint fix included (S-0367). It answers
+// the paths the rebased branch undoes of the main branch's changes, which the
+// rebase also records (ADR-0155). A refusal or a rebase left for the agent is
+// a *syncStopped, with the conflicting paths when there are any.
+func (a *app) syncStoryBranch(repo *workitem.Repo, id string) (base string, undone []storygit.Undone, err error) {
 	// the rebase reads only the story's ID
 	res, err := storygit.Rebase(storygit.SyncOptions{Runner: a.runner, Repo: repo, Story: &workitem.Item{ID: id}, Now: a.now(), Files: issues.SyncFiles(repo, id, a.runner, a.now), Fix: a.checkoutFix(context.Background()), Log: a.logger()})
 	if err != nil {
 		return res.Base, nil, err
 	}
 	if !res.Synced {
-		return res.Base, res.Conflicts, syncStoppedFrom(res)
+		return res.Base, nil, syncStoppedFrom(res)
 	}
-	return res.Base, nil, nil
+	return res.Base, res.UndoesMain, nil
 }
 
 // checkoutFix runs the fix commands of the tiers a story's worktree declares
@@ -170,26 +171,33 @@ func (a *app) checkoutFix(ctx context.Context) storygit.FixFunc {
 
 // mergeStoryBranch brings a story's branch into the main branch: the
 // worktree must be clean, the branch is rebased, fast-forwarded into main,
-// and the worktree and branch are removed. Returns false when the story has
-// no branch.
-func (a *app) mergeStoryBranch(repo *workitem.Repo, id string) (bool, error) {
+// and the worktree and branch are removed. A path the rebase finds the branch
+// undoing of main's change is refused unless keep keeps it (ADR-0155).
+// Returns false when the story has no branch.
+func (a *app) mergeStoryBranch(repo *workitem.Repo, id string, keep []preview.KeptRemoval) (bool, error) {
 	if !a.inGitWorkTree(repo.MainRoot) || !a.branchExists(repo.MainRoot, storyBranch(id)) {
 		return false, nil
 	}
 	branch, path := storyBranch(id), repo.WorktreePath(id)
 	hasWorktree, base := false, ""
+	var undone []storygit.Undone
 	if _, err := os.Stat(path); err == nil {
 		hasWorktree = true
 		if st, _ := a.runner.Run(path, "git", "status", "--porcelain"); strings.TrimSpace(st) != "" {
 			return false, fmt.Errorf("the worktree %s has uncommitted changes; commit them on %s (or discard them) before accepting", relPath(repo.MainRoot, path), branch)
 		}
-		if base, _, err = a.syncStoryBranch(repo, id); err != nil {
+		if base, undone, err = a.syncStoryBranch(repo, id); err != nil {
 			return false, err
 		}
 	}
 	// a conflict git-added unresolved must not reach main (S-0253, I-0066)
 	if err := a.refuseConflictMarkers(repo, id); err != nil {
 		return false, err
+	}
+	// nor a revert this rebase replayed over main's change, unless the
+	// operator keeps it (ADR-0155)
+	if left := notKept(preview.UndonePaths(undone, keep)); len(left) > 0 {
+		return false, undoneRefused(id, nil, left)
 	}
 	// nor lint the fix after the rebase left (S-0367, TH-0413)
 	if hasWorktree {

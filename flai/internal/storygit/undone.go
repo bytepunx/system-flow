@@ -138,8 +138,9 @@ func RecordedUndone(r execx.Runner, repo *workitem.Repo, story string) ([]Undone
 
 // checkUndone sets res.UndoesMain to what the branch rebased in the worktree
 // at dir undoes of main since oldBase, and adds it to the story's record,
-// found at o.Now. A check or a record that fails is logged and the sync
-// stands; an empty oldBase, which could not be read, checks nothing.
+// found at o.Now, leaving out the files flai writes itself. A check or a
+// record that fails is logged and the sync stands; an empty oldBase, which
+// could not be read, checks nothing.
 func checkUndone(o SyncOptions, dir, oldBase string, res *SyncResult) {
 	if oldBase == "" {
 		return
@@ -150,6 +151,11 @@ func checkUndone(o SyncOptions, dir, oldBase string, res *SyncResult) {
 		o.Log.Warn("what the rebased branch undoes of the main branch not checked; the sync stands", "component", "git", "story", id, "err", err)
 		return
 	}
+	// flai writes these itself from both sides, so main's lines are not lost
+	// there: the generated files, and the files the rebase merged (ADR-0098,
+	// ADR-0126)
+	own := slices.Concat(o.Files.generatedPaths(), res.Regenerated, res.Merged)
+	found = slices.DeleteFunc(found, func(u Undone) bool { return slices.Contains(own, u.Path) })
 	if len(found) == 0 {
 		return
 	}
