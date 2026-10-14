@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 908
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 192
-      cache_read: 1535450
-      cache_write: 264662
-      cost: 0.8289
+      input: 36
+      output: 12720
+      cache_read: 1761642
+      cache_write: 81604
+      cost: 1.0658
 ---
 # T-1484 A settled entry makes a conversation await neither story until the next message
 

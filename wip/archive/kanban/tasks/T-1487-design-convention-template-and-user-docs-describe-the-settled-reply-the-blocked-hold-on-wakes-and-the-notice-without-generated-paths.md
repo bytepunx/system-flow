@@ -3,16 +3,37 @@ id: T-1487
 type: task
 nature: improvement
 title: Design, convention, template, and user docs describe the settled reply, the blocked hold on wakes, and the notice without generated paths
-status: backlog
+status: done
 parent: S-0372
 owner: alex
 created: 2026-10-12T17:23:37Z
-updated: 2026-10-12T17:23:37Z
-transitions: []
+updated: 2026-10-14T21:40:22Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:36:47Z
+    by: agent-S-0372
+  - to: in-progress
+    at: 2026-10-14T21:36:48Z
+    by: agent-S-0372
+  - to: done
+    at: 2026-10-14T21:40:22Z
+    by: agent-S-0372
 stream: S-0372
 tags: [messages, docs, conventions]
-touches: [design/system/agent-coordination.md, design/system/workflow.md, design/system/agent-narrative.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/system/agent-coordination.md, design/system/workflow.md, design/system/agent-narrative.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1483, T-1485, T-1486]
+usage:
+  source: log
+  seconds: 214
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 22428
+      cache_read: 3106003
+      cache_write: 143879
+      cost: 1.8792
 ---
 # T-1487 Design, convention, template, and user docs describe the settled reply, the blocked hold on wakes, and the notice without generated paths
 

@@ -3,15 +3,36 @@ id: T-1476
 type: task
 nature: remediation
 title: "ADR: a rebased story branch that undoes main's change to a path is an acceptance blocker the operator resolves per path, by restoring it, keeping the removal with a reason, or sending the story back"
-status: backlog
+status: done
 parent: S-0371
 owner: alex
 created: 2026-10-12T17:15:17Z
-updated: 2026-10-14T20:58:14Z
-transitions: []
+updated: 2026-10-14T21:35:56Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:34:47Z
+    by: agent-S-0371
+  - to: in-progress
+    at: 2026-10-14T21:34:48Z
+    by: agent-S-0371
+  - to: done
+    at: 2026-10-14T21:35:56Z
+    by: agent-S-0371
 stream: S-0371
 tags: [cli, docs]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 68
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 16
+      output: 136
+      cache_read: 1345501
+      cache_write: 11284
+      cost: 0.625
 ---
 # T-1476 ADR: a rebased story branch that undoes main's change to a path is an acceptance blocker the operator resolves per path, by restoring it, keeping the removal with a reason, or sending the story back
 

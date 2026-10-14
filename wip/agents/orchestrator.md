@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 561.4039
-accrued_seconds: 478629
-tasks_completed: 475
-last_run: 2026-10-14T21:34:23Z
+accrued_cost: 563.8943
+accrued_seconds: 479080
+tasks_completed: 478
+last_run: 2026-10-14T21:41:54Z
 ---
 
 # Orchestrator activity
@@ -3336,6 +3336,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0304
 - Seconds: 1118
 - Cost: 1.8342 USD, estimated
+
+### 2026-10-14T21:34:34Z
+
+- Summary: Under publish, policy judgement: released S-0304 (1 pending, 0 USD/week, unvalued) as flai 1.49.2 → 1.49.3 (patch, flai/v1.49.3), pushed. Reason: a complete, verified remediation on its own (flai stream open starts a ready story and refuses a held one, ADR-0153; I-0097 closed); nothing held by whole_epics.
+- Items: S-0304
+- Seconds: 11
+- Cost: 0.0766 USD, estimated
+
+### 2026-10-14T21:34:45Z
+
+- Summary: S-0371 was pulled (21:33Z). Under order_ready, applied the throughput order: S-0374 (1h), S-0306 (no forecast duration); unchanged. S-0371 started without the three criteria its planner proposed; TH-0448 still awaits the operator.
+- Items: S-0374, S-0306, S-0371
+- Seconds: 11
+- Cost: 0.2347 USD, estimated
+
+### 2026-10-14T21:41:54Z
+
+- Summary: S-0374 was pulled. Under order_ready, applied the throughput order: S-0306 alone (no forecast duration).
+- Items: S-0374, S-0306
+- Seconds: 429
+- Cost: 2.1791 USD, estimated
 
 ## Refusals
 

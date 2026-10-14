@@ -24,16 +24,16 @@ touches: [flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver
 after: [T-1484]
 usage:
   source: log
-  seconds: 1020
+  seconds: 1022
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 427
-      cache_read: 3749571
-      cache_write: 282888
-      cost: 1.8568
+      input: 80
+      output: 28495
+      cache_read: 3946264
+      cache_write: 182802
+      cost: 2.3876
 ---
 # T-1485 flai message reply --settled and message_reply settled, with inbox and wait_for_events saying no reply is owed
 

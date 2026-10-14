@@ -3,12 +3,18 @@ id: T-1495
 type: task
 nature: improvement
 title: The close-out syncs and verifies again, at most three rounds, when main moved during its tiers
-status: backlog
+status: in-progress
 parent: S-0374
 owner: alex
 created: 2026-10-12T17:34:15Z
-updated: 2026-10-12T17:34:15Z
-transitions: []
+updated: 2026-10-14T21:45:26Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:45:26Z
+    by: agent-S-0374
+  - to: in-progress
+    at: 2026-10-14T21:45:26Z
+    by: agent-S-0374
 stream: S-0374
 tags: [cli, template]
 touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md]

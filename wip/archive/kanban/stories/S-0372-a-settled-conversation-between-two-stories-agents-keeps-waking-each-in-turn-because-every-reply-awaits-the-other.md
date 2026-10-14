@@ -3,10 +3,10 @@ id: S-0372
 type: story
 nature: improvement
 title: A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T16:52:49Z
-updated: 2026-10-14T21:30:54Z
+updated: 2026-10-14T21:52:28Z
 transitions:
   - to: ready
     at: 2026-10-14T20:56:28Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-14T20:56:35Z
     by: agent-S-0372
+  - to: review
+    at: 2026-10-14T21:51:30Z
+    by: agent-S-0372
+  - to: done
+    at: 2026-10-14T21:52:28Z
+    by: orchestrator
 tags: [flai, messages, serve]
 topics: [cli, conventions]
-touches: [design/adrs/README.md, design/system/agent-coordination.md, design/system/workflow.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/folder.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md, design/adrs/0154-a-reply-may-settle-a-conversation-which-then-awaits-neither-story-and-flai.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
+touches: [design/adrs/README.md, design/system/agent-coordination.md, design/system/workflow.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/folder.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md, design/adrs/0154-a-reply-may-settle-a-conversation-which-then-awaits-neither-story-and-flai.md, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, docs/operators/settings.md, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2059
-  estimated: true
-  priced_by: estimate
+  seconds: 3311
+  priced_by: harness
   turns:
     - day: 2026-10-14
-      hand_edits: 1
-      work: 39
+      ceremony: 1
+      hand_edits: 2
+      work: 63
   models:
     - model: claude-opus-5-5
-      input: 298
-      output: 1741
-      cache_read: 12965434
-      cache_write: 871528
-      cost: 6.3716
+      input: 436
+      output: 155270
+      cache_read: 21503314
+      cache_write: 996093
+      cost: 13.0101
   strategic:
     - kind: orchestrator
       seconds: 290
@@ -74,8 +80,8 @@ finalized:
 This story remediates [I-0125](../../../design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md), "A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0125 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0125 is closed with `flai issue close I-0125 --reason` saying what fixed it
+- [x] The cause I-0125 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0125 is closed with `flai issue close I-0125 --reason` saying what fixed it
 
 ## Tasks
 - T-1482 ADR: a reply may settle a conversation, which then awaits neither story, and flai serve wakes no agent for a settled reply or for a message while its story is blocked
@@ -126,3 +132,13 @@ Overlaps: S-0367, in progress, claims `flai/internal/taskdone/taskdone.go`, `fla
 Forecast: 1h, raised from flai's 34m. flai's figure is 78 s per unit of size over 61 large improvement stories, at size 26. This story has seven tasks in five layers. It spans four packages and a new ADR, and it changes a baseline convention in two copies. Each of the single-feature message stories S-0330 to S-0334 and S-0338 took 32 to 45 minutes of agent time. The delivery moves by the same 26 minutes, to 2026-10-13T02:58:00Z.
 
 Cost of delay: 90 USD a week, as `flai cod` gives it from flai's input: 36m lost per 168h cycle at 150 USD an hour. It stands. The input counts four occurrences, while the fourth instance alone reports 12 restarts, so it is low. The inputs are not the planner's to change.
+
+### Accepted by the orchestrator
+
+- Verified: 4732e1fb35806acd45a224a9b3f8980eac64e5fd
+- At: 2026-10-14T21:52:28Z
+
+Verdict: meets all criteria; flai verify passed every step at 4732e1fb; every changed path is within the story's touches, none under .claude/; the baseline change to work-management.md is the one the operator confirmed on TH-0422, identical in both copies.
+
+- 1: flai/internal/messages/messages.go, flai/internal/serve/agents.go, flai/internal/taskdone/taskdone.go, flai/internal/inbox/inbox.go, flai/cmd/message.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server.go, with their tests (TestASettledReplyAwaitsNeitherStory, TestASettledReplyStartsTheAgentWaitingOnItOnce, TestRunTellsNoOneOfThePathsSyncRegenerates, TestABlockedStorysAgentIsStartedOnlyForTheAnswerToItsQuestion), design/adrs/0154-a-reply-may-settle-a-conversation-which-then-awaits-neither-story-and-flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, design/system/agent-coordination.md, design/system/agent-narrative.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md
+- 2: design/issues/I-0125 (closed, naming S-0372, ADR-0154, and the tests), design/issues/summary.md

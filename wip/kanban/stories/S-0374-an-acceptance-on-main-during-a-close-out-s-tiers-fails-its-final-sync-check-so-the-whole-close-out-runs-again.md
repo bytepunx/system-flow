@@ -3,26 +3,41 @@ id: S-0374
 type: story
 nature: improvement
 title: An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-12T16:52:54Z
-updated: 2026-10-14T21:34:18Z
+updated: 2026-10-14T21:45:09Z
 transitions:
   - to: ready
     at: 2026-10-14T20:57:05Z
     by: alex
+  - to: in-progress
+    at: 2026-10-14T21:41:50Z
+    by: agent-S-0374
 tags: [cli]
 topics: [cli, conventions, template, testing]
-touches: [design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/summary.md]
+touches: [design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/summary.md, design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 205
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-14
+      hand_edits: 1
+      work: 22
+  models:
+    - model: claude-opus-5-5
+      input: 46
+      output: 232
+      cache_read: 2503285
+      cache_write: 151940
+      cost: 1.2231
   strategic:
     - kind: planner
       seconds: 322
@@ -41,15 +56,15 @@ usage:
           cache_write: 116361
           cost: 1.7627
     - kind: orchestrator
-      seconds: 27
+      seconds: 246
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 146
-          cache_read: 1719004
-          cache_write: 6911
-          cost: 0.4336
+          input: 41
+          output: 662
+          cache_read: 6368656
+          cache_write: 15374
+          cost: 1.6014
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 18m

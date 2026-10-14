@@ -3,11 +3,11 @@ id: T-1486
 type: task
 nature: improvement
 title: flai serve starts no agent again for a settled entry, nor for a message while its story is blocked
-status: in-progress
+status: done
 parent: S-0372
 owner: alex
 created: 2026-10-12T17:23:23Z
-updated: 2026-10-14T21:13:53Z
+updated: 2026-10-14T21:36:39Z
 transitions:
   - to: ready
     at: 2026-10-14T21:13:52Z
@@ -15,22 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-14T21:13:53Z
     by: agent-S-0372
+  - to: done
+    at: 2026-10-14T21:36:39Z
+    by: agent-S-0372
 stream: S-0372
 tags: [messages, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
 after: [T-1484]
 usage:
   source: log
-  seconds: 1019
+  seconds: 1366
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 418
-      cache_read: 3461709
-      cache_write: 124214
-      cost: 1.6512
+      input: 102
+      output: 36253
+      cache_read: 5020678
+      cache_write: 232572
+      cost: 3.0376
 ---
 # T-1486 flai serve starts no agent again for a settled entry, nor for a message while its story is blocked
 

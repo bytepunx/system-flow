@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 948
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 398
-      cache_read: 2373865
-      cache_write: 78534
-      cost: 1.1293
+      input: 49
+      output: 17330
+      cache_read: 2400004
+      cache_write: 111175
+      cost: 1.4521
 ---
 # T-1483 flai task done leaves the paths sync regenerates out of its changed-paths notice
 

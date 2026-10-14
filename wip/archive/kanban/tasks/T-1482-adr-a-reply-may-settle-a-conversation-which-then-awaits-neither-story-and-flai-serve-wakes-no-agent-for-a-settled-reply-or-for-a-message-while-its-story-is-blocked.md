@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 37
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 5
-      output: 20
-      cache_read: 331293
-      cache_write: 4391
-      cost: 0.1546
+      input: 7
+      output: 2372
+      cache_read: 328506
+      cache_write: 15217
+      cost: 0.1988
 ---
 # T-1482 ADR: a reply may settle a conversation, which then awaits neither story, and flai serve wakes no agent for a settled reply or for a message while its story is blocked
 

@@ -3,15 +3,36 @@ id: T-1493
 type: task
 nature: improvement
 title: "Record the ADR: a close-out that main outran syncs and runs again only the tiers main's new paths select"
-status: backlog
+status: done
 parent: S-0374
 owner: alex
 created: 2026-10-12T17:33:48Z
-updated: 2026-10-12T17:33:48Z
-transitions: []
+updated: 2026-10-14T21:45:14Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:44:24Z
+    by: agent-S-0374
+  - to: in-progress
+    at: 2026-10-14T21:44:24Z
+    by: agent-S-0374
+  - to: done
+    at: 2026-10-14T21:45:14Z
+    by: agent-S-0374
 stream: S-0374
 tags: [cli]
 touches: [design/adrs/README.md]
+usage:
+  source: log
+  seconds: 48
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 10
+      output: 44
+      cache_read: 792593
+      cache_write: 9154
+      cost: 0.3693
 ---
 # T-1493 Record the ADR: a close-out that main outran syncs and runs again only the tiers main's new paths select
 

@@ -3,16 +3,37 @@ id: T-1477
 type: task
 nature: remediation
 title: storygit.Rebase reports and records each path where the rebased branch removes lines main gained since its old branch point, with a test reproducing I-0124
-status: backlog
+status: done
 parent: S-0371
 owner: alex
 created: 2026-10-12T17:15:30Z
-updated: 2026-10-14T20:58:48Z
-transitions: []
+updated: 2026-10-14T21:43:43Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:36:03Z
+    by: agent-S-0371
+  - to: in-progress
+    at: 2026-10-14T21:36:04Z
+    by: agent-S-0371
+  - to: done
+    at: 2026-10-14T21:43:43Z
+    by: agent-S-0371
 stream: S-0371
 tags: [cli, go]
 touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go]
 after: [T-1476]
+usage:
+  source: log
+  seconds: 457
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 256
+      cache_read: 2546753
+      cache_write: 125400
+      cost: 1.2309
 ---
 # T-1477 storygit.Rebase reports and records each path where the rebased branch removes lines main gained since its old branch point, with a test reproducing I-0124
 

@@ -3,12 +3,18 @@ id: T-1494
 type: task
 nature: improvement
 title: flai verify reuses the tiers a clean rebase onto a newer main cannot reach, and runs again those main's new paths select
-status: backlog
+status: in-progress
 parent: S-0374
 owner: alex
 created: 2026-10-12T17:34:01Z
-updated: 2026-10-12T17:34:01Z
-transitions: []
+updated: 2026-10-14T21:45:25Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:45:25Z
+    by: agent-S-0374
+  - to: in-progress
+    at: 2026-10-14T21:45:25Z
+    by: agent-S-0374
 stream: S-0374
 tags: [cli]
 touches: [flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go]
