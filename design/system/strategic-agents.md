@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-13
+updated: 2026-10-14
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -196,11 +196,11 @@ While the `plan` host action is on, `flai serve` plans again without the operato
 
 | Trigger | When | What `flai serve` does |
 |---------|------|------------------------|
-| An edit | Someone other than a planner edits the goal, criteria, or touches of a backlog or ready story whose forecast or cost of delay value is older than the edit; or edits its cost of delay inputs, leaving them newer than its value (`CostOfDelay.Stale`) | Queues the planner for the story |
+| An edit | Someone other than a planner or the story's own agent edits the goal, criteria, or touches of a backlog or ready story whose forecast or cost of delay value is older than the edit; or edits its cost of delay inputs, leaving them newer than its value (`CostOfDelay.Stale`) | Queues the planner for the story |
 | Work ahead completes or the order changes | A story is accepted or cancelled, or the pull order changes | What `planning.replan` says ([The replan policy](#the-replan-policy)) |
 | The schedule | `planning.schedule` comes round | Queues the planner for every ready story, in pull order |
 
-Edits are read from the edit notices in `.flai-cache/edits.jsonl`, which `flai edit`, `flai touches`, the dashboard, and the MCP tool `item_edit` leave ([flai-cli.md](flai-cli.md#commands)); a hand edit of a file leaves none. An edit by an agent named `planner-…` never triggers, so a planner's own writes do not start it again. A story never planned, with neither a forecast nor a cost of delay value, is not planned on an edit: replanning keeps planning fresh, and planning a story first is the operator's to ask. A cost of delay value written alone triggers nothing.
+Edits are read from the edit notices in `.flai-cache/edits.jsonl`, which `flai edit`, `flai touches`, the dashboard, and the MCP tool `item_edit` leave ([flai-cli.md](flai-cli.md#commands)); a hand edit of a file leaves none. An edit by an agent named `planner-…` never triggers, so a planner's own writes do not start it again. Nor does an edit by the story's own agent, named by the configured agent name, `agent` by default, and the story's ID, such as `agent-S-0001` (I-0098). A story never planned, with neither a forecast nor a cost of delay value, is not planned on an edit: replanning keeps planning fresh, and planning a story first is the operator's to ask. A cost of delay value written alone triggers nothing.
 
 #### The replan policy
 
@@ -224,7 +224,7 @@ The replanner sees the schedule come round at the next look after its time, so a
 
 #### The queue
 
-The queue holds a story once: a trigger for a story already queued is added to its entry, not queued again. flai serve drains it one planner at a time per project, with its own launcher, so it sees the run end at once and starts the next. It passes over an entry whose item has a planner running, such as one the operator asked for, and comes back to it. Each entry goes through `planCheck`, the checks `serve.Plan` makes ([Starting it](#starting-it)); an entry they refuse, such as a story accepted meanwhile, is dropped and logged at info as `queued planner dropped`, with the reason. A run the operator asks for is not queued.
+The queue holds a story once: a trigger for a story already queued is added to its entry, not queued again. flai serve drains it one planner at a time per project, with its own launcher, so it sees the run end at once and starts the next. It passes over an entry whose item has a planner running, such as one the operator asked for, and comes back to it. It drops an entry whose story its agent works, whatever queued it: the story is in progress or in review, or the story's agent run is still running, such as a ready story whose agent flai serve has started. The drop is logged at info as `queued planner dropped`, with the reason (I-0098). Each other entry goes through `planCheck`, the checks `serve.Plan` makes ([Starting it](#starting-it)); an entry they refuse, such as a story accepted meanwhile, is dropped and logged at info as `queued planner dropped`, with the reason. A run the operator asks for is not queued.
 
 #### What a run records
 

@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-13
+updated: 2026-10-14
 status: active
 ---
 
@@ -1575,7 +1575,7 @@ While `plan` is on, `flai serve` also plans again on its own, so that forecasts 
 
 | When | What happens |
 |------|--------------|
-| You or an agent edit the goal, criteria, or touches of a backlog or ready story that has a forecast or a cost of delay value, or change its cost of delay inputs after its value | The planner runs for that story. A story never planned is not planned on an edit: planning it first is yours to ask, or the orchestrator's while you give it `plan_backlog_stories`. The planner's own edits start nothing |
+| You or an agent edit the goal, criteria, or touches of a backlog or ready story that has a forecast or a cost of delay value, or change its cost of delay inputs after its value | The planner runs for that story. A story never planned is not planned on an edit: planning it first is yours to ask, or the orchestrator's while you give it `plan_backlog_stories`. The planner's own edits start nothing, nor do the edits of the story's own agent. While the story's agent works it (the story is in progress or in review, or its agent runs), no trigger starts the planner for it (I-0098); your own `flai plan` still does |
 | A story is accepted or cancelled, or the pull order changes | What `planning.replan` says. By default flai plays the board out again with no agent and moves the delivery of each ready and backlog forecast that changed, keeping its duration, in one commit, `chore: replan forecasts after …` |
 | `planning.schedule` comes round | The planner runs for every ready story |
 
