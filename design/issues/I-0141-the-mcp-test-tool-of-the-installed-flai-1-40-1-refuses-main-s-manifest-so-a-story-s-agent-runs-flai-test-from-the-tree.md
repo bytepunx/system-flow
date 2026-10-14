@@ -3,11 +3,11 @@ id: I-0141
 title: The MCP test tool of the installed flai 1.40.1 refuses main's manifest, so a story's agent runs flai test from the tree
 class: efficiency
 status: open
-count: 3
+count: 4
 cost: 2m
 first_reported: 2026-10-12T17:07:12Z
-last_reported: 2026-10-14T21:01:28Z
-updated: 2026-10-14T21:01:28Z
+last_reported: 2026-10-14T23:14:46Z
+updated: 2026-10-14T23:14:46Z
 ---
 
 # I-0141 The MCP test tool of the installed flai 1.40.1 refuses main's manifest, so a story's agent runs flai test from the tree
@@ -28,6 +28,10 @@ The MCP server's installed flai, 1.48.0, refused task_done for T-1530 under ADR-
 ### 2026-10-14T21:01:28Z
 Story: S-0305.
 The MCP task_done of the installed flai 1.48.0 refused to close T-1151 because main's history has flai 1.49.1 (ADR-0142); S-0305's agent closed it with scripts/flai.sh task done from the tree.
+
+### 2026-10-14T23:14:46Z
+Story: S-0389.
+the MCP task_done of the installed flai 1.48.0 refused to close T-1587 under ADR-0142, as main's history holds flai 1.49.6; closed it with scripts/flai.sh task done from the tree instead
 
 ## Remediation
 
