@@ -2,12 +2,12 @@
 id: I-0136
 title: An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
 class: efficiency
-status: open
+status: closed
 count: 8
 cost: 6m
 first_reported: 2026-10-12T15:19:01Z
 last_reported: 2026-10-13T19:01:02Z
-updated: 2026-10-13T19:01:02Z
+updated: 2026-10-14T22:05:36Z
 ---
 
 # I-0136 An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
@@ -52,3 +52,4 @@ S-0378's close-out passed every tier (integration 4m47s, smoke 1m29s), then stop
 ## Remediation
 
 Story S-0374 remediates this issue, created from it at 2026-10-12T16:52:54Z.
+Closed 2026-10-14T22:05:36Z: Fixed by S-0374 (ADR-0156). When the close-out's last check finds that main moved during its tiers, scripts/close-out.sh, here and in the template, now runs flai stream sync itself and, when the sync ends clean, verifies, commits, and checks again, at most three rounds. Across that clean rebase flai verify reuses the tiers the last run passed while the branch's own change keeps the same patch id, and runs again only those that main's new paths select, leaving out wip paths the branch does not change. Tests reproduce I-0136 with fake git and in a real repository.
