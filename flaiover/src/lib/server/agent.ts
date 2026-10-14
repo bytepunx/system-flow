@@ -104,6 +104,8 @@ export const REQUIRED_METHODS = [
 	'stream.log',
 	'stream.answer',
 	'stream.state',
+	// S-0371: main's version of a path the rebased story branch undoes, restored onto it (ADR-0155)
+	'stream.restore',
 	'thread.new',
 	'thread.reply',
 	'thread.resolve',

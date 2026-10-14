@@ -677,6 +677,24 @@ func docRel(p channel.Project, rel string) (string, *channel.Error) {
 	return "", bad("%s is not under the project's design, docs, or wip folder", clean)
 }
 
+// undonePath checks a path a story branch undoes of main's change (ADR-0155),
+// as stream.restore and accept.run's keep_removals name it: relative to the
+// repository's root, inside it with no .. at all, and never a flag. Whether
+// the story's record holds it is flai's to say.
+func undonePath(field, given string) (string, *channel.Error) {
+	p := strings.TrimSpace(given)
+	clean := filepath.ToSlash(filepath.Clean(p))
+	switch {
+	case strings.ContainsAny(p, "\x00\n\r"):
+		return "", bad("%q in %s holds a line break or NUL", given, field)
+	case strings.HasPrefix(p, "-"):
+		return "", bad("%q in %s is not a path: give it as git names it from the repository's root, such as docs/users/flai.md", given, field)
+	case !filepath.IsLocal(p) || clean == "." || slices.Contains(strings.Split(filepath.ToSlash(p), "/"), ".."):
+		return "", bad("%q in %s is not a file inside the checkout: give it relative to the repository's root, with no .., such as docs/users/flai.md", given, field)
+	}
+	return clean, nil
+}
+
 // decode reads params into v, refusing what is not an object.
 func decode[T any](raw json.RawMessage) (T, *channel.Error) {
 	var v T
@@ -1372,6 +1390,10 @@ func itemSpecs() map[string]spec {
 		// evidence (ADR-0093). flai's refusal for lint the fix left (exit 4,
 		// ADR-0140) is Refused, with each finding, its file, line, rule, and
 		// checkout, as data, so the dashboard opens each file (S-0378).
+		// keep_removals are the operator's only (ADR-0155): each a path the
+		// branch undoes of main's change and the reason its removal is kept,
+		// passed as --keep-removal and --reason pairs in order. flai's refusal
+		// for a path still undone (exit 4) is Refused with undoes_main as data.
 		"accept.run": {progress: true, exits: map[int]int{4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID                 string `json:"id"`
@@ -1379,6 +1401,10 @@ func itemSpecs() map[string]spec {
 				By                 string `json:"by"`
 				Verified           string `json:"verified"`
 				Evidence           string `json:"evidence"`
+				KeepRemovals       []struct {
+					Path   string `json:"path"`
+					Reason string `json:"reason"`
+				} `json:"keep_removals"`
 			}](raw)
 			if e != nil {
 				return nil, "", e
@@ -1386,9 +1412,24 @@ func itemSpecs() map[string]spec {
 			if e := needID(in.ID); e != nil {
 				return nil, "", e
 			}
+			var keeps []string
+			for _, k := range in.KeepRemovals {
+				path, e := undonePath("keep_removals", k.Path)
+				if e != nil {
+					return nil, "", e
+				}
+				reason := text(k.Reason)
+				if reason == "" {
+					return nil, "", bad("the reason for keeping the removal at %s is blank: say why the branch's removal of the main branch's lines is kept", path)
+				}
+				keeps = append(keeps, "--keep-removal="+path, "--reason="+reason)
+			}
+			if len(keeps) > 0 && workitem.IsOrchestrator(in.By) {
+				return nil, "", bad("keep_removals are the operator's acceptance only: the orchestrator keeps no removal of the main branch's lines, so leave by out (ADR-0155)")
+			}
 			// Acceptance merges and archives only; it releases nothing (S-0087).
 			// Publishing what has accumulated is a step of its own (publish.run).
-			args, stdin := []string{"accept", in.ID, "--by=" + owner(p)}, ""
+			args, stdin := append([]string{"accept", in.ID, "--by=" + owner(p)}, keeps...), ""
 			switch {
 			case workitem.IsOrchestrator(in.By):
 				if e := orchestratorAccepts(p, in.ID); e != nil {
@@ -1490,6 +1531,36 @@ func itemSpecs() map[string]spec {
 				return nil, "", bad("current, next, or both are required: the text to write under ## Current state and ## Next steps")
 			}
 			return append([]string{"stream", "state", in.ID}, texts...), "", nil
+		}},
+
+		// stream.restore commits main's version of each path a rebased story
+		// branch undoes onto the branch (ADR-0155): flai stream restore, as one
+		// commit marked as the dashboard's. A story not in progress or in
+		// review, a worktree not clean, and a path the story's record does not
+		// hold are flai's refusals (exit 4), with what makes them so as data.
+		"stream.restore": {exits: map[int]int{4: Refused}, build: func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				ID    string   `json:"id"`
+				Paths []string `json:"paths"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if e := needStory(in.ID); e != nil {
+				return nil, "", e
+			}
+			if len(in.Paths) == 0 {
+				return nil, "", bad("paths are required: each path the branch undoes of main's change to restore, as flai accept --dry-run lists them under undoes_main")
+			}
+			args := []string{"stream", "restore", in.ID}
+			for _, given := range in.Paths {
+				path, e := undonePath("paths", given)
+				if e != nil {
+					return nil, "", e
+				}
+				args = append(args, "--path="+path)
+			}
+			return append(args, "--trailer="+Trailer), "", nil
 		}},
 
 		"thread.new": one(func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {

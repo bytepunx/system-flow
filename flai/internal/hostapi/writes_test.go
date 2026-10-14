@@ -43,10 +43,11 @@ var good = map[string]struct {
 	"issue.list":         {`{"story":"S-0198"}`, "issue list --story=S-0198 --json", ""},
 	"issue.story":        {`{"id":"I-0007","epic":"E-0002",` + rid + `}`, "issue story I-0007 --owner=olive --autocommit --trailer=" + Trailer + " --epic=E-0002 --json", ""},
 	"item.edit":          {`{"id":"S-0001","hash":"` + strings.Repeat("a", 64) + `","title":" --json  is my title ","nature":"remediation","tags":["cli","dashboard"],"touches":[],"topics":["logging"],"after":["S-0128","S-129"],"parent":"E-0002","body":"## Goal\nx\n",` + rid + `}`, "edit S-0001 --hash=" + strings.Repeat("a", 64) + " --by=olive --autocommit --trailer=" + Trailer + " --title=--json is my title --nature=remediation --parent=E-0002 --tag=cli --tag=dashboard --clear-touches --topics=logging --after=S-0128 --after=S-129 --body-stdin --json", "## Goal\nx\n"},
-	"accept.run":         {`{"id":"S-0001","include_uncommitted":true,` + rid + `}`, "accept S-0001 --by=olive --yes --json", ""},
+	"accept.run":         {`{"id":"S-0001","include_uncommitted":true,"keep_removals":[{"path":" docs/a.md ","reason":" the story\n rewrites it "},{"path":"scripts/x.sh","reason":"--gone"}],` + rid + `}`, "accept S-0001 --by=olive --keep-removal=docs/a.md --reason=the story rewrites it --keep-removal=scripts/x.sh --reason=--gone --yes --json", ""},
 	"stream.log":         {`{"id":"S-0001","entry":"--not a flag",` + rid + `}`, "stream log S-0001 --json -- --not a flag", ""},
 	"stream.answer":      {`{"id":"S-0001","question":"--not a flag?","answer":"--also not",` + rid + `}`, "stream answer S-0001 --by=olive --json -- --not a flag? --also not", ""},
 	"stream.state":       {`{"id":"S-0001","current":"  --not a flag\n- T-1 done \n","next":"1. --json\n2. -",` + rid + `}`, "stream state S-0001 --current=--not a flag\n- T-1 done --next=1. --json\n2. - --json", ""},
+	"stream.restore":     {`{"id":"S-0001","paths":[" docs/a.md ","scripts/flai-snapshot.sh"],` + rid + `}`, "stream restore S-0001 --path=docs/a.md --path=scripts/flai-snapshot.sh --trailer=" + Trailer + " --json", ""},
 	"thread.new":         {`{"on":"S-0001","heading":"Goal","title":"How deep?","text":"Eight metres?",` + rid + `}`, "thread new --on=S-0001 --by=olive --heading=Goal --json -- How deep? Eight metres?", ""},
 	"thread.reply":       {`{"id":"TH-0001","text":"Nine.","recommend":true,"source":" design/adrs/0090-x.md#Decision ",` + rid + `}`, "thread reply TH-0001 --by=olive --recommend --source=design/adrs/0090-x.md#Decision --json -- Nine.", ""},
 	"thread.confirm":     {`{"id":"TH-0001",` + rid + `}`, "thread confirm TH-0001 --by=olive --json", ""},
@@ -166,6 +167,14 @@ var refused = map[string][]string{
 		`{"id":"S-0001","current":"-",` + rid + `}`, `{"id":"S-0001","current":"c","next":" -\n",` + rid + `}`,
 		`{"id":"S-0001","current":["c"],` + rid + `}`, `{"id":"S-0001","current":"c"}`,
 	},
+	// S-0371, ADR-0155: a story's ID and at least one path, each inside the checkout, with no .., never a flag
+	"stream.restore": {
+		`{"id":"--help","paths":["a"],` + rid + `}`, `{"id":"T-0001","paths":["a"],` + rid + `}`, `{"id":"S-0001 --json","paths":["a"],` + rid + `}`,
+		`{"id":"S-0001",` + rid + `}`, `{"id":"S-0001","paths":[],` + rid + `}`, `{"id":"S-0001","paths":"docs/a.md",` + rid + `}`,
+		`{"id":"S-0001","paths":["--all"],` + rid + `}`, `{"id":"S-0001","paths":["/etc/passwd"],` + rid + `}`, `{"id":"S-0001","paths":["../x"],` + rid + `}`,
+		`{"id":"S-0001","paths":["docs/../scripts/x.sh"],` + rid + `}`, `{"id":"S-0001","paths":["docs/a.md"," "],` + rid + `}`, `{"id":"S-0001","paths":["."],` + rid + `}`,
+		`{"id":"S-0001","paths":["a\nb"],` + rid + `}`, `{"id":"S-0001","paths":["docs/a.md"]}`,
+	},
 	// S-0273: flai test in a checkout, its paths kept inside it
 	"test.run": {
 		`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"paths":["../etc"],` + rid + `}`, `{"paths":["/etc"],` + rid + `}`,
@@ -200,7 +209,7 @@ var refused = map[string][]string{
 	"item.template":      {`{"type":"task"}`},
 	"issue.list":         {`{"story":"--all"}`, `{"story":"T-0001"}`, `{"story":"S-1 --all"}`, `[]`},
 	"issue.story":        {`{"id":"--help",` + rid + `}`, `{"id":"S-0001",` + rid + `}`, `{"id":"I-0001 --story=S-1",` + rid + `}`, `{"id":"I-0001","epic":"S-0001",` + rid + `}`, `{"id":"I-0001","epic":"--json",` + rid + `}`, `{"id":"I-0001"}`},
-	"accept.run":         {`{"id":"S-1 --no-push",` + rid + `}`, `{"id":"S-0001","by":"alex",` + rid + `}`, `{"id":"S-0001","verified":"abc1234",` + rid + `}`, `{"id":"S-0001","evidence":"Verdict: pass",` + rid + `}`},
+	"accept.run":         append([]string{`{"id":"S-1 --no-push",` + rid + `}`, `{"id":"S-0001","by":"alex",` + rid + `}`, `{"id":"S-0001","verified":"abc1234",` + rid + `}`, `{"id":"S-0001","evidence":"Verdict: pass",` + rid + `}`}, refusedKeeps...),
 	"stream.log":         {`{"id":"S-0001","entry":"  ",` + rid + `}`},
 	"stream.answer":      {`{"id":"../../etc","question":"q","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"  ","answer":"a",` + rid + `}`, `{"id":"S-0001","question":"q","answer":"  ",` + rid + `}`},
 	"thread.new":         {`{"on":"../secret.md","title":"t","text":"x",` + rid + `}`, `{"on":"--by=eve","title":"t","text":"x",` + rid + `}`, `{"on":"S-0001","title":"","text":"x",` + rid + `}`, `{"on":"src/main.go","title":"t","text":"x",` + rid + `}`},
@@ -283,6 +292,22 @@ var refused = map[string][]string{
 		`{"id":"--help","reason":"r",` + rid + `}`, `{"id":"I-1; ls","reason":"r",` + rid + `}`, `{"id":"S-0001","reason":"r",` + rid + `}`,
 		`{"id":"I-0001",` + rid + `}`, `{"id":"I-0001","reason":" \n ",` + rid + `}`, `{"id":"I-0001","reason":["r"],` + rid + `}`, `{"id":"I-0001","reason":"r"}`,
 	},
+}
+
+// refusedKeeps are accept.run's keep_removals that never reach flai accept
+// (S-0371, ADR-0155): a path that is a flag, absolute, outside the checkout,
+// or blank, a reason blank or missing, a keep that is not a path and a
+// reason, and any keep in the orchestrator's acceptance.
+var refusedKeeps = []string{
+	`{"id":"S-0001","keep_removals":[{"path":"--force","reason":"r"}],` + rid + `}`,
+	`{"id":"S-0001","keep_removals":[{"path":"/etc/passwd","reason":"r"}],` + rid + `}`,
+	`{"id":"S-0001","keep_removals":[{"path":"../x","reason":"r"}],` + rid + `}`,
+	`{"id":"S-0001","keep_removals":[{"path":"docs/../../x","reason":"r"}],` + rid + `}`,
+	`{"id":"S-0001","keep_removals":[{"path":"","reason":"r"}],` + rid + `}`,
+	`{"id":"S-0001","keep_removals":[{"path":"docs/a.md","reason":" \n "}],` + rid + `}`,
+	`{"id":"S-0001","keep_removals":[{"path":"docs/a.md"}],` + rid + `}`,
+	`{"id":"S-0001","keep_removals":["docs/a.md"],` + rid + `}`,
+	`{"id":"S-0001","keep_removals":[{"path":"docs/a.md","reason":"r"}],"by":"orchestrator","verified":"abc1234","evidence":"Verdict: pass",` + rid + `}`,
 }
 
 type recorder struct {
@@ -2497,6 +2522,43 @@ func TestStreamStateWritesTheTextsGiven(t *testing.T) {
 		if e == nil || e.Code != Refused || e.Data.(map[string]any)["reason"] == nil {
 			t.Errorf("a refusal: %+v", e)
 		}
+	}
+}
+
+// S-0371, ADR-0155: flai's refusals of stream.restore and of an acceptance
+// blocked on paths the branch undoes of main's change (exit 4) are Refused,
+// with what makes them so as data; and the orchestrator's acceptance with a
+// kept removal is refused, running nothing, before its permission is read.
+func TestUndoneMainPathsRefusalsPassThrough(t *testing.T) {
+	p := withDocs(t)
+	call := func(method string, ran Ran, params string) (*channel.Error, int) {
+		rec := &recorder{ran: ran}
+		_, e := writeMethods(rec.run, time.Now, Host{})[method](context.Background(), p, json.RawMessage(params))
+		return e, len(rec.runs)
+	}
+	notHeld := Ran{Exit: 4, Stdout: []byte(`{"refused":{"story":"S-0001","reason":"S-0001's record holds no docs/b.md","not_held":["docs/b.md"],"held":["docs/a.md"]}}`),
+		Events: []map[string]any{{"level": "FATAL", "err": "S-0001's record holds no docs/b.md"}}}
+	e, _ := call("stream.restore", notHeld, `{"id":"S-0001","paths":["docs/b.md"],`+rid+`}`)
+	if e == nil || e.Code != Refused || e.Message != "S-0001's record holds no docs/b.md" {
+		t.Fatalf("a restore flai refuses is Refused with its reason: %+v", e)
+	}
+	if data, _ := e.Data.(map[string]any); fmt.Sprint(data["not_held"], data["held"]) != "[docs/b.md] [docs/a.md]" {
+		t.Errorf("the restore refusal's data: %+v", e.Data)
+	}
+
+	undone := Ran{Exit: 4, Stdout: []byte(`{"refused":{"id":"S-0001","reason":"rule: story/S-0001 undoes main's change to docs/a.md","undoes_main":[{"path":"docs/a.md","removed":3}]}}`),
+		Events: []map[string]any{{"level": "FATAL", "err": "rule: story/S-0001 undoes main's change to docs/a.md"}}}
+	e, _ = call("accept.run", undone, `{"id":"S-0001",`+rid+`}`)
+	if e == nil || e.Code != Refused || e.Message != "story/S-0001 undoes main's change to docs/a.md" {
+		t.Fatalf("an acceptance blocked on an undone path is Refused: %+v", e)
+	}
+	if undoes, _ := e.Data.(map[string]any)["undoes_main"].([]any); len(undoes) != 1 {
+		t.Errorf("the acceptance refusal's data: %+v", e.Data)
+	}
+
+	e, runs := call("accept.run", Ran{}, `{"id":"S-0001","by":"orchestrator","keep_removals":[{"path":"docs/a.md","reason":"r"}],`+rid+`}`)
+	if e == nil || e.Code != channel.CodeInvalidParams || runs != 0 || !strings.Contains(e.Message, "the operator's acceptance only") {
+		t.Errorf("the orchestrator keeps no removal: %+v, ran %d", e, runs)
 	}
 }
 
