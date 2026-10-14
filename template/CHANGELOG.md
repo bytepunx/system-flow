@@ -2,6 +2,7 @@
 
 ## 1.0.91 - 2026-10-14
 
+- S-0372 A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other (patch).
 - S-0372 A reply that asks nothing is sent settled, and wakes no one (patch, ADR-0154): `work-management.md` says to answer a message with `flai message reply --settled`, or `message_reply` with `settled`, when the answer asks nothing, such as agreement, so the conversation awaits neither story and the other story's agent is not woken; a settled entry to your story owes no reply. A `flai task done` notice that does not break your work is answered settled, and one that does gets a plain reply saying how. The notice leaves out the paths sync regenerates, and while your story is blocked `flai serve` starts you again only for the answer to your thread, not for a message. It needs a flai that has `--settled`; an older flai refuses the flag, and its `message_reply` has no `settled`.
 
 ## 1.0.90 - 2026-10-12
