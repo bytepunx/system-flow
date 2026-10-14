@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-14T20:55:58Z
+updated: 2026-10-14T20:56:27Z
 ---
 
 # Active streams
@@ -8,6 +8,7 @@ updated: 2026-10-14T20:55:58Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0304](S-0304.md) | A story's agent that runs flai stream open is left with the story in ready, so permission_prompt refuses its .claude/ write until it moves the story itself | in-progress | agent-S-0304 | 2026-10-14T20:55:01Z |
+| [S-0305](S-0305.md) | flai serve replans a story on its own agent's touches edit while the agent works it, and the planner's new touches hold other ready stories | in-progress | agent-S-0305 | 2026-10-14T20:56:26Z |
 
 ## Strategic agents
 
