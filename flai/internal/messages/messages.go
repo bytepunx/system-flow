@@ -42,6 +42,9 @@ const titleLimit = 72
 // closedPrefix starts the line of the entry that closes a conversation.
 const closedPrefix = "Closed: "
 
+// settledMark ends the heading of a settled entry, after its story (ADR-0154).
+const settledMark = " (settled)"
+
 // Conversation is one file: the messages between two stories.
 type Conversation struct {
 	ID           string   `yaml:"id" json:"id"`
@@ -68,19 +71,28 @@ type Conversation struct {
 
 // Entry is one dated contribution parsed from the body: its time, its
 // author, the story it was written for, empty on an entry that closes the
-// conversation, and its text.
+// conversation, its text, and whether it is settled: a reply after which the
+// conversation awaits neither story (ADR-0154). The fields are in the order
+// of their JSON keys, sorted, as a decoded object writes them.
 type Entry struct {
-	At     string `json:"at"`
-	Author string `json:"author"`
-	Story  string `json:"story"`
-	Text   string `json:"text"`
+	At      string `json:"at"`
+	Author  string `json:"author"`
+	Settled bool   `json:"settled"`
+	Story   string `json:"story"`
+	Text    string `json:"text"`
+}
+
+// Marks are the optional marks of a reply: that it settles the conversation.
+// The zero value is a plain reply.
+type Marks struct {
+	Settled bool
 }
 
 var (
 	idPattern    = regexp.MustCompile(`^MS-\d{4,}$`)
 	looseID      = regexp.MustCompile(`^(?:(?i:ms)-?)?0*(\d+)$`)
 	storyPattern = regexp.MustCompile(`^S-\d{3,}$`)
-	entryHeading = regexp.MustCompile(`(?m)^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+?)(?: (S-\d{3,}))?$`)
+	entryHeading = regexp.MustCompile(`(?m)^### (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+?)(?: (S-\d{3,})( \(settled\))?)?$`)
 )
 
 // Dir is <layout.wip>/messages, always in the main checkout.
@@ -205,7 +217,8 @@ func (c *Conversation) Save() error {
 }
 
 // Entries parses the dated entries from the body, in order. An entry headed
-// with no story is one that closed the conversation.
+// with no story is one that closed the conversation; one whose heading ends
+// in the settled mark after its story is settled.
 func (c *Conversation) Entries() []Entry {
 	locs := entryHeading.FindAllStringSubmatchIndex(c.Body, -1)
 	var out []Entry
@@ -218,20 +231,25 @@ func (c *Conversation) Entries() []Entry {
 		if loc[6] >= 0 {
 			e.Story = c.Body[loc[6]:loc[7]]
 		}
+		e.Settled = loc[8] >= 0
 		out = append(out, e)
 	}
 	return out
 }
 
 // Awaiting is the story of the two that did not write the last entry written
-// for a story: the addressee until it replies, then the sender, and so on.
+// for a story: the addressee until it replies, then the sender, and so on. It
+// is empty while that entry is settled: the conversation then awaits neither
+// story until either writes again (ADR-0154).
 func (c *Conversation) Awaiting() string {
 	es := c.Entries()
 	for i := len(es) - 1; i >= 0; i-- {
-		switch workitem.CanonicalID(es[i].Story) {
-		case "":
+		switch {
+		case es[i].Story == "":
 			continue
-		case workitem.CanonicalID(c.From):
+		case es[i].Settled:
+			return ""
+		case workitem.CanonicalID(es[i].Story) == workitem.CanonicalID(c.From):
 			return c.To
 		default:
 			return c.From
@@ -351,10 +369,10 @@ func (c *Conversation) Other(story string) string {
 }
 
 // AwaitingOther returns story's conversations that read as open and await
-// the other story's reply: those story sent or answered last, in ID order.
-// One whose other story is not in progress or in review is left out: a
-// ready story, such as one flai asked about a hold for, has no agent to
-// reply until it starts, so a reply to it awaits no one (ADR-0134).
+// the other story's reply: those story sent or answered last, in ID order,
+// and not settled. One whose other story is not in progress or in review is
+// left out: a ready story, such as one flai asked about a hold for, has no
+// agent to reply until it starts, so a reply to it awaits no one (ADR-0134).
 func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
 	all, err := For(r, story)
 	if err != nil {
@@ -365,7 +383,7 @@ func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
 		if closed, _ := c.Closed(r); closed {
 			continue
 		}
-		if workitem.CanonicalID(c.Awaiting()) == workitem.CanonicalID(story) {
+		if a := c.Awaiting(); a == "" || workitem.CanonicalID(a) == workitem.CanonicalID(story) {
 			continue
 		}
 		if it, err := r.Get(c.Other(story)); err == nil && it.Status != workitem.InProgress && it.Status != workitem.Review {
@@ -377,7 +395,8 @@ func AwaitingOther(r *workitem.Repo, story string) ([]*Conversation, error) {
 }
 
 // ToSince returns story's conversations with an entry the other story wrote
-// after t, in ID order: those a message to story arrived in since then.
+// after t, in ID order: those a message to story arrived in since then, a
+// settled reply among them, which owes no reply.
 func ToSince(r *workitem.Repo, story string, t time.Time) ([]*Conversation, error) {
 	all, err := For(r, story)
 	if err != nil {
@@ -561,6 +580,13 @@ func openBetween(r *workitem.Repo, a, b string) (*Conversation, error) {
 // must still be in progress or in review. A conversation that reads as closed
 // takes no reply.
 func Reply(r *workitem.Repo, id, story, author, text string, now time.Time) (*Conversation, error) {
+	return ReplyWith(r, id, story, author, text, now, Marks{})
+}
+
+// ReplyWith appends a reply as Reply does, with marks. A settled reply leaves
+// the conversation open and awaiting neither story, until the next message
+// from either (ADR-0154).
+func ReplyWith(r *workitem.Repo, id, story, author, text string, now time.Time, marks Marks) (*Conversation, error) {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return nil, fmt.Errorf("a reply needs text")
@@ -583,7 +609,7 @@ func Reply(r *workitem.Repo, id, story, author, text string, now time.Time) (*Co
 		return nil, err
 	}
 	was := c.Marshal()
-	c.add(now.UTC().Format(workitem.TimeFormat), author, storyOf(c, it.ID), text)
+	c.addWith(now.UTC().Format(workitem.TimeFormat), author, storyOf(c, it.ID), text, marks)
 	return c, save(r, c, was)
 }
 
@@ -694,10 +720,20 @@ func relTo(r *workitem.Repo, path string) string {
 	return path
 }
 
-// add appends an entry by author for story at stamp, names author among the
-// participants, and marks the conversation updated then.
+// add appends an unsettled entry by author for story at stamp, names author
+// among the participants, and marks the conversation updated then.
 func (c *Conversation) add(stamp, author, story, text string) {
-	c.Body = appendEntry(c.Body, stamp+" "+author+" "+story, text)
+	c.addWith(stamp, author, story, text, Marks{})
+}
+
+// addWith appends an entry as add does, its heading ending in the settled
+// mark when marks settle it.
+func (c *Conversation) addWith(stamp, author, story, text string, marks Marks) {
+	heading := stamp + " " + author + " " + story
+	if marks.Settled {
+		heading += settledMark
+	}
+	c.Body = appendEntry(c.Body, heading, text)
 	if !contains(c.Participants, author) {
 		c.Participants = append(c.Participants, author)
 	}
@@ -774,8 +810,9 @@ func CloseOn(r *workitem.Repo, stories []string, author, verb string, now time.T
 
 // View is a conversation as flai prints it with --json and the dashboard
 // reads it: the front matter, whether it reads as closed and why, the story
-// it awaits while open, the path relative to the repository, the entries,
-// and the shares (an empty list when there are none).
+// it awaits while open, empty while settled, the path relative to the
+// repository, the entries, each marked settled or not, and the shares (an
+// empty list when there are none).
 func View(r *workitem.Repo, c *Conversation) map[string]any {
 	path := relTo(r, c.Path)
 	closed, why := c.Closed(r)
@@ -927,9 +964,9 @@ func titleOf(text, from string) string {
 func cleanAuthor(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // appendEntry adds a dated entry under its heading, the time, author, and
-// story. One with the same heading as the last entry joins it, as threads'
-// entries do (I-0043): a second identical heading fails the duplicate-heading
-// rule (MD024).
+// story, and the settled mark on a settled entry. One with the same heading
+// as the last entry joins it, as threads' entries do (I-0043): a second
+// identical heading fails the duplicate-heading rule (MD024).
 func appendEntry(body, heading, text string) string {
 	body = strings.TrimRight(body, "\n")
 	heading = "### " + heading

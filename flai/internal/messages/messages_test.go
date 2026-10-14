@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -449,6 +450,139 @@ func TestAwaitingOtherAndToSince(t *testing.T) {
 	}
 	if list, _ := ToSince(r, "S-0002", t0); len(list) != 0 {
 		t.Errorf("its own reply is no message to S-0002: %s", ids(list))
+	}
+}
+
+// ADR-0154, I-0125: a settled reply leaves the conversation open and awaiting
+// neither story, so that an agreement wakes no one; its mark is in the
+// heading, after the story, and is read back from the file.
+func TestASettledReplyAwaitsNeitherStory(t *testing.T) {
+	r := project(t)
+	send(t, r, "S-0001", "S-0002", "I changed board.go; does it break you?", t0)
+	at := t0.Add(time.Minute)
+	if _, err := Reply(r, "MS-0001", "S-0002", "agent-S-0002", "Checking.", at); err != nil {
+		t.Fatal(err)
+	}
+	c, err := ReplyWith(r, "MS-0001", "S-0002", "agent-S-0002", "Agreed, nothing to change.", at, Marks{Settled: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Awaiting() != "" || c.Status != StatusOpen {
+		t.Errorf("settled: awaiting %q, status %s", c.Awaiting(), c.Status)
+	}
+	if closed, why := c.Closed(r); closed {
+		t.Errorf("a settled conversation stays open: %s", why)
+	}
+	for _, s := range []string{"S-0001", "S-0002"} {
+		if list, err := AwaitingOther(r, s); err != nil || len(list) != 0 {
+			t.Errorf("%s awaits no one on a settled conversation: %s %v", s, ids(list), err)
+		}
+	}
+	if list, _ := ToSince(r, "S-0001", t0); ids(list) != "MS-0001" {
+		t.Errorf("the settled reply is still a message to S-0001: %s", ids(list))
+	}
+	if body := readFile(t, c.Path); !strings.Contains(body, "\n### 2026-10-07T09:01:00Z agent-S-0002 S-0002\nChecking.\n\n### 2026-10-07T09:01:00Z agent-S-0002 S-0002 (settled)\nAgreed, nothing to change.\n") {
+		t.Errorf("the mark ends the heading, and a settled reply does not join a plain one:\n%s", body)
+	}
+	back, err := Read(c.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Entry{
+		{At: "2026-10-07T09:00:00Z", Author: "agent-S-0001", Story: "S-0001", Text: "I changed board.go; does it break you?"},
+		{At: "2026-10-07T09:01:00Z", Author: "agent-S-0002", Story: "S-0002", Text: "Checking."},
+		{At: "2026-10-07T09:01:00Z", Author: "agent-S-0002", Story: "S-0002", Text: "Agreed, nothing to change.", Settled: true},
+	}
+	if got := back.Entries(); len(got) != len(want) || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
+		t.Fatalf("entries read back: %+v", got)
+	}
+	if back.Awaiting() != "" || back.Marshal() != c.Marshal() {
+		t.Errorf("awaiting %q; the file round-trips:\n%s", back.Awaiting(), back.Marshal())
+	}
+	if err := back.Validate(); err != nil {
+		t.Error(err)
+	}
+	lintClean(t, r, c)
+
+	v := View(r, back)
+	if v["awaiting"] != "" || v["closed"] != false {
+		t.Errorf("view: %+v", v)
+	}
+	if es, ok := v["entries"].([]Entry); !ok || len(es) != 3 || es[1].Settled || !es[2].Settled {
+		t.Errorf("entries: %+v", v["entries"])
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if js := string(data); !strings.Contains(js, `"settled":true`) || !strings.Contains(js, `"settled":false`) || !strings.Contains(js, `"awaiting":""`) {
+		t.Errorf("json: %s", js)
+	}
+
+	if _, err := Close(r, c.ID, "alex", "done talking", at.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if closed, _ := Read(c.Path); closed.Awaiting() != "" {
+		t.Errorf("a closing entry names no story and is passed over: awaiting %q", closed.Awaiting())
+	}
+}
+
+// ADR-0154: after a settled reply, the next message from either story, a
+// notice and an escalation among them, makes the conversation await the
+// other story again; only a reply is written settled.
+func TestAMessageAfterASettledReplyAwaitsTheOtherAgain(t *testing.T) {
+	later := t0.Add(2 * time.Minute)
+	for _, tc := range []struct {
+		name  string
+		write func(r *workitem.Repo) error
+		want  string
+	}{
+		{"a reply from the settling story", func(r *workitem.Repo) error {
+			_, err := Reply(r, "MS-0001", "S-0002", "agent-S-0002", "On second thought, one question.", later)
+			return err
+		}, "S-0001"},
+		{"a reply from the other story", func(r *workitem.Repo) error {
+			_, err := Reply(r, "MS-0001", "S-0001", "agent-S-0001", "One more change.", later)
+			return err
+		}, "S-0002"},
+		{"a settled reply from the other story", func(r *workitem.Repo) error {
+			_, err := ReplyWith(r, "MS-0001", "S-0001", "agent-S-0001", "Thanks.", later, Marks{Settled: true})
+			return err
+		}, ""},
+		{"a notice from the other story", func(r *workitem.Repo) error {
+			_, err := Notify(r, SendOptions{From: "S-0001", To: "S-0002", Author: "agent-S-0001", Text: "T-0002 of S-0001 changed board.go.", About: []string{"board.go"}, Now: later})
+			return err
+		}, "S-0002"},
+		{"a notice from the settling story", func(r *workitem.Repo) error {
+			_, err := Notify(r, SendOptions{From: "S-0002", To: "S-0001", Author: "agent-S-0002", Text: "T-0003 of S-0002 changed board.go.", About: []string{"board.go"}, Now: later})
+			return err
+		}, "S-0001"},
+		{"an escalation", func(r *workitem.Repo) error {
+			_, _, err := Escalate(r, "MS-0001", "S-0001", "agent-S-0001", "We do not agree after all.", later)
+			return err
+		}, "S-0002"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := project(t)
+			send(t, r, "S-0001", "S-0002", "I changed board.go; does it break you?", t0)
+			if _, err := ReplyWith(r, "MS-0001", "S-0002", "agent-S-0002", "Agreed, nothing to change.", t0.Add(time.Minute), Marks{Settled: true}); err != nil {
+				t.Fatal(err)
+			}
+			if err := tc.write(r); err != nil {
+				t.Fatal(err)
+			}
+			c, err := Get(r, "MS-0001")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c.Awaiting() != tc.want || c.Status != StatusOpen {
+				t.Errorf("awaiting %q, want %q; status %s", c.Awaiting(), tc.want, c.Status)
+			}
+			if es := c.Entries(); es[len(es)-1].Settled != (tc.want == "") {
+				t.Errorf("the newest entry: %+v", es[len(es)-1])
+			}
+			lintClean(t, r, c)
+		})
 	}
 }
 
