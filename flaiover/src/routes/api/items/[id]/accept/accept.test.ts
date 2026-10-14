@@ -109,6 +109,37 @@ describe('acceptance and diff endpoints over the channel', () => {
 		expect(asked[1].params.include_uncommitted).toBe(false);
 	});
 
+	// ADR-0155, S-0388: the removals of main's lines the designer keeps, each with why, go to flai
+	// as given; flai checks each path against what the branch undoes.
+	it('passes the removals kept and their reasons only when there are any', async () => {
+		script = { answer: { data: { id: 'S-0041', status: 'done' }, warnings: [] } };
+		const keeps = [
+			{ path: 'docs/a.md', reason: 'the story rewrites it' },
+			{ path: 'scripts/x.sh', reason: 'gone with the old build' }
+		];
+		await (await post('S-0041', { keep_removals: keeps })).text();
+		expect(asked[0].params.keep_removals).toEqual(keeps);
+		expect(asked[0].params.include_uncommitted).toBe(false);
+		await (await post('S-0041', { keep_removals: [] })).text();
+		expect(asked[1].params).not.toHaveProperty('keep_removals');
+		await (await post('S-0041', {})).text();
+		expect(asked[2].params).not.toHaveProperty('keep_removals');
+	});
+
+	it.each([
+		['not a list', 'docs/a.md', 'keep_removals must be a list'],
+		['an entry that is not an object', ['docs/a.md'], 'needs a path'],
+		['an entry with no path', [{ reason: 'r' }], 'needs a path'],
+		['an entry with a blank path', [{ path: ' ', reason: 'r' }], 'needs a path'],
+		['an entry with no reason', [{ path: 'docs/a.md' }], 'keeping the removal at docs/a.md'],
+		['an entry with a blank reason', [{ path: 'docs/a.md', reason: ' \n ' }], 'is blank']
+	])('answers keep_removals that is %s with 400 before asking flai', async (_, keeps, message) => {
+		const r = await post('S-0041', { keep_removals: keeps });
+		expect(r.status).toBe(400);
+		expect((await r.json()).error).toContain(message);
+		expect(asked).toHaveLength(0);
+	});
+
 	it('ends with flai’s message verbatim when the acceptance fails', async () => {
 		const message =
 			'rebase of story/S-0041 onto main stopped with conflicts in docs/users/flai.md; resolve them in .flai-cache/worktrees/S-0041 and run flai stream sync';
@@ -150,6 +181,37 @@ describe('acceptance and diff endpoints over the channel', () => {
 			error: `rule: ${reason}`,
 			data: { id: 'S-0041', reason, findings: [finding] }
 		});
+	});
+
+	// ADR-0155, S-0388: a refusal for a branch that undoes main's change carries each path, so the
+	// page can show the lines and offer to restore or keep each.
+	it('ends a refusal for undone lines of main with undoes_main as data, whole', async () => {
+		const undoes = [
+			{ path: 'docs/a.md', lines: ['kept on main'], old_base: 'abc1234' },
+			{
+				path: 'scripts/x.sh',
+				lines: ['echo built'],
+				old_base: 'abc1234',
+				kept_reason: 'gone with the old build'
+			}
+		];
+		const reason = "S-0041 cannot be accepted: story/S-0041 undoes main's change to docs/a.md";
+		script = {
+			error: new AgentError(502, `rule: ${reason}`, -32010, {
+				id: 'S-0041',
+				reason,
+				undoes_main: undoes
+			})
+		};
+		const out = await lines(await post('S-0041', {}));
+		expect(out).toEqual([
+			{
+				event: 'error',
+				status: 422,
+				error: `rule: ${reason}`,
+				data: { id: 'S-0041', reason, undoes_main: undoes }
+			}
+		]);
 	});
 
 	it('says the acceptance may have completed when the connection is lost on the way', async () => {
