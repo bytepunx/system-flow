@@ -23,7 +23,7 @@ The dashboard reads and saves a text file that is not markdown through the host 
 
 1. **The methods.** `file.get` `{path, story?}` answers the file's raw content and its SHA-256. `file.save` `{path, content, hash, story?, message?}` saves it. The CLI is `flai file show <path>` and `flai file save <path> --hash <h>`, the content on standard input, each with `--story`, as `flai doc show` and `flai doc save` are.
 2. **What they reach.** A file under the manifest's design or docs folder, or a path the manifest names for a purpose: the design token file and the design stylesheet now.
-3. **What they refuse.** Any other path; a path under the wip folder; a binary file; a file over a size limit S-0381 sets; and a markdown file, which keeps `doc.show` and `doc.save` and their edit modes.
+3. **What they refuse.** Any other path; a path under the wip folder; a binary file; a file over a size limit the story that builds them sets; and a markdown file, which keeps `doc.show` and `doc.save` and their edit modes.
 4. **The rules of a save.** A stale hash is a conflict, exit 3, with the current content and a diff. flai runs `flai check` before and after writing; a finding the content introduces, or an error already on the file, puts the old file back and refuses the save, exit 4. The save commits that path on the main checkout's current branch as `docs:`, unless `dashboard.autocommit` is false. With `story`, it is read, checked, and committed in that story's worktree, on `story/S-nnnn`, and refused as ADR-0145 refuses.
 5. **ADR-0029 stands.** There is still no method that reads an arbitrary file. A path outside the two folders enters `file.get`'s reach only by being named in the manifest.
 

@@ -184,7 +184,7 @@ Decided on TH-0445 ([ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text
 | Methods | `file.get` `{path, story?}`: the raw content and its SHA-256. `file.save` `{path, content, hash, story?, message?}`. |
 | CLI | `flai file show <path>` and `flai file save <path> --hash <h>`, the content on standard input, each with `--story` |
 | Reach | A file under the manifest's design or docs folder, or a path the manifest names for a purpose: the design token file and the design stylesheet |
-| Refused | Any other path, the wip folder, a binary file, a file over a size limit S-0381 sets, and a Markdown file, which keeps `doc.show` and `doc.save` |
+| Refused | Any other path, the wip folder, a binary file, a file over a size limit the story that builds them sets, and a Markdown file, which keeps `doc.show` and `doc.save` |
 | A save | `doc.save`'s rules: a stale hash is a conflict, exit 3; `flai check` before and after, a finding the content introduces refusing it, exit 4; the commit on the main checkout's branch unless `dashboard.autocommit` is false; with `story`, the story's worktree and branch ([ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md)) |
 
 ADR-0029 stands: there is still no method that reads an arbitrary file.
@@ -377,7 +377,7 @@ Option 3 first, then 1 and 2 together; 4 deferred. The stylesheet makes the toke
 
 Build in this order, as decided (§ Decision):
 
-1. **The token file, the guidance, and their check** ([Where a project keeps its design system](#where-a-project-keeps-its-design-system)): the DTCG token file the manifest names, `design/system/design-system.tokens.json` by default; the guidance in `design/system/design-system.md`; `design.tokens`; `file.get` and `file.save` with `flai file show` and `flai file save`; `flai design init`, `show`, and `css`; and `design.get`. The documentation convention's exception for the token file, in the template and the standard. S-0381.
+1. **The token file, the guidance, and their check** ([Where a project keeps its design system](#where-a-project-keeps-its-design-system)): the DTCG token file the manifest names, `design/system/design-system.tokens.json` by default; the guidance in `design/system/design-system.md`; `design.tokens`; `flai design init`, `show`, and `css`; and `design.get`. The documentation convention's exception for the token file, in the template and the standard. S-0381. Then `file.get` and `file.save` with `flai file show` and `flai file save`, in a story of their own (§ Epic).
 2. **The stylesheet** ([How agents build from it](#how-agents-build-from-it)): `design.stylesheet`, `flai design css --write`, `design.stale` naming the token file and the stylesheet, and flai writing the stylesheet whenever it writes the tokens. S-0385, before S-0383, whose save depends on it.
 3. **The Design group and its preview** ([Previewing it live](#previewing-it-live-without-building-the-project)): a blank same-origin frame the page fills, the gallery against the fixed vocabulary, the tokens as `--ds-*` values. S-0382.
 4. **Editing on the page** ([Working on it together](#working-on-it-together), option 1): the preview follows before saving, and the save writes the token file and the stylesheet through `file.save`. S-0383.
@@ -437,3 +437,62 @@ The question asked for "all as recommended, or the numbers you want otherwise". 
 | [ADR-0150](../adrs/0150-a-token-save-from-the-design-page-lands-on-main-and-flai-writes-the-stylesheet.md) | A token save from the Design page lands on main, with the generated stylesheet in the same commit (choice 8); refines ADR-0023 and ADR-0147 |
 | [ADR-0151](../adrs/0151-the-operator-and-agents-change-a-design-system-by-edits-on-the-design-page.md) | Edits on the page, proposals as stories, a request form, and threads on the guidance; no store of variants (choice 9) |
 | [ADR-0152](../adrs/0152-agents-build-ui-from-a-tailwind-v4-stylesheet-flai-generates-from-the-tokens.md) | A generated stylesheet kept in step by `design.stale`, prime giving the guidance and the token file whole by the guidance's topics, and a baseline convention (choice 10); refines ADR-0049 and ADR-0050 |
+
+## Epic
+
+What each of E-0020's drafts must change after the decision, for the planner to replan them from. Paths are touches to add or drop; forecasts and costs of delay are the planner's to redo.
+
+### S-0381 The token file, the guidance, and their check
+
+- **Holds.** `flai design init`, `show`, and `css`; `design.tokens` with a location; `design.get`; the docs; T-1532 to T-1537 in their layers.
+- **Changes.** Title and goal: the tokens are a DTCG file the manifest names, `design/system/design-system.tokens.json` by default, beside the guidance in `design/system/design-system.md` (ADR-0146). Criterion 1: `init` writes both from starters, dark values through the resolver's `theme` modifier. Criterion 2: `design.tokens` reports a file that does not parse, a type or colour space flai does not read, a missing role or step, and a resolver other than `theme` with `light` and `dark`, at the token's path and line, and passes a project with no token file (ADR-0148). Criterion 3: `show --json` adds the roles' contrast, reported, never a finding. New criterion and task: the convention's one exception to "Everything is markdown", in both copies of `documentation.md` and the standard. T-1532 reads JSON, not front matter. Tags: add `template`.
+- **Touches.** Add `flai/internal/designsystem/resolver.go` and `color.go` (oklch to sRGB, contrast) with tests, `starter.tokens.json`, `flai/internal/manifest/manifest.go` with its test, `design/system/project-manifest.md`, `docs/operators/settings.md`, `design/conventions/documentation.md`, `template/root/design/conventions/documentation.md`, `design/system/documentation-standard.md`.
+
+### A new story: file.get and file.save
+
+`flai file show` and `flai file save`, each with `--story`, and the host methods `file.get` and `file.save` (ADR-0147). Not in S-0381: S-0381 needs neither, it is already the largest flai story, and the pair is general rather than design's. This story sets the size limit ADR-0147 leaves to it. Touches: `flai/cmd/file.go` with its test, `flai/cmd/root.go`, `flai/internal/docedit/` for the hash, check, and commit rules it shares with `doc.save`, `flai/internal/hostapi/writes.go`, `writes_test.go`, `contract_test.go`, `design/system/dashboard-host-channel.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, the reference. It and S-0381 both claim `flai/cmd/root.go`, so they run one after the other anyway (ADR-0046).
+
+### S-0382 The Design group and its preview
+
+- **Holds.** The Design group and `/design`, the gallery's components, the empty state, following changes, the docs; T-1538, T-1539, T-1541, T-1542.
+- **Changes.** Criterion 2: contrast is the roles' pairs at ADR-0148's thresholds as `design.get` reports them, not each colour on the ground; extra tokens are swatches and specimens; the guidance comes from `design/system/design-system.md`. Criterion 3 names the means (ADR-0149): a blank same-origin frame the page fills, the gallery's stylesheet compiled apart and imported `?inline`, the gallery mounted with `mount`, the tokens as `--ds-*` values in one `<style>`, light and dark as two panels, a route outside the root layout as the fallback. T-1540 checks `?inline` and the frame's events first. New criterion: Google Fonts loaded into the frame only when a font token names a family, and a missing family said. Criteria 4 and 5: the token file, with `flai design init`.
+- **Touches.** Add `flaiover/src/lib/design/gallery.css`.
+
+### S-0383 Editing on the page
+
+- **Holds.** Each kind edited in place, the preview following before saving, contrast beside the token, the leave guard and discard, the docs.
+- **Changes.** Goal and criterion 3: the save writes the token file through `file.save` on main, flai writing the stylesheet in the same commit, the guidance untouched (ADR-0150); not `doc.save`, not front matter. Criterion 1: a colour in `srgb` with its hex, or `oklch`. Criterion 2: the browser computes the pairs as flai does, both tested against one fixture. New criterion: unsaved values kept in the browser across a reload (ADR-0151). T-1543 edits the DTCG JSON and keeps keys it does not know; T-1546 saves through `file.save`.
+- **Touches.** Add `flaiover/src/routes/api/design/tokens/+server.ts` with its test (`file.get` and `file.save`, 501 from an older flai) and `flaiover/src/lib/server/agent.ts`; drop the note that the doc endpoints are called as they are.
+
+### S-0384 Proposals and threads
+
+- **Holds.** `design show --story` and `design.get` with a story, the proposals list, the comparison, the request form, acceptance with no step, the docs; T-1548 to T-1555.
+- **Changes.** Criterion 2: a proposal's branch changes the token file or the guidance. Criterion 4: the form's story has the fixed criteria (the tokens as asked, the stylesheet in step, the UI's tests passing), the token file and the stylesheet as touches, the values tried in its body, and is moved to ready, not a draft. New criteria, a task each: the operator tweaks a proposal's tokens on its branch through `file.save` with `story`; the page lists the guidance's threads by heading and opens one with `thread.new`. T-1548 reads the worktree as `file.get` does, after S-0378.
+- **Touches.** Add `flaiover/src/routes/api/design/tokens/+server.ts` and `flaiover/src/lib/components/Threads.svelte`.
+
+### S-0385 The stylesheet
+
+- **Holds.** `design.stylesheet` under a sub-project, `flai design css --write` with its header, `design.stale` naming the command, the docs; T-1556 to T-1560.
+- **Changes.** Criterion 2: the file is whole, imported by the UI's own stylesheet, and selects dark values as the project's `dark:` variant does, which this story settles. Criterion 3: `design.stale` names the token file and the stylesheet, so a close-out stops a branch that changed only the tokens (ADR-0152). New criterion and task: whenever flai writes the token file, by `file.save` or `flai design`, it writes the stylesheet in the same commit, on main or the story's branch, and `file.save` reaches the stylesheet (ADR-0150).
+- **Touches.** Add `flai/cmd/file.go` and `flai/internal/docedit/`.
+
+### S-0386 Agents' use
+
+- **Holds.** The baseline `design-system.md` in the template and here, a project with no design system primed as before, T-1563, T-1564, the docs.
+- **Changes.** Criterion 1: drop `flai design init --project` and the record of governed sub-projects; prime loads the guidance and the token file whole, as if named, for every story the guidance's `topics` reach, and briefs them above ADR-0050's threshold; the token file is prime's first read of a file that is not Markdown. Criterion 2: `roles: [story, verify]`, and ADR-0152's wording: change the token file on the branch, widen the touches to it and the stylesheet, run `flai design css --write`, say why in the guidance, ask on a thread before a role changes meaning, read both with `doc_get` and `flai file show`. Criterion 4: `agent-context.md` records the refinement of ADR-0049 and ADR-0050. Drop T-1561; T-1562 loads whole rather than briefs; T-1565 drops governs and `init --project`.
+- **Touches.** Drop `flai/cmd/design.go` and its test; add `flai/internal/context/story.go` and `flai/internal/conventions/conventions.go`, where conventions are chosen.
+
+### The order
+
+1. S-0381, after S-0380.
+2. The file story, after S-0381.
+3. S-0382, after S-0381, beside 2 and 4.
+4. S-0385, after S-0381 and the file story.
+5. S-0383, after S-0382, S-0385, and the file story.
+6. S-0384, after S-0383.
+7. S-0386, after S-0385 and the file story; not after S-0384, whose page it does not need.
+
+### Proposed, not drafted
+
+- **A Patterns page.** Still wait for S-0383. Under ADR-0149 it is more of the gallery, in the same frame and vocabulary, so it needs no decision of its own.
+- **This repository's own design system.** After S-0385 and S-0386, and larger than proposed: flaiover's 39 `--t-*` colours meet the required roles (`ground` is `background`, `ink` is `text`), with the nature and type colours as extras, so its utilities are renamed or kept beside the roles; `theme.test.ts` reads the generated file instead of `layout.css`; and S-0385's dark selection must serve `[data-theme='dark']`. The chart palette stays outside.
