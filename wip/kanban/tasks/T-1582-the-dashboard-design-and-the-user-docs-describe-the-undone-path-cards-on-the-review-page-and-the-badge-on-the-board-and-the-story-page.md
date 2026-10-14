@@ -3,12 +3,18 @@ id: T-1582
 type: task
 nature: feature
 title: The dashboard design and the user docs describe the undone-path cards on the review page and the badge on the board and the story page
-status: backlog
+status: in-progress
 parent: S-0388
 owner: alex
 created: 2026-10-14T21:09:18Z
-updated: 2026-10-14T21:09:18Z
-transitions: []
+updated: 2026-10-14T23:29:46Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:29:45Z
+    by: agent-S-0388
+  - to: in-progress
+    at: 2026-10-14T23:29:46Z
+    by: agent-S-0388
 stream: S-0388
 tags: [dashboard, docs]
 touches: [design/system/flaiover-dashboard.md, docs/users/flaiover.md]

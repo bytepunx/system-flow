@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 571.9040
-accrued_seconds: 483984
-tasks_completed: 484
-last_run: 2026-10-14T23:03:43Z
+accrued_cost: 576.1779
+accrued_seconds: 484489
+tasks_completed: 487
+last_run: 2026-10-14T23:12:08Z
 ---
 
 # Orchestrator activity
@@ -3399,6 +3399,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0371
 - Seconds: 2733
 - Cost: 2.3684 USD, estimated
+
+### 2026-10-14T23:09:40Z
+
+- Summary: The operator accepted S-0371 (TH-0448/TH-0451 settled by it). Under publish, policy judgement: released S-0371 (1 pending, 25 USD/week) as flai 1.49.5 → 1.49.6 (flai/v1.49.6) and flaiover 0.44.0 → 0.44.1 (flaiover/v0.44.1), pushed; reason: a complete remediation on its own (ADR-0155, I-0124 closed), nothing held by whole_epics. Under promote_to_ready, moved S-0388 to ready (rank 1, 1h; no longer held after S-0371); S-0241 (rank 2, 2h) stays out, blocked. Under order_ready, applied the throughput order: S-0388. Under plan_backlog_stories, started the planner on S-0389, flai plan --candidates' only candidate.
+- Items: S-0371, S-0388, S-0389
+- Seconds: 357
+- Cost: 2.3485 USD, estimated
+
+### 2026-10-14T23:11:55Z
+
+- Summary: Answered TH-0452, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0389
+- Seconds: 135
+- Cost: 1.6144 USD, estimated
+
+### 2026-10-14T23:12:08Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0389's plan TH-0452 (2 tasks in 2 layers cover both criteria; file touches; 30m raised from flai's 14m; 40 USD/week from the 16m input). Under finalize_drafts, finalized S-0389 (flai promote --drafts: complete, 30m). Under promote_to_ready, moved it to ready (rank 1, 30m); S-0241 (rank 2, 2h) stays out, blocked. Under order_ready, applied the throughput order: S-0389.
+- Items: S-0389
+- Seconds: 13
+- Cost: 0.3110 USD, estimated
 
 ## Refusals
 

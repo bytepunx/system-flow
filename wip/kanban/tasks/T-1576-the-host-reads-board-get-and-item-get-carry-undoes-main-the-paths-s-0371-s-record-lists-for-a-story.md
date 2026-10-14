@@ -3,15 +3,36 @@ id: T-1576
 type: task
 nature: feature
 title: The host reads board.get and item.get carry undoes_main, the paths S-0371's record lists for a story
-status: backlog
+status: done
 parent: S-0388
 owner: alex
 created: 2026-10-14T21:08:41Z
-updated: 2026-10-14T21:08:41Z
-transitions: []
+updated: 2026-10-14T23:15:23Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:10:18Z
+    by: agent-S-0388
+  - to: in-progress
+    at: 2026-10-14T23:10:18Z
+    by: agent-S-0388
+  - to: done
+    at: 2026-10-14T23:15:23Z
+    by: agent-S-0388
 stream: S-0388
 tags: [cli]
 touches: [flai/internal/workitem/boardview.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, design/system/flai-cli.md]
+usage:
+  source: log
+  seconds: 305
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 374
+      cache_read: 2538566
+      cache_write: 93050
+      cost: 1.2147
 ---
 # T-1576 The host reads board.get and item.get carry undoes_main, the paths S-0371's record lists for a story
 

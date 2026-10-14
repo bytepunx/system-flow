@@ -3,14 +3,20 @@ id: S-0388
 type: story
 nature: feature
 title: The review page shows each path a story's branch undoes on main as a card, with Restore, Keep with a reason, and Send back, and the board badges such a story
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-14T21:02:31Z
-updated: 2026-10-14T23:09:12Z
-transitions: []
+updated: 2026-10-14T23:29:41Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:09:33Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-14T23:09:39Z
+    by: agent-S-0388
 tags: [dashboard]
 topics: [dashboard, cli]
-touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/WorktreeUncommitted.svelte, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/restore/+server.ts", "flaiover/src/routes/api/items/[id]/restore/restore.test.ts", flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/lib/server/repo.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", flai/internal/workitem/boardview.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flaiover.md]
+touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/WorktreeUncommitted.svelte, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/restore/+server.ts", "flaiover/src/routes/api/items/[id]/restore/restore.test.ts", flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/lib/server/repo.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", flai/internal/workitem/boardview.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flaiover.md, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/repo-forget.test.ts]
 after: [S-0371]
 agent:
   harness: claude-code
@@ -18,20 +24,33 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1171
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-14
+      ceremony: 1
+      hand_edits: 1
+      work: 40
+  models:
+    - model: claude-opus-5-5
+      input: 316
+      output: 1761
+      cache_read: 12494231
+      cache_write: 561759
+      cost: 6.0261
   strategic:
     - kind: orchestrator
-      seconds: 460
+      seconds: 579
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 61
-          output: 1092
-          cache_read: 7875603
-          cache_write: 31932
-          cost: 1.9824
+          input: 77
+          output: 1364
+          cache_read: 10993484
+          cache_write: 36700
+          cost: 2.7652
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m
@@ -57,12 +76,12 @@ finalized:
 The operator resolves a story branch that undoes main's change from the dashboard, path by path, without git commands or hand-edited files, as they chose on TH-0420. S-0371 gives flai the check, the acceptance blocker with its data (`undoes_main`), `flai stream restore` behind the host write `stream.restore`, and `accept.run`'s `keep_removals`. This story builds the dashboard's side on them.
 
 ## Acceptance criteria
-- [ ] The review page shows each path in the acceptance preview's `undoes_main` as a card: the path, and main's lines that the branch removes beside the branch's version
-- [ ] Restore on a card runs `stream.restore` for its path, and the preview runs again, so the card clears
-- [ ] Keep on a card asks for a one-line reason, and Accept then passes the kept paths and their reasons as `keep_removals`, so the acceptance records them in the story's Notes
-- [ ] Send back on a card opens a thread on the story naming the undone paths and moves the story back to in-progress with that reason
-- [ ] Accept stays disabled while a card is neither restored nor kept, and a refused acceptance that carries `undoes_main` as data shows the same cards
-- [ ] The board's card and the story page show "undoes main on N paths" for a story whose record lists any, linking to the review page
+- [x] The review page shows each path in the acceptance preview's `undoes_main` as a card: the path, and main's lines that the branch removes beside the branch's version
+- [x] Restore on a card runs `stream.restore` for its path, and the preview runs again, so the card clears
+- [x] Keep on a card asks for a one-line reason, and Accept then passes the kept paths and their reasons as `keep_removals`, so the acceptance records them in the story's Notes
+- [x] Send back on a card opens a thread on the story naming the undone paths and moves the story back to in-progress with that reason
+- [x] Accept stays disabled while a card is neither restored nor kept, and a refused acceptance that carries `undoes_main` as data shows the same cards
+- [x] The board's card and the story page show "undoes main on N paths" for a story whose record lists any, linking to the review page
 - [ ] The dashboard design and the user docs describe the cards and the badge
 
 ## Tasks

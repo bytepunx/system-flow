@@ -3,16 +3,37 @@ id: T-1581
 type: task
 nature: feature
 title: "The story page shows \"undoes main on N paths\" for a story whose record lists any, linking to its review page"
-status: backlog
+status: done
 parent: S-0388
 owner: alex
 created: 2026-10-14T21:09:09Z
-updated: 2026-10-14T21:09:09Z
-transitions: []
+updated: 2026-10-14T23:29:29Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:15:48Z
+    by: agent-S-0388
+  - to: in-progress
+    at: 2026-10-14T23:15:49Z
+    by: agent-S-0388
+  - to: done
+    at: 2026-10-14T23:29:29Z
+    by: agent-S-0388
 stream: S-0388
 tags: [dashboard]
-touches: [flaiover/src/lib/server/repo.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts"]
+touches: [flaiover/src/lib/server/repo.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", flaiover/src/lib/server/repo-forget.test.ts]
 after: [T-1576]
+usage:
+  source: log
+  seconds: 799
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 178
+      cache_read: 1373526
+      cache_write: 63895
+      cost: 0.6634
 ---
 # T-1581 The story page shows "undoes main on N paths" for a story whose record lists any, linking to its review page
 

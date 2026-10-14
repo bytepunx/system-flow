@@ -23,16 +23,16 @@ tags: []
 touches: [design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md]
 usage:
   source: log
-  seconds: 178
+  seconds: 191
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 227
-      cache_read: 1389629
-      cache_write: 61117
-      cost: 0.6695
+      input: 41
+      output: 235
+      cache_read: 1565069
+      cache_write: 62595
+      cost: 0.7513
 ---
 # T-1584 ADR records that a rebase merges design/adrs/README.md's index by rows, and the design and user docs say so
 

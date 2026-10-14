@@ -3,15 +3,36 @@ id: T-1577
 type: task
 nature: feature
 title: "POST /api/items/[id]/restore runs the host write stream.restore for one path"
-status: backlog
+status: done
 parent: S-0388
 owner: alex
 created: 2026-10-14T21:08:46Z
-updated: 2026-10-14T21:08:46Z
-transitions: []
+updated: 2026-10-14T23:15:30Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:10:19Z
+    by: agent-S-0388
+  - to: in-progress
+    at: 2026-10-14T23:10:20Z
+    by: agent-S-0388
+  - to: done
+    at: 2026-10-14T23:15:30Z
+    by: agent-S-0388
 stream: S-0388
 tags: [dashboard]
 touches: ["flaiover/src/routes/api/items/[id]/restore/+server.ts", "flaiover/src/routes/api/items/[id]/restore/restore.test.ts"]
+usage:
+  source: log
+  seconds: 310
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 45
+      output: 299
+      cache_read: 1206375
+      cache_write: 53274
+      cost: 0.5815
 ---
 # T-1577 POST /api/items/[id]/restore runs the host write stream.restore for one path
 

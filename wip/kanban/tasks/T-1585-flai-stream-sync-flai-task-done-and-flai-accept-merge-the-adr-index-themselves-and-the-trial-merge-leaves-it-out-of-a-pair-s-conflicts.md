@@ -3,11 +3,11 @@ id: T-1585
 type: task
 nature: improvement
 title: flai stream sync, flai task done, and flai accept merge the ADR index themselves, and the trial merge leaves it out of a pair's conflicts
-status: in-progress
+status: done
 parent: S-0306
 owner: alex
 created: 2026-10-14T23:04:12Z
-updated: 2026-10-14T23:07:56Z
+updated: 2026-10-14T23:27:31Z
 transitions:
   - to: ready
     at: 2026-10-14T23:07:55Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-14T23:07:56Z
     by: agent-S-0306
+  - to: done
+    at: 2026-10-14T23:27:31Z
+    by: agent-S-0306
 stream: S-0306
 tags: []
 touches: [flai/internal/issues/generated.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, docs/users/flai-reference.md]
 after: [T-1583]
+usage:
+  source: log
+  seconds: 1175
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 112
+      output: 695
+      cache_read: 7181089
+      cache_write: 220173
+      cost: 3.416
 ---
 # T-1585 flai stream sync, flai task done, and flai accept merge the ADR index themselves, and the trial merge leaves it out of a pair's conflicts
 

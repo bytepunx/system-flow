@@ -3,15 +3,36 @@ id: T-1578
 type: task
 nature: feature
 title: "POST /api/items/[id]/accept forwards keep_removals to accept.run and passes a refusal's undoes_main through"
-status: backlog
+status: done
 parent: S-0388
 owner: alex
 created: 2026-10-14T21:08:50Z
-updated: 2026-10-14T21:08:50Z
-transitions: []
+updated: 2026-10-14T23:15:34Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:10:20Z
+    by: agent-S-0388
+  - to: in-progress
+    at: 2026-10-14T23:10:21Z
+    by: agent-S-0388
+  - to: done
+    at: 2026-10-14T23:15:34Z
+    by: agent-S-0388
 stream: S-0388
 tags: [dashboard]
 touches: ["flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts"]
+usage:
+  source: log
+  seconds: 313
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 47
+      output: 255
+      cache_read: 1301685
+      cache_write: 55385
+      cost: 0.6264
 ---
 # T-1578 POST /api/items/[id]/accept forwards keep_removals to accept.run and passes a refusal's undoes_main through
 

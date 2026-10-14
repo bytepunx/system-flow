@@ -6,7 +6,7 @@ title: Two stories that each add an ADR conflict in design/adrs/README.md, whose
 status: in-progress
 owner: alex
 created: 2026-10-07T01:07:12Z
-updated: 2026-10-14T23:07:38Z
+updated: 2026-10-14T23:28:49Z
 transitions:
   - to: ready
     at: 2026-10-14T20:54:58Z
@@ -15,7 +15,7 @@ transitions:
     at: 2026-10-14T23:02:21Z
     by: agent-S-0306
 tags: []
-touches: [design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, flai/cmd/stream_sync.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, design/issues/I-0099-two-stories-that-each-add-an-adr-conflict-in-design-adrs-readme-md-whose-index-both-append-a-row-to-and-flai-opens-a-thread-for-each-sync-that-finds-it.md, design/issues/summary.md, docs/users/flai-reference.md, flai/cmd/stream.go, flai/cmd/stream_sync_test.go, flai/internal/issues/generated.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,20 +23,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 307
+  seconds: 1505
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-10-14
+      ceremony: 1
       hand_edits: 1
-      work: 27
+      work: 57
   models:
     - model: claude-opus-5-5
-      input: 106
-      output: 793
-      cache_read: 4563560
-      cache_write: 269751
-      cost: 2.2305
+      input: 228
+      output: 1611
+      cache_read: 12633615
+      cache_write: 495531
+      cost: 6.0598
   strategic:
     - kind: orchestrator
       seconds: 391
@@ -66,8 +67,8 @@ This story remediates [I-0099](../../../design/issues/I-0099-two-stories-that-ea
 The index is derived from the ADR files, as `summary.md` is from the issues: `flai adr new` could regenerate it whole, and `flai stream sync` and `flai accept` could treat it as a generated file (ADR-0098), writing it again from the ADR files when a rebase stops on it alone, and leaving it out of a pair's conflicts. `design/adrs/README.md` would then need to carry nothing but the generated table, or hold its hand-written part apart from it.
 
 ## Acceptance criteria
-- [ ] The cause I-0099 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0099 is closed with `flai issue close I-0099 --reason` saying what fixed it
+- [x] The cause I-0099 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0099 is closed with `flai issue close I-0099 --reason` saying what fixed it
 
 ## Tasks
 - T-1583 The ADR index in design/adrs/README.md merges row by row from a stopped rebase's three versions, keeping each side's rows in number order

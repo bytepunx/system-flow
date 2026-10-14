@@ -3,16 +3,37 @@ id: T-1580
 type: task
 nature: feature
 title: "The board's card shows \"undoes main on N paths\" for a story whose record lists any, linking to its review page"
-status: backlog
+status: done
 parent: S-0388
 owner: alex
 created: 2026-10-14T21:09:06Z
-updated: 2026-10-14T21:09:06Z
-transitions: []
+updated: 2026-10-14T23:29:23Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:15:46Z
+    by: agent-S-0388
+  - to: in-progress
+    at: 2026-10-14T23:15:47Z
+    by: agent-S-0388
+  - to: done
+    at: 2026-10-14T23:29:23Z
+    by: agent-S-0388
 stream: S-0388
 tags: [dashboard]
-touches: [flaiover/src/lib/server/board.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts]
+touches: [flaiover/src/lib/server/board.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/server/repo-channel.test.ts]
 after: [T-1576]
+usage:
+  source: log
+  seconds: 801
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 43
+      output: 174
+      cache_read: 1544157
+      cache_write: 61309
+      cost: 0.741
 ---
 # T-1580 The board's card shows "undoes main on N paths" for a story whose record lists any, linking to its review page
 

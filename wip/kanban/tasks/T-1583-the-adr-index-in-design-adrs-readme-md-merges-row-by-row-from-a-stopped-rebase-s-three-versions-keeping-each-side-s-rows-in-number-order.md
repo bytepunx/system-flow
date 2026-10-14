@@ -23,7 +23,7 @@ tags: []
 touches: [flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md]
 usage:
   source: log
-  seconds: 179
+  seconds: 182
   estimated: true
   priced_by: estimate
   models:
@@ -32,7 +32,7 @@ usage:
       output: 189
       cache_read: 1114415
       cache_write: 63514
-      cost: 0.5436
+      cost: 0.5437
 ---
 # T-1583 The ADR index in design/adrs/README.md merges row by row from a stopped rebase's three versions, keeping each side's rows in number order
 

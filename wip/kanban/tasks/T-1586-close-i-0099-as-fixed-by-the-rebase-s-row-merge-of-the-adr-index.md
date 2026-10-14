@@ -3,16 +3,37 @@ id: T-1586
 type: task
 nature: improvement
 title: Close I-0099 as fixed by the rebase's row merge of the ADR index
-status: backlog
+status: done
 parent: S-0306
 owner: alex
 created: 2026-10-14T23:04:17Z
-updated: 2026-10-14T23:04:17Z
-transitions: []
+updated: 2026-10-14T23:28:43Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:28:36Z
+    by: agent-S-0306
+  - to: in-progress
+    at: 2026-10-14T23:28:37Z
+    by: agent-S-0306
+  - to: done
+    at: 2026-10-14T23:28:43Z
+    by: agent-S-0306
 stream: S-0306
 tags: []
 touches: [design/issues/I-0099-two-stories-that-each-add-an-adr-conflict-in-design-adrs-readme-md-whose-index-both-append-a-row-to-and-flai-opens-a-thread-for-each-sync-that-finds-it.md, design/issues/summary.md]
 after: [T-1584, T-1585]
+usage:
+  source: log
+  seconds: 3
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 16
+      cache_read: 219830
+      cache_write: 961
+      cost: 0.1019
 ---
 # T-1586 Close I-0099 as fixed by the rebase's row merge of the ADR index
 

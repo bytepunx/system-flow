@@ -3,16 +3,37 @@ id: T-1579
 type: task
 nature: feature
 title: The review page shows each undone path as a card with Restore, Keep with a reason, and Send back, and holds Accept until each is resolved
-status: backlog
+status: done
 parent: S-0388
 owner: alex
 created: 2026-10-14T21:09:01Z
-updated: 2026-10-14T21:09:01Z
-transitions: []
+updated: 2026-10-14T23:29:08Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:15:44Z
+    by: agent-S-0388
+  - to: in-progress
+    at: 2026-10-14T23:15:45Z
+    by: agent-S-0388
+  - to: done
+    at: 2026-10-14T23:29:08Z
+    by: agent-S-0388
 stream: S-0388
 tags: [dashboard]
 touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/WorktreeUncommitted.svelte]
 after: [T-1577, T-1578]
+usage:
+  source: log
+  seconds: 803
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 66
+      output: 293
+      cache_read: 3007013
+      cache_write: 119547
+      cost: 1.443
 ---
 # T-1579 The review page shows each undone path as a card with Restore, Keep with a reason, and Send back, and holds Accept until each is resolved
 
