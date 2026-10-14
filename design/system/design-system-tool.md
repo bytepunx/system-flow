@@ -1,6 +1,6 @@
 ---
 title: A design system tool for the dashboard and agents
-updated: 2026-10-13
+updated: 2026-10-14
 status: active
 topics: [design, dashboard, cli]
 ---
@@ -168,61 +168,79 @@ A design system here is tokens, the values code uses, and guidance, the words th
 
 The DTCG format's first stable version is 2025.10 ([designtokens.org](https://www.designtokens.org/), read 2026-10-13). It recommends the extension `.tokens` or `.tokens.json`, writes a colour as an object with `colorSpace` and `components`, and expresses light and dark through its Resolver Module, a second file. Interop does not need DTCG as the source: flai can write a `.tokens.json` from option 1 for a project that wants one.
 
+The table weighs the host methods of 2026-10-13. The operator's decision (§ Decision) adds `file.get` and `file.save`, which change options 4 and 5:
+
+| Option | Documentation standard | Host methods | `flai check` | What an agent reads | What code uses |
+|--------|------------------------|--------------|--------------|---------------------|----------------|
+| 4. A DTCG token file the manifest names, beside the guidance in `design/system/design-system.md` | One exception to "Everything is markdown", proposed for the convention (§ Decision) | `file.get` reads it and `file.save` saves it, by `doc.save`'s rules | `design.tokens` validates it; a bad token refuses a save, as in option 1 | The token file whole, with the guidance, for the stories the guidance's topics reach: a change to prime, which reads only Markdown today | A generated `@theme` block; Figma Variables, Style Dictionary, Tokens Studio, and Terrazzo read the file as it is |
+| 5. A Tailwind v4 stylesheet flai owns, as the source | The same exception, for CSS | `file.get` and `file.save` at the path the manifest names | flai parses `@theme`; dark values and roles are still the file's own convention | As 4, the stylesheet in place of the token file | Exactly what code uses; nothing outside Tailwind reads it |
+
+### file.get and file.save
+
+Decided on TH-0445 ([ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)). Two host methods read and save a text file that is not Markdown, as `doc.show` and `doc.save` do a Markdown one:
+
+| | |
+|-|-|
+| Methods | `file.get` `{path, story?}`: the raw content and its SHA-256. `file.save` `{path, content, hash, story?, message?}`. |
+| CLI | `flai file show <path>` and `flai file save <path> --hash <h>`, the content on standard input, each with `--story` |
+| Reach | A file under the manifest's design or docs folder, or a path the manifest names for a purpose: the design token file and the design stylesheet |
+| Refused | Any other path, the wip folder, a binary file, a file over a size limit S-0381 sets, and a Markdown file, which keeps `doc.show` and `doc.save` |
+| A save | `doc.save`'s rules: a stale hash is a conflict, exit 3; `flai check` before and after, a finding the content introduces refusing it, exit 4; the commit on the main checkout's branch unless `dashboard.autocommit` is false; with `story`, the story's worktree and branch ([ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md)) |
+
+ADR-0029 stands: there is still no method that reads an arbitrary file.
+
 ### The token schema
 
-Tokens sit under one key, `tokens`, in namespaces named after Tailwind v4's, so rendering them as `@theme` is a rename:
+Tokens are DTCG tokens ([ADR-0146](../adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md)), in groups named after Tailwind v4's namespaces, so rendering them as `@theme` is a rename:
 
-| Namespace | Tailwind variable | Value | Required |
-|-----------|-------------------|-------|----------|
-| `color.<name>` | `--color-<name>` | `{light, dark}`, or one value for both | The roles below |
-| `font.<name>` | `--font-<name>` | A CSS `font-family` stack | `sans`, `mono` |
-| `text.<step>` | `--text-<step>`, `--text-<step>--line-height` | `{size, line-height}`: a length, and a length or a unitless number | `xs`, `sm`, `base`, `lg`, `xl`, `2xl`, `3xl`, `4xl` |
-| `spacing` | `--spacing` | One length, the step every spacing utility multiplies | Yes |
-| `radius.<name>` | `--radius-<name>` | A length | `sm`, `md`, `lg` |
-| `shadow.<name>` | `--shadow-<name>` | A CSS `box-shadow` whose colours follow the colour rule | `sm`, `md`, `lg` |
+| Group | DTCG `$type` | Tailwind variable | Value | Required |
+|-------|--------------|-------------------|-------|----------|
+| `color.<name>` | `color` | `--color-<name>` | A colour in `srgb`, with its `hex`, or `oklch`; a dark value through the resolver, or one value for both | The roles below |
+| `font.<name>` | `fontFamily` | `--font-<name>` | A list of families, the stack | `sans`, `mono` |
+| `text.<step>` | `typography`, or a `dimension` with a line height | `--text-<step>`, `--text-<step>--line-height` | A size, and a length or a unitless number | `xs`, `sm`, `base`, `lg`, `xl`, `2xl`, `3xl`, `4xl` |
+| `spacing` | `dimension` | `--spacing` | One length, the step every spacing utility multiplies | Yes |
+| `radius.<name>` | `dimension` | `--radius-<name>` | A length | `sm`, `md`, `lg` |
+| `shadow.<name>` | `shadow` | `--shadow-<name>` | Offsets, blur, spread, and a colour that follows the colour rule | `sm`, `md`, `lg` |
 
-Lengths are `rem` or `px`. Tailwind's other namespaces, such as breakpoints, weights, and easing, stay at its defaults until a project asks for them.
+Lengths are `rem` or `px`. Tailwind's other namespaces, such as breakpoints, weights, and easing, stay at its defaults until a project asks for them. Light and dark are one Resolver modifier, `theme`, with the contexts `light` and `dark`; flai implements that subset.
 
-**Colour syntaxes.** Two: six-digit hex, `#rrggbb`, and `oklch(L C H)`, with `/ alpha` only in shadows and extra tokens. flai must compute contrast, which is defined on sRGB. Hex is sRGB; oklch converts to it by fixed arithmetic, with no new dependency. oklch is what Tailwind v4's own palette is written in, and it steps evenly in lightness, which makes a dark value easier to derive from a light one. An oklch colour outside sRGB is clipped for contrast and reported. `rgb()`, `hsl()`, and names add nothing hex lacks; `var()`, `color-mix()`, and `light-dark()` must be resolved before contrast can be computed; `color(display-p3 ...)` has no sRGB contrast. A hex value is quoted, since `#` starts a YAML comment; an unquoted one parses as empty and is a finding.
+**Colour syntaxes.** Two colour spaces: `srgb`, with its six-digit `hex`, and `oklch`, with alpha only in shadows and extra tokens. flai must compute contrast, which is defined on sRGB. Hex is sRGB; oklch converts to it by fixed arithmetic, with no new dependency. oklch is what Tailwind v4's own palette is written in, and it steps evenly in lightness, which makes a dark value easier to derive from a light one. An oklch colour outside sRGB is clipped for contrast and reported. `hsl` and the other spaces add nothing hex lacks; CSS's `var()`, `color-mix()`, and `light-dark()` must be resolved before contrast can be computed; `display-p3` has no sRGB contrast. Any colour space but the two is a finding.
 
 **Semantic roles.** A fixed set of colour roles is required, because the preview's components are written against names they can rely on ([The fixed vocabulary](#the-fixed-vocabulary)): `background`, `surface`, `text`, `text-muted`, `border`, `primary`, `on-primary`, `secondary`, `on-secondary`, `focus`, and the states `success`, `warning`, `danger`, `info`, each with a `-soft` tint for its alert. Any other name is an extra token: validated, rendered, and shown as a swatch. The roles give the pairs flai computes, at the thresholds flaiover's own test uses: text, muted text, and each state on `background`, `surface`, or its tint at 4.5:1; `on-primary` and `on-secondary` on their fill at 4.5:1; `border` and `focus` on `background` at 3:1.
 
-Contrast should not be a `flai check` finding. Every finding a save introduces refuses the save (§ Today), so a contrast rule would stop the operator saving a colour while trying it. Parse errors are findings; contrast is reported by flai's design command and on the Design page.
+Contrast should not be a `flai check` finding. Every finding a save introduces refuses the save (§ Today), so a contrast rule would stop the operator saving a colour while trying it. An invalid token file is a finding, `design.tokens`; contrast is reported by flai's design command and on the Design page.
 
-**One per project.** One design system per project now: the operator's projects have one UI each, and two documents would need a rule for which one an agent follows. A project that grows a second UI with its own visual language can have a document per sub-project later, `design/system/design-system-<sub-project>.md`, each whole rather than inheriting, with topics naming its sub-project so prime gives each UI story its own.
+**One per project.** One design system per project now: the operator's projects have one UI each, and two would need a rule for which one an agent follows. A project that grows a second UI with its own visual language can have one per sub-project later, a guidance document `design/system/design-system-<sub-project>.md` and its token file, each whole rather than inheriting, with topics naming its sub-project so prime gives each UI story its own.
 
-**The name.** `design/system/design-system.md`. No file, link, or code in this repository or the template uses it (searched 2026-10-13), and it is the operator's own term. It sits beside this finding, `design-system-tool.md`, which describes the tool, not a project's design system. Its `topics` name the UI sub-project or its kind, so every story that touches the UI is briefed the guidance.
+**The name.** The guidance is `design/system/design-system.md`. No file, link, or code in this repository or the template uses it (searched 2026-10-13), and it is the operator's own term. It sits beside this finding, `design-system-tool.md`, which describes the tool, not a project's design system. Its `topics` name the UI sub-project or its kind, so every story that touches the UI is given the guidance. The manifest names the token file; the default is `design/system/design-system.tokens.json`.
 
-```yaml
----
-title: Design system
-updated: 2026-10-13
-status: active
-topics: [web]                  # the UI sub-project, or its kind
-tokens:
-  color:
-    background: { light: "#ffffff", dark: "#0b0f14" }
-    text:       { light: "#111827", dark: "#e5e7eb" }
-    primary:    { light: "oklch(0.52 0.18 255)", dark: "oklch(0.72 0.14 255)" }
-    on-primary: { light: "#ffffff", dark: "#0b0f14" }
-    # ... the other roles
-    brand-sun:  "#f5b700"      # an extra, one value for both themes
-  font:
-    sans: "Inter, ui-sans-serif, system-ui, sans-serif"
-    mono: "ui-monospace, Menlo, monospace"
-  text:
-    base: { size: 1rem, line-height: 1.5rem }
-    # ... xs to 4xl
-  spacing: 0.25rem
-  radius: { sm: 0.25rem, md: 0.375rem, lg: 0.5rem }
-  shadow:
-    sm: "0 1px 2px 0 oklch(0 0 0 / 0.05)"
----
+An illustrative token file, light values only; the dark values come through the resolver's `theme` modifier. S-0381 settles the exact layout against the spec:
+
+```json
+{
+  "color": {
+    "$type": "color",
+    "background": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "hex": "#ffffff" } },
+    "primary": { "$value": { "colorSpace": "oklch", "components": [0.52, 0.18, 255] } },
+    "brand-sun": { "$value": { "colorSpace": "srgb", "components": [0.961, 0.718, 0], "hex": "#f5b700" } }
+  },
+  "font": {
+    "$type": "fontFamily",
+    "sans": { "$value": ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] }
+  },
+  "spacing": { "$type": "dimension", "$value": { "value": 0.25, "unit": "rem" } },
+  "radius": {
+    "$type": "dimension",
+    "md": { "$value": { "value": 0.375, "unit": "rem" } }
+  }
+}
 ```
 
 ### Recommendation
 
 Option 1: tokens in the front matter of `design/system/design-system.md`, guidance in its body. It fits the documentation standard, `doc.get` and `doc.save` read and save it as they are, prime selects it by its topics, and one new check rule makes a bad token refuse a save. Option 3 is close; it loses because `doc.get` does not parse the block and the tokens clutter the rendered guidance. Code gets the tokens as a rendered `@theme` block, and Figma or Style Dictionary as a DTCG export, both generated from the document.
+
+The operator overturned this on TH-0445 on 2026-10-14: the tokens are a DTCG file, read and saved through `file.get` and `file.save`, beside the guidance in `design/system/design-system.md` (§ Decision).
 
 ## Previewing it live without building the project
 
@@ -248,7 +266,7 @@ Tailwind generated the dashboard's utilities at its build, from the class names 
 `source(none)` and `@source` keep that stylesheet to the gallery's own classes. That is general knowledge of Tailwind v4's source detection; how `--spacing` and `--shadow-*` behave through `inline` is to check in the build story. A token change is then a change of `--ds-*` values, with no compile.
 
 - **Tokens outside the vocabulary** are not on components. Extra colours are swatches with their contrast on `background`; extra steps, radii, and shadows are specimens drawn to size.
-- **Fonts.** A font token is a stack, shown as the operator's browser resolves it; a family the browser lacks falls back, and the page says so. A project's own font files are in its sub-project, which the dashboard cannot read. Recommended: system stacks, and Google Fonts loaded into the preview by family name only when the document asks for it, since that sends a request from the operator's browser to Google.
+- **Fonts.** A font token is a stack, shown as the operator's browser resolves it; a family the browser lacks falls back, and the page says so. A project's own font files are in its sub-project, which the dashboard cannot read. Recommended: system stacks, and Google Fonts loaded into the preview by family name only when the design system names one, since that sends a request from the operator's browser to Google.
 
 ### The gallery
 
@@ -270,7 +288,7 @@ A frame at a dashboard route boots the whole app under the root `flaiover/src/ro
 - **A blank frame the page fills.** An `about:blank` frame is same-origin with its page. The page imports the gallery's stylesheet with Vite's `?inline`, so it reaches the dashboard's document as a string and never as a stylesheet, writes it into the frame, and mounts the gallery into the frame's body with Svelte's `mount`. No route and no second app. Whether `@tailwindcss/vite` compiles an `?inline` import, and whether Svelte's event delegation works across the frame, is to check.
 - **A route outside the root layout.** Move the root layout's header and `layout.css` import into a route group, `(app)/+layout.svelte`, and put the frame's page in a group of its own with its own stylesheet. Groups do not change URLs, but every route folder moves, and the frame boots a second copy of the app. Its request is authenticated like any page (`decide` in `flaiover/src/lib/server/auth.ts`), with the `SameSite=Lax` session cookie a same-origin frame sends.
 
-Either way the page sizes the frame to its content, which a same-origin page can read. Token values reach the frame only after the parse `flai check` uses, so none carries `url()` or a stray `}` into the stylesheet. The frame follows the page's own state, so a change shows as the operator types; the document is saved through `doc.save` when the operator saves.
+Either way the page sizes the frame to its content, which a same-origin page can read. Token values reach the frame only after the parse `design.tokens` uses, so none carries `url()` or a stray `}` into the stylesheet. The frame follows the page's own state, so a change shows as the operator types; the token file is saved through `file.save` when the operator saves.
 
 ### The project's own components
 
@@ -288,34 +306,34 @@ The operator decides the design system; agents propose changes and apply them. E
 
 | Option | Reviewed | Recorded | Undone | New to build | Fit with the board |
 |--------|----------|----------|--------|--------------|--------------------|
-| 1. The operator edits tokens on the Design page, the preview following each change, and saves through `doc.save` on main | By the operator as they type, with contrast beside each token; no second reader | A commit of the document on main, as every dashboard save is ([ADR-0023](../adrs/0023-documents-are-saved-through-flai.md)) | Another save, or a revert of the commit | A token editor and a front matter round trip on the page (S-0383); the stylesheet written with the save (below) | Outside it: no story, no WIP slot, no close-out |
-| 2. A proposal is a story whose branch changes the document; the Design page previews the branch's tokens beside main's, and the operator tweaks them on the branch | On the Design page beside main's, then on the review page's diff (`stream.diff`) | The story, its narrative, its branch's commits, its acceptance | Before acceptance, send it back or cancel it; after, another story or a revert | Reading the document from a story's worktree and listing open proposals (S-0384); saving on the branch is S-0378's, accepted | It is the board: claims, WIP limit, close-out, acceptance |
-| 3. A thread on a heading of the document | In the thread | Under `wip/threads`, anchored to the document and heading | Resolve it | Nothing in flai; the Design page reuses the document page's threads | Beside it: no agent is started for it (below) |
-| 4. Draft variants outside git, under `.flai-cache` or `wip/`, which the operator switches between | On the page only | Under `.flai-cache`, on one host and in no history; under `wip/`, a new kind of file with its own schema and check | Delete the variant | A store, host methods to read and write it, a picker, and a way to promote a variant to the document | None: a variant is no item, and prime does not give it to an agent |
+| 1. The operator edits tokens on the Design page, the preview following each change, and saves through `file.save` on main | By the operator as they type, with contrast beside each token; no second reader | A commit of the token file on main, as every dashboard save is ([ADR-0023](../adrs/0023-documents-are-saved-through-flai.md)) | Another save, or a revert of the commit | A token editor on the page that saves the token file (S-0383); the stylesheet written with the save (below) | Outside it: no story, no WIP slot, no close-out |
+| 2. A proposal is a story whose branch changes the token file or the guidance; the Design page previews the branch's tokens beside main's, and the operator tweaks them on the branch | On the Design page beside main's, then on the review page's diff (`stream.diff`) | The story, its narrative, its branch's commits, its acceptance | Before acceptance, send it back or cancel it; after, another story or a revert | Reading the token file from a story's worktree with `file.get` and `story`, and listing open proposals (S-0384); saving on the branch is S-0378's, accepted, through `file.save` and `story` | It is the board: claims, WIP limit, close-out, acceptance |
+| 3. A thread on a heading of the guidance document | In the thread | Under `wip/threads`, anchored to the document and heading | Resolve it | Nothing in flai; the Design page reuses the document page's threads | Beside it: no agent is started for it (below) |
+| 4. Draft variants outside git, under `.flai-cache` or `wip/`, which the operator switches between | On the page only | Under `.flai-cache`, on one host and in no history; under `wip/`, a new kind of file with its own schema and check | Delete the variant | A store, host methods to read and write it, a picker, and a way to promote a variant to the token file | None: a variant is no item, and prime does not give it to an agent |
 
-- **S-0378**, accepted on 2026-10-14, gives option 2 its reads and writes. `flai doc show` and `flai doc save` take `--story`: the file resolves in the story's worktree, the check runs there, and the save commits that one path on the story's branch; a wip path, or a story with no worktree, is refused (T-1514). The dashboard's `/api/docs/edit` and `PUT /api/docs/file` pass `story` (T-1517), the editor opens on a story's branch (T-1518), and [ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md) records it, refining ADR-0023. A story's worktree exists while it is open, so the operator tweaks a proposal while it is in progress or in review.
-- **The stylesheet goes with every token save.** `doc.save` refuses any finding the new content introduces, on any path (`flai/internal/docedit/docedit.go`). S-0385 as drafted adds `design.stale`, a finding when the stylesheet differs from the tokens. A token save that leaves the stylesheet as it was introduces it, so every save from the Design page, on main or on a branch, would be refused. So whenever flai writes the document's tokens, it writes the stylesheet the manifest names in the same commit, and `design.stale` is left to hand edits. On main that is a file of a sub-project changed by a dashboard save, outside any story: a new kind of write, for the ADR that refines ADR-0023.
-- **Threads.** `thread.new` takes a document and a heading (`flai/internal/hostapi/writes.go`), and `/docs/<path>` shows a document's threads with a composer per heading (`Threads.svelte`, [ADR-0020](../adrs/0020-files-plus-mcp.md)). Every agent's inbox counts such a thread as awaiting it while the last entry is not its own (`flai/internal/inbox/inbox.go`). But flai serve starts agents for stories, and restarts a story's agent only for a thread on that story (`asking` in `flai/internal/serve/agents.go`). The orchestrator answers threads while its permission is on, and edits no file. A thread on the document discusses and records; it does not get the document changed. A thread on a proposal story reaches that story's agent.
+- **S-0378**, accepted on 2026-10-14, gives option 2 its reads and writes. `flai doc show` and `flai doc save` take `--story`: the file resolves in the story's worktree, the check runs there, and the save commits that one path on the story's branch; a wip path, or a story with no worktree, is refused (T-1514). The dashboard's `/api/docs/edit` and `PUT /api/docs/file` pass `story` (T-1517), the editor opens on a story's branch (T-1518), and [ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md) records it, refining ADR-0023. `file.get` and `file.save` take `story` the same way ([file.get and file.save](#fileget-and-filesave)). A story's worktree exists while it is open, so the operator tweaks a proposal while it is in progress or in review.
+- **The stylesheet goes with every token save.** `doc.save` refuses any finding the new content introduces, on any path (`flai/internal/docedit/docedit.go`), and `file.save` keeps that rule. S-0385 as drafted adds `design.stale`, a finding when the stylesheet differs from the tokens. A token save that leaves the stylesheet as it was introduces it, so every save from the Design page, on main or on a branch, would be refused. So whenever flai writes the token file, it writes the stylesheet the manifest names in the same commit, and `design.stale` is left to hand edits. On main that is a file of a sub-project changed by a dashboard save, outside any story: a new kind of write, for the ADR that refines ADR-0023.
+- **Threads.** `thread.new` takes a document and a heading (`flai/internal/hostapi/writes.go`), and `/docs/<path>` shows a document's threads with a composer per heading (`Threads.svelte`, [ADR-0020](../adrs/0020-files-plus-mcp.md)). Every agent's inbox counts such a thread as awaiting it while the last entry is not its own (`flai/internal/inbox/inbox.go`). But flai serve starts agents for stories, and restarts a story's agent only for a thread on that story (`asking` in `flai/internal/serve/agents.go`). The orchestrator answers threads while its permission is on, and edits no file. A thread on the guidance discusses and records; it does not get the design system changed. A thread on a proposal story reaches that story's agent.
 - **Variants.** Option 1 already lets the operator try values without saving. Keeping the unsaved values in the browser across a reload gives most of what a store would, with nothing on the host.
 
 ### Asking for a change from the page
 
-A form on the Design page makes a story as the board's new-item form does: `item.new` with a title, a body, `topics`, and `touches`, made in backlog and moved to ready (`flaiover/src/lib/components/NewItemForm.svelte`, `movesTo` in `flaiover/src/lib/lanes.ts`). The form writes the goal from the operator's words and fixed criteria: the tokens as asked, the stylesheet in step, the UI's tests passing. Its touches are the document and the stylesheet, and it may carry the values the operator tried on the page as a YAML block in the body, for the agent to start from.
+A form on the Design page makes a story as the board's new-item form does: `item.new` with a title, a body, `topics`, and `touches`, made in backlog and moved to ready (`flaiover/src/lib/components/NewItemForm.svelte`, `movesTo` in `flaiover/src/lib/lanes.ts`). The form writes the goal from the operator's words and fixed criteria: the tokens as asked, the stylesheet in step, the UI's tests passing. Its touches are the token file and the stylesheet, and it may carry the values the operator tried on the page as a JSON block in the body, for the agent to start from.
 
 The story meets the definition of ready as made: a goal, criteria as checkboxes, an open epic if it has one, and not a draft (`work-management.md`). It needs no finalizing. `draft` marks a story an agent wrote ([ADR-0074](../adrs/0074-work-items-carry-planning-data-a-story-s-draft-flag-an-epic-s-or-story-s-cost.md)), and `finalized` records who took a draft on ([ADR-0077](../adrs/0077-a-story-that-was-a-draft-records-who-finalized-it-and-when-and-the-dashboard.md)); the operator wrote this one. A design story the planner drafts waits for the operator's finalize, as any draft does.
 
 ### Two changes at once
 
-A design story claims the document's path, and a second ready story that claims it is held until the first is accepted ([ADR-0046](../adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)). That is right for one shared document, where two branches editing the same YAML conflict line by line. Two gaps remain:
+A design story claims the token file's path, and a second ready story that claims it is held until the first is accepted ([ADR-0046](../adrs/0046-a-ready-story-whose-claim-overlaps-an-open-story-s-is-held-yellow-and-with-its.md)). That is right for one shared file, where two branches editing the same JSON conflict line by line. Two gaps remain:
 
-- A story that widens its touches to the document while open holds only ready stories, never an open one. Two open branches can then change the document, and `flai stream sync`'s trial merge reports the conflict to both in their conversation.
+- A story that widens its touches to the token file while open holds only ready stories, never an open one. Two open branches can then change the file, and `flai stream sync`'s trial merge reports the conflict to both in their conversation.
 - The stylesheet lies inside the UI sub-project. A story that claims the sub-project by name overlaps every design story, since a sub-project's path is a prefix of the stylesheet's, so design stories and UI stories wait on each other. Narrow touches on both sides keep them apart.
 
 ### Tokens and guidance
 
 | | A token change | A guidance change |
 |-|----------------|-------------------|
-| What changes | Front matter values, and the stylesheet with them | The body's prose |
+| What changes | The token file's values, and the stylesheet with them | The guidance document's prose |
 | Seen before saving | On the gallery | In the editor's preview |
 | Reviewed | Beside main's on the Design page, and in the diff | In the diff |
 | Reaches code | At once, through the stylesheet | Through the agents that read it |
@@ -327,49 +345,49 @@ Options 1, 2, and 3; not 4.
 
 - **1, for the operator's own decisions.** Try freely; save to main, flai writing the stylesheet with the tokens. It is the shortest path from a decision to the code, and the operator reviews every change on this board anyway. Its cost is a code file changed on main without a story's close-out. If every code change must pass through a story, token saves go on a proposal's branch instead, and option 1 is for trying, not saving: a choice for the operator.
 - **2, for what an agent proposes or applies**, and for a change the operator asks for from the form. Review, history, and undo stay the board's.
-- **3, for discussion.** The Design page lists the document's threads by heading and opens one on a heading. A request that needs an agent becomes a story, which the thread names.
+- **3, for discussion.** The Design page lists the guidance document's threads by heading and opens one on a heading. A request that needs an agent becomes a story, which the thread names.
 - **Not 4.** Option 1's unsaved edits give what it would, and a store outside git is lost to history and unseen by agents.
 
 ## How agents build from it
 
-An agent building UI needs the token names and the guidance on when to use each, more than the values. It should get them without being told, and its code should not drift from the document.
+An agent building UI needs the token names and the guidance on when to use each, more than the values. It should get them without being told, and its code should not drift from the tokens.
 
 ### Options
 
 | Option | What the agent gets | What it needs | Cost | What it leaves open |
 |--------|---------------------|---------------|------|---------------------|
-| 1. Prime: the document's topics name the UI sub-project | A brief, title, first paragraph, and outline, with no tokens (§ Today); the whole file, front matter included, when the story names it | For the whole file on every UI story, a link in each story, or a rule in prime | The tokens are a few KB; with the guidance, likely under an eighth of the budget, 10 KB at 80 KB, which [ADR-0050](../adrs/0050-a-document-a-story-names-only-by-its-path-written-out-is-briefed-when-it-is.md) loads whole (an estimate) | A link depends on whoever writes the story |
+| 1. Prime: the guidance document's topics name the UI sub-project | Of the guidance, a brief, title, first paragraph, and outline (§ Today), or the whole file when the story names it; of the token file, nothing, since prime reads only Markdown | For both whole on every UI story, a rule in prime that also reads the token file | The tokens are a few KB; with the guidance, likely under an eighth of the budget, 10 KB at 80 KB, which [ADR-0050](../adrs/0050-a-document-a-story-names-only-by-its-path-written-out-is-briefed-when-it-is.md) loads whole (an estimate) | A link depends on whoever writes the story |
 | 2. A baseline convention, `design-system.md` | The rules: token utilities only, no raw colour or size, change the tokens on the branch rather than hard-code | A template file, and a rule that gives it only where a design system exists | One short convention in each UI story's pack | Advice; only the verifier holds an agent to it |
 | 3. A stylesheet flai writes from the tokens, which the manifest names, and `design.stale` when it falls behind | Utilities for the tokens and no others of the project's: `bg-primary` exists, a colour outside the tokens has none | S-0385 | Small | Arbitrary values such as `bg-[#3b82f6]` still compile |
 | 4. A lint that flags raw values in components | A finding on each arbitrary value or hex in `.svelte` and `.css` outside the generated file | A scanner of sub-project code, which `flai check` does not read today, or a rule in the project's own linter declared in the manifest's `tests` | Medium; false positives on layout values such as `grid-cols-[...]`, SVG, and chart palettes such as flaiover's `palette.ts` | Nothing 2 and 3 leave, at a price |
 
-- **Which stories.** The document's `topics` already say which stories it reaches (§ Today). S-0386 as drafted adds a record of the sub-projects the document governs, written by `flai design init --project`. That is a second list beside `topics`, and the two can disagree. Use the topics.
-- **The whole document.** Prime loads the design system document whole for every story its topics reach, as if the story named it, and briefs it above ADR-0050's threshold, where the convention tells the agent to read it with `doc_get`. A rule the agent must remember to follow is the failure the operator reports.
-- **The convention, where it applies.** A baseline convention ships with `topics: [all]` ([conventions.md § Topics](conventions.md#topics)) and cannot name a project's UI. Prime gives `design-system.md` to exactly the stories the document reaches, and leaves it out where the project has no design system document. Its `roles` are `[story, verify]` ([ADR-0068](../adrs/0068-a-convention-s-roles-list-every-agent-that-reads-it-the-story-s-agent-included.md)), so that the verifier checks a UI diff against it.
-- **What the convention says.** Build UI from the token utilities. No arbitrary value or hex for colour, type, spacing, radius, or shadow, and no colour in a `style` attribute. When the UI needs a value the tokens lack, change the document on the story's branch, widen the touches to it and the stylesheet, run `flai design css --write`, and say why in the guidance; the operator sees it on the Design page before accepting. Ask on a thread first when the change alters what a role means.
-- **On a proposal's branch.** The agent edits the tokens, runs `flai design css --write`, and commits both. A forgotten write stops its close-out, provided `design.stale` names the document as well as the stylesheet: the close-out's check, scoped to the story, prints a finding on a file the story did not change as a note and goes on (`work-management.md`), so a branch that changed only the document would pass.
+- **Which stories.** The guidance document's `topics` already say which stories it reaches (§ Today). S-0386 as drafted adds a record of the sub-projects the design system governs, written by `flai design init --project`. That is a second list beside `topics`, and the two can disagree. Use the topics.
+- **The whole design system.** Prime loads the guidance document and the token file whole for every story the guidance's topics reach, as if the story named them, and briefs them above ADR-0050's threshold, where the convention tells the agent to read them with `doc_get` and `flai file show`. Prime reads only Markdown today, so reading the token file at the path the manifest names is a change to prime. A rule the agent must remember to follow is the failure the operator reports.
+- **The convention, where it applies.** A baseline convention ships with `topics: [all]` ([conventions.md § Topics](conventions.md#topics)) and cannot name a project's UI. Prime gives `design-system.md` to exactly the stories the guidance reaches, and leaves it out where the project has no design system. Its `roles` are `[story, verify]` ([ADR-0068](../adrs/0068-a-convention-s-roles-list-every-agent-that-reads-it-the-story-s-agent-included.md)), so that the verifier checks a UI diff against it.
+- **What the convention says.** Build UI from the token utilities. No arbitrary value or hex for colour, type, spacing, radius, or shadow, and no colour in a `style` attribute. When the UI needs a value the tokens lack, change the token file on the story's branch, widen the touches to it and the stylesheet, run `flai design css --write`, and say why in the guidance; the operator sees it on the Design page before accepting. Ask on a thread first when the change alters what a role means.
+- **On a proposal's branch.** The agent edits the tokens, runs `flai design css --write`, and commits both. A forgotten write stops its close-out, provided `design.stale` names the token file as well as the stylesheet: the close-out's check, scoped to the story, prints a finding on a file the story did not change as a note and goes on (`work-management.md`), so a branch that changed only the token file would pass.
 - **On main.** flai writes the stylesheet with every token save, and branches stop at close-out, so `design.stale` appears on main only after a hand edit there. The generated file should be whole, imported by the UI's own stylesheet, so that no hand-written CSS sits in it. How it selects the dark values, by a media query, a class, or an attribute as the project's `dark:` variant does, is S-0385's to settle.
 - **The lint, later.** Option 3 removes most reasons for a raw value, and option 2 with the verifier catches the rest at review. Add a lint when `design/issues` shows raw values getting through, as a rule in the project's own linter rather than in flai, which reads no code today.
 
 ### Recommendation
 
-Option 3 first, then 1 and 2 together; 4 deferred. The stylesheet makes the tokens the easy path and catches drift; prime then gives each UI story the whole document and the convention, chosen by one list, the document's topics. Build order: the stylesheet with S-0385, before the Design page saves anything; prime and the convention with S-0386, without its record of governed sub-projects.
+Option 3 first, then 1 and 2 together; 4 deferred. The stylesheet makes the tokens the easy path and catches drift; prime then gives each UI story the guidance and the token file whole, and the convention, chosen by one list, the guidance's topics. Build order: the stylesheet with S-0385, before the Design page saves anything; prime and the convention with S-0386, without its record of governed sub-projects.
 
 ## Recommendation
 
-Build in this order:
+Build in this order, as decided (§ Decision):
 
-1. **The document and its check** ([Where a project keeps its design system](#where-a-project-keeps-its-design-system)): `design/system/design-system.md`, tokens in its front matter, `design.tokens`, `flai design init`, `show`, and `css`, and `design.get`. S-0381.
-2. **The stylesheet** ([How agents build from it](#how-agents-build-from-it)): `design.stylesheet`, `flai design css --write`, `design.stale` naming the document and the stylesheet, and flai writing the stylesheet whenever it writes the tokens. S-0385, before S-0383, whose save depends on it.
+1. **The token file, the guidance, and their check** ([Where a project keeps its design system](#where-a-project-keeps-its-design-system)): the DTCG token file the manifest names, `design/system/design-system.tokens.json` by default; the guidance in `design/system/design-system.md`; `design.tokens`; `file.get` and `file.save` with `flai file show` and `flai file save`; `flai design init`, `show`, and `css`; and `design.get`. The documentation convention's exception for the token file, in the template and the standard. S-0381.
+2. **The stylesheet** ([How agents build from it](#how-agents-build-from-it)): `design.stylesheet`, `flai design css --write`, `design.stale` naming the token file and the stylesheet, and flai writing the stylesheet whenever it writes the tokens. S-0385, before S-0383, whose save depends on it.
 3. **The Design group and its preview** ([Previewing it live](#previewing-it-live-without-building-the-project)): a blank same-origin frame the page fills, the gallery against the fixed vocabulary, the tokens as `--ds-*` values. S-0382.
-4. **Editing on the page** ([Working on it together](#working-on-it-together), option 1): the preview follows before saving, and the save writes the document and the stylesheet. S-0383.
-5. **Proposals and threads** (options 2 and 3): the branch's tokens beside main's, the open proposals listed, the request form, the document's threads on the page. S-0384, on S-0378's save on a story's branch, accepted on 2026-10-14.
-6. **Agents' use** ([How agents build from it](#how-agents-build-from-it)): prime loads the document whole and gives the convention to the stories its topics reach; the baseline convention in the template and here. S-0386, without the governed sub-projects.
+4. **Editing on the page** ([Working on it together](#working-on-it-together), option 1): the preview follows before saving, and the save writes the token file and the stylesheet through `file.save`. S-0383.
+5. **Proposals and threads** (options 2 and 3): the branch's tokens beside main's, the open proposals listed, the request form, the guidance's threads on the page. S-0384, on S-0378's save on a story's branch, accepted on 2026-10-14.
+6. **Agents' use** ([How agents build from it](#how-agents-build-from-it)): prime loads the guidance and the token file whole and gives the convention to the stories the guidance's topics reach; the baseline convention in the template and here. S-0386, without the governed sub-projects.
 7. **Not now:** a store of variants, the project's own components, the browser build of Tailwind, and a lint of raw values.
 
-What it does to the current ADRs: [ADR-0023](../adrs/0023-documents-are-saved-through-flai.md) is refined again, beyond S-0378's [ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md), for a save that writes the stylesheet with the document. [ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md) and ADR-0050 are refined for the design system document loaded whole by topics. [ADR-0029](../adrs/0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md), ADR-0046, and ADR-0074 stand.
+What it does to the current ADRs: [ADR-0023](../adrs/0023-documents-are-saved-through-flai.md) is refined again, beyond S-0378's [ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md), for `file.save` and for a save that writes the stylesheet with the tokens. [ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md) and ADR-0050 are refined for the guidance and the token file loaded whole by topics. [ADR-0029](../adrs/0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md), ADR-0046, and ADR-0074 stand.
 
-Questions only the operator can answer, each with the recommended answer first:
+The questions put to the operator on TH-0445, each with the recommended answer first. They were answered on 2026-10-14 (§ Decision); the list is kept as asked:
 
 1. **Format and name.** Tokens in the front matter of `design/system/design-system.md`, guidance in its body; or a fenced block in the body, a DTCG file, or the UI's stylesheet as the source.
 2. **Colour syntax.** Six-digit hex and `oklch()`; or hex only; or any CSS colour, which flai cannot always compute contrast for.
@@ -381,3 +399,41 @@ Questions only the operator can answer, each with the recommended answer first:
 8. **Where the operator's token save lands.** On main, flai writing the stylesheet in the same commit; or only on a proposal's branch, so that every code change passes a story.
 9. **Working together.** Edits on the page, proposals as stories, and threads on the document; or those and a store of variants.
 10. **Agents' use.** The generated stylesheet with `design.stale`, the document whole and the convention for the stories its topics reach, the lint deferred; or briefs and the convention only; or the lint now.
+
+## Decision
+
+On 2026-10-14 the operator answered on TH-0445:
+
+> 1. I would not like to force more things into a markdown document when it's not the obvious best choice simply because we currently only have API semantics for markdown documents. Introduce file.get and file.save as alternatives that we can leverage for different kinds of files.
+
+The question asked for "all as recommended, or the numbers you want otherwise". The answer gave only choice 1, so choices 2 to 10 stand as recommended. S-0380's agent posted on TH-0445 what it took for choice 1, which nothing built yet constrains, and which the operator can overrule at review.
+
+**Choice 1, the format.** The tokens are a W3C Design Tokens Community Group (DTCG) file, format version 2025.10, with its Format, Color, and Resolver modules; not Markdown. Figma Variables, Style Dictionary, Tokens Studio, and Terrazzo read and write it, and it has a type for each kind of token the schema needs (§ The token schema). Light and dark are one Resolver modifier, `theme`, with the contexts `light` and `dark`, and flai implements that subset. The manifest names the file, by default `design/system/design-system.tokens.json`; S-0381 settles the key and the exact layout against the spec. The guidance stays Markdown, `design/system/design-system.md`, whose `topics` choose the UI stories prime gives it to. The dashboard reads and saves the token file through the new `file.get` and `file.save` (§ file.get and file.save), and ADR-0029 stands.
+
+**The runner-up** was a Tailwind v4 theme stylesheet flai owns, as the source. It needs no generated file and no `design.stale`. It came second because it ties the design system to Tailwind and to one way of writing dark values, and nothing outside Tailwind reads it.
+
+**The conflict with a convention.** The token file breaks the baseline rule "Everything is markdown" (`design/conventions/documentation.md`, [documentation-standard.md](documentation-standard.md)). The operator's answer is followed. The proposed edit is one exception: a project's design token file, in DTCG format, named by the manifest. S-0381 carries it to `template/` and to the standard.
+
+**Choices 2 to 10, as recommended:**
+
+| Choice | Decided |
+|--------|---------|
+| 2. Colour syntax | `srgb`, with its hex, and `oklch` |
+| 3. Roles | The fixed colour roles are required; extra tokens are allowed |
+| 4. Contrast | Reported on the Design page and by `flai design`, never a finding; an invalid token file is the finding `design.tokens`, which refuses a `file.save` |
+| 5. Scope | One design system per project now; one per UI sub-project later |
+| 6. Fonts | System stacks; Google Fonts loaded into the preview by family name only when the design system names one |
+| 7. Preview | A blank same-origin frame the page fills, the gallery compiled with the dashboard against the fixed vocabulary, the tokens as `--ds-*` values; a route outside the root layout as the fallback |
+| 8. The operator's token save | On main, through `file.save`, flai writing the stylesheet in the same commit |
+| 9. Working together | Edits on the page, proposals as stories previewed beside main's, a request form that makes a ready story, and threads on the guidance's headings; no store of variants |
+| 10. Agents' use | A generated Tailwind v4 `@theme` stylesheet and `design.stale` naming the token file and the stylesheet; prime gives the stories the guidance's topics reach the guidance and the token file whole, a change to prime, which reads only Markdown today; a baseline `design-system.md` convention; the raw-value lint deferred |
+
+| ADR | Decision |
+|-----|----------|
+| [ADR-0146](../adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md) | A project's design tokens are a DTCG file the manifest names, beside its guidance in `design/system/design-system.md`, and a project has one design system (choices 1 and 5) |
+| [ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md) | The dashboard reads and saves a text file that is not Markdown through `file.get` and `file.save`, under the design and docs folders or at a path the manifest names, by `doc.save`'s rules; refines ADR-0023 and ADR-0145 |
+| [ADR-0148](../adrs/0148-a-design-token-s-colour-is-in-the-srgb-colour-space-with-its-hex-or-in-oklch.md) | Colours in `srgb` or `oklch`, the fixed roles required, an invalid token file the finding `design.tokens`, contrast reported (choices 2, 3, and 4) |
+| [ADR-0149](../adrs/0149-the-design-page-previews-a-project-s-tokens-in-a-blank-same-origin-frame-it.md) | The preview is a blank same-origin frame over a gallery compiled with the dashboard, with system font stacks and Google Fonts only when asked (choices 6 and 7) |
+| [ADR-0150](../adrs/0150-a-token-save-from-the-design-page-lands-on-main-and-flai-writes-the-stylesheet.md) | A token save from the Design page lands on main, with the generated stylesheet in the same commit (choice 8); refines ADR-0023 and ADR-0147 |
+| [ADR-0151](../adrs/0151-the-operator-and-agents-change-a-design-system-by-edits-on-the-design-page.md) | Edits on the page, proposals as stories, a request form, and threads on the guidance; no store of variants (choice 9) |
+| [ADR-0152](../adrs/0152-agents-build-ui-from-a-tailwind-v4-stylesheet-flai-generates-from-the-tokens.md) | A generated stylesheet kept in step by `design.stale`, prime giving the guidance and the token file whole by the guidance's topics, and a baseline convention (choice 10); refines ADR-0049 and ADR-0050 |
