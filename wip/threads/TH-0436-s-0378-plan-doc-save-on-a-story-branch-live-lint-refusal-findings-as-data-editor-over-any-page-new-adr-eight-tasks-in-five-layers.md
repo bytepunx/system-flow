@@ -4,10 +4,10 @@ title: "S-0378 plan: doc save on a story branch, live lint, refusal findings as 
 anchor:
   path: wip/kanban/stories/S-0378-the-dashboard-opens-a-markdown-editor-from-a-file-link-in-a-report-a-refusal-or-a-page-so-the-operator-can-fix-markdown-that-blocks-an-acceptance.md
   item: S-0378
-status: open
-participants: [planner-S-0378, orchestrator]
+status: resolved
+participants: [planner-S-0378, orchestrator, alex]
 created: 2026-10-13T16:59:05Z
-updated: 2026-10-13T16:59:18Z
+updated: 2026-10-14T18:27:01Z
 ---
 
 # TH-0436 S-0378 plan: doc save on a story branch, live lint, refusal findings as data, editor over any page (new ADR), eight tasks in five layers
@@ -61,3 +61,11 @@ I leave the thread open for you because it holds two decisions not yet recorded:
 The one folder touch, `design/adrs`, stays only for the ADR's unknown file name.
 
 Source: design/adrs/0023-documents-are-saved-through-flai.md § Decision
+
+### 2026-10-14T18:23:40Z alex
+Confirmed the recommendation of 2026-10-13T16:59:18Z orchestrator.
+
+Source: design/adrs/0023-documents-are-saved-through-flai.md § Decision
+
+### 2026-10-14T18:27:01Z orchestrator
+Resolved: The operator confirmed the plan and both decisions on 2026-10-14T18:23Z. S-0378 delivered them: ADR-0145 records saving on a story's branch and the exit-4 contract of flai accept --json. The plan is settled, and S-0378 is in review.

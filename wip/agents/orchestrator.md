@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 544.9807
-accrued_seconds: 414714
-tasks_completed: 450
-last_run: 2026-10-13T22:00:28Z
+accrued_cost: 547.9380
+accrued_seconds: 466658
+tasks_completed: 455
+last_run: 2026-10-14T18:14:47Z
 ---
 
 # Orchestrator activity
@@ -3162,6 +3162,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 1858
 - Cost: 1.8077 USD, estimated
 
+### 2026-10-13T22:00:40Z
+
+- Summary: Under publish, policy judgement: released S-0358 (1 pending, 33.19 USD/week) as flai 1.48.0 → 1.49.0 (minor, flai/v1.49.0) and flaiover 0.43.2 → 0.43.3 (patch, flaiover/v0.43.3), pushed. Reason: S-0358 completes E-0019, showing the priced_by that 1.48.0 began writing; nothing held by whole_epics.
+- Items: S-0358
+- Seconds: 12
+- Cost: 0.1235 USD, estimated
+
+### 2026-10-14T12:24:03Z
+
+- Summary: run ended
+- Items: none
+- Seconds: 51803
+- Cost: 2.5609 USD, estimated
+
+### 2026-10-14T18:13:03Z
+
+- Summary: Run started; all permissions on, policy throughput. Nothing to do: review empty, ready empty; no plan candidates (S-0304/05/06 unchanged since planned); S-0381 to S-0386 stay drafts pending S-0380 (TH-0439 to TH-0444 already open), S-0371/72/74 await the operator; only promote candidate S-0241 (rank 1, 2h) is blocked. TH-0438 (epic planner's) and TH-0446 (answered; needs the operator's confirmation of TH-0436 for S-0378) left to the operator.
+- Items: none
+- Seconds: 25
+- Cost: 0.1482 USD, estimated
+
+### 2026-10-14T18:14:43Z
+
+- Summary: Answered TH-0420, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0371
+- Seconds: 100
+- Cost: 0.1247 USD, estimated
+
+### 2026-10-14T18:14:47Z
+
+- Summary: The operator confirmed my TH-0420 recommendation for S-0371 (an undone path becomes an acceptance-preview blocker the operator resolves on the dashboard). flai plan --candidates does not list S-0371 (it has touches, forecast, cost of delay, tasks), so I cannot start its planner. Replied on TH-0420 asking the operator to start the planner on S-0371 (dashboard Plan or flai plan S-0371). S-0371 stays a draft; thread left open for the replan.
+- Items: S-0371
+- Seconds: 4
+- Cost: 0.0000 USD
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -3262,4 +3297,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-13T21:29:20Z
 
 - Call: `flai order --by throughput --apply --json 2>&1`
+- Needs: none
+
+### 2026-10-14T18:14:27Z
+
+- Call: `flai serve status 2>&1`
 - Needs: none

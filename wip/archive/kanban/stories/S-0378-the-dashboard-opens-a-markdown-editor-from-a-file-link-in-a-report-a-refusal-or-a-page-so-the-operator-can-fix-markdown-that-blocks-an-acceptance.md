@@ -3,10 +3,10 @@ id: S-0378
 type: story
 nature: feature
 title: The dashboard opens a markdown editor from a file link in a report, a refusal, or a page, so the operator can fix markdown that blocks an acceptance
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T17:07:24Z
-updated: 2026-10-13T19:12:53Z
+updated: 2026-10-14T18:27:21Z
 transitions:
   - to: ready
     at: 2026-10-13T17:29:37Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:29:43Z
     by: agent-S-0378
+  - to: review
+    at: 2026-10-14T18:26:06Z
+    by: agent-S-0378
+  - to: done
+    at: 2026-10-14T18:27:21Z
+    by: orchestrator
 tags: [dashboard, cli]
 topics: [markdown]
 touches: [flai/cmd/doc.go, flai/cmd/doc_test.go, flai/cmd/doc_lint.go, flai/cmd/doc_lint_test.go, flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/cmd/accept_fix_test.go, flai/internal/docedit/docedit.go, flai/internal/docedit/docedit_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/docs.go, flai/internal/hostapi/docs_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/writes.test.ts, flaiover/src/routes/api/docs/edit/+server.ts, flaiover/src/routes/api/docs/file/+server.ts, flaiover/src/routes/api/docs/file/save.test.ts, flaiover/src/routes/api/docs/lint/+server.ts, flaiover/src/routes/api/docs/lint/lint.test.ts, flaiover/src/lib/components/DocEditor.svelte, flaiover/src/lib/components/DocEditor.svelte.test.ts, flaiover/src/lib/components/EditorDialog.svelte, flaiover/src/lib/components/EditorDialog.svelte.test.ts, flaiover/src/lib/editor.svelte.ts, flaiover/src/lib/edit.ts, flaiover/src/lib/edit.test.ts, flaiover/src/routes/+layout.svelte, "flaiover/src/routes/edit/[...path]/+page.svelte", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, flaiover/src/lib/markdown.ts, flaiover/src/lib/markdown.test.ts, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/items/[id]/+page.svelte", design/adrs, design/adrs/README.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/settings.md, flaiover/src/lib/components/DismissibleNotice.svelte, flaiover/src/lib/components/DismissibleNotice.svelte.test.ts, design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md, design/issues/summary.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/I-0146-testthegateisaskedoneveryattempt-fails-now-and-then-the-state-reads-refused-before-the-second-refusal-is-logged.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md]
@@ -24,19 +30,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 6419
+  seconds: 7163
+  priced_by: harness
   turns:
     - day: 2026-10-13
       ceremony: 6
       hand_edits: 6
       work: 122
+    - day: 2026-10-14
+      ceremony: 2
+      work: 19
   models:
     - model: claude-opus-5-5
-      input: 984
-      output: 357097
-      cache_read: 54191900
-      cache_write: 1594685
-      cost: 27.5391
+      input: 1030
+      output: 364801
+      cache_read: 55639699
+      cache_write: 1737283
+      cost: 29.1237
     - model: claude-sonnet-5-5
       input: 28
       output: 9243
@@ -115,3 +125,15 @@ When an acceptance is refused because markdown the lint fix cannot fix still has
 - **Overlaps.** `docs/users/flai.md` and `design/system/flai-cli.md` are claimed by S-0375 and by E-0019's stories, in progress. They are the usual shared docs, touched by T-1521 last.
 - **Forecast.** `flai forecast` gave 1h24m: 95 s per unit of size over 50 done feature stories on claude-opus-5-5 in the large band, times size 53. Raised to 1h45m, and the delivery from 20:00Z to 20:25Z, because the story spans flai and flaiover: its tasks run both test tiers and add new Svelte components with component tests, which a rate per unit of size does not tell apart.
 - **Cost of delay.** 25.00 USD a week, as `flai cod` works it out from the input the orchestrator set on TH-0435, `penalty_per_week` 25, the figure recommended there. It stands as worked out.
+
+### Accepted by the orchestrator
+
+- Verified: 9f46596b657cf249f4b731356d62e12c6a67f6ad
+- At: 2026-10-14T18:27:21Z
+
+Verdict: meets all four criteria; flai verify passed every step at 9f46596b; every changed path is within the story's touches.
+
+- 1: flaiover/src/lib/filelinks.ts, flaiover/src/lib/markdown.ts, flaiover/src/lib/editor.svelte.ts, flaiover/src/lib/components/EditorDialog.svelte, flaiover/src/routes/+layout.svelte, flaiover/src/lib/components/Threads.svelte, flaiover/src/lib/components/AnalyzerPanel.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/DismissibleNotice.svelte, flaiover/src/lib/components/DocEditor.svelte, flaiover/src/lib/edit.ts, with filelinks.test.ts, markdown.test.ts, EditorDialog.svelte.test.ts, DocEditor.svelte.test.ts, edit.test.ts
+- 2: flai/cmd/doc_lint.go, flai/internal/hostapi/docs.go, flaiover/src/routes/api/docs/lint/+server.ts, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/lib/components/DocEditor.svelte, with doc_lint_test.go, docs_test.go, lint.test.ts
+- 3: flai/internal/docedit/docedit.go, flai/cmd/doc.go, flai/internal/hostapi/writes.go, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/docs/file/+server.ts, flaiover/src/routes/api/docs/edit/+server.ts, design/adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md, with docedit_test.go, doc_test.go, writes_test.go, save.test.ts, writes.test.ts
+- 4: flai/cmd/accept_markdown.go, flai/cmd/accept.go, flai/internal/hostapi/writes.go, flaiover/src/routes/api/items/[id]/accept/+server.ts, flaiover/src/lib/components/Review.svelte, with accept_fix_test.go, accept.test.ts, Review.svelte.test.ts

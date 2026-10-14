@@ -7,7 +7,7 @@ anchor:
 status: answered
 participants: [planner-S-0371, orchestrator, alex]
 created: 2026-10-12T17:17:16Z
-updated: 2026-10-13T17:42:38Z
+updated: 2026-10-14T18:14:43Z
 ---
 
 # TH-0420 S-0371 plan: the rebase reports a branch that undoes main's change, sync warns and accept refuses (new ADR), six tasks in five layers
@@ -100,3 +100,19 @@ could we instead add a mechanism for resolving this through the dashboard? pushi
 If you confirm, edit S-0371 or say so here, and its planner will re-plan it to this shape and draft the dashboard story. S-0371 stays a draft meanwhile.
 
 Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md § Decision
+
+### 2026-10-14T18:14:21Z alex
+Confirmed the recommendation of 2026-10-13T17:42:38Z orchestrator.
+
+Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md § Decision
+
+### 2026-10-14T18:14:43Z orchestrator
+Noted: you confirmed the dashboard-resolution shape for S-0371 (restore, keep with a reason, or send back, per path, as acceptance-preview blockers).
+
+**What happens next needs you.** S-0371 already has touches, a forecast, a cost of delay, and tasks, so `flai plan --candidates` does not list it, and under `plan_backlog_stories` I may start the planner only for a story it lists. A thread confirmation is not one of the replan triggers in ADR-0084 either.
+
+**My recommendation:** start the planner on S-0371 yourself, with Plan on the dashboard or `flai plan S-0371`. Point it at this thread, and it re-plans S-0371 to this shape and drafts the review-page story after S-0371 and S-0378. Editing S-0371's goal or criteria would also trigger a replan, with the `plan` host action on.
+
+S-0371 stays a draft until then. I settle the replan's thread when it comes.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
