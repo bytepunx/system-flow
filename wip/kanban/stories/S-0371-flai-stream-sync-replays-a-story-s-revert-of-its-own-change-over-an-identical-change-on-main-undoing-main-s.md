@@ -3,11 +3,14 @@ id: S-0371
 type: story
 nature: remediation
 title: flai stream sync replays a story's revert of its own change over an identical change on main, undoing main's
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-12T16:52:47Z
-updated: 2026-10-14T20:55:48Z
-transitions: []
+updated: 2026-10-14T20:55:58Z
+transitions:
+  - to: ready
+    at: 2026-10-14T20:55:53Z
+    by: alex
 tags: [cli]
 topics: [cli]
 touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/cmd/branch.go, flai/cmd/accept.go, flai/cmd/accept_undone_test.go, docs/users/flai-reference.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, docs/users/flai.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/summary.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 743
+      seconds: 747
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 72
-          output: 1055
-          cache_read: 17301137
-          cache_write: 28718
-          cost: 4.368
+          input: 76
+          output: 1081
+          cache_read: 17630785
+          cache_write: 31804
+          cost: 4.4514
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-10-12T17:16:59Z
 forecast:
   duration: 45m
-  delivery: 2026-10-14T21:35:00Z
-  basis: "Its own forecast of 45m; 5th in the pull order with an in-progress limit of 5, behind S-0241, S-0304, S-0305 and S-0306."
+  delivery: 2026-10-14T21:44:00Z
+  basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 5, behind S-0304."
   by: flai
-  at: 2026-10-14T20:46:58Z
+  at: 2026-10-14T20:55:58Z
 finalized:
   by: alex
   at: 2026-10-14T20:55:48Z

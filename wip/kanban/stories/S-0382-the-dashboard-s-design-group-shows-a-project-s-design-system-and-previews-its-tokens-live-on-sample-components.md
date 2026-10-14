@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:35Z
-updated: 2026-10-14T20:46:58Z
+updated: 2026-10-14T20:55:58Z
 transitions: []
 tags: [dashboard]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:51:37Z
 forecast:
   duration: 50m
-  delivery: 2026-10-14T22:52:00Z
-  basis: "Its own forecast of 50m; 9th in the pull order with an in-progress limit of 5, behind S-0241, S-0304, S-0305, S-0306, S-0371, S-0372, S-0374 and S-0381."
+  delivery: 2026-10-14T23:01:00Z
+  basis: "Its own forecast of 50m; 8th in the pull order with an in-progress limit of 5, behind S-0304, S-0371, S-0305, S-0306, S-0241, S-0372, S-0374 and S-0381."
   by: flai
-  at: 2026-10-14T20:46:58Z
+  at: 2026-10-14T20:55:58Z
 ---
 # S-0382 The dashboard's Design group shows a project's design system and previews its tokens live on sample components
 
