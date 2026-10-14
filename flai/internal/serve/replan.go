@@ -24,11 +24,11 @@ import (
 // launcher does: when its work items or threads change, when an agent ends,
 // and every minute. It acts on three triggers.
 //
-//   - An edit. Someone other than a planner edits a backlog or ready story's
-//     goal, criteria, or touches, and the story has a forecast or a cost of
-//     delay value older than the edit; or edits its cost of delay's inputs
-//     after its value. The planner is queued for the story. A story never
-//     planned, with neither figure, is not.
+//   - An edit. Someone other than a planner or the story's own agent edits a
+//     backlog or ready story's goal, criteria, or touches, and the story has
+//     a forecast or a cost of delay value older than the edit; or edits its
+//     cost of delay's inputs after its value. The planner is queued for the
+//     story. A story never planned, with neither figure, is not.
 //   - Work ahead completes or the order changes: a story is accepted or
 //     cancelled, or the pull order changes. planning.replan decides: never
 //     does nothing; deterministic, the default, plays the board out again
@@ -42,8 +42,10 @@ import (
 // The queue holds a story once: a trigger for a story already queued is
 // added to its entry. It runs one planner at a time per project, with the
 // launcher of flai serve, so that the run's end is seen at once, through the
-// checks Plan makes; an entry they refuse is dropped. The run records its
-// triggers, joined by semicolons, and its activity entry says them.
+// checks Plan makes; an entry they refuse is dropped, as is one for a story
+// its agent works: in progress or in review, or with its agent running
+// (I-0098). The run records its triggers, joined by semicolons, and its
+// activity entry says them.
 //
 // What it has seen is kept in memory only: edits, moves, and scheduled times
 // from its start are acted on, and none that passed while flai serve was
@@ -138,7 +140,11 @@ func (r *replanner) look(ctx context.Context) {
 	reordered := workitem.Reordered(r.order, board.Order)
 	r.order = slices.Clone(board.Order)
 	sched := r.schedule(repo.Manifest.Planning, now)
-	if r.o.Agent == nil || !r.o.Agent(r.e.Root).Plan {
+	var cfg AgentConfig
+	if r.o.Agent != nil {
+		cfg = r.o.Agent(r.e.Root)
+	}
+	if !cfg.Plan {
 		r.queue, r.cadence.mark = nil, now
 		return
 	}
@@ -147,7 +153,7 @@ func (r *replanner) look(ctx context.Context) {
 		byID[it.ID] = it
 	}
 	for _, n := range edits {
-		if t := editTrigger(byID[n.ID], n); t != "" {
+		if t := editTrigger(byID[n.ID], n, cfg.Name); t != "" {
 			r.queue = enqueue(r.queue, n.ID, t)
 		}
 	}
@@ -163,7 +169,7 @@ func (r *replanner) look(ctx context.Context) {
 			r.queue = enqueue(r.queue, id, scheduleTrigger(sched))
 		}
 	}
-	r.drain(ctx)
+	r.drain(ctx, byID)
 }
 
 // schedule is planning.schedule parsed, nil when it is unset or cannot be
@@ -234,10 +240,11 @@ func (r *replanner) replan(repo *workitem.Repo, items []*workitem.Item, board *w
 }
 
 // drain starts the planner for the first queued story with no planner
-// running, unless a planner this replanner started still runs. An entry the
-// checks refuse is dropped and logged, and the next one tried; one that
+// running, unless a planner this replanner started still runs. An entry for
+// a story its agent works, by byID and the story's newest run, or one the
+// checks refuse, is dropped and logged, and the next one tried; one that
 // cannot be read is dropped and warned of.
-func (r *replanner) drain(ctx context.Context) {
+func (r *replanner) drain(ctx context.Context, byID map[string]*workitem.Item) {
 	st := r.o.Dir.AgentStates()[r.e.Root]
 	if r.started != "" && st.Plans[r.started].running() {
 		return
@@ -251,6 +258,10 @@ func (r *replanner) drain(ctx context.Context) {
 		q := r.queue[i]
 		r.queue = slices.Delete(r.queue, i, i+1)
 		trigger := strings.Join(q.triggers, "; ")
+		if why := worked(q.item, byID[q.item], st.Stories[q.item]); why != "" {
+			r.starter.log("queued planner dropped", "item", q.item, "trigger", trigger, "reason", why)
+			continue
+		}
 		ps, err := planCheck(r.o, r.e, q.item)
 		var no *Refused
 		switch {
@@ -267,6 +278,29 @@ func (r *replanner) drain(ctx context.Context) {
 		r.started = ps.item
 		return
 	}
+}
+
+// worked is why the planner is not started on its own for story id, it as
+// read, while its agent works it: it is in progress or in review, or run,
+// its newest agent run, runs; "" when neither (I-0098).
+func worked(id string, it *workitem.Item, run *AgentRun) string {
+	if it != nil && (it.Status == workitem.InProgress || it.Status == workitem.Review) {
+		return fmt.Sprintf("%s is %s; its agent works it, so the planner is not started for it on its own", id, it.Status)
+	}
+	if run.running() {
+		return fmt.Sprintf("the agent is running for %s (pid %d, started %s); the planner is not started for it on its own", id, run.PID, run.Started)
+	}
+	return ""
+}
+
+// storyAgent is the name flai serve gives the run of story's agent, its
+// FLAI_AGENT: the configured name, agent when there is none, and the
+// story's ID.
+func storyAgent(name, story string) string {
+	if name == "" {
+		name = "agent"
+	}
+	return name + "-" + story
 }
 
 // warnOnce warns of err with msg the first time it is seen.
@@ -327,13 +361,14 @@ func noticeKey(n itemedit.Notice) string {
 // editTrigger is the trigger an edit gives story it: "edited", the fields
 // that make it due, and who edited; "" when it gives none (ADR-0084). It
 // gives none for an item that is not a backlog or ready story on the board,
-// and for a planner's edit. A goal, criteria, or touches edit makes it due
-// when its forecast or its cost of delay value is older than the edit; a
-// cost of delay edit, when its inputs are now newer than its value. A stamp
-// that cannot be read is not older.
-func editTrigger(it *workitem.Item, n itemedit.Notice) string {
+// for a planner's edit, and for an edit by the story's own agent, whose
+// configured name is agent (I-0098). A goal, criteria, or touches edit makes
+// it due when its forecast or its cost of delay value is older than the
+// edit; a cost of delay edit, when its inputs are now newer than its value.
+// A stamp that cannot be read is not older.
+func editTrigger(it *workitem.Item, n itemedit.Notice, agent string) string {
 	if it == nil || it.Archived || it.Type != workitem.Story || (it.Status != workitem.Backlog && it.Status != workitem.Ready) ||
-		strings.HasPrefix(n.By, workitem.ActivityPlanner+"-") {
+		strings.HasPrefix(n.By, workitem.ActivityPlanner+"-") || n.By == storyAgent(agent, it.ID) {
 		return ""
 	}
 	at, err := time.Parse(workitem.TimeFormat, n.At)

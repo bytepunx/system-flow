@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -62,6 +63,8 @@ func TestAnEditOfAPlannedStoryIsATrigger(t *testing.T) {
 		}), notice("alex", "cost_of_delay"), ""},
 		{"other fields", story(nil), notice("alex", "title", "notes", "body", "forecast"), ""},
 		{"the planner's own edit", story(nil), notice("planner-S-0001", "goal"), ""},
+		{"the story's own agent's edit", story(nil), notice("agent-S-0001", "touches"), ""},
+		{"another story's agent's edit", story(nil), notice("agent-S-0002", "touches"), "edited touches by agent-S-0002"},
 		{"never planned", story(unplanned), notice("alex", "goal"), ""},
 		{"never planned, inputs only", story(func(it *workitem.Item) {
 			it.Forecast, it.CostOfDelay = nil, &workitem.CostOfDelay{Inputs: &workitem.CostInputs{RevenuePerWeek: &value, By: "alex", At: "2026-10-04T10:00:00Z"}}
@@ -74,9 +77,16 @@ func TestAnEditOfAPlannedStoryIsATrigger(t *testing.T) {
 		{"a task", story(func(it *workitem.Item) { it.Type = workitem.Task }), notice("alex", "touches"), ""},
 		{"an item not there", nil, notice("alex", "goal"), ""},
 	} {
-		if got := editTrigger(c.it, c.n); got != c.want {
+		if got := editTrigger(c.it, c.n, ""); got != c.want {
 			t.Errorf("%s: trigger %q, want %q", c.name, got, c.want)
 		}
+	}
+	// I-0098: the story's agent goes by the name configured for agents
+	if got := editTrigger(story(nil), notice("builder-S-0001", "touches"), "builder"); got != "" {
+		t.Errorf("the story's own agent, named builder: trigger %q, want none", got)
+	}
+	if got := editTrigger(story(nil), notice("agent-S-0001", "touches"), "builder"); got != "edited touches by agent-S-0001" {
+		t.Errorf("an agent-S-0001 not the story's agent, named builder: trigger %q", got)
 	}
 }
 
@@ -510,7 +520,7 @@ func TestTheQueueSkipsARunningPlannerAndDropsARefusal(t *testing.T) {
 		t.Fatal("the operator's planner did not start")
 	}
 	lab.r.queue = []queued{{item: done, triggers: []string{"reordered"}}, {item: asked, triggers: []string{"reordered"}}, {item: next, triggers: []string{"reordered", "schedule daily"}}}
-	lab.r.drain(ctx)
+	lab.r.drain(ctx, lab.byID())
 	waitFor(t, "the next planner started", func() bool { return lab.planRun(next) != nil })
 	if run := lab.planRun(next); run.Trigger != "reordered; schedule daily" {
 		t.Errorf("run = %+v", run)
@@ -522,6 +532,69 @@ func TestTheQueueSkipsARunningPlannerAndDropsARefusal(t *testing.T) {
 		t.Errorf("the refused entry was not dropped and logged:\n%s", lab.logText())
 	}
 	lab.release(asked)
+	lab.release(next)
+}
+
+// byID are the project's items by ID, as the replanner reads them.
+func (lab *replanLab) byID() map[string]*workitem.Item {
+	lab.t.Helper()
+	items, err := lab.repo.List(true)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	out := map[string]*workitem.Item{}
+	for _, it := range items {
+		out[it.ID] = it
+	}
+	return out
+}
+
+// agentRuns records an agent running for story, as flai serve records the
+// one it started: a process of its own session that lasts the test.
+func (lab *replanLab) agentRuns(story string) {
+	lab.t.Helper()
+	p := exec.Command("sleep", "30")
+	Detach(p)
+	if err := p.Start(); err != nil {
+		lab.t.Fatal(err)
+	}
+	lab.t.Cleanup(func() { _ = p.Process.Kill(); _ = p.Wait() })
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+		s.put(&AgentRun{Story: story, Agent: "builder-" + story, PID: p.Process.Pid, Start: Started(p.Process.Pid), Started: lab.clock.Format(time.RFC3339)})
+	})
+}
+
+// I-0098: a queued planner is dropped, and logged, for a ready story whose
+// agent runs and for a story in progress, whatever queued it; another ready
+// story's still starts.
+func TestTheQueueDropsAStoryItsAgentWorks(t *testing.T) {
+	lab := newReplanLab(t, "")
+	ctx := context.Background()
+	lab.hold()
+	running, working, next := lab.ready("Running"), lab.inProgress("Working"), lab.ready("Next")
+	lab.agentRuns(running)
+	lab.r.queue = []queued{{item: running, triggers: []string{"edited touches by alex"}}, {item: working, triggers: []string{"schedule daily"}}, {item: next, triggers: []string{"reordered"}}}
+	lab.r.drain(ctx, lab.byID())
+	waitFor(t, "the next planner started", func() bool { return lab.planRun(next) != nil })
+	if run := lab.planRun(next); run.Trigger != "reordered" {
+		t.Errorf("run = %+v", run)
+	}
+	if len(lab.r.queue) != 0 {
+		t.Errorf("queue = %+v, want it empty", lab.r.queue)
+	}
+	for _, id := range []string{running, working} {
+		if run := lab.planRun(id); run != nil {
+			t.Errorf("a planner started for %s, which its agent works: %+v", id, run)
+		}
+	}
+	for _, want := range []string{
+		`msg="queued planner dropped" component=serve project=t item=` + running + ` trigger="edited touches by alex" reason="the agent is running for ` + running + ` (pid `,
+		`msg="queued planner dropped" component=serve project=t item=` + working + ` trigger="schedule daily" reason="` + working + ` is in-progress; `,
+	} {
+		if !strings.Contains(lab.logText(), want) {
+			t.Errorf("not logged: %s\n%s", want, lab.logText())
+		}
+	}
 	lab.release(next)
 }
 
