@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:14Z
-updated: 2026-10-14T20:55:58Z
+updated: 2026-10-14T21:03:17Z
 transitions: []
 tags: [cli]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:52:16Z
 forecast:
   duration: 27m
-  delivery: 2026-10-14T22:34:00Z
-  basis: "Its own forecast of 27m; 11th in the pull order with an in-progress limit of 5, behind S-0304, S-0371, S-0305, S-0306, S-0241, S-0372, S-0374, S-0381, S-0382, S-0383 and S-0384."
+  delivery: 2026-10-14T22:50:00Z
+  basis: "Its own forecast of 27m; 9th in the pull order with an in-progress limit of 5, behind S-0304, S-0305, S-0372, S-0374, S-0371, S-0306, S-0241, S-0381, S-0382, S-0383 and S-0384."
   by: flai
-  at: 2026-10-14T20:55:58Z
+  at: 2026-10-14T21:03:17Z
 ---
 # S-0385 flai writes the design system's tokens into the stylesheet the manifest names, and flai check reports the stylesheet when it falls behind them
 

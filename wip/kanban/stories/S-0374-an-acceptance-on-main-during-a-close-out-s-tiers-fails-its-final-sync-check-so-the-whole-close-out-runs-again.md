@@ -6,7 +6,7 @@ title: An acceptance on main during a close-out's tiers fails its final sync che
 status: ready
 owner: alex
 created: 2026-10-12T16:52:54Z
-updated: 2026-10-14T20:57:16Z
+updated: 2026-10-14T21:03:17Z
 transitions:
   - to: ready
     at: 2026-10-14T20:57:05Z
@@ -41,15 +41,15 @@ usage:
           cache_write: 116361
           cost: 1.7627
     - kind: orchestrator
-      seconds: 23
+      seconds: 27
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 140
-          cache_read: 1595519
-          cache_write: 5470
-          cost: 0.4023
+          input: 12
+          output: 146
+          cache_read: 1719004
+          cache_write: 6911
+          cost: 0.4336
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 18m
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-10-12T17:35:05Z
 forecast:
   duration: 1h
-  delivery: 2026-10-14T22:03:00Z
-  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0304, S-0305, S-0372 and S-0371."
+  delivery: 2026-10-14T22:09:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 5, behind S-0304, S-0305 and S-0372."
   by: flai
-  at: 2026-10-14T20:57:16Z
+  at: 2026-10-14T21:03:17Z
 finalized:
   by: alex
   at: 2026-10-14T20:57:02Z
