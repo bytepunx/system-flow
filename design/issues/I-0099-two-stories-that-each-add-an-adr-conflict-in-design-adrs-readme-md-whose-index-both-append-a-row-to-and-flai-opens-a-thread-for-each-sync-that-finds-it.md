@@ -2,12 +2,12 @@
 id: I-0099
 title: Two stories that each add an ADR conflict in design/adrs/README.md, whose index both append a row to, and flai opens a thread for each sync that finds it
 class: efficiency
-status: open
+status: closed
 count: 1
 cost: 5m
 first_reported: 2026-10-06T23:31:35Z
 last_reported: 2026-10-06T23:31:35Z
-updated: 2026-10-07T01:07:12Z
+updated: 2026-10-14T23:28:38Z
 ---
 
 # I-0099 Two stories that each add an ADR conflict in design/adrs/README.md, whose index both append a row to, and flai opens a thread for each sync that finds it
@@ -29,3 +29,4 @@ On 2026-10-06 between 22:59Z and 23:27Z, three stories in progress at once (S-02
 The index is derived from the ADR files, as `summary.md` is from the issues: `flai adr new` could regenerate it whole, and `flai stream sync` and `flai accept` could treat it as a generated file (ADR-0098), writing it again from the ADR files when a rebase stops on it alone, and leaving it out of a pair's conflicts. `design/adrs/README.md` would then need to carry nothing but the generated table, or hold its hand-written part apart from it.
 
 Story S-0306 remediates this issue, created from it at 2026-10-07T01:07:12Z.
+Closed 2026-10-14T23:28:38Z: Fixed by S-0306 (ADR-0157): flai stream sync, flai task done, and flai accept merge design/adrs/README.md row by row when a rebase stops on it, keeping both sides' rows in ADR number order, and the trial merge leaves the index out of a pair's conflicts, so two stories that each add an ADR neither stop each other's rebase nor get a message about it.
