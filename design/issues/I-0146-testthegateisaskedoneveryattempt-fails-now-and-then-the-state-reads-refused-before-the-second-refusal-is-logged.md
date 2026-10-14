@@ -29,3 +29,4 @@ S-0371's close-out stopped at the integration tier on TestTheGateIsAskedOnEveryA
 
 Story S-0389 remediates this issue, created from it at 2026-10-14T23:09:14Z.
 Closed 2026-10-14T23:14:54Z: S-0389: Client.Run in flai/internal/channel/channel.go now logs each attempt's end before setState publishes it, so a reader that sees the state refused finds the refusal logged; TestTheStateIsPublishedAfterTheAttemptIsLogged logs through a slow writer and failed on the old order
+The close-out then met the same cause in serveOnce, which published the connected state before it logged the connection (TestAConnectionRecordsAndWarnsOfTheUnsignedSides); T-1589 logs it first, and TestTheStateIsPublishedAfterTheConnectionIsLogged makes that race certain.

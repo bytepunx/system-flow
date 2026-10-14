@@ -710,6 +710,13 @@ func (c *Client) serveOnce(ctx context.Context, allow bool) error {
 		return err
 	}
 	unsigned := c.unsignedSides(allow, peer)
+	// The connection is logged before the state publishes it, so a reader that
+	// sees it connected finds the lines written (S-0389).
+	c.Logger.Info("connected to the dashboard", "component", "channel", "url", c.URL, "project", c.Project.Key, "dashboard", hr.Dashboard)
+	if len(unsigned) > 0 {
+		// said once for each connection proven, never for a signed pair (S-0239)
+		c.Logger.Warn("connection allowed unsigned", "component", "channel", "url", c.URL, "project", c.Project.Key, "unsigned", unsigned)
+	}
 	c.setState(func(s *State) {
 		s.Connected, s.Since, s.LastError = true, c.Now().UTC().Format(time.RFC3339), ""
 		s.RefusedBy, s.RefusedReason = "", ""
@@ -730,11 +737,6 @@ func (c *Client) serveOnce(ctx context.Context, allow bool) error {
 		c.notify = nil
 		c.mu.Unlock()
 	}()
-	c.Logger.Info("connected to the dashboard", "component", "channel", "url", c.URL, "project", c.Project.Key, "dashboard", hr.Dashboard)
-	if len(unsigned) > 0 {
-		// said once for each connection proven, never for a signed pair (S-0239)
-		c.Logger.Warn("connection allowed unsigned", "component", "channel", "url", c.URL, "project", c.Project.Key, "unsigned", unsigned)
-	}
 	c.setState(func(s *State) { s.Attempts = 0 })
 
 	// A dashboard that stops answering pings is gone, however open the socket looks.

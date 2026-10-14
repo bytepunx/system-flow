@@ -916,6 +916,22 @@ func TestTheStateIsPublishedAfterTheAttemptIsLogged(t *testing.T) {
 	}
 }
 
+// S-0389: a proven connection is logged before the state publishes it, so a
+// reader that sees it connected finds its unsigned sides warned of, however
+// slow the log's writer.
+func TestTheStateIsPublishedAfterTheConnectionIsLogged(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	var logs lockedBuffer
+	c := &Client{URL: d.srv.URL, Key: []byte("s3cret"), Project: project(t), Methods: testMethods(), Version: "test", ReleaseKeys: d.keys,
+		AllowUnsigned: func() bool { return false }, Logger: slog.New(slog.NewJSONHandler(slowWriter{w: &logs, delay: 200 * time.Millisecond}, nil)),
+		PingEvery: time.Hour, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond}
+	runClient(t, c)
+	waitState(t, c, "connected", func(s State) bool { return s.Connected })
+	if said := allowedUnsigned(&logs); len(said) != 1 {
+		t.Errorf("the state read connected with %d warnings logged, want the warning logged first", len(said))
+	}
+}
+
 // S-0238: a client the gate refuses still ends as soon as its context does,
 // however long the held back-off.
 func TestARefusedGateEndsWithTheContext(t *testing.T) {
