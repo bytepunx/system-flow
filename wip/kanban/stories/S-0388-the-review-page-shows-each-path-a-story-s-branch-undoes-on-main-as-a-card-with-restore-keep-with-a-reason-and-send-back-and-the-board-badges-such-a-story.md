@@ -6,7 +6,7 @@ title: The review page shows each path a story's branch undoes on main as a card
 status: backlog
 owner: alex
 created: 2026-10-14T21:02:31Z
-updated: 2026-10-14T21:34:18Z
+updated: 2026-10-14T21:52:28Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard, cli]
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-14T21:10:13Z
 forecast:
   duration: 1h
-  delivery: 2026-10-15T00:45:00Z
-  basis: "Its own forecast of 1h; 11th in the pull order with an in-progress limit of 5, behind S-0371, S-0372, S-0374, S-0306, S-0241, S-0381, S-0382, S-0383, S-0384, S-0385, S-0386 and S-0387."
+  delivery: 2026-10-15T01:03:00Z
+  basis: "Its own forecast of 1h; 10th in the pull order with an in-progress limit of 5, behind S-0371, S-0374, S-0306, S-0241, S-0381, S-0382, S-0383, S-0384, S-0385, S-0386 and S-0387."
   by: flai
-  at: 2026-10-14T21:34:18Z
+  at: 2026-10-14T21:52:28Z
 finalized:
   by: orchestrator
   at: 2026-10-14T21:10:51Z
