@@ -136,6 +136,28 @@ func RecordedUndone(r execx.Runner, repo *workitem.Repo, story string) ([]Undone
 	return out, nil
 }
 
+// withRecordedUndone sets res.UndoesMain, after a clean sync, to every path
+// the story's branch still undoes of the main branch's change: what this
+// rebase found, and what the story's record holds besides, one entry per
+// path, sorted by path. A later rebase starts past main's change and finds
+// nothing itself, so the record carries the warning on; Rebase alone, as
+// flai accept runs it, gives only its own findings. A record that cannot be
+// read is logged and the sync stands.
+func withRecordedUndone(o SyncOptions, res *SyncResult) {
+	recorded, err := RecordedUndone(o.Runner, o.Repo, o.Story.ID)
+	if err != nil {
+		o.Log.Warn("the paths the story's record says its branch undoes of the main branch not read; the sync stands", "component", "git", "story", o.Story.ID, "err", err)
+		return
+	}
+	found := len(res.UndoesMain)
+	for _, u := range recorded {
+		if !slices.ContainsFunc(res.UndoesMain[:found], func(f Undone) bool { return f.Path == u.Path }) {
+			res.UndoesMain = append(res.UndoesMain, u)
+		}
+	}
+	slices.SortFunc(res.UndoesMain, func(a, b Undone) int { return strings.Compare(a.Path, b.Path) })
+}
+
 // checkUndone sets res.UndoesMain to what the branch rebased in the worktree
 // at dir undoes of main since oldBase, and adds it to the story's record,
 // found at o.Now, leaving out the files flai writes itself. A check or a

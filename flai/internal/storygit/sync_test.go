@@ -768,9 +768,11 @@ func TestSyncFindsAndRecordsARevertReplayedOverMainsChange(t *testing.T) {
 	}
 
 	commitFiles(t, repo.MainRoot, "docs: main moves on", "design/note.md")
+	// this rebase starts past main's change and finds nothing itself; the
+	// sync gives the path through the record
 	res, err = Sync(syncOptions(repo, story))
-	if err != nil || !res.Synced || len(res.UndoesMain) != 0 {
-		t.Fatalf("second sync: %+v %v", res, err)
+	if err != nil || !res.Synced || !reflect.DeepEqual(res.UndoesMain, want) {
+		t.Fatalf("second sync: %+v %v, want undoes_main %+v", res, err, want)
 	}
 	if got, err := RecordedUndone(r, repo, "S-0001"); err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("recorded after the second sync: %+v %v, want %+v", got, err, want)

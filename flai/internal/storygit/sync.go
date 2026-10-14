@@ -288,6 +288,7 @@ func Sync(o SyncOptions) (SyncResult, error) {
 	if err != nil || !res.Synced {
 		return res, err
 	}
+	withRecordedUndone(o, &res)
 	if err := checkSync(o, &res); err != nil {
 		o.Log.Warn("story branch checks failed after the rebase", "component", "git", "story", o.Story.ID, "err", err)
 		return res, nil

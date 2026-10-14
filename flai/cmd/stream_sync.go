@@ -26,7 +26,8 @@ func syncStoppedFrom(res storygit.SyncResult) *syncStopped {
 // the issues it folded (ADR-0126), the files whose lint it fixed (S-0367),
 // how story's branch merges with the other open branches, with the
 // conversation that tells a conflicting pair and the old conflict thread a
-// clean pair resolved, and what it changed outside the story's claim.
+// clean pair resolved, each path where the branch undoes the main branch's
+// change (ADR-0155), and what it changed outside the story's claim.
 func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult) {
 	mine := storyBranch(story.ID)
 	for _, p := range res.Merged {
@@ -59,6 +60,10 @@ func printSyncChecks(w io.Writer, story *workitem.Item, res storygit.SyncResult)
 			see = "; see " + b.Conversation
 		}
 		fmt.Fprintf(w, "%s conflicts with %s (%s) in %s%s\n", mine, b.Branch, state, strings.Join(b.Conflicts, ", "), see)
+	}
+	for _, u := range res.UndoesMain {
+		fmt.Fprintf(w, "%s removes %s main added to %s since %s; restore them with flai stream restore %s --path %s, or keep the removal at acceptance with flai accept %s --keep-removal %s --reason \"<why>\"\n",
+			mine, plural(len(u.Lines), "line"), u.Path, shortCommit(u.OldBase), story.ID, u.Path, story.ID, u.Path)
 	}
 	if len(res.Outside) > 0 {
 		fmt.Fprintf(w, "%s changed %s outside %s's touches: %s\n", mine, plural(len(res.Outside), "path"), story.ID, strings.Join(res.Outside, ", "))

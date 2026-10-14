@@ -1228,6 +1228,94 @@ func TestPrintSyncChecksNamesTheFilesFixed(t *testing.T) {
 	}
 }
 
+// The text report warns on each path the branch undoes of main's change,
+// naming flai stream restore and --keep-removal, before the outside-touches
+// note (ADR-0155).
+func TestPrintSyncChecksWarnsOnEachPathTheBranchUndoesOfMain(t *testing.T) {
+	var out strings.Builder
+	printSyncChecks(&out, &workitem.Item{ID: "S-0002"}, storygit.SyncResult{
+		UndoesMain: []storygit.Undone{
+			{Path: "docs/a.md", Lines: []string{"x"}, OldBase: "0123456789abcdef"},
+			{Path: "docs/b.md", Lines: []string{"y", "z"}, OldBase: "fedcba9876543210"},
+		},
+		Outside: []string{"README.md"},
+	})
+	want := `story/S-0002 removes 1 line main added to docs/a.md since 0123456; restore them with flai stream restore S-0002 --path docs/a.md, or keep the removal at acceptance with flai accept S-0002 --keep-removal docs/a.md --reason "<why>"
+story/S-0002 removes 2 lines main added to docs/b.md since fedcba9; restore them with flai stream restore S-0002 --path docs/b.md, or keep the removal at acceptance with flai accept S-0002 --keep-removal docs/b.md --reason "<why>"
+story/S-0002 changed 1 path outside S-0002's touches: README.md
+`
+	if !strings.HasPrefix(out.String(), want) {
+		t.Errorf("report:\n%s\nwant it to begin:\n%s", out.String(), want)
+	}
+}
+
+// ADR-0155, I-0124: flai stream sync on a revert replayed over main's
+// identical change warns on the path, inside the story's claim, naming flai
+// stream restore, exits 0, and gives it under undoes_main; a later sync,
+// whose rebase starts past main's change and cannot find it, still warns on
+// it from the story's record.
+func TestSyncWarnsOnAPathTheRebasedBranchUndoesOfMain(t *testing.T) {
+	root := syncProject(t)
+	wt := openSyncStory(t, root, 1, "docs")
+	commitIn(t, wt, "docs/guide.md", "line one\nline two\n")
+	commitIn(t, wt, "docs/guide.md", "line one\n")
+	oldBase := gitIn(t, root, "merge-base", "main", "story/S-0001")
+	_ = os.WriteFile(filepath.Join(root, "docs", "guide.md"), []byte("line one\nline two\n"), 0o644)
+	gitIn(t, root, "add", "docs/guide.md")
+	gitIn(t, root, "commit", "-q", "-m", "feat: [S-0002] line two")
+	unrelated := func(n int) {
+		t.Helper()
+		rel := fmt.Sprintf("design/unrelated-%d.md", n)
+		_ = os.WriteFile(filepath.Join(root, rel), []byte("unrelated\n"), 0o644)
+		gitIn(t, root, "add", rel)
+		gitIn(t, root, "commit", "-q", "-m", "docs: [S-0003] unrelated")
+	}
+	warning := `story/S-0001 removes 1 line main added to docs/guide.md since ` + oldBase[:7] + `; restore them with flai stream restore S-0001 --path docs/guide.md, or keep the removal at acceptance with flai accept S-0001 --keep-removal docs/guide.md --reason "<why>"`
+
+	out, errOut, code := runIn(t, wt, "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("sync: %d %s %s", code, out, errOut)
+	}
+	if got, _ := os.ReadFile(filepath.Join(wt, "docs", "guide.md")); string(got) != "line one\n" {
+		t.Fatalf("the revert was not replayed over main's change: %q", got)
+	}
+	if !strings.Contains(out, warning) {
+		t.Errorf("sync lacks the warning %q:\n%s", warning, out)
+	}
+	if strings.Contains(out, "outside") {
+		t.Errorf("docs/guide.md is inside the claim, yet the sync says outside:\n%s", out)
+	}
+
+	// the next rebase starts past main's change: the record carries it
+	unrelated(1)
+	out, errOut, code = runIn(t, wt, "--json", "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("second sync: %d %s %s", code, out, errOut)
+	}
+	var res struct {
+		OK         bool              `json:"ok"`
+		UndoesMain []storygit.Undone `json:"undoes_main"`
+	}
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("second sync's JSON: %v %s", err, out)
+	}
+	want := []storygit.Undone{{Path: "docs/guide.md", Lines: []string{"line two"}, OldBase: oldBase}}
+	if !res.OK || !slices.EqualFunc(res.UndoesMain, want, func(a, b storygit.Undone) bool {
+		return a.Path == b.Path && a.OldBase == b.OldBase && slices.Equal(a.Lines, b.Lines)
+	}) {
+		t.Errorf("undoes_main: %+v, want %+v:\n%s", res.UndoesMain, want, out)
+	}
+
+	unrelated(2)
+	out, errOut, code = runIn(t, wt, "stream", "sync", "S-0001")
+	if code != 0 {
+		t.Fatalf("third sync: %d %s %s", code, out, errOut)
+	}
+	if !strings.Contains(out, warning) {
+		t.Errorf("a later sync lacks the warning %q:\n%s", warning, out)
+	}
+}
+
 // fixSubject is the subject of the lint fix's commit on S-0001's branch.
 const fixSubject = "chore: [S-0001] fix the lint of the files the branch changes, after the sync"
 

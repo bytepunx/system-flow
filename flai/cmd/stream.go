@@ -238,7 +238,22 @@ thread an older flai opened is still resolved the same way, and no sync opens
 one. With --json each branch names its conversation, and thread names an old
 conflict thread it resolved. It also lists the paths the branch changed since
 the main branch that the story's touches, and its open tasks', do not cover,
-so that they are widened with flai touches.`,
+so that they are widened with flai touches.
+
+After a clean rebase it warns on each path where the rebased branch removes
+lines the main branch added since the branch left it, as when a revert of the
+story's own change is replayed cleanly over main's identical change (I-0124,
+ADR-0155), inside the story's claim or outside it. The warning names flai
+stream restore <id> --path <path>, which commits main's version of the path on
+the branch, and flai accept <id> --keep-removal <path> --reason "<why>", for
+the operator to keep the removal. Each such path is recorded in the main
+checkout's .flai-cache/undone/<id>.json and blocks the story's acceptance
+until it is restored or kept. A later sync, whose rebase starts past main's
+change and cannot find the path itself, warns on it from the record for as
+long as the branch still removes those lines. The sync still exits 0. With
+--json, undoes_main lists each path with its path, lines (main's lines the
+branch removes), and old_base (the branch's merge base with main before the
+rebase that found it).`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -271,7 +286,7 @@ so that they are widened with flai touches.`,
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"story": it.ID, "branch": res.Branch, "base": res.Base, "conflicts": nil, "ok": true,
 					"merged": res.Merged, "folded": res.Folded, "fixed": res.Fixed,
-					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "outside_touches": res.Outside})
+					"branches": res.Branches, "trial_merge_skipped": res.TrialMergeSkipped, "undoes_main": res.UndoesMain, "outside_touches": res.Outside})
 			}
 			fmt.Fprintf(a.out, "%s is rebased onto %s\n", res.Branch, res.Base)
 			printSyncChecks(a.out, it, res)
