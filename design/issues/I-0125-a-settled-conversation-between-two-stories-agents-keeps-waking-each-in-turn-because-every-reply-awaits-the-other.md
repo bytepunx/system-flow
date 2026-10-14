@@ -2,12 +2,12 @@
 id: I-0125
 title: A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
 class: efficiency
-status: open
+status: closed
 count: 8
 cost: 6m
 first_reported: 2026-10-08T10:21:38Z
 last_reported: 2026-10-13T19:15:11Z
-updated: 2026-10-13T19:15:11Z
+updated: 2026-10-14T21:40:43Z
 ---
 
 # I-0125 A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
@@ -52,3 +52,4 @@ MS-0110: S-0357 agreed to the shared split on docs/operators/settings.md, which 
 ## Remediation
 
 Story S-0372 remediates this issue, created from it at 2026-10-12T16:52:49Z.
+Closed 2026-10-14T21:40:43Z: S-0372, ADR-0154. A reply that asks nothing is sent settled (flai message reply --settled, message_reply settled), and the conversation then awaits neither story, so an agreement no longer wakes the other story's agent (instances of MS-0021, MS-0041, MS-0101, MS-0109, MS-0110; TestASettledReplyAwaitsNeitherStory, TestASettledReplyDoesNotStartAnAgentThatEndedForAThread, TestASettledReplyStartsTheAgentWaitingOnItOnce, TestWaitForEventsCountsNoSettledConversationAsAwaitingAReply). flai task done leaves the paths sync regenerates, such as design/issues/summary.md, out of its notice (MS-0053; TestRunTellsNoOneOfThePathsSyncRegenerates). While a story is blocked, flai serve starts its agent again only for the answer to its thread (S-0337's 12 restarts; TestABlockedStorysAgentIsStartedOnlyForTheAnswerToItsQuestion). The work-management convention says to reply settled when a change does not break your work.
