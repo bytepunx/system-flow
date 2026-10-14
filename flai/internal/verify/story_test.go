@@ -732,3 +732,349 @@ func TestUnwrittenReadsSectionsAsTheCloseOutDoes(t *testing.T) {
 		})
 	}
 }
+
+// rebaseTiers are tiers a real repository's story selects by its Go file:
+// unit and, after docs, which it does not select, integration and smoke;
+// integration is selected by lib/ too.
+var rebaseTiers = []Tier{
+	{Name: "unit", Paths: []string{"flai/**/*.go"}, Command: []string{"unit", "{files}"}},
+	{Name: "docs", Paths: []string{"docs/**"}, Command: []string{"docs", "{files}"}},
+	{Name: "integration", AllOnly: true, Paths: []string{"flai/**", "lib/**"}, Command: []string{"integration"}},
+	{Name: "smoke", AllOnly: true, Paths: []string{"flai/**"}, Command: []string{"smoke"}},
+}
+
+// wipTiers are rebaseTiers with an integration tier that wip paths select
+// too, as a markdown tier selects wip's markdown.
+var wipTiers = []Tier{
+	{Name: "unit", Paths: []string{"flai/**/*.go"}, Command: []string{"unit", "{files}"}},
+	{Name: "integration", AllOnly: true, Paths: []string{"flai/**", "wip/**"}, Command: []string{"integration"}},
+	{Name: "smoke", AllOnly: true, Paths: []string{"flai/**"}, Command: []string{"smoke"}},
+}
+
+// rebaseFixture is a real repository whose S-004 has a worktree, on a
+// branch that changed flai/x.go, and the options that verify it.
+type rebaseFixture struct {
+	root, worktree string
+	proc           *fakeProc
+	opts           StoryOptions
+}
+
+func newRebaseFixture(t *testing.T) *rebaseFixture {
+	t.Helper()
+	root := realRepo(t)
+	if err := os.CopyFS(root, os.DirFS("../metrics/testdata/good")); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, root, ".gitignore", ".flai-cache/\n")
+	writeFile(t, root, "flai/x.go", "package x\n")
+	runGit(t, root, "add", "-A")
+	runGit(t, root, "commit", "-q", "-m", "init")
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	worktree := repo.WorktreePath("S-004")
+	runGit(t, root, "worktree", "add", "-q", "-b", "story/S-004", worktree)
+	writeFile(t, worktree, "flai/x.go", "package x // S-004\n")
+	runGit(t, worktree, "commit", "-q", "-am", "S-004's change")
+	proc := &fakeProc{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)}
+	return &rebaseFixture{root: root, worktree: worktree, proc: proc, opts: StoryOptions{
+		Story: "S-004", Project: repo, Base: "main", Tiers: rebaseTiers, Git: execx.System{},
+		RunOptions: RunOptions{Proc: proc, Now: proc.clock},
+	}}
+}
+
+// verify runs Verify and answers its report, failing the test on an error;
+// what the tiers ran is reset first.
+func (f *rebaseFixture) verify(t *testing.T) Report {
+	t.Helper()
+	f.proc.ran = nil
+	f.proc.now = f.proc.now.Add(time.Minute)
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rep
+}
+
+// commitOnMain commits a file on main, as an acceptance does while the
+// story's close-out runs.
+func (f *rebaseFixture) commitOnMain(t *testing.T, rel string) {
+	t.Helper()
+	writeFile(t, f.root, rel, "main's\n")
+	runGit(t, f.root, "add", "-A")
+	runGit(t, f.root, "commit", "-q", "-m", "merge: another story")
+}
+
+// rebase rebases the story's branch onto main, as flai stream sync does.
+func (f *rebaseFixture) rebase(t *testing.T) {
+	t.Helper()
+	runGit(t, f.worktree, "rebase", "-q", "main")
+}
+
+// tierStates are the report's tiers as name:state.
+func tierStates(rep Report) []string {
+	var out []string
+	for _, s := range rep.Steps {
+		if s.Tier {
+			out = append(out, s.Name+":"+string(s.State))
+		}
+	}
+	return out
+}
+
+// I-0136: every tier passed, another story was accepted on main while they
+// ran, and the branch rebased onto it cleanly; the run after the rebase ran
+// every tier again, though main's commit changed nothing they test.
+func TestVerifyReusesTheTiersAcrossACleanRebaseWhenMainsPathsSelectNone(t *testing.T) {
+	f := newRebaseFixture(t)
+	first := f.verify(t)
+	if !first.Passed || !reflect.DeepEqual(f.proc.ran, []string{"unit flai/x.go", "integration", "smoke"}) {
+		t.Fatalf("first run %v, ran %q: %+v", states(first), f.proc.ran, first)
+	}
+	if first.MergeBase == "" || first.Patch == "" {
+		t.Fatalf("the first run recorded merge base %q and patch %q", first.MergeBase, first.Patch)
+	}
+	f.commitOnMain(t, "other/notes.txt")
+	f.rebase(t)
+	second := f.verify(t)
+	want := []string{"unit:reused", "integration:reused", "smoke:reused"}
+	if !second.Passed || !reflect.DeepEqual(tierStates(second), want) || len(f.proc.ran) != 0 {
+		t.Fatalf("after a clean rebase, tiers %v, ran %q; want %v and nothing run", tierStates(second), f.proc.ran, want)
+	}
+	if second.Commit == first.Commit || second.MergeBase == first.MergeBase || second.Patch != first.Patch {
+		t.Errorf("commit %s, merge base %s, patch %s after the rebase; first %s, %s, %s",
+			second.Commit, second.MergeBase, second.Patch, first.Commit, first.MergeBase, first.Patch)
+	}
+	note := "reused across the rebase onto main: the branch's own change is the same as at " + first.Commit[:7] +
+		", and the 1 path main brought in selects none of the tiers reused"
+	if s := second.Steps[4]; s.Note != note || !s.ReusedFrom.Equal(first.RanAt) {
+		t.Errorf("first reused tier %+v; want the note %q", s, note)
+	}
+	for _, s := range second.Steps[5:] {
+		if s.Note != "" {
+			t.Errorf("%s has a note: %q", s.Name, s.Note)
+		}
+	}
+	// a run after it, at the same head and base, reuses them with no note
+	third := f.verify(t)
+	if !reflect.DeepEqual(tierStates(third), want) || len(f.proc.ran) != 0 || third.Steps[4].Note != "" {
+		t.Errorf("third run tiers %v, ran %q, note %q", tierStates(third), f.proc.ran, third.Steps[4].Note)
+	}
+}
+
+// ADR-0156: a tier that main's new paths select, and every tier after it,
+// runs again after the rebase; the tiers before it are reused.
+func TestVerifyRunsAgainTheTiersMainsNewPathsSelectAndThoseAfterThem(t *testing.T) {
+	for _, tc := range []struct {
+		name, path string
+		want, ran  []string
+		note       string
+	}{
+		{name: "a path integration selects", path: "lib/y.txt",
+			want: []string{"unit:reused", "integration:passed", "smoke:passed"}, ran: []string{"integration", "smoke"},
+			note: "run again from here: the 1 path main brought in since the last run selects integration: lib/y.txt"},
+		{name: "a Go file of another package", path: "flai/y/y.go",
+			want: []string{"unit:passed", "integration:passed", "smoke:passed"}, ran: []string{"unit flai/x.go", "integration", "smoke"},
+			note: "run again from here: the 1 path main brought in since the last run selects unit, integration, smoke: flai/y/y.go"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newRebaseFixture(t)
+			if first := f.verify(t); !first.Passed {
+				t.Fatalf("first run %v", states(first))
+			}
+			f.commitOnMain(t, tc.path)
+			f.rebase(t)
+			rep := f.verify(t)
+			if !rep.Passed || !reflect.DeepEqual(tierStates(rep), tc.want) || !reflect.DeepEqual(f.proc.ran, tc.ran) {
+				t.Fatalf("tiers %v, ran %q; want %v, %q", tierStates(rep), f.proc.ran, tc.want, tc.ran)
+			}
+			at := 4 + len(tc.want) - len(tc.ran)
+			if s := rep.Steps[at]; s.Note != tc.note {
+				t.Errorf("first tier run again %+v; want the note %q", s, tc.note)
+			}
+		})
+	}
+}
+
+// ADR-0156: across a rebase, a run reuses nothing when the branch's own
+// change is not the same, when it is told not to, or when the last report
+// had uncommitted changes, which its patch id would not cover.
+func TestVerifyReusesNothingAcrossARebaseWhenTheBranchsChangeMayDiffer(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		before, after func(t *testing.T, f *rebaseFixture)
+	}{
+		{name: "another commit on the branch", after: func(t *testing.T, f *rebaseFixture) {
+			writeFile(t, f.worktree, "flai/notes.txt", "more\n")
+			runGit(t, f.worktree, "add", "-A")
+			runGit(t, f.worktree, "commit", "-q", "-m", "S-004's notes")
+		}},
+		{name: "fresh", after: func(_ *testing.T, f *rebaseFixture) { f.opts.Fresh = true }},
+		{name: "a report with an uncommitted change", before: func(t *testing.T, f *rebaseFixture) {
+			writeFile(t, f.worktree, "scratch.txt", "draft\n")
+		}, after: func(t *testing.T, f *rebaseFixture) {
+			if err := os.Remove(filepath.Join(f.worktree, "scratch.txt")); err != nil {
+				t.Fatal(err)
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newRebaseFixture(t)
+			if tc.before != nil {
+				tc.before(t, f)
+			}
+			first := f.verify(t)
+			if !first.Passed {
+				t.Fatalf("first run %v", states(first))
+			}
+			if tc.before != nil && first.Patch != "" {
+				t.Errorf("a run with an uncommitted change recorded the patch %q", first.Patch)
+			}
+			f.commitOnMain(t, "other/notes.txt")
+			tc.after(t, f)
+			f.rebase(t)
+			rep := f.verify(t)
+			want := []string{"unit:passed", "integration:passed", "smoke:passed"}
+			if !rep.Passed || !reflect.DeepEqual(tierStates(rep), want) || len(f.proc.ran) != 3 {
+				t.Errorf("tiers %v, ran %q; want every tier run", tierStates(rep), f.proc.ran)
+			}
+		})
+	}
+}
+
+// ADR-0135, ADR-0156: a commit on main that changes only wip/ paths the
+// branch does not change is passed over by the sync step, and since the
+// branch was not rebased, its tiers are reused.
+func TestVerifyReusesTheTiersWhenMainGainsOnlyWipCommits(t *testing.T) {
+	f := newRebaseFixture(t)
+	first := f.verify(t)
+	if !first.Passed {
+		t.Fatalf("first run %v", states(first))
+	}
+	f.commitOnMain(t, "wip/notes.txt")
+	rep := f.verify(t)
+	want := []string{"unit:reused", "integration:reused", "smoke:reused"}
+	if !rep.Passed || !reflect.DeepEqual(tierStates(rep), want) || len(f.proc.ran) != 0 {
+		t.Fatalf("steps %v, ran %q; want %v", states(rep), f.proc.ran, want)
+	}
+	if s := rep.Steps[1]; s.State != Passed || !strings.Contains(s.Note, "passed over 1 commit of main") {
+		t.Errorf("sync step %+v", s)
+	}
+	note := "reused though main moved on: the branch's own change is the same as at " + first.Commit[:7] + ", and it was not rebased"
+	if rep.Commit != first.Commit || rep.BaseCommit == first.BaseCommit || rep.Steps[4].Note != note {
+		t.Errorf("commit %s, base %s, note %q; first %s, %s; want the note %q", rep.Commit, rep.BaseCommit, rep.Steps[4].Note, first.Commit, first.BaseCommit, note)
+	}
+}
+
+// ADR-0156, without real git: what a run after a rebase reuses, by what git
+// answers for the branch's merge base, its patch id, and main's new paths.
+func TestVerifyAcrossARebaseReusesUpToWhatMainsNewPathsSelect(t *testing.T) {
+	covering := []Tier{
+		{Name: "lint", Paths: []string{"flai/**/*.go"}, Command: []string{"lint", "{files}"}, Covers: []string{"check-y"}},
+		{Name: "unit", Paths: []string{"flai/**/*.go"}, Command: []string{"unit", "{files}"}},
+		{Name: "check-y", Paths: []string{"flai/**", "lib/**"}, Command: []string{"check-y"}},
+	}
+	every := []string{"unit flai/internal/x/x.go", "integration", "smoke"}
+	for _, tc := range []struct {
+		name   string
+		tiers  []Tier
+		change func(f *verifyFixture)
+		want   []string
+		ran    []string
+		notes  []string
+	}{
+		{name: "main's paths select no tier", want: []string{"unit:reused", "integration:reused", "smoke:reused"},
+			notes: []string{"reused across the rebase onto main: the branch's own change is the same as at 0123abc, and the 1 path main brought in selects none of the tiers reused"}},
+		{name: "main's paths select integration", change: func(f *verifyFixture) { f.git.out["diff --no-renames --name-only mb1 mb2"] = "lib/y.txt" },
+			want: []string{"unit:reused", "integration:passed", "smoke:passed"}, ran: []string{"integration", "smoke"},
+			notes: []string{"reused across the rebase onto main: the branch's own change is the same as at 0123abc, and the 1 path main brought in selects none of the tiers reused", "run again from here: the 1 path main brought in since the last run selects integration: lib/y.txt"}},
+		{name: "main's paths select a tier that one before it covers", tiers: covering,
+			change: func(f *verifyFixture) { f.git.out["diff --no-renames --name-only mb1 mb2"] = "lib/y.txt" },
+			want:   []string{"lint:passed", "unit:passed", "check-y:skipped"}, ran: []string{"lint flai/internal/x/x.go", "unit flai/internal/x/x.go"},
+			notes: []string{"run again from here: the 1 path main brought in since the last run selects lint, check-y: lib/y.txt"}},
+		{name: "main's paths are wip paths the branch does not change", tiers: wipTiers,
+			change: func(f *verifyFixture) { f.git.out["diff --no-renames --name-only mb1 mb2"] = "wip/kanban/notes.md" },
+			want:   []string{"unit:reused", "integration:reused", "smoke:reused"},
+			notes:  []string{"reused across the rebase onto main: the branch's own change is the same as at 0123abc, and main brought in only wip paths the branch does not change"}},
+		{name: "another patch", change: func(f *verifyFixture) { f.git.out["patch-id --stable"] = "p2 4567def" },
+			want: []string{"unit:passed", "integration:passed", "smoke:passed"}, ran: every},
+		{name: "fresh", change: func(f *verifyFixture) { f.opts.Fresh = true },
+			want: []string{"unit:passed", "integration:passed", "smoke:passed"}, ran: every},
+		{name: "main's new paths git cannot list", change: func(f *verifyFixture) { delete(f.git.out, "diff --no-renames --name-only mb1 mb2") },
+			want: []string{"unit:passed", "integration:passed", "smoke:passed"}, ran: every},
+		{name: "a merge base git cannot read", change: func(f *verifyFixture) { delete(f.git.out, "merge-base HEAD main") },
+			want: []string{"unit:passed", "integration:passed", "smoke:passed"}, ran: every},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newVerifyFixture(t)
+			f.opts.Tiers = rebaseTiers
+			if tc.tiers != nil {
+				f.opts.Tiers = tc.tiers
+			}
+			diff := "diff --git a/flai/internal/x/x.go b/flai/internal/x/x.go"
+			f.git.out["merge-base HEAD main"] = "mb1"
+			f.git.out["diff --no-color --no-ext-diff --full-index mb1 HEAD"] = diff
+			f.git.out["patch-id --stable"] = "p1 0123abc"
+			first, err := Verify(context.Background(), f.opts)
+			if err != nil || !first.Passed || first.MergeBase != "mb1" || first.Patch != "p1" {
+				t.Fatalf("first run %+v, %v", first, err)
+			}
+			// the branch is rebased onto main, which gained a commit
+			f.git.out["rev-parse HEAD"] = "4567def"
+			f.git.out["rev-parse --verify --quiet main^{commit}"] = "9abcdef"
+			f.git.out["merge-base HEAD main"] = "mb2"
+			f.git.out["diff --no-color --no-ext-diff --full-index mb2 HEAD"] = diff
+			f.git.out["patch-id --stable"] = "p1 4567def"
+			f.git.out["diff --no-renames --name-only mb1 mb2"] = "other/notes.txt"
+			if tc.change != nil {
+				tc.change(f)
+			}
+			f.proc.ran = nil
+			rep, err := Verify(context.Background(), f.opts)
+			if err != nil || !rep.Passed {
+				t.Fatalf("report %+v, %v", rep, err)
+			}
+			if !reflect.DeepEqual(tierStates(rep), tc.want) || !reflect.DeepEqual(f.proc.ran, tc.ran) {
+				t.Fatalf("tiers %v, ran %q; want %v, %q", tierStates(rep), f.proc.ran, tc.want, tc.ran)
+			}
+			var notes []string
+			for _, s := range rep.Steps[4:] {
+				if s.Note != "" {
+					notes = append(notes, s.Note)
+				}
+			}
+			if !reflect.DeepEqual(notes, tc.notes) {
+				t.Errorf("notes %q, want %q", notes, tc.notes)
+			}
+		})
+	}
+}
+
+// ADR-0156: a report taken with something uncommitted records no patch id,
+// so the run after a rebase reuses nothing.
+func TestVerifyRecordsNoPatchWithAnUncommittedChange(t *testing.T) {
+	f := newVerifyFixture(t)
+	f.opts.Tiers = rebaseTiers
+	f.git.out["status --porcelain --untracked-files=all"] = "?? scratch.txt"
+	f.git.out["merge-base HEAD main"] = "mb1"
+	f.git.out["diff --no-color --no-ext-diff --full-index mb1 HEAD"] = "diff --git a/flai/internal/x/x.go b/flai/internal/x/x.go"
+	f.git.out["patch-id --stable"] = "p1 0123abc"
+	first, err := Verify(context.Background(), f.opts)
+	if err != nil || !first.Passed || first.MergeBase != "mb1" || first.Patch != "" {
+		t.Fatalf("first run %+v, %v", first, err)
+	}
+	f.git.out["status --porcelain --untracked-files=all"] = ""
+	f.git.out["rev-parse HEAD"] = "4567def"
+	f.git.out["merge-base HEAD main"] = "mb2"
+	f.git.out["diff --no-color --no-ext-diff --full-index mb2 HEAD"] = "diff --git a/flai/internal/x/x.go b/flai/internal/x/x.go"
+	f.git.out["diff --no-renames --name-only mb1 mb2"] = "other/notes.txt"
+	f.proc.ran = nil
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil || rep.Patch != "p1" {
+		t.Fatalf("report %+v, %v", rep, err)
+	}
+	if n, _ := rep.Reused(); n != 0 || len(f.proc.ran) != 3 {
+		t.Errorf("reused %d, ran %q; want every tier run", n, f.proc.ran)
+	}
+}

@@ -195,3 +195,86 @@ func TestBaseChangesNamesARenamesBothPathsAndCountsAMergeOnBase(t *testing.T) {
 		t.Errorf("commits %q, want the rename, the side commit, and the merge, newest first: %q", commits, want)
 	}
 }
+
+func TestBetweenPathsListsWhatChangedFromOneCommitToAnother(t *testing.T) {
+	git := &fakeGit{out: map[string]string{
+		"diff --no-renames --name-only mb1 mb2": "lib/b.txt\n\"lib/caf\\303\\251.txt\"\nflai/a.go\nlib/b.txt",
+	}}
+	got, err := BetweenPaths(git, "/work/S-0001", "mb1", "mb2")
+	if err != nil || !reflect.DeepEqual(got, []string{"flai/a.go", "lib/b.txt", "lib/café.txt"}) {
+		t.Errorf("BetweenPaths = %q, %v", got, err)
+	}
+	git = &fakeGit{err: map[string]error{"diff --no-renames --name-only mb1 gone": errors.New("bad object gone")}}
+	if _, err := BetweenPaths(git, "/work", "mb1", "gone"); err == nil || !strings.Contains(err.Error(), "bad object gone") || !strings.Contains(err.Error(), "from mb1 to gone") {
+		t.Errorf("error %v", err)
+	}
+}
+
+func TestBranchPatchIsTheMergeBaseAndThePatchIdOfACleanBranch(t *testing.T) {
+	const diff = "diff --no-color --no-ext-diff --full-index mb1 HEAD"
+	for _, tc := range []struct {
+		name, status, diff, patchID string
+		err                         map[string]error
+		mergeBase, patch, wantErr   string
+	}{
+		{name: "a clean branch", diff: "diff --git a/x b/x", patchID: "p1 0123abc", mergeBase: "mb1", patch: "p1"},
+		{name: "an uncommitted change", status: "?? scratch.txt", diff: "diff --git a/x b/x", patchID: "p1 0123abc", mergeBase: "mb1"},
+		{name: "a branch that changes nothing", mergeBase: "mb1"},
+		{name: "a merge base git cannot find", err: map[string]error{"merge-base HEAD main": errors.New("no merge base")}, wantErr: "no merge base"},
+		{name: "a patch id git cannot take", diff: "diff --git a/x b/x", err: map[string]error{"patch-id --stable": errors.New("boom")},
+			mergeBase: "mb1", wantErr: "take the patch id"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			git := &fakeGit{out: map[string]string{
+				"merge-base HEAD main":                     "mb1\n",
+				"status --porcelain --untracked-files=all": tc.status,
+				diff:                tc.diff,
+				"patch-id --stable": tc.patchID,
+			}, err: tc.err}
+			mergeBase, patch, err := BranchPatch(git, "/work", "main")
+			if mergeBase != tc.mergeBase || patch != tc.patch || (err == nil) != (tc.wantErr == "") || err != nil && !strings.Contains(err.Error(), tc.wantErr) {
+				t.Errorf("BranchPatch = %q, %q, %v; want %q, %q, an error with %q", mergeBase, patch, err, tc.mergeBase, tc.patch, tc.wantErr)
+			}
+		})
+	}
+}
+
+func TestBranchPatchIsTheSameAcrossARebaseAndNotAfterAnotherChange(t *testing.T) {
+	dir := realRepo(t)
+	writeFile(t, dir, "flai/x.go", "package x\n")
+	writeFile(t, dir, "lib/y.txt", "y\n")
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-q", "-m", "init")
+	runGit(t, dir, "checkout", "-q", "-b", "story")
+	writeFile(t, dir, "flai/x.go", "package x // story\n")
+	runGit(t, dir, "commit", "-q", "-am", "story")
+	git := execx.System{}
+	before, patch, err := BranchPatch(git, dir, "main")
+	if err != nil || before != runGit(t, dir, "rev-parse", "main") || patch == "" {
+		t.Fatalf("BranchPatch = %q, %q, %v", before, patch, err)
+	}
+
+	runGit(t, dir, "checkout", "-q", "main")
+	writeFile(t, dir, "lib/y.txt", "main's\n")
+	runGit(t, dir, "commit", "-q", "-am", "main")
+	runGit(t, dir, "checkout", "-q", "story")
+	runGit(t, dir, "rebase", "-q", "main")
+	after, rebased, err := BranchPatch(git, dir, "main")
+	if err != nil || after == before || rebased != patch {
+		t.Errorf("after a rebase BranchPatch = %q, %q, %v; want a new merge base and the patch %q", after, rebased, err, patch)
+	}
+	paths, err := BetweenPaths(git, dir, before, after)
+	if err != nil || !reflect.DeepEqual(paths, []string{"lib/y.txt"}) {
+		t.Errorf("BetweenPaths = %q, %v; want main's one path", paths, err)
+	}
+
+	writeFile(t, dir, "scratch.txt", "draft\n")
+	if _, dirty, err := BranchPatch(git, dir, "main"); err != nil || dirty != "" {
+		t.Errorf("with an untracked file BranchPatch answered the patch %q, %v", dirty, err)
+	}
+	runGit(t, dir, "add", "scratch.txt")
+	runGit(t, dir, "commit", "-q", "-m", "more")
+	if _, other, err := BranchPatch(git, dir, "main"); err != nil || other == "" || other == patch {
+		t.Errorf("after another commit BranchPatch answered the patch %q, %v; want one other than %q", other, err, patch)
+	}
+}

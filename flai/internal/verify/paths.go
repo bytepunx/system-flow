@@ -116,6 +116,65 @@ func BaseChanges(r execx.Runner, dir, base string) (paths, commits []string, err
 	return slices.Compact(paths), commits, nil
 }
 
+// BetweenPaths are the paths changed from the commit from to the commit to,
+// relative to the root of the checkout at dir, sorted, a rename as both of
+// its paths and a deletion among them: what the main branch brought in
+// between two merge bases of a story's branch (ADR-0156).
+func BetweenPaths(r execx.Runner, dir, from, to string) ([]string, error) {
+	out, err := r.Run(dir, "git", "diff", "--no-renames", "--name-only", from, to)
+	if err != nil {
+		return nil, fmt.Errorf("list what changed from %s to %s; check that both are commits of the repository at %s: %w", from, to, dir, err)
+	}
+	var paths []string
+	for _, line := range strings.Split(out, "\n") {
+		if p := unquote(line); p != "" {
+			paths = append(paths, p)
+		}
+	}
+	slices.Sort(paths)
+	return slices.Compact(paths), nil
+}
+
+// BranchPatch is the merge base of the checkout at dir's HEAD with base, and
+// the stable patch id of what HEAD changed since it: the branch's own change,
+// whatever base it sits on (ADR-0156). The patch id is "" when the checkout
+// has anything uncommitted, which the id would not cover, or when HEAD
+// changed nothing. An error says which git command failed, with what it
+// found before it.
+func BranchPatch(r execx.Runner, dir, base string) (mergeBase, patch string, err error) {
+	out, err := r.Run(dir, "git", "merge-base", "HEAD", base)
+	if err != nil {
+		return "", "", fmt.Errorf("find where the checkout at %s left %s: %w", dir, base, err)
+	}
+	mergeBase = strings.TrimSpace(out)
+	status, err := r.Run(dir, "git", "status", "--porcelain", "--untracked-files=all")
+	if err != nil {
+		return mergeBase, "", fmt.Errorf("list what %s has not committed: %w", dir, err)
+	}
+	if strings.TrimSpace(status) != "" {
+		return mergeBase, "", nil
+	}
+	// --full-index names a binary file's blobs in full, which is all of it
+	// that patch-id hashes
+	diff, err := r.Run(dir, "git", "diff", "--no-color", "--no-ext-diff", "--full-index", mergeBase, "HEAD")
+	if err != nil {
+		return mergeBase, "", fmt.Errorf("diff %s from %s: %w", dir, mergeBase, err)
+	}
+	if diff == "" {
+		return mergeBase, "", nil
+	}
+	// the runner trims the diff's last newline: give it back, so that
+	// patch-id reads the diff as git wrote it
+	out, err = r.RunInput(dir, "git", diff+"\n", "patch-id", "--stable")
+	if err != nil {
+		return mergeBase, "", fmt.Errorf("take the patch id of what %s changed since %s: %w", dir, mergeBase, err)
+	}
+	if fields := strings.Fields(out); len(fields) > 0 {
+		patch = fields[0]
+	}
+	return mergeBase, patch, nil
+}
+
 // statusEntry is a git status --porcelain line's two status letters and the
 // path it is now at. The runner trims its output, which takes the leading
 // space from the first line's " M path", so a line whose third character is

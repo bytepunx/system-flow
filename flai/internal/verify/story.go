@@ -74,10 +74,20 @@ type Report struct {
 	// BaseCommit the commit it had then; "" when git could not read it.
 	Base       string `json:"base"`
 	BaseCommit string `json:"base_commit,omitempty"`
+	// MergeBase is where the branch left Base, git merge-base HEAD Base;
+	// "" when git could not tell.
+	MergeBase string `json:"merge_base,omitempty"`
+	// Patch is the stable patch id of the branch's own change, what it
+	// changed since MergeBase; "" when the worktree had anything
+	// uncommitted, the branch changed nothing, or git could not tell
+	// (ADR-0156).
+	Patch string `json:"patch,omitempty"`
 	// Fingerprint hashes what selects and runs the tiers: the project's
-	// tiers and the selected ones' commands. A later run at the same Commit
-	// and BaseCommit with the same Fingerprint reuses the tiers this one
-	// passed (S-0341).
+	// tiers and the selected ones' commands. A later run with the same
+	// Fingerprint reuses the tiers this one passed when it is at the same
+	// Commit and BaseCommit (S-0341), or, rebased, has the same Patch, but
+	// for the tiers that what Base changed between the two MergeBases sends
+	// back (ADR-0156).
 	Fingerprint string    `json:"fingerprint,omitempty"`
 	RanAt       time.Time `json:"ran_at"`
 	// DurationMS and Duration are how long the whole run took.
@@ -104,8 +114,10 @@ type Step struct {
 	DurationMS int64     `json:"duration_ms"`
 	Duration   string    `json:"duration,omitempty"`
 	Findings   []Finding `json:"findings,omitempty"`
-	// Note is what a step that passed says about what it passed over, as
-	// sync names the commits of Base it did not need (ADR-0135); it is the
+	// Note is what a step says about why it ran as it did: what a step
+	// that passed passed over, as sync names the commits of Base it did not
+	// need (ADR-0135), or, after a rebase, that a tier was reused across it
+	// or that the paths Base brought in sent it back (ADR-0156). It is the
 	// step's own, not a check note, and nothing records it as an issue.
 	Note string `json:"note,omitempty"`
 	// Omitted counts the findings past the run's cap.
@@ -158,7 +170,11 @@ type Note struct {
 // last report has the same head, base commit, and fingerprint, and Fresh is
 // not set, the tiers before the first it shows failed or not reached are not
 // run again but reported Reused, with the time of the run that ran them; the
-// steps before the tiers always run (S-0341). It commits nothing and records
+// steps before the tiers always run (S-0341). When the head or base commit
+// differ, as after a clean rebase, they are reused only when the branch's own
+// change has the same patch id, and only up to the first tier that the paths
+// the main branch brought in select, which runs again with every tier after
+// it (ADR-0156). It commits nothing and records
 // no issue. The report, whole, is stored as the story's last (SaveReport)
 // whether it passes or not. It returns an error, with no report, when the
 // story, its worktree, or its changes cannot be read, and, with the report
@@ -204,6 +220,10 @@ type storyRun struct {
 	commit     string
 	baseCommit string
 	paths      []string
+	// mergeBase and patch are where the branch left base and the patch id
+	// of its own change, as Report has them; Verify reads them.
+	mergeBase string
+	patch     string
 	// note is what the step running says about what it passed over, which
 	// runSteps puts on its result.
 	note string
@@ -277,7 +297,10 @@ func (v *storyRun) syncSteps() []storyStep {
 
 // newReport is a report begun at start that has passed so far.
 func (v *storyRun) newReport(start time.Time) Report {
-	return Report{Story: v.story, Commit: v.commit, Base: v.base, BaseCommit: v.baseCommit, RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{}}
+	return Report{
+		Story: v.story, Commit: v.commit, Base: v.base, BaseCommit: v.baseCommit, MergeBase: v.mergeBase, Patch: v.patch,
+		RanAt: start.UTC(), Passed: true, Paths: v.paths, Steps: []Step{},
+	}
 }
 
 // runSteps runs steps in order onto rep; once one fails, those after it are
@@ -307,6 +330,9 @@ func (v *storyRun) runSteps(rep *Report, steps []storyStep) {
 // ctx's error, with the report, when ctx ends during a tier.
 func (v *storyRun) run(ctx context.Context) (Report, error) {
 	start := v.opts.Now()
+	// what git cannot tell is left "", which reuses nothing across a
+	// rebase; the steps below find what is wrong with the branch
+	v.mergeBase, v.patch, _ = BranchPatch(v.opts.Git, v.worktree, v.base)
 	rep := v.newReport(start)
 	v.runSteps(&rep, append(v.syncSteps(),
 		storyStep{StepNarrative, v.narrative},
@@ -316,14 +342,18 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 	rep.Fingerprint = fingerprint(v.opts.Tiers, selected)
 	var runErr error
 	if rep.Passed {
-		reused := v.reusable(rep.Fingerprint, selected)
+		reused, sentBack := v.reusable(rep.Fingerprint, selected)
 		rep.Steps = append(rep.Steps, reused...)
 		ro := v.opts.RunOptions
 		ro.Env = append(append([]string{}, ro.Env...), StoryEnv+"="+v.story)
 		var res Result
 		res, runErr = Run(ctx, v.worktree, selected[len(reused):], ro)
-		for _, tr := range res.Tiers {
-			rep.Steps = append(rep.Steps, tierStep(tr))
+		for i, tr := range res.Tiers {
+			step := tierStep(tr)
+			if i == 0 {
+				step.Note = sentBack
+			}
+			rep.Steps = append(rep.Steps, step)
 			if tr.State == Failed && rep.Passed {
 				rep.Passed, rep.StoppedAt = false, tr.Name
 			}
@@ -361,12 +391,10 @@ func (v *storyRun) sync() []Finding {
 	if len(commits) == 0 {
 		return nil
 	}
-	root := mainRoot(v.opts.Project)
-	wip, err := filepath.Rel(root, v.opts.Project.WipDir())
+	wip, err := v.wipPrefix()
 	if err != nil {
-		return []Finding{{Name: StepSync, Message: fmt.Sprintf("cannot tell which paths are under the wip folder %s: %v; check the layout in the project's manifest", v.opts.Project.WipDir(), err)}}
+		return []Finding{{Name: StepSync, Message: err.Error()}}
 	}
-	wip = filepath.ToSlash(wip) + "/"
 	var outside, shared []string
 	for _, p := range paths {
 		switch {
@@ -390,6 +418,16 @@ func (v *storyRun) sync() []Finding {
 	}
 	v.note = fmt.Sprintf("passed over %s of %s that %s only %s paths the branch does not change: %s", plural(len(commits), "commit"), v.base, change, wip, few(commits, 10))
 	return nil
+}
+
+// wipPrefix is the manifest's wip folder relative to the project's root,
+// with a trailing slash, as git names the paths under it.
+func (v *storyRun) wipPrefix() (string, error) {
+	wip, err := filepath.Rel(mainRoot(v.opts.Project), v.opts.Project.WipDir())
+	if err != nil {
+		return "", fmt.Errorf("cannot tell which paths are under the wip folder %s: %w; check the layout in the project's manifest", v.opts.Project.WipDir(), err)
+	}
+	return filepath.ToSlash(wip) + "/", nil
 }
 
 // plural is n and the noun, plural but for one.
@@ -479,17 +517,42 @@ func tierStep(tr TierResult) Step {
 // reusable is the steps of the selected tiers that the story's last report
 // lets this run reuse, in order: those before the first it shows failed or
 // not reached, each Reused with the time of the run that ran it, but for a
-// tier another selected tier covers, which stays Skipped. It is none
-// with Fresh, with no last report, or when the report's head, base commit,
-// fingerprint, or tiers differ from this run's; every tier, when it passed
-// them all.
-func (v *storyRun) reusable(fp string, selected []Selected) []Step {
+// tier another selected tier covers, which stays Skipped. It is none with
+// Fresh, with no last report, or when the report's fingerprint or tiers
+// differ from this run's; every tier, when it passed them all. At the
+// report's head and base commit that is all (S-0341). At another, it reuses
+// only when the branch's own change, its patch id, is the same, and stops
+// at the first tier that the paths the main branch brought in between the
+// two merge bases select, but for wip paths the branch does not change
+// (ADR-0135), as the branch's own select its tiers, or that
+// covers one they select; then it answers, as the note for that tier, why
+// it runs again, and the first tier it reuses says it was reused across the
+// main branch's new commits (ADR-0156).
+func (v *storyRun) reusable(fp string, selected []Selected) (steps []Step, sentBackNote string) {
 	if v.opts.Fresh || v.baseCommit == "" || fp == "" {
-		return nil
+		return nil, ""
 	}
 	last, ok, err := LastReport(v.opts.Project, v.story)
-	if err != nil || !ok || last.Commit != v.commit || last.BaseCommit != v.baseCommit || last.Fingerprint != fp {
-		return nil
+	if err != nil || !ok || last.Fingerprint != fp {
+		return nil, ""
+	}
+	moved := last.Commit != v.commit || last.BaseCommit != v.baseCommit
+	var mainPaths []string
+	sentBack := map[string]bool{}
+	if moved {
+		if v.patch == "" || last.Patch != v.patch || v.mergeBase == "" || last.MergeBase == "" {
+			return nil, ""
+		}
+		if last.MergeBase != v.mergeBase {
+			// what main brought in cannot be told, so nothing is reused
+			if mainPaths, err = BetweenPaths(v.opts.Git, v.worktree, last.MergeBase, v.mergeBase); err != nil {
+				return nil, ""
+			}
+			if mainPaths, err = v.outsideWip(mainPaths); err != nil {
+				return nil, ""
+			}
+		}
+		sentBack = v.sentBack(selected, mainPaths)
 	}
 	var tiers []Step
 	for _, s := range last.Steps {
@@ -498,11 +561,16 @@ func (v *storyRun) reusable(fp string, selected []Selected) []Step {
 		}
 	}
 	if len(tiers) != len(selected) {
-		return nil
+		return nil, ""
 	}
 	var out []Step
 	for i, s := range tiers {
 		if s.Name != selected[i].Tier.Name {
+			break
+		}
+		s.Note = ""
+		if sentBack[s.Name] {
+			sentBackNote = v.sentBackNote(selected[i:], sentBack, mainPaths)
 			break
 		}
 		// A tier another selected tier covers ran nothing, so it neither
@@ -522,7 +590,95 @@ func (v *storyRun) reusable(fp string, selected []Selected) []Step {
 		s.State, s.ReusedFrom = Reused, &from
 		out = append(out, s)
 	}
+	if moved {
+		for i := range out {
+			if out[i].State == Reused {
+				out[i].Note = v.reusedNote(last, mainPaths)
+				break
+			}
+		}
+	}
+	return out, sentBackNote
+}
+
+// outsideWip leaves out of paths the main branch brought in those under the
+// wip folder that the branch does not change: no tier's result reads them
+// (ADR-0135), so they send no tier back, as they hold no sync back.
+func (v *storyRun) outsideWip(paths []string) ([]string, error) {
+	wip, err := v.wipPrefix()
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, p := range paths {
+		if !strings.HasPrefix(p, wip) || slices.Contains(v.paths, p) {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+// sentBack are the names of the selected tiers that the paths the main
+// branch brought in reach: those the paths select as the branch's own select
+// its tiers (SelectStory, {importers} included), and the tier that covers
+// each of them in this run, which runs in its place (ADR-0156).
+func (v *storyRun) sentBack(selected []Selected, mainPaths []string) map[string]bool {
+	out := map[string]bool{}
+	if len(mainPaths) == 0 {
+		return out
+	}
+	for _, s := range SelectStory(v.opts.FS, v.opts.Tiers, mainPaths) {
+		out[s.Tier.Name] = true
+	}
+	for _, s := range selected {
+		if out[s.Tier.Name] && s.CoveredBy != "" {
+			out[s.CoveredBy] = true
+		}
+	}
 	return out
+}
+
+// sentBackNote says that the tiers from rest on run again, and which of
+// them the main branch's new paths select.
+func (v *storyRun) sentBackNote(rest []Selected, sentBack map[string]bool, mainPaths []string) string {
+	var names []string
+	for _, s := range rest {
+		if sentBack[s.Tier.Name] {
+			names = append(names, s.Tier.Name)
+		}
+	}
+	return fmt.Sprintf("run again from here: the %s %s brought in since the last run %s %s: %s",
+		plural(len(mainPaths), "path"), v.base, selectVerb(len(mainPaths)), strings.Join(names, ", "), few(mainPaths, 3))
+}
+
+// reusedNote says that a tier was reused across the main branch's new
+// commits, and why it could be.
+func (v *storyRun) reusedNote(last Report, mainPaths []string) string {
+	if last.MergeBase == v.mergeBase {
+		return fmt.Sprintf("reused though %s moved on: the branch's own change is the same as at %s, and it was not rebased", v.base, shortHash(last.Commit))
+	}
+	if len(mainPaths) == 0 {
+		return fmt.Sprintf("reused across the rebase onto %s: the branch's own change is the same as at %s, and %s brought in only wip paths the branch does not change",
+			v.base, shortHash(last.Commit), v.base)
+	}
+	return fmt.Sprintf("reused across the rebase onto %s: the branch's own change is the same as at %s, and the %s %s brought in %s none of the tiers reused",
+		v.base, shortHash(last.Commit), plural(len(mainPaths), "path"), v.base, selectVerb(len(mainPaths)))
+}
+
+// selectVerb is "select" agreeing with n paths.
+func selectVerb(n int) string {
+	if n == 1 {
+		return "selects"
+	}
+	return "select"
+}
+
+// shortHash is a commit's first seven characters, as git abbreviates it.
+func shortHash(commit string) string {
+	if len(commit) > 7 {
+		return commit[:7]
+	}
+	return commit
 }
 
 // fingerprint hashes the project's tiers as declared and the selected ones'

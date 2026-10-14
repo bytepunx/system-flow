@@ -54,8 +54,16 @@ When the story's last run was at the same head and base commit, and the
 tiers, their commands, and those the branch selects are the same, the steps
 before the tiers run again but the tiers before the first the last run showed
 failed or not reached do not: each is reported reused, with the time of the
-run that ran it, and the run goes on from the tier that failed. Any change
-makes the run full; --fresh forces one (S-0341).
+run that ran it, and the run goes on from the tier that failed (S-0341).
+After a clean rebase onto a newer main branch the head and base commit
+differ, but when the branch's own change has the same patch id
+(git patch-id --stable of its diff from the merge base, recorded only from a
+worktree with nothing uncommitted), the tiers are reused all the same, up to
+the first that the paths the main branch brought in between the two merge
+bases select, but for wip paths the branch does not change; that tier runs
+again with every tier after it. A note under the first reused tier, or under
+the first tier run again, says why (ADR-0156). Any other change makes the
+run full; --fresh forces one.
 
 flai verify commits nothing. The answer is a line for each step, its state
 and duration, the failing step's first findings under it, at most --max
@@ -65,7 +73,8 @@ that do not fail it, and last a line as the close-out ends:
 (<exit status or state>)", either followed by " (reused N tiers from <time>)"
 when tiers were reused, the earliest run they come from. With --json the
 answer is the report, with the story, the commit and base it was verified at
-and the base's commit, when it ran, how long it took, passed, stopped_at, the
+and the base's commit, the merge base and the branch's patch id, when it ran,
+how long it took, passed, stopped_at, the
 paths the branch changed, and each step's state, duration, and findings, a
 reused tier's reused_from, a skipped tier's covered_by, and the notes.
 
