@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-13
+updated: 2026-10-14
 status: active
 ---
 
@@ -3377,6 +3377,8 @@ flai stream open <story-id> [flags]
 ```
 
 Creates wip/agents/&lt;story-id&gt;.md from the template and, in a git repository, the branch story/&lt;story-id&gt; from the main branch, checked out in a worktree under .flai-cache/worktrees/&lt;story-id&gt; (ADR-0019). Work there; wip/ stays in the main checkout. Run flai stream sync at every task transition. The narrative records the host that opened it.
+
+A story in ready is started first, as flai story start starts it (ADR-0153): it is moved to in-progress as FLAI\_AGENT, its epic following, unless the board holds it (its claim overlaps a story in progress or in review, or it names in after: a story that is not done), when it is refused with exit 4 and nothing changes. A story in any other state is opened as it is, unmoved. --json prints stream, path, branch, worktree, reopened, from, and moved, true when it moved the story.
 
 A story whose narrative exists and whose worktree does not, such as one begun on another host (ADR-0064), is reopened: the narrative is kept, with this host, agent, and session recorded, and story/&lt;story-id&gt; is checked out from this clone's branch, else fetched from the remote (origin) when it has one, else created from the main branch. It is refused when the worktree exists too.
 

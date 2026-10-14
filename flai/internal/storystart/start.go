@@ -66,7 +66,7 @@ type Moved struct {
 	Warnings []string `json:"warnings"`
 }
 
-// Refused is Start's refusal, made before anything changed: the story is not
+// Refused is Begin's refusal, made before anything changed: the story is not
 // ready, or the board holds it.
 type Refused struct {
 	Story  string
@@ -120,23 +120,16 @@ func Start(ctx context.Context, o Options) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("start %s: %w; give the ID of a ready story", o.Story, err)
 	}
-	if err := refuse(o.Repo, story); err != nil {
-		return Result{}, err
-	}
 	now := o.Now()
-	moved, err := o.Repo.TransitionAll(story, workitem.InProgress, o.Agent, "", now, false)
+	moved, err := Begin(o.Repo, story, o.Agent, now, o.Log)
 	if err != nil {
-		return Result{}, fmt.Errorf("move %s to in-progress: %w", story.ID, err)
-	}
-	for _, w := range moved.Warnings {
-		o.Log.Warn("workflow policy warning", "component", "workitem", "item", story.ID, "detail", w)
+		return Result{}, err
 	}
 	warnings := moved.Warnings
 	if warnings == nil {
 		warnings = []string{}
 	}
 	res := Result{Story: Moved{ID: story.ID, Title: story.Title, Status: story.Status, Warnings: warnings}, Followed: moved.Followed}
-	o.Log.Info("story started", "component", "storystart", "story", story.ID, "agent", o.Agent)
 
 	if err := openStream(o, story, now, &res); err != nil {
 		return res, &StepError{Story: story.ID, Step: StepStream, Finish: "flai stream open " + story.ID + ", then flai prime --story " + story.ID, Err: err}
@@ -150,6 +143,23 @@ func Start(ctx context.Context, o Options) (Result, error) {
 	}
 	res.Inbox = &in
 	return res, nil
+}
+
+// Begin moves story to in-progress as agent, its epic following, or refuses
+// it with a *Refused when it is not ready or the board holds it (ADR-0153).
+func Begin(repo *workitem.Repo, story *workitem.Item, agent string, now time.Time, log *slog.Logger) (*workitem.MoveResult, error) {
+	if err := refuse(repo, story); err != nil {
+		return nil, err
+	}
+	moved, err := repo.TransitionAll(story, workitem.InProgress, agent, "", now, false)
+	if err != nil {
+		return nil, fmt.Errorf("move %s to in-progress: %w", story.ID, err)
+	}
+	for _, w := range moved.Warnings {
+		log.Warn("workflow policy warning", "component", "workitem", "item", story.ID, "detail", w)
+	}
+	log.Info("story started", "component", "storystart", "story", story.ID, "agent", agent)
+	return moved, nil
 }
 
 // refuse says why story may not start, or nil: it is not a ready story, or

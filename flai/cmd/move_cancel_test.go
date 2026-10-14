@@ -35,7 +35,7 @@ func cancelProject(t *testing.T) string {
 	file := filepath.Join(root, "wip/kanban/stories/S-0001-first.md")
 	s, _ := os.ReadFile(file)
 	_ = os.WriteFile(file, []byte(strings.Replace(string(s), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [ ] ok\n", 1)), 0o644)
-	for _, args := range [][]string{{"move", "S-0001", "ready"}, {"stream", "open", "S-0001"}, {"move", "S-0001", "in-progress"}} {
+	for _, args := range [][]string{{"move", "S-0001", "ready"}, {"move", "S-0001", "in-progress"}, {"stream", "open", "S-0001"}} {
 		if _, errOut, code := runIn(t, root, args...); code != 0 {
 			t.Fatal(errOut)
 		}

@@ -12,6 +12,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/storystart"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -37,6 +38,14 @@ under .flai-cache/worktrees/<story-id> (ADR-0019). Work there; wip/ stays in
 the main checkout. Run flai stream sync at every task transition. The
 narrative records the host that opened it.
 
+A story in ready is started first, as flai story start starts it (ADR-0153):
+it is moved to in-progress as FLAI_AGENT, its epic following, unless the
+board holds it (its claim overlaps a story in progress or in review, or it
+names in after: a story that is not done), when it is refused with exit 4 and
+nothing changes. A story in any other state is opened as it is, unmoved.
+--json prints stream, path, branch, worktree, reopened, from, and moved, true
+when it moved the story.
+
 A story whose narrative exists and whose worktree does not, such as one begun
 on another host (ADR-0064), is reopened: the narrative is kept, with this
 host, agent, and session recorded, and story/<story-id> is checked out from
@@ -55,31 +64,39 @@ too.`,
 			}
 			agent, session := agentIdentity()
 			opt := workitem.StreamOptions{Agent: agent, Session: session, Host: workitem.ThisHost(), Now: a.now()}
-			n, err := repo.OpenStream(story, opt)
-			var exists *workitem.StreamExistsError
-			reopen := errors.As(err, &exists)
-			if reopen {
-				if !a.canReopen(repo, story.ID, noBranch) {
+			var moved *workitem.MoveResult
+			if story.Type == workitem.Story && story.Status == workitem.Ready {
+				if moved, err = storystart.Begin(repo, story, agent, opt.Now, a.logger()); err != nil {
+					var refused *storystart.Refused
+					if errors.As(err, &refused) {
+						return &exitError{code: exitDocRefused, msg: refused.Error()}
+					}
 					return err
 				}
-				opt.Agent = os.Getenv("FLAI_AGENT")
-				n, err = repo.ReopenStream(story, opt)
 			}
+			n, reopen, opened, err := a.openStream(repo, story, opt, noBranch)
 			if err != nil {
-				return err
-			}
-			if err := a.refreshIndex(repo); err != nil {
-				return err
-			}
-			var opened storygit.Opened
-			if !noBranch {
-				if opened, err = a.openStoryBranch(repo, story.ID, reopen); err != nil {
-					return fmt.Errorf("narrative opened but the branch was not: %w", err)
+				var exists *workitem.StreamExistsError
+				if moved != nil && errors.As(err, &exists) {
+					// A story sent back to ready keeps its narrative and
+					// worktree: moved, it is worked there again.
+					return fmt.Errorf("%s is in progress, and its narrative and worktree exist already: take it up in %s with flai prime --story %s", story.ID, relPath(repo.MainRoot, repo.WorktreePath(story.ID)), story.ID)
 				}
+				if moved != nil {
+					return fmt.Errorf("%s is in progress, but its stream was not opened: %w; finish it with flai stream open %s", story.ID, err, story.ID)
+				}
+				return err
 			}
 			branch, wt, from := opened.Branch, opened.Worktree, opened.From
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"stream": n.Stream, "path": n.Path, "branch": branch, "worktree": wt, "reopened": reopen, "from": from})
+				return a.printJSON(map[string]any{"stream": n.Stream, "path": n.Path, "branch": branch, "worktree": wt, "reopened": reopen, "from": from, "moved": moved != nil})
+			}
+			if moved != nil {
+				fmt.Fprintf(a.out, "%s → %s\n", story.ID, story.Status)
+				a.printFollowed(moved.Followed)
+				for _, warn := range moved.Warnings {
+					fmt.Fprintf(a.out, "  warning: %s\n", warn)
+				}
 			}
 			if reopen {
 				fmt.Fprintf(a.out, "reopened %s\n", relPath(repo.Root, n.Path))
@@ -98,6 +115,35 @@ too.`,
 	}
 	c.Flags().BoolVar(&noBranch, "no-branch", false, "narrative only; no branch or worktree")
 	return c
+}
+
+// openStream opens story's narrative, or takes up the one it has when canReopen
+// allows, writes the stream index again, and checks its branch out in a
+// worktree unless noBranch.
+func (a *app) openStream(repo *workitem.Repo, story *workitem.Item, opt workitem.StreamOptions, noBranch bool) (*workitem.Narrative, bool, storygit.Opened, error) {
+	n, err := repo.OpenStream(story, opt)
+	var exists *workitem.StreamExistsError
+	reopen := errors.As(err, &exists)
+	if reopen {
+		if !a.canReopen(repo, story.ID, noBranch) {
+			return nil, false, storygit.Opened{}, err
+		}
+		opt.Agent = os.Getenv("FLAI_AGENT")
+		n, err = repo.ReopenStream(story, opt)
+	}
+	if err != nil {
+		return nil, false, storygit.Opened{}, err
+	}
+	if err := a.refreshIndex(repo); err != nil {
+		return nil, false, storygit.Opened{}, err
+	}
+	var opened storygit.Opened
+	if !noBranch {
+		if opened, err = a.openStoryBranch(repo, story.ID, reopen); err != nil {
+			return nil, false, storygit.Opened{}, fmt.Errorf("narrative opened but the branch was not: %w", err)
+		}
+	}
+	return n, reopen, opened, nil
 }
 
 // canReopen reports whether stream open may take up story's existing
