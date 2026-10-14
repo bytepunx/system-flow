@@ -24,7 +24,7 @@ touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.g
 after: [T-1476]
 usage:
   source: log
-  seconds: 457
+  seconds: 459
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 256
       cache_read: 2546753
       cache_write: 125400
-      cost: 1.2309
+      cost: 1.2318
 ---
 # T-1477 storygit.Rebase reports and records each path where the rebased branch removes lines main gained since its old branch point, with a test reproducing I-0124
 

@@ -3,16 +3,31 @@ id: T-1496
 type: task
 nature: improvement
 title: Document the close-out's rounds and verify's reuse across a rebase in the design, the user docs, and the work-management convention
-status: backlog
+status: done
 parent: S-0374
 owner: alex
 created: 2026-10-12T17:34:24Z
-updated: 2026-10-12T17:34:24Z
-transitions: []
+updated: 2026-10-14T22:05:28Z
+transitions:
+  - to: ready
+    at: 2026-10-14T22:05:24Z
+    by: agent-S-0374
+  - to: in-progress
+    at: 2026-10-14T22:05:25Z
+    by: agent-S-0374
+  - to: done
+    at: 2026-10-14T22:05:28Z
+    by: agent-S-0374
 stream: S-0374
 tags: [cli, conventions, template]
 touches: [docs/users/flai.md, design/system/workflow.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md]
 after: [T-1494, T-1495]
+usage:
+  source: log
+  seconds: 3
+  estimated: true
+  priced_by: harness
+  models: []
 ---
 # T-1496 Document the close-out's rounds and verify's reuse across a rebase in the design, the user docs, and the work-management convention
 

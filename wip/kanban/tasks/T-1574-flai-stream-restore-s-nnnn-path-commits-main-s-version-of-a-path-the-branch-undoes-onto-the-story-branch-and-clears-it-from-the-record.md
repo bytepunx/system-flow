@@ -3,11 +3,11 @@ id: T-1574
 type: task
 nature: remediation
 title: flai stream restore S-nnnn --path commits main's version of a path the branch undoes onto the story branch, and clears it from the record
-status: in-progress
+status: done
 parent: S-0371
 owner: alex
 created: 2026-10-14T20:58:37Z
-updated: 2026-10-14T21:43:56Z
+updated: 2026-10-14T22:09:18Z
 transitions:
   - to: ready
     at: 2026-10-14T21:43:55Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-14T21:43:56Z
     by: agent-S-0371
+  - to: done
+    at: 2026-10-14T22:09:18Z
+    by: agent-S-0371
 stream: S-0371
 tags: [cli, go]
 touches: [flai/cmd/stream_restore.go, flai/cmd/stream_restore_test.go, flai/cmd/stream.go]
 after: [T-1477]
+usage:
+  source: log
+  seconds: 1504
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 95
+      output: 479
+      cache_read: 4347820
+      cache_write: 327895
+      cost: 2.1555
 ---
 # T-1574 flai stream restore S-nnnn --path commits main's version of a path the branch undoes onto the story branch, and clears it from the record
 

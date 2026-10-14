@@ -3,12 +3,18 @@ id: T-1478
 type: task
 nature: remediation
 title: flai stream sync and flai task done warn on each path where the rebased branch undoes main's change, and name flai stream restore
-status: backlog
+status: in-progress
 parent: S-0371
 owner: alex
 created: 2026-10-12T17:15:49Z
-updated: 2026-10-14T20:59:12Z
-transitions: []
+updated: 2026-10-14T22:14:49Z
+transitions:
+  - to: ready
+    at: 2026-10-14T22:14:48Z
+    by: agent-S-0371
+  - to: in-progress
+    at: 2026-10-14T22:14:49Z
+    by: agent-S-0371
 stream: S-0371
 tags: [cli, go]
 touches: [flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go]

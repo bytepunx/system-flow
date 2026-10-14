@@ -3,11 +3,11 @@ id: T-1479
 type: task
 nature: remediation
 title: flai accept's preview lists each path the branch undoes as a blocker with its lines as data, and accept refuses it unless --keep-removal names it with a reason, which the operator alone may give
-status: in-progress
+status: done
 parent: S-0371
 owner: alex
 created: 2026-10-12T17:15:57Z
-updated: 2026-10-14T21:43:54Z
+updated: 2026-10-14T22:09:01Z
 transitions:
   - to: ready
     at: 2026-10-14T21:43:54Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-14T21:43:54Z
     by: agent-S-0371
+  - to: done
+    at: 2026-10-14T22:09:01Z
+    by: agent-S-0371
 stream: S-0371
 tags: [cli, go]
-touches: [flai/internal/preview/accept.go, flai/cmd/accept.go, flai/cmd/branch.go, flai/cmd/accept_undone_test.go]
+touches: [flai/internal/preview/accept.go, flai/cmd/accept.go, flai/cmd/branch.go, flai/cmd/accept_undone_test.go, flai/internal/preview/orchestrator.go, flai/cmd/move.go, flai/internal/storygit/undone.go]
 after: [T-1477]
+usage:
+  source: log
+  seconds: 1506
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 87
+      output: 422
+      cache_read: 4982721
+      cache_write: 275982
+      cost: 2.4241
 ---
 # T-1479 flai accept's preview lists each path the branch undoes as a blocker with its lines as data, and accept refuses it unless --keep-removal names it with a reason, which the operator alone may give
 

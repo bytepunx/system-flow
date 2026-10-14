@@ -6,7 +6,7 @@ title: flai stream sync replays a story's revert of its own change over an ident
 status: in-progress
 owner: alex
 created: 2026-10-12T16:52:47Z
-updated: 2026-10-14T21:35:32Z
+updated: 2026-10-14T22:09:01Z
 transitions:
   - to: ready
     at: 2026-10-14T20:55:53Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0371
 tags: [cli]
 topics: [cli]
-touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_restore.go, flai/cmd/stream_restore_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/preview/accept.go, flai/cmd/branch.go, flai/cmd/accept.go, flai/cmd/accept_undone_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, docs/operators/settings.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/summary.md, design/adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md]
+touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_restore.go, flai/cmd/stream_restore_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/preview/accept.go, flai/cmd/branch.go, flai/cmd/accept.go, flai/cmd/accept_undone_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, docs/operators/settings.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/summary.md, design/adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md, flai/cmd/move.go, flai/internal/preview/orchestrator.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +24,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 608
+  seconds: 2128
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-10-14
-      ceremony: 1
+      ceremony: 2
       hand_edits: 1
-      work: 32
+      work: 44
   models:
     - model: claude-opus-5-5
-      input: 108
-      output: 709
-      cache_read: 5877661
-      cache_write: 288117
-      cost: 2.8402
+      input: 294
+      output: 1684
+      cache_read: 15592172
+      cache_write: 893830
+      cost: 7.5999
   strategic:
     - kind: planner
       seconds: 435

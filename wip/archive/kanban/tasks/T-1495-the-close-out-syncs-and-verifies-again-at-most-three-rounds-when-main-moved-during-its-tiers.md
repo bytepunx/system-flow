@@ -3,11 +3,11 @@ id: T-1495
 type: task
 nature: improvement
 title: The close-out syncs and verifies again, at most three rounds, when main moved during its tiers
-status: in-progress
+status: done
 parent: S-0374
 owner: alex
 created: 2026-10-12T17:34:15Z
-updated: 2026-10-14T21:45:26Z
+updated: 2026-10-14T22:03:47Z
 transitions:
   - to: ready
     at: 2026-10-14T21:45:26Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-14T21:45:26Z
     by: agent-S-0374
+  - to: done
+    at: 2026-10-14T22:03:47Z
+    by: agent-S-0374
 stream: S-0374
 tags: [cli, template]
 touches: [scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md]
 after: [T-1493]
+usage:
+  source: log
+  seconds: 1101
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 80
+      output: 34345
+      cache_read: 5478150
+      cache_write: 124916
+      cost: 2.6006
 ---
 # T-1495 The close-out syncs and verifies again, at most three rounds, when main moved during its tiers
 

@@ -3,11 +3,11 @@ id: T-1494
 type: task
 nature: improvement
 title: flai verify reuses the tiers a clean rebase onto a newer main cannot reach, and runs again those main's new paths select
-status: in-progress
+status: done
 parent: S-0374
 owner: alex
 created: 2026-10-12T17:34:01Z
-updated: 2026-10-14T21:45:25Z
+updated: 2026-10-14T22:03:08Z
 transitions:
   - to: ready
     at: 2026-10-14T21:45:25Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-14T21:45:25Z
     by: agent-S-0374
+  - to: done
+    at: 2026-10-14T22:03:08Z
+    by: agent-S-0374
 stream: S-0374
 tags: [cli]
-touches: [flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go]
+touches: [flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go, design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md, docs/users/flai-reference.md, flai/cmd/verify.go]
 after: [T-1493]
+usage:
+  source: log
+  seconds: 1063
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 79
+      output: 33717
+      cache_read: 5377977
+      cache_write: 122632
+      cost: 2.553
 ---
 # T-1494 flai verify reuses the tiers a clean rebase onto a newer main cannot reach, and runs again those main's new paths select
 

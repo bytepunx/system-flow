@@ -23,16 +23,16 @@ tags: [cli]
 touches: [design/adrs/README.md]
 usage:
   source: log
-  seconds: 48
+  seconds: 50
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 44
-      cache_read: 792593
-      cache_write: 9154
-      cost: 0.3693
+      input: 12
+      output: 4970
+      cache_read: 792707
+      cache_write: 18076
+      cost: 0.3763
 ---
 # T-1493 Record the ADR: a close-out that main outran syncs and runs again only the tiers main's new paths select
 

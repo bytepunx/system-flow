@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 566.1383
-accrued_seconds: 479720
-tasks_completed: 479
-last_run: 2026-10-14T21:52:39Z
+accrued_cost: 566.2234
+accrued_seconds: 479738
+tasks_completed: 480
+last_run: 2026-10-14T21:52:57Z
 ---
 
 # Orchestrator activity
@@ -3364,6 +3364,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0372
 - Seconds: 640
 - Cost: 2.2440 USD, estimated
+
+### 2026-10-14T21:52:57Z
+
+- Summary: Under publish, policy judgement: released S-0372 (1 pending, 90 USD/week) as flai 1.49.3 → 1.49.4 (patch, flai/v1.49.4) and template 1.0.90 → 1.0.91 (published to system-flow-template v1.0.91, f26b350), pushed. Reason: a complete, verified improvement on its own (settled replies, ADR-0154, the confirmed work-management.md change; I-0125 closed); nothing held by whole_epics.
+- Items: S-0372
+- Seconds: 18
+- Cost: 0.0851 USD, estimated
 
 ## Refusals
 

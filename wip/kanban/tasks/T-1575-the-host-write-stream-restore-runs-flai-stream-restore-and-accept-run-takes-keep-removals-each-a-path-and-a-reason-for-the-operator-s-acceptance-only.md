@@ -3,12 +3,18 @@ id: T-1575
 type: task
 nature: remediation
 title: The host write stream.restore runs flai stream restore, and accept.run takes keep_removals, each a path and a reason, for the operator's acceptance only
-status: backlog
+status: in-progress
 parent: S-0371
 owner: alex
 created: 2026-10-14T20:59:28Z
-updated: 2026-10-14T21:01:20Z
-transitions: []
+updated: 2026-10-14T22:14:50Z
+transitions:
+  - to: ready
+    at: 2026-10-14T22:14:49Z
+    by: agent-S-0371
+  - to: in-progress
+    at: 2026-10-14T22:14:50Z
+    by: agent-S-0371
 stream: S-0371
 tags: [cli, go]
 touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts]

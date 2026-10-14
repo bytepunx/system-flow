@@ -3,10 +3,10 @@ id: S-0374
 type: story
 nature: improvement
 title: An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T16:52:54Z
-updated: 2026-10-14T21:45:09Z
+updated: 2026-10-14T22:17:39Z
 transitions:
   - to: ready
     at: 2026-10-14T20:57:05Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-14T21:41:50Z
     by: agent-S-0374
+  - to: review
+    at: 2026-10-14T22:16:37Z
+    by: agent-S-0374
+  - to: done
+    at: 2026-10-14T22:17:39Z
+    by: orchestrator
 tags: [cli]
 topics: [cli, conventions, template, testing]
-touches: [design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/summary.md, design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md]
+touches: [design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/summary.md, design/adrs/0156-a-close-out-that-main-outran-syncs-and-verifies-again-at-most-three-rounds-and.md, docs/users/flai-reference.md, flai/cmd/verify.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 205
-  estimated: true
-  priced_by: estimate
+  seconds: 2103
+  priced_by: harness
   turns:
     - day: 2026-10-14
+      ceremony: 2
       hand_edits: 1
-      work: 22
+      work: 77
   models:
     - model: claude-opus-5-5
-      input: 46
-      output: 232
-      cache_read: 2503285
-      cache_write: 151940
-      cost: 1.2231
+      input: 302
+      output: 129693
+      cache_read: 20686631
+      cache_write: 471709
+      cost: 9.8202
   strategic:
     - kind: planner
       seconds: 322
@@ -90,8 +96,8 @@ finalized:
 This story remediates [I-0136](../../../design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md), "An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0136 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0136 is closed with `flai issue close I-0136 --reason` saying what fixed it
+- [x] The cause I-0136 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0136 is closed with `flai issue close I-0136 --reason` saying what fixed it
 
 ## Tasks
 - T-1493 Record the ADR: a close-out that main outran syncs and runs again only the tiers main's new paths select
@@ -125,3 +131,13 @@ Touches, every one a file; no folder touch is kept:
 Forecast 1h, raised from flai's 23m: five tasks in four layers, with an ADR, a change to verify's reuse tested in a real repository, a loop in two copies of the close-out, and docs in five files. Recent planned stories of this shape (S-0369, S-0371, S-0372) were raised to 45m to 1h for the same reasons. Delivery moves by the 37m added.
 
 Cost of delay 45 USD a week stands, as `flai cod` works it from flai's 18m input at 150 USD an hour. It is likely low: the three instances came within 1.5 hours of one another, so the 168h cycle undercounts. The input is not the planner's to change.
+
+### Accepted by the orchestrator
+
+- Verified: cf1079e23efe2a87c0c52420df72c0ca2604505b
+- At: 2026-10-14T22:17:39Z
+
+Verdict: meets all criteria; flai verify passed every step at cf1079e2; every changed path is within the story's touches, none under .claude/; the baseline work-management.md change is the one the operator confirmed on TH-0424, identical in both copies, with template CHANGELOG 1.0.92.
+
+- 1: scripts/close-out.sh and template/root/scripts/close-out.sh (sync and verify again, at most three rounds), flai/internal/verify/story.go and flai/internal/verify/paths.go (tier reuse across a clean rebase gated on patch id, prefix rule), flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go, flai/cmd/verify.go, docs/users/flai-reference.md, design/adrs/0156 (refines ADR-0110 and ADR-0135), design/adrs/README.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, design/system/workflow.md, design/system/flai-cli.md
+- 2: design/issues/I-0136 (closed, fixed by S-0374, ADR-0156), design/issues/summary.md

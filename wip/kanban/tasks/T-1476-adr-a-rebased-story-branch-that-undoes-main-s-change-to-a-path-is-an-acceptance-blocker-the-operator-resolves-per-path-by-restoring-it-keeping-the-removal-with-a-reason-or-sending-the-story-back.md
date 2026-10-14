@@ -32,7 +32,7 @@ usage:
       output: 136
       cache_read: 1345501
       cache_write: 11284
-      cost: 0.625
+      cost: 0.6255
 ---
 # T-1476 ADR: a rebased story branch that undoes main's change to a path is an acceptance blocker the operator resolves per path, by restoring it, keeping the removal with a reason, or sending the story back
 
