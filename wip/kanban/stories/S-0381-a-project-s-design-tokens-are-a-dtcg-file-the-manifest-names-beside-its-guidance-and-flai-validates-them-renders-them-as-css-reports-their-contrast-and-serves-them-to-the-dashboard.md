@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:24Z
-updated: 2026-10-14T23:53:18Z
+updated: 2026-10-14T23:53:43Z
 transitions: []
 tags: [cli, template]
 topics: [design]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-13T17:51:23Z
 forecast:
   duration: 45m
-  delivery: 2026-10-15T00:30:00Z
-  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 5, behind S-0306, S-0388 and S-0241."
+  delivery: 2026-10-15T00:47:00Z
+  basis: "Its own forecast of 45m; 2nd in the pull order with an in-progress limit of 5, behind S-0306 and S-0241."
   by: flai
-  at: 2026-10-14T23:36:28Z
+  at: 2026-10-14T23:53:43Z
 ---
 # S-0381 A project's design tokens are a DTCG file the manifest names, beside its guidance, and flai validates them, renders them as CSS, reports their contrast, and serves them to the dashboard
 
