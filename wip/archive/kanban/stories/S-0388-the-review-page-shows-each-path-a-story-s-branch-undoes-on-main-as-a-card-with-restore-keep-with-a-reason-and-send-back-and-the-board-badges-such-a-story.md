@@ -3,10 +3,10 @@ id: S-0388
 type: story
 nature: feature
 title: The review page shows each path a story's branch undoes on main as a card, with Restore, Keep with a reason, and Send back, and the board badges such a story
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-14T21:02:31Z
-updated: 2026-10-14T23:29:41Z
+updated: 2026-10-14T23:53:43Z
 transitions:
   - to: ready
     at: 2026-10-14T23:09:33Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-14T23:09:39Z
     by: agent-S-0388
+  - to: review
+    at: 2026-10-14T23:52:33Z
+    by: agent-S-0388
+  - to: done
+    at: 2026-10-14T23:53:43Z
+    by: orchestrator
 tags: [dashboard]
 topics: [dashboard, cli]
-touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/WorktreeUncommitted.svelte, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/restore/+server.ts", "flaiover/src/routes/api/items/[id]/restore/restore.test.ts", flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/lib/server/repo.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", flai/internal/workitem/boardview.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flaiover.md, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/repo-forget.test.ts]
+touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/WorktreeUncommitted.svelte, "flaiover/src/routes/api/items/[id]/accept/+server.ts", "flaiover/src/routes/api/items/[id]/accept/accept.test.ts", "flaiover/src/routes/api/items/[id]/restore/+server.ts", "flaiover/src/routes/api/items/[id]/restore/restore.test.ts", flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/server/board.ts, flaiover/src/lib/server/repo.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", flai/internal/workitem/boardview.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flaiover.md, flaiover/src/lib/server/repo-channel.test.ts, flaiover/src/lib/server/repo-forget.test.ts, docs/users/flai.md]
 after: [S-0371]
 agent:
   harness: claude-code
@@ -25,21 +31,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1171
-  estimated: true
-  priced_by: estimate
+  seconds: 2595
+  priced_by: harness
   turns:
     - day: 2026-10-14
       ceremony: 1
-      hand_edits: 1
-      work: 40
+      hand_edits: 2
+      work: 55
   models:
     - model: claude-opus-5-5
-      input: 316
-      output: 1761
-      cache_read: 12494231
-      cache_write: 561759
-      cost: 6.0261
+      input: 430
+      output: 131038
+      cache_read: 19024356
+      cache_write: 703618
+      cost: 10.521
   strategic:
     - kind: orchestrator
       seconds: 579
@@ -82,7 +87,7 @@ The operator resolves a story branch that undoes main's change from the dashboar
 - [x] Send back on a card opens a thread on the story naming the undone paths and moves the story back to in-progress with that reason
 - [x] Accept stays disabled while a card is neither restored nor kept, and a refused acceptance that carries `undoes_main` as data shows the same cards
 - [x] The board's card and the story page show "undoes main on N paths" for a story whose record lists any, linking to the review page
-- [ ] The dashboard design and the user docs describe the cards and the badge
+- [x] The dashboard design and the user docs describe the cards and the badge
 
 ## Tasks
 - T-1576 The host reads board.get and item.get carry undoes_main, the paths S-0371's record lists for a story
@@ -155,3 +160,18 @@ All ten declared touches are kept. `flai touches suggest S-0388` over them liste
 
 - **Forecast 1h**, delivery 2026-10-15T00:19Z. `flai forecast` gave 43m: the median of 95 s per unit of size over 54 done large-band feature stories on claude-opus-5-5, times size 27 (7 criteria, 20 touches). I raised it because the work is seven tasks in three layers, in two languages: a Go change to two host reads, two endpoints, and component tests on three pages. S-0371's eight tasks were raised to 1h15m. The delivery moves by the 17m added to flai's 00:02Z.
 - **Cost of delay 12.50 USD a week**, from `flai cod`: the orchestrator's input of 5m lost per 168h cycle (TH-0449, the planner's recommendation) at 150 USD an hour. It is not adjusted. The story saves the operator's time on each occurrence; the loss of main's change itself is S-0371's to prevent.
+
+### Accepted by the orchestrator
+
+- Verified: 77f5b0721d763628987b6a27d70ef9552868e3fc
+- At: 2026-10-14T23:53:43Z
+
+Verdict: meets all seven criteria; flai verify passed every step at 77f5b072; every changed path is within the story's touches, none under .claude/.
+
+- 1: flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/WorktreeUncommitted.svelte
+- 2: flaiover/src/routes/api/items/[id]/restore/+server.ts, flaiover/src/routes/api/items/[id]/restore/restore.test.ts, flaiover/src/lib/components/Review.svelte
+- 3: flaiover/src/lib/components/Review.svelte, flaiover/src/routes/api/items/[id]/accept/+server.ts, flaiover/src/routes/api/items/[id]/accept/accept.test.ts
+- 4: flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts
+- 5: flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/WorktreeUncommitted.svelte, flaiover/src/routes/api/items/[id]/accept/+server.ts
+- 6: flai/internal/workitem/boardview.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flaiover/src/lib/server/board.ts, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/items/[id]/+page.svelte, flaiover/src/routes/items/[id]/item.svelte.test.ts
+- 7: design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/users/flai.md, design/system/flai-cli.md

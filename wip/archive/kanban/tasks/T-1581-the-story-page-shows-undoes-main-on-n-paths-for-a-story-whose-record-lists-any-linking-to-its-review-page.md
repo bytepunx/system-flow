@@ -24,16 +24,16 @@ touches: [flaiover/src/lib/server/repo.ts, "flaiover/src/routes/items/[id]/+page
 after: [T-1576]
 usage:
   source: log
-  seconds: 799
+  seconds: 820
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 178
-      cache_read: 1373526
-      cache_write: 63895
-      cost: 0.6634
+      input: 36
+      output: 11112
+      cache_read: 1613211
+      cache_write: 59665
+      cost: 0.8921
 ---
 # T-1581 The story page shows "undoes main on N paths" for a story whose record lists any, linking to its review page
 

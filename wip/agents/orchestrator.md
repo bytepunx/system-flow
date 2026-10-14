@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 576.1779
-accrued_seconds: 484489
-tasks_completed: 487
-last_run: 2026-10-14T23:12:08Z
+accrued_cost: 583.0339
+accrued_seconds: 485963
+tasks_completed: 489
+last_run: 2026-10-14T23:36:45Z
 ---
 
 # Orchestrator activity
@@ -3420,6 +3420,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0389
 - Seconds: 13
 - Cost: 0.3110 USD, estimated
+
+### 2026-10-14T23:36:37Z
+
+- Summary: Under accept_reviews, accepted S-0389 at adddb8fce3aa. flai verify passed every step at the branch head; the verifier matched criterion 1 to channel.go (Run and serveOnce log before setState publishes) and channel_test.go (two slow-writer tests that make the race certain), 2 to I-0146 closed and summary.md; the dry run had no blocker. A first accept was refused by flai because my evidence wrapped the paths in notes ("names no file the branch changes"); the retry with bare paths passed. Merged, done, archived, committed; S-0306 told of overlap.
+- Items: S-0389
+- Seconds: 1466
+- Cost: 6.7460 USD, estimated
+
+### 2026-10-14T23:36:45Z
+
+- Summary: Under publish, policy judgement: did not publish yet. release_evaluate: 1 pending (S-0389), 40 USD/week, not met (judgement). Reason: S-0389 is a small fix to a flaky test, and S-0306 (flai, all tasks done) is about to reach review; I will weigh both together after the next acceptance rather than cut two flai patch releases minutes apart.
+- Items: S-0389
+- Seconds: 8
+- Cost: 0.1100 USD, estimated
 
 ## Refusals
 

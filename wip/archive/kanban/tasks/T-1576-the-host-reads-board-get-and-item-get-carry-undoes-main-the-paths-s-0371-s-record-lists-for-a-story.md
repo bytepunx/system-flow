@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 305
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 374
-      cache_read: 2538566
-      cache_write: 93050
-      cost: 1.2147
+      input: 59
+      output: 17986
+      cache_read: 2611247
+      cache_write: 96577
+      cost: 1.4441
 ---
 # T-1576 The host reads board.get and item.get carry undoes_main, the paths S-0371's record lists for a story
 

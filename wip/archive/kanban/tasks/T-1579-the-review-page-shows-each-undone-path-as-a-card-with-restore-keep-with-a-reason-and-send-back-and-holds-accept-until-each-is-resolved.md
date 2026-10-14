@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 803
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 293
-      cache_read: 3007013
-      cache_write: 119547
-      cost: 1.443
+      input: 70
+      output: 21369
+      cache_read: 3102336
+      cache_write: 114740
+      cost: 1.7157
 ---
 # T-1579 The review page shows each undone path as a card with Restore, Keep with a reason, and Send back, and holds Accept until each is resolved
 

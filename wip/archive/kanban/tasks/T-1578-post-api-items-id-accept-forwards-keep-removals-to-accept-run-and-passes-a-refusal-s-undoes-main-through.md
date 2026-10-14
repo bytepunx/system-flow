@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 313
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 47
-      output: 255
-      cache_read: 1301685
-      cache_write: 55385
-      cost: 0.6264
+      input: 30
+      output: 9275
+      cache_read: 1346574
+      cache_write: 49803
+      cost: 0.7447
 ---
 # T-1578 POST /api/items/[id]/accept forwards keep_removals to accept.run and passes a refusal's undoes_main through
 

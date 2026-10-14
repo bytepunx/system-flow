@@ -2,7 +2,7 @@
 id: TH-0439
 title: S-0381 stays a draft until S-0380's decision
 anchor:
-  path: wip/kanban/stories/S-0381-a-project-s-design-system-is-a-document-whose-front-matter-holds-its-tokens-and-flai-validates-it-renders-it-as-css-and-serves-it-to-the-dashboard.md
+  path: wip/kanban/stories/S-0381-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its-guidance-and-flai-validates-them-renders-them-as-css-reports-their-contrast-and-serves-them-to-the-dashboard.md
   item: S-0381
 status: answered
 participants: [orchestrator, alex]
@@ -12,7 +12,7 @@ updated: 2026-10-14T23:11:49Z
 
 # TH-0439 S-0381 stays a draft until S-0380's decision
 
-On wip/kanban/stories/S-0381-a-project-s-design-system-is-a-document-whose-front-matter-holds-its-tokens-and-flai-validates-it-renders-it-as-css-and-serves-it-to-the-dashboard.md.
+On wip/kanban/stories/S-0381-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its-guidance-and-flai-validates-them-renders-them-as-css-reports-their-contrast-and-serves-them-to-the-dashboard.md.
 
 ## Entries
 

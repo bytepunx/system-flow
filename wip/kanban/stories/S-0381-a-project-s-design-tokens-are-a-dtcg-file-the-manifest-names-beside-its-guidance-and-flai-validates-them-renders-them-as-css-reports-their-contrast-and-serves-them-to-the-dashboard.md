@@ -2,16 +2,16 @@
 id: S-0381
 type: story
 nature: feature
-title: A project's design system is a document whose front matter holds its tokens, and flai validates it, renders it as CSS, and serves it to the dashboard
+title: A project's design tokens are a DTCG file the manifest names, beside its guidance, and flai validates them, renders them as CSS, reports their contrast, and serves them to the dashboard
 status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:24Z
-updated: 2026-10-14T23:36:28Z
+updated: 2026-10-14T23:53:18Z
 transitions: []
-tags: [cli]
+tags: [cli, template]
 topics: [design]
-touches: [flai/internal/designsystem/tokens.go, flai/internal/designsystem/tokens_test.go, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go, flai/internal/designsystem/starter.md, flai/internal/check/design.go, flai/internal/check/design_test.go, flai/internal/check/check.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/cmd/root.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flai/internal/hostapi/hostapi.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/designsystem/tokens.go, flai/internal/designsystem/tokens_test.go, flai/internal/designsystem/resolver.go, flai/internal/designsystem/resolver_test.go, flai/internal/designsystem/color.go, flai/internal/designsystem/color_test.go, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go, flai/internal/designsystem/starter.md, flai/internal/designsystem/starter.tokens.json, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/design.go, flai/internal/check/design_test.go, flai/internal/check/check.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/cmd/root.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flai/internal/hostapi/hostapi.go, design/system/flai-cli.md, design/system/project-manifest.md, design/system/documentation-standard.md, design/conventions/documentation.md, template/root/design/conventions/documentation.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [S-0380]
 agent:
   harness: claude-code
@@ -45,7 +45,7 @@ forecast:
   by: flai
   at: 2026-10-14T23:36:28Z
 ---
-# S-0381 A project's design system is a document whose front matter holds its tokens, and flai validates it, renders it as CSS, and serves it to the dashboard
+# S-0381 A project's design tokens are a DTCG file the manifest names, beside its guidance, and flai validates them, renders them as CSS, reports their contrast, and serves them to the dashboard
 
 ## Goal
 
@@ -66,6 +66,10 @@ A project keeps its design system in one markdown document, `design/system/desig
 - T-1535 flai design init writes the design system document from a starter, and flai design show and flai design css print it
 - T-1536 The host method design.get answers the dashboard what flai design show --json prints
 - T-1537 The flai design and user docs and the reference describe the design system document, flai design, design.tokens, and design.get
+- T-1590 The manifest key design.tokens names the design token file, design/system/design-system.tokens.json when unset
+- T-1591 The documentation convention and standard allow one exception to Everything is markdown: a project's design token file, in DTCG format, named by the manifest
+- T-1592 The design token file's light and dark values resolve through the DTCG Resolver's theme modifier, and a resolver other than theme with light and dark is a problem at its path and line
+- T-1593 A design token colour converts from oklch to sRGB with clipping reported, and the colour roles' pairs get their contrast against ADR-0148's thresholds
 
 ## Notes
 

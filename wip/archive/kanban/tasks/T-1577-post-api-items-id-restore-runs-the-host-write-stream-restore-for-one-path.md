@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 310
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 45
-      output: 299
-      cache_read: 1206375
-      cache_write: 53274
-      cost: 0.5815
+      input: 28
+      output: 8609
+      cache_read: 1249907
+      cache_write: 46228
+      cost: 0.6912
 ---
 # T-1577 POST /api/items/[id]/restore runs the host write stream.restore for one path
 

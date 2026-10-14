@@ -7,12 +7,12 @@ status: backlog
 parent: S-0381
 owner: alex
 created: 2026-10-13T17:46:32Z
-updated: 2026-10-13T17:46:32Z
+updated: 2026-10-14T23:53:25Z
 transitions: []
 stream: S-0381
 tags: [cli]
 touches: [flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go]
-after: [T-1532]
+after: [T-1592, T-1593]
 ---
 # T-1533 The design system's tokens render as CSS custom properties per theme and as a Tailwind v4 @theme block, and Show gives the tokens with both renderings
 

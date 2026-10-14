@@ -7,12 +7,12 @@ status: backlog
 parent: S-0381
 owner: alex
 created: 2026-10-13T17:46:35Z
-updated: 2026-10-13T17:46:35Z
+updated: 2026-10-14T23:53:27Z
 transitions: []
 stream: S-0381
 tags: [cli]
 touches: [flai/internal/check/design.go, flai/internal/check/design_test.go, flai/internal/check/check.go]
-after: [T-1532]
+after: [T-1590, T-1592]
 ---
 # T-1534 flai check reports a design system token that does not parse as design.tokens with its key and line
 

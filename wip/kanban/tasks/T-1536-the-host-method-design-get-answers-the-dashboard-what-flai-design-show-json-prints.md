@@ -7,12 +7,12 @@ status: backlog
 parent: S-0381
 owner: alex
 created: 2026-10-13T17:46:45Z
-updated: 2026-10-13T17:46:45Z
+updated: 2026-10-14T23:53:31Z
 transitions: []
 stream: S-0381
 tags: [cli]
 touches: [flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flai/internal/hostapi/hostapi.go]
-after: [T-1533]
+after: [T-1533, T-1590]
 ---
 # T-1536 The host method design.get answers the dashboard what flai design show --json prints
 

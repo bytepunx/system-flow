@@ -7,12 +7,12 @@ status: backlog
 parent: S-0381
 owner: alex
 created: 2026-10-13T17:46:50Z
-updated: 2026-10-13T17:46:50Z
+updated: 2026-10-14T23:53:33Z
 transitions: []
 stream: S-0381
 tags: [cli]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
-after: [T-1534, T-1535, T-1536]
+after: [T-1534, T-1535, T-1536, T-1591]
 ---
 # T-1537 The flai design and user docs and the reference describe the design system document, flai design, design.tokens, and design.get
 

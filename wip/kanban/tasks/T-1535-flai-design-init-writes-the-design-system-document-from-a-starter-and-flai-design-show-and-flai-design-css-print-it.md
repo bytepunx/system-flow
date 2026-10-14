@@ -7,12 +7,12 @@ status: backlog
 parent: S-0381
 owner: alex
 created: 2026-10-13T17:46:41Z
-updated: 2026-10-13T17:50:44Z
+updated: 2026-10-14T23:53:29Z
 transitions: []
 stream: S-0381
 tags: [cli]
-touches: [flai/cmd/design.go, flai/cmd/design_test.go, flai/cmd/root.go, flai/internal/designsystem/starter.md]
-after: [T-1533]
+touches: [flai/cmd/design.go, flai/cmd/design_test.go, flai/cmd/root.go, flai/internal/designsystem/starter.md, flai/internal/designsystem/starter.tokens.json]
+after: [T-1533, T-1590]
 ---
 # T-1535 flai design init writes the design system document from a starter, and flai design show and flai design css print it
 

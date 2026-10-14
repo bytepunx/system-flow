@@ -6,7 +6,7 @@ title: A Design System Extension
 status: in-progress
 owner: alex
 created: 2026-10-13T17:37:49Z
-updated: 2026-10-13T17:53:28Z
+updated: 2026-10-14T23:52:30Z
 transitions:
   - to: ready
     at: 2026-10-13T17:53:19Z
@@ -87,7 +87,7 @@ This epic should specify the stories necessary to create a new top-level heading
 
 ## Stories
 - S-0380 Research how a project keeps its design system in the repository, how the dashboard previews it live, and how agents work on it with the operator
-- S-0381 A project's design system is a document whose front matter holds its tokens, and flai validates it, renders it as CSS, and serves it to the dashboard
+- S-0381 A project's design tokens are a DTCG file the manifest names, beside its guidance, and flai validates them, renders them as CSS, reports their contrast, and serves them to the dashboard
 - S-0382 The dashboard's Design group shows a project's design system and previews its tokens live on sample components
 - S-0383 The operator changes the design system's tokens on the Design page, sees the preview follow before saving, and saves through flai
 - S-0384 An agent's proposal for the design system is a story whose branch changes it, and the Design page previews that branch beside the main branch's before the operator accepts it

@@ -24,16 +24,16 @@ touches: [flaiover/src/lib/server/board.ts, flaiover/src/lib/components/BoardCar
 after: [T-1576]
 usage:
   source: log
-  seconds: 801
+  seconds: 816
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 43
-      output: 174
-      cache_read: 1544157
-      cache_write: 61309
-      cost: 0.741
+      input: 36
+      output: 10973
+      cache_read: 1593031
+      cache_write: 58918
+      cost: 0.881
 ---
 # T-1580 The board's card shows "undoes main on N paths" for a story whose record lists any, linking to its review page
 
