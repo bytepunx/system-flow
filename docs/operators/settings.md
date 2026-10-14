@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-13
+updated: 2026-10-14
 status: active
 ---
 
@@ -408,6 +408,7 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--role-harness` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--role-model` | [flai agent set](../users/flai-reference.md#flai-agent-set), [flai edit](../users/flai-reference.md#flai-edit), [flai story new](../users/flai-reference.md#flai-story-new) |
 | `--rotate` | [flai dashboard token](../users/flai-reference.md#flai-dashboard-token), [flai mcp token](../users/flai-reference.md#flai-mcp-token) |
+| `--settled` | [flai message reply](../users/flai-reference.md#flai-message-reply) |
 | `--show` | [flai edit](../users/flai-reference.md#flai-edit) |
 | `--since` | [flai stats](../users/flai-reference.md#flai-stats) |
 | `--source` | [flai thread reply](../users/flai-reference.md#flai-thread-reply) |

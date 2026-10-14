@@ -1,6 +1,6 @@
 ---
 title: Coordinating stories that run in parallel
-updated: 2026-10-08
+updated: 2026-10-14
 status: active
 topics: [cli, dashboard]
 ---
@@ -122,7 +122,7 @@ The stories that build it are under E-0009. Until they are accepted, flai behave
 
 The hold, the trial merge, and the notice at accept coordinate stories through flai. Since S-0330 the agents of two open stories can also agree between themselves, for example on who changes a shared file first, without asking the operator to relay. [ADR-0120](../adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md) records the decision.
 
-- **Addressed story to story.** `flai message send S-nnnn "<text>"` starts a conversation from the sender's story to another. Both must be in progress or in review. The sender's story is `--from`, else `FLAI_STORY`, else the story in an `agent-S-nnnn` `FLAI_AGENT`, else the story branch checked out. `--about` names the paths the conversation is about. `flai message reply MS-nnnn` answers from one of the two stories. A conversation awaits the story that did not write its last message.
+- **Addressed story to story.** `flai message send S-nnnn "<text>"` starts a conversation from the sender's story to another. Both must be in progress or in review. The sender's story is `--from`, else `FLAI_STORY`, else the story in an `agent-S-nnnn` `FLAI_AGENT`, else the story branch checked out. `--about` names the paths the conversation is about. `flai message reply MS-nnnn` answers from one of the two stories. A conversation awaits the story that did not write its last message. Since S-0372 a reply that asks nothing, such as agreement, is sent settled, `flai message reply --settled` or `message_reply` with `settled`: its heading ends in `(settled)`, and the conversation awaits neither story until the next message from either, a `flai task done` notice among them ([ADR-0154](../adrs/0154-a-reply-may-settle-a-conversation-which-then-awaits-neither-story-and-flai.md)). It stays open. Only a reply can be settled.
 - **Kept in `wip/messages`.** One file per conversation, `MS-nnnn-<slug>.md`, written in the main checkout as threads are, with dated entries under `## Entries`. `flai check` validates them, and a story's close-out counts its own conversations as inside the story.
 - **Closed with the story.** A conversation reads as closed once either story is done, cancelled, or archived, and then takes no reply. `flai accept` and `flai archive` close the open conversations of the stories they archive, with the entry `Closed: S-nnnn was accepted` or `was archived`. A closed conversation is never reopened; a new message starts a new one.
 - **Apart from threads.** None appears in `flai thread list`, among the threads awaiting the operator in `inbox` or the dashboard's designer inbox, or in a narrative's `## Open questions`. The operator reads them with `flai message list --all` and `flai message show`. A question for the designer is still a thread.

@@ -1909,7 +1909,7 @@ Conversations between the agents of two stories in progress or in review (ADR-01
 
 A ready story held on overlap alone with a story in progress has no agent, so flai serve asks the holding story's agent about it in their conversation, and that agent may share the overlapping paths with flai message share, so that the overlap no longer holds (ADR-0134).
 
-A conversation awaits the story that did not write its last message. When the two do not agree, either story's agent asks the operator with flai message escalate, which opens a thread (ADR-0121). It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
+A conversation awaits the story that did not write its last message, unless that message is a settled reply (flai message reply --settled), after which it awaits neither story until the next message from either (ADR-0154). When the two do not agree, either story's agent asks the operator with flai message escalate, which opens a thread (ADR-0121). It reads as closed when its status is closed or either story is done, cancelled, or archived, and a closed conversation takes no reply: a new message starts a new one. flai accept and flai archive close the conversations of the stories they archive.
 
 Messages are kept apart from threads: none appears in flai thread list, among the threads awaiting the operator, or in a narrative's Open questions. A question for the designer is still a thread.
 
@@ -1958,7 +1958,7 @@ List conversations; those still open by default.
 flai message list [flags]
 ```
 
-Lists conversations in ID order, one a line: its ID, the story that started it and the one it went to, the story it awaits, the time of its last message, and its title.
+Lists conversations in ID order, one a line: its ID, the story that started it and the one it went to, the story it awaits (settled when its newest entry from a story is a settled reply, and it awaits neither), the time of its last message, and its title.
 
 By default only the conversations that do not read as closed are listed, those of every story. --story lists only the conversations the story is one of the two of, in any padding; it has no default, so that the operator sees every story's. --all adds the closed ones, each with why it is closed in place of the story it awaits.
 
@@ -1984,7 +1984,9 @@ Add a message to a conversation from one of its two stories.
 flai message reply <MS-nnnn> "<text>" [flags]
 ```
 
-Adds a message to the conversation &lt;MS-nnnn&gt; from one of its two stories, and prints whom it now awaits: the other story.
+Adds a message to the conversation &lt;MS-nnnn&gt; from one of its two stories, and prints whom it now awaits: the other story, or no one when the reply is settled.
+
+--settled marks the reply settled, in its heading (ADR-0154): the conversation then awaits neither story, and flai serve starts neither story's agent for it, until the next message from either. Use it for a reply that asks nothing, such as "agreed" or "the change does not break this story", so that the other story's agent is not woken to answer it. The conversation stays open.
 
 The replying story is --from, else FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here. A reply is refused from a story that is not one of the two, from a story no longer in progress or in review, and on a conversation that reads as closed, which takes none; nothing is written. The author is --by, else FLAI\_AGENT, else the config author.
 
@@ -1992,6 +1994,7 @@ Examples:
 
 ```bash
 flai message reply MS-0004 "Yes, it is yours until you push." --from S-0331
+flai message reply MS-0004 "Agreed; the change does not break S-0331." --settled
 ```
 
 Flags:
@@ -2000,6 +2003,7 @@ Flags:
 |------|---------|
 | `--by` string | author (default: FLAI\_AGENT, then config author) |
 | `--from` string | the story the message comes from (default: FLAI\_STORY, else the story in FLAI\_AGENT of the form agent-S-nnnn, else the story branch checked out here) |
+| `--settled` | a reply that asks nothing: the conversation then awaits neither story, and no agent is woken to answer it |
 
 #### flai message send
 
@@ -2067,7 +2071,7 @@ Print a conversation with every message.
 flai message show <MS-nnnn>
 ```
 
-Prints the conversation &lt;MS-nnnn&gt;: its ID and title; the two stories, its status, and the story it awaits, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, and text. The ID may be given in any padding, such as ms-4.
+Prints the conversation &lt;MS-nnnn&gt;: its ID and title; the two stories, its status, and the story it awaits, settled when it awaits neither, or why it reads as closed; the paths it is about; and every entry, with its time, author, story, (settled) on a settled reply (ADR-0154), and text. The ID may be given in any padding, such as ms-4.
 
 Examples:
 
