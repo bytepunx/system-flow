@@ -3,11 +3,14 @@ id: S-0374
 type: story
 nature: improvement
 title: An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-12T16:52:54Z
-updated: 2026-10-14T20:57:02Z
-transitions: []
+updated: 2026-10-14T20:57:16Z
+transitions:
+  - to: ready
+    at: 2026-10-14T20:57:05Z
+    by: alex
 tags: [cli]
 topics: [cli, conventions, template, testing]
 touches: [design/adrs/README.md, flai/internal/verify/story.go, flai/internal/verify/paths.go, flai/internal/verify/story_test.go, flai/internal/verify/paths_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, template/CHANGELOG.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/issues/I-0136-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md, design/issues/summary.md]
@@ -38,15 +41,15 @@ usage:
           cache_write: 116361
           cost: 1.7627
     - kind: orchestrator
-      seconds: 10
+      seconds: 23
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 20
-          cache_read: 658068
-          cache_write: 2445
-          cost: 0.1665
+          input: 11
+          output: 140
+          cache_read: 1595519
+          cache_write: 5470
+          cost: 0.4023
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 18m
@@ -57,10 +60,10 @@ cost_of_delay:
   at: 2026-10-12T17:35:05Z
 forecast:
   duration: 1h
-  delivery: 2026-10-14T22:06:00Z
-  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 5, behind S-0304, S-0371, S-0305, S-0306, S-0241 and S-0372."
+  delivery: 2026-10-14T22:03:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0304, S-0305, S-0372 and S-0371."
   by: flai
-  at: 2026-10-14T20:55:58Z
+  at: 2026-10-14T20:57:16Z
 finalized:
   by: alex
   at: 2026-10-14T20:57:02Z
