@@ -1226,6 +1226,167 @@ func TestAMessageInTheSecondARunEndedIsNew(t *testing.T) {
 	}
 }
 
+// settled writes story's settled reply on conversation id, by its agent.
+func (lab *agentLab) settled(id, story, text string) {
+	lab.t.Helper()
+	if _, err := messages.ReplyWith(lab.repo, id, story, "builder-"+story, text, time.Now(), messages.Marks{Settled: true}); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// asksOn opens a question by story's agent on story, as its run ended
+// asking, and records it on the run.
+func (lab *agentLab) asksOn(story string, at time.Time) *threads.Thread {
+	lab.t.Helper()
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Which port?", On: story, Author: "builder-" + story, Text: "Eight or nine?", Now: at})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.Stories[story].Thread = th.ID })
+	return th
+}
+
+// S-0372, I-0125: a settled reply to a story whose agent ended waiting on the
+// operator's answer does not start it again, as the agreement on MS-0109
+// started S-0380's; a message that awaits its reply still does.
+func TestASettledReplyDoesNotStartAnAgentThatEndedForAThread(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	other := lab.inProgress("Other")
+	id := lab.putEnded("Waits on the operator", AgentRun{Outcome: OutcomeAsked})
+	before := time.Now().Add(-2 * time.Minute)
+	lab.asksOn(id, before)
+	c, err := messages.Send(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "I take docs/, you take flai/.", Now: before})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := messages.ReplyWith(lab.repo, c.ID, id, "builder-"+id, "Agreed; nothing to change.", before, messages.Marks{Settled: true}); err != nil {
+		t.Fatal(err)
+	}
+	lab.endedAgo(id, time.Minute)
+
+	lab.settled(c.ID, other, "Agreed.")
+	lab.l.look(ctx, false)
+	if r := lab.run(id); r.live() || r.Session != "earlier" || len(lab.entries()) != 0 {
+		t.Fatalf("started again for a settled reply: %+v, journal %+v", r, lab.entries())
+	}
+
+	if _, err := messages.Reply(lab.repo, c.ID, other, "builder-"+other, "One more: I renamed docs/ports.md.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again for the message", func() bool { return lab.run(id).Answered == c.ID })
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
+// S-0372, I-0125: an agent that ended waiting on another story's agent's
+// reply is started again once when that reply comes settled, and not again
+// when it answers settled in turn; nor is the other story's agent, which
+// ended waiting on the operator, started for that answer. A run that ends
+// with only settled conversations is not asked on them.
+func TestASettledReplyStartsTheAgentWaitingOnItOnce(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	other := lab.putEnded("Other", AgentRun{Outcome: OutcomeAsked})
+	lab.asksOn(other, time.Now())
+	id := lab.putEnded("Messages and waits", AgentRun{Outcome: OutcomeAsked})
+	run := lab.run(id)
+	started, _ := time.Parse(time.RFC3339, run.Started)
+	th := lab.asksOn(id, started)
+	c, err := messages.Send(lab.repo, messages.SendOptions{From: id, To: other, Author: run.Agent, Text: "Do you change flai/cmd?", Now: started})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if judgeRun(lab.root, run, new(int)); run.Outcome != OutcomeAsked || run.Thread != th.ID || !slices.Equal(run.Conversations, []string{c.ID}) {
+		t.Fatalf("asked on both: %+v", run)
+	}
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) { s.put(run) })
+	lab.l.look(ctx, false)
+	if len(lab.entries()) != 0 {
+		t.Fatalf("started before the reply: %+v", lab.entries())
+	}
+
+	lab.settled(c.ID, other, "No; nothing to change.")
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again for the settled reply", func() bool { return lab.run(id).Answered == c.ID })
+	if again := lab.run(id); again.Session != "earlier" {
+		t.Errorf("the same session: %+v", again)
+	}
+	lab.settled(c.ID, id, "Settled; no reply is needed.")
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	if r := lab.run(id); r.Outcome != OutcomeAsked || r.Thread != th.ID || len(r.Conversations) != 0 {
+		t.Fatalf("asked on the settled conversation: %+v", r)
+	}
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+	lab.l.look(ctx, false)
+	if r, o := lab.run(id), lab.run(other); r.live() || o.live() || len(lab.entries()) != 1 {
+		t.Fatalf("started again for a settled answer: %+v, %+v, journal %+v", r, o, lab.entries())
+	}
+
+	// with no question of its own open, it ends neither asking nor waiting
+	alone := AgentRun{Story: id, Agent: "someone-else", Started: started.Format(time.RFC3339)}
+	if judgeRun(lab.root, &alone, new(int)); alone.Outcome != OutcomeFailed || len(alone.Conversations) != 0 {
+		t.Errorf("judged on a settled conversation: %+v", alone)
+	}
+}
+
+// S-0372, I-0125: while its story is blocked, an agent that ended asking is
+// not started again for a new message to its story, as S-0337's was twelve
+// times, nor for the conversation it waited on closing; the answer to the
+// question it asked still starts it.
+func TestABlockedStorysAgentIsStartedOnlyForTheAnswerToItsQuestion(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.hold()
+	other := lab.inProgress("Other")
+	id := lab.putEnded("Blocked and waits", AgentRun{Outcome: OutcomeAsked})
+	before := time.Now().Add(-2 * time.Minute)
+	th := lab.asksOn(id, before)
+	c, err := messages.Send(lab.repo, messages.SendOptions{From: id, To: other, Author: "builder-" + id, Text: "Do you change flai/cmd?", Now: before})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+		s.Stories[id].Conversations, s.Stories[id].WaitsOn = []string{c.ID}, []string{other}
+	})
+	lab.endedAgo(id, 30*time.Second)
+	st, _ := lab.repo.Get(id)
+	if err := workitem.BlockItem(st, "waiting on "+th.ID, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := lab.repo.Save(st); err != nil {
+		t.Fatal(err)
+	}
+	notStarted := func(what string) {
+		t.Helper()
+		lab.l.look(ctx, false)
+		if r := lab.run(id); r.live() || r.Session != "earlier" || len(lab.entries()) != 0 {
+			t.Fatalf("started while blocked for %s: %+v, journal %+v", what, r, lab.entries())
+		}
+	}
+
+	if _, err := messages.Send(lab.repo, messages.SendOptions{From: other, To: id, Author: "builder-" + other, Text: "I changed flai/cmd/prime.go.", Now: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	notStarted("a new message")
+	if _, err := messages.Close(lab.repo, c.ID, "builder-"+other, "nothing to change", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	notStarted("a closed conversation")
+
+	if _, err := threads.Reply(lab.repo, th.ID, "alex", "Nine.", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs again for the answer", func() bool { return lab.run(id).Answered == th.ID })
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
 // S-0116, ADR-0043: the operator restarts the agent of a story in ready or in
 // progress whose agent dropped or failed, and is told why when it cannot be.
 func TestAStoryWhoseAgentDroppedOrFailedIsRestarted(t *testing.T) {

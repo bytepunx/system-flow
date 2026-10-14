@@ -932,7 +932,11 @@ func (l *launcher) settleOrphans() {
 // in the limit already, and it holds others rather than being held
 // (ADR-0046), so neither holds it back. A story in ready is started again by
 // the look, once nothing holds it and the limit has room, like any other;
-// one in backlog waits until it is ready (S-0182).
+// one in backlog waits until it is ready (S-0182). A blocked story's agent is
+// started again only for the answer to the question it asked, not for a
+// message or a conversation that closed, which its first inbox lists once it
+// is (ADR-0154); a blocked story in ready is never started, so the look needs
+// no such rule.
 func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	for id, run := range st.Stories {
@@ -945,6 +949,9 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 		}
 		it, err := repo.Get(id)
 		if err != nil || (it.Status != workitem.InProgress && it.Status != workitem.Review) {
+			continue
+		}
+		if it.IsBlocked() && answer != run.Thread {
 			continue
 		}
 		l.start(ctx, cfg, readyStory{ID: id, Agent: it.Agent, Asked: run, Answer: answer})
@@ -1703,10 +1710,12 @@ func askedAnswered(repo *workitem.Repo, run *AgentRun) *threads.Thread {
 
 // answered is what answers a run that ended asking, or "" while nothing does:
 // its thread, once the question has an answer (threadAnswered); a
-// conversation it ended on, once the other story's agent has written last on
-// it or it reads as closed, so that no reply will come (S-0335); or a
-// conversation on which a message to its story came after it ended
-// (messaged), even while its question to the operator is unanswered.
+// conversation it ended on, once that no longer awaits the other story: it
+// reads as closed, so that no reply will come (S-0335), or the other story's
+// agent has written last on it, a settled reply among what it writes, which
+// leaves it awaiting neither story (ADR-0154); or a conversation on which a
+// message to its story came after it ended (messaged), even while its
+// question to the operator is unanswered.
 func answered(repo *workitem.Repo, run *AgentRun) string {
 	if run.Thread != "" && threadAnswered(repo, run) {
 		return run.Thread
@@ -1716,7 +1725,7 @@ func answered(repo *workitem.Repo, run *AgentRun) string {
 		if err != nil {
 			continue
 		}
-		if closed, _ := c.Closed(repo); closed || owesReply(c, run.Story) {
+		if closed, _ := c.Closed(repo); closed || c.Awaiting() == "" || owesReply(c, run.Story) {
 			return c.ID
 		}
 	}
@@ -1729,7 +1738,8 @@ func answered(repo *workitem.Repo, run *AgentRun) string {
 // to the second: a message written in the second the run ended, after
 // judgeRun read the conversations, is new to it too, while one its agent
 // answered in that second no longer awaits its reply. It never looks before
-// the run started: the message it was started again for is not new to it.
+// the run started: the message it was started again for is not new to it. A
+// settled reply awaits no one, so it is passed over (ADR-0154).
 func messaged(repo *workitem.Repo, run *AgentRun) string {
 	ended, err := time.Parse(time.RFC3339, run.Ended)
 	if err != nil {
