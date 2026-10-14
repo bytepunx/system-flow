@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 559.4971
-accrued_seconds: 477499
-tasks_completed: 473
-last_run: 2026-10-14T21:15:33Z
+accrued_cost: 559.5697
+accrued_seconds: 477511
+tasks_completed: 474
+last_run: 2026-10-14T21:15:45Z
 ---
 
 # Orchestrator activity
@@ -3322,6 +3322,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0305
 - Seconds: 275
 - Cost: 1.1629 USD, estimated
+
+### 2026-10-14T21:15:45Z
+
+- Summary: Under publish, policy judgement: released S-0305 (1 pending, 0 USD/week, unvalued) as flai 1.49.1 → 1.49.2 (patch, flai/v1.49.2), pushed. Reason: a complete, verified remediation on its own (no replan on the story's own agent's edit; no queued planner for a story under way; I-0098 closed); nothing held by whole_epics.
+- Items: S-0305
+- Seconds: 12
+- Cost: 0.0726 USD, estimated
 
 ## Refusals
 

@@ -32,7 +32,7 @@ usage:
       output: 398
       cache_read: 2373865
       cache_write: 78534
-      cost: 1.1291
+      cost: 1.1293
 ---
 # T-1483 flai task done leaves the paths sync regenerates out of its changed-paths notice
 

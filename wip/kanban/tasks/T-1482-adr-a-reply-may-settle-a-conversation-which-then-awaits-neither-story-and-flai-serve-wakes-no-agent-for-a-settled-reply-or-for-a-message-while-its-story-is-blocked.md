@@ -32,7 +32,7 @@ usage:
       output: 20
       cache_read: 331293
       cache_write: 4391
-      cost: 0.1545
+      cost: 0.1546
 ---
 # T-1482 ADR: a reply may settle a conversation, which then awaits neither story, and flai serve wakes no agent for a settled reply or for a message while its story is blocked
 

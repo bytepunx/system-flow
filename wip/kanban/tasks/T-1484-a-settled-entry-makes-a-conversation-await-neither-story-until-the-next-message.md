@@ -24,7 +24,7 @@ touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_te
 after: [T-1482]
 usage:
   source: log
-  seconds: 906
+  seconds: 908
   estimated: true
   priced_by: estimate
   models:
@@ -33,7 +33,7 @@ usage:
       output: 192
       cache_read: 1535450
       cache_write: 264662
-      cost: 0.8287
+      cost: 0.8289
 ---
 # T-1484 A settled entry makes a conversation await neither story until the next message
 

@@ -3,11 +3,11 @@ id: T-1572
 type: task
 nature: improvement
 title: flai stream open starts a ready story as flai story start does, moving it to in-progress and refusing one the board holds
-status: in-progress
+status: done
 parent: S-0304
 owner: alex
 created: 2026-10-14T20:56:19Z
-updated: 2026-10-14T20:56:28Z
+updated: 2026-10-14T21:17:10Z
 transitions:
   - to: ready
     at: 2026-10-14T20:56:27Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-14T20:56:28Z
     by: agent-S-0304
+  - to: done
+    at: 2026-10-14T21:17:10Z
+    by: agent-S-0304
 stream: S-0304
 tags: []
-touches: [flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/cmd/stream.go, flai/cmd/stream_open_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/storystart/start.go, flai/internal/storystart/start_test.go, flai/cmd/stream.go, flai/cmd/stream_open_test.go, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/move_cancel_test.go]
+usage:
+  source: log
+  seconds: 1242
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 69
+      output: 19139
+      cache_read: 4208933
+      cache_write: 220245
+      cost: 2.5718
 ---
 # T-1572 flai stream open starts a ready story as flai story start does, moving it to in-progress and refusing one the board holds
 

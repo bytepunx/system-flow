@@ -3,14 +3,17 @@ id: S-0371
 type: story
 nature: remediation
 title: flai stream sync replays a story's revert of its own change over an identical change on main, undoing main's
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-12T16:52:47Z
-updated: 2026-10-14T21:15:26Z
+updated: 2026-10-14T21:33:36Z
 transitions:
   - to: ready
     at: 2026-10-14T20:55:53Z
     by: alex
+  - to: in-progress
+    at: 2026-10-14T21:33:36Z
+    by: agent-S-0371
 tags: [cli]
 topics: [cli]
 touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_restore.go, flai/cmd/stream_restore_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/preview/accept.go, flai/cmd/branch.go, flai/cmd/accept.go, flai/cmd/accept_undone_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, docs/operators/settings.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/summary.md]

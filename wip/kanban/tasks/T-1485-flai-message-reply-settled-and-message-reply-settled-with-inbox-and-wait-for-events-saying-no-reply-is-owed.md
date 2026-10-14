@@ -3,11 +3,11 @@ id: T-1485
 type: task
 nature: improvement
 title: flai message reply --settled and message_reply settled, with inbox and wait_for_events saying no reply is owed
-status: in-progress
+status: done
 parent: S-0372
 owner: alex
 created: 2026-10-12T17:23:12Z
-updated: 2026-10-14T21:13:52Z
+updated: 2026-10-14T21:30:54Z
 transitions:
   - to: ready
     at: 2026-10-14T21:13:51Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-14T21:13:52Z
     by: agent-S-0372
+  - to: done
+    at: 2026-10-14T21:30:54Z
+    by: agent-S-0372
 stream: S-0372
 tags: [messages, cli, mcp]
-touches: [flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/folder.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go]
+touches: [flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/folder.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
 after: [T-1484]
+usage:
+  source: log
+  seconds: 1020
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 427
+      cache_read: 3749571
+      cache_write: 282888
+      cost: 1.8568
 ---
 # T-1485 flai message reply --settled and message_reply settled, with inbox and wait_for_events saying no reply is owed
 

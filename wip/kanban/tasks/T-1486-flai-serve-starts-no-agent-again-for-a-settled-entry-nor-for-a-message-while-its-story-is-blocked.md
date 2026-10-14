@@ -19,6 +19,18 @@ stream: S-0372
 tags: [messages, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
 after: [T-1484]
+usage:
+  source: log
+  seconds: 1019
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 418
+      cache_read: 3461709
+      cache_write: 124214
+      cost: 1.6512
 ---
 # T-1486 flai serve starts no agent again for a settled entry, nor for a message while its story is blocked
 

@@ -6,7 +6,7 @@ title: An acceptance on main during a close-out's tiers fails its final sync che
 status: ready
 owner: alex
 created: 2026-10-12T16:52:54Z
-updated: 2026-10-14T21:15:26Z
+updated: 2026-10-14T21:34:18Z
 transitions:
   - to: ready
     at: 2026-10-14T20:57:05Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-10-12T17:35:05Z
 forecast:
   duration: 1h
-  delivery: 2026-10-14T22:22:00Z
-  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 5, behind S-0304 and S-0372."
+  delivery: 2026-10-14T22:40:00Z
+  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 5, behind S-0371 and S-0372."
   by: flai
-  at: 2026-10-14T21:15:26Z
+  at: 2026-10-14T21:34:18Z
 finalized:
   by: alex
   at: 2026-10-14T20:57:02Z
