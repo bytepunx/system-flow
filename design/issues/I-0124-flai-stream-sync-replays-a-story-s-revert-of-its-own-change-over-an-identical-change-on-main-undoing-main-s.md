@@ -2,12 +2,12 @@
 id: I-0124
 title: flai stream sync replays a story's revert of its own change over an identical change on main, undoing main's
 class: defect
-status: open
+status: closed
 count: 1
 cost: 10m
 first_reported: 2026-10-08T09:00:31Z
 last_reported: 2026-10-08T09:00:31Z
-updated: 2026-10-12T16:52:47Z
+updated: 2026-10-14T22:42:05Z
 ---
 
 # I-0124 flai stream sync replays a story's revert of its own change over an identical change on main, undoing main's
@@ -24,3 +24,4 @@ S-0232 changed scripts/flai-snapshot.sh's skip list to --skip=publish,sign, then
 ## Remediation
 
 Story S-0371 remediates this issue, created from it at 2026-10-12T16:52:47Z.
+Closed 2026-10-14T22:42:05Z: Fixed by S-0371 (ADR-0155): after a clean rebase storygit.Rebase compares the lines main added since the branch's old merge base with the lines the rebased branch removes, and records each path that removes any in .flai-cache/undone/S-nnnn.json. flai stream sync and flai task done warn on every recorded path still undone; the acceptance preview lists it as a blocker with its lines as undoes_main, and flai accept refuses it, its own rebase checking too, until the path is restored with flai stream restore (host write stream.restore) or kept with --keep-removal and a reason (accept.run keep_removals), which the orchestrator may not give. Tests reproduce I-0124 in storygit (sync_test.go), flai stream sync, flai stream restore, and flai accept.
