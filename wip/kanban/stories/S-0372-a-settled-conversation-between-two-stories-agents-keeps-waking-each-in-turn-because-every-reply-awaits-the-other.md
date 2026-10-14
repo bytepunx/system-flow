@@ -3,34 +3,52 @@ id: S-0372
 type: story
 nature: improvement
 title: A settled conversation between two stories' agents keeps waking each in turn, because every reply awaits the other
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-12T16:52:49Z
-updated: 2026-10-14T20:56:25Z
-transitions: []
+updated: 2026-10-14T20:58:12Z
+transitions:
+  - to: ready
+    at: 2026-10-14T20:56:28Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-14T20:56:35Z
+    by: agent-S-0372
 tags: [flai, messages, serve]
 topics: [cli, conventions]
-touches: [design/adrs/README.md, design/system/agent-coordination.md, design/system/workflow.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/folder.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/agent-coordination.md, design/system/workflow.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/messages/messages.go, flai/internal/messages/messages_test.go, flai/cmd/message.go, flai/cmd/message_test.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/messages_test.go, flai/internal/mcpserver/folder.go, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md, design/adrs/0154-a-reply-may-settle-a-conversation-which-then-awaits-neither-story-and-flai.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1015
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-14
+      hand_edits: 1
+      work: 26
+  models:
+    - model: claude-opus-5-5
+      input: 148
+      output: 887
+      cache_read: 5438232
+      cache_write: 462084
+      cost: 2.7165
   strategic:
     - kind: orchestrator
-      seconds: 280
+      seconds: 290
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 54
-          output: 970
-          cache_read: 17162305
-          cache_write: 24307
-          cost: 4.3326
+          input: 63
+          output: 1095
+          cache_read: 18045511
+          cache_write: 26564
+          cost: 4.5546
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 36m

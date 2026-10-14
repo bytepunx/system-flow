@@ -3,15 +3,36 @@ id: T-1482
 type: task
 nature: improvement
 title: "ADR: a reply may settle a conversation, which then awaits neither story, and flai serve wakes no agent for a settled reply or for a message while its story is blocked"
-status: backlog
+status: done
 parent: S-0372
 owner: alex
 created: 2026-10-12T17:22:31Z
-updated: 2026-10-12T17:22:31Z
-transitions: []
+updated: 2026-10-14T20:58:12Z
+transitions:
+  - to: ready
+    at: 2026-10-14T20:57:33Z
+    by: agent-S-0372
+  - to: in-progress
+    at: 2026-10-14T20:57:34Z
+    by: agent-S-0372
+  - to: done
+    at: 2026-10-14T20:58:11Z
+    by: agent-S-0372
 stream: S-0372
 tags: [messages, docs]
-touches: [design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0154-a-reply-may-settle-a-conversation-which-then-awaits-neither-story-and-flai.md]
+usage:
+  source: log
+  seconds: 37
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 20
+      cache_read: 331293
+      cache_write: 4391
+      cost: 0.1545
 ---
 # T-1482 ADR: a reply may settle a conversation, which then awaits neither story, and flai serve wakes no agent for a settled reply or for a message while its story is blocked
 

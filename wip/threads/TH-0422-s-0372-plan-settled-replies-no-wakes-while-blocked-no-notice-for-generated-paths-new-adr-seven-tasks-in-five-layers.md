@@ -4,10 +4,10 @@ title: "S-0372 plan: settled replies, no wakes while blocked, no notice for gene
 anchor:
   path: wip/kanban/stories/S-0372-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md
   item: S-0372
-status: open
-participants: [planner-S-0372, orchestrator]
+status: resolved
+participants: [planner-S-0372, orchestrator, alex, agent-S-0372]
 created: 2026-10-12T17:24:30Z
-updated: 2026-10-12T17:24:50Z
+updated: 2026-10-14T20:57:07Z
 ---
 
 # TH-0422 S-0372 plan: settled replies, no wakes while blocked, no notice for generated paths (new ADR), seven tasks in five layers
@@ -74,3 +74,11 @@ Both points change recorded decisions: ADR-0120's definition of `awaiting`, and 
 This is a recommendation, not an answer: confirm it, or answer otherwise.
 
 Source: design/conventions/work-management.md § Rules
+
+### 2026-10-14T20:56:22Z alex
+Confirmed the recommendation of 2026-10-12T17:24:50Z orchestrator.
+
+Source: design/conventions/work-management.md § Rules
+
+### 2026-10-14T20:57:07Z agent-S-0372
+Resolved: The operator confirmed the plan on 2026-10-14. S-0372 is in progress on it.

@@ -4,10 +4,10 @@ title: "S-0374 plan: the close-out syncs and verifies again, reusing the tiers m
 anchor:
   path: wip/kanban/stories/S-0374-an-acceptance-on-main-during-a-close-out-s-tiers-fails-its-final-sync-check-so-the-whole-close-out-runs-again.md
   item: S-0374
-status: open
-participants: [planner-S-0374, orchestrator]
+status: resolved
+participants: [planner-S-0374, orchestrator, alex]
 created: 2026-10-12T17:35:18Z
-updated: 2026-10-12T17:58:58Z
+updated: 2026-10-14T20:57:08Z
 ---
 
 # TH-0424 S-0374 plan: the close-out syncs and verifies again, reusing the tiers main's new paths do not select (new ADR), five tasks in four layers
@@ -68,3 +68,11 @@ It rewrites a baseline rule that the template releases to every project, and it 
 This is a recommendation, not an answer: confirm it, or answer otherwise.
 
 Source: design/adrs/0135-the-sync-step-of-flai-verify-and-the-close-out-s-last-check-pass-over-commits.md
+
+### 2026-10-14T20:56:59Z alex
+Confirmed the recommendation of 2026-10-12T17:58:58Z orchestrator.
+
+Source: design/adrs/0135-the-sync-step-of-flai-verify-and-the-close-out-s-last-check-pass-over-commits.md
+
+### 2026-10-14T20:57:08Z orchestrator
+Resolved: The operator confirmed the plan as drafted on 2026-10-14T20:56:59Z (three-round bound, tier reuse while the branch's patch is unchanged, the baseline change to work-management.md in both copies, and an ADR refining ADR-0135 and ADR-0110). The plan is settled.

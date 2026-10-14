@@ -3,16 +3,37 @@ id: T-1152
 type: task
 nature: remediation
 title: The design and the user guide say an edit by a story's own agent, or a story whose agent is at work, starts no planner on its own
-status: backlog
+status: done
 parent: S-0305
 owner: alex
 created: 2026-10-07T02:19:47Z
-updated: 2026-10-07T02:19:58Z
-transitions: []
+updated: 2026-10-14T21:03:15Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:02:00Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-14T21:02:00Z
+    by: system-flow
+  - to: done
+    at: 2026-10-14T21:03:15Z
+    by: system-flow
 stream: S-0305
 tags: [docs, planner]
 touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md]
 after: [T-1151]
+usage:
+  source: log
+  seconds: 75
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 3221
+      cache_read: 630765
+      cache_write: 25169
+      cost: 0.3565
 ---
 # T-1152 The design and the user guide say an edit by a story's own agent, or a story whose agent is at work, starts no planner on its own
 

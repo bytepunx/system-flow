@@ -3,16 +3,37 @@ id: T-1484
 type: task
 nature: improvement
 title: A settled entry makes a conversation await neither story until the next message
-status: backlog
+status: done
 parent: S-0372
 owner: alex
 created: 2026-10-12T17:23:00Z
-updated: 2026-10-12T17:23:00Z
-transitions: []
+updated: 2026-10-14T21:13:30Z
+transitions:
+  - to: ready
+    at: 2026-10-14T20:58:22Z
+    by: agent-S-0372
+  - to: in-progress
+    at: 2026-10-14T20:58:22Z
+    by: agent-S-0372
+  - to: done
+    at: 2026-10-14T21:13:30Z
+    by: agent-S-0372
 stream: S-0372
 tags: [messages]
 touches: [flai/internal/messages/messages.go, flai/internal/messages/messages_test.go]
 after: [T-1482]
+usage:
+  source: log
+  seconds: 906
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 192
+      cache_read: 1535450
+      cache_write: 264662
+      cost: 0.8287
 ---
 # T-1484 A settled entry makes a conversation await neither story until the next message
 

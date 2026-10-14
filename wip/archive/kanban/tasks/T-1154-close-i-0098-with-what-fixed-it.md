@@ -3,16 +3,37 @@ id: T-1154
 type: task
 nature: remediation
 title: Close I-0098 with what fixed it
-status: backlog
+status: done
 parent: S-0305
 owner: alex
 created: 2026-10-07T02:19:51Z
-updated: 2026-10-07T02:19:51Z
-transitions: []
+updated: 2026-10-14T21:03:24Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:02:01Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-14T21:02:02Z
+    by: system-flow
+  - to: done
+    at: 2026-10-14T21:03:24Z
+    by: system-flow
 stream: S-0305
 tags: [issues]
 touches: [design/issues/I-0098-flai-serve-replans-a-story-on-its-own-agent-s-touches-edit-while-the-agent-works-it-and-the-planner-s-new-touches-hold-other-ready-stories.md, design/issues/summary.md]
 after: [T-1151]
+usage:
+  source: log
+  seconds: 82
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 1877
+      cache_read: 367605
+      cache_write: 14668
+      cost: 0.2078
 ---
 # T-1154 Close I-0098 with what fixed it
 

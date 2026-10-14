@@ -3,15 +3,36 @@ id: T-1483
 type: task
 nature: improvement
 title: flai task done leaves the paths sync regenerates out of its changed-paths notice
-status: backlog
+status: done
 parent: S-0372
 owner: alex
 created: 2026-10-12T17:22:53Z
-updated: 2026-10-12T17:22:53Z
-transitions: []
+updated: 2026-10-14T21:13:23Z
+transitions:
+  - to: ready
+    at: 2026-10-14T20:57:34Z
+    by: agent-S-0372
+  - to: in-progress
+    at: 2026-10-14T20:57:35Z
+    by: agent-S-0372
+  - to: done
+    at: 2026-10-14T21:13:23Z
+    by: agent-S-0372
 stream: S-0372
 tags: [messages, cli]
 touches: [flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go]
+usage:
+  source: log
+  seconds: 948
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 398
+      cache_read: 2373865
+      cache_write: 78534
+      cost: 1.1291
 ---
 # T-1483 flai task done leaves the paths sync regenerates out of its changed-paths notice
 

@@ -3,17 +3,35 @@ id: S-0306
 type: story
 nature: improvement
 title: Two stories that each add an ADR conflict in design/adrs/README.md, whose index both append a row to, and flai opens a thread for each sync that finds it
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-07T01:07:12Z
-updated: 2026-10-07T02:17:33Z
-transitions: []
+updated: 2026-10-14T20:54:58Z
+transitions:
+  - to: ready
+    at: 2026-10-14T20:54:58Z
+    by: alex
 tags: []
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 173
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 30
+          output: 413
+          cache_read: 3151175
+          cache_write: 12270
+          cost: 0.7931
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 5m

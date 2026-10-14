@@ -3,15 +3,36 @@ id: T-1151
 type: task
 nature: remediation
 title: The replanner neither queues nor starts the planner for a story whose own agent is at work
-status: backlog
+status: done
 parent: S-0305
 owner: alex
 created: 2026-10-07T02:19:38Z
-updated: 2026-10-07T02:19:38Z
-transitions: []
+updated: 2026-10-14T21:01:19Z
+transitions:
+  - to: ready
+    at: 2026-10-14T20:56:55Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-14T20:56:56Z
+    by: system-flow
+  - to: done
+    at: 2026-10-14T21:01:19Z
+    by: system-flow
 stream: S-0305
 tags: [serve, planner]
 touches: [flai/internal/serve/replan.go, flai/internal/serve/replan_test.go]
+usage:
+  source: log
+  seconds: 263
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 15045
+      cache_read: 2945850
+      cache_write: 117546
+      cost: 1.665
 ---
 # T-1151 The replanner neither queues nor starts the planner for a story whose own agent is at work
 

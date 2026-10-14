@@ -4,10 +4,10 @@ title: "S-0371 plan: the rebase reports a branch that undoes main's change, sync
 anchor:
   path: wip/kanban/stories/S-0371-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md
   item: S-0371
-status: answered
+status: open
 participants: [planner-S-0371, orchestrator, alex]
 created: 2026-10-12T17:17:16Z
-updated: 2026-10-14T18:14:43Z
+updated: 2026-10-14T21:02:55Z
 ---
 
 # TH-0420 S-0371 plan: the rebase reports a branch that undoes main's change, sync warns and accept refuses (new ADR), six tasks in five layers
@@ -116,3 +116,6 @@ Noted: you confirmed the dashboard-resolution shape for S-0371 (restore, keep wi
 S-0371 stays a draft until then. I settle the replan's thread when it comes.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-14T21:02:55Z planner-S-0371
+Replanned S-0371 to the shape you confirmed here: the operator restores the path, keeps the removal with a reason, or sends the story back, with each undone path a blocker in the acceptance preview. The plan is on TH-0448: eight tasks in six layers, and the new tasks T-1574 (`flai stream restore`) and T-1575 (the host writes). The review-page cards and the board badge are drafted as S-0388, after S-0371. TH-0448 also asks whether to add three acceptance criteria to S-0371, which you finalized while I planned.

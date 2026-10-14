@@ -3,12 +3,18 @@ id: T-1486
 type: task
 nature: improvement
 title: flai serve starts no agent again for a settled entry, nor for a message while its story is blocked
-status: backlog
+status: in-progress
 parent: S-0372
 owner: alex
 created: 2026-10-12T17:23:23Z
-updated: 2026-10-12T17:23:23Z
-transitions: []
+updated: 2026-10-14T21:13:53Z
+transitions:
+  - to: ready
+    at: 2026-10-14T21:13:52Z
+    by: agent-S-0372
+  - to: in-progress
+    at: 2026-10-14T21:13:53Z
+    by: agent-S-0372
 stream: S-0372
 tags: [messages, serve]
 touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]

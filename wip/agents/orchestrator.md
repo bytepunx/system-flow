@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 548.5489
-accrued_seconds: 467441
-tasks_completed: 458
-last_run: 2026-10-14T18:27:53Z
+accrued_cost: 558.3342
+accrued_seconds: 477224
+tasks_completed: 472
+last_run: 2026-10-14T21:10:56Z
 ---
 
 # Orchestrator activity
@@ -3218,6 +3218,104 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 9
 - Cost: 0.0954 USD, estimated
 
+### 2026-10-14T20:47:40Z
+
+- Summary: Recommended an answer on TH-0438, citing design/system/design-system-tool.md § The project's own components
+- Items: none
+- Seconds: 8387
+- Cost: 1.5331 USD, estimated
+
+### 2026-10-14T20:47:51Z
+
+- Summary: S-0380 is in review; I verified it (flai verify passed at 0b7fc078; the verifier met criteria 1-5 but found the operator's TH-0445 request for component design uncovered). The operator accepted S-0380 at 20:46Z before I could act, so I took no acceptance. release_evaluate: nothing pending (research releases nothing). Under answer_threads autonomous, recommended on TH-0438 (last entry by agent-S-0380): the operator should start the planner on E-0020 (not a plan candidate) to replan S-0381 to S-0386 and the file story, plus one component-design story, since the finding defers it ("Not now"). Under plan_backlog_stories, started the planner on S-0387, flai plan --candidates' only candidate (no touches, forecast, value, or tasks).
+- Items: S-0380, E-0020, S-0387
+- Seconds: 11
+- Cost: 0.1690 USD, estimated
+
+### 2026-10-14T20:55:02Z
+
+- Summary: The operator moved S-0304, S-0305, and S-0306 to ready. Under order_ready, applied the throughput order: S-0304, S-0305, S-0306, each lacking a forecast duration, so kept in their current order. (A first try with 2>&1 was refused by flai guard; the plain command passed.)
+- Items: S-0304, S-0305, S-0306
+- Seconds: 431
+- Cost: 0.6618 USD, estimated
+
+### 2026-10-14T20:55:43Z
+
+- Summary: Recommended an answer on TH-0447, citing design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md § Decision
+- Items: S-0387
+- Seconds: 41
+- Cost: 0.1376 USD, estimated
+
+### 2026-10-14T20:55:49Z
+
+- Summary: Under plan_backlog_stories, settled TH-0447 (planner-S-0387's plan) with a recommendation, not an approval: the plan adds a new ADR and a new shell-only auto-upgrade host action that upgrades the host's flai, a decision not yet recorded. I recommended the full plan, off by default, and asked T-1567's ADR to say what a host upgrade does to the strategic agents. The figures fit (1h15m raised from flai's 34m; 10 USD/week from the 4m input). Thread left open; S-0387 stays a draft until the operator answers.
+- Items: S-0387
+- Seconds: 6
+- Cost: 0.0964 USD, estimated
+
+### 2026-10-14T20:56:01Z
+
+- Summary: The operator finalized S-0371 and moved it to ready (TH-0420 holds the dashboard-resolution shape for its agent). Under order_ready, applied the throughput order: S-0371 (rank 1, 45m), then S-0305 and S-0306, which lack a forecast duration. All other backlog stories are held behind S-0304 (in progress, no touches) or are drafts awaiting the operator.
+- Items: S-0371, S-0305, S-0306
+- Seconds: 12
+- Cost: 0.2502 USD, estimated
+
+### 2026-10-14T20:56:41Z
+
+- Summary: S-0305 and S-0372 (finalized and moved to ready by the operator) were pulled. Under order_ready, applied the throughput order: S-0371 (rank 1, 45m; held on overlap with S-0304, asked in MS-0112), S-0306 (no forecast duration). Under promote_to_ready, S-0241 (rank 1, 2h) stays out: blocked.
+- Items: S-0305, S-0372, S-0371, S-0306
+- Seconds: 40
+- Cost: 0.8880 USD, estimated
+
+### 2026-10-14T20:57:18Z
+
+- Summary: The operator confirmed my TH-0424 recommendation (S-0374's plan as drafted). Under plan_backlog_stories, resolved planner-S-0374's thread TH-0424. The operator finalized S-0374 and moved it to ready. Under order_ready, applied the throughput order: S-0371 (45m), S-0374 (1h), S-0306 (no forecast duration).
+- Items: S-0374, S-0371, S-0306
+- Seconds: 37
+- Cost: 0.7074 USD, estimated
+
+### 2026-10-14T21:03:04Z
+
+- Summary: Recommended an answer on TH-0448, citing design/conventions/strategic-agents.md § Rules
+- Items: S-0371
+- Seconds: 346
+- Cost: 3.2654 USD, estimated
+
+### 2026-10-14T21:03:20Z
+
+- Summary: The operator started the planner on S-0371 (as recommended on TH-0420). Under plan_backlog_stories, recommended on its replan thread TH-0448: approve (8 tasks in 6 layers, file touches, 1h15m raised from flai's 40m, 25 USD/week) and add its three proposed criteria, which only the operator may do since S-0371 is finalized; thread left open. Started the planner on S-0388 (the dashboard cards story it drafted), flai plan --candidates' only candidate. Under order_ready, applied the throughput order after S-0371's forecast rose: S-0374 (1h), S-0371 (1h15m), S-0306 (no forecast).
+- Items: S-0371, S-0388, S-0374, S-0306
+- Seconds: 16
+- Cost: 0.1253 USD, estimated
+
+### 2026-10-14T21:04:03Z
+
+- Summary: Answered TH-0449, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0388
+- Seconds: 43
+- Cost: 0.8267 USD, estimated
+
+### 2026-10-14T21:04:05Z
+
+- Summary: Under plan_backlog_stories, set S-0388's cost of delay input time_lost_per_cycle 5m (planner-S-0388's recommended figure on TH-0449; no reason in the thread or story for its 10m or 2m alternatives), replied, and resolved TH-0449.
+- Items: S-0388
+- Seconds: 2
+- Cost: 0.0644 USD, estimated
+
+### 2026-10-14T21:10:47Z
+
+- Summary: Answered TH-0450, citing design/conventions/strategic-agents.md § As the orchestrator
+- Items: S-0388
+- Seconds: 402
+- Cost: 0.9897 USD, estimated
+
+### 2026-10-14T21:10:56Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0388's plan TH-0450 (7 tasks in 3 layers covering its 7 criteria within TH-0420's confirmed shape; file touches; 1h raised from flai's 43m; 12.50 USD/week from the 5m input). Under finalize_drafts, finalized S-0388 (flai promote --drafts: complete, position 6, 1h; value 12.50 USD/week); it stays in the backlog, held after S-0371. Left S-0387 a draft (TH-0447 awaits the operator), and S-0381 to S-0386 drafts pending E-0020's replan (TH-0438).
+- Items: S-0388
+- Seconds: 9
+- Cost: 0.0703 USD, estimated
+
 ## Refusals
 
 ### 2026-10-06T22:33:18Z
@@ -3323,4 +3421,9 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-10-14T18:14:27Z
 
 - Call: `flai serve status 2>&1`
+- Needs: none
+
+### 2026-10-14T20:54:57Z
+
+- Call: `flai order --by throughput --apply --json 2>&1`
 - Needs: none
