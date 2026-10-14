@@ -6,7 +6,7 @@ title: flai stream sync replays a story's revert of its own change over an ident
 status: ready
 owner: alex
 created: 2026-10-12T16:52:47Z
-updated: 2026-10-14T21:03:17Z
+updated: 2026-10-14T21:15:26Z
 transitions:
   - to: ready
     at: 2026-10-14T20:55:53Z
@@ -60,10 +60,10 @@ cost_of_delay:
   at: 2026-10-12T17:16:59Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-14T22:23:00Z
-  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0304, S-0305, S-0372 and S-0374."
+  delivery: 2026-10-14T22:35:00Z
+  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0304, S-0372 and S-0374."
   by: flai
-  at: 2026-10-14T21:03:17Z
+  at: 2026-10-14T21:15:26Z
 finalized:
   by: alex
   at: 2026-10-14T20:55:48Z
