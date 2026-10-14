@@ -23,7 +23,7 @@ func newStreamCmd(a *app) *cobra.Command {
 		Long: `A stream is the narrative for one story. Set FLAI_AGENT and FLAI_SESSION
 so entries record who wrote them.`,
 	}
-	c.AddCommand(newStreamDiffCmd(a), newStreamOpenCmd(a), newStreamLogCmd(a), newStreamStateCmd(a), newStreamSyncCmd(a), newStreamAnswerCmd(a))
+	c.AddCommand(newStreamDiffCmd(a), newStreamOpenCmd(a), newStreamLogCmd(a), newStreamStateCmd(a), newStreamSyncCmd(a), newStreamAnswerCmd(a), newStreamRestoreCmd(a))
 	return c
 }
 
