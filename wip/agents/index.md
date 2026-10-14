@@ -1,16 +1,17 @@
 ---
 title: Active streams
-updated: 2026-10-14T20:46:58Z
+updated: 2026-10-14T20:55:48Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0304](S-0304.md) | A story's agent that runs flai stream open is left with the story in ready, so permission_prompt refuses its .claude/ write until it moves the story itself | in-progress | agent-S-0304 | 2026-10-14T20:55:01Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 73 | 201.2111 USD | 25012 | 2026-10-13T17:52:57Z |
-| [orchestrator](orchestrator.md) | 458 | 548.5489 USD | 467441 | 2026-10-14T18:27:53Z |
+| [orchestrator](orchestrator.md) | 462 | 551.0504 USD | 476311 | 2026-10-14T20:55:43Z |
