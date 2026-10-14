@@ -414,14 +414,24 @@ func covers(touches []string, path string) bool {
 
 // tell messages each other story in progress or in review whose claim covers
 // a path the commit changed, the shared paths included, on the conversation
-// open between the two stories or a new one (S-0333). It runs before the
-// sync, so that a sync stopped on conflicts, after which a second call has
-// nothing to commit, does not lose the notice. It never stops the run: a
-// notice that cannot be sent is logged and left out of Result.Told.
+// open between the two stories or a new one (S-0333). The paths sync
+// regenerates are no one's business (ADR-0098, ADR-0154): they are dropped
+// before the claims are read, since an empty claim covers every path, and a
+// commit that changes only them tells no one. It runs before the sync, so
+// that a sync stopped on conflicts, after which a second call has nothing to
+// commit, does not lose the notice. It never stops the run: a notice that
+// cannot be sent is logged and left out of Result.Told.
 func (r *run) tell() error {
 	r.res.Told = []Told{}
 	c := r.res.Commit
 	if c == nil {
+		return nil
+	}
+	generated := issues.Generated(r.o.Repo, r.story.ID, r.o.Now)
+	paths := slices.DeleteFunc(slices.Clone(c.Paths), func(p string) bool {
+		return slices.ContainsFunc(generated, func(g storygit.GeneratedFile) bool { return g.Path == p })
+	})
+	if len(paths) == 0 {
 		return nil
 	}
 	items, err := r.o.Repo.List(false)
@@ -429,7 +439,7 @@ func (r *run) tell() error {
 		r.logger.Warn("change notices not sent", "component", "taskdone", "task", r.task.ID, "err", err)
 		return nil
 	}
-	for _, cov := range itemedit.Covering(items, r.o.Repo.Manifest.Projects, r.story.ID, c.Paths) {
+	for _, cov := range itemedit.Covering(items, r.o.Repo.Manifest.Projects, r.story.ID, paths) {
 		conv, err := messages.Notify(r.o.Repo, messages.SendOptions{
 			From: r.story.ID, To: cov.ID, Author: r.o.Agent, Text: r.notice(cov), About: cov.Paths, Now: r.o.Now(),
 		})

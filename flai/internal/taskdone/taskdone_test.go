@@ -782,6 +782,55 @@ func TestRunTellsEachOpenStoryWhoseClaimCoversTheCommit(t *testing.T) {
 	}
 }
 
+// ADR-0154, I-0125: the paths sync regenerates are told to no one, not even a
+// story whose claim covers them or whose claim is empty, and a commit that
+// changes only them writes no notice.
+func TestRunTellsNoOneOfThePathsSyncRegenerates(t *testing.T) {
+	repo, wt := project(t)
+	story(t, repo, "S-006", workitem.InProgress, "design")
+	story(t, repo, "S-007", workitem.Review)
+	write(t, wt, "design/issues/summary.md", "# Open issues\n\nChanged on the story's branch.\n")
+	write(t, wt, "design/system/flow.md", "---\ntitle: Flow\nupdated: 2026-08-31\ntopics: [all]\n---\n\n# Flow\n\nChanged on the story's branch.\n")
+
+	res, err := Run(context.Background(), options(repo, "fix: [S-004] T-003 the flow"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil || !slices.Contains(res.Commit.Paths, "design/issues/summary.md") {
+		t.Fatalf("stopped at %q: %s, commit %+v", res.Stopped, res.Error, res.Commit)
+	}
+	want := []Told{
+		{Story: "S-006", Title: "Other S-006", Paths: []string{"design/system/flow.md"}, Conversation: "MS-0001"},
+		{Story: "S-007", Title: "Other S-007", Paths: []string{"design/system/flow.md"}, Conversation: "MS-0002"},
+	}
+	if !toldAs(res.Told, want) {
+		t.Fatalf("told %+v, want %+v", res.Told, want)
+	}
+	c, err := messages.Get(repo, "MS-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the widened claims' overlap note joins the entry and may name the summary
+	if !strings.Contains(c.Body, "`fix: [S-004] T-003 the flow`, changing `design/system/flow.md`. It reaches") {
+		t.Errorf("the notice names the flow alone: %+v\n%s", c, c.Body)
+	}
+
+	write(t, wt, "design/issues/summary.md", "# Open issues\n\nChanged again.\n")
+	res, err = Run(context.Background(), options(repo, "fix: [S-004] T-003 the summary"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil || !slices.Equal(res.Commit.Paths, []string{"design/issues/summary.md"}) || res.Told == nil || len(res.Told) != 0 {
+		t.Fatalf("again: stopped at %q: %s, commit %+v, told %+v", res.Stopped, res.Error, res.Commit, res.Told)
+	}
+	if all, _ := messages.List(repo); len(all) != 2 {
+		t.Errorf("a commit of the summary alone writes no notice: %d conversations", len(all))
+	}
+	if c, err = messages.Get(repo, "MS-0001"); err != nil || strings.Count(c.Body, "changed paths S-006's claim covers.") != 1 {
+		t.Errorf("MS-0001 after the summary's commit: %v\n%s", err, c.Body)
+	}
+}
+
 // S-0333: a notice that cannot be written is logged, is not in told, and does
 // not stop the close.
 func TestRunGoesOnWhenANoticeCannotBeWritten(t *testing.T) {
