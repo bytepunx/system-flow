@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 548.4225
-accrued_seconds: 467419
-tasks_completed: 456
-last_run: 2026-10-14T18:27:31Z
+accrued_cost: 548.5489
+accrued_seconds: 467441
+tasks_completed: 458
+last_run: 2026-10-14T18:27:53Z
 ---
 
 # Orchestrator activity
@@ -3203,6 +3203,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0378
 - Seconds: 761
 - Cost: 0.4845 USD, estimated
+
+### 2026-10-14T18:27:44Z
+
+- Summary: Under publish, policy judgement: released S-0378 (1 pending, 25 USD/week) as flai 1.49.0 → 1.49.1 (patch, flai/v1.49.1) and flaiover 0.43.3 → 0.44.0 (minor, flaiover/v0.44.0), pushed. Reason: S-0378 is complete and verified on its own (editor from file links, live lint, saves on a story's branch per ADR-0145, accept --json exit 4 findings); nothing held by whole_epics.
+- Items: S-0378
+- Seconds: 13
+- Cost: 0.0310 USD, estimated
+
+### 2026-10-14T18:27:53Z
+
+- Summary: After S-0378's acceptance: S-0371, S-0372, S-0374 are no longer held, but stay drafts: TH-0420 awaits the operator's replan of S-0371, and TH-0422 and TH-0424 (plan threads) await the operator. Only promote candidate S-0241 (rank 1, 2h) is blocked. Ready column unchanged (empty), so no order to apply.
+- Items: none
+- Seconds: 9
+- Cost: 0.0954 USD, estimated
 
 ## Refusals
 

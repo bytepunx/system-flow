@@ -26,13 +26,14 @@ usage:
   source: log
   seconds: 510
   estimated: true
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 33209
-      cache_read: 5052639
-      cache_write: 163167
-      cost: 2.6664
+      input: 81
+      output: 32718
+      cache_read: 4998454
+      cache_write: 205318
+      cost: 3.0173
 ---
 # T-1529 Set out how the operator and agents change the design system together, and how a story's agent is told to build from it, with a recommendation
 

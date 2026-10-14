@@ -25,13 +25,14 @@ usage:
   source: log
   seconds: 385
   estimated: true
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 112
-      output: 38759
-      cache_read: 5897066
-      cache_write: 190436
-      cost: 3.112
+      input: 94
+      output: 38186
+      cache_read: 5833825
+      cache_write: 239632
+      cost: 3.5215
 ---
 # T-1527 Record what the dashboard's theme, document editor, and site menu, and the prime pack, offer a design system tool today
 

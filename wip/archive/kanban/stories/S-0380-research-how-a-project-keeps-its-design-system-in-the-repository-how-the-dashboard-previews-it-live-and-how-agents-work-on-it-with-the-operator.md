@@ -3,11 +3,11 @@ id: S-0380
 type: story
 nature: research
 title: Research how a project keeps its design system in the repository, how the dashboard previews it live, and how agents work on it with the operator
-status: in-progress
+status: done
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:14Z
-updated: 2026-10-13T19:12:42Z
+updated: 2026-10-14T20:46:58Z
 transitions:
   - to: ready
     at: 2026-10-13T17:53:19Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:53:28Z
     by: agent-S-0380
+  - to: review
+    at: 2026-10-14T20:46:20Z
+    by: agent-S-0380
+  - to: done
+    at: 2026-10-14T20:46:58Z
+    by: alex
 tags: [dashboard, cli]
 topics: [design]
-touches: [design/system/design-system-tool.md, design/system/README.md, design/adrs, design/adrs/README.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md]
+touches: [design/system/design-system-tool.md, design/system/README.md, design/adrs, design/adrs/README.md, design/issues/I-0125-a-settled-conversation-between-two-stories-agents-keeps-waking-each-in-turn-because-every-reply-awaits-the-other.md, design/issues/summary.md, design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -25,12 +31,17 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1492
+  seconds: 2466
+  priced_by: harness
   turns:
     - day: 2026-10-13
       ceremony: 2
       hand_edits: 2
       work: 41
+    - day: 2026-10-14
+      ceremony: 3
+      hand_edits: 3
+      work: 33
   models:
     - model: claude-haiku-5-5
       input: 58701
@@ -39,11 +50,11 @@ usage:
       cache_write: 0
       cost: 0.0175
     - model: claude-opus-5-5
-      input: 348
-      output: 120304
-      cache_read: 18303715
-      cache_write: 591088
-      cost: 9.6593
+      input: 516
+      output: 209043
+      cache_read: 31935964
+      cache_write: 1311811
+      cost: 19.2778
   strategic:
     - kind: orchestrator
       seconds: 1372
@@ -80,8 +91,8 @@ Settle, before anything is built, how E-0020's Design menu works: where and in w
 - [x] A finding, `design/system/design-system-tool.md`, sets out where and in what format a project keeps its design system, its tokens (colours for light and dark, fonts, type scale, spacing, radii, shadows) and its guidance, so that flai can validate it and the dashboard and agents read the same file, with the options considered and how each fits the documentation standard and the host methods, which read and save only markdown.
 - [x] It sets out how the dashboard previews a project's tokens live on sample components without building the project, isolated from the dashboard's own theme, with the options considered, such as an iframe or a shadow root carrying CSS custom properties over components compiled with the dashboard, or Tailwind's browser build.
 - [x] It sets out how the operator and agents work on the design system together, such as a proposal on a story's branch previewed beside the main branch's before acceptance, a thread on the document, or an edit from the page, and how a story's agent is told to build its UI from the design system.
-- [ ] It ends with a recommendation, and the operator's decision is recorded on a thread and in ADRs.
-- [ ] E-0020's other stories are checked against the decision, and what each must change is named on the epic's plan thread.
+- [x] It ends with a recommendation, and the operator's decision is recorded on a thread and in ADRs.
+- [x] E-0020's other stories are checked against the decision, and what each must change is named on the epic's plan thread.
 
 ## Tasks
 - T-1527 Record what the dashboard's theme, document editor, and site menu, and the prime pack, offer a design system tool today

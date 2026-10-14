@@ -4,10 +4,10 @@ title: "S-0380 decision: where the design system lives, how it is previewed, and
 anchor:
   path: wip/kanban/stories/S-0380-research-how-a-project-keeps-its-design-system-in-the-repository-how-the-dashboard-previews-it-live-and-how-agents-work-on-it-with-the-operator.md
   item: S-0380
-status: open
-participants: [agent-S-0380, orchestrator]
+status: resolved
+participants: [agent-S-0380, orchestrator, alex]
 created: 2026-10-13T18:16:41Z
-updated: 2026-10-13T18:17:05Z
+updated: 2026-10-14T20:46:58Z
 ---
 
 # TH-0445 S-0380 decision: where the design system lives, how it is previewed, and how you and agents change it (10 choices)
@@ -94,3 +94,23 @@ I read the finding on `story/S-0380` (`design/system/design-system-tool.md`). Ea
 Once you answer, S-0380's agent records the ADRs and names on TH-0438 what S-0381 to S-0386 must change. The planner then replans them, and I finalize those that come out consistent.
 
 Source: design/adrs/0023-documents-are-saved-through-flai.md § Decision
+
+### 2026-10-14T20:30:34Z alex
+1. I would not like to force more things into a markdown document when it's not the obvious best choice simply because we currently only have API semantics for markdown documents. Introduce file.get and file.save as alternatives that we can leverage for different kinds of files.
+
+### 2026-10-14T20:32:25Z agent-S-0380
+Recorded. My question asked for the numbers you wanted otherwise, and you gave only 1, so I take 2 to 10 as recommended. Here is what I take for 1. Nothing is built yet, so any of it can be overruled at review.
+
+- **Tokens are a W3C Design Tokens (DTCG) file**, not markdown. The format is stable since 2025.10. Figma Variables, Style Dictionary, Tokens Studio, and Terrazzo read and write it. It has a type for each of the six kinds the story names: colour, font family, typography, dimension (for spacing and radii), and shadow. Colours are `srgb` (hex) or `oklch`, as choice 2 asked. Light and dark use its Resolver module, a modifier `theme` with the contexts `light` and `dark`. flai implements that subset.
+- **The guidance stays markdown**, in `design/system/design-system.md`. Its `topics` choose the UI stories prime gives it to. The manifest names the token file, by default `design/system/design-system.tokens.json`.
+- **`file.get` and `file.save`** (`flai file show` and `flai file save`) read and save a text file that is not markdown. Each works under the design and docs folders, or at a path the manifest names for a purpose, such as the token file or the stylesheet. They keep `doc.save`'s rules: the hash conflict, `flai check` before and after the write, the commit, and `story` (ADR-0145). Any other path, a binary, or a file too large is refused. ADR-0029 stands: there is still no method that reads any file at all.
+- **This conflicts with a baseline rule:** "Everything is markdown" (`documentation.md`, `documentation-standard.md`). I follow your answer, record the conflict, and propose there that the one exception be a design token file. S-0381 would carry that change to the template.
+- **Runner-up:** a Tailwind v4 theme stylesheet that flai owns, as the source. It needs no generated file and no `design.stale`. I put it second because it ties the design system to Tailwind and to one way of writing dark values, and nothing outside Tailwind reads it. Say so if you want it instead.
+
+Next: the finding's Decision section and the ADRs, then the list on TH-0438 of what S-0381 to S-0386 must change.
+
+### 2026-10-14T20:34:53Z alex
+I would like to see something in this story that covers component design so that we can introduce tools and surfaces that allow an operator to evolve the appearance of components that get recorded in such a way the agents can use/refer to them and the operator can easily see what things will look like before completed implemenation
+
+### 2026-10-14T20:46:58Z alex
+Resolved: S-0380 was accepted

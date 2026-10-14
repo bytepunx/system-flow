@@ -26,13 +26,14 @@ usage:
   source: log
   seconds: 402
   estimated: true
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 12522
-      cache_read: 1905207
-      cache_write: 61526
-      cost: 1.0054
+      input: 30
+      output: 12337
+      cache_read: 1884776
+      cache_write: 77420
+      cost: 1.1377
 ---
 # T-1528 Set out where and in what format a project keeps its design system, and how the dashboard previews it live, with the options and a recommendation
 
