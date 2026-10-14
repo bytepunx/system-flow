@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -472,5 +476,110 @@ func TestItemGetExpectedCost(t *testing.T) {
 	got = ItemWithChildren{}
 	if err := call(t, p, "item.get", `{"id":"T-0001"}`, &got); err != nil || got.ExpectedCost != nil {
 		t.Errorf("an item with no duration has no expected cost: %+v %+v", err, got.ExpectedCost)
+	}
+}
+
+// undoing makes harbour a git repository whose S-0001 branch still removes
+// the lines main added to quay.md and berth.md after it branched, and records
+// those two and restored.md, which the branch no longer undoes, as the paths
+// S-0001 undoes of main (ADR-0155).
+func undoing(t *testing.T) channel.Project {
+	t.Helper()
+	p := harbour(t)
+	r := execx.System{}
+	git := func(args ...string) {
+		t.Helper()
+		if out, err := r.Run(p.Root, "git", args...); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	write := func(name, text string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(p.Root, name), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	git("init", "-q", "-b", "main")
+	git("config", "user.email", "t@t")
+	git("config", "user.name", "t")
+	for _, name := range []string{"quay.md", "berth.md", "restored.md"} {
+		write(name, "line\n")
+	}
+	git("add", "-A")
+	git("commit", "-q", "-m", "one")
+	git("branch", storygit.Branch("S-0001"))
+	for _, name := range []string{"quay.md", "berth.md"} {
+		write(name, "line\nmain's\n")
+	}
+	git("commit", "-q", "-am", "main's lines")
+	rec := storygit.UndoneRecord{Story: "S-0001", Paths: []storygit.UndoneEntry{}}
+	for _, name := range []string{"berth.md", "quay.md", "restored.md"} {
+		rec.Paths = append(rec.Paths, storygit.UndoneEntry{Undone: storygit.Undone{Path: name, Lines: []string{"main's"}, OldBase: "b0"}, FoundAt: t0})
+	}
+	data, err := json.Marshal(rec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := storygit.UndoneRecordPath(filepath.Join(p.Root, ".flai-cache"), "S-0001")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// S-0388: a story whose record lists paths its branch still undoes of main
+// carries them, sorted, on its board card and in item.get; a story with no
+// record, and anything not a story, leaves undoes_main out.
+func TestBoardAndItemCarryWhatAStoryUndoesOfMain(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	p := undoing(t)
+	want := []string{"berth.md", "quay.md"}
+	var v struct {
+		Columns map[string][]map[string]any
+	}
+	if err := call(t, p, "board.get", `{"all":true}`, &v); err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	for _, cards := range v.Columns {
+		for _, c := range cards {
+			undoes, has := c["undoes_main"]
+			switch c["id"] {
+			case "S-0001":
+				seen++
+				if got, _ := json.Marshal(undoes); string(got) != `["berth.md","quay.md"]` {
+					t.Errorf("S-0001's card undoes_main %s, want %v", got, want)
+				}
+			default:
+				if has {
+					t.Errorf("%s's card has undoes_main %v with no record", c["id"], undoes)
+				}
+			}
+		}
+	}
+	if seen != 1 {
+		t.Errorf("S-0001 on the board %d times", seen)
+	}
+
+	var got ItemWithChildren
+	if err := call(t, p, "item.get", `{"id":"S-0001"}`, &got); err != nil || !slices.Equal(got.UndoesMain, want) {
+		t.Errorf("item.get S-0001's undoes_main: %+v %v, want %v", err, got.UndoesMain, want)
+	}
+	for _, id := range []string{"S-0002", "T-0001"} {
+		var raw map[string]any
+		if err := call(t, p, "item.get", `{"id":"`+id+`"}`, &raw); err != nil {
+			t.Fatal(err)
+		}
+		if undoes, has := raw["undoes_main"]; has {
+			t.Errorf("item.get %s has undoes_main %v with no record", id, undoes)
+		}
 	}
 }

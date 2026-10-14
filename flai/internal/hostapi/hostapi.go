@@ -10,8 +10,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
+	"log/slog"
+	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
@@ -22,6 +26,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/release"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -69,13 +74,15 @@ type ProjectDashboard struct {
 }
 
 // ItemWithChildren is what item.get answers: a story with tasks has its
-// task plan too (S-0176), and an item with a forecast or an estimate its
-// expected cost (ADR-0083).
+// task plan too (S-0176), an item with a forecast or an estimate its
+// expected cost (ADR-0083), and a story whose record lists any the paths its
+// branch still undoes of the main branch's change (S-0388).
 type ItemWithChildren struct {
 	Item         *workitem.Item        `json:"item"`
 	Children     []*workitem.Item      `json:"children"`
 	Plan         *workitem.Plan        `json:"plan,omitempty"`
 	ExpectedCost *metrics.ExpectedCost `json:"expected_cost,omitempty"`
+	UndoesMain   []string              `json:"undoes_main,omitempty"`
 }
 
 // ItemCount is what items.count answers.
@@ -141,6 +148,27 @@ func relative(root string, items []*workitem.Item, bodies bool) []*workitem.Item
 		out = append(out, &c)
 	}
 	return out
+}
+
+// undoesMain is the paths story's record says its branch still undoes of
+// the main branch's change (ADR-0155), sorted; none when it has no record,
+// so that a read with no records runs no git. A record that cannot be read,
+// or checked against main, is logged and left out, and the read stands.
+func undoesMain(r execx.Runner, repo *workitem.Repo, story string) []string {
+	if _, err := os.Stat(storygit.UndoneRecordPath(repo.CacheDir(), story)); errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	undone, err := storygit.RecordedUndone(r, repo, story)
+	if err != nil {
+		slog.Default().Warn("the paths the story's record says its branch undoes of the main branch not read; left out of the answer", "component", "git", "story", story, "err", err)
+		return nil
+	}
+	paths := make([]string, 0, len(undone))
+	for _, u := range undone {
+		paths = append(paths, u.Path)
+	}
+	slices.Sort(paths)
+	return paths
 }
 
 // enabledActions says which host actions the operator enabled for a project,
@@ -318,11 +346,25 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			if err != nil {
 				return nil, failed(err)
 			}
+			r := execx.Timed(ctx, execx.System{})
 			done = perf.Track(ctx, "release.pending")
-			pending := release.PendingIDs(execx.Timed(ctx, execx.System{}), repo.Root, repo.Manifest, repo)
+			pending := release.PendingIDs(r, repo.Root, repo.Manifest, repo)
 			done()
-			defer perf.Track(ctx, "board.view")()
-			return workitem.NewBoardView(items, board, now(), in.All, pending, repo.Holds(items)), nil
+			done = perf.Track(ctx, "board.view")
+			v := workitem.NewBoardView(items, board, now(), in.All, pending, repo.Holds(items))
+			done()
+			defer perf.Track(ctx, "undone.read")()
+			// an accepted or cancelled story's branch may be gone, and it
+			// undoes nothing on main any more
+			for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
+				cards := v.Columns[st]
+				for i := range cards {
+					if cards[i].Type == workitem.Story {
+						cards[i].UndoesMain = undoesMain(r, repo, cards[i].ID)
+					}
+				}
+			}
+			return v, nil
 		},
 
 		// items.list: by type and state; the archive and the bodies on request.
@@ -419,6 +461,11 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			out := ItemWithChildren{Item: one, Children: relative(repo.MainRoot, children, true)}
 			if it.Type == workitem.Story {
 				out.Plan = workitem.PlanOf(children, it.ID)
+			}
+			if it.Type == workitem.Story && !it.Archived && (it.Status == workitem.Ready || it.Status == workitem.InProgress || it.Status == workitem.Review) {
+				done = perf.Track(ctx, "undone.read")
+				out.UndoesMain = undoesMain(execx.Timed(ctx, execx.System{}), repo, it.ID)
+				done()
 			}
 			out.ExpectedCost = metrics.ExpectedCostOf(it, metrics.CostPerAgentHour(all))
 			return out, nil

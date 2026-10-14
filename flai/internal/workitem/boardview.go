@@ -40,6 +40,10 @@ type BoardCard struct {
 	// Draft marks a story an agent wrote that the operator has not finalized,
 	// so the board can say so on its card (S-0201).
 	Draft bool `json:"draft,omitempty"`
+	// UndoesMain is, for a story whose record lists any, the paths its
+	// branch still undoes of the main branch's change, sorted (ADR-0155,
+	// S-0388). NewBoardView leaves it empty; the host's board.get fills it.
+	UndoesMain []string `json:"undoes_main,omitempty"`
 }
 
 // BoardView is the board with its cards: one reading of the repository for
