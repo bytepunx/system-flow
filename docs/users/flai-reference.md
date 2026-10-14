@@ -175,6 +175,8 @@ Markdown flai accept commits passes the project's lint (S-0367): the fix command
 
 --by orchestrator is the orchestrator's acceptance (ADR-0093), refused unless orchestration.permissions.accept\_reviews is on; under FLAI\_ROLE=orchestrate no other acceptance is allowed. It is refused, before anything is merged, unless --verified names the story branch's head, every acceptance criterion is ticked, every file the branch changes is under the story's touches and on no path Claude Code protects, no thread on the story or its tasks is open, and --evidence, a Verdict: line and one item "- &lt;n&gt;: &lt;files&gt;" per criterion, names a changed file for each of them. The evidence is written, with the commit, under ### Accepted by the orchestrator in the story's Notes. With --dry-run the evidence is optional.
 
+A story whose rebased branch undoes the main branch's change to a path, as a revert replayed over main's identical change does (ADR-0155, I-0124), is refused before anything is merged while the path is not kept: each path flai stream sync recorded and its branch still undoes, and each path the acceptance's own rebase finds. --dry-run lists each under undoes\_main, with main's lines the branch removes, and each not kept as a blocker. Restore main's version with flai stream restore &lt;id&gt; --path &lt;path&gt;, send the story back to in-progress, or, as the operator, keep the removal with --keep-removal &lt;path&gt; (repeatable) and --reason "&lt;why&gt;": one --reason per --keep-removal in order, or one for them all. A --keep-removal naming a path the record does not hold, one without a reason, a reason on more than one line, and any with --by orchestrator are refused before anything changes: an undone path waits for the operator. Each kept path and its reason are written, with the commit, under ### Removals kept in the story's Notes. With --json the refusal exits 4 and prints {"refused": {"id", "reason", "undoes\_main"}}, each path with its path, lines, and old\_base.
+
 Examples:
 
 ```bash
@@ -182,6 +184,7 @@ flai accept S-031 --by alex
 flai accept S-031 --by alex --dry-run
 flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
 flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
+flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"
 ```
 
 Flags:
@@ -191,6 +194,8 @@ Flags:
 | `--by` string | who accepted (default: config author) |
 | `--dry-run` | show what would block acceptance and change nothing |
 | `--evidence` string | with --by orchestrator: file holding its evidence, a Verdict: line and - &lt;n&gt;: &lt;files&gt; per criterion (- reads standard input) |
+| `--keep-removal` stringArray | as the operator: accept the branch's removal of the main branch's lines at this recorded path, with --reason (repeatable) |
+| `--reason` stringArray | with --keep-removal: why the removal is kept, one per --keep-removal in order or one for all (repeatable) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 | `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
 
@@ -2154,7 +2159,8 @@ Flags:
 | `--by` string | who made the change (default: FLAI\_AGENT when set, else the config author) |
 | `--dry-run` | for a move to cancelled: list what would be cancelled with it and change nothing |
 | `--evidence` string | with --by orchestrator: file holding its evidence, a Verdict: line and - &lt;n&gt;: &lt;files&gt; per criterion (- reads standard input) |
-| `--reason` string | why (required for cancelled and review → in-progress) |
+| `--keep-removal` stringArray | as the operator: accept the branch's removal of the main branch's lines at this recorded path, with --reason (repeatable) |
+| `--reason` string | why (required for cancelled and review → in-progress; for done, why each --keep-removal is kept) |
 | `--trailer` stringArray | line appended to the commit message (repeatable) |
 | `--verified` string | with --by orchestrator: the commit its verifier passed, the story branch's head |
 
@@ -3328,6 +3334,7 @@ Subcommands:
 - [diff](#flai-stream-diff): What a story branch changes: files and hunks against the main branch
 - [log](#flai-stream-log): Append a timestamped entry to a story's narrative log
 - [open](#flai-stream-open): Create the narrative for a story and check out its branch in a worktree
+- [restore](#flai-stream-restore): Commit main's version of a path the rebased story branch undoes onto the branch
 - [state](#flai-stream-state): Replace a story's narrative's Current state and Next steps
 - [sync](#flai-stream-sync): Rebase the story branch onto the main branch in its worktree
 
@@ -3392,6 +3399,34 @@ Flags:
 |------|---------|
 | `--no-branch` | narrative only; no branch or worktree |
 
+#### flai stream restore
+
+Commit main's version of a path the rebased story branch undoes onto the branch.
+
+```text
+flai stream restore <story-id> --path <path>... [flags]
+```
+
+Commits the main branch's version of each --path onto story/&lt;story-id&gt;, in the story's worktree, as one commit, "fix: [S-nnnn] restore main's &lt;path&gt;, which the rebased branch undid (ADR-0155)", with each --trailer.
+
+Use it for a path flai stream sync warns the rebased branch undoes main's change to, which the acceptance preview (flai accept --dry-run) lists as a blocker: the branch removes lines main added since the branch left it, as a revert replayed over the same change on main does (I-0124). Once committed, the branch no longer removes main's lines, so the path leaves the story's record of undone paths and no longer blocks the acceptance.
+
+It refuses, changing nothing, with exit 4: a story that is not in progress or in review, one with no worktree, a worktree with uncommitted changes (each named) or a rebase unfinished, a worktree with another branch checked out, and a path the story's record does not hold (naming those it holds). With --json it prints story, branch, commit, and paths, and a refusal as {"refused": {"story", "reason", ...}} with status, uncommitted, not\_held, or held where they apply.
+
+Examples:
+
+```bash
+flai stream restore S-0232 --path scripts/flai-snapshot.sh
+flai stream restore S-0232 --path docs/a.md --path docs/b.md --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--path` stringArray | a path the story's record of undone paths holds, as git names it from the project's root (repeatable) |
+| `--trailer` stringArray | a trailer line for the commit (repeatable) |
+
 #### flai stream state
 
 Replace a story's narrative's Current state and Next steps.
@@ -3440,6 +3475,8 @@ Once the rebase is clean, each open issue the branch added whose title an open i
 Then it runs the fix command of each test tier in system-flow.yaml (fix\_command) over the files the branch changes against the main branch, deleted ones left out, so that what the rebase brought into them is fixed with them, and commits what the fixes rewrote on the branch as "chore: [S-nnnn] fix the lint of the files the branch changes, after the sync". flai accept fixes the same way. A fix that fails is logged and the sync stands. The report names the files fixed; with --json, fixed lists them.
 
 After a clean rebase it trial-merges the branch with the branch of every other story in progress or in review (git merge-tree --write-tree, git 2.38 or newer), writing nothing to any worktree, and lists each branch it conflicts with and the conflicting paths. A pair's conflicts are the paths both branches changed since they left the main branch, not what the main branch brought since: a path where main has since changed what a branch behind it did is that story's own rebase to settle (I-0064). Generated files and issue files are left out, so a pair whose only conflicts are summary.md and issue files counts as clean. A conflict is told to both stories in their conversation, not a thread (ADR-0121): flai messages the other story from the one that synced, about the conflicting paths, and sync names the pair's conversation. A later sync with the same paths adds nothing, and one that finds the pair merging cleanly again, or the other story no longer open, closes the conversation. The two agents agree who changes what; either asks the operator with flai message escalate only when they do not agree. A conflict thread an older flai opened is still resolved the same way, and no sync opens one. With --json each branch names its conversation, and thread names an old conflict thread it resolved. It also lists the paths the branch changed since the main branch that the story's touches, and its open tasks', do not cover, so that they are widened with flai touches.
+
+After a clean rebase it warns on each path where the rebased branch removes lines the main branch added since the branch left it, as when a revert of the story's own change is replayed cleanly over main's identical change (I-0124, ADR-0155), inside the story's claim or outside it. The warning names flai stream restore &lt;id&gt; --path &lt;path&gt;, which commits main's version of the path on the branch, and flai accept &lt;id&gt; --keep-removal &lt;path&gt; --reason "&lt;why&gt;", for the operator to keep the removal. Each such path is recorded in the main checkout's .flai-cache/undone/&lt;id&gt;.json and blocks the story's acceptance until it is restored or kept. A later sync, whose rebase starts past main's change and cannot find the path itself, warns on it from the record for as long as the branch still removes those lines. The sync still exits 0. With --json, undoes\_main lists each path with its path, lines (main's lines the branch removes), and old\_base (the branch's merge base with main before the rebase that found it).
 
 ### flai task
 
