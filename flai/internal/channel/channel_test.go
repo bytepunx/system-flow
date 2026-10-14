@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -886,6 +887,33 @@ func TestTheGateIsAskedOnEveryAttempt(t *testing.T) {
 
 	g.set(nil)
 	waitProven(t, d)
+}
+
+// slowWriter holds every write for delay before it reaches w.
+type slowWriter struct {
+	w     io.Writer
+	delay time.Duration
+}
+
+func (s slowWriter) Write(p []byte) (int, error) {
+	time.Sleep(s.delay)
+	return s.w.Write(p)
+}
+
+// S-0389: an attempt's end is logged before the state publishes it, so a
+// reader that sees the state refused finds the refusal logged, however slow
+// the log's writer.
+func TestTheStateIsPublishedAfterTheAttemptIsLogged(t *testing.T) {
+	d := newFakeDashboard(t, "s3cret")
+	g := &fakeGate{refuse: errors.New(unsignedImage)}
+	var logs lockedBuffer
+	c := gatedClient(d, g, &logs, 60*time.Millisecond)
+	c.Logger = slog.New(slog.NewJSONHandler(slowWriter{w: &logs, delay: 200 * time.Millisecond}, nil))
+	runClient(t, c)
+	waitState(t, c, "refused", func(s State) bool { return s.RefusedBy != "" })
+	if said := gateRefusals(&logs, unsignedImage); len(said) != 1 {
+		t.Errorf("the state read refused with %d refusals logged, want the refusal logged first", len(said))
+	}
 }
 
 // S-0238: a client the gate refuses still ends as soon as its context does,

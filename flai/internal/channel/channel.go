@@ -413,36 +413,19 @@ func (c *Client) Run(ctx context.Context) {
 		unsigned := errors.As(err, &refused)
 		var gated *gateError
 		gate := errors.As(err, &gated)
-		proven := false
-		c.setState(func(s *State) {
-			proven = s.Since != ""
-			s.Connected, s.Since, s.Attempts, s.Unsigned = false, "", s.Attempts+1, nil
-			if err != nil {
-				s.LastError = err.Error()
-			}
-			if held || unsigned || gate {
-				s.LastError += "; trying again in " + c.HeldBackoff.String()
-			}
-			switch {
-			case unsigned:
-				s.RefusedBy, s.RefusedReason, s.PeerVersion, s.PeerSigned = refused.By, refused.Reason, refused.PeerVersion, false
-			case gate:
-				// not dialled, so nothing was heard from the dashboard
-				s.RefusedBy, s.RefusedReason, s.PeerVersion, s.PeerSigned = RefusedByFlai, gated.reason, "", false
-			default:
-				// the refusal was the last attempt's; this one ended otherwise
-				s.RefusedBy, s.RefusedReason = "", ""
-			}
-		})
-		if proven {
+		// Only the attempt sets Since, so it reads the same here as when the
+		// attempt ended.
+		if c.State().Since != "" {
 			// a refusal after a proven connection is a new one, said again
 			lastLogged = "\x00"
 		}
-		if ctx.Err() != nil || c.isDraining() {
-			return
-		}
+		// The attempt's end is logged before the state publishes it, so a
+		// reader that sees the state finds the line written (S-0389).
+		stopping := ctx.Err() != nil || c.isDraining()
 		wait := jitter(backoff)
 		switch {
+		case stopping:
+			// ending: nothing to say and nothing to wait for
 		case held:
 			wait = jitter(c.HeldBackoff)
 			if msg := errText(err); msg != lastLogged {
@@ -480,6 +463,28 @@ func (c *Client) Run(ctx context.Context) {
 			if backoff *= 2; backoff > c.MaxBackoff {
 				backoff = c.MaxBackoff
 			}
+		}
+		c.setState(func(s *State) {
+			s.Connected, s.Since, s.Attempts, s.Unsigned = false, "", s.Attempts+1, nil
+			if err != nil {
+				s.LastError = err.Error()
+			}
+			if held || unsigned || gate {
+				s.LastError += "; trying again in " + c.HeldBackoff.String()
+			}
+			switch {
+			case unsigned:
+				s.RefusedBy, s.RefusedReason, s.PeerVersion, s.PeerSigned = refused.By, refused.Reason, refused.PeerVersion, false
+			case gate:
+				// not dialled, so nothing was heard from the dashboard
+				s.RefusedBy, s.RefusedReason, s.PeerVersion, s.PeerSigned = RefusedByFlai, gated.reason, "", false
+			default:
+				// the refusal was the last attempt's; this one ended otherwise
+				s.RefusedBy, s.RefusedReason = "", ""
+			}
+		})
+		if stopping {
+			return
 		}
 		select {
 		case <-ctx.Done():
