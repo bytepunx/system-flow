@@ -2,12 +2,12 @@
 id: I-0146
 title: "TestTheGateIsAskedOnEveryAttempt fails now and then: the state reads refused before the second refusal is logged"
 class: defect
-status: open
+status: closed
 count: 2
 cost: 8m
 first_reported: 2026-10-13T19:01:05Z
 last_reported: 2026-10-14T22:49:23Z
-updated: 2026-10-14T23:09:14Z
+updated: 2026-10-14T23:14:54Z
 ---
 
 # I-0146 TestTheGateIsAskedOnEveryAttempt fails now and then: the state reads refused before the second refusal is logged
@@ -28,3 +28,4 @@ S-0371's close-out stopped at the integration tier on TestTheGateIsAskedOnEveryA
 ## Remediation
 
 Story S-0389 remediates this issue, created from it at 2026-10-14T23:09:14Z.
+Closed 2026-10-14T23:14:54Z: S-0389: Client.Run in flai/internal/channel/channel.go now logs each attempt's end before setState publishes it, so a reader that sees the state refused finds the refusal logged; TestTheStateIsPublishedAfterTheAttemptIsLogged logs through a slow writer and failed on the old order
