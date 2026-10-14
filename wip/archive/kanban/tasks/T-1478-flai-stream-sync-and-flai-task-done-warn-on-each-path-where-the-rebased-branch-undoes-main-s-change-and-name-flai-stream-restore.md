@@ -3,11 +3,11 @@ id: T-1478
 type: task
 nature: remediation
 title: flai stream sync and flai task done warn on each path where the rebased branch undoes main's change, and name flai stream restore
-status: in-progress
+status: done
 parent: S-0371
 owner: alex
 created: 2026-10-12T17:15:49Z
-updated: 2026-10-14T22:14:49Z
+updated: 2026-10-14T22:30:27Z
 transitions:
   - to: ready
     at: 2026-10-14T22:14:48Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-14T22:14:49Z
     by: agent-S-0371
+  - to: done
+    at: 2026-10-14T22:30:27Z
+    by: agent-S-0371
 stream: S-0371
 tags: [cli, go]
-touches: [flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go]
+touches: [flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/storygit/undone.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go]
 after: [T-1574]
+usage:
+  source: log
+  seconds: 938
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 15800
+      cache_read: 2492767
+      cache_write: 116840
+      cost: 1.4562
 ---
 # T-1478 flai stream sync and flai task done warn on each path where the rebased branch undoes main's change, and name flai stream restore
 

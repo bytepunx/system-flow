@@ -24,16 +24,16 @@ touches: [flai/cmd/stream_restore.go, flai/cmd/stream_restore_test.go, flai/cmd/
 after: [T-1477]
 usage:
   source: log
-  seconds: 1504
+  seconds: 1522
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 95
-      output: 479
-      cache_read: 4347820
-      cache_write: 327895
-      cost: 2.1555
+      input: 88
+      output: 32887
+      cache_read: 5188616
+      cache_write: 243199
+      cost: 3.0311
 ---
 # T-1574 flai stream restore S-nnnn --path commits main's version of a path the branch undoes onto the story branch, and clears it from the record
 

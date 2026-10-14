@@ -24,16 +24,16 @@ touches: [flai/internal/preview/accept.go, flai/cmd/accept.go, flai/cmd/branch.g
 after: [T-1477]
 usage:
   source: log
-  seconds: 1506
+  seconds: 1507
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 87
-      output: 422
-      cache_read: 4982721
-      cache_write: 275982
-      cost: 2.4241
+      output: 32476
+      cache_read: 5123801
+      cache_write: 240161
+      cost: 2.9932
 ---
 # T-1479 flai accept's preview lists each path the branch undoes as a blocker with its lines as data, and accept refuses it unless --keep-removal names it with a reason, which the operator alone may give
 

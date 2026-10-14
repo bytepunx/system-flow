@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 569.1737
-accrued_seconds: 481226
-tasks_completed: 481
-last_run: 2026-10-14T22:17:45Z
+accrued_cost: 571.9040
+accrued_seconds: 483984
+tasks_completed: 484
+last_run: 2026-10-14T23:03:43Z
 ---
 
 # Orchestrator activity
@@ -3378,6 +3378,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0374
 - Seconds: 1488
 - Cost: 2.9503 USD, estimated
+
+### 2026-10-14T22:18:03Z
+
+- Summary: Under publish, policy judgement: released S-0374 (1 pending, 45 USD/week) as flai 1.49.4 → 1.49.5 (patch, flai/v1.49.5) and template 1.0.91 → 1.0.92 (system-flow-template v1.0.92, ab03dc9), pushed. Reason: a complete, verified improvement on its own (close-out rounds and tier reuse, ADR-0156; confirmed work-management.md change; I-0136 closed); nothing held by whole_epics.
+- Items: S-0374
+- Seconds: 18
+- Cost: 0.1802 USD, estimated
+
+### 2026-10-14T22:18:10Z
+
+- Summary: Under plan_backlog_stories, resolved planner-S-0371's thread TH-0420: its confirmed decision is carried into the replan (TH-0448) and S-0388; the open question (S-0371's three added criteria) stays on TH-0448 awaiting the operator. Ready column: S-0306 alone, held (no touches) behind S-0371.
+- Items: S-0371
+- Seconds: 7
+- Cost: 0.1817 USD, estimated
+
+### 2026-10-14T23:03:43Z
+
+- Summary: Under accept_reviews, verified S-0371 (flai verify passed at 607bcbf1; the verifier met both criteria and the three proposed on TH-0448, and found two narrowing departures from ADR-0155 that change nothing confirmed on TH-0420). The dry run is blocked by TH-0448 (planner-S-0371's thread with my recommendation awaiting the operator on adding criteria to a finalized story), so I left S-0371 in review and opened TH-0451 asking the operator to answer TH-0448. S-0306 was pulled; the ready column is empty.
+- Items: S-0371
+- Seconds: 2733
+- Cost: 2.3684 USD, estimated
 
 ## Refusals
 

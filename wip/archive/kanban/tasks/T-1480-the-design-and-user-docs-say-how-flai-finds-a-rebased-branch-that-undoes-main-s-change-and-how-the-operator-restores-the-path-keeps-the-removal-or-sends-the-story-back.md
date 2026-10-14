@@ -3,16 +3,37 @@ id: T-1480
 type: task
 nature: remediation
 title: The design and user docs say how flai finds a rebased branch that undoes main's change, and how the operator restores the path, keeps the removal, or sends the story back
-status: backlog
+status: done
 parent: S-0371
 owner: alex
 created: 2026-10-12T17:16:06Z
-updated: 2026-10-14T21:01:32Z
-transitions: []
+updated: 2026-10-14T22:41:57Z
+transitions:
+  - to: ready
+    at: 2026-10-14T22:31:28Z
+    by: agent-S-0371
+  - to: in-progress
+    at: 2026-10-14T22:31:28Z
+    by: agent-S-0371
+  - to: done
+    at: 2026-10-14T22:41:57Z
+    by: agent-S-0371
 stream: S-0371
 tags: [cli, docs]
-touches: [design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md]
+touches: [design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, design/adrs/README.md]
 after: [T-1478, T-1575]
+usage:
+  source: log
+  seconds: 629
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 36682
+      cache_read: 5787460
+      cache_write: 271268
+      cost: 3.3809
 ---
 # T-1480 The design and user docs say how flai finds a rebased branch that undoes main's change, and how the operator restores the path, keeps the removal, or sends the story back
 

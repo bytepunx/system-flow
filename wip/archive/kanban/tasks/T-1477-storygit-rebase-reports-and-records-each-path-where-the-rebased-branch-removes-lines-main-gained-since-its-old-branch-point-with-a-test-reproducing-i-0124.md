@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 459
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 256
-      cache_read: 2546753
-      cache_write: 125400
-      cost: 1.2318
+      input: 44
+      output: 16502
+      cache_read: 2603613
+      cache_write: 122036
+      cost: 1.521
 ---
 # T-1477 storygit.Rebase reports and records each path where the rebased branch removes lines main gained since its old branch point, with a test reproducing I-0124
 

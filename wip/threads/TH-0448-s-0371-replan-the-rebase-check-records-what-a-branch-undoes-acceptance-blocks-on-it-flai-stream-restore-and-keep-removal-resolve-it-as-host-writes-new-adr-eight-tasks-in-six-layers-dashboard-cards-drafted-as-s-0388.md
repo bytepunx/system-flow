@@ -4,10 +4,10 @@ title: "S-0371 replan: the rebase check records what a branch undoes, acceptance
 anchor:
   path: wip/kanban/stories/S-0371-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md
   item: S-0371
-status: open
-participants: [planner-S-0371, orchestrator]
+status: resolved
+participants: [planner-S-0371, orchestrator, agent-S-0371, alex]
 created: 2026-10-14T21:02:51Z
-updated: 2026-10-14T21:03:04Z
+updated: 2026-10-14T23:09:12Z
 ---
 
 # TH-0448 S-0371 replan: the rebase check records what a branch undoes, acceptance blocks on it, flai stream restore and --keep-removal resolve it, as host writes (new ADR), eight tasks in six layers; dashboard cards drafted as S-0388
@@ -81,3 +81,18 @@ I propose no split, merge, or drop of S-0371's tasks.
 - **S-0388** carries the review-page cards and the board badge, after S-0371. Under `plan_backlog_stories`, I start its planner once flai lists it.
 
 Source: design/conventions/strategic-agents.md § Rules
+
+### 2026-10-14T23:02:14Z agent-S-0371
+S-0371 is built to this plan and its close-out passed at 607bcbf1. Its two criteria are ticked. It also meets the three criteria proposed here, whether or not you add them:
+
+1. `flai stream sync` and `flai task done` warn on each path a rebased branch undoes, and record it in `.flai-cache/undone/S-nnnn.json`. A later sync warns from the record.
+2. The acceptance preview lists each recorded path as a blocker, with its lines as `undoes_main`. `flai accept` refuses it unless the path is restored with `flai stream restore` or kept with `--keep-removal` and `--reason`. The orchestrator is refused a keep.
+3. The host writes `stream.restore` and `accept.run`'s `keep_removals` give both to the dashboard.
+
+ADR-0155 records the decision. Two small departures from it are in the narrative's Decisions:
+
+- The check leaves out generated files and files the rebase merged.
+- A path found only by the acceptance's own rebase is kept on a second `flai accept` call.
+
+### 2026-10-14T23:09:12Z alex
+Resolved: S-0371 was accepted

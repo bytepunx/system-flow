@@ -3,10 +3,10 @@ id: S-0371
 type: story
 nature: remediation
 title: flai stream sync replays a story's revert of its own change over an identical change on main, undoing main's
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-12T16:52:47Z
-updated: 2026-10-14T22:09:01Z
+updated: 2026-10-14T23:09:12Z
 transitions:
   - to: ready
     at: 2026-10-14T20:55:53Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-14T21:33:36Z
     by: agent-S-0371
+  - to: review
+    at: 2026-10-14T23:02:14Z
+    by: agent-S-0371
+  - to: done
+    at: 2026-10-14T23:09:12Z
+    by: alex
 tags: [cli]
 topics: [cli]
-touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_restore.go, flai/cmd/stream_restore_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/preview/accept.go, flai/cmd/branch.go, flai/cmd/accept.go, flai/cmd/accept_undone_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, docs/operators/settings.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/summary.md, design/adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md, flai/cmd/move.go, flai/internal/preview/orchestrator.go]
+touches: [flai/internal/storygit/undone.go, flai/internal/storygit/undone_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream_restore.go, flai/cmd/stream_restore_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, flai/cmd/stream.go, flai/internal/preview/accept.go, flai/cmd/branch.go, flai/cmd/accept.go, flai/cmd/accept_undone_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, docs/users/flai-reference.md, docs/operators/settings.md, design/adrs/README.md, design/system/flai-cli.md, design/system/workflow.md, design/system/strategic-agents.md, docs/users/flai.md, design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md, design/issues/summary.md, design/adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md, flai/cmd/move.go, flai/internal/preview/orchestrator.go, design/issues/I-0146-testthegateisaskedoneveryattempt-fails-now-and-then-the-state-reads-refused-before-the-second-refusal-is-logged.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2128
-  estimated: true
-  priced_by: estimate
+  seconds: 5333
+  priced_by: harness
   turns:
     - day: 2026-10-14
       ceremony: 2
-      hand_edits: 1
-      work: 44
+      hand_edits: 2
+      work: 87
   models:
     - model: claude-opus-5-5
-      input: 294
-      output: 1684
-      cache_read: 15592172
-      cache_write: 893830
-      cost: 7.5999
+      input: 578
+      output: 215863
+      cache_read: 34057181
+      cache_write: 1596318
+      cost: 19.8956
   strategic:
     - kind: planner
       seconds: 435
@@ -57,15 +62,21 @@ usage:
           cache_write: 220584
           cost: 4.2503
     - kind: orchestrator
-      seconds: 1122
+      seconds: 3862
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 208
-          output: 3329
-          cache_read: 32885331
-          cache_write: 64316
-          cost: 8.2841
+          input: 256
+          output: 4031
+          cache_read: 41817550
+          cache_write: 87424
+          cost: 10.5292
+        - model: claude-sonnet-5-5
+          input: 14
+          output: 78
+          cache_read: 295074
+          cache_write: 77557
+          cost: 0.305
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -91,8 +102,8 @@ finalized:
 This story remediates [I-0124](../../../design/issues/I-0124-flai-stream-sync-replays-a-story-s-revert-of-its-own-change-over-an-identical-change-on-main-undoing-main-s.md), "flai stream sync replays a story's revert of its own change over an identical change on main, undoing main's". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0124 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0124 is closed with `flai issue close I-0124 --reason` saying what fixed it
+- [x] The cause I-0124 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0124 is closed with `flai issue close I-0124 --reason` saying what fixed it
 
 ## Tasks
 - T-1476 ADR: a rebased story branch that undoes main's change to a path is an acceptance blocker the operator resolves per path, by restoring it, keeping the removal with a reason, or sending the story back

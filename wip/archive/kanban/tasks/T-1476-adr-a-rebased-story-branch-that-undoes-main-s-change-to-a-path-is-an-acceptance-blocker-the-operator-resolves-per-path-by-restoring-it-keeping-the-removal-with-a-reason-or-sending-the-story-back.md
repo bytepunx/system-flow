@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 68
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 16
-      output: 136
-      cache_read: 1345501
-      cache_write: 11284
-      cost: 0.6255
+      input: 22
+      output: 8379
+      cache_read: 1321975
+      cache_write: 61963
+      cost: 0.7723
 ---
 # T-1476 ADR: a rebased story branch that undoes main's change to a path is an acceptance blocker the operator resolves per path, by restoring it, keeping the removal with a reason, or sending the story back
 
