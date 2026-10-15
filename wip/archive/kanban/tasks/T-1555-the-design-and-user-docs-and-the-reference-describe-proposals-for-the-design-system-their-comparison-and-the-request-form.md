@@ -3,19 +3,37 @@ id: T-1555
 type: task
 nature: feature
 title: The design and user docs and the reference describe proposals for the design system, their comparison, and the request form
-status: ready
+status: done
 parent: S-0384
 owner: alex
 created: 2026-10-13T17:48:30Z
-updated: 2026-10-15T03:17:16Z
+updated: 2026-10-15T04:05:08Z
 transitions:
   - to: ready
     at: 2026-10-15T03:17:16Z
     by: system-flow
+  - to: in-progress
+    at: 2026-10-15T03:56:38Z
+    by: system-flow
+  - to: done
+    at: 2026-10-15T04:05:07Z
+    by: system-flow
 stream: S-0384
 tags: [dashboard, cli]
-touches: [design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
+touches: [design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/settings.md]
 after: [T-1551, T-1554]
+usage:
+  source: log
+  seconds: 509
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 72
+      output: 25952
+      cache_read: 3724248
+      cache_write: 113020
+      cost: 1.9153
 ---
 # T-1555 The design and user docs and the reference describe proposals for the design system, their comparison, and the request form
 

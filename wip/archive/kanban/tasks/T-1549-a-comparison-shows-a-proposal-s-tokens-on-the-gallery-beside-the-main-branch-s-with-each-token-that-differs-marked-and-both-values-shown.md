@@ -23,16 +23,16 @@ tags: [dashboard]
 touches: [flaiover/src/lib/design/diff.ts, flaiover/src/lib/design/diff.test.ts, flaiover/src/lib/components/design/ProposalCompare.svelte, flaiover/src/lib/components/design/ProposalCompare.svelte.test.ts]
 usage:
   source: log
-  seconds: 331
+  seconds: 343
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 220
-      cache_read: 1594573
-      cache_write: 89748
-      cost: 0.7809
+      input: 36
+      output: 12830
+      cache_read: 1841188
+      cache_write: 55875
+      cost: 0.9469
 ---
 # T-1549 A comparison shows a proposal's tokens on the gallery beside the main branch's, with each token that differs marked and both values shown
 

@@ -4,10 +4,10 @@ title: "S-0384 scope: add the design's two extra criteria (tweak a proposal on i
 anchor:
   path: wip/kanban/stories/S-0384-an-agent-s-proposal-for-the-design-system-is-a-story-whose-branch-changes-it-and-the-design-page-previews-that-branch-beside-the-main-branch-s-before-the-operator-accepts-it.md
   item: S-0384
-status: open
-participants: [agent-S-0384, orchestrator]
+status: resolved
+participants: [agent-S-0384, orchestrator, alex]
 created: 2026-10-15T03:17:24Z
-updated: 2026-10-15T03:17:34Z
+updated: 2026-10-15T04:18:35Z
 ---
 
 # TH-0457 S-0384 scope: add the design's two extra criteria (tweak a proposal on its branch, the guidance's threads by heading)?
@@ -51,3 +51,11 @@ Answer one of:
 - The two new stories come from E-0020's planner. I cannot start it: `flai plan --candidates` does not list E-0020. Run `flai plan E-0020` once, and it drafts these two along with the file story and the component-design story.
 
 Source: design/system/design-system-tool.md § S-0384 Proposals and threads
+
+### 2026-10-15T04:12:07Z alex
+Confirmed the recommendation of 2026-10-15T03:17:34Z orchestrator.
+
+Source: design/system/design-system-tool.md § S-0384 Proposals and threads
+
+### 2026-10-15T04:18:35Z agent-S-0384
+Resolved: Leave out, confirmed by alex. S-0384 is finished as written and is in review. E-0020's planner drafts the two criteria (tweak a proposal on its branch through file.save; the guidance's threads by heading) as backlog stories when it replans the epic (TH-0438).

@@ -18,9 +18,8 @@ tags: [dashboard, cli]
 topics: [design]
 usage:
   source: sum
-  seconds: 17143
-  estimated: true
-  priced_by: estimate
+  seconds: 20509
+  priced_by: harness
   turns:
     - day: 2026-10-13
       ceremony: 2
@@ -31,9 +30,9 @@ usage:
       hand_edits: 4
       work: 51
     - day: 2026-10-15
-      ceremony: 6
-      hand_edits: 9
-      work: 214
+      ceremony: 8
+      hand_edits: 10
+      work: 267
   models:
     - model: claude-haiku-5-5
       input: 95933
@@ -42,11 +41,11 @@ usage:
       cache_write: 0
       cost: 0.0244
     - model: claude-opus-5-5
-      input: 2534
-      output: 1144815
-      cache_read: 140330605
-      cache_write: 5686047
-      cost: 84.2121
+      input: 2964
+      output: 1361438
+      cache_read: 164626911
+      cache_write: 6239957
+      cost: 96.875
     - model: claude-sonnet-5-5
       input: 44
       output: 12003

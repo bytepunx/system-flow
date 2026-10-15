@@ -3,11 +3,11 @@ id: T-1551
 type: task
 nature: feature
 title: flai design show takes --story, and flai design proposals lists the open stories whose branches change the design system
-status: in-progress
+status: done
 parent: S-0384
 owner: alex
 created: 2026-10-13T17:48:12Z
-updated: 2026-10-15T03:23:16Z
+updated: 2026-10-15T03:42:44Z
 transitions:
   - to: ready
     at: 2026-10-15T03:17:14Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-15T03:23:16Z
     by: system-flow
+  - to: done
+    at: 2026-10-15T03:42:44Z
+    by: system-flow
 stream: S-0384
 tags: [cli]
 touches: [flai/cmd/design.go, flai/cmd/design_test.go]
 after: [T-1548]
+usage:
+  source: log
+  seconds: 1168
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 60
+      output: 21444
+      cache_read: 3077324
+      cache_write: 93388
+      cost: 1.5826
 ---
 # T-1551 flai design show takes --story, and flai design proposals lists the open stories whose branches change the design system
 

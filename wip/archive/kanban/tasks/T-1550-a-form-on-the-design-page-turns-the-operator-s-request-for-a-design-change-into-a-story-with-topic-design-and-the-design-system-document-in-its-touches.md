@@ -23,16 +23,16 @@ tags: [dashboard]
 touches: [flaiover/src/lib/components/design/ProposeChange.svelte, flaiover/src/lib/components/design/ProposeChange.svelte.test.ts]
 usage:
   source: log
-  seconds: 329
+  seconds: 347
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 346
-      cache_read: 2177856
-      cache_write: 95213
-      cost: 1.0539
+      input: 50
+      output: 18081
+      cache_read: 2594604
+      cache_write: 78739
+      cost: 1.3343
 ---
 # T-1550 A form on the Design page turns the operator's request for a design change into a story with topic design and the design system document in its touches
 

@@ -23,16 +23,16 @@ tags: [cli]
 touches: [flai/internal/designsystem/proposals.go, flai/internal/designsystem/proposals_test.go]
 usage:
   source: log
-  seconds: 332
+  seconds: 333
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 227
-      cache_read: 1531958
-      cache_write: 82089
-      cost: 0.7484
+      input: 31
+      output: 11182
+      cache_read: 1604685
+      cache_write: 48698
+      cost: 0.8252
 ---
 # T-1548 flai/internal/designsystem reads the design system from an open story's worktree and lists the open stories whose branches change it
 

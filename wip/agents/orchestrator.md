@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 631.5602
-accrued_seconds: 500170
-tasks_completed: 528
-last_run: 2026-10-15T03:33:46Z
+accrued_cost: 631.7312
+accrued_seconds: 500180
+tasks_completed: 529
+last_run: 2026-10-15T03:33:56Z
 ---
 
 # Orchestrator activity
@@ -3707,6 +3707,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0390
 - Seconds: 966
 - Cost: 3.0414 USD, estimated
+
+### 2026-10-15T03:33:56Z
+
+- Summary: Under publish, policy judgement: released S-0390 (1 pending, 30 USD/week) as flai 1.51.0 → 1.51.1 (patch, flai/v1.51.1), pushed. Reason: a complete remediation on its own (task_done closes with the installed flai once it has caught up, ADR-0160; I-0147 closed); nothing held by whole_epics.
+- Items: S-0390
+- Seconds: 10
+- Cost: 0.1710 USD, estimated
 
 ## Refusals
 

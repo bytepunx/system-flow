@@ -3,11 +3,11 @@ id: S-0384
 type: story
 nature: feature
 title: An agent's proposal for the design system is a story whose branch changes it, and the Design page previews that branch beside the main branch's before the operator accepts it
-status: in-progress
+status: done
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:03Z
-updated: 2026-10-15T03:15:42Z
+updated: 2026-10-15T04:19:34Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:42Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-15T03:15:42Z
     by: agent-S-0384
+  - to: review
+    at: 2026-10-15T04:18:29Z
+    by: system-flow
+  - to: done
+    at: 2026-10-15T04:19:34Z
+    by: orchestrator
 tags: [dashboard, cli]
 topics: [design]
-touches: [flai/internal/designsystem/proposals.go, flai/internal/designsystem/proposals_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/design/+server.ts, flaiover/src/routes/api/design/design.test.ts, flaiover/src/routes/api/design/proposals/+server.ts, flaiover/src/routes/api/design/proposals/proposals.test.ts, flaiover/src/lib/design/diff.ts, flaiover/src/lib/design/diff.test.ts, flaiover/src/lib/components/design/ProposalCompare.svelte, flaiover/src/lib/components/design/ProposalCompare.svelte.test.ts, flaiover/src/lib/components/design/ProposeChange.svelte, flaiover/src/lib/components/design/ProposeChange.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
+touches: [flai/internal/designsystem/proposals.go, flai/internal/designsystem/proposals_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/design/+server.ts, flaiover/src/routes/api/design/design.test.ts, flaiover/src/routes/api/design/proposals/+server.ts, flaiover/src/routes/api/design/proposals/proposals.test.ts, flaiover/src/lib/design/diff.ts, flaiover/src/lib/design/diff.test.ts, flaiover/src/lib/components/design/ProposalCompare.svelte, flaiover/src/lib/components/design/ProposalCompare.svelte.test.ts, flaiover/src/lib/components/design/ProposeChange.svelte, flaiover/src/lib/components/design/ProposeChange.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, flai/internal/designsystem/css.go, docs/operators/settings.md]
 after: [S-0383]
 agent:
   harness: claude-code
@@ -26,21 +32,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 425
-  estimated: true
-  priced_by: estimate
+  seconds: 3791
+  priced_by: harness
   turns:
     - day: 2026-10-15
-      ceremony: 1
-      hand_edits: 1
-      work: 22
+      ceremony: 3
+      hand_edits: 2
+      work: 75
   models:
     - model: claude-opus-5-5
-      input: 174
-      output: 957
-      cache_read: 6926970
-      cache_write: 393626
-      cost: 3.3942
+      input: 604
+      output: 217580
+      cache_read: 31223276
+      cache_write: 947536
+      cost: 16.0571
   strategic:
     - kind: orchestrator
       seconds: 335
@@ -74,12 +79,12 @@ The operator works with agents on the design system through the board's own work
 
 ## Acceptance criteria
 
-- [ ] `flai design show --story S-nnnn` and the host method `design.get` with a story read the design system from that story's worktree, and refuse a story that is not open or has no worktree.
-- [ ] `flai design proposals --json` and the host method `design.proposals` list the open stories whose branches change the design system document, each with its ID, title, and state.
-- [ ] The Design page lists those stories, and choosing one previews its tokens on the gallery beside the main branch's, with each token that differs marked and its two values shown.
-- [ ] From the Design page the operator writes a request for a change to the design system, which becomes a story under an epic they choose, with topic `design`, its goal from their words, and the design system document in its touches, for a story's agent to work like any other.
-- [ ] Once such a story is accepted, the Design page shows its tokens as the project's, with no step of its own.
-- [ ] `design/system/flai-cli.md`, `design/system/flaiover-dashboard.md`, `docs/users/flai.md`, `docs/users/flaiover.md`, and the generated reference say how.
+- [x] `flai design show --story S-nnnn` and the host method `design.get` with a story read the design system from that story's worktree, and refuse a story that is not open or has no worktree.
+- [x] `flai design proposals --json` and the host method `design.proposals` list the open stories whose branches change the design system document, each with its ID, title, and state.
+- [x] The Design page lists those stories, and choosing one previews its tokens on the gallery beside the main branch's, with each token that differs marked and its two values shown.
+- [x] From the Design page the operator writes a request for a change to the design system, which becomes a story under an epic they choose, with topic `design`, its goal from their words, and the design system document in its touches, for a story's agent to work like any other.
+- [x] Once such a story is accepted, the Design page shows its tokens as the project's, with no step of its own.
+- [x] `design/system/flai-cli.md`, `design/system/flaiover-dashboard.md`, `docs/users/flai.md`, `docs/users/flaiover.md`, and the generated reference say how.
 
 ## Tasks
 - T-1548 flai/internal/designsystem reads the design system from an open story's worktree and lists the open stories whose branches change it
@@ -111,3 +116,17 @@ The operator works with agents on the design system through the board's own work
 - **Layers.** T-1548, T-1549, and T-1550 together; then T-1551 and T-1552 together; then T-1553; then T-1554; then T-1555.
 - **Forecast: 1h5m, delivery 2026-10-14T00:24:00Z.** `flai forecast` gave 50m: 95 s per unit of size over 50 done feature stories on claude-opus-5-5 in the large band, times size 31. Raised about a quarter to 1h5m, as S-0378 was, because it spans flai and flaiover, runs both test tiers, and adds three Svelte components with tests, across eight tasks in five layers. The delivery adds the 15m to flai's 2026-10-14T00:09Z.
 - **Cost of delay: 250.00 USD a week.** `flai cod`: 1h5m of the 5h12m forecast over E-0020's seven open stories, of the epic's 1200 USD a week. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: c9396f086540c49edda8ec6a62a67f80f5a7f825
+- At: 2026-10-15T04:19:34Z
+
+Verdict: meets all six criteria; flai verify passed every step at c9396f08; criteria unchanged, with the two refinements confirmed on TH-0457 in the code; every changed path is within the story's touches, none under .claude/.
+
+- 1: flai/internal/designsystem/proposals.go, flai/internal/designsystem/proposals_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flai/internal/designsystem/css.go, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/design/+server.ts, flaiover/src/routes/api/design/design.test.ts
+- 2: flai/internal/designsystem/proposals.go, flai/internal/designsystem/proposals_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/design/proposals/+server.ts, flaiover/src/routes/api/design/proposals/proposals.test.ts
+- 3: flaiover/src/lib/design/diff.ts, flaiover/src/lib/design/diff.test.ts, flaiover/src/lib/components/design/ProposalCompare.svelte, flaiover/src/lib/components/design/ProposalCompare.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts
+- 4: flaiover/src/lib/components/design/ProposeChange.svelte, flaiover/src/lib/components/design/ProposeChange.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts
+- 5: flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts
+- 6: design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, docs/operators/settings.md
