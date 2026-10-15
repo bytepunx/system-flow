@@ -3,15 +3,36 @@ id: T-1590
 type: task
 nature: feature
 title: The manifest key design.tokens names the design token file, design/system/design-system.tokens.json when unset
-status: backlog
+status: done
 parent: S-0381
 owner: alex
 created: 2026-10-14T23:52:52Z
-updated: 2026-10-14T23:52:52Z
-transitions: []
+updated: 2026-10-15T00:09:34Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:57:51Z
+    by: agent-S-0381
+  - to: in-progress
+    at: 2026-10-14T23:57:52Z
+    by: agent-S-0381
+  - to: done
+    at: 2026-10-15T00:09:34Z
+    by: agent-S-0381
 stream: S-0381
 tags: [cli]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, design/system/project-manifest.md, docs/operators/settings.md]
+usage:
+  source: log
+  seconds: 702
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 245
+      cache_read: 1852740
+      cache_write: 223631
+      cost: 0.9588
 ---
 # T-1590 The manifest key design.tokens names the design token file, design/system/design-system.tokens.json when unset
 

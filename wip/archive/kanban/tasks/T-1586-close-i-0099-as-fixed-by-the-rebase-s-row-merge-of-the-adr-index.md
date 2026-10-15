@@ -24,16 +24,16 @@ touches: [design/issues/I-0099-two-stories-that-each-add-an-adr-conflict-in-desi
 after: [T-1584, T-1585]
 usage:
   source: log
-  seconds: 3
+  seconds: 6
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 2
-      output: 16
-      cache_read: 219830
-      cache_write: 961
-      cost: 0.1019
+      input: 3
+      output: 998
+      cache_read: 217038
+      cache_write: 6457
+      cost: 0.1041
 ---
 # T-1586 Close I-0099 as fixed by the rebase's row merge of the ADR index
 

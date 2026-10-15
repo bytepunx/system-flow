@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 205.7930
-accrued_seconds: 25447
-tasks_completed: 74
-last_run: 2026-10-14T21:03:03Z
+accrued_cost: 208.2260
+accrued_seconds: 25781
+tasks_completed: 75
+last_run: 2026-10-14T23:56:12Z
 ---
 
 # Planner activity
@@ -596,3 +596,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0371, T-1574, T-1575, T-1476, T-1477, T-1478, T-1479, T-1480, T-1481
 - Seconds: 435
 - Cost: 4.5819 USD, estimated
+
+### 2026-10-14T23:56:12Z
+
+- Summary: Replanned S-0381 (still a draft) so the tokens live in a DTCG file the manifest names, not in front matter: rewrote its title, goal and criteria (5 to 7), added the `template` tag, set touches to 30 files, forecast 1h15m (flai said 56m) and cost of delay 319.15 USD a week; created T-1590, T-1591, T-1592 and T-1593, and revisited T-1532 to T-1537 (rewrote the Work of T-1532, T-1533, T-1534, T-1535 and T-1537 once the orchestrator approved on TH-0453, and changed only `after` on T-1536), giving ten tasks in five layers; replied on TH-0439.
+- Trigger: asked
+- Items: S-0381, T-1590, T-1591, T-1592, T-1593, T-1532, T-1533, T-1534, T-1535, T-1536, T-1537
+- Seconds: 334
+- Cost: 2.4330 USD, estimated

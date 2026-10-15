@@ -3,16 +3,37 @@ id: T-1593
 type: task
 nature: feature
 title: A design token colour converts from oklch to sRGB with clipping reported, and the colour roles' pairs get their contrast against ADR-0148's thresholds
-status: backlog
+status: done
 parent: S-0381
 owner: alex
 created: 2026-10-14T23:53:18Z
-updated: 2026-10-14T23:53:18Z
-transitions: []
+updated: 2026-10-15T00:22:30Z
+transitions:
+  - to: ready
+    at: 2026-10-15T00:09:53Z
+    by: agent-S-0381
+  - to: in-progress
+    at: 2026-10-15T00:09:54Z
+    by: agent-S-0381
+  - to: done
+    at: 2026-10-15T00:22:30Z
+    by: agent-S-0381
 stream: S-0381
 tags: [cli]
 touches: [flai/internal/designsystem/color.go, flai/internal/designsystem/color_test.go]
 after: [T-1532]
+usage:
+  source: log
+  seconds: 756
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 165
+      cache_read: 1599416
+      cache_write: 99649
+      cost: 0.7845
 ---
 # T-1593 A design token colour converts from oklch to sRGB with clipping reported, and the colour roles' pairs get their contrast against ADR-0148's thresholds
 

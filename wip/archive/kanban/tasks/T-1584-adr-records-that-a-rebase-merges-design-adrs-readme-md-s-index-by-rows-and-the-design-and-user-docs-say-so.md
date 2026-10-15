@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 191
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 235
-      cache_read: 1565069
-      cache_write: 62595
-      cost: 0.7513
+      input: 25
+      output: 7361
+      cache_read: 1600015
+      cache_write: 47605
+      cost: 0.7672
 ---
 # T-1584 ADR records that a rebase merges design/adrs/README.md's index by rows, and the design and user docs say so
 

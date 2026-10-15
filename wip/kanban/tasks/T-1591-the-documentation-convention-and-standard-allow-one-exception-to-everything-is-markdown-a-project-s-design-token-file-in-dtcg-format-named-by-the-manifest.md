@@ -3,15 +3,36 @@ id: T-1591
 type: task
 nature: feature
 title: "The documentation convention and standard allow one exception to Everything is markdown: a project's design token file, in DTCG format, named by the manifest"
-status: backlog
+status: done
 parent: S-0381
 owner: alex
 created: 2026-10-14T23:53:00Z
-updated: 2026-10-14T23:53:00Z
-transitions: []
+updated: 2026-10-15T00:09:39Z
+transitions:
+  - to: ready
+    at: 2026-10-14T23:57:53Z
+    by: agent-S-0381
+  - to: in-progress
+    at: 2026-10-14T23:57:53Z
+    by: agent-S-0381
+  - to: done
+    at: 2026-10-15T00:09:39Z
+    by: agent-S-0381
 stream: S-0381
 tags: [template]
 touches: [design/system/documentation-standard.md, design/conventions/documentation.md, template/root/design/conventions/documentation.md, template/CHANGELOG.md]
+usage:
+  source: log
+  seconds: 706
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 107
+      cache_read: 795845
+      cache_write: 56425
+      cost: 0.3935
 ---
 # T-1591 The documentation convention and standard allow one exception to Everything is markdown: a project's design token file, in DTCG format, named by the manifest
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 584.7336
-accrued_seconds: 486987
-tasks_completed: 490
-last_run: 2026-10-14T23:53:55Z
+accrued_cost: 589.8415
+accrued_seconds: 487950
+tasks_completed: 496
+last_run: 2026-10-15T00:09:58Z
 ---
 
 # Orchestrator activity
@@ -3441,6 +3441,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0388
 - Seconds: 1024
 - Cost: 1.6997 USD, estimated
+
+### 2026-10-14T23:54:08Z
+
+- Summary: Under publish, policy judgement: released S-0388 and S-0389 (2 pending, 52.5 USD/week) as flai 1.49.6 → 1.49.7 (patch, flai/v1.49.7) and flaiover 0.44.1 → 0.45.0 (minor, flaiover/v0.45.0), pushed. Reason: S-0388 completes on the dashboard what S-0371 released; S-0389 is a complete flai fix (I-0146); nothing held by whole_epics.
+- Items: S-0388, S-0389
+- Seconds: 13
+- Cost: 0.1132 USD, estimated
+
+### 2026-10-14T23:55:16Z
+
+- Summary: Answered TH-0453, citing design/adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md § Decision
+- Items: S-0381
+- Seconds: 68
+- Cost: 0.9197 USD, estimated
+
+### 2026-10-14T23:55:24Z
+
+- Summary: Under plan_backlog_stories, answered planner-S-0381's plan TH-0453: approved its five rewrites of T-1532 to T-1535 and T-1537 (written by planner-E-0020) to read the DTCG token file, on the accepted ADR-0146 to ADR-0148, and confirmed that ADR-0146 § Decision 5 gives T-1591's documentation exception its consent; agreed the file.get/save story is E-0020's planner's to draft (TH-0438). Left TH-0453 answered for the planner to make the rewrites; S-0381 stays a draft until its tasks read the token file. Figures: 1h15m (flai 56m), 319.15 USD/week.
+- Items: S-0381
+- Seconds: 8
+- Cost: 0.1172 USD, estimated
+
+### 2026-10-14T23:56:27Z
+
+- Summary: planner-S-0381 made the five approved task rewrites; resolved its TH-0453 and my TH-0439 (the operator's direction is carried in). Under finalize_drafts, finalized S-0381 (flai promote --drafts: complete, 1h15m; 319.15 USD/week), consistent with ADR-0146 to ADR-0148. Under promote_to_ready, moved it to ready (rank 1, 1h15m); S-0241 (rank 2) stays out, blocked. Under order_ready, applied the throughput order: S-0381. S-0382 to S-0386 stay drafts pending E-0020's replan (TH-0438, my recommendation awaiting the operator).
+- Items: S-0381
+- Seconds: 63
+- Cost: 1.7757 USD, estimated
+
+### 2026-10-15T00:09:29Z
+
+- Summary: The operator finalized S-0382 (still in the backlog, held after S-0381). Resolved my own TH-0440, which had kept it a draft until S-0380's decision: the operator has decided. S-0383 to S-0386 stay drafts pending E-0020's replan (TH-0438).
+- Items: S-0382
+- Seconds: 782
+- Cost: 1.4495 USD, estimated
+
+### 2026-10-15T00:09:58Z
+
+- Summary: The operator finalized S-0383 (backlog, held after S-0382). Resolved my own TH-0441, which had kept it a draft until S-0380's decision. Drafts left: S-0384, S-0385, S-0386 (pending E-0020's replan, TH-0438) and S-0387 (TH-0447 awaits the operator).
+- Items: S-0383
+- Seconds: 29
+- Cost: 0.7326 USD, estimated
 
 ## Refusals
 

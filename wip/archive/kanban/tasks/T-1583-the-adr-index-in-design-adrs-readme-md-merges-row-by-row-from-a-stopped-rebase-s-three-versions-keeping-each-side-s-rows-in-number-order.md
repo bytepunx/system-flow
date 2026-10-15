@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 182
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 29
-      output: 189
-      cache_read: 1114415
-      cache_write: 63514
-      cost: 0.5437
+      input: 18
+      output: 5327
+      cache_read: 1157917
+      cache_write: 34451
+      cost: 0.5552
 ---
 # T-1583 The ADR index in design/adrs/README.md merges row by row from a stopped rebase's three versions, keeping each side's rows in number order
 

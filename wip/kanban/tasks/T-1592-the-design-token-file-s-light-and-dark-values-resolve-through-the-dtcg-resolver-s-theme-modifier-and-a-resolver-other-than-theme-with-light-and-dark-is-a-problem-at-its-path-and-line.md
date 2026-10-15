@@ -3,16 +3,37 @@ id: T-1592
 type: task
 nature: feature
 title: The design token file's light and dark values resolve through the DTCG Resolver's theme modifier, and a resolver other than theme with light and dark is a problem at its path and line
-status: backlog
+status: done
 parent: S-0381
 owner: alex
 created: 2026-10-14T23:53:09Z
-updated: 2026-10-14T23:53:09Z
-transitions: []
+updated: 2026-10-15T00:17:48Z
+transitions:
+  - to: ready
+    at: 2026-10-15T00:09:52Z
+    by: agent-S-0381
+  - to: in-progress
+    at: 2026-10-15T00:09:52Z
+    by: agent-S-0381
+  - to: done
+    at: 2026-10-15T00:17:47Z
+    by: agent-S-0381
 stream: S-0381
 tags: [cli]
-touches: [flai/internal/designsystem/resolver.go, flai/internal/designsystem/resolver_test.go]
+touches: [flai/internal/designsystem/resolver.go, flai/internal/designsystem/resolver_test.go, flai/internal/designsystem/tokens.go]
 after: [T-1532]
+usage:
+  source: log
+  seconds: 475
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 123
+      cache_read: 992480
+      cache_write: 104808
+      cost: 0.5067
 ---
 # T-1592 The design token file's light and dark values resolve through the DTCG Resolver's theme modifier, and a resolver other than theme with light and dark is a problem at its path and line
 

@@ -3,10 +3,10 @@ id: S-0306
 type: story
 nature: improvement
 title: Two stories that each add an ADR conflict in design/adrs/README.md, whose index both append a row to, and flai opens a thread for each sync that finds it
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-07T01:07:12Z
-updated: 2026-10-14T23:28:49Z
+updated: 2026-10-15T00:32:47Z
 transitions:
   - to: ready
     at: 2026-10-14T20:54:58Z
@@ -14,8 +14,14 @@ transitions:
   - to: in-progress
     at: 2026-10-14T23:02:21Z
     by: agent-S-0306
+  - to: review
+    at: 2026-10-15T00:19:22Z
+    by: agent-S-0306
+  - to: done
+    at: 2026-10-15T00:32:47Z
+    by: orchestrator
 tags: []
-touches: [design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, flai/cmd/stream_sync.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, design/issues/I-0099-two-stories-that-each-add-an-adr-conflict-in-design-adrs-readme-md-whose-index-both-append-a-row-to-and-flai-opens-a-thread-for-each-sync-that-finds-it.md, design/issues/summary.md, docs/users/flai-reference.md, flai/cmd/stream.go, flai/cmd/stream_sync_test.go, flai/internal/issues/generated.go]
+touches: [design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, flai/cmd/stream_sync.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, design/issues/I-0099-two-stories-that-each-add-an-adr-conflict-in-design-adrs-readme-md-whose-index-both-append-a-row-to-and-flai-opens-a-thread-for-each-sync-that-finds-it.md, design/issues/summary.md, docs/users/flai-reference.md, flai/cmd/stream.go, flai/cmd/stream_sync_test.go, flai/internal/issues/generated.go, design/issues/I-0148-a-close-out-whose-run-main-outruns-takes-two-rounds-of-the-integration-and-smoke-tiers-about-24-minutes-past-the-bash-tool-s-10-minute-limit-so-the-agent-s-call-is-killed-mid-round.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,21 +29,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1505
-  estimated: true
-  priced_by: estimate
+  seconds: 4641
+  priced_by: harness
   turns:
     - day: 2026-10-14
+      ceremony: 2
+      hand_edits: 2
+      work: 68
+    - day: 2026-10-15
       ceremony: 1
-      hand_edits: 1
-      work: 57
+      work: 6
   models:
     - model: claude-opus-5-5
-      input: 228
-      output: 1611
-      cache_read: 12633615
-      cache_write: 495531
-      cost: 6.0598
+      input: 276
+      output: 81089
+      cache_read: 17626873
+      cache_write: 524446
+      cost: 8.4515
   strategic:
     - kind: orchestrator
       seconds: 391
@@ -79,3 +87,13 @@ The index is derived from the ADR files, as `summary.md` is from the issues: `fl
 ## Notes
 
 Cost of delay inputs set by flai from I-0099. time_lost_per_cycle 5m: 5m per occurrence × 1 occurrence ÷ 1 cycle of 168h (first reported 2026-10-06T23:31:35Z, 0.1 days before this story; under one cycle counts as one).
+
+### Accepted by the orchestrator
+
+- Verified: b5b9647bad02fcd225bffd6e1ae485b5f8619591
+- At: 2026-10-15T00:32:47Z
+
+Verdict: meets both criteria; flai verify passed every step at b5b9647b; every changed path is within the story's touches, none under .claude/. The ADR index merges row by row on a rebase, and the trial merge leaves it out of a pair's conflicts (ADR-0157).
+
+- 1: flai/internal/adrindex/adrindex.go, flai/internal/adrindex/adrindex_test.go, flai/internal/issues/generated.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/cmd/stream.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, design/adrs/0157-flai-stream-sync-and-flai-accept-merge-design-adrs-readme-md-s-index-row-by-row.md, design/adrs/README.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md
+- 2: design/issues/I-0099-two-stories-that-each-add-an-adr-conflict-in-design-adrs-readme-md-whose-index-both-append-a-row-to-and-flai-opens-a-thread-for-each-sync-that-finds-it.md, design/issues/summary.md

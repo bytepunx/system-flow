@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1175
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 112
-      output: 695
-      cache_read: 7181089
-      cache_write: 220173
-      cost: 3.416
+      input: 114
+      output: 33469
+      cache_read: 7275485
+      cache_write: 216465
+      cost: 3.4884
 ---
 # T-1585 flai stream sync, flai task done, and flai accept merge the ADR index themselves, and the trial merge leaves it out of a pair's conflicts
 
