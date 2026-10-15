@@ -112,6 +112,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.issues()
 	c.experiments()
 	c.analysis()
+	c.designTokens()
 	c.threads()
 	c.messages()
 	c.markdown()
