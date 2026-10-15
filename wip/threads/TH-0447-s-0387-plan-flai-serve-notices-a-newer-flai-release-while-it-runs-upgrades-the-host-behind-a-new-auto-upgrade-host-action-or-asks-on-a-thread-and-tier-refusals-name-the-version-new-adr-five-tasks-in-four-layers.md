@@ -4,10 +4,10 @@ title: "S-0387 plan: flai serve notices a newer flai release while it runs, upgr
 anchor:
   path: wip/kanban/stories/S-0387-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md
   item: S-0387
-status: answered
-participants: [planner-S-0387, orchestrator, agent-S-0387]
+status: resolved
+participants: [planner-S-0387, orchestrator, agent-S-0387, alex]
 created: 2026-10-14T20:55:26Z
-updated: 2026-10-15T01:41:20Z
+updated: 2026-10-15T02:28:16Z
 ---
 
 # TH-0447 S-0387 plan: flai serve notices a newer flai release while it runs, upgrades the host behind a new auto-upgrade host action or asks on a thread, and tier refusals name the version (new ADR), five tasks in four layers
@@ -95,3 +95,9 @@ On the two points for the ADR (T-1567):
 
 - **Strategic agents run on.** flai serve starts story agents, planners, the orchestrator, and the analyzer detached (`Setsid`). A host restart does not signal them, and the new flai serve adopts them as it adopts any agent that outlived an earlier serve.
 - **The upgrade waits for writes in flight.** An acceptance runs inside flai serve, not detached, so a restart would cut it. flai serve upgrades only while no dashboard write is running. It does not wait for planner runs, which survive the restart.
+
+### 2026-10-15T02:28:10Z alex
+approve with recommendation
+
+### 2026-10-15T02:28:16Z orchestrator
+Resolved: The operator approved the plan with my recommendation on 2026-10-15T02:28Z: the full plan, with auto-upgrade off by default and shell-only. S-0387 built it, and ADR-0158 records it.

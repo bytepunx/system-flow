@@ -3,18 +3,21 @@ id: S-0385
 type: story
 nature: feature
 title: flai writes the design system's tokens into the stylesheet the manifest names, and flai check reports the stylesheet when it falls behind them
-status: ready
+status: in-progress
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:14Z
-updated: 2026-10-15T01:56:53Z
+updated: 2026-10-15T02:23:00Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:45Z
     by: alex
+  - to: in-progress
+    at: 2026-10-15T02:20:49Z
+    by: agent-S-0385
 tags: [cli]
 topics: [design]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/designsystem/stylesheet.go, flai/internal/designsystem/stylesheet_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/check/design.go, flai/internal/check/design_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/designsystem/stylesheet.go, flai/internal/designsystem/stylesheet_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/check/design.go, flai/internal/check/design_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0159-the-generated-design-stylesheet-puts-the-dark-values-under-data-theme-dark-and.md, design/adrs/README.md, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go, design/system/design-system-tool.md]
 after: [S-0381]
 agent:
   harness: claude-code
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 289
+      seconds: 294
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 29
-          output: 542
-          cache_read: 5600494
-          cache_write: 9356
-          cost: 1.4105
+          input: 32
+          output: 573
+          cache_read: 6470486
+          cache_write: 11082
+          cost: 1.6291
 cost_of_delay:
   value: 103.85
   by: planner-E-0020

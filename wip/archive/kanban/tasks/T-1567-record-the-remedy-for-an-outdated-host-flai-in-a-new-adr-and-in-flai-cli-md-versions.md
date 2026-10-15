@@ -23,22 +23,22 @@ tags: [adr, design]
 touches: [design/adrs/0153-flai-serve-upgrades-the-host-s-flai-when-the-project-s-history-has-a-newer-published-release-behind-auto-upgrade.md, design/adrs/README.md, design/system/flai-cli.md, design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md]
 usage:
   source: log
-  seconds: 72
+  seconds: 75
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-haiku-5-5
-      input: 158
-      output: 862
-      cache_read: 11303043
-      cache_write: 225814
-      cost: 0.746
+      input: 160
+      output: 54996
+      cache_read: 11528857
+      cache_write: 238837
+      cost: 0.7525
     - model: claude-opus-5-5
-      input: 14
-      output: 179
-      cache_read: 1035311
-      cache_write: 6515
-      cost: 0.4819
+      input: 18
+      output: 7035
+      cache_read: 1029379
+      cache_write: 29107
+      cost: 0.5324
 ---
 # T-1567 Record the remedy for an outdated host flai in a new ADR and in flai-cli.md § Versions
 

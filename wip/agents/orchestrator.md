@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 602.9235
-accrued_seconds: 494364
-tasks_completed: 507
-last_run: 2026-10-15T01:56:57Z
+accrued_cost: 609.4258
+accrued_seconds: 495867
+tasks_completed: 515
+last_run: 2026-10-15T02:22:00Z
 ---
 
 # Orchestrator activity
@@ -3560,6 +3560,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0382
 - Seconds: 1396
 - Cost: 5.6100 USD, estimated
+
+### 2026-10-15T01:57:08Z
+
+- Summary: Under publish, policy judgement: released S-0382 (1 pending, 192.31 USD/week) as flaiover 0.45.1 → 0.46.0 (minor, flaiover/v0.46.0), pushed. Reason: complete and verified; the Design page shows and previews what S-0381 released (ADR-0149); nothing held by whole_epics.
+- Items: S-0382
+- Seconds: 11
+- Cost: 0.2787 USD, estimated
+
+### 2026-10-15T01:57:17Z
+
+- Summary: S-0383 was pulled. Under order_ready, applied the throughput order: S-0385 (27m), S-0386 (35m), S-0384 (1h5m). S-0383 started without the file.save story TH-0438 names as its prerequisite; its agent reviews its tasks against ADR-0146 to ADR-0150.
+- Items: S-0383, S-0385, S-0386, S-0384
+- Seconds: 9
+- Cost: 0.2798 USD, estimated
+
+### 2026-10-15T01:58:09Z
+
+- Summary: Recommended an answer on TH-0454, citing design/adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md § Decision
+- Items: S-0383
+- Seconds: 52
+- Cost: 0.4221 USD, estimated
+
+### 2026-10-15T01:58:14Z
+
+- Summary: Under answer_threads autonomous, recommended on TH-0454 (agent-S-0383: criterion 3 saves front matter via doc.save, but tokens are DTCG JSON and file.save does not exist): take option 1, building the dashboard side against ADR-0147's file.get/file.save contract with a 501 path; the operator rewrites criterion 3 (wording proposed) and starts E-0020's planner to draft the file.get/file.save story (TH-0438). Escalated rather than answered: it changes a finalized story's criteria and adds a story.
+- Items: S-0383, E-0020
+- Seconds: 5
+- Cost: 0.1414 USD, estimated
+
+### 2026-10-15T02:16:58Z
+
+- Summary: Answered TH-0438, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: none
+- Seconds: 1124
+- Cost: 3.0188 USD, estimated
+
+### 2026-10-15T02:17:02Z
+
+- Summary: The operator confirmed my TH-0438 recommendation (replan E-0020 with a file.get/file.save story and a component-design story). E-0020 is not a plan candidate and the confirmation started no planner, so I replied on TH-0438 asking the operator to run flai plan E-0020; S-0383 waits on the file story (TH-0454).
+- Items: E-0020
+- Seconds: 4
+- Cost: 0.0000 USD
+
+### 2026-10-15T02:21:52Z
+
+- Summary: Under accept_reviews, verified S-0387 (flai verify passed at 626b4f55; the verifier met both criteria: the minute check and shell-only auto-upgrade, off by default, version-aware tier refusals, ADR-0158 covering detached agents and writes in flight; I-0141 closed). The dry run is blocked by TH-0447 (planner-S-0387's plan with my recommendation on the auto-upgrade host action, awaiting the operator), so I left S-0387 in review and opened TH-0455 asking the operator to settle TH-0447.
+- Items: S-0387
+- Seconds: 290
+- Cost: 1.9157 USD, estimated
+
+### 2026-10-15T02:22:00Z
+
+- Summary: S-0385 was pulled. Under order_ready, applied the throughput order: S-0386 (35m), S-0384 (1h5m).
+- Items: S-0385, S-0386, S-0384
+- Seconds: 8
+- Cost: 0.4458 USD, estimated
 
 ## Refusals
 

@@ -3,26 +3,34 @@ id: T-1556
 type: task
 nature: feature
 title: The manifest's design.stylesheet names the stylesheet the design system's tokens are written to
-status: backlog
+status: in-progress
 parent: S-0385
 owner: alex
 created: 2026-10-13T17:48:42Z
-updated: 2026-10-13T17:48:42Z
-transitions: []
+updated: 2026-10-15T02:23:00Z
+transitions:
+  - to: ready
+    at: 2026-10-15T02:23:00Z
+    by: agent-S-0385
+  - to: in-progress
+    at: 2026-10-15T02:23:00Z
+    by: agent-S-0385
 stream: S-0385
 tags: [cli]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, design/system/project-manifest.md]
 ---
 # T-1556 The manifest's design.stylesheet names the stylesheet the design system's tokens are written to
 
 ## Work
 
-Add `design.stylesheet` to the manifest in `flai/internal/manifest/manifest.go`: a repository path, optional, and a helper that says which sub-project holds it, or none. Tests cover it set, unset, and outside every sub-project. It waits for nothing.
+Add `design.stylesheet` to the manifest in `flai/internal/manifest/manifest.go`: a repository path, optional, which `Load` refuses as it refuses a bad `design.tokens` (absolute, leaving the repository, not clean), and a helper that answers the sub-project (`projects` entry) whose path holds it, or none. Tests cover it set, unset, refused, and outside every sub-project.
+
+Add its row to `docs/operators/settings.md`, whose test (`flai/cmd/settings_doc_test.go`) fails on a manifest key without one, and describe it in `design/system/project-manifest.md` beside `design.tokens`, in the same change, so that the key and its documentation land together. It waits for nothing.
 
 ## Done when
 
-- `go test ./internal/manifest/` passes with the three cases.
+- `flai test` on the manifest package and `flai/cmd/settings_doc_test.go`'s package passes with the new cases.
 
 ## Notes
 
-- Layer 1, beside T-1557.
+- Layer 1, beside T-1557. The settings row moved here from T-1560 so that no task leaves the settings test failing.

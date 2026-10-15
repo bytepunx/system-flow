@@ -3,11 +3,11 @@ id: T-1568
 type: task
 nature: improvement
 title: flai serve checks whether the host's flai is behind each served project on its reconcile loop, upgrades it with auto-upgrade on, and asks the operator otherwise
-status: in-progress
+status: done
 parent: S-0387
 owner: alex
 created: 2026-10-14T20:54:41Z
-updated: 2026-10-15T01:43:13Z
+updated: 2026-10-15T02:04:23Z
 transitions:
   - to: ready
     at: 2026-10-15T01:43:13Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-15T01:43:13Z
     by: agent-S-0387
+  - to: done
+    at: 2026-10-15T02:04:23Z
+    by: agent-S-0387
 stream: S-0387
 tags: [flai, serve, host]
-touches: [flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
+touches: [flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/serve.go]
 after: [T-1567]
+usage:
+  source: log
+  seconds: 1270
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 104
+      output: 40943
+      cache_read: 5990938
+      cache_write: 169399
+      cost: 3.0985
 ---
 # T-1568 flai serve checks whether the host's flai is behind each served project on its reconcile loop, upgrades it with auto-upgrade on, and asks the operator otherwise
 

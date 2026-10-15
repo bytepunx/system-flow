@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:47Z
-updated: 2026-10-15T01:56:59Z
+updated: 2026-10-15T01:59:06Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:39Z
@@ -25,20 +25,31 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1269
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-15
+      work: 22
+  models:
+    - model: claude-opus-5-5
+      input: 174
+      output: 777
+      cache_read: 9198161
+      cache_write: 684063
+      cost: 4.5714
   strategic:
     - kind: orchestrator
-      seconds: 421
+      seconds: 479
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 35
-          output: 619
-          cache_read: 7023289
-          cache_write: 10213
-          cost: 1.7674
+          input: 43
+          output: 693
+          cache_read: 9262776
+          cache_write: 15505
+          cost: 2.3302
 cost_of_delay:
   value: 115.38
   by: planner-E-0020
@@ -68,7 +79,7 @@ The operator tries a decision on the design system, a colour, a font, a step of 
 - [ ] `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` say how tokens are changed and saved.
 
 ## Tasks
-- T-1543 An edit model holds changed tokens apart from the saved ones and writes them back into the document's front matter, leaving the rest as it was
+- T-1543 An edit model holds changed tokens apart from the saved ones, renders them as flai does for the preview, and writes them back into the DTCG token file, leaving the rest as it was
 - T-1544 The preview flags each colour pair below 4.5:1 for text or 3:1 for controls, in the theme it fails in
 - T-1545 A token editor changes each kind of token in place and marks a bad value and a failing contrast beside it
 - T-1546 The Design page edits tokens with the preview following before saving, saves through doc.save, shows a refusal without losing the edits, and asks before leaving

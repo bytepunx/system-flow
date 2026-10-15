@@ -3,12 +3,18 @@ id: T-1545
 type: task
 nature: feature
 title: A token editor changes each kind of token in place and marks a bad value and a failing contrast beside it
-status: backlog
+status: in-progress
 parent: S-0383
 owner: alex
 created: 2026-10-13T17:47:36Z
-updated: 2026-10-13T17:47:36Z
-transitions: []
+updated: 2026-10-15T02:18:54Z
+transitions:
+  - to: ready
+    at: 2026-10-15T02:18:54Z
+    by: agent-S-0383
+  - to: in-progress
+    at: 2026-10-15T02:18:54Z
+    by: agent-S-0383
 stream: S-0383
 tags: [dashboard]
 touches: [flaiover/src/lib/components/design/TokenEditor.svelte, flaiover/src/lib/components/design/TokenEditor.svelte.test.ts]

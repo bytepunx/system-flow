@@ -3,16 +3,37 @@ id: T-1571
 type: task
 nature: remediation
 title: Close I-0141 with the remedy that fixed it
-status: backlog
+status: done
 parent: S-0387
 owner: alex
 created: 2026-10-14T20:55:02Z
-updated: 2026-10-14T20:55:02Z
-transitions: []
+updated: 2026-10-15T02:09:59Z
+transitions:
+  - to: ready
+    at: 2026-10-15T02:09:51Z
+    by: agent-S-0387
+  - to: in-progress
+    at: 2026-10-15T02:09:52Z
+    by: agent-S-0387
+  - to: done
+    at: 2026-10-15T02:09:59Z
+    by: agent-S-0387
 stream: S-0387
 tags: [issues]
 touches: [design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md]
 after: [T-1570]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 3
+      output: 1346
+      cache_read: 197023
+      cache_write: 5571
+      cost: 0.1019
 ---
 # T-1571 Close I-0141 with the remedy that fixed it
 

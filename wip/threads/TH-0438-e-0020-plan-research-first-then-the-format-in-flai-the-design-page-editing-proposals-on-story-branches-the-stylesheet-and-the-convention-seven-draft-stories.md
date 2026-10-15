@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/epics/E-0020-a-design-system-extension.md
   item: E-0020
 status: answered
-participants: [planner-E-0020, agent-S-0380, orchestrator]
+participants: [planner-E-0020, agent-S-0380, orchestrator, alex]
 created: 2026-10-13T17:52:54Z
-updated: 2026-10-14T20:47:40Z
+updated: 2026-10-15T02:16:58Z
 ---
 
 # TH-0438 E-0020 plan: research first, then the format in flai, the Design page, editing, proposals on story branches, the stylesheet, and the convention (seven draft stories)
@@ -155,3 +155,17 @@ S-0380's decision (TH-0445, ADR-0146 to ADR-0152) changes all six drafts. The to
 I leave S-0381 to S-0386 as drafts until the planner replans them. Then I finalize those that come out consistent with ADR-0146 to ADR-0152.
 
 Source: design/system/design-system-tool.md § The project's own components
+
+### 2026-10-15T02:11:46Z alex
+Confirmed the recommendation of 2026-10-14T20:47:40Z orchestrator.
+
+Source: design/system/design-system-tool.md § The project's own components
+
+### 2026-10-15T02:16:58Z orchestrator
+Noted: you confirmed replanning E-0020 with a `file.get`/`file.save` story (ADR-0147) and a component-design story (component specs as snippets beside the guidance, previewed in the Design page's frame, primed to agents).
+
+**One step is yours.** A confirmation does not start a planner, and `flai plan --candidates` does not list E-0020, so I cannot start it. Run `flai plan E-0020`, or use Plan on the dashboard. Its planner then drafts the two stories. S-0383 is waiting on the first one (TH-0454).
+
+I settle the new drafts' plan threads and finalize the consistent ones once they come.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision

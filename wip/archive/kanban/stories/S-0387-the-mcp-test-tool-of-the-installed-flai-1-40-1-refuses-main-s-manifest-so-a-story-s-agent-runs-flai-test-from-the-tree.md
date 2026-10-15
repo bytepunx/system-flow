@@ -3,10 +3,10 @@ id: S-0387
 type: story
 nature: improvement
 title: The MCP test tool of the installed flai 1.40.1 refuses main's manifest, so a story's agent runs flai test from the tree
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-14T20:47:00Z
-updated: 2026-10-15T01:42:39Z
+updated: 2026-10-15T02:28:33Z
 transitions:
   - to: ready
     at: 2026-10-15T01:11:34Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-10-15T01:32:11Z
     by: agent-S-0387
+  - to: review
+    at: 2026-10-15T02:20:43Z
+    by: agent-S-0387
+  - to: done
+    at: 2026-10-15T02:28:33Z
+    by: orchestrator
 tags: []
 topics: [release, cli, mcp, host]
-touches: [design/adrs/0153-flai-serve-upgrades-the-host-s-flai-when-the-project-s-history-has-a-newer-published-release-behind-auto-upgrade.md, design/adrs/README.md, design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/index.md, docs/operators/settings.md, docs/operators/runbooks/update.md, docs/users/flai.md, design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md, design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md]
+touches: [design/adrs/0153-flai-serve-upgrades-the-host-s-flai-when-the-project-s-history-has-a-newer-published-release-behind-auto-upgrade.md, design/adrs/README.md, design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/index.md, docs/operators/settings.md, docs/operators/runbooks/update.md, docs/users/flai.md, design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md, design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md, flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/cmd/serve.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,37 +30,43 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 628
-  estimated: true
-  priced_by: estimate
+  seconds: 2936
+  priced_by: harness
   turns:
     - day: 2026-10-15
-      ceremony: 1
-      work: 17
+      ceremony: 2
+      hand_edits: 1
+      work: 45
   models:
     - model: claude-haiku-5-5
-      input: 158
-      output: 862
-      cache_read: 11303043
-      cache_write: 225814
-      cost: 0.746
+      input: 160
+      output: 54996
+      cache_read: 11528857
+      cache_write: 238837
+      cost: 0.7525
     - model: claude-opus-5-5
-      input: 36
-      output: 326
-      cache_read: 2021544
-      cache_write: 138948
-      cost: 0.9993
+      input: 268
+      output: 105894
+      cache_read: 15494746
+      cache_write: 438127
+      cost: 8.0138
   strategic:
     - kind: orchestrator
-      seconds: 139
+      seconds: 429
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 392
-          cache_read: 5945022
-          cache_write: 25566
-          cost: 1.4967
+          input: 52
+          output: 814
+          cache_read: 12366758
+          cache_write: 39094
+          cost: 3.11
+        - model: claude-sonnet-5-5
+          input: 16
+          output: 83
+          cache_read: 308349
+          cache_write: 61139
+          cost: 0.3024
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m
@@ -80,8 +92,8 @@ finalized:
 This story remediates [I-0141](../../../design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md), "The MCP test tool of the installed flai 1.40.1 refuses main's manifest, so a story's agent runs flai test from the tree". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0141 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0141 is closed with `flai issue close I-0141 --reason` saying what fixed it
+- [x] The cause I-0141 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0141 is closed with `flai issue close I-0141 --reason` saying what fixed it
 
 ## Tasks
 - T-1567 Record the remedy for an outdated host flai in a new ADR and in flai-cli.md § Versions
@@ -123,3 +135,13 @@ Figures:
 
 - **Forecast 1h15m**, raised from flai's 34m: five tasks with an ADR, a host action, and a serve loop that drives the host's upgrade, as S-0372 and S-0374 were raised to 1h for comparable plans. Delivery moves by the 41m added, to 2026-10-15T00:08:00Z.
 - **Cost of delay 10 USD a week**, flai cod's figure from the 4m time_lost_per_cycle input at 150 USD an hour, kept: both instances were worked around in about 2m each.
+
+### Accepted by the orchestrator
+
+- Verified: 626b4f55f67531a0f7ff536a9c5792ccf41b0d16
+- At: 2026-10-15T02:28:33Z
+
+Verdict: meets both criteria; flai verify passed every step at 626b4f55; every changed path is within the story's touches, none under .claude/; auto-upgrade is off by default and shell-only, as the operator approved on TH-0447 (ADR-0158).
+
+- 1: design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md, design/adrs/README.md, design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/cmd/serve.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/cmd/test.go, flai/cmd/test_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, docs/operators/index.md, docs/operators/settings.md, docs/operators/runbooks/update.md, docs/users/flai.md
+- 2: design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md

@@ -4,10 +4,10 @@ title: "S-0387 holds S-0385 on overlap alone: may S-0385 start beside it?"
 from: S-0385
 to: S-0387
 about: [docs/operators/settings.md]
-status: open
-participants: [flai]
+status: closed
+participants: [flai, agent-S-0387, orchestrator]
 created: 2026-10-15T01:32:59Z
-updated: 2026-10-15T01:32:59Z
+updated: 2026-10-15T02:28:33Z
 ---
 
 # MS-0124 S-0387 holds S-0385 on overlap alone: may S-0385 start beside it?
@@ -30,3 +30,9 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0387 --remove <path>`, or on the task that names the path, if S-0387 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0124 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0385 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0385 waits until S-0387 moves to review, is cancelled, or is sent back.
+
+### 2026-10-15T02:20:51Z agent-S-0387 S-0387
+S-0387 is now in review, so it no longer holds S-0385. In `docs/operators/settings.md`, S-0387 changed only the `host_actions.<name>` row: it adds `auto-upgrade` to the list and one sentence on what it does. S-0385 can change the rest freely.
+
+### 2026-10-15T02:28:33Z orchestrator
+Closed: S-0387 was accepted
