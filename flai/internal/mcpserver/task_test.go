@@ -320,8 +320,9 @@ func TestTaskDoneAnswersAFailedCheck(t *testing.T) {
 }
 
 // I-0127, ADR-0142: task_done on a server whose flai is a minor version
-// behind the newest flai release in the project's history is a tool error
-// naming the upgrade, and leaves the task open and its changes uncommitted.
+// behind the newest flai release in the project's history, with no installed
+// flai known to close it instead (ADR-0160), is a tool error naming the
+// upgrade, and leaves the task open and its changes uncommitted.
 func TestTaskDoneRefusesAFlaiAMinorVersionBehind(t *testing.T) {
 	repo, wt := closeProject(t)
 	gitIn(t, repo.Root, "tag", "flai/v1.10.0")
@@ -330,7 +331,7 @@ func TestTaskDoneRefusesAFlaiAMinorVersionBehind(t *testing.T) {
 	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Version: "1.9.3", Now: func() time.Time { return closeClock }})
 
 	out, failed := (&fixture{repo: repo, cs: cs}).call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
-	if !strings.Contains(failed, "this flai is 1.9.3, a minor version behind flai 1.10.0") || !strings.Contains(failed, buildinfo.UpgradeCommand) {
+	if !strings.Contains(failed, "this flai is 1.9.3, a minor version behind flai 1.10.0") || !strings.Contains(failed, buildinfo.UpgradeCommand) || !strings.Contains(failed, "no installed flai is known") {
 		t.Fatalf("answered %v, failed %q", out, failed)
 	}
 	if st := t003(t, repo); st != workitem.InProgress {

@@ -90,6 +90,10 @@ type Result struct {
 	Stopped string `json:"stopped"`
 	// Error says why that step failed and what to do.
 	Error string `json:"error,omitempty"`
+	// ClosedBy is set only by the MCP tool task_done when the installed flai
+	// closed the task in place of an outdated server's (ADR-0160), naming its
+	// version and path, such as "flai 1.50.1 at /home/u/.flai/bin/flai".
+	ClosedBy string `json:"closed_by,omitempty"`
 }
 
 // Commit is the commit step's commit; Result.Commit is nil when there was
@@ -260,27 +264,53 @@ func start(o Options) (*run, error) {
 	return r, nil
 }
 
-// refuseOutdated refuses to close the task while the running flai's major or
-// minor version is behind the newest flai release in the project's history
-// (ADR-0142); a patch behind, or a build that is not a release, closes it.
+// OutdatedError is Run's refusal to close a task while the running flai's
+// major or minor version is behind the newest flai release in the project's
+// history (ADR-0142).
+type OutdatedError struct {
+	Task    string // the task not closed
+	Running string // the running flai's version
+	Newest  string // the newest flai release in the project's history
+	Behind  string // "major" or "minor"
+	Upgrade string // the command that upgrades the host's flai
+}
+
+func (e *OutdatedError) Error() string {
+	return fmt.Sprintf("flai task done refuses to close %s: this flai is %s, a %s version behind flai %s in the project's history, and would close it by older rules (ADR-0142); upgrade it with %s and close it again",
+		e.Task, e.Running, e.Behind, e.Newest, e.Upgrade)
+}
+
+// BehindRelease says how far version is behind the release newest by
+// ADR-0142's rule: "major" or "minor", or "" when it is not, when it is only
+// a patch behind, or when either is not a release, such as dev.
+func BehindRelease(version, newest string) string {
+	v, ok := buildinfo.Semver(version)
+	n, ok2 := buildinfo.Semver(newest)
+	switch {
+	case !ok || !ok2 || v[0] > n[0]:
+		return ""
+	case v[0] < n[0]:
+		return "major"
+	case v[1] < n[1]:
+		return "minor"
+	}
+	return ""
+}
+
+// refuseOutdated refuses to close the task with an *OutdatedError while the
+// running flai's major or minor version is behind the newest flai release in
+// the project's history (ADR-0142); a patch behind, or a build that is not a
+// release, closes it.
 func refuseOutdated(o Options, task string) error {
 	out := release.FlaiOutdated(o.Runner, mainRoot(o.Repo), o.Version)
 	if out == nil {
 		return nil
 	}
-	running, _ := buildinfo.Semver(out.Running)
-	newest, _ := buildinfo.Semver(out.Newest)
-	var behind string
-	switch {
-	case running[0] < newest[0]:
-		behind = "major"
-	case running[1] < newest[1]:
-		behind = "minor"
-	default:
+	behind := BehindRelease(out.Running, out.Newest)
+	if behind == "" {
 		return nil
 	}
-	return fmt.Errorf("flai task done refuses to close %s: this flai is %s, a %s version behind flai %s in the project's history, and would close it by older rules (ADR-0142); upgrade it with %s and close it again",
-		task, out.Running, behind, out.Newest, out.Upgrade)
+	return &OutdatedError{Task: task, Running: out.Running, Newest: out.Newest, Behind: behind, Upgrade: out.Upgrade}
 }
 
 // again is the command that runs this close again.

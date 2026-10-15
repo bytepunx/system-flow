@@ -150,11 +150,12 @@ func (a *app) serveMCPHTTP(ctx context.Context, repo *workitem.Repo, addr string
 		log.Warn("listening beyond this machine: the token travels in every request and flai does not encrypt it, so put a proxy or tunnel that terminates TLS in front", "addr", addr)
 	}
 	closing := make(chan struct{})
+	installed := a.mcpInstalled()
 	handler := mcphttp.Handler(mcphttp.Options{
 		Token: token, ProjectKey: repo.Manifest.Key, ProjectName: repo.Manifest.Name,
 		MaxSessions: maxSessions, Idle: idle, Logger: log,
 		NewServer: func(agent string) *mcp.Server {
-			return mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Activities: a.mcpActivity, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees})
+			return mcpserver.New(mcpserver.Options{Repo: repo, Agent: agent, Version: buildinfo.Version, Now: a.now, Runner: a.runner, Closing: closing, Logger: a.logger(), Agents: a.mcpAgents, Plans: a.mcpPlan, Analyses: a.mcpAnalyze, Activities: a.mcpActivity, Publish: a.mcpPublisher(), RelativePaths: a.relativeWorktrees, Installed: installed})
 		},
 	})
 	mux := http.NewServeMux()

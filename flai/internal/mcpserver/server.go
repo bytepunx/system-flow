@@ -93,6 +93,11 @@ type Options struct {
 	// relative paths, as flai stream open does (S-0274); nil links an
 	// ordinary one.
 	RelativePaths func() bool
+	// Installed is the path of the flai binary this server was started from,
+	// which task_done runs to close a task when this server's flai is
+	// outdated and that one has caught up (ADR-0160); empty when none is
+	// known.
+	Installed string
 }
 
 type server struct {
@@ -128,6 +133,9 @@ type server struct {
 	// relative paths (S-0274)
 	relativePaths func() bool
 	logger        *slog.Logger // nil logs nothing
+	// installed is the flai binary this server was started from, which
+	// task_done closes with while this one is outdated (ADR-0160)
+	installed string
 
 	// when wait_for_work last answered: a thread written to since then wakes it
 	workMu    sync.Mutex
@@ -136,7 +144,7 @@ type server struct {
 
 // newServer is the server for one project, with the defaults filled in.
 func newServer(opt Options, repo *workitem.Repo) *server {
-	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger}
+	s := &server{repo: repo, agent: opt.Agent, now: opt.Now, poll: opt.Poll, maxWait: opt.MaxWait, after: opt.After, beat: opt.Heartbeat, runner: opt.Runner, closing: opt.Closing, agents: opt.Agents, plans: opt.Plans, analyses: opt.Analyses, activities: opt.Activities, version: opt.Version, autoApprove: opt.AutoApprove, publish: opt.Publish, relativePaths: opt.RelativePaths, logger: opt.Logger, installed: opt.Installed}
 	if repo.Git == nil {
 		repo.Git = opt.Runner // item_move asks git whether a story's worktree is committed (S-0140)
 	}

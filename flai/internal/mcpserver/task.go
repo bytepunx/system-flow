@@ -2,13 +2,16 @@ package mcpserver
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/taskdone"
 )
 
-const taskDoneDescription = "Close a task in one call from its story's worktree (ADR-0107), with the answer flai task done --json prints. In order: commit with message the paths changed in the worktree that the task's touches cover and those no other open task of the story covers (ADR-0128), leaving uncommitted, and listed in left, those only another open task covers, for its close (nothing to commit is no failure, and needs no message), message each other story in progress or in review whose claim covers a path the commit changed, the shared paths included, naming the task, the commit, its subject, and those paths, and answer them as told (a message that cannot be sent is logged and stops nothing), sync the story's branch as flai stream sync does (a refusal for the paths left alone stops nothing: the close that leaves none syncs it), move the task to done with what moves with it, log message's subject line, or log, or with neither 'Closed T-nnnn: <title>', to the story's narrative, add the paths the commit changed that the story's branch still changes against the main branch, never a path left, to the task's and the story's touches where they do not cover them, listing the committed paths the branch no longer changes in touches.unchanged (ADR-0144), run flai check --strict scoped to the story, and read your inbox, as inbox does. It stops at the first step that fails, and answers stopped naming it, error saying why and what to do, and what the steps before it did; a stop is an answer, not a tool error. After a stopped sync, resolve each conflicting path in the worktree, git add it, run git rebase --continue there, and call again; after a failed check, fix its findings and call again, which commits the fix. A task already done is not moved again. Running the tests and ticking criteria stay yours."
+const taskDoneDescription = "Close a task in one call from its story's worktree (ADR-0107), with the answer flai task done --json prints. In order: commit with message the paths changed in the worktree that the task's touches cover and those no other open task of the story covers (ADR-0128), leaving uncommitted, and listed in left, those only another open task covers, for its close (nothing to commit is no failure, and needs no message), message each other story in progress or in review whose claim covers a path the commit changed, the shared paths included, naming the task, the commit, its subject, and those paths, and answer them as told (a message that cannot be sent is logged and stops nothing), sync the story's branch as flai stream sync does (a refusal for the paths left alone stops nothing: the close that leaves none syncs it), move the task to done with what moves with it, log message's subject line, or log, or with neither 'Closed T-nnnn: <title>', to the story's narrative, add the paths the commit changed that the story's branch still changes against the main branch, never a path left, to the task's and the story's touches where they do not cover them, listing the committed paths the branch no longer changes in touches.unchanged (ADR-0144), run flai check --strict scoped to the story, and read your inbox, as inbox does. It stops at the first step that fails, and answers stopped naming it, error saying why and what to do, and what the steps before it did; a stop is an answer, not a tool error. After a stopped sync, resolve each conflicting path in the worktree, git add it, run git rebase --continue there, and call again; after a failed check, fix its findings and call again, which commits the fix. A task already done is not moved again. When this server's flai is a major or minor version behind the newest flai release in the project's history, which refuses the close (ADR-0142), the flai installed at the path the server started from closes the task instead once it has caught up, answering its result with closed_by naming its version and path; while it is behind too, the close is refused, naming its version: call again once the host is upgraded (ADR-0160). Running the tests and ticking criteria stay yours."
 
 // taskDoneInstructions sends the agent to task_done at every task
 // transition (ADR-0107).
@@ -30,14 +33,46 @@ type TaskDoneOut = taskdone.Result
 
 // taskDone closes the task as the server's agent. A step that fails is the
 // answer's stopped and error; only a close that cannot start is the tool's
-// error.
+// error. A close this server's outdated flai refuses goes to the installed
+// flai (ADR-0160).
 func (s *server) taskDone(ctx context.Context, _ *mcp.CallToolRequest, in TaskDoneIn) (*mcp.CallToolResult, TaskDoneOut, error) {
 	res, err := taskdone.Run(ctx, taskdone.Options{
 		Repo: s.repo, Runner: s.runner, Task: in.Task, Message: in.Message, LogEntry: in.Log,
 		Agent: s.agent, Session: s.session, Now: s.now, Version: s.version, Logger: s.logger,
 	})
+	var outdated *taskdone.OutdatedError
+	if errors.As(err, &outdated) {
+		return s.closeWithInstalled(ctx, in, outdated)
+	}
 	if err != nil {
 		return nil, TaskDoneOut{}, err
+	}
+	return nil, res, nil
+}
+
+// closeWithInstalled closes the task that refusal refused with the flai
+// installed at the path this server was started from, when that flai has
+// caught up with the newest release; otherwise it refuses, naming the
+// installed flai's version or why it could not be read (ADR-0160).
+func (s *server) closeWithInstalled(ctx context.Context, in TaskDoneIn, refusal *taskdone.OutdatedError) (*mcp.CallToolResult, TaskDoneOut, error) {
+	if s.installed == "" {
+		return nil, TaskDoneOut{}, fmt.Errorf("%w; no installed flai is known to close it with (ADR-0160)", refusal)
+	}
+	f := installedFlai{path: s.installed, dir: projectRoot(s.repo), env: append(os.Environ(), "FLAI_AGENT="+s.agent, "FLAI_SESSION="+s.session)}
+	version, err := f.version(ctx)
+	if err != nil {
+		return nil, TaskDoneOut{}, fmt.Errorf("%w; the installed flai at %s could not be read (%w), so it cannot close it either; call task_done again once the host is upgraded (ADR-0160)", refusal, s.installed, err)
+	}
+	if taskdone.BehindRelease(version, refusal.Newest) != "" {
+		return nil, TaskDoneOut{}, fmt.Errorf("%w; the installed flai at %s is %s, behind too; call task_done again once the host is upgraded (ADR-0160)", refusal, s.installed, version)
+	}
+	res, err := f.taskDone(ctx, in)
+	if err != nil {
+		return nil, TaskDoneOut{}, err
+	}
+	res.ClosedBy = fmt.Sprintf("flai %s at %s", version, s.installed)
+	if s.logger != nil {
+		s.logger.Info("task closed with the installed flai", "component", "mcp", "agent", s.agent, "task", res.Task, "running", refusal.Running, "installed", version, "path", s.installed, "stopped", res.Stopped)
 	}
 	return nil, res, nil
 }

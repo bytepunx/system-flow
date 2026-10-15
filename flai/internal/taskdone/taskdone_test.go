@@ -3,6 +3,7 @@ package taskdone
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -964,6 +965,13 @@ func TestRunRefusesAMinorOrMajorVersionBehind(t *testing.T) {
 					t.Errorf("error lacks %q: %v", want, err)
 				}
 			}
+			var outdated *OutdatedError
+			if !errors.As(err, &outdated) {
+				t.Fatalf("the refusal is not an *OutdatedError: %T", err)
+			}
+			if want := (OutdatedError{Task: "T-003", Running: tc.running, Newest: "1.10.0", Behind: tc.behind, Upgrade: buildinfo.UpgradeCommand}); *outdated != want {
+				t.Errorf("refusal %+v, want %+v", *outdated, want)
+			}
 			if res.Task != "T-003" || res.Commit != nil || res.Move != nil || res.Log != nil || res.Touches != nil {
 				t.Errorf("a step ran: %+v", res)
 			}
@@ -1019,5 +1027,27 @@ func TestRunClosesWithinAPatchOfTheNewestRelease(t *testing.T) {
 				t.Errorf("the inbox warns %v (%+v), want %v", warned, res.Inbox.FlaiOutdated, tc.warned)
 			}
 		})
+	}
+}
+
+// ADR-0142, ADR-0160: BehindRelease is the refusal's rule, which the MCP
+// tool task_done applies to the installed flai too: a major or a minor
+// version behind is behind; a patch behind, the same, a newer version, or a
+// build that is not a release is not.
+func TestBehindRelease(t *testing.T) {
+	for _, tc := range []struct{ version, newest, want string }{
+		{"1.9.3", "1.10.0", "minor"},
+		{"v1.9.3", "1.10.0", "minor"},
+		{"0.12.0", "1.10.0", "major"},
+		{"1.10.0", "1.10.0", ""},
+		{"1.10.0", "1.10.2", ""},
+		{"1.11.0", "1.10.2", ""},
+		{"2.0.0", "1.10.2", ""},
+		{"dev", "1.10.0", ""},
+		{"1.9.3", "dev", ""},
+	} {
+		if got := BehindRelease(tc.version, tc.newest); got != tc.want {
+			t.Errorf("BehindRelease(%q, %q) = %q, want %q", tc.version, tc.newest, got, tc.want)
+		}
 	}
 }
