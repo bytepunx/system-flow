@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-10-15T00:09:10Z
+updated: 2026-10-15T00:09:29Z
 ---
 
 # Active streams
@@ -8,7 +8,7 @@ updated: 2026-10-15T00:09:10Z
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
 | [S-0306](S-0306.md) | Two stories that each add an ADR conflict in design/adrs/README.md, whose index both append a row to, and flai opens a thread for each sync that finds it | in-progress | agent-S-0306 | 2026-10-14T23:28:52Z |
-| [S-0381](S-0381.md) | A project's design tokens are a DTCG file the manifest names, beside its guidance, and flai validates them, renders them as CSS, reports their contrast, and serves them to the dashboard | in-progress | agent-S-0381 | 2026-10-14T23:57:54Z |
+| [S-0381](S-0381.md) | A project's design tokens are a DTCG file the manifest names, beside its guidance, and flai validates them, renders them as CSS, reports their contrast, and serves them to the dashboard | in-progress | agent-S-0381 | 2026-10-15T00:09:25Z |
 
 ## Strategic agents
 
