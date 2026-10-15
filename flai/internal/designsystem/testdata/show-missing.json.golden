@@ -1,0 +1,13 @@
+{
+  "path": "design/system/design-system.tokens.json",
+  "exists": false,
+  "no_token_file": "there is no token file at design/system/design-system.tokens.json; run flai design init to write one and its guidance",
+  "guidance": "",
+  "headings": [],
+  "resolver": false,
+  "themes": [],
+  "problems": [],
+  "css": "",
+  "tailwind": "",
+  "contrast": []
+}

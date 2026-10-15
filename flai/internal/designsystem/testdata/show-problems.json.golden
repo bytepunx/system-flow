@@ -1,0 +1,384 @@
+{
+  "path": "design/system/design-system.tokens.json",
+  "exists": true,
+  "guidance": "design/system/design-system.md",
+  "headings": [
+    "Design system",
+    "Colour",
+    "Type"
+  ],
+  "resolver": false,
+  "themes": [
+    {
+      "name": "light",
+      "tokens": [
+        {
+          "path": "color.brandSun",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.961,
+              0.718,
+              0
+            ],
+            "hex": "#f5b700"
+          },
+          "css": "",
+          "variables": [],
+          "line": 4
+        },
+        {
+          "path": "color.text",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.21,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(21% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-text",
+              "value": "oklch(21% 0.02 265)"
+            }
+          ],
+          "line": 5
+        },
+        {
+          "path": "color.background",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              1,
+              1,
+              1
+            ],
+            "hex": "#ffffff"
+          },
+          "css": "#ffffff",
+          "variables": [
+            {
+              "name": "--color-background",
+              "value": "#ffffff"
+            }
+          ],
+          "line": 6
+        },
+        {
+          "path": "color.link",
+          "type": "color",
+          "value": "{color.nowhere}",
+          "css": "",
+          "variables": [],
+          "ref": "color.nowhere",
+          "line": 7
+        },
+        {
+          "path": "spacing",
+          "type": "dimension",
+          "value": "0.25rem",
+          "css": "",
+          "variables": [],
+          "line": 9
+        }
+      ]
+    },
+    {
+      "name": "dark",
+      "tokens": [
+        {
+          "path": "color.brandSun",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.961,
+              0.718,
+              0
+            ],
+            "hex": "#f5b700"
+          },
+          "css": "",
+          "variables": [],
+          "line": 4
+        },
+        {
+          "path": "color.text",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.21,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(21% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-text",
+              "value": "oklch(21% 0.02 265)"
+            }
+          ],
+          "line": 5
+        },
+        {
+          "path": "color.background",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              1,
+              1,
+              1
+            ],
+            "hex": "#ffffff"
+          },
+          "css": "#ffffff",
+          "variables": [
+            {
+              "name": "--color-background",
+              "value": "#ffffff"
+            }
+          ],
+          "line": 6
+        },
+        {
+          "path": "color.link",
+          "type": "color",
+          "value": "{color.nowhere}",
+          "css": "",
+          "variables": [],
+          "ref": "color.nowhere",
+          "line": 7
+        },
+        {
+          "path": "spacing",
+          "type": "dimension",
+          "value": "0.25rem",
+          "css": "",
+          "variables": [],
+          "line": 9
+        }
+      ]
+    }
+  ],
+  "problems": [
+    {
+      "path": "font.mono",
+      "line": 1,
+      "message": "font.mono is required; add it"
+    },
+    {
+      "path": "font.sans",
+      "line": 1,
+      "message": "font.sans is required; add it"
+    },
+    {
+      "path": "radius.lg",
+      "line": 1,
+      "message": "radius.lg is required; add it"
+    },
+    {
+      "path": "radius.md",
+      "line": 1,
+      "message": "radius.md is required; add it"
+    },
+    {
+      "path": "radius.sm",
+      "line": 1,
+      "message": "radius.sm is required; add it"
+    },
+    {
+      "path": "shadow.lg",
+      "line": 1,
+      "message": "shadow.lg is required; add it"
+    },
+    {
+      "path": "shadow.md",
+      "line": 1,
+      "message": "shadow.md is required; add it"
+    },
+    {
+      "path": "shadow.sm",
+      "line": 1,
+      "message": "shadow.sm is required; add it"
+    },
+    {
+      "path": "text.2xl",
+      "line": 1,
+      "message": "text.2xl is required; add it"
+    },
+    {
+      "path": "text.3xl",
+      "line": 1,
+      "message": "text.3xl is required; add it"
+    },
+    {
+      "path": "text.4xl",
+      "line": 1,
+      "message": "text.4xl is required; add it"
+    },
+    {
+      "path": "text.base",
+      "line": 1,
+      "message": "text.base is required; add it"
+    },
+    {
+      "path": "text.lg",
+      "line": 1,
+      "message": "text.lg is required; add it"
+    },
+    {
+      "path": "text.sm",
+      "line": 1,
+      "message": "text.sm is required; add it"
+    },
+    {
+      "path": "text.xl",
+      "line": 1,
+      "message": "text.xl is required; add it"
+    },
+    {
+      "path": "text.xs",
+      "line": 1,
+      "message": "text.xs is required; add it"
+    },
+    {
+      "path": "color.border",
+      "line": 2,
+      "message": "color.border is required; add it"
+    },
+    {
+      "path": "color.danger",
+      "line": 2,
+      "message": "color.danger is required; add it"
+    },
+    {
+      "path": "color.danger-soft",
+      "line": 2,
+      "message": "color.danger-soft is required; add it"
+    },
+    {
+      "path": "color.focus",
+      "line": 2,
+      "message": "color.focus is required; add it"
+    },
+    {
+      "path": "color.info",
+      "line": 2,
+      "message": "color.info is required; add it"
+    },
+    {
+      "path": "color.info-soft",
+      "line": 2,
+      "message": "color.info-soft is required; add it"
+    },
+    {
+      "path": "color.on-primary",
+      "line": 2,
+      "message": "color.on-primary is required; add it"
+    },
+    {
+      "path": "color.on-secondary",
+      "line": 2,
+      "message": "color.on-secondary is required; add it"
+    },
+    {
+      "path": "color.primary",
+      "line": 2,
+      "message": "color.primary is required; add it"
+    },
+    {
+      "path": "color.secondary",
+      "line": 2,
+      "message": "color.secondary is required; add it"
+    },
+    {
+      "path": "color.success",
+      "line": 2,
+      "message": "color.success is required; add it"
+    },
+    {
+      "path": "color.success-soft",
+      "line": 2,
+      "message": "color.success-soft is required; add it"
+    },
+    {
+      "path": "color.surface",
+      "line": 2,
+      "message": "color.surface is required; add it"
+    },
+    {
+      "path": "color.text-muted",
+      "line": 2,
+      "message": "color.text-muted is required; add it"
+    },
+    {
+      "path": "color.warning",
+      "line": 2,
+      "message": "color.warning is required; add it"
+    },
+    {
+      "path": "color.warning-soft",
+      "line": 2,
+      "message": "color.warning-soft is required; add it"
+    },
+    {
+      "path": "color.brandSun",
+      "line": 4,
+      "message": "the name \"brandSun\" cannot be part of the CSS custom property flai renders the token as; rename it brand-sun, in lower-case letters, digits, and hyphens, starting with a letter or digit"
+    },
+    {
+      "path": "color.link",
+      "line": 7,
+      "message": "the reference {color.nowhere} does not resolve: no token has the path color.nowhere; name a token the file defines"
+    },
+    {
+      "path": "spacing",
+      "line": 9,
+      "message": "a dimension is an object such as {\"value\": 0.25, \"unit\": \"rem\"}, not a string"
+    }
+  ],
+  "css": ":root {\n  --color-text: oklch(21% 0.02 265);\n  --color-background: #ffffff;\n}\n\n[data-theme='dark'] {\n  --color-text: oklch(21% 0.02 265);\n  --color-background: #ffffff;\n}\n",
+  "tailwind": "@theme {\n  --color-text: oklch(21% 0.02 265);\n  --color-background: #ffffff;\n}\n",
+  "contrast": [
+    {
+      "theme": "light",
+      "pairs": [
+        {
+          "theme": "light",
+          "foreground": "color.text",
+          "background": "color.background",
+          "foreground_hex": "#141822",
+          "background_hex": "#ffffff",
+          "ratio": 17.74,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "pairs": [
+        {
+          "theme": "dark",
+          "foreground": "color.text",
+          "background": "color.background",
+          "foreground_hex": "#141822",
+          "background_hex": "#ffffff",
+          "ratio": 17.74,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        }
+      ]
+    }
+  ]
+}

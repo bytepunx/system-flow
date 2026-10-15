@@ -1,0 +1,2254 @@
+{
+  "path": "design/system/design-system.tokens.json",
+  "exists": true,
+  "guidance": "design/system/design-system.md",
+  "headings": [
+    "Design system",
+    "Colour",
+    "Type"
+  ],
+  "resolver": true,
+  "themes": [
+    {
+      "name": "light",
+      "tokens": [
+        {
+          "path": "color.background",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              1,
+              1,
+              1
+            ],
+            "hex": "#ffffff"
+          },
+          "css": "#ffffff",
+          "variables": [
+            {
+              "name": "--color-background",
+              "value": "#ffffff"
+            }
+          ],
+          "line": 10
+        },
+        {
+          "path": "color.surface",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.96,
+              0.96,
+              0.97
+            ],
+            "hex": "#f5f5f7"
+          },
+          "css": "#f5f5f7",
+          "variables": [
+            {
+              "name": "--color-surface",
+              "value": "#f5f5f7"
+            }
+          ],
+          "line": 11
+        },
+        {
+          "path": "color.text",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.21,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(21% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-text",
+              "value": "oklch(21% 0.02 265)"
+            }
+          ],
+          "line": 12
+        },
+        {
+          "path": "color.text-muted",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.45,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(45% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-text-muted",
+              "value": "oklch(45% 0.02 265)"
+            }
+          ],
+          "line": 13
+        },
+        {
+          "path": "color.border",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.8,
+              0.8,
+              0.82
+            ],
+            "hex": "#ccccd1"
+          },
+          "css": "#ccccd1",
+          "variables": [
+            {
+              "name": "--color-border",
+              "value": "#ccccd1"
+            }
+          ],
+          "line": 14
+        },
+        {
+          "path": "color.primary",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.52,
+              0.18,
+              255
+            ]
+          },
+          "css": "oklch(52% 0.18 255)",
+          "variables": [
+            {
+              "name": "--color-primary",
+              "value": "oklch(52% 0.18 255)"
+            }
+          ],
+          "line": 15
+        },
+        {
+          "path": "color.on-primary",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              1,
+              1,
+              1
+            ],
+            "hex": "#ffffff"
+          },
+          "css": "#ffffff",
+          "variables": [
+            {
+              "name": "--color-on-primary",
+              "value": "#ffffff"
+            }
+          ],
+          "line": 16
+        },
+        {
+          "path": "color.secondary",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.45,
+              0.05,
+              200
+            ]
+          },
+          "css": "oklch(45% 0.05 200)",
+          "variables": [
+            {
+              "name": "--color-secondary",
+              "value": "oklch(45% 0.05 200)"
+            }
+          ],
+          "line": 17
+        },
+        {
+          "path": "color.on-secondary",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              1,
+              1,
+              1
+            ],
+            "hex": "#ffffff"
+          },
+          "css": "#ffffff",
+          "variables": [
+            {
+              "name": "--color-on-secondary",
+              "value": "#ffffff"
+            }
+          ],
+          "line": 18
+        },
+        {
+          "path": "color.focus",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.6,
+              0.2,
+              255
+            ]
+          },
+          "css": "oklch(60% 0.2 255)",
+          "variables": [
+            {
+              "name": "--color-focus",
+              "value": "oklch(60% 0.2 255)"
+            }
+          ],
+          "line": 19
+        },
+        {
+          "path": "color.success",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.5,
+              0.13,
+              150
+            ]
+          },
+          "css": "oklch(50% 0.13 150)",
+          "variables": [
+            {
+              "name": "--color-success",
+              "value": "oklch(50% 0.13 150)"
+            }
+          ],
+          "line": 20
+        },
+        {
+          "path": "color.success-soft",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.95,
+              0.04,
+              150
+            ]
+          },
+          "css": "oklch(95% 0.04 150)",
+          "variables": [
+            {
+              "name": "--color-success-soft",
+              "value": "oklch(95% 0.04 150)"
+            }
+          ],
+          "line": 21
+        },
+        {
+          "path": "color.warning",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.55,
+              0.12,
+              70
+            ]
+          },
+          "css": "oklch(55% 0.12 70)",
+          "variables": [
+            {
+              "name": "--color-warning",
+              "value": "oklch(55% 0.12 70)"
+            }
+          ],
+          "line": 22
+        },
+        {
+          "path": "color.warning-soft",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.96,
+              0.05,
+              90
+            ]
+          },
+          "css": "oklch(96% 0.05 90)",
+          "variables": [
+            {
+              "name": "--color-warning-soft",
+              "value": "oklch(96% 0.05 90)"
+            }
+          ],
+          "line": 23
+        },
+        {
+          "path": "color.danger",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.52,
+              0.19,
+              25
+            ]
+          },
+          "css": "oklch(52% 0.19 25)",
+          "variables": [
+            {
+              "name": "--color-danger",
+              "value": "oklch(52% 0.19 25)"
+            }
+          ],
+          "line": 24
+        },
+        {
+          "path": "color.danger-soft",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.95,
+              0.03,
+              25
+            ]
+          },
+          "css": "oklch(95% 0.03 25)",
+          "variables": [
+            {
+              "name": "--color-danger-soft",
+              "value": "oklch(95% 0.03 25)"
+            }
+          ],
+          "line": 25
+        },
+        {
+          "path": "color.info",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.5,
+              0.12,
+              240
+            ]
+          },
+          "css": "oklch(50% 0.12 240)",
+          "variables": [
+            {
+              "name": "--color-info",
+              "value": "oklch(50% 0.12 240)"
+            }
+          ],
+          "line": 26
+        },
+        {
+          "path": "color.info-soft",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.95,
+              0.03,
+              240
+            ]
+          },
+          "css": "oklch(95% 0.03 240)",
+          "variables": [
+            {
+              "name": "--color-info-soft",
+              "value": "oklch(95% 0.03 240)"
+            }
+          ],
+          "line": 27
+        },
+        {
+          "path": "color.scrim",
+          "type": "color",
+          "value": {
+            "alpha": 0.4,
+            "colorSpace": "srgb",
+            "components": [
+              0,
+              0,
+              0
+            ],
+            "hex": "#000000"
+          },
+          "css": "#00000066",
+          "variables": [
+            {
+              "name": "--color-scrim",
+              "value": "#00000066"
+            }
+          ],
+          "line": 28
+        },
+        {
+          "path": "color.link",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.52,
+              0.18,
+              255
+            ]
+          },
+          "css": "oklch(52% 0.18 255)",
+          "variables": [
+            {
+              "name": "--color-link",
+              "value": "oklch(52% 0.18 255)"
+            }
+          ],
+          "ref": "color.primary",
+          "line": 29
+        },
+        {
+          "path": "font.sans",
+          "type": "fontFamily",
+          "value": [
+            "Inter Variable",
+            "Inter",
+            "ui-sans-serif",
+            "system-ui",
+            "sans-serif",
+            "Apple Color Emoji"
+          ],
+          "css": "\"Inter Variable\", Inter, ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\"",
+          "variables": [
+            {
+              "name": "--font-sans",
+              "value": "\"Inter Variable\", Inter, ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\""
+            }
+          ],
+          "line": 33
+        },
+        {
+          "path": "font.mono",
+          "type": "fontFamily",
+          "value": [
+            "JetBrains Mono",
+            "ui-monospace",
+            "monospace"
+          ],
+          "css": "\"JetBrains Mono\", ui-monospace, monospace",
+          "variables": [
+            {
+              "name": "--font-mono",
+              "value": "\"JetBrains Mono\", ui-monospace, monospace"
+            }
+          ],
+          "line": 34
+        },
+        {
+          "path": "text.xs",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 0.75
+            },
+            "lineHeight": 1.333
+          },
+          "css": "0.75rem",
+          "variables": [
+            {
+              "name": "--text-xs",
+              "value": "0.75rem"
+            },
+            {
+              "name": "--text-xs--line-height",
+              "value": "1.333"
+            }
+          ],
+          "line": 38
+        },
+        {
+          "path": "text.sm",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 0.875
+            },
+            "lineHeight": {
+              "unit": "rem",
+              "value": 1.25
+            }
+          },
+          "css": "0.875rem",
+          "variables": [
+            {
+              "name": "--text-sm",
+              "value": "0.875rem"
+            },
+            {
+              "name": "--text-sm--line-height",
+              "value": "1.25rem"
+            }
+          ],
+          "line": 39
+        },
+        {
+          "path": "text.base",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 1
+            },
+            "fontWeight": 400,
+            "letterSpacing": {
+              "unit": "px",
+              "value": 0
+            },
+            "lineHeight": 1.5
+          },
+          "css": "1rem",
+          "variables": [
+            {
+              "name": "--text-base",
+              "value": "1rem"
+            },
+            {
+              "name": "--text-base--line-height",
+              "value": "1.5"
+            },
+            {
+              "name": "--text-base--font-weight",
+              "value": "400"
+            },
+            {
+              "name": "--text-base--letter-spacing",
+              "value": "0px"
+            }
+          ],
+          "line": 40
+        },
+        {
+          "path": "text.lg",
+          "type": "dimension",
+          "value": {
+            "unit": "rem",
+            "value": 1.125
+          },
+          "css": "1.125rem",
+          "variables": [
+            {
+              "name": "--text-lg",
+              "value": "1.125rem"
+            }
+          ],
+          "line": 41
+        },
+        {
+          "path": "text.xl",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 1.25
+            },
+            "fontWeight": "semi-bold",
+            "lineHeight": 1.4
+          },
+          "css": "1.25rem",
+          "variables": [
+            {
+              "name": "--text-xl",
+              "value": "1.25rem"
+            },
+            {
+              "name": "--text-xl--line-height",
+              "value": "1.4"
+            },
+            {
+              "name": "--text-xl--font-weight",
+              "value": "600"
+            }
+          ],
+          "line": 42
+        },
+        {
+          "path": "text.2xl",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 1.5
+            },
+            "lineHeight": 1.333
+          },
+          "css": "1.5rem",
+          "variables": [
+            {
+              "name": "--text-2xl",
+              "value": "1.5rem"
+            },
+            {
+              "name": "--text-2xl--line-height",
+              "value": "1.333"
+            }
+          ],
+          "line": 43
+        },
+        {
+          "path": "text.3xl",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "px",
+              "value": 30
+            },
+            "lineHeight": 1.2
+          },
+          "css": "30px",
+          "variables": [
+            {
+              "name": "--text-3xl",
+              "value": "30px"
+            },
+            {
+              "name": "--text-3xl--line-height",
+              "value": "1.2"
+            }
+          ],
+          "line": 44
+        },
+        {
+          "path": "text.4xl",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 2.25
+            },
+            "letterSpacing": {
+              "unit": "rem",
+              "value": -0.025
+            },
+            "lineHeight": 1.111
+          },
+          "css": "2.25rem",
+          "variables": [
+            {
+              "name": "--text-4xl",
+              "value": "2.25rem"
+            },
+            {
+              "name": "--text-4xl--line-height",
+              "value": "1.111"
+            },
+            {
+              "name": "--text-4xl--letter-spacing",
+              "value": "-0.025rem"
+            }
+          ],
+          "line": 45
+        },
+        {
+          "path": "spacing",
+          "type": "dimension",
+          "value": {
+            "unit": "rem",
+            "value": 0.25
+          },
+          "css": "0.25rem",
+          "variables": [
+            {
+              "name": "--spacing",
+              "value": "0.25rem"
+            }
+          ],
+          "line": 47
+        },
+        {
+          "path": "radius.sm",
+          "type": "dimension",
+          "value": {
+            "unit": "rem",
+            "value": 0.25
+          },
+          "css": "0.25rem",
+          "variables": [
+            {
+              "name": "--radius-sm",
+              "value": "0.25rem"
+            }
+          ],
+          "line": 50
+        },
+        {
+          "path": "radius.md",
+          "type": "dimension",
+          "value": {
+            "unit": "rem",
+            "value": 0.375
+          },
+          "css": "0.375rem",
+          "variables": [
+            {
+              "name": "--radius-md",
+              "value": "0.375rem"
+            }
+          ],
+          "line": 51
+        },
+        {
+          "path": "radius.lg",
+          "type": "dimension",
+          "value": {
+            "unit": "px",
+            "value": 8
+          },
+          "css": "8px",
+          "variables": [
+            {
+              "name": "--radius-lg",
+              "value": "8px"
+            }
+          ],
+          "line": 52
+        },
+        {
+          "path": "shadow.sm",
+          "type": "shadow",
+          "value": {
+            "blur": {
+              "unit": "px",
+              "value": 2
+            },
+            "color": {
+              "alpha": 0.05,
+              "colorSpace": "srgb",
+              "components": [
+                0,
+                0,
+                0
+              ],
+              "hex": "#000000"
+            },
+            "offsetX": {
+              "unit": "px",
+              "value": 0
+            },
+            "offsetY": {
+              "unit": "px",
+              "value": 1
+            },
+            "spread": {
+              "unit": "px",
+              "value": 0
+            }
+          },
+          "css": "0px 1px 2px 0px #0000000d",
+          "variables": [
+            {
+              "name": "--shadow-sm",
+              "value": "0px 1px 2px 0px #0000000d"
+            }
+          ],
+          "line": 56
+        },
+        {
+          "path": "shadow.md",
+          "type": "shadow",
+          "value": [
+            {
+              "blur": {
+                "unit": "px",
+                "value": 6
+              },
+              "color": {
+                "alpha": 0.1,
+                "colorSpace": "oklch",
+                "components": [
+                  0,
+                  0,
+                  "none"
+                ]
+              },
+              "offsetX": {
+                "unit": "px",
+                "value": 0
+              },
+              "offsetY": {
+                "unit": "px",
+                "value": 4
+              },
+              "spread": {
+                "unit": "px",
+                "value": -1
+              }
+            },
+            {
+              "blur": {
+                "unit": "px",
+                "value": 4
+              },
+              "color": {
+                "alpha": 0.1,
+                "colorSpace": "oklch",
+                "components": [
+                  0,
+                  0,
+                  "none"
+                ]
+              },
+              "offsetX": {
+                "unit": "px",
+                "value": 0
+              },
+              "offsetY": {
+                "unit": "px",
+                "value": 2
+              },
+              "spread": {
+                "unit": "px",
+                "value": -2
+              }
+            }
+          ],
+          "css": "0px 4px 6px -1px oklch(0% 0 none / 0.1), 0px 2px 4px -2px oklch(0% 0 none / 0.1)",
+          "variables": [
+            {
+              "name": "--shadow-md",
+              "value": "0px 4px 6px -1px oklch(0% 0 none / 0.1), 0px 2px 4px -2px oklch(0% 0 none / 0.1)"
+            }
+          ],
+          "line": 57
+        },
+        {
+          "path": "shadow.lg",
+          "type": "shadow",
+          "value": {
+            "blur": {
+              "unit": "px",
+              "value": 15
+            },
+            "color": {
+              "alpha": 0.1,
+              "colorSpace": "srgb",
+              "components": [
+                0,
+                0,
+                0
+              ],
+              "hex": "#000000"
+            },
+            "offsetX": {
+              "unit": "px",
+              "value": 0
+            },
+            "offsetY": {
+              "unit": "px",
+              "value": 10
+            },
+            "spread": {
+              "unit": "px",
+              "value": -3
+            }
+          },
+          "css": "0px 10px 15px -3px #0000001a",
+          "variables": [
+            {
+              "name": "--shadow-lg",
+              "value": "0px 10px 15px -3px #0000001a"
+            }
+          ],
+          "line": 61
+        },
+        {
+          "path": "shadow.inner",
+          "type": "shadow",
+          "value": {
+            "blur": {
+              "unit": "px",
+              "value": 4
+            },
+            "color": {
+              "alpha": 0.05,
+              "colorSpace": "srgb",
+              "components": [
+                0,
+                0,
+                0
+              ],
+              "hex": "#000000"
+            },
+            "inset": true,
+            "offsetX": {
+              "unit": "px",
+              "value": 0
+            },
+            "offsetY": {
+              "unit": "px",
+              "value": 2
+            },
+            "spread": {
+              "unit": "px",
+              "value": 0
+            }
+          },
+          "css": "inset 0px 2px 4px 0px #0000000d",
+          "variables": [
+            {
+              "name": "--shadow-inner",
+              "value": "inset 0px 2px 4px 0px #0000000d"
+            }
+          ],
+          "line": 62
+        }
+      ]
+    },
+    {
+      "name": "dark",
+      "tokens": [
+        {
+          "path": "color.background",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.18,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(18% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-background",
+              "value": "oklch(18% 0.02 265)"
+            }
+          ],
+          "line": 76
+        },
+        {
+          "path": "color.surface",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.23,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(23% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-surface",
+              "value": "oklch(23% 0.02 265)"
+            }
+          ],
+          "line": 77
+        },
+        {
+          "path": "color.text",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.96,
+              0.96,
+              0.97
+            ],
+            "hex": "#f5f5f7"
+          },
+          "css": "#f5f5f7",
+          "variables": [
+            {
+              "name": "--color-text",
+              "value": "#f5f5f7"
+            }
+          ],
+          "line": 78
+        },
+        {
+          "path": "color.text-muted",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.75,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(75% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-text-muted",
+              "value": "oklch(75% 0.02 265)"
+            }
+          ],
+          "line": 79
+        },
+        {
+          "path": "color.border",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.35,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(35% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-border",
+              "value": "oklch(35% 0.02 265)"
+            }
+          ],
+          "line": 80
+        },
+        {
+          "path": "color.primary",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.72,
+              0.15,
+              255
+            ]
+          },
+          "css": "oklch(72% 0.15 255)",
+          "variables": [
+            {
+              "name": "--color-primary",
+              "value": "oklch(72% 0.15 255)"
+            }
+          ],
+          "line": 81
+        },
+        {
+          "path": "color.on-primary",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.18,
+              0.02,
+              265
+            ]
+          },
+          "css": "oklch(18% 0.02 265)",
+          "variables": [
+            {
+              "name": "--color-on-primary",
+              "value": "oklch(18% 0.02 265)"
+            }
+          ],
+          "line": 82
+        },
+        {
+          "path": "color.secondary",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.45,
+              0.05,
+              200
+            ]
+          },
+          "css": "oklch(45% 0.05 200)",
+          "variables": [
+            {
+              "name": "--color-secondary",
+              "value": "oklch(45% 0.05 200)"
+            }
+          ],
+          "line": 17
+        },
+        {
+          "path": "color.on-secondary",
+          "type": "color",
+          "value": {
+            "colorSpace": "srgb",
+            "components": [
+              1,
+              1,
+              1
+            ],
+            "hex": "#ffffff"
+          },
+          "css": "#ffffff",
+          "variables": [
+            {
+              "name": "--color-on-secondary",
+              "value": "#ffffff"
+            }
+          ],
+          "line": 18
+        },
+        {
+          "path": "color.focus",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.6,
+              0.2,
+              255
+            ]
+          },
+          "css": "oklch(60% 0.2 255)",
+          "variables": [
+            {
+              "name": "--color-focus",
+              "value": "oklch(60% 0.2 255)"
+            }
+          ],
+          "line": 19
+        },
+        {
+          "path": "color.success",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.5,
+              0.13,
+              150
+            ]
+          },
+          "css": "oklch(50% 0.13 150)",
+          "variables": [
+            {
+              "name": "--color-success",
+              "value": "oklch(50% 0.13 150)"
+            }
+          ],
+          "line": 20
+        },
+        {
+          "path": "color.success-soft",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.95,
+              0.04,
+              150
+            ]
+          },
+          "css": "oklch(95% 0.04 150)",
+          "variables": [
+            {
+              "name": "--color-success-soft",
+              "value": "oklch(95% 0.04 150)"
+            }
+          ],
+          "line": 21
+        },
+        {
+          "path": "color.warning",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.55,
+              0.12,
+              70
+            ]
+          },
+          "css": "oklch(55% 0.12 70)",
+          "variables": [
+            {
+              "name": "--color-warning",
+              "value": "oklch(55% 0.12 70)"
+            }
+          ],
+          "line": 22
+        },
+        {
+          "path": "color.warning-soft",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.96,
+              0.05,
+              90
+            ]
+          },
+          "css": "oklch(96% 0.05 90)",
+          "variables": [
+            {
+              "name": "--color-warning-soft",
+              "value": "oklch(96% 0.05 90)"
+            }
+          ],
+          "line": 23
+        },
+        {
+          "path": "color.danger",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.7,
+              0.3,
+              25
+            ]
+          },
+          "css": "oklch(70% 0.3 25)",
+          "variables": [
+            {
+              "name": "--color-danger",
+              "value": "oklch(70% 0.3 25)"
+            }
+          ],
+          "line": 83
+        },
+        {
+          "path": "color.danger-soft",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.28,
+              0.06,
+              25
+            ]
+          },
+          "css": "oklch(28% 0.06 25)",
+          "variables": [
+            {
+              "name": "--color-danger-soft",
+              "value": "oklch(28% 0.06 25)"
+            }
+          ],
+          "line": 84
+        },
+        {
+          "path": "color.info",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.5,
+              0.12,
+              240
+            ]
+          },
+          "css": "oklch(50% 0.12 240)",
+          "variables": [
+            {
+              "name": "--color-info",
+              "value": "oklch(50% 0.12 240)"
+            }
+          ],
+          "line": 26
+        },
+        {
+          "path": "color.info-soft",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.95,
+              0.03,
+              240
+            ]
+          },
+          "css": "oklch(95% 0.03 240)",
+          "variables": [
+            {
+              "name": "--color-info-soft",
+              "value": "oklch(95% 0.03 240)"
+            }
+          ],
+          "line": 27
+        },
+        {
+          "path": "color.scrim",
+          "type": "color",
+          "value": {
+            "alpha": 0.4,
+            "colorSpace": "srgb",
+            "components": [
+              0,
+              0,
+              0
+            ],
+            "hex": "#000000"
+          },
+          "css": "#00000066",
+          "variables": [
+            {
+              "name": "--color-scrim",
+              "value": "#00000066"
+            }
+          ],
+          "line": 28
+        },
+        {
+          "path": "color.link",
+          "type": "color",
+          "value": {
+            "colorSpace": "oklch",
+            "components": [
+              0.72,
+              0.15,
+              255
+            ]
+          },
+          "css": "oklch(72% 0.15 255)",
+          "variables": [
+            {
+              "name": "--color-link",
+              "value": "oklch(72% 0.15 255)"
+            }
+          ],
+          "ref": "color.primary",
+          "line": 29
+        },
+        {
+          "path": "font.sans",
+          "type": "fontFamily",
+          "value": [
+            "Inter Variable",
+            "Inter",
+            "ui-sans-serif",
+            "system-ui",
+            "sans-serif",
+            "Apple Color Emoji"
+          ],
+          "css": "\"Inter Variable\", Inter, ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\"",
+          "variables": [
+            {
+              "name": "--font-sans",
+              "value": "\"Inter Variable\", Inter, ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\""
+            }
+          ],
+          "line": 33
+        },
+        {
+          "path": "font.mono",
+          "type": "fontFamily",
+          "value": [
+            "JetBrains Mono",
+            "ui-monospace",
+            "monospace"
+          ],
+          "css": "\"JetBrains Mono\", ui-monospace, monospace",
+          "variables": [
+            {
+              "name": "--font-mono",
+              "value": "\"JetBrains Mono\", ui-monospace, monospace"
+            }
+          ],
+          "line": 34
+        },
+        {
+          "path": "text.xs",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 0.75
+            },
+            "lineHeight": 1.333
+          },
+          "css": "0.75rem",
+          "variables": [
+            {
+              "name": "--text-xs",
+              "value": "0.75rem"
+            },
+            {
+              "name": "--text-xs--line-height",
+              "value": "1.333"
+            }
+          ],
+          "line": 38
+        },
+        {
+          "path": "text.sm",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 0.875
+            },
+            "lineHeight": {
+              "unit": "rem",
+              "value": 1.25
+            }
+          },
+          "css": "0.875rem",
+          "variables": [
+            {
+              "name": "--text-sm",
+              "value": "0.875rem"
+            },
+            {
+              "name": "--text-sm--line-height",
+              "value": "1.25rem"
+            }
+          ],
+          "line": 39
+        },
+        {
+          "path": "text.base",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 1
+            },
+            "fontWeight": 400,
+            "letterSpacing": {
+              "unit": "px",
+              "value": 0
+            },
+            "lineHeight": 1.5
+          },
+          "css": "1rem",
+          "variables": [
+            {
+              "name": "--text-base",
+              "value": "1rem"
+            },
+            {
+              "name": "--text-base--line-height",
+              "value": "1.5"
+            },
+            {
+              "name": "--text-base--font-weight",
+              "value": "400"
+            },
+            {
+              "name": "--text-base--letter-spacing",
+              "value": "0px"
+            }
+          ],
+          "line": 40
+        },
+        {
+          "path": "text.lg",
+          "type": "dimension",
+          "value": {
+            "unit": "rem",
+            "value": 1.125
+          },
+          "css": "1.125rem",
+          "variables": [
+            {
+              "name": "--text-lg",
+              "value": "1.125rem"
+            }
+          ],
+          "line": 41
+        },
+        {
+          "path": "text.xl",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 1.25
+            },
+            "fontWeight": "semi-bold",
+            "lineHeight": 1.4
+          },
+          "css": "1.25rem",
+          "variables": [
+            {
+              "name": "--text-xl",
+              "value": "1.25rem"
+            },
+            {
+              "name": "--text-xl--line-height",
+              "value": "1.4"
+            },
+            {
+              "name": "--text-xl--font-weight",
+              "value": "600"
+            }
+          ],
+          "line": 42
+        },
+        {
+          "path": "text.2xl",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 1.5
+            },
+            "lineHeight": 1.333
+          },
+          "css": "1.5rem",
+          "variables": [
+            {
+              "name": "--text-2xl",
+              "value": "1.5rem"
+            },
+            {
+              "name": "--text-2xl--line-height",
+              "value": "1.333"
+            }
+          ],
+          "line": 43
+        },
+        {
+          "path": "text.3xl",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "px",
+              "value": 30
+            },
+            "lineHeight": 1.2
+          },
+          "css": "30px",
+          "variables": [
+            {
+              "name": "--text-3xl",
+              "value": "30px"
+            },
+            {
+              "name": "--text-3xl--line-height",
+              "value": "1.2"
+            }
+          ],
+          "line": 44
+        },
+        {
+          "path": "text.4xl",
+          "type": "typography",
+          "value": {
+            "fontSize": {
+              "unit": "rem",
+              "value": 2.25
+            },
+            "letterSpacing": {
+              "unit": "rem",
+              "value": -0.025
+            },
+            "lineHeight": 1.111
+          },
+          "css": "2.25rem",
+          "variables": [
+            {
+              "name": "--text-4xl",
+              "value": "2.25rem"
+            },
+            {
+              "name": "--text-4xl--line-height",
+              "value": "1.111"
+            },
+            {
+              "name": "--text-4xl--letter-spacing",
+              "value": "-0.025rem"
+            }
+          ],
+          "line": 45
+        },
+        {
+          "path": "spacing",
+          "type": "dimension",
+          "value": {
+            "unit": "rem",
+            "value": 0.25
+          },
+          "css": "0.25rem",
+          "variables": [
+            {
+              "name": "--spacing",
+              "value": "0.25rem"
+            }
+          ],
+          "line": 47
+        },
+        {
+          "path": "radius.sm",
+          "type": "dimension",
+          "value": {
+            "unit": "rem",
+            "value": 0.25
+          },
+          "css": "0.25rem",
+          "variables": [
+            {
+              "name": "--radius-sm",
+              "value": "0.25rem"
+            }
+          ],
+          "line": 50
+        },
+        {
+          "path": "radius.md",
+          "type": "dimension",
+          "value": {
+            "unit": "rem",
+            "value": 0.375
+          },
+          "css": "0.375rem",
+          "variables": [
+            {
+              "name": "--radius-md",
+              "value": "0.375rem"
+            }
+          ],
+          "line": 51
+        },
+        {
+          "path": "radius.lg",
+          "type": "dimension",
+          "value": {
+            "unit": "px",
+            "value": 8
+          },
+          "css": "8px",
+          "variables": [
+            {
+              "name": "--radius-lg",
+              "value": "8px"
+            }
+          ],
+          "line": 52
+        },
+        {
+          "path": "shadow.sm",
+          "type": "shadow",
+          "value": {
+            "blur": {
+              "unit": "px",
+              "value": 2
+            },
+            "color": {
+              "alpha": 0.05,
+              "colorSpace": "srgb",
+              "components": [
+                0,
+                0,
+                0
+              ],
+              "hex": "#000000"
+            },
+            "offsetX": {
+              "unit": "px",
+              "value": 0
+            },
+            "offsetY": {
+              "unit": "px",
+              "value": 1
+            },
+            "spread": {
+              "unit": "px",
+              "value": 0
+            }
+          },
+          "css": "0px 1px 2px 0px #0000000d",
+          "variables": [
+            {
+              "name": "--shadow-sm",
+              "value": "0px 1px 2px 0px #0000000d"
+            }
+          ],
+          "line": 56
+        },
+        {
+          "path": "shadow.md",
+          "type": "shadow",
+          "value": {
+            "blur": {
+              "unit": "px",
+              "value": 6
+            },
+            "color": {
+              "alpha": 0.5,
+              "colorSpace": "oklch",
+              "components": [
+                0,
+                0,
+                "none"
+              ]
+            },
+            "offsetX": {
+              "unit": "px",
+              "value": 0
+            },
+            "offsetY": {
+              "unit": "px",
+              "value": 4
+            },
+            "spread": {
+              "unit": "px",
+              "value": -1
+            }
+          },
+          "css": "0px 4px 6px -1px oklch(0% 0 none / 0.5)",
+          "variables": [
+            {
+              "name": "--shadow-md",
+              "value": "0px 4px 6px -1px oklch(0% 0 none / 0.5)"
+            }
+          ],
+          "line": 87
+        },
+        {
+          "path": "shadow.lg",
+          "type": "shadow",
+          "value": {
+            "blur": {
+              "unit": "px",
+              "value": 15
+            },
+            "color": {
+              "alpha": 0.1,
+              "colorSpace": "srgb",
+              "components": [
+                0,
+                0,
+                0
+              ],
+              "hex": "#000000"
+            },
+            "offsetX": {
+              "unit": "px",
+              "value": 0
+            },
+            "offsetY": {
+              "unit": "px",
+              "value": 10
+            },
+            "spread": {
+              "unit": "px",
+              "value": -3
+            }
+          },
+          "css": "0px 10px 15px -3px #0000001a",
+          "variables": [
+            {
+              "name": "--shadow-lg",
+              "value": "0px 10px 15px -3px #0000001a"
+            }
+          ],
+          "line": 61
+        },
+        {
+          "path": "shadow.inner",
+          "type": "shadow",
+          "value": {
+            "blur": {
+              "unit": "px",
+              "value": 4
+            },
+            "color": {
+              "alpha": 0.05,
+              "colorSpace": "srgb",
+              "components": [
+                0,
+                0,
+                0
+              ],
+              "hex": "#000000"
+            },
+            "inset": true,
+            "offsetX": {
+              "unit": "px",
+              "value": 0
+            },
+            "offsetY": {
+              "unit": "px",
+              "value": 2
+            },
+            "spread": {
+              "unit": "px",
+              "value": 0
+            }
+          },
+          "css": "inset 0px 2px 4px 0px #0000000d",
+          "variables": [
+            {
+              "name": "--shadow-inner",
+              "value": "inset 0px 2px 4px 0px #0000000d"
+            }
+          ],
+          "line": 62
+        }
+      ]
+    }
+  ],
+  "problems": [],
+  "css": ":root {\n  --color-background: #ffffff;\n  --color-surface: #f5f5f7;\n  --color-text: oklch(21% 0.02 265);\n  --color-text-muted: oklch(45% 0.02 265);\n  --color-border: #ccccd1;\n  --color-primary: oklch(52% 0.18 255);\n  --color-on-primary: #ffffff;\n  --color-secondary: oklch(45% 0.05 200);\n  --color-on-secondary: #ffffff;\n  --color-focus: oklch(60% 0.2 255);\n  --color-success: oklch(50% 0.13 150);\n  --color-success-soft: oklch(95% 0.04 150);\n  --color-warning: oklch(55% 0.12 70);\n  --color-warning-soft: oklch(96% 0.05 90);\n  --color-danger: oklch(52% 0.19 25);\n  --color-danger-soft: oklch(95% 0.03 25);\n  --color-info: oklch(50% 0.12 240);\n  --color-info-soft: oklch(95% 0.03 240);\n  --color-scrim: #00000066;\n  --color-link: oklch(52% 0.18 255);\n  --font-sans: \"Inter Variable\", Inter, ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\";\n  --font-mono: \"JetBrains Mono\", ui-monospace, monospace;\n  --text-xs: 0.75rem;\n  --text-xs--line-height: 1.333;\n  --text-sm: 0.875rem;\n  --text-sm--line-height: 1.25rem;\n  --text-base: 1rem;\n  --text-base--line-height: 1.5;\n  --text-base--font-weight: 400;\n  --text-base--letter-spacing: 0px;\n  --text-lg: 1.125rem;\n  --text-xl: 1.25rem;\n  --text-xl--line-height: 1.4;\n  --text-xl--font-weight: 600;\n  --text-2xl: 1.5rem;\n  --text-2xl--line-height: 1.333;\n  --text-3xl: 30px;\n  --text-3xl--line-height: 1.2;\n  --text-4xl: 2.25rem;\n  --text-4xl--line-height: 1.111;\n  --text-4xl--letter-spacing: -0.025rem;\n  --spacing: 0.25rem;\n  --radius-sm: 0.25rem;\n  --radius-md: 0.375rem;\n  --radius-lg: 8px;\n  --shadow-sm: 0px 1px 2px 0px #0000000d;\n  --shadow-md: 0px 4px 6px -1px oklch(0% 0 none / 0.1), 0px 2px 4px -2px oklch(0% 0 none / 0.1);\n  --shadow-lg: 0px 10px 15px -3px #0000001a;\n  --shadow-inner: inset 0px 2px 4px 0px #0000000d;\n}\n\n[data-theme='dark'] {\n  --color-background: oklch(18% 0.02 265);\n  --color-surface: oklch(23% 0.02 265);\n  --color-text: #f5f5f7;\n  --color-text-muted: oklch(75% 0.02 265);\n  --color-border: oklch(35% 0.02 265);\n  --color-primary: oklch(72% 0.15 255);\n  --color-on-primary: oklch(18% 0.02 265);\n  --color-secondary: oklch(45% 0.05 200);\n  --color-on-secondary: #ffffff;\n  --color-focus: oklch(60% 0.2 255);\n  --color-success: oklch(50% 0.13 150);\n  --color-success-soft: oklch(95% 0.04 150);\n  --color-warning: oklch(55% 0.12 70);\n  --color-warning-soft: oklch(96% 0.05 90);\n  --color-danger: oklch(70% 0.3 25);\n  --color-danger-soft: oklch(28% 0.06 25);\n  --color-info: oklch(50% 0.12 240);\n  --color-info-soft: oklch(95% 0.03 240);\n  --color-scrim: #00000066;\n  --color-link: oklch(72% 0.15 255);\n  --font-sans: \"Inter Variable\", Inter, ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\";\n  --font-mono: \"JetBrains Mono\", ui-monospace, monospace;\n  --text-xs: 0.75rem;\n  --text-xs--line-height: 1.333;\n  --text-sm: 0.875rem;\n  --text-sm--line-height: 1.25rem;\n  --text-base: 1rem;\n  --text-base--line-height: 1.5;\n  --text-base--font-weight: 400;\n  --text-base--letter-spacing: 0px;\n  --text-lg: 1.125rem;\n  --text-xl: 1.25rem;\n  --text-xl--line-height: 1.4;\n  --text-xl--font-weight: 600;\n  --text-2xl: 1.5rem;\n  --text-2xl--line-height: 1.333;\n  --text-3xl: 30px;\n  --text-3xl--line-height: 1.2;\n  --text-4xl: 2.25rem;\n  --text-4xl--line-height: 1.111;\n  --text-4xl--letter-spacing: -0.025rem;\n  --spacing: 0.25rem;\n  --radius-sm: 0.25rem;\n  --radius-md: 0.375rem;\n  --radius-lg: 8px;\n  --shadow-sm: 0px 1px 2px 0px #0000000d;\n  --shadow-md: 0px 4px 6px -1px oklch(0% 0 none / 0.5);\n  --shadow-lg: 0px 10px 15px -3px #0000001a;\n  --shadow-inner: inset 0px 2px 4px 0px #0000000d;\n}\n",
+  "tailwind": "@theme {\n  --color-background: #ffffff;\n  --color-surface: #f5f5f7;\n  --color-text: oklch(21% 0.02 265);\n  --color-text-muted: oklch(45% 0.02 265);\n  --color-border: #ccccd1;\n  --color-primary: oklch(52% 0.18 255);\n  --color-on-primary: #ffffff;\n  --color-secondary: oklch(45% 0.05 200);\n  --color-on-secondary: #ffffff;\n  --color-focus: oklch(60% 0.2 255);\n  --color-success: oklch(50% 0.13 150);\n  --color-success-soft: oklch(95% 0.04 150);\n  --color-warning: oklch(55% 0.12 70);\n  --color-warning-soft: oklch(96% 0.05 90);\n  --color-danger: oklch(52% 0.19 25);\n  --color-danger-soft: oklch(95% 0.03 25);\n  --color-info: oklch(50% 0.12 240);\n  --color-info-soft: oklch(95% 0.03 240);\n  --color-scrim: #00000066;\n  --color-link: oklch(52% 0.18 255);\n  --font-sans: \"Inter Variable\", Inter, ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\";\n  --font-mono: \"JetBrains Mono\", ui-monospace, monospace;\n  --text-xs: 0.75rem;\n  --text-xs--line-height: 1.333;\n  --text-sm: 0.875rem;\n  --text-sm--line-height: 1.25rem;\n  --text-base: 1rem;\n  --text-base--line-height: 1.5;\n  --text-base--font-weight: 400;\n  --text-base--letter-spacing: 0px;\n  --text-lg: 1.125rem;\n  --text-xl: 1.25rem;\n  --text-xl--line-height: 1.4;\n  --text-xl--font-weight: 600;\n  --text-2xl: 1.5rem;\n  --text-2xl--line-height: 1.333;\n  --text-3xl: 30px;\n  --text-3xl--line-height: 1.2;\n  --text-4xl: 2.25rem;\n  --text-4xl--line-height: 1.111;\n  --text-4xl--letter-spacing: -0.025rem;\n  --spacing: 0.25rem;\n  --radius-sm: 0.25rem;\n  --radius-md: 0.375rem;\n  --radius-lg: 8px;\n  --shadow-sm: 0px 1px 2px 0px #0000000d;\n  --shadow-md: 0px 4px 6px -1px oklch(0% 0 none / 0.1), 0px 2px 4px -2px oklch(0% 0 none / 0.1);\n  --shadow-lg: 0px 10px 15px -3px #0000001a;\n  --shadow-inner: inset 0px 2px 4px 0px #0000000d;\n}\n\n[data-theme='dark'] {\n  --color-background: oklch(18% 0.02 265);\n  --color-surface: oklch(23% 0.02 265);\n  --color-text: #f5f5f7;\n  --color-text-muted: oklch(75% 0.02 265);\n  --color-border: oklch(35% 0.02 265);\n  --color-primary: oklch(72% 0.15 255);\n  --color-on-primary: oklch(18% 0.02 265);\n  --color-danger: oklch(70% 0.3 25);\n  --color-danger-soft: oklch(28% 0.06 25);\n  --color-link: oklch(72% 0.15 255);\n  --shadow-md: 0px 4px 6px -1px oklch(0% 0 none / 0.5);\n}\n",
+  "contrast": [
+    {
+      "theme": "light",
+      "pairs": [
+        {
+          "theme": "light",
+          "foreground": "color.text",
+          "background": "color.background",
+          "foreground_hex": "#141822",
+          "background_hex": "#ffffff",
+          "ratio": 17.74,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.text",
+          "background": "color.surface",
+          "foreground_hex": "#141822",
+          "background_hex": "#f5f5f7",
+          "ratio": 16.29,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.text-muted",
+          "background": "color.background",
+          "foreground_hex": "#505561",
+          "background_hex": "#ffffff",
+          "ratio": 7.46,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.text-muted",
+          "background": "color.surface",
+          "foreground_hex": "#505561",
+          "background_hex": "#f5f5f7",
+          "ratio": 6.85,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.success",
+          "background": "color.background",
+          "foreground_hex": "#137738",
+          "background_hex": "#ffffff",
+          "ratio": 5.63,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.success",
+          "background": "color.surface",
+          "foreground_hex": "#137738",
+          "background_hex": "#f5f5f7",
+          "ratio": 5.17,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.success",
+          "background": "color.success-soft",
+          "foreground_hex": "#137738",
+          "background_hex": "#dcf7e1",
+          "ratio": 4.95,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.warning",
+          "background": "color.background",
+          "foreground_hex": "#9d6300",
+          "background_hex": "#ffffff",
+          "ratio": 4.97,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "light",
+          "foreground": "color.warning",
+          "background": "color.surface",
+          "foreground_hex": "#9d6300",
+          "background_hex": "#f5f5f7",
+          "ratio": 4.57,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "light",
+          "foreground": "color.warning",
+          "background": "color.warning-soft",
+          "foreground_hex": "#9d6300",
+          "background_hex": "#fff1cc",
+          "ratio": 4.43,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": true
+        },
+        {
+          "theme": "light",
+          "foreground": "color.danger",
+          "background": "color.background",
+          "foreground_hex": "#be222a",
+          "background_hex": "#ffffff",
+          "ratio": 6.08,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.danger",
+          "background": "color.surface",
+          "foreground_hex": "#be222a",
+          "background_hex": "#f5f5f7",
+          "ratio": 5.58,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.danger",
+          "background": "color.danger-soft",
+          "foreground_hex": "#be222a",
+          "background_hex": "#ffe7e4",
+          "ratio": 5.15,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "light",
+          "foreground": "color.info",
+          "background": "color.background",
+          "foreground_hex": "#006aa0",
+          "background_hex": "#ffffff",
+          "ratio": 5.88,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "light",
+          "foreground": "color.info",
+          "background": "color.surface",
+          "foreground_hex": "#006aa0",
+          "background_hex": "#f5f5f7",
+          "ratio": 5.4,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "light",
+          "foreground": "color.info",
+          "background": "color.info-soft",
+          "foreground_hex": "#006aa0",
+          "background_hex": "#ddf2ff",
+          "ratio": 5.1,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "light",
+          "foreground": "color.on-primary",
+          "background": "color.primary",
+          "foreground_hex": "#ffffff",
+          "background_hex": "#0066cd",
+          "ratio": 5.55,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "light",
+          "foreground": "color.on-secondary",
+          "background": "color.secondary",
+          "foreground_hex": "#ffffff",
+          "background_hex": "#315e60",
+          "ratio": 7.23,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.border",
+          "background": "color.background",
+          "foreground_hex": "#ccccd1",
+          "background_hex": "#ffffff",
+          "ratio": 1.59,
+          "threshold": 3,
+          "passes": false,
+          "clipped": false
+        },
+        {
+          "theme": "light",
+          "foreground": "color.focus",
+          "background": "color.background",
+          "foreground_hex": "#007df3",
+          "background_hex": "#ffffff",
+          "ratio": 4.01,
+          "threshold": 3,
+          "passes": true,
+          "clipped": true
+        }
+      ]
+    },
+    {
+      "theme": "dark",
+      "pairs": [
+        {
+          "theme": "dark",
+          "foreground": "color.text",
+          "background": "color.background",
+          "foreground_hex": "#f5f5f7",
+          "background_hex": "#0d111b",
+          "ratio": 17.32,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.text",
+          "background": "color.surface",
+          "foreground_hex": "#f5f5f7",
+          "background_hex": "#181d27",
+          "ratio": 15.5,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.text-muted",
+          "background": "color.background",
+          "foreground_hex": "#a8aebb",
+          "background_hex": "#0d111b",
+          "ratio": 8.47,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.text-muted",
+          "background": "color.surface",
+          "foreground_hex": "#a8aebb",
+          "background_hex": "#181d27",
+          "ratio": 7.58,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.success",
+          "background": "color.background",
+          "foreground_hex": "#137738",
+          "background_hex": "#0d111b",
+          "ratio": 3.34,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.success",
+          "background": "color.surface",
+          "foreground_hex": "#137738",
+          "background_hex": "#181d27",
+          "ratio": 2.99,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.success",
+          "background": "color.success-soft",
+          "foreground_hex": "#137738",
+          "background_hex": "#dcf7e1",
+          "ratio": 4.95,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.warning",
+          "background": "color.background",
+          "foreground_hex": "#9d6300",
+          "background_hex": "#0d111b",
+          "ratio": 3.78,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.warning",
+          "background": "color.surface",
+          "foreground_hex": "#9d6300",
+          "background_hex": "#181d27",
+          "ratio": 3.39,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.warning",
+          "background": "color.warning-soft",
+          "foreground_hex": "#9d6300",
+          "background_hex": "#fff1cc",
+          "ratio": 4.43,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.danger",
+          "background": "color.background",
+          "foreground_hex": "#ff0028",
+          "background_hex": "#0d111b",
+          "ratio": 4.74,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.danger",
+          "background": "color.surface",
+          "foreground_hex": "#ff0028",
+          "background_hex": "#181d27",
+          "ratio": 4.24,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.danger",
+          "background": "color.danger-soft",
+          "foreground_hex": "#ff0028",
+          "background_hex": "#421c19",
+          "ratio": 3.74,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.info",
+          "background": "color.background",
+          "foreground_hex": "#006aa0",
+          "background_hex": "#0d111b",
+          "ratio": 3.2,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.info",
+          "background": "color.surface",
+          "foreground_hex": "#006aa0",
+          "background_hex": "#181d27",
+          "ratio": 2.86,
+          "threshold": 4.5,
+          "passes": false,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.info",
+          "background": "color.info-soft",
+          "foreground_hex": "#006aa0",
+          "background_hex": "#ddf2ff",
+          "ratio": 5.1,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.on-primary",
+          "background": "color.primary",
+          "foreground_hex": "#0d111b",
+          "background_hex": "#5fa7ff",
+          "ratio": 7.59,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": true
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.on-secondary",
+          "background": "color.secondary",
+          "foreground_hex": "#ffffff",
+          "background_hex": "#315e60",
+          "ratio": 7.23,
+          "threshold": 4.5,
+          "passes": true,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.border",
+          "background": "color.background",
+          "foreground_hex": "#353b45",
+          "background_hex": "#0d111b",
+          "ratio": 1.67,
+          "threshold": 3,
+          "passes": false,
+          "clipped": false
+        },
+        {
+          "theme": "dark",
+          "foreground": "color.focus",
+          "background": "color.background",
+          "foreground_hex": "#007df3",
+          "background_hex": "#0d111b",
+          "ratio": 4.69,
+          "threshold": 3,
+          "passes": true,
+          "clipped": true
+        }
+      ]
+    }
+  ]
+}

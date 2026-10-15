@@ -319,6 +319,18 @@ func TestValidateProblems(t *testing.T) {
     "s.m": { "$value": { "value": 4, "unit": "px" } }
   }
 }`, "radius.s.m", 4, "rename it"},
+		{"name not safe in a CSS custom property", `{
+  "color": {
+    "$type": "color",
+    "brandSun": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "hex": "#ffffff" } }
+  }
+}`, "color.brandSun", 4, "rename it brand-sun"},
+		{"name with nothing safe in it", `{
+  "radius": {
+    "$type": "dimension",
+    "__": { "$value": { "value": 4, "unit": "px" } }
+  }
+}`, "radius.__", 4, "rename it in lower-case letters"},
 		{"type not a string", `{
   "radius": {
     "$type": 3,
@@ -336,6 +348,22 @@ func TestValidateProblems(t *testing.T) {
 				t.Errorf("problem = line %d %q, want line %d containing %q", got[0].Line, got[0].Message, c.line, c.want)
 			}
 		})
+	}
+}
+
+func TestSafeName(t *testing.T) {
+	for name, want := range map[string]string{
+		"brandSun": "brand-sun", "Brand_Sun": "brand-sun", "2XL": "2xl", "-x": "x",
+		"on primary!": "on-primary", "HTMLColor": "htmlcolor", "__": "",
+	} {
+		if got := safeName(name); got != want || (got != "" && !CSSSafe(got)) {
+			t.Errorf("safeName(%q) = %q, want %q", name, got, want)
+		}
+	}
+	for _, name := range []string{"2xl", "text-muted", "a", "0"} {
+		if !CSSSafe(name) {
+			t.Errorf("CSSSafe(%q) = false, want true", name)
+		}
 	}
 }
 

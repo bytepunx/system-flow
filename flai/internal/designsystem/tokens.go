@@ -491,8 +491,8 @@ func (s *TokenSet) problem(path string, line int, msg string) {
 }
 
 // Validate reports what is wrong with a token set against flai's subset of
-// DTCG (ADR-0148): what reading found, then each token's placement, type,
-// and value in file order, then each required token that is missing, at
+// DTCG (ADR-0148): what reading found, then each token's placement, name,
+// type, and value in file order, then each required token that is missing, at
 // the line of its group, or line 1 when the group is missing. An alias is
 // left for the resolver: its target is not looked up here.
 func Validate(s *TokenSet) []Problem {
@@ -519,6 +519,9 @@ func Validate(s *TokenSet) []Problem {
 // check says what is wrong with one token, or "".
 func check(t Token) string {
 	if msg := placement(t); msg != "" {
+		return msg
+	}
+	if msg := nameProblem(t.Name); msg != "" {
 		return msg
 	}
 	switch {
@@ -555,6 +558,56 @@ func placement(t Token) string {
 		return fmt.Sprintf("flai reads one level of names under %s; name it %s.%s", t.Group, t.Group, strings.Join(strings.Split(t.Path, ".")[1:], "-"))
 	}
 	return ""
+}
+
+var cssNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
+
+// CSSSafe reports whether a token name can be part of the CSS custom
+// property a token renders as, such as --color-<name>: lower-case letters,
+// digits, and hyphens, starting with a letter or digit.
+func CSSSafe(name string) bool { return cssNameRe.MatchString(name) }
+
+// nameProblem says what to rename a token name that is not CSSSafe to, or "".
+func nameProblem(name string) string {
+	if CSSSafe(name) {
+		return ""
+	}
+	const rule = "lower-case letters, digits, and hyphens, starting with a letter or digit"
+	if s := safeName(name); s != "" {
+		return fmt.Sprintf("the name %q cannot be part of the CSS custom property flai renders the token as; rename it %s, in %s", name, s, rule)
+	}
+	return fmt.Sprintf("the name %q cannot be part of the CSS custom property flai renders the token as; rename it in %s", name, rule)
+}
+
+// safeName is name made CSSSafe: lower case, a hyphen where a lower-case
+// letter meets an upper-case one, and each run of anything else one hyphen,
+// with none leading or trailing; "" when nothing is left.
+func safeName(name string) string {
+	var b strings.Builder
+	hyphen := true // the last rune written was a hyphen, or none was written
+	lower := false // the last rune written was a lower-case letter
+	for _, r := range name {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			if lower {
+				b.WriteByte('-')
+			}
+			b.WriteRune(r - 'A' + 'a')
+			hyphen, lower = false, false
+		case r >= 'a' && r <= 'z':
+			b.WriteRune(r)
+			hyphen, lower = false, true
+		case r >= '0' && r <= '9':
+			b.WriteRune(r)
+			hyphen, lower = false, false
+		default:
+			if !hyphen {
+				b.WriteByte('-')
+			}
+			hyphen, lower = true, false
+		}
+	}
+	return strings.TrimRight(b.String(), "-")
 }
 
 // checkValue decodes a token's value by its type.

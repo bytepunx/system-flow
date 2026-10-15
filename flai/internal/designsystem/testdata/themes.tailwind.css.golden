@@ -1,0 +1,65 @@
+@theme {
+  --color-background: #ffffff;
+  --color-surface: #f5f5f7;
+  --color-text: oklch(21% 0.02 265);
+  --color-text-muted: oklch(45% 0.02 265);
+  --color-border: #ccccd1;
+  --color-primary: oklch(52% 0.18 255);
+  --color-on-primary: #ffffff;
+  --color-secondary: oklch(45% 0.05 200);
+  --color-on-secondary: #ffffff;
+  --color-focus: oklch(60% 0.2 255);
+  --color-success: oklch(50% 0.13 150);
+  --color-success-soft: oklch(95% 0.04 150);
+  --color-warning: oklch(55% 0.12 70);
+  --color-warning-soft: oklch(96% 0.05 90);
+  --color-danger: oklch(52% 0.19 25);
+  --color-danger-soft: oklch(95% 0.03 25);
+  --color-info: oklch(50% 0.12 240);
+  --color-info-soft: oklch(95% 0.03 240);
+  --color-scrim: #00000066;
+  --color-link: oklch(52% 0.18 255);
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji";
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.333;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5;
+  --text-base--font-weight: 400;
+  --text-base--letter-spacing: 0px;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.4;
+  --text-xl--font-weight: 600;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.333;
+  --text-3xl: 30px;
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 1.111;
+  --text-4xl--letter-spacing: -0.025rem;
+  --spacing: 0.25rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 8px;
+  --shadow-sm: 0px 1px 2px 0px #0000000d;
+  --shadow-md: 0px 4px 6px -1px oklch(0% 0 none / 0.1), 0px 2px 4px -2px oklch(0% 0 none / 0.1);
+  --shadow-lg: 0px 10px 15px -3px #0000001a;
+  --shadow-inner: inset 0px 2px 4px 0px #0000000d;
+}
+
+[data-theme='dark'] {
+  --color-background: oklch(18% 0.02 265);
+  --color-surface: oklch(23% 0.02 265);
+  --color-text: #f5f5f7;
+  --color-text-muted: oklch(75% 0.02 265);
+  --color-border: oklch(35% 0.02 265);
+  --color-primary: oklch(72% 0.15 255);
+  --color-on-primary: oklch(18% 0.02 265);
+  --color-danger: oklch(70% 0.3 25);
+  --color-danger-soft: oklch(28% 0.06 25);
+  --color-link: oklch(72% 0.15 255);
+  --shadow-md: 0px 4px 6px -1px oklch(0% 0 none / 0.5);
+}
