@@ -3,15 +3,36 @@ id: T-1561
 type: task
 nature: feature
 title: flai design init --project records in the design system document which sub-projects it governs
-status: backlog
+status: done
 parent: S-0386
 owner: alex
 created: 2026-10-13T17:49:10Z
-updated: 2026-10-13T17:49:10Z
-transitions: []
+updated: 2026-10-15T04:40:13Z
+transitions:
+  - to: ready
+    at: 2026-10-15T04:21:11Z
+    by: agent-S-0386
+  - to: in-progress
+    at: 2026-10-15T04:21:12Z
+    by: agent-S-0386
+  - to: done
+    at: 2026-10-15T04:40:13Z
+    by: agent-S-0386
 stream: S-0386
 tags: [cli]
-touches: [flai/cmd/design.go, flai/cmd/design_test.go]
+touches: [flai/cmd/design.go, flai/cmd/design_test.go, docs/operators/settings.md, docs/users/flai-reference.md]
+usage:
+  source: log
+  seconds: 1141
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 7899
+      cache_read: 1130862
+      cache_write: 43442
+      cost: 0.6383
 ---
 # T-1561 flai design init --project records in the design system document which sub-projects it governs
 

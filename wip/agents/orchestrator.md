@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 635.9076
-accrued_seconds: 502925
-tasks_completed: 530
-last_run: 2026-10-15T04:19:44Z
+accrued_cost: 637.4880
+accrued_seconds: 504131
+tasks_completed: 533
+last_run: 2026-10-15T04:39:50Z
 ---
 
 # Orchestrator activity
@@ -3721,6 +3721,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0384
 - Seconds: 2745
 - Cost: 4.1764 USD, estimated
+
+### 2026-10-15T04:19:55Z
+
+- Summary: Under publish, policy judgement: released S-0384 (1 pending, 250 USD/week) as flai 1.51.1 → 1.51.2 (patch, flai/v1.51.2) and flaiover 0.47.0 → 0.48.0 (minor, flaiover/v0.48.0), pushed. Reason: complete and verified (design proposals listed, compared, and requested from the Design page); nothing held by whole_epics.
+- Items: S-0384
+- Seconds: 11
+- Cost: 0.1746 USD, estimated
+
+### 2026-10-15T04:21:30Z
+
+- Summary: Opened TH-0458 on S-0386: its in-progress T-1561 builds the governs list that the accepted ADR-0152 § Decision 4 rules out (TH-0438 named it to drop). Recommended dropping T-1561 and selecting by the guidance's topics alone; that is the operator's call, since S-0386 is finalized. Ready column empty; nothing to promote but S-0241 (blocked).
+- Items: S-0386
+- Seconds: 95
+- Cost: 0.8762 USD, estimated
+
+### 2026-10-15T04:39:50Z
+
+- Summary: Resolved my TH-0458: S-0386's agent showed T-1561's --project writes into the guidance's topics (ADR-0152's single list) and keeps no second record, so no conflict with ADR-0152 § Decision 4.
+- Items: S-0386
+- Seconds: 1100
+- Cost: 0.5296 USD, estimated
 
 ## Refusals
 

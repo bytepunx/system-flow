@@ -3,11 +3,11 @@ id: S-0386
 type: story
 nature: feature
 title: A story's agent working on a project's UI is primed with its design system, and a baseline convention tells it to build from the tokens and propose changes on its branch
-status: in-progress
+status: done
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:42Z
-updated: 2026-10-15T04:19:45Z
+updated: 2026-10-15T05:02:16Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:47Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-15T04:19:45Z
     by: agent-S-0386
+  - to: review
+    at: 2026-10-15T05:01:13Z
+    by: agent-S-0386
+  - to: done
+    at: 2026-10-15T05:02:16Z
+    by: alex
 tags: [cli, template]
 topics: [design, conventions]
-touches: [flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/context/design.go, flai/internal/context/design_test.go, template/root/design/conventions/design-system.md, template/root/design/conventions/README.md, design/conventions/design-system.md, design/conventions/README.md, design/system/conventions.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/context/design.go, flai/internal/context/design_test.go, template/root/design/conventions/design-system.md, template/root/design/conventions/README.md, design/conventions/design-system.md, design/conventions/README.md, design/system/conventions.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/brief_test.go, flai/internal/context/context.go, flai/internal/context/designsystem.go, flai/internal/context/items.go, flai/internal/context/parts_test.go, flai/internal/context/rank.go, flai/internal/context/story.go, flai/internal/context/strategic.go, flai/internal/conventions/conventions.go, design/issues/I-0149-the-host-s-installed-flai-stays-behind-the-project-s-releases-after-i-0147-closed-so-the-mcp-task-done-still-refuses.md, design/issues/summary.md]
 after: [S-0384, S-0385]
 agent:
   harness: claude-code
@@ -25,20 +31,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2506
+  priced_by: harness
+  turns:
+    - day: 2026-10-15
+      ceremony: 2
+      hand_edits: 2
+      work: 36
+  models:
+    - model: claude-opus-5-5
+      input: 330
+      output: 112172
+      cache_read: 16059335
+      cache_write: 616913
+      cost: 9.0639
   strategic:
     - kind: orchestrator
-      seconds: 1166
+      seconds: 2361
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 46
-          output: 758
-          cache_read: 10480559
-          cache_write: 17983
-          cost: 2.6361
+          input: 62
+          output: 957
+          cache_read: 16079982
+          cache_write: 26274
+          cost: 4.0419
 cost_of_delay:
   value: 134.62
   by: planner-E-0020
@@ -61,10 +79,10 @@ Agents leverage the design system without being told each time: a story's agent 
 
 ## Acceptance criteria
 
-- [ ] `flai design init --project <name>` records in the design system document which sub-projects it governs, and `flai prime --story` briefs it for every story whose topics or touches reach one of them.
-- [ ] A baseline convention, `design-system.md`, in the template and in this repository, reaches the same stories' agents and says: build UI from the design system's tokens through the stylesheet `flai design css --write` keeps; add no colour, size, font, radius, or shadow outside them; make a change the UI needs to the design system document on the story's branch, so the operator previews it on the Design page before accepting; and record the reason for a design decision in the document's guidance.
-- [ ] A project with no design system document primes as before, and the convention says nothing to its agents.
-- [ ] `design/system/conventions.md`, `design/system/agent-context.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated reference say how.
+- [x] `flai design init --project <name>` records in the design system document which sub-projects it governs, and `flai prime --story` briefs it for every story whose topics or touches reach one of them.
+- [x] A baseline convention, `design-system.md`, in the template and in this repository, reaches the same stories' agents and says: build UI from the design system's tokens through the stylesheet `flai design css --write` keeps; add no colour, size, font, radius, or shadow outside them; make a change the UI needs to the design system document on the story's branch, so the operator previews it on the Design page before accepting; and record the reason for a design decision in the document's guidance.
+- [x] A project with no design system document primes as before, and the convention says nothing to its agents.
+- [x] `design/system/conventions.md`, `design/system/agent-context.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated reference say how.
 
 ## Tasks
 - T-1561 flai design init --project records in the design system document which sub-projects it governs

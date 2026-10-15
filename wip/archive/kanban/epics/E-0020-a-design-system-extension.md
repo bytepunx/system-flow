@@ -3,10 +3,10 @@ id: E-0020
 type: epic
 nature: feature
 title: A Design System Extension
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-13T17:37:49Z
-updated: 2026-10-14T23:52:30Z
+updated: 2026-10-15T05:02:16Z
 transitions:
   - to: ready
     at: 2026-10-13T17:53:19Z
@@ -14,11 +14,17 @@ transitions:
   - to: in-progress
     at: 2026-10-13T17:53:28Z
     by: agent-S-0380
+  - to: review
+    at: 2026-10-15T05:01:13Z
+    by: agent-S-0386
+  - to: done
+    at: 2026-10-15T05:02:16Z
+    by: alex
 tags: [dashboard, cli]
 topics: [design]
 usage:
   source: sum
-  seconds: 20509
+  seconds: 23015
   priced_by: harness
   turns:
     - day: 2026-10-13
@@ -30,9 +36,9 @@ usage:
       hand_edits: 4
       work: 51
     - day: 2026-10-15
-      ceremony: 8
-      hand_edits: 10
-      work: 267
+      ceremony: 10
+      hand_edits: 12
+      work: 303
   models:
     - model: claude-haiku-5-5
       input: 95933
@@ -41,11 +47,11 @@ usage:
       cache_write: 0
       cost: 0.0244
     - model: claude-opus-5-5
-      input: 2964
-      output: 1361438
-      cache_read: 164626911
-      cache_write: 6239957
-      cost: 96.875
+      input: 3294
+      output: 1473610
+      cache_read: 180686246
+      cache_write: 6856870
+      cost: 105.9389
     - model: claude-sonnet-5-5
       input: 44
       output: 12003
@@ -70,15 +76,15 @@ usage:
           cache_write: 397563
           cost: 8.3038
     - kind: orchestrator
-      seconds: 13171
+      seconds: 14377
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 682
-          output: 11339
-          cache_read: 159972760
-          cache_write: 239505
-          cost: 40.1944
+          input: 700
+          output: 11622
+          cache_read: 166267722
+          cache_write: 248797
+          cost: 41.7748
         - model: claude-sonnet-5-5
           input: 52
           output: 292
@@ -113,3 +119,5 @@ This epic should specify the stories necessary to create a new top-level heading
 ## Notes
 - 2026-10-13T17:53:19Z: moved to ready: follows S-0380, which moved to ready
 - 2026-10-13T17:53:28Z: moved to in-progress: follows S-0380, which moved to in-progress
+- 2026-10-15T05:01:13Z: moved to review: follows S-0386, which moved to review
+- 2026-10-15T05:02:16Z: moved to done: follows S-0386, which moved to done

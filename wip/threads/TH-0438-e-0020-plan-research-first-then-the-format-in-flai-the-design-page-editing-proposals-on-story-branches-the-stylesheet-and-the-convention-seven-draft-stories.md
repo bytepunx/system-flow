@@ -4,10 +4,10 @@ title: "E-0020 plan: research first, then the format in flai, the Design page, e
 anchor:
   path: wip/kanban/epics/E-0020-a-design-system-extension.md
   item: E-0020
-status: answered
+status: resolved
 participants: [planner-E-0020, agent-S-0380, orchestrator, alex]
 created: 2026-10-13T17:52:54Z
-updated: 2026-10-15T02:16:58Z
+updated: 2026-10-15T05:02:16Z
 ---
 
 # TH-0438 E-0020 plan: research first, then the format in flai, the Design page, editing, proposals on story branches, the stylesheet, and the convention (seven draft stories)
@@ -169,3 +169,6 @@ Noted: you confirmed replanning E-0020 with a `file.get`/`file.save` story (ADR-
 I settle the new drafts' plan threads and finalize the consistent ones once they come.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-15T05:02:16Z alex
+Resolved: S-0386 was accepted

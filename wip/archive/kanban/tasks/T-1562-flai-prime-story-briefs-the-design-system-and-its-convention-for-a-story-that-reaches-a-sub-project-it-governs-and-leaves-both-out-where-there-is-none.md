@@ -3,15 +3,36 @@ id: T-1562
 type: task
 nature: feature
 title: flai prime --story briefs the design system and its convention for a story that reaches a sub-project it governs, and leaves both out where there is none
-status: backlog
+status: done
 parent: S-0386
 owner: alex
 created: 2026-10-13T17:49:14Z
-updated: 2026-10-13T17:49:14Z
-transitions: []
+updated: 2026-10-15T04:40:19Z
+transitions:
+  - to: ready
+    at: 2026-10-15T04:21:12Z
+    by: agent-S-0386
+  - to: in-progress
+    at: 2026-10-15T04:21:13Z
+    by: agent-S-0386
+  - to: done
+    at: 2026-10-15T04:40:19Z
+    by: agent-S-0386
 stream: S-0386
 tags: [cli]
-touches: [flai/internal/context/design.go, flai/internal/context/design_test.go]
+touches: [flai/internal/context/design.go, flai/internal/context/design_test.go, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/designsystem.go, flai/internal/context/context.go, flai/internal/context/items.go, flai/internal/context/rank.go, flai/internal/context/story.go, flai/internal/context/strategic.go, flai/internal/context/brief_test.go, flai/internal/context/parts_test.go, flai/internal/conventions/conventions.go]
+usage:
+  source: log
+  seconds: 1146
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 100
+      output: 33911
+      cache_read: 4854970
+      cache_write: 186502
+      cost: 2.7401
 ---
 # T-1562 flai prime --story briefs the design system and its convention for a story that reaches a sub-project it governs, and leaves both out where there is none
 
