@@ -6,7 +6,7 @@ title: The host's installed flai stays behind the project's releases after I-014
 status: backlog
 owner: alex
 created: 2026-10-15T05:02:18Z
-updated: 2026-10-15T05:02:18Z
+updated: 2026-10-15T05:02:58Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 2m
     by: flai
     at: 2026-10-15T05:02:18Z
+finalized:
+  by: alex
+  at: 2026-10-15T05:02:58Z
 ---
 # S-0391 The host's installed flai stays behind the project's releases after I-0147 closed, so the MCP task_done still refuses
 
