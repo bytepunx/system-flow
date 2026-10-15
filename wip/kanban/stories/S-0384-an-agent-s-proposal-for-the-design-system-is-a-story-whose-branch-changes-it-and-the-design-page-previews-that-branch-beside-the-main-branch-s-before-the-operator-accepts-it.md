@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:03Z
-updated: 2026-10-15T00:32:48Z
+updated: 2026-10-15T00:36:07Z
 transitions: []
 tags: [dashboard, cli]
 topics: [design]
@@ -33,7 +33,6 @@ usage:
           cache_read: 2888091
           cache_write: 4910
           cost: 0.7293
-draft: true
 cost_of_delay:
   value: 250
   by: planner-E-0020
@@ -44,6 +43,9 @@ forecast:
   basis: "Its own forecast of 1h5m; 4th in the pull order with an in-progress limit of 5, behind S-0381, S-0241, S-0382 and S-0383."
   by: flai
   at: 2026-10-15T00:32:48Z
+finalized:
+  by: alex
+  at: 2026-10-15T00:36:07Z
 ---
 # S-0384 An agent's proposal for the design system is a story whose branch changes it, and the Design page previews that branch beside the main branch's before the operator accepts it
 
