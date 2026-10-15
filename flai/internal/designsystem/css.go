@@ -241,11 +241,15 @@ func CSS(sys *System) string {
 	return b.String()
 }
 
-// Tailwind renders the tokens as a Tailwind v4 @theme rule with the light
-// values, then a [data-theme='dark'] rule overriding the properties whose
-// dark value differs, left out when none does. "" when the system has no
-// themes. How the generated stylesheet selects the dark values is S-0385's
-// to settle (ADR-0152); this rule is the selector CSS uses meanwhile.
+// darkVariant redefines Tailwind's dark variant to follow DarkSelector, on
+// the element that carries it and every element below it.
+const darkVariant = "@custom-variant dark (&:where(" + DarkSelector + ", " + DarkSelector + " *));\n"
+
+// Tailwind renders the tokens as a Tailwind v4 stylesheet, as ADR-0159
+// decides: a @custom-variant rule that makes the dark: variant follow
+// [data-theme='dark'], then a @theme rule with the light values, then a
+// [data-theme='dark'] rule overriding the properties whose dark value
+// differs, left out when none does. "" when the system has no themes.
 func Tailwind(sys *System) string {
 	light, dark := sys.theme(ThemeLight), sys.theme(ThemeDark)
 	if light == nil || dark == nil {
@@ -253,6 +257,7 @@ func Tailwind(sys *System) string {
 	}
 	lightDecls := themeDeclarations(light)
 	var b strings.Builder
+	b.WriteString(darkVariant + "\n")
 	block(&b, "@theme", lightDecls)
 	values := make(map[string]string, len(lightDecls))
 	for _, d := range lightDecls {

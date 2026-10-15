@@ -62,13 +62,22 @@ func TestRenderingsGolden(t *testing.T) {
 	}
 }
 
+func TestTailwindDarkVariantFollowsTheDarkSelector(t *testing.T) {
+	const want = "@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));\n\n@theme {\n"
+	for _, fixture := range []string{"full", "themes"} {
+		if got := Tailwind(loadFixture(t, fixture+".tokens.json")); !strings.HasPrefix(got, want) {
+			t.Errorf("%s: Tailwind does not open with the dark variant, then @theme:\n%s", fixture, got)
+		}
+	}
+}
+
 func TestTailwindDarkOverridesOnlyWhatDiffers(t *testing.T) {
 	plain := Tailwind(loadFixture(t, "full.tokens.json"))
-	if strings.Contains(plain, DarkSelector) {
+	if strings.Contains(plain, DarkSelector+" {") {
 		t.Errorf("a plain file's Tailwind rendering has a dark rule:\n%s", plain)
 	}
 	themed := Tailwind(loadFixture(t, "themes.tokens.json"))
-	_, dark, ok := strings.Cut(themed, DarkSelector)
+	_, dark, ok := strings.Cut(themed, DarkSelector+" {")
 	if !ok {
 		t.Fatalf("no dark rule in:\n%s", themed)
 	}
