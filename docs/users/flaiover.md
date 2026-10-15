@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-14
+updated: 2026-10-15
 status: active
 ---
 
@@ -21,13 +21,14 @@ In a project, run `flai dashboard`. It starts the dashboard, and `flai serve` be
 The header is the same on every page.
 
 - **Project switcher**, at the left: the project you are looking at, and the others this dashboard serves. See [More than one project](#more-than-one-project).
-- **Site menu**: three groups, each with its pages in a row below the header. Each page is a section below.
+- **Site menu**: four groups, each with its pages in a row below the header. Each page is a section below.
 
   | Group | Pages |
   |-------|-------|
   | Workflow | Overview, Board, Inbox (with the number of things that need you), Threads, Activity, Planner, Orchestrator, Analyzer |
   | Status | Charts, ADRs, Docs, Search |
   | Host | Updates (the [Host](#host) page), Settings |
+  | Design | [Design system](#design-system) |
 
   Point at a group, click it, or tap it to show its pages. Move the pointer off the menu, or press Escape, and the row shows the group of the page you are on again. The group and the page you are on are bold and coloured. A group shows the number its pages show, so the Inbox count also stands beside Workflow.
 - **Host flai badge**, at the right: whether a flai on the host has the dashboard connected. See [Host flai](#host-flai).
@@ -513,6 +514,17 @@ Commands are written one argument a line, and are run exactly as written, with n
 ## License
 
 License, the last page of the Host group, shows the Bytepunx Shield License: the terms the dashboard, flai, and the system-flow repository are distributed under. The text is the `LICENSE.md` the dashboard's image carries beside its server, so it is the license of the very dashboard you are looking at, and the same text `flai license` prints and the repository keeps at its root. It is the one page that asks flai on the host for nothing: the file is the dashboard's own, not the project's. An image built without the file says so instead.
+
+## Design system
+
+Design system, the first page of the Design group, shows the project's design system as it stands: the design tokens in the file the manifest's `design.tokens` names, `design/system/design-system.tokens.json` by default, and the guidance beside them, `design/system/design-system.md`. You see the effect of the tokens in the browser without building or deploying the project.
+
+- **Problems**: what flai found wrong in the token file, by line, as `flai check` reports it.
+- **Preview**: sample components styled by the tokens, light and dark side by side: buttons, inputs, a form, a card, an alert per state, a table, navigation, and headings over body text. They are generic components, not the project's own, so they show its tokens, not its markup. The dashboard's own theme never reaches them, and switching it changes nothing in the preview.
+- **Tokens**: each colour as a swatch with its contrast against the ground, `color.background`, in both themes; the colour pairs flai checks, with the ratio each must reach and whether it does; the type scale as sample text; the font stacks as your browser resolves them; and spacing, radii, and shadows drawn to size.
+- **Guidance**: the guidance document, rendered.
+
+A project with no token file is told so: run `flai design init` to write the starter tokens and guidance. The page follows a change to the token file or the guidance made elsewhere, as the other pages follow theirs.
 
 ## Theme
 

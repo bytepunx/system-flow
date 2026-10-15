@@ -1,6 +1,6 @@
 ---
 title: A design system tool for the dashboard and agents
-updated: 2026-10-14
+updated: 2026-10-15
 status: active
 topics: [design, dashboard, cli]
 ---
@@ -263,7 +263,7 @@ Tailwind generated the dashboard's utilities at its build, from the class names 
 }
 ```
 
-`source(none)` and `@source` keep that stylesheet to the gallery's own classes. That is general knowledge of Tailwind v4's source detection; how `--spacing` and `--shadow-*` behave through `inline` is to check in the build story. A token change is then a change of `--ds-*` values, with no compile.
+`source(none)` and `@source` keep that stylesheet to the gallery's own classes. That is general knowledge of Tailwind v4's source detection; S-0382 checked how `--spacing` and `--shadow-*` behave through `inline`: spacing utilities come out as `calc(var(--ds-spacing) * n)`, and a shadow utility sets `--tw-shadow` to `var(--ds-shadow-*)`, so the token's shadow shows as written and a `shadow-<colour>` class cannot recolour it. A token change is then a change of `--ds-*` values, with no compile.
 
 - **Tokens outside the vocabulary** are not on components. Extra colours are swatches with their contrast on `background`; extra steps, radii, and shadows are specimens drawn to size.
 - **Fonts.** A font token is a stack, shown as the operator's browser resolves it; a family the browser lacks falls back, and the page says so. A project's own font files are in its sub-project, which the dashboard cannot read. Recommended: system stacks, and Google Fonts loaded into the preview by family name only when the design system names one, since that sends a request from the operator's browser to Google.
@@ -285,7 +285,7 @@ Tailwind's documentation says the browser build "is designed for development pur
 
 A frame at a dashboard route boots the whole app under the root `flaiover/src/routes/+layout.svelte`, which imports `layout.css`, and `flaiover/src/app.html` stamps `data-theme` on the frame's `<html>`. Two ways keep the dashboard's theme out of option 1:
 
-- **A blank frame the page fills.** An `about:blank` frame is same-origin with its page. The page imports the gallery's stylesheet with Vite's `?inline`, so it reaches the dashboard's document as a string and never as a stylesheet, writes it into the frame, and mounts the gallery into the frame's body with Svelte's `mount`. No route and no second app. Whether `@tailwindcss/vite` compiles an `?inline` import, and whether Svelte's event delegation works across the frame, is to check.
+- **A blank frame the page fills.** An `about:blank` frame is same-origin with its page. The page imports the gallery's stylesheet with Vite's `?inline`, so it reaches the dashboard's document as a string and never as a stylesheet, writes it into the frame, and mounts the gallery into the frame's body with Svelte's `mount`. No route and no second app. S-0382 checked both: `@tailwindcss/vite` compiles an `?inline` import (it skips only `?worker`, `?sharedworker`, `?raw`, and `?url`), and Svelte's `mount` attaches its listeners to the mount target inside the frame, so the gallery's events work there. A blank frame's document is in quirks mode, where a table's text does not inherit its colour, so the page writes it again with a doctype first.
 - **A route outside the root layout.** Move the root layout's header and `layout.css` import into a route group, `(app)/+layout.svelte`, and put the frame's page in a group of its own with its own stylesheet. Groups do not change URLs, but every route folder moves, and the frame boots a second copy of the app. Its request is authenticated like any page (`decide` in `flaiover/src/lib/server/auth.ts`), with the `SameSite=Lax` session cookie a same-origin frame sends.
 
 Either way the page sizes the frame to its content, which a same-origin page can read. Token values reach the frame only after the parse `design.tokens` uses, so none carries `url()` or a stray `}` into the stylesheet. The frame follows the page's own state, so a change shows as the operator types; the token file is saved through `file.save` when the operator saves.
