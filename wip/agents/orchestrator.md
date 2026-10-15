@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 628.5188
-accrued_seconds: 499204
-tasks_completed: 527
-last_run: 2026-10-15T03:17:38Z
+accrued_cost: 631.5602
+accrued_seconds: 500170
+tasks_completed: 528
+last_run: 2026-10-15T03:33:46Z
 ---
 
 # Orchestrator activity
@@ -3700,6 +3700,13 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0384, E-0020
 - Seconds: 4
 - Cost: 0.1674 USD, estimated
+
+### 2026-10-15T03:33:46Z
+
+- Summary: Under accept_reviews, accepted S-0390 at a7a10f6d06e4. flai verify passed every step at the branch head; the verifier matched criterion 1 to task_done closing with the installed flai once it has caught up (taskdone, mcpserver installed and task, ADR-0160 refining ADR-0142, docs), 2 to I-0147 closed. Noted, not blocking: no test swaps the binary after a self-upgrade, and the close runs in the main checkout as ADR-0160 states. The dry run had no blocker. Merged, done, archived, committed; S-0384 told of overlaps.
+- Items: S-0390
+- Seconds: 966
+- Cost: 3.0414 USD, estimated
 
 ## Refusals
 
