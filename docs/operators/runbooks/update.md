@@ -1,6 +1,6 @@
 ---
 title: "Runbook: update"
-updated: 2026-10-12
+updated: 2026-10-15
 status: active
 ---
 
@@ -43,7 +43,8 @@ Before either, read the release notes on the [releases page](https://github.com/
    flai host status   # every process on the same version
    ```
 
-5. Agents already running keep the flai they started with: an MCP server that `.mcp.json` started over stdio runs until its session ends. Start the session again to give it the new one.
+5. Or let `flai serve` do it: with the `auto-upgrade` host action on for a project (`flai serve enable auto-upgrade`, in a shell), `flai serve` asks the host for each newer flai release tagged in the project's history, within about a minute of its being published. Off, it asks you on a thread on the project's `system-flow.yaml`. See [Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current).
+6. Agents already running keep the flai they started with: an MCP server that `.mcp.json` started over stdio runs until its session ends. Start the session again to give it the new one.
 
 ### To go back, or to a chosen release
 

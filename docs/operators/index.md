@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-13
+updated: 2026-10-15
 status: active
 ---
 
@@ -353,9 +353,18 @@ flai host also looks after the dashboard container (S-0184, [ADR-0062](../../des
 
 The flai on the host serves MCP and starts agents. When a flai release is accepted and you have not installed it, the host's flai is older than the project it serves, and it may lack rules the project relies on. An older flai once started stories that a newer one would hold (S-0181).
 
-- **Where you are told.** `flai serve` logs `flai is older than the project it serves` at warn, with both versions, when it starts serving such a project. Agents see `flai_outdated` in their MCP inbox on every call, and are told to tell you. The dashboard's host badge reads `host flai: upgrade to X.Y.Z`, and its tooltip names both versions and the command. Older means older than the newest `flai/vX.Y.Z` tag reachable from the project's HEAD. A project with no such tag, or a flai built from source (`dev`), says nothing.
+- **Where you are told.** `flai serve` logs `flai is older than the project it serves` at warn, with both versions, when it starts serving such a project. It looks again every minute, and with `auto-upgrade` off it asks you on a thread, as below. Agents see `flai_outdated` in their MCP inbox on every call, and are told to tell you. The dashboard's host badge reads `host flai: upgrade to X.Y.Z`, and its tooltip names both versions and the command. Older means older than the newest `flai/vX.Y.Z` tag reachable from the project's HEAD. A project with no such tag, or a flai built from source (`dev`), says nothing.
 - **What it stops.** A host flai a minor version or more behind the project's history stops every story's agent at its next task close, until you run `flai host upgrade` (S-0363, [ADR-0142](../../design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md)). The agent asks you on a thread. A patch release stops no one: a host flai only a patch behind warns.
 - **What to run.** `flai host upgrade` installs the newest release and restarts the host and everything it runs. Where no flai host runs, run `flai self-upgrade`, then restart what runs flai.
+- **Letting flai serve upgrade it.** With the `auto-upgrade` host action on for a project, `flai serve` upgrades the host itself (S-0387, [ADR-0158](../../design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md)). Every minute it compares its flai with the newest `flai/vX.Y.Z` tag in each served project's history. When the project is ahead, it asks `flai host` to install that release, as `flai host upgrade --version X.Y.Z` does, verified the same way, and the host restarts on it. Agents run on through the restart, and the new `flai serve` takes them up again. It asks no upgrade while a dashboard write, such as an acceptance, runs in `flai serve`, and asks again the next minute. A release tagged but not yet published is refused; it asks again no sooner than 15 minutes later. When the release is still not installed an hour after the first ask, it opens the thread below, with the host's last answer. It is off by default and shell only, like `auto-approve`, because it replaces the flai on your machine:
+
+  ```bash
+  flai serve enable auto-upgrade    # for this project; --all-projects for every project
+  flai serve disable auto-upgrade
+  ```
+
+- **The thread.** With `auto-upgrade` off, or with `flai serve` running outside `flai host`, `flai serve` opens a thread on the project's `system-flow.yaml`, as `flai serve`, naming both versions and the command to run. It asks once per project and release, and records it in `upgrade-asks.json` in its `serve` folder, so a restart does not ask again. A newer release asks again.
+- **What an agent sees.** `flai test`, `flai verify`, and the MCP tools `test` and `verify` refuse a manifest whose test tiers this flai cannot read. When the project's history has a newer flai, the refusal says the flai is older than the project and names the upgrade, rather than asking for the manifest to be fixed (I-0141).
 - **Fields it does not know.** An older flai reads work items, threads, and issues that carry front-matter fields it does not know. It logs `front matter has fields this flai does not know`, with the file and the fields, and it keeps those fields when it writes the file. It does not act on them. `flai check` reports each one as an error.
 - **The minimum.** `flai.minimum` in `system-flow.yaml` is the oldest flai release that may read the project. A flai below it stops before it reads any item, and names the version needed and the upgrade. `flai serve` then leaves the project unserved, and `flai serve status` gives that reason. It first lets the project's requests in flight finish, for up to five minutes, and refuses new ones, saying why. A publish raises the minimum when a flai release changed the front-matter fields flai reads, but never past the flai doing the publish, so the minimum only ever names a release `flai host upgrade` can already install (S-0321). When the release that changed the fields is newer than the host's flai, the raise waits: upgrade the host, and the next publish from it raises the minimum.
 
