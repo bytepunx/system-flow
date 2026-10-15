@@ -4,10 +4,16 @@
 // design/system/design-system.md. It reports each token flai does not read
 // at its token path and line.
 //
-// The token file is a plain DTCG token file, whose values serve both themes,
-// or a DTCG resolver document with its sources inline, recognised by a
-// top-level resolutionOrder. This file reads JSON with lines and a token
-// tree into tokens, and validates them.
+// The token file is one file, in one of two layouts. A plain DTCG token
+// file, with no resolutionOrder, gives each token one value, which serves
+// both the light and the dark theme. A DTCG resolver document, recognised by
+// its top-level resolutionOrder, holds its tokens inline: its sets' sources
+// give the light values, and the dark values sit in the context dark of its
+// one modifier, theme (modifiers.theme.contexts.dark), each an override of a
+// token a set defines, which keeps that token's type; a token dark does not
+// override has its light value in dark too. This file reads JSON with lines
+// and a token tree into tokens, and validates them; resolver.go resolves the
+// file into its two themes.
 package designsystem
 
 import (
