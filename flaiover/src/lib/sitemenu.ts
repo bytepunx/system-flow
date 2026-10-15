@@ -1,4 +1,4 @@
-// The site menu's two tiers (S-0172): three groups in the header, each with its pages in a row
+// The site menu's two tiers (S-0172): four groups in the header, each with its pages in a row
 // below, and which group and page a path belongs to.
 
 /** A page of the menu, named by key so the header can resolve its route. */
@@ -17,7 +17,7 @@ export type MenuGroup = {
 	/** Paths outside its pages that still belong to the group, such as an item's page. */
 	also?: string[];
 };
-export type GroupKey = 'workflow' | 'status' | 'host';
+export type GroupKey = 'workflow' | 'status' | 'host' | 'design';
 export type PageKey =
 	| 'overview'
 	| 'board'
@@ -34,7 +34,8 @@ export type PageKey =
 	| 'search'
 	| 'updates'
 	| 'settings'
-	| 'license';
+	| 'license'
+	| 'design';
 
 export const SITE_MENU: MenuGroup[] = [
 	{
@@ -78,6 +79,14 @@ export const SITE_MENU: MenuGroup[] = [
 			{ key: 'settings', label: 'Settings', path: '/settings' },
 			// The license the image carries, the same text flai license prints (S-0231).
 			{ key: 'license', label: 'License', path: '/license' }
+		]
+	},
+	{
+		key: 'design',
+		label: 'Design',
+		pages: [
+			// The project's design system: its tokens, its guidance, and a gallery they style (S-0382).
+			{ key: 'design', label: 'Design system', path: '/design' }
 		]
 	}
 ];

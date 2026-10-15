@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { SITE_MENU, groupBadges, locate } from './sitemenu';
 
 describe('the site menu (S-0172)', () => {
-	it('has Workflow, Status, and Host, with their pages in order', () => {
+	it('has Workflow, Status, Host, and Design, with their pages in order', () => {
 		expect(SITE_MENU.map((g) => [g.label, g.pages.map((p) => p.label)])).toEqual([
 			[
 				'Workflow',
@@ -20,7 +20,8 @@ describe('the site menu (S-0172)', () => {
 				]
 			],
 			['Status', ['Charts', 'ADRs', 'Docs', 'Search']],
-			['Host', ['Updates', 'Settings', 'License']]
+			['Host', ['Updates', 'Settings', 'License']],
+			['Design', ['Design system']]
 		]);
 	});
 
@@ -37,6 +38,7 @@ describe('the site menu (S-0172)', () => {
 		expect(locate('/host')).toEqual({ group: 'host', page: 'updates' });
 		expect(locate('/settings')).toEqual({ group: 'host', page: 'settings' });
 		expect(locate('/license')).toEqual({ group: 'host', page: 'license' });
+		expect(locate('/design')).toEqual({ group: 'design', page: 'design' });
 	});
 
 	it('places a path only its group claims in the group, with no page', () => {
@@ -47,9 +49,10 @@ describe('the site menu (S-0172)', () => {
 	it('places nothing for a path no group has, nor for one that only shares a prefix', () => {
 		expect(locate('/login')).toEqual({ group: null, page: null });
 		expect(locate('/boards')).toEqual({ group: null, page: null });
+		expect(locate('/designs')).toEqual({ group: null, page: null });
 	});
 
 	it('gives a group the indicators of its pages, Messages none (S-0336)', () => {
-		expect(SITE_MENU.map((g) => groupBadges(g))).toEqual([['inbox'], [], []]);
+		expect(SITE_MENU.map((g) => groupBadges(g))).toEqual([['inbox'], [], [], []]);
 	});
 });

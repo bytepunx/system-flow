@@ -29,7 +29,8 @@
 		search: resolve('/search'),
 		updates: resolve('/host'),
 		settings: resolve('/settings'),
-		license: resolve('/license')
+		license: resolve('/license'),
+		design: resolve('/design')
 	};
 	const BADGE = { inbox: InboxBadge };
 

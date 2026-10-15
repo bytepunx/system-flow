@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import { inboxState, type Inbox } from '$lib/inbox.svelte';
+import { projectState, resetForTests } from '$lib/project.svelte';
 
 const where = vi.hoisted(() => ({ url: new URL('http://localhost/board') }));
 vi.mock('$app/state', () => ({ page: where }));
@@ -37,6 +38,7 @@ describe('the site menu (S-0172)', () => {
 		if (c) unmount(c);
 		c = undefined;
 		inboxState.data = null;
+		resetForTests();
 		document.body.innerHTML = '';
 	});
 	const show = (path: string) => {
@@ -50,7 +52,8 @@ describe('the site menu (S-0172)', () => {
 		expect([...document.querySelectorAll('[data-menu-group]')].map((b) => b.textContent)).toEqual([
 			'Workflow',
 			'Status',
-			'Host'
+			'Host',
+			'Design'
 		]);
 		expect(shownPages()).toEqual([
 			'Overview',
@@ -94,6 +97,15 @@ describe('the site menu (S-0172)', () => {
 		const current = document.querySelector('[aria-current="page"]')!;
 		expect(current.textContent).toBe('Planner');
 		expect(current.getAttribute('href')).toBe('/workflow/planner');
+	});
+
+	it('links the design system page under Design, keeping the project (S-0382)', () => {
+		projectState.current = 'harbour';
+		show('/design');
+		expect(group('design').dataset.active).toBe('true');
+		const current = document.querySelector('[aria-current="page"]')!;
+		expect(current.textContent).toBe('Design system');
+		expect(current.getAttribute('href')).toBe('/design?project=harbour');
 	});
 
 	it('opens a group on hover and goes back to the page shown when the pointer leaves', () => {
