@@ -6,7 +6,7 @@ title: The MCP test tool of the installed flai 1.40.1 refuses main's manifest, s
 status: backlog
 owner: alex
 created: 2026-10-14T20:47:00Z
-updated: 2026-10-15T00:32:48Z
+updated: 2026-10-15T00:59:41Z
 transitions: []
 tags: []
 topics: [release, cli, mcp, host]
@@ -31,7 +31,6 @@ usage:
           cache_read: 1138916
           cache_write: 19208
           cost: 0.2903
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m
@@ -46,6 +45,9 @@ forecast:
   basis: "Its own forecast of 1h15m; 7th in the pull order with an in-progress limit of 5, behind S-0381, S-0241, S-0382, S-0383, S-0384, S-0385 and S-0386."
   by: flai
   at: 2026-10-15T00:32:48Z
+finalized:
+  by: alex
+  at: 2026-10-15T00:59:41Z
 ---
 # S-0387 The MCP test tool of the installed flai 1.40.1 refuses main's manifest, so a story's agent runs flai test from the tree
 
