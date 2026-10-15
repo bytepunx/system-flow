@@ -3,12 +3,18 @@ id: T-1568
 type: task
 nature: improvement
 title: flai serve checks whether the host's flai is behind each served project on its reconcile loop, upgrades it with auto-upgrade on, and asks the operator otherwise
-status: backlog
+status: in-progress
 parent: S-0387
 owner: alex
 created: 2026-10-14T20:54:41Z
-updated: 2026-10-14T20:54:41Z
-transitions: []
+updated: 2026-10-15T01:43:13Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:43:13Z
+    by: agent-S-0387
+  - to: in-progress
+    at: 2026-10-15T01:43:13Z
+    by: agent-S-0387
 stream: S-0387
 tags: [flai, serve, host]
 touches: [flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]

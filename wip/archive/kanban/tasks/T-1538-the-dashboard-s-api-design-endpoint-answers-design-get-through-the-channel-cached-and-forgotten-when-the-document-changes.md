@@ -3,15 +3,36 @@ id: T-1538
 type: task
 nature: feature
 title: The dashboard's /api/design endpoint answers design.get through the channel, cached and forgotten when the document changes
-status: backlog
+status: done
 parent: S-0382
 owner: alex
 created: 2026-10-13T17:47:01Z
-updated: 2026-10-13T17:47:01Z
-transitions: []
+updated: 2026-10-15T01:46:08Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:34:24Z
+    by: agent-S-0382
+  - to: in-progress
+    at: 2026-10-15T01:34:26Z
+    by: agent-S-0382
+  - to: done
+    at: 2026-10-15T01:46:08Z
+    by: agent-S-0382
 stream: S-0382
 tags: [dashboard]
 touches: [flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/design/+server.ts, flaiover/src/routes/api/design/design.test.ts]
+usage:
+  source: log
+  seconds: 702
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 78
+      output: 29711
+      cache_read: 4504436
+      cache_write: 130186
+      cost: 2.2567
 ---
 # T-1538 The dashboard's /api/design endpoint answers design.get through the channel, cached and forgotten when the document changes
 

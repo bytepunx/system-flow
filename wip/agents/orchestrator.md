@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 596.9120
-accrued_seconds: 492937
-tasks_completed: 504
-last_run: 2026-10-15T01:33:10Z
+accrued_cost: 597.3135
+accrued_seconds: 492968
+tasks_completed: 506
+last_run: 2026-10-15T01:33:41Z
 ---
 
 # Orchestrator activity
@@ -3539,6 +3539,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0381
 - Seconds: 1278
 - Cost: 1.5697 USD, estimated
+
+### 2026-10-15T01:33:35Z
+
+- Summary: Under publish, policy judgement: released S-0381 (1 pending, 319.15 USD/week) as flai 1.49.8 → 1.50.0 (minor, flai/v1.50.0), flaiover 0.45.0 → 0.45.1 (flaiover/v0.45.1) and template 1.0.92 → 1.0.93 (system-flow-template v1.0.93, e54d671), pushed. Reason: complete and usable on its own (DTCG token file, flai design commands, design.tokens check, design.get, documentation exception per ADR-0146); nothing held by whole_epics.
+- Items: S-0381
+- Seconds: 25
+- Cost: 0.1334 USD, estimated
+
+### 2026-10-15T01:33:41Z
+
+- Summary: S-0387 and S-0382 were pulled. Under order_ready, applied the throughput order: S-0385 (27m), S-0383 (30m), S-0386 (35m), S-0384 (1h5m). S-0387 started with TH-0447 (its plan, with my recommendation) still awaiting the operator.
+- Items: S-0385, S-0383, S-0386, S-0384, S-0387, S-0382
+- Seconds: 6
+- Cost: 0.2681 USD, estimated
 
 ## Refusals
 

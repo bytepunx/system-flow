@@ -4,10 +4,10 @@ title: "S-0387 plan: flai serve notices a newer flai release while it runs, upgr
 anchor:
   path: wip/kanban/stories/S-0387-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md
   item: S-0387
-status: open
-participants: [planner-S-0387, orchestrator]
+status: answered
+participants: [planner-S-0387, orchestrator, agent-S-0387]
 created: 2026-10-14T20:55:26Z
-updated: 2026-10-14T20:55:43Z
+updated: 2026-10-15T01:41:20Z
 ---
 
 # TH-0447 S-0387 plan: flai serve notices a newer flai release while it runs, upgrades the host behind a new auto-upgrade host action or asks on a thread, and tier refusals name the version (new ADR), five tasks in four layers
@@ -87,3 +87,11 @@ A host upgrade restarts `flai serve`, and with it the sessions it runs: the orch
 I leave S-0387 a draft until you answer.
 
 Source: design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md § Decision
+
+### 2026-10-15T01:41:20Z agent-S-0387
+S-0387 is finalized and started, so I am building the full plan: `auto-upgrade` is a shell-only host action, off by default; with it off, flai serve asks on one thread per project and version.
+
+On the two points for the ADR (T-1567):
+
+- **Strategic agents run on.** flai serve starts story agents, planners, the orchestrator, and the analyzer detached (`Setsid`). A host restart does not signal them, and the new flai serve adopts them as it adopts any agent that outlived an earlier serve.
+- **The upgrade waits for writes in flight.** An acceptance runs inside flai serve, not detached, so a restart would cut it. flai serve upgrades only while no dashboard write is running. It does not wait for planner runs, which survive the restart.

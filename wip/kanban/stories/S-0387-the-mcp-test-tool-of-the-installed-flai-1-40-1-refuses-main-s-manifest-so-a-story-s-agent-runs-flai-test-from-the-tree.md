@@ -6,7 +6,7 @@ title: The MCP test tool of the installed flai 1.40.1 refuses main's manifest, s
 status: in-progress
 owner: alex
 created: 2026-10-14T20:47:00Z
-updated: 2026-10-15T01:32:11Z
+updated: 2026-10-15T01:42:39Z
 transitions:
   - to: ready
     at: 2026-10-15T01:11:34Z
@@ -16,27 +16,45 @@ transitions:
     by: agent-S-0387
 tags: []
 topics: [release, cli, mcp, host]
-touches: [design/adrs/0153-flai-serve-upgrades-the-host-s-flai-when-the-project-s-history-has-a-newer-published-release-behind-auto-upgrade.md, design/adrs/README.md, design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/index.md, docs/operators/settings.md, docs/operators/runbooks/update.md, docs/users/flai.md, design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md]
+touches: [design/adrs/0153-flai-serve-upgrades-the-host-s-flai-when-the-project-s-history-has-a-newer-published-release-behind-auto-upgrade.md, design/adrs/README.md, design/system/flai-cli.md, flai/internal/serve/upgrade.go, flai/internal/serve/upgrade_test.go, flai/internal/serve/serve.go, flai/internal/serve/outdated_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, docs/operators/index.md, docs/operators/settings.md, docs/operators/runbooks/update.md, docs/users/flai.md, design/issues/I-0141-the-mcp-test-tool-of-the-installed-flai-1-40-1-refuses-main-s-manifest-so-a-story-s-agent-runs-flai-test-from-the-tree.md, design/issues/summary.md, design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 628
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-15
+      ceremony: 1
+      work: 17
+  models:
+    - model: claude-haiku-5-5
+      input: 158
+      output: 862
+      cache_read: 11303043
+      cache_write: 225814
+      cost: 0.746
+    - model: claude-opus-5-5
+      input: 36
+      output: 326
+      cache_read: 2021544
+      cache_write: 138948
+      cost: 0.9993
   strategic:
     - kind: orchestrator
-      seconds: 138
+      seconds: 139
       estimated: true
       models:
         - model: claude-opus-5-5
           input: 30
-          output: 374
-          cache_read: 5767425
-          cache_write: 24962
-          cost: 1.452
+          output: 392
+          cache_read: 5945022
+          cache_write: 25566
+          cost: 1.4967
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m

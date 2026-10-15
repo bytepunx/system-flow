@@ -3,15 +3,36 @@ id: T-1540
 type: task
 nature: feature
 title: An isolated preview frame styles a gallery of sample components from a set of tokens, in light and dark, apart from the dashboard's theme
-status: backlog
+status: done
 parent: S-0382
 owner: alex
 created: 2026-10-13T17:47:07Z
-updated: 2026-10-13T17:47:07Z
-transitions: []
+updated: 2026-10-15T01:46:19Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:34:25Z
+    by: agent-S-0382
+  - to: in-progress
+    at: 2026-10-15T01:34:27Z
+    by: agent-S-0382
+  - to: done
+    at: 2026-10-15T01:46:19Z
+    by: agent-S-0382
 stream: S-0382
 tags: [dashboard]
-touches: [flaiover/src/lib/design/preview.ts, flaiover/src/lib/design/preview.test.ts, flaiover/src/lib/components/design/PreviewFrame.svelte, flaiover/src/lib/components/design/PreviewFrame.svelte.test.ts, flaiover/src/lib/components/design/Gallery.svelte]
+touches: [flaiover/src/lib/design/preview.ts, flaiover/src/lib/design/preview.test.ts, flaiover/src/lib/design/gallery.css, flaiover/src/lib/components/design/PreviewFrame.svelte, flaiover/src/lib/components/design/PreviewFrame.svelte.test.ts, flaiover/src/lib/components/design/Gallery.svelte]
+usage:
+  source: log
+  seconds: 712
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 133
+      output: 50206
+      cache_read: 7611588
+      cache_write: 219989
+      cost: 3.8134
 ---
 # T-1540 An isolated preview frame styles a gallery of sample components from a set of tokens, in light and dark, apart from the dashboard's theme
 

@@ -3,15 +3,42 @@ id: T-1567
 type: task
 nature: improvement
 title: "Record the remedy for an outdated host flai in a new ADR and in flai-cli.md § Versions"
-status: backlog
+status: done
 parent: S-0387
 owner: alex
 created: 2026-10-14T20:54:28Z
-updated: 2026-10-14T20:54:28Z
-transitions: []
+updated: 2026-10-15T01:42:39Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:41:24Z
+    by: agent-S-0387
+  - to: in-progress
+    at: 2026-10-15T01:41:24Z
+    by: agent-S-0387
+  - to: done
+    at: 2026-10-15T01:42:39Z
+    by: agent-S-0387
 stream: S-0387
 tags: [adr, design]
-touches: [design/adrs/0153-flai-serve-upgrades-the-host-s-flai-when-the-project-s-history-has-a-newer-published-release-behind-auto-upgrade.md, design/adrs/README.md, design/system/flai-cli.md]
+touches: [design/adrs/0153-flai-serve-upgrades-the-host-s-flai-when-the-project-s-history-has-a-newer-published-release-behind-auto-upgrade.md, design/adrs/README.md, design/system/flai-cli.md, design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md]
+usage:
+  source: log
+  seconds: 72
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-haiku-5-5
+      input: 158
+      output: 862
+      cache_read: 11303043
+      cache_write: 225814
+      cost: 0.746
+    - model: claude-opus-5-5
+      input: 14
+      output: 179
+      cache_read: 1035311
+      cache_write: 6515
+      cost: 0.4819
 ---
 # T-1567 Record the remedy for an outdated host flai in a new ADR and in flai-cli.md § Versions
 

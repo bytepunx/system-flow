@@ -3,15 +3,21 @@ id: T-1569
 type: task
 nature: improvement
 title: flai test and the MCP tools test and verify say the running flai is older than the project when the manifest's tiers refuse
-status: backlog
+status: in-progress
 parent: S-0387
 owner: alex
 created: 2026-10-14T20:54:47Z
-updated: 2026-10-14T20:54:47Z
-transitions: []
+updated: 2026-10-15T01:43:14Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:43:14Z
+    by: agent-S-0387
+  - to: in-progress
+    at: 2026-10-15T01:43:14Z
+    by: agent-S-0387
 stream: S-0387
 tags: [flai, mcp, test]
-touches: [flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go]
+touches: [flai/internal/verify/manifest.go, flai/internal/verify/manifest_test.go, flai/internal/mcpserver/test.go, flai/internal/mcpserver/test_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/cmd/test.go, flai/cmd/verify.go]
 after: [T-1567]
 ---
 # T-1569 flai test and the MCP tools test and verify say the running flai is older than the project when the manifest's tiers refuse
