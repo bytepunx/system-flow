@@ -1,12 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-15T01:32:59Z
+updated: 2026-10-15T01:33:11Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0382](S-0382.md) | The dashboard's Design group shows a project's design system and previews its tokens live on sample components | in-progress | agent-S-0382 | 2026-10-15T01:33:11Z |
 | [S-0387](S-0387.md) | The MCP test tool of the installed flai 1.40.1 refuses main's manifest, so a story's agent runs flai test from the tree | in-progress | agent-S-0387 | 2026-10-15T01:32:11Z |
 
 ## Strategic agents

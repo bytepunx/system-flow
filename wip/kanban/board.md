@@ -7,15 +7,10 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0382
   - S-0385
   - S-0383
   - S-0386
   - S-0384
-placed:
-  S-0382:
-    by: flaiover
-    at: 2026-10-15T01:11:41Z
 ---
 
 # Board

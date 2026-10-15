@@ -3,15 +3,18 @@ id: S-0382
 type: story
 nature: feature
 title: The dashboard's Design group shows a project's design system and previews its tokens live on sample components
-status: ready
+status: in-progress
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:35Z
-updated: 2026-10-15T01:32:59Z
+updated: 2026-10-15T01:33:11Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:37Z
     by: alex
+  - to: in-progress
+    at: 2026-10-15T01:33:11Z
+    by: agent-S-0382
 tags: [dashboard]
 topics: [design]
 touches: [flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/design/+server.ts, flaiover/src/routes/api/design/design.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/SiteMenu.svelte.test.ts, flaiover/src/lib/design/preview.ts, flaiover/src/lib/design/preview.test.ts, flaiover/src/lib/components/design/PreviewFrame.svelte, flaiover/src/lib/components/design/PreviewFrame.svelte.test.ts, flaiover/src/lib/components/design/Gallery.svelte, flaiover/src/lib/components/design/TokenSheet.svelte, flaiover/src/lib/components/design/TokenSheet.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
