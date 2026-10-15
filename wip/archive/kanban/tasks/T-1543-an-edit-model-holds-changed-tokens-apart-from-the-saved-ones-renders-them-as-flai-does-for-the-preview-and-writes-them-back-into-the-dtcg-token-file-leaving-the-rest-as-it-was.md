@@ -23,16 +23,16 @@ tags: [dashboard]
 touches: [flaiover/src/lib/design/tokens.ts, flaiover/src/lib/design/tokens.test.ts]
 usage:
   source: log
-  seconds: 1146
+  seconds: 1154
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 268
-      cache_read: 3822279
-      cache_write: 411357
-      cost: 1.9584
+      input: 69
+      output: 47870
+      cache_read: 4360146
+      cache_write: 170773
+      cost: 2.7706
 ---
 # T-1543 An edit model holds changed tokens apart from the saved ones, renders them as flai does for the preview, and writes them back into the DTCG token file, leaving the rest as it was
 

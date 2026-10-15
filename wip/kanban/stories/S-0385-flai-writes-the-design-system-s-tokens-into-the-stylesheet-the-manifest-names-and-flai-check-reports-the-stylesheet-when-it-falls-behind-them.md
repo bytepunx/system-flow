@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:14Z
-updated: 2026-10-15T02:23:00Z
+updated: 2026-10-15T02:50:44Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:45Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0385
 tags: [cli]
 topics: [design]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/designsystem/stylesheet.go, flai/internal/designsystem/stylesheet_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/check/design.go, flai/internal/check/design_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0159-the-generated-design-stylesheet-puts-the-dark-values-under-data-theme-dark-and.md, design/adrs/README.md, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go, design/system/design-system-tool.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/designsystem/stylesheet.go, flai/internal/designsystem/stylesheet_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/check/design.go, flai/internal/check/design_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0159-the-generated-design-stylesheet-puts-the-dark-values-under-data-theme-dark-and.md, design/adrs/README.md, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go, design/system/design-system-tool.md, flai/internal/designsystem/testdata/full.tailwind.css.golden, flai/internal/designsystem/testdata/show-problems.json.golden, flai/internal/designsystem/testdata/show.json.golden, flai/internal/designsystem/testdata/starter.stylesheet.css.golden, flai/internal/designsystem/testdata/themes.tailwind.css.golden, flai/cmd/reference_test.go, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md]
 after: [S-0381]
 agent:
   harness: claude-code
@@ -25,9 +25,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1779
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-15
+      hand_edits: 1
+      work: 34
+  models:
+    - model: claude-opus-5-5
+      input: 238
+      output: 1466
+      cache_read: 9614644
+      cache_write: 505595
+      cost: 4.6827
   strategic:
     - kind: orchestrator
       seconds: 294
@@ -61,9 +73,9 @@ The design system's tokens reach the project's code by one path: the manifest na
 
 ## Acceptance criteria
 
-- [ ] The manifest's `design.stylesheet` names the stylesheet, a path under a sub-project, and `flai check` refuses a path outside every sub-project.
-- [ ] `flai design css --write` writes the Tailwind v4 `@theme` block, with a generated-file header naming the command, to that stylesheet, and refuses when the manifest names none.
-- [ ] `flai check` reports `design.stale` when the stylesheet differs from what `flai design css --write` would write, naming the command that brings it in step, and passes a project whose manifest names no stylesheet.
+- [x] The manifest's `design.stylesheet` names the stylesheet, a path under a sub-project, and `flai check` refuses a path outside every sub-project.
+- [x] `flai design css --write` writes the Tailwind v4 `@theme` block, with a generated-file header naming the command, to that stylesheet, and refuses when the manifest names none.
+- [x] `flai check` reports `design.stale` when the stylesheet differs from what `flai design css --write` would write, naming the command that brings it in step, and passes a project whose manifest names no stylesheet.
 - [ ] `design/system/project-manifest.md`, `docs/operators/settings.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated reference say how.
 
 ## Tasks

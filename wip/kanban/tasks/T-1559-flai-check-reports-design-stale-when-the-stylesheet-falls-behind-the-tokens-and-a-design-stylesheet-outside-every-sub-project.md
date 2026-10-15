@@ -3,19 +3,37 @@ id: T-1559
 type: task
 nature: feature
 title: flai check reports design.stale when the stylesheet falls behind the tokens, and a design.stylesheet outside every sub-project
-status: ready
+status: done
 parent: S-0385
 owner: alex
 created: 2026-10-13T17:48:53Z
-updated: 2026-10-15T02:23:02Z
+updated: 2026-10-15T02:48:28Z
 transitions:
   - to: ready
     at: 2026-10-15T02:23:02Z
+    by: agent-S-0385
+  - to: in-progress
+    at: 2026-10-15T02:30:48Z
+    by: agent-S-0385
+  - to: done
+    at: 2026-10-15T02:48:28Z
     by: agent-S-0385
 stream: S-0385
 tags: [cli]
 touches: [flai/internal/check/design.go, flai/internal/check/design_test.go]
 after: [T-1556, T-1557]
+usage:
+  source: log
+  seconds: 1060
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 91
+      cache_read: 642886
+      cache_write: 55264
+      cost: 0.323
 ---
 # T-1559 flai check reports design.stale when the stylesheet falls behind the tokens, and a design.stylesheet outside every sub-project
 

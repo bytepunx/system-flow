@@ -3,11 +3,11 @@ id: T-1556
 type: task
 nature: feature
 title: The manifest's design.stylesheet names the stylesheet the design system's tokens are written to
-status: in-progress
+status: done
 parent: S-0385
 owner: alex
 created: 2026-10-13T17:48:42Z
-updated: 2026-10-15T02:23:00Z
+updated: 2026-10-15T02:30:28Z
 transitions:
   - to: ready
     at: 2026-10-15T02:23:00Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-15T02:23:00Z
     by: agent-S-0385
+  - to: done
+    at: 2026-10-15T02:30:27Z
+    by: agent-S-0385
 stream: S-0385
 tags: [cli]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, design/system/project-manifest.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, docs/operators/settings.md, design/system/project-manifest.md, flai/internal/designsystem/testdata/full.tailwind.css.golden, flai/internal/designsystem/testdata/show-problems.json.golden, flai/internal/designsystem/testdata/show.json.golden, flai/internal/designsystem/testdata/starter.stylesheet.css.golden, flai/internal/designsystem/testdata/themes.tailwind.css.golden]
+usage:
+  source: log
+  seconds: 447
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 225
+      cache_read: 1386720
+      cache_write: 66346
+      cost: 0.6724
 ---
 # T-1556 The manifest's design.stylesheet names the stylesheet the design system's tokens are written to
 

@@ -4,10 +4,10 @@ title: "S-0383 was never replanned: criterion 3 saves front matter through doc.s
 anchor:
   path: wip/kanban/stories/S-0383-the-operator-changes-the-design-system-s-tokens-on-the-design-page-sees-the-preview-follow-before-saving-and-saves-through-flai.md
   item: S-0383
-status: open
-participants: [agent-S-0383, orchestrator]
+status: resolved
+participants: [agent-S-0383, orchestrator, alex]
 created: 2026-10-15T01:57:56Z
-updated: 2026-10-15T01:58:09Z
+updated: 2026-10-15T02:54:34Z
 ---
 
 # TH-0454 S-0383 was never replanned: criterion 3 saves front matter through doc.save, but the tokens are a DTCG JSON file and file.save does not exist yet
@@ -65,3 +65,11 @@ The save in T-1546 waits for your answer.
 While T-1546 waits, the agent carries on with the parts that hold under every option.
 
 Source: design/adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md § Decision
+
+### 2026-10-15T02:38:32Z alex
+Confirmed the recommendation of 2026-10-15T01:58:09Z orchestrator.
+
+Source: design/adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md § Decision
+
+### 2026-10-15T02:54:34Z agent-S-0383
+Resolved: Option 1 is built. T-1594 added /api/design/tokens, which calls file.get and file.save and answers 501 from an older flai. Criterion 3 now has the confirmed wording. E-0020's planner still has to draft the flai story for file.get/file.save.

@@ -3,11 +3,11 @@ id: T-1557
 type: task
 nature: feature
 title: flai/internal/designsystem renders the stylesheet's whole content with a generated-file header and says when a stylesheet differs from it
-status: in-progress
+status: done
 parent: S-0385
 owner: alex
 created: 2026-10-13T17:48:45Z
-updated: 2026-10-15T02:23:01Z
+updated: 2026-10-15T02:30:36Z
 transitions:
   - to: ready
     at: 2026-10-15T02:23:01Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-15T02:23:01Z
     by: agent-S-0385
+  - to: done
+    at: 2026-10-15T02:30:36Z
+    by: agent-S-0385
 stream: S-0385
 tags: [cli]
 touches: [flai/internal/designsystem/stylesheet.go, flai/internal/designsystem/stylesheet_test.go, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go]
+usage:
+  source: log
+  seconds: 455
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 245
+      cache_read: 1766229
+      cache_write: 70299
+      cost: 0.8498
 ---
 # T-1557 flai/internal/designsystem renders the stylesheet's whole content with a generated-file header and says when a stylesheet differs from it
 

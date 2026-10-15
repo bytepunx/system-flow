@@ -3,19 +3,37 @@ id: T-1560
 type: task
 nature: feature
 title: The manifest, settings, flai design, and user docs and the reference describe design.stylesheet, flai design css --write, and design.stale
-status: ready
+status: done
 parent: S-0385
 owner: alex
 created: 2026-10-13T17:48:59Z
-updated: 2026-10-15T02:23:03Z
+updated: 2026-10-15T02:50:30Z
 transitions:
   - to: ready
     at: 2026-10-15T02:23:03Z
+    by: agent-S-0385
+  - to: in-progress
+    at: 2026-10-15T02:48:42Z
+    by: agent-S-0385
+  - to: done
+    at: 2026-10-15T02:50:30Z
     by: agent-S-0385
 stream: S-0385
 tags: [cli]
 touches: [design/system/flai-cli.md, docs/users/flai.md, design/system/design-system-tool.md]
 after: [T-1558, T-1559]
+usage:
+  source: log
+  seconds: 104
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 313
+      cache_read: 1562356
+      cache_write: 83328
+      cost: 0.7615
 ---
 # T-1560 The manifest, settings, flai design, and user docs and the reference describe design.stylesheet, flai design css --write, and design.stale
 

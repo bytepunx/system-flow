@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1145
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 76
-      output: 375
-      cache_read: 3803204
-      cache_write: 134516
-      cost: 1.8216
+      input: 62
+      output: 42784
+      cache_read: 3896897
+      cache_write: 152629
+      cost: 2.4762
 ---
 # T-1544 The preview flags each colour pair below 4.5:1 for text or 3:1 for controls, in the theme it fails in
 
