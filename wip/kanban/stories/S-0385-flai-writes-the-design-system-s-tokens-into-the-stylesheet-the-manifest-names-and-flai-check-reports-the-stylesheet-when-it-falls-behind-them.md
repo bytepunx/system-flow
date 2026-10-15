@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:14Z
-updated: 2026-10-15T00:32:48Z
+updated: 2026-10-15T00:37:19Z
 transitions: []
 tags: [cli]
 topics: [design]
@@ -33,7 +33,6 @@ usage:
           cache_read: 2888091
           cache_write: 4910
           cost: 0.7293
-draft: true
 cost_of_delay:
   value: 103.85
   by: planner-E-0020
@@ -44,6 +43,9 @@ forecast:
   basis: "Its own forecast of 27m; 5th in the pull order with an in-progress limit of 5, behind S-0381, S-0241, S-0382, S-0383 and S-0384."
   by: flai
   at: 2026-10-15T00:32:48Z
+finalized:
+  by: alex
+  at: 2026-10-15T00:37:19Z
 ---
 # S-0385 flai writes the design system's tokens into the stylesheet the manifest names, and flai check reports the stylesheet when it falls behind them
 
