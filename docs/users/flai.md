@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-14
+updated: 2026-10-15
 status: active
 ---
 
@@ -1240,6 +1240,34 @@ With `--story S-nnnn`, `show` and `save` work in that story's worktree, on its b
 
 `flai doc lint <path> --stdin` lints the content on standard input as the markdown file at that path under design, docs, or wip. The file need not exist. It uses the project's markdownlint configuration and the subset of its rules flai checks itself ([Check the repository](#check-the-repository)), and prints each finding as `path:line rule/alias message`; `--json` gives `{path, findings: [{line, rule, alias, message}]}`. It exits 0 when the content is clean, 1 with findings, and 2 when it cannot lint. The dashboard's editor shows the same findings as you type. Your markdown tier, such as `scripts/lint-md.sh`, still decides at acceptance.
 
+## Keep a design system
+
+A project's design system is its tokens, the values its UI uses, and its guidance, the words that say when to use which ([ADR-0146](../../design/adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md)). A project has one. The tokens are one DTCG 2025.10 JSON file at the path the manifest's `design.tokens` names, `design/system/design-system.tokens.json` when it is unset ([Settings](../operators/settings.md)). The guidance is `design/system/design-system.md`.
+
+```bash
+flai design init --topics flaiover      # write the token file and the guidance from flai's starters
+flai check                              # report each problem in the token file as design.tokens
+flai design show                        # the token file, the guidance, the problems, and each role pair's contrast
+flai design css                         # the tokens as CSS custom properties, light and dark
+flai design css --tailwind > theme.css  # the tokens as a Tailwind v4 @theme block
+```
+
+`flai design init` writes both files and commits nothing. The token file holds every token flai requires, with light and dark values, and every colour pair passes its contrast threshold. The guidance has the headings its words go under, each saying what to write there. `--topics` sets the guidance's topics, `all` by default, and they choose the stories `flai prime` gives it to: name your UI sub-project, as in the example. A topic the project does not use makes `flai check --strict` warn `doc.topic`. When either file is there already, `init` writes neither, says which, and exits 1.
+
+Edit the token file by hand. It is a plain token file, one value per token for both themes, or, as `init` writes it, a resolver document whose `theme` modifier gives the dark values. flai reads the groups `color`, `font`, `text`, `spacing`, `radius`, and `shadow`, and requires the colour roles, the `sans` and `mono` fonts, the type scale `xs` to `4xl`, one spacing step, and the radii and shadows `sm`, `md`, and `lg`. A colour is in `srgb` with its `hex`, or in `oklch` ([ADR-0148](../../design/adrs/0148-a-design-token-s-colour-is-in-the-srgb-colour-space-with-its-hex-or-in-oklch.md)). The whole rule set is in [flai-cli.md § Design system](../../design/system/flai-cli.md#design-system).
+
+`flai check` reports each problem as an error, `design.tokens`, at the token's line, with its token path and what to do:
+
+```text
+design/system/design-system.tokens.json:11: error: design.tokens: color.background: hex is a six-digit #rrggbb such as #1a2b3c; correct it
+```
+
+A project without a token file has nothing checked.
+
+`flai design show` prints the token file's path and layout, the guidance's headings, each theme's token count, the problems, and a contrast table per theme. Each row is a role pair, its ratio, its threshold, pass or `FAIL`, and whether an `oklch` colour had to be clipped to sRGB to measure it. Text and state colours need 4.5:1, and borders and focus rings 3:1. Contrast is a report, never a check finding, so `show` exits 0 whatever it finds. `--json` gives everything, the tokens of each theme and both renderings included; the dashboard reads the same answer through the host method `design.get`.
+
+`flai design css` prints a `:root` block of the light values and a `[data-theme='dark']` block of the dark values, with Tailwind v4's names, such as `--color-primary` and `--text-sm`. `--tailwind` prints an `@theme` block of the light values, then the dark values that differ. With no token file, or one with problems, `css` prints nothing, lists the problems, and exits 1.
+
 ## Check the repository
 
 ```bash
@@ -1250,7 +1278,7 @@ flai check --strict --story S-0249                   # findings outside S-0249 a
 flai check --strict --story S-0249 --record-issues   # and each rule's are recorded in an issue
 ```
 
-Every finding is one line, `path:line: level: rule: message`, so editors and CI annotate it. Rules cover the manifest and layout, every work item in `kanban/` and `archive/` (front matter, IDs and file names, parents and children, state history, acceptance criteria, required sections), narratives and their index, the board's WIP limits and pull order, and front matter on `design/` and `docs/` files including ADR numbering. `README.md` files are exempt from front matter.
+Every finding is one line, `path:line: level: rule: message`, so editors and CI annotate it. Rules cover the manifest and layout, every work item in `kanban/` and `archive/` (front matter, IDs and file names, parents and children, state history, acceptance criteria, required sections), narratives and their index, the board's WIP limits and pull order, front matter on `design/` and `docs/` files including ADR numbering, and the design token file ([Keep a design system](#keep-a-design-system)). `README.md` files are exempt from front matter.
 
 `--strict` fails on every warning but three. One is `board.wip-limit` for review over its limit: only you clear it, by accepting or sending back a story (S-0243, [ADR-0073](../../design/adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)). Another is `epic.lags-stories`, an open epic that its stories put further on than its status, because it was moved before S-0200 or moved back by hand: the message names the `flai move`s that catch it up, or `flai accept E-nnnn` when its stories are all done, and only you move an epic ([ADR-0076](../../design/adrs/0076-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)). Neither must stop an agent's close-out of another story. The third is `narrative.state`, a story in progress or in review whose narrative's `## Current state` or `## Next steps` is not written (see [Agent narratives](#agent-narratives)): a narrative is unwritten from `flai stream open` until its agent first writes it, and `flai verify` stops the story before review. All three are still printed, the summary line ends `(N that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes)`, and `--json` counts them in `advisory` as well as `warnings`. Ready or in-progress over its limit still fails `--strict`.
 
