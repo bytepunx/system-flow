@@ -3,12 +3,15 @@ id: S-0383
 type: story
 nature: feature
 title: The operator changes the design system's tokens on the Design page, sees the preview follow before saving, and saves through flai
-status: backlog
+status: ready
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:47Z
-updated: 2026-10-15T00:32:48Z
-transitions: []
+updated: 2026-10-15T01:10:41Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:10:39Z
+    by: alex
 tags: [dashboard]
 topics: [design]
 touches: [flaiover/src/lib/design/tokens.ts, flaiover/src/lib/design/tokens.test.ts, flaiover/src/lib/design/preview.ts, flaiover/src/lib/design/preview.test.ts, flaiover/src/lib/components/design/TokenEditor.svelte, flaiover/src/lib/components/design/TokenEditor.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 84
+      seconds: 409
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 544
-          cache_read: 5807157
-          cache_write: 8270
-          cost: 1.4619
+          input: 32
+          output: 565
+          cache_read: 6325041
+          cache_write: 9112
+          cost: 1.592
 cost_of_delay:
   value: 115.38
   by: planner-E-0020
   at: 2026-10-13T17:51:49Z
 forecast:
   duration: 30m
-  delivery: 2026-10-15T02:58:00Z
-  basis: "Its own forecast of 30m; 3rd in the pull order with an in-progress limit of 5, behind S-0381, S-0241 and S-0382."
+  delivery: 2026-10-15T01:46:00Z
+  basis: "Its own forecast of 30m; 1st in the pull order with an in-progress limit of 5, behind S-0381."
   by: flai
-  at: 2026-10-15T00:32:48Z
+  at: 2026-10-15T01:10:41Z
 finalized:
   by: alex
   at: 2026-10-15T00:09:29Z

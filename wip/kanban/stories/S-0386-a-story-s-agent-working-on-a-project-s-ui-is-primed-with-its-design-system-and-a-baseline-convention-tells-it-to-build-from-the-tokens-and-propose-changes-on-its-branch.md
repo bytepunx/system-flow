@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:42Z
-updated: 2026-10-15T00:58:30Z
+updated: 2026-10-15T01:10:41Z
 transitions: []
 tags: [cli, template]
 topics: [design, conventions]
@@ -24,25 +24,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 54
+      seconds: 1140
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 328
-          cache_read: 2888091
-          cache_write: 4910
-          cost: 0.7293
+          input: 34
+          output: 611
+          cache_read: 6969486
+          cache_write: 10695
+          cost: 1.7539
 cost_of_delay:
   value: 134.62
   by: planner-E-0020
   at: 2026-10-13T17:52:29Z
 forecast:
   duration: 35m
-  delivery: 2026-10-15T04:55:00Z
-  basis: "Its own forecast of 35m; 6th in the pull order with an in-progress limit of 5, behind S-0381, S-0241, S-0382, S-0383, S-0384 and S-0385."
+  delivery: 2026-10-15T03:43:00Z
+  basis: "Its own forecast of 35m; 6th in the pull order with an in-progress limit of 5, behind S-0381, S-0383, S-0382, S-0241, S-0384 and S-0385."
   by: flai
-  at: 2026-10-15T00:32:48Z
+  at: 2026-10-15T01:10:41Z
 finalized:
   by: alex
   at: 2026-10-15T00:58:30Z

@@ -6,7 +6,7 @@ title: The MCP test tool of the installed flai 1.40.1 refuses main's manifest, s
 status: backlog
 owner: alex
 created: 2026-10-14T20:47:00Z
-updated: 2026-10-15T00:59:41Z
+updated: 2026-10-15T01:10:41Z
 transitions: []
 tags: []
 topics: [release, cli, mcp, host]
@@ -22,15 +22,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 50
+      seconds: 128
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 96
-          cache_read: 1138916
-          cache_write: 19208
-          cost: 0.2903
+          input: 28
+          output: 340
+          cache_read: 5246774
+          cache_write: 24465
+          cost: 1.3214
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4m
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-10-14T20:53:56Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-15T03:35:00Z
-  basis: "Its own forecast of 1h15m; 7th in the pull order with an in-progress limit of 5, behind S-0381, S-0241, S-0382, S-0383, S-0384, S-0385 and S-0386."
+  delivery: 2026-10-15T03:12:00Z
+  basis: "Its own forecast of 1h15m; 7th in the pull order with an in-progress limit of 5, behind S-0381, S-0383, S-0382, S-0241, S-0384, S-0385 and S-0386."
   by: flai
-  at: 2026-10-15T00:32:48Z
+  at: 2026-10-15T01:10:41Z
 finalized:
   by: alex
   at: 2026-10-15T00:59:41Z
