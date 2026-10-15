@@ -1,6 +1,6 @@
 ---
 title: "Runbook: migrate"
-updated: 2026-10-06
+updated: 2026-10-15
 status: active
 ---
 
@@ -101,5 +101,6 @@ Every item and narrative is renamed with `git mv` and every reference in the pro
 | S-0076, flaiover 0.22 | MCP moved from the dashboard's `/mcp` to `flai mcp` on the host | [MCP over HTTP](../index.md#mcp-over-http) |
 | S-0077 | The dashboard no longer mounts the repository or holds a push key; everything goes through `flai serve` | [Upgrading from a release that mounted the repository](../index.md#upgrading-from-a-release-that-mounted-the-repository) |
 | S-0080 | One container, `flaiover`, and one login token serve every project, instead of one per project | [Upgrading from one container per project](../index.md#upgrading-from-one-container-per-project) |
+| S-0387, flai 1.50.1 | `flai serve` checks for a newer flai release every minute, and upgrades the host or asks you; a host older than it does not follow releases | Run `flai host upgrade` once ([Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current)) |
 
 Each is done once, in this order, and only by a machine that ran a release from before the story; the changelog of each release names the stories it carries.
