@@ -582,7 +582,10 @@ describe('the proposals and the request for a change on the design page (S-0384)
 	});
 
 	// Serves design.get, the guidance, the proposals, the epics, and a proposal's design.get.
-	async function show(proposals: unknown[] = [BLUER, ACCENT], design = withStylesheet()) {
+	async function show(
+		proposals: unknown[] = [BLUER, ACCENT],
+		design: DesignSystem = withStylesheet()
+	) {
 		main = design;
 		list = () => answer(proposals);
 		story = (id) => (id === 'S-0390' ? answer(proposed()) : answer({ error: `no ${id}` }, 404));
