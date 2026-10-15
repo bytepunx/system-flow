@@ -1,7 +1,11 @@
 // The design system preview's arithmetic (S-0382, ADR-0149): a theme's tokens, as flai's
 // design.get answers them, as the --ds-* custom properties the gallery's stylesheet reads, and
 // each colour's WCAG 2 contrast against the theme's ground, computed as flai computes it
-// (flai/internal/designsystem/color.go).
+// (flai/internal/designsystem/color.go). For tokens edited in the browser before they are saved
+// (S-0383), it also computes the role pairs' contrast as flai's Contrast reports it in design.get,
+// so that a pair below its threshold can be flagged in the theme it fails in.
+
+import type { DesignContrastPair } from '$lib/server/repo';
 
 /** A token as design.get answers it, only as far as the preview reads it. */
 export interface PreviewToken {
@@ -114,11 +118,48 @@ export function toSRGB(value: unknown): SRGB | null {
 	const [l, c] = comps;
 	const h = comps[2] === 'none' ? 0 : comps[2];
 	if (typeof l !== 'number' || typeof c !== 'number' || typeof h !== 'number') return null;
+	return fromOKLCH(l, c, h);
+}
+
+// An oklch colour in sRGB, as flai's Color.SRGB converts it: oklch → OKLab → linear sRGB → gamma,
+// clipped when a channel falls outside 0 to 1 by more than CLIP_TOLERANCE.
+function fromOKLCH(l: number, c: number, h: number): SRGB {
 	const rad = (h * Math.PI) / 180;
 	const linear = oklabToLinearSRGB(l, c * Math.cos(rad), c * Math.sin(rad));
 	const gamma = linear.map(encode) as [number, number, number];
 	const clipped = gamma.some((x) => x < -CLIP_TOLERANCE || x > 1 + CLIP_TOLERANCE);
 	return encoded(gamma, clipped);
+}
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+
+/**
+ * A DTCG colour value in sRGB as flai's DecodeColor and Color.SRGB read it, or null where
+ * DecodeColor refuses it: stricter than toSRGB, as an srgb colour needs a hex that agrees with its
+ * components, and is converted from its components, every component must be in range, and alpha,
+ * when given, must be 0 to 1.
+ */
+export function decodeColor(value: unknown): SRGB | null {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+	const v = value as Record<string, unknown>;
+	const space = v.colorSpace;
+	if (space !== 'srgb' && space !== 'oklch') return null;
+	const comps = v.components;
+	if (!Array.isArray(comps) || comps.length !== 3) return null;
+	const noHue = space === 'oklch' && comps[2] === 'none';
+	const [a, b, c] = noHue ? [comps[0], comps[1], 0] : comps;
+	if (typeof a !== 'number' || typeof b !== 'number' || typeof c !== 'number') return null;
+	if (space === 'srgb' && [a, b, c].some((x) => x < 0 || x > 1)) return null;
+	if (space === 'oklch' && (a < 0 || a > 1 || b < 0 || c < 0 || c > 360)) return null;
+	if ('alpha' in v && (typeof v.alpha !== 'number' || v.alpha < 0 || v.alpha > 1)) return null;
+	const hex = v.hex;
+	if (hex === undefined) return space === 'oklch' ? fromOKLCH(a, b, c) : null;
+	if (typeof hex !== 'string' || !HEX.test(hex)) return null;
+	if (space === 'oklch') return fromOKLCH(a, b, c);
+	const n = parseInt(hex.slice(1), 16);
+	const bytes = [n >> 16, (n >> 8) & 255, n & 255];
+	const agrees = [a, b, c].every((x, i) => Math.abs(x - bytes[i] / 255) <= 1 / 255 + 1e-9);
+	return agrees ? encoded([a, b, c], false) : null;
 }
 
 // Björn Ottosson's OKLab to linear sRGB, through LMS, with the matrices CSS Color 4 and flai use.
@@ -177,7 +218,11 @@ export interface Contrast {
 export function contrast(foreground: unknown, background: unknown): Contrast | null {
 	const fg = toSRGB(foreground);
 	const bg = toSRGB(background);
-	if (!fg || !bg) return null;
+	return fg && bg ? contrastOf(fg, bg) : null;
+}
+
+// The WCAG 2 contrast of two colours in sRGB, as flai's ContrastRatio, the same whichever is first.
+function contrastOf(fg: SRGB, bg: SRGB): Contrast {
 	const [hi, lo] = [luminance(fg.rgb), luminance(bg.rgb)].sort((a, b) => b - a);
 	const exact = (hi + 0.05) / (lo + 0.05);
 	return {
@@ -198,4 +243,93 @@ export function contrastOnGround(tokens: readonly PreviewToken[]): ({ path: stri
 		const c = contrast(t.value, ground.value);
 		return c ? [{ path: t.path, ...c }] : [];
 	});
+}
+
+/** The least ratio a text pair passes at, and a state's colour read as text (ADR-0148, flai's ThresholdText). */
+export const THRESHOLD_TEXT = 4.5;
+
+/** The least ratio a control pair passes at: a border or a focus ring on what it sits on (flai's ThresholdControl). */
+export const THRESHOLD_CONTROL = 3.0;
+
+/** A foreground colour role, the role it sits on, and the least ratio that passes. */
+export interface RolePair {
+	foreground: string;
+	background: string;
+	threshold: number;
+}
+
+// A role pair, at the text threshold unless another is given.
+function rolePair(foreground: string, background: string, threshold = THRESHOLD_TEXT): RolePair {
+	return { foreground, background, threshold };
+}
+
+/**
+ * The role pairs ADR-0148 § Decision 4 names, in its order, as flai's rolePairs: text and muted text
+ * on background and surface, each state on background, surface, and its own -soft tint, on-primary
+ * and on-secondary on their fill, all at 4.5:1; border and focus on background at 3:1.
+ */
+export const ROLE_PAIRS: readonly RolePair[] = [
+	...['text', 'text-muted'].flatMap((fg) => [rolePair(fg, 'background'), rolePair(fg, 'surface')]),
+	...['success', 'warning', 'danger', 'info'].flatMap((state) => [
+		rolePair(state, 'background'),
+		rolePair(state, 'surface'),
+		rolePair(state, `${state}-soft`)
+	]),
+	rolePair('on-primary', 'primary'),
+	rolePair('on-secondary', 'secondary'),
+	rolePair('border', 'background', THRESHOLD_CONTROL),
+	rolePair('focus', 'background', THRESHOLD_CONTROL)
+];
+
+/** A token as rolePairs reads it: a DesignToken or a PreviewToken will do. */
+export type ColourToken = Pick<PreviewToken, 'path' | 'value'>;
+
+// The colour role name in a theme's tokens, in sRGB, as flai's roleColor: the first token at
+// color.<name>, read as DecodeColor reads it; null when the role is missing or not a colour flai
+// reads, such as an alias left unresolved, whose value is still "{…}".
+function roleColor(tokens: readonly ColourToken[], name: string): SRGB | null {
+	const token = tokens.find((t) => t.path === `color.${name}`);
+	return token ? decodeColor(token.value) : null;
+}
+
+/**
+ * The contrast of each role pair in one theme's tokens, in ROLE_PAIRS' order, as flai's Contrast
+ * reports it in design.get: each ratio of the colours as their hex gives them, truncated to two
+ * decimals; passes decided on the exact ratio; a pair whose role is missing or not a colour left out.
+ * The tokens' values are read as they are, so an alias's must already be its target's, as design.get
+ * gives it.
+ */
+export function rolePairs(
+	theme: PreviewTheme,
+	tokens: readonly ColourToken[]
+): DesignContrastPair[] {
+	return ROLE_PAIRS.flatMap((rp) => {
+		const fg = roleColor(tokens, rp.foreground);
+		const bg = fg && roleColor(tokens, rp.background);
+		if (!fg || !bg) return [];
+		const c = contrastOf(fg, bg);
+		return [
+			{
+				theme,
+				foreground: `color.${rp.foreground}`,
+				background: `color.${rp.background}`,
+				foreground_hex: c.foregroundHex,
+				background_hex: c.backgroundHex,
+				ratio: c.ratio,
+				threshold: rp.threshold,
+				passes: c.exact >= rp.threshold,
+				clipped: c.clipped
+			}
+		];
+	});
+}
+
+/** The pairs below their threshold, in their order. */
+export function failingPairs(pairs: readonly DesignContrastPair[]): DesignContrastPair[] {
+	return pairs.filter((p) => !p.passes);
+}
+
+/** The failing pairs the token at path takes part in, as foreground or background, for showing beside it. */
+export function pairsOf(path: string, pairs: readonly DesignContrastPair[]): DesignContrastPair[] {
+	return failingPairs(pairs).filter((p) => p.foreground === path || p.background === path);
 }

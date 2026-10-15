@@ -1,10 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { DesignContrast, DesignTheme, DesignToken } from '$lib/server/repo';
 import {
 	contrast,
 	contrastOnGround,
+	decodeColor,
 	dsDeclarations,
+	failingPairs,
 	luminance,
+	pairsOf,
 	previewStyle,
+	ROLE_PAIRS,
+	rolePairs,
+	THRESHOLD_CONTROL,
+	THRESHOLD_TEXT,
 	toSRGB,
 	unsafeVariable,
 	type PreviewToken
@@ -316,5 +326,175 @@ describe('contrast, as flai reports it', () => {
 
 	it('is empty for a theme with no ground', () => {
 		expect(contrastOnGround([colour('text', '#000000')])).toEqual([]);
+	});
+});
+
+// flai's own fixture for design show --json (flai/internal/designsystem/testdata): a token file with
+// both themes, each theme's tokens as design.get answers them, and the role pairs flai computed.
+type Shown = { themes: DesignTheme[]; contrast: DesignContrast[] };
+const GOLDEN = resolve('../flai/internal/designsystem/testdata/show.json.golden');
+const SHOWN = JSON.parse(readFileSync(GOLDEN, 'utf8')) as Shown;
+
+const THEMES = ['light', 'dark'] as const;
+const shownTokens = (theme: 'light' | 'dark') => SHOWN.themes.find((t) => t.name === theme)!.tokens;
+const shownPairs = (theme: 'light' | 'dark') =>
+	SHOWN.contrast.find((c) => c.theme === theme)!.pairs;
+
+// The theme's tokens with the colour role name's value replaced, or the role removed.
+function withRole(
+	theme: 'light' | 'dark',
+	name: string,
+	value?: unknown,
+	extra: Partial<DesignToken> = {}
+): DesignToken[] {
+	const path = `color.${name}`;
+	const tokens = shownTokens(theme);
+	if (value === undefined) return tokens.filter((t) => t.path !== path);
+	return tokens.map((t) => (t.path === path ? { ...t, value, ...extra } : t));
+}
+
+const srgb = (hex: string) => colour('x', hex).value;
+
+// Whether the pair has the role name as either of its colours.
+function involves(name: string, p: { foreground: string; background: string }): boolean {
+	return p.foreground === `color.${name}` || p.background === `color.${name}`;
+}
+
+describe('rolePairs, as flai reports them in design.get (flai/internal/designsystem/color.go)', () => {
+	it('names the pairs ADR-0148 names, in its order, at their thresholds, as flai does', () => {
+		expect(THRESHOLD_TEXT).toBe(4.5);
+		expect(THRESHOLD_CONTROL).toBe(3);
+		const named = ROLE_PAIRS.map((p) => [
+			`color.${p.foreground}`,
+			`color.${p.background}`,
+			p.threshold
+		]);
+		for (const theme of THEMES) {
+			const shown = shownPairs(theme).map((p) => [p.foreground, p.background, p.threshold]);
+			expect(shown).toEqual(named);
+		}
+	});
+
+	for (const theme of THEMES) {
+		it(`${theme}: computes from the fixture's tokens the pairs flai computed from them`, () => {
+			const pairs = rolePairs(theme, shownTokens(theme));
+			expect(pairs).toEqual(shownPairs(theme));
+			// The fixture holds passing, failing, and clipped pairs in each theme.
+			expect(pairs.some((p) => p.passes)).toBe(true);
+			expect(failingPairs(pairs).length).toBeGreaterThan(0);
+			expect(pairs.some((p) => p.clipped)).toBe(true);
+		});
+	}
+
+	// Each case changes one colour of the fixture's theme, on either side of its pair's threshold.
+	it.each([
+		['light', 'text', '#767676', 4.54, true],
+		['light', 'text', '#777777', 4.47, false],
+		['light', 'border', '#949494', 3.03, true],
+		['light', 'border', '#959595', 2.99, false],
+		['dark', 'text', '#7c7c7c', 4.51, true],
+		['dark', 'text', '#7b7b7b', 4.45, false],
+		['dark', 'border', '#606060', 3, true],
+		['dark', 'border', '#5f5f5f', 2.95, false]
+	] as const)('%s: %s at %s is %s, passing %s', (theme, role, hex, ratio, passes) => {
+		const pairs = rolePairs(theme, withRole(theme, role, srgb(hex)));
+		const path = `color.${role}`;
+		const pair = pairs.find((p) => p.foreground === path && p.background === 'color.background')!;
+		const shown = shownPairs(theme).find((p) => p.foreground === path)!;
+		expect(pair).toEqual({
+			...shown,
+			foreground_hex: hex,
+			ratio,
+			passes,
+			clipped: false,
+			threshold: role === 'text' ? THRESHOLD_TEXT : THRESHOLD_CONTROL
+		});
+		expect(pairsOf(path, pairs).includes(pair)).toBe(!passes);
+		// The pairs the role takes no part in are as flai reported them.
+		expect(pairs.filter((p) => !involves(role, p))).toEqual(
+			shownPairs(theme).filter((p) => !involves(role, p))
+		);
+	});
+
+	for (const theme of THEMES) {
+		it(`${theme}: leaves out each pair of a missing role, as flai does`, () => {
+			expect(rolePairs(theme, withRole(theme, 'surface'))).toEqual(
+				shownPairs(theme).filter((p) => p.background !== 'color.surface')
+			);
+			expect(rolePairs(theme, withRole(theme, 'text'))).toEqual(
+				shownPairs(theme).filter((p) => p.foreground !== 'color.text')
+			);
+			expect(rolePairs(theme, [])).toEqual([]);
+		});
+	}
+
+	it.each([
+		['an alias left unresolved', '{color.nope}'],
+		['a null value', null],
+		['an srgb colour with no hex', { colorSpace: 'srgb', components: [0, 0, 0] }],
+		[
+			'an srgb colour whose hex and components disagree',
+			{ colorSpace: 'srgb', components: [0, 0, 0], hex: '#ffffff' }
+		],
+		[
+			'an srgb component out of range',
+			{ colorSpace: 'srgb', components: [1.2, 0, 0], hex: '#ff0000' }
+		],
+		['an oklch lightness out of range', oklch(1.2, 0, 0)],
+		['an oklch hue out of range', oklch(0.5, 0.1, 400)],
+		['an alpha out of range', { ...oklch(0.2, 0, 0), alpha: 2 }],
+		['an oklch colour with a malformed hex', { ...oklch(0.2, 0, 0), hex: '#123' }],
+		['another colour space', { colorSpace: 'display-p3', components: [0, 0, 0] }]
+	])('leaves out each pair of a role that is %s, as flai does', (_, value) => {
+		expect(rolePairs('light', withRole('light', 'text', value))).toEqual(
+			shownPairs('light').filter((p) => p.foreground !== 'color.text')
+		);
+	});
+
+	it("reads an alias by its value, its target's as design.get gives it", () => {
+		const danger = shownTokens('light').find((t) => t.path === 'color.danger')!;
+		const pairs = rolePairs(
+			'light',
+			withRole('light', 'text', danger.value, { ref: 'color.danger' })
+		);
+		const hex = shownPairs('light').find((p) => p.foreground === 'color.danger')!.foreground_hex;
+		const text = pairs.filter((p) => p.foreground === 'color.text');
+		expect(text.map((p) => p.foreground_hex)).toEqual([hex, hex]);
+	});
+
+	it('says when a colour of the pair was clipped to sRGB', () => {
+		const pairs = rolePairs('dark', withRole('dark', 'focus', oklch(0.9, 0.4, 145)));
+		const focus = pairs.find((p) => p.foreground === 'color.focus')!;
+		expect(focus.foreground_hex).toBe('#00ff00');
+		expect(focus.clipped).toBe(true);
+		expect(focus.threshold).toBe(THRESHOLD_CONTROL);
+	});
+
+	it('gives the failing pairs, and those a token takes part in', () => {
+		const light = shownPairs('light');
+		const failing = failingPairs(light);
+		expect(failing.map((p) => [p.foreground, p.background])).toEqual([
+			['color.warning', 'color.warning-soft'],
+			['color.border', 'color.background']
+		]);
+		expect(pairsOf('color.warning-soft', light)).toEqual([failing[0]]);
+		expect(pairsOf('color.warning', light)).toEqual([failing[0]]);
+		expect(pairsOf('color.background', light)).toEqual([failing[1]]);
+		expect(pairsOf('color.text', light)).toEqual([]);
+	});
+});
+
+describe('decodeColor, as flai decodes and converts a colour', () => {
+	it('converts an srgb colour from its components, as flai does, where toSRGB reads its hex', () => {
+		const value = { colorSpace: 'srgb', components: [0.5, 0.5, 0.5], hex: '#7f7f7f' };
+		expect(decodeColor(value)!.hex).toBe('#808080');
+		expect(toSRGB(value)!.hex).toBe('#7f7f7f');
+	});
+
+	it('converts an oklch colour as toSRGB does, with or without a hex', () => {
+		for (const value of [oklch(0.52, 0.18, 255), { ...oklch(0.52, 0.18, 255), hex: '#000000' }]) {
+			expect(decodeColor(value)).toEqual(toSRGB(oklch(0.52, 0.18, 255)));
+		}
+		expect(decodeColor(oklch(0.5, 0, 'none'))!.hex).toBe('#636363');
 	});
 });
