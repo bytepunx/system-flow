@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,6 +17,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
@@ -78,7 +82,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, checks, dashboard, host, orchestrate, plan, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, dashboard, host, orchestrate, plan, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -1156,6 +1160,73 @@ func TestAutoPublishIsTheShellsAlone(t *testing.T) {
 	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
 	if strings.Contains(string(got), "auto-publish") || !strings.Contains(string(got), `"name":"push"`) {
 		t.Errorf("the settings page is told of auto-publish: %s", got)
+	}
+}
+
+// S-0387, ADR-0158: auto-upgrade, which has flai serve upgrade the flai on
+// the host, is the operator's shell tool: serve enable turns it on for the
+// project, saying what it has flai serve do, and the dashboard is neither
+// told of it nor can turn it on or off.
+func TestAutoUpgradeIsTheShellsAlone(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	out, errOut, code := runIn(t, root, "serve", "enable", "auto-upgrade")
+	if code != 0 || !strings.Contains(out, "auto-upgrade enabled for t\n  it has flai serve ask flai host") || strings.Contains(out, "journal") || !strings.Contains(out, "flai serve disable auto-upgrade") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !(&app{}).host().Enabled(hostapi.ActionAutoUpgrade, mainRootOf(repo)) {
+		t.Error("flai serve sees auto-upgrade on for the project")
+	}
+	if info, _, _ := runIn(t, root, "hostapi", "project.info"); strings.Contains(info, "auto-upgrade") {
+		t.Errorf("project.info names auto-upgrade: %s", info)
+	}
+	runIn(t, root, "serve", "enable", "settings")
+	out, _, code = runIn(t, root, "hostapi", "settings.action", `{"action":"auto-upgrade","on":false,"request_id":"5d2e3b61-8c4a-4e1f-9b62-1d3e5f7a9b31"}`)
+	if code == 0 || !strings.Contains(out, "flai serve disable auto-upgrade") {
+		t.Errorf("settings.action refuses auto-upgrade, naming what to run: %d %s", code, out)
+	}
+	got, _ := json.Marshal((&app{}).hostSettings(mainRootOf(repo)))
+	if strings.Contains(string(got), "auto-upgrade") {
+		t.Errorf("the settings page is told of auto-upgrade: %s", got)
+	}
+}
+
+// ADR-0158: flai serve asks the host it runs under for the project's release
+// by version, as flai host upgrade --version does, and hears whether the
+// host restarts on it or why it refused; a serve under no host asks none.
+func TestServeAsksItsHostForTheRelease(t *testing.T) {
+	var asked []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		asked = append(asked, r.Method+" "+r.URL.Path+" "+string(body)+" "+r.Header.Get("Authorization"))
+		if strings.Contains(string(body), "9.9.9") {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"flai 9.9.9 is not published; published are 1.50.0"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"upgrade":{"installed":"1.50.0"},"restarting":true}`))
+	}))
+	t.Cleanup(srv.Close)
+	upgrade := hostUpgrade(hostMCP{c: &host.Client{URL: srv.URL, Token: "host-token"}})
+	if upgrade == nil {
+		t.Fatal("a serve under a host has no way to ask it for an upgrade")
+	}
+	restarting, err := upgrade(context.Background(), "1.50.0")
+	if err != nil || !restarting {
+		t.Errorf("an installed release: %v %v", restarting, err)
+	}
+	if len(asked) != 1 || asked[0] != `POST /upgrade {"version":"1.50.0"} Bearer host-token` {
+		t.Errorf("the host was asked %q", asked)
+	}
+	if restarting, err := upgrade(context.Background(), "9.9.9"); err == nil || restarting || !strings.Contains(err.Error(), "not published") {
+		t.Errorf("a refused release: %v %v", restarting, err)
+	}
+	if hostUpgrade(nil) != nil {
+		t.Error("a serve under no host asks one for an upgrade")
 	}
 }
 

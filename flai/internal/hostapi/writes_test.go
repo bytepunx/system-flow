@@ -885,6 +885,70 @@ func TestAutoApproveIsTheShellsAlone(t *testing.T) {
 	}
 }
 
+// S-0387, ADR-0158: auto-upgrade, which has flai serve upgrade the flai on
+// the host, is the operator's shell tool as auto-approve is (ADR-0067): a
+// dashboard is neither told of it nor turns it on or off, even with every
+// action and the settings action on.
+func TestAutoUpgradeIsTheShellsAlone(t *testing.T) {
+	p := withDocs(t)
+	if !strings.Contains(Actions[ActionAutoUpgrade], "flai host") || !strings.Contains(Actions[ActionAutoUpgrade], "thread") {
+		t.Errorf("auto-upgrade says what it has flai do: %q", Actions[ActionAutoUpgrade])
+	}
+	host := Host{Enabled: func(string, string) bool { return true }}
+	if info := enabledActions(host, p.Root); !info[ActionPush] {
+		t.Errorf("project.info says the push action is on: %+v", info)
+	} else if _, ok := info[ActionAutoUpgrade]; ok {
+		t.Errorf("project.info names auto-upgrade: %+v", info)
+	}
+	if DashboardSees(ActionAutoUpgrade) {
+		t.Error("a dashboard sees auto-upgrade")
+	}
+	rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+	m := writeMethods(rec.run, time.Now, host)
+	for i, on := range []string{"true", "false"} {
+		params := fmt.Sprintf(`{"action":"auto-upgrade","on":%s,"request_id":"req-0000002%d"}`, on, i+2)
+		_, e := m["settings.action"](context.Background(), p, json.RawMessage(params))
+		if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "flai serve enable auto-upgrade") || !strings.Contains(e.Message, "flai serve disable auto-upgrade") {
+			t.Errorf("settings.action %s: %+v, want a refusal naming what to run in a shell", params, e)
+		}
+	}
+	if len(rec.runs) != 0 {
+		t.Errorf("a refused setting ran %+v", rec.runs)
+	}
+}
+
+// ADR-0158: flai serve asks for no upgrade while a dashboard write runs in
+// its process, which a restart would cut: WritesRunning counts a write for
+// as long as its flai command runs, and a read not at all.
+func TestWritesRunningCountsAWriteWhileItRuns(t *testing.T) {
+	p := withDocs(t)
+	var during []int
+	run := func(context.Context, Run) (Ran, error) {
+		during = append(during, WritesRunning())
+		return Ran{Stdout: []byte(`{"id":"S-0001"}`)}, nil
+	}
+	m := writeMethods(run, time.Now, Host{})
+	if WritesRunning() != 0 {
+		t.Fatalf("before any write: %d", WritesRunning())
+	}
+	if _, e := m["item.move"](context.Background(), p, json.RawMessage(good["item.move"].params)); e != nil {
+		t.Fatalf("item.move: %+v", e)
+	}
+	if len(during) != 1 || during[0] != 1 || WritesRunning() != 0 {
+		t.Errorf("a write counts while it runs and not after: during %v, after %d", during, WritesRunning())
+	}
+	reads := map[string]spec{"x.read": {reads: true, build: func(channel.Project, json.RawMessage) ([]string, string, *channel.Error) {
+		return []string{"show", "S-0001"}, "", nil
+	}}}
+	during = nil
+	if _, e := methodsFrom(reads, run, time.Now, Host{})["x.read"](context.Background(), p, json.RawMessage(`{}`)); e != nil {
+		t.Fatalf("a read: %+v", e)
+	}
+	if len(during) != 1 || during[0] != 0 {
+		t.Errorf("a read is not a write: during %v", during)
+	}
+}
+
 // S-0105: a setting kept for every project needs the settings action on for
 // every project; one of this project's needs it here; either refusal says
 // what the operator runs, and is journalled.

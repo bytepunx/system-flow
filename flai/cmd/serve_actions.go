@@ -96,6 +96,33 @@ func (a *app) journal(e hostapi.Entry) error {
 	return err
 }
 
+// hostUpgrade is how flai serve asks for a newer flai (ADR-0158): of the
+// host its MCP servers are kept by, under the same check (S-0183), and of
+// none when it keeps none.
+func hostUpgrade(m serve.MCP) serve.HostUpgrade {
+	h, ok := m.(hostMCP)
+	if !ok {
+		return nil
+	}
+	return h.upgrade
+}
+
+// upgrade asks the host to install the flai release version, as flai host
+// upgrade --version does, and answers whether it restarts on it.
+func (m hostMCP) upgrade(ctx context.Context, version string) (bool, error) {
+	out, err := m.c.Upgrade(ctx, version)
+	if err != nil {
+		return false, err
+	}
+	var said struct {
+		Restarting bool `json:"restarting"`
+	}
+	if err := json.Unmarshal(out, &said); err != nil {
+		return false, fmt.Errorf("flai host answered the upgrade to flai %s with %s: %w", version, out, err)
+	}
+	return said.Restarting, nil
+}
+
 func knownAction(name string) error {
 	if _, ok := hostapi.Actions[name]; ok {
 		return nil

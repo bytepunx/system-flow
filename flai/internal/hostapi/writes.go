@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
@@ -294,6 +295,15 @@ const ActionAutoPublish = "auto-publish"
 // mcp reads it at every request.
 const ActionAutoApprove = "auto-approve"
 
+// ActionAutoUpgrade is the host action that has flai serve ask the host it
+// runs under to install a newer flai release, and restart on it, when the
+// project's history holds a newer flai/vX.Y.Z tag than the flai serving it
+// (S-0387, ADR-0158). Off, which is the default, flai serve asks the
+// operator on a thread instead. It replaces the binary on the operator's
+// machine, so like auto-approve it is the operator's shell tool (ADR-0067):
+// no method asks for it, and the dashboard neither sees nor changes it.
+const ActionAutoUpgrade = "auto-upgrade"
+
 // ActionAgent is the host action that starts a story's agent when the story
 // becomes ready, the in-progress limit has room, and review is under its
 // limit (S-0079, S-0104, ADR-0043, S-0243). flai serve performs that itself, from what it sees in the
@@ -353,6 +363,7 @@ var Actions = map[string]string{
 	ActionPush:        "publish when you press Publish: tag what was accepted since each component's last release and push the branch and the tags, with your git credentials, never forced; a holder of the dashboard token can then publish everything accepted and unreleased",
 	ActionAutoPublish: "has flai push --pending, run in a shell, first tag a release of everything merged and unreleased since each component's last tag; off, pushing releases nothing and what is accepted waits for Publish or flai release --pending. It is the operator's shell tool, outside the workflow (ADR-0067): no dashboard sees or changes it",
 	ActionAutoApprove: "has flai's MCP tool permission_prompt allow, without asking you, a flai serve agent's Edit or Write of a path Claude Code protects, such as a file in a .claude/ folder (its settings, hooks, and agent definitions) or .mcp.json but never .git, in its own in-progress story's worktree, which Claude Code run headless refuses without a person's approval, and lets that story's sub-agents make those writes too, which flai guard otherwise refuses them; off, permission_prompt asks the story's owner on a thread and waits for allow. A story whose branch changes such a path is accepted by you only, so you read those changes at acceptance (ADR-0106). It is the operator's shell tool (ADR-0067): no dashboard sees or changes it",
+	ActionAutoUpgrade: "has flai serve ask flai host to install the newest flai release tagged in this project's history, verified as flai host upgrade --version installs it, and restart flai serve and the MCP servers on it, whenever the flai serving the project is older than that release, checked every minute; it waits while a dashboard write runs in flai serve, and asks again for a refused release no sooner than 15 minutes later; off, flai serve asks you on a thread on the project's system-flow.yaml, once for each newer release. It replaces the flai on this host, so it is the operator's shell tool (ADR-0067, ADR-0158): no dashboard sees or changes it",
 	ActionAgent:       "start each story's agent, with the harnesses and the command you set with flai serve agent, on this machine and as you, whenever a story becomes ready, the in-progress limit has room, and review is under its limit, start a ready story's agent on demand, start or queue a new one for a story whose agent dropped or failed, start one to commit what a story in review left uncommitted in its worktree, and stop a story's agent, ending its process and everything it started; whoever can move a story to ready or press Start agent, Retry, Have an agent commit them, or Stop, a holder of the dashboard token included, then starts or stops it",
 	ActionDashboard:   "restart the dashboard container, upgrade it to the image your configuration names, or stop it, with Docker on this host; an upgrade is never applied until the new image answers healthy, so a bad one leaves the running container untouched",
 	ActionChecks:      "run the commands named in flai serve checks set or the manifest's checks:, and the test tiers the manifest's tests: declare through flai test, in a story's worktree or the main checkout, on this host, and cancel a checks run; whoever can open the review page then decides what runs there",
@@ -365,7 +376,7 @@ var Actions = map[string]string{
 
 // shellOnly are the host actions kept to the operator's shell (ADR-0067):
 // no dashboard sees them or turns them on and off.
-var shellOnly = map[string]bool{ActionAutoPublish: true, ActionAutoApprove: true}
+var shellOnly = map[string]bool{ActionAutoPublish: true, ActionAutoApprove: true, ActionAutoUpgrade: true}
 
 // DashboardSees reports whether a dashboard is told of the host action name.
 func DashboardSees(name string) bool {
@@ -2678,7 +2689,13 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 				defer execCancel()
 			}
 			done := perf.Track(ctx, perf.Exec("flai", args))
+			if key != "" {
+				writing.Add(1)
+			}
 			ran, err := run(execCtx, r)
+			if key != "" {
+				writing.Add(-1)
+			}
 			done()
 			res, rerr := outcome(answered(ran, sp.answers), err, sp.exits)
 			if w, ok := res.(Written); ok && rerr == nil && sp.judge != nil {
@@ -2722,6 +2739,13 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 	}
 	return out
 }
+
+// writing counts the dashboard writes running in this process now, each a
+// flai command that a restart of flai serve would cut (ADR-0158).
+var writing atomic.Int64
+
+// WritesRunning is how many dashboard writes run in this process now.
+func WritesRunning() int { return int(writing.Load()) }
 
 func (h Host) record(e Entry) {
 	if h.Record != nil {

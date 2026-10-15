@@ -191,6 +191,11 @@ type Options struct {
 	StopGrace time.Duration
 	// NewClient lets tests shorten a client's timings.
 	NewClient func(e Entry, key []byte) *channel.Client
+	// Upgrade asks the host flai serve runs under to install a newer flai
+	// release and restart on it (ADR-0158), for a served project whose
+	// history holds one while its auto-upgrade host action is on; nil when
+	// it runs under no host, when it asks the operator on a thread instead.
+	Upgrade HostUpgrade
 	// MCP has each served project's HTTP MCP server kept by flai host
 	// (S-0096, S-0106); nil keeps none. MCPEvery is how often the host is
 	// told again when nothing changed.
@@ -458,6 +463,10 @@ func Run(ctx context.Context, o Options) error {
 		return out
 	})
 	defer checker.wait()
+	// Each served project's history is looked at for a newer flai release
+	// every minute, and at once when it is first served (ADR-0158).
+	upgrades := newUpgrader(o)
+	defer upgrades.wait()
 	if agent := o.Agent; agent != nil {
 		o.Agent = func(root string) AgentConfig {
 			cfg := agent(root)
@@ -638,6 +647,11 @@ func Run(ctx context.Context, o Options) error {
 			}
 		}
 		offered.reconcile(ctx, entries)
+		served := make([]Entry, 0, len(clients))
+		for _, r := range clients {
+			served = append(served, r.entry)
+		}
+		upgrades.soon(ctx, served)
 	}
 	writeStatus := func() {
 		mu.Lock()
