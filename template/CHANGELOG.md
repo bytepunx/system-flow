@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.93 - 2026-10-15
+
+- S-0381 The design token file is the one exception to "Everything is markdown" (patch, ADR-0146): `documentation.md` says that everything is markdown with YAML front matter except the design token file, JSON in the W3C Design Tokens Community Group (DTCG) format at the path the manifest's `design.tokens` names, `design/system/design-system.tokens.json` by default. Its guidance, `design/system/design-system.md`, is markdown like any other design document. The manifest key and `flai design init`, which writes both files, need a flai that has them, the release that carries S-0381.
+
 ## 1.0.92 - 2026-10-14
 
 - S-0374 An acceptance on main during a close-out's tiers fails its final sync check, so the whole close-out runs again (patch).

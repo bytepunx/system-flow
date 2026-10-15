@@ -1,6 +1,6 @@
 ---
 title: Documentation standard
-updated: 2026-10-07
+updated: 2026-10-15
 status: active
 topics: [all]
 ---
@@ -8,6 +8,8 @@ topics: [all]
 # Documentation standard
 
 Applies to every markdown file in `design/`, `docs/`, and `wip/`, in this repo and in any project generated from the template.
+
+Every document is markdown with YAML front matter, with one exception: a project's design token file is JSON in the W3C Design Tokens Community Group (DTCG) format, with no front matter, at the path the manifest's `design.tokens` key names, `design/system/design-system.tokens.json` by default ([ADR-0146](../adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md)).
 
 ## Front matter
 
