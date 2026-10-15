@@ -1106,6 +1106,8 @@ The token file is a DTCG 2025.10 resolver document: one set of light values and 
 
 --topics sets the guidance's topics, all by default. The topics choose the stories flai prime gives the guidance to, so name the UI sub-project, or its kind, so that every story that touches the UI is given it.
 
+--project names a sub-project the design system governs, one of the manifest's projects; repeat it or separate names with commas. init writes each name into the guidance's topics, the one list prime reads, so there is no second record of the sub-projects governed (ADR-0152). With --project and no --topics, the topics are the sub-projects alone, without all; with both, they are the --topics values, then each sub-project not among them. A name the manifest does not list is refused before anything is written.
+
 When the manifest's design.stylesheet names a design stylesheet, init then writes it from the token file it has just written, as flai design css --write does, replacing what is there. When that fails, the token file and the guidance stay, and the error says to run flai design css --write.
 
 When the token file or the guidance is there already, init writes nothing and says which, with exit status 1. It commits nothing. Prints the paths written, the token file, the guidance, and the stylesheet when there is one; with --json, {"tokens": ..., "guidance": ..., "topics": [...], "stylesheet": ...}, stylesheet left out when the manifest names none.
@@ -1115,12 +1117,14 @@ Examples:
 ```bash
 flai design init
 flai design init --topics flaiover,ui
+flai design init --project flaiover
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--project` strings | a sub-project of the manifest the design system governs, written into the guidance's topics; repeatable |
 | `--topics` strings | the guidance's topics, which choose the stories prime gives it to: name the UI sub-project (default `[all]`) |
 
 #### flai design proposals

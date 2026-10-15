@@ -113,6 +113,80 @@ func TestDesignInitTopics(t *testing.T) {
 	}
 }
 
+// designProjectWithSubProjects is a scratch project with no design system
+// whose manifest lists the sub-projects flai and flaiover.
+func designProjectWithSubProjects(t *testing.T) string {
+	t.Helper()
+	root := designProject(t)
+	data := readProjectFile(t, root, manifest.File) + "projects:\n  - name: flai\n    path: flai\n    kind: go\n  - name: flaiover\n    path: flaiover\n    kind: node\n"
+	writeProjectFile(t, root, manifest.File, data)
+	return root
+}
+
+// S-0386: --project writes each sub-project into the guidance's topics, the
+// one list prime reads (ADR-0152), and drops the default all.
+func TestDesignInitProject(t *testing.T) {
+	root := designProjectWithSubProjects(t)
+	out, errOut, code := runIn(t, root, "design", "init", "--project", "flaiover", "--json")
+	var got struct {
+		Topics []string `json:"topics"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &got) != nil {
+		t.Fatalf("init --project --json: %d %q %s", code, out, errOut)
+	}
+	if strings.Join(got.Topics, ",") != "flaiover" {
+		t.Errorf("init --project --json topics %v, want [flaiover]", got.Topics)
+	}
+	if g := readProjectFile(t, root, designGuidanceFile); !strings.Contains(g, "\ntopics: [flaiover]\n") {
+		t.Errorf("the guidance's topics:\n%s", g)
+	}
+}
+
+// S-0386: with --topics and --project, the topics are the --topics values,
+// then each sub-project not among them, once each.
+func TestDesignInitProjectWithTopics(t *testing.T) {
+	root := designProjectWithSubProjects(t)
+	out, errOut, code := runIn(t, root, "design", "init", "--topics", "ui,flaiover", "--project", "flaiover", "--project", "flai", "--json")
+	var got struct {
+		Topics []string `json:"topics"`
+	}
+	if code != 0 || json.Unmarshal([]byte(out), &got) != nil {
+		t.Fatalf("init --topics --project --json: %d %q %s", code, out, errOut)
+	}
+	if strings.Join(got.Topics, ",") != "ui,flaiover,flai" {
+		t.Errorf("init --topics --project --json topics %v, want [ui flaiover flai]", got.Topics)
+	}
+	if g := readProjectFile(t, root, designGuidanceFile); !strings.Contains(g, "\ntopics: [ui, flaiover, flai]\n") {
+		t.Errorf("the guidance's topics:\n%s", g)
+	}
+}
+
+// S-0386: a --project the manifest does not list is refused, naming the flag,
+// the name, and the sub-projects there are, and nothing is written.
+func TestDesignInitProjectRefusesAnUnknownSubProject(t *testing.T) {
+	root := designProjectWithSubProjects(t)
+	_, errOut, code := runIn(t, root, "design", "init", "--project", "flaiover,web")
+	if code != 1 {
+		t.Errorf("init --project web: exit %d, want 1: %s", code, errOut)
+	}
+	for _, want := range []string{"--project", "web", "is not a sub-project", "flai, flaiover"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the error does not hold %q: %s", want, errOut)
+		}
+	}
+	if projectFileExists(root, designTokensFile) || projectFileExists(root, designGuidanceFile) {
+		t.Error("a refused init wrote a file")
+	}
+
+	root = designProject(t)
+	if _, errOut, code := runIn(t, root, "design", "init", "--project", "flaiover"); code != 1 || !strings.Contains(errOut, "lists none") {
+		t.Errorf("init --project in a project with no sub-projects: %d %s", code, errOut)
+	}
+	if projectFileExists(root, designTokensFile) || projectFileExists(root, designGuidanceFile) {
+		t.Error("a refused init wrote a file")
+	}
+}
+
 // S-0381: init refuses when either file is there, naming it, and writes
 // neither.
 func TestDesignInitRefusesWhenEitherFileIsThere(t *testing.T) {

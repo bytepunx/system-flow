@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -54,7 +55,7 @@ worktree. Accepting the story merges its branch, and with it the proposal.`,
 }
 
 func newDesignInitCmd(a *app) *cobra.Command {
-	var list []string
+	var list, projects []string
 	c := &cobra.Command{
 		Use:   "init",
 		Short: "Write the token file and the guidance from flai's starters, and the design stylesheet when one is named",
@@ -74,6 +75,14 @@ saying what to write there, and its front matter's updated is today.
 stories flai prime gives the guidance to, so name the UI sub-project, or its
 kind, so that every story that touches the UI is given it.
 
+--project names a sub-project the design system governs, one of the
+manifest's projects; repeat it or separate names with commas. init writes
+each name into the guidance's topics, the one list prime reads, so there is
+no second record of the sub-projects governed (ADR-0152). With --project and
+no --topics, the topics are the sub-projects alone, without all; with both,
+they are the --topics values, then each sub-project not among them. A name
+the manifest does not list is refused before anything is written.
+
 When the manifest's design.stylesheet names a design stylesheet, init then
 writes it from the token file it has just written, as flai design css --write
 does, replacing what is there. When that fails, the token file and the
@@ -85,7 +94,8 @@ the token file, the guidance, and the stylesheet when there is one; with
 --json, {"tokens": ..., "guidance": ..., "topics": [...], "stylesheet": ...},
 stylesheet left out when the manifest names none.`,
 		Example: `  flai design init
-  flai design init --topics flaiover,ui`,
+  flai design init --topics flaiover,ui
+  flai design init --project flaiover`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			for _, t := range list {
@@ -94,6 +104,10 @@ stylesheet left out when the manifest names none.`,
 				}
 			}
 			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			list, err = governedTopics(list, cmd.Flags().Changed("topics"), projects, repo.Manifest.Projects)
 			if err != nil {
 				return err
 			}
@@ -131,7 +145,41 @@ stylesheet left out when the manifest names none.`,
 		},
 	}
 	c.Flags().StringSliceVar(&list, "topics", []string{"all"}, "the guidance's topics, which choose the stories prime gives it to: name the UI sub-project")
+	c.Flags().StringSliceVar(&projects, "project", nil, "a sub-project of the manifest the design system governs, written into the guidance's topics; repeatable")
 	return c
+}
+
+// governedTopics is the guidance's topics once the sub-projects the design
+// system governs are written into them (ADR-0152): the topics list, its
+// default all dropped when explicit is false and there are sub-projects, then
+// each sub-project not already in it. A name that is no sub-project of known
+// is refused, naming the ones there are.
+func governedTopics(list []string, explicit bool, projects []string, known []manifest.Project) ([]string, error) {
+	if len(projects) == 0 {
+		return list, nil
+	}
+	names := make([]string, 0, len(known))
+	for _, p := range known {
+		names = append(names, p.Name)
+	}
+	for _, p := range projects {
+		if !slices.Contains(names, p) {
+			if len(names) == 0 {
+				return nil, fmt.Errorf("--project: %q is not a sub-project of this project, and %s lists none; add it under projects in %s, or leave --project out and name the topics with --topics", p, manifest.File, manifest.File)
+			}
+			return nil, fmt.Errorf("--project: %q is not a sub-project of this project; %s lists %s, so name one of those", p, manifest.File, strings.Join(names, ", "))
+		}
+	}
+	var out []string
+	if explicit {
+		out = slices.Clone(list)
+	}
+	for _, p := range projects {
+		if !slices.Contains(out, p) {
+			out = append(out, p)
+		}
+	}
+	return out, nil
 }
 
 // initStylesheet writes the design stylesheet from the token file flai design
