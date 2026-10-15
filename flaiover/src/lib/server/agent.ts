@@ -78,6 +78,7 @@ export const REQUIRED_METHODS = [
 	'docs.tree',
 	'doc.get',
 	'doc.lint',
+	'design.get',
 	'adrs.list',
 	'activity.get',
 	'activity.document',

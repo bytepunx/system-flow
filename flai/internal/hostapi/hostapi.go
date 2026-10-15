@@ -571,7 +571,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			return messages.View(repo, c), nil
 		},
 	}
-	for _, more := range []map[string]channel.Method{docMethods(), peopleMethods(now), searchMethods(), readMethods(now), writeMethods(Commands, now, host)} {
+	for _, more := range []map[string]channel.Method{docMethods(), designMethods(), peopleMethods(now), searchMethods(), readMethods(now), writeMethods(Commands, now, host)} {
 		for name, m := range more {
 			table[name] = m
 		}
