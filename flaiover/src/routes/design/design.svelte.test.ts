@@ -5,6 +5,9 @@
 // writes the edits into the token file through /api/design/tokens, and a refusal, a conflict, or a
 // flai too old to save is shown with the edits kept; Discard goes back to the saved tokens; leaving
 // with unsaved changes asks first.
+// S-0384: the page lists the open stories that propose a change to the design system, compares
+// the one chosen with the main branch's tokens, closes it when it leaves the list, and offers the
+// form that requests a change under an open epic.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -22,20 +25,24 @@ vi.mock('$app/navigation', () => ({
 		navigation.before = f;
 	}
 }));
+vi.mock('$app/paths', () => ({
+	resolve: (route: string, p?: { id: string }) => route.replace('[id]', p?.id ?? '')
+}));
 const enhance = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('$lib/markdown', async (actual) => ({
 	...(await actual<typeof import('$lib/markdown')>()),
 	enhance
 }));
+// Each follow's callback, by the kinds it follows joined with commas.
 const followed = vi.hoisted(() => ({
 	kinds: [] as string[][],
-	f: null as null | (() => void)
+	of: {} as Record<string, () => void>
 }));
 vi.mock('$lib/events', () => ({
 	listen: () => () => {},
 	follow: (kinds: string[], f: () => void) => {
 		followed.kinds.push(kinds);
-		followed.f = f;
+		followed.of[kinds.join()] = f;
 		return () => {};
 	}
 }));
@@ -99,6 +106,8 @@ const guidanceDoc = {
 	body: '\n# Design system\n\nUse the primary colour for one action per view.\n'
 };
 const guidanceUrl = `/api/docs/file?path=${encodeURIComponent(GUIDANCE)}`;
+const PROPOSALS = '/api/design/proposals';
+const EPICS = '/api/items?type=epic&archived=false';
 
 describe('the design page (S-0382)', () => {
 	let c: ReturnType<typeof mount> | undefined;
@@ -107,7 +116,7 @@ describe('the design page (S-0382)', () => {
 		c = undefined;
 		api.mockReset();
 		followed.kinds = [];
-		followed.f = null;
+		followed.of = {};
 		document.body.innerHTML = '';
 	});
 
@@ -115,6 +124,7 @@ describe('the design page (S-0382)', () => {
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/design') return design();
 			if (url === guidanceUrl) return guidance();
+			if (url === PROPOSALS || url === EPICS) return answer([]);
 			return answer({ error: `unexpected ${url}` }, 404);
 		});
 	}
@@ -176,11 +186,11 @@ describe('the design page (S-0382)', () => {
 		let current: DesignSystem = without;
 		serve(() => answer(current));
 		await show();
-		expect(followed.kinds).toEqual([['document']]);
+		expect(followed.kinds).toEqual([['document'], ['item']]);
 		expect(q('no-design-system')).not.toBeNull();
 
 		current = withSystem;
-		followed.f!();
+		followed.of.document();
 		await settle();
 		expect(q('no-design-system')).toBeNull();
 		expect(q('token-sheet')).not.toBeNull();
@@ -227,7 +237,7 @@ describe('editing the design system on the design page (S-0383)', () => {
 		vi.unstubAllGlobals();
 		get = readRaw;
 		put = saveRaw;
-		followed.f = null;
+		followed.of = {};
 		navigation.before = null;
 		document.body.innerHTML = '';
 	});
@@ -239,6 +249,7 @@ describe('editing the design system on the design page (S-0383)', () => {
 		api.mockImplementation(async (url: string, init?: RequestInit) => {
 			if (url === '/api/design') return answer(design);
 			if (url === guidanceUrl) return answer(guidanceDoc);
+			if (url === PROPOSALS || url === EPICS) return answer([]);
 			if (url === '/api/design/tokens' && init?.method === 'PUT') {
 				const body = JSON.parse(String(init.body)) as Record<string, unknown>;
 				puts.push(body);
@@ -498,7 +509,7 @@ describe('editing the design system on the design page (S-0383)', () => {
 		surface.value = { colorSpace: 'srgb', components: [0.933, 0.933, 0.933], hex: '#eeeeee' };
 		surface.css = '#eeeeee';
 		surface.variables = [{ name: '--color-surface', value: '#eeeeee' }];
-		followed.f!();
+		followed.of.document();
 		await settle();
 		expect(field('color.surface, light').value).toBe('#eeeeee');
 		expect(changedMarks()).toEqual(['edit-color.primary']);
@@ -527,5 +538,215 @@ describe('editing the design system on the design page (S-0383)', () => {
 		confirm.mockReturnValueOnce(true);
 		navigation.before!({ cancel });
 		expect(cancel).toHaveBeenCalledTimes(1);
+	});
+});
+
+const STYLESHEET = 'flaiover/src/routes/layout.css';
+const BLUER = { id: 'S-0390', title: 'A bluer primary', status: 'in-progress', paths: [TOKENS] };
+const ACCENT = {
+	id: 'S-0391',
+	title: 'Say when to use the accent',
+	status: 'ready',
+	paths: [TOKENS, GUIDANCE]
+};
+const EPIC_LIST = [
+	{ id: 'E-0001', title: 'Dashboard', status: 'in-progress' },
+	{ id: 'E-0002', title: 'Shipped', status: 'done' },
+	{ id: 'E-0003', title: 'Dropped', status: 'cancelled' },
+	{ id: 'E-0004', title: 'Design system', status: 'backlog' }
+];
+const STORY = '/api/design?story=';
+
+describe('the proposals and the request for a change on the design page (S-0384)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	let main: DesignSystem;
+	let list: () => unknown;
+	let story: (id: string) => unknown;
+
+	// S-0390's design system: the main branch's with a bluer light primary.
+	const proposed = () => {
+		const d = structuredClone(withSystem);
+		d.problems = [];
+		d.themes[0].tokens[1] = colour('primary', '#336699');
+		return d;
+	};
+	const withStylesheet = () => ({ ...structuredClone(withSystem), stylesheet: STYLESHEET });
+
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		followed.kinds = [];
+		followed.of = {};
+		document.body.innerHTML = '';
+	});
+
+	// Serves design.get, the guidance, the proposals, the epics, and a proposal's design.get.
+	async function show(proposals: unknown[] = [BLUER, ACCENT], design = withStylesheet()) {
+		main = design;
+		list = () => answer(proposals);
+		story = (id) => (id === 'S-0390' ? answer(proposed()) : answer({ error: `no ${id}` }, 404));
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/design') return answer(main);
+			if (url === guidanceUrl) return answer(guidanceDoc);
+			if (url === PROPOSALS) return list();
+			if (url === EPICS) return answer(EPIC_LIST);
+			if (url.startsWith(STORY)) return story(decodeURIComponent(url.slice(STORY.length)));
+			return answer({ error: `unexpected ${url}` }, 404);
+		});
+		c = mount(DesignPage, { target: document.body });
+		await settle();
+	}
+
+	const q = (testid: string) => document.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
+	const words = (e: Element | null) => e!.textContent!.replace(/\s+/g, ' ').trim();
+	const compare = (id: string) => q(`proposal-${id}`)!.querySelector('button')!;
+	const pathsOf = (row: Element) =>
+		[...row.querySelectorAll('[data-testid="proposal-path"]')].map(words);
+	const storyReads = () =>
+		api.mock.calls.map(([url]) => String(url)).filter((url) => url.startsWith(STORY));
+	function button(text: string) {
+		const found = [...document.querySelectorAll('button')].find(
+			(b) => b.textContent!.trim() === text
+		);
+		if (!found) throw new Error(`no button ${text}`);
+		return found;
+	}
+
+	it('lists each proposal with its link, title, state, and which of the token file and guidance it changes', async () => {
+		await show();
+		const bluer = q('proposal-S-0390')!;
+		expect(bluer.querySelector('a')!.getAttribute('href')).toBe('/items/S-0390');
+		expect(words(bluer)).toContain('A bluer primary');
+		expect(words(bluer)).toContain('in-progress');
+		expect(pathsOf(bluer)).toEqual([`token file ${TOKENS}`]);
+		const accent = q('proposal-S-0391')!;
+		expect(accent.querySelector('a')!.getAttribute('href')).toBe('/items/S-0391');
+		expect(words(accent)).toContain('ready');
+		expect(pathsOf(accent)).toEqual([`token file ${TOKENS}`, `guidance ${GUIDANCE}`]);
+		expect(q('proposals-none')).toBeNull();
+		expect(q('proposal-chosen')).toBeNull();
+	});
+
+	it('says no open story proposes a change, pointing to the form, when the list is empty', async () => {
+		await show([]);
+		expect(words(q('proposals-none'))).toBe(
+			'No open story proposes a change to the design system. Request one below.'
+		);
+		expect(q('propose-change')).not.toBeNull();
+	});
+
+	it("says the host's flai is too old to list the proposals when it answers 501", async () => {
+		await show();
+		list = () => answer({ error: 'flai on the host does not offer design.proposals' }, 501);
+		followed.of.item();
+		await settle();
+		expect(words(q('proposals-cannot-list'))).toBe(
+			'This flai cannot list the proposals yet; upgrade flai on the host.'
+		);
+		expect(q('proposal-S-0390')).toBeNull();
+	});
+
+	it("compares the chosen proposal's tokens with the main branch's, and closes it when chosen again", async () => {
+		await show();
+		compare('S-0390').click();
+		await settle();
+		expect(storyReads()).toEqual([`${STORY}S-0390`]);
+		expect(compare('S-0390').getAttribute('aria-pressed')).toBe('true');
+		const heading = q('proposal-compare')!.querySelector('h3');
+		expect(words(heading)).toBe('Proposal S-0390: A bluer primary');
+		const row = q('difference-light-color.primary')!;
+		expect(row.dataset.change).toBe('changed');
+		expect(words(row.querySelector('[data-side="main"]'))).toBe('#2563eb');
+		expect(words(row.querySelector('[data-side="proposal"]'))).toBe('#336699');
+		expect(q('difference-dark-color.primary')).toBeNull();
+
+		compare('S-0390').click();
+		await settle();
+		expect(q('proposal-chosen')).toBeNull();
+		expect(compare('S-0390').getAttribute('aria-pressed')).toBe('false');
+	});
+
+	it('closes the comparison with its close control', async () => {
+		await show();
+		compare('S-0390').click();
+		await settle();
+		button('Close comparison').click();
+		await settle();
+		expect(q('proposal-chosen')).toBeNull();
+	});
+
+	it("shows flai's message when it refuses to read a proposal's design system", async () => {
+		await show();
+		story = () => answer({ error: 'S-0391 has no worktree: start it again' }, 400);
+		compare('S-0391').click();
+		await settle();
+		expect(storyReads()).toEqual([`${STORY}S-0391`]);
+		const refused = q('proposal-error')!;
+		expect(refused.getAttribute('role')).toBe('alert');
+		expect(words(refused)).toBe(
+			"Could not read S-0391's design system: S-0391 has no worktree: start it again"
+		);
+		expect(q('proposal-compare')).toBeNull();
+	});
+
+	it('closes the comparison when its proposal leaves the list, and keeps it while it stays', async () => {
+		await show();
+		compare('S-0390').click();
+		await settle();
+		list = () => answer([BLUER]);
+		followed.of.item();
+		await settle();
+		expect(q('proposal-compare')).not.toBeNull();
+		expect(q('proposal-S-0391')).toBeNull();
+
+		list = () => answer([ACCENT]);
+		followed.of.item();
+		await settle();
+		expect(q('proposal-S-0390')).toBeNull();
+		expect(q('proposal-chosen')).toBeNull();
+	});
+
+	it('reads the proposals and the chosen proposal again when a document changes', async () => {
+		await show();
+		compare('S-0390').click();
+		await settle();
+		const lists = () => api.mock.calls.filter(([url]) => url === PROPOSALS).length;
+		const before = lists();
+		followed.of.document();
+		await settle();
+		expect(lists()).toBe(before + 1);
+		expect(storyReads()).toEqual([`${STORY}S-0390`, `${STORY}S-0390`]);
+		expect(q('proposal-compare')).not.toBeNull();
+	});
+
+	it('offers the request form with the open epics, the token file, and the stylesheet', async () => {
+		await show();
+		const request = q('design-request')!;
+		expect(words(request.querySelector('h2'))).toBe('Request a change');
+		expect(request.querySelector('[data-testid="propose-change"]')).not.toBeNull();
+		const offered = [...q('propose-epic')!.querySelectorAll('option')].map((o) => o.value);
+		expect(offered).toEqual(['', 'E-0001', 'E-0004']);
+		expect(words(q('propose-about'))).toContain(`${TOKENS} and ${STYLESHEET}`);
+	});
+
+	it('closes the comparison and holds compare back while the tokens are edited', async () => {
+		await show();
+		compare('S-0390').click();
+		await settle();
+		button('Edit tokens').click();
+		await settle();
+		expect(q('design-edit')).not.toBeNull();
+		expect(q('proposal-chosen')).toBeNull();
+		expect(compare('S-0390').disabled).toBe(true);
+	});
+
+	it('offers neither the proposals nor the request form to a project with no token file', async () => {
+		await show([BLUER], without);
+		expect(q('no-design-system')).not.toBeNull();
+		expect(q('design-proposals')).toBeNull();
+		expect(q('design-request')).toBeNull();
+		expect(api).not.toHaveBeenCalledWith(PROPOSALS);
+		expect(api).not.toHaveBeenCalledWith(EPICS);
 	});
 });

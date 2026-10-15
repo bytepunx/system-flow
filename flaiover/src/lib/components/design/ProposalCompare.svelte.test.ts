@@ -70,11 +70,11 @@ describe('ProposalCompare (S-0384)', () => {
 
 	it("previews the gallery with main's tokens and the proposal's, side by side, each labelled", () => {
 		render();
-		expect(words(q('h2'))).toBe('Proposal S-0400: A warmer primary');
+		expect(words(q('h3'))).toBe('Proposal S-0400: A warmer primary');
 		const main = q('[data-testid="compare-main"]');
 		const proposal = q('[data-testid="compare-proposal"]');
-		expect(words(main.querySelector('h3')!)).toBe('Main branch');
-		expect(words(proposal.querySelector('h3')!)).toBe('Proposal S-0400');
+		expect(words(main.querySelector('h4')!)).toBe('Main branch');
+		expect(words(proposal.querySelector('h4')!)).toBe('Proposal S-0400');
 		const frame = (el: Element) => el.querySelector<HTMLIFrameElement>('iframe')!;
 		expect(frame(main).title).toBe("The main branch's design system preview");
 		expect(frame(proposal).title).toBe("S-0400's proposed design system preview");
@@ -88,7 +88,7 @@ describe('ProposalCompare (S-0384)', () => {
 	it("marks each token that differs, per theme, with main's value and the proposal's", () => {
 		render();
 		const differences = q('[data-testid="proposal-differences"]');
-		expect([...differences.querySelectorAll('h4')].map(words)).toEqual(['Light']);
+		expect([...differences.querySelectorAll('h5')].map(words)).toEqual(['Light']);
 		const rows = [...differences.querySelectorAll<HTMLElement>('tbody tr')];
 		expect(rows.map((r) => [r.dataset.change, r.querySelector('td')!.textContent])).toEqual([
 			['changed', 'color.primary'],

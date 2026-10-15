@@ -42,7 +42,7 @@
 	const safe = (value: string | undefined): string | undefined =>
 		value && unsafeVariable('--v', value) === null ? value : undefined;
 
-	const h3 = 'mb-3 text-lg font-semibold';
+	const h4 = 'mb-3 text-lg font-semibold';
 	const th = 'py-2 pr-4 text-left font-medium text-muted';
 </script>
 
@@ -65,9 +65,9 @@
 {/snippet}
 
 <section aria-labelledby="proposal-compare-heading" data-testid="proposal-compare">
-	<h2 id="proposal-compare-heading" class="text-lg font-semibold">
+	<h3 id="proposal-compare-heading" class="text-lg font-semibold">
 		Proposal {story}: {title}
-	</h2>
+	</h3>
 	<p class="mt-1 text-sm text-muted">
 		The sample components with the main branch's tokens and with {story}'s, and the tokens they
 		differ in.
@@ -90,7 +90,7 @@
 
 	<div class="mt-4 grid grid-cols-1 gap-6 xl:grid-cols-2">
 		<section class="min-w-0" aria-labelledby="proposal-compare-main" data-testid="compare-main">
-			<h3 id="proposal-compare-main" class={h3}>Main branch</h3>
+			<h4 id="proposal-compare-main" class={h4}>Main branch</h4>
 			<PreviewFrame
 				light={tokensOf(main, 'light')}
 				dark={tokensOf(main, 'dark')}
@@ -102,7 +102,7 @@
 			aria-labelledby="proposal-compare-proposal"
 			data-testid="compare-proposal"
 		>
-			<h3 id="proposal-compare-proposal" class={h3}>Proposal {story}</h3>
+			<h4 id="proposal-compare-proposal" class={h4}>Proposal {story}</h4>
 			<PreviewFrame
 				light={tokensOf(proposal, 'light')}
 				dark={tokensOf(proposal, 'dark')}
@@ -116,7 +116,7 @@
 		aria-labelledby="proposal-compare-differences"
 		data-testid="proposal-differences"
 	>
-		<h3 id="proposal-compare-differences" class="text-lg font-semibold">Tokens that differ</h3>
+		<h4 id="proposal-compare-differences" class="text-lg font-semibold">Tokens that differ</h4>
 		{#if !proposal.themes.length}
 			<p class="mt-2 text-sm text-warn" data-testid="proposal-no-tokens">
 				{story}'s token file {proposal.exists ? 'does not parse' : 'is missing'}, so it has no
@@ -128,9 +128,9 @@
 			</p>
 		{:else}
 			{#each differences as group (group.theme)}
-				<h4 id="proposal-differences-{group.theme}" class="mt-4 font-semibold">
+				<h5 id="proposal-differences-{group.theme}" class="mt-4 font-semibold">
 					{LABEL[group.theme]}
-				</h4>
+				</h5>
 				<table class="mt-2 w-full text-sm" aria-labelledby="proposal-differences-{group.theme}">
 					<thead>
 						<tr>

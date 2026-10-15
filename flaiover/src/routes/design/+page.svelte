@@ -9,10 +9,19 @@
 	// through flai's file.save; flai's refusal, a change made meanwhile, or a flai too old to save is
 	// shown with the edits kept. A document change while editing refreshes only the saved tokens, and
 	// leaving with unsaved changes asks first.
-	import type { DesignContrast, DesignSystem, DesignTheme } from '$lib/server/repo';
+	// Proposals (S-0384) lists the open stories whose branches change the token file or the
+	// guidance, through /api/design/proposals, read again when a document or a work item changes;
+	// comparing one reads its design system from its worktree and shows it beside the main branch's,
+	// each token that differs marked with its two values. A proposal that leaves the list, accepted
+	// or cancelled, takes its comparison with it; once accepted, its tokens are the main branch's,
+	// read on the document change its merge makes. Request a change turns the operator's words into
+	// a ready story with topic design under the open epic they choose. Comparing waits while the
+	// tokens are being edited.
+	import type { DesignContrast, DesignProposal, DesignSystem, DesignTheme } from '$lib/server/repo';
 	import { api } from '$lib/api';
 	import { onMount, tick } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { follow } from '$lib/events';
 	import { enhance, render } from '$lib/markdown';
 	import { themeState } from '$lib/theme.svelte';
@@ -27,14 +36,20 @@
 	import TokenSheet from '$lib/components/design/TokenSheet.svelte';
 	import PreviewFrame from '$lib/components/design/PreviewFrame.svelte';
 	import TokenEditor from '$lib/components/design/TokenEditor.svelte';
+	import ProposalCompare from '$lib/components/design/ProposalCompare.svelte';
+	import ProposeChange from '$lib/components/design/ProposeChange.svelte';
 	import DismissibleNotice from '$lib/components/DismissibleNotice.svelte';
 
 	/** The token file as GET /api/design/tokens answers it: its raw text and its SHA-256. */
 	type Raw = { path: string; content: string; hash: string };
 	type Finding = { level: string; rule: string; path: string; line: number; message: string };
 	type Conflict = { current: string; hash: string; diff?: string };
+	type Epic = { id: string; title: string; status: string };
+	/** The proposal compared: its design system once read, or flai's refusal to read it. */
+	type Chosen = { id: string; design: DesignSystem | null; error: string | null };
 
 	const CANNOT_SAVE = 'This flai cannot save the token file yet; upgrade flai on the host.';
+	const CANNOT_LIST = 'This flai cannot list the proposals yet; upgrade flai on the host.';
 	// The token sheet's order; any other namespace follows in the token file's order.
 	const NAMESPACES = ['color', 'font', 'text', 'spacing', 'radius'];
 	const HEADINGS: Record<string, string> = {
@@ -66,6 +81,14 @@
 	// Bumped to mount the editors afresh, dropping text they hold that made no edit.
 	let generation = $state(0);
 
+	let proposals = $state<DesignProposal[] | null>(null);
+	let proposalsError = $state<string | null>(null);
+	// The host's flai answered 501: it cannot list the proposals.
+	let cannotList = $state(false);
+	let chosen = $state<Chosen | null>(null);
+	let epics = $state<Epic[]>([]);
+	let epicsError = $state<string | null>(null);
+
 	const saved = $derived(design?.themes ?? []);
 	// A plain token file's one value serves both themes, so a light edit reaches dark even before,
 	// or without, its raw text; a resolver document's dark context is known only from its text.
@@ -81,10 +104,19 @@
 	const editable = $derived(!!design?.exists && saved.length > 0);
 	const namespaces = $derived(namespacesOf(saved));
 	const canSave = $derived(dirty && raw !== null && !cannotSave && !busy);
+	const chosenTitle = $derived(proposals?.find((p) => p.id === chosen?.id)?.title ?? '');
 
 	const tokens = (name: 'light' | 'dark') => themes.find((t) => t.name === name)?.tokens ?? [];
 
 	const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+	const itemHref = (id: string) => resolve('/items/[id]', { id });
+	const th = 'py-2 pr-4 text-left font-medium text-muted';
+	const td = 'py-2 pr-4';
+
+	/** What a proposal's changed path is to the main branch's design system. */
+	const changeOf = (path: string) =>
+		path === design?.path ? 'token file' : path === design?.guidance ? 'guidance' : 'file';
 
 	/** Each token path's first part, in the token sheet's order, the rest as the file gives them. */
 	function namespacesOf(all: readonly DesignTheme[]): string[] {
@@ -149,6 +181,74 @@
 		}
 	}
 
+	/** Lists the proposals; a chosen one no longer listed, accepted or cancelled, is closed. */
+	async function loadProposals() {
+		try {
+			const r = await api('/api/design/proposals');
+			const body = await r.json().catch(() => ({}));
+			if (r.status === 501) {
+				cannotList = true;
+				proposals = null;
+				chosen = null;
+				return;
+			}
+			if (!r.ok) throw new Error(body.error ?? r.statusText);
+			cannotList = false;
+			proposalsError = null;
+			proposals = body as DesignProposal[];
+			if (chosen && !proposals.some((p) => p.id === chosen!.id)) chosen = null;
+		} catch (e) {
+			proposalsError = `Could not list the proposals: ${errorText(e)}`;
+		}
+	}
+
+	/** Reads the proposal's design system from its story's worktree, if it is still chosen. */
+	async function readProposal(id: string) {
+		let next: Chosen;
+		try {
+			const r = await api(`/api/design?story=${encodeURIComponent(id)}`);
+			const body = await r.json().catch(() => ({}));
+			next = r.ok
+				? { id, design: body as DesignSystem, error: null }
+				: { id, design: null, error: body.error ?? r.statusText };
+		} catch (e) {
+			next = { id, design: null, error: errorText(e) };
+		}
+		if (chosen?.id === id) chosen = next;
+	}
+
+	/** Compares the proposal with the main branch's tokens, or closes it if it is compared already. */
+	function choose(id: string) {
+		if (chosen?.id === id) {
+			chosen = null;
+			return;
+		}
+		chosen = { id, design: null, error: null };
+		void readProposal(id);
+	}
+
+	/** The open epics a requested change may go under, as the new-item form offers them. */
+	async function loadEpics() {
+		try {
+			const r = await api('/api/items?type=epic&archived=false');
+			const body = await r.json().catch(() => ({}));
+			if (!r.ok) throw new Error(body.error ?? r.statusText);
+			epics = (body as Epic[]).filter((e) => e.status !== 'done' && e.status !== 'cancelled');
+			epicsError = null;
+		} catch (e) {
+			epicsError = `Could not read the epics: ${errorText(e)}`;
+		}
+	}
+
+	// The proposals and the request form are offered only for a project with a token file.
+	async function refresh() {
+		await load();
+		if (!design?.exists) return;
+		void loadProposals();
+		void loadEpics();
+		if (chosen) void readProposal(chosen.id);
+	}
+
 	function clearOutcome() {
 		saveError = notice = null;
 		findings = [];
@@ -157,6 +257,8 @@
 
 	function startEditing() {
 		clearOutcome();
+		// a comparison shows the saved tokens, not the edits, so it waits until editing is done
+		chosen = null;
 		editing = true;
 		void loadRaw();
 	}
@@ -257,9 +359,21 @@
 	});
 
 	onMount(() => {
-		void load();
-		// the token file and the guidance are documents under the design folder
-		return follow(['document'], () => void load());
+		void refresh();
+		// The token file and the guidance are documents under the design folder, and an accepted
+		// proposal's merge changes them. A story moved, accepted, or cancelled, or an epic closed,
+		// changes the proposals or the epics offered.
+		const stops = [
+			follow(['document'], () => void refresh()),
+			follow(['item'], () => {
+				if (!design?.exists) return;
+				void loadProposals();
+				void loadEpics();
+			})
+		];
+		return () => {
+			for (const stop of stops) stop();
+		};
 	});
 </script>
 
@@ -461,5 +575,110 @@
 				{@html guidance.html}
 			</article>
 		{/if}
+	</section>
+	<section class="mt-8" aria-labelledby="design-proposals" data-testid="design-proposals">
+		<h2 id="design-proposals" class="text-lg font-semibold">Proposals</h2>
+		<p class="mt-1 text-sm text-muted">
+			The open stories whose branches change the token file or the guidance. Compare one to see its
+			tokens beside the main branch's.
+		</p>
+		{#if proposalsError}
+			<p class="mt-2 rounded border border-danger bg-danger-soft p-3 text-sm text-danger">
+				{proposalsError}
+			</p>
+		{/if}
+		{#if cannotList}
+			<p
+				class="mt-2 rounded border border-warn bg-warn-soft p-2 text-sm text-warn"
+				role="status"
+				data-testid="proposals-cannot-list"
+			>
+				{CANNOT_LIST}
+			</p>
+		{:else if proposals === null}
+			{#if !proposalsError}<p class="mt-2 text-sm text-muted">Loading…</p>{/if}
+		{:else if !proposals.length}
+			<p class="mt-2 text-sm text-muted" data-testid="proposals-none">
+				No open story proposes a change to the design system. Request one below.
+			</p>
+		{:else}
+			<table class="mt-3 w-full text-sm">
+				<thead>
+					<tr>
+						<th class={th}>Story</th>
+						<th class={th}>Title</th>
+						<th class={th}>State</th>
+						<th class={th}>Changes</th>
+						<th class="py-2"><span class="sr-only">Compare</span></th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each proposals as p (p.id)}
+						<tr class="border-t border-line align-top" data-testid="proposal-{p.id}">
+							<td class={td}><a class="font-mono underline" href={itemHref(p.id)}>{p.id}</a></td>
+							<td class={td}>{p.title}</td>
+							<td class="py-2 pr-4 whitespace-nowrap">{p.status}</td>
+							<td class={td}>
+								<ul>
+									{#each p.paths as path (path)}
+										<li data-testid="proposal-path">
+											{changeOf(path)} <code class="text-xs">{path}</code>
+										</li>
+									{/each}
+								</ul>
+							</td>
+							<td class="py-2 text-right">
+								<button
+									type="button"
+									class="rounded border border-line-strong px-3 py-1 text-sm disabled:opacity-50"
+									aria-pressed={chosen?.id === p.id}
+									disabled={editing}
+									title={editing ? 'Finish editing the tokens first' : undefined}
+									onclick={() => choose(p.id)}>Compare</button
+								>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{/if}
+		{#if chosen}
+			<div class="mt-6 rounded border border-line p-4" data-testid="proposal-chosen">
+				<div class="mb-2 flex justify-end">
+					<button
+						type="button"
+						class="rounded border border-line px-3 py-1 text-sm"
+						onclick={() => (chosen = null)}>Close comparison</button
+					>
+				</div>
+				{#if chosen.error}
+					<p
+						class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger"
+						role="alert"
+						data-testid="proposal-error"
+					>
+						Could not read {chosen.id}'s design system: {chosen.error}
+					</p>
+				{:else if chosen.design}
+					<ProposalCompare
+						main={design}
+						proposal={chosen.design}
+						story={chosen.id}
+						title={chosenTitle}
+					/>
+				{:else}
+					<p class="text-sm text-muted">Reading {chosen.id}'s design system…</p>
+				{/if}
+			</div>
+		{/if}
+	</section>
+	<section class="mt-8" aria-labelledby="design-request" data-testid="design-request">
+		<h2 id="design-request" class="mb-2 text-lg font-semibold">Request a change</h2>
+		{#if epicsError}
+			<p class="mb-3 rounded border border-danger bg-danger-soft p-3 text-sm text-danger">
+				{epicsError}
+			</p>
+		{/if}
+		<ProposeChange {epics} tokens={design.path} stylesheet={design.stylesheet} />
 	</section>
 {/if}
