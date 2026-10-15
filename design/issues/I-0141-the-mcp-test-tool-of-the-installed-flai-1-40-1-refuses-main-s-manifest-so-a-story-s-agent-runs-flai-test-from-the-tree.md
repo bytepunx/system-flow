@@ -2,12 +2,12 @@
 id: I-0141
 title: The MCP test tool of the installed flai 1.40.1 refuses main's manifest, so a story's agent runs flai test from the tree
 class: efficiency
-status: open
+status: closed
 count: 6
 cost: 2m
 first_reported: 2026-10-12T17:07:12Z
 last_reported: 2026-10-15T01:46:39Z
-updated: 2026-10-15T01:46:39Z
+updated: 2026-10-15T02:09:57Z
 ---
 
 # I-0141 The MCP test tool of the installed flai 1.40.1 refuses main's manifest, so a story's agent runs flai test from the tree
@@ -44,3 +44,4 @@ S-0382: the MCP task_done of the host's flai 1.48.0 refused to close T-1538 beca
 ## Remediation
 
 Story S-0387 remediates this issue, created from it at 2026-10-14T20:47:00Z.
+Closed 2026-10-15T02:09:57Z: Fixed by S-0387 (ADR-0158). flai serve now checks every minute whether its flai is older than the newest flai release in each served project's history. With the shell-only auto-upgrade host action on, it has flai host install that release and restart on it. Otherwise it asks the operator on one thread per project and release, so the host no longer lags unnoticed. flai test, flai verify, and the MCP tools test and verify now say an outdated flai refused the tiers and name the upgrade, instead of asking for the manifest to be fixed. ADR-0142's task_done refusal stays: it holds only until the host catches up.
