@@ -346,7 +346,7 @@
     }
   ],
   "css": ":root {\n  --color-text: oklch(21% 0.02 265);\n  --color-background: #ffffff;\n}\n\n[data-theme='dark'] {\n  --color-text: oklch(21% 0.02 265);\n  --color-background: #ffffff;\n}\n",
-  "tailwind": "@theme {\n  --color-text: oklch(21% 0.02 265);\n  --color-background: #ffffff;\n}\n",
+  "tailwind": "@custom-variant dark (\u0026:where([data-theme='dark'], [data-theme='dark'] *));\n\n@theme {\n  --color-text: oklch(21% 0.02 265);\n  --color-background: #ffffff;\n}\n",
   "contrast": [
     {
       "theme": "light",

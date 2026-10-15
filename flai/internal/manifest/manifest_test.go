@@ -863,6 +863,81 @@ func TestDesignTokens(t *testing.T) {
 	}
 }
 
+// S-0385: design.stylesheet names the generated design stylesheet (ADR-0159).
+// Unset, there is none; set, it is the path given, trimmed; a path that is
+// absolute, leaves the repository, or is not clean is refused at load, naming
+// the key and what to write. One outside every sub-project loads, for flai
+// check to report, and the sub-project that holds it is the one whose path is
+// a folder above it.
+func TestDesignStylesheet(t *testing.T) {
+	head := "version: 1\nname: demo\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" +
+		"projects:\n" +
+		"  - name: web\n    path: web\n    kind: sveltekit\n" +
+		"  - name: cli\n    path: tools/cli/\n    kind: go\n"
+	for _, c := range []struct{ name, body, want string }{
+		{"unset", head, ""},
+		{"an empty block", head + "design: {}\n", ""},
+		{"set", head + "design:\n  stylesheet: web/src/theme.css\n", "web/src/theme.css"},
+		{"set with spaces", head + "design:\n  stylesheet: \" web/src/theme.css \"\n", "web/src/theme.css"},
+	} {
+		if got := loaded(t, []byte(c.body)).DesignStylesheet(); got != c.want {
+			t.Errorf("%s: DesignStylesheet = %q, want %q", c.name, got, c.want)
+		}
+	}
+	if got := (Manifest{}).DesignStylesheet(); got != "" {
+		t.Errorf("an empty manifest: DesignStylesheet = %q", got)
+	}
+
+	for _, c := range []struct{ stylesheet, want string }{
+		{"", ""},
+		{"web/src/theme.css", "web"},
+		{" web/src/theme.css ", "web"},
+		{"tools/cli/theme.css", "cli"},
+		{"web", ""},
+		{"website/src/theme.css", ""},
+		{"theme.css", ""},
+		{"design/system/theme.css", ""},
+	} {
+		body := head
+		if c.stylesheet != "" {
+			body += "design:\n  stylesheet: '" + c.stylesheet + "'\n"
+		}
+		p, ok := loaded(t, []byte(body)).DesignStylesheetProject()
+		if ok != (c.want != "") || p.Name != c.want {
+			t.Errorf("%q: DesignStylesheetProject = %q %v, want %q", c.stylesheet, p.Name, ok, c.want)
+		}
+	}
+
+	file := filepath.Join(t.TempDir(), File)
+	for _, c := range []struct{ stylesheet, want string }{
+		{"/web/theme.css", "is an absolute path; write it relative to the repository root, such as web/src/theme.css"},
+		{`C:\theme.css`, "is an absolute path"},
+		{"../theme.css", "leaves the repository; write a file inside it, relative to its root, such as web/src/theme.css"},
+		{"web/../../theme.css", "leaves the repository"},
+		{"web/./src/theme.css", "is not a clean path; write it with single slashes, no . or .. segments, and none at the end, such as web/src/theme.css"},
+		{"web//src/theme.css", "is not a clean path"},
+	} {
+		body := head + "design:\n  stylesheet: '" + c.stylesheet + "'\n"
+		if err := os.WriteFile(file, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Load(file)
+		if err == nil || !strings.Contains(err.Error(), `design.stylesheet "`) || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%q: %v", c.stylesheet, err)
+		}
+	}
+
+	set := loaded(t, []byte(head+"design:\n  stylesheet: web/src/theme.css\n"))
+	js, err := json.Marshal(Manifest{Design: set.Design})
+	if err != nil || !strings.Contains(string(js), `"design":{"stylesheet":"web/src/theme.css"}`) {
+		t.Errorf("JSON: %v %s", err, js)
+	}
+	data, err := yaml.Marshal(Manifest{Design: Design{Tokens: "ui/tokens.json"}})
+	if err != nil || strings.Contains(string(data), "stylesheet") {
+		t.Errorf("an unset stylesheet is written: %v\n%s", err, data)
+	}
+}
+
 // S-0273: tests is an ordered list of tiers that loads with every field,
 // reads back the same through YAML and JSON, and is valid.
 func TestTestsRoundTrip(t *testing.T) {

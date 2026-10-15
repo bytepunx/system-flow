@@ -1,3 +1,5 @@
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 @theme {
   --color-background: #ffffff;
   --color-surface: #f5f5f7;

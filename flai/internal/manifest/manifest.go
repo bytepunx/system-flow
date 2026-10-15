@@ -109,7 +109,16 @@ type Design struct {
 	// Tokens is the repository path of the project's design token file, a
 	// DTCG file; empty means the default DesignTokens gives.
 	Tokens string `yaml:"tokens,omitempty" json:"tokens,omitempty"`
+	// Stylesheet is the repository path of the generated Tailwind v4
+	// stylesheet flai design css --write writes the design tokens to, a file
+	// under a sub-project (S-0385, ADR-0152, ADR-0159); empty means none, and
+	// nothing is written or checked.
+	Stylesheet string `yaml:"stylesheet,omitempty" json:"stylesheet,omitempty"`
 }
+
+// exampleDesignStylesheet is the stylesheet a refusal of design.stylesheet
+// gives as one to write.
+const exampleDesignStylesheet = "web/src/theme.css"
 
 // DefaultDesignTokens is the design token file when design.tokens is not set
 // and the design layout folder is design.
@@ -131,6 +140,29 @@ func (m Manifest) DesignTokens() string {
 		return path.Join(d, designTokensUnder)
 	}
 	return DefaultDesignTokens
+}
+
+// DesignStylesheet is the repository path of the generated design stylesheet,
+// design.stylesheet, or "" when it is not set.
+func (m Manifest) DesignStylesheet() string {
+	return strings.TrimSpace(m.Design.Stylesheet)
+}
+
+// DesignStylesheetProject is the sub-project the design stylesheet lies under,
+// the entry of projects whose path holds it; false when design.stylesheet is
+// not set or lies outside every sub-project.
+func (m Manifest) DesignStylesheetProject() (Project, bool) {
+	s := m.DesignStylesheet()
+	if s == "" {
+		return Project{}, false
+	}
+	s = path.Clean(s)
+	for _, p := range m.Projects {
+		if d := path.Clean(strings.TrimSpace(p.Path)); strings.HasPrefix(s, d+"/") {
+			return p, true
+		}
+	}
+	return Project{}, false
 }
 
 // DesignGuidance is the repository path of the design system's guidance,
@@ -1013,6 +1045,9 @@ func Load(path string) (Manifest, error) {
 	}
 	if r := repoPathProblem(strings.TrimSpace(m.Design.Tokens), "a file", DefaultDesignTokens, DefaultDesignTokens); r != "" {
 		return Manifest{}, fmt.Errorf("%s: design.tokens %q %s", path, m.Design.Tokens, r)
+	}
+	if r := repoPathProblem(m.DesignStylesheet(), "a file", exampleDesignStylesheet, exampleDesignStylesheet); r != "" {
+		return Manifest{}, fmt.Errorf("%s: design.stylesheet %q %s", path, m.Design.Stylesheet, r)
 	}
 	if min := m.Flai.Minimum; min != "" {
 		if _, ok := buildinfo.Semver(min); !ok {
