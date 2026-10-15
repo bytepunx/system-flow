@@ -1,0 +1,77 @@
+/* The design preview's own stylesheet (S-0382, ADR-0149). PreviewFrame imports it with ?inline
+   and writes it into its blank frame, so it never applies to the dashboard, and the dashboard's
+   layout.css never reaches the gallery. Its utilities are the gallery's classes alone, from the
+   fixed vocabulary of design-system-tool.md § The token schema, each mapped to a --ds-* property
+   that preview.ts sets from the project's tokens on each theme's panel. */
+@import 'tailwindcss' source(none);
+@source '../components/design/Gallery.svelte';
+
+/* Only the vocabulary: Tailwind's own palette, families, steps, radii, and shadows are cleared, so
+   a class outside it styles nothing rather than show a Tailwind default as if it were the project's. */
+@theme {
+	--color-*: initial;
+	--font-*: initial;
+	--text-*: initial;
+	--radius-*: initial;
+	--shadow-*: initial;
+}
+
+@theme inline {
+	--color-background: var(--ds-color-background);
+	--color-surface: var(--ds-color-surface);
+	--color-text: var(--ds-color-text);
+	--color-text-muted: var(--ds-color-text-muted);
+	--color-border: var(--ds-color-border);
+	--color-primary: var(--ds-color-primary);
+	--color-on-primary: var(--ds-color-on-primary);
+	--color-secondary: var(--ds-color-secondary);
+	--color-on-secondary: var(--ds-color-on-secondary);
+	--color-focus: var(--ds-color-focus);
+	--color-success: var(--ds-color-success);
+	--color-success-soft: var(--ds-color-success-soft);
+	--color-warning: var(--ds-color-warning);
+	--color-warning-soft: var(--ds-color-warning-soft);
+	--color-danger: var(--ds-color-danger);
+	--color-danger-soft: var(--ds-color-danger-soft);
+	--color-info: var(--ds-color-info);
+	--color-info-soft: var(--ds-color-info-soft);
+
+	--font-sans: var(--ds-font-sans);
+	--font-mono: var(--ds-font-mono);
+
+	--text-xs: var(--ds-text-xs);
+	--text-xs--line-height: var(--ds-text-xs--line-height);
+	--text-sm: var(--ds-text-sm);
+	--text-sm--line-height: var(--ds-text-sm--line-height);
+	--text-base: var(--ds-text-base);
+	--text-base--line-height: var(--ds-text-base--line-height);
+	--text-lg: var(--ds-text-lg);
+	--text-lg--line-height: var(--ds-text-lg--line-height);
+	--text-xl: var(--ds-text-xl);
+	--text-xl--line-height: var(--ds-text-xl--line-height);
+	--text-2xl: var(--ds-text-2xl);
+	--text-2xl--line-height: var(--ds-text-2xl--line-height);
+	--text-3xl: var(--ds-text-3xl);
+	--text-3xl--line-height: var(--ds-text-3xl--line-height);
+	--text-4xl: var(--ds-text-4xl);
+	--text-4xl--line-height: var(--ds-text-4xl--line-height);
+
+	--spacing: var(--ds-spacing);
+
+	--radius-sm: var(--ds-radius-sm);
+	--radius-md: var(--ds-radius-md);
+	--radius-lg: var(--ds-radius-lg);
+
+	--shadow-sm: var(--ds-shadow-sm);
+	--shadow-md: var(--ds-shadow-md);
+	--shadow-lg: var(--ds-shadow-lg);
+}
+
+/* The two panels, light and dark, side by side where the frame is wide enough, else one above
+   the other. Each panel's theme attribute carries its --ds-* values (preview.ts). */
+@layer base {
+	.ds-panels {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+	}
+}
