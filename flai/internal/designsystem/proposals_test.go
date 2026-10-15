@@ -256,3 +256,20 @@ func TestProposalsNoneIsAnEmptyList(t *testing.T) {
 		t.Errorf("no proposals serialise as []: %s %v", data, err)
 	}
 }
+
+func TestChangedOfAnUntrackedFolderCoversWhatIsUnderIt(t *testing.T) {
+	want := []string{mainTokens, mainGuidance}
+	for _, c := range []struct {
+		changed []string
+		got     []string
+	}{
+		{[]string{"design/system/"}, want},
+		{[]string{"design/"}, want},
+		{[]string{"design/sys/"}, nil},
+		{[]string{"docs/", mainGuidance}, []string{mainGuidance}},
+	} {
+		if got := changedOf(want, c.changed); !slices.Equal(got, c.got) {
+			t.Errorf("changedOf(%v) = %v, want %v", c.changed, got, c.got)
+		}
+	}
+}

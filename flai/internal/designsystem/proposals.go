@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -38,6 +39,18 @@ func ShowStory(repo *workitem.Repo, story string) (*Shown, string, error) {
 	return shown, id, nil
 }
 
+// Refused is ShowStory's refusal of a story whose design system it does not
+// read: an item that is not a story, a story done or cancelled, or one
+// without a worktree that is a checkout of the project.
+type Refused struct{ msg string }
+
+func (e *Refused) Error() string { return e.msg }
+
+// refused is a Refused saying why, as fmt.Sprintf formats it.
+func refused(format string, args ...any) error {
+	return &Refused{msg: fmt.Sprintf(format, args...)}
+}
+
 // storyWorktree is story's canonical ID and the repository rooted at its
 // worktree, refusing an item that is not a story, a story that is not open,
 // and a story that has no worktree.
@@ -47,18 +60,18 @@ func storyWorktree(repo *workitem.Repo, story string) (string, *workitem.Repo, e
 		return "", nil, fmt.Errorf("read the design system of %s: %w; name a story of this project", story, err)
 	}
 	if it.Type != workitem.Story {
-		return "", nil, fmt.Errorf("read the design system of %s: it is a %s; name a story (S-nnnn), whose worktree holds the design system it proposes", it.ID, it.Type)
+		return "", nil, refused("read the design system of %s: it is a %s; name a story (S-nnnn), whose worktree holds the design system it proposes", it.ID, it.Type)
 	}
 	if it.Closed() {
-		return "", nil, fmt.Errorf("read the design system of %s: it is %s, so it proposes nothing; name an open story, or read the main checkout's without a story", it.ID, it.Status)
+		return "", nil, refused("read the design system of %s: it is %s, so it proposes nothing; name an open story, or read the main checkout's without a story", it.ID, it.Status)
 	}
 	wt := repo.WorktreePath(it.ID)
 	if st, err := os.Stat(wt); err != nil || !st.IsDir() {
-		return "", nil, fmt.Errorf("read the design system of %s: it has no worktree at %s; open it with flai stream open %s, or read the main checkout's without a story", it.ID, wt, it.ID)
+		return "", nil, refused("read the design system of %s: it has no worktree at %s; open it with flai stream open %s, or read the main checkout's without a story", it.ID, wt, it.ID)
 	}
 	in, err := workitem.Open(wt)
 	if err != nil || filepath.Clean(in.Root) != filepath.Clean(wt) {
-		return "", nil, fmt.Errorf("read the design system of %s: its worktree %s is not a checkout of the project; open it again with flai stream open %s", it.ID, wt, it.ID)
+		return "", nil, refused("read the design system of %s: its worktree %s is not a checkout of the project; open it again with flai stream open %s", it.ID, wt, it.ID)
 	}
 	return it.ID, in, nil
 }
@@ -89,17 +102,35 @@ func Proposals(r execx.Runner, repo *workitem.Repo) ([]Proposal, error) {
 	return out, nil
 }
 
-// changedOf is those of want that changed names, in want's order.
+// changedOf is those of want that changed names, in want's order. A changed
+// name ending in a slash is a folder git does not track yet, as git status
+// lists it, and covers every path under it.
 func changedOf(want, changed []string) []string {
 	seen := make(map[string]bool, len(changed))
+	var folders []string
 	for _, p := range changed {
-		seen[path.Clean(filepath.ToSlash(p))] = true
+		p = filepath.ToSlash(p)
+		if strings.HasSuffix(p, "/") {
+			folders = append(folders, path.Clean(p)+"/")
+			continue
+		}
+		seen[path.Clean(p)] = true
 	}
 	var out []string
 	for _, p := range want {
-		if seen[p] {
+		if seen[p] || under(p, folders) {
 			out = append(out, p)
 		}
 	}
 	return out
+}
+
+// under reports whether p lies in one of folders, each ending in a slash.
+func under(p string, folders []string) bool {
+	for _, f := range folders {
+		if strings.HasPrefix(p, f) {
+			return true
+		}
+	}
+	return false
 }
