@@ -526,6 +526,24 @@ Design system, the first page of the Design group, shows the project's design sy
 
 A project with no token file is told so: run `flai design init` to write the starter tokens and guidance. The page follows a change to the token file or the guidance made elsewhere, as the other pages follow theirs.
 
+### Changing tokens
+
+**Edit tokens**, beside the page's introduction, opens the tokens for editing next to the preview. Nothing is written until you save.
+
+- **Colours**: a picker and a text field for each theme. Type `#rrggbb` or `oklch(L C H)`, such as `oklch(52% 0.18 255)`.
+- **Lengths**, such as spacing and radii: a number and its unit, `px` or `rem`.
+- **Type scale**: each step's font size, as a number and a unit, and its line height.
+- **Font stacks**: the font names, separated by commas.
+- **Shadows and aliases** are read-only here. An alias follows the token it names, so change that one.
+
+The preview, the token sheet, and the contrast follow each change as you type. When a colour leaves a pair below its threshold, 4.5:1 for text or 3:1 for controls, the colour says so beside its field: which pair, in which theme, at what ratio. A value flai would not accept stays in its field, marked with the reason, and changes nothing until you correct it. A changed token is marked, with **Reset** to take it back. A change to a light value reaches dark too, unless dark has a value of its own. In a token file with no dark context, a colour has one value for both themes: change its light value, because a dark change cannot be saved there.
+
+**Save** writes your changes into the token file, leaves the rest of it as it was, and commits it on main, as saving a document does ([Editing documents](#editing-documents)). The line under "What changed" becomes the commit's subject. flai checks the file first. If it finds a problem, the save is refused, the findings are listed, and your changes stay. If someone changed the token file after you started, you choose, as in the document editor: load the current version, which keeps your changes where its tokens still take them, or save yours over it.
+
+**Discard changes** goes back to the saved tokens. **Done** closes the editor once nothing is unsaved. The page asks before you leave it with unsaved changes. A change to the token file made elsewhere while you edit updates the saved tokens and keeps your changes.
+
+**Saving needs a newer flai.** flai on the host must be able to read and save the token file, and no released flai can yet. Until one can, the page says "This flai cannot save the token file yet; upgrade flai on the host." You can still change tokens and see the preview, but Save is off, and your changes last only until you leave the page.
+
 ## Theme
 
 flaiover uses the brand palette in a light and a dark theme. It follows your system preference by default; the button at the right of the navigation cycles system, light, and dark, and the choice is remembered per browser. Both themes are checked for readable contrast, and the charts use palettes validated for colour-vision deficiency in each theme.
