@@ -6,7 +6,7 @@ title: The MCP server's flai lags a fresh publish, so task_done refuses and a st
 status: backlog
 owner: alex
 created: 2026-10-15T02:55:10Z
-updated: 2026-10-15T02:55:10Z
+updated: 2026-10-15T02:55:40Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
     by: flai
     at: 2026-10-15T02:55:10Z
+finalized:
+  by: alex
+  at: 2026-10-15T02:55:40Z
 ---
 # S-0390 The MCP server's flai lags a fresh publish, so task_done refuses and a story's agent falls back to the tree's CLI
 
