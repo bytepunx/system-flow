@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.94 - 2026-10-15
+
+- S-0386 A story's agent working on a project's UI is primed with its design system, and a baseline convention tells it to build from the tokens and propose changes on its branch (patch).
+
 ## 1.0.93 - 2026-10-15
 
 - S-0381 A project's design tokens are a DTCG file the manifest names, beside its guidance, and flai validates them, renders them as CSS, reports their contrast, and serves them to the dashboard (patch).
