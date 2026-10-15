@@ -121,3 +121,9 @@ orchestration:
   policy: throughput
   release:
     value: 1000
+analysis:
+  agent:
+    harness: claude-code
+    model: claude-fable-5-1
+    config:
+      effort: medium
