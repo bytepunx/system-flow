@@ -35,14 +35,21 @@ reports them with each colour role pair's contrast, and flai design css
 renders the tokens as CSS. flai design css --write writes the tokens to the
 generated design stylesheet the manifest's design.stylesheet names, which
 flai check reports as design.stale when it falls behind the tokens
-(ADR-0159).`,
+(ADR-0159).
+
+A story proposes a change to the design system on its branch: flai design
+proposals lists the open stories whose branches change it, and flai design
+show --story S-nnnn reads the design system a story proposes from its
+worktree. Accepting the story merges its branch, and with it the proposal.`,
 		Example: `  flai design init --topics flaiover
   flai design show
   flai design show --json
+  flai design show --story S-0042
+  flai design proposals
   flai design css --tailwind
   flai design css --write`,
 	}
-	c.AddCommand(newDesignInitCmd(a), newDesignShowCmd(a), newDesignCSSCmd(a))
+	c.AddCommand(newDesignInitCmd(a), newDesignShowCmd(a), newDesignProposalsCmd(a), newDesignCSSCmd(a))
 	return c
 }
 
@@ -210,7 +217,8 @@ func writeNew(path string, data []byte) error {
 }
 
 func newDesignShowCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var story string
+	c := &cobra.Command{
 		Use:   "show",
 		Short: "Report the token file, the guidance, the problems, and each role pair's contrast",
 		Long: `Report the project's design system: the token file's path, the guidance's
@@ -227,44 +235,80 @@ the table and the exit status is still 0. So is a token file with problems,
 which flai check reports as findings; show prints them and exits 0. No token
 file is no error either: show says so and how to write one.
 
+With --story S-nnnn, show reads the design system a story proposes from the
+story's worktree instead of the main checkout, at the token file and
+guidance paths the worktree's manifest gives, and names the story and its
+worktree first; the host method design.get does the same when given a story.
+It works the same from the main checkout and from any worktree. It refuses,
+with exit status 1, an ID that is no story of this project, a story that is
+done or cancelled, which proposes nothing, and a story with no worktree,
+which flai stream open S-nnnn opens. flai design proposals lists the stories
+whose branches change the design system.
+
 --json prints what the host method design.get answers: {path, exists,
 no_token_file, guidance, headings, resolver, themes: [{name, tokens: [{path,
 type, value, css, variables, ref, line}]}], problems, css, tailwind,
 contrast: [{theme, pairs: [{theme, foreground, background, foreground_hex,
-background_hex, ratio, threshold, passes, clipped}]}]}.`,
+background_hex, ratio, threshold, passes, clipped}]}]}, the same with
+--story.`,
 		Example: `  flai design show
-  flai design show --json`,
+  flai design show --json
+  flai design show --story S-0042`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			fsys := os.DirFS(repo.Root)
-			shown, err := designsystem.Show(fsys, repo.Manifest.DesignTokens(), repo.Manifest.DesignGuidance())
-			if err != nil {
-				return err
+			var (
+				shown *designsystem.Shown
+				fsys  fs.FS
+				from  string
+			)
+			if story != "" {
+				var id string
+				if shown, id, err = designsystem.ShowStory(repo, story); err != nil {
+					return err
+				}
+				wt := repo.WorktreePath(id)
+				fsys, from = os.DirFS(wt), fmt.Sprintf("%s, read from its worktree %s", id, wt)
+			} else {
+				fsys = os.DirFS(repo.Root)
+				if shown, err = designsystem.Show(fsys, repo.Manifest.DesignTokens(), repo.Manifest.DesignGuidance()); err != nil {
+					return err
+				}
 			}
 			if a.jsonOut {
 				return a.printJSON(shown)
 			}
-			return printDesign(a.out, fsys, shown, repo.Manifest.DesignGuidance())
+			return printDesign(a.out, fsys, shown, from)
 		},
 	}
+	c.Flags().StringVar(&story, "story", "", "read the design system the open story S-nnnn proposes, from its worktree, instead of the main checkout's")
+	return c
 }
 
-// printDesign writes flai design show's summary of shown.
-func printDesign(w io.Writer, fsys fs.FS, shown *designsystem.Shown, guidance string) error {
+// printDesign writes flai design show's summary of shown, read from fsys;
+// from names the story whose worktree it was read from, or is empty for the
+// checkout flai runs in.
+func printDesign(w io.Writer, fsys fs.FS, shown *designsystem.Shown, from string) error {
 	if !shown.Exists {
+		if from != "" {
+			fmt.Fprintf(w, "story %s\n", from)
+		}
 		fmt.Fprintf(w, "no token file at %s: run flai design init to write one and its guidance\n", shown.Path)
 		return nil
 	}
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
+	if from != "" {
+		fmt.Fprintf(tw, "story\t%s\n", from)
+	}
 	layout := "a plain token file"
 	if shown.Resolver {
 		layout = "a resolver document"
 	}
 	fmt.Fprintf(tw, "token file\t%s, %s\n", shown.Path, layout)
+	guidance := shown.Guidance
 	if _, err := fs.Stat(fsys, guidance); errors.Is(err, fs.ErrNotExist) {
 		fmt.Fprintf(tw, "guidance\t%s, not there\n", guidance)
 	} else {
@@ -318,6 +362,77 @@ func designProblem(file string, p designsystem.Problem) string {
 		return fmt.Sprintf("%s:%d: %s", file, p.Line, p.Message)
 	}
 	return fmt.Sprintf("%s:%d: %s: %s", file, p.Line, p.Path, p.Message)
+}
+
+func newDesignProposalsCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "proposals",
+		Short: "List the open stories whose branches change the design system",
+		Long: `List the proposals: the open stories whose branch, or whose worktree
+uncommitted, changes the design system, that is the token file, the
+guidance, or both, at the paths the main checkout's manifest gives. A
+story's branch is compared with its merge base with the main branch, as
+flai stream diff compares it, and git is read in the main checkout, so the
+list is the same from the main checkout and from any worktree. A story that
+is done or cancelled proposes nothing and is left out; so is every story of
+a project that is not a git repository, which has no branches.
+
+The Design page lists the same through the host method design.proposals,
+and flai design show --story S-nnnn reads the design system a proposal
+holds from its story's worktree. A proposal needs no step of its own to
+land: accepting the story merges its branch, and with it the main checkout's
+design system becomes the proposal's.
+
+Prints a table of ID, STATE, TITLE, and CHANGES, the paths the story
+changes, in story ID order, or a line saying no open story's branch changes
+the design system, naming the token file and the guidance. With --json, the
+list as the host method design.proposals answers it: [{id, title, status,
+paths}], [] when there are none.`,
+		Example: `  flai design proposals
+  flai design proposals --json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			if repo, err = mainCheckoutRepo(repo); err != nil {
+				return err
+			}
+			list, err := designsystem.Proposals(a.runner, repo)
+			if err != nil {
+				return err
+			}
+			if a.jsonOut {
+				return a.printJSON(list)
+			}
+			if len(list) == 0 {
+				fmt.Fprintf(a.out, "no open story's branch changes the design system, the token file %s or the guidance %s\n", repo.Manifest.DesignTokens(), repo.Manifest.DesignGuidance())
+				return nil
+			}
+			tw := tabwriter.NewWriter(a.out, 0, 0, 2, ' ', 0)
+			fmt.Fprintln(tw, "ID\tSTATE\tTITLE\tCHANGES")
+			for _, p := range list {
+				fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", p.ID, p.Status, p.Title, strings.Join(p.Paths, ", "))
+			}
+			return tw.Flush()
+		},
+	}
+}
+
+// mainCheckoutRepo is the repository at the main checkout when repo is a
+// story's worktree, so that the design system's paths are the ones the main
+// checkout's manifest gives, and repo otherwise.
+func mainCheckoutRepo(repo *workitem.Repo) (*workitem.Repo, error) {
+	if !repo.IsWorktree() {
+		return repo, nil
+	}
+	main, err := workitem.Open(repo.MainRoot)
+	if err != nil {
+		return nil, fmt.Errorf("open the main checkout %s of the worktree %s: %w; run the command in the main checkout", repo.MainRoot, repo.Root, err)
+	}
+	main.Git, main.TemplateDir = repo.Git, repo.TemplateDir
+	return main, nil
 }
 
 func newDesignCSSCmd(a *app) *cobra.Command {

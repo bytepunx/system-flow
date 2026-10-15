@@ -8,9 +8,11 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/designsystem"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // The paths flai design writes in a project with the default layout.
@@ -470,5 +472,201 @@ func TestDesignInitInTheTemplatePassesCheck(t *testing.T) {
 	}
 	if out, errOut, code := runIn(t, dest, "check", "--strict"); code != 0 {
 		t.Errorf("check --strict: %d\n%s\n%s", code, out, errOut)
+	}
+}
+
+// designStory is a story a scratch project holds for flai design show
+// --story and flai design proposals: its title, its state, and whether it
+// has a worktree.
+type designStory struct {
+	title, status string
+	worktree      bool
+}
+
+// plainDesignTokens is a token file of one colour, with no theme modifier.
+const plainDesignTokens = `{"color":{"primary":{"$type":"color","$value":{"colorSpace":"srgb","components":[0,0,1],"hex":"#0000ff"}}}}`
+
+// designStories adds E-0001 and the stories given, S-0001 onwards, to the
+// scratch project at root, each story with a worktree linked to the project
+// as git links one, holding a copy of the project's manifest.
+func designStories(t *testing.T, root string, stories ...designStory) *workitem.Repo {
+	t.Helper()
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)
+	if _, err := repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Epic", Now: now}); err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range stories {
+		it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: s.title, Parent: "E-0001", Now: now})
+		if err != nil {
+			t.Fatal(err)
+		}
+		it.Status = s.status
+		if err := repo.Save(it); err != nil {
+			t.Fatal(err)
+		}
+		if s.worktree {
+			wt := repo.WorktreePath(it.ID)
+			writeProjectFile(t, wt, ".git", "gitdir: "+filepath.Join(root, ".git", "worktrees", it.ID)+"\n")
+			writeProjectFile(t, wt, manifest.File, readProjectFile(t, root, manifest.File))
+		}
+	}
+	return repo
+}
+
+// S-0384: show --story refuses, with exit status 1 and the reason, an ID no
+// story has, a done story, and a story with no worktree.
+func TestDesignShowStoryRefuses(t *testing.T) {
+	root := designProject(t)
+	repo := designStories(t, root,
+		designStory{"Open", workitem.InProgress, true},
+		designStory{"Done", workitem.Done, true},
+		designStory{"No worktree", workitem.Ready, false},
+	)
+	cases := []struct {
+		name, story string
+		want        []string
+	}{
+		{"an ID no item has", "S-0099", []string{"read the design system of S-0099", "name a story of this project"}},
+		{"a done story", "S-0002", []string{"S-0002: it is done", "name an open story"}},
+		{"a story without a worktree", "S-0003", []string{"S-0003: it has no worktree at " + repo.WorktreePath("S-0003"), "flai stream open S-0003"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			for _, args := range [][]string{{"design", "show", "--story", c.story}, {"design", "show", "--story", c.story, "--json"}} {
+				out, errOut, code := runIn(t, root, args...)
+				if code != 1 || out != "" {
+					t.Errorf("%v: %d %q %s", args, code, out, errOut)
+				}
+				for _, w := range c.want {
+					if !strings.Contains(errOut, w) {
+						t.Errorf("%v: the error %q does not say %q", args, errOut, w)
+					}
+				}
+			}
+		})
+	}
+}
+
+// S-0384: show --story reads the design system from the story's worktree,
+// not the main checkout, names the story and its worktree, and reads the
+// same from inside the worktree; --json is the worktree's design system.
+func TestDesignShowStoryReadsItsWorktree(t *testing.T) {
+	root := designProject(t)
+	repo := designStories(t, root, designStory{"Proposal", workitem.InProgress, true})
+	wt := repo.WorktreePath("S-0001")
+	writeProjectFile(t, wt, designTokensFile, plainDesignTokens)
+	writeProjectFile(t, wt, designGuidanceFile, "# Design system\n\n## Colour\n")
+	writeProjectFile(t, root, designTokensFile, "{")
+
+	for _, dir := range []string{root, wt} {
+		out, errOut, code := runIn(t, dir, "design", "show", "--story", "S-0001")
+		if code != 0 {
+			t.Fatalf("show --story in %s: %d %s", dir, code, errOut)
+		}
+		for _, want := range []string{
+			"story       S-0001, read from its worktree " + wt + "\n",
+			"token file  " + designTokensFile + ", a plain token file\n",
+			"guidance    " + designGuidanceFile + ", 2 headings\n",
+			"tokens      light 1, dark 1\n",
+		} {
+			if !strings.Contains(out, want) {
+				t.Errorf("show --story in %s does not say %q:\n%s", dir, want, out)
+			}
+		}
+	}
+
+	out, errOut, code := runIn(t, root, "design", "show", "--story", "S-0001", "--json")
+	var got designsystem.Shown
+	if code != 0 || json.Unmarshal([]byte(out), &got) != nil {
+		t.Fatalf("show --story --json: %d %q %s", code, out, errOut)
+	}
+	if !got.Exists || got.Resolver || got.Guidance != designGuidanceFile || len(got.Themes) != 2 || len(got.Themes[0].Tokens) != 1 || got.Themes[0].Tokens[0].Path != "color.primary" {
+		t.Errorf("show --story --json is not the worktree's design system: %+v", got)
+	}
+
+	if err := os.Remove(filepath.Join(wt, filepath.FromSlash(designTokensFile))); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runIn(t, root, "design", "show", "--story", "S-0001")
+	if want := "story S-0001, read from its worktree " + wt + "\nno token file at " + designTokensFile + ": run flai design init to write one and its guidance\n"; code != 0 || out != want {
+		t.Errorf("show --story of a worktree with no token file: %d %q %s", code, out, errOut)
+	}
+}
+
+// S-0384: with no open story's branch changing the design system, proposals
+// prints [] with --json, and says so naming the token file and the guidance;
+// a project that is not a git repository has no branches, so no proposals.
+func TestDesignProposalsNone(t *testing.T) {
+	root := designProject(t)
+	designStories(t, root, designStory{"Open", workitem.InProgress, true})
+	out, errOut, code := runIn(t, root, "design", "proposals", "--json")
+	if code != 0 || out != "[]\n" {
+		t.Errorf("proposals --json: %d %q %s", code, out, errOut)
+	}
+	out, errOut, code = runIn(t, root, "design", "proposals")
+	if want := "no open story's branch changes the design system, the token file " + designTokensFile + " or the guidance " + designGuidanceFile + "\n"; code != 0 || out != want {
+		t.Errorf("proposals: %d %q %s", code, out, errOut)
+	}
+}
+
+// S-0384: proposals lists the open stories whose branch, or whose worktree
+// uncommitted, changes the token file or the guidance, with their IDs,
+// titles, states, and paths, the same from the main checkout and from a
+// worktree; show --story reads what a proposal commits. Integration: it
+// runs real git.
+func TestDesignProposalsListsTheStoriesChangingTheDesignSystem(t *testing.T) {
+	root := syncProject(t)
+	// git status lists a new file in a folder git does not track as the folder
+	writeProjectFile(t, root, "design/system/.gitkeep", "")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "design/system")
+	one := openSyncStory(t, root, 1, "design")
+	two := openSyncStory(t, root, 2, "design")
+	three := openSyncStory(t, root, 3, "docs")
+	commitIn(t, one, designTokensFile, plainDesignTokens)
+	writeProjectFile(t, two, designGuidanceFile, "# Design system\n")
+	commitIn(t, three, "docs/guide.md", "three's line\n")
+
+	want := []designsystem.Proposal{
+		{ID: "S-0001", Title: "Story 1", Status: workitem.InProgress, Paths: []string{designTokensFile}},
+		{ID: "S-0002", Title: "Story 2", Status: workitem.InProgress, Paths: []string{designGuidanceFile}},
+	}
+	for _, dir := range []string{root, three} {
+		out, errOut, code := runIn(t, dir, "design", "proposals", "--json")
+		var got []designsystem.Proposal
+		if code != 0 || json.Unmarshal([]byte(out), &got) != nil {
+			t.Fatalf("proposals --json in %s: %d %q %s", dir, code, out, errOut)
+		}
+		if len(got) != len(want) {
+			t.Fatalf("proposals --json in %s:\n got %+v\nwant %+v", dir, got, want)
+		}
+		for i := range want {
+			if got[i].ID != want[i].ID || got[i].Title != want[i].Title || got[i].Status != want[i].Status || strings.Join(got[i].Paths, ",") != strings.Join(want[i].Paths, ",") {
+				t.Errorf("proposal %d in %s:\n got %+v\nwant %+v", i, dir, got[i], want[i])
+			}
+		}
+	}
+
+	out, errOut, code := runIn(t, root, "design", "proposals")
+	if code != 0 {
+		t.Fatalf("proposals: %d %s", code, errOut)
+	}
+	for _, line := range []string{
+		"ID      STATE        TITLE    CHANGES\n",
+		"S-0001  in-progress  Story 1  " + designTokensFile + "\n",
+		"S-0002  in-progress  Story 2  " + designGuidanceFile + "\n",
+	} {
+		if !strings.Contains(out, line) {
+			t.Errorf("proposals does not say %q:\n%s", line, out)
+		}
+	}
+
+	out, errOut, code = runIn(t, root, "design", "show", "--story", "S-0001")
+	if code != 0 || !strings.Contains(out, "token file  "+designTokensFile+", a plain token file\n") {
+		t.Errorf("show --story S-0001: %d %s\n%s", code, errOut, out)
 	}
 }
