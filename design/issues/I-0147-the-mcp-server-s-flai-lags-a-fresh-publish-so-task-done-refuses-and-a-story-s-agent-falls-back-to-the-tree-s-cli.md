@@ -3,11 +3,11 @@ id: I-0147
 title: The MCP server's flai lags a fresh publish, so task_done refuses and a story's agent falls back to the tree's CLI
 class: efficiency
 status: open
-count: 3
+count: 4
 cost: 3m
 first_reported: 2026-10-13T21:48:16Z
-last_reported: 2026-10-14T21:40:37Z
-updated: 2026-10-14T21:40:37Z
+last_reported: 2026-10-15T02:52:47Z
+updated: 2026-10-15T02:52:47Z
 ---
 
 # I-0147 The MCP server's flai lags a fresh publish, so task_done refuses and a story's agent falls back to the tree's CLI
@@ -28,5 +28,9 @@ task_done refused T-1572 because the MCP server's flai was 1.48.0 and the projec
 ### 2026-10-14T21:40:37Z
 Story: S-0372.
 The MCP server's flai is 1.48.0 and the project's history has flai 1.49.1, so task_done refused to close T-1482 (ADR-0142). Every task of S-0372 was closed with scripts/flai.sh task done from the worktree instead.
+
+### 2026-10-15T02:52:47Z
+Story: S-0383.
+The MCP task_done of the installed flai 1.48.0 refused to close T-1544 (ADR-0142), because the project's history has flai 1.50.0. Every task of S-0383 was closed with the tree's scripts/flai.sh task done instead.
 
 ## Remediation
