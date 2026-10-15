@@ -109,6 +109,13 @@ JSON: parts of at most 40,000 bytes each, every one carrying part and parts
 			if set.Missing {
 				return fmt.Errorf("no conventions folder at %s; render it from the template or run flai upgrade", relPath(repo.Root, set.Dir))
 			}
+			hasDesign, err := ctxpack.HasDesignSystem(repo)
+			if err != nil {
+				return err
+			}
+			if !hasDesign {
+				set = set.WithoutDesignSystem()
+			}
 			readme := filepath.Join(set.Dir, "README.md")
 			var paths []string
 			if set.README != "" {

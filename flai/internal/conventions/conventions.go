@@ -83,6 +83,19 @@ type Set struct {
 	Missing bool   // folder does not exist
 }
 
+// DesignSystemFile is the name of the baseline convention on building UI
+// from the design system, which only the agents a project's design system
+// reaches read (ADR-0152).
+const DesignSystemFile = "design-system.md"
+
+// WithoutDesignSystem is the set without the design-system convention, for
+// an agent the project's design system does not reach (ADR-0152).
+func (s *Set) WithoutDesignSystem() *Set {
+	out := *s
+	out.Files = slices.DeleteFunc(slices.Clone(s.Files), func(f File) bool { return f.Name == DesignSystemFile })
+	return &out
+}
+
 type front struct {
 	Title    string   `yaml:"title"`
 	Updated  string   `yaml:"updated"`

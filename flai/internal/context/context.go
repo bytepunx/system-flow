@@ -150,13 +150,16 @@ func (p *Pack) size() {
 // Design runs the steps that choose design, tech, and ADRs for a story, in
 // the order ADR-0049 gives: what the story, its epic, and its tasks name, to
 // load whole, save a large document named only by its path written out,
-// which is briefed when it is over briefOver bytes (ADR-0050); what its
-// topics select, to brief; and the ADRs one step from both, to brief. The
-// ranked step runs in AddDesign, against the budget.
-func Design(docs []*Doc, storyTopics []string, sources []Source, briefOver int) *Selection {
+// which is briefed when it is over briefOver bytes (ADR-0050); the design
+// system ds, when its guidance's topics reach the story, to load whole
+// likewise (ADR-0152), nil for none; what its topics select, to brief; and
+// the ADRs one step from them all, to brief. The ranked step runs in
+// AddDesign, against the budget.
+func Design(docs []*Doc, storyTopics []string, sources []Source, briefOver int, ds *DesignSystem) *Selection {
 	s := NewSelection(docs)
 	s.BriefOver = briefOver
 	s.Linked(sources)
+	s.DesignSystem(ds, storyTopics)
 	s.ByTopics(storyTopics)
 	s.Step()
 	return s
@@ -426,13 +429,13 @@ const (
 )
 
 var groupHead = map[string]string{
-	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story, its epic, or its tasks name by a path written out and that are too large to load whole (reason: named in <ID>), then those the story's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the story, read the section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", or the whole file, before relying on it or changing what it describes. doc_search, or flai doc search, finds sections by their words.\n",
+	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story, its epic, or its tasks name by a path written out and that are too large to load whole (reason: named in <ID>), the design system's guidance and token file when they are too large to load whole (reason: design system: topics <topics>), then those the story's topics select, each as its title, size, reason, first paragraph, and outline. A brief is not the document: when one bears on the story, read the section with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\", or the whole file, before relying on it or changing what it describes. doc_search, or flai doc search, finds sections by their words.\n",
 	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the pack reached, and those named by a path written out and too large to load whole, each by its decision sentence. When one bears on the story, read it with the MCP doc_get, or its decision alone with heading Decision (flai doc show <path> --heading Decision), before relying on it.\n\n",
 }
 
 // roleHead is groupHead for a sub-agent's pack, which briefs everything.
 var roleHead = map[string]string{
-	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story, its epic, or its tasks name, then those the story's topics select, each as its title, size, reason, first paragraph, and outline. A sub-agent's pack holds no bodies: when one bears on your question, read the section that does with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\". doc_search, or flai doc search, finds sections by their words.\n",
+	groupBriefs:    "\nbriefs\n======\n\nThe design and tech files the story, its epic, or its tasks name, the design system's guidance and token file when its topics reach the story, then those the story's topics select, each as its title, size, reason, first paragraph, and outline. A sub-agent's pack holds no bodies: when one bears on your question, read the section that does with the MCP doc_get and its heading, or flai doc show <path> --heading \"<heading>\". doc_search, or flai doc search, finds sections by their words.\n",
 	groupDecisions: "\ndecisions\n=========\n\nThe ADRs the story names and those the pack reached, each by its decision sentence. When one bears on your question, read it with the MCP doc_get.\n\n",
 }
 
@@ -494,8 +497,12 @@ func (it Item) print(sized bool) string {
 		return fmt.Sprintf("- %s %s (%s; %s): %s\n", it.ID, it.Title, it.Path, it.briefReason(), it.Text)
 	case groupBriefs:
 		head := fmt.Sprintf("\n%s: %s (%d bytes; %s)\n", it.Path, it.Title, it.Whole, it.briefReason())
-		if sized && strings.HasPrefix(it.Reason, NamedIn) {
+		switch {
+		case !sized:
+		case strings.HasPrefix(it.Reason, NamedIn):
 			head += namedBrief
+		case strings.HasPrefix(it.Reason, DesignSystemReason):
+			head += designSystemBrief
 		}
 		if it.Text == "" {
 			return head

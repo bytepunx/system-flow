@@ -66,15 +66,16 @@ type Candidate struct {
 // best first, with the section index doc_search uses (ADR-0049). Sections
 // are indexed one by one, each down to the next heading of any level; an ADR
 // appears once, at its best section. ADRs loaded in any part, superseded
-// ADRs, and sections with nothing below their heading are left out. A
-// briefed document's sections are in: a brief is not its body.
+// ADRs, the design token file, which is not prose, and sections with
+// nothing below their heading are left out. A briefed document's sections
+// are in: a brief is not its body.
 func (s *Selection) Candidates(query string) []Candidate {
 	var (
 		keys []Candidate
 		secs []search.Section
 	)
 	for _, d := range s.Docs {
-		if d.Kind == KindADR && (s.Loaded(d) || s.Superseded(d)) {
+		if d.Kind == KindTokens || d.Kind == KindADR && (s.Loaded(d) || s.Superseded(d)) {
 			continue
 		}
 		for i, sec := range d.Cuts() {

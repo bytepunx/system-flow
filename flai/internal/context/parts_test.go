@@ -32,7 +32,7 @@ func largePack(t *testing.T, texts ...string) *Pack {
 		if err != nil {
 			t.Fatal(err)
 		}
-		p.AddDesign(Design(fixture(t).Docs, names, nil, BriefOver(budget)), query)
+		p.AddDesign(Design(fixture(t).Docs, names, nil, BriefOver(budget), nil), query)
 		return p
 	}
 	base := build(DefaultBudget, "")

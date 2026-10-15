@@ -489,3 +489,45 @@ func TestPrimeStoryRole(t *testing.T) {
 		}
 	}
 }
+
+// ADR-0152, S-0386: without a story, prime lists and prints the
+// design-system convention only when the project has a design system's
+// guidance.
+func TestPrimeCatHasTheDesignSystemConventionOnlyWithGuidance(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	conv := func(name, title string, order int, roles string) {
+		write("design/conventions/"+name, fmt.Sprintf("---\ntitle: %s\nupdated: 2026-10-14\naudience: agent\norder: %d\nstatus: active\n%s---\n\n# %s\n\n- %s rule.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n", title, order, roles, title, title))
+	}
+	write("design/conventions/README.md", "# Conventions\n\n- [safety.md](safety.md)\n- [design-system.md](design-system.md)\n")
+	conv("safety.md", "Safety", 10, "")
+	conv("design-system.md", "Design system", 150, "roles: [story, verify]\n")
+	for _, guidance := range []bool{false, true} {
+		if guidance {
+			write("design/system/design-system.md", "---\ntitle: Design system\nupdated: 2026-10-14\nstatus: active\ntopics: [all]\n---\n\n# Design system\n\nWhen to use each token.\n")
+		}
+		list, errOut, code := runIn(t, root, "prime")
+		if code != 0 {
+			t.Fatalf("prime: %s", errOut)
+		}
+		cat, _, _ := runIn(t, root, "prime", "--cat")
+		js, _, _ := runIn(t, root, "prime", "--json")
+		for what, out := range map[string]string{"list": list, "--cat": cat, "--json": js} {
+			if !strings.Contains(out, "safety.md") || strings.Contains(out, "design/conventions/design-system.md") != guidance {
+				t.Errorf("guidance %v, %s:\n%s", guidance, what, out)
+			}
+		}
+		if strings.Contains(cat, "- Design system rule.") != guidance {
+			t.Errorf("guidance %v, --cat:\n%s", guidance, cat)
+		}
+	}
+}

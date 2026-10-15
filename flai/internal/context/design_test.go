@@ -1,11 +1,17 @@
 package context
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/bytepunx/system-flow/flai/internal/conventions"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // fixture loads the documents of testdata/repo.
@@ -494,6 +500,232 @@ func TestCatalogListsWhatIsNeitherLoadedNorBriefedAndOutlinesWhatIsInPart(t *tes
 		}
 		if e.Outline != nil {
 			t.Errorf("outline on a document not loaded: %+v", e)
+		}
+	}
+}
+
+// designRepo is a project with a convention every agent reads, the
+// design-system convention for the story's agent and the verifier, a
+// design file on cli, and, with guidance, a design system on flaiover whose
+// token file holds tokens. It has a story on flaiover and one on cli.
+func designRepo(t *testing.T, guidance bool, tokens string) (repo *workitem.Repo, flaiover, cli string) {
+	t.Helper()
+	root := t.TempDir()
+	write := func(rel, s string) {
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("system-flow.yaml", "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n")
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	conv := func(name, title, order, roles string) {
+		write("design/conventions/"+name, "---\ntitle: "+title+"\nupdated: 2026-10-14\naudience: agent\norder: "+order+"\nstatus: active\ntopics: [all]\n"+roles+"---\n\n# "+title+"\n\n## Rules\n\n- "+title+" rule.\n\n<!-- system-flow:end-of-baseline -->\n\n## Project additions\n")
+	}
+	write("design/conventions/README.md", "# Conventions\n\n- [safety.md](safety.md)\n- [design-system.md](design-system.md)\n")
+	conv("safety.md", "Safety", "10", "")
+	conv(conventions.DesignSystemFile, "Design system", "150", "roles: [story, verify]\n")
+	write("design/system/cli.md", "---\ntitle: CLI\nupdated: 2026-10-14\nstatus: active\ntopics: [cli]\n---\n\n# CLI\n\nThe command line.\n\n## Commands\n\nThe commands.\n")
+	if guidance {
+		write("design/system/design-system.md", "---\ntitle: Design system\nupdated: 2026-10-14\nstatus: active\ntopics: [flaiover]\n---\n\n# Design system\n\nWhen to use each token.\n\n## Colour\n\nPrimary for the one action.\n")
+	}
+	write("design/system/design-system.tokens.json", tokens)
+	var err error
+	if repo, err = workitem.Open(root); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC)
+	ids := map[string]string{}
+	for _, topic := range []string{"flaiover", "cli"} {
+		it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "A " + topic + " story", Owner: "alex", Topics: []string{topic}, Now: now,
+			Body: "## Goal\n\nBuild it.\n\n## Acceptance criteria\n\n- [ ] built\n"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids[topic] = it.ID
+	}
+	return repo, ids["flaiover"], ids["cli"]
+}
+
+const someTokens = `{"color": {"primary": {"$type": "color", "$value": "#3b82f6"}}}` + "\n"
+
+// conventionNames is the file names of a pack's conventions.
+func conventionNames(p *Pack) []string {
+	var out []string
+	for _, c := range p.Conventions {
+		out = append(out, c.Name)
+	}
+	return out
+}
+
+// itemsAt is the pack's items at path.
+func itemsAt(p *Pack, path string) []Item {
+	var out []Item
+	for _, it := range p.Items {
+		if it.Path == path {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
+// ADR-0152, S-0386: a story the guidance's topics reach loads the guidance
+// and the token file whole, as if it named them, with the design-system
+// convention; the guidance is not briefed again for its topics.
+func TestAStoryTheGuidanceReachesLoadsTheDesignSystemWholeWithItsConvention(t *testing.T) {
+	repo, flaiover, _ := designRepo(t, true, someTokens)
+	p, err := ForStory(repo, flaiover, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(conventionNames(p), []string{"safety.md", conventions.DesignSystemFile}) {
+		t.Errorf("conventions %v", conventionNames(p))
+	}
+	for _, path := range []string{"design/system/design-system.md", "design/system/design-system.tokens.json"} {
+		got := itemsAt(p, path)
+		if len(got) != 1 || got[0].Step != StepNamed || got[0].Reason != "design system: topics flaiover" || got[0].Heading != nil {
+			t.Fatalf("%s: %+v", path, got)
+		}
+	}
+	if tok := itemsAt(p, "design/system/design-system.tokens.json")[0]; tok.Text != someTokens {
+		t.Errorf("the token file is not its raw text: %q", tok.Text)
+	}
+	if g := itemsAt(p, "design/system/design-system.md")[0]; !slices.Equal(g.Also, []string{"topics: flaiover"}) {
+		t.Errorf("guidance's other reasons %v", g.Also)
+	}
+	body := p.Body()
+	if !strings.Contains(body, "\ndesign/system/design-system.tokens.json\n") || !strings.Contains(body, "reason: design system: topics flaiover\n\n"+someTokens) {
+		t.Errorf("body:\n%s", body)
+	}
+}
+
+// ADR-0152, S-0386: a story the guidance's topics do not reach gets neither
+// the guidance whole, nor the token file, nor the convention.
+func TestAStoryTheGuidanceDoesNotReachGetsNoDesignSystem(t *testing.T) {
+	repo, _, cli := designRepo(t, true, someTokens)
+	p, err := ForStory(repo, cli, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(conventionNames(p), []string{"safety.md"}) {
+		t.Errorf("conventions %v", conventionNames(p))
+	}
+	if got := itemsAt(p, "design/system/design-system.tokens.json"); len(got) != 0 {
+		t.Errorf("token file %+v", got)
+	}
+	for _, it := range itemsAt(p, "design/system/design-system.md") {
+		if it.Step != StepRanked {
+			t.Errorf("guidance %s for %s", it.Step, it.Reason)
+		}
+	}
+	if strings.Contains(p.Body(), "#3b82f6") {
+		t.Errorf("the tokens are in the pack:\n%s", p.Body())
+	}
+}
+
+// ADR-0152, S-0386 criterion 3: a project with no guidance primes as it
+// did, with no token file and no convention, though the token file is there.
+func TestAProjectWithoutGuidancePrimesAsBefore(t *testing.T) {
+	repo, flaiover, _ := designRepo(t, false, someTokens)
+	if has, err := HasDesignSystem(repo); err != nil || has {
+		t.Fatalf("has a design system: %v %v", has, err)
+	}
+	p, err := ForStory(repo, flaiover, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(conventionNames(p), []string{"safety.md"}) {
+		t.Errorf("conventions %v", conventionNames(p))
+	}
+	for _, it := range p.Items {
+		if it.Path != "design/system/cli.md" {
+			t.Errorf("chose %s for %s", it.Path, it.Reason)
+		}
+	}
+	for _, role := range conventions.SubAgentRoles {
+		r, err := ForRole(repo, flaiover, role, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(conventionNames(r), []string{"safety.md"}) || len(r.Items) != 0 {
+			t.Errorf("%s: conventions %v, items %+v", role, conventionNames(r), r.Items)
+		}
+	}
+	repo, _, _ = designRepo(t, true, someTokens)
+	if has, err := HasDesignSystem(repo); err != nil || !has {
+		t.Errorf("with guidance, has a design system: %v %v", has, err)
+	}
+}
+
+// ADR-0152, S-0386: a sub-agent's pack holds the design system as briefs,
+// the token file's saying how to read it, and the verifier's has the
+// convention, which the explorer's role does not read.
+func TestASubAgentGetsTheDesignSystemAsBriefs(t *testing.T) {
+	repo, flaiover, _ := designRepo(t, true, someTokens)
+	for role, conv := range map[string][]string{
+		conventions.RoleVerify:  {"safety.md", conventions.DesignSystemFile},
+		conventions.RoleExplore: {"safety.md"},
+	} {
+		p, err := ForRole(repo, flaiover, role, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(conventionNames(p), conv) {
+			t.Errorf("%s: conventions %v", role, conventionNames(p))
+		}
+		for _, path := range []string{"design/system/design-system.md", "design/system/design-system.tokens.json"} {
+			got := itemsAt(p, path)
+			if len(got) != 1 || got[0].Step != StepBriefed || got[0].Reason != "design system: topics flaiover" {
+				t.Fatalf("%s: %s: %+v", role, path, got)
+			}
+		}
+		if tok := itemsAt(p, "design/system/design-system.tokens.json")[0]; tok.Text != tokensBrief || tok.Whole != len(someTokens) {
+			t.Errorf("%s: token brief %+v", role, tok)
+		}
+		if strings.Contains(p.Body(), "#3b82f6") || strings.Contains(p.Body(), designSystemBrief) {
+			t.Errorf("%s: body:\n%s", role, p.Body())
+		}
+	}
+}
+
+// ADR-0152, ADR-0050: a token file larger than an eighth of the budget is
+// briefed, with its path, size, and how to read it; the guidance, small,
+// still loads whole.
+func TestALargeTokenFileIsBriefed(t *testing.T) {
+	large := "{\n" + strings.Repeat(`  "a": {"$type": "color", "$value": "#000000"},`+"\n", 40) + "}\n"
+	repo, flaiover, _ := designRepo(t, true, large)
+	p, err := ForStory(repo, flaiover, "8KB")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(large) <= BriefOver(p.Budget) {
+		t.Fatalf("the token file, %d bytes, is not over %d", len(large), BriefOver(p.Budget))
+	}
+	tok := itemsAt(p, "design/system/design-system.tokens.json")
+	if len(tok) != 1 || tok[0].Step != StepBriefed || tok[0].Text != tokensBrief {
+		t.Fatalf("token file %+v", tok)
+	}
+	if g := itemsAt(p, "design/system/design-system.md"); len(g) != 1 || g[0].Step != StepNamed {
+		t.Errorf("guidance %+v", g)
+	}
+	want := "\ndesign/system/design-system.tokens.json: Design tokens (" + strconv.Itoa(len(large)) + " bytes; design system: topics flaiover)\n" + designSystemBrief + "\n" + tokensBrief
+	if body := p.Body(); !strings.Contains(body, want) || strings.Contains(body, "#000000") {
+		t.Errorf("body, want %q:\n%s", want, body)
+	}
+	pr, err := loadProject(repo, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range Design(pr.docs, []string{"flaiover"}, nil, BriefOver(p.Budget), pr.design).Candidates("color value") {
+		if c.doc.Kind == KindTokens {
+			t.Errorf("the token file is a candidate to rank")
 		}
 	}
 }

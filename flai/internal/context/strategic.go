@@ -70,7 +70,7 @@ func ForStrategic(repo *workitem.Repo, role, epic, story, budget string) (*Pack,
 	}
 	packTopics := withRole(itemTopics, role)
 	list, _ := issues.List(repo)
-	pack, err := Build(repo.Root, "", title, packTopics, pr.readBy(role, false), issues.SummaryTable(list), size)
+	pack, err := Build(repo.Root, "", title, packTopics, pr.readBy(role, false, topics.Names(packTopics)), issues.SummaryTable(list), size)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func ForStrategic(repo *workitem.Repo, role, epic, story, budget string) (*Pack,
 	if it != nil {
 		pack.Item = it.ID
 	}
-	pack.AddDesign(Design(pr.docs, topics.Names(packTopics), sources, BriefOver(size)), query)
+	pack.AddDesign(Design(pr.docs, topics.Names(packTopics), sources, BriefOver(size), nil), query)
 	return pack, nil
 }
 

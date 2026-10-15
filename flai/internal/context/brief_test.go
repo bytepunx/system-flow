@@ -91,7 +91,7 @@ func budgetPack(t *testing.T, budget int, storyTopics []string, sources []Source
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := Design(fixture(t).Docs, storyTopics, sources, BriefOver(budget))
+	s := Design(fixture(t).Docs, storyTopics, sources, BriefOver(budget), nil)
 	p.AddDesign(s, query)
 	return p, s
 }

@@ -54,7 +54,11 @@ func (s *Selection) Items() []Item {
 			adrs = append(adrs, it)
 			continue
 		}
-		it.Text = s.designBrief(b)
+		if d.Kind == KindTokens {
+			it.Text = tokensBrief
+		} else {
+			it.Text = s.designBrief(b)
+		}
 		it.Size = len(it.Text)
 		designs = append(designs, it)
 	}

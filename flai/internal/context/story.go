@@ -15,7 +15,8 @@ import (
 // ForStory builds the context pack for a story (ADR-0047), fitted to a
 // budget (ADR-0049): the conventions the story's agent reads (ADR-0068)
 // with the sections its topics leave out taken out (S-0136), the open
-// issues, then what the story, its epic, and its tasks name, briefs of the
+// issues, then what the story, its epic, and its tasks name, and the design
+// system when its guidance's topics reach the story (ADR-0152), briefs of the
 // design, tech, and ADRs its topics and one link step select, the sections
 // that rank highest to fill the budget, and a catalog of the rest (S-0137,
 // S-0146). budget is a size as ParseSize reads it; empty means the
@@ -32,11 +33,12 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 		return nil, err
 	}
 	list, _ := issues.List(repo)
-	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, st.readBy(conventions.RoleStory, true), issues.SummaryTable(list), size)
+	names := topics.Names(st.topics)
+	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, st.readBy(conventions.RoleStory, true, names), issues.SummaryTable(list), size)
 	if err != nil {
 		return nil, err
 	}
-	pack.AddDesign(Design(st.docs, topics.Names(st.topics), st.sources, BriefOver(size)), Query(st.item.Title, st.item.Body))
+	pack.AddDesign(Design(st.docs, names, st.sources, BriefOver(size), st.design), Query(st.item.Title, st.item.Body))
 	return pack, nil
 }
 
@@ -44,7 +46,8 @@ func ForStory(repo *workitem.Repo, id, budget string) (*Pack, error) {
 // the conventions it reads (ADR-0068), with the sections the story's
 // topics leave out taken out; the story's goal and acceptance criteria; and
 // briefs, never bodies, of what the story, its epic, and its tasks name,
-// what their topics select, and the ADRs one step reaches, in the order
+// the design system its guidance's topics reach (ADR-0152), what their
+// topics select, and the ADRs one step reaches, in the order
 // Items gives them, each while the budget has room. budget is a size as
 // ParseSize reads it; empty means half the story's agent's.
 func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
@@ -62,7 +65,8 @@ func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
 	if err != nil {
 		return nil, err
 	}
-	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, st.readBy(role, false), "", size)
+	names := topics.Names(st.topics)
+	pack, err := Build(repo.Root, st.item.ID, st.item.Title, st.topics, st.readBy(role, false, names), "", size)
 	if err != nil {
 		return nil, err
 	}
@@ -70,17 +74,19 @@ func ForRole(repo *workitem.Repo, id, role, budget string) (*Pack, error) {
 	s := NewSelection(st.docs)
 	s.BriefNamed = true
 	s.Linked(st.sources)
-	s.ByTopics(topics.Names(st.topics))
+	s.DesignSystem(st.design, names)
+	s.ByTopics(names)
 	s.Step()
 	pack.AddBriefs(s)
 	return pack, nil
 }
 
-// project is what every pack is built from: the conventions and the design
-// documents.
+// project is what every pack is built from: the conventions, the design
+// documents, and the design system.
 type project struct {
-	set  *conventions.Set
-	docs []*Doc
+	set    *conventions.Set
+	docs   []*Doc
+	design *DesignSystem
 }
 
 // story is what a story's pack is built from: the project, the story, its
@@ -93,8 +99,10 @@ type story struct {
 }
 
 // readBy is the conventions the agent in role reads (ADR-0068): those whose
-// roles are empty or list it, with the README when readme is set.
-func (p *project) readBy(role string, readme bool) *conventions.Set {
+// roles are empty or list it, with the README when readme is set, and
+// without the design-system convention unless the design system reaches a
+// pack with these topics (ADR-0152).
+func (p *project) readBy(role string, readme bool, packTopics []string) *conventions.Set {
 	sub := &conventions.Set{Dir: p.set.Dir}
 	if readme {
 		sub.README = p.set.README
@@ -104,11 +112,14 @@ func (p *project) readBy(role string, readme bool) *conventions.Set {
 			sub.Files = append(sub.Files, f)
 		}
 	}
+	if len(p.design.Reaches(packTopics)) == 0 {
+		return sub.WithoutDesignSystem()
+	}
 	return sub
 }
 
-// loadProject reads the conventions and the design documents; cmd is the
-// command the errors name.
+// loadProject reads the conventions, the design documents, and the design
+// system; cmd is the command the errors name.
 func loadProject(repo *workitem.Repo, cmd string) (*project, error) {
 	set, _, err := conventions.Load(repo)
 	if err != nil {
@@ -121,7 +132,11 @@ func loadProject(repo *workitem.Repo, cmd string) (*project, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: reading the design documents: %w", cmd, err)
 	}
-	return &project{set: set, docs: docs}, nil
+	ds, err := loadDesignSystem(repo.Root, repo.Manifest, docs)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", cmd, err)
+	}
+	return &project{set: set, docs: docs, design: ds}, nil
 }
 
 func loadStory(repo *workitem.Repo, id string) (*story, error) {

@@ -223,19 +223,25 @@ type Selection struct {
 
 // NewSelection starts a selection over docs with nothing chosen.
 func NewSelection(docs []*Doc) *Selection {
-	s := &Selection{Docs: docs, byPath: map[string]*Doc{}, byID: map[string]*Doc{}, owner: map[*Doc][]int{}, briefOf: map[*Doc]*brief{}}
+	s := &Selection{Docs: make([]*Doc, 0, len(docs)), byPath: map[string]*Doc{}, byID: map[string]*Doc{}, owner: map[*Doc][]int{}, briefOf: map[*Doc]*brief{}}
 	for _, d := range docs {
-		s.byPath[d.Path] = d
-		if d.ID != "" {
-			s.byID[d.ID] = d
-		}
-		own := make([]int, len(d.Sections))
-		for i := range own {
-			own[i] = -1
-		}
-		s.owner[d] = own
+		s.add(d)
 	}
 	return s
+}
+
+// add puts a document in the selection with nothing of it chosen.
+func (s *Selection) add(d *Doc) {
+	s.Docs = append(s.Docs, d)
+	s.byPath[d.Path] = d
+	if d.ID != "" {
+		s.byID[d.ID] = d
+	}
+	own := make([]int, len(d.Sections))
+	for i := range own {
+		own[i] = -1
+	}
+	s.owner[d] = own
 }
 
 // choose gives sections of d to a reason. A section already chosen keeps
