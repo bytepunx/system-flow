@@ -3,15 +3,18 @@ id: S-0386
 type: story
 nature: feature
 title: A story's agent working on a project's UI is primed with its design system, and a baseline convention tells it to build from the tokens and propose changes on its branch
-status: ready
+status: in-progress
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:42Z
-updated: 2026-10-15T04:19:35Z
+updated: 2026-10-15T04:19:45Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:47Z
     by: alex
+  - to: in-progress
+    at: 2026-10-15T04:19:45Z
+    by: agent-S-0386
 tags: [cli, template]
 topics: [design, conventions]
 touches: [flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/context/design.go, flai/internal/context/design_test.go, template/root/design/conventions/design-system.md, template/root/design/conventions/README.md, design/conventions/design-system.md, design/conventions/README.md, design/system/conventions.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
