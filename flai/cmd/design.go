@@ -270,7 +270,7 @@ func printDesign(w io.Writer, fsys fs.FS, shown *designsystem.Shown, guidance st
 	return nil
 }
 
-// designProblem is one problem of the token file file as
+// designProblem is one problem of the token file as
 // <file>:<line>: <token path>: <message>, the token path left out when the
 // problem is the whole file's.
 func designProblem(file string, p designsystem.Problem) string {
