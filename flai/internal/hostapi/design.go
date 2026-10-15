@@ -44,6 +44,7 @@ func designMethods() map[string]channel.Method {
 			if err != nil {
 				return nil, failed(err)
 			}
+			shown.Stylesheet = m.DesignStylesheet()
 			return shown, nil
 		},
 		// design.proposals: as flai design proposals --json; the open

@@ -62,7 +62,7 @@ func designProject(t *testing.T, tokens string, stories ...storyFixture) (*worki
 		}
 		wt := repo.WorktreePath(it.ID)
 		writeFile(t, filepath.Join(wt, ".git"), "gitdir: "+filepath.Join(root, ".git", "worktrees", it.ID)+"\n")
-		writeFile(t, filepath.Join(wt, "system-flow.yaml"), manifest+"design:\n  tokens: "+tokens+"\n")
+		writeFile(t, filepath.Join(wt, "system-flow.yaml"), manifest+"design:\n  tokens: "+tokens+"\n  stylesheet: web/src/design.css\n")
 	}
 	if _, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Task", Parent: "S-0001", Now: now}); err != nil {
 		t.Fatal(err)
@@ -98,6 +98,9 @@ func TestShowStoryReadsItsWorktree(t *testing.T) {
 	}
 	if !shown.Exists || shown.Path != "design/proposed.tokens.json" || shown.Guidance != mainGuidance {
 		t.Errorf("the worktree's design system: %+v", shown)
+	}
+	if shown.Stylesheet != "web/src/design.css" {
+		t.Errorf("the worktree manifest's stylesheet: %q", shown.Stylesheet)
 	}
 	if !slices.Equal(shown.Headings, []string{"Design system", "Colour"}) {
 		t.Errorf("the worktree's guidance headings: %q", shown.Headings)

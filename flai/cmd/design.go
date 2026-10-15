@@ -246,11 +246,12 @@ which flai stream open S-nnnn opens. flai design proposals lists the stories
 whose branches change the design system.
 
 --json prints what the host method design.get answers: {path, exists,
-no_token_file, guidance, headings, resolver, themes: [{name, tokens: [{path,
-type, value, css, variables, ref, line}]}], problems, css, tailwind,
-contrast: [{theme, pairs: [{theme, foreground, background, foreground_hex,
-background_hex, ratio, threshold, passes, clipped}]}]}, the same with
---story.`,
+no_token_file, guidance, stylesheet, headings, resolver, themes: [{name,
+tokens: [{path, type, value, css, variables, ref, line}]}], problems, css,
+tailwind, contrast: [{theme, pairs: [{theme, foreground, background,
+foreground_hex, background_hex, ratio, threshold, passes, clipped}]}]}, the
+same with --story. stylesheet is the manifest's design.stylesheet, left out
+when it names none.`,
 		Example: `  flai design show
   flai design show --json
   flai design show --story S-0042`,
@@ -277,6 +278,7 @@ background_hex, ratio, threshold, passes, clipped}]}]}, the same with
 				if shown, err = designsystem.Show(fsys, repo.Manifest.DesignTokens(), repo.Manifest.DesignGuidance()); err != nil {
 					return err
 				}
+				shown.Stylesheet = repo.Manifest.DesignStylesheet()
 			}
 			if a.jsonOut {
 				return a.printJSON(shown)

@@ -6,8 +6,9 @@ import { AgentError } from '$lib/server/agent';
 import { Repo, useRepo, type Ask, type DesignSystem } from '$lib/server/repo';
 import { flaiAsk, haveFlai, shell } from '$lib/server/testing';
 
-// GET /api/design answers flai's design.get on the host (S-0382), through the flai built from this
-// tree, against copies of the fixture: one without a design system, and one flai design init wrote.
+// GET /api/design answers flai's design.get on the host (S-0382), of a story's worktree when asked
+// (S-0384), through the flai built from this tree, against copies of the fixture: one without a
+// design system, and one flai design init wrote.
 const fixture = resolve('../flai/internal/metrics/testdata/good');
 const TOKENS = 'design/system/design-system.tokens.json';
 
@@ -17,7 +18,7 @@ describe.skipIf(!haveFlai)('design system endpoint', () => {
 	let bare: string;
 	let designed: string;
 	let GET: Handler;
-	const get = () => GET({ url: new URL('http://x/api/design') } as never);
+	const get = (query = '') => GET({ url: new URL(`http://x/api/design${query}`) } as never);
 
 	beforeAll(async () => {
 		bare = await mkdtemp(join(tmpdir(), 'flaiover-design-bare-'));
@@ -104,6 +105,41 @@ describe.skipIf(!haveFlai)('design system endpoint', () => {
 		r.changed(TOKENS);
 		await get();
 		expect(asked).toBe(2);
+	});
+
+	it("passes the story to design.get and asks afresh each time, keeping the main checkout's", async () => {
+		const asked: (Record<string, unknown> | undefined)[] = [];
+		const flai = flaiAsk(designed);
+		const counting = (async (method: string, params?: Record<string, unknown>) => {
+			if (method !== 'design.get') return flai(method, params);
+			asked.push(params);
+			// the designed copy stands in for the story's worktree
+			return flai(method, {});
+		}) as unknown as Ask;
+		useRepo(new Repo(designed, counting));
+		await get();
+		const r = await get('?story=S-004');
+		expect(r.status).toBe(200);
+		expect(((await r.json()) as DesignSystem).path).toBe(TOKENS);
+		await get('?story=S-004');
+		await get();
+		expect(asked).toEqual([{}, { story: 'S-004' }, { story: 'S-004' }]);
+	});
+
+	it("answers flai's refusal of a story with its status and message", async () => {
+		useRepo(new Repo(bare, flaiAsk(bare)));
+		const missing = await get('?story=S-999');
+		expect(missing.status).toBe(404);
+		expect((await missing.json()).error).toContain('S-999 not found');
+		const malformed = await get('?story=nope');
+		expect(malformed.status).toBe(400);
+		expect((await malformed.json()).error).toContain('not an item ID');
+		const epic = await get('?story=E-001');
+		expect(epic.status).toBe(400);
+		expect((await epic.json()).error).toContain('name a story');
+		const unopened = await get('?story=S-004');
+		expect(unopened.status).toBe(400);
+		expect((await unopened.json()).error).toContain('no worktree');
 	});
 
 	it("answers flai's refusal with its status and message", async () => {

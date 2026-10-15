@@ -79,6 +79,8 @@ export const REQUIRED_METHODS = [
 	'doc.get',
 	'doc.lint',
 	'design.get',
+	// S-0384: the open stories whose branches change the design system
+	'design.proposals',
 	'adrs.list',
 	'activity.get',
 	'activity.document',

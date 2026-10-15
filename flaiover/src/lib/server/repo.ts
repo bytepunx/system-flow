@@ -216,6 +216,8 @@ export type DesignSystem = {
 	no_token_file?: string;
 	/** The guidance document's repository path; '' when there is no token file. */
 	guidance: string;
+	/** The generated stylesheet the manifest's design.stylesheet names; absent when it names none (S-0384). */
+	stylesheet?: string;
 	/** The guidance's headings; [] when it is missing. */
 	headings: string[];
 	/** Whether the token file is a DTCG resolver document. */
@@ -229,6 +231,19 @@ export type DesignSystem = {
 	/** The tokens rendered as a Tailwind v4 @theme block; '' when the file does not parse. */
 	tailwind: string;
 	contrast: DesignContrast[];
+};
+
+/**
+ * An open story whose branch, or whose worktree uncommitted, changes the design system, as flai's
+ * design.proposals gives it (S-0384, Go's designsystem.Proposal).
+ */
+export type DesignProposal = {
+	id: string;
+	title: string;
+	/** Its state, never done or cancelled. */
+	status: string;
+	/** The token file, the guidance, or both, in that order. */
+	paths: string[];
 };
 
 /** A text file that is not markdown as flai's file.get answers it (ADR-0147): raw, with its SHA-256. */
@@ -510,10 +525,22 @@ export class Repo extends EventEmitter {
 
 	/**
 	 * The project's design system (S-0382): its tokens per theme, their problems, renderings, and
-	 * contrast, or that there is no token file, as flai's design.get answers it.
+	 * contrast, or that there is no token file, as flai's design.get answers it. With story, from that
+	 * open story's worktree (S-0384), asked afresh each time: a branch's files change without flai's
+	 * word, which is of the main checkout only. flai refuses a story that is not open or has no worktree.
 	 */
-	async designSystem(): Promise<DesignSystem> {
+	async designSystem(story?: string): Promise<DesignSystem> {
+		if (story) return this.ask<DesignSystem>('design.get', { story });
 		return this.remember<DesignSystem>('design', 'design.get');
+	}
+
+	/**
+	 * The open stories whose branches propose a change to the design system (S-0384), as flai's
+	 * design.proposals answers them, [] when none. Asked afresh each time, as stream.diff is: a
+	 * branch's commits are not announced as changes.
+	 */
+	async designProposals(): Promise<DesignProposal[]> {
+		return this.ask<DesignProposal[]>('design.proposals');
 	}
 
 	/**

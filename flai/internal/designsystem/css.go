@@ -283,6 +283,7 @@ type Shown struct {
 	Exists      bool           `json:"exists"`                  // false when there is no token file, and every field below is empty
 	NoTokenFile string         `json:"no_token_file,omitempty"` // when there is no token file: so, and what to run
 	Guidance    string         `json:"guidance"`                // the guidance document's path
+	Stylesheet  string         `json:"stylesheet,omitempty"`    // the generated stylesheet the manifest's design.stylesheet names; set by the caller, which reads the manifest
 	Headings    []string       `json:"headings"`                // the guidance's headings; empty when it is missing
 	Resolver    bool           `json:"resolver"`                // the file is a DTCG resolver document
 	Themes      []ShownTheme   `json:"themes"`                  // light then dark; empty when the file does not parse

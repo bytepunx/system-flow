@@ -36,6 +36,7 @@ func ShowStory(repo *workitem.Repo, story string) (*Shown, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("read the design system in %s's worktree %s: %w", id, in.Root, err)
 	}
+	shown.Stylesheet = in.Manifest.DesignStylesheet()
 	return shown, id, nil
 }
 
