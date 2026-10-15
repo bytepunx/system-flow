@@ -2,12 +2,12 @@
 id: I-0147
 title: The MCP server's flai lags a fresh publish, so task_done refuses and a story's agent falls back to the tree's CLI
 class: efficiency
-status: open
+status: closed
 count: 5
 cost: 3m
 first_reported: 2026-10-13T21:48:16Z
 last_reported: 2026-10-15T03:20:04Z
-updated: 2026-10-15T03:20:04Z
+updated: 2026-10-15T03:20:12Z
 ---
 
 # I-0147 The MCP server's flai lags a fresh publish, so task_done refuses and a story's agent falls back to the tree's CLI
@@ -44,3 +44,4 @@ S-0390 started on the installed flai 1.48.0 while the project's history had flai
 ## Remediation
 
 Story S-0390 remediates this issue, created from it at 2026-10-15T02:55:10Z.
+Closed 2026-10-15T03:20:12Z: S-0390 (ADR-0160): when ADR-0142 refuses an outdated MCP server's task_done, it now closes the task with the flai installed at the server's own path once that flai has caught up, answering closed_by; TestTaskDoneClosesWithTheInstalledFlaiOnceItHasCaughtUp reproduces the instances.
