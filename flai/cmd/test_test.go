@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 )
 
@@ -235,5 +236,58 @@ func TestFlaiTestExitsTwoWhenItCannotAnswer(t *testing.T) {
 	out, errOut, code := runIn(t, root, "test", "web/x.ts")
 	if code != exitTestUnusable || out != "" || !strings.Contains(errOut, "tests[0].format") {
 		t.Errorf("a tier not declared validly: exit %d, want %d, naming the field\nout %q\nerr %q", code, exitTestUnusable, out, errOut)
+	}
+}
+
+// I-0141, ADR-0158: flai test refuses tiers it does not take, here a
+// placeholder it does not fill, naming both versions and the upgrade when
+// the checkout's history holds a newer flai release, and the manifest's fix
+// when the running flai is that release.
+// The refusal comes before any tier runs, so the project needs only git.
+func TestFlaiTestSaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	bad := strings.Replace(testTiersManifest, `web, "{files}"]`, `web, "{dependents}"]`, 1)
+	for name, body := range map[string]string{"system-flow.yaml": bad, "web/x.ts": "export const x = 1;\n", ".gitignore": ".flai-cache/\n"} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+	gitIn(t, root, "tag", "-a", "flai/v1.49.0", "-m", "flai 1.49.0")
+	was := buildinfo.Version
+	t.Cleanup(func() { buildinfo.Version = was })
+	// the log line quotes the tier's name, so the problem is matched without it
+	const problem = "argument {dependents} is not a placeholder flai fills"
+	for _, c := range []struct {
+		version string
+		want    []string
+		not     string
+	}{
+		{"1.40.1", []string{"tests[1].command", problem, "this flai is 1.40.1, older than flai 1.49.0 in the project's history", "upgrade it with flai host upgrade"}, "flai manifest set tests="},
+		{"1.49.0", []string{"tests[1].command", problem, "flai manifest set tests="}, "upgrade it"},
+	} {
+		buildinfo.Version = c.version
+		out, errOut, code := runIn(t, root, "test", "web/x.ts")
+		if code != exitTestUnusable || out != "" {
+			t.Errorf("flai %s: exit %d, want %d\nout %q\nerr %q", c.version, code, exitTestUnusable, out, errOut)
+		}
+		for _, want := range c.want {
+			if !strings.Contains(errOut, want) {
+				t.Errorf("flai %s: %q, want it to say %q", c.version, errOut, want)
+			}
+		}
+		if strings.Contains(errOut, c.not) {
+			t.Errorf("flai %s: %q, want it not to say %q", c.version, errOut, c.not)
+		}
 	}
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/check"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -177,7 +178,7 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 	if o.syncOnly {
 		rep, err = verify.SyncOnly(opts)
 	} else {
-		if opts.Tiers, err = verify.CheckoutTiers(worktree); err != nil {
+		if opts.Tiers, err = verify.CheckoutTiersFor(worktree, a.runner, buildinfo.Version); err != nil {
 			return &exitError{code: exitVerifyUnusable, msg: fmt.Sprintf("verify %s: %v", id, err)}
 		}
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)

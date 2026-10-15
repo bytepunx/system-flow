@@ -39,15 +39,15 @@ func (s *server) test(ctx context.Context, _ *mcp.CallToolRequest, in TestIn) (*
 	if err != nil {
 		return nil, verify.Result{}, err
 	}
-	tiers, err := verify.CheckoutTiers(root)
-	if err != nil {
-		return nil, verify.Result{}, err
-	}
 	git := s.runner
 	if git == nil {
 		git = execx.System{}
 	}
 	git = execx.Timed(ctx, git)
+	tiers, err := verify.CheckoutTiersFor(root, git, s.version)
+	if err != nil {
+		return nil, verify.Result{}, err
+	}
 	var base string
 	if len(in.Paths) == 0 && !in.All {
 		base, err = storygit.MainBranch(git, projectRoot(s.repo))

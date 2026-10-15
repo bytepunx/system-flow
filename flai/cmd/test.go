@@ -11,6 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -72,7 +73,7 @@ covered_by.`,
 			if err != nil {
 				return &exitError{code: exitTestUnusable, msg: err.Error()}
 			}
-			tiers, err := verify.CheckoutTiers(root)
+			tiers, err := verify.CheckoutTiersFor(root, a.runner, buildinfo.Version)
 			if err != nil {
 				return &exitError{code: exitTestUnusable, msg: err.Error()}
 			}

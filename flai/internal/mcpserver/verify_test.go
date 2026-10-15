@@ -18,7 +18,15 @@ import (
 // commits a file on the story's branch.
 func verifyFixture(t *testing.T) (f *fixture, change func(rel string)) {
 	t.Helper()
-	f, git := testFixture(t)
+	f, change, _ = verifyFixtureWith(t, nil)
+	return f, change
+}
+
+// verifyFixtureWith is verifyFixture with the server's options changed by
+// with as well, when it is not nil, and the git it runs.
+func verifyFixtureWith(t *testing.T, with func(*Options)) (f *fixture, change func(rel string), git func(dir string, args ...string)) {
+	t.Helper()
+	f, git = testFixtureWith(t, with)
 	wt := f.repo.WorktreePath(f.story.ID)
 	git(f.repo.Root, "worktree", "add", "-q", "-b", "story/"+f.story.ID, wt, "main")
 	path := f.repo.NarrativePath(f.story.ID)
@@ -43,7 +51,7 @@ func verifyFixture(t *testing.T) (f *fixture, change func(rel string)) {
 		}
 		git(wt, "add", "-A")
 		git(wt, "commit", "-q", "-m", "change "+rel)
-	}
+	}, git
 }
 
 // steps are the answer's steps as name=state, and its findings' messages.
@@ -193,5 +201,38 @@ func TestVerifyRefusesWhatItCannotVerify(t *testing.T) {
 	}
 	if _, ok, err := verify.LastReport(f.repo, f.story.ID); ok || err != nil {
 		t.Errorf("a refusal stored a report: %v, %v", ok, err)
+	}
+}
+
+// I-0141, ADR-0158: verify refuses tiers its flai does not take, in the
+// story's worktree, as the tool test does: naming both versions and the
+// upgrade when the project's history holds a newer flai release, and the
+// manifest's fix when it does not. No report is stored either way.
+func TestVerifySaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) {
+	for _, c := range []struct {
+		version string
+		want    []string
+		not     string
+	}{
+		{"1.40.1", []string{i0141Problem, "this flai is 1.40.1, older than flai 1.49.0 in the project's history", "upgrade it with flai host upgrade"}, "flai manifest set tests="},
+		{"1.49.0", []string{i0141Problem, "flai manifest set tests="}, "upgrade it"},
+	} {
+		f, _, git := verifyFixtureWith(t, func(o *Options) { o.Version = c.version })
+		git(f.repo.Root, "tag", "-a", "flai/v1.49.0", "-m", "flai 1.49.0", "main")
+		if err := os.WriteFile(filepath.Join(f.repo.WorktreePath(f.story.ID), "system-flow.yaml"), []byte(i0141Manifest), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, failed := f.call(t, "verify", map[string]any{"story": f.story.ID})
+		for _, want := range c.want {
+			if !strings.Contains(failed, want) {
+				t.Errorf("flai %s: %q, want it to say %q", c.version, failed, want)
+			}
+		}
+		if strings.Contains(failed, c.not) {
+			t.Errorf("flai %s: %q, want it not to say %q", c.version, failed, c.not)
+		}
+		if _, ok, err := verify.LastReport(f.repo, f.story.ID); ok || err != nil {
+			t.Errorf("flai %s: a refusal stored a report: %v, %v", c.version, ok, err)
+		}
 	}
 }

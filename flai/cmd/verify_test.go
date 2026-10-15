@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -659,5 +660,66 @@ func TestVerifyFreshRunsEveryTier(t *testing.T) {
 	}
 	if got := lastLine(out); got != "verify: S-004 stopped at lint (exit 4)" {
 		t.Errorf("--fresh: last line %q:\n%s", got, out)
+	}
+}
+
+// taggedGit is verifyGit in a project whose history holds the flai release
+// tags given.
+type taggedGit struct {
+	verifyGit
+	tags string
+}
+
+func (g taggedGit) Run(dir, name string, args ...string) (string, error) {
+	if strings.Join(args, " ") == "tag --merged HEAD --list flai/v*" {
+		return g.tags, nil
+	}
+	return g.verifyGit.Run(dir, name, args...)
+}
+
+func (g taggedGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+// I-0141, ADR-0158: flai verify refuses tiers its flai does not take, in the
+// story's worktree, naming both versions and the upgrade when the history
+// holds a newer flai release, and the manifest's fix when it does not.
+func TestVerifySaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) {
+	root, worktree := verifyFixture(t, "exit 0")
+	path := filepath.Join(worktree, "system-flow.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(strings.Replace(string(data), `"{files}"]`, `"{dependents}"]`, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	was := buildinfo.Version
+	t.Cleanup(func() { buildinfo.Version = was })
+	// the log line quotes the tier's name, so the problem is matched without it
+	const problem = "argument {dependents} is not a placeholder flai fills"
+	// each case its own running version, as FlaiOutdated keeps an answer per
+	// root and version for a minute
+	for _, c := range []struct {
+		version string
+		want    []string
+		not     string
+	}{
+		{"1.40.1", []string{"verify S-004: ", "tests[0].command", problem, "this flai is 1.40.1, older than flai 1.49.0 in the project's history", "upgrade it with flai host upgrade"}, "flai manifest set tests="},
+		{"1.49.0", []string{"verify S-004: ", "tests[0].command", problem, "flai manifest set tests="}, "upgrade it"},
+	} {
+		buildinfo.Version = c.version
+		out, errOut, code := runVerify(t, root, taggedGit{tags: "flai/v1.40.1\nflai/v1.49.0\n"}, "verify", "S-004")
+		if code != exitVerifyUnusable || out != "" {
+			t.Errorf("flai %s: exit %d, want %d\nout %q\nerr %q", c.version, code, exitVerifyUnusable, out, errOut)
+		}
+		for _, want := range c.want {
+			if !strings.Contains(errOut, want) {
+				t.Errorf("flai %s: %q, want it to say %q", c.version, errOut, want)
+			}
+		}
+		if strings.Contains(errOut, c.not) {
+			t.Errorf("flai %s: %q, want it not to say %q", c.version, errOut, c.not)
+		}
 	}
 }

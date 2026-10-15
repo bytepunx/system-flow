@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -57,5 +58,66 @@ func TestCheckoutTiers(t *testing.T) {
 	_, err = CheckoutTiers(checkout(t, "tests:\n  - name: unit\n    command: [go, test]\n    paths: [\"flai/**\"]\n    format: junit\n"))
 	if err == nil || !strings.Contains(err.Error(), "tests[0].format") || !strings.Contains(err.Error(), "flai manifest set tests=") {
 		t.Errorf("a bad tier: %v, want it refused naming tests[0].format and how to fix it", err)
+	}
+}
+
+// tagGit answers git tag with the flai release tags it holds, as git does in
+// a project whose history has them, and refuses everything else.
+type tagGit struct{ tags string }
+
+func (g tagGit) Run(_, name string, args ...string) (string, error) {
+	if name == "git" && strings.Join(args, " ") == "tag --merged HEAD --list flai/v*" {
+		return g.tags, nil
+	}
+	return "", errors.New("fatal: not a git repository")
+}
+
+func (g tagGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+func (tagGit) LookPath(name string) (string, error) { return name, nil }
+
+// I-0141, ADR-0158: tiers a newer flai would take, here a placeholder this
+// flai does not fill, are refused as an older flai's when the checkout's
+// history has a newer flai release, naming both versions and the upgrade
+// rather than the manifest's fix; with no newer release, no runner, or a
+// running flai that is not a release, the refusal names the fix as before.
+func TestCheckoutTiersForSaysTheFlaiIsOlderThanTheProject(t *testing.T) {
+	// each its own checkout, as FlaiOutdated keeps an answer per root for a minute
+	bad := func() string {
+		return checkout(t, "tests:\n  - name: vet\n    command: [go, vet, \"{dependents}\"]\n    paths: [\"flai/**\"]\n")
+	}
+	const problem = `tests[0].command (tier "vet") argument {dependents} is not a placeholder flai fills`
+
+	_, err := CheckoutTiersFor(bad(), tagGit{tags: "flai/v1.40.1\nflai/v1.49.0\n"}, "1.40.1")
+	if err == nil {
+		t.Fatal("tiers that are not valid were taken")
+	}
+	for _, want := range []string{problem, "this flai is 1.40.1, older than flai 1.49.0 in the project's history", "upgrade it with flai host upgrade"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("behind a newer release: %q, want it to say %q", err, want)
+		}
+	}
+	if strings.Contains(err.Error(), "flai manifest set tests=") {
+		t.Errorf("behind a newer release: %q tells the agent to fix the manifest", err)
+	}
+
+	for name, c := range map[string]struct {
+		git     tagGit
+		running string
+	}{
+		"no newer release":    {tagGit{tags: "flai/v1.40.1\n"}, "1.40.1"},
+		"a dev build":         {tagGit{tags: "flai/v1.49.0\n"}, "dev"},
+		"git cannot say":      {tagGit{}, "1.40.1"},
+		"a newer running one": {tagGit{tags: "flai/v1.49.0\n"}, "1.50.0"},
+	} {
+		_, err := CheckoutTiersFor(bad(), c.git, c.running)
+		if err == nil || !strings.Contains(err.Error(), problem) || !strings.Contains(err.Error(), "flai manifest set tests=") || strings.Contains(err.Error(), "upgrade it") {
+			t.Errorf("%s: %v, want the manifest's fix", name, err)
+		}
+	}
+	if _, err := CheckoutTiersFor(bad(), nil, "1.40.1"); err == nil || !strings.Contains(err.Error(), "flai manifest set tests=") {
+		t.Errorf("no runner: %v, want the manifest's fix", err)
 	}
 }

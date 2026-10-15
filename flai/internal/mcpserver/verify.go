@@ -35,16 +35,17 @@ func (s *server) verify(ctx context.Context, _ *mcp.CallToolRequest, in VerifyIn
 	if err != nil {
 		return nil, verify.Report{}, err
 	}
-	tiers, err := verify.CheckoutTiers(wt)
-	if err != nil {
-		return nil, verify.Report{}, err
-	}
 	git := s.runner
 	if git == nil {
 		git = execx.System{}
 	}
+	git = execx.Timed(ctx, git)
+	tiers, err := verify.CheckoutTiersFor(wt, git, s.version)
+	if err != nil {
+		return nil, verify.Report{}, err
+	}
 	rep, err := verify.Verify(ctx, verify.StoryOptions{
-		Story: story, Project: s.repo, Worktree: wt, Tiers: tiers, Git: execx.Timed(ctx, git),
+		Story: story, Project: s.repo, Worktree: wt, Tiers: tiers, Git: git,
 		RunOptions: verify.RunOptions{Max: in.Max},
 	})
 	if err != nil {

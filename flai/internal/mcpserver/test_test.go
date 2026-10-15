@@ -43,12 +43,24 @@ tests:
 // manifest declares the tiers above, with files each tier selects.
 func testFixture(t *testing.T) (*fixture, func(dir string, args ...string)) {
 	t.Helper()
+	return testFixtureWith(t, nil)
+}
+
+// testFixtureWith is testFixture with the server's options changed by with
+// as well, when it is not nil.
+func testFixtureWith(t *testing.T, with func(*Options)) (*fixture, func(dir string, args ...string)) {
+	t.Helper()
 	for _, bin := range []string{"git", "sh", "sleep"} {
 		if _, err := exec.LookPath(bin); err != nil {
 			t.Skip(bin + " not installed")
 		}
 	}
-	f := setupWith(t, func(o *Options) { o.Runner = execx.System{} })
+	f := setupWith(t, func(o *Options) {
+		o.Runner = execx.System{}
+		if with != nil {
+			with(o)
+		}
+	})
 	root := f.repo.Root
 	git := func(dir string, args ...string) {
 		t.Helper()
@@ -228,6 +240,44 @@ func TestTestRunsInTheStorysWorktree(t *testing.T) {
 	}
 	if _, failed := f.call(t, "test", map[string]any{"paths": []string{"ok"}}); !strings.Contains(failed, "tests[0].paths") || !strings.Contains(failed, "flai manifest set tests=") {
 		t.Errorf("a manifest whose tests are not valid: %q", failed)
+	}
+}
+
+// i0141Manifest is testManifest with a tier whose command holds a
+// placeholder this flai does not fill, as main's manifest held {importers}
+// for flai 1.40.1 (I-0141).
+var i0141Manifest = strings.Replace(testManifest, `command: [sh, -c, "exit 0"]`, `command: [sh, -c, "exit 0", "{dependents}"]`, 1)
+
+// i0141Problem is what this flai finds wrong in i0141Manifest.
+const i0141Problem = `tests[0].command (tier "ok") argument {dependents} is not a placeholder flai fills`
+
+// I-0141, ADR-0158: a flai older than the newest flai release in the
+// project's history that refuses the manifest's tests says so, with both
+// versions and the upgrade, rather than telling the agent to fix the
+// manifest; a flai at that release refuses them naming the fix.
+func TestTestSaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) {
+	for _, c := range []struct {
+		version string
+		want    []string
+		not     string
+	}{
+		{"1.40.1", []string{i0141Problem, "this flai is 1.40.1, older than flai 1.49.0 in the project's history", "upgrade it with flai host upgrade"}, "flai manifest set tests="},
+		{"1.49.0", []string{i0141Problem, "flai manifest set tests="}, "upgrade it"},
+	} {
+		f, git := testFixtureWith(t, func(o *Options) { o.Version = c.version })
+		git(f.repo.Root, "tag", "-a", "flai/v1.49.0", "-m", "flai 1.49.0")
+		if err := os.WriteFile(filepath.Join(f.repo.Root, "system-flow.yaml"), []byte(i0141Manifest), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, failed := f.call(t, "test", map[string]any{"paths": []string{"ok"}})
+		for _, want := range c.want {
+			if !strings.Contains(failed, want) {
+				t.Errorf("flai %s: %q, want it to say %q", c.version, failed, want)
+			}
+		}
+		if strings.Contains(failed, c.not) {
+			t.Errorf("flai %s: %q, want it not to say %q", c.version, failed, c.not)
+		}
 	}
 }
 
