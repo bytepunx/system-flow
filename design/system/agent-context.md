@@ -1,6 +1,6 @@
 ---
 title: Priming an agent with the documentation its story needs
-updated: 2026-10-08
+updated: 2026-10-15
 status: active
 topics: [cli, conventions]
 ---
@@ -205,6 +205,17 @@ Measured on 2026-09-29 on the S-0149 branch against the flai before it, same doc
 
 What is left named is ADRs by ID (ADR-0047 9 KB, ADR-0049 15 KB), which ADR-0050 keeps whole. Every pack is still over the budget, now by the briefs or by those ADRs, because the conventions and open issues take 57 KB of the 80 KB; narrowing the conventions' topics is still the remedy.
 
+### The design system
+
+[ADR-0152](../adrs/0152-agents-build-ui-from-a-tailwind-v4-stylesheet-flai-generates-from-the-tokens.md) (S-0386) adds a step after the named one, before topics: the design system, for a story the guidance's front-matter `topics` reach (`all`, or a topic the story has). Those `topics` are the only record of which stories a design system reaches; `flai design init --project` writes sub-projects into them. The step loads two files whole, as if the story named them, with the reason `design system: topics <the guidance's topics that matched>`:
+
+- The guidance, at the path the manifest gives (`design/system/design-system.md` by default).
+- The token file, at the manifest's `design.tokens`, read as raw JSON text. It is the one file in a pack that is not markdown, and it is never ranked.
+
+Each file larger than an eighth of the budget is briefed instead, as ADR-0050 briefs a path written out. The line under the brief says the design system reaches the story and to read it whole before building or changing UI. The token file's brief has no outline: it says the file is JSON that `doc_get` cannot read, and to read the file or run `flai design show --json`. A document the story links already is not loaded twice; the reason is listed on it. A sub-agent's pack briefs both files. A strategic pack does not get the design system. Without a token file the step gives the guidance alone. A project without a guidance document has no design system, and its packs are as before.
+
+The convention `design-system.md` (`roles: [story, verify]`) goes with the step. It is in a story's pack, or a verifier's, only when the design system reaches the story: the project has a guidance document and its `topics` reach the story's. `flai prime`, `--cat`, and `--json` without a story leave it out when the project has no guidance document, and give it otherwise.
+
 ### Delivered in parts
 
 ADR-0049 chose 80 KB so that the pack would fit an MCP tool result. It does not: Claude Code saves any tool result over 50,000 characters to a file, and I-0068 records eight stories whose `prime` result it saved, measured on 2026-10-06 at 161 to 198 KB of JSON. The conventions alone encode to 71 KB for a story's agent, and they are never cut, so no budget brings a story's pack under one result.
@@ -274,9 +285,9 @@ A sub-agent's flai calls arrive on its parent's MCP connection under its parent'
 
 1. The conventions whose front matter `roles` are empty or list the role ([ADR-0068](../adrs/0068-a-convention-s-roles-list-every-agent-that-reads-it-the-story-s-agent-included.md)), with the sections the story's topics leave out taken out. No README and no open issues.
 2. The story's `## Goal` and `## Acceptance criteria`.
-3. Briefs, never bodies: what the story, its epic, and its tasks name, then what their topics select, then the ADRs one step reaches, in that order while the budget has room. What does not fit is counted in the header; `doc_search` finds it.
+3. Briefs, never bodies: what the story, its epic, and its tasks name, then the design system when it reaches the story ([The design system](#the-design-system)), then what their topics select, then the ADRs one step reaches, in that order while the budget has room. What does not fit is counted in the header; `doc_search` finds it.
 
-The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. In the baseline the explorer reads `delegation`, `telemetry`, and the conventions without roles: `communication`, `documentation`, `safety`, and `tooling`. The verifier reads those, `code-quality`, and `logging`. The story's agent reads every baseline convention but `strategic-agents`, since each other lists `story` or carries no roles ([conventions.md](conventions.md#roles)).
+The budget is half the project's (`prime.budget`, else 80 KB), or `--budget`. In the baseline the explorer reads `delegation`, `telemetry`, and the conventions without roles: `communication`, `documentation`, `safety`, and `tooling`. The verifier reads those, `code-quality`, and `logging`. The story's agent reads every baseline convention but `strategic-agents`, since each other lists `story` or carries no roles ([conventions.md](conventions.md#roles)). The exception is `design-system`: the story's agent and the verifier read it only when the design system reaches the story.
 
 ### Strategic packs
 
@@ -286,7 +297,7 @@ The planner, the orchestrator, and the analyzer (E-0016) work above a story, so 
 2. The conventions whose `roles` are empty or list the role, with the sections those topics leave out taken out. No README.
 3. The open issues.
 4. For the planner, what its item names, whole: a story with its epic and tasks, or an epic alone. An epic's pack does not load what its stories name: on E-0016 that came to 131 KB, past what a tool result carries. The planner reads the stories as items instead. Then the sections ranked highest against the item.
-5. Briefs of the design, tech, and ADRs the topics select and the ADRs one step reaches, and a catalog of the rest.
+5. Briefs of the design, tech, and ADRs the topics select and the ADRs one step reaches, and a catalog of the rest. The design system step does not run.
 
 In the baseline the planner reads `strategic-agents`, `work-management`, and the conventions without roles; the orchestrator the same and `decisions`; the analyzer `strategic-agents`, `continuous-improvement`, `code-quality`, `telemetry`, and the conventions without roles. `metrics.md` carries the topic `analysis`; `work-hierarchy.md` and `workflow.md` are `[all]` and so are briefed in every pack.
 

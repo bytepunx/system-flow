@@ -30,14 +30,17 @@ func newPrimeCmd(a *app) *cobra.Command {
 		Short: "Print the conventions an agent reads at session start, in order",
 		Long: `List design/conventions in read order (README first, then by order) so an
 agent, a hook, or a script can load them in one call. --cat prints the
-content of each file with a header instead of the paths. Both give every
-convention, whatever its roles.
+content of each file with a header instead of the paths. Both, and --json,
+give every convention whatever its roles, except design-system.md in a
+project with no design system, that is, no guidance document at
+design/system/design-system.md (ADR-0152).
 
 --story S-nnnn prints the context pack for an agent working that story
 (ADR-0047), fitted to a size budget (ADR-0049): a header naming the story,
 its topics and where each came from, the pack's size against the budget, and
 the size of each thing it prints; then each convention the story's agent
 reads, those whose front matter roles are empty or list story (ADR-0068),
+design-system.md only when the design system reaches the story (below),
 as --cat prints it, with the sections whose topics include neither all nor
 one of the story's left out (the front matter, the baseline marker, and the
 Project additions heading always stay), never cut for the budget; the open
@@ -46,7 +49,12 @@ issues; everything the story, its epic, and its tasks link or name, whole
 supersedes it), except a document named only by its path written out and larger than an eighth of
 the budget, which is briefed with the reason "named in <ID>" and a line
 telling the agent to read it before relying on it or changing it
-(ADR-0050); a brief of each design/system and design/tech file its topics
+(ADR-0050); the design system, when the topics of its guidance include all
+or one of the story's (ADR-0152): the guidance and the token file whole,
+as if the story named them, with the reason "design system: topics <the
+topics that matched>", each larger than an eighth of the budget briefed
+with a line telling the agent to read it whole before building UI; a
+brief of each design/system and design/tech file its topics
 select, as its first paragraph and heading outline; the decision sentence of each ADR its topics
 select or one link step reaches (linked from a named or briefed section,
 refined by, or refining one); then the sections ranked highest against the
@@ -63,10 +71,11 @@ flai's is 80KB. An archived story gets the pack it would get today.
 
 --role explore or --role verify, with --story, prints the smaller pack for
 a sub-agent the story's agent hands work to (ADR-0059): the conventions
-whose front matter roles are empty or list the role (ADR-0068), with the
+whose front matter roles are empty or list the role (ADR-0068),
+design-system.md only when the design system reaches the story, with the
 sections the story's topics leave out taken out; the story's goal and
 acceptance criteria; and briefs, never bodies, of what the story names,
-what its topics select, and the ADRs one step reaches, each while the
+the design system when it reaches the story, what its topics select, and the ADRs one step reaches, each while the
 budget has room, with a count of those left out. No open issues, nothing
 ranked, no catalog. Its budget is half the story's agent's unless --budget
 is given.
@@ -81,7 +90,7 @@ sections its topics leave out taken out, and no README; the open issues;
 for the planner, what the item names, whole, as a story's pack loads it (a
 story's with its epic and tasks, an epic's alone), and the sections ranked highest against the item; briefs of the design, tech,
 and ADRs its topics select and the ADRs one step reaches; and a catalog of
-the rest. Its budget is the story's agent's, and --budget sets it.
+the rest. It does not get the design system. Its budget is the story's agent's, and --budget sets it.
 
 --part N prints part N of the pack as the MCP prime tool returns it, as
 JSON: parts of at most 40,000 bytes each, every one carrying part and parts
