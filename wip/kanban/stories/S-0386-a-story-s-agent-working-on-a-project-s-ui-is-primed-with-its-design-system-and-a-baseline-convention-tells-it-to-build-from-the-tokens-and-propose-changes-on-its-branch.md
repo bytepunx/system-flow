@@ -7,7 +7,7 @@ status: backlog
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:42Z
-updated: 2026-10-15T00:32:48Z
+updated: 2026-10-15T00:58:30Z
 transitions: []
 tags: [cli, template]
 topics: [design, conventions]
@@ -33,7 +33,6 @@ usage:
           cache_read: 2888091
           cache_write: 4910
           cost: 0.7293
-draft: true
 cost_of_delay:
   value: 134.62
   by: planner-E-0020
@@ -44,6 +43,9 @@ forecast:
   basis: "Its own forecast of 35m; 6th in the pull order with an in-progress limit of 5, behind S-0381, S-0241, S-0382, S-0383, S-0384 and S-0385."
   by: flai
   at: 2026-10-15T00:32:48Z
+finalized:
+  by: alex
+  at: 2026-10-15T00:58:30Z
 ---
 # S-0386 A story's agent working on a project's UI is primed with its design system, and a baseline convention tells it to build from the tokens and propose changes on its branch
 
