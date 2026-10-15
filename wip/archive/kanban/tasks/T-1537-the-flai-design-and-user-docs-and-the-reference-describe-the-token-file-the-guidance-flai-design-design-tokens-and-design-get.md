@@ -3,16 +3,37 @@ id: T-1537
 type: task
 nature: feature
 title: The flai design and user docs and the reference describe the token file, the guidance, flai design, design.tokens, and design.get
-status: backlog
+status: done
 parent: S-0381
 owner: alex
 created: 2026-10-13T17:46:50Z
-updated: 2026-10-14T23:55:47Z
-transitions: []
+updated: 2026-10-15T00:59:04Z
+transitions:
+  - to: ready
+    at: 2026-10-15T00:55:16Z
+    by: agent-S-0381
+  - to: in-progress
+    at: 2026-10-15T00:55:17Z
+    by: agent-S-0381
+  - to: done
+    at: 2026-10-15T00:59:04Z
+    by: agent-S-0381
 stream: S-0381
 tags: [cli]
 touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-1534, T-1535, T-1536, T-1591]
+usage:
+  source: log
+  seconds: 227
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 29389
+      cache_read: 2760584
+      cache_write: 133460
+      cost: 1.8731
 ---
 # T-1537 The flai design and user docs and the reference describe the token file, the guidance, flai design, design.tokens, and design.get
 

@@ -3,12 +3,15 @@ id: S-0384
 type: story
 nature: feature
 title: An agent's proposal for the design system is a story whose branch changes it, and the Design page previews that branch beside the main branch's before the operator accepts it
-status: backlog
+status: ready
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:03Z
-updated: 2026-10-15T00:36:07Z
-transitions: []
+updated: 2026-10-15T01:10:42Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:10:42Z
+    by: alex
 tags: [dashboard, cli]
 topics: [design]
 touches: [flai/internal/designsystem/proposals.go, flai/internal/designsystem/proposals_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/design/+server.ts, flaiover/src/routes/api/design/design.test.ts, flaiover/src/routes/api/design/proposals/+server.ts, flaiover/src/routes/api/design/proposals/proposals.test.ts, flaiover/src/lib/design/diff.ts, flaiover/src/lib/design/diff.test.ts, flaiover/src/lib/components/design/ProposalCompare.svelte, flaiover/src/lib/components/design/ProposalCompare.svelte.test.ts, flaiover/src/lib/components/design/ProposeChange.svelte, flaiover/src/lib/components/design/ProposeChange.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 55
+      seconds: 288
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 329
-          cache_read: 2888091
-          cache_write: 4910
-          cost: 0.7293
+          input: 28
+          output: 526
+          cache_read: 5422897
+          cache_write: 8751
+          cost: 1.3658
 cost_of_delay:
   value: 250
   by: planner-E-0020

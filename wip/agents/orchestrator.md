@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 591.1058
-accrued_seconds: 489326
-tasks_completed: 497
-last_run: 2026-10-15T00:32:54Z
+accrued_cost: 595.3423
+accrued_seconds: 491659
+tasks_completed: 503
+last_run: 2026-10-15T01:11:47Z
 ---
 
 # Orchestrator activity
@@ -3490,6 +3490,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0306
 - Seconds: 1376
 - Cost: 1.2643 USD, estimated
+
+### 2026-10-15T00:33:05Z
+
+- Summary: Under publish, policy judgement: released S-0306 (1 pending, 0 USD/week, unvalued) as flai 1.49.7 → 1.49.8 (patch, flai/v1.49.8), pushed. Reason: a complete, verified remediation on its own (row-by-row ADR index merge, ADR-0157; I-0099 closed); nothing held by whole_epics.
+- Items: S-0306
+- Seconds: 11
+- Cost: 0.1252 USD, estimated
+
+### 2026-10-15T00:40:29Z
+
+- Summary: The operator finalized S-0384 and S-0385 (backlog, held by their after). Resolved my own TH-0442 and TH-0443, which had kept them drafts until S-0380's decision. Drafts left: S-0386 (TH-0444, pending the operator or E-0020's replan) and S-0387 (TH-0447 awaits the operator).
+- Items: S-0384, S-0385
+- Seconds: 444
+- Cost: 1.0116 USD, estimated
+
+### 2026-10-15T00:58:35Z
+
+- Summary: The operator finalized S-0386 and resolved my TH-0444. All E-0020 drafts are now finalized (S-0381 in progress; S-0382 to S-0386 held by their after). The only draft left is S-0387, whose plan thread TH-0447 (new auto-upgrade host action) awaits the operator; TH-0438 (E-0020 replan: the file.get/save story and component design) still carries my recommendation.
+- Items: S-0386
+- Seconds: 1086
+- Cost: 1.0246 USD, estimated
+
+### 2026-10-15T00:59:53Z
+
+- Summary: The operator finalized S-0387; it is held (overlap on docs/operators/settings.md) until S-0381 moves to review. TH-0447, its plan thread with my recommendation (full plan with a shell-only auto-upgrade host action), still awaits the operator; while it stays open it would block S-0387's acceptance. Promote candidates: only S-0241 (rank 1, 2h), which stays out, blocked.
+- Items: S-0387
+- Seconds: 78
+- Cost: 1.0311 USD, estimated
+
+### 2026-10-15T01:10:43Z
+
+- Summary: The operator moved S-0382 (and S-0383) to ready; both are held by after behind S-0381. Under order_ready, applied the throughput order: S-0383 (30m), S-0382 (50m).
+- Items: S-0382, S-0383
+- Seconds: 650
+- Cost: 0.2601 USD, estimated
+
+### 2026-10-15T01:11:47Z
+
+- Summary: The operator moved S-0382 to S-0387 to ready and placed S-0382 first by hand. Under order_ready, applied the throughput order, keeping that placement: S-0382 (kept, 50m), S-0385 (27m), S-0383 (30m), S-0386 (35m), S-0384 (1h5m), S-0387 (1h15m). All are held behind S-0381 (by after or overlap) until it moves to review or is done.
+- Items: S-0382, S-0383, S-0384, S-0385, S-0386, S-0387
+- Seconds: 64
+- Cost: 0.7839 USD, estimated
 
 ## Refusals
 

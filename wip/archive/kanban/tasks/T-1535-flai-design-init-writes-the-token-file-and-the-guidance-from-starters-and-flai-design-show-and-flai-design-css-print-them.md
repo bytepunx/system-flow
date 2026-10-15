@@ -3,11 +3,11 @@ id: T-1535
 type: task
 nature: feature
 title: flai design init writes the token file and the guidance from starters, and flai design show and flai design css print them
-status: in-progress
+status: done
 parent: S-0381
 owner: alex
 created: 2026-10-13T17:46:41Z
-updated: 2026-10-15T00:30:28Z
+updated: 2026-10-15T00:54:45Z
 transitions:
   - to: ready
     at: 2026-10-15T00:30:27Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-15T00:30:28Z
     by: agent-S-0381
+  - to: done
+    at: 2026-10-15T00:54:45Z
+    by: agent-S-0381
 stream: S-0381
 tags: [cli]
-touches: [flai/cmd/design.go, flai/cmd/design_test.go, flai/cmd/root.go, flai/internal/designsystem/starter.md, flai/internal/designsystem/starter.tokens.json]
+touches: [flai/cmd/design.go, flai/cmd/design_test.go, flai/cmd/root.go, flai/internal/designsystem/starter.md, flai/internal/designsystem/starter.tokens.json, flai/internal/designsystem/starter.go, docs/operators/settings.md, docs/users/flai-reference.md]
 after: [T-1533, T-1590]
+usage:
+  source: log
+  seconds: 1457
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 122
+      output: 63393
+      cache_read: 5954625
+      cache_write: 287875
+      cost: 4.0403
 ---
 # T-1535 flai design init writes the token file and the guidance from starters, and flai design show and flai design css print them
 

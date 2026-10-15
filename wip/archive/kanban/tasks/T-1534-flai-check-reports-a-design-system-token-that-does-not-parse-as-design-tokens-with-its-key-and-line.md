@@ -24,16 +24,16 @@ touches: [flai/internal/check/design.go, flai/internal/check/design_test.go, fla
 after: [T-1590, T-1592]
 usage:
   source: log
-  seconds: 411
+  seconds: 415
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 50
-      output: 261
-      cache_read: 1595992
-      cache_write: 80433
-      cost: 0.7741
+      input: 34
+      output: 17599
+      cache_read: 1653153
+      cache_write: 79921
+      cost: 1.1217
 ---
 # T-1534 flai check reports a design system token that does not parse as design.tokens with its key and line
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 475
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 123
-      cache_read: 992480
-      cache_write: 104808
-      cost: 0.5067
+      input: 22
+      output: 11519
+      cache_read: 1082051
+      cache_write: 52312
+      cost: 0.7342
 ---
 # T-1592 The design token file's light and dark values resolve through the DTCG Resolver's theme modifier, and a resolver other than theme with light and dark is a problem at its path and line
 

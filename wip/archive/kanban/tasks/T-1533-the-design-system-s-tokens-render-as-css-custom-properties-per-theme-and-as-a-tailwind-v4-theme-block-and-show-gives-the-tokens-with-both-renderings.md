@@ -24,16 +24,16 @@ touches: [flai/internal/designsystem/css.go, flai/internal/designsystem/css_test
 after: [T-1592, T-1593]
 usage:
   source: log
-  seconds: 412
+  seconds: 413
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 199
-      cache_read: 1852432
-      cache_write: 122899
-      cost: 0.9121
+      input: 40
+      output: 20737
+      cache_read: 1947895
+      cache_write: 94171
+      cost: 1.3217
 ---
 # T-1533 The design system's tokens render as CSS custom properties per theme and as a Tailwind v4 @theme block, and Show gives the tokens with both renderings
 

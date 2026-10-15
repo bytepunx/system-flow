@@ -3,12 +3,15 @@ id: S-0382
 type: story
 nature: feature
 title: The dashboard's Design group shows a project's design system and previews its tokens live on sample components
-status: backlog
+status: ready
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:35Z
-updated: 2026-10-15T00:32:48Z
-transitions: []
+updated: 2026-10-15T01:32:59Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:10:37Z
+    by: alex
 tags: [dashboard]
 topics: [design]
 touches: [flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/design/+server.ts, flaiover/src/routes/api/design/design.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/SiteMenu.svelte.test.ts, flaiover/src/lib/design/preview.ts, flaiover/src/lib/design/preview.test.ts, flaiover/src/lib/components/design/PreviewFrame.svelte, flaiover/src/lib/components/design/PreviewFrame.svelte.test.ts, flaiover/src/lib/components/design/Gallery.svelte, flaiover/src/lib/components/design/TokenSheet.svelte, flaiover/src/lib/components/design/TokenSheet.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 837
+      seconds: 1173
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 42
-          output: 798
-          cache_read: 8664155
-          cache_write: 10519
-          cost: 2.1788
+          input: 46
+          output: 854
+          cache_read: 9702690
+          cache_write: 11859
+          cost: 2.4395
 cost_of_delay:
   value: 192.31
   by: planner-E-0020
   at: 2026-10-13T17:51:37Z
 forecast:
   duration: 50m
-  delivery: 2026-10-15T02:23:00Z
-  basis: "Its own forecast of 50m; 2nd in the pull order with an in-progress limit of 5, behind S-0381 and S-0241."
+  delivery: 2026-10-15T02:31:00Z
+  basis: "Its own forecast of 50m; 1st in the pull order with an in-progress limit of 5, behind S-0387."
   by: flai
-  at: 2026-10-15T00:32:48Z
+  at: 2026-10-15T01:32:59Z
 finalized:
   by: alex
   at: 2026-10-15T00:09:10Z

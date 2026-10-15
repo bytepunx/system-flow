@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 756
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 165
-      cache_read: 1599416
-      cache_write: 99649
-      cost: 0.7845
+      input: 34
+      output: 17837
+      cache_read: 1675469
+      cache_write: 81000
+      cost: 1.1368
 ---
 # T-1593 A design token colour converts from oklch to sRGB with clipping reported, and the colour roles' pairs get their contrast against ADR-0148's thresholds
 

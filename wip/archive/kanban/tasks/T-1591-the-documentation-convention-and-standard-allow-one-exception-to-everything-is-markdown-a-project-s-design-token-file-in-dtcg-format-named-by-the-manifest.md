@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 706
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 107
-      cache_read: 795845
-      cache_write: 56425
-      cost: 0.3935
+      input: 17
+      output: 8947
+      cache_read: 840441
+      cache_write: 40631
+      cost: 0.5702
 ---
 # T-1591 The documentation convention and standard allow one exception to Everything is markdown: a project's design token file, in DTCG format, named by the manifest
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 702
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 48
-      output: 245
-      cache_read: 1852740
-      cache_write: 223631
-      cost: 0.9588
+      input: 42
+      output: 21798
+      cache_read: 2047533
+      cache_write: 98988
+      cost: 1.3893
 ---
 # T-1590 The manifest key design.tokens names the design token file, design/system/design-system.tokens.json when unset
 

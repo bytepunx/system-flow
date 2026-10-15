@@ -25,14 +25,20 @@ usage:
   source: log
   seconds: 694
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 53
-      output: 250
-      cache_read: 1953668
-      cache_write: 115556
-      cost: 0.9555
+      input: 42
+      output: 21723
+      cache_read: 2040491
+      cache_write: 98647
+      cost: 1.3845
+    - model: claude-sonnet-5-5
+      input: 44
+      output: 12003
+      cache_read: 1390155
+      cache_write: 103370
+      cost: 0.5176
 ---
 # T-1532 flai/internal/designsystem reads the DTCG token file and the guidance's headings, and reports each token it does not read at its path and line
 

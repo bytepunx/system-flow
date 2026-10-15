@@ -3,12 +3,15 @@ id: S-0385
 type: story
 nature: feature
 title: flai writes the design system's tokens into the stylesheet the manifest names, and flai check reports the stylesheet when it falls behind them
-status: backlog
+status: ready
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:14Z
-updated: 2026-10-15T00:37:19Z
-transitions: []
+updated: 2026-10-15T01:10:45Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:10:45Z
+    by: alex
 tags: [cli]
 topics: [design]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/designsystem/stylesheet.go, flai/internal/designsystem/stylesheet_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/check/design.go, flai/internal/check/design_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 55
+      seconds: 288
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 328
-          cache_read: 2888091
-          cache_write: 4910
-          cost: 0.7293
+          input: 28
+          output: 523
+          cache_read: 5422897
+          cache_write: 8751
+          cost: 1.3658
 cost_of_delay:
   value: 103.85
   by: planner-E-0020
