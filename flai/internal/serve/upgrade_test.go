@@ -31,6 +31,9 @@ type upgradeLab struct {
 	logs     syncBuffer
 	underNo  bool // flai serve runs under no host
 	upgrader *upgrader
+	public   map[string]bool // the releases published; nil when flai serve does not look
+	unlisted error           // what listing the published releases answers instead
+	checked  []string        // the releases looked for
 }
 
 func newUpgradeLab(t *testing.T) *upgradeLab {
@@ -64,7 +67,20 @@ func (lab *upgradeLab) restart() {
 			return lab.refuse == nil, lab.refuse
 		}
 	}
+	if lab.public != nil {
+		u.published = func(_ context.Context, version string) (bool, error) {
+			lab.checked = append(lab.checked, version)
+			return lab.public[version], lab.unlisted
+		}
+	}
 	lab.upgrader = u
+}
+
+// publishing has flai serve look at the published releases before it opens
+// a thread: none is published until the test says so.
+func (lab *upgradeLab) publishing() {
+	lab.public = map[string]bool{}
+	lab.restart()
 }
 
 func (lab *upgradeLab) look(roots ...string) {
@@ -284,5 +300,95 @@ func TestADevelopmentBuildAsksNothing(t *testing.T) {
 	lab.look("harbour")
 	if len(lab.asked) != 0 || len(lab.threads) != 0 {
 		t.Errorf("a dev build asked %v and told %v", lab.asked, lab.threads)
+	}
+}
+
+// I-0149, ADR-0161: a release is tagged minutes before it is published, and
+// the host refuses one that is not, so the thread waits: no thread and no
+// record while it is not published, and the next minute's look once it is
+// opens it, naming the release.
+func TestTheUpgradeThreadWaitsForTheReleaseToBePublished(t *testing.T) {
+	lab := newUpgradeLab(t)
+	lab.publishing()
+	lab.newest["harbour"] = "1.49.0"
+	lab.look("harbour")
+	if len(lab.threads) != 0 {
+		t.Fatalf("a thread named a release not yet published: %v", lab.threads)
+	}
+	if asks, err := lab.dir.upgradeAsks(); err != nil || len(asks) != 0 {
+		t.Fatalf("a release not yet published was recorded as asked about: %v %v", asks, err)
+	}
+	if logs := lab.logs.String(); !strings.Contains(logs, `level=INFO msg="flai upgrade thread waits for the release to be published"`) || !strings.Contains(logs, "newest=1.49.0") {
+		t.Errorf("the wait is logged:\n%s", logs)
+	}
+	lab.after(time.Minute)
+	lab.look("harbour")
+	if len(lab.threads) != 0 {
+		t.Fatalf("asked before the release was published: %v", lab.threads)
+	}
+	lab.public["1.49.0"] = true
+	lab.after(time.Minute)
+	lab.look("harbour")
+	if len(lab.threads) != 1 || !strings.Contains(lab.threads[0], "flai host upgrade --version 1.49.0") {
+		t.Fatalf("once published, the next look asks: %v", lab.threads)
+	}
+	if asks, err := lab.dir.upgradeAsks(); err != nil || asks["harbour"] != "1.49.0" {
+		t.Errorf("the record holds the release asked about: %v %v", asks, err)
+	}
+}
+
+// ADR-0161: when the published releases cannot be listed, the thread opens
+// as before, and the failure is logged at warn.
+func TestTheUpgradeThreadOpensWhenThePublishedReleasesCannotBeListed(t *testing.T) {
+	lab := newUpgradeLab(t)
+	lab.publishing()
+	lab.unlisted = errors.New("list the flai/v releases of bytepunx/system-flow: 503")
+	lab.newest["harbour"] = "1.49.0"
+	lab.look("harbour")
+	if len(lab.threads) != 1 {
+		t.Fatalf("a failed listing kept the thread back: %v", lab.threads)
+	}
+	if logs := lab.logs.String(); !strings.Contains(logs, "level=WARN") || !strings.Contains(logs, "503") {
+		t.Errorf("the failed listing is logged at warn:\n%s", logs)
+	}
+}
+
+// ADR-0161: a release found published is not looked for again, as for a
+// second project behind it.
+func TestAPublishedReleaseIsNotLookedForAgain(t *testing.T) {
+	lab := newUpgradeLab(t)
+	lab.publishing()
+	lab.public["1.49.0"] = true
+	lab.newest["harbour"] = "1.49.0"
+	lab.look("harbour")
+	lab.newest["quay"] = "1.49.0"
+	lab.after(time.Minute)
+	lab.look("harbour", "quay")
+	if len(lab.threads) != 2 {
+		t.Fatalf("each project is asked on its own thread: %v", lab.threads)
+	}
+	if strings.Join(lab.checked, " ") != "1.49.0" {
+		t.Errorf("looked for the published release %v, want once", lab.checked)
+	}
+}
+
+// ADR-0161: the thread an hour of the host's refusals opens, with
+// auto-upgrade on, is not held for the release to be published: it names
+// the host's last refusal, which says why the release is not installed.
+func TestTheThreadAfterAnHourOfRefusalsDoesNotWaitForPublication(t *testing.T) {
+	lab := newUpgradeLab(t)
+	lab.publishing()
+	lab.auto["harbour"] = true
+	lab.newest["harbour"] = "1.49.0"
+	lab.refuse = errors.New("flai 1.49.0 is not published; published are 1.48.0")
+	for range 61 {
+		lab.look("harbour")
+		lab.after(time.Minute)
+	}
+	if len(lab.threads) != 1 || !strings.Contains(lab.threads[0], "is not published") {
+		t.Fatalf("an hour of refusals tells the operator the host's answer: %v", lab.threads)
+	}
+	if len(lab.checked) != 0 {
+		t.Errorf("looked for the release %v before telling the host's refusal", lab.checked)
 	}
 }

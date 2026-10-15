@@ -18,10 +18,12 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
+	"github.com/bytepunx/system-flow/flai/internal/selfupgrade"
 	"github.com/bytepunx/system-flow/flai/internal/serve"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -121,6 +123,19 @@ func (m hostMCP) upgrade(ctx context.Context, version string) (bool, error) {
 		return false, fmt.Errorf("flai host answered the upgrade to flai %s with %s: %w", version, out, err)
 	}
 	return said.Restarting, nil
+}
+
+// releasePublished is how flai serve learns whether a flai release is
+// published before it names it on a thread (ADR-0161): among the releases
+// flai self-upgrade --list reads, from FLAI_RELEASES_API when set.
+func releasePublished(r execx.Runner) serve.ReleasePublished {
+	return func(ctx context.Context, version string) (bool, error) {
+		published, err := selfupgrade.List(ctx, selfupgrade.Options{APIBase: strings.TrimSpace(os.Getenv("FLAI_RELEASES_API")), Token: selfupgrade.Token(r)}, selfupgrade.TagPrefix)
+		if err != nil {
+			return false, err
+		}
+		return slices.ContainsFunc(published, func(rel selfupgrade.Release) bool { return rel.Version == version }), nil
+	}
 }
 
 func knownAction(name string) error {

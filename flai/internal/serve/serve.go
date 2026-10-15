@@ -196,6 +196,9 @@ type Options struct {
 	// history holds one while its auto-upgrade host action is on; nil when
 	// it runs under no host, when it asks the operator on a thread instead.
 	Upgrade HostUpgrade
+	// Published says whether a flai release is published, asked before the
+	// thread that names it is opened (ADR-0161); nil opens it unasked.
+	Published ReleasePublished
 	// MCP has each served project's HTTP MCP server kept by flai host
 	// (S-0096, S-0106); nil keeps none. MCPEvery is how often the host is
 	// told again when nothing changed.

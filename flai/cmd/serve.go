@@ -143,7 +143,7 @@ there does.`,
 			}
 			servePprof(ctx, a.logger())
 			warnReleaseStamp(a.logger(), buildinfo.OwnStamp())
-			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, Upgrade: hostUpgrade(mcp), ImportRoots: a.importRoots,
+			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, Upgrade: hostUpgrade(mcp), Published: releasePublished(a.runner), ImportRoots: a.importRoots,
 				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned})
 		},
 	}

@@ -32,7 +32,10 @@ import (
 // with it on while flai serve runs under no host, or whose release is still
 // not installed an hour after the first ask, gets one thread on its
 // system-flow.yaml, once per release, recorded under the serve directory so
-// that no later look and no restart opens it again.
+// that no later look and no restart opens it again. The thread waits until
+// the release is published (ADR-0161): a release is tagged minutes before
+// its binaries are, and the host refuses one that is not, so each look asks
+// again until it is.
 
 const (
 	// upgradeEvery is how often the served projects are looked at again.
@@ -47,12 +50,18 @@ const (
 	// upgradeTimeout bounds one ask of the host: it downloads and verifies
 	// the release before it answers.
 	upgradeTimeout = 6 * time.Minute
+	// publishedTimeout bounds one look at the published releases.
+	publishedTimeout = 30 * time.Second
 )
 
 // HostUpgrade asks the host flai serve runs under to install the flai
 // release version, as flai host upgrade --version does, and answers whether
 // it installed it and so restarts.
 type HostUpgrade func(ctx context.Context, version string) (restarting bool, err error)
+
+// ReleasePublished answers whether the flai release version is published,
+// so that the host can install it.
+type ReleasePublished func(ctx context.Context, version string) (bool, error)
 
 func (d Dir) upgradeAsksFile() string { return filepath.Join(string(d), "upgrade-asks.json") }
 
@@ -94,15 +103,16 @@ type upgradeAttempt struct {
 // asks; its dependencies are funcs so that it is tested without a host, git,
 // or a repository.
 type upgrader struct {
-	now      func() time.Time
-	log      *slog.Logger
-	dir      Dir
-	outdated func(root string) *release.Outdated
-	auto     func(root string) bool
-	upgrade  HostUpgrade // nil when flai serve runs under no host
-	writing  func() int
-	tell     func(e Entry, title, text string) (thread string, err error)
-	journal  func(hostapi.Entry)
+	now       func() time.Time
+	log       *slog.Logger
+	dir       Dir
+	outdated  func(root string) *release.Outdated
+	auto      func(root string) bool
+	upgrade   HostUpgrade // nil when flai serve runs under no host
+	writing   func() int
+	tell      func(e Entry, title, text string) (thread string, err error)
+	journal   func(hostapi.Entry)
+	published ReleasePublished // nil names a release without looking
 
 	busy     atomic.Bool
 	wg       sync.WaitGroup
@@ -110,6 +120,7 @@ type upgrader struct {
 	seen     map[string]bool
 	attempts map[string]*upgradeAttempt // by release
 	told     map[string]string          // root → release asked about, as recorded
+	public   map[string]bool            // the releases found published
 }
 
 func newUpgrader(o Options) *upgrader {
@@ -122,10 +133,11 @@ func newUpgrader(o Options) *upgrader {
 		auto: func(root string) bool {
 			return o.Host.Enabled != nil && o.Host.Enabled(hostapi.ActionAutoUpgrade, root)
 		},
-		upgrade: o.Upgrade,
-		writing: hostapi.WritesRunning,
-		tell:    upgradeThread(o.Now),
-		journal: o.Host.Record,
+		upgrade:   o.Upgrade,
+		writing:   hostapi.WritesRunning,
+		tell:      upgradeThread(o.Now),
+		journal:   o.Host.Record,
+		published: o.Published,
 	}
 }
 
@@ -202,9 +214,9 @@ func (u *upgrader) look(ctx context.Context, served []Entry) {
 		}
 		switch {
 		case !u.auto(e.Root):
-			u.ask(e, out, "")
+			u.ask(ctx, e, out, "", true)
 		case u.upgrade == nil:
-			u.ask(e, out, "auto-upgrade is on for this project, but flai serve runs outside flai host, so there is no host for it to ask")
+			u.ask(ctx, e, out, "auto-upgrade is on for this project, but flai serve runs outside flai host, so there is no host for it to ask", true)
 		default:
 			auto = append(auto, behindProject{e, out})
 			if best < 0 || buildinfo.Below(auto[best].out.Newest, out.Newest) {
@@ -234,7 +246,7 @@ func (u *upgrader) look(ctx context.Context, served []Entry) {
 		why += "; the host's last answer: " + att.refusal
 	}
 	for _, b := range auto {
-		u.ask(b.e, b.out, why)
+		u.ask(ctx, b.e, b.out, why, false)
 	}
 }
 
@@ -279,9 +291,11 @@ func (u *upgrader) request(ctx context.Context, now time.Time, b behindProject) 
 
 // ask opens the thread that asks the operator to upgrade flai for the
 // project e to out's newest release, unless one was opened for that release
-// or a newer one; why says why flai serve did not upgrade it itself, "" when
-// auto-upgrade is off.
-func (u *upgrader) ask(e Entry, out *release.Outdated, why string) {
+// or a newer one, or, with published, the release is not yet published;
+// why says why flai serve did not upgrade it itself, "" when auto-upgrade
+// is off. The ask an hour of the host's refusals makes passes no published:
+// its why already carries the host's answer.
+func (u *upgrader) ask(ctx context.Context, e Entry, out *release.Outdated, why string, published bool) {
 	if u.told == nil {
 		u.told = map[string]string{}
 	}
@@ -298,6 +312,9 @@ func (u *upgrader) ask(e Entry, out *release.Outdated, why string) {
 		u.told[e.Root] = was
 		return
 	}
+	if published && !u.isPublished(ctx, e, out.Newest) {
+		return
+	}
 	id, err := u.tell(e, upgradeTitle(out), upgradeText(out, why))
 	if err != nil {
 		u.log.Warn("flai upgrade not asked on a thread", "component", "serve", "project", e.Key, "running", out.Running, "newest", out.Newest, "err", err.Error())
@@ -308,6 +325,34 @@ func (u *upgrader) ask(e Entry, out *release.Outdated, why string) {
 		u.log.Warn("flai upgrade ask not recorded", "component", "serve", "project", e.Key, "newest", out.Newest, "file", u.dir.upgradeAsksFile(), "err", err.Error())
 	}
 	u.log.Info("flai upgrade asked on a thread", "component", "serve", "project", e.Key, "running", out.Running, "newest", out.Newest, "thread", id)
+}
+
+// isPublished says whether the thread may name version: once it is
+// published, which is remembered, or when flai serve cannot tell, as a
+// thread that names a release not yet published beats none. It says no
+// while serve stops.
+func (u *upgrader) isPublished(ctx context.Context, e Entry, version string) bool {
+	if u.published == nil || u.public[version] {
+		return true
+	}
+	pctx, cancel := context.WithTimeout(ctx, publishedTimeout)
+	defer cancel()
+	ok, err := u.published(pctx, version)
+	switch {
+	case ctx.Err() != nil:
+		return false
+	case err != nil:
+		u.log.Warn("flai upgrade thread opened without knowing the release is published", "component", "serve", "project", e.Key, "newest", version, "err", err.Error())
+		return true
+	case !ok:
+		u.log.Info("flai upgrade thread waits for the release to be published", "component", "serve", "project", e.Key, "newest", version)
+		return false
+	}
+	if u.public == nil {
+		u.public = map[string]bool{}
+	}
+	u.public[version] = true
+	return true
 }
 
 func upgradeTitle(out *release.Outdated) string {
