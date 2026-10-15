@@ -7,7 +7,7 @@ status: ready
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:14Z
-updated: 2026-10-15T01:10:45Z
+updated: 2026-10-15T01:32:59Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:45Z
@@ -42,10 +42,10 @@ cost_of_delay:
   at: 2026-10-13T17:52:16Z
 forecast:
   duration: 27m
-  delivery: 2026-10-15T01:56:00Z
-  basis: "Its own forecast of 27m; 5th in the pull order with an in-progress limit of 5, behind S-0381, S-0241, S-0382, S-0383 and S-0384."
+  delivery: 2026-10-15T02:04:00Z
+  basis: "Its own forecast of 27m; 2nd in the pull order with an in-progress limit of 5, behind S-0387 and S-0382."
   by: flai
-  at: 2026-10-15T00:32:48Z
+  at: 2026-10-15T01:32:59Z
 finalized:
   by: alex
   at: 2026-10-15T00:37:19Z
