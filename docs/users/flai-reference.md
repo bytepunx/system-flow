@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-14
+updated: 2026-10-15
 status: active
 ---
 
@@ -26,6 +26,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [config](#flai-config) | Read and write ~/.flai/config.json |
 | [criteria](#flai-criteria) | List, tick, and untick an item's acceptance criteria by their numbers |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
+| [design](#flai-design) | Write, show, and render the project's design system |
 | [doc](#flai-doc) | Search, read, and save markdown documents |
 | [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
@@ -98,6 +99,7 @@ Subcommands:
 - [config](#flai-config): Read and write ~/.flai/config.json
 - [criteria](#flai-criteria): List, tick, and untick an item's acceptance criteria by their numbers
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
+- [design](#flai-design): Write, show, and render the project's design system
 - [doc](#flai-doc): Search, read, and save markdown documents
 - [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
@@ -1033,6 +1035,102 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--repo` string | GitHub repository whose flaiover/vX.Y.Z tags are the published dashboard releases (default `bytepunx/system-flow`) |
+
+### flai design
+
+Write, show, and render the project's design system.
+
+A project's design system is its tokens, the values its UI uses, and its guidance, the words that say when to use which (ADR-0146). The tokens are one DTCG 2025.10 file the manifest's design.tokens names, design/system/design-system.tokens.json when it is unset; the guidance is design/system/design-system.md. flai check validates the token file as design.tokens; flai design init writes both from starters, flai design show reports them with each colour role pair's contrast, and flai design css renders the tokens as CSS.
+
+Examples:
+
+```bash
+flai design init --topics flaiover
+flai design show
+flai design show --json
+flai design css --tailwind
+```
+
+Subcommands:
+
+- [css](#flai-design-css): Print the tokens as CSS custom properties, or as a Tailwind v4 @theme block
+- [init](#flai-design-init): Write the token file and the guidance from flai's starters
+- [show](#flai-design-show): Report the token file, the guidance, the problems, and each role pair's contrast
+
+#### flai design css
+
+Print the tokens as CSS custom properties, or as a Tailwind v4 @theme block.
+
+```text
+flai design css [flags]
+```
+
+Print the token file's tokens as CSS custom properties with Tailwind v4's names, such as --color-primary and --text-sm, one block per theme, each with every token: :root for light, then [data-theme='dark'] for dark. With --tailwind, print them as a Tailwind v4 @theme block of the light values, then a [data-theme='dark'] block of the dark values that differ from them.
+
+No token file is an error, exit status 1, naming the file and flai design init. So is a token file with problems: css renders nothing rather than CSS that silently leaves out or misreads a token, and the error lists each problem, as flai design show and flai check report them; fix them and run it again.
+
+Examples:
+
+```bash
+flai design css
+flai design css --tailwind > src/theme.css
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--tailwind` | print a Tailwind v4 @theme block instead of one block of custom properties per theme |
+
+#### flai design init
+
+Write the token file and the guidance from flai's starters.
+
+```text
+flai design init [flags]
+```
+
+Write the token file the manifest's design.tokens names, and the guidance, design/system/design-system.md, from flai's starters, creating their folders.
+
+The token file is a DTCG 2025.10 resolver document: one set of light values and the theme modifier, whose dark context overrides each colour role and each shadow. It holds every required token: the colour roles, the sans and mono font stacks (system stacks, no web fonts), the type scale xs to 4xl, the spacing step, and the radii and shadows sm, md, and lg, at Tailwind v4's default sizes. Every role pair passes its contrast threshold in light and dark. The guidance has the headings a design system's words go under, each saying what to write there, and its front matter's updated is today.
+
+--topics sets the guidance's topics, all by default. The topics choose the stories flai prime gives the guidance to, so name the UI sub-project, or its kind, so that every story that touches the UI is given it.
+
+When either file is there already, init writes neither and says which, with exit status 1. It commits nothing. Prints the two paths written; with --json, {"tokens": ..., "guidance": ..., "topics": [...]}.
+
+Examples:
+
+```bash
+flai design init
+flai design init --topics flaiover,ui
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--topics` strings | the guidance's topics, which choose the stories prime gives it to: name the UI sub-project (default `[all]`) |
+
+#### flai design show
+
+Report the token file, the guidance, the problems, and each role pair's contrast.
+
+```text
+flai design show
+```
+
+Report the project's design system: the token file's path, the guidance's path and its headings, the number of tokens in each theme, each problem flai check reports as design.tokens, as &lt;file&gt;:&lt;line&gt;: &lt;token path&gt;: &lt;message&gt;, and, for light and dark, each colour role pair's contrast ratio against ADR-0148's threshold: 4.5:1 for text, muted text, each state on background, surface, and its tint, and on-primary and on-secondary on their fill; 3:1 for border and focus on background. A pair whose oklch colour lies outside sRGB is computed on the colour clipped to sRGB, and says so.
+
+Contrast is a report, never a finding: a pair below its threshold is FAIL in the table and the exit status is still 0. So is a token file with problems, which flai check reports as findings; show prints them and exits 0. No token file is no error either: show says so and how to write one.
+
+--json prints what the host method design.get answers: {path, exists, no\_token\_file, guidance, headings, resolver, themes: [{name, tokens: [{path, type, value, css, variables, ref, line}]}], problems, css, tailwind, contrast: [{theme, pairs: [{theme, foreground, background, foreground\_hex, background\_hex, ratio, threshold, passes, clipped}]}]}.
+
+Examples:
+
+```bash
+flai design show
+flai design show --json
+```
 
 ### flai doc
 

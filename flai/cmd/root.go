@@ -154,6 +154,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	root.AddCommand(newTestCmd(a))
 	root.AddCommand(newVerifyCmd(a))
 	root.AddCommand(newMessageCmd(a))
+	root.AddCommand(newDesignCmd(a))
 	return root
 }
 
