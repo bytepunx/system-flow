@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytepunx/system-flow/flai/internal/designsystem"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -132,4 +133,139 @@ func TestDesignTokensManifestPath(t *testing.T) {
 		t.Fatalf("a token file that is a folder: %+v, want one error", got)
 	}
 	wantTokenFinding(t, got, manifest.DefaultDesignTokens, 1, "read the token file "+manifest.DefaultDesignTokens)
+}
+
+// stylesheetProject is an empty project with a web sub-project whose
+// manifest names the design stylesheet web/src/theme.css, and a full token
+// file at the default path.
+func stylesheetProject(t *testing.T) *workitem.Repo {
+	t.Helper()
+	repo := planningProject(t, "projects:\n  - name: web\n    path: web\n    kind: sveltekit\ndesign:\n  stylesheet: web/src/theme.css\n")
+	writeTokens(t, repo, manifest.DefaultDesignTokens, fullTokens(t))
+	return repo
+}
+
+// inStep is the stylesheet flai design css --write writes for repo's token
+// file at the default path.
+func inStep(t *testing.T, repo *workitem.Repo) string {
+	t.Helper()
+	sys, err := designsystem.Load(os.DirFS(repo.Root), manifest.DefaultDesignTokens)
+	if err != nil {
+		t.Fatal(err)
+	}
+	css := designsystem.Stylesheet(sys, manifest.DefaultDesignTokens)
+	if css == "" {
+		t.Fatal("the full token file gives no stylesheet")
+	}
+	return css
+}
+
+// wantStale fails unless got is two design.stale warnings, one on
+// web/src/theme.css and one on the token file, each at line 1 and holding
+// want and the command.
+func wantStale(t *testing.T, got []Finding, want string) {
+	t.Helper()
+	if len(got) != 2 {
+		t.Fatalf("want two design.stale findings: %+v", got)
+	}
+	paths := map[string]bool{}
+	for _, f := range got {
+		if f.Level != Warning || f.Line != 1 || !strings.Contains(f.Message, want) || !strings.Contains(f.Message, "flai design css --write") {
+			t.Errorf("finding %+v, want a warning at line 1 holding %q and the command", f, want)
+		}
+		paths[filepath.ToSlash(f.Path)] = true
+	}
+	if !paths["web/src/theme.css"] || !paths[manifest.DefaultDesignTokens] {
+		t.Errorf("findings on %v, want the stylesheet and the token file", paths)
+	}
+}
+
+// ADR-0152, ADR-0159: a stylesheet that is what flai design css --write
+// writes, with LF or CRLF line endings, gives no design.stale finding.
+func TestDesignStaleInStep(t *testing.T) {
+	repo := stylesheetProject(t)
+	css := inStep(t, repo)
+	writeTokens(t, repo, "web/src/theme.css", css)
+	if got := findings(t, repo, "design.stale"); len(got) != 0 {
+		t.Errorf("in step: %+v, want no finding", got)
+	}
+	writeTokens(t, repo, "web/src/theme.css", strings.ReplaceAll(css, "\n", "\r\n"))
+	if got := findings(t, repo, "design.stale"); len(got) != 0 {
+		t.Errorf("in step with CRLF: %+v, want no finding", got)
+	}
+	if got := findings(t, repo, "design.stylesheet"); len(got) != 0 {
+		t.Errorf("a stylesheet under a sub-project: %+v, want no design.stylesheet finding", got)
+	}
+}
+
+// ADR-0152 § Decision 2: a stylesheet that differs from the tokens is a
+// warning on the stylesheet and one on the token file, so that a branch that
+// changed only the token file stops at its close-out.
+func TestDesignStaleDiffers(t *testing.T) {
+	repo := stylesheetProject(t)
+	writeTokens(t, repo, "web/src/theme.css", inStep(t, repo)+"/* hand edit */\n")
+	wantStale(t, findings(t, repo, "design.stale"), "does not match the tokens in "+manifest.DefaultDesignTokens)
+}
+
+// ADR-0152: a stylesheet the manifest names that is not there is the same
+// pair of warnings, saying it is missing.
+func TestDesignStaleMissing(t *testing.T) {
+	repo := stylesheetProject(t)
+	wantStale(t, findings(t, repo, "design.stale"), "web/src/theme.css for the tokens in "+manifest.DefaultDesignTokens+" is missing")
+}
+
+// A stylesheet flai cannot read is one error on it.
+func TestDesignStaleUnreadable(t *testing.T) {
+	repo := stylesheetProject(t)
+	if err := os.MkdirAll(filepath.Join(repo.Root, "web", "src", "theme.css"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got := findings(t, repo, "design.stale")
+	if len(got) != 1 || got[0].Level != Error || filepath.ToSlash(got[0].Path) != "web/src/theme.css" {
+		t.Errorf("a stylesheet that is a folder: %+v, want one error on it", got)
+	}
+}
+
+// ADR-0152: no design.stale finding when the manifest names no stylesheet,
+// when there is no token file, or when the token file has problems, which
+// design.tokens reports alone.
+func TestDesignStaleNotChecked(t *testing.T) {
+	repo := planningProject(t, "projects:\n  - name: web\n    path: web\n    kind: sveltekit\n")
+	writeTokens(t, repo, manifest.DefaultDesignTokens, fullTokens(t))
+	if got := findings(t, repo, "design.stale"); len(got) != 0 {
+		t.Errorf("no stylesheet named: %+v, want no finding", got)
+	}
+
+	repo = planningProject(t, "projects:\n  - name: web\n    path: web\n    kind: sveltekit\ndesign:\n  stylesheet: web/src/theme.css\n")
+	if got := findings(t, repo, "design.stale"); len(got) != 0 {
+		t.Errorf("no token file: %+v, want no finding", got)
+	}
+
+	body := strings.Replace(fullTokens(t), `"colorSpace": "srgb"`, `"colorSpace": "display-p3"`, 1)
+	writeTokens(t, repo, manifest.DefaultDesignTokens, body)
+	if got := findings(t, repo, "design.tokens"); len(got) == 0 {
+		t.Fatal("the token file has no problem to report")
+	}
+	if got := findings(t, repo, "design.stale"); len(got) != 0 {
+		t.Errorf("a token file with problems: %+v, want no design.stale finding", got)
+	}
+}
+
+// ADR-0152: a stylesheet outside every sub-project is an error on the
+// manifest at the key's line, and is not read.
+func TestDesignStylesheetOutsideProjects(t *testing.T) {
+	extra := "projects:\n  - name: web\n    path: web\n    kind: sveltekit\ndesign:\n  tokens: " + manifest.DefaultDesignTokens + "\n  stylesheet: site/theme.css\n"
+	repo := planningProject(t, extra)
+	writeTokens(t, repo, manifest.DefaultDesignTokens, fullTokens(t))
+	got := findings(t, repo, "design.stylesheet")
+	body, err := os.ReadFile(filepath.Join(repo.Root, manifest.File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].Level != Error || got[0].Path != manifest.File || got[0].Line != lineOf(t, string(body), "stylesheet:") || !strings.Contains(got[0].Message, `"site/theme.css" lies outside every sub-project`) {
+		t.Errorf("a stylesheet outside every sub-project: %+v, want one error on the manifest at its key", got)
+	}
+	if got := findings(t, repo, "design.stale"); len(got) != 0 {
+		t.Errorf("a stylesheet outside every sub-project: %+v, want no design.stale finding", got)
+	}
 }
