@@ -106,9 +106,9 @@ func TestReferenceWriteKeepsDateWhenUnchanged(t *testing.T) {
 	if again, _ := os.ReadFile(path); string(again) != string(first) || !strings.Contains(out, "up to date") {
 		t.Fatalf("an unchanged reference was rewritten: %s", out)
 	}
-	_ = os.WriteFile(path, []byte(strings.Replace(string(first), "Print the kanban board", "stale", 1)), 0o644)
+	_ = os.WriteFile(path, []byte(strings.Replace(string(first), "Print the kanban board", "not-in-any-help", 1)), 0o644)
 	runInAt(t, ".", day2, "reference", "--write", path)
-	if again, _ := os.ReadFile(path); !strings.Contains(string(again), "updated: 2026-09-02\n") || strings.Contains(string(again), "stale") {
+	if again, _ := os.ReadFile(path); !strings.Contains(string(again), "updated: 2026-09-02\n") || strings.Contains(string(again), "not-in-any-help") {
 		t.Fatalf("a stale reference was not rewritten with the new date:\n%.200s", again)
 	}
 }

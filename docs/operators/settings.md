@@ -441,6 +441,6 @@ Every flag of every flai command, with the commands that take it. What a flag me
 | `--verified` | [flai accept](../users/flai-reference.md#flai-accept), [flai move](../users/flai-reference.md#flai-move) |
 | `--version` | [flai host upgrade](../users/flai-reference.md#flai-host-upgrade), [flai self-upgrade](../users/flai-reference.md#flai-self-upgrade) |
 | `--wait` | [flai checks tail](../users/flai-reference.md#flai-checks-tail) |
-| `--write` | [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage) |
+| `--write` | [flai design css](../users/flai-reference.md#flai-design-css), [flai serve agent usage](../users/flai-reference.md#flai-serve-agent-usage) |
 | `-y`, `--yes` | every command ([global flags](../users/flai-reference.md#flai)) |
 <!-- flags:end -->

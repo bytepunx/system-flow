@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/designsystem"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -31,11 +32,15 @@ design/system/design-system.tokens.json when it is unset; the guidance is
 design/system/design-system.md. flai check validates the token file as
 design.tokens; flai design init writes both from starters, flai design show
 reports them with each colour role pair's contrast, and flai design css
-renders the tokens as CSS.`,
+renders the tokens as CSS. flai design css --write writes the tokens to the
+generated design stylesheet the manifest's design.stylesheet names, which
+flai check reports as design.stale when it falls behind the tokens
+(ADR-0159).`,
 		Example: `  flai design init --topics flaiover
   flai design show
   flai design show --json
-  flai design css --tailwind`,
+  flai design css --tailwind
+  flai design css --write`,
 	}
 	c.AddCommand(newDesignInitCmd(a), newDesignShowCmd(a), newDesignCSSCmd(a))
 	return c
@@ -45,7 +50,7 @@ func newDesignInitCmd(a *app) *cobra.Command {
 	var list []string
 	c := &cobra.Command{
 		Use:   "init",
-		Short: "Write the token file and the guidance from flai's starters",
+		Short: "Write the token file and the guidance from flai's starters, and the design stylesheet when one is named",
 		Long: `Write the token file the manifest's design.tokens names, and the guidance,
 design/system/design-system.md, from flai's starters, creating their folders.
 
@@ -62,9 +67,16 @@ saying what to write there, and its front matter's updated is today.
 stories flai prime gives the guidance to, so name the UI sub-project, or its
 kind, so that every story that touches the UI is given it.
 
-When either file is there already, init writes neither and says which, with
-exit status 1. It commits nothing. Prints the two paths written; with --json,
-{"tokens": ..., "guidance": ..., "topics": [...]}.`,
+When the manifest's design.stylesheet names a design stylesheet, init then
+writes it from the token file it has just written, as flai design css --write
+does, replacing what is there. When that fails, the token file and the
+guidance stay, and the error says to run flai design css --write.
+
+When the token file or the guidance is there already, init writes nothing and
+says which, with exit status 1. It commits nothing. Prints the paths written,
+the token file, the guidance, and the stylesheet when there is one; with
+--json, {"tokens": ..., "guidance": ..., "topics": [...], "stylesheet": ...},
+stylesheet left out when the manifest names none.`,
 		Example: `  flai design init
   flai design init --topics flaiover,ui`,
 		Args: cobra.NoArgs,
@@ -90,15 +102,43 @@ exit status 1. It commits nothing. Prints the two paths written; with --json,
 				return err
 			}
 			a.logger().Info("design system written", "component", "cmd", "tokens", tokens, "guidance", guidance)
+			stylesheet := repo.Manifest.DesignStylesheet()
+			if stylesheet != "" {
+				if err := initStylesheet(repo.Root, stylesheet, tokens); err != nil {
+					return err
+				}
+				a.logger().Info("design stylesheet written", "component", "cmd", "stylesheet", stylesheet, "tokens", tokens)
+			}
 			if a.jsonOut {
-				return a.printJSON(map[string]any{"tokens": tokens, "guidance": guidance, "topics": list})
+				out := map[string]any{"tokens": tokens, "guidance": guidance, "topics": list}
+				if stylesheet != "" {
+					out["stylesheet"] = stylesheet
+				}
+				return a.printJSON(out)
 			}
 			fmt.Fprintf(a.out, "wrote %s\nwrote %s\n", tokens, guidance)
+			if stylesheet != "" {
+				fmt.Fprintf(a.out, "wrote %s\n", stylesheet)
+			}
 			return nil
 		},
 	}
 	c.Flags().StringSliceVar(&list, "topics", []string{"all"}, "the guidance's topics, which choose the stories prime gives it to: name the UI sub-project")
 	return c
+}
+
+// initStylesheet writes the design stylesheet from the token file flai design
+// init has just written. The token file and the guidance stay when it fails,
+// and the error says how to write the stylesheet again.
+func initStylesheet(root, stylesheet, tokens string) error {
+	sys, err := loadDesignTokens(root, tokens)
+	if err == nil {
+		err = writeStylesheet(root, stylesheet, sys, tokens)
+	}
+	if err != nil {
+		return fmt.Errorf("flai design init wrote the token file and the guidance but not the design stylesheet %s: %w; run flai design css --write to write it", stylesheet, err)
+	}
+	return nil
 }
 
 // starterGuidance is the starter guidance with its front matter's updated
@@ -281,52 +321,110 @@ func designProblem(file string, p designsystem.Problem) string {
 }
 
 func newDesignCSSCmd(a *app) *cobra.Command {
-	var tailwind bool
+	var tailwind, write bool
 	c := &cobra.Command{
 		Use:   "css",
-		Short: "Print the tokens as CSS custom properties, or as a Tailwind v4 @theme block",
+		Short: "Print the tokens as CSS custom properties or a Tailwind v4 @theme block, or write the design stylesheet",
 		Long: `Print the token file's tokens as CSS custom properties with Tailwind v4's
 names, such as --color-primary and --text-sm, one block per theme, each with
 every token: :root for light, then [data-theme='dark'] for dark. With
---tailwind, print them as a Tailwind v4 @theme block of the light values,
-then a [data-theme='dark'] block of the dark values that differ from them.
+--tailwind, print them as a Tailwind v4 stylesheet: a @custom-variant rule
+that makes Tailwind's dark: variant follow [data-theme='dark'], a @theme
+block of the light values, then a [data-theme='dark'] block of the dark
+values that differ from them, so that the dark values and the dark: variant
+follow the same attribute (ADR-0159).
+
+With --write, write the design stylesheet instead of printing: the file the
+manifest's design.stylesheet names, holding what --tailwind prints with a
+header ahead of it that says the file is generated from the token file by
+flai design css --write and is not to be edited. It creates the file's
+folders and replaces what is there, since the file is generated, and prints
+the path written; with --json, {"stylesheet": ..., "tokens": ...}. When the
+manifest names no stylesheet, --write writes nothing and exits with status 1:
+set design.stylesheet in system-flow.yaml to the stylesheet's repository
+path, such as web/src/theme.css. Once the stylesheet is there, flai check
+reports design.stale whenever it falls behind the tokens; run flai design css
+--write again to bring it up to date. --write and --tailwind are mutually
+exclusive.
 
 No token file is an error, exit status 1, naming the file and flai design
-init. So is a token file with problems: css renders nothing rather than CSS
-that silently leaves out or misreads a token, and the error lists each
-problem, as flai design show and flai check report them; fix them and run it
-again.`,
+init. So is a token file with problems: css renders and writes nothing rather
+than CSS that silently leaves out or misreads a token, and the error lists
+each problem, as flai design show and flai check report them; fix them and
+run it again.`,
 		Example: `  flai design css
-  flai design css --tailwind > src/theme.css`,
+  flai design css --tailwind
+  flai design css --write`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
+			stylesheet := repo.Manifest.DesignStylesheet()
+			if write && stylesheet == "" {
+				return fmt.Errorf("the manifest names no design stylesheet, so flai design css --write writes nothing; set design.stylesheet in %s to the stylesheet's repository path, such as web/src/theme.css, and run it again", manifest.File)
+			}
 			name := repo.Manifest.DesignTokens()
-			sys, err := designsystem.Load(os.DirFS(repo.Root), name)
-			switch {
-			case errors.Is(err, fs.ErrNotExist):
-				return fmt.Errorf("there is no token file at %s; run flai design init to write one and its guidance", name)
-			case err != nil:
+			sys, err := loadDesignTokens(repo.Root, name)
+			if err != nil {
 				return err
 			}
-			if len(sys.Problems) > 0 {
-				lines := make([]string, 0, len(sys.Problems))
-				for _, p := range sys.Problems {
-					lines = append(lines, designProblem(name, p))
+			switch {
+			case write:
+				if err := writeStylesheet(repo.Root, stylesheet, sys, name); err != nil {
+					return err
 				}
-				return fmt.Errorf("flai design css renders nothing from the token file %s while it has problems; fix them and run it again: %s", name, strings.Join(lines, "; "))
-			}
-			if tailwind {
+				a.logger().Info("design stylesheet written", "component", "cmd", "stylesheet", stylesheet, "tokens", name)
+				if a.jsonOut {
+					return a.printJSON(map[string]any{"stylesheet": stylesheet, "tokens": name})
+				}
+				fmt.Fprintf(a.out, "wrote %s\n", stylesheet)
+			case tailwind:
 				fmt.Fprint(a.out, designsystem.Tailwind(sys))
-			} else {
+			default:
 				fmt.Fprint(a.out, designsystem.CSS(sys))
 			}
 			return nil
 		},
 	}
-	c.Flags().BoolVar(&tailwind, "tailwind", false, "print a Tailwind v4 @theme block instead of one block of custom properties per theme")
+	c.Flags().BoolVar(&tailwind, "tailwind", false, "print a Tailwind v4 stylesheet, the dark: variant, a @theme block, and the dark values, instead of one block of custom properties per theme; --write writes it")
+	c.Flags().BoolVar(&write, "write", false, "write the Tailwind v4 stylesheet, with a generated-file header, to the file the manifest's design.stylesheet names")
+	c.MarkFlagsMutuallyExclusive("tailwind", "write")
 	return c
+}
+
+// loadDesignTokens reads the token file name under root, and refuses when
+// there is none or when it has problems, listing each, so that nothing is
+// rendered that silently leaves out or misreads a token.
+func loadDesignTokens(root, name string) (*designsystem.System, error) {
+	sys, err := designsystem.Load(os.DirFS(root), name)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, fmt.Errorf("there is no token file at %s; run flai design init to write one and its guidance", name)
+	case err != nil:
+		return nil, err
+	}
+	if len(sys.Problems) > 0 {
+		lines := make([]string, 0, len(sys.Problems))
+		for _, p := range sys.Problems {
+			lines = append(lines, designProblem(name, p))
+		}
+		return nil, fmt.Errorf("flai design css renders nothing from the token file %s while it has problems; fix them and run it again: %s", name, strings.Join(lines, "; "))
+	}
+	return sys, nil
+}
+
+// writeStylesheet writes the generated design stylesheet, the repository
+// path stylesheet under root, from sys, read from the token file tokens,
+// creating its folders and replacing what is there (S-0385, ADR-0159).
+func writeStylesheet(root, stylesheet string, sys *designsystem.System, tokens string) error {
+	abs := filepath.Join(root, filepath.FromSlash(stylesheet))
+	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+		return fmt.Errorf("write the design stylesheet %s: %w", stylesheet, err)
+	}
+	if err := os.WriteFile(abs, []byte(designsystem.Stylesheet(sys, tokens)), 0o644); err != nil {
+		return fmt.Errorf("write the design stylesheet %s: %w", stylesheet, err)
+	}
+	return nil
 }

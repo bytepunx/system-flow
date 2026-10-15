@@ -1040,7 +1040,7 @@ Flags:
 
 Write, show, and render the project's design system.
 
-A project's design system is its tokens, the values its UI uses, and its guidance, the words that say when to use which (ADR-0146). The tokens are one DTCG 2025.10 file the manifest's design.tokens names, design/system/design-system.tokens.json when it is unset; the guidance is design/system/design-system.md. flai check validates the token file as design.tokens; flai design init writes both from starters, flai design show reports them with each colour role pair's contrast, and flai design css renders the tokens as CSS.
+A project's design system is its tokens, the values its UI uses, and its guidance, the words that say when to use which (ADR-0146). The tokens are one DTCG 2025.10 file the manifest's design.tokens names, design/system/design-system.tokens.json when it is unset; the guidance is design/system/design-system.md. flai check validates the token file as design.tokens; flai design init writes both from starters, flai design show reports them with each colour role pair's contrast, and flai design css renders the tokens as CSS. flai design css --write writes the tokens to the generated design stylesheet the manifest's design.stylesheet names, which flai check reports as design.stale when it falls behind the tokens (ADR-0159).
 
 Examples:
 
@@ -1049,42 +1049,47 @@ flai design init --topics flaiover
 flai design show
 flai design show --json
 flai design css --tailwind
+flai design css --write
 ```
 
 Subcommands:
 
-- [css](#flai-design-css): Print the tokens as CSS custom properties, or as a Tailwind v4 @theme block
-- [init](#flai-design-init): Write the token file and the guidance from flai's starters
+- [css](#flai-design-css): Print the tokens as CSS custom properties or a Tailwind v4 @theme block, or write the design stylesheet
+- [init](#flai-design-init): Write the token file and the guidance from flai's starters, and the design stylesheet when one is named
 - [show](#flai-design-show): Report the token file, the guidance, the problems, and each role pair's contrast
 
 #### flai design css
 
-Print the tokens as CSS custom properties, or as a Tailwind v4 @theme block.
+Print the tokens as CSS custom properties or a Tailwind v4 @theme block, or write the design stylesheet.
 
 ```text
 flai design css [flags]
 ```
 
-Print the token file's tokens as CSS custom properties with Tailwind v4's names, such as --color-primary and --text-sm, one block per theme, each with every token: :root for light, then [data-theme='dark'] for dark. With --tailwind, print them as a Tailwind v4 @theme block of the light values, then a [data-theme='dark'] block of the dark values that differ from them.
+Print the token file's tokens as CSS custom properties with Tailwind v4's names, such as --color-primary and --text-sm, one block per theme, each with every token: :root for light, then [data-theme='dark'] for dark. With --tailwind, print them as a Tailwind v4 stylesheet: a @custom-variant rule that makes Tailwind's dark: variant follow [data-theme='dark'], a @theme block of the light values, then a [data-theme='dark'] block of the dark values that differ from them, so that the dark values and the dark: variant follow the same attribute (ADR-0159).
 
-No token file is an error, exit status 1, naming the file and flai design init. So is a token file with problems: css renders nothing rather than CSS that silently leaves out or misreads a token, and the error lists each problem, as flai design show and flai check report them; fix them and run it again.
+With --write, write the design stylesheet instead of printing: the file the manifest's design.stylesheet names, holding what --tailwind prints with a header ahead of it that says the file is generated from the token file by flai design css --write and is not to be edited. It creates the file's folders and replaces what is there, since the file is generated, and prints the path written; with --json, {"stylesheet": ..., "tokens": ...}. When the manifest names no stylesheet, --write writes nothing and exits with status 1: set design.stylesheet in system-flow.yaml to the stylesheet's repository path, such as web/src/theme.css. Once the stylesheet is there, flai check reports design.stale whenever it falls behind the tokens; run flai design css --write again to bring it up to date. --write and --tailwind are mutually exclusive.
+
+No token file is an error, exit status 1, naming the file and flai design init. So is a token file with problems: css renders and writes nothing rather than CSS that silently leaves out or misreads a token, and the error lists each problem, as flai design show and flai check report them; fix them and run it again.
 
 Examples:
 
 ```bash
 flai design css
-flai design css --tailwind > src/theme.css
+flai design css --tailwind
+flai design css --write
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
-| `--tailwind` | print a Tailwind v4 @theme block instead of one block of custom properties per theme |
+| `--tailwind` | print a Tailwind v4 stylesheet, the dark: variant, a @theme block, and the dark values, instead of one block of custom properties per theme; --write writes it |
+| `--write` | write the Tailwind v4 stylesheet, with a generated-file header, to the file the manifest's design.stylesheet names |
 
 #### flai design init
 
-Write the token file and the guidance from flai's starters.
+Write the token file and the guidance from flai's starters, and the design stylesheet when one is named.
 
 ```text
 flai design init [flags]
@@ -1096,7 +1101,9 @@ The token file is a DTCG 2025.10 resolver document: one set of light values and 
 
 --topics sets the guidance's topics, all by default. The topics choose the stories flai prime gives the guidance to, so name the UI sub-project, or its kind, so that every story that touches the UI is given it.
 
-When either file is there already, init writes neither and says which, with exit status 1. It commits nothing. Prints the two paths written; with --json, {"tokens": ..., "guidance": ..., "topics": [...]}.
+When the manifest's design.stylesheet names a design stylesheet, init then writes it from the token file it has just written, as flai design css --write does, replacing what is there. When that fails, the token file and the guidance stay, and the error says to run flai design css --write.
+
+When the token file or the guidance is there already, init writes nothing and says which, with exit status 1. It commits nothing. Prints the paths written, the token file, the guidance, and the stylesheet when there is one; with --json, {"tokens": ..., "guidance": ..., "topics": [...], "stylesheet": ...}, stylesheet left out when the manifest names none.
 
 Examples:
 
