@@ -1249,7 +1249,8 @@ flai design init --topics flaiover      # write the token file and the guidance 
 flai check                              # report each problem in the token file as design.tokens
 flai design show                        # the token file, the guidance, the problems, and each role pair's contrast
 flai design css                         # the tokens as CSS custom properties, light and dark
-flai design css --tailwind > theme.css  # the tokens as a Tailwind v4 @theme block
+flai design css --tailwind              # the tokens as a Tailwind v4 stylesheet
+flai design css --write                 # write that stylesheet to the file design.stylesheet names
 ```
 
 `flai design init` writes both files and commits nothing. The token file holds every token flai requires, with light and dark values, and every colour pair passes its contrast threshold. The guidance has the headings its words go under, each saying what to write there. `--topics` sets the guidance's topics, `all` by default, and they choose the stories `flai prime` gives it to: name your UI sub-project, as in the example. A topic the project does not use makes `flai check --strict` warn `doc.topic`. When either file is there already, `init` writes neither, says which, and exits 1.
@@ -1266,7 +1267,29 @@ A project without a token file has nothing checked.
 
 `flai design show` prints the token file's path and layout, the guidance's headings, each theme's token count, the problems, and a contrast table per theme. Each row is a role pair, its ratio, its threshold, pass or `FAIL`, and whether an `oklch` colour had to be clipped to sRGB to measure it. Text and state colours need 4.5:1, and borders and focus rings 3:1. Contrast is a report, never a check finding, so `show` exits 0 whatever it finds. `--json` gives everything, the tokens of each theme and both renderings included; the dashboard reads the same answer through the host method `design.get`.
 
-`flai design css` prints a `:root` block of the light values and a `[data-theme='dark']` block of the dark values, with Tailwind v4's names, such as `--color-primary` and `--text-sm`. `--tailwind` prints an `@theme` block of the light values, then the dark values that differ. With no token file, or one with problems, `css` prints nothing, lists the problems, and exits 1.
+`flai design css` prints a `:root` block of the light values and a `[data-theme='dark']` block of the dark values, with Tailwind v4's names, such as `--color-primary` and `--text-sm`. `--tailwind` prints a Tailwind v4 stylesheet: a rule that makes Tailwind's `dark:` variant follow `[data-theme='dark']`, an `@theme` block of the light values, then the dark values that differ ([ADR-0159](../../design/adrs/0159-the-generated-design-stylesheet-puts-the-dark-values-under-data-theme-dark-and.md)). With no token file, or one with problems, `css` prints nothing, lists the problems, and exits 1.
+
+### The generated stylesheet
+
+To build a UI from the tokens, name a stylesheet for flai to write in the manifest, under your UI sub-project ([Settings](../operators/settings.md)):
+
+```yaml
+design:
+  stylesheet: web/src/theme.css
+```
+
+`flai design css --write` writes it: a header saying it is generated from the token file and not to be edited, then what `--tailwind` prints. It creates the folders, replaces what is there, and prints `wrote web/src/theme.css`. It writes nothing and exits 1 when the manifest names no stylesheet or the token file is missing or has problems. `flai design init` writes it too when the manifest names one. Commit it with the token file.
+
+Import it from the UI's own stylesheet, after Tailwind:
+
+```css
+@import "tailwindcss";
+@import "./theme.css";
+```
+
+Utilities such as `bg-primary` and `text-sm` then come from the tokens. To switch to the dark theme, set `data-theme="dark"` on the root element, or on any element whose subtree should be dark; the dark values and the `dark:` variant both follow it.
+
+Do not edit the stylesheet. Change the token file and run `flai design css --write` again. Until you do, `flai check` warns `design.stale` on both the stylesheet and the token file, naming the command, so a story that changed only the tokens stops at its close-out. `flai check` reports `design.stylesheet` as an error when the path lies outside every sub-project.
 
 ## Check the repository
 
