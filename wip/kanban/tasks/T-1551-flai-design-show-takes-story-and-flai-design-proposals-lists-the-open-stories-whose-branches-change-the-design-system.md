@@ -3,12 +3,18 @@ id: T-1551
 type: task
 nature: feature
 title: flai design show takes --story, and flai design proposals lists the open stories whose branches change the design system
-status: backlog
+status: in-progress
 parent: S-0384
 owner: alex
 created: 2026-10-13T17:48:12Z
-updated: 2026-10-13T17:48:12Z
-transitions: []
+updated: 2026-10-15T03:23:16Z
+transitions:
+  - to: ready
+    at: 2026-10-15T03:17:14Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-15T03:23:16Z
+    by: system-flow
 stream: S-0384
 tags: [cli]
 touches: [flai/cmd/design.go, flai/cmd/design_test.go]

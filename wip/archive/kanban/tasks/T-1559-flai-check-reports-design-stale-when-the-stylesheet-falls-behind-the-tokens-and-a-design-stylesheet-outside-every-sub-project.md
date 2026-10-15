@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1060
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 91
-      cache_read: 642886
-      cache_write: 55264
-      cost: 0.323
+      input: 14
+      output: 4465
+      cache_read: 689007
+      cache_write: 25889
+      cost: 0.3893
 ---
 # T-1559 flai check reports design.stale when the stylesheet falls behind the tokens, and a design.stylesheet outside every sub-project
 

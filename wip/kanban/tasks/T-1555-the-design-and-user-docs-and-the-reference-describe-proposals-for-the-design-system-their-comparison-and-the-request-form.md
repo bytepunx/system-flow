@@ -3,12 +3,15 @@ id: T-1555
 type: task
 nature: feature
 title: The design and user docs and the reference describe proposals for the design system, their comparison, and the request form
-status: backlog
+status: ready
 parent: S-0384
 owner: alex
 created: 2026-10-13T17:48:30Z
-updated: 2026-10-13T17:48:30Z
-transitions: []
+updated: 2026-10-15T03:17:16Z
+transitions:
+  - to: ready
+    at: 2026-10-15T03:17:16Z
+    by: system-flow
 stream: S-0384
 tags: [dashboard, cli]
 touches: [design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]

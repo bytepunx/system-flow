@@ -3,12 +3,15 @@ id: T-1554
 type: task
 nature: feature
 title: The Design page lists the open proposals, compares the one chosen with the main branch's tokens, and offers the request form
-status: backlog
+status: ready
 parent: S-0384
 owner: alex
 created: 2026-10-13T17:48:27Z
-updated: 2026-10-13T17:48:27Z
-transitions: []
+updated: 2026-10-15T03:17:16Z
+transitions:
+  - to: ready
+    at: 2026-10-15T03:17:16Z
+    by: system-flow
 stream: S-0384
 tags: [dashboard]
 touches: [flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts]

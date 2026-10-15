@@ -24,16 +24,16 @@ touches: [docs/users/flai.md, docs/operators/index.md, design/system/agent-narra
 after: [T-1595]
 usage:
   source: log
-  seconds: 717
+  seconds: 722
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 205
-      cache_read: 1141130
-      cache_write: 59246
-      cost: 0.5564
+      input: 19
+      output: 5804
+      cache_read: 1182197
+      cache_write: 35717
+      cost: 0.5878
 ---
 # T-1597 Document how task_done closes a task with the installed flai, for users, operators, and agents
 

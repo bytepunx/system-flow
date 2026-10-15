@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 626.5216
-accrued_seconds: 499147
-tasks_completed: 523
-last_run: 2026-10-15T03:16:41Z
+accrued_cost: 628.5188
+accrued_seconds: 499204
+tasks_completed: 527
+last_run: 2026-10-15T03:17:38Z
 ---
 
 # Orchestrator activity
@@ -3672,6 +3672,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0385
 - Seconds: 946
 - Cost: 4.1121 USD, estimated
+
+### 2026-10-15T03:16:56Z
+
+- Summary: Under publish, policy judgement: released S-0385 and S-0383 (2 pending, 219.23 USD/week) as flai 1.50.1 → 1.51.0 (minor, flai/v1.51.0) and flaiover 0.46.0 → 0.47.0 (minor, flaiover/v0.47.0), pushed. Reason: both complete and verified; S-0383's save answers 501 until the file.get/file.save story lands, which is not yet drafted, so holding it would hold every release; nothing held by whole_epics.
+- Items: S-0385, S-0383
+- Seconds: 15
+- Cost: 0.1652 USD, estimated
+
+### 2026-10-15T03:17:02Z
+
+- Summary: S-0384 was pulled. Under order_ready, applied the throughput order: S-0386 alone (35m; waits for S-0384 by its after). In progress: S-0384, S-0390.
+- Items: S-0384, S-0386
+- Seconds: 6
+- Cost: 0.3315 USD, estimated
+
+### 2026-10-15T03:17:34Z
+
+- Summary: Recommended an answer on TH-0457, citing design/system/design-system-tool.md § S-0384 Proposals and threads
+- Items: S-0384
+- Seconds: 32
+- Cost: 1.3331 USD, estimated
+
+### 2026-10-15T03:17:38Z
+
+- Summary: Under answer_threads autonomous, recommended on TH-0457 (agent-S-0384: add two criteria from design-system-tool.md § S-0384?): "leave out"; S-0384 finishes as written, and E-0020's planner drafts the two as backlog stories when the operator starts it (TH-0438). Escalated, not answered: a change of scope to a finalized story.
+- Items: S-0384, E-0020
+- Seconds: 4
+- Cost: 0.1674 USD, estimated
 
 ## Refusals
 

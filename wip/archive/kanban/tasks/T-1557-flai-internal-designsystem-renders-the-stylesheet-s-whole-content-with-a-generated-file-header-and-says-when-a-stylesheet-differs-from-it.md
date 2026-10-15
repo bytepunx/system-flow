@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 455
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 245
-      cache_read: 1766229
-      cache_write: 70299
-      cost: 0.8498
+      input: 36
+      output: 11745
+      cache_read: 1812472
+      cache_write: 68101
+      cost: 1.0241
 ---
 # T-1557 flai/internal/designsystem renders the stylesheet's whole content with a generated-file header and says when a stylesheet differs from it
 

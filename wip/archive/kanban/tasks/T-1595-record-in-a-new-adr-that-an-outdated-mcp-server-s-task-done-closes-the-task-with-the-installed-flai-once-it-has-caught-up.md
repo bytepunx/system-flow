@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 55
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 127
-      cache_read: 863926
-      cache_write: 19934
-      cost: 0.4097
+      input: 14
+      output: 4273
+      cache_read: 870469
+      cache_write: 26299
+      cost: 0.4328
 ---
 # T-1595 Record in a new ADR that an outdated MCP server's task_done closes the task with the installed flai once it has caught up
 

@@ -3,12 +3,18 @@ id: T-1552
 type: task
 nature: feature
 title: The host method design.get takes a story, and design.proposals lists the open stories whose branches change the design system
-status: backlog
+status: in-progress
 parent: S-0384
 owner: alex
 created: 2026-10-13T17:48:15Z
-updated: 2026-10-13T17:48:15Z
-transitions: []
+updated: 2026-10-15T03:23:17Z
+transitions:
+  - to: ready
+    at: 2026-10-15T03:17:15Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-15T03:23:17Z
+    by: system-flow
 stream: S-0384
 tags: [cli]
 touches: [flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go]

@@ -3,15 +3,36 @@ id: T-1550
 type: task
 nature: feature
 title: A form on the Design page turns the operator's request for a design change into a story with topic design and the design system document in its touches
-status: backlog
+status: done
 parent: S-0384
 owner: alex
 created: 2026-10-13T17:48:07Z
-updated: 2026-10-13T17:48:07Z
-transitions: []
+updated: 2026-10-15T03:23:01Z
+transitions:
+  - to: ready
+    at: 2026-10-15T03:17:13Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-15T03:17:14Z
+    by: system-flow
+  - to: done
+    at: 2026-10-15T03:23:01Z
+    by: system-flow
 stream: S-0384
 tags: [dashboard]
 touches: [flaiover/src/lib/components/design/ProposeChange.svelte, flaiover/src/lib/components/design/ProposeChange.svelte.test.ts]
+usage:
+  source: log
+  seconds: 329
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 346
+      cache_read: 2177856
+      cache_write: 95213
+      cost: 1.0539
 ---
 # T-1550 A form on the Design page turns the operator's request for a design change into a story with topic design and the design system document in its touches
 

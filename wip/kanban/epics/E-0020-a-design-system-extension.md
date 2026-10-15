@@ -18,7 +18,7 @@ tags: [dashboard, cli]
 topics: [design]
 usage:
   source: sum
-  seconds: 14867
+  seconds: 17143
   estimated: true
   priced_by: estimate
   turns:
@@ -31,9 +31,9 @@ usage:
       hand_edits: 4
       work: 51
     - day: 2026-10-15
-      ceremony: 5
-      hand_edits: 8
-      work: 175
+      ceremony: 6
+      hand_edits: 9
+      work: 214
   models:
     - model: claude-haiku-5-5
       input: 95933
@@ -42,11 +42,11 @@ usage:
       cache_write: 0
       cost: 0.0244
     - model: claude-opus-5-5
-      input: 2312
-      output: 1053165
-      cache_read: 128796564
-      cache_write: 5263654
-      cost: 77.4652
+      input: 2534
+      output: 1144815
+      cache_read: 140330605
+      cache_write: 5686047
+      cost: 84.2121
     - model: claude-sonnet-5-5
       input: 44
       output: 12003
@@ -71,15 +71,15 @@ usage:
           cache_write: 397563
           cost: 8.3038
     - kind: orchestrator
-      seconds: 10369
+      seconds: 10426
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 612
-          output: 10236
-          cache_read: 136201989
-          cache_write: 216063
-          cost: 34.2294
+          input: 636
+          output: 10538
+          cache_read: 144159218
+          cache_write: 225928
+          cost: 36.2267
         - model: claude-sonnet-5-5
           input: 40
           output: 238

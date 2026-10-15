@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1066
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 293
-      cache_read: 1715064
-      cache_write: 74858
-      cost: 0.8282
+      input: 36
+      output: 11447
+      cache_read: 1766480
+      cache_write: 66373
+      cost: 0.9981
 ---
 # T-1558 flai design css --write writes the stylesheet the manifest names, and refuses when it names none
 

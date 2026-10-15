@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 447
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 41
-      output: 225
-      cache_read: 1386720
-      cache_write: 66346
-      cost: 0.6724
+      input: 29
+      output: 9293
+      cache_read: 1434034
+      cache_write: 53882
+      cost: 0.8102
 ---
 # T-1556 The manifest's design.stylesheet names the stylesheet the design system's tokens are written to
 

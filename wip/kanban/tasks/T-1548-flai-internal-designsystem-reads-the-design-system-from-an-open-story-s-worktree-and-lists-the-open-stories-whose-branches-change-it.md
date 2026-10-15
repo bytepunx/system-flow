@@ -3,15 +3,36 @@ id: T-1548
 type: task
 nature: feature
 title: flai/internal/designsystem reads the design system from an open story's worktree and lists the open stories whose branches change it
-status: backlog
+status: done
 parent: S-0384
 owner: alex
 created: 2026-10-13T17:47:55Z
-updated: 2026-10-13T17:48:35Z
-transitions: []
+updated: 2026-10-15T03:22:44Z
+transitions:
+  - to: ready
+    at: 2026-10-15T03:17:11Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-15T03:17:11Z
+    by: system-flow
+  - to: done
+    at: 2026-10-15T03:22:44Z
+    by: system-flow
 stream: S-0384
 tags: [cli]
 touches: [flai/internal/designsystem/proposals.go, flai/internal/designsystem/proposals_test.go]
+usage:
+  source: log
+  seconds: 332
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 227
+      cache_read: 1531958
+      cache_write: 82089
+      cost: 0.7484
 ---
 # T-1548 flai/internal/designsystem reads the design system from an open story's worktree and lists the open stories whose branches change it
 

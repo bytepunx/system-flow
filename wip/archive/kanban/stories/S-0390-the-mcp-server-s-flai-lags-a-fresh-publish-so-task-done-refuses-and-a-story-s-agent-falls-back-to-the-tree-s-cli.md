@@ -3,10 +3,10 @@ id: S-0390
 type: story
 nature: improvement
 title: The MCP server's flai lags a fresh publish, so task_done refuses and a story's agent falls back to the tree's CLI
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-15T02:55:10Z
-updated: 2026-10-15T03:15:07Z
+updated: 2026-10-15T03:33:38Z
 transitions:
   - to: ready
     at: 2026-10-15T03:00:41Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-15T03:00:50Z
     by: agent-S-0390
+  - to: review
+    at: 2026-10-15T03:32:39Z
+    by: agent-S-0390
+  - to: done
+    at: 2026-10-15T03:33:38Z
+    by: orchestrator
 tags: []
 topics: [mcp, release, host]
 touches: [design/adrs/README.md, design/system/flai-cli.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/server.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-narrative.md, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md, design/adrs/0160-an-outdated-mcp-server-s-task-done-closes-the-task-with-the-installed-flai-once.md, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
@@ -24,21 +30,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 860
-  estimated: true
-  priced_by: estimate
+  seconds: 1925
+  priced_by: harness
   turns:
     - day: 2026-10-15
-      ceremony: 2
-      hand_edits: 1
-      work: 28
+      ceremony: 3
+      hand_edits: 2
+      work: 45
   models:
     - model: claude-opus-5-5
-      input: 160
-      output: 1178
-      cache_read: 8256153
-      cache_write: 341934
-      cost: 3.9851
+      input: 204
+      output: 60819
+      cache_read: 12388360
+      cache_write: 374279
+      cost: 6.1596
   strategic:
     - kind: planner
       seconds: 287
@@ -91,8 +96,8 @@ finalized:
 This story remediates [I-0147](../../../design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md), "The MCP server's flai lags a fresh publish, so task_done refuses and a story's agent falls back to the tree's CLI". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0147 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0147 is closed with `flai issue close I-0147 --reason` saying what fixed it
+- [x] The cause I-0147 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0147 is closed with `flai issue close I-0147 --reason` saying what fixed it
 
 ## Tasks
 - T-1595 Record in a new ADR that an outdated MCP server's task_done closes the task with the installed flai once it has caught up
@@ -132,3 +137,13 @@ Figures:
 
 - **Forecast 40m**, raised from flai's 23m (85 s per unit of size times 16). The plan has an ADR, a subprocess path in `task_done` with a test on a fake installed binary, docs, and the issue's close. S-0387's comparable plan took 48m from start to review. Delivery moves by the 17m added, to 2026-10-15T03:41:00Z.
 - **Cost of delay 30 USD a week**, flai cod's figure from the 12m time_lost_per_cycle input at 150 USD an hour, kept. The four instances each cost about 3m to work around, and a project made from the template has no tree CLI to fall back to.
+
+### Accepted by the orchestrator
+
+- Verified: a7a10f6d06e481dde55f48305c13cb02eaf3892f
+- At: 2026-10-15T03:33:38Z
+
+Verdict: meets both criteria; flai verify passed every step at a7a10f6d; every changed path is within the story's touches, none under .claude/. A task is never closed by a flai behind the newest release (ADR-0160 refines ADR-0142). Not tested: os.Executable after a real self-upgrade swap; the path is captured at server start.
+
+- 1: flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/server.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, design/adrs/0160-an-outdated-mcp-server-s-task-done-closes-the-task-with-the-installed-flai-once.md, design/adrs/README.md, design/system/flai-cli.md, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/index.md
+- 2: design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md

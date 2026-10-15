@@ -24,16 +24,16 @@ touches: [design/system/flai-cli.md, docs/users/flai.md, design/system/design-sy
 after: [T-1558, T-1559]
 usage:
   source: log
-  seconds: 104
+  seconds: 108
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 313
-      cache_read: 1562356
-      cache_write: 83328
-      cost: 0.7615
+      input: 33
+      output: 10525
+      cache_read: 1624126
+      cache_write: 61024
+      cost: 0.9176
 ---
 # T-1560 The manifest, settings, flai design, and user docs and the reference describe design.stylesheet, flai design css --write, and design.stale
 

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 718
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 95
-      output: 642
-      cache_read: 4923293
-      cache_write: 140441
-      cost: 2.347
+      input: 82
+      output: 24483
+      cache_read: 4987041
+      cache_write: 150669
+      cost: 2.4796
 ---
 # T-1596 The MCP tool task_done closes a task with the installed flai when the session's flai is a minor version behind and the installed one has caught up
 
