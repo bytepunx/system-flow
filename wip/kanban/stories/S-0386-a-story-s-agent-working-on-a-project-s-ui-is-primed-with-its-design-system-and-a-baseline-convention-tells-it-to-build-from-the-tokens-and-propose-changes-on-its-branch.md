@@ -3,12 +3,15 @@ id: S-0386
 type: story
 nature: feature
 title: A story's agent working on a project's UI is primed with its design system, and a baseline convention tells it to build from the tokens and propose changes on its branch
-status: backlog
+status: ready
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:42Z
-updated: 2026-10-15T01:10:41Z
-transitions: []
+updated: 2026-10-15T01:11:42Z
+transitions:
+  - to: ready
+    at: 2026-10-15T01:10:47Z
+    by: alex
 tags: [cli, template]
 topics: [design, conventions]
 touches: [flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/context/design.go, flai/internal/context/design_test.go, template/root/design/conventions/design-system.md, template/root/design/conventions/README.md, design/conventions/design-system.md, design/conventions/README.md, design/system/conventions.md, design/system/agent-context.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -39,10 +42,10 @@ cost_of_delay:
   at: 2026-10-13T17:52:29Z
 forecast:
   duration: 35m
-  delivery: 2026-10-15T03:43:00Z
-  basis: "Its own forecast of 35m; 6th in the pull order with an in-progress limit of 5, behind S-0381, S-0383, S-0382, S-0241, S-0384 and S-0385."
+  delivery: 2026-10-15T04:55:00Z
+  basis: "Its own forecast of 35m; 5th in the pull order with an in-progress limit of 5, behind S-0381, S-0382, S-0383, S-0384 and S-0385."
   by: flai
-  at: 2026-10-15T01:10:41Z
+  at: 2026-10-15T01:11:42Z
 finalized:
   by: alex
   at: 2026-10-15T00:58:30Z
