@@ -231,6 +231,19 @@ export type DesignSystem = {
 	contrast: DesignContrast[];
 };
 
+/** A text file that is not markdown as flai's file.get answers it (ADR-0147): raw, with its SHA-256. */
+export type ProjectFile = { path: string; content: string; hash: string };
+
+/** What flai's file.save is given (ADR-0147); with no story it saves and commits on the main checkout. */
+export type FileSave = {
+	path: string;
+	content: string;
+	/** The SHA-256 the file was loaded with: a stale one is a conflict. */
+	hash: string;
+	message?: string;
+	story?: string;
+};
+
 /** JSON-RPC's code for a method the host flai does not offer: it is older than this dashboard. */
 const METHOD_NOT_FOUND = -32601;
 /** flai's code for an item or thread that does not exist (internal/hostapi). */
@@ -501,6 +514,24 @@ export class Repo extends EventEmitter {
 	 */
 	async designSystem(): Promise<DesignSystem> {
 		return this.remember<DesignSystem>('design', 'design.get');
+	}
+
+	/**
+	 * A text file that is not markdown, such as the design token file, through flai's file.get
+	 * (ADR-0147), from the story's worktree when story names one. Asked afresh each time, as doc.show
+	 * is, so that the hash a save is given is the file's as it is now.
+	 */
+	async file(rel: string, story?: string): Promise<ProjectFile> {
+		return (await this.run<ProjectFile>('file.get', { path: rel, story })).data;
+	}
+
+	/**
+	 * Save a text file that is not markdown through flai's file.save (ADR-0147), by doc.save's rules:
+	 * 409 with current, hash, and diff when the hash is stale; 422 with findings when flai refuses the
+	 * content. As every write, it forgets every answer, design.get's included.
+	 */
+	async saveFile(save: FileSave): Promise<Written<Record<string, unknown>>> {
+		return this.write<Record<string, unknown>>('file.save', { ...save });
 	}
 
 	/**
