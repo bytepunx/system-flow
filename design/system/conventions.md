@@ -1,6 +1,6 @@
 ---
 title: Agent conventions
-updated: 2026-10-07
+updated: 2026-10-15
 status: active
 topics: [conventions, template]
 ---
@@ -39,7 +39,8 @@ design/conventions/
 ├── logging.md           # order 110
 ├── telemetry.md         # order 120
 ├── delegation.md        # order 130
-└── strategic-agents.md  # order 140
+├── strategic-agents.md  # order 140
+└── design-system.md     # order 150
 ```
 
 The folder lives under `layout.design` in `system-flow.yaml`; tooling resolves it as `<design>/conventions`. No separate layout key.
@@ -60,6 +61,7 @@ The folder lives under `layout.design` in `system-flow.yaml`; tooling resolves i
 | `delegation.md` | When the story's agent hands work to a sub-agent (search, test and lint runs, long logs, the check before review), what it gives one, and what a sub-agent may do: read, run checks, answer, and return questions for the story's agent to ask. A task sub-agent works one task of the plan, alone or beside the rest of its layer, edits only what its task touches, and never commits or writes through flai; the story's agent reviews, commits, and moves each task (S-0176). The story's agent runs only the tests for what it changed while it works, and before review runs the close-out itself, which runs `flai verify`; the verifier reviews the diff against the criteria and the conventions when that pays ([ADR-0110](../adrs/0110-a-story-s-agent-runs-the-close-out-which-runs-flai-verify-itself-before-review.md), S-0270). See [agent-context.md](agent-context.md#sub-agents). |
 | `strategic-agents.md` | What the planner, the orchestrator, and the analyzer do and never do: how each primes, works through flai and never edits code, records what it sets as its own, logs its activity, and asks the operator in a thread. Read only by them (S-0207). |
 | `continuous-improvement.md` | Record recurring friction, defects, blockers, and inefficiencies in `design/issues` with counts and cost, each instance naming its story; the operator chooses at a story's acceptance which issues become remediation or improvement stories. See [continuous-improvement.md](continuous-improvement.md). |
+| `design-system.md` | Build UI from the design system's tokens through the stylesheet `flai design css --write` generates, never hand-edit it, and add no colour, font, type size, spacing, radius, or shadow outside the tokens. A value the tokens lack is a change to the token file on the story's branch, with the touches widened to it and the stylesheet, the stylesheet regenerated, and the reason in the guidance; the operator previews it on the Design page beside main's before accepting ([ADR-0151](../adrs/0151-the-operator-and-agents-change-a-design-system-by-edits-on-the-design-page.md)). Ask on a thread before changing what a role means. The verifier checks the diff for values outside the tokens. `flai prime` gives it, with the guidance and the token file, only to the stories the guidance's `topics` reach, and to none in a project without a design system ([ADR-0152](../adrs/0152-agents-build-ui-from-a-tailwind-v4-stylesheet-flai-generates-from-the-tokens.md), S-0386). This repository has none yet, so it says so under its project additions. |
 
 Adding a topic is a template change and a note here; it is not an ADR unless it changes the folder's contract.
 
@@ -142,6 +144,8 @@ The baseline's roles, as the designer decided on TH-0081 (2026-10-03):
 | `delegation.md` | `[story, explore, verify]` |
 | `strategic-agents.md` | `[plan, orchestrate, analyze]` |
 | `communication.md`, `documentation.md`, `safety.md`, `tooling.md`, `README.md` | none |
+
+`design-system.md`, added after that answer, is `[story, verify]` ([ADR-0152](../adrs/0152-agents-build-ui-from-a-tailwind-v4-stylesheet-flai-generates-from-the-tokens.md)): the story's agent builds from the tokens and the verifier checks the diff for values outside them.
 
 Unlike `topics`, `roles` is the template's: `flai upgrade` replaces it with the rest of the baseline front matter.
 
