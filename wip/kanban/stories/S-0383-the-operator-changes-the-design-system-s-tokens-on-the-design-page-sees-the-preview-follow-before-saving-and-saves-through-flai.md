@@ -3,15 +3,18 @@ id: S-0383
 type: story
 nature: feature
 title: The operator changes the design system's tokens on the Design page, sees the preview follow before saving, and saves through flai
-status: ready
+status: in-progress
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:44:47Z
-updated: 2026-10-15T01:56:53Z
+updated: 2026-10-15T01:56:59Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:39Z
     by: alex
+  - to: in-progress
+    at: 2026-10-15T01:56:59Z
+    by: agent-S-0383
 tags: [dashboard]
 topics: [design]
 touches: [flaiover/src/lib/design/tokens.ts, flaiover/src/lib/design/tokens.test.ts, flaiover/src/lib/design/preview.ts, flaiover/src/lib/design/preview.test.ts, flaiover/src/lib/components/design/TokenEditor.svelte, flaiover/src/lib/components/design/TokenEditor.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
