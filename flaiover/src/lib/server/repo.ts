@@ -155,6 +155,82 @@ export type LintFinding = { line: number; rule: string; alias: string; message: 
 /** What flai's doc.lint answers: the document's path, cleaned, and its findings, [] when clean. */
 export type DocLint = { path: string; findings: LintFinding[] };
 
+/** A CSS custom property a design token renders as, such as --color-primary (ADR-0146). */
+export type DesignVariable = { name: string; value: string };
+
+/** One design token in one theme, as flai's design.get gives it (S-0381). */
+export type DesignToken = {
+	/** Its dotted path, such as color.primary. */
+	path: string;
+	/** Its DTCG type: color, dimension, fontFamily, typography, shadow, and so on. */
+	type: string;
+	/** Its $value as JSON; an alias's is its target's. */
+	value: unknown;
+	/** Its first CSS property's value; '' when it renders nothing. */
+	css: string;
+	/** The CSS custom properties it renders as; [] when none. */
+	variables: DesignVariable[];
+	/** The token path an alias names; absent for a token that is not an alias. */
+	ref?: string;
+	/** Its line in the token file, from 1. */
+	line: number;
+};
+
+/** One theme's tokens, in file order. */
+export type DesignTheme = { name: 'light' | 'dark'; tokens: DesignToken[] };
+
+/** A problem of the token file: path is the token's, absent for the whole file. */
+export type DesignProblem = { path?: string; line: number; message: string };
+
+/** One colour role pair's contrast in one theme: a report, never a problem. */
+export type DesignContrastPair = {
+	theme: 'light' | 'dark';
+	/** Token paths, such as color.text and color.background. */
+	foreground: string;
+	background: string;
+	/** The two colours in sRGB, #rrggbb. */
+	foreground_hex: string;
+	background_hex: string;
+	/** Truncated to two decimals, so that it never reads as passing when it fails. */
+	ratio: number;
+	/** The least ratio that passes. */
+	threshold: number;
+	passes: boolean;
+	/** Either colour is an oklch colour outside sRGB, clipped to it. */
+	clipped: boolean;
+};
+
+/** One theme's role pairs. */
+export type DesignContrast = { theme: 'light' | 'dark'; pairs: DesignContrastPair[] };
+
+/**
+ * The project's design system as flai's design.get answers it, what flai design show --json prints
+ * (S-0381, Go's designsystem.Shown). With no token file, exists is false, no_token_file says so and
+ * names flai design init, and every list is empty. Lists are never null.
+ */
+export type DesignSystem = {
+	/** The token file's repository path, the manifest's design.tokens or its default. */
+	path: string;
+	exists: boolean;
+	/** Set only when there is no token file: so, and the command that writes one. */
+	no_token_file?: string;
+	/** The guidance document's repository path; '' when there is no token file. */
+	guidance: string;
+	/** The guidance's headings; [] when it is missing. */
+	headings: string[];
+	/** Whether the token file is a DTCG resolver document. */
+	resolver: boolean;
+	/** Light, then dark; [] when the file does not parse. */
+	themes: DesignTheme[];
+	/** By line, then path. */
+	problems: DesignProblem[];
+	/** The tokens rendered as CSS custom properties; '' when the file does not parse. */
+	css: string;
+	/** The tokens rendered as a Tailwind v4 @theme block; '' when the file does not parse. */
+	tailwind: string;
+	contrast: DesignContrast[];
+};
+
 /** JSON-RPC's code for a method the host flai does not offer: it is older than this dashboard. */
 const METHOD_NOT_FOUND = -32601;
 /** flai's code for an item or thread that does not exist (internal/hostapi). */
@@ -420,6 +496,14 @@ export class Repo extends EventEmitter {
 	}
 
 	/**
+	 * The project's design system (S-0382): its tokens per theme, their problems, renderings, and
+	 * contrast, or that there is no token file, as flai's design.get answers it.
+	 */
+	async designSystem(): Promise<DesignSystem> {
+		return this.remember<DesignSystem>('design', 'design.get');
+	}
+
+	/**
 	 * Listen for flai's word that a file changed, and for its return: a flai that comes back may have
 	 * missed changes, so everything asked is forgotten and open pages are told to look again.
 	 */
@@ -460,7 +544,9 @@ export class Repo extends EventEmitter {
  * forgets everything; a thread's view names its story, read from the items; docs.tree carries
  * every file's front matter under the three folders. doc:<path> is read from its own file only.
  * A conversation's file under the wip folder's messages is a document, and whether it reads as
- * closed follows its two stories' states, read from the items.
+ * closed follows its two stories' states, read from the items. design.get reads the token file and
+ * the guidance, both documents under the design folder by default; flai serve watches only the
+ * manifest and the three folders, so a token file design.tokens places outside them is not heard of.
  */
 const READS: Record<string, ChangeKind[]> = {
 	project: [],
@@ -473,6 +559,7 @@ const READS: Record<string, ChangeKind[]> = {
 	inbox: ['item', 'thread', 'narrative'],
 	activity: ['item', 'narrative'],
 	adrs: ['adr'],
+	design: ['document'],
 	docs: ['item', 'narrative', 'thread', 'adr', 'document']
 };
 
