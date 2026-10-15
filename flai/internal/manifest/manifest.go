@@ -133,6 +133,17 @@ func (m Manifest) DesignTokens() string {
 	return DefaultDesignTokens
 }
 
+// DesignGuidance is the repository path of the design system's guidance,
+// design-system.md in the system folder of the design layout folder,
+// design/system/design-system.md under the default layout (ADR-0146).
+func (m Manifest) DesignGuidance() string {
+	d := m.Layout["design"]
+	if d == "" {
+		d = "design"
+	}
+	return path.Join(d, "system/design-system.md")
+}
+
 // Prime is the project's say about its context packs.
 type Prime struct {
 	// Budget is the size a story's context pack fits, such as 80KB or

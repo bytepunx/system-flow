@@ -809,6 +809,17 @@ func TestDesignTokens(t *testing.T) {
 	if got := (Manifest{}).DesignTokens(); got != DefaultDesignTokens {
 		t.Errorf("a manifest with no layout: DesignTokens = %q, want %q", got, DefaultDesignTokens)
 	}
+	for _, c := range []struct{ design, want string }{
+		{"design", "design/system/design-system.md"},
+		{"arch", "arch/system/design-system.md"},
+	} {
+		if got := loaded(t, []byte(head(c.design))).DesignGuidance(); got != c.want {
+			t.Errorf("design folder %s: DesignGuidance = %q, want %q", c.design, got, c.want)
+		}
+	}
+	if got := (Manifest{}).DesignGuidance(); got != "design/system/design-system.md" {
+		t.Errorf("a manifest with no layout: DesignGuidance = %q", got)
+	}
 
 	p := filepath.Join(t.TempDir(), File)
 	for _, c := range []struct{ tokens, want string }{
