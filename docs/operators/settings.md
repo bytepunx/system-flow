@@ -1,6 +1,6 @@
 ---
 title: Settings index
-updated: 2026-10-14
+updated: 2026-10-15
 status: active
 ---
 
@@ -156,6 +156,7 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `analysis.agent.roles.<name>.harness` | `agent.roles` | A sub-agent role's harness in the analyzer's session, merged role by role over `agent.roles`. Changed with `flai manifest set analysis.agent=<json>` or by hand; the Analyzer page keeps them as they are |
 | `analysis.agent.roles.<name>.model` | `agent.roles` | A sub-agent role's model in the analyzer's session. Changed with `flai manifest set analysis.agent=<json>` or by hand; the Analyzer page keeps them as they are |
 | `analysis.agent.roles.<name>.config.<name>` | `agent.roles` | A sub-agent role's options in the analyzer's session; `claude-code` takes none. Changed with `flai manifest set analysis.agent=<json>` or by hand; the Analyzer page keeps them as they are |
+| `design.tokens` | `design/system/design-system.tokens.json`, under the `design` layout folder | The repository path of the project's design token file, a DTCG file, beside its guidance in `design/system/design-system.md` ([ADR-0146](../../design/adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md)). Relative to the root and inside it: an absolute path, one that leaves the repository, or one that is not clean stops every command, naming the key. Changed by hand ([Project manifest](../../design/system/project-manifest.md)) |
 | `flai.minimum` | unset | The oldest flai release that may read the project, `X.Y.Z`; an older one stops before reading any item and names the version needed. Publishing a flai release that changes the front-matter fields flai reads raises it ([Keeping the host's flai current](index.md#keeping-the-hosts-flai-current)) |
 | `agent.roles.<name>.harness` | none | The harness of a sub-agent role (`explore`, `verify`); for `claude-code`, only `claude-code`, since a sub-agent runs in the story's session |
 | `agent.roles.<name>.model` | none | The model a sub-agent role runs, over the one its definition in `.claude/agents/` names, such as `haiku` or `claude-sonnet-5-5` |

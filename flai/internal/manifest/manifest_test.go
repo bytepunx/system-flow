@@ -784,6 +784,74 @@ func TestSetMinimum(t *testing.T) {
 	}
 }
 
+// S-0381: design.tokens names the design token file (ADR-0146). Unset, it is
+// design-system.tokens.json in the design layout folder's system folder; set,
+// it is the path given; a path that is absolute, leaves the repository, or is
+// not clean is refused at load, naming the key and what to write.
+func TestDesignTokens(t *testing.T) {
+	head := func(design string) string {
+		return "version: 1\nname: demo\nlayout:\n  design: " + design + "\n  docs: docs\n  wip: wip\n"
+	}
+	for _, c := range []struct{ name, body, want string }{
+		{"unset", head("design"), DefaultDesignTokens},
+		{"unset, the design folder renamed", head("arch"), "arch/system/design-system.tokens.json"},
+		{"an empty block", head("design") + "design: {}\n", DefaultDesignTokens},
+		{"set", head("design") + "design:\n  tokens: ui/tokens.json\n", "ui/tokens.json"},
+		{"set with spaces", head("design") + "design:\n  tokens: \" ui/tokens.json \"\n", "ui/tokens.json"},
+	} {
+		if got := loaded(t, []byte(c.body)).DesignTokens(); got != c.want {
+			t.Errorf("%s: DesignTokens = %q, want %q", c.name, got, c.want)
+		}
+	}
+	if DefaultDesignTokens != "design/system/design-system.tokens.json" {
+		t.Errorf("the default is %q", DefaultDesignTokens)
+	}
+	if got := (Manifest{}).DesignTokens(); got != DefaultDesignTokens {
+		t.Errorf("a manifest with no layout: DesignTokens = %q, want %q", got, DefaultDesignTokens)
+	}
+
+	p := filepath.Join(t.TempDir(), File)
+	for _, c := range []struct{ tokens, want string }{
+		{"/etc/tokens.json", "is an absolute path; write it relative to the repository root, such as " + DefaultDesignTokens},
+		{`C:\tokens.json`, "is an absolute path"},
+		{`\\host\tokens.json`, "is an absolute path"},
+		{"../tokens.json", "leaves the repository; write a file inside it, relative to its root, such as " + DefaultDesignTokens},
+		{"..", "leaves the repository"},
+		{"design/../../tokens.json", "leaves the repository"},
+		{"design/./tokens.json", "is not a clean path"},
+	} {
+		body := head("design") + "design:\n  tokens: '" + c.tokens + "'\n"
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Load(p)
+		if err == nil || !strings.Contains(err.Error(), `design.tokens "`) || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%q: %v", c.tokens, err)
+		}
+	}
+
+	data, err := yaml.Marshal(Manifest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "design:") || strings.Contains(string(data), "tokens") {
+		t.Errorf("an unset design block is written:\n%s", data)
+	}
+	set := loaded(t, []byte(head("design")+"design:\n  tokens: ui/tokens.json\n"))
+	data, err = yaml.Marshal(Manifest{Design: set.Design})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var again Manifest
+	if err := yaml.Unmarshal(data, &again); err != nil || again.Design != set.Design {
+		t.Errorf("YAML round trip: %v\n%s\n%+v", err, data, again.Design)
+	}
+	js, err := json.Marshal(Manifest{Design: set.Design})
+	if err != nil || !strings.Contains(string(js), `"design":{"tokens":"ui/tokens.json"}`) {
+		t.Errorf("JSON: %v %s", err, js)
+	}
+}
+
 // S-0273: tests is an ordered list of tiers that loads with every field,
 // reads back the same through YAML and JSON, and is valid.
 func TestTestsRoundTrip(t *testing.T) {

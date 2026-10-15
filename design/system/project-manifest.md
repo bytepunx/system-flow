@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-13
+updated: 2026-10-15
 status: active
 topics: [cli, template]
 ---
@@ -109,6 +109,8 @@ claims:                                      # optional (S-0295): how stories' t
     - docs/users/flai.md
     - design/adrs
     - design/issues
+design:                                      # optional (S-0381): where the project's design system is kept
+  tokens: design/system/design-system.tokens.json # the design token file, a DTCG file; default design-system.tokens.json in the design folder's system folder
 flai:                                        # optional (S-0181): what the project asks of the flai that reads it
   minimum: 1.27.0                            # the oldest flai release that may read it; a publish raises it, no higher than the flai publishing
 ```
@@ -226,5 +228,6 @@ Rules:
   - Unset, the list is empty and every overlap holds. A project made from the template starts with `adrs` and `issues` under its design layout folder, `design/adrs` and `design/issues` by default. This project's list adds `docs/users/flai.md`, `docs/users/flai-reference.md`, `design/system/flai-cli.md`, and `template/CHANGELOG.md`.
   - `flai shared list`, `check`, `add`, and `remove` read and change it ([flai-cli.md](flai-cli.md#commands)), as do the host API's `settings.get`, `settings.shared_check`, and `settings.shared`, the dashboard's project settings, and the MCP tools `shared_paths` and `shared_paths_edit`. Add and remove rewrite only this key, keeping the file's other keys and comments. Only the operator's own session may change it: `flai guard` refuses every session flai serve starts.
   - A flai older than S-0295 ignores the key, as the manifest is decoded leniently, and holds every overlap. The key is not a front-matter field, so it raises no `flai.minimum`.
+- `design.tokens` is the repository path of the project's design token file, a W3C Design Tokens Community Group (DTCG) file, beside the guidance in `design/system/design-system.md` (S-0381, [ADR-0146](../adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md)). A project has one design system. Unset, it is `design-system.tokens.json` in the `system` folder of the `design` layout folder, `design/system/design-system.tokens.json` by default (`Manifest.DesignTokens`, `manifest.DefaultDesignTokens`). The path is relative to the repository root: `manifest.Load` refuses one that is absolute, leaves the repository, or is not clean, naming `design.tokens` and what to write, so every command stops until it is fixed by hand. The key is not a front-matter field, so it raises no `flai.minimum`; a flai older than S-0381 ignores it.
 - `flai.minimum` is the oldest flai release, `X.Y.Z`, that may read the project (S-0181): one that knows every front-matter field its items, threads, and issues carry. `manifest.Load` refuses the manifest for a flai below it, so every command, `flai serve` (which leaves the project unserved and says why, once the requests in flight have answered), and `flai mcp` stop before reading any item, with `manifest.TooOldError`: the version needed, the running one, and the upgrade (`flai host upgrade`, or `flai self-upgrade` where no flai host runs). A dev build (`dev`) is never below it, and one that is not a release version is a load error. A publish raises it to the newest flai release whose `flai/internal/workitem/front-matter-fields.txt` changed, no newer than the flai doing the publish (`release.RaiseMinimum`, in the publish commit; I-0107, S-0321), so it never names a release whose binaries are not built yet. A release that adds a front-matter field waits until a publish from a flai at or above it, then becomes the minimum. A flai that is not a release build raises nothing, and the minimum never falls. The rule in full is in [flai-cli.md](flai-cli.md#versions-the-hosts-flai-and-the-tree). A flai older than S-0181 does not know the key and ignores it, as the manifest is decoded leniently; what keeps such a flai reading is that it is told it is behind ([flai-cli.md](flai-cli.md#versions-the-hosts-flai-and-the-tree)). Unset, any flai reads the project.
 - The manifest is human-edited YAML. `flai` rewrites only the keys it owns (`template.*`, `projects`, `agent` with `flai agent set`, `claims.shared`, `flai.minimum`) and the strategic agents' settings and `tests` with `flai manifest set` (S-0229, S-0273), and preserves comments where the YAML library allows it.

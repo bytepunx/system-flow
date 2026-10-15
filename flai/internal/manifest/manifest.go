@@ -74,6 +74,9 @@ type Manifest struct {
 	// overlaps hold no story (S-0295, ADR-0096). A pattern that is not valid
 	// does not stop the load; Claims.Errors names it, and it frees nothing.
 	Claims Claims `yaml:"claims,omitempty" json:"claims,omitzero"`
+	// Design is where the project's design system is kept (S-0381,
+	// ADR-0146). Load refuses a path in it that is not inside the repository.
+	Design Design `yaml:"design,omitempty" json:"design,omitzero"`
 	// Flai is what the project asks of the flai that reads it (S-0181).
 	Flai Requirement `yaml:"flai,omitempty" json:"flai,omitzero"`
 }
@@ -98,6 +101,36 @@ type TooOldError struct {
 func (e *TooOldError) Error() string {
 	return fmt.Sprintf("%s needs flai %s or newer, and this is flai %s, which may not know the fields its items carry: upgrade it with %s, then run this again",
 		e.Path, e.Minimum, e.Running, buildinfo.UpgradeCommand)
+}
+
+// Design is the project's say about where its design system is kept: one per
+// project (ADR-0146).
+type Design struct {
+	// Tokens is the repository path of the project's design token file, a
+	// DTCG file; empty means the default DesignTokens gives.
+	Tokens string `yaml:"tokens,omitempty" json:"tokens,omitempty"`
+}
+
+// DefaultDesignTokens is the design token file when design.tokens is not set
+// and the design layout folder is design.
+const DefaultDesignTokens = "design/" + designTokensUnder
+
+// designTokensUnder is the default design token file under the design layout
+// folder.
+const designTokensUnder = "system/design-system.tokens.json"
+
+// DesignTokens is the repository path of the design token file:
+// design.tokens, or, when it is empty, design-system.tokens.json in the
+// system folder of the design layout folder, DefaultDesignTokens under the
+// default layout.
+func (m Manifest) DesignTokens() string {
+	if s := strings.TrimSpace(m.Design.Tokens); s != "" {
+		return s
+	}
+	if d := m.Layout["design"]; d != "" {
+		return path.Join(d, designTokensUnder)
+	}
+	return DefaultDesignTokens
 }
 
 // Prime is the project's say about its context packs.
@@ -877,15 +910,23 @@ func commandProblems(field string, args []string, placeholders bool) []string {
 // dirProblem says what is wrong with a tier's dir, or "" when it is valid: a
 // clean path inside the repository, relative to its root, or empty.
 func dirProblem(d string) string {
+	return repoPathProblem(d, "a folder", "flai", "flai/web")
+}
+
+// repoPathProblem says what is wrong with p, a path the manifest names, or ""
+// when it is valid: a clean path inside the repository, relative to its root,
+// or empty. what is what p names, such as a folder, and example and clean
+// are paths the reason gives as ones to write.
+func repoPathProblem(p, what, example, clean string) string {
 	switch {
-	case d == "":
+	case p == "":
 		return ""
-	case strings.HasPrefix(d, "/") || strings.HasPrefix(d, `\`) || len(d) > 1 && d[1] == ':':
-		return "is an absolute path; write it relative to the repository root, such as flai"
-	case d == ".." || strings.HasPrefix(d, "../"):
-		return "leaves the repository; write a folder inside it, relative to its root, such as flai"
-	case path.Clean(d) != d:
-		return "is not a clean path; write it with single slashes, no . or .. segments, and none at the end, such as flai/web"
+	case strings.HasPrefix(p, "/") || strings.HasPrefix(p, `\`) || len(p) > 1 && p[1] == ':':
+		return "is an absolute path; write it relative to the repository root, such as " + example
+	case path.Clean(p) == ".." || strings.HasPrefix(path.Clean(p), "../"):
+		return "leaves the repository; write " + what + " inside it, relative to its root, such as " + example
+	case path.Clean(p) != p:
+		return "is not a clean path; write it with single slashes, no . or .. segments, and none at the end, such as " + clean
 	}
 	return ""
 }
@@ -958,6 +999,9 @@ func Load(path string) (Manifest, error) {
 		if m.Layout[k] == "" {
 			return Manifest{}, fmt.Errorf("%s: layout.%s is required", path, k)
 		}
+	}
+	if r := repoPathProblem(strings.TrimSpace(m.Design.Tokens), "a file", DefaultDesignTokens, DefaultDesignTokens); r != "" {
+		return Manifest{}, fmt.Errorf("%s: design.tokens %q %s", path, m.Design.Tokens, r)
 	}
 	if min := m.Flai.Minimum; min != "" {
 		if _, ok := buildinfo.Semver(min); !ok {
