@@ -1251,6 +1251,8 @@ flai design show                        # the token file, the guidance, the prob
 flai design css                         # the tokens as CSS custom properties, light and dark
 flai design css --tailwind              # the tokens as a Tailwind v4 stylesheet
 flai design css --write                 # write that stylesheet to the file design.stylesheet names
+flai design proposals                   # the open stories whose branches change the design system
+flai design show --story S-0042         # the design system S-0042 proposes, read from its worktree
 ```
 
 `flai design init` writes both files and commits nothing. The token file holds every token flai requires, with light and dark values, and every colour pair passes its contrast threshold. The guidance has the headings its words go under, each saying what to write there. `--topics` sets the guidance's topics, `all` by default, and they choose the stories `flai prime` gives it to: name your UI sub-project, as in the example. A topic the project does not use makes `flai check --strict` warn `doc.topic`. When either file is there already, `init` writes neither, says which, and exits 1.
@@ -1265,7 +1267,7 @@ design/system/design-system.tokens.json:11: error: design.tokens: color.backgrou
 
 A project without a token file has nothing checked.
 
-`flai design show` prints the token file's path and layout, the guidance's headings, each theme's token count, the problems, and a contrast table per theme. Each row is a role pair, its ratio, its threshold, pass or `FAIL`, and whether an `oklch` colour had to be clipped to sRGB to measure it. Text and state colours need 4.5:1, and borders and focus rings 3:1. Contrast is a report, never a check finding, so `show` exits 0 whatever it finds. `--json` gives everything, the tokens of each theme and both renderings included; the dashboard reads the same answer through the host method `design.get`.
+`flai design show` prints the token file's path and layout, the guidance's headings, each theme's token count, the problems, and a contrast table per theme. Each row is a role pair, its ratio, its threshold, pass or `FAIL`, and whether an `oklch` colour had to be clipped to sRGB to measure it. Text and state colours need 4.5:1, and borders and focus rings 3:1. Contrast is a report, never a check finding, so `show` exits 0 whatever it finds. `--json` gives everything, the tokens of each theme and both renderings included, and `stylesheet` when the manifest names one; the dashboard reads the same answer through the host method `design.get`.
 
 `flai design css` prints a `:root` block of the light values and a `[data-theme='dark']` block of the dark values, with Tailwind v4's names, such as `--color-primary` and `--text-sm`. `--tailwind` prints a Tailwind v4 stylesheet: a rule that makes Tailwind's `dark:` variant follow `[data-theme='dark']`, an `@theme` block of the light values, then the dark values that differ ([ADR-0159](../../design/adrs/0159-the-generated-design-stylesheet-puts-the-dark-values-under-data-theme-dark-and.md)). With no token file, or one with problems, `css` prints nothing, lists the problems, and exits 1.
 
@@ -1290,6 +1292,16 @@ Import it from the UI's own stylesheet, after Tailwind:
 Utilities such as `bg-primary` and `text-sm` then come from the tokens. To switch to the dark theme, set `data-theme="dark"` on the root element, or on any element whose subtree should be dark; the dark values and the `dark:` variant both follow it.
 
 Do not edit the stylesheet. Change the token file and run `flai design css --write` again. Until you do, `flai check` warns `design.stale` on both the stylesheet and the token file, naming the command, so a story that changed only the tokens stops at its close-out. `flai check` reports `design.stylesheet` as an error when the path lies outside every sub-project.
+
+### Proposals
+
+A change to the design system is proposed on a story's branch, like any other change ([ADR-0151](../../design/adrs/0151-the-operator-and-agents-change-a-design-system-by-edits-on-the-design-page.md)). A proposal is an open story whose branch, or uncommitted worktree, changes the token file, the guidance, or both.
+
+`flai design proposals` lists them: ID, state, title, and the paths each changes. Each branch is compared with where it left main, as `flai stream diff` compares it, so the list is the same from the main checkout and from any worktree. With none, it says so, naming both paths. `--json` gives `[{id, title, status, paths}]`, and `[]` for none.
+
+`flai design show --story S-nnnn` reads the design system that story proposes from its worktree and names the story and the worktree first. `--json` gives what `show --json` gives. It exits 1 for an ID that is no story, for a story that is done or cancelled, which proposes nothing, and for a story with no worktree: open one with `flai stream open S-nnnn`.
+
+A proposal needs no step of its own. Accepting the story merges its branch, and the project's design system becomes the proposal's. The dashboard's Design page lists the proposals, compares one with main's, and makes a story from a request ([flaiover.md § Proposals](flaiover.md#proposals)).
 
 ## Check the repository
 

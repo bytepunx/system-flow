@@ -544,6 +544,25 @@ The preview, the token sheet, and the contrast follow each change as you type. W
 
 **Saving needs a newer flai.** flai on the host must be able to read and save the token file, and no released flai can yet. Until one can, the page says "This flai cannot save the token file yet; upgrade flai on the host." You can still change tokens and see the preview, but Save is off, and your changes last only until you leave the page.
 
+### Proposals
+
+An agent proposes a change to the design system on its story's branch. **Proposals**, below the guidance, lists each open story whose branch changes the token file, the guidance, or both: its ID, linked to the story, its title, its state, and what it changes. `flai design proposals` lists the same ([flai.md § Proposals](flai.md#proposals)).
+
+**Compare** shows the proposal beside the main branch's design system:
+
+- **Preview**: the sample components styled by main's tokens and by the proposal's, side by side, each in light and dark.
+- **Tokens that differ**: per theme, each token the proposal changes, adds, or removes, with main's value and the proposal's. A token differs when it renders differently, so an alias replaced by the same value is no difference.
+
+Problems in the proposal's token file are listed above the preview. **Close comparison**, or **Compare** again, closes it. Compare is off while you edit tokens. If flai cannot read the story's design system, such as when its worktree is gone, the comparison says why.
+
+To accept a proposal, accept its story on the board. Its branch is merged, the page shows its tokens as the project's, and it leaves the list. A cancelled story leaves the list too.
+
+### Requesting a change
+
+**Request a change** asks an agent for a change to the design system. Choose the epic, the nature, a title, and write what to change and why in your own words. **Request the change** makes a story under that epic and moves it to ready for a story's agent to pull ([ADR-0151](../../design/adrs/0151-the-operator-and-agents-change-a-design-system-by-edits-on-the-design-page.md)). The story has topic `design`, your words as its goal, and three criteria: the tokens changed as asked, the generated stylesheet in step with them, and the UI's tests passing. It claims the token file, and the stylesheet when the manifest names one, so a second request is held on the board until the first is accepted. Once its agent changes the tokens on its branch, the story shows under **Proposals**.
+
+If flai refuses the story, your words stay and its findings are listed. If the story is made but cannot move to ready, the page says so and the story stays in backlog: move it from the board.
+
 ## Theme
 
 flaiover uses the brand palette in a light and a dark theme. It follows your system preference by default; the button at the right of the navigation cycles system, light, and dark, and the choice is remembered per browser. Both themes are checked for readable contrast, and the charts use palettes validated for colour-vision deficiency in each theme.

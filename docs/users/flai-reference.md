@@ -1042,12 +1042,16 @@ Write, show, and render the project's design system.
 
 A project's design system is its tokens, the values its UI uses, and its guidance, the words that say when to use which (ADR-0146). The tokens are one DTCG 2025.10 file the manifest's design.tokens names, design/system/design-system.tokens.json when it is unset; the guidance is design/system/design-system.md. flai check validates the token file as design.tokens; flai design init writes both from starters, flai design show reports them with each colour role pair's contrast, and flai design css renders the tokens as CSS. flai design css --write writes the tokens to the generated design stylesheet the manifest's design.stylesheet names, which flai check reports as design.stale when it falls behind the tokens (ADR-0159).
 
+A story proposes a change to the design system on its branch: flai design proposals lists the open stories whose branches change it, and flai design show --story S-nnnn reads the design system a story proposes from its worktree. Accepting the story merges its branch, and with it the proposal.
+
 Examples:
 
 ```bash
 flai design init --topics flaiover
 flai design show
 flai design show --json
+flai design show --story S-0042
+flai design proposals
 flai design css --tailwind
 flai design css --write
 ```
@@ -1056,6 +1060,7 @@ Subcommands:
 
 - [css](#flai-design-css): Print the tokens as CSS custom properties or a Tailwind v4 @theme block, or write the design stylesheet
 - [init](#flai-design-init): Write the token file and the guidance from flai's starters, and the design stylesheet when one is named
+- [proposals](#flai-design-proposals): List the open stories whose branches change the design system
 - [show](#flai-design-show): Report the token file, the guidance, the problems, and each role pair's contrast
 
 #### flai design css
@@ -1118,26 +1123,56 @@ Flags:
 |------|---------|
 | `--topics` strings | the guidance's topics, which choose the stories prime gives it to: name the UI sub-project (default `[all]`) |
 
+#### flai design proposals
+
+List the open stories whose branches change the design system.
+
+```text
+flai design proposals
+```
+
+List the proposals: the open stories whose branch, or whose worktree uncommitted, changes the design system, that is the token file, the guidance, or both, at the paths the main checkout's manifest gives. A story's branch is compared with its merge base with the main branch, as flai stream diff compares it, and git is read in the main checkout, so the list is the same from the main checkout and from any worktree. A story that is done or cancelled proposes nothing and is left out; so is every story of a project that is not a git repository, which has no branches.
+
+The Design page lists the same through the host method design.proposals, and flai design show --story S-nnnn reads the design system a proposal holds from its story's worktree. A proposal needs no step of its own to land: accepting the story merges its branch, and with it the main checkout's design system becomes the proposal's.
+
+Prints a table of ID, STATE, TITLE, and CHANGES, the paths the story changes, in story ID order, or a line saying no open story's branch changes the design system, naming the token file and the guidance. With --json, the list as the host method design.proposals answers it: [{id, title, status, paths}], [] when there are none.
+
+Examples:
+
+```bash
+flai design proposals
+flai design proposals --json
+```
+
 #### flai design show
 
 Report the token file, the guidance, the problems, and each role pair's contrast.
 
 ```text
-flai design show
+flai design show [flags]
 ```
 
 Report the project's design system: the token file's path, the guidance's path and its headings, the number of tokens in each theme, each problem flai check reports as design.tokens, as &lt;file&gt;:&lt;line&gt;: &lt;token path&gt;: &lt;message&gt;, and, for light and dark, each colour role pair's contrast ratio against ADR-0148's threshold: 4.5:1 for text, muted text, each state on background, surface, and its tint, and on-primary and on-secondary on their fill; 3:1 for border and focus on background. A pair whose oklch colour lies outside sRGB is computed on the colour clipped to sRGB, and says so.
 
 Contrast is a report, never a finding: a pair below its threshold is FAIL in the table and the exit status is still 0. So is a token file with problems, which flai check reports as findings; show prints them and exits 0. No token file is no error either: show says so and how to write one.
 
---json prints what the host method design.get answers: {path, exists, no\_token\_file, guidance, headings, resolver, themes: [{name, tokens: [{path, type, value, css, variables, ref, line}]}], problems, css, tailwind, contrast: [{theme, pairs: [{theme, foreground, background, foreground\_hex, background\_hex, ratio, threshold, passes, clipped}]}]}.
+With --story S-nnnn, show reads the design system a story proposes from the story's worktree instead of the main checkout, at the token file and guidance paths the worktree's manifest gives, and names the story and its worktree first; the host method design.get does the same when given a story. It works the same from the main checkout and from any worktree. It refuses, with exit status 1, an ID that is no story of this project, a story that is done or cancelled, which proposes nothing, and a story with no worktree, which flai stream open S-nnnn opens. flai design proposals lists the stories whose branches change the design system.
+
+--json prints what the host method design.get answers: {path, exists, no\_token\_file, guidance, stylesheet, headings, resolver, themes: [{name, tokens: [{path, type, value, css, variables, ref, line}]}], problems, css, tailwind, contrast: [{theme, pairs: [{theme, foreground, background, foreground\_hex, background\_hex, ratio, threshold, passes, clipped}]}]}, the same with --story. stylesheet is the manifest's design.stylesheet, left out when it names none.
 
 Examples:
 
 ```bash
 flai design show
 flai design show --json
+flai design show --story S-0042
 ```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--story` string | read the design system the open story S-nnnn proposes, from its worktree, instead of the main checkout's |
 
 ### flai doc
 
