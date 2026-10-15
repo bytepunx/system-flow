@@ -3,11 +3,11 @@ id: S-0385
 type: story
 nature: feature
 title: flai writes the design system's tokens into the stylesheet the manifest names, and flai check reports the stylesheet when it falls behind them
-status: in-progress
+status: done
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:14Z
-updated: 2026-10-15T02:50:44Z
+updated: 2026-10-15T03:16:35Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:45Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-15T02:20:49Z
     by: agent-S-0385
+  - to: review
+    at: 2026-10-15T03:15:34Z
+    by: agent-S-0385
+  - to: done
+    at: 2026-10-15T03:16:35Z
+    by: orchestrator
 tags: [cli]
 topics: [design]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/designsystem/stylesheet.go, flai/internal/designsystem/stylesheet_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/check/design.go, flai/internal/check/design_test.go, design/system/project-manifest.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0159-the-generated-design-stylesheet-puts-the-dark-values-under-data-theme-dark-and.md, design/adrs/README.md, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go, design/system/design-system-tool.md, flai/internal/designsystem/testdata/full.tailwind.css.golden, flai/internal/designsystem/testdata/show-problems.json.golden, flai/internal/designsystem/testdata/show.json.golden, flai/internal/designsystem/testdata/starter.stylesheet.css.golden, flai/internal/designsystem/testdata/themes.tailwind.css.golden, flai/cmd/reference_test.go, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md]
@@ -76,7 +82,7 @@ The design system's tokens reach the project's code by one path: the manifest na
 - [x] The manifest's `design.stylesheet` names the stylesheet, a path under a sub-project, and `flai check` refuses a path outside every sub-project.
 - [x] `flai design css --write` writes the Tailwind v4 `@theme` block, with a generated-file header naming the command, to that stylesheet, and refuses when the manifest names none.
 - [x] `flai check` reports `design.stale` when the stylesheet differs from what `flai design css --write` would write, naming the command that brings it in step, and passes a project whose manifest names no stylesheet.
-- [ ] `design/system/project-manifest.md`, `docs/operators/settings.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated reference say how.
+- [x] `design/system/project-manifest.md`, `docs/operators/settings.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, and the generated reference say how.
 
 ## Tasks
 - T-1556 The manifest's design.stylesheet names the stylesheet the design system's tokens are written to
@@ -101,3 +107,15 @@ The design system's tokens reach the project's code by one path: the manifest na
 - **Layers.** T-1556 and T-1557 together; then T-1558 and T-1559 together; then T-1560.
 - **Forecast: 27m, delivery 2026-10-13T22:11:00Z.** `flai forecast` gave 27m: 95 s per unit of size over 50 done feature stories on claude-opus-5-5 in the large band, times size 17. It stands: each task extends a file S-0381 starts, in five tasks in three layers.
 - **Cost of delay: 103.85 USD a week.** `flai cod`: 27m of the 5h12m forecast over E-0020's seven open stories, of the epic's 1200 USD a week. It stands.
+
+### Accepted by the orchestrator
+
+- Verified: fa16bc32e6d57d988181ff66043a17bd969e2ccc
+- At: 2026-10-15T03:16:35Z
+
+Verdict: meets all four criteria; flai verify passed every step at fa16bc32; every changed path is within the story's touches, none under .claude/. Dark values are selected by [data-theme='dark'] (ADR-0159); design.stale names the token file and the stylesheet. The file.save path writing the stylesheet belongs to the file.get/file.save story.
+
+- 1: flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/check/design.go, flai/internal/check/design_test.go, design/system/project-manifest.md
+- 2: flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/designsystem/stylesheet.go, flai/internal/designsystem/stylesheet_test.go, flai/internal/designsystem/css.go, flai/internal/designsystem/css_test.go
+- 3: flai/internal/check/design.go, flai/internal/check/design_test.go, flai/internal/designsystem/stylesheet.go
+- 4: design/system/project-manifest.md, docs/operators/settings.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/design-system-tool.md

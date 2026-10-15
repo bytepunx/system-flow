@@ -3,15 +3,18 @@ id: S-0384
 type: story
 nature: feature
 title: An agent's proposal for the design system is a story whose branch changes it, and the Design page previews that branch beside the main branch's before the operator accepts it
-status: ready
+status: in-progress
 parent: E-0020
 owner: alex
 created: 2026-10-13T17:45:03Z
-updated: 2026-10-15T03:00:44Z
+updated: 2026-10-15T03:15:42Z
 transitions:
   - to: ready
     at: 2026-10-15T01:10:42Z
     by: alex
+  - to: in-progress
+    at: 2026-10-15T03:15:42Z
+    by: agent-S-0384
 tags: [dashboard, cli]
 topics: [design]
 touches: [flai/internal/designsystem/proposals.go, flai/internal/designsystem/proposals_test.go, flai/cmd/design.go, flai/cmd/design_test.go, flai/internal/hostapi/design.go, flai/internal/hostapi/design_test.go, flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/design/+server.ts, flaiover/src/routes/api/design/design.test.ts, flaiover/src/routes/api/design/proposals/+server.ts, flaiover/src/routes/api/design/proposals/proposals.test.ts, flaiover/src/lib/design/diff.ts, flaiover/src/lib/design/diff.test.ts, flaiover/src/lib/components/design/ProposalCompare.svelte, flaiover/src/lib/components/design/ProposalCompare.svelte.test.ts, flaiover/src/lib/components/design/ProposeChange.svelte, flaiover/src/lib/components/design/ProposeChange.svelte.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 296
+      seconds: 298
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 34
-          output: 610
-          cache_read: 7110213
-          cache_write: 13036
-          cost: 1.79
+          input: 36
+          output: 624
+          cache_read: 7753687
+          cache_write: 13887
+          cost: 1.9515
 cost_of_delay:
   value: 250
   by: planner-E-0020

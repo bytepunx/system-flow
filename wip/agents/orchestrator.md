@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 612.4245
-accrued_seconds: 496278
-tasks_completed: 517
-last_run: 2026-10-15T02:28:52Z
+accrued_cost: 622.4095
+accrued_seconds: 498201
+tasks_completed: 522
+last_run: 2026-10-15T03:00:55Z
 ---
 
 # Orchestrator activity
@@ -3630,6 +3630,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0387
 - Seconds: 12
 - Cost: 0.1522 USD, estimated
+
+### 2026-10-15T02:55:29Z
+
+- Summary: Verified S-0383 (flai verify passed at 916a4eea; all five criteria met; criterion 3 is the wording confirmed on TH-0454). My accept was refused by flai, "S-0383 is already done": the operator accepted it while the verifier ran. No action needed.
+- Items: S-0383
+- Seconds: 1597
+- Cost: 6.4812 USD, estimated
+
+### 2026-10-15T02:55:41Z
+
+- Summary: Under publish, policy judgement: did not publish yet. release_evaluate: 1 pending (S-0383), 115.38 USD/week, not met (judgement). Reason: S-0383's Save answers 501 until the file.get/file.save story lands, and S-0385 (all tasks done) reaches review shortly; I will weigh both together at its acceptance.
+- Items: S-0383
+- Seconds: 12
+- Cost: 0.0000 USD
+
+### 2026-10-15T03:00:36Z
+
+- Summary: Answered TH-0456, citing design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md § Decision
+- Items: S-0390
+- Seconds: 295
+- Cost: 2.5366 USD, estimated
+
+### 2026-10-15T03:00:47Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0390's plan TH-0456 (4 tasks in 4 layers; its ADR refines ADR-0142 without weakening it; 40m raised from flai's 23m; 30 USD/week). The operator had finalized S-0390. Under promote_to_ready, moved it to ready (rank 1, 40m); S-0241 stays out, blocked. Under order_ready, applied the throughput order: S-0386 (35m), S-0390 (40m), S-0384 (1h5m).
+- Items: S-0390, S-0386, S-0384
+- Seconds: 11
+- Cost: 0.4826 USD, estimated
+
+### 2026-10-15T03:00:55Z
+
+- Summary: S-0390 was pulled. Under order_ready, applied the throughput order: S-0386 (35m), S-0384 (1h5m).
+- Items: S-0390, S-0386, S-0384
+- Seconds: 8
+- Cost: 0.4846 USD, estimated
 
 ## Refusals
 

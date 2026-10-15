@@ -4,10 +4,10 @@ title: "S-0385 holds S-0384 on overlap alone: may S-0384 start beside it?"
 from: S-0384
 to: S-0385
 about: [flai/cmd/design.go, flai/cmd/design_test.go]
-status: open
-participants: [flai]
+status: closed
+participants: [flai, orchestrator]
 created: 2026-10-15T02:55:08Z
-updated: 2026-10-15T02:55:08Z
+updated: 2026-10-15T03:16:35Z
 ---
 
 # MS-0125 S-0385 holds S-0384 on overlap alone: may S-0384 start beside it?
@@ -30,3 +30,6 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0385 --remove <path>`, or on the task that names the path, if S-0385 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0125 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0384 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0384 waits until S-0385 moves to review, is cancelled, or is sent back.
+
+### 2026-10-15T03:16:35Z orchestrator
+Closed: S-0385 was accepted

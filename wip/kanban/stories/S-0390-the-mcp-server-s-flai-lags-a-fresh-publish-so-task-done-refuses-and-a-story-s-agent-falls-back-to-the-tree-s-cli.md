@@ -3,26 +3,42 @@ id: S-0390
 type: story
 nature: improvement
 title: The MCP server's flai lags a fresh publish, so task_done refuses and a story's agent falls back to the tree's CLI
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-15T02:55:10Z
-updated: 2026-10-15T03:00:44Z
+updated: 2026-10-15T03:15:07Z
 transitions:
   - to: ready
     at: 2026-10-15T03:00:41Z
     by: orchestrator
+  - to: in-progress
+    at: 2026-10-15T03:00:50Z
+    by: agent-S-0390
 tags: []
 topics: [mcp, release, host]
-touches: [design/adrs/0159-an-outdated-mcp-server-s-task-done-closes-the-task-with-the-installed-flai-once-it-has-caught-up.md, design/adrs/README.md, design/system/flai-cli.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/server.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-narrative.md, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/system/flai-cli.md, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, flai/internal/mcpserver/server.go, docs/users/flai.md, docs/operators/index.md, design/system/agent-narrative.md, design/issues/I-0147-the-mcp-server-s-flai-lags-a-fresh-publish-so-task-done-refuses-and-a-story-s-agent-falls-back-to-the-tree-s-cli.md, design/issues/summary.md, design/adrs/0160-an-outdated-mcp-server-s-task-done-closes-the-task-with-the-installed-flai-once.md, flai/cmd/mcp.go, flai/cmd/mcp_http.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 860
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-15
+      ceremony: 2
+      hand_edits: 1
+      work: 28
+  models:
+    - model: claude-opus-5-5
+      input: 160
+      output: 1178
+      cache_read: 8256153
+      cache_write: 341934
+      cost: 3.9851
   strategic:
     - kind: planner
       seconds: 287
@@ -41,15 +57,15 @@ usage:
           cache_write: 128383
           cost: 1.8142
     - kind: orchestrator
-      seconds: 299
+      seconds: 302
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 34
-          output: 568
-          cache_read: 10748030
-          cache_write: 11932
-          cost: 2.6975
+          input: 36
+          output: 583
+          cache_read: 11391504
+          cache_write: 12784
+          cost: 2.859
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 12m
