@@ -324,10 +324,150 @@ Against the thresholds of the success measure at 10x, for the eight reads only: 
 
 **Where the database would live.** flai keeps its per-checkout state in `.flai-cache/` of the main checkout, which git ignores. `Repo.CacheDir` resolves to the main checkout even from a story worktree, and `Repo.WipDir` is always the main checkout's `wip/` (`flai/internal/workitem/repo.go`). So one database per main checkout, such as `.flai-cache/readmodel.db`, would serve `flai serve` and every story worktree, because they all read the same files. A story worktree would pay nothing to build it. A fresh clone pays one full load, 1.1 s at 1x and 9.2 s at 10x, the first time anything reads the stats. It then holds 23.5 MB on disk at 1x and 235 MB at 10x, or 8.6 MB and 85 MB without the pass-through columns. With the load in WAL mode it briefly needs twice that. With one database shared across processes, `flai serve` and agents' one-shot `flai stats --json` from worktrees would all rescan into it. That needs WAL mode and a busy timeout, and the rescans then take turns for SQLite's one write lock. T-1802 did not measure concurrent writers.
 
+### Postgres
+
+T-1803 ran on 2026-10-16 between 07:09Z and 07:23Z, on the same host, with a load average of 0.6 to 2.8. Its program, scripts, outputs, and commands are in `bin/experiments/S-0427/postgres/`, with the steps appended to the scratch folder's `README.txt`. Every query uses T-1801's corpora, its fixed now, and flai's reports over each corpus (`overhead/runs/baseline-<x>x.json`) as the reference.
+
+**What a server could give that SQLite cannot here.**
+
+| Claimed advantage | What it means for this read model |
+|-------------------|-----------------------------------|
+| One server shared by `flai serve`, each project's MCP server, the dashboard, and every story worktree | A SQLite file in the main checkout's `.flai-cache/` is already one model shared by every process on the host (see [Where the database would live](#overhead)). What a server adds is reach over the network: a process in another container or on another machine. The dashboard does not need that, because it reads through `flai serve`'s API, not the database. One server could also hold every project's database, but each project's data is its own, so sharing a server shares nothing. |
+| Concurrent writers | Postgres locks rows, not the database, so writers of different rows do not wait for each other. Every writer here is a rescan of the same checkout, which writes the same rows. The test below measures what that gives. |
+| `LISTEN`/`NOTIFY` to push changes to the dashboard instead of polling | The dashboard is already pushed its changes by `flai serve`, whose watcher polls three folders every 300 ms (`flai/internal/watch/watch.go`, after [ADR-0029](../adrs/0029-the-dashboard-reaches-a-project-only-through-flai-on-the-host.md), by which the dashboard reaches a project only through flai). The files stay the source of truth, and agents write files, not the database. So something must still notice a file change, and a notification can only follow a rescan; it removes no poll. It would let a process other than `flai serve`, such as a worktree's MCP server, learn of a rescan without a watcher of its own. |
+
+What it costs:
+
+- **A daemon and a container to keep running.** flai is one static binary built with `CGO_ENABLED=0`. With a server, every machine that runs flai also needs Docker or a Postgres install, and every one-shot `flai stats --json` must cope with the server being down, which means keeping the file reads as a fallback. The image `postgres:16-alpine` takes 420 MB on disk. The first start, initdb included, took 2.65 s to accept connections, and a restart took 1.8 s.
+- **A port.** 55432 here, bound to 127.0.0.1. Each host needs one free port, which every flai process must be told.
+- **A credential.** Every flai process needs the password in its connection string, from configuration or the environment, never the repository. Here it was a throw-away `local`.
+- **A backup story.** The read model is derived: it reloads from the files in 1.3 s at 1x and 10 s at 10x, so it needs no backup. The volume still needs looking after. Postgres keeps WAL up to `max_wal_size`, 1 GB by default, and a major version upgrade needs the data dumped and reloaded or `pg_upgrade`. For a derived model, dropping and reloading would do.
+- **RAM and idle CPU**, measured below.
+
+**The setup.** The container is the stock image, started as `docker run -d --name s0427-pg -p 127.0.0.1:55432:5432 -e POSTGRES_PASSWORD=local -v s0427-pg-data:/var/lib/postgresql/data postgres:16-alpine`. It runs PostgreSQL 16.15 with the image's defaults: `shared_buffers` 128MB, `work_mem` 4MB, `fsync` and `synchronous_commit` on, `max_wal_size` 1GB. The volume is on docker's root, `/var/lib/docker`, on the host's disk. Each corpus has its own database, created with `LC_COLLATE 'C'` so text sorts by bytes, as in SQLite. The client connects over TCP to 127.0.0.1 with SCRAM-SHA-256 and `sslmode=disable`.
+
+**The driver and the program.** `github.com/jackc/pgx/v5` v5.10.0, pure Go like the SQLite driver. It was already in the operator's module cache, so `go get` against that cache as a file proxy took 10 s, with no download; it added `pgpassfile`, `pgservicefile`, and `golang.org/x/text` v0.29.0. The program `s0427pg` is in package `main` under `flai/internal/s0427pg`, mapped there by `go build -overlay`, with `-modfile` pointing at `postgres/go.mod`, T-1801's copy plus pgx. As with T-1801, nothing is written into the module. It uses pgx's own interface, not `database/sql`. It parses each file with flai's readers into T-1801's rows. The full load writes them with `COPY`, one table at a time, in one transaction, then fills the derived tables with two `INSERT ... SELECT` and runs `ANALYZE`. A second load mode sends one batch of `INSERT`s per file instead. The rescan is T-1801's: it reads the `files` table, stats every file, and reloads what changed. For each changed file it queues the deletes, the inserts, and the derived rows in one pgx batch, in one transaction.
+
+```bash
+cd flai && GOMODCACHE=$S/gomodcache GOPROXY=file:///home/alex/go/pkg/mod/cache/download GOFLAGS=-modcacherw \
+  go build -modfile=$S/postgres/go.mod -overlay=$S/postgres/overlay.json -o $S/postgres/s0427pg ./internal/s0427pg
+./s0427pg load /tmp/s0427-corpus "postgres://postgres:local@127.0.0.1:55432/s0427_1x?sslmode=disable" copy
+./s0427pg query /tmp/s0427-corpus "<same dsn>" 2026-10-16T06:04:02Z answers-1x.json 3
+```
+
+**The port.** The schema is T-1801's, with `INTEGER` as `BIGINT`, `REAL` as `DOUBLE PRECISION` (Postgres's `REAL` has four bytes), no `WITHOUT ROWID`, and the column `by` quoted, because it is a reserved word. The eight reads are T-1801's over the derived tables, in `postgres/queries.go`, with these changes:
+
+| SQLite | Postgres |
+|--------|----------|
+| `unixepoch(date(x, 'unixepoch'))` | `(x / 86400) * 86400`, `x` a non-negative `BIGINT` |
+| `date(x, 'unixepoch')` | `to_char(to_timestamp(x) AT TIME ZONE 'UTC', 'YYYY-MM-DD')` |
+| `date(s, 'unixepoch', '-6 days', 'weekday 1')`, the Monday that starts the week | `date_trunc('week', to_timestamp(s) AT TIME ZONE 'UTC')` |
+| `strftime('%G-W%V', x, 'unixepoch')` | `to_char(to_timestamp(x) AT TIME ZONE 'UTC', 'IYYY-"W"IW')` |
+| `MAX(a, b)` with two arguments | `GREATEST(a, b)` |
+| `SUM(state <> 'cancelled')` | `count(*) FILTER (WHERE state <> 'cancelled')` |
+| `SUM` and `AVG` of integers | cast back with `::bigint` and `::float8`: Postgres returns `NUMERIC` for both |
+| `x * 1.0 / y` | `x::float8 / y` |
+| `GROUP BY metric`, selecting `n` | `GROUP BY metric, n`: Postgres requires every selected column grouped |
+| `:now`, `:start`, `:type` | pgx named arguments `@now::bigint`, `@start::bigint`, `@type` |
+
+**Checks.** The answers matched flai's report over the same corpus on every value at every scale: 5,321, 9,517, 13,713, and 43,085 values, none differing. That held for the one-shot and for the warm answers (`compare.py runs/answers-<x>x.json ../overhead/runs/baseline-<x>x.json`), and again after a restart of the container and after every round of the concurrency test. At each scale a load with `COPY` and a load with batched inserts dumped to the same SHA-256, `ebd18f6b…` at 1x (`s0427pg dump`).
+
+**Timings.** Medians of three, each with its range, except where a row says one run. Wall time, CPU, and max RSS of a fresh process come from `measure.py`; in-process times come from `time.Now` around each step. The baseline and SQLite figures are those above.
+
+| What | Baseline | SQLite, 1x and 10x | Postgres, 1x | Postgres, 10x | Measured with |
+|------|----------|--------------------|--------------|---------------|---------------|
+| Full load from empty, fresh process | `stats.get` cold, 4715 ms | 1,098 ms and 9,186 ms | 1,345 ms (1,326 to 1,371); in process: parse 561 ms, `COPY` 313 ms, derived tables and commit 142 ms, `ANALYZE` 197 ms, schema 103 ms, connect 15 ms | 10,081 ms (10,010 to 10,096); parse 5,031 ms, `COPY` 2,830 ms | `measure.py runs/load-<x>x 3 -- s0427pg load <corpus> <dsn> copy` |
+| Full load with a batch of `INSERT`s per file, one run | | | 3,598 ms | 30,521 ms | `measure.py runs/loadbatch-<x>x 1 -- s0427pg load ... batch` |
+| Rescan, nothing changed, fresh process | none | 21.1 ms and 191.3 ms | 22.4 ms (20.8 to 23.2), and a connect of about 8 ms before it | 197.3 ms (184.5 to 208.8), and about 7 ms to connect | `rescan-test.py ./s0427pg <corpus copy> <dsn> 3` |
+| Rescan, one story changed, fresh process | none | 27.0 ms and 200.0 ms | 36.2 ms (34.5 to 37.4), of which 13.6 to 15.6 ms writes the file's rows in one transaction | 203.1 ms (199.3 to 203.1), of which 30.9 to 33.4 ms writes | the same |
+| One-shot: connect, rescan, the eight reads, write the answers | `flai stats --json`, 4701 ms | 119 ms and 1,153 ms | 186.6 ms (183.2 to 188.9): connect 9.6 ms, rescan 22.4 ms, reads 146.4 ms; user 24.5 ms, system 18.3 ms; max RSS 16,996 KB | 965.2 ms (957.5 to 1,003.1); user 124.6 ms, system 134.2 ms; max RSS 52,500 KB | `measure.py runs/oneshot-<x>x 3 -- s0427pg query ... 0` |
+| The same, first query after a container restart, one run | | | 197.9 ms | | `measure.py runs/oneshot-after-restart-1x 1 -- ...` |
+| Warm: the eight reads, rounds 2 to 4 on one connection | `stats.get` warm, 4022 ms | 82.0 ms and 917.5 ms | 111.6 ms (109.9 to 112.1) | 710.5 ms (708.0 to 742.6) | `measure.py runs/warm-<x>x 1 -- s0427pg query ... 3` |
+| Warm, a long-running process: the eight reads for 20 s, median round | `stats.get` warm, 4022 ms | as above; SQLite's rounds do not change | 63.8 ms (61.3 to 151.6), 309 rounds | 684.4 ms (678.6 to 759.9), 29 rounds | `s0427pg loop <dsn> <now> 20` |
+
+The two warm rows differ because of how Postgres plans. pgx prepares each query once per connection. Postgres plans a prepared statement afresh for each of its first five runs, then may keep one generic plan, and here it did. The loop's first six rounds at 1x took 151.6, 116.1, 113.7, 114.1, 111.2, and 68.6 ms. A long-running `flai serve` would answer at the loop's figure. An agent's one-shot pays the planning every time.
+
+| Read, warm | SQLite, 1x | Postgres rounds 2 to 4, 1x | Postgres long-running, 1x | SQLite, 10x | Postgres long-running, 10x |
+|------------|------------|----------------------------|---------------------------|-------------|----------------------------|
+| `columns` | 0.29 ms | 1.37 ms | 0.72 ms | 1.28 ms | 1.19 ms |
+| `cycle_time` | 1.18 ms | 2.16 ms | 2.17 ms | 12.0 ms | 27.5 ms |
+| `time_in_state` | 4.37 ms | 6.59 ms | 6.94 ms | 50.7 ms | 59.9 ms |
+| `summary` | 9.82 ms | 6.83 ms | 5.94 ms | 102.4 ms | 64.4 ms |
+| `throughput_week` | 2.01 ms | 1.47 ms | 1.36 ms | 22.3 ms | 8.46 ms |
+| `throughput_day` | 0.55 ms | 1.15 ms | 1.05 ms | 5.89 ms | 7.44 ms |
+| `daily_states` | 43.9 ms | 29.4 ms | 28.8 ms | 498.3 ms | 359.0 ms |
+| `spend_models` | 19.7 ms | 62.1 ms | 16.5 ms | 224.9 ms | 155.7 ms |
+| All eight | 82.0 ms | 111.6 ms | 63.8 ms | 917.5 ms | 684.4 ms |
+| Measured with | `overhead/runs/warm-<x>x-1.out` | `postgres/runs/warm-1x-1.out` | `postgres/runs/loopq-1x-1.out` | `overhead/runs/warm-10x-1.out` | `postgres/runs/loopq-10x-1.out` |
+
+**Growth.** Medians of three, as above.
+
+| What | 1x | 2x | 3x | 10x | 10x over 1x |
+|------|----|----|----|-----|-------------|
+| Full load with `COPY` | 1,345 ms | 2,471 ms | 3,472 ms | 10,081 ms | 7.5 |
+| One-shot | 186.6 ms | 270.5 ms | 334.5 ms | 965.2 ms | 5.2 |
+| Warm, rounds 2 to 4 | 111.6 ms | 165.8 ms | 219.7 ms | 710.5 ms | 6.4 |
+| Rescan, nothing changed | 22.4 ms | 38.3 ms | 56.3 ms | 197.3 ms | 8.8 |
+| Rescan, one story changed | 36.2 ms | 54.0 ms | 71.9 ms | 203.1 ms | 5.6 |
+| Database after the first load | 36,225,551 bytes | 60,744,207 | 87,777,807 | 264,094,223 | 7.3 |
+
+**Storage.**
+
+| What | 1x | 10x | Measured with |
+|------|----|-----|---------------|
+| SQLite database file, for comparison | 23,531,520 bytes | 234,643,456 bytes | T-1802 |
+| `pg_database_size` after the first load | 36,225,551 bytes | 264,094,223 bytes | `s0427pg load`, which reads it at the end |
+| of which an empty database, the system catalog | 7,537,167 bytes | 7,537,167 bytes | `pg_database_size` of a database just created |
+| The read model's tables with their indexes and TOAST, after five loads | 27,860,992 bytes, 13,672,448 of it table rows | 256,032,768 bytes, 116,563,968 of it rows | `s0427pg size`: `pg_total_relation_size`, `pg_relation_size` |
+| The `items` table, `doc` JSON included | 6,176,768 bytes, against SQLite's 11.9 MB: Postgres compresses long text | 57,335,808 bytes | the same |
+| The volume, after every load of this task: 1x to 10x, a rescan copy, and the system databases | 1,820,669,768 bytes: databases 746,449,087, WAL 1,073,750,016 (64 segments) | | `du -sb` in the container; `docker system df -v` reported 1.82GB |
+
+Each reload with `DROP SCHEMA` left the database about 0.4 MB larger, in the catalog. The WAL had grown to `max_wal_size` after about 25 loads in a few minutes. Postgres recycles it towards `min_wal_size`, 80 MB, as checkpoints pass. A volume holding one project's model at 1x would need the database, about 23 MB of system databases, and between 80 MB and 1 GB of WAL. That is derived from the figures above, not measured on its own.
+
+**RAM.** `docker stats` reports the container's memory less its inactive page cache, so it moves with what the loads wrote. The server's own memory is its processes' resident sets, from `/proc/<pid>/status` in the container.
+
+| What | Figure | Measured with |
+|------|--------|---------------|
+| Server, idle after a restart on the existing volume | 17.53 MiB; six processes with 12,516 KB of private memory | `docker stats --no-stream`; `RssAnon` per process |
+| Server, idle after the loads and queries | 485 to 523 MiB. Of the cgroup's 2.2 GB, private memory 5.0 to 6.3 MB, shared memory 147 MB (`shared_buffers` filled), the rest page cache: 2.16 GB, 1.65 GB of it inactive | `docker stats`; `memory.stat` of the container's cgroup |
+| Server, during the query loop | 533 to 538 MiB at 1x, 555 to 575 MiB at 10x, against 522 MiB idle just before | `docker stats` three times in each 32 s loop (`pg-resources.sh`) |
+| Client, one-shot, max RSS | 16,996 KB at 1x, 52,500 KB at 10x; SQLite's, engine included, 24,140 KB and 70,256 KB | `measure.py` |
+| Client, long-running loop, max RSS | 18,236 KB at 1x, 20,556 KB at 10x; SQLite's warm process 26,468 KB and 81,700 KB | the same |
+| Client, full load, max RSS | 46,016 KB at 1x, 297,716 KB at 10x, because `COPY` here takes every row from memory; 21,428 KB and 53,668 KB with batched inserts | the same |
+
+With Postgres the database engine runs in the container, not in flai's process. So flai's process is lighter than with SQLite, and the server is a second process that holds its own memory whether or not anything asks it.
+
+**CPU.** The container's CPU is its cgroup's `usage_usec` from `cpu.stat`, read before and after each window. `docker stats` gives a percentage over about a second. The per-round rows are derived: the measured CPU divided by the rounds.
+
+| What | Postgres | SQLite, for comparison | Measured with |
+|------|----------|------------------------|---------------|
+| Idle 130 s, one client connection held open | Container 270 ms, about 0.2 percent of a core (derived); `docker stats` 0.00 percent; client 0.6 ms | 2.6 ms in 130 s at 1x | `pg-resources.sh 130 32 1 10` |
+| Query loop, 32 s at 1x | Container 29.8 s of CPU in 32.2 s, `docker stats` 91.8 to 92.3 percent; client 1.9 s; 495 rounds | | the same |
+| Derived: CPU per round of the eight reads, 1x | 60.2 ms server and 3.9 ms client, 64.1 ms | 87.5 ms, the eight reads alone (`cpu`, T-1802) | the same |
+| Query loop, 32 s at 10x | Container 32.2 s in 32.5 s, 97.4 to 98.8 percent; client 1.1 s; 47 rounds | | the same |
+| Derived: CPU per round, 10x | 685 ms server and 23.2 ms client, 708 ms | 943 ms | the same |
+
+The server answers one connection's queries on one core, as SQLite does in flai's process.
+
+**Two rescans at once.** `concurrent.py` copies a corpus, loads a model from it, and in each of three rounds changes k work items. It sets their modification time 5 s back and starts two rescans as two processes at once. A third rescan then runs alone, and for comparison k other items change and one rescan runs alone. SQLite is T-1801's rescan unchanged, on a WAL database with `busy_timeout` 10000 ms and `BEGIN IMMEDIATE` (`postgres/sqlite-wal/concur.go`, mapped beside T-1801's files). Postgres is the same rescan as ported, and a second form that first takes `pg_advisory_xact_lock` and reads the `files` table inside that transaction. Times are each rescan's in-process total.
+
+| Corpus, items changed | SQLite, WAL and busy timeout | Postgres, T-1801's rescan as ported | Postgres, advisory lock first |
+|-----------------------|------------------------------|-------------------------------------|-------------------------------|
+| 1x, 1 | Both succeeded in 3 of 3 rounds, and both reloaded the file: 26.7 to 38.6 ms, against 30.4 to 31.0 ms alone | One of the two failed in 3 of 3 rounds with `duplicate key value violates unique constraint "files_pkey"`; the other took 37.3 to 37.6 ms, against 35.1 to 36.0 ms alone | Both succeeded. The second waited 30.8 to 35.2 ms for the lock, then found nothing changed: 55.0 to 58.8 ms, against 36.5 to 36.9 ms alone |
+| 1x, 100 | Both succeeded; the first took 105 to 152 ms, the second waited and reloaded the same files, 213 to 292 ms; alone 104 to 178 ms | One failed in 3 of 3, the same error; the other took 145 to 261 ms; alone 136 to 282 ms | Both succeeded; the second waited 150 to 253 ms, total 174 to 276 ms; alone 139 to 275 ms |
+| 10x, 1 | Both succeeded: 201 to 224 ms, against 210 to 216 ms alone. Stat-ing 29,140 files dominates, and the write is short | One failed in 3 of 3; the other took 202 to 208 ms; alone 201 to 203 ms | Both succeeded; the second waited 198 to 205 ms, total 393 to 407 ms; alone 199 to 216 ms |
+| Measured with | `python3 -I concurrent.py <corpus> <x> <k> 3`, `runs/concurrent-<x>x-k<k>.out` | the same | the same |
+
+After every round the rescan alone found nothing left to change, and the answers matched flai's on every value (`runs/conc-answers-*.compare`). Two rescans of one checkout write the same rows, so they take turns on either database. On SQLite the busy timeout makes them take turns with no change to the code, and the second repeats the first's reload. On Postgres, row locks do not let them run together. T-1801's delete-then-insert fails outright when two writers race, so the rescan has to be written for it, here with an advisory lock that makes the second wait for the first.
+
+**`LISTEN`/`NOTIFY`.** One connection listened on a channel. A second connection appended a line to a story, rescanned it with `pg_notify` in the same transaction, and committed. From sending the commit to the notification's arrival took 1.36 ms, median of 20 (1.25 to 1.86 ms). The commit itself took 1.31 ms (`s0427pg listen <corpus copy> <dsn> 20`).
+
+**Against the success measure.** Postgres is worth its server only if it answers the same queries at least twice as fast as SQLite. Derived from the figures above: a long-running process answers the eight reads 1.29 times as fast at 1x (63.8 ms against 82.0 ms) and 1.34 times as fast at 10x (684 ms against 918 ms). An agent's one-shot is slower at 1x (187 ms against 119 ms) and 1.19 times as fast at 10x (965 ms against 1,153 ms). The full load and the rescans are about the same or slower. Neither database gives the hold replay a SQL form, and that replay is 97 percent of `metrics.Compute`. The threshold is not met.
+
 ## Results
 
 Later tasks of S-0427 write the results, against the success measure above.
 
 ## Recommendation
 
-Provisional, from the baseline alone: adapt. A read model that only replaces the file reads saves at most about 80 to 670 ms of a 4 s answer, so it is worth having only if its queries also take over the computation. The SQLite figures point the same way: the chart reads in SQL take 83 ms where flai's Go takes about 25 ms over parsed items, and the 3.4 s hold replay has no SQL form, so the replay, not the reads, is what to change first. At ten times the corpus `metrics.Compute` grows 52 times, to 194 s, while the read model's load, reads, and rescans grow about ten times, and a read model would need flai's file watch rather than a stat of every file to stay within 50 ms a change. Later tasks of S-0427 settle it once the SQLite and Postgres comparisons are in.
+Provisional, from the baseline alone: adapt. A read model that only replaces the file reads saves at most about 80 to 670 ms of a 4 s answer, so it is worth having only if its queries also take over the computation. The SQLite figures point the same way: the chart reads in SQL take 83 ms where flai's Go takes about 25 ms over parsed items, and the 3.4 s hold replay has no SQL form, so the replay, not the reads, is what to change first. Postgres does not change that: a long-running process answers the eight reads 1.3 times as fast as SQLite and an agent's one-shot at most 1.2 times, short of the twice the success measure asks, and two rescans still take turns, because they write the same rows. At ten times the corpus `metrics.Compute` grows 52 times, to 194 s, while the read model's load, reads, and rescans grow about ten times, and a read model would need flai's file watch rather than a stat of every file to stay within 50 ms a change. Later tasks of S-0427 settle it once the SQLite and Postgres comparisons are in.
