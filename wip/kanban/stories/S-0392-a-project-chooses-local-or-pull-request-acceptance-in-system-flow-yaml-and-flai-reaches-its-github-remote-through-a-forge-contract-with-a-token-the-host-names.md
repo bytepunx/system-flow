@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:33:00Z
-updated: 2026-10-16T05:24:55Z
+updated: 2026-10-16T05:26:51Z
 transitions: []
 tags: [cli, template]
 topics: [release]
@@ -17,13 +17,15 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 forecast:
   duration: 1h
   delivery: 2026-10-16T06:32:00Z
   basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0241."
   by: flai
   at: 2026-10-16T05:24:55Z
+finalized:
+  by: alex
+  at: 2026-10-16T05:26:51Z
 ---
 # S-0392 A project chooses local or pull-request acceptance in system-flow.yaml, and flai reaches its GitHub remote through a forge contract with a token the host names
 
