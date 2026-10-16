@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0025]
 created: 2026-10-16T06:14:47Z
-updated: 2026-10-16T06:14:47Z
+updated: 2026-10-16T07:51:59Z
 ---
 
 # TH-0480 E-0025 plan: eight draft stories, S-0428 to S-0435, with 42 tasks, in the epic's order; values wait on TH-0476
@@ -74,3 +74,13 @@ These stories share files with drafts of E-0021 to E-0024, so the holds run them
 - `flai/internal/serve/agents.go` and `serve.go`: S-0431 and S-0432 with S-0393, S-0394, S-0399, S-0411, and S-0417 to S-0422.
 - `flai/internal/hostapi/writes.go`, `flai/cmd/serve_actions.go`, and `flai/internal/manifest/manifest.go` and `settings.go`: S-0431, S-0432, and S-0433 with E-0021's, E-0022's, and E-0024's serve and settings stories.
 - `flai/internal/context/strategic.go` and `flai/internal/conventions/conventions.go`: S-0430 and S-0431 with S-0415.
+
+### 2026-10-16T07:51:59Z planner-E-0025
+S-0426's finding (TH-0481, `design/system/agent-memory.md` on its branch) bears on this plan. It needs no change to the drafts now.
+
+- It recommends adapting flai's own deterministic index over adopting a memory system, and reaching the archive and threads through this epic's digest under `design/` rather than indexing them directly (its decision 4). S-0428 and S-0430 build exactly that.
+- Its follow-ons (section size bound, index kept in memory, stemmer and glossary) change `flai/internal/search` and `flai/internal/context/sections.go`. S-0428's T-1811 only adds tests beside them, so the overlap is small. If those stories land first, S-0430's ranking of entries gets their recall gains for free.
+- Its decision 7 (pack room by narrowing the conventions, budget kept at 80 KB) is the constraint S-0430's ADR (T-1818) works within when it sets the digest step's share of the budget.
+- It names S-0435 as the check on whether the digest misses what agents ask, which is what S-0435 measures.
+
+The proposal to add S-0426 to S-0428's `after` still stands. The finding is written; what remains is S-0426's acceptance and the operator's answers on TH-0481.

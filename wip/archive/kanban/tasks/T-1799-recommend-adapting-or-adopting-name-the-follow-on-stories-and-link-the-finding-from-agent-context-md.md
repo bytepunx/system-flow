@@ -3,16 +3,37 @@ id: T-1799
 type: task
 nature: research
 title: Recommend adapting or adopting, name the follow-on stories, and link the finding from agent-context.md
-status: backlog
+status: done
 parent: S-0426
 owner: alex
 created: 2026-10-16T05:58:25Z
-updated: 2026-10-16T05:58:25Z
-transitions: []
+updated: 2026-10-16T07:51:25Z
+transitions:
+  - to: ready
+    at: 2026-10-16T07:45:25Z
+    by: agent-S-0426
+  - to: in-progress
+    at: 2026-10-16T07:45:26Z
+    by: agent-S-0426
+  - to: done
+    at: 2026-10-16T07:51:25Z
+    by: agent-S-0426
 stream: S-0426
 tags: []
 touches: [design/system/agent-memory.md, design/system/agent-context.md]
 after: [T-1798]
+usage:
+  source: log
+  seconds: 359
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 23453
+      cache_read: 2810203
+      cache_write: 199458
+      cost: 2.112
 ---
 # T-1799 Recommend adapting or adopting, name the follow-on stories, and link the finding from agent-context.md
 

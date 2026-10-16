@@ -3,10 +3,10 @@ id: S-0426
 type: story
 nature: research
 title: Agent memory system
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-16T05:47:45Z
-updated: 2026-10-16T06:29:03Z
+updated: 2026-10-16T20:56:07Z
 transitions:
   - to: ready
     at: 2026-10-16T05:47:46Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-16T06:01:33Z
     by: agent-S-0426
+  - to: review
+    at: 2026-10-16T07:52:00Z
+    by: agent-S-0426
+  - to: done
+    at: 2026-10-16T20:56:07Z
+    by: alex
 tags: []
 topics: [cli]
 touches: [design/system/agent-memory.md, design/system/agent-context.md, design/system/README.md]
@@ -24,31 +30,51 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1179
-  estimated: true
-  priced_by: estimate
+  seconds: 6639
+  priced_by: harness
   turns:
     - day: 2026-10-16
-      hand_edits: 1
-      work: 28
+      ceremony: 2
+      hand_edits: 2
+      work: 45
   models:
+    - model: claude-haiku-5-5
+      input: 495868
+      output: 42897
+      cache_read: 0
+      cache_write: 0
+      cost: 0.131
     - model: claude-opus-5-5
-      input: 272
-      output: 1431
-      cache_read: 12391446
-      cache_write: 393580
-      cost: 5.9491
+      input: 570
+      output: 240842
+      cache_read: 28858440
+      cache_write: 2048271
+      cost: 21.688
   strategic:
     - kind: orchestrator
-      seconds: 360
+      seconds: 43653
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 108
-          output: 2004
-          cache_read: 45869422
-          cache_write: 44358
-          cost: 11.5101
+          input: 266
+          output: 4617
+          cache_read: 60881121
+          cache_write: 91083
+          cost: 15.2856
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 64
+          cache_read: 108674
+          cache_write: 45754
+          cost: 0.1264
+cost_of_delay:
+  inputs:
+    time_lost_per_cycle: 1h
+    by: planner-S-0426
+    at: 2026-10-16T19:31:54Z
+  value: 150
+  by: planner-S-0426
+  at: 2026-10-16T19:32:08Z
 forecast:
   duration: 1h30m
   delivery: 2026-10-16T09:05:00Z
@@ -95,6 +121,6 @@ Topics: `cli` added, since every task reads flai's pack and search code (`flai/i
 
 Forecast: `flai forecast` gave 8m from the median 232 s per size unit over 6 research stories, at size 2. Raised to 1h30m: S-0413, a comparable research story, was forecast at 50m, and this one adds a trial in a scratch directory. Delivery 2026-10-16T09:05Z is the start at 06:01Z plus 1h30m times flai's cycle factor of 2.03; it was 10:00Z while the hold was expected to last until S-0413 reached review.
 
-Cost of delay: no inputs and no epic, so `flai cod` refuses. Asked on TH-0475, recommending `time_lost_per_cycle: 1h` (150 USD a week); the value is written once the operator sets the input.
+Cost of delay: 150 USD a week, as `flai cod` works it out and unadjusted. The input, `time_lost_per_cycle: 1h`, is the operator's: they confirmed it on TH-0475 at 2026-10-16T19:31Z, and the planner wrote it as confirmed. That is 1h lost per 168h cycle at `planning.hour_rate` 150.
 
 Tasks run in five layers, one each, because all five write `design/system/agent-memory.md` in order: T-1795, T-1796, T-1797, T-1798, T-1799.

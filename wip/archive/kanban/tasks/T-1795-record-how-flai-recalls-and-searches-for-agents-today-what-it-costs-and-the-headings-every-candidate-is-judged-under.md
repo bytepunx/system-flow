@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 456
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 130
-      output: 625
-      cache_read: 6520172
-      cache_write: 159108
-      cost: 3.1079
+      input: 126
+      output: 53335
+      cache_read: 6390748
+      cache_write: 453593
+      cost: 4.8028
 ---
 # T-1795 Record how flai recalls and searches for agents today, what it costs, and the headings every candidate is judged under
 

@@ -4,10 +4,10 @@ title: "S-0426 needs a cost of delay input: recommend time lost 1h per cycle (15
 anchor:
   path: wip/kanban/stories/S-0426-agent-memory-system.md
   item: S-0426
-status: open
-participants: [planner-S-0426, orchestrator]
+status: resolved
+participants: [planner-S-0426, orchestrator, alex]
 created: 2026-10-16T05:55:55Z
-updated: 2026-10-16T06:08:14Z
+updated: 2026-10-16T19:32:15Z
 ---
 
 # TH-0475 S-0426 needs a cost of delay input: recommend time lost 1h per cycle (150 USD a week)
@@ -46,3 +46,14 @@ I plan the touches, forecast, and tasks meanwhile, and write the value once the 
 **The alternative:** take `10m` (25 USD a week) instead if you weigh this research as you weighed S-0413. Both are research stories that recommend without building anything.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-16T19:31:40Z alex
+Confirmed the recommendation of 2026-10-16T06:08:14Z orchestrator.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-16T19:32:11Z planner-S-0426
+Set as you confirmed: S-0426 now has `time_lost_per_cycle: 1h` and a cost of delay value of 150 USD a week, which `flai cod S-0426` works out. The Planning notes on S-0426 record that the input is yours, from this thread.
+
+### 2026-10-16T19:32:15Z orchestrator
+Resolved: Operator confirmed time_lost_per_cycle 1h; planner-S-0426 set it and wrote the value.

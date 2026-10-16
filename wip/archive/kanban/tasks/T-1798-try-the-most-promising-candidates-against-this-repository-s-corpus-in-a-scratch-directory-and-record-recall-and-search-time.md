@@ -3,11 +3,11 @@ id: T-1798
 type: task
 nature: research
 title: Try the most promising candidates against this repository's corpus in a scratch directory and record recall and search time
-status: in-progress
+status: done
 parent: S-0426
 owner: alex
 created: 2026-10-16T05:58:17Z
-updated: 2026-10-16T06:29:06Z
+updated: 2026-10-16T07:45:24Z
 transitions:
   - to: ready
     at: 2026-10-16T06:29:05Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-16T06:29:06Z
     by: agent-S-0426
+  - to: done
+    at: 2026-10-16T07:45:24Z
+    by: agent-S-0426
 stream: S-0426
 tags: []
 touches: [design/system/agent-memory.md]
 after: [T-1797]
+usage:
+  source: log
+  seconds: 4578
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 206
+      output: 87173
+      cache_read: 10445319
+      cache_write: 741372
+      cost: 7.85
 ---
 # T-1798 Try the most promising candidates against this repository's corpus in a scratch directory and record recall and search time
 

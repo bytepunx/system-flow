@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 757.9045
-accrued_seconds: 598350
-tasks_completed: 566
-last_run: 2026-10-16T06:50:09Z
+accrued_cost: 762.8919
+accrued_seconds: 644077
+tasks_completed: 572
+last_run: 2026-10-16T19:32:16Z
 ---
 
 # Orchestrator activity
@@ -3973,6 +3973,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0427
 - Seconds: 2114
 - Cost: 0.8137 USD, estimated
+
+### 2026-10-16T07:30:28Z
+
+- Summary: Accepted S-0427 under accept_reviews at ce03beae; flai verify passed at that head against main 6e0f297. The verifier matched criteria 1 to 3 to design/experiments/S-0427-sqlite-and-postgres-read-models.md, with Postgres run in Docker and a recommendation to drop. The dry run had no blocker. release_evaluate (judgement) has nothing pending: an experiment with no component change, so no release.
+- Items: S-0427
+- Seconds: 2419
+- Cost: 0.8827 USD, estimated
+
+### 2026-10-16T07:51:54Z
+
+- Summary: Recommended an answer on TH-0481, citing design/adrs/0020-files-plus-mcp.md § Decision
+- Items: S-0426
+- Seconds: 1286
+- Cost: 1.8085 USD, estimated
+
+### 2026-10-16T07:51:58Z
+
+- Summary: Under answer_threads (autonomous): posted a recommendation on agent-S-0426's TH-0481, escalating it as decisions not yet recorded plus a scope choice. I recommended agent-S-0426's seven answers and follow-on stories 1 to 3 (recall set, bounded sections, in-memory index) under a new epic, with stories 4 to 7 deferred, citing ADR-0020 § Decision for decisions 1 and 6.
+- Items: S-0426
+- Seconds: 4
+- Cost: 0.0465 USD, estimated
+
+### 2026-10-16T07:52:53Z
+
+- Summary: Verified S-0426 under accept_reviews at eb61fba05cab: flai verify passed against main 8b6f7cc, and the verifier matched criterion 1 and 2 to design/system/agent-memory.md. The dry run is blocked by TH-0475 (cost of delay input, awaiting the operator) and TH-0481 (agent's decisions, awaiting the operator), so I left S-0426 in review and opened a thread on it naming both blockers.
+- Items: S-0426
+- Seconds: 55
+- Cost: 0.3670 USD, estimated
+
+### 2026-10-16T07:53:08Z
+
+- Summary: promote_candidates (throughput) ranks S-0241 first at a 2h forecast, now that S-0426 is in review and clears its overlap hold. Left it in the backlog because it is still blocked since 2026-10-08 ("No candidate solutions yet"), so promoting it would fill ready with work that cannot start. No other candidates.
+- Items: S-0241
+- Seconds: 15
+- Cost: 0.2028 USD, estimated
+
+### 2026-10-16T19:32:16Z
+
+- Summary: Under plan_backlog_stories: resolved planner-S-0426's TH-0475 after the operator confirmed time_lost_per_cycle 1h and planner-S-0426 set it. S-0426 (verified at eb61fba) is still blocked from acceptance by TH-0481, whose recommendation awaits the operator, and by my TH-0482.
+- Items: S-0426
+- Seconds: 41948
+- Cost: 1.6799 USD, estimated
 
 ## Refusals
 

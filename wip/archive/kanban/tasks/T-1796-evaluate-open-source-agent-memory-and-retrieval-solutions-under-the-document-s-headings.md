@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 637
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 102
-      output: 516
-      cache_read: 4434858
-      cache_write: 144679
-      cost: 2.1309
+      input: 87
+      output: 36568
+      cache_read: 4381722
+      cache_write: 310999
+      cost: 3.293
 ---
 # T-1796 Evaluate open source agent memory and retrieval solutions under the document's headings
 

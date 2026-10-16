@@ -24,16 +24,16 @@ touches: [design/system/agent-memory.md]
 after: [T-1796]
 usage:
   source: log
-  seconds: 460
+  seconds: 463
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 54
-      output: 316
-      cache_read: 2248362
-      cache_write: 121125
-      cost: 1.1026
+      input: 45
+      output: 18921
+      cache_read: 2267137
+      cache_write: 160913
+      cost: 1.7038
 ---
 # T-1797 Survey state-of-the-art memory and retrieval approaches flai cannot adopt directly but could learn from
 
