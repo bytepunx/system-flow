@@ -1240,6 +1240,28 @@ With `--story S-nnnn`, `show` and `save` work in that story's worktree, on its b
 
 `flai doc lint <path> --stdin` lints the content on standard input as the markdown file at that path under design, docs, or wip. The file need not exist. It uses the project's markdownlint configuration and the subset of its rules flai checks itself ([Check the repository](#check-the-repository)), and prints each finding as `path:line rule/alias message`; `--json` gives `{path, findings: [{line, rule, alias, message}]}`. It exits 0 when the content is clean, 1 with findings, and 2 when it cannot lint. The dashboard's editor shows the same findings as you type. Your markdown tier, such as `scripts/lint-md.sh`, still decides at acceptance.
 
+## Edit a file that is not markdown through flai
+
+```bash
+flai file show design/system/design-system.tokens.json --json   # content and its sha256
+flai file show web/src/theme.css > theme.css                     # the content to stdout, the path and hash to stderr
+flai file save design/system/design-system.tokens.json --hash "$h" --message "darker primary" < tokens.json
+flai file save design/system/palette.json --story S-0042 --hash "$h" < palette.json   # committed on story/S-0042
+```
+
+`flai file` does for a text file that is not markdown what `flai doc` does for a document ([Edit a document through flai](#edit-a-document-through-flai)). The dashboard saves the design token file this way ([ADR-0147](../../design/adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)).
+
+| | |
+|-|-|
+| Reaches | A file under the design or docs folder, and the design token file and design stylesheet the manifest names, wherever they are ([Settings](../operators/settings.md)) |
+| Refuses, exit code 1 | Any other path, a path under the wip folder, a markdown file (use `flai doc show` and `flai doc save`), a binary file (a NUL byte in its first 8 KB), and a file over 1 MiB |
+| Conflict, exit code 3 | The file changed since `show` gave you its hash; the diff is printed, and `--json` gives the current content and its hash |
+| Refused, exit code 4 | Binary content, content over 1 MiB, a token file flai cannot turn into a stylesheet, or content the check finds anything new in; the file is left as it was |
+
+`show` prints the content as it is on standard output, and the path and its hash on standard error, so you can redirect the content to a file, edit it, and save it. `--json` gives `{path, content, hash}`. `save` reads the new content on standard input and saves it as it is, with the hash `show` gave. It runs the check before and after writing, and commits the file on its own as `docs:`, as `flai doc save` does: `--message` sets the subject, `--trailer` adds lines, and `--no-commit` or `dashboard.autocommit: false` skips the commit. Nothing is pushed. `--story S-nnnn` reads and saves in that story's worktree and commits on its branch, with the same refusals as `flai doc`.
+
+A save of the design token file, when the manifest names a design stylesheet, writes the stylesheet from the new tokens too ([The generated stylesheet](#the-generated-stylesheet)). The check runs with both in place, a finding puts both back, and both are committed in one commit ([ADR-0150](../../design/adrs/0150-a-token-save-from-the-design-page-lands-on-main-and-flai-writes-the-stylesheet.md)). `--json` names the stylesheet in `stylesheet`.
+
 ## Keep a design system
 
 A project's design system is its tokens, the values its UI uses, and its guidance, the words that say when to use which ([ADR-0146](../../design/adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md)). A project has one. The tokens are one DTCG 2025.10 JSON file at the path the manifest's `design.tokens` names, `design/system/design-system.tokens.json` when it is unset ([Settings](../operators/settings.md)). The guidance is `design/system/design-system.md`.
@@ -1283,7 +1305,7 @@ design:
   stylesheet: web/src/theme.css
 ```
 
-`flai design css --write` writes it: a header saying it is generated from the token file and not to be edited, then what `--tailwind` prints. It creates the folders, replaces what is there, and prints `wrote web/src/theme.css`. It writes nothing and exits 1 when the manifest names no stylesheet or the token file is missing or has problems. `flai design init` writes it too when the manifest names one. Commit it with the token file.
+`flai design css --write` writes it: a header saying it is generated from the token file and not to be edited, then what `--tailwind` prints. It creates the folders, replaces what is there, and prints `wrote web/src/theme.css`. It writes nothing and exits 1 when the manifest names no stylesheet or the token file is missing or has problems. `flai design init` writes it too when the manifest names one. Commit it with the token file. A save of the token file through `flai file save` or the dashboard writes the stylesheet and commits both in one commit ([Edit a file that is not markdown through flai](#edit-a-file-that-is-not-markdown-through-flai)).
 
 Import it from the UI's own stylesheet, after Tailwind:
 

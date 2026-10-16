@@ -1,6 +1,6 @@
 ---
 title: A design system tool for the dashboard and agents
-updated: 2026-10-15
+updated: 2026-10-16
 status: active
 topics: [design, dashboard, cli]
 ---
@@ -177,15 +177,17 @@ The table weighs the host methods of 2026-10-13. The operator's decision (§ Dec
 
 ### file.get and file.save
 
-Decided on TH-0445 ([ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)). Two host methods read and save a text file that is not Markdown, as `doc.show` and `doc.save` do a Markdown one:
+Decided on TH-0445 ([ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)) and built by S-0436 (`flai/internal/docedit/file.go`, `flai/cmd/file.go`, `flai/internal/hostapi/writes.go`). Two host methods read and save a text file that is not Markdown, as `doc.show` and `doc.save` do a Markdown one:
 
 | | |
 |-|-|
 | Methods | `file.get` `{path, story?}`: the raw content and its SHA-256. `file.save` `{path, content, hash, story?, message?}`. |
 | CLI | `flai file show <path>` and `flai file save <path> --hash <h>`, the content on standard input, each with `--story` |
 | Reach | A file under the manifest's design or docs folder, or a path the manifest names for a purpose: the design token file and the design stylesheet |
-| Refused | Any other path, the wip folder, a binary file, a file over a size limit the story that builds them sets, and a Markdown file, which keeps `doc.show` and `doc.save` |
-| A save | `doc.save`'s rules: a stale hash is a conflict, exit 3; `flai check` before and after, a finding the content introduces refusing it, exit 4; the commit on the main checkout's branch unless `dashboard.autocommit` is false; with `story`, the story's worktree and branch ([ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md)) |
+| Refused | Any other path, the wip folder, a binary file (a NUL byte in its first 8 KB), a file over 1 MiB (`MaxFileSize`, 1,048,576 bytes), and a Markdown file, which keeps `doc.show` and `doc.save`: exit 1 from the CLI; the host methods refuse a path out of reach as invalid params before flai runs (`fileRel`) |
+| A save | `doc.save`'s rules: a stale hash is a conflict, exit 3, with the current content, its hash, and a diff; `flai check` before and after, a finding the content introduces refusing it, exit 4, as binary content, content over 1 MiB, and a token file flai cannot render are refused, the file put back; the commit, as `docs:`, on the main checkout's branch unless `dashboard.autocommit` is false; with `story`, the story's worktree and branch ([ADR-0145](../adrs/0145-a-dashboard-save-may-name-a-story-and-is-then-committed-on-that-story-s-branch.md)). `file.save` maps exit 3 to Conflict and exit 4 to Refused, and is ungated, as `doc.save` is |
+| A token save | When the manifest names a stylesheet, the save writes it from the new tokens, checks with both in place, puts both back on a finding, and commits both in one commit ([ADR-0150](../adrs/0150-a-token-save-from-the-design-page-lands-on-main-and-flai-writes-the-stylesheet.md)); `flai design init` and `flai design css --write` use the same generator |
+| The dashboard | flaiover's `REQUIRED_METHODS` lists both, so its banner names a flai without them; the Design page's token save, `/api/design/tokens`, goes through `file.get` and `file.save` and answers 501 only from such a flai |
 
 ADR-0029 stands: there is still no method that reads an arbitrary file.
 
@@ -377,8 +379,8 @@ Option 3 first, then 1 and 2 together; 4 deferred. The stylesheet makes the toke
 
 Build in this order, as decided (§ Decision):
 
-1. **The token file, the guidance, and their check** ([Where a project keeps its design system](#where-a-project-keeps-its-design-system)): the DTCG token file the manifest names, `design/system/design-system.tokens.json` by default; the guidance in `design/system/design-system.md`; `design.tokens`; `flai design init`, `show`, and `css`; and `design.get`. The documentation convention's exception for the token file, in the template and the standard. S-0381. Then `file.get` and `file.save` with `flai file show` and `flai file save`, in a story of their own (§ Epic).
-2. **The stylesheet** ([How agents build from it](#how-agents-build-from-it)): `design.stylesheet`, `flai design css --write`, `design.stale` naming the token file and the stylesheet, and flai writing the stylesheet whenever it writes the tokens. S-0385, before S-0383, whose save depends on it.
+1. **The token file, the guidance, and their check** ([Where a project keeps its design system](#where-a-project-keeps-its-design-system)): the DTCG token file the manifest names, `design/system/design-system.tokens.json` by default; the guidance in `design/system/design-system.md`; `design.tokens`; `flai design init`, `show`, and `css`; and `design.get`. The documentation convention's exception for the token file, in the template and the standard. S-0381. Then `file.get` and `file.save` with `flai file show` and `flai file save`, in a story of their own (§ Epic), S-0436.
+2. **The stylesheet** ([How agents build from it](#how-agents-build-from-it)): `design.stylesheet`, `flai design css --write`, `design.stale` naming the token file and the stylesheet, and flai writing the stylesheet whenever it writes the tokens. S-0385, before S-0383, whose save depends on it; the stylesheet written with a token save came with S-0436's `file.save`.
 3. **The Design group and its preview** ([Previewing it live](#previewing-it-live-without-building-the-project)): a blank same-origin frame the page fills, the gallery against the fixed vocabulary, the tokens as `--ds-*` values. S-0382.
 4. **Editing on the page** ([Working on it together](#working-on-it-together), option 1): the preview follows before saving, and the save writes the token file and the stylesheet through `file.save`. S-0383.
 5. **Proposals and threads** (options 2 and 3): the branch's tokens beside main's, the open proposals listed, the request form, the guidance's threads on the page. S-0384, on S-0378's save on a story's branch, accepted on 2026-10-14.
@@ -450,7 +452,7 @@ What each of E-0020's drafts must change after the decision, for the planner to 
 
 ### A new story: file.get and file.save
 
-`flai file show` and `flai file save`, each with `--story`, and the host methods `file.get` and `file.save` (ADR-0147). Not in S-0381: S-0381 needs neither, it is already the largest flai story, and the pair is general rather than design's. This story sets the size limit ADR-0147 leaves to it. Touches: `flai/cmd/file.go` with its test, `flai/cmd/root.go`, `flai/internal/docedit/` for the hash, check, and commit rules it shares with `doc.save`, `flai/internal/hostapi/writes.go`, `writes_test.go`, `contract_test.go`, `design/system/dashboard-host-channel.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, the reference. It and S-0381 both claim `flai/cmd/root.go`, so they run one after the other anyway (ADR-0046).
+`flai file show` and `flai file save`, each with `--story`, and the host methods `file.get` and `file.save` (ADR-0147). Not in S-0381: S-0381 needs neither, it is already the largest flai story, and the pair is general rather than design's. This story sets the size limit ADR-0147 leaves to it. Built as S-0436, with the limit at 1 MiB, and with the stylesheet written by a token save, which the drafts gave S-0385 ([file.get and file.save](#fileget-and-filesave)). Touches: `flai/cmd/file.go` with its test, `flai/cmd/root.go`, `flai/internal/docedit/` for the hash, check, and commit rules it shares with `doc.save`, `flai/internal/hostapi/writes.go`, `writes_test.go`, `contract_test.go`, `design/system/dashboard-host-channel.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, the reference. It and S-0381 both claim `flai/cmd/root.go`, so they run one after the other anyway (ADR-0046).
 
 ### S-0382 The Design group and its preview
 

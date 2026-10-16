@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-15
+updated: 2026-10-16
 status: active
 ---
 
@@ -538,11 +538,11 @@ A project with no token file is told so: run `flai design init` to write the sta
 
 The preview, the token sheet, and the contrast follow each change as you type. When a colour leaves a pair below its threshold, 4.5:1 for text or 3:1 for controls, the colour says so beside its field: which pair, in which theme, at what ratio. A value flai would not accept stays in its field, marked with the reason, and changes nothing until you correct it. A changed token is marked, with **Reset** to take it back. A change to a light value reaches dark too, unless dark has a value of its own. In a token file with no dark context, a colour has one value for both themes: change its light value, because a dark change cannot be saved there.
 
-**Save** writes your changes into the token file, leaves the rest of it as it was, and commits it on main, as saving a document does ([Editing documents](#editing-documents)). The line under "What changed" becomes the commit's subject. flai checks the file first. If it finds a problem, the save is refused, the findings are listed, and your changes stay. If someone changed the token file after you started, you choose, as in the document editor: load the current version, which keeps your changes where its tokens still take them, or save yours over it.
+**Save** writes your changes into the token file, leaves the rest of it as it was, and commits it on main, as saving a document does ([Editing documents](#editing-documents)). flai on the host saves it with `flai file save` ([flai.md § Edit a file that is not markdown through flai](flai.md#edit-a-file-that-is-not-markdown-through-flai)). When the manifest names a design stylesheet, flai writes the stylesheet from the new tokens and commits it with the token file in the same commit ([flai.md § The generated stylesheet](flai.md#the-generated-stylesheet)). The line under "What changed" becomes the commit's subject. flai checks the file first. If it finds a problem, the save is refused, the findings are listed, and your changes stay. If someone changed the token file after you started, you choose, as in the document editor: load the current version, which keeps your changes where its tokens still take them, or save yours over it.
 
 **Discard changes** goes back to the saved tokens. **Done** closes the editor once nothing is unsaved. The page asks before you leave it with unsaved changes. A change to the token file made elsewhere while you edit updates the saved tokens and keeps your changes.
 
-**Saving needs a newer flai.** flai on the host must be able to read and save the token file, and no released flai can yet. Until one can, the page says "This flai cannot save the token file yet; upgrade flai on the host." You can still change tokens and see the preview, but Save is off, and your changes last only until you leave the page.
+**Saving needs a flai that reads and saves the token file.** With a flai on the host older than the dashboard, the banner says what it lacks, and the page says "This flai cannot save the token file yet; upgrade flai on the host." You can still change tokens and see the preview, but Save is off, and your changes last only until you leave the page.
 
 ### Proposals
 
