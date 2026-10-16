@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:39:46Z
-updated: 2026-10-16T04:41:49Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli, template]
 topics: [release, orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-10-16T09:46:00Z
-  basis: "flai forecast's 34m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 21), raised by a third for git against a scratch remote: a merge by three methods, a fetch, and a rebase of unpublished commits, plus a hand-off to flai serve."
-  by: planner-E-0021
-  at: 2026-10-16T04:41:49Z
+  delivery: 2026-10-16T10:30:00Z
+  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395 and S-0396."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0397 Under pull-request acceptance, flai accept merges the story's pull request through the remote by the project's merge method, then fetches main and moves to done, archives, and commits as today
 

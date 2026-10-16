@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:07Z
-updated: 2026-10-16T05:05:33Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli, dashboard]
 topics: [orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h15m
-  delivery: 2026-10-16T11:09:00Z
-  basis: "flai forecast's 40m (96 s per unit, large band, size 25), raised: it changes the acceptance, flai's most guarded flow, and must prove each landing matches an acceptance by hand, plus bisection and a send-back."
-  by: planner-E-0022
-  at: 2026-10-16T05:04:40Z
+  delivery: 2026-10-16T11:34:00Z
+  basis: "Its own forecast of 1h15m; 10th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398 and S-0399."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0400 A green batch lands each story in order through the acceptance of today, and a red batch is bisected to the story that fails, which goes back to in-progress with the failing step in its notes and a thread to its agent
 

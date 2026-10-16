@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:20Z
-updated: 2026-10-16T05:05:43Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli]
 topics: [orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-16T10:43:00Z
-  basis: "flai forecast's 28m (96 s per unit, large band, size 17), raised: a three-way markdown merge by section is new logic with many edge cases, beyond reusing ADR-0098, 0126, and 0157's steps."
-  by: planner-E-0022
-  at: 2026-10-16T05:04:41Z
+  delivery: 2026-10-16T11:06:00Z
+  basis: "Its own forecast of 50m; 11th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399 and S-0400."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0401 A batch settles a rebase that stops inside the manifest's shared paths by the regenerate-and-merge steps and never sends a story back for it, and tells the story's agent of a conflict outside them by message
 

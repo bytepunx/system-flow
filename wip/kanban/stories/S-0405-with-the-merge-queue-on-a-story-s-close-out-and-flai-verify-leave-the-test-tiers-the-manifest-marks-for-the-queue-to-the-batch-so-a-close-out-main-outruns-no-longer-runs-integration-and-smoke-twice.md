@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:59:12Z
-updated: 2026-10-16T05:06:17Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli]
 topics: [conventions, template]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 41m
-  delivery: 2026-10-16T11:23:00Z
-  basis: "flai forecast's 41m (86 s per unit over 75 done improvement stories on claude-opus-5-5, large band, size 28), kept: a tier key, a selection rule, and both copies of a script and a convention."
-  by: planner-E-0022
-  at: 2026-10-16T05:04:47Z
+  delivery: 2026-10-16T11:44:00Z
+  basis: "Its own forecast of 41m; 15th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403 and S-0404."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0405 With the merge queue on, a story's close-out and flai verify leave the test tiers the manifest marks for the queue to the batch, so a close-out main outruns no longer runs integration and smoke twice
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:18:34Z
-updated: 2026-10-16T05:23:54Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-16T16:12:00Z
-  basis: flai forecast's 37m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 23), raised a third for recorded fixtures, replacing the Claude Code reader named outright in two serve files without changing Claude Code runs, and a gateway test, as S-0357's pricing work was, across six tasks in four layers.
-  by: planner-E-0023
-  at: 2026-10-16T05:21:58Z
+  delivery: 2026-10-16T16:15:00Z
+  basis: "Its own forecast of 50m; 20th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408 and S-0409."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0410 A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's
 

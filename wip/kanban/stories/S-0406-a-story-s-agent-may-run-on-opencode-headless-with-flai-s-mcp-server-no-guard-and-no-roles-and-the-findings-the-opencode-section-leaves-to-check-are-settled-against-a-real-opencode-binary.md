@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:13:48Z
-updated: 2026-10-16T05:22:56Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 1h15m
-  delivery: 2026-10-16T12:46:00Z
-  basis: "flai forecast's 51m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 32), raised half for four findings checked by hand against an external binary, a new adapter with a configuration merge, an ADR, and a binary-gated integration test, across eight tasks in four layers; delivery is flai's play-out moved by the raise times the cycle factor 1.11."
-  by: planner-E-0023
-  at: 2026-10-16T05:21:52Z
+  delivery: 2026-10-16T12:49:00Z
+  basis: "Its own forecast of 1h15m; 16th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404 and S-0405."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0406 A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, and the findings the OpenCode section leaves to check are settled against a real opencode binary
 

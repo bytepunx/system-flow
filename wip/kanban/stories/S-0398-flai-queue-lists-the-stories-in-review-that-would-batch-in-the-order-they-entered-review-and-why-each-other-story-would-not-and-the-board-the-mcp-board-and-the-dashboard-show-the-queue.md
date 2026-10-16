@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:36Z
-updated: 2026-10-16T05:05:07Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli, dashboard]
 topics: [orchestration]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 47m
-  delivery: 2026-10-16T08:09:00Z
-  basis: "flai forecast's 47m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 29), kept: a read-only view over existing reads, with one new package."
-  by: planner-E-0022
-  at: 2026-10-16T05:04:37Z
+  delivery: 2026-10-16T08:30:00Z
+  basis: "Its own forecast of 47m; 8th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396 and S-0397."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0398 flai queue lists the stories in review that would batch, in the order they entered review, and why each other story would not, and the board, the MCP board, and the dashboard show the queue
 
