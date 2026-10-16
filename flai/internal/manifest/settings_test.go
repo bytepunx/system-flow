@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 // settingsFixture is a manifest with comments in and around the strategic
@@ -418,5 +419,165 @@ func TestEditSettingsRefusesBadTests(t *testing.T) {
 				t.Errorf("the file changed:\n%s", data)
 			}
 		})
+	}
+}
+
+// componentsFixture is a manifest with comments and blank lines around its
+// sub-projects, one of each kind the components key concerns.
+const componentsFixture = `version: 1
+name: demo
+layout:
+  design: design
+  docs: docs
+  wip: wip
+projects:                 # the releasable components
+  - name: api
+    path: api
+    kind: go
+    tags: [cli]
+  # the app
+  - name: web             # the dashboard
+    path: web
+    kind: sveltekit
+    tags: [dashboard]   # its tag
+
+  - name: ui
+    path: packages/ui
+    kind: svelte
+dashboard:
+  port: 4242
+`
+
+// componentsFiles are the files the fixture's setup modules name.
+var componentsFiles = fstest.MapFS{
+	"web/src/app.css":         {Data: []byte("@import 'tailwindcss';\n")},
+	"web/src/theme.css":       {Data: nil},
+	"packages/ui/src/ui.css":  {Data: nil},
+	"packages/ui/src/lib/x.y": {Data: nil},
+}
+
+// S-0437: EditComponents adds a sub-project's components key after its last
+// line, replaces it whole keeping its comment, and removes it, and every
+// other line, the order of the keys, and the comments stay as they were.
+func TestEditComponents(t *testing.T) {
+	webBlock := "    components:\n      include: [\"src/lib/**/*.svelte\", \"src/stories/*.svelte\"]\n      exclude: [\"src/lib/internal/**\"]\n      setup: src/app.css\n"
+	withWeb := strings.Replace(componentsFixture, "    tags: [dashboard]   # its tag\n", "    tags: [dashboard]   # its tag\n"+webBlock, 1)
+	commented := strings.Replace(withWeb, "    components:\n", "    components:           # the catalogue\n", 1)
+	for _, c := range []struct {
+		name, data, project string
+		set                 *Components
+		want                string
+	}{
+		{"added to a sub-project in the middle", componentsFixture, "web",
+			&Components{Include: []string{"src/lib/**/*.svelte", "src/stories/*.svelte"}, Exclude: []string{"src/lib/internal/**"}, Setup: "src/app.css"},
+			withWeb},
+		{"added to the last sub-project", componentsFixture, "ui", &Components{Setup: "src/ui.css"},
+			strings.Replace(componentsFixture, "    kind: svelte\n", "    kind: svelte\n    components:\n      setup: src/ui.css\n", 1)},
+		{"replaced whole, its comment kept", commented, "web", &Components{Exclude: []string{"src/lib/x.svelte"}},
+			strings.Replace(commented, webBlock[len("    components:\n"):], "      exclude: [src/lib/x.svelte]\n", 1)},
+		{"removed", commented, "web", nil, componentsFixture},
+		{"removed where there is none", componentsFixture, "ui", nil, componentsFixture},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			out, err := EditComponents([]byte(c.data), componentsFiles, c.project, c.set)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(out) != c.want {
+				t.Errorf("got:\n%s\nwant:\n%s", out, c.want)
+			}
+			m := loaded(t, out)
+			i := slices.IndexFunc(m.Projects, func(p Project) bool { return p.Name == c.project })
+			if !sameComponents(m.Projects[i].Components, c.set) {
+				t.Errorf("reads back as %+v, want %+v", m.Projects[i].Components, c.set)
+			}
+		})
+	}
+}
+
+// S-0437: a sub-project's entry whose keys are written after a lone dash, or
+// further in than two spaces, is edited at its own indent.
+func TestEditComponentsKeepsTheEntrysIndent(t *testing.T) {
+	data := "version: 1\nname: demo\nprojects:\n-   name: web\n    path: web\n    kind: sveltekit\n-\n  name: ui\n  path: ui\n  kind: svelte\n"
+	out, err := EditComponents([]byte(data), nil, "ui", &Components{Include: []string{"lib/*.svelte"}})
+	want := strings.Replace(data, "  kind: svelte\n", "  kind: svelte\n  components:\n    include: [\"lib/*.svelte\"]\n", 1)
+	if err != nil || string(out) != want {
+		t.Errorf("after a lone dash: %v\n%s", err, out)
+	}
+	out, err = EditComponents([]byte(data), nil, "web", &Components{Setup: "src/app.css"})
+	want = strings.Replace(data, "    kind: sveltekit\n", "    kind: sveltekit\n    components:\n      setup: src/app.css\n", 1)
+	if err != nil || string(out) != want {
+		t.Errorf("further in: %v\n%s", err, out)
+	}
+}
+
+// S-0437: EditComponents refuses what ComponentErrors finds in the manifest
+// as it would be, with the field and the reason, an unknown sub-project, a
+// key that sets nothing, and an entry it cannot edit, and SetComponents then
+// writes nothing.
+func TestEditComponentsRefuses(t *testing.T) {
+	for _, c := range []struct {
+		name, project string
+		set           *Components
+		field, reason string
+	}{
+		{"a glob that does not parse", "web", &Components{Include: []string{"src/[ab.svelte"}}, "projects[1].components.include", `(sub-project "web") pattern "src/[ab.svelte" is not a valid glob`},
+		{"a setup that names no file", "web", &Components{Setup: "src/missing.css"}, "projects[1].components.setup", `(sub-project "web") "src/missing.css" names no file under web`},
+		{"a setup under another sub-project", "ui", &Components{Setup: "../../web/src/app.css"}, "projects[2].components.setup", "leaves the sub-project"},
+		{"an unsupported kind", "api", &Components{Setup: "main.go"}, "projects[0].components", `(sub-project "api") is set on a sub-project of kind "go"`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := EditComponents([]byte(componentsFixture), componentsFiles, c.project, c.set)
+			var refused *RefusedError
+			if !errors.As(err, &refused) {
+				t.Fatalf("want a refusal, got %v", err)
+			}
+			i := slices.IndexFunc(refused.Problems, func(p Problem) bool { return p.Field == c.field })
+			if i < 0 || !strings.Contains(refused.Problems[i].Reason, c.reason) {
+				t.Errorf("want %s: ...%s..., got %+v", c.field, c.reason, refused.Problems)
+			}
+		})
+	}
+	for _, c := range []struct {
+		name, data, project string
+		set                 *Components
+		want                string
+	}{
+		{"an unknown sub-project", componentsFixture, "nope", &Components{Setup: "x.css"}, `system-flow.yaml has no sub-project "nope"; name one of api, web, ui`},
+		{"no sub-projects", "version: 1\nname: demo\n", "web", nil, `system-flow.yaml has no sub-project "web", and names none under projects`},
+		{"nothing to set", componentsFixture, "web", &Components{}, `nothing to set for sub-project "web"'s components`},
+		{"an entry on one line", "version: 1\nname: demo\nprojects:\n  - {name: web, path: web, kind: sveltekit}\n", "web", &Components{Setup: "x.css"}, "its entry under projects is written on one line"},
+		{"projects on one line", "version: 1\nname: demo\nprojects: [{name: web, path: web, kind: sveltekit}]\n", "web", &Components{Setup: "x.css"}, "projects is written on one line"},
+		{"an entry that begins with components", "version: 1\nname: demo\nprojects:\n  - components: {setup: x.css}\n    name: web\n    path: web\n    kind: sveltekit\n", "web", nil, "begins with components"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if _, err := EditComponents([]byte(c.data), nil, c.project, c.set); err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Errorf("want ...%s..., got %v", c.want, err)
+			}
+		})
+	}
+	root := t.TempDir()
+	file := filepath.Join(root, File)
+	if err := os.WriteFile(file, []byte(componentsFixture), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetComponents(file, "web", &Components{Setup: "src/app.css"}); err == nil {
+		t.Error("SetComponents wrote a setup that names no file under the manifest's folder")
+	}
+	if data, _ := os.ReadFile(file); string(data) != componentsFixture {
+		t.Errorf("the file changed on a refusal:\n%s", data)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "web", "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "web", "src", "app.css"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetComponents(file, "web", &Components{Setup: "src/app.css"}); err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Replace(componentsFixture, "    tags: [dashboard]   # its tag\n", "    tags: [dashboard]   # its tag\n    components:\n      setup: src/app.css\n", 1)
+	if data, _ := os.ReadFile(file); string(data) != want {
+		t.Errorf("SetComponents wrote:\n%s", data)
 	}
 }

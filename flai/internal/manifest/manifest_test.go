@@ -1126,3 +1126,117 @@ func TestTestTiers(t *testing.T) {
 		t.Errorf("a bad tier: %v", err)
 	}
 }
+
+// componentsManifest is a manifest whose projects are the YAML given, a list
+// of sub-projects written at an indent of two.
+func componentsManifest(t *testing.T, projects string) Manifest {
+	t.Helper()
+	return loaded(t, []byte("version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\nprojects:\n"+projects))
+}
+
+// S-0437: a sveltekit or svelte sub-project's components settings are its
+// key over the defaults; any other kind has none.
+func TestComponentSettings(t *testing.T) {
+	m := componentsManifest(t, `  - {name: app, path: app, kind: sveltekit}
+  - {name: ui, path: ui, kind: svelte}
+  - {name: api, path: api, kind: go}
+  - name: site
+    path: site
+    kind: sveltekit
+    components:
+      include: ["src/**/*.svelte"]
+      exclude: ["src/routes/**"]
+      setup: " src/app.css "
+  - name: kit
+    path: kit
+    kind: svelte
+    components:
+      setup: src/theme.css
+`)
+	defaults := Components{Include: []string{DefaultComponentInclude}}
+	for _, c := range []struct {
+		i    int
+		want Components
+		ok   bool
+	}{
+		{0, defaults, true},
+		{1, defaults, true},
+		{2, Components{}, false},
+		{3, Components{Include: []string{"src/**/*.svelte"}, Exclude: []string{"src/routes/**"}, Setup: "src/app.css"}, true},
+		{4, Components{Include: []string{DefaultComponentInclude}, Setup: "src/theme.css"}, true},
+	} {
+		p := m.Projects[c.i]
+		got, ok := p.ComponentSettings()
+		if ok != c.ok || !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: got %+v, %v; want %+v, %v", p.Name, got, ok, c.want, c.ok)
+		}
+	}
+	if !SupportsComponents("sveltekit") || !SupportsComponents("svelte") || SupportsComponents("go") || SupportsComponents("template") {
+		t.Error("SupportsComponents takes sveltekit and svelte alone")
+	}
+	got, _ := m.Projects[3].ComponentSettings()
+	got.Include[0] = "changed"
+	if m.Projects[3].Components.Include[0] != "src/**/*.svelte" {
+		t.Error("ComponentSettings shares its include with the manifest")
+	}
+}
+
+// S-0437: ComponentErrors refuses a glob that is not valid, a setup that is
+// not a clean path inside the sub-project or names no file under it, and the
+// key on a kind whose components flai does not read; it checks no file with
+// no file system.
+func TestComponentErrors(t *testing.T) {
+	fsys := fstest.MapFS{
+		"web/src/app.css":   {Data: []byte("@import 'tailwindcss';\n")},
+		"web/src/lib/x.css": {Data: nil},
+	}
+	for _, c := range []struct {
+		name, project, want string
+	}{
+		{"valid", "    components:\n      include: [\"src/lib/**/*.svelte\", src/Button.svelte]\n      exclude: [\"src/lib/internal/**\"]\n      setup: src/app.css\n", ""},
+		{"the key with defaults alone", "    components: {}\n", ""},
+		{"an unclosed bracket", "    components:\n      include: [\"src/[ab.svelte\"]\n",
+			`projects[0].components.include (sub-project "web") pattern "src/[ab.svelte" is not a valid glob, such as an unclosed [ or a trailing \; fix it or remove it`},
+		{"** inside a segment", "    components:\n      exclude: [\"src/**x\"]\n",
+			`projects[0].components.exclude (sub-project "web") pattern "src/**x" has ** inside a segment`},
+		{"an empty glob", "    components:\n      include: [\"\"]\n",
+			`projects[0].components.include (sub-project "web") pattern "" is empty; write a glob relative to the sub-project's folder, such as src/lib/**/*.svelte, or remove it`},
+		{"an absolute glob", "    components:\n      include: [\"/src/*.svelte\"]\n",
+			`projects[0].components.include (sub-project "web") pattern "/src/*.svelte" is an absolute path; write it relative to the sub-project's folder`},
+		{"a glob that leaves", "    components:\n      exclude: [\"../api/**\"]\n",
+			`projects[0].components.exclude (sub-project "web") pattern "../api/**" has a .. segment, which leaves the sub-project`},
+		{"a setup that names no file", "    components:\n      setup: src/missing.css\n",
+			`projects[0].components.setup (sub-project "web") "src/missing.css" names no file under web; write the path of a module of the sub-project, relative to its folder, such as src/app.css, or remove it`},
+		{"a setup that is a folder", "    components:\n      setup: src/lib\n",
+			`projects[0].components.setup (sub-project "web") "src/lib" names no file under web`},
+		{"a setup that leaves", "    components:\n      setup: ../api/main.go\n",
+			`projects[0].components.setup (sub-project "web") "../api/main.go" leaves the sub-project; write a module inside it, relative to its root, such as src/app.css`},
+		{"an absolute setup", "    components:\n      setup: /web/src/app.css\n",
+			`projects[0].components.setup (sub-project "web") "/web/src/app.css" is an absolute path; write it relative to the sub-project's folder, such as src/app.css`},
+		{"a setup not clean", "    components:\n      setup: src//app.css\n",
+			`projects[0].components.setup (sub-project "web") "src//app.css" is not a clean path`},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			m := componentsManifest(t, "  - name: web\n    path: web\n    kind: sveltekit\n"+c.project)
+			errs := m.ComponentErrors(fsys)
+			switch {
+			case c.want == "" && len(errs) > 0:
+				t.Errorf("want none, got %q", errs)
+			case c.want != "" && (len(errs) != 1 || !strings.HasPrefix(errs[0], c.want)):
+				t.Errorf("want one beginning %q, got %q", c.want, errs)
+			}
+		})
+	}
+	m := componentsManifest(t, "  - name: web\n    path: web\n    kind: sveltekit\n  - name: api\n    path: api\n    kind: go\n    components:\n      include: [\"src/[\"]\n")
+	want := []string{`projects[1].components (sub-project "api") is set on a sub-project of kind "go", whose components flai does not read; remove it, or set kind to sveltekit or svelte if the sub-project is one`}
+	if errs := m.ComponentErrors(fsys); !reflect.DeepEqual(errs, want) {
+		t.Errorf("the key on an unsupported kind:\n got %q\nwant %q", errs, want)
+	}
+	m = componentsManifest(t, "  - name: web\n    path: web\n    kind: sveltekit\n    components:\n      setup: src/missing.css\n")
+	if errs := m.ComponentErrors(nil); len(errs) != 0 {
+		t.Errorf("with no file system the setup's file is not checked: %q", errs)
+	}
+	if p := splitProblem(m.ComponentErrors(fsys)[0]); p.Field != "projects[0].components.setup" {
+		t.Errorf("the problem's field: %+v", p)
+	}
+}

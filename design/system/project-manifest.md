@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-15
+updated: 2026-10-16
 status: active
 topics: [cli, template]
 ---
@@ -31,8 +31,12 @@ projects:                                    # releasable components at the repo
     tags: [cli]                              # story tags that mean "delivers to flai"
   - name: flaiover
     path: flaiover
-    kind: sveltekit
+    kind: sveltekit                          # sveltekit or svelte: flai reads its components (S-0437)
     tags: [dashboard]
+    components:                              # optional (S-0437): where its components are found; flai components config writes it
+      include: ["src/lib/**/*.svelte"]       # globs from the sub-project's folder, as claims.shared; default src/lib/**/*.svelte
+      exclude: ["src/lib/internal/**"]       # globs of files include finds that are not components; default none
+      setup: src/app.css                     # a module of the sub-project the harness imports before any component; default none
   - name: template
     path: template
     kind: template                           # released by bumping template.yaml and CHANGELOG.md, not by tag
@@ -124,6 +128,12 @@ Rules:
 - `system-flow.lock.yaml` beside the manifest records the hash of every rendered file so upgrade can tell project edits from baseline (ADR-0015), the `topics` the template gave each marker file so upgrade keeps a project's own (S-0134), and under `vars` the value of every template variable the project was last rendered with, so upgrade renders a fork's own variables again (S-0185).
 - `name`, `key`, `description`, `owner`, and `repo` are read back by `flai upgrade` as the template variables `project_name`, `project_key`, `description`, `owner`, and `repo_url`, ahead of the values the lock recorded, so an edit to them here reaches the next upgrade. `flai upgrade --var` refuses them and names the key to edit ([template.md](template.md#upgrading-a-project)).
 - `projects` are the components `flai release` versions, one item at a time or, since S-0087, batched by `flai release --pending`: code kinds get `<name>/vX.Y.Z` tags, kind `template` gets its version file bumped. `flai accept` versions nothing. `tags` are aliases a story or epic tag may use to say which component it delivers to.
+- `projects[].components` (S-0437) says where flai finds the components of a sub-project whose `kind` is `sveltekit`, a SvelteKit app, or `svelte`, a Svelte project that is not one, such as a component package built with Vite. Sub-projects of any other kind have no components flai reads (`manifest.ComponentKinds`, `manifest.SupportsComponents`). It has:
+  - `include`, globs of the component files, relative to the sub-project's folder, with the syntax of `claims.shared`: `*` within one segment, `**` zero or more whole segments, `?` one character. Unset or empty, it is `src/lib/**/*.svelte`, so the app's routes are left out.
+  - `exclude`, globs of files `include` finds that are not components to list, written the same way. Unset, nothing is excluded.
+  - `setup`, a module of the sub-project, relative to its folder, that the harness imports before any component, such as the app's stylesheet. Unset, there is none.
+
+  `Project.ComponentSettings` gives the settings in effect, the key over those defaults, and false for a kind it does not take. `Manifest.ComponentErrors` reports, each by the sub-project's index, field, and name, such as `projects[1].components.include (sub-project "web") pattern "src/[" is not a valid glob …`: a glob that is empty, absolute, has a `.` or `..` segment, has `**` inside a segment, or does not parse; a `setup` that is absolute, not clean, or leaves the sub-project, or names no file under the sub-project's folder; and `components` on a sub-project of another kind. `flai check` reports them as `manifest.components` errors, and `flai manifest set` refuses a manifest that has one, with no file checked. `flai components config <sub-project> [--include] [--exclude] [--setup] [--unset]` writes the key whole, or removes it, through `manifest.SetComponents`. It keeps every other line of the manifest, the order of its keys, and its comments, and refuses an unknown sub-project and any problem `ComponentErrors` finds in the manifest as it would be, writing nothing. `manifest.EditComponents` gives the bytes it would write, for a caller that checks them first. A key it cannot edit in place, such as a sub-project written on one line, is refused with what to write instead.
 - `dashboard.notify_url`, when set, makes the dashboard's server POST `{ project, entry: { key, kind, title, href, at } }` to that URL for each inbox entry that appears after it started: one attempt, a short timeout, a warning in the log on failure. The token and file contents are never sent. Unset by default.
 - `dashboard.autocommit: false` leaves documents saved from the dashboard uncommitted; the default commits each save on the main checkout, one path per commit (ADR-0023).
 - `dashboard.allow_unsigned`, when set, is this project's allowance for unsigned builds, over `dashboard.allow_unsigned` in the host's flai configuration (S-0239, [ADR-0070](../adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)): `true` allows them for this project, `false` refuses them though the host allows them, and unset leaves the host's. `flai serve` reads it before each dial, and `flai dashboard` when it starts the container. What the allowance lets through and how it is shown is in [release-signing.md](release-signing.md#the-development-case). An older flai ignores it.

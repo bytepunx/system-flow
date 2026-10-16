@@ -3,8 +3,10 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"math"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -364,6 +366,194 @@ func EditSettings(data []byte, set []Assignment, unset []string) ([]byte, error)
 	return out, nil
 }
 
+// SetComponents writes the components key of the sub-project named project
+// in the manifest at path, as EditComponents does, checking setup against
+// the files of the folder the manifest is in; on a refusal it writes
+// nothing.
+func SetComponents(path, project string, c *Components) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	out, err := EditComponents(data, os.DirFS(filepath.Dir(path)), project, c)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, out, 0o644)
+}
+
+// EditComponents is the manifest data with the components key of the
+// sub-project named project replaced, whole, by c, or removed when c is nil
+// so that the defaults apply (S-0437); every other line, the order of the
+// keys, and the comments are kept. It refuses a sub-project the manifest does
+// not name, a c that sets nothing, and an entry laid out in a way it cannot
+// edit; and, with a *RefusedError naming each field and why, any problem
+// ComponentErrors finds in the manifest as it would be, checking setup
+// against fsys, the repository root, unless fsys is nil.
+func EditComponents(data []byte, fsys fs.FS, project string, c *Components) ([]byte, error) {
+	if c != nil && len(c.Include) == 0 && len(c.Exclude) == 0 && c.Setup == "" {
+		return nil, fmt.Errorf("nothing to set for sub-project %q's components: give include, exclude, or setup, or unset the key for its defaults", project)
+	}
+	var before Manifest
+	if err := yaml.Unmarshal(data, &before); err != nil {
+		return nil, fmt.Errorf("cannot read system-flow.yaml to write sub-project %q's components: %w; fix its YAML by hand, then run this again", project, err)
+	}
+	idx := slices.IndexFunc(before.Projects, func(p Project) bool { return p.Name == project })
+	if idx < 0 {
+		names := make([]string, len(before.Projects))
+		for i, p := range before.Projects {
+			names[i] = p.Name
+		}
+		if len(names) == 0 {
+			return nil, fmt.Errorf("system-flow.yaml has no sub-project %q, and names none under projects; add the sub-project there first", project)
+		}
+		return nil, fmt.Errorf("system-flow.yaml has no sub-project %q; name one of %s", project, strings.Join(names, ", "))
+	}
+	lines, err := componentsLines(strings.Split(string(data), "\n"), idx, project, c)
+	if err != nil {
+		return nil, err
+	}
+	out := []byte(strings.Join(lines, "\n"))
+	var after Manifest
+	if err := yaml.Unmarshal(out, &after); err != nil || !componentsReadBack(before, after, idx, c) {
+		return nil, fmt.Errorf("cannot write sub-project %q's components so that system-flow.yaml reads them back as given; the file is left as it was: edit the key by hand", project)
+	}
+	if msgs := after.ComponentErrors(fsys); len(msgs) > 0 {
+		problems := make([]Problem, len(msgs))
+		for i, msg := range msgs {
+			problems[i] = splitProblem(msg)
+		}
+		return nil, &RefusedError{Problems: problems}
+	}
+	return out, nil
+}
+
+// componentsLines are the manifest's lines with the components key of the
+// idx-th entry of projects, named project, written from c, or removed when c
+// is nil: replaced where it is, keeping its line's comment, or added after the
+// entry's last line.
+func componentsLines(lines []string, idx int, project string, c *Components) ([]string, error) {
+	cannot := func(why string) error {
+		return fmt.Errorf("cannot write sub-project %q's components: %s; edit the key by hand, or write it that way and run this again", project, why)
+	}
+	list, _ := findKey(lines, 0, len(lines), "projects")
+	if list.at < 0 {
+		return nil, cannot("system-flow.yaml has no projects block")
+	}
+	rest, _ := keyRest(lines[list.at], "projects")
+	if value, _ := splitComment(rest); value != "" {
+		return nil, cannot("projects is written on one line; write it as a block, a sub-project an item under it")
+	}
+	var items []int
+	itemIn := ""
+	for i := list.at + 1; i < list.end; i++ {
+		if !isContent(lines[i]) {
+			continue
+		}
+		t := strings.TrimSpace(lines[i])
+		if len(items) == 0 {
+			itemIn = indent(lines[i])
+		}
+		if indent(lines[i]) == itemIn && (t == "-" || strings.HasPrefix(t, "- ")) {
+			items = append(items, i)
+		}
+	}
+	if idx >= len(items) {
+		return nil, cannot("projects is not a list of items, each a sub-project")
+	}
+	from, to := items[idx], list.end
+	if idx+1 < len(items) {
+		to = items[idx+1]
+	}
+	first := strings.TrimPrefix(strings.TrimSpace(lines[from]), "-")
+	head, _ := splitComment(first)
+	var keyIn string
+	switch {
+	case head == "":
+		next := from + 1
+		for next < to && !isContent(lines[next]) {
+			next++
+		}
+		if next == to {
+			return nil, cannot("its entry under projects is empty")
+		}
+		keyIn = indent(lines[next])
+	case strings.HasPrefix(head, "{"):
+		return nil, cannot("its entry under projects is written on one line; write it as a block, a key a line")
+	default:
+		keyIn = itemIn + " " + strings.Repeat(" ", len(first)-len(strings.TrimLeft(first, " \t")))
+	}
+	if _, ok := keyRest(head, "components"); ok {
+		return nil, cannot("its entry under projects begins with components; move name to its first line")
+	}
+	key := span{at: -1}
+	for i := from + 1; i < to; i++ {
+		if isContent(lines[i]) && indent(lines[i]) == keyIn {
+			if _, ok := keyRest(lines[i], "components"); ok {
+				key = span{at: i, end: valueEnd(lines, i, to)}
+				break
+			}
+		}
+	}
+	if c == nil {
+		if key.at < 0 {
+			return lines, nil
+		}
+		return slices.Delete(slices.Clone(lines), key.at, key.end), nil
+	}
+	block := []string{keyIn + "components:"}
+	if key.at >= 0 {
+		old, _ := keyRest(lines[key.at], "components")
+		if value, comment := splitComment(old); value == "" {
+			block[0] = lines[key.at] // keep the key's line and its comment
+		} else {
+			block[0] = withComment(block[0], comment)
+		}
+	}
+	if len(c.Include) > 0 {
+		block = append(block, keyIn+"  include: "+flowList(c.Include))
+	}
+	if len(c.Exclude) > 0 {
+		block = append(block, keyIn+"  exclude: "+flowList(c.Exclude))
+	}
+	if c.Setup != "" {
+		block = append(block, keyIn+"  setup: "+yamlScalar(c.Setup))
+	}
+	if key.at >= 0 {
+		return slices.Concat(lines[:key.at], block, lines[key.end:]), nil
+	}
+	at := contentEnd(lines, from, to)
+	return slices.Concat(lines[:at], block, lines[at:]), nil
+}
+
+// componentsReadBack reports whether after, the manifest as written, has
+// the sub-projects before has, in the same order with the same names and
+// components, but the idx-th, whose components are c.
+func componentsReadBack(before, after Manifest, idx int, c *Components) bool {
+	if len(after.Projects) != len(before.Projects) {
+		return false
+	}
+	for i, p := range after.Projects {
+		want := before.Projects[i].Components
+		if i == idx {
+			want = c
+		}
+		if p.Name != before.Projects[i].Name || !sameComponents(p.Components, want) {
+			return false
+		}
+	}
+	return true
+}
+
+// sameComponents reports whether two components keys say the same, a list
+// absent and one empty alike.
+func sameComponents(a, b *Components) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return slices.Equal(a.Include, b.Include) && slices.Equal(a.Exclude, b.Exclude) && a.Setup == b.Setup
+}
+
 // write is one key to set or remove.
 type write struct {
 	setting Setting
@@ -627,6 +817,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.Analysis.Errors()...)
 	msgs = append(msgs, m.TestErrors()...)
 	msgs = append(msgs, m.ProviderErrors()...)
+	msgs = append(msgs, m.ComponentErrors(nil)...)
 	for _, e := range m.Claims.Errors() {
 		msgs = append(msgs, e.Error())
 	}

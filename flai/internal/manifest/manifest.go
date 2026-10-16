@@ -961,17 +961,31 @@ func dirProblem(d string) string {
 // or empty. what is what p names, such as a folder, and example and clean
 // are paths the reason gives as ones to write.
 func repoPathProblem(p, what, example, clean string) string {
+	return pathProblem(p, "the repository", "the repository root", what, example, clean)
+}
+
+// pathProblem says what is wrong with p, a path the manifest names inside
+// within, such as the repository, whose root is root, such as the repository
+// root, or "" when it is valid: a clean path inside it, relative to its root,
+// or empty. what, example, and clean are as repoPathProblem's.
+func pathProblem(p, within, root, what, example, clean string) string {
 	switch {
 	case p == "":
 		return ""
-	case strings.HasPrefix(p, "/") || strings.HasPrefix(p, `\`) || len(p) > 1 && p[1] == ':':
-		return "is an absolute path; write it relative to the repository root, such as " + example
+	case isAbsolute(p):
+		return "is an absolute path; write it relative to " + root + ", such as " + example
 	case path.Clean(p) == ".." || strings.HasPrefix(path.Clean(p), "../"):
-		return "leaves the repository; write " + what + " inside it, relative to its root, such as " + example
+		return "leaves " + within + "; write " + what + " inside it, relative to its root, such as " + example
 	case path.Clean(p) != p:
 		return "is not a clean path; write it with single slashes, no . or .. segments, and none at the end, such as " + clean
 	}
 	return ""
+}
+
+// isAbsolute reports whether p is an absolute path, on any system: one
+// beginning with a slash or a backslash, or with a drive letter.
+func isAbsolute(p string) bool {
+	return strings.HasPrefix(p, "/") || strings.HasPrefix(p, `\`) || len(p) > 1 && p[1] == ':'
 }
 
 // Template records which template produced the project.
@@ -990,6 +1004,148 @@ type Project struct {
 	Path string   `yaml:"path" json:"path"`
 	Kind string   `yaml:"kind" json:"kind"`
 	Tags []string `yaml:"tags,omitempty" json:"tags,omitempty"`
+	// Components is where a Svelte sub-project's components are found and
+	// what the harness imports before them (S-0437); nil means the defaults
+	// ComponentSettings gives. Only a kind SupportsComponents takes it.
+	Components *Components `yaml:"components,omitempty" json:"components,omitempty"`
+}
+
+// The kinds of sub-project whose components flai reads (S-0437).
+const (
+	// ProjectKindSvelteKit is a SvelteKit app.
+	ProjectKindSvelteKit = "sveltekit"
+	// ProjectKindSvelte is a Svelte project that is not a SvelteKit app, such
+	// as a component package built with Vite.
+	ProjectKindSvelte = "svelte"
+)
+
+// ComponentKinds are the kinds of sub-project whose components flai reads,
+// in the order they are listed to the operator.
+var ComponentKinds = []string{ProjectKindSvelteKit, ProjectKindSvelte}
+
+// DefaultComponentInclude is the glob, relative to the sub-project's folder,
+// that finds its components when components.include is not set: every
+// .svelte file under src/lib, so that routes are left out.
+const DefaultComponentInclude = "src/lib/**/*.svelte"
+
+// exampleComponentSetup is the setup a refusal of components.setup gives as
+// one to write.
+const exampleComponentSetup = "src/app.css"
+
+// Components is a sub-project's say about its components (S-0437). Its globs
+// have the syntax of claims.shared's, relative to the sub-project's folder.
+type Components struct {
+	// Include are the globs of the sub-project's component files; empty means
+	// DefaultComponentInclude.
+	Include []string `yaml:"include,omitempty" json:"include,omitempty"`
+	// Exclude are the globs of files Include finds that are not components to
+	// list; empty means none.
+	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty"`
+	// Setup is a module of the sub-project, relative to its folder, that the
+	// harness imports before any component, such as the app's stylesheet;
+	// empty means none.
+	Setup string `yaml:"setup,omitempty" json:"setup,omitempty"`
+}
+
+// SupportsComponents reports whether flai reads the components of a
+// sub-project of kind: one of ComponentKinds.
+func SupportsComponents(kind string) bool {
+	return slices.Contains(ComponentKinds, kind)
+}
+
+// ComponentSettings are the sub-project's components settings in effect:
+// its components key over the defaults, include DefaultComponentInclude,
+// nothing excluded, and no setup. False, with none, when its kind is not one
+// SupportsComponents takes. It does not say whether the settings are valid;
+// ComponentErrors does.
+func (p Project) ComponentSettings() (Components, bool) {
+	if !SupportsComponents(p.Kind) {
+		return Components{}, false
+	}
+	c := Components{Include: []string{DefaultComponentInclude}}
+	if p.Components == nil {
+		return c, true
+	}
+	if len(p.Components.Include) > 0 {
+		c.Include = slices.Clone(p.Components.Include)
+	}
+	c.Exclude = slices.Clone(p.Components.Exclude)
+	c.Setup = strings.TrimSpace(p.Components.Setup)
+	return c, true
+}
+
+// ComponentErrors are what is wrong with the sub-projects' components keys,
+// one sentence each, each beginning with the sub-project's index and field,
+// such as projects[1].components.include: a key on a sub-project of a kind
+// SupportsComponents does not take, a glob that is not valid, and a setup
+// that is not a clean path inside the sub-project or, when fsys, the
+// repository root, is not nil, names no file under the sub-project's folder.
+// None when every key is valid.
+func (m Manifest) ComponentErrors(fsys fs.FS) []string {
+	var errs []string
+	for i, p := range m.Projects {
+		c := p.Components
+		if c == nil {
+			continue
+		}
+		at := func(field string) string { return componentField(i, p, field) }
+		if !SupportsComponents(p.Kind) {
+			errs = append(errs, fmt.Sprintf("%s is set on a sub-project of kind %q, whose components flai does not read; remove it, or set kind to %s if the sub-project is one", at(""), p.Kind, strings.Join(ComponentKinds, " or ")))
+			continue
+		}
+		for _, list := range []struct {
+			field string
+			globs []string
+		}{{"include", c.Include}, {"exclude", c.Exclude}} {
+			for _, g := range list.globs {
+				if r := componentGlobProblem(g); r != "" {
+					errs = append(errs, fmt.Sprintf("%s pattern %q %s", at(list.field), g, r))
+				}
+			}
+		}
+		setup := strings.TrimSpace(c.Setup)
+		if r := pathProblem(setup, "the sub-project", "the sub-project's folder", "a module", exampleComponentSetup, exampleComponentSetup); r != "" {
+			errs = append(errs, fmt.Sprintf("%s %q %s", at("setup"), c.Setup, r))
+		} else if setup != "" && fsys != nil && !isFile(fsys, path.Join(path.Clean(strings.TrimSpace(p.Path)), setup)) {
+			errs = append(errs, fmt.Sprintf("%s %q names no file under %s; write the path of a module of the sub-project, relative to its folder, such as %s, or remove it", at("setup"), c.Setup, path.Clean(strings.TrimSpace(p.Path)), exampleComponentSetup))
+		}
+	}
+	return errs
+}
+
+// componentField is a sub-project's components field as ComponentErrors
+// names it, such as projects[1].components.include (sub-project "web"), or
+// the key itself when field is empty.
+func componentField(i int, p Project, field string) string {
+	s := fmt.Sprintf("projects[%d].components", i)
+	if field != "" {
+		s += "." + field
+	}
+	if name := strings.TrimSpace(p.Name); name != "" {
+		s += fmt.Sprintf(" (sub-project %q)", name)
+	}
+	return s
+}
+
+// componentGlobProblem says what is wrong with a glob of components.include
+// or components.exclude, or "" when it is valid: a path relative to the
+// sub-project's folder and inside it, with the syntax of claims.shared's.
+func componentGlobProblem(g string) string {
+	switch {
+	case strings.TrimSpace(g) == "":
+		return "is empty; write a glob relative to the sub-project's folder, such as " + DefaultComponentInclude + ", or remove it"
+	case isAbsolute(g):
+		return "is an absolute path; write it relative to the sub-project's folder, such as " + DefaultComponentInclude
+	}
+	for _, seg := range strings.Split(g, "/") {
+		switch seg {
+		case "..":
+			return "has a .. segment, which leaves the sub-project; write a glob inside its folder, relative to it, such as " + DefaultComponentInclude
+		case ".":
+			return "has a . segment; write the glob without it, such as " + DefaultComponentInclude + " for ./" + DefaultComponentInclude
+		}
+	}
+	return patternProblem(g)
 }
 
 // Dashboard is how the flaiover image runs for this project.

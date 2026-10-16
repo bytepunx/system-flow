@@ -86,8 +86,11 @@ Beside the file, in the folders `serve` and `host`, flai keeps state, tokens, an
 | `layout.<name>` | `design`, `docs`, `wip` | The folder names; `design`, `docs`, and `wip` are required |
 | `projects[].name` | none | A releasable component's name, the prefix of its release tags |
 | `projects[].path` | none | Its folder at the root |
-| `projects[].kind` | none | `go`, `sveltekit`, `template`, and so on; `template` is released by its version file, not a tag |
+| `projects[].kind` | none | `go`, `sveltekit`, `svelte`, `template`, and so on; `template` is released by its version file, not a tag. flai reads the components of a `sveltekit` or `svelte` sub-project, a Svelte project that is not a SvelteKit app |
 | `projects[].tags` | none | Story tags that mean a story delivers to it |
+| `projects[].components.include` | `src/lib/**/*.svelte`, so routes are left out | For a `sveltekit` or `svelte` sub-project, the globs of its component files, relative to its folder, with the syntax of `claims.shared`. A glob that does not parse, or one that leaves the sub-project, is a `flai check` error, and so is `components` on a sub-project of any other kind. Changed with `flai components config <sub-project> [--include] [--exclude] [--setup] [--unset]`, which keeps the manifest's other keys, order, and comments and refuses what the check reports, or by hand ([Project manifest](../../design/system/project-manifest.md)) |
+| `projects[].components.exclude` | none | The globs of files `include` finds that are not components to list, relative to the sub-project's folder, as `include`. Changed with `flai components config` or by hand |
+| `projects[].components.setup` | none | A module of the sub-project, relative to its folder, that the harness imports before any component, such as the app's stylesheet `src/app.css`. A path that is not clean, leaves the sub-project, or names no file is a `flai check` error. Changed with `flai components config` or by hand |
 | `dashboard.image` | the configuration's | The image, for this project, over `dashboard.image` in the configuration |
 | `dashboard.tag` | the configuration's | The flaiover release, `latest` or `X.Y.Z`, run by digest, or another image's tag, likewise |
 | `dashboard.port` | the configuration's | The host port, likewise |
