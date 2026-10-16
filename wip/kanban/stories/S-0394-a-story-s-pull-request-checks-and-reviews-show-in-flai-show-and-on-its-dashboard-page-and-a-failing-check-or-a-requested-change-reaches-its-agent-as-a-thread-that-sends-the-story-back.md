@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:36:28Z
-updated: 2026-10-16T04:41:28Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, dashboard]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h15m
-  delivery: 2026-10-16T08:25:00Z
-  basis: flai forecast's 59m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 37), raised about a quarter, as S-0384 was, for spanning flai and flaiover with both test tiers and a Svelte component, across eight tasks in four layers.
-  by: planner-E-0021
-  at: 2026-10-16T04:41:28Z
+  delivery: 2026-10-16T09:08:00Z
+  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 5, behind S-0241, S-0392 and S-0393."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0394 A story's pull request checks and reviews show in flai show and on its dashboard page, and a failing check or a requested change reaches its agent as a thread that sends the story back
 

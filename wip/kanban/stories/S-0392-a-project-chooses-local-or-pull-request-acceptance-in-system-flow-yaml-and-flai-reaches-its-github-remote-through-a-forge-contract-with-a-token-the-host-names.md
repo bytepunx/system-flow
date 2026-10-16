@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:33:00Z
-updated: 2026-10-16T04:41:10Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli, template]
 topics: [release]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 1h
-  delivery: 2026-10-16T05:41:00Z
-  basis: flai forecast's 48m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 30), raised a quarter for a new package with an HTTP adapter and a fake forge the later stories reuse, plus an ADR, across seven tasks in three layers.
-  by: planner-E-0021
-  at: 2026-10-16T04:41:10Z
+  delivery: 2026-10-16T06:32:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0241."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0392 A project chooses local or pull-request acceptance in system-flow.yaml, and flai reaches its GitHub remote through a forge contract with a token the host names
 

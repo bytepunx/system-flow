@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:34:50Z
-updated: 2026-10-16T04:41:08Z
+updated: 2026-10-16T05:24:55Z
 transitions: []
 tags: [cli, template]
 topics: [release]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h5m
-  delivery: 2026-10-16T07:01:00Z
-  basis: flai forecast's 50m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 31), raised to 1h5m for flai serve's push with a lease against a scratch remote, the guard, and the agents' environment, across six tasks in four layers.
-  by: planner-E-0021
-  at: 2026-10-16T04:41:08Z
+  delivery: 2026-10-16T07:45:00Z
+  basis: "Its own forecast of 1h5m; 3rd in the pull order with an in-progress limit of 5, behind S-0241 and S-0392."
+  by: flai
+  at: 2026-10-16T05:24:55Z
 ---
 # S-0393 Under pull-request acceptance, a story's move to review has flai serve push its branch and open or update one pull request from the project's pull request template
 
