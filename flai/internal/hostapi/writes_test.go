@@ -54,6 +54,8 @@ var good = map[string]struct {
 	"thread.resolve":     {`{"id":"TH-0001","reason":"answered",` + rid + `}`, "thread resolve TH-0001 --by=olive --reason=answered --json", ""},
 	"doc.show":           {`{"path":"design/system/overview.md"}`, "doc show --json -- design/system/overview.md", ""},
 	"doc.save":           {`{"path":"design/system/overview.md","content":"# new\n","hash":"abcdef0123456789","message":"tidy",` + rid + `}`, "doc save --hash=abcdef0123456789 --trailer=" + Trailer + " --message=tidy --json -- design/system/overview.md", "# new\n"},
+	"file.get":           {`{"path":"design/system/palette.json"}`, "file show --json -- design/system/palette.json", ""},
+	"file.save":          {`{"path":"design/system/palette.json","content":"{}\n","hash":"abcdef0123456789","message":"tidy",` + rid + `}`, "file save --hash=abcdef0123456789 --trailer=" + Trailer + " --message=tidy --json -- design/system/palette.json", "{}\n"},
 	"adr.new":            {`{"title":"Decide it","status":"accepted","refines":["ADR-0016"],"supersedes":["7"],"body":"## Context\nx\n",` + rid + `}`, "adr new --status=accepted --supersedes=7 --refines=16 --body-stdin --autocommit --trailer=" + Trailer + " --json -- Decide it", "## Context\nx\n"},
 	"adr.template":       {`{}`, "adr new --print-body --json", ""},
 	"adr.accept":         {`{"id":"ADR-0028",` + rid + `}`, "adr accept 28 --autocommit --trailer=" + Trailer + " --json", ""},
@@ -218,6 +220,8 @@ var refused = map[string][]string{
 	"thread.resolve":     {`{"id":"TH-1; ls",` + rid + `}`},
 	"doc.show":           {`{"path":"../../etc/passwd"}`, `{"path":"system-flow.yaml"}`, `{"path":"-rf.md"}`, `{"path":"src/notes.md"}`, `{"path":"design/x.md","story":"--help"}`, `{"path":"design/x.md","story":"T-0001"}`},
 	"doc.save":           {`{"path":"design/x.md","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.sh","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123","story":"S-1 --no-commit",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123","story":"E-0001",` + rid + `}`},
+	"file.get":           {`{"path":"../../etc/passwd"}`, `{"path":"/etc/passwd"}`, `{"path":"system-flow.yaml"}`, `{"path":"-rf.json"}`, `{"path":"src/main.go"}`, `{"path":"design/system/overview.md"}`, `{"path":"wip/kanban/board.json"}`, `{"path":""}`, `{"path":"design/x.json","story":"--help"}`, `{"path":"design/x.json","story":"T-0001"}`},
+	"file.save":          {`{"path":"design/x.json","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.json","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.json","content":"c",` + rid + `}`, `{"content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"../x.json","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123","story":"S-1 --no-commit",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123","story":"E-0001",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123"}`},
 	"adr.new":            {`{"title":"t","body":"b","status":"final",` + rid + `}`, `{"title":"t","body":"b","refines":["--autocommit"],` + rid + `}`, `{"title":"t","body":"b","supersedes":["0"],` + rid + `}`},
 	"adr.template":       {`[]`},
 	"adr.accept":         {`{"id":"--trailer=x",` + rid + `}`},
@@ -1869,6 +1873,123 @@ func TestDocMethodsRunInAStorysWorktree(t *testing.T) {
 	_, e = call("doc.save", save, Ran{Exit: 3, Stdout: []byte(`{"conflict":{"hash":"h2","current":"# theirs\n"}}`), Events: fatal("conflict: design/system/overview.md changed after it was loaded")})
 	if e == nil || e.Code != Conflict || e.Data.(map[string]any)["hash"] != "h2" {
 		t.Errorf("a conflict on the branch: %+v", e)
+	}
+}
+
+// S-0436: file.get and file.save with a story run flai file --story in that
+// story's worktree, as doc.show and doc.save do, and refuse a story without
+// one, or that is not there, before anything runs.
+func TestFileMethodsRunInAStorysWorktree(t *testing.T) {
+	p := withDocs(t) // S-0001 is in the fixture
+	call := func(method, params string, ran Ran) (*recorder, *channel.Error) {
+		rec := &recorder{ran: ran}
+		_, e := writeMethods(rec.run, time.Now, Host{})[method](context.Background(), p, json.RawMessage(params))
+		return rec, e
+	}
+	get := `{"path":"design/system/palette.json","story":"S-0001"}`
+	save := `{"path":"design/system/palette.json","content":"{}\n","hash":"abcdef0123456789","story":"S-0001",` + rid + `}`
+	for method, params := range map[string]string{"file.get": get, "file.save": save} {
+		if rec, e := call(method, params, Ran{}); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, "S-0001 has no worktree") || !strings.Contains(e.Message, "leave story out") || len(rec.runs) != 0 {
+			t.Errorf("%s for a story with no worktree: %+v", method, e)
+		}
+	}
+	if rec, e := call("file.get", `{"path":"design/system/palette.json","story":"S-9999"}`, Ran{}); e == nil || e.Code != NotFound || len(rec.runs) != 0 {
+		t.Errorf("a story that is not there: %+v", e)
+	}
+
+	worktree := filepath.Join(p.Root, ".flai-cache", "worktrees", "S-0001")
+	if err := os.MkdirAll(worktree, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rec, e := call("file.get", get, Ran{Stdout: []byte(`{"path":"design/system/palette.json","content":"{}\n","hash":"h1"}`)})
+	if e != nil {
+		t.Fatalf("get: %+v", e)
+	}
+	if got := strings.Join(rec.runs[0].Args, " "); got != "file show --story=S-0001 --json -- design/system/palette.json" || rec.runs[0].Dir != worktree {
+		t.Errorf("get ran %q in %s, want flai file show --story in %s", got, rec.runs[0].Dir, worktree)
+	}
+	rec, e = call("file.save", save, Ran{Stdout: []byte(`{"path":"design/system/palette.json","committed":true}`)})
+	if e != nil {
+		t.Fatalf("save: %+v", e)
+	}
+	if got := strings.Join(rec.runs[0].Args, " "); got != "file save --hash=abcdef0123456789 --trailer="+Trailer+" --story=S-0001 --json -- design/system/palette.json" || rec.runs[0].Dir != worktree || rec.runs[0].Stdin != "{}\n" {
+		t.Errorf("save ran %q in %s with %q, want flai file save --story in %s", got, rec.runs[0].Dir, rec.runs[0].Stdin, worktree)
+	}
+}
+
+// S-0436: file.save's exit 3 is Conflict with the current content and its
+// hash, and its exit 4 Refused with the findings, as doc.save's are; flai's
+// own reason for a path is its error, and file.get answers what flai file
+// show printed.
+func TestFileMethodsOutcomes(t *testing.T) {
+	p := withDocs(t)
+	call := func(name string, ran Ran) (any, *channel.Error) {
+		rec := &recorder{ran: ran}
+		return writeMethods(rec.run, time.Now, Host{})[name](context.Background(), p, json.RawMessage(good[name].params))
+	}
+	fatal := func(msg string) []map[string]any { return []map[string]any{{"level": "FATAL", "err": msg}} }
+
+	res, e := call("file.get", Ran{Stdout: []byte(`{"path":"design/system/palette.json","content":"{}\n","hash":"h1"}`)})
+	if w, ok := res.(Written); e != nil || !ok || string(w.Data) != `{"path":"design/system/palette.json","content":"{}\n","hash":"h1"}` {
+		t.Errorf("a read: %#v %+v", res, e)
+	}
+	_, e = call("file.save", Ran{Exit: 3, Stdout: []byte(`{"conflict":{"path":"design/system/palette.json","hash":"h2","current":"{\"theirs\":1}\n","diff":"+mine"}}`), Events: fatal("conflict: design/system/palette.json changed after it was loaded")})
+	if e == nil || e.Code != Conflict || e.Message != "design/system/palette.json changed after it was loaded" {
+		t.Fatalf("a conflict: %+v", e)
+	}
+	if d := e.Data.(map[string]any); d["hash"] != "h2" || d["current"] != "{\"theirs\":1}\n" || d["diff"] != "+mine" {
+		t.Errorf("a conflict carries the current content, its hash, and the diff: %+v", d)
+	}
+	_, e = call("file.save", Ran{Exit: 4, Stdout: []byte(`{"refused":{"path":"design/system/palette.json","findings":[{"rule":"design.tokens","path":"design/system/palette.json","line":1}]}}`), Events: fatal("refused: flai check has 1 finding(s) with this content; nothing was saved")})
+	if e == nil || e.Code != Refused {
+		t.Fatalf("a refusal: %+v", e)
+	}
+	if f, _ := e.Data.(map[string]any)["findings"].([]any); len(f) != 1 || f[0].(map[string]any)["rule"] != "design.tokens" {
+		t.Errorf("a refusal carries its findings: %+v", e.Data)
+	}
+	if _, e := call("file.get", Ran{Exit: 1, Events: fatal("design/system/palette.json does not exist")}); e == nil || e.Code != channel.CodeInternal || e.Message != "design/system/palette.json does not exist" {
+		t.Errorf("flai's reason: %+v", e)
+	}
+}
+
+// S-0436: a path flai file does not reach is refused with its reason before
+// anything runs: one outside the design and docs folders that is not the
+// token file or the stylesheet, one under wip, and a markdown file, which
+// doc.show and doc.save edit. The token file and the stylesheet the
+// manifest names are reached wherever they are.
+func TestFileMethodsRefuseAPathOutOfReach(t *testing.T) {
+	p := withDocs(t)
+	manifestPath := filepath.Join(p.Root, "system-flow.yaml")
+	m, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifestPath, append(m, "design:\n  tokens: web/tokens.json\n  stylesheet: web/src/theme.css\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for path, says := range map[string]string{
+		"src/main.go":             "is outside the design and docs folders and is not the design token file web/tokens.json or the design stylesheet web/src/theme.css",
+		"wip/kanban/board.json":   "is under the wip folder",
+		"design/system/plan.md":   "is a markdown file; read and save it with doc.show and doc.save",
+		"web/src/other.css":       "is outside the design and docs folders",
+		"design/../../etc/passwd": "is not a path inside the repository",
+	} {
+		for method, params := range map[string]string{
+			"file.get":  `{"path":"` + path + `"}`,
+			"file.save": `{"path":"` + path + `","content":"c","hash":"abcdef0123",` + rid + `}`,
+		} {
+			rec := &recorder{}
+			_, e := writeMethods(rec.run, time.Now, Host{})[method](context.Background(), p, json.RawMessage(params))
+			if e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, says) || len(rec.runs) != 0 {
+				t.Errorf("%s %s: %+v, ran %d command(s); want %q", method, path, e, len(rec.runs), says)
+			}
+		}
+	}
+	for _, path := range []string{"web/tokens.json", "web/src/theme.css", "./web/tokens.json"} {
+		rec := &recorder{ran: Ran{Stdout: []byte(`{}`)}}
+		if _, e := writeMethods(rec.run, time.Now, Host{})["file.get"](context.Background(), p, json.RawMessage(`{"path":"`+path+`"}`)); e != nil || len(rec.runs) != 1 || rec.runs[0].Args[len(rec.runs[0].Args)-1] != strings.TrimPrefix(path, "./") {
+			t.Errorf("%s is reached: %+v %+v", path, e, rec.runs)
+		}
 	}
 }
 

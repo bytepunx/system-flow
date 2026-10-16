@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
+	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -72,6 +73,12 @@ func ExecRunner(ctx context.Context, r Run) (Ran, error) {
 	if err != nil {
 		return Ran{}, err
 	}
+	return runFlai(ctx, exe, r)
+}
+
+// runFlai runs the flai executable exe as ExecRunner does: a test gives the
+// flai it built from this tree.
+func runFlai(ctx context.Context, exe string, r Run) (Ran, error) {
 	cmd := exec.CommandContext(ctx, exe, r.Args...)
 	cmd.Dir = r.Dir
 	cmd.Env = append(os.Environ(), "FLAI_AGENT=flaiover", "FLAI_SESSION=", "LOG_FORMAT=json")
@@ -686,6 +693,29 @@ func docRel(p channel.Project, rel string) (string, *channel.Error) {
 		}
 	}
 	return "", bad("%s is not under the project's design, docs, or wip folder", clean)
+}
+
+// fileRel checks a path file.get and file.save name, as docRel does a
+// document's: inside the repository, never a flag, not markdown, which
+// doc.show and doc.save edit, and a file flai file reaches under the
+// project's manifest (ADR-0147), refused with flai's reason before it runs.
+func fileRel(p channel.Project, rel string) (string, *channel.Error) {
+	clean := filepath.ToSlash(filepath.Clean(rel))
+	if rel == "" || filepath.IsAbs(rel) || strings.HasPrefix(clean, "..") || strings.HasPrefix(clean, "-") || strings.ContainsRune(rel, 0) {
+		return "", bad("%q is not a path inside the repository", rel)
+	}
+	if strings.EqualFold(filepath.Ext(clean), ".md") {
+		return "", bad("%s is a markdown file; read and save it with doc.show and doc.save", clean)
+	}
+	m, err := manifest.Load(filepath.Join(p.Root, manifest.File))
+	if err != nil {
+		return "", failed(err)
+	}
+	reached, err := docedit.FileReach(m, clean)
+	if err != nil {
+		return "", bad("%s", err.Error())
+	}
+	return reached, nil
 }
 
 // undonePath checks a path a story branch undoes of main's change (ADR-0155),
@@ -1707,6 +1737,67 @@ func itemSpecs() map[string]spec {
 				return nil, "", bad("hash is the one the document was loaded with")
 			}
 			args := []string{"doc", "save", "--hash=" + in.Hash, "--trailer=" + Trailer}
+			if text(in.Message) != "" {
+				args = append(args, "--message="+text(in.Message))
+			}
+			if in.Story != "" {
+				if e := needStory(in.Story); e != nil {
+					return nil, "", e
+				}
+				args = append(args, "--story="+in.Story)
+			}
+			return append(args, "--", rel), *in.Content, nil
+		}},
+
+		// file.get and file.save read and save a text file that is not
+		// markdown, such as the design token file, as doc.show and doc.save
+		// do a document (S-0436, ADR-0147): in a story's worktree when story
+		// names one, and a save of the token file writes and commits the
+		// design stylesheet with it (ADR-0150).
+		"file.get": {reads: true, dir: docDir, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Path  string `json:"path"`
+				Story string `json:"story"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			rel, e := fileRel(p, in.Path)
+			if e != nil {
+				return nil, "", e
+			}
+			args := []string{"file", "show"}
+			if in.Story != "" {
+				if e := needStory(in.Story); e != nil {
+					return nil, "", e
+				}
+				args = append(args, "--story="+in.Story)
+			}
+			return append(args, "--", rel), "", nil
+		}},
+
+		"file.save": {exits: map[int]int{3: Conflict, 4: Refused}, dir: docDir, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+			in, e := decode[struct {
+				Path    string  `json:"path"`
+				Content *string `json:"content"`
+				Hash    string  `json:"hash"`
+				Message string  `json:"message"`
+				Story   string  `json:"story"`
+			}](raw)
+			if e != nil {
+				return nil, "", e
+			}
+			if in.Path == "" || in.Content == nil || in.Hash == "" {
+				return nil, "", bad("path, content, and hash are required")
+			}
+			rel, e := fileRel(p, in.Path)
+			if e != nil {
+				return nil, "", e
+			}
+			if !docHash.MatchString(in.Hash) {
+				return nil, "", bad("hash is the one file.get gave for the content the file was loaded with")
+			}
+			args := []string{"file", "save", "--hash=" + in.Hash, "--trailer=" + Trailer}
 			if text(in.Message) != "" {
 				args = append(args, "--message="+text(in.Message))
 			}

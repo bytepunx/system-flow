@@ -115,6 +115,9 @@ export const REQUIRED_METHODS = [
 	'thread.confirm',
 	'doc.show',
 	'doc.save',
+	// S-0436: a text file that is not markdown, such as the design token file, read and saved (ADR-0147)
+	'file.get',
+	'file.save',
 	'adr.new',
 	'adr.template',
 	'adr.accept',
