@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-15
+updated: 2026-10-16
 status: active
 ---
 
@@ -23,6 +23,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [checks](#flai-checks) | Run, watch, and cancel checks for a story in review |
 | [cod](#flai-cod) | Print an epic's or story's cost of delay per week, from its inputs or its epic's share |
 | [completion](#flai-completion) | Generate the autocompletion script for the specified shell |
+| [components](#flai-components) | List the component library: each Svelte sub-project's components and their props |
 | [config](#flai-config) | Read and write ~/.flai/config.json |
 | [criteria](#flai-criteria) | List, tick, and untick an item's acceptance criteria by their numbers |
 | [dashboard](#flai-dashboard) | Make sure the one flaiover dashboard runs and serves this project |
@@ -96,6 +97,7 @@ Subcommands:
 - [checks](#flai-checks): Run, watch, and cancel checks for a story in review
 - [cod](#flai-cod): Print an epic's or story's cost of delay per week, from its inputs or its epic's share
 - [completion](#flai-completion): Generate the autocompletion script for the specified shell
+- [components](#flai-components): List the component library: each Svelte sub-project's components and their props
 - [config](#flai-config): Read and write ~/.flai/config.json
 - [criteria](#flai-criteria): List, tick, and untick an item's acceptance criteria by their numbers
 - [dashboard](#flai-dashboard): Make sure the one flaiover dashboard runs and serves this project
@@ -704,6 +706,87 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--no-descriptions` | disable completion descriptions |
+
+### flai components
+
+List the component library: each Svelte sub-project's components and their props.
+
+The component library is the components of the project's Svelte sub-projects, those whose kind in system-flow.yaml is sveltekit or svelte (ADR-0162). A sub-project's components are its .svelte files that match its components.include globs, src/lib/\*\*/\*.svelte by default, and none of its components.exclude globs; its components.setup names a module the harness imports before any component, such as the app's stylesheet.
+
+flai components list prints the catalogue, each component with the props it takes, read by the sub-project's own svelte/compiler; flai components config writes a sub-project's components key, which flai manifest set does not reach.
+
+Examples:
+
+```bash
+flai components list
+flai components list --project flaiover --json
+flai components config flaiover --setup src/routes/layout.css
+```
+
+Subcommands:
+
+- [config](#flai-components-config): Write a Svelte sub-project's components key: its include and exclude globs and its setup
+- [list](#flai-components-list): Print each Svelte sub-project's components and the props each takes
+
+#### flai components config
+
+Write a Svelte sub-project's components key: its include and exclude globs and its setup.
+
+```text
+flai components config <sub-project> [flags]
+```
+
+Write the components key of the sub-project the argument names in system-flow.yaml, keeping every other key, the order, and the comments.
+
+Each flag given replaces its field of the key as it is; a field whose flag is not given keeps its value, so --setup alone keeps the globs. --include and --exclude are repeatable, and the globs given replace the field's whole list. A glob is relative to the sub-project's folder, with segments separated by /, each a path.Match pattern or \*\* alone, which stands for any number of folders. --setup is a module of the sub-project, relative to its folder, that the harness imports before any component; --setup "" removes it. --unset removes the key, so that the defaults apply: include src/lib/\*\*/\*.svelte, nothing excluded, no setup. It is given alone.
+
+The manifest is checked as it would be after the change, as flai check checks it. A sub-project whose kind is not sveltekit or svelte, a glob that does not parse, or a setup that names no file under the sub-project's folder is refused with the field and the reason, and nothing is written; the exit status is 1, as for a workflow rule's refusal. With --json a refusal is {"refused": [{"field": ..., "reason": ...}]} on standard output, and a change {"project": ..., "components": {"include": [...], "exclude": [...], "setup": ...}}, components null after --unset.
+
+Examples:
+
+```bash
+flai components config flaiover --setup src/routes/layout.css
+flai components config ui --include 'src/lib/**/*.svelte' --include 'src/widgets/*.svelte'
+flai components config ui --exclude 'src/lib/internal/**' --json
+flai components config ui --unset
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--exclude` stringArray | a glob of files include finds that are not components (repeatable; replaces the list) |
+| `--include` stringArray | a glob of the sub-project's component files, relative to its folder (repeatable; replaces the list) |
+| `--setup` string | a module of the sub-project the harness imports before any component, such as src/app.css; "" removes it |
+| `--unset` | remove the components key, so that the defaults apply |
+
+#### flai components list
+
+Print each Svelte sub-project's components and the props each takes.
+
+```text
+flai components list [flags]
+```
+
+Print the component library: every sub-project of system-flow.yaml, in its order, or only the one --project names. A sub-project of kind sveltekit or svelte is listed with its components, each a .svelte file its components key finds, by its path relative to the sub-project, and under it each prop: its name, its kind (string, number, boolean, union with its literals, array, object, function, snippet, or unknown), its type as the source writes it, its default after =, and required when it has neither a default nor an optional type. A component whose props cannot be read, such as one that does not parse, is listed with the reason. A sub-project of any other kind is listed as unsupported, with its kind.
+
+Props are read by a script flai embeds, run with node in the sub-project's folder on the sub-project's own svelte/compiler; no component is run. So node must be on PATH and svelte installed in each Svelte sub-project listed: when either is missing, list fails, exit status 1, saying what to install.
+
+--json prints {"projects": [{"name", "path", "kind", "supported", "setup", "components": [{"project", "path", "name", "props": [{"name", "kind", "type", "default", "required", "literals"}], "error"}]}]}, setup only when the sub-project names one, and type, default, literals, and error only when they have a value.
+
+Examples:
+
+```bash
+flai components list
+flai components list --project flaiover
+flai components list --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--project` string | list only the sub-project of this name, one of the manifest's projects |
 
 ### flai config
 
