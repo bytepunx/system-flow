@@ -3,11 +3,14 @@ id: E-0021
 type: epic
 nature: feature
 title: A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-16T04:27:54Z
-updated: 2026-10-16T04:39:46Z
-transitions: []
+updated: 2026-10-16T05:25:43Z
+transitions:
+  - to: ready
+    at: 2026-10-16T05:25:43Z
+    by: alex
 tags: [cli, dashboard, template]
 topics: [cli, orchestration, release, dashboard]
 touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/workitem, flai/cmd, flaiover/src, design/system/workflow.md, design/system/pushing-from-the-board.md, design/system/metrics.md, design/conventions/git.md, docs/operators/index.md, docs/users/flai.md, template]
@@ -17,15 +20,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 18801
+      seconds: 18818
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 93
-          output: 1535
-          cache_read: 36583109
-          cache_write: 18265
-          cost: 9.1755
+          input: 98
+          output: 1593
+          cache_read: 38628779
+          cache_write: 20867
+          cost: 9.689
 ---
 # E-0021 A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent
 

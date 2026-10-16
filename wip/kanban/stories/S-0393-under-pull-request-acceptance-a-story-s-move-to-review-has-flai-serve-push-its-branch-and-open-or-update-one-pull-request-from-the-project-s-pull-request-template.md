@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:34:50Z
-updated: 2026-10-16T05:24:55Z
+updated: 2026-10-16T05:27:35Z
 transitions: []
 tags: [cli, template]
 topics: [release]
@@ -59,5 +59,28 @@ A team that reviews on GitHub sees each story arrive as a pull request without a
 
 ### Planning
 
-- **Touches.** None were declared. Every touch is the planner's.
-- **Forecast and cost of delay.** Written after `flai forecast` and `flai cod`.
+- **Touches.** None were declared. Every touch is the planner's, and each is a file except `design/adrs`:
+  - **Layout:**
+    - `flai/internal/forge/pullrequest.go`, with its test, and `template/root/.github/pull_request_template.md`: criterion 3.
+    - `flai/internal/serve/forge.go`, with its test, and `serve.go` to wire it into the minute loop: criteria 1, 4, and 5.
+    - `flai/internal/hostapi/writes.go`, with its test: `ActionForge` in the `Actions` map, beside `ActionPush`.
+    - `flai/internal/serve/start.go`, with its test: the agents' environment. It may prove to be built in `flai/internal/harness/adapters.go`, where `ANTHROPIC_AUTH_TOKEN` is set; T-1610 says to follow it there.
+    - `flai/internal/guard/guard.go`, with its test: refusing `flai forge push` to agents.
+    - `flai/cmd/forge.go`, with its test: `flai forge push` and `flai forge status`.
+  - **Design:**
+    - `design/system/workflow.md`, `design/conventions/git.md`, and `template/root/design/conventions/git.md`: what the move to review now does, and the force-push exception.
+    - The CLI and operator docs, the reference, and `template/CHANGELOG.md`.
+- **Folder touch kept.** `design/adrs`, for an ADR whose file name `flai adr new` makes. It is a shared path, so it holds nothing.
+- **Co-change left out.**
+  - `flai/cmd/serve_actions.go`: `flai serve enable` reads its names from `hostapi.Actions`, so the new action needs no change there.
+  - `flaiover/src/lib/server/agent.ts` and the flaiover docs: this story adds no host method. S-0394 adds `forge.status`.
+  - `flai/internal/mcpserver/*`: no tool changes.
+- **Paths it shares with other stories.** `flai/internal/serve/serve.go` with S-0391, now done, and with E-0022's S-0399. `flai/internal/hostapi/writes.go` with S-0395, S-0397, and E-0022's S-0399.
+- **Layers.**
+  - First: T-1609, T-1610, and T-1611 together.
+  - Second: T-1612, after T-1609 and T-1610.
+  - Third: T-1613, after T-1612.
+  - Fourth: T-1614, after T-1611 and T-1613.
+- **Forecast: 1h5m.** `flai forecast` gave 50m: 96 s per unit over 61 done feature stories on claude-opus-5-5 in the large band, times size 31. Raised to 1h5m for git against a scratch remote with a lease, the guard, and the agents' environment, across six tasks in four layers. flai's replan sets the delivery from this duration.
+- **Cost of delay: not yet set.** `flai cod` refuses until E-0021 has inputs, asked for on TH-0463.
+- **Criterion 4 depends on TH-0463 question 4.** If the operator chooses merging main into story branches instead, criterion 4 and T-1611 and T-1612 change. The planner will ask before rewriting them once the story is finalized.

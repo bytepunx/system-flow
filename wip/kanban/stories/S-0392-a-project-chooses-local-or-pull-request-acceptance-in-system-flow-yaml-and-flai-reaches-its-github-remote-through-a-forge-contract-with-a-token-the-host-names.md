@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:33:00Z
-updated: 2026-10-16T05:26:51Z
+updated: 2026-10-16T05:27:15Z
 transitions: []
 tags: [cli, template]
 topics: [release]
@@ -58,16 +58,25 @@ An operator whose team gates main with pull requests can tell flai so. They set 
 
 ### Planning
 
-- **Touches.** None were declared. Every touch is the planner's:
+- **Touches.** None were declared. Every touch is the planner's, and each is a file except `design/adrs`:
   - **Layout:**
-    - `flai/internal/manifest/manifest.go` and `settings.go`, with their tests: the `Manifest` struct and `buildCatalog`, for criterion 1.
-    - `flai/internal/config/config.go`, with its test: the host's `Config`, beside `Agent.Providers`, for criterion 2.
-    - `flai/cmd/serve_actions.go`, with its test: where `flai serve agent provider --key-env` lives, for criterion 2.
-    - `flai/internal/forge/forge.go` and `github.go`, with their tests: a new package, for criterion 3.
-    - `flai/cmd/forge.go` and its test, with `flai/cmd/root.go` to register the command: criterion 4.
-    - `flai/tests/integration/forge_github_test.go`: criterion 5, following the env-gated skip of `mcp_http_test.go`.
-  - **Design:**
-    - `design/adrs`: folder kept, because the ADR's file name is not known until `flai adr new`. It is a shared path, so it holds nothing.
-    - The docs, the generated reference, `template/root/system-flow.yaml.tmpl`, and `template/CHANGELOG.md`: criterion 6. `docs/users/flai.md`, `docs/users/flai-reference.md`, `design/system/flai-cli.md`, and `template/CHANGELOG.md` are shared paths.
-- **Co-change.** `flai touches suggest` lists hub documents and `flai/cmd/settings_doc_test.go`. The test is not added: it checks the settings index and should pass unchanged once `settings.md` gains the rows.
-- **Forecast and cost of delay.** Written after `flai forecast` and `flai cod`. See below once set.
+    - `flai/internal/manifest/manifest.go` and `settings.go`, with their tests: the `Manifest` struct and `buildCatalog`. Criterion 1.
+    - `flai/internal/config/config.go`, with its test: the host's `Config`, beside `Agent.Providers`. Criterion 2.
+    - `flai/cmd/serve_actions.go`, with its test: where `flai serve agent provider --key-env` lives. Criterion 2.
+    - `flai/internal/forge/forge.go` and `github.go`, with their tests: a new package, with the fake forge the later stories test against. Criterion 3.
+    - `flai/cmd/forge.go`, its test, and `flai/cmd/root.go`: criterion 4.
+    - `flai/tests/integration/forge_github_test.go`: criterion 5, after the skip in `mcp_http_test.go`.
+  - **Design:** the docs, the generated reference, and `template/root/system-flow.yaml.tmpl`, for criterion 6.
+  - **Co-change:** `docs/operators/index.md`, the most frequent co-change at 16%. The token's setup belongs there.
+- **Folder touch kept.** `design/adrs`, because the ADR's file name is not known until `flai adr new` makes it. It is a shared path (`claims.shared`), so it holds no story.
+- **Co-change left out.**
+  - `design/system/flaiover-dashboard.md`, `docs/users/flaiover.md`, `flai/internal/hostapi/writes.go`, and the harness files: this story adds no dashboard method and no host action.
+  - `template/template.yaml`: the version is bumped at publish, not by a story.
+- **Shared paths.** `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`, `design/adrs`, and `template/CHANGELOG.md` hold nothing.
+- **Overlap with E-0022.** S-0399 also changes `manifest.go`, `settings.go`, `config.go`, `serve_actions.go`, and the template's manifest. Whichever starts second waits, as TH-0464 says.
+- **Layers.**
+  - First: T-1602, T-1603, T-1604, and T-1605 together.
+  - Second: T-1606, after T-1602, T-1603, and T-1604; and T-1607, after T-1603.
+  - Third: T-1608, after T-1605 and T-1606.
+- **Forecast: 1h.** `flai forecast` gave 48m: 96 s per unit of size over 61 done feature stories on claude-opus-5-5 in the large band, times size 30. Raised a quarter to 1h for a new package with an HTTP adapter and a fake forge the later stories reuse, plus an ADR, across seven tasks in three layers. flai's replan now sets the delivery from this duration.
+- **Cost of delay: not yet set.** `flai cod` refuses: neither E-0021 nor this story has inputs. They are asked for on TH-0463.

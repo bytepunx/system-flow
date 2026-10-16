@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 704.9038
-accrued_seconds: 593223
-tasks_completed: 546
-last_run: 2026-10-16T05:24:42Z
+accrued_cost: 755.6966
+accrued_seconds: 595784
+tasks_completed: 560
+last_run: 2026-10-16T06:07:23Z
 ---
 
 # Orchestrator activity
@@ -3833,6 +3833,104 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: E-0023, E-0024
 - Seconds: 1068
 - Cost: 16.0766 USD, estimated
+
+### 2026-10-16T05:25:11Z
+
+- Summary: The operator accepted S-0391 (my TH-0462 about the dirty main is moot). Under publish, policy judgement: released S-0391 (1 pending, 5 USD/week) as flai 1.52.0 → 1.52.1 (patch, flai/v1.52.1), pushed. Reason: a complete remediation on its own (the upgrade thread names only a published release, ADR-0161; I-0149 closed); nothing held by whole_epics.
+- Items: S-0391
+- Seconds: 29
+- Cost: 0.8601 USD, estimated
+
+### 2026-10-16T05:26:55Z
+
+- Summary: Recommended an answer on TH-0470, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0407
+- Seconds: 104
+- Cost: 3.0382 USD, estimated
+
+### 2026-10-16T05:26:57Z
+
+- Summary: Under plan_backlog_stories, on planner-S-0407's TH-0470: approved its plan (5 tasks in 4 layers, 2 touches added, 45m vs flai's 39m; its proposal to add a startAllowed test to T-1692 approved, the T-1694 reorder declined) and posted a recommendation for the cost of delay input instead of setting it: the recommended input is penalty 500 USD/week on E-0023, an epic-level money decision already asked on TH-0467, and a story-level input could block it. Thread left open for that input.
+- Items: S-0407, E-0023
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-16T05:27:47Z
+
+- Summary: Under promote_to_ready and finalize_drafts: S-0392 (finalized by the operator) and drafts S-0393 to S-0412 all lack a cost of delay value, which waits on the operator's epic-level inputs (TH-0463 for E-0021, TH-0465 for E-0022, TH-0467 for E-0023). The missing value is already raised once per epic on those threads, so I opened no per-story threads. Only promote candidate S-0241 (2h) stays out, blocked.
+- Items: E-0021, E-0022, E-0023
+- Seconds: 50
+- Cost: 1.5404 USD, estimated
+
+### 2026-10-16T05:44:17Z
+
+- Summary: The operator wrote S-0413 (exploring options to reduce agent-produced prose) and moved it to ready; it was pulled at once, so the ready column is empty and the throughput order applied nothing.
+- Items: S-0413
+- Seconds: 990
+- Cost: 8.4762 USD, estimated
+
+### 2026-10-16T05:47:56Z
+
+- Summary: The operator added S-0426 (agent memory system) and moved it to ready. Under order_ready, applied the throughput order: S-0426 alone.
+- Items: S-0426
+- Seconds: 219
+- Cost: 9.0576 USD, estimated
+
+### 2026-10-16T05:54:38Z
+
+- Summary: E-0024's planner drafted S-0414 to S-0425 with 66 tasks and posted TH-0473 (the operator's; values wait on TH-0471). Under plan_backlog_epics, started the planner on E-0025, the last of the five new epics.
+- Items: E-0024, E-0025
+- Seconds: 402
+- Cost: 15.7712 USD, estimated
+
+### 2026-10-16T05:55:15Z
+
+- Summary: The operator added S-0427 (an experiment with local storage that syncs with the documentation) and moved it to ready. Under order_ready, applied the throughput order: S-0426, S-0427 (neither has a forecast yet, so current order kept).
+- Items: S-0426, S-0427
+- Seconds: 37
+- Cost: 0.7074 USD, estimated
+
+### 2026-10-16T05:56:06Z
+
+- Summary: Recommended an answer on TH-0474, citing design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+- Items: S-0427
+- Seconds: 51
+- Cost: 0.9455 USD, estimated
+
+### 2026-10-16T05:56:07Z
+
+- Summary: Under plan_backlog_stories, tried to set S-0427's cost of delay input time_lost_per_cycle 2h (planner-S-0427's recommendation on TH-0474); flai refused: "S-0427 is ready, not in the backlog: the orchestrator gives cost of delay inputs to a story in the backlog alone". Posted a recommendation on TH-0474 for the operator to set 2h. Not retrying.
+- Items: S-0427
+- Seconds: 1
+- Cost: 0.0000 USD
+
+### 2026-10-16T05:59:29Z
+
+- Summary: S-0427 was pulled (its cost of delay input still awaits the operator on TH-0474). Under order_ready, applied the throughput order: S-0426 alone. E-0025's planner is drafting (inputs asked on TH-0476).
+- Items: S-0427, S-0426
+- Seconds: 202
+- Cost: 4.0459 USD, estimated
+
+### 2026-10-16T06:01:52Z
+
+- Summary: Answered TH-0478, citing design/conventions/work-management.md § Rules
+- Items: S-0427
+- Seconds: 143
+- Cost: 4.5486 USD, estimated
+
+### 2026-10-16T06:01:55Z
+
+- Summary: Under plan_backlog_stories, approved and resolved planner-S-0427's TH-0478: its proposal to cancel the planner's T-1802 to T-1804 for agent-S-0427's T-1805 and T-1806 (each pair shared the results document in one layer); forecast 3h (flai 7m). The cost of delay input stays with the operator on TH-0474.
+- Items: S-0427
+- Seconds: 3
+- Cost: 0.0000 USD
+
+### 2026-10-16T06:07:23Z
+
+- Summary: Answered TH-0472, citing no source
+- Items: S-0413
+- Seconds: 328
+- Cost: 1.8017 USD, estimated
 
 ## Refusals
 

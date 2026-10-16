@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:36:28Z
-updated: 2026-10-16T05:24:55Z
+updated: 2026-10-16T05:27:53Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, dashboard]
@@ -59,5 +59,23 @@ The story's agent hears from CI and from reviewers without the operator relaying
 
 ### Planning
 
-- **Touches.** None were declared. Every touch is the planner's.
-- **Forecast and cost of delay.** Written after `flai forecast` and `flai cod`.
+- **Touches.** None were declared. Every touch is the planner's, and each is a file except `design/adrs`:
+  - **Layout:**
+    - `flai/internal/forge/state.go`, with its test: the kept state and its events. Criterion 1.
+    - `flai/internal/serve/forgestatus.go`, with its test, and `serve.go`: the reading, the thread, and the send back. Criteria 1 and 4.
+    - `flai/internal/serve/agents.go`, with its test: the start beside `answered`. Criterion 5.
+    - `flai/cmd/items.go` with `show_test.go`, `flai/cmd/forge.go` with its test, and `flai/internal/mcpserver/server.go` with its test: criterion 2.
+    - `flai/internal/hostapi/reads.go`, with its test, `flaiover/src/lib/server/agent.ts`, the new route and `ForgeStatus.svelte` with their tests, and the item and review pages: criterion 3.
+  - **Co-change:** `flai/internal/mcpserver/folder.go`, at 8%, where `item_get`'s description lives. It should name the new field.
+  - **Design:** the workflow, the CLI and dashboard design, and the user docs and reference, for criterion 6.
+- **Folder touch kept.** `design/adrs`, a shared path, for an ADR `flai adr new` names.
+- **Co-change left out.**
+  - `docs/operators/index.md` and `settings.md`: this story adds no setting.
+  - `flai/internal/hostapi/writes.go`: it adds a read, not a write.
+- **Layers.**
+  - First: T-1615 and T-1616 together.
+  - Second: T-1617, T-1618, and T-1619, each after T-1615 alone.
+  - Third: T-1620, after T-1617; and T-1621, after T-1619.
+  - Fourth: T-1622, after T-1616, T-1618, T-1620, and T-1621.
+- **Forecast: 1h15m.** `flai forecast` gave 59m: 96 s per unit over 61 done feature stories on claude-opus-5-5 in the large band, times size 37. Raised about a quarter, as S-0384 was, for spanning flai and flaiover with both test tiers and a new Svelte component, across eight tasks in four layers. flai's replan sets the delivery from this duration.
+- **Cost of delay: not yet set.** `flai cod` refuses until E-0021 has inputs, asked for on TH-0463.

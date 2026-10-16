@@ -1,0 +1,34 @@
+---
+id: T-1812
+type: task
+nature: feature
+title: The digest folder's README, the layout, the CLI design, and the user docs say what the digest is, where it lives, and how flai writes it, and the template ships the folder
+status: backlog
+parent: S-0428
+owner: alex
+created: 2026-10-16T06:03:37Z
+updated: 2026-10-16T06:03:37Z
+transitions: []
+stream: S-0428
+tags: [cli, template]
+touches: [design/digest/README.md, template/root/design/digest/README.md, design/README.md, template/root/design/README.md.tmpl, design/system/repository-layout.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/conventions.md, template/CHANGELOG.md, template/template.yaml]
+after: [T-1809, T-1810, T-1811]
+---
+# T-1812 The digest folder's README, the layout, the CLI design, and the user docs say what the digest is, where it lives, and how flai writes it, and the template ships the folder
+
+## Work
+
+- Write `design/digest/README.md` and its template copy `template/root/design/digest/README.md`: what the folder is for, one fact per entry, that only flai writes it (the seed, the curator, the operator's answers), and that an entry never holds a secret's value.
+- Add the folder to `design/README.md`, `template/root/design/README.md.tmpl`, the tree in `design/system/repository-layout.md`, and the layout and artifact table in `docs/users/conventions.md`.
+- Describe `flai digest` and the two check findings in `design/system/flai-cli.md` and `docs/users/flai.md`.
+- Add a `template/CHANGELOG.md` entry and bump the version in `template/template.yaml`.
+
+Waits for the check, commands, and search tasks, so the docs describe what was built.
+
+## Done when
+
+The documents say what the code does, `flai check --strict` reports nothing on them, and the markdown lint passes.
+
+## Notes
+
+`docs/operators/settings.md` and `design/system/project-manifest.md` are left out: the folder follows `layout.design` and adds no setting. The story's sixth criterion names them; the planner's notes say why they dropped out.

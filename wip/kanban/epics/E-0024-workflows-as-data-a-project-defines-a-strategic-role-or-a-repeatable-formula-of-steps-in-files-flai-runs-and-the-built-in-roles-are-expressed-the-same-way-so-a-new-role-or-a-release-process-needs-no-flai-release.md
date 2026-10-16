@@ -6,7 +6,7 @@ title: "Workflows as data: a project defines a strategic role or a repeatable fo
 status: backlog
 owner: alex
 created: 2026-10-16T04:28:02Z
-updated: 2026-10-16T04:28:02Z
+updated: 2026-10-16T05:41:28Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [cli, orchestration, planning, template, conventions]
@@ -17,15 +17,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 534
+      seconds: 735
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 76
-          output: 1456
-          cache_read: 32051915
-          cache_write: 12874
-          cost: 8.0383
+          input: 144
+          output: 2615
+          cache_read: 63492549
+          cache_write: 28224
+          cost: 15.9239
 ---
 # E-0024 Workflows as data: a project defines a strategic role or a repeatable formula of steps in files flai runs, and the built-in roles are expressed the same way, so a new role or a release process needs no flai release
 
@@ -45,6 +45,18 @@ The planner, the orchestrator, and the analyzer are fixed in Go: their prompts, 
 ## Stories
 
 To be drafted by the planner. Order: the role file format and its validation first, read by `flai prime --role` and the guard, with the three built-in roles expressed in it and their tests green; then `flai serve` starting a defined role; then the dashboard's generic role page and status; then formulas and `flai formula run`; then the baseline formulas, each run here once; then metrics per role with its ADR; documentation and the template with each story.
+- S-0414 A strategic role is a markdown file under design/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files
+- S-0415 flai prime --role gives a role a project defines its pack within the budget, from the topics and the item kind its role file names, and the three built-in roles prime from their files unchanged
+- S-0416 flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
+- S-0417 flai serve starts a role a project defines on the operator's word, behind the host action its file names, with an activity document under wip/agents and the same journal entries as the built-in roles
+- S-0418 A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
+- S-0419 The planner, the orchestrator, and the analyzer start through the path a defined role takes, with their prompts read from their role files, and behave exactly as today
+- S-0420 The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
+- S-0421 A formula is a markdown file under design/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
+- S-0422 flai serve works a formula's instance step by step, commands and scripts in the main checkout and roles through their runs, and a formula starts from a host action, a schedule, or a role
+- S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
+- S-0424 The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here
+- S-0425 metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
 
 ## Notes
 

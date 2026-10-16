@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:37:54Z
-updated: 2026-10-16T05:24:55Z
+updated: 2026-10-16T05:28:06Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, orchestration]
@@ -54,5 +54,21 @@ Under pull-request acceptance, CI and the team's reviewers are the gate, whoever
 
 ### Planning
 
-- **Touches.** None were declared. Every touch is the planner's.
-- **Forecast and cost of delay.** Written after `flai forecast` and `flai cod`.
+- **Touches.** None were declared. Every touch is the planner's, and each is a file except `design/adrs`:
+  - **Layout:**
+    - `flai/internal/preview/accept.go`, with a new test, `accept_forge_test.go`: `AcceptWith` and its blockers. Criteria 1 and 2.
+    - `flai/cmd/accept.go`, with a new test, `accept_forge_test.go`, and `flai/internal/hostapi/writes.go`, with its test: the refusals, `accept.run`, and `orchestratorAccepts`. Criteria 1 and 3.
+    - `flaiover/src/routes/review/[id]/+page.svelte`: the confirmation. Criterion 4.
+  - **Design:** `workflow.md`, `strategic-agents.md`, `flai-cli.md`, and `docs/users/flai.md`, for criterion 5.
+- **Folder touch kept.** `design/adrs`, a shared path, for an ADR `flai adr new` names.
+- **Co-change left out.**
+  - `docs/users/flai-reference.md`: no new flag.
+  - `docs/operators/*` and `flaiover/src/lib/server/agent.ts`: no setting and no host method.
+- **Tag added.** `dashboard`, second, for the review page.
+- **Paths it shares with other stories.** E-0022's S-0400 changes `flai/cmd/accept.go` and `flai/internal/preview/accept.go`, and S-0399 changes `writes.go`. They hold each other while either is in progress (TH-0464).
+- **Layers.**
+  - First: T-1623 and T-1624 together.
+  - Second: T-1625 and T-1626, each after T-1623.
+  - Third: T-1627, after T-1624, T-1625, and T-1626.
+- **Forecast: 28m.** `flai forecast` gave 28m: 96 s per unit over 61 done feature stories on claude-opus-5-5 in the large band, times size 17. Kept: the gate reads state S-0394 keeps, and the dashboard part is one page.
+- **Cost of delay: not yet set.** `flai cod` refuses until E-0021 has inputs, asked for on TH-0463.

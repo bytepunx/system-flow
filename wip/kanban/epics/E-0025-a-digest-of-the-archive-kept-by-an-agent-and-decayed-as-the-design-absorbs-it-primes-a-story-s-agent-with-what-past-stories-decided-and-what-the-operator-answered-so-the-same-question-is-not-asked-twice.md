@@ -6,11 +6,26 @@ title: A digest of the archive, kept by an agent and decayed as the design absor
 status: backlog
 owner: alex
 created: 2026-10-16T04:28:05Z
-updated: 2026-10-16T04:28:05Z
+updated: 2026-10-16T06:00:41Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, analysis, conventions]
 touches: [flai/internal/context, flai/internal/serve, flai/cmd, design/system/agent-context.md, design/system/strategic-agents.md, design/system/metrics.md, design/conventions/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, template]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 201
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 68
+          output: 1159
+          cache_read: 31440633
+          cache_write: 15350
+          cost: 7.8856
 ---
 # E-0025 A digest of the archive, kept by an agent and decayed as the design absorbs it, primes a story's agent with what past stories decided and what the operator answered, so the same question is not asked twice
 
@@ -30,6 +45,14 @@ The archive holds hundreds of accepted stories, their narratives' decisions and 
 ## Stories
 
 To be drafted by the planner. Order: the entry format and its home first, with the ADR; then a one-off build of the digest from today's archive, so there is something to prime with; then priming by topic within the budget; then the keeping run as a role, with absorption and compaction; then the operator's answers as entries at once; then metrics and the experiment; documentation and the template with each story.
+- S-0428 A digest entry is one markdown file under design/digest that flai writes, lists, and checks, and an ADR records where it lives and how it is written
+- S-0429 flai digest harvest lists what the archive and the threads hold since a date, and a one-off seed fills the digest from the operator's answers and the closed issues so there is something to prime with
+- S-0430 flai prime gives a story's agent the digest entries its topics and touches select, and the orchestrator the entries on the threads it answers, ranked within the budget and marked as the digest's
+- S-0431 The curator, a strategic agent behind the curate host action, takes in what the archive and the threads gained since its last run as digest entries written through flai alone
+- S-0432 The curator runs after each acceptance and on a schedule, marks an entry the design now records absorbed, and compacts an entry no one has cited within the window
+- S-0433 An operator's answer on a thread becomes a digest entry at once, before the curator's next run, so the next story that meets the question finds it
+- S-0434 flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it
+- S-0435 Experiment: does priming with the digest cut the threads opened to the operator per completed story on this repository, two weeks before against two weeks after
 
 ## Notes
 

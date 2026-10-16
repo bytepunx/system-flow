@@ -1,0 +1,32 @@
+---
+id: T-1815
+type: task
+nature: feature
+title: digest.Harvest lists every candidate since a date with the entries that already cite its source, and digest.Seed writes the answers and causes not yet cited
+status: backlog
+parent: S-0429
+owner: alex
+created: 2026-10-16T06:04:04Z
+updated: 2026-10-16T06:04:04Z
+transitions: []
+stream: S-0429
+tags: [cli]
+touches: [flai/internal/digest/harvest.go, flai/internal/digest/harvest_test.go, flai/internal/digest/seed.go, flai/internal/digest/seed_test.go]
+after: [T-1813, T-1814]
+---
+# T-1815 digest.Harvest lists every candidate since a date with the entries that already cite its source, and digest.Seed writes the answers and causes not yet cited
+
+## Work
+
+- `harvest.go`: `Harvest(root, since, kinds)` joins the candidates of `Answers` over every thread, `Decisions`, and `Causes`, sorted by date, each with the entries that already cite its source (from `digest.List`). With a zero `since` it lists everything.
+- `seed.go`: `Seed(root, since, dryRun)` writes, through `digest.New`, one entry per `answer`, `recommendation`, and `cause` candidate whose source no entry cites, and returns what it wrote and what it skipped and why. Decisions are never seeded.
+
+Waits for the answer rule and the sources tasks, which it joins.
+
+## Done when
+
+`harvest_test.go` covers a mixed fixture sorted by date, `since`, `kinds`, and a cited source shown with its entry; `seed_test.go` covers a first run that writes, a second that writes nothing, a dry run that writes nothing, and decisions left out; `flai test flai/internal/digest` passes.
+
+## Notes
+
+The curator (S-0431) reads `Harvest` since its last run on every run, so its output must be stable for the same files.

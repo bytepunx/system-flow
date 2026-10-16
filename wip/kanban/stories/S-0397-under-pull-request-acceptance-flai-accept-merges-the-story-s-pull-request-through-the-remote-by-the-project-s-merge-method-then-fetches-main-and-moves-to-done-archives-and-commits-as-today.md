@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:39:46Z
-updated: 2026-10-16T05:24:55Z
+updated: 2026-10-16T05:28:36Z
 transitions: []
 tags: [cli, template]
 topics: [release, orchestration]
@@ -58,5 +58,22 @@ A team whose main branch takes changes only through pull requests can accept sto
 
 ### Planning
 
-- **Touches.** None were declared. Every touch is the planner's.
-- **Forecast and cost of delay.** Written after `flai forecast` and `flai cod`.
+- **Touches.** None were declared. Every touch is the planner's, and each is a file except `design/adrs`:
+  - **Layout:**
+    - `flai/cmd/accept.go`, with a new `accept_remote.go` and its test, beside `mergeStoryBranch` in `branch.go`. `branch.go` is called, not changed. Criteria 1 and 3 to 5.
+    - `flai/internal/serve/forgemerge.go`, with its test: the merge in flai serve and the hand-off. Criterion 2.
+    - `flai/internal/hostapi/writes.go`, with its test: `accept.run` for the dashboard. Criterion 2.
+  - **Design:** the workflow, the git convention and the template's, the CLI docs, and the operators' guide, for criterion 6.
+- **Folder touch kept.** `design/adrs`, a shared path, for an ADR `flai adr new` names.
+- **Co-change left out.**
+  - `docs/users/flai-reference.md`: no new flag.
+  - `docs/operators/settings.md`: no new setting.
+  - The flaiover files: the dashboard's acceptance changes in flai serve, and the confirmation already lists blockers since S-0395.
+- **Paths it shares with other stories.** S-0395 changes `flai/cmd/accept.go` and `writes.go` before it, by `after`. E-0022's S-0400 changes `accept.go` too. TH-0464 recommends this story before S-0400.
+- **Layers.**
+  - First: T-1633 and T-1634 together.
+  - Second: T-1635, after T-1634.
+  - Third: T-1636, after T-1634 and T-1635.
+  - Fourth: T-1637, after T-1633, T-1635, and T-1636.
+- **Forecast: 45m.** `flai forecast` gave 34m: 96 s per unit over 61 done feature stories on claude-opus-5-5 in the large band, times size 21. Raised by a third for git against a scratch remote, a merge by three methods, a fetch, and a rebase of unpublished commits, plus the hand-off to flai serve. flai's replan sets the delivery from this duration.
+- **Cost of delay: not yet set.** `flai cod` refuses until E-0021 has inputs, asked for on TH-0463.

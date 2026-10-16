@@ -7,11 +7,11 @@ status: backlog
 parent: S-0407
 owner: alex
 created: 2026-10-16T05:15:23Z
-updated: 2026-10-16T05:15:28Z
+updated: 2026-10-16T05:25:08Z
 transitions: []
 stream: S-0407
 tags: [cli]
-touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard_test.go]
+touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md]
 ---
 # T-1690 flai guard reads an OpenCode plugin's call into the neutral Call and answers in the form the plugin reads
 

@@ -7,24 +7,39 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:15:14Z
-updated: 2026-10-16T05:24:55Z
+updated: 2026-10-16T05:28:09Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
-touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard_test.go, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, ".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, flai/tests/integration/opencode_test.go, design/system/agent-adapters.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, flai/internal/harness/harness_test.go]
+touches: [flai/internal/guard/opencode.go, flai/internal/guard/opencode_test.go, flai/internal/guard/guard.go, flai/internal/guard/subagents.go, flai/internal/guard/subagents_test.go, flai/cmd/guard.go, flai/cmd/guard_test.go, docs/users/flai-reference.md, flai/internal/harness/opencode.go, flai/internal/harness/opencode_test.go, flai/internal/harness/harness_test.go, flai/internal/serve/agents_test.go, ".opencode/plugins/flai-guard.js", template/root/.opencode/plugins/flai-guard.js, flai/tests/integration/opencode_test.go, design/system/agent-adapters.md, design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md]
 after: [S-0406]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 104
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 28
+          output: 382
+          cache_read: 12107316
+          cache_write: 12168
+          cost: 3.0382
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-10-16T13:39:00Z
-  basis: "Its own forecast of 45m; 17th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405 and S-0406."
-  by: flai
-  at: 2026-10-16T05:24:55Z
+  delivery: 2026-10-16T13:42:00Z
+  basis: "flai forecast's 40m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 25 with 20 touches), raised about an eighth for a JavaScript plugin with no test pattern in this repository and sub-agent tracking checked against the real opencode binary, across five tasks in four layers; delivery is flai's 13:36Z play-out moved by the 5m raise times the cycle factor 1.11."
+  by: planner-S-0407
+  at: 2026-10-16T05:28:09Z
 ---
 # S-0407 flai guard judges an OpenCode agent's calls through a plugin on tool.execute.before, and the opencode adapter states the guard only where the plugin can tell a sub-agent's call
 
@@ -55,9 +70,20 @@ A story's agent on OpenCode is held by the same guard as one on Claude Code. A p
 
 ### Planning
 
-- **Touches.** None were declared. Every touch is the planner's:
-  - **Layout:** `flai/internal/guard/opencode.go`, new, beside `claudecode.go`, and `guard.go`, whose `readers` map registers it; `subagents.go`, which records Claude Code's sub-agents for ADR-0092 and gains OpenCode's; `flai/cmd/guard_test.go` for `--harness opencode`, while `flai/cmd/guard.go` already looks the reader up by name; `flai/internal/harness/opencode.go` for the capability, and `harness_test.go`, where `TestEachAdapterStatesItsCapabilities` lives; the plugin in `.opencode/plugins/` and `template/root/.opencode/plugins/`; `flai/tests/integration/opencode_test.go`, S-0406's.
-  - **Design:** `design/system/agent-adapters.md` for criterion 3; the docs and `template/CHANGELOG.md` for criterion 5.
-  - **Co-change:** `flai touches suggest` lists hub documents, `guard_test.go`, and `harness_test.go`. `harness_test.go` is added; `guard_test.go` is not, since the reader's tests go in `opencode_test.go`.
-- **Forecast.** 45m against flai's 34m. A JavaScript plugin has no test pattern in this repository, and the sub-agent tracking is checked against the real binary: a third again. The delivery, 2026-10-16T13:36Z, is flai's play-out moved by the raise times the cycle factor.
-- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467.
+- **Touches.** The story declared the E-0023 planner's 17 touches, all kept. This run added three. No folder touch is kept: every path is a file.
+  - **Declared, from layout:**
+    - `flai/internal/guard/opencode.go` and `opencode_test.go`, new, beside `claudecode.go`.
+    - `guard.go`, whose `readers` map registers the reader.
+    - `subagents.go` and `subagents_test.go`, kept for ADR-0092's record of OpenCode's sub-agents. A reader returns `Hook.SubAgent` and the record already takes it, so these may not change.
+    - `flai/cmd/guard_test.go` for `--harness opencode`.
+    - `flai/internal/harness/opencode.go`, `opencode_test.go`, and `harness_test.go` (`TestEachAdapterStatesItsCapabilities`) for the capability.
+    - The plugin, `.opencode/plugins/flai-guard.js` and `template/root/.opencode/plugins/flai-guard.js`.
+    - `flai/tests/integration/opencode_test.go`, which S-0406 creates.
+  - **Declared, from design:** `design/system/agent-adapters.md` for criterion 3; `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/operators/index.md`, and `template/CHANGELOG.md` for criterion 5.
+  - **Added, from layout:**
+    - `flai/cmd/guard.go`, whose help says claude-code is "the only reader there is" and whose `--harness` flag lists `guard.Harnesses()`. Also `docs/users/flai-reference.md`, which is generated from that help (`make flai-reference`) and must be regenerated in the same task. Both go on T-1690.
+    - `flai/internal/serve/agents_test.go`, on T-1692, for a `startAllowed` test that shows criterion 3. It was approved on TH-0470.
+  - **Co-change, not added:** `flai touches suggest` also lists hub documents (`flaiover-dashboard.md`, `docs/users/flaiover.md`, `design/adrs/README.md`, `docs/operators/settings.md`, `workflow.md`). None of the criteria reach them. `settings.md` already indexes `--harness` for `flai guard`, and no setting is added. The list also has `guard_test.go`, but the reader's tests go in `opencode_test.go`. `harness.go` is left out because S-0406 registers the adapter.
+  - **Layout, not added:** `flai/internal/serve/agents.go`. `startAllowed` reads `Capabilities().Guard` for any harness, so a `Guard: true` lifts the refusal without a change there.
+- **Forecast.** 45m against flai's 40m. flai's figure grew from 36m with the three added touches. Those are mechanical: a help text, a regenerated reference, and one test case. The raise for a JavaScript plugin with no test pattern here, and for sub-agent tracking checked against the real binary, therefore drops from a third to about an eighth. The delivery, 2026-10-16T13:42Z, is flai's 13:36Z play-out moved by the 5m raise times the cycle factor 1.11.
+- **Cost of delay.** Not set: neither S-0407 nor E-0023 has inputs, so `flai cod` refuses. I asked on TH-0470, and the orchestrator's recommendation there waits for the operator. The epic's input is asked on TH-0467.

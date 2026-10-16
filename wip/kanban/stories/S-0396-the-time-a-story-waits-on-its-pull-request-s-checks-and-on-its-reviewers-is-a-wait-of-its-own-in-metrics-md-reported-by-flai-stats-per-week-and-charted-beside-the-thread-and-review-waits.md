@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:38:48Z
-updated: 2026-10-16T05:24:55Z
+updated: 2026-10-16T05:28:20Z
 transitions: []
 tags: [cli, dashboard]
 topics: [analysis, dashboard]
@@ -58,5 +58,22 @@ A slow CI or a slow reviewer shows up where the operator and the analyzer alread
 
 ### Planning
 
-- **Touches.** None were declared. Every touch is the planner's.
-- **Forecast and cost of delay.** Written after `flai forecast` and `flai cod`.
+- **Touches.** None were declared. Every touch is the planner's, and each is a file except `design/adrs`:
+  - **Layout:**
+    - `flai/internal/metrics/waiting.go` and `flai/internal/statsread/statsread.go`, with their tests: `Waiting`, `longest()`, and the loading of inputs, which already loads the conflict log. Criteria 2 and 4.
+    - `flai/cmd/stats.go`, with `check_stats_test.go`: `printWaiting`. Criterion 2.
+    - `flaiover/src/lib/viz/charts.ts` and `WaitTable.svelte`, with their tests: `agentWaiting()` and the types that mirror the JSON. Criterion 3.
+  - **Design:** `metrics.md`, for criterion 1, and the dashboard design and user docs, for criterion 5.
+  - **Co-change:** `design/system/flai-cli.md`, which changes with these paths in 48% of their commits and documents `flai stats`.
+- **Folder touch kept.** `design/adrs`, a shared path, for an ADR `flai adr new` names.
+- **Co-change left out.**
+  - `docs/operators/*` and `docs/users/flai-reference.md`: no setting and no flag.
+  - `design/system/workflow.md`: the waits change no transition.
+- **Paths it shares with other stories.** E-0022's S-0404 also changes the metrics and the waiting chart. The two should not run at once.
+- **Layers.**
+  - First: T-1628.
+  - Second: T-1629, after T-1628.
+  - Third: T-1630 and T-1631, each after T-1629.
+  - Fourth: T-1632, after T-1630 and T-1631.
+- **Forecast: 42m.** `flai forecast` gave 34m: 96 s per unit over 61 done feature stories on claude-opus-5-5 in the large band, times size 21. Raised about a quarter for a metrics ADR and spanning flai and flaiover with both test tiers. flai's replan sets the delivery from this duration.
+- **Cost of delay: not yet set.** `flai cod` refuses until E-0021 has inputs, asked for on TH-0463.
