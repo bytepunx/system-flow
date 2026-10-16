@@ -96,4 +96,4 @@ Later tasks of S-0427 write the results, against the success measure above.
 
 ## Recommendation
 
-Later tasks of S-0427 write the recommendation, once the SQLite and Postgres comparisons are in.
+Provisional, from the baseline alone: adapt. A read model that only replaces the file reads saves at most about 80 to 670 ms of a 4 s answer, so it is worth having only if its queries also take over the computation. Later tasks of S-0427 settle it once the SQLite and Postgres comparisons are in.
