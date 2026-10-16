@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-10-16T05:53:42Z
+updated: 2026-10-16T06:07:38Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-17T01:02:00Z
-  basis: "flai forecast's 36m (86 s per unit over 76 done improvement stories on claude-opus-5-5, large band, size 25 with 20 touches) raised to 50m for the live run, whose agent waits on flai serve working the instance and on its acceptance; delivery is flai's 00:46Z play-out moved by the 14m raise times the cycle factor 1.08."
-  by: system-flow
-  at: 2026-10-16T05:51:57Z
+  delivery: 2026-10-17T01:57:00Z
+  basis: "Its own forecast of 50m; 32nd in the pull order with an in-progress limit of 5, behind S-0426, S-0427, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421 and S-0422."
+  by: flai
+  at: 2026-10-16T06:07:38Z
 ---
 # S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
 

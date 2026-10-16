@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:40Z
-updated: 2026-10-16T05:53:38Z
+updated: 2026-10-16T06:07:38Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 51m
-  delivery: 2026-10-16T22:43:00Z
-  basis: "flai forecast's 51m kept (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 32 with 26 touches): a loader, a check, a front matter field, and a command that writes through itemnew, as S-0414 does for roles, across six tasks in four layers; delivery is flai's play-out."
-  by: system-flow
-  at: 2026-10-16T05:51:53Z
+  delivery: 2026-10-16T23:39:00Z
+  basis: "Its own forecast of 51m; 30th in the pull order with an in-progress limit of 5, behind S-0426, S-0427, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419 and S-0420."
+  by: flai
+  at: 2026-10-16T06:07:38Z
 ---
 # S-0421 A formula is a markdown file under design/formulas that flai check validates, and flai formula run makes a story from it with one task per step and the steps' after between them
 

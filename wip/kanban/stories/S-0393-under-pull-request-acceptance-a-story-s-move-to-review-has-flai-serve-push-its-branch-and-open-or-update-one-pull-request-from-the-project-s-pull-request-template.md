@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:34:50Z
-updated: 2026-10-16T05:27:35Z
+updated: 2026-10-16T06:07:38Z
 transitions: []
 tags: [cli, template]
 topics: [release]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h5m
-  delivery: 2026-10-16T07:45:00Z
-  basis: "Its own forecast of 1h5m; 3rd in the pull order with an in-progress limit of 5, behind S-0241 and S-0392."
+  delivery: 2026-10-16T08:27:00Z
+  basis: "Its own forecast of 1h5m; 3rd in the pull order with an in-progress limit of 5, behind S-0426, S-0427, S-0241 and S-0392."
   by: flai
-  at: 2026-10-16T05:24:55Z
+  at: 2026-10-16T06:07:38Z
 ---
 # S-0393 Under pull-request acceptance, a story's move to review has flai serve push its branch and open or update one pull request from the project's pull request template
 

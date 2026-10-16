@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:28Z
-updated: 2026-10-16T05:53:46Z
+updated: 2026-10-16T06:07:38Z
 transitions: []
 tags: [cli, dashboard]
 topics: [cli, dashboard, planning, orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-17T01:57:00Z
-  basis: "flai forecast's 50m kept (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 31 with 26 touches): an ADR and charge, stats, and chart code that iterate roles where they iterate three kinds, across five tasks in four layers; delivery is flai's play-out behind S-0423 and S-0424."
-  by: system-flow
-  at: 2026-10-16T05:52:00Z
+  delivery: 2026-10-17T02:53:00Z
+  basis: "Its own forecast of 50m; 34th in the pull order with an in-progress limit of 5, behind S-0426, S-0427, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423 and S-0424."
+  by: flai
+  at: 2026-10-16T06:07:38Z
 ---
 # S-0425 metrics.md generalizes strategic usage per kind to usage per role by an ADR, so a project's own role is charged on its items, reported by flai stats, and charted as the built-in roles are
 

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:31Z
-updated: 2026-10-16T05:53:37Z
+updated: 2026-10-16T06:07:38Z
 transitions: []
 tags: [dashboard, cli]
 topics: [dashboard, planning, orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h4m
-  delivery: 2026-10-16T21:46:00Z
-  basis: "flai forecast's 1h4m kept (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 40 with 35 touches): a new page built from three that exist, with their tests kept, across six tasks in four layers; delivery is flai's play-out."
-  by: system-flow
-  at: 2026-10-16T05:51:51Z
+  delivery: 2026-10-16T22:43:00Z
+  basis: "Its own forecast of 1h4m; 29th in the pull order with an in-progress limit of 5, behind S-0426, S-0427, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418 and S-0419."
+  by: flai
+  at: 2026-10-16T06:07:38Z
 ---
 # S-0420 The dashboard's Planner, Orchestrator, and Analyzer pages become one role page per defined role, with its settings panel, its activity document, and its runs, and agent.status carries every role by name
 
