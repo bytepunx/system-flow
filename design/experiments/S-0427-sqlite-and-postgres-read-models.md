@@ -466,8 +466,48 @@ After every round the rescan alone found nothing left to change, and the answers
 
 ## Results
 
-Later tasks of S-0427 write the results, against the success measure above.
+The hypothesis is not confirmed. Reading the files is not where the chart data's time goes, so a read model has little to save.
+
+- **Where the time goes.** A warm `stats.get` takes 4022 ms. Reading the files is about 80 ms of it, and one `git log` 370 ms. `metrics.Compute` is 3.6 s, and 97 percent of that is `metrics.replayHolds`.
+- **What the read model replaces.** Taking `metrics.Compute`'s inputs from SQLite saves about 440 ms on a cold call (550 ms against 110 ms). It costs 27 ms on a warm one (72 ms against 99 ms), because flai already keeps parsed items between requests.
+- **What its queries can take over.** The eight broad chart reads in SQL match flai on every value, at every scale. They take 83 ms warm, where flai's Go computes the same parts from parsed items in about 25 ms. The hold replay has no SQL form.
+- **How it grows.** From today's corpus to ten times it, the read model's load, rescans, reads, and size grow 7 to 11 times. `metrics.Compute` grows 52 times, to 194 s, because the hold replay grows faster than the corpus.
+
+Against the success measure, for SQLite and Postgres, today's corpus and ten times it:
+
+| Measure | Threshold | Baseline, 1x | SQLite, 1x | SQLite, 10x | Postgres, 1x | Postgres, 10x | Verdict |
+|---------|-----------|--------------|------------|-------------|--------------|---------------|---------|
+| Operator's wait, warm | 400 ms | 4022 ms | eight reads 83 ms; whole report about 3.6 s (derived) | eight reads 918 ms | eight reads 64 ms long-running | eight reads 684 ms | Not met: the eight reads meet it at 1x only, and the whole report still waits on the hold replay |
+| Keeping current, one changed file | 50 ms | none | 27.5 ms | 200 ms | 36.2 ms | 203 ms | Met at 1x only: a rescan stats every file, so at 10x it needs flai's file watch instead |
+| Agent's one-shot | 1200 ms | 4701 ms | eight reads 119 ms; whole report about 4.0 s (derived) | eight reads 1153 ms | eight reads 187 ms | eight reads 965 ms | Not met for the whole report, which is what `flai stats --json` answers |
+| Full load from empty | the cold baseline | 4715 ms | 1098 ms | 9186 ms, against 199 s | 1345 ms | 10,081 ms | Met |
+| Storage | 18 MB, twice the corpus | 8.95 MB of files | 23.5 MB; 8.6 MB without the pass-through columns | 235 MB; 85 MB without | 36.2 MB, and a volume with up to 1 GB of WAL | 264 MB | Met by SQLite without the pass-through columns only |
+| RAM added to the long-running process | 50 MB | 71 MB held | 8.3 MB after a Compute; 13 MB with items only | 51 MB with items only | client lighter; server 485 to 575 MiB with its page cache | the same | Met by SQLite at 1x; Postgres adds a server's memory |
+| CPU while idle | none | none | 2.6 ms in 130 s | 3.1 ms in 130 s | 270 ms in 130 s | | Met by SQLite |
+| Postgres over SQLite | twice as fast | | | | 1.29 times long-running; slower as a one-shot | 1.34 times; 1.19 times as a one-shot | Not met |
+
+What this means:
+
+- **For the operator.** The charts page waits about 4 s for each answer. It asks again on every item change, so while agents work it is nearly always waiting. A read model would leave that wait at about 3.6 s. At ten times today's corpus the same page would wait over three minutes, almost all of it the hold replay.
+- **For an agent.** A one-shot `flai stats --json` takes 4.7 s. A read model would save about 0.5 s of it, the cold read. The rest is the same computation.
+- **What would help.** Making the hold replay cheaper would take about 3.4 s off every answer today. Nothing a database does comes close. On 2026-09-29 the same call took 9 to 11 ms warm, so most of today's cost has arrived in the last three weeks ([I-0155](../issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md)).
 
 ## Recommendation
 
-Provisional, from the baseline alone: adapt. A read model that only replaces the file reads saves at most about 80 to 670 ms of a 4 s answer, so it is worth having only if its queries also take over the computation. The SQLite figures point the same way: the chart reads in SQL take 83 ms where flai's Go takes about 25 ms over parsed items, and the 3.4 s hold replay has no SQL form, so the replay, not the reads, is what to change first. Postgres does not change that: a long-running process answers the eight reads 1.3 times as fast as SQLite and an agent's one-shot at most 1.2 times, short of the twice the success measure asks, and two rescans still take turns, because they write the same rows. At ten times the corpus `metrics.Compute` grows 52 times, to 194 s, while the read model's load, reads, and rescans grow about ten times, and a read model would need flai's file watch rather than a stat of every file to stay within 50 ms a change. Later tasks of S-0427 settle it once the SQLite and Postgres comparisons are in.
+**Drop**, for the charts. Neither a SQLite nor a Postgres read model is worth adding to flai to speed up the chart data. The reads it replaces cost about 80 ms warm and 0.5 s cold of a 4 s answer. Its queries are slower than flai's Go over parsed items. It cannot take over the hold replay, which is the answer's cost. Postgres adds a server, a port, and a credential for 1.3 times SQLite's speed, short of the twice the success measure asks. Its concurrent writers and `LISTEN`/`NOTIFY` give nothing here: the files stay the source of truth, and every writer rewrites the same rows.
+
+**The follow-up** is a remediation story from [I-0155](../issues/I-0155-the-chart-data-takes-about-4-s-warm-against-10-ms-measured-on-2026-09-29-almost-all-of-it-in-metrics-replayholds.md), checked on this story's review page. The operator chooses at acceptance whether it becomes a story. A title and a goal for it:
+
+- *The hold replay that `flai stats` and `stats.get` compute takes a few milliseconds again and grows with the corpus, not faster than it.*
+- Goal: find what made `metrics.replayHolds` the cost of the chart data since 2026-09-29, make it incremental or cached per claim, and measure `stats.get` against `server-performance.md`'s figures and this document's ten-times corpus.
+
+**When to look again.** A read model becomes worth measuring again in two cases. One is once the hold replay is cheap and reading the files is again a real part of an answer. The other is if S-0426, the agent memory research in progress, recommends SQLite FTS5 for search: its draft `design/system/agent-memory.md` names this story's synchronized store as one shape that could take. One SQLite file could then hold the search index and the read model, and the driver's cost would be paid once.
+
+**Decisions the operator would make first, if a read model is ever adopted:**
+
+- Whether flai takes a SQLite dependency: `modernc.org/sqlite` keeps the build free of cgo and adds 6 MB, 19 percent, to the binary.
+- Where the database lives: one file per main checkout, such as `.flai-cache/readmodel.db`, shared by `flai serve` and every story worktree, in WAL mode with a busy timeout.
+- What keeps it current: flai's file watch rather than a stat of every file, which costs 200 ms at ten times the corpus.
+- Whether to store the pass-through copies of each item, which more than double the file's size.
+
+This story builds nothing, writes no ADR, and makes no story. Its loader, queries, and outputs stay in the git-ignored `bin/experiments/S-0427/` of its worktree until the worktree is removed; this document holds the schema, the queries, and the commands to repeat the run without them.
