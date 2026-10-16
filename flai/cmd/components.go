@@ -2,12 +2,16 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -36,12 +40,14 @@ imports before any component, such as the app's stylesheet.
 flai components list prints the catalogue, each component with the props it
 takes, read by the sub-project's own svelte/compiler; flai components config
 writes a sub-project's components key, which flai manifest set does not
-reach.`,
+reach; flai components serve runs a sub-project's own Vite dev server with
+flai's harness, which renders one component by its path (ADR-0163).`,
 		Example: `  flai components list
   flai components list --project flaiover --json
-  flai components config flaiover --setup src/routes/layout.css`,
+  flai components config flaiover --setup src/routes/layout.css
+  flai components serve --project flaiover`,
 	}
-	c.AddCommand(newComponentsListCmd(a), newComponentsConfigCmd(a))
+	c.AddCommand(newComponentsListCmd(a), newComponentsConfigCmd(a), newComponentsServeCmd(a))
 	return c
 }
 
@@ -94,7 +100,7 @@ they have a value.`,
 			if project != "" {
 				i := slices.IndexFunc(projects, func(p manifest.Project) bool { return p.Name == project })
 				if i < 0 {
-					return unknownSubProject(project, projects)
+					return components.UnknownSubProject(project, projects)
 				}
 				projects = projects[i : i+1]
 			}
@@ -118,19 +124,6 @@ they have a value.`,
 	}
 	c.Flags().StringVar(&project, "project", "", "list only the sub-project of this name, one of the manifest's projects")
 	return c
-}
-
-// unknownSubProject is the error for a sub-project name the manifest does
-// not have, listing the names it does.
-func unknownSubProject(name string, projects []manifest.Project) error {
-	if len(projects) == 0 {
-		return fmt.Errorf("system-flow.yaml has no sub-project %q, and names none under projects; add the sub-project there first", name)
-	}
-	names := make([]string, len(projects))
-	for i, p := range projects {
-		names[i] = p.Name
-	}
-	return fmt.Errorf("system-flow.yaml has no sub-project %q; name one of %s", name, strings.Join(names, ", "))
 }
 
 // printComponents writes flai components list's text: a block for each
@@ -317,5 +310,92 @@ func (a *app) printComponentsConfig(name string, c *manifest.Components) error {
 		setup = "none"
 	}
 	_, err := fmt.Fprintf(a.out, "set sub-project %s's components\n  include  %s\n  exclude  %s\n  setup    %s\n", name, include, exclude, setup)
+	return err
+}
+
+func newComponentsServeCmd(a *app) *cobra.Command {
+	var project string
+	c := &cobra.Command{
+		Use:   "serve",
+		Short: "Run a Svelte sub-project's own Vite dev server with flai's component harness, in the foreground",
+		Long: `Run the Vite dev server of the sub-project --project names with flai's
+component harness, in the foreground, until Ctrl-C or SIGTERM stops it. The
+sub-project is one of kind sveltekit or svelte in system-flow.yaml; --project
+may be left out when the manifest has one such sub-project only.
+
+flai writes a Vite config under .flai-cache/components/<project>/<sub-project>/
+that loads the sub-project's own Vite config and merges flai's harness plugin
+into it, then runs the sub-project's own vite, from its node_modules, in its
+folder, on 127.0.0.1 and a free port (ADR-0163). Once the harness answers, it
+prints the harness's URL, the port's /__flai/components/ on 127.0.0.1, and
+under it the sub-project and how to stop it. Open the URL with ?c=<path>, a
+component's path in the sub-project as flai components list prints it, to
+render that component after the components key's setup module; a saved
+change reaches the page as a hot update. Vite's own output goes to standard
+error.
+
+This runs the project's code and its dependencies on this machine, as the
+sub-project's own dev server does, reachable from this machine only. The
+dashboard has flai serve start the same dev server only once the operator
+turns the components host action on (flai serve enable components).
+
+A sub-project without vite installed is refused with what to install, and
+a dev server that exits on its own ends the command, exit status 1, with its
+last lines of output. --json prints {"project", "url", "port", "pid"} once
+the harness answers.`,
+		Example: `  flai components serve
+  flai components serve --project flaiover
+  flai components serve --project flaiover --json`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			sub, err := components.PickSubProject(repo.Manifest.Projects, project)
+			if err != nil {
+				return err
+			}
+			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			return a.serveComponents(ctx, repo.Root, repo.Manifest.Name, sub)
+		},
+	}
+	c.Flags().StringVar(&project, "project", "", "serve the sub-project of this name, of kind sveltekit or svelte; needed when the manifest has more than one")
+	return c
+}
+
+// serveComponents starts sub's dev server, prints where its harness answers,
+// and runs until ctx ends, then stops it, or until it exits on its own, then
+// returns why.
+func (a *app) serveComponents(ctx context.Context, root, project string, sub manifest.Project) error {
+	s, err := components.Serve(ctx, components.ServeOptions{Root: root, Project: project, Sub: sub, Output: a.errOut})
+	if err != nil {
+		return err
+	}
+	log := a.logger().With("component", "components", "project", sub.Name, "pid", s.PID(), "port", s.Port())
+	log.Info("component dev server started")
+	if err := a.printComponentsServe(sub, s); err != nil {
+		return errors.Join(err, s.Stop())
+	}
+	select {
+	case <-ctx.Done():
+		if err := s.Stop(); err != nil {
+			return err
+		}
+		log.Info("component dev server stopped")
+		return nil
+	case <-s.Done():
+		return s.Err()
+	}
+}
+
+// printComponentsServe says where sub's dev server s answers: its harness's
+// URL on a line of its own, then the sub-project and how to stop it.
+func (a *app) printComponentsServe(sub manifest.Project, s *components.DevServer) error {
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"project": sub.Name, "url": s.URL(), "port": s.Port(), "pid": s.PID()})
+	}
+	_, err := fmt.Fprintf(a.out, "%s\n  sub-project %s (%s), Vite pid %d; Ctrl-C stops it\n", s.URL(), sub.Name, sub.Path, s.PID())
 	return err
 }

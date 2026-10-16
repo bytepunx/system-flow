@@ -1,13 +1,24 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
+	"slices"
+	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/components"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
@@ -348,5 +359,316 @@ func TestComponentsConfigRefuses(t *testing.T) {
 	}
 	if code != 1 || json.Unmarshal([]byte(out), &got) != nil || len(got.Refused) != 1 || !strings.Contains(got.Refused[0].Reason, "absolute path") {
 		t.Errorf("--json refusal: %d %q", code, out)
+	}
+}
+
+// TestHelperComponentsVite is the fake vite flai components serve's tests
+// start: the test binary run again by the script fakeComponentsVite writes,
+// with FLAI_FAKE_COMPONENTS_VITE naming what it does: serve answers 200 at
+// the harness's path on the --port it is given, and crash does so and exits
+// soon after. It writes its pid and its arguments, one per line, into
+// FLAI_FAKE_COMPONENTS_VITE_DIR first. Run as a test, it does nothing.
+func TestHelperComponentsVite(t *testing.T) {
+	mode := os.Getenv("FLAI_FAKE_COMPONENTS_VITE")
+	if mode == "" {
+		return
+	}
+	args := os.Args
+	if i := slices.Index(args, "--"); i >= 0 {
+		args = args[i+1:]
+	}
+	state := os.Getenv("FLAI_FAKE_COMPONENTS_VITE_DIR")
+	_ = os.WriteFile(filepath.Join(state, "args"), []byte(strings.Join(args, "\n")), 0o600)
+	_ = os.WriteFile(filepath.Join(state, "pid"), []byte(strconv.Itoa(os.Getpid())), 0o600)
+	port := ""
+	if i := slices.Index(args, "--port"); i >= 0 && i+1 < len(args) {
+		port = args[i+1]
+	}
+	if mode == "crash" {
+		go func() {
+			time.Sleep(300 * time.Millisecond)
+			fmt.Fprintln(os.Stderr, "the fake vite crashed")
+			os.Exit(2)
+		}()
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc(components.HarnessPath, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "harness")
+	})
+	fmt.Println("VITE ready")
+	err := http.ListenAndServe("127.0.0.1:"+port, mux)
+	fmt.Fprintln(os.Stderr, "cannot serve:", err)
+	os.Exit(1)
+}
+
+// fakeComponentsVite installs, as the node_modules/.bin/vite of the
+// sub-project at sub under root, a script that runs this test binary as
+// TestHelperComponentsVite in mode, and returns the folder it writes into.
+func fakeComponentsVite(t *testing.T, root, sub, mode string) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake vite is a POSIX shell script")
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(root, filepath.FromSlash(sub), "node_modules", ".bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := fmt.Sprintf("#!/bin/sh\nexec '%s' '-test.run=^TestHelperComponentsVite$' -- \"$@\"\n", exe)
+	if err := os.WriteFile(filepath.Join(bin, "vite"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	state := t.TempDir()
+	t.Setenv("FLAI_FAKE_COMPONENTS_VITE", mode)
+	t.Setenv("FLAI_FAKE_COMPONENTS_VITE_DIR", state)
+	return state
+}
+
+// lockedBuffer is a bytes.Buffer safe to write from the command and vite's
+// output while the test reads it.
+type lockedBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (l *lockedBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *lockedBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
+}
+
+// served is a flai components serve running in the background.
+type served struct {
+	out, errOut *lockedBuffer
+	cancel      context.CancelFunc
+	done        chan error
+}
+
+// serveComponentsIn runs flai with args in root in the background, with a
+// context the test cancels as an interrupt would.
+func serveComponentsIn(t *testing.T, root string, args ...string) *served {
+	t.Helper()
+	t.Setenv("FLAI_CACHE_DIR", filepath.Join(t.TempDir(), "cache"))
+	ctx, cancel := context.WithCancel(context.Background())
+	s := &served{out: &lockedBuffer{}, errOut: &lockedBuffer{}, cancel: cancel, done: make(chan error, 1)}
+	a := &app{out: s.out, errOut: s.errOut, cwd: root}
+	cmd := newRootCmdWith(a)
+	cmd.SetArgs(args)
+	go func() { s.done <- cmd.ExecuteContext(ctx) }()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-s.done:
+		case <-time.After(15 * time.Second):
+			t.Error("flai components serve did not stop")
+		}
+	})
+	return s
+}
+
+// waitOutput waits for the command to have written what ok accepts on
+// standard output, and fails the test when it ends or takes too long.
+func (s *served) waitOutput(t *testing.T, ok func(string) bool) string {
+	t.Helper()
+	deadline := time.Now().Add(15 * time.Second)
+	for {
+		out := s.out.String()
+		if ok(out) {
+			return out
+		}
+		select {
+		case err := <-s.done:
+			t.Fatalf("flai components serve ended: %v\n%s\n%s", err, out, s.errOut.String())
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("flai components serve printed only %q\n%s", out, s.errOut.String())
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// stop cancels the command's context and returns its error.
+func (s *served) stop(t *testing.T) error {
+	t.Helper()
+	s.cancel()
+	select {
+	case err := <-s.done:
+		s.done <- err
+		return err
+	case <-time.After(15 * time.Second):
+		t.Fatal("flai components serve did not stop on interrupt")
+		return nil
+	}
+}
+
+// fakeVitePID is the pid the fake vite wrote into state.
+func fakeVitePID(t *testing.T, state string) int {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(state, "pid"))
+	if err != nil {
+		t.Fatalf("the fake vite wrote no pid: %v", err)
+	}
+	pid, err := strconv.Atoi(string(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pid
+}
+
+// processGone reports whether no process answers a signal 0 at pid.
+func processGone(pid int) bool {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return true
+	}
+	defer func() { _ = p.Release() }()
+	return p.Signal(syscall.Signal(0)) != nil
+}
+
+// oneSvelteFixture is a scratch project whose manifest names a SvelteKit
+// app, ui, and a Go sub-project, cli, so that ui is the one supported.
+func oneSvelteFixture(t *testing.T) string {
+	t.Helper()
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	file := filepath.Join(root, manifest.File)
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data = append(data, "projects:\n  - name: ui\n    path: ui\n    kind: sveltekit\n    components:\n      setup: src/app.css\n  - name: cli\n    path: cli\n    kind: go\n"...)
+	if err := os.WriteFile(file, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "ui", "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "ui", "src", "app.css"), []byte("p {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+var harnessURL = regexp.MustCompile(`^http://127\.0\.0\.1:(\d+)/__flai/components/$`)
+
+// S-0438: serve picks the one Svelte sub-project, writes its harness config,
+// runs its own vite on it, prints the harness's URL once it answers, and
+// stops vite when interrupted.
+func TestComponentsServePrintsTheURLAndStopsOnInterrupt(t *testing.T) {
+	root := oneSvelteFixture(t)
+	state := fakeComponentsVite(t, root, "ui", "serve")
+	s := serveComponentsIn(t, root, "components", "serve")
+	out := s.waitOutput(t, func(out string) bool { return strings.Count(out, "\n") >= 2 })
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+	pid := fakeVitePID(t, state)
+	if len(lines) != 2 || !harnessURL.MatchString(lines[0]) || lines[1] != fmt.Sprintf("  sub-project ui (ui), Vite pid %d; Ctrl-C stops it", pid) {
+		t.Fatalf("output %q", out)
+	}
+	resp, err := http.Get(lines[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("GET %s: %d", lines[0], resp.StatusCode)
+	}
+	config := filepath.Join(root, ".flai-cache", "components", "t", "ui", components.HarnessConfig)
+	written, err := os.ReadFile(config)
+	if err != nil || !strings.Contains(string(written), `"setup":"src/app.css"`) {
+		t.Errorf("the harness config at %s: %v\n%s", config, err, written)
+	}
+	args, _ := os.ReadFile(filepath.Join(state, "args"))
+	if !strings.HasPrefix(string(args), "--config\n"+config+"\n--host\n127.0.0.1\n") {
+		t.Errorf("vite ran with\n%s", args)
+	}
+	if !strings.Contains(s.errOut.String(), "VITE ready") {
+		t.Errorf("vite's output is not on standard error: %q", s.errOut.String())
+	}
+	if err := s.stop(t); err != nil {
+		t.Errorf("an interrupt is not an error: %v", err)
+	}
+	if !processGone(pid) {
+		if p, err := os.FindProcess(pid); err == nil {
+			_ = p.Kill()
+		}
+		t.Errorf("the fake vite, pid %d, is still running after the interrupt", pid)
+	}
+}
+
+// S-0438: --project names the sub-project among several, and --json prints
+// {project, url, port, pid}.
+func TestComponentsServeProjectJSON(t *testing.T) {
+	root, _ := componentsFixture(t)
+	state := fakeComponentsVite(t, root, "packages/kit", "serve")
+	s := serveComponentsIn(t, root, "components", "serve", "--project", "kit", "--json")
+	var got struct {
+		Project string `json:"project"`
+		URL     string `json:"url"`
+		Port    int    `json:"port"`
+		PID     int    `json:"pid"`
+	}
+	s.waitOutput(t, func(out string) bool { return json.Unmarshal([]byte(out), &got) == nil })
+	m := harnessURL.FindStringSubmatch(got.URL)
+	if got.Project != "kit" || m == nil || m[1] != strconv.Itoa(got.Port) || got.PID != fakeVitePID(t, state) {
+		t.Errorf("--json: %+v", got)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".flai-cache", "components", "t", "kit", components.HarnessConfig)); err != nil {
+		t.Errorf("kit's harness config: %v", err)
+	}
+	if err := s.stop(t); err != nil {
+		t.Errorf("stop: %v", err)
+	}
+	if !processGone(got.PID) {
+		t.Errorf("the fake vite, pid %d, is still running", got.PID)
+	}
+}
+
+// S-0438: a dev server that exits on its own ends the command with why.
+func TestComponentsServeEndsWhenViteExits(t *testing.T) {
+	root := oneSvelteFixture(t)
+	fakeComponentsVite(t, root, "ui", "crash")
+	s := serveComponentsIn(t, root, "components", "serve")
+	select {
+	case err := <-s.done:
+		s.done <- err
+		if err == nil || !strings.Contains(err.Error(), "exited: exit status 2") || !strings.Contains(err.Error(), "the fake vite crashed") {
+			t.Errorf("error %v, want vite's exit with its last lines", err)
+		}
+	case <-time.After(15 * time.Second):
+		t.Fatal("flai components serve did not end when vite exited")
+	}
+}
+
+// S-0438: serve refuses an unknown, an unsupported, or an ambiguous
+// sub-project, and one without vite installed, and starts nothing.
+func TestComponentsServeRefuses(t *testing.T) {
+	root, _ := componentsFixture(t)
+	for _, tc := range []struct {
+		name   string
+		args   []string
+		errOut string
+	}{
+		{"unknown", []string{"--project", "web"}, `system-flow.yaml has no sub-project \"web\"; name one of ui, cli, kit`},
+		{"unsupported", []string{"--project", "cli"}, `sub-project \"cli\" is of kind go`},
+		{"ambiguous", nil, "has 2 sub-projects of kind sveltekit or svelte (ui, kit)"},
+		{"no vite", []string{"--project", "ui"}, "cannot serve sub-project ui's components: vite is not installed in " + filepath.Join(root, "ui")},
+	} {
+		out, errOut, code := runIn(t, root, append([]string{"components", "serve"}, tc.args...)...)
+		if code != 1 || out != "" || !strings.Contains(errOut, tc.errOut) {
+			t.Errorf("%s: %d %q %s", tc.name, code, out, errOut)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, ".flai-cache", "components", "t", "cli")); err == nil {
+		t.Error("an unsupported sub-project got a harness")
 	}
 }

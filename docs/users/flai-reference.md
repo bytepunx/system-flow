@@ -715,7 +715,7 @@ List the component library: each Svelte sub-project's components and their props
 
 The component library is the components of the project's Svelte sub-projects, those whose kind in system-flow.yaml is sveltekit or svelte (ADR-0162). A sub-project's components are its .svelte files that match its components.include globs, src/lib/\*\*/\*.svelte by default, and none of its components.exclude globs; its components.setup names a module the harness imports before any component, such as the app's stylesheet.
 
-flai components list prints the catalogue, each component with the props it takes, read by the sub-project's own svelte/compiler; flai components config writes a sub-project's components key, which flai manifest set does not reach.
+flai components list prints the catalogue, each component with the props it takes, read by the sub-project's own svelte/compiler; flai components config writes a sub-project's components key, which flai manifest set does not reach; flai components serve runs a sub-project's own Vite dev server with flai's harness, which renders one component by its path (ADR-0163).
 
 Examples:
 
@@ -723,12 +723,14 @@ Examples:
 flai components list
 flai components list --project flaiover --json
 flai components config flaiover --setup src/routes/layout.css
+flai components serve --project flaiover
 ```
 
 Subcommands:
 
 - [config](#flai-components-config): Write a Svelte sub-project's components key: its include and exclude globs and its setup
 - [list](#flai-components-list): Print each Svelte sub-project's components and the props each takes
+- [serve](#flai-components-serve): Run a Svelte sub-project's own Vite dev server with flai's component harness, in the foreground
 
 #### flai components config
 
@@ -789,6 +791,36 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--project` string | list only the sub-project of this name, one of the manifest's projects |
+
+#### flai components serve
+
+Run a Svelte sub-project's own Vite dev server with flai's component harness, in the foreground.
+
+```text
+flai components serve [flags]
+```
+
+Run the Vite dev server of the sub-project --project names with flai's component harness, in the foreground, until Ctrl-C or SIGTERM stops it. The sub-project is one of kind sveltekit or svelte in system-flow.yaml; --project may be left out when the manifest has one such sub-project only.
+
+flai writes a Vite config under .flai-cache/components/&lt;project&gt;/&lt;sub-project&gt;/ that loads the sub-project's own Vite config and merges flai's harness plugin into it, then runs the sub-project's own vite, from its node\_modules, in its folder, on 127.0.0.1 and a free port (ADR-0163). Once the harness answers, it prints the harness's URL, the port's /\_\_flai/components/ on 127.0.0.1, and under it the sub-project and how to stop it. Open the URL with ?c=&lt;path&gt;, a component's path in the sub-project as flai components list prints it, to render that component after the components key's setup module; a saved change reaches the page as a hot update. Vite's own output goes to standard error.
+
+This runs the project's code and its dependencies on this machine, as the sub-project's own dev server does, reachable from this machine only. The dashboard has flai serve start the same dev server only once the operator turns the components host action on (flai serve enable components).
+
+A sub-project without vite installed is refused with what to install, and a dev server that exits on its own ends the command, exit status 1, with its last lines of output. --json prints {"project", "url", "port", "pid"} once the harness answers.
+
+Examples:
+
+```bash
+flai components serve
+flai components serve --project flaiover
+flai components serve --project flaiover --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--project` string | serve the sub-project of this name, of kind sveltekit or svelte; needed when the manifest has more than one |
 
 ### flai config
 
