@@ -449,3 +449,137 @@ Not verified: the context length of Qwen3.5 0.8B and 2B and the licence of Minis
 - Serving: [llama-server](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md), [Ollama](https://docs.ollama.com/api/openai-compatibility.md), [vLLM](https://docs.vllm.ai/en/latest/serving/online_serving/), [mlx-lm server](https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/SERVER.md)
 - Costs and terms: [Claude pricing](https://platform.claude.com/docs/en/about-claude/pricing), [RunPod](https://www.runpod.io/gpu-cloud/pricing), [Vast RTX 4090](https://computeprices.com/providers/vast/gpus/rtx4090), [Anthropic Commercial Terms](https://www.anthropic.com/legal/commercial-terms)
 - Evaluation: [AlignScore](https://aclanthology.org/2023.acl-long.634), [AlignScore critique](https://arxiv.org/html/2403.02270v1), [COSTRA](https://arxiv.org/pdf/1912.01673), [self-preference bias](https://arxiv.org/abs/2404.13076)
+
+## Alternatives
+
+Criterion 3. Other routes reach the same end, simpler and shorter prose across flai, with or without a linter or a model. Each alternative below says what it is, where it sits in flai, its effect, cost, effort (S, M, or L), and risk, and whether it needs the linter or a model.
+
+Two facts from the sections above shape them. This repository's agent prose has almost no filler: its length comes from long sentences, chained clauses, lists of IDs, and sheer volume, 1.47 million words. And the prose agents copy is flai's own: the story agent's prompt in `flai/internal/harness/harness.go`, about 1,600 words in long sentences, and the conventions, which alone take this story's prime pack over its budget. Anthropic's guidance says a prompt's style shapes the style of the output ([prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices)).
+
+### 1. Tighter conventions and prompts
+
+- **What.** Rewrite [communication.md](../conventions/communication.md) and [documentation.md](../conventions/documentation.md) as short rules, each artefact with a word budget, one good example, and one bad. Rewrite the harness prompts and the MCP tool descriptions in the same style.
+- **Where.** `template/root/design/conventions/`, then here, through a template release, since these are baseline rules. `flai/internal/harness/harness.go` and the tool descriptions in `flai/internal/mcpserver/folder.go`.
+- **Evidence.** Anthropic's [Opus 5 guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5) finds a short instruction to be concise effective, and positive examples more effective than prohibitions. [Concise Thoughts](https://arxiv.org/abs/2407.19825) shows that a stated word limit shortens output without lowering accuracy.
+- **Effect.** Moderate; nothing enforces it. **Cost.** None, and shorter prompts cost fewer input tokens. **Effort.** S.
+- **Risk.** Soft instructions fade in long sessions, and a rewrite can drop a rule that prevents a defect.
+- **Needs.** Neither.
+
+### 2. Word budgets flai enforces at write time
+
+- **What.** flai refuses a thread entry, log entry, Current state, Next steps, story goal, or title over its budget, naming the budget and the count. Code blocks and tables do not count.
+- **Where.** The refusal path [ADR-0061](../adrs/0061-flai-lints-the-markdown-it-writes-in-wip-with-its-own-implementation-of-the.md) built for markdown: thread replies, `flai stream log`, `flai stream state`, item writes, issue writes. Budgets in `system-flow.yaml` beside `prime.budget`, and a `flai check` warning on existing files. No length limit exists today beyond the two title limits under [Today](#today).
+- **Effect.** High on the long tail: a tenth of thread entries run past 233 words, and of Current state sections past 217. **Cost.** None; it runs in milliseconds. **Effort.** S.
+- **Risk.** Agents may split text across entries or move it into files. A budget set too tight drops facts.
+- **Needs.** Neither.
+
+### 3. Structured fields in place of prose
+
+- **What.** A thread question takes fields: question, recommendation, options, source. Current state becomes capped bullets. A story goal becomes one sentence and its criteria. The final report follows a template: outcome, changed, not verified, the operator's next action.
+- **Where.** The MCP schemas of `thread_open`, `thread_reply`, and `stream_state`; `flai/internal/threads`; [agent-narrative.md](agent-narrative.md); [work-hierarchy.md](work-hierarchy.md). [ADR-0090](../adrs/0090-a-thread-entry-is-marked-a-recommendation-in-its-heading-and-cites-its-source.md)'s recommendation mark and `Source:` line are a start.
+- **Effect.** High for scanning: the dashboard renders each field in a fixed place, and each field can carry its own budget. **Cost.** None at run time. **Effort.** M: an ADR, a format older flai versions still read, and dashboard changes.
+- **Risk.** Format churn, and padded fields where a case does not fit.
+- **Needs.** Neither.
+
+### 4. A rewrite by a hosted small model
+
+- **What.** flai sends text that fails the linter or a budget to a small hosted model and writes the rewrite if it passes the checks of [A local rewriting model](#a-local-rewriting-model).
+- **Where.** A step beside the lint at write time, calling `claude -p --model haiku` as `flai/internal/serve/claudecheck.go` already runs Claude Code, or a provider of [agent-adapters.md](agent-adapters.md).
+- **Effect.** High on what the rules catch, with no extra turns for the authoring agent. **Cost.** Claude Haiku 5.5 costs $0.10 per million tokens in and $0.50 out ([pricing](https://platform.claude.com/docs/en/about-claude/pricing)): $0.0001 to $0.0004 a write, by input size, and seconds of latency. **Effort.** M.
+- **Risk.** Meaning drift, which the token check and the fallback limit. The authoring agent learns nothing from the rewrite.
+- **Needs.** Both: a model to rewrite, the linter to check.
+
+### 5. Self-revision through linter findings in the refusal
+
+- **What.** flai runs the prose linter where it runs its markdown lint and refuses the write with each finding and its line. The agent fixes its own text and retries. No extra model.
+- **Where.** The ADR-0061 refusal path, which works for any harness. A Claude Code `PreToolUse` hook on the flai write tools could do the same for one adapter only ([hooks](https://code.claude.com/docs/en/hooks)).
+- **Effect.** High on what the rules catch, and agents see the rules applied. **Cost.** One retry turn per refusal: about $0.03 on Opus 5.5 with a 100,000-token cached context, more per event than a Haiku rewrite. **Effort.** S once Vale is installed; M if the rules are written in Go, as `flai/internal/mdlint`'s are.
+- **Risk.** Retry loops and false positives that block work. flai should cap retries, then accept the text with a warning.
+- **Needs.** The linter.
+
+### 6. Summaries for the reader
+
+- **What.** The dashboard shows each thread entry, log entry, and report by its first sentence and folds the rest. The communication convention already says to lead with the outcome, so the first sentence is the summary; a budget on it makes that reliable. Logs fold by default on the review and activity pages.
+- **Where.** flaiover's item, review, activity, and inbox pages ([flaiover-dashboard.md](flaiover-dashboard.md)), and `flai stream show`.
+- **Effect.** High on what the operator reads, with no change to how agents write. **Cost.** None when the summary is the first sentence; a model-written summary adds cost and drift. **Effort.** S to M.
+- **Risk.** It hides detail, and a first sentence that does not lead with the outcome misleads.
+- **Needs.** Neither.
+
+### 7. Reduce what is read
+
+- **What.** Shorten the conventions and remove what they repeat: 16,345 words, of which [work-management.md](../conventions/work-management.md) is 3,770 and [delegation.md](../conventions/delegation.md) 2,285. Remove from the harness prompt what the conventions already say. Rotate long activity logs: `wip/agents/orchestrator.md` holds 30,116 words. Trim tool answers: on this story, each `task_done` answer ran to about 73,000 characters, most of it fourteen open threads on other epics, repeated whole on every call ([I-0154](../issues/I-0154-task-done-s-answer-repeats-every-open-thread-not-on-the-agent-s-story-so-it-overflows-a-tool-result.md)).
+- **Where.** `design/conventions/`, `template/`, `flai/internal/harness/harness.go`, the inbox in `flai/internal/mcpserver`, `flai archive`, and the prime pack ([ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md), [ADR-0104](../adrs/0104-the-mcp-prime-tool-returns-a-context-pack-in-parts-of-at-most-40-000-bytes-of.md)).
+- **Effect.** Agents read less, and what they copy is shorter. Prompt compression such as [LLMLingua](https://arxiv.org/html/2310.05736v2) suits context only a machine reads, not documents people edit. **Cost.** None; it saves input tokens. **Effort.** M, since baseline conventions change only through a template release.
+- **Risk.** Losing a rule that stops a recurring issue.
+- **Needs.** Neither.
+
+### 8. The analyzer measures prose
+
+- **What.** A metric: words per artefact (median and 90th percentile), words per sentence, and linter alerts per 1,000 words, by artefact and agent, over time. The analyzer reports drift.
+- **Where.** `flai stats` and [metrics.md](metrics.md), which change only with an ADR; the analyzer's report ([ADR-0099](../adrs/0099-the-analyzer-runs-behind-the-analyze-host-action-and-writes-one-report-under.md)); a dashboard chart.
+- **Effect.** Indirect: it is the evidence for every other step and for the decision on a rewriter. **Cost.** None. **Effort.** S to M.
+- **Risk.** A measure made a target gets gamed.
+- **Needs.** The linter, for the alert rate only.
+
+### 9. Model choice and settings
+
+- **What.** Choose models and settings that write less. Anthropic's guide says Opus 5 writes longer responses and documents than earlier Opus models, that effort governs thinking rather than visible length, and that Opus 5.5 finishes tasks in fewer tokens ([Opus 5.5 guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5)).
+- **Where.** Each story's `agent.model` and `agent.config.effort`.
+- **Does not help.** A hard output-token cap cuts text off rather than shortening it. A Claude Code custom output style drops Claude Code's own conciseness instructions unless it restates them ([output styles](https://code.claude.com/docs/en/output-styles)).
+- **Effect.** Low to moderate. **Cost.** Neutral or lower. **Effort.** S.
+- **Risk.** Weaker work.
+- **Needs.** Neither.
+
+### 10. A style judge at review
+
+- **What.** The verifier, or a Haiku call, scores a story's new prose against a rubric drawn from the communication convention before review, and reports without refusing.
+- **Where.** The verifier's prompt ([ADR-0059](../adrs/0059-a-story-s-agent-hands-search-test-runs-and-verification-to-an-explorer-and-a.md)) or `flai verify`.
+- **Effect.** Catches what no rule can: a restated request, narrated reasoning, a buried outcome. **Cost.** Cents a story. **Effort.** S.
+- **Risk.** Model judges favour length and formatting ([Length-Controlled AlpacaEval](https://arxiv.org/abs/2404.04475)), so the rubric must reward brevity outright.
+- **Needs.** A model.
+
+### Comparison
+
+| Route | Where | Operator reads less | Simpler sentences | Money | Latency | Effort | Risk | Linter | Model |
+|-------|-------|---------------------|-------------------|-------|---------|--------|------|--------|-------|
+| 1 Conventions and prompts | Conventions, `harness.go` | Some | Some | None | None | S | Low | No | No |
+| 2 Write-time budgets | ADR-0061 refusal path | Much | Little | None | ms | S | Medium | No | No |
+| 3 Structured fields | MCP schemas, threads, narrative | Much | Some | None | None | M | Medium | No | No |
+| 4 Hosted rewrite | Write step | Some | Much | $0.0001 to $0.0004 a write | Seconds | M | Medium | Yes | Hosted |
+| 5 Self-revision | ADR-0061 refusal path | Some | Much | ~$0.03 a refusal | One agent turn | S to M | Medium | Yes | No |
+| 6 Reader summaries | Dashboard pages | Much | None | None | None | S to M | Low | No | No |
+| 7 Read less | Conventions, prompts, tool answers | Agents do | Some | Saves | None | M | Medium | No | No |
+| 8 Prose metric | `flai stats`, analyzer | Indirect | Indirect | None | None | S to M | Low | Optional | No |
+| 9 Model and settings | Story `agent` | Little | Little | Neutral | None | S | Medium | No | No |
+| 10 Style judge | Verifier | Little | Some | Cents a story | Minutes | S | Medium | No | Hosted |
+| Linter gate alone | Vale at the refusal path, as 5 | Some | Much | ~$0.03 a refusal | One agent turn | M | Medium | Yes | No |
+| Linter and local LoRA rewriter | Vale and a local model at write time, as 4 | Some | Much | Hardware and training | Seconds with a GPU | L | High | Yes | Local |
+
+### Sources for the alternatives
+
+- Anthropic: [prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices), [prompting Opus 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5), [prompting Opus 5.5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5-5), [pricing](https://platform.claude.com/docs/en/about-claude/pricing), [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)
+- Claude Code: [hooks](https://code.claude.com/docs/en/hooks), [output styles](https://code.claude.com/docs/en/output-styles)
+- Research: [Concise Thoughts](https://arxiv.org/abs/2407.19825), [Verbosity ≠ Veracity](https://arxiv.org/abs/2411.07858), [Length-Controlled AlpacaEval](https://arxiv.org/abs/2404.04475), [G-Eval](https://aclanthology.org/2023.emnlp-main.153), [LLMLingua](https://arxiv.org/html/2310.05736v2)
+- Plain language: [Federal Plain Language Guidelines, short sentences](https://cybercemetery.unt.edu/oilspill/20121007091104mp_/http:/www.plainlanguage.gov/howto/guidelines/bigdoc/writeShortSent.cfm), [Simplified Technical English](https://en.wikipedia.org/wiki/Simplified_Technical_English), [Google, short sentences](https://developers.google.com/tech-writing/one/short-sentences), [Microsoft, top 10 tips](https://learn.microsoft.com/style-guide/top-10-tips-style-voice), [BLUF](https://en.wikipedia.org/wiki/BLUF_(communication))
+
+Not verified: the latency of a Haiku rewrite; the cost of a retry turn on a real story; and whether agents here write longer on Opus 5.5 than on other models.
+
+## Recommendation
+
+Go cheapest and surest first, and measure before and after each step. The trial found little filler to remove; the length is in long sentences, chained clauses, ID lists, and volume. Budgets, structure rules, and shorter inputs reach that without a model. A rewriter, hosted or local, is the last step, taken only on evidence.
+
+| Step | What it needs | Follow-on story |
+|------|---------------|-----------------|
+| 1. Measure | Nothing | flai stats reports words per artefact, words per sentence, and prose alerts per 1,000 words |
+| 2. Prompts and conventions | A template release | The harness prompt and the communication convention give each artefact a word budget, with one good and one bad example |
+| 3. Budgets | Nothing | flai refuses a thread entry, log entry, Current state, or title over its word budget, naming the budget |
+| 4. The linter | Vale, pinned | flai test runs Vale with the Flow style on what a story changes, as an advisory prose tier |
+| 5. Self-revision | Step 4 | flai refuses a wip write with prose-lint errors, returning each finding with its line |
+| 6. Reader summaries | Nothing | The review and activity pages show each entry's first sentence and fold the rest |
+| 7. Read less | A template release | The inbox in a tool's answer lists only the threads on the agent's own story, and the conventions drop what they repeat |
+| 8. Structured threads | An ADR | thread_open takes the question, the recommendation, and the options as fields |
+| 9. Rewriter experiment | Steps 1, 4 | experiment: a hosted small model rewrites wip text that fails the prose lint, keeping every ID and path |
+
+Run step 9 only if, after steps 1 to 5, alerts per 1,000 words stay above target, or more than one write in ten needs two or more retries, or retry turns cost more than a hosted rewrite would. Judge it on a blind sample by the evaluation in [A local rewriting model](#a-local-rewriting-model). Train a local LoRA model only if the hosted rewrite passes that test and a reason other than money applies: offline work, privacy, or independence from a provider. At Haiku 5.5's prices, money alone does not justify one.
+
+The operator chooses at review which of these become stories. None is created by this story.
