@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-15
+updated: 2026-10-16
 status: active
 ---
 
@@ -1305,6 +1305,63 @@ A change to the design system is proposed on a story's branch, like any other ch
 `flai design show --story S-nnnn` reads the design system that story proposes from its worktree and names the story and the worktree first. `--json` gives what `show --json` gives. It exits 1 for an ID that is no story, for a story that is done or cancelled, which proposes nothing, and for a story with no worktree: open one with `flai stream open S-nnnn`.
 
 A proposal needs no step of its own. Accepting the story merges its branch, and the project's design system becomes the proposal's. The dashboard's Design page lists the proposals, compares one with main's, and makes a story from a request ([flaiover.md § Proposals](flaiover.md#proposals)).
+
+## List a project's components
+
+The component library is the components of your Svelte sub-projects and the props each takes ([ADR-0162](../../design/adrs/0162-the-component-library-reaches-sub-projects-of-kind-sveltekit-or-svelte-finds.md)). A sub-project is in it when its `kind` in `system-flow.yaml` is `sveltekit` or `svelte`. Its components are its `.svelte` files under `src/lib`, unless its `components` key says otherwise ([Where flai finds them](#where-flai-finds-them)). The design is in [component-library.md](../../design/system/component-library.md#the-catalogue-s-0437).
+
+```bash
+flai components list                       # every sub-project, in the manifest's order
+flai components list --project flaiover    # only flaiover
+flai components list --json                # the same as JSON
+```
+
+```text
+flaiover (flaiover, sveltekit): 63 components
+  src/lib/components/Chart.svelte
+    option  object   Record<string, unknown>  required
+    theme   unknown  Theme                    required
+    height  number   number                   = 360
+```
+
+The first line names the sub-project, its path, its kind, its setup module when it has one, and how many components it has. Under each component's path is a line per prop:
+
+| Column | What it holds |
+|--------|---------------|
+| Name | The prop's name |
+| Kind | `string`, `number`, `boolean`, `union` followed by its literals (such as `union "sm"\|"lg"`), `array`, `object`, `function`, `snippet`, or `unknown` |
+| Type | The type as the source writes it. A type imported from another module is not followed, so its kind is `unknown` with its text kept, as `Theme` above |
+| Default | The default after `=`, as the source writes it |
+| Required | `required` when the prop has no default and its type is not optional |
+
+A component with no props says `no props`. A component flai cannot read, such as one that does not parse, is listed with `error:` and the reason; the rest are listed as usual. A sub-project of any other kind is listed as `flai (flai): unsupported kind go`.
+
+`--json` gives `{"projects": [...]}`: each sub-project's `name`, `path`, `kind`, `supported`, `setup`, and `components`, and each component's `project`, `path`, `name`, `props`, and `error`. `--project` with a name the manifest does not have exits 1 and names the sub-projects it does have.
+
+flai reads props with each Svelte sub-project's own `svelte/compiler` and never runs a component. So it needs `node` on `PATH` and Svelte 5 or later installed in the sub-project. When either is missing, the whole command exits 1 and says what to install: Node.js, or the sub-project's dependencies with `npm install` or its package manager's install. A sub-project of another kind needs neither.
+
+### Where flai finds them
+
+A Svelte sub-project's `components` key in `system-flow.yaml` says which files are components and what the harness loads first ([project-manifest.md](../../design/system/project-manifest.md), [Settings](../operators/settings.md)). Write it with `flai components config`; `flai manifest set` does not reach it.
+
+```bash
+flai components config flaiover --setup src/routes/layout.css
+flai components config ui --include 'src/lib/**/*.svelte' --include 'src/widgets/*.svelte'
+flai components config ui --exclude 'src/lib/internal/**'
+flai components config ui --setup ""      # remove the setup, keep the globs
+flai components config ui --unset         # remove the key, so the defaults apply
+```
+
+Each flag you give replaces its field, and the fields you leave out keep their values. `--include` and `--exclude` repeat, and the globs you give replace the whole list. A glob is relative to the sub-project's folder: `*` matches within one folder, and `**` alone matches any number of folders. `--setup` names a module of the sub-project, such as its stylesheet. `--unset` removes the key and takes no other flag. flai keeps the rest of the manifest, its order, and its comments, and prints the key it wrote:
+
+```text
+set sub-project ui's components
+  include  src/lib/**/*.svelte, src/widgets/*.svelte
+  exclude  none
+  setup    src/app.css
+```
+
+flai checks the manifest as it would be after the change, as `flai check` does. It refuses a glob that does not parse, a setup that names no file in the sub-project, and the key on a sub-project that is not `sveltekit` or `svelte`, each with its field and the reason. It also refuses an unknown sub-project and a call with no flag. Nothing is written, and the exit status is 1. With `--json` a refusal is `{"refused": [{"field": ..., "reason": ...}]}`, and a change `{"project": ..., "components": ...}`, with `components` null after `--unset`. `flai check` reports the same problems in a key you edit by hand as `manifest.components` errors.
 
 ## Check the repository
 
