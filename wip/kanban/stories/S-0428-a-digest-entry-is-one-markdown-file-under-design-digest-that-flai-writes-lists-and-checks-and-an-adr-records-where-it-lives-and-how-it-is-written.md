@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:10Z
-updated: 2026-10-16T07:30:22Z
+updated: 2026-10-16T20:56:07Z
 transitions: []
 tags: [cli, template]
 topics: [cli, conventions, planning, analysis]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 51m
-  delivery: 2026-10-17T01:13:00Z
-  basis: "Its own forecast of 51m; 35th in the pull order with an in-progress limit of 5, behind S-0426, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424 and S-0425."
+  delivery: 2026-10-17T14:39:00Z
+  basis: "Its own forecast of 51m; 35th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424 and S-0425."
   by: flai
-  at: 2026-10-16T07:30:22Z
+  at: 2026-10-16T20:56:07Z
 ---
 # S-0428 A digest entry is one markdown file under design/digest that flai writes, lists, and checks, and an ADR records where it lives and how it is written
 
@@ -52,7 +52,7 @@ The digest has a home and a format before anything fills it. An entry is one fac
 
 - Drafted by the planner for E-0025. First story of the epic: the format every later story reads and writes.
 - TH-0476 questions 2 and 5 shape the ADR: the folder, one file per entry, and who counts as the operator. The story builds on the recommended answers until they are answered otherwise.
-- S-0426 (research, in progress) surveys agent memory systems for flai. Its findings may bear on the format and the retrieval; the ADR should cite them if S-0426 is accepted first.
+- S-0426 (accepted 2026-10-16) recommends, in `design/system/agent-memory.md` § Recommendation, adapting flai's own deterministic index and reaching the archive and threads through this digest under `design/`. The ADR cites it.
 - `cited` is filled by S-0432's `flai digest cited` from the citations S-0430's conventions ask agents to write, and read by its compaction; `asked_again` is filled by the curator (S-0431) and read by the metric (S-0434).
 
 ### Planning
