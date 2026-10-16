@@ -3,16 +3,37 @@ id: T-1803
 type: task
 nature: experiment
 title: Weigh what Postgres would add over SQLite and, where it might, run the same test in Docker
-status: backlog
+status: done
 parent: S-0427
 owner: alex
 created: 2026-10-16T05:59:35Z
-updated: 2026-10-16T05:59:35Z
-transitions: []
+updated: 2026-10-16T07:27:08Z
+transitions:
+  - to: ready
+    at: 2026-10-16T07:01:51Z
+    by: agent-S-0427
+  - to: in-progress
+    at: 2026-10-16T07:01:52Z
+    by: agent-S-0427
+  - to: done
+    at: 2026-10-16T07:27:08Z
+    by: agent-S-0427
 stream: S-0427
 tags: [cli]
 touches: [design/experiments/S-0427-sqlite-and-postgres-read-models.md]
 after: [T-1802]
+usage:
+  source: log
+  seconds: 1516
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 135
+      output: 77508
+      cache_read: 8539571
+      cache_write: 281965
+      cost: 4.8477
 ---
 # T-1803 Weigh what Postgres would add over SQLite and, where it might, run the same test in Docker
 

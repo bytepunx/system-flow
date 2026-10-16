@@ -6,7 +6,7 @@ title: Agent memory system
 status: in-progress
 owner: alex
 created: 2026-10-16T05:47:45Z
-updated: 2026-10-16T06:01:49Z
+updated: 2026-10-16T06:29:03Z
 transitions:
   - to: ready
     at: 2026-10-16T05:47:46Z
@@ -23,20 +23,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1179
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-16
+      hand_edits: 1
+      work: 28
+  models:
+    - model: claude-opus-5-5
+      input: 272
+      output: 1431
+      cache_read: 12391446
+      cache_write: 393580
+      cost: 5.9491
   strategic:
     - kind: orchestrator
-      seconds: 339
+      seconds: 360
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 100
-          output: 1944
-          cache_read: 45594824
-          cache_write: 16404
-          cost: 11.4343
+          input: 108
+          output: 2004
+          cache_read: 45869422
+          cache_write: 44358
+          cost: 11.5101
 forecast:
   duration: 1h30m
   delivery: 2026-10-16T09:05:00Z
@@ -53,8 +65,8 @@ Research open source solutions for agent memory that improve the recall and sear
 We are looking to adapt designs and technology to solve this problem for flai or to adopt an existing open source solution via an optional, configured adapter.
 
 ## Acceptance criteria
-- [ ] Present evaluations of various open source solutions and/or technologies and architectures to solve for this
-- [ ] Consider state-of-the-art approaches that may not be directly available for flai, but could serve as inspiration and direction for a solution that would improve the speed and reduce the overhead that exists in flai today
+- [x] Present evaluations of various open source solutions and/or technologies and architectures to solve for this
+- [x] Consider state-of-the-art approaches that may not be directly available for flai, but could serve as inspiration and direction for a solution that would improve the speed and reduce the overhead that exists in flai today
 
 ## Tasks
 - T-1795 Record how flai recalls and searches for agents today, what it costs, and the headings every candidate is judged under

@@ -3,11 +3,11 @@ id: T-1800
 type: task
 nature: experiment
 title: Measure the file-read baseline for chart data on today's corpus and start the results document
-status: in-progress
+status: done
 parent: S-0427
 owner: alex
 created: 2026-10-16T05:59:07Z
-updated: 2026-10-16T06:00:57Z
+updated: 2026-10-16T06:09:04Z
 transitions:
   - to: ready
     at: 2026-10-16T06:00:57Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-16T06:00:57Z
     by: agent-S-0427
+  - to: done
+    at: 2026-10-16T06:09:04Z
+    by: agent-S-0427
 stream: S-0427
 tags: [cli]
 touches: [design/experiments/S-0427-sqlite-and-postgres-read-models.md]
+usage:
+  source: log
+  seconds: 487
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 61
+      output: 34718
+      cache_read: 3825120
+      cache_write: 126300
+      cost: 2.1714
 ---
 # T-1800 Measure the file-read baseline for chart data on today's corpus and start the results document
 

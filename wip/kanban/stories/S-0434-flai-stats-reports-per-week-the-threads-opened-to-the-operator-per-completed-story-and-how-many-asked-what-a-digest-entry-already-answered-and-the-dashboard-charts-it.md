@@ -7,10 +7,11 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:19Z
-updated: 2026-10-16T06:00:19Z
+updated: 2026-10-16T06:13:50Z
 transitions: []
 tags: [cli, dashboard]
 topics: [cli, dashboard, analysis]
+touches: [design/adrs, design/adrs/README.md, design/conventions/strategic-agents.md, design/system/flaiover-dashboard.md, design/system/metrics.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/check_stats_test.go, flai/cmd/stats.go, flai/internal/metrics/digest.go, flai/internal/metrics/digest_test.go, flai/internal/metrics/metrics.go, flai/internal/statsread/statsread.go, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/viz/charts.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, template/template.yaml]
 after: [S-0433]
 agent:
   harness: claude-code
@@ -18,6 +19,12 @@ agent:
   config:
     effort: high
 draft: true
+forecast:
+  duration: 39m
+  delivery: 2026-10-17T06:02:00Z
+  basis: "flai forecast's 39m kept (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 24 with 20 touches): a metric on the waiting section's pattern and one chart, across five tasks in four layers; delivery is flai's play-out moved by S-0429's raise."
+  by: planner-E-0025
+  at: 2026-10-16T06:13:50Z
 ---
 # S-0434 flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it
 
@@ -33,8 +40,24 @@ The analyzer and the operator can see whether the digest cut the questions that 
 - [ ] `design/system/metrics.md` § Charts, `docs/users/flai.md`, and `docs/users/flaiover.md` describe the measure and the chart; the convention `strategic-agents.md` § As the analyzer names the measure for a bottlenecks run.
 
 ## Tasks
+- T-1842 An ADR defines the digest's measure in metrics.md: threads opened to the operator per completed story per week, and the threads that asked what an entry already answered
+- T-1843 flai/internal/metrics computes digest.weeks and digest.entries from the threads, the completed stories, and the entries
+- T-1844 flai stats prints the digest's weeks under a digest heading and carries them in --json
+- T-1845 The dashboard's charts page draws threads per completed story per week with the repeats stacked
+- T-1846 The user docs and the dashboard's design describe the digest's measure and chart, and the analyzer is told to read it on a bottlenecks run
 
 ## Notes
 
 - Drafted by the planner for E-0025, after S-0433 in the epic's order. It reads only S-0428's front matter, so it could follow S-0428; the plan thread proposes that, since the weeks before the digest are what the experiment (S-0435) compares against and are already in the threads.
 - `metrics.md` is the contract between `flai stats` and the dashboard and changes only with an ADR (CLAUDE.md).
+
+### Planning
+
+- **Touches.** The story declared none. Every touch comes from its five tasks, file by file.
+  - **From layout:** a new `flai/internal/metrics/digest.go` with its test, on the pattern of `waiting.go`; `metrics.go` for the report's field; `flai/internal/statsread/statsread.go` to load the entries; `flai/cmd/stats.go` and `check_stats_test.go`; `flaiover/src/lib/viz/charts.ts`, `charts.test.ts`, and the charts page with its test.
+  - **From design:** the ADR, its index, and `metrics.md`; `docs/users/flai.md`, `docs/users/flaiover.md`, `flaiover-dashboard.md`, the convention `strategic-agents.md` in both copies, `template/CHANGELOG.md`, and `template/template.yaml` for criterion 4.
+  - **Co-change, added:** `flaiover/src/lib/viz/charts.test.ts` (51% of the commits that changed `waiting.go`, `stats.go`, or `charts.ts`), the charts page (31%) and its test (27%), `flai/cmd/check_stats_test.go` (29%), `flai/internal/metrics/metrics.go` (27%), `design/system/metrics.md` (24%), `docs/users/flai.md` (22%), `flaiover-dashboard.md` (13%), and `docs/users/flaiover.md` (13%).
+  - **Co-change, not added:** `docs/users/flai-reference.md` (18%), since no flag is added; `usage.go`, `spend.go`, `strategic.go`, `SpendTable.svelte.test.ts`, and `palette.ts`, since neither usage nor spend changes and the chart reads the palette as it is.
+  - **Folder touch kept:** `design/adrs`, because the ADR's file name is known only once `flai adr new` makes it. It is in `claims.shared`, so it holds no story.
+- **Forecast.** Kept at flai's 39m. It is a metric on the waiting section's pattern and one chart. Delivery is flai's play-out moved by S-0429's raise.
+- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.

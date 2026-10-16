@@ -3,12 +3,15 @@ id: T-1806
 type: task
 nature: experiment
 title: Run the same load and chart queries against a throw-away Postgres container and write the results and recommendation
-status: backlog
+status: cancelled
 parent: S-0427
 owner: alex
 created: 2026-10-16T06:00:31Z
-updated: 2026-10-16T06:00:40Z
-transitions: []
+updated: 2026-10-16T06:36:57Z
+transitions:
+  - to: cancelled
+    at: 2026-10-16T06:36:57Z
+    by: agent-S-0427
 stream: S-0427
 tags: []
 touches: [design/experiments/S-0427-sqlite-and-postgres-read-models.md]
@@ -31,3 +34,4 @@ Waits for T-1805: it reuses the loader, the queries, and the ten-times corpus, a
 - The container is stopped and removed.
 
 ## Notes
+- 2026-10-16T06:36:57Z: moved to cancelled: duplicates the planner's T-1803 and T-1804, written in parallel

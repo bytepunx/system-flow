@@ -3,12 +3,18 @@ id: T-1798
 type: task
 nature: research
 title: Try the most promising candidates against this repository's corpus in a scratch directory and record recall and search time
-status: backlog
+status: in-progress
 parent: S-0426
 owner: alex
 created: 2026-10-16T05:58:17Z
-updated: 2026-10-16T05:58:17Z
-transitions: []
+updated: 2026-10-16T06:29:06Z
+transitions:
+  - to: ready
+    at: 2026-10-16T06:29:05Z
+    by: agent-S-0426
+  - to: in-progress
+    at: 2026-10-16T06:29:06Z
+    by: agent-S-0426
 stream: S-0426
 tags: []
 touches: [design/system/agent-memory.md]

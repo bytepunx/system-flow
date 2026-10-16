@@ -3,11 +3,11 @@ id: T-1795
 type: task
 nature: research
 title: Record how flai recalls and searches for agents today, what it costs, and the headings every candidate is judged under
-status: in-progress
+status: done
 parent: S-0426
 owner: alex
 created: 2026-10-16T05:57:39Z
-updated: 2026-10-16T06:02:48Z
+updated: 2026-10-16T06:10:24Z
 transitions:
   - to: ready
     at: 2026-10-16T06:02:48Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-16T06:02:48Z
     by: agent-S-0426
+  - to: done
+    at: 2026-10-16T06:10:24Z
+    by: agent-S-0426
 stream: S-0426
 tags: []
 touches: [design/system/agent-memory.md, design/system/README.md]
+usage:
+  source: log
+  seconds: 456
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 130
+      output: 625
+      cache_read: 6520172
+      cache_write: 159108
+      cost: 3.1079
 ---
 # T-1795 Record how flai recalls and searches for agents today, what it costs, and the headings every candidate is judged under
 

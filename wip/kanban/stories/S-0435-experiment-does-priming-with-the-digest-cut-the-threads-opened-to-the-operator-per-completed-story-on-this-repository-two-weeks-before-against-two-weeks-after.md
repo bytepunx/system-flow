@@ -7,10 +7,11 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:41Z
-updated: 2026-10-16T06:00:41Z
+updated: 2026-10-16T06:14:01Z
 transitions: []
 tags: [cli]
 topics: [analysis, planning]
+touches: [design/experiments/README.md, design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md, design/issues/summary.md]
 after: [S-0434]
 agent:
   harness: claude-code
@@ -18,6 +19,12 @@ agent:
   config:
     effort: high
 draft: true
+forecast:
+  duration: 25m
+  delivery: 2026-10-31T02:38:00Z
+  basis: "flai forecast's 13m (94 s per unit over 236 done stories, size 8 with 3 touches) raised to 25m for reading two windows' stats, the manifest's history, and three threads into an argued results document; delivery is no earlier than 14 days after S-0430's forecast delivery, when the after window is whole, plus the duration."
+  by: planner-E-0025
+  at: 2026-10-16T06:14:01Z
 ---
 # S-0435 Experiment: does priming with the digest cut the threads opened to the operator per completed story on this repository, two weeks before against two weeks after
 
@@ -27,16 +34,27 @@ Find out, on this repository, whether the digest does what E-0025 built it for. 
 
 ## Acceptance criteria
 
-- [ ] The results document, `design/experiments/S-0435-<slug>.md` from `design/experiments/template.md`, states the hypothesis, the two windows by date, and the method: `flai stats --json` with each window, the `digest.weeks[]` figures, and the waits `waiting.weeks[].threads` reports, as flai gave them.
+- [ ] The results document, `design/experiments/S-0435-digest-priming-and-threads-to-the-operator.md` from `design/experiments/template.md`, states the hypothesis, the two windows by date, and the method: `flai stats --json` with each window, the `digest.weeks[]` figures, and the waits `waiting.weeks[].threads` reports, as flai gave them.
 - [ ] It reports for each window the threads opened to the operator, the stories completed, the threads per completed story, the threads that asked what an entry already answered, and the thread waits' total and mean, in one table.
 - [ ] It names what else changed between the windows that could explain a difference (other epics accepted, the orchestrator's `answer_threads` setting, the stories' mix by nature), and says whether the result supports the hypothesis, refutes it, or cannot tell, and why.
 - [ ] It lists three threads of the after window that an entry answered and the entry each cited, or says that none did, and the entries the curator absorbed or compacted in the window.
 - [ ] It ends with a recommendation: keep the digest as it is, change it (naming what, as an issue filed with `flai issue new` and linked), or drop it; and `design/experiments/README.md` lists the document.
 
 ## Tasks
+- T-1847 The results document states the hypothesis and the two windows and gives the measured figures for each, as flai stats reports them
+- T-1848 The results document weighs what else changed, cites threads an entry answered, says whether the hypothesis holds, and recommends keeping, changing, or dropping the digest
 
 ## Notes
 
 - Drafted by the planner for E-0025: the epic's last story.
-- It cannot start before 14 days have passed since S-0430's acceptance, since the after window must be whole. The operator promotes it no earlier than that; the planner sets no date.
+- It cannot start before 14 days have passed since S-0430's acceptance, since the after window must be whole. The operator promotes it no earlier than that; T-1847 blocks the story if it starts sooner.
 - An experiment is accepted like any other story and releases nothing (ADR-0066).
+
+### Planning
+
+- **Touches.** The story declared none. Both tasks write the results document, named here so that no folder is claimed; T-1848 adds `design/experiments/README.md` and `design/issues/summary.md`, which `flai issue new` writes when the recommendation files a change.
+  - **From design:** `design/experiments/template.md` and the folder's README, as the documentation standard asks of an experiment story.
+  - **Co-change:** `flai touches suggest` found nothing changed often enough with `design/experiments/README.md` (one commit).
+  - **No folder touch.** The issue file a recommendation may add is in `design/issues`, which is in `claims.shared`, and the close-out commits it.
+- **Forecast.** Raised from flai's 13m to 25m. flai's figure is the median over all 236 done stories, since few experiments are done; reading two windows' stats, the manifest's history, and three threads into an argued document is more than the size, 5 criteria and 3 touches, counts. Delivery is no earlier than 14 days after S-0430's forecast delivery (2026-10-17T02:13Z), when the after window is whole, plus the duration.
+- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.

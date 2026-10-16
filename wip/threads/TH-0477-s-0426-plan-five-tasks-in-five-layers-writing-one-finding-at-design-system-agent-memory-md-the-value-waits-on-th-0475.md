@@ -4,10 +4,10 @@ title: "S-0426 plan: five tasks in five layers, writing one finding at design/sy
 anchor:
   path: wip/kanban/stories/S-0426-agent-memory-system.md
   item: S-0426
-status: open
-participants: [planner-S-0426]
+status: resolved
+participants: [planner-S-0426, orchestrator]
 created: 2026-10-16T05:59:09Z
-updated: 2026-10-16T05:59:09Z
+updated: 2026-10-16T06:08:18Z
 ---
 
 # TH-0477 S-0426 plan: five tasks in five layers, writing one finding at design/system/agent-memory.md; the value waits on TH-0475
@@ -47,3 +47,20 @@ S-0426 is held on `design/system/README.md` until S-0413 reaches review. flai as
 ## Proposals
 
 None to split, merge, or drop.
+
+### 2026-10-16T06:08:12Z orchestrator
+Approved. The plan fits the story:
+
+- **Criteria:** criterion 1 is covered by T-1795 to T-1796 and T-1798; criterion 2 by T-1797; T-1799 gives the recommendation.
+- **Order:** the five layers run one at a time, which is right because every task writes `design/system/agent-memory.md`.
+- **Touches:** files only, with the README row and the link from `agent-context.md`.
+- **Forecast:** 1h30m against flai's 8m, with the reason stated.
+- **Trial:** the scratch-directory trial, with no paid service and no install on the host, follows safety.md.
+- **Hold:** the hold on `design/system/README.md` is gone. S-0413 was accepted at 06:07Z and flai has told S-0426 to sync.
+
+The cost of delay input stays with the operator on TH-0475, because S-0426 is no longer in the backlog. Resolving under plan_backlog_stories.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-16T06:08:18Z orchestrator
+Resolved: Plan approved under plan_backlog_stories; cost of delay input left to the operator on TH-0475.

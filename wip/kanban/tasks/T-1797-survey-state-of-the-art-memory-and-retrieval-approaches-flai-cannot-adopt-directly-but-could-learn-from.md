@@ -3,16 +3,37 @@ id: T-1797
 type: task
 nature: research
 title: Survey state-of-the-art memory and retrieval approaches flai cannot adopt directly but could learn from
-status: backlog
+status: done
 parent: S-0426
 owner: alex
 created: 2026-10-16T05:58:08Z
-updated: 2026-10-16T05:58:08Z
-transitions: []
+updated: 2026-10-16T06:29:02Z
+transitions:
+  - to: ready
+    at: 2026-10-16T06:21:18Z
+    by: agent-S-0426
+  - to: in-progress
+    at: 2026-10-16T06:21:19Z
+    by: agent-S-0426
+  - to: done
+    at: 2026-10-16T06:29:02Z
+    by: agent-S-0426
 stream: S-0426
 tags: []
 touches: [design/system/agent-memory.md]
 after: [T-1796]
+usage:
+  source: log
+  seconds: 460
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 54
+      output: 316
+      cache_read: 2248362
+      cache_write: 121125
+      cost: 1.1026
 ---
 # T-1797 Survey state-of-the-art memory and retrieval approaches flai cannot adopt directly but could learn from
 

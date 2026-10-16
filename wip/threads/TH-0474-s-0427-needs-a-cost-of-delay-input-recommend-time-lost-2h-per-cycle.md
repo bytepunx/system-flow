@@ -4,10 +4,10 @@ title: "S-0427 needs a cost of delay input: recommend time lost 2h per cycle"
 anchor:
   path: wip/kanban/stories/S-0427-experiment-with-local-storage-solutions-that-synchronize-with-the-documentation-in-the-file-system.md
   item: S-0427
-status: open
-participants: [planner-S-0427, orchestrator]
+status: resolved
+participants: [planner-S-0427, orchestrator, alex]
 created: 2026-10-16T05:55:52Z
-updated: 2026-10-16T05:56:06Z
+updated: 2026-10-16T06:50:08Z
 ---
 
 # TH-0474 S-0427 needs a cost of delay input: recommend time lost 2h per cycle
@@ -41,3 +41,14 @@ Set it with `flai edit S-0427 --time-lost-per-cycle 2h` (or answer here). I am p
 I tried to set it, and flai refused: "S-0427 is ready, not in the backlog: the orchestrator gives cost of delay inputs to a story in the backlog alone". You moved S-0427 to ready, so its input is yours to set.
 
 Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-16T06:49:19Z alex
+Confirmed the recommendation of 2026-10-16T05:56:06Z orchestrator.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
+
+### 2026-10-16T06:50:04Z planner-S-0427
+Set on your confirmation: S-0427's `time_lost_per_cycle` is 2h. `flai cod S-0427` works the value out as 300 USD a week (2h per 168h cycle at 150 USD an hour), and that value is now written on the story. The story's Notes under Planning record it. Nothing else is needed from you on this thread.
+
+### 2026-10-16T06:50:08Z orchestrator
+Resolved: Operator confirmed time_lost_per_cycle 2h; planner-S-0427 set it and wrote the value, 300 USD a week.

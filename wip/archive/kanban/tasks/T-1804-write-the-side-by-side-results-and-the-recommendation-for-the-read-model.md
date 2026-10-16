@@ -3,16 +3,37 @@ id: T-1804
 type: task
 nature: experiment
 title: Write the side-by-side results and the recommendation for the read model
-status: backlog
+status: done
 parent: S-0427
 owner: alex
 created: 2026-10-16T05:59:44Z
-updated: 2026-10-16T05:59:44Z
-transitions: []
+updated: 2026-10-16T07:29:03Z
+transitions:
+  - to: ready
+    at: 2026-10-16T07:27:27Z
+    by: agent-S-0427
+  - to: in-progress
+    at: 2026-10-16T07:27:28Z
+    by: agent-S-0427
+  - to: done
+    at: 2026-10-16T07:29:03Z
+    by: agent-S-0427
 stream: S-0427
 tags: [cli]
 touches: [design/experiments/S-0427-sqlite-and-postgres-read-models.md]
 after: [T-1803]
+usage:
+  source: log
+  seconds: 95
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 29
+      output: 16794
+      cache_read: 1850346
+      cache_write: 61096
+      cost: 1.0504
 ---
 # T-1804 Write the side-by-side results and the recommendation for the read model
 

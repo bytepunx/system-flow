@@ -7,10 +7,11 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:01Z
-updated: 2026-10-16T06:07:29Z
+updated: 2026-10-16T06:13:33Z
 transitions: []
 tags: [cli]
 topics: [cli, orchestration, planning]
+touches: [design/system/agent-narrative.md, design/system/strategic-agents.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/thread.go, flai/cmd/thread_test.go, flai/internal/digest/onanswer.go, flai/internal/digest/onanswer_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go]
 after: [S-0432]
 agent:
   harness: claude-code
@@ -18,6 +19,12 @@ agent:
   config:
     effort: high
 draft: true
+forecast:
+  duration: 29m
+  delivery: 2026-10-17T05:19:00Z
+  basis: "flai forecast's 29m kept (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 18 with 12 touches): one function and three call sites, across five tasks in three layers; delivery is flai's play-out moved by S-0429's raise."
+  by: planner-E-0025
+  at: 2026-10-16T06:13:33Z
 ---
 # S-0433 An operator's answer on a thread becomes a digest entry at once, before the curator's next run, so the next story that meets the question finds it
 
@@ -36,8 +43,23 @@ The question the operator just answered is not asked again while the curator wai
 
 ## Tasks
 - T-1837 digest.OnAnswer writes or updates the entry for an operator's answer on a thread, and never fails the answer
+- T-1838 The MCP thread_reply writes the operator's answer as a digest entry and names it in its result
+- T-1839 The host API's thread.reply and thread.confirm write the operator's answer from the dashboard as a digest entry
+- T-1840 flai thread reply and flai thread confirm write the operator's answer as a digest entry and name it in their result
+- T-1841 The design and the user docs say that an operator's answer on a thread becomes a digest entry at once
 
 ## Notes
 
 - Drafted by the planner for E-0025, after S-0432 in the epic's order. It needs only S-0429's rule, so it could follow S-0429; the plan thread proposes that.
 - Writes happen in the main checkout, where threads are written, and are not committed, as a thread entry is not.
+
+### Planning
+
+- **Touches.** The story declared none. Every touch comes from its five tasks, file by file.
+  - **From layout:** a new `flai/internal/digest/onanswer.go` with its test, called from the three places that save an answer, which the explorer found: `flai/cmd/thread.go`, `threadReply` in `flai/internal/mcpserver/server.go`, and `thread.reply` and `thread.confirm` in `flai/internal/hostapi/writes.go`, each with its test. `threads.ReplyWith` itself is left alone, so that `flai/internal/threads` does not import `digest`, which reads threads.
+  - **From design:** `strategic-agents.md`, `agent-narrative.md`, `docs/users/flai.md`, and `docs/users/flaiover.md` for criterion 6.
+  - **Co-change, added:** `flai/internal/hostapi/writes_test.go` (74% of the commits that changed `threads.go` or `writes.go`) and `docs/users/flai.md` (13%).
+  - **Co-change, not added:** `flaiover/src/lib/server/agent.ts` (41%), since the dashboard need not show the entry; `flai/cmd/serve_actions.go` (27%), since no host action changes; `docs/users/flai-reference.md` (23%), since no flag is added, only a field of the result.
+  - **No folder touch.** The entries are written in the main checkout at run time, not on the story's branch.
+- **Forecast.** Kept at flai's 29m. It is one function and three call sites. Delivery is flai's play-out moved by S-0429's raise.
+- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.

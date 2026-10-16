@@ -17,15 +17,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 201
+      seconds: 280
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 68
-          output: 1159
-          cache_read: 31440633
-          cache_write: 15350
-          cost: 7.8856
+          input: 86
+          output: 1499
+          cache_read: 32429944
+          cache_write: 22048
+          cost: 8.1354
 ---
 # E-0025 A digest of the archive, kept by an agent and decayed as the design absorbs it, primes a story's agent with what past stories decided and what the operator answered, so the same question is not asked twice
 

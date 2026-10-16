@@ -7,10 +7,11 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:28Z
-updated: 2026-10-16T06:04:22Z
+updated: 2026-10-16T06:12:01Z
 transitions: []
 tags: [cli]
 topics: [cli, planning, analysis]
+touches: [design/digest, design/digest/README.md, design/system/flai-cli.md, docs/users/flai-reference.md, docs/users/flai.md, flai/cmd/digest.go, flai/cmd/digest_test.go, flai/internal/digest/answer.go, flai/internal/digest/answer_test.go, flai/internal/digest/harvest.go, flai/internal/digest/harvest_test.go, flai/internal/digest/seed.go, flai/internal/digest/seed_test.go, flai/internal/digest/sources.go, flai/internal/digest/sources_test.go]
 after: [S-0428]
 agent:
   harness: claude-code
@@ -18,6 +19,12 @@ agent:
   config:
     effort: high
 draft: true
+forecast:
+  duration: 45m
+  delivery: 2026-10-17T01:19:00Z
+  basis: "flai forecast's 32m (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 20 with 15 touches) raised by 13m for the seed's run over about 480 threads and 138 closed issues and the fixes its check findings need, which the size does not count; delivery is flai's play-out moved by the raise."
+  by: planner-E-0025
+  at: 2026-10-16T06:12:01Z
 ---
 # S-0429 flai digest harvest lists what the archive and the threads hold since a date, and a one-off seed fills the digest from the operator's answers and the closed issues so there is something to prime with
 
@@ -43,5 +50,16 @@ The digest starts full enough to prime with. `flai digest harvest` lists, as can
 ## Notes
 
 - Drafted by the planner for E-0025, after S-0428, whose format and writer it uses.
-- Decisions from narratives are listed but not seeded. There are hundreds, and most are already recorded in a design document or an ADR, which only a model can judge. The curator's first run takes them in (S-0431).
+- Decisions from narratives are listed but not seeded. There are hundreds (381 archived narratives), and most are already recorded in a design document or an ADR, which only a model can judge. The curator's first run takes them in (S-0431).
 - The answer-to-entry rule here is the one S-0433 runs at the moment the operator answers. Keep it in one function in `flai/internal/digest` so both use it.
+
+### Planning
+
+- **Touches.** The story declared none. Every touch comes from its five tasks, file by file.
+  - **From layout:** `answer.go`, `sources.go`, `harvest.go`, and `seed.go` in `flai/internal/digest`, each with its test; `flai/cmd/digest.go` and its test, which S-0428 makes.
+  - **From design:** `design/system/flai-cli.md`, `docs/users/flai.md`, `docs/users/flai-reference.md`, and `design/digest/README.md` for criterion 5.
+  - **Co-change, added:** `design/system/flai-cli.md` (36% of the commits that changed `threads.go`, `narrative.go`, or `cmd/thread.go`) and `docs/users/flai.md` (23%).
+  - **Co-change, not added:** `flai/internal/threads/threads_test.go` and `flai/internal/workitem/narrative_test.go` (27%), since the digest reads threads and narratives without changing their packages; T-1814 adds `narrative.go` if reading an archived narrative needs it, and `flai task done` widens the touches then. `design/system/agent-narrative.md` (23%), since no narrative rule changes here.
+  - **Folder touch kept:** `design/digest`, because the seed's entry file names are known only once it runs. Only this story writes there while it is in progress, and it holds a ready story only for that time.
+- **Forecast.** Raised from flai's 32m to 45m. The seed runs over about 480 threads and 138 closed issues, and fixing what the check reports on its entries is work the size, 5 criteria and 15 touches, does not count. Delivery is flai's play-out moved by the raise.
+- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.

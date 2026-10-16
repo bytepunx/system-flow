@@ -7,16 +7,23 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:10Z
-updated: 2026-10-16T06:03:37Z
+updated: 2026-10-16T06:11:29Z
 transitions: []
 tags: [cli, template]
 topics: [cli, conventions, planning, analysis]
+touches: [design/adrs, design/adrs/README.md, flai/internal/digest/digest.go, flai/internal/digest/digest_test.go, flai/internal/digest/write.go, flai/internal/digest/write_test.go, flai/internal/digest/secret.go, flai/internal/digest/secret_test.go, flai/internal/check/check.go, flai/internal/check/digest_test.go, flai/cmd/digest.go, flai/cmd/digest_test.go, flai/cmd/root.go, docs/users/flai-reference.md, flai/internal/context/sections_test.go, flai/internal/hostapi/docs_test.go, design/digest/README.md, template/root/design/digest/README.md, design/README.md, template/root/design/README.md.tmpl, design/system/repository-layout.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/conventions.md, CLAUDE.md, template/root/CLAUDE.md.tmpl, template/CHANGELOG.md, template/template.yaml]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 draft: true
+forecast:
+  duration: 51m
+  delivery: 2026-10-17T00:30:00Z
+  basis: "flai forecast's 51m kept (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 32 with 26 touches): the template copies inflate the size about as much as the ADR and the new package add, across six tasks in four layers; delivery is flai's play-out."
+  by: planner-E-0025
+  at: 2026-10-16T06:11:05Z
 ---
 # S-0428 A digest entry is one markdown file under design/digest that flai writes, lists, and checks, and an ADR records where it lives and how it is written
 
@@ -26,12 +33,12 @@ The digest has a home and a format before anything fills it. An entry is one fac
 
 ## Acceptance criteria
 
-- [ ] An ADR records where the digest lives within the layout, the manifest key that names its folder, an entry's file name and ID (`D-nnnn`), its front matter (`id`, `title`, `kind`, `sources`, `topics`, `paths`, `date`, `status` of `active`, `absorbed`, or `compacted`, `absorbed_by`, `asked_again`, `cited`), its body, and that nothing is deleted: absorption and compaction change an entry's state and body, and git keeps the rest.
+- [ ] An ADR records where the digest lives within the layout (its folder following `layout.design`, as `design/analysis` does), an entry's file name and ID (`D-nnnn`), its front matter (`id`, `title`, `kind`, `sources`, `topics`, `paths`, `date`, `status` of `active`, `absorbed`, or `compacted`, `absorbed_by`, `asked_again`, `cited`), its body, and that nothing is deleted: absorption and compaction change an entry's state and body, and git keeps the rest.
 - [ ] `flai/internal/digest` reads every entry of a project, and `flai digest list [--status] [--topic] [--json]` and `flai digest show <D-nnnn> [--json]` print them with their sources, topics, paths, date, and state.
-- [ ] `flai digest new "<fact>" --kind <kind> --source <id>... [--topic] [--path] [--json]` allocates the next ID, writes the file in the main checkout, and runs the check on it, refusing and writing nothing when the check fails; `flai digest edit <D-nnnn>` changes an entry's body, topics, paths, sources, and `asked_again` the same way.
+- [ ] `flai digest new "<fact>" --kind <kind> --source <id>... [--topic] [--path] [--json]` allocates the next ID, writes the file in the checkout it runs in, and runs the check on it, refusing and writing nothing when the check fails; `flai digest edit <D-nnnn>` changes an entry's body, topics, paths, sources, and `asked_again` the same way.
 - [ ] `flai check` reports `digest.entry` for an entry whose front matter does not parse or misses a field, whose kind or state is unknown, whose source names no work item, thread, or issue in the project or its archive, or whose `absorbed_by` names no file; and `digest.secret` for an entry whose text matches the shape of a key or token, so that an entry says where a secret lives and never its value.
-- [ ] `doc_search` and `flai doc search` return an entry's section, and the dashboard's documents page lists `design/digest/` and renders an entry, shown by a test on each side.
-- [ ] `design/digest/README.md` in the template and here says what the folder is for and that only flai and the digest's keeper write in it; `design/system/repository-layout.md`, `design/system/project-manifest.md`, `design/system/flai-cli.md`, `docs/users/flai.md` with `flai-reference.md` regenerated, `docs/operators/settings.md`, and `template/CHANGELOG.md` describe the folder, its key, and the commands.
+- [ ] `doc_search` and `flai doc search` return an entry's section, and the host API's documents tree, which the dashboard renders, lists `design/digest/` and returns an entry, shown by tests.
+- [ ] `design/digest/README.md` in the template and here says what the folder is for and that only flai and the digest's keeper write in it; `design/README.md` and its template, `CLAUDE.md` and its template, `design/system/repository-layout.md`, `docs/users/conventions.md`, `design/system/flai-cli.md`, `docs/users/flai.md` with `flai-reference.md` regenerated, and `template/CHANGELOG.md` describe the folder and the commands.
 
 ## Tasks
 - T-1807 An ADR records the digest: its folder under design, an entry's file name, ID, front matter, and body, and that nothing in it is deleted
@@ -45,5 +52,16 @@ The digest has a home and a format before anything fills it. An entry is one fac
 
 - Drafted by the planner for E-0025. First story of the epic: the format every later story reads and writes.
 - TH-0476 questions 2 and 5 shape the ADR: the folder, one file per entry, and who counts as the operator. The story builds on the recommended answers until they are answered otherwise.
-- S-0426 (research, ready) surveys agent memory systems for flai. Its findings may bear on the format and the retrieval; the ADR should cite them if S-0426 is accepted first.
-- `cited` is filled by S-0428's priming rule (an agent cites an entry's ID when it relies on it) and read by the curator's compaction (S-0431); `asked_again` is filled by the curator and read by the metric (S-0433).
+- S-0426 (research, in progress) surveys agent memory systems for flai. Its findings may bear on the format and the retrieval; the ADR should cite them if S-0426 is accepted first.
+- `cited` is filled by S-0432's `flai digest cited` from the citations S-0430's conventions ask agents to write, and read by its compaction; `asked_again` is filled by the curator (S-0431) and read by the metric (S-0434).
+
+### Planning
+
+- **Touches.** The story declared none. Every touch comes from its six tasks, file by file.
+  - **From design:** the ADR and its index; for criterion 6, `repository-layout.md`, `design/README.md` and its template, `docs/users/conventions.md`, `flai-cli.md`, `docs/users/flai.md`, and `template/CHANGELOG.md`.
+  - **From layout:** the new package `flai/internal/digest` (`digest.go`, `write.go`, `secret.go`, and their tests) on the pattern of `flai/internal/analysis`; `flai/cmd/digest.go` and `root.go`; `checker.digest` in `flai/internal/check/check.go` with a new `digest_test.go`, beside `checker.analysis`; tests in `flai/internal/context/sections_test.go` and `flai/internal/hostapi/docs_test.go`, since `doc_search` and the documents tree already walk `design/`; the two READMEs; `template/template.yaml` for the version.
+  - **Co-change, added:** `design/system/flai-cli.md` (32% of the seed commits), `docs/users/flai.md` (29%), `flai/cmd/root.go` (17%), `design/adrs/README.md` (10%), `docs/users/flai-reference.md`, `design/README.md`, and `CLAUDE.md` with `template/root/CLAUDE.md.tmpl` (12%), whose layout table lists `design/analysis/` and so takes `design/digest/`.
+  - **Co-change, not added:** `flai/internal/check/check_test.go` (a new `digest_test.go` instead); `design/system/project-manifest.md`, `docs/operators/settings.md`, and `flai/internal/manifest/manifest.go`, since the folder follows `layout.design` and adds no setting, which is why the sixth criterion no longer names them; `design/system/flaiover-dashboard.md`, since the documents page needs no change.
+  - **Folder touch kept:** `design/adrs`, because the ADR's file name is known only once `flai adr new` makes it. It is in `claims.shared`, so it holds no story.
+- **Forecast.** Kept at flai's 51m. The template copies inflate the size about as much as the ADR and the new package add. Delivery is flai's play-out.
+- **Cost of delay.** Not set. Neither the story nor E-0025 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0476, question 1, and the value follows its answer.

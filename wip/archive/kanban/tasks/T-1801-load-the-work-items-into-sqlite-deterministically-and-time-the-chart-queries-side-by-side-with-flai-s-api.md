@@ -3,16 +3,37 @@ id: T-1801
 type: task
 nature: experiment
 title: Load the work items into SQLite deterministically and time the chart queries side by side with flai's API
-status: backlog
+status: done
 parent: S-0427
 owner: alex
 created: 2026-10-16T05:59:18Z
-updated: 2026-10-16T05:59:18Z
-transitions: []
+updated: 2026-10-16T06:36:37Z
+transitions:
+  - to: ready
+    at: 2026-10-16T06:09:55Z
+    by: agent-S-0427
+  - to: in-progress
+    at: 2026-10-16T06:09:56Z
+    by: agent-S-0427
+  - to: done
+    at: 2026-10-16T06:36:37Z
+    by: agent-S-0427
 stream: S-0427
 tags: [cli]
 touches: [design/experiments/S-0427-sqlite-and-postgres-read-models.md]
 after: [T-1800]
+usage:
+  source: log
+  seconds: 1601
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 148
+      output: 85134
+      cache_read: 9379784
+      cache_write: 309708
+      cost: 5.3247
 ---
 # T-1801 Load the work items into SQLite deterministically and time the chart queries side by side with flai's API
 

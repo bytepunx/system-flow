@@ -3,12 +3,15 @@ id: T-1805
 type: task
 nature: feature
 title: Measure the storage, RAM, and CPU a SQLite read model adds, on today's corpus and a synthetic ten-times corpus
-status: backlog
+status: cancelled
 parent: S-0427
 owner: alex
 created: 2026-10-16T06:00:08Z
-updated: 2026-10-16T06:00:24Z
-transitions: []
+updated: 2026-10-16T06:36:57Z
+transitions:
+  - to: cancelled
+    at: 2026-10-16T06:36:57Z
+    by: agent-S-0427
 stream: S-0427
 tags: []
 touches: [design/experiments/S-0427-sqlite-and-postgres-read-models.md]
@@ -35,3 +38,4 @@ Waits for T-1801: it reuses its loader and queries, and both write the results d
 - It says how the baseline and SQLite timings grow from today's corpus to the ten-times corpus.
 
 ## Notes
+- 2026-10-16T06:36:57Z: moved to cancelled: duplicates the planner's T-1802, written in parallel; its ten-times corpus is folded into T-1802

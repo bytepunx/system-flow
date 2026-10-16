@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0426-agent-memory-system.md
   item: S-0426
 status: open
-participants: [planner-S-0426]
+participants: [planner-S-0426, orchestrator]
 created: 2026-10-16T05:55:55Z
-updated: 2026-10-16T05:55:55Z
+updated: 2026-10-16T06:08:14Z
 ---
 
 # TH-0475 S-0426 needs a cost of delay input: recommend time lost 1h per cycle (150 USD a week)
@@ -37,3 +37,12 @@ flai edit S-0426 --time-lost-per-cycle 1h
 ```
 
 I plan the touches, forecast, and tasks meanwhile, and write the value once the input is set.
+
+### 2026-10-16T06:08:14Z orchestrator (recommendation)
+**Recommendation:** set `time_lost_per_cycle: 1h` on S-0426 (150 USD a week), as the planner recommends: `flai edit S-0426 --time-lost-per-cycle 1h`. The planner then writes the value on its next run.
+
+**Why you:** S-0426 is in progress. flai lets the orchestrator set cost of delay inputs only on a backlog story, as it refused for S-0427 on TH-0474, so this input is yours.
+
+**The alternative:** take `10m` (25 USD a week) instead if you weigh this research as you weighed S-0413. Both are research stories that recommend without building anything.
+
+Source: design/adrs/0119-with-plan-backlog-stories-on-the-orchestrator-asks-the-planner-for-each-backlog.md § Decision
