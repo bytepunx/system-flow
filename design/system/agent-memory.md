@@ -108,7 +108,7 @@ A solution serves these consumers:
 | The pack, `prime` | Built from the files on every call; conventions only for the stories measured | Rank sections against a story, within the budget, the same way every time |
 | `doc_search` and `doc_get` | BM25 over sections of `design/` and `docs/`, built on every call | Find the section that answers an agent's question in its own words, and a section small enough to read |
 | E-0025's digest | Not built (E-0025) | Entries drawn from the archive and the threads, each citing its source, that `doc_search` finds and the pack primes by topic |
-| S-0427's synchronized store | Not built (S-0427) | A database populated from the files deterministically and kept current with them, which could hold the index too |
+| S-0427's synchronized store | Not built; [S-0427](../experiments/S-0427-sqlite-and-postgres-read-models.md#recommendation) recommended dropping a read model for the charts | A database populated from the files deterministically and kept current with them, which could hold the index too |
 | The dashboard's `search.query` | Whole-file index kept in `flai serve` | The same recall for the operator, over the same files |
 
 Every candidate in the sections that follow is judged under these headings, used as table columns:
@@ -513,3 +513,73 @@ Of the five queries of [Where recall fails](#where-recall-fails), q01 and q02 ("
 - **Ollama, all-minilm, and nomic-embed-text.** Ollama is not installed, and installing it on the host was out of bounds. fastembed's ONNX model stood in for a local embedding model.
 - **hugot's Go backend, a static model in Go, and FTS5 through ncruces.** Each would need Go code in flai or a scratch module with new dependencies. The Python runs measured the designs, not their Go speed; modernc's SQLite is slower than C in CPU-bound work.
 - **Bounded sections and a glossary.** They were left to the recommendation. They need no model, and the results above say where each would apply.
+
+## Recommendation
+
+Adapt, do not adopt. flai keeps its own index, derived from the files and deletable, and takes into its Go the designs that measured best: the model-free steps first, then dense ranks fused with BM25 from a local model the operator runs, behind an optional adapter that is off by default. No agent memory system and no search server is adopted. This section rests on [Today](#today), the [candidates](#open-source-candidates), [What this means for flai](#what-this-means-for-flai), and the [Trial](#trial). It builds nothing and writes no story and no ADR: the operator answers [Decisions for the operator](#decisions-for-the-operator) first.
+
+### The options
+
+Recall is R@10 of the trial's 25 queries, and search time the median per query, both from [Results on this corpus](#results-on-this-corpus).
+
+| | Keep and improve flai's own search | Adapt designs into flai's Go | Adopt an open source solution behind an optional adapter |
+|-|------------------------------------|------------------------------|-----------------------------------------------------------|
+| What it is | Today's BM25 over today's sections, with the index kept in `flai mcp` and `flai serve`, sections bounded in size, a stemmer, and a project glossary | Fusion by reciprocal rank, static embeddings, a persisted FTS5 index through a cgo-free driver, personalized PageRank over flai's links | An agent memory system (Mem0, Graphiti, Cognee) or a hybrid search server (txtai, Qdrant, Chroma) that flai calls as a separate process, with BM25 as the fallback |
+| Recall | 15 today. FTS5's porter stemming found 18 but ranks its hits lower. Bounded sections and a glossary aim at q21's design answer and at q01 and q02, which no approach found; not measured | Hybrid A 19, losing none BM25 found; FTS5 18; Hybrid B 16; PageRank not measured | Not tried. Hybrid A measures the hybrid servers' design: 19. The memory systems store what an LLM extracted, not sections, so the set does not apply |
+| Search time | 233 ms in the CLI, about 200 ms of it the rebuild; 6.9 ms with the index kept in memory | FTS5 2.6 ms; Hybrid B 7.4 ms; Hybrid A 57.4 ms, 47.6 ms of it the dense query | Hybrid A's 57.4 ms and an HTTP call; Mem0 claims 0.88 to 1.09 s for its managed platform |
+| Cost to build | Go in `flai/internal/search` and `flai/internal/context`; no dependency | Fusion is a few lines. FTS5 through `modernc.org/sqlite` adds 6 MB, 19 percent, to the binary ([S-0427](../experiments/S-0427-sqlite-and-postgres-read-models.md#recommendation)). Static embeddings need a tokenizer and a table lookup in Go, not built. A transformer in Go needs [hugot](#hugot)'s Go backend, not tried, or ONNX Runtime, which needs cgo | An adapter: configuration, an HTTP client, a vector cache, the fallback. A memory system kept in step costs an LLM call per changed file |
+| Cost to run | 196 to 211 ms to index from nothing, once per process; 123 to 131 ms to index again after a change; 70 MB peak against 66 MB | FTS5: a 6.6 MB file, 4 to 31 ms per changed file. Static: a 31 MB model, 2.4 MB of vectors, 5 to 21 ms per changed file | Dense: 271 s to build, 1.6 to 1.9 s per changed file, 273 MB resident to answer and 2.8 GB to build |
+| What it asks of the host | Nothing | Nothing for fusion or FTS5; a 31 MB model fetched once for static embeddings, or twice the binary if it ships inside | A second process the operator installs and keeps running: in the trial a 190 MB Python environment and a 67 MB model; for a memory system, an LLM too |
+| Bars it fails | None | A transformer linked into the binary fails Go fit | The memory systems fail Files as source and Determinism ([Agent memory systems](#agent-memory-systems)); the servers fit Go only as an adapter |
+
+The three are not exclusive. The recommended path takes the first whole, the fusion from the second, and from the third only a model runtime, never a memory.
+
+### Recommended path
+
+The largest measured gain is search time, not recall, and it needs no model. Of the CLI's 233 ms a query, about 200 ms rebuilds the index, and the same index kept in memory answers in 6.9 ms ([What the results mean for flai](#what-the-results-mean-for-flai)). Agents search through `flai mcp`, which already keeps parsed work items between requests, so keeping the section index there too removes the rebuild from every `doc_search` and every ranked step of `prime`.
+
+The recall differences are one to four queries of 25: a direction, not proof. The misses no approach fixed are about words and size, and both fixes are model-free. q01 and q02 ("concurrently", "concurrency cap") pulled every approach, embeddings included, to the same wrong section, so a glossary is the measured gap. q21's design answer, a 63 KB section, was found by no approach, and both models read only a section's first 512 tokens, so sections bounded in size help BM25 and any later embedding alike. Bounding comes before vectors for a second reason: a vector cached by a section's text is thrown away when the sections are cut anew. FTS5's three extra finds at ten came with porter stemming; a stemmer in flai's own tokenizer can be tried against the same set, without SQLite.
+
+Hybrid A found the most, 19 of 25 at ten against 15, and lost none BM25 found, so dense ranks are worth offering. They are not worth requiring. They cost a process, a model, 271 s to build, and 273 MB to answer, and [ADR-0049](../adrs/0049-a-story-s-context-pack-fits-a-size-budget-what-the-story-names-loads-whole-what.md) rejected embedding retrieval for a model, a store, and results that move with the model. An adapter that is off by default keeps the default meeting every bar, and BM25 alone answers when the adapter is off or down. Static embeddings found one more at ten, net, and lost q25: too little to justify a 31 MB model now.
+
+Adopting fails where the bars are strict. The memory systems keep a store that is the record, which [ADR-0020](../adrs/0020-files-plus-mcp.md) rejects, written by an LLM, which fails Determinism. The hybrid servers bring the design Hybrid A measured, which flai can fuse itself, at the cost of a second process; txtai was [not tried](#not-tried).
+
+SQLite waits. In the long-running processes where agents search, an index in memory answers in 6.9 ms, and FTS5's 2.6 ms would save little there. S-0427 measured the store FTS5 would share and recommended dropping it for the charts. The one-shot CLI still rebuilds in about 200 ms; if that comes to matter, FTS5 is looked at again with S-0427's read model, so that the driver's 6 MB is paid once.
+
+What the path means for each consumer of [What a solution must meet](#what-a-solution-must-meet):
+
+| Consumer | What changes |
+|----------|--------------|
+| The pack, `prime` | The ranked step shares the index kept in memory and gains bounded sections, the stemmer, and the glossary. None of it reaches the pack while the conventions alone exceed the budget ([The context pack](#the-context-pack)): story 5 below makes room, and keeps the pack the same bytes for the same inputs, which [prompt caching](#prompt-caching-and-a-stable-pack-prefix) rewards on every turn. Conventions stay selected by topic. |
+| `doc_search` and `doc_get` | Under 10 ms a query in `flai mcp`; no hit larger than the bound; the glossary's words; with the adapter on, dense ranks fused in, each hit saying which list ranked it |
+| E-0025's digest | S-0428 puts entries under `design/`, which `doc_search` reads already, and its criterion 5 tests that `doc_search` finds them. The agents reach the archive and the threads through the digest, not the raw files, with no story of this document's. S-0430's digest step needs room in the pack, which story 5 gives |
+| S-0427's synchronized store | Not built. The section index is a cache in process memory; the adapter's vectors are a cache under the main checkout's `.flai-cache`, keyed by model and by a hash of each section's text. Deleting either loses nothing |
+| The dashboard's `search.query` | Keeps its whole-file index in `flai serve`, rebuilt by its hash, and its reach into the archive and the threads. It shares `flai/internal/search`, so the stemmer and the glossary reach it with no change of its own |
+
+Personalized PageRank over [the graph flai already has](#the-graph-flai-already-has) is HippoRAG's retrieval without a model, but nothing here measured it. It is an experiment, not a commitment.
+
+### Follow-on stories
+
+In the order they should land. Stories 1 to 4 are model-free and each reports against story 1's set. Story 5 is independent of them and lands before S-0430.
+
+| # | Title | Goal | Operator decision first | Related |
+|---|-------|------|-------------------------|---------|
+| 1 | flai's section search is measured against a recall set of questions with known answers | The trial's 25 queries and their answering sections become a file in the repository and a script that prints R@5, R@10, MRR@10, and query time for `flai doc search`, so each later story reports what it gained and lost | None | [Trial](#trial) |
+| 2 | Sections over a size bound are indexed in pieces, and `doc_get` returns a large section in pieces | No indexed piece exceeds the bound, each keeps its title and heading path, `flai-cli.md § Commands` stops winning broad queries, and `doc_get` never returns more than a tool result holds | 2 | ADR-0049's "splitting the long documents"; [agent-context.md](agent-context.md#1-a-storys-context-pack-core-scoped-linked-ranked-and-a-catalog-recommended)'s design 1, which named a size limit that was not built |
+| 3 | `flai mcp` and `flai serve` keep the section index in memory and refresh it when a file changes | `doc_search` and the pack's ranked step answer from one index kept between calls, cut again only for files whose hash changed, in under 10 ms a query in `flai mcp` | 6 | S-0427; [server-performance.md](server-performance.md) |
+| 4 | flai's search stems words and expands a query by a project glossary | A stemmer, kept only if the set gains without losing, and a glossary of the project's terms and the words that mean them, so q01 and q02 find `workflow.md § Columns and WIP limits`; the dashboard's search gains both | 3 | `flai/internal/search` |
+| 5 | A story's pack leaves room under its budget for what its links and topics select, and is the same bytes for the same inputs | The conventions a story's agent reads fit the budget with room for briefs and ranked sections, and nothing that varies between stories sits before what they share | 7 | ADR-0049; TH-0032; S-0430, which needs the room |
+| 6 | An optional embedding adapter fuses dense ranks from a local model with BM25 | Off by default; when configured, flai embeds sections through an endpoint the operator runs, caches the vectors by model and section hash, fuses by RRF with k = 60, falls back to BM25 when the endpoint is off or down, and says which list ranked each hit | 5, and an ADR refining ADR-0049 | ADR-0047, ADR-0049 |
+| 7 | Experiment: does personalized PageRank over flai's links select what a story needs better than BM25? | Walk from a story's links, topics, and touches over refines, links, and citations, story to ADR to thread, and measure it by the replay of [agent-context.md](agent-context.md#as-built) and on the set against BM25 | None | E-0025 |
+
+No story is needed for `doc_search` to reach the digest: S-0428's criterion 5 covers it.
+
+### Decisions for the operator
+
+1. **Adapt or adopt?** Adapt. flai keeps its own index, derived from the files, and adopts no agent memory system and no search server. The memory systems fail Files as source and Determinism, and the servers' design is what Hybrid A measured, which flai can fuse in Go.
+2. **Bound section size in flai, or split the large documents by hand?** In flai, for every project. The index cuts a section over the bound at paragraphs, list items, and table rows, and `doc_get` returns a section over 40,000 bytes in numbered pieces, as `prime` returns parts ([ADR-0104](../adrs/0104-the-mcp-prime-tool-returns-a-context-pack-in-parts-of-at-most-40-000-bytes-of.md)). Story 2 picks the bound the set favours among 2, 4, and 8 KB. Splitting `flai-cli.md § Commands` by hand helps this repository only.
+3. **Where does the glossary live, and who keeps it?** In one file, `design/system/glossary.md`: a table of a project term and the words that mean it, which flai reads when it builds the index. An agent adds a row when a search in the asker's words misses, and the template ships the file with its table and no rows.
+4. **Should `doc_search` read the archive and the threads?** Not directly. It reaches them through E-0025's digest. A scope for the raw archive and threads, 7.9 MB against the 3.7 MB `doc_search` reads now, waits until S-0435 shows the digest misses what agents ask.
+5. **Should flai offer the embedding adapter, and when?** Yes, off by default, and only after stories 1 to 4 are measured: build it if they leave the set below Hybrid A's 19 of 25 at ten. Its runtime is a process the operator runs and flai reaches over HTTP, [Ollama](#ollama)'s `/api/embed` first, not a model in flai's binary. It needs an ADR refining ADR-0049, which rejected embedding retrieval.
+6. **Should flai take a SQLite driver to persist the index?** No, not now. The index kept in memory answers in 6.9 ms, and S-0427 dropped the read model it would share. Look again with that read model if the one-shot `flai doc search`, which still rebuilds in about 200 ms, comes to matter.
+7. **How does a story's pack get room under its budget?** Narrow the conventions by heading topics, the remedy [agent-context.md](agent-context.md#as-built-with-a-budget) has named since 2026-09-29, and keep the 80 KB budget. Every byte of the pack is read from the cache on every turn, so raising the budget lets design in at that cost.
