@@ -6,3 +6,4 @@ Only the analyzer writes here, and it adds a row below for each report it writes
 
 | Report | Focus | Window | Status |
 |--------|-------|--------|--------|
+| [2026-10-15-bottlenecks.md](2026-10-15-bottlenecks.md) | bottlenecks | 2026-09-15 to 2026-10-15 | active |

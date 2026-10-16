@@ -6,11 +6,26 @@ title: A merge queue verifies the stories in review as one batch, bisects a red 
 status: backlog
 owner: alex
 created: 2026-10-16T04:27:57Z
-updated: 2026-10-16T04:27:57Z
+updated: 2026-10-16T04:59:12Z
 transitions: []
 tags: [cli, dashboard]
 topics: [cli, orchestration, analysis]
 touches: [flai/internal/serve, flai/internal/workitem, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/workflow.md, design/system/agent-coordination.md, design/system/metrics.md, design/conventions/strategic-agents.md, docs/operators/index.md, docs/users/flai.md, template]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 1156
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 139
+          output: 2476
+          cache_read: 55937290
+          cache_write: 25925
+          cost: 14.0294
 ---
 # E-0022 A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
 
@@ -31,6 +46,14 @@ Acceptance is one story at a time, and it stops: on uncommitted files in the mai
 ## Stories
 
 To be drafted by the planner. Order: the queue's state and its view first, read-only, so the operator sees what would batch; then the batch worktree and the single verification; then landing green and bisecting red; then the shared-path and dirty-checkout rules, each with its ADR; then the orchestrator's enqueueing; then metrics and charts; documentation and the template with each story.
+- S-0398 flai queue lists the stories in review that would batch, in the order they entered review, and why each other story would not, and the board, the MCP board, and the dashboard show the queue
+- S-0399 flai serve builds a batch of the enqueued stories in a worktree of its own, rebased on main in order, and verifies it once with the tiers flai verify runs, behind the merge-queue host action
+- S-0400 A green batch lands each story in order through the acceptance of today, and a red batch is bisected to the story that fails, which goes back to in-progress with the failing step in its notes and a thread to its agent
+- S-0401 A batch settles a rebase that stops inside the manifest's shared paths by the regenerate-and-merge steps and never sends a story back for it, and tells the story's agent of a conflict outside them by message
+- S-0402 A batch lands on main while the main checkout has uncommitted files no queued story claims, and the landing tells the operator what their checkout is behind
+- S-0403 With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify
+- S-0404 metrics.md defines the queue wait per story, the batch size, and the bisections per week by an ADR, and flai stats and the dashboard's charts report them
+- S-0405 With the merge queue on, a story's close-out and flai verify leave the test tiers the manifest marks for the queue to the batch, so a close-out main outruns no longer runs integration and smoke twice
 
 ## Notes
 

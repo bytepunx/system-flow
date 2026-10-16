@@ -6,11 +6,26 @@ title: An OpenCode adapter runs a story's agent on OpenCode with the guard, the 
 status: backlog
 owner: alex
 created: 2026-10-16T04:28:00Z
-updated: 2026-10-16T04:28:00Z
+updated: 2026-10-16T05:20:15Z
 transitions: []
 tags: [cli, template]
 topics: [cli, agents, template]
 touches: [flai/internal/harness, flai/internal/guard, flai/internal/usage, flai/internal/mcpserver, flai/internal/serve, flai/internal/manifest, design/system/agent-adapters.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, template]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 1022
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 150
+          output: 2868
+          cache_read: 62277197
+          cache_write: 26387
+          cost: 15.6189
 ---
 # E-0023 An OpenCode adapter runs a story's agent on OpenCode with the guard, the permission prompt, the roles, and usage measured, through its plugin hooks and its server's events, so a non-Claude model works a story end to end
 
@@ -31,6 +46,13 @@ flai drives one harness fully, Claude Code, and runs anything else through the `
 ## Stories
 
 To be drafted by the planner. Order: the adapter and the headless run first, with the MCP entry, so a story runs with no guard and the findings to check are settled; then the guard plugin and the capabilities it proves; then the permission prompt; then the roles; then usage and pricing; then the status stream and its ADR; then the end-to-end story on a non-Claude model; documentation and the template with each story.
+- S-0406 A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, and the findings the OpenCode section leaves to check are settled against a real opencode binary
+- S-0407 flai guard judges an OpenCode agent's calls through a plugin on tool.execute.before, and the opencode adapter states the guard only where the plugin can tell a sub-agent's call
+- S-0408 An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles
+- S-0409 The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is
+- S-0410 A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's
+- S-0411 A story's card and page show its OpenCode agent's status from a stream the adapter reads, from --format json or opencode serve's events as an ADR decides
+- S-0412 A non-Claude model works one story of this repository end to end on OpenCode through OpenRouter, with the guard and the permission prompt on, and the results record what broke and what it cost
 
 ## Notes
 

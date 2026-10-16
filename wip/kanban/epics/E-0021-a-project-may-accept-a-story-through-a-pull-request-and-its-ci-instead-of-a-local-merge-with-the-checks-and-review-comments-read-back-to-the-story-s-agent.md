@@ -6,11 +6,26 @@ title: A project may accept a story through a pull request and its CI instead of
 status: backlog
 owner: alex
 created: 2026-10-16T04:27:54Z
-updated: 2026-10-16T04:27:54Z
+updated: 2026-10-16T04:39:46Z
 transitions: []
 tags: [cli, dashboard, template]
 topics: [cli, orchestration, release, dashboard]
 touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/workitem, flai/cmd, flaiover/src, design/system/workflow.md, design/system/pushing-from-the-board.md, design/system/metrics.md, design/conventions/git.md, docs/operators/index.md, docs/users/flai.md, template]
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 18801
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 93
+          output: 1535
+          cache_read: 36583109
+          cache_write: 18265
+          cost: 9.1755
 ---
 # E-0021 A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent
 
@@ -30,6 +45,12 @@ Acceptance today merges a story's branch into main on the host, moves it to done
 ## Stories
 
 To be drafted by the planner. Order: the setting and the forge contract first, with GitHub behind it; then opening and updating the pull request on the move to review; then reading checks and reviews back as threads; then acceptance through the remote and the gate, the orchestrator's included; then the wait in metrics and the dashboard; documentation and the template with each story.
+- S-0392 A project chooses local or pull-request acceptance in system-flow.yaml, and flai reaches its GitHub remote through a forge contract with a token the host names
+- S-0393 Under pull-request acceptance, a story's move to review has flai serve push its branch and open or update one pull request from the project's pull request template
+- S-0394 A story's pull request checks and reviews show in flai show and on its dashboard page, and a failing check or a requested change reaches its agent as a thread that sends the story back
+- S-0395 Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each
+- S-0396 The time a story waits on its pull request's checks and on its reviewers is a wait of its own in metrics.md, reported by flai stats per week and charted beside the thread and review waits
+- S-0397 Under pull-request acceptance, flai accept merges the story's pull request through the remote by the project's merge method, then fetches main and moves to done, archives, and commits as today
 
 ## Notes
 

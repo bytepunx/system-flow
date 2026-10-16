@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 637.4880
-accrued_seconds: 504131
-tasks_completed: 533
-last_run: 2026-10-15T04:39:50Z
+accrued_cost: 704.9038
+accrued_seconds: 593223
+tasks_completed: 546
+last_run: 2026-10-16T05:24:42Z
 ---
 
 # Orchestrator activity
@@ -3742,6 +3742,97 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0386
 - Seconds: 1100
 - Cost: 0.5296 USD, estimated
+
+### 2026-10-15T05:03:00Z
+
+- Summary: The operator accepted S-0386 (E-0020 followed to done) while I held it to raise that acceptance would close E-0020 before its two confirmed stories (file.get/file.save, component design) were drafted; resolved my TH-0459 as moot, noting they now need a new epic or story from the operator. Under publish, policy judgement: released S-0386 (1 pending, 134.62 USD/week) as flai 1.51.2 → 1.52.0 (minor, flai/v1.52.0) and template 1.0.93 → 1.0.94 (system-flow-template v1.0.94, 90b6b47), pushed; reason: complete and verified, completes E-0020; nothing held by whole_epics.
+- Items: S-0386, E-0020
+- Seconds: 1390
+- Cost: 4.3198 USD, estimated
+
+### 2026-10-15T05:03:08Z
+
+- Summary: Under plan_backlog_stories, started the planner on S-0391 (from I-0149: the host's installed flai stays behind the project's releases, so MCP task_done still refuses), flai plan --candidates' only candidate.
+- Items: S-0391
+- Seconds: 8
+- Cost: 0.5487 USD, estimated
+
+### 2026-10-15T05:04:03Z
+
+- Summary: The operator moved S-0391 to ready while its planner runs. Under order_ready, applied the throughput order: S-0391 alone (no forecast yet).
+- Items: S-0391
+- Seconds: 55
+- Cost: 0.7337 USD, estimated
+
+### 2026-10-15T05:06:22Z
+
+- Summary: Recommended an answer on TH-0460, citing design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md § Decision
+- Items: S-0391
+- Seconds: 139
+- Cost: 1.2887 USD, estimated
+
+### 2026-10-15T05:06:26Z
+
+- Summary: Under plan_backlog_stories, posted a recommendation on planner-S-0391's TH-0460 rather than approving: its plan fits (3 tasks, file touches, no code; 20m raised from flai's 11m; 5 USD/week), but its core ask is the operator's: upgrade the host's flai from 1.48.0 (flai host upgrade) and choose auto-upgrade on or off. Thread left open for the operator. S-0391 is in progress.
+- Items: S-0391
+- Seconds: 4
+- Cost: 0.0000 USD
+
+### 2026-10-15T05:09:11Z
+
+- Summary: Recommended an answer on TH-0461, citing design/adrs/0158-flai-serve-checks-each-served-project-for-a-newer-flai-release-every-minute.md § Decision
+- Items: S-0391
+- Seconds: 165
+- Cost: 0.5587 USD, estimated
+
+### 2026-10-15T05:09:13Z
+
+- Summary: Under answer_threads autonomous, recommended on TH-0461 (agent-S-0391): the operator runs flai host upgrade once (answers TH-0460 too), and keeps 2b in S-0391 (the upgrade thread names the newest published release, not the newest tag; new ADR refining ADR-0158, with a test), since it is the same cause as I-0149. Escalated: a change to the operator's machine and a scope addition.
+- Items: S-0391
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-15T06:23:35Z
+
+- Summary: Under plan_backlog_stories, resolved planner-S-0391's TH-0460: S-0391's agent took the plan over (T-1599, T-1600 done; T-1601 waits for the upgrade). The operator's host upgrade and auto-upgrade choice continue on TH-0461, with my recommendation pending.
+- Items: S-0391
+- Seconds: 4462
+- Cost: 3.0135 USD, estimated
+
+### 2026-10-15T23:26:09Z
+
+- Summary: Under accept_reviews, verified S-0391 (flai verify passed at b5ca3495; the verifier met both criteria: ADR-0161's published-release check with tests and the operator docs; I-0149 closed). The dry run refuses: the main checkout has uncommitted files that are not S-0391's (the analyzer's 2026-10-15 report and I-0150 to I-0153, plus design/system/design-system.md and design-system.tokens.json). Left S-0391 in review and opened TH-0462 asking the operator to commit or stash them; not using --yes.
+- Items: S-0391
+- Seconds: 61354
+- Cost: 10.0907 USD, estimated
+
+### 2026-10-16T04:28:23Z
+
+- Summary: Under plan_backlog_epics, flai plan --candidates lists five new epics (E-0021 to E-0025, each in the backlog with no stories). Started the planner on E-0021 (rank 1); E-0022 to E-0025 follow one at a time.
+- Items: E-0021
+- Seconds: 18134
+- Cost: 2.7267 USD, estimated
+
+### 2026-10-16T04:50:37Z
+
+- Summary: E-0021's planner drafted S-0392 to S-0397 with 36 tasks and posted TH-0464; it now holds only for the operator's cost of delay answer on TH-0463 (epic planner threads are the operator's). Under plan_backlog_epics, started the planner on E-0022 (next in flai plan --candidates), keeping one planner drafting at a time; E-0023 to E-0025 follow.
+- Items: E-0021, E-0022
+- Seconds: 1334
+- Cost: 12.8976 USD, estimated
+
+### 2026-10-16T05:06:54Z
+
+- Summary: E-0022's planner drafted S-0398 to S-0405 with 44 tasks and posted TH-0466 (epic planner thread, the operator's; its inputs are on TH-0465). Under plan_backlog_epics, started the planner on E-0023; E-0024 and E-0025 follow.
+- Items: E-0022, E-0023
+- Seconds: 977
+- Cost: 15.1611 USD, estimated
+
+### 2026-10-16T05:24:42Z
+
+- Summary: E-0023's planner drafted S-0406 to S-0412 with 38 tasks and posted TH-0468 (the operator's; values wait on TH-0467). Under plan_backlog_epics, started the planner on E-0024; E-0025 follows.
+- Items: E-0023, E-0024
+- Seconds: 1068
+- Cost: 16.0766 USD, estimated
 
 ## Refusals
 
