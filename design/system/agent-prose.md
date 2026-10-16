@@ -79,7 +79,7 @@ The prime budget is the one place flai limits what an agent reads, and conventio
 
 ## Prose linters
 
-Criterion 1. This section compares the natural language linters that could check what agents write, records a trial of the strongest on this repository's prose, and recommends one. The linter would also score the training data and the output of a rewriting model (the next section), so machine-readable output, per-rule alerts, and rules the project can write matter as much as what a tool checks out of the box.
+Criterion 1. This section compares the natural language linters that could check what agents write, records a trial of the strongest on this repository's prose, and recommends one. The linter would also score the training data and the output of a rewriting model ([A local rewriting model](#a-local-rewriting-model)), so machine-readable output, per-rule alerts, and rules the project can write matter as much as what a tool checks out of the box.
 
 | Tool | Checks | Configurable rules | Markdown aware | Runtime | Output | Licence | Last release | Fit |
 |------|--------|--------------------|----------------|---------|--------|---------|--------------|-----|
@@ -265,3 +265,187 @@ Not checked in the trial: LanguageTool, alex, and slop-cop were not run; Vale on
 - textlint: [v15.8.0](https://github.com/textlint/textlint/releases/tag/v15.8.0), [sentence-length](https://www.npmjs.com/package/textlint-rule-sentence-length)
 - LanguageTool: [changes](https://github.com/languagetool-org/languagetool/blob/master/languagetool-standalone/CHANGES.md), [HTTP server](https://dev.languagetool.org/http-server), [HTTP API](https://languagetool.org/http-api/)
 - [alex](https://github.com/get-alex/alex), [coala](https://github.com/coala/coala), [textstat](https://github.com/textstat/textstat), [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2), [slop-cop](https://github.com/yasyf/slop-cop), [vale-ai-tells](https://github.com/krishnasunkam/vale-ai-tells), [neurosnap/sentences](https://github.com/neurosnap/sentences)
+
+## A local rewriting model
+
+Criterion 2. This section evaluates open-weight models that could be fitted, with LoRA or another method, to run on consumer hardware and rewrite verbose agent prose until it passes the linter recommended above. It covers the candidates, the approaches, the hardware, how flai would call a model, a training and evaluation plan, and the costs and risks.
+
+The short answer: small open models in 2026 make this practical on a GPU or an Apple Silicon Mac. On the operator's host, which has no GPU visible to WSL, a rewrite takes 6 to 17 seconds per paragraph. A prompted hosted model does the same job for cents a day with nothing to install. A trained local model pays only when text must not leave the host, or when prompted models miss the quality thresholds below.
+
+Facts about models come from their model cards and vendors' pages, read on 2026-10-16. Figures marked *est.* are estimates, scaled from the measured rows by model size.
+
+### Candidate models
+
+| Family | Sizes | Licence | Context | Notes for rewriting |
+|--------|-------|---------|---------|---------------------|
+| Qwen3.5 | 0.8B, 2B, 4B, 9B, dense | Apache-2.0 ([4B](https://huggingface.co/Qwen/Qwen3.5-4B), [9B](https://huggingface.co/Qwen/Qwen3.5-9B)) | 262,144 for 4B and 9B; smaller sizes not checked | Released February to March 2026. Thinking is on by default; `enable_thinking: false` turns it off. [Unsloth](https://unsloth.ai/docs/models/qwen3.5/fine-tune) has notebooks for 0.8B to 4B |
+| Gemma 4 | E2B (5.1B total), E4B (8B total), 12B | Apache-2.0 ([card](https://huggingface.co/google/gemma-4-E4B-it)) | 128K for E2B and E4B; 256K for 12B | Released 2026-04-02. Memory follows total parameters, not effective ones |
+| Granite 4.1 | 3B, 8B, dense, text only | Apache-2.0 ([card](https://huggingface.co/ibm-granite/granite-4.1-8b)) | 131,072 | Released 2026-04-29. Text only and dense, so QLoRA is the plain path |
+| Ministral 3 | 3B, 8B, 14B | Apache-2.0 for 8B ([card](https://huggingface.co/mistralai/Ministral-3-8B-Instruct-2512)); 3B not checked | 256K | Released December 2025. Instruct weights ship in FP8 |
+| Phi-4-mini | 3.8B | MIT ([card](https://huggingface.co/microsoft/Phi-4-mini-instruct)) | 128K | Released February 2025, older than the rest |
+| SmolLM3 | 3B | Apache-2.0 ([card](https://huggingface.co/HuggingFaceTB/SmolLM3-3B-Base/blob/refs%2Fpr%2F4/README.md)) | 64K, 128K with YaRN | Weights, data, and recipe all open |
+| Llama 3.2 | 1B, 3B | Llama 3.2 Community License ([card](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct)) | 128K | Gated. A distributed fine-tune must start its name with "Llama" |
+| LFM2 | 2.6B | LFM Open License v1.0 ([card](https://huggingface.co/LiquidAI/LFM2-2.6B)) | 32,768 | Commercial use is conditional. Left out |
+
+Every candidate's context covers inputs of a few thousand tokens. The licence narrows the field to Qwen3.5, Gemma 4, and Granite 4.1: Apache-2.0 and current. Qwen3.5 has the widest ladder of sizes, so one recipe trains a 2B for a CPU and a 4B for a GPU.
+
+### Approaches
+
+| Approach | What it is | When it fits |
+|----------|------------|--------------|
+| Prompted small model | A base instruct model gets the style rules and three examples. No training | The baseline every trained model must beat |
+| Prompted hosted model | Claude Haiku 5.5 with the same prompt | The baseline on cost and quality |
+| Supervised fine-tune (SFT) with LoRA | Rank 8 to 32 adapters trained on pairs of verbose text and its rewrite, on a frozen base | The main path |
+| SFT with QLoRA | LoRA on a base loaded in 4 bits, about a third of the memory | Granite, Gemma, or Ministral on a GPU of 8 GB or less. Unsloth advises against it for Qwen3.5, whose quantization error is high |
+| Full fine-tune of a tiny model | Every weight of a 0.8B to 2B model is trained | Rarely worth it. LoRA makes the same style change with a tenth of the memory |
+| Distillation | A large teacher writes the targets; the student learns them | Always the data source. SFT on a teacher's pairs is distillation |
+| DPO | Learns from pairs of a passing and a failing teacher output | A second stage, when SFT outputs still trip the linter |
+| GRPO | Online reinforcement learning: the model samples rewrites and reward functions score them ([TRL](https://huggingface.co/docs/trl/main/en/grpo_trainer), [Unsloth](https://unsloth.ai/docs/get-started/reinforcement-learning-rl-guide)) | A third stage. The rewards: fewer Vale alerts, every protected token kept, a length term, and entailment. A model can game them by deleting content, so the meaning reward must stop that |
+| Quantization | GGUF Q4_K_M for CPU and Mac, Q8_0 for GPU ([llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/tools/quantize/README.md)) | Always, for inference |
+
+The linter enters every approach the same way: text in, alerts out. Vale's JSON gives each alert's `Check`, `Line`, `Span`, `Severity`, and `Message`. Any linter that gives that list can stand in for Vale.
+
+### Hardware
+
+GGUF Q4_K_M takes about 0.61 bytes per parameter, plus 0.3 to 1.5 GB for the cache of a 4K to 8K context. Generation speed follows memory bandwidth.
+
+| Size | Q4_K_M memory | Operator's host: Ryzen 9 3900X, DDR4, CPU only | RTX 3060 12 GB | RTX 4060 Ti 16 GB | Apple M2 | Apple M4 Pro |
+|------|---------------|------------------------------------------------|----------------|-------------------|----------|--------------|
+| 2B | 1.5 to 2.5 GB | 20 to 30 tok/s *est.* | ~200 tok/s *est.* | ~170 tok/s *est.* | ~60 tok/s *est.* | ~130 tok/s *est.* |
+| 4B | 3 to 4 GB | 10 to 15 tok/s *est.* | 110 to 130 tok/s *est.* | ~100 tok/s *est.* | ~35 tok/s *est.* | ~80 tok/s *est.* |
+| 7B to 8B | 5 to 6 GB | 6 to 8 tok/s ([guide](https://bestllmfor.com/guide/llm-local-cpu-sans-gpu/)) | 76 tok/s ([llama.cpp](https://github.com/ggml-org/llama.cpp/discussions/15013)) | 64 tok/s (same) | 21.7 tok/s ([llama.cpp](https://github.com/ggml-org/llama.cpp/discussions/4167)) | 50 tok/s (same) |
+| 14B | 9.5 to 10 GB | 3 to 4 tok/s *est.* | Just fits | Fits | Tight at 16 GB | Fits |
+
+A typical rewrite reads about 350 tokens and writes about 150. That gives these times per rewrite:
+
+| Where | 2B | 4B | 8B |
+|-------|----|----|----|
+| Operator's host, CPU only | 6 to 9 s | 12 to 17 s | 25 to 35 s |
+| RTX 3060 or 4060 Ti | under 1 s | ~1.5 s | ~2.5 s |
+| Apple M2 | ~3 s | ~5 s | ~9 s |
+
+The operator's host shows only a d3d12 device inside WSL, so CUDA is not available there, and Vulkan through the Dozen driver has overhead ([llama.cpp](https://github.com/ggml-org/llama.cpp/pull/16689)). If the Windows side has an NVIDIA or AMD GPU, llama-server can run on Windows and flai in WSL can reach it at `127.0.0.1` under mirrored networking. That GPU is unknown.
+
+Training needs a GPU. Unsloth's minimums ([requirements](https://www.unsloth.ai/docs/get-started/fine-tuning-for-beginners/unsloth-requirements)):
+
+| Model | QLoRA, 4-bit | LoRA, 16-bit |
+|-------|--------------|--------------|
+| 3B | 3.5 GB | 8 GB |
+| 8B | 6 GB | 22 GB |
+| 14B | 8.5 GB | 33 GB |
+| Qwen3.5 0.8B, 2B, 4B, 9B | Not advised | 3, 5, 10, 22 GB |
+
+No measured training throughput was found, so these times are estimates. 12,000 pairs of about 450 tokens make 5.4 million tokens an epoch. At 30% of an RTX 4090's 165 TFLOPS ([Vast](https://vast.ai/pricing/gpu/RTX-4090)), a 4B model takes about 45 minutes an epoch and an 8B about 1.5 hours. Plan on 2 to 5 GPU hours for SFT with evaluation, and 5 to 20 more for GRPO. The operator's host cannot run Unsloth, which needs an NVIDIA GPU in WSL.
+
+Renting is cheap: an RTX 4090 costs $0.25 to $0.69 an hour, an A100 80 GB $1.19 to $1.39, an H100 $1.99 to $3.89 ([RunPod](https://www.runpod.io/gpu-cloud/pricing), [Vast](https://computeprices.com/providers/vast/gpus/rtx4090)). A training run costs about $1 to $15.
+
+### Serving and how flai would call it
+
+| Server | API | Platform | Notes |
+|--------|-----|----------|-------|
+| llama.cpp `llama-server` | OpenAI `/v1/chat/completions`, `/v1/models`, `/health` | CPU, CUDA, Metal, Vulkan | `--api-key`, JSON-schema and grammar constraints, parallel slots ([README](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md)) |
+| Ollama | OpenAI-compatible at `http://localhost:11434/v1` | CPU, GPU, Mac | Wraps llama.cpp ([docs](https://docs.ollama.com/api/openai-compatibility.md)) |
+| LM Studio | OpenAI-compatible at `http://localhost:1234/v1` | Desktop | Answers with whichever model is loaded |
+| vLLM | `vllm serve <model>` | GPU | Loads LoRA adapters at run time ([docs](https://docs.vllm.ai/en/latest/serving/online_serving/)) |
+| MLX `mlx_lm.server` | `/v1/chat/completions` | Apple Silicon | "Not recommended for production" ([SERVER.md](https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/SERVER.md)) |
+
+All of them speak the OpenAI chat API, so flai calls each the same way, through a provider entry with `api: openai-chat` as [agent-adapters.md](agent-adapters.md) proposes. A sketch, not a decided shape:
+
+```yaml
+agent:
+  providers:
+    local-rewrite:
+      api: openai-chat
+      base_url: http://127.0.0.1:8080/v1
+      key_env: ""              # llama-server without --api-key
+rewrite:
+  provider: local-rewrite      # or a hosted provider for Claude Haiku 5.5
+  model: flai-rewrite-4b-q4km
+  timeout: 20s
+  max_ratio: 1.0               # refuse output longer than its input
+  on_failure: pass-through     # write the original, flagged
+```
+
+flai needs five things: a base URL, a model name, a timeout, a health probe (`/health` or `/v1/models`, cached for a few minutes), and a fallback. On a refusal, a timeout, an error, or a failed check, flai writes the original text unchanged and records why.
+
+A rewrite must keep markdown structure, so flai sends only prose. It never sends code, tables, headings, or front matter. Placeholders such as `⟦P3⟧` replace IDs, paths, inline code, URLs, and numbers before the model sees the text, and flai restores them after. Whether every protected token survived is then an exact comparison of placeholders.
+
+```mermaid
+flowchart LR
+  A[Agent text] --> B[Split markdown into prose segments]
+  B --> C[Mask protected tokens]
+  C --> D[Vale]
+  D -->|no alerts| W[Write original]
+  D -->|alerts| E[Rewriter]
+  E -->|timeout or error| F[Write original, flagged]
+  E --> G[Unmask, then Vale, tokens, length, meaning]
+  G -->|all pass| X[Write rewrite]
+  G -->|any fails| F
+```
+
+Latency decides where the rewrite runs. With a GPU or a Mac it runs inside the write. On a CPU only it runs after: flai writes the original, a queue rewrites it, and flai amends the file, with git keeping the original.
+
+### Training plan
+
+1. **Extract.** Walk `wip/archive/`, `wip/threads/`, `wip/agents/`, `design/adrs/`, `design/issues/`, and `design/system/`. Keep paragraphs and list items; drop front matter, code, tables, and headings. Group them into segments of 30 to 400 words, remove near-duplicates, and record each segment's path and date. The corpus is the 1.47 million words measured under [Today](#today).
+2. **Mask.** Replace IDs (`\b(S|T|E|I|TH|MS|ADR)-\d{4}\b`), code spans, paths, URLs, numbers, dates, and link targets with numbered placeholders, and keep the map.
+3. **Generate targets.** A large teacher rewrites each segment twice, under the rules of [communication.md](../conventions/communication.md) and the Vale rule list: keep every placeholder once, add no fact, keep list structure. Through Anthropic's Batch API at half price, 20,000 segments cost about $20 to $80 ([pricing](https://platform.claude.com/docs/en/about-claude/pricing)).
+4. **Filter.** Keep a pair only if it passes every gate: no Vale error, warnings at most half the input's rate, every placeholder present, a length ratio of 0.4 to 0.95, and entailment of at least 0.9 from input to output and 0.7 back. Add 5 to 10% inputs that already pass, with the input as the target, so the model learns to leave good text alone. Aim for 10,000 to 15,000 pairs.
+5. **Split** by source file and time: the newest month's text as the 5% test set, 5% validation, the rest training. No file has paragraphs in two splits.
+6. **Fine-tune.** Unsloth, or TRL's `SFTTrainer` with PEFT; Axolotl on rented machines. Base Qwen3.5-2B and 4B instruct with the non-thinking template. bf16 LoRA, rank 16, alpha 16 to 32, all linear layers, learning rate 2e-4 with cosine decay, 2 epochs, sequences up to 2,048 tokens, loss on the completion only. For QLoRA, train Granite 4.1 instead. Keep the smaller model if it meets the thresholds.
+7. **Preference stage, if needed.** DPO on the teacher's passing and failing candidates, or GRPO on 1,000 to 2,000 held-out segments with the gates as rewards. Read samples for deletion.
+8. **Export** to GGUF, Q4_K_M for CPU and Mac and Q8_0 for GPU, with Unsloth's `save_pretrained_gguf` or llama.cpp's `convert_hf_to_gguf.py` and `llama-quantize` ([Unsloth](https://unsloth.ai/docs/basics/running-and-saving-models/saving-to-gguf)). Check that the chat template and end token match training.
+9. **Serve** with `llama-server -m flai-rewrite-4b-Q4_K_M.gguf --port 8080 -c 8192 -np 2`, naming the file with its date and data hash.
+10. **Retrain** when `communication.md` or the Vale rules change: steps 3 to 9 run again.
+
+### Evaluation
+
+The same harness measures the prompted base model, Claude Haiku 5.5, the agent's own model, and each trained model.
+
+| Metric | How | Pass to start with |
+|--------|-----|--------------------|
+| Protected tokens kept | Exact multiset of placeholders, then of IDs, paths, code, and numbers after unmasking | 100%. One miss means fallback |
+| Linter alerts | Vale alerts per 1,000 words, before and after | No error. Warnings down at least 50%, and within 20% of the teacher's rate |
+| Length | Words out over words in | Median 0.55 to 0.8. No output longer than its input |
+| Meaning, entailment | An MNLI model or [AlignScore](https://aclanthology.org/2023.acl-long.634), both directions, per segment | Input entails output at 0.9 or more on 95% of segments; output entails input at 0.7 or more |
+| Meaning, embeddings | Cosine similarity | Diagnostic only: it scores a negated sentence as near the original ([COSTRA](https://arxiv.org/pdf/1912.01673)) |
+| Meaning, LLM judge | A model grades same facts, none added, none dropped, on 300 test pairs | 95%. Judges favour their own outputs ([Panickssery et al.](https://arxiv.org/abs/2404.13076)), so teacher and judge come from different families |
+| Operator review | 50 random test pairs, blind against the original | 90% "same meaning, easier to read". No wrong fact |
+
+The main risk is a fact invented or dropped. The token check catches a changed ID or number, and entailment catches most added claims. Neither reliably catches a dropped "not" or condition, so the operator's review gates any release of the model.
+
+### Costs and risks
+
+| | Trained local model | Prompted local model | Claude Haiku 5.5 | The agent's own model | Linter feedback only |
+|-|---------------------|----------------------|------------------|-----------------------|----------------------|
+| One-off cash | $25 to $100: teacher, GPU, judge | None | None | None | None |
+| One-off work | Pipeline, scorers, harness: days to weeks | Harness and prompt | Harness and prompt | Prompt | Vale rules and the refusal loop |
+| Per rewrite | Free; 6 to 17 s on the operator's host, 1 to 5 s on a GPU or Mac | Same | About $0.00013 at $0.10 and $0.50 per million tokens in and out; latency not measured | Frontier tokens and context | One more agent turn |
+| Upkeep | Retrain when the style changes | Edit the prompt | Edit the prompt | Edit the prompt | Edit the rules |
+| Install | A server and a model file on every host | Same | A key | Nothing | Vale |
+| Text leaves the host | No | No | Yes | Already does | No |
+
+Other risks:
+
+- **Meaning drift.** The operator acts on work items as written; a rewrite that drops a condition changes the work. The fallback on any failed gate limits the harm, and git keeps every original.
+- **Teacher terms.** Anthropic's [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) bar using the services "to train competing AI models" without approval. Whether a private style rewriter competes is a legal question this research did not settle. An Apache-2.0 open teacher on a rented GPU removes it.
+- **Reward hacking.** A linter reward pushes toward deletion. A hard meaning gate and a length floor counter it.
+- **One more process.** The model server must run for the rewriter to work. The fallback keeps flai working when it does not.
+
+### Recommendation for the model
+
+1. Build what every option needs: markdown segmentation, placeholder masking and the token check, a Vale scorer behind a linter interface, and the evaluation harness.
+2. Add the rewrite provider with pass-through fallback. Point it first at Claude Haiku 5.5 and at a prompted Qwen3.5-4B, and run the evaluation.
+3. Train only if a local model is required and the prompted local model misses the thresholds. Use Qwen3.5-2B for a CPU and Qwen3.5-4B for a GPU or Mac, with bf16 LoRA SFT on filtered pairs, DPO second, and GRPO only if needed.
+4. On the operator's host, run the rewrite after the write until a GPU is available to it.
+
+Not verified: the context length of Qwen3.5 0.8B and 2B and the licence of Ministral 3 3B; any speed on the Ryzen 9 3900X, which `llama-bench` on the host would settle; training throughput; Haiku 5.5's latency; and the quality of any prompted model on this repository's prose, which the evaluation would measure. No small open model released after August 2026 was found, but the search was not exhaustive.
+
+### Sources for the model
+
+- Models: [Qwen3.5-4B](https://huggingface.co/Qwen/Qwen3.5-4B), [Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B), [Gemma 4 E4B](https://huggingface.co/google/gemma-4-E4B-it), [Gemma 4 release](https://the-decoder.com/googles-gemma-4-is-now-available-with-apache-2-0-licensing-for-the-first-time/), [Granite 4.1 8B](https://huggingface.co/ibm-granite/granite-4.1-8b), [Ministral 3 8B](https://huggingface.co/mistralai/Ministral-3-8B-Instruct-2512), [Phi-4-mini](https://huggingface.co/microsoft/Phi-4-mini-instruct), [SmolLM3](https://huggingface.co/HuggingFaceTB/SmolLM3-3B-Base/blob/refs%2Fpr%2F4/README.md), [Llama 3.2 3B](https://huggingface.co/meta-llama/Llama-3.2-3B-Instruct), [LFM2-2.6B](https://huggingface.co/LiquidAI/LFM2-2.6B)
+- Training: [Unsloth requirements](https://www.unsloth.ai/docs/get-started/fine-tuning-for-beginners/unsloth-requirements), [Unsloth Qwen3.5](https://unsloth.ai/docs/models/qwen3.5/fine-tune), [Unsloth RL guide](https://unsloth.ai/docs/get-started/reinforcement-learning-rl-guide), [Unsloth GGUF](https://unsloth.ai/docs/basics/running-and-saving-models/saving-to-gguf), [TRL GRPO](https://huggingface.co/docs/trl/main/en/grpo_trainer)
+- Speed: [llama.cpp CUDA results](https://github.com/ggml-org/llama.cpp/discussions/15013), [llama.cpp Apple Silicon results](https://github.com/ggml-org/llama.cpp/discussions/4167), [llama.cpp quantize](https://github.com/ggml-org/llama.cpp/blob/master/tools/quantize/README.md), [CPU guide](https://bestllmfor.com/guide/llm-local-cpu-sans-gpu/), [Dozen driver](https://github.com/ggml-org/llama.cpp/pull/16689), [RTX 4090](https://vast.ai/pricing/gpu/RTX-4090)
+- Serving: [llama-server](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md), [Ollama](https://docs.ollama.com/api/openai-compatibility.md), [vLLM](https://docs.vllm.ai/en/latest/serving/online_serving/), [mlx-lm server](https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/SERVER.md)
+- Costs and terms: [Claude pricing](https://platform.claude.com/docs/en/about-claude/pricing), [RunPod](https://www.runpod.io/gpu-cloud/pricing), [Vast RTX 4090](https://computeprices.com/providers/vast/gpus/rtx4090), [Anthropic Commercial Terms](https://www.anthropic.com/legal/commercial-terms)
+- Evaluation: [AlignScore](https://aclanthology.org/2023.acl-long.634), [AlignScore critique](https://arxiv.org/html/2403.02270v1), [COSTRA](https://arxiv.org/pdf/1912.01673), [self-preference bias](https://arxiv.org/abs/2404.13076)
