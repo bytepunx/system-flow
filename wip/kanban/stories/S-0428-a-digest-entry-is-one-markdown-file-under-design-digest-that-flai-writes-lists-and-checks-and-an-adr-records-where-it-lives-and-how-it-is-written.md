@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:10Z
-updated: 2026-10-16T06:11:29Z
+updated: 2026-10-16T07:30:22Z
 transitions: []
 tags: [cli, template]
 topics: [cli, conventions, planning, analysis]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 51m
-  delivery: 2026-10-17T00:30:00Z
-  basis: "flai forecast's 51m kept (96 s per unit over 61 done feature stories on claude-opus-5-5, large band, size 32 with 26 touches): the template copies inflate the size about as much as the ADR and the new package add, across six tasks in four layers; delivery is flai's play-out."
-  by: planner-E-0025
-  at: 2026-10-16T06:11:05Z
+  delivery: 2026-10-17T01:13:00Z
+  basis: "Its own forecast of 51m; 35th in the pull order with an in-progress limit of 5, behind S-0426, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424 and S-0425."
+  by: flai
+  at: 2026-10-16T07:30:22Z
 ---
 # S-0428 A digest entry is one markdown file under design/digest that flai writes, lists, and checks, and an ADR records where it lives and how it is written
 

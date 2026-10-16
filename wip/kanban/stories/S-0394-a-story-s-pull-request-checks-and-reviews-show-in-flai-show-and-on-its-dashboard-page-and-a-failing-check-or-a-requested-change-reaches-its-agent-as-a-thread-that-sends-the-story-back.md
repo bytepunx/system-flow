@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:36:28Z
-updated: 2026-10-16T06:07:38Z
+updated: 2026-10-16T07:30:22Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, dashboard]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h15m
-  delivery: 2026-10-16T09:51:00Z
-  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 5, behind S-0426, S-0427, S-0241, S-0392 and S-0393."
+  delivery: 2026-10-16T11:14:00Z
+  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 5, behind S-0426, S-0241, S-0392 and S-0393."
   by: flai
-  at: 2026-10-16T06:07:38Z
+  at: 2026-10-16T07:30:22Z
 ---
 # S-0394 A story's pull request checks and reviews show in flai show and on its dashboard page, and a failing check or a requested change reaches its agent as a thread that sends the story back
 
