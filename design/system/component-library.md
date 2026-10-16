@@ -94,10 +94,29 @@ A component the compiler cannot parse is listed with its error. A missing `node`
 
 flai runs a sub-project's own Vite dev server on the host, with the project's own config, plugins, and dependencies, so aliases, Tailwind, and the design stylesheet behave as in the app. A plugin flai embeds serves a harness page that renders one component by its path, inside an error boundary, after the `setup` module. Vite's hot module replacement carries each saved change, to the source or the stylesheet, into the harness.
 
-- The dev server binds 127.0.0.1 on a port flai picks.
-- Starting it runs the project's code on the host, so it sits behind a new host action, `components`, off until the operator runs `flai serve enable components`.
-- flai stops a dev server nobody has asked about for 30 minutes, and when `flai serve` stops.
-- The dashboard frames the harness cross-origin and talks to it by `postMessage`, under a protocol that story's ADR fixes.
+[ADR-0163](../adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md) records the decision.
+
+- flai writes a Vite config under `.flai-cache/components/<project>/<sub-project>/` that loads the sub-project's own config and merges flai's plugin into it, and runs the sub-project's own `vite` in its folder.
+- The dev server binds 127.0.0.1 on a port flai picks. The browser on the host frames it; the dashboard's container never reaches it.
+- Starting it runs the project's code on the host, so it sits behind a new host action, `components`, off until the operator runs `flai serve enable components`. `components.start` and `components.stop` are gated by it and journalled; `components.status` and `components.list` are reads.
+- flai stops a dev server without a `components.status` call for `components.idle`, 30 minutes by default, and every dev server when `flai serve` stops.
+- The harness at `/__flai/components/` imports the `setup` module, then mounts the component `?c=<path>` or a `select` message names, inside an error boundary.
+
+### The protocol
+
+The dashboard frames the harness cross-origin and talks to it by `postMessage`. Every message is an object with `source: "flai-components"`, `version: 1`, and `type`. The harness URL carries the page's origin as `?origin=`: the harness accepts messages only from that origin and posts only to it, and the page accepts messages only from the harness's origin and its own frame. Without `origin`, the harness renders `?c=` and posts nothing.
+
+| From | Type | Fields | Meaning |
+|------|------|--------|---------|
+| page | `select` | `component`, `props?` | Mount this component, by its path in the sub-project, with these props. |
+| page | `props` | `props`, `functions?` | Set the mounted component's props without remounting it. Each name in `functions` gets a logger that posts `event`. |
+| page | `theme` | `theme` | Set `data-theme` on the document to `light` or `dark`. |
+| page | `tokens` | `light`, `dark` | Lay these CSS custom properties over the stylesheet's, under `:root` and `[data-theme='dark']`; empty objects clear them. |
+| harness | `ready` | `component?` | The harness has loaded and its `setup` module has run. |
+| harness | `rendered` | `component` | The component mounted, or took new props. |
+| harness | `error` | `component`, `message`, `file?`, `line?`, `column?` | The component failed to import or render; `file` and `line` say where. |
+| harness | `event` | `component`, `name`, `args` | A function prop was called, with its arguments as far as JSON carries them. |
+| harness | `size` | `width`, `height` | The rendered content's size, in CSS pixels, each time it changes. |
 
 ## The Components page (S-0439)
 

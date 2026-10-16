@@ -6,6 +6,7 @@ date: 2026-10-16
 supersedes: []
 superseded_by: []
 refines: [ADR-0029, ADR-0031]
+topics: [components, design, cli, dashboard]
 ---
 
 # ADR-0163 flai runs a sub-project's own Vite dev server on 127.0.0.1 behind the components host action, stops it when idle, and the dashboard frames its harness cross-origin and talks to it by postMessage under a fixed protocol
