@@ -236,10 +236,98 @@ The SQL answers, in both forms, match flai's over the snapshot on all 5,321 valu
 
 The eight SQL reads answer in 83 ms warm over the derived tables, with every value matching flai's. But flai's Go computes the same parts from parsed items in about 25 ms. The hold replay, at 3.4 s, is 97 percent of `Compute` over the snapshot, and no read model takes it over. Inputs read from SQLite save about 440 ms on a cold call and cost about 27 ms on a warm one.
 
+### Overhead
+
+T-1802 ran on 2026-10-16 between 06:40Z and 06:58Z, on the same host, with a load average of 0.7 to 4.1. Its programs, scripts, outputs, and commands are in `bin/experiments/S-0427/overhead/`, with the steps appended to the folder's `README.txt`. `overhead.go` adds commands to T-1801's program through the same overlay; T-1801's files are unchanged. Every query uses T-1801's derived tables and its fixed now. `/tmp` is tmpfs, so the corpora are in RAM. The databases are on the worktree's ext4 disk unless a row says tmpfs.
+
+**The corpora.** `make-corpus.py` copies the snapshot whole, then adds N-1 copies of every work item, thread, and conversation. Copy k adds k × 10000 to every four-digit `E-`, `S-`, `T-`, `TH-`, and `MS-` ID, in the file and in its name, so S-0241 becomes S-10241, S-20241, and so on. Parents, `after`, anchors, and a conversation's stories resolve within each copy. Issues, the board, the manifest, the activity documents, and the conflict log stay once. Dates inside the files are not shifted. Each copy repeats the snapshot's history on the same days, so at any moment there are N times as many open stories, all claiming the same paths. That is a heavier case for the hold replay than ten times the history spread over more time.
+
+| Corpus | Files loaded | Items | Bytes of those files | Measured with |
+|--------|--------------|-------|----------------------|---------------|
+| 1x, `/tmp/s0427-corpus` | 2,914 | 2,308 | 7,432,477 | `corpus-bytes.py <corpus>...` |
+| 2x, `/tmp/s0427-corpus-2x` | 5,828 | 4,616 | 14,906,975 | the same |
+| 3x, `/tmp/s0427-corpus-3x` | 8,742 | 6,924 | 22,381,473 | the same |
+| 10x, `/tmp/s0427-corpus-10x` | 29,140 | 23,080 | 74,702,959 | the same |
+
+The SQL answers matched flai's report over the same corpus on every value at every scale: 5,321, 9,517, 13,713, and 43,085 values, none differing (`compare.py runs/answers-<x>x.json runs/baseline-<x>x.json`).
+
+**Storage.** The database grows in step with the items, at about 10.2 MB per thousand items, or 3.7 MB without the pass-through columns. It is 3.2 times the bytes it loads, and 1.16 times without them. At 1x, the `items` table holds 11.9 MB, most of it the `doc` JSON; `threads` holds 2.5 MB and `touches` 2.4 MB. In WAL mode the load's one transaction writes a WAL as large as the database, so a load needs twice the database's space until the close checkpoints it. The close removes the WAL and the shared-memory file.
+
+| Corpus | Database after a full load | Per 1,000 items | Vacuumed copy | Vacuumed, pass-through columns blanked | Per 1,000 items | WAL and `-shm` at the end of a load in WAL mode, before close |
+|--------|----------------------------|-----------------|---------------|----------------------------------------|-----------------|------------------------------------------------------------------|
+| 1x | 23,531,520 bytes | 10.20 MB | 22,769,664 | 8,609,792 | 3.73 MB | 23,751,832 and 65,536 |
+| 2x | 47,058,944 | 10.19 MB | 45,465,600 | 17,113,088 | 3.71 MB | 47,417,112 and 98,304 |
+| 3x | 70,574,080 | 10.19 MB | 68,173,824 | 25,636,864 | 3.70 MB | 71,070,032 and 163,840 |
+| 10x | 234,643,456 | 10.17 MB | 227,119,104 | 85,295,104 | 3.70 MB | 236,100,752 and 458,752 |
+| Measured with | `s0427overhead load <corpus> <db>` | derived | `dbsize.py <db> runs` | the same | derived | `s0427overhead walload <corpus> <db>` |
+
+| Other storage | Figure | Measured with |
+|---------------|--------|---------------|
+| WAL after a rescan with nothing changed, 1x and 10x | 0 bytes, `-shm` 32,768 | `wal-rescan.sh 1 10` |
+| WAL after a rescan with one story changed, 1x and 10x | 49,472 bytes, `-shm` 32,768 | the same |
+| flai's binary with the driver linked in | 37,353,257 bytes against 31,323,518: 6,029,739 more, 19 percent | `go build` of `flai/` with and without an overlay that imports `modernc.org/sqlite` |
+
+**RAM.** Max RSS is from `wait4`'s rusage through `measure.py`. VmRSS is from `/proc/self/status`, read by the program at each step. The baseline row is flai's own report over the same corpus, one process: `statsread.Read`, then `metrics.Compute`, then at 1x to 3x Compute's parts timed once more.
+
+| What | 1x | 2x | 3x | 10x | Measured with |
+|------|----|----|----|-----|---------------|
+| Full load, max RSS | 25,956 KB | 30,196 KB | 33,760 KB | 58,620 KB | `measure.py runs/load-<x>x 3 -- s0427overhead load <corpus> <db>`, median |
+| Cold open, rescan, and the eight reads, max RSS | 24,140 KB | 30,572 KB | 37,468 KB | 70,256 KB | `measure.py ... 3 -- s0427overhead query <corpus> <db> <now> <out> 0 tables`, median |
+| A process holding the read model warm, after three warm rounds, max RSS | 26,468 KB | 34,068 KB | 39,856 KB | 81,700 KB | `measure.py ... 1 -- s0427overhead query ... 3 tables` |
+| The same kind of process, about to idle, VmRSS | 24,636 KB | | | 71,004 KB | `s0427overhead idle <corpus> <db> <now> db 130` |
+| A process holding flai's parsed items, VmRSS | 44,912 KB | 74,236 KB | 103,284 KB | 298,512 KB | `s0427overhead serverss <corpus> <db> <now> items 5` |
+| The same, after it opens the read model and answers the eight reads five times | 58,336 KB, 13,424 more | 91,212 KB, 16,976 more | 122,584 KB, 19,300 more | 349,780 KB, 51,268 more | the same run |
+| A process after `statsread.Read` and one `metrics.Compute`, VmRSS | 62,336 KB | | 146,696 KB | | `s0427overhead serverss ... compute 5` |
+| The same, after the read model and the eight reads five times | 70,676 KB, 8,340 more | | 155,032 KB, 8,336 more | | the same run |
+| Baseline: flai's report over the corpus, max RSS | 61,016 KB | 103,328 KB | 145,752 KB | 436,696 KB | `measure.py runs/baseline-<x>x 1 -- s0427overhead baseline <corpus> <now> <out> <0 or 1>` |
+
+The baseline's `stats.get` in the main checkout peaked at 79,368 KB, and a warm process held 71,304 KB after six calls. A process that holds only the parsed items gains 13 MB at 1x and 51 MB at 10x from the read model. Most of the gain is Go heap for the answers' rows: at 10x the heap in use rose from 247 MB to 307 MB over the reads. A process that has just run `metrics.Compute` gains 8.3 MB at 1x and at 3x, because the reads reuse the heap Compute freed. Of that, 2.5 MB is file-backed: the driver's code pages (`RssFile` 8,008 KB to 10,556 KB). A long-running flai serve would be the second kind once it has answered one `stats.get`.
+
+**CPU.** The warm figures are the means of 30 rescans or requests in one process (`s0427overhead cpu <corpus-copy> <db> <now> 30`), from `getrusage` around each, with the median wall time in brackets. For the changed rescans the program appends a line to a story and sets its modification time 5 s back, so the rescan reads it once and trusts it. The per-hour and per-thousand rows are derived: 3,600 or 1,000 times the measured CPU.
+
+| What | 1x | 2x | 3x | 10x | Measured with |
+|------|----|----|----|-----|---------------|
+| Full load, user and system CPU | 1,013 and 266 ms | 1,975 and 401 ms | 2,780 and 487 ms | 8,893 and 1,325 ms | the program's `getrusage` at the end of each load, median of three |
+| Rescan, nothing changed, warm | 21.7 ms (18.2 ms) | 41.3 ms (34.7 ms) | 64.4 ms (53.8 ms) | 215.4 ms (183.2 ms) | `cpu` |
+| Rescan, one story changed, warm | 25.2 ms (23.7 ms) | 45.6 ms (40.7 ms) | 66.3 ms (58.1 ms) | 218.4 ms (187.9 ms) | `cpu` |
+| A request: rescan and the eight reads, warm | 108.1 ms (103.1 ms) | 215.1 ms (205.3 ms) | 335.1 ms (318.7 ms) | 1,170.3 ms (1,122.8 ms) | `cpu` |
+| Derived: a rescan every second, nothing changed, CPU an hour | 78 s, 2.2 percent of a core | 149 s | 232 s | 776 s, 21.5 percent of a core | 3,600 × the warm rescan |
+| Derived: per thousand requests, the rescan alone, or the rescan and the eight reads | 21.7 s, or 108 s | 41 s, or 215 s | 64 s, or 335 s | 215 s, or 1,170 s | 1,000 × the warm figures |
+| Idle for 130 s, holding the read model open warm | 2.6 ms | | | 3.1 ms | `idle.sh`: `s0427overhead idle ... db 130` |
+| Idle for 130 s, holding flai's parsed items, for comparison | 10.5 ms | | | 95.9 ms | `idle.sh`: `s0427overhead idle ... items 130` |
+
+For comparison, a warm `stats.get` costs 5,502 ms of CPU a call on the main checkout (5,208 ms user, 294 ms system). The charts page asks for the stats again on every item change (`follow(['item'], ...)` in `flaiover/src/routes/charts/[kind]/+page.svelte`), so per request is how a rescan before each answer would be paid. Idle, the read model costs nothing measurable: 2.6 ms in 130 s at 1x and 3.1 ms at 10x, less than a process that holds only the parsed items.
+
+Nearly all of a rescan is stat-ing every file: 19 to 20 ms of 20 to 21 ms at 1x, and 172 to 189 ms of 188 to 211 ms at 10x, about 6.5 µs a file. Reloading the one changed file and its derived rows took 6.7 to 7.3 ms at 1x and 22 to 25 ms at 10x. A rescan keyed on inode also reloads every file after anything that rewrites them all. A first, mistaken run rescanned a WAL database loaded from the snapshot against a copy with new inodes. It reloaded all 2,914 files in 2.2 s at 1x and all 29,140 in 20.0 s at 10x, about twice a full load (`runs/walrescan-<x>x-1.out`).
+
+**Growth.** flai's report over the 10x corpus took 199 s in one run, under the 10-minute bound, so no estimate from a smaller corpus was needed. The other rows are medians of three, except the warm reads, the median of three rounds in one process.
+
+| What | 1x | 2x | 3x | 10x | 10x over 1x | Measured with |
+|------|----|----|----|-----|-------------|---------------|
+| Baseline: `statsread.Read`, cold | 572 ms | 1,084 ms | 1,560 ms | 4,894 ms | 8.6 | `s0427overhead baseline`, one run each |
+| Baseline: `metrics.Compute` | 3,715 ms | 10,975 ms | 21,826 ms | 193,865 ms | 52 | the same |
+| `replayHolds`, timed apart | 3,647 ms | 10,826 ms | 23,095 ms | not timed | | the same, with parts |
+| Compute's other parts that the SQL covers, summed | 25.8 ms | 54.5 ms | 88.7 ms | not timed | | the same |
+| Baseline: user CPU of read and Compute | 5,986 ms | 17,683 ms | 35,497 ms | 331,018 ms | 55 | the same |
+| SQLite: full load, database on ext4 | 1,098 ms | 2,076 ms | 2,890 ms | 9,186 ms | 8.4 | `measure.py runs/load-<x>x 3 -- ...` |
+| SQLite: full load, database on tmpfs | 979 ms | 1,946 ms | 2,713 ms | 8,763 ms | 9.0 | `measure.py runs/loadtmp-<x>x 3 -- ...` |
+| SQLite: one-shot, open, rescan, eight reads | 119 ms | 226 ms | 334 ms | 1,153 ms | 9.7 | `measure.py runs/oneshot-<x>x 3 -- ...` |
+| SQLite: the eight reads, warm | 82.0 ms | 169.1 ms | 257.8 ms | 917.5 ms | 11.2 | `measure.py runs/warm-<x>x 1 -- ...` |
+| of which `daily_states` | 43.9 ms | 91.3 ms | 137.3 ms | 498.3 ms | 11.4 | the same |
+| SQLite: rescan in a fresh process, nothing changed | 21.1 ms | 38.1 ms | 57.1 ms | 191.3 ms | 9.1 | `rescan-test.py` |
+| SQLite: rescan in a fresh process, one story changed | 27.0 ms | 45.0 ms | 64.1 ms | 200.0 ms | 7.4 | the same |
+| SQLite: database | 23.5 MB | 47.1 MB | 70.6 MB | 234.6 MB | 9.97 | the load |
+
+The read model grows linearly: its load, rescans, reads, and size each grow 7 to 11 times from 1x to 10x. flai's file read grows the same way, 8.6 times. `metrics.Compute` grows 52 times, about as the 1.7th power of the corpus, because `replayHolds` does: it grew 3.0 times at 2x and 6.3 times at 3x, while Compute's other parts grew 2.1 and 3.4 times.
+
+Against the thresholds of the success measure at 10x, for the eight reads only: the warm reads take 918 ms, over 400 ms. The one-shot takes 1,153 ms, under 1,200 ms. A rescan for one changed file takes 200 ms, over 50 ms, almost all of it the stat of every file. The database is 235 MB against twice the corpus, 149 MB; without the pass-through columns it is 85 MB. The RAM added is 51 MB to a process holding only the items, and 8.3 MB to one that has run Compute (at 1x and 3x). The full load, 9.2 s, is far under the 10x cold baseline of about 199 s.
+
+**Where the database would live.** flai keeps its per-checkout state in `.flai-cache/` of the main checkout, which git ignores. `Repo.CacheDir` resolves to the main checkout even from a story worktree, and `Repo.WipDir` is always the main checkout's `wip/` (`flai/internal/workitem/repo.go`). So one database per main checkout, such as `.flai-cache/readmodel.db`, would serve `flai serve` and every story worktree, because they all read the same files. A story worktree would pay nothing to build it. A fresh clone pays one full load, 1.1 s at 1x and 9.2 s at 10x, the first time anything reads the stats. It then holds 23.5 MB on disk at 1x and 235 MB at 10x, or 8.6 MB and 85 MB without the pass-through columns. With the load in WAL mode it briefly needs twice that. With one database shared across processes, `flai serve` and agents' one-shot `flai stats --json` from worktrees would all rescan into it. That needs WAL mode and a busy timeout, and the rescans then take turns for SQLite's one write lock. T-1802 did not measure concurrent writers.
+
 ## Results
 
 Later tasks of S-0427 write the results, against the success measure above.
 
 ## Recommendation
 
-Provisional, from the baseline alone: adapt. A read model that only replaces the file reads saves at most about 80 to 670 ms of a 4 s answer, so it is worth having only if its queries also take over the computation. The SQLite figures point the same way: the chart reads in SQL take 83 ms where flai's Go takes about 25 ms over parsed items, and the 3.4 s hold replay has no SQL form, so the replay, not the reads, is what to change first. Later tasks of S-0427 settle it once the SQLite and Postgres comparisons are in.
+Provisional, from the baseline alone: adapt. A read model that only replaces the file reads saves at most about 80 to 670 ms of a 4 s answer, so it is worth having only if its queries also take over the computation. The SQLite figures point the same way: the chart reads in SQL take 83 ms where flai's Go takes about 25 ms over parsed items, and the 3.4 s hold replay has no SQL form, so the replay, not the reads, is what to change first. At ten times the corpus `metrics.Compute` grows 52 times, to 194 s, while the read model's load, reads, and rescans grow about ten times, and a read model would need flai's file watch rather than a stat of every file to stay within 50 ms a change. Later tasks of S-0427 settle it once the SQLite and Postgres comparisons are in.
