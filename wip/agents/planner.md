@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 493.8373
-accrued_seconds: 29569
-tasks_completed: 78
-last_run: 2026-10-16T06:50:10Z
+accrued_cost: 751.0673
+accrued_seconds: 31390
+tasks_completed: 79
+last_run: 2026-10-16T21:51:32Z
 ---
 
 # Planner activity
@@ -628,3 +628,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0427, T-1800, T-1801, T-1802, T-1803, T-1804, T-1805, T-1806
 - Seconds: 3287
 - Cost: 239.3850 USD, estimated
+
+### 2026-10-16T21:51:32Z
+
+- Summary: Created nine draft stories for E-0026, S-0436 to S-0444, with 46 backlog tasks, T-1849 to T-1894; none revisited (the epic had none); each has file-level touches, a forecast, a value from the epic's 600 USD a week, and `### Planning` notes; S-0443 and S-0444 follow TH-0483's answer to keep examples under `design/components/`; `flai check --strict` is clean; plan on TH-0484.
+- Trigger: asked
+- Items: E-0026, S-0436, S-0437, S-0438, S-0439, S-0440, S-0441, S-0442, S-0443, S-0444, T-1849, T-1850, T-1851, T-1852, T-1853, T-1854, T-1855, T-1856, T-1857, T-1858, T-1859, T-1860, T-1861, T-1862, T-1863, T-1864, T-1865, T-1866, T-1867, T-1868, T-1869, T-1870, T-1871, T-1872, T-1873, T-1874, T-1875, T-1876, T-1877, T-1878, T-1879, T-1880, T-1881, T-1882, T-1883, T-1884, T-1885, T-1886, T-1887, T-1888, T-1889, T-1890, T-1891, T-1892, T-1893, T-1894
+- Seconds: 1821
+- Cost: 257.2300 USD, estimated

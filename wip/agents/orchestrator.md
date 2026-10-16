@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 762.8919
-accrued_seconds: 644077
-tasks_completed: 572
-last_run: 2026-10-16T19:32:16Z
+accrued_cost: 775.6993
+accrued_seconds: 652545
+tasks_completed: 577
+last_run: 2026-10-16T21:53:24Z
 ---
 
 # Orchestrator activity
@@ -4015,6 +4015,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0426
 - Seconds: 41948
 - Cost: 1.6799 USD, estimated
+
+### 2026-10-16T20:56:13Z
+
+- Summary: The operator accepted S-0426 at 20:56Z, which resolved TH-0481 and TH-0482. release_evaluate (judgement) shows nothing pending, since it was research with no component change, so there is no release. Nothing is in progress or in review now, and no backlog story is a promote candidate besides the blocked S-0241.
+- Items: S-0426
+- Seconds: 5037
+- Cost: 0.2206 USD, estimated
+
+### 2026-10-16T21:52:11Z
+
+- Summary: Under finalize_drafts, finalized E-0026's nine drafts, S-0436 to S-0444. flai promote --drafts reports each complete. Each one's criteria, file touches, after chain, forecast and value match TH-0484's plan. The operator's TH-0483 answers are reflected, with S-0443 and S-0444 now keeping examples under design/components. Values run from 35.78 to 110.09 USD a week, from the epic's 600.
+- Items: S-0436, S-0437, S-0438, S-0439, S-0440, S-0441, S-0442, S-0443, S-0444
+- Seconds: 3358
+- Cost: 11.7243 USD, estimated
+
+### 2026-10-16T21:52:24Z
+
+- Summary: Under promote_to_ready, moved S-0436 (forecast 37m, rank 1) and S-0437 (43m, rank 2) to ready in promote_candidates' throughput order. Skipped S-0241 (rank 3, 2h) because it is still blocked. Under order_ready, applied flai order --by throughput, giving S-0436 then S-0437.
+- Items: S-0436, S-0437
+- Seconds: 13
+- Cost: 0.3096 USD, estimated
+
+### 2026-10-16T21:52:36Z
+
+- Summary: agent-S-0436 pulled S-0436, which took E-0026 to in-progress. Under order_ready, re-applied flai order --by throughput, leaving S-0437 (43m) alone in ready.
+- Items: S-0437
+- Seconds: 12
+- Cost: 0.2348 USD, estimated
+
+### 2026-10-16T21:53:24Z
+
+- Summary: agent-S-0437 pulled S-0437, leaving ready empty. Under order_ready, re-applied flai order --by throughput on the empty column. promote_candidates lists only S-0241, which is still blocked. Every other backlog story is held by after or by an overlap with S-0436 or S-0437, or lacks a value or is a draft.
+- Items: S-0437
+- Seconds: 48
+- Cost: 0.3181 USD, estimated
 
 ## Refusals
 

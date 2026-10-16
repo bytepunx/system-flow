@@ -1,0 +1,90 @@
+---
+id: S-0438
+type: story
+nature: feature
+title: flai runs a Svelte sub-project's own Vite dev server on the host, behind the components host action, with a harness that renders any one of its components live
+status: backlog
+parent: E-0026
+owner: alex
+created: 2026-10-16T21:33:15Z
+updated: 2026-10-16T21:51:58Z
+transitions: []
+tags: [cli, dashboard]
+topics: [components, design, cli, dashboard]
+touches: [design/adrs, design/adrs/README.md, design/system/component-library.md, flai/internal/components/harness/plugin.mjs, flai/internal/components/harness/harness.html, flai/internal/components/harness/harness.mjs, flai/internal/components/harness.go, flai/internal/components/harness_test.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/cmd/components.go, flai/cmd/components_test.go, docs/users/flai-reference.md, flai/internal/components/integration_test.go, flai/internal/components/testdata, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/hostapi.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go, docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, docs/users/flai.md, design/system/dashboard-host-channel.md]
+after: [S-0437]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 373
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 41
+          output: 767
+          cache_read: 5187103
+          cache_write: 8819
+          cost: 1.3027
+cost_of_delay:
+  value: 110.09
+  by: planner-E-0026
+  at: 2026-10-16T21:50:00Z
+forecast:
+  duration: 1h20m
+  delivery: 2026-10-17T21:23:00Z
+  basis: "flai's 55m (size 34) raised to 1h20m for the unproven merge of the project's Vite config with SvelteKit's plugin and a live HMR integration test; delivery is flai's start plus 1h20m."
+  by: system-flow
+  at: 2026-10-16T21:42:58Z
+finalized:
+  by: orchestrator
+  at: 2026-10-16T21:51:58Z
+---
+# S-0438 flai runs a Svelte sub-project's own Vite dev server on the host, behind the components host action, with a harness that renders any one of its components live
+
+## Goal
+
+A component renders as the project builds it, and follows each change to its source or to the stylesheet without a rebuild or a redeploy. flai runs the sub-project's own Vite with the project's own config, plugins, and dependencies, so that aliases, Tailwind, and the design stylesheet behave as in the app. It adds a plugin flai embeds, which serves a harness page that renders one component by its path, inside an error boundary, after the manifest's `setup` module. Vite's hot module replacement then carries every saved change into the harness. The dev server listens on 127.0.0.1 on a port flai picks. The dashboard frames the harness cross-origin and talks to it by `postMessage`, under a protocol the ADR fixes. Starting it runs the project's code on the host, so it waits for a host action, `components`, which the operator enables. flai stops a dev server nobody has asked about for 30 minutes.
+
+## Acceptance criteria
+
+- [ ] An ADR records the dev server on TH-0483's answers 1 and 5. The server binds a loopback port, and the dashboard frames it cross-origin, with the container still holding nothing of the project (ADR-0029 and ADR-0031 refined). It records the `components` host action and the idle stop. It records the protocol: the page sends `select`, `props`, `theme`, and `tokens`; the harness answers `ready`, `rendered`, `error` with the file and line, `event`, and `size`; each side checks the other's origin.
+- [ ] `flai components serve [--project <name>]` writes a Vite config under `.flai-cache/components/<project>/<sub-project>/` that merges the sub-project's own config and adds flai's embedded plugin. It starts the sub-project's own `vite` on 127.0.0.1 and a free port, and prints the harness URL once Vite answers. The harness at `/__flai/components/` renders the component `?c=<path>` or a `select` message names, after the `setup` module, and posts an `error` instead of a blank frame when it throws. A sub-project without `vite` installed is refused with the fix.
+- [ ] `flai serve enable components` turns on the host action. `components.start` and `components.stop` `{project?}` are gated by it and journalled. `components.status` and `components.list` are reads: running or not, the URL, the port, since when, the last error, and the catalogue. `flai serve` supervises one dev server per sub-project and stops it after `components.idle` (30m by default) without a `components.status`, and when `flai serve` stops.
+- [ ] An edit to a fixture component's source, and a rewrite of the stylesheet its setup imports, each reach the running dev server as a hot update, not a full reload: an integration test drives the dev server on a fixture sub-project and reads Vite's HMR payloads. It is skipped when `node` is absent. Run by hand on this repository, the harness renders `flaiover/src/lib/components/design/Gallery.svelte`; the story's notes say what was seen.
+- [ ] `docs/operators/index.md` has a section on the `components` host action, and `docs/operators/settings.md` rows for it and `components.idle`. `design/system/flai-cli.md`, `docs/users/flai.md` with `flai-reference.md` regenerated, `design/system/dashboard-host-channel.md`, and `design/system/component-library.md` describe the dev server, the methods, and the protocol.
+
+## Tasks
+- T-1858 An ADR records the dev server on a loopback port framed cross-origin, the components host action, the idle stop, and the page-to-harness protocol
+- T-1859 flai embeds a Vite plugin and a harness page that render one component by path after the setup module, and writes the merged Vite config
+- T-1860 flai/internal/components starts the sub-project's own vite on 127.0.0.1 and a free port, waits for it to answer, and stops it
+- T-1861 flai components serve writes the harness and the merged config, starts the dev server, and prints the harness URL
+- T-1862 An integration test runs the dev server on a fixture sub-project and shows a source edit and a stylesheet rewrite reach the harness as hot updates, not reloads
+- T-1863 The components host action gates components.start and components.stop, and flai serve supervises each dev server and stops it when idle
+- T-1864 The operator docs, the CLI design, the channel's design, and the component library's design describe the dev server, the host action, and its methods
+
+## Notes
+
+- Drafted by the planner for E-0026. It is the epic's riskiest story: merging the project's own Vite config with SvelteKit's plugin and serving a page outside the app's routes. The second layer of tasks (T-1859, T-1860) proves both on a fixture before the host methods build on them.
+- No proxy, reverse proxy, or byte stream exists in `flai/internal/hostapi` or `flai/internal/serve` today. `flai/internal/host/child.go` supervises the MCP servers and is the pattern for the dev server.
+- Host actions are declared in `flai/internal/hostapi/writes.go` (`Action*`, `Actions`, `shellOnly`) with commands in `flai/cmd/serve_actions.go`.
+- The integration test reads Vite's HMR payloads rather than drive a browser: the payloads show the update is hot, and the frame's side is S-0439's manual check.
+
+### Planning
+
+- **Touches.** The story declared none; every touch comes from its seven tasks, file by file.
+  - **From design:** the ADR and its index; `design/system/dashboard-host-channel.md`, which lists the host actions and methods; `docs/operators/index.md` and `settings.md`, which the documentation convention requires for a new setting and host action.
+  - **From layout:** the harness, plugin, config writer, and runner in `flai/internal/components`; the host action in `flai/internal/hostapi/writes.go` with `components.go` for the reads, merged in `hostapi.go`; supervision in a new `flai/internal/serve/components.go` beside `checks.go`; the commands in `flai/cmd/serve_actions.go` and `components.go`.
+  - **Co-change, added:** `flai-cli.md`, `flai.md`, and the reference, in `claims.shared`.
+  - **Co-change, not added:** `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` (16%, 13%), and `flaiover/src/lib/server/agent.ts` (7%), which are S-0439's with the page; `design/system/project-manifest.md` (7%), since `components.idle` is a host setting, not a manifest key.
+  - **Folder touches kept:** `design/adrs` for the new ADR, in `claims.shared`; `flai/internal/components/testdata` for the fixture sub-project, whose files the agent names.
+- **Forecast.** flai's 55m (size 34, at 96 s a unit) raised to 1h20m. Nothing in the history merges a project's Vite config with SvelteKit's plugin or runs a live dev server in a test, and T-1859's note keeps a second way open if the first fails. Delivery is flai's start, 20:03Z, plus 1h20m.
+- **Cost of delay.** 110.09 USD a week, flai's share of E-0026's 600 USD penalty by the raised forecast, kept: every later story waits on it.
+- The forecast carries `by: system-flow`: the CLI wrote it under the host's `FLAI_AGENT`. The planner wrote it.
