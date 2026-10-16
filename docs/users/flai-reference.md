@@ -31,6 +31,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [doc](#flai-doc) | Search, read, and save markdown documents |
 | [edit](#flai-edit) | Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step |
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
+| [file](#flai-file) | Read and save a text file that is not markdown |
 | [forecast](#flai-forecast) | Print a story's forecast duration and delivery, worked out from history and the pull order |
 | [guard](#flai-guard) | Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
@@ -105,6 +106,7 @@ Subcommands:
 - [doc](#flai-doc): Search, read, and save markdown documents
 - [edit](#flai-edit): Change an item's title, nature, tags, topics, touches, after, parent, planning data, or body, checked and in one step
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
+- [file](#flai-file): Read and save a text file that is not markdown
 - [forecast](#flai-forecast): Print a story's forecast duration and delivery, worked out from history and the pull order
 - [guard](#flai-guard): Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
@@ -1123,7 +1125,7 @@ Flags:
 
 Write, show, and render the project's design system.
 
-A project's design system is its tokens, the values its UI uses, and its guidance, the words that say when to use which (ADR-0146). The tokens are one DTCG 2025.10 file the manifest's design.tokens names, design/system/design-system.tokens.json when it is unset; the guidance is design/system/design-system.md. flai check validates the token file as design.tokens; flai design init writes both from starters, flai design show reports them with each colour role pair's contrast, and flai design css renders the tokens as CSS. flai design css --write writes the tokens to the generated design stylesheet the manifest's design.stylesheet names, which flai check reports as design.stale when it falls behind the tokens (ADR-0159).
+A project's design system is its tokens, the values its UI uses, and its guidance, the words that say when to use which (ADR-0146). The tokens are one DTCG 2025.10 file the manifest's design.tokens names, design/system/design-system.tokens.json when it is unset; the guidance is design/system/design-system.md. flai check validates the token file as design.tokens; flai design init writes both from starters, flai design show reports them with each colour role pair's contrast, and flai design css renders the tokens as CSS. flai design css --write writes the tokens to the generated design stylesheet the manifest's design.stylesheet names, which flai check reports as design.stale when it falls behind the tokens (ADR-0159). flai design init and flai file save, whenever they write the token file, write the stylesheet from it too (ADR-0150).
 
 A story proposes a change to the design system on its branch: flai design proposals lists the open stories whose branches change it, and flai design show --story S-nnnn reads the design system a story proposes from its worktree. Accepting the story merges its branch, and with it the proposal.
 
@@ -1499,6 +1501,78 @@ Flags:
 | `--topics` strings | topics the epic is about beyond the components it reaches, such as logging or release (repeatable or comma separated) |
 | `--touches` strings | paths or components this work changes (repeatable or comma separated) |
 | `--trailer` stringArray | trailer line for the commit (repeatable) |
+
+### flai file
+
+Read and save a text file that is not markdown.
+
+The save path for a text file that is not markdown, such as the design token file, edited in the dashboard (ADR-0147). It follows flai doc's rules: a content hash detects a concurrent change, the check validates the save, and the save is committed. A file under the design or docs folder, and the design token file and design stylesheet the manifest names, are reached; the wip folder, a markdown file (flai doc show and flai doc save handle those), a binary file, a file over 1048576 bytes (1 MiB), and any other path are refused, each with its reason. A save of the token file writes the design stylesheet from the new tokens and commits both in one commit (ADR-0150).
+
+Subcommands:
+
+- [save](#flai-file-save): Save a text file that is not markdown from standard input: conflict check, flai check, commit
+- [show](#flai-file-show): Print a text file that is not markdown, with its content hash
+
+#### flai file save
+
+Save a text file that is not markdown from standard input: conflict check, flai check, commit.
+
+```text
+flai file save <path> --hash <sha256> [flags]
+```
+
+Reads the new content on standard input and saves it as it is. --hash is the hash flai file show gave for the content the editor loaded; when the file no longer has it the save fails as a conflict (exit 3) with the current content, its hash, and a diff. Content flai will not save is refused (exit 4) and the file is left as it was: binary content, content over 1048576 bytes (1 MiB), a token file flai cannot render as a stylesheet, and content the check has a new finding with. A saved file is committed on its own, as docs, unless --no-commit is given or the project sets dashboard.autocommit: false. Nothing is pushed.
+
+Reaches what flai file show reaches and refuses what it refuses, with exit status 1 and the reason.
+
+A save of the design token file, when the manifest names a design stylesheet, writes the stylesheet from the new tokens as flai design css --write does, checks with both in place, puts both back when the check refuses, and commits both paths in one commit (ADR-0150). --json prints the result with stylesheet, the stylesheet's path, set.
+
+With --story, saves the file in that story's worktree: the hash and the check are the branch's, and the commit is on story/S-nnnn, with the story named in its subject; the main checkout is left as it was (ADR-0145). A story without a worktree and a worktree not on its branch are refused.
+
+Examples:
+
+```bash
+flai file save design/system/design-system.tokens.json --hash "$h" --message "darker primary" < tokens.json
+flai file save design/system/palette.json --story S-0042 --hash "$h" < palette.json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--hash` string | hash of the content the editor loaded (from flai file show) |
+| `--message` string | commit subject after the type prefix (default: edit &lt;path&gt;) |
+| `--no-commit` | save without committing |
+| `--story` string | save the file in this story's worktree and commit it on its branch (S-nnnn) |
+| `--trailer` stringArray | line appended to the commit message (repeatable) |
+
+#### flai file show
+
+Print a text file that is not markdown, with its content hash.
+
+```text
+flai file show <path> [flags]
+```
+
+Prints the file's content as it is on standard output, and its path and content hash on standard error, so that the content can be redirected to a file and saved again with flai file save --hash. With --json, prints {path, content, hash}.
+
+Reaches a file under the design or docs folder, and the design token file and design stylesheet the manifest names. Refuses, with exit status 1 and the reason, a path outside those, a path under the wip folder, a markdown file, which flai doc show reads, a binary file, and a file over 1048576 bytes (1 MiB).
+
+With --story, reads the file in that story's worktree, as it is on its branch, for flai file save --story (ADR-0145). A story without a worktree is refused.
+
+Examples:
+
+```bash
+flai file show design/system/design-system.tokens.json --json
+flai file show web/src/theme.css > theme.css
+flai file show design/system/design-system.tokens.json --story S-0042 --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--story` string | read the file in this story's worktree (S-nnnn) |
 
 ### flai forecast
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/designsystem"
+	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -477,6 +478,42 @@ func TestDesignInitWritesTheStylesheetWhenNamed(t *testing.T) {
 	if _, ok := got["stylesheet"]; ok || projectFileExists(root, "web") {
 		t.Errorf("init with no stylesheet named wrote one: %q", out)
 	}
+}
+
+// S-0436, ADR-0150: in a project whose manifest names a stylesheet under a
+// sub-project, init leaves the token file and the stylesheet in step, and
+// flai check reports no design.stale, which it does once they fall apart.
+func TestDesignInitLeavesTheStylesheetInStep(t *testing.T) {
+	root := designProject(t)
+	writeProjectFile(t, root, manifest.File, readProjectFile(t, root, manifest.File)+"projects:\n  - name: web\n    path: web\n    kind: sveltekit\n")
+	nameDesignStylesheet(t, root)
+	if out, errOut, code := runIn(t, root, "design", "init"); code != 0 {
+		t.Fatalf("init: %d %s %s", code, out, errOut)
+	}
+	if got, want := readProjectFile(t, root, designStylesheetFile), sheetOf(t, designTokensFile, readProjectFile(t, root, designTokensFile)); got != want {
+		t.Errorf("the stylesheet is not the token file's:\n%s", got)
+	}
+	out, _, _ := runIn(t, root, "check")
+	for _, rule := range []string{"design.stale", "design.stylesheet", "design.tokens"} {
+		if strings.Contains(out, rule) {
+			t.Errorf("flai check reports %s after init:\n%s", rule, out)
+		}
+	}
+	writeProjectFile(t, root, designStylesheetFile, "/* by hand */\n")
+	if out, _, _ := runIn(t, root, "check"); !strings.Contains(out, "design.stale") {
+		t.Errorf("flai check should report a stylesheet out of step as design.stale:\n%s", out)
+	}
+}
+
+// sheetOf is the design stylesheet flai writes from content, the token file
+// at the repository path tokens.
+func sheetOf(t *testing.T, tokens, content string) string {
+	t.Helper()
+	css, err := docedit.StylesheetFor(tokens, []byte(content))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return css
 }
 
 // S-0381: the starter token file has no problem, holds every required

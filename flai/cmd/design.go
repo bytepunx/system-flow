@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/designsystem"
+	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/topics"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -36,7 +37,8 @@ reports them with each colour role pair's contrast, and flai design css
 renders the tokens as CSS. flai design css --write writes the tokens to the
 generated design stylesheet the manifest's design.stylesheet names, which
 flai check reports as design.stale when it falls behind the tokens
-(ADR-0159).
+(ADR-0159). flai design init and flai file save, whenever they write the
+token file, write the stylesheet from it too (ADR-0150).
 
 A story proposes a change to the design system on its branch: flai design
 proposals lists the open stories whose branches change it, and flai design
@@ -182,15 +184,12 @@ func governedTopics(list []string, explicit bool, projects []string, known []man
 	return out, nil
 }
 
-// initStylesheet writes the design stylesheet from the token file flai design
-// init has just written. The token file and the guidance stay when it fails,
-// and the error says how to write the stylesheet again.
+// initStylesheet writes the design stylesheet from the starter tokens flai
+// design init has just written to the token file tokens, by the generator
+// flai file save uses (ADR-0150). The token file and the guidance stay when
+// it fails, and the error says how to write the stylesheet again.
 func initStylesheet(root, stylesheet, tokens string) error {
-	sys, err := loadDesignTokens(root, tokens)
-	if err == nil {
-		err = writeStylesheet(root, stylesheet, sys, tokens)
-	}
-	if err != nil {
+	if err := docedit.WriteStylesheet(root, stylesheet, tokens, designsystem.StarterTokens); err != nil {
 		return fmt.Errorf("flai design init wrote the token file and the guidance but not the design stylesheet %s: %w; run flai design css --write to write it", stylesheet, err)
 	}
 	return nil
@@ -537,7 +536,11 @@ run it again.`,
 			}
 			switch {
 			case write:
-				if err := writeStylesheet(repo.Root, stylesheet, sys, name); err != nil {
+				data, err := os.ReadFile(filepath.Join(repo.Root, filepath.FromSlash(name)))
+				if err != nil {
+					return fmt.Errorf("read the token file %s: %w; run flai design css --write again", name, err)
+				}
+				if err := docedit.WriteStylesheet(repo.Root, stylesheet, name, data); err != nil {
 					return err
 				}
 				a.logger().Info("design stylesheet written", "component", "cmd", "stylesheet", stylesheet, "tokens", name)
@@ -578,18 +581,4 @@ func loadDesignTokens(root, name string) (*designsystem.System, error) {
 		return nil, fmt.Errorf("flai design css renders nothing from the token file %s while it has problems; fix them and run it again: %s", name, strings.Join(lines, "; "))
 	}
 	return sys, nil
-}
-
-// writeStylesheet writes the generated design stylesheet, the repository
-// path stylesheet under root, from sys, read from the token file tokens,
-// creating its folders and replacing what is there (S-0385, ADR-0159).
-func writeStylesheet(root, stylesheet string, sys *designsystem.System, tokens string) error {
-	abs := filepath.Join(root, filepath.FromSlash(stylesheet))
-	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
-		return fmt.Errorf("write the design stylesheet %s: %w", stylesheet, err)
-	}
-	if err := os.WriteFile(abs, []byte(designsystem.Stylesheet(sys, tokens)), 0o644); err != nil {
-		return fmt.Errorf("write the design stylesheet %s: %w", stylesheet, err)
-	}
-	return nil
 }
