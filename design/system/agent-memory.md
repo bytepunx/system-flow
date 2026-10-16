@@ -400,3 +400,116 @@ For T-1798 and T-1799 to weigh, the approaches that need no model at query time 
 - **A project glossary of synonyms.** No model. It closes the misses where the operator's words and the document's differ, at the cost of a list someone keeps.
 
 Dense retrieval through a transformer, SPLADE's full form, ColBERT, cross-encoder reranking, HyDE, GraphRAG, and HippoRAG's query step each put a model on the query path; what they would add over the list above is for T-1798's trial to show.
+
+## Trial
+
+Three approaches were run beside flai's own BM25, over one copy of this repository's documents, on 2026-10-16 between 06:41Z and 07:45Z, on the operator's host (WSL2, 24 cores, 62 GB, no GPU). Other flai agents ran on the host throughout; the load average was 1.5 to 3.9 during the BM25 and FTS5 runs. Everything lived in `/tmp/s0426-trial`, which is left in place; nothing was installed elsewhere and no service or account was used.
+
+- **Baseline: flai's BM25.** `bin/flai doc search`, built from commit `4282b31c`, and the same code called in-process.
+- **Hybrid A: BM25 and a transformer.** flai's BM25 ranks fused with dense cosine ranks by reciprocal rank fusion, k = 60. The dense model is `bge-small-en-v1.5`, int8 ONNX, run by fastembed. Dense alone is reported too.
+- **Hybrid B: BM25 and static embeddings.** The same fusion with `potion-base-8M` run by model2vec, a token-table lookup and an average. Python stands in for the pure-Go form of [Static embeddings](#static-embeddings).
+- **SQLite FTS5.** A persisted lexical index with the porter tokenizer, ranked by `bm25()` with flai's boosts: title 3, heading 2, body 1. Python's `sqlite3` (SQLite 3.46.1) stands in for [ncruces or modernc](#sqlite-fts5).
+
+### The corpus and the query set
+
+The corpus is `design/` and `docs/` copied from the worktree at `005c5241`, less this document, which quotes the failing queries word for word. flai cuts it into 2,828 sections and indexes the 2,358 that have a body. Every approach indexed those 2,358, taken from flai's own cut. The dense and static runs embed the title, the heading path, and the body. Both models read at most 512 tokens of a section. 399 indexed sections are over 2 KB and 36 are over 8 KB.
+
+There are 25 queries, each in the asker's words: the five of [Where recall fails](#where-recall-fails), 16 thread titles, and the opening sentence of four stories' goals. A leading story or issue ID, such as "S-0294: ", was dropped from a thread title. The answers were chosen by reading the sections, before any approach ran, with one exception: q21's two `docs/users/flaiover.md` sections were added after the first run listed them, because they answer it. A query counts as found at k when any of its answers is in the top k. In the table below, a bare file name is under `design/system`, `conv/` is `design/conventions`, ADRs are in `design/adrs`, and issues are in `design/issues`.
+
+| # | Question | Source | Answering sections |
+|---|----------|--------|--------------------|
+| q01 | how many stories may run concurrently | [Today](#where-recall-fails) | workflow.md § Columns and WIP limits |
+| q02 | concurrency cap | Today | same |
+| q03 | token spend per story | Today | ADR-0051 § Decision, § Context |
+| q04 | anti-pattern low level git commands hand-edited files | Today | ADR-0155 § Context |
+| q05 | branch ref empty file after host crash | Today | I-0137 § Description, § Instances › 2026-10-12T15:29:54Z, § Remediation |
+| q06 | Who ticks a criterion a task sub-agent's work meets? | TH-0162 | ADR-0089 § Decision; workflow.md § Definition of done (story); conv/work-management.md § Rules |
+| q07 | How should finalizing a draft record who did it? | TH-0083 | ADR-0077 § Decision; work-hierarchy.md § Identifiers, § Front matter schema |
+| q08 | Should Retry queue a ready story's agent when the in-progress limit is full? | TH-0011 | ADR-0044 § Decision; workflow.md § The pull order (S-0057); flaiover-dashboard.md § Writes |
+| q09 | Should wip/ warnings outside a story stop its close-out? | TH-0056 | ADR-0085 § Decision; continuous-improvement.md § Cadence; I-0057 § Remediation |
+| q10 | Which baseline conventions should the planner, orchestrator, and analyzer read? | TH-0081 | ADR-0075 § Decision; conv/strategic-agents.md § Rules |
+| q11 | An epic accepted with its last story makes the next publish a major release: keep that? | TH-0082 | ADR-0078 § Decision; conv/git.md § Rules |
+| q12 | may flai serve restart a story's agent on its own, and how many times? | TH-0208 | ADR-0108 § Decision; workflow.md § The pull order (S-0057); docs/operators/settings.md § flai configuration |
+| q13 | Commit outstanding work: start an agent, or have flai commit it itself? | TH-0027 | workflow.md § Transitions and who makes them; docs/users/flaiover.md § Board › Reviewing a story; docs/users/flai-reference.md § flai serve agent commit |
+| q14 | Time in state on a time axis: a bar per item, or per day? | TH-0039 | ADR-0056 § Decision; metrics.md § Charts |
+| q15 | Conflicts in a publish are between accepted stories, which take no new tasks: where do the conflict tasks go? | TH-0073 | conv/work-management.md § Rules; ADR-0067 § Decision |
+| q16 | Sync refuses uncommitted changes, so a task is committed before it is synced: may git.md say so? | TH-0072 | conv/git.md § Rules; ADR-0069 § Decision |
+| q17 | a second y-axis against charts.md's one-axis rule? | TH-0140 | design/tech/charts.md § Palette and rules |
+| q18 | attestations cannot run on this private Team repository; where the key goes; your public key | TH-0324 | release-signing.md § Signing releases › Keys; ADR-0070 § Decision |
+| q19 | How should the review limit stop breaking close-outs? | TH-0078 | ADR-0073 § Decision; workflow.md § Columns and WIP limits, § Pull policy |
+| q20 | does the story's agent still make stories for its issues before review? | TH-0075 | conv/continuous-improvement.md § Rules; continuous-improvement.md § Cadence |
+| q21 | Where should an inbox thread anchored on a design document (no item) lead? | TH-0041 | flaiover-dashboard.md § Views; docs/users/flaiover.md § Threads, § Inbox |
+| q22 | When stories are moved from the backlog into ready, if there is available capacity in the in process WIP, the story should be assigned to an agent. | S-0116 | workflow.md § The pull order (S-0057); docs/operators/index.md § Starting an agent when a story becomes ready |
+| q23 | When an agent has a question, it should place that question in the inbox where the operator can answer it, have it recorded, and then the open question should close out. | S-0090 | agent-narrative.md § Narrative structure; conv/work-management.md § Project additions |
+| q24 | A process inside the dashboard container cannot leave anything in the mounted clone that git later executes on the host as the operator. | S-0064 | ADR-0027 § Decision; ADR-0031 § Consequences |
+| q25 | A research story can be moved to done like any other. | S-0053 | workflow.md § Natures that do not release; ADR-0025 § Decision |
+
+### What was run
+
+```bash
+# in /tmp/s0426-trial: the corpus, and flai's cut and BM25 from a copy of flai/ with one extra main package
+cp -r design docs system-flow.yaml corpus/ && rm corpus/design/system/agent-memory.md
+go build -o bin/trial ./trialcmd            # LoadSections, IndexSections, Rank, Search
+bin/trial export corpus results/sections.jsonl
+bin/trial bm25 corpus queries.json results/flai_inproc.json
+# the CLI, five runs per query, from the corpus
+bin/flai doc search --json --limit 10 "<query>"
+# Python 3.12: fastembed 0.9.0, model2vec 0.10.0, onnxruntime 1.31.0, numpy 2.5.4
+uv venv env --python 3.12 && uv pip install --python env/bin/python fastembed model2vec
+python3 -I scripts/fts5.py results/sections.jsonl queries.json results/fts5.db results/fts5.json design/system/workflow.md design/system/flai-cli.md
+env/bin/python -I scripts/embed.py dense models/bge-small-en-v1.5-onnx-Q results/sections.jsonl queries.json results/flai_inproc.json results/dense.json design/system/workflow.md design/system/flai-cli.md
+env/bin/python -I scripts/embed.py static models/potion-base-8M ...   # the same arguments
+python3 -I scripts/evaluate.py queries.json flai_cli=results/flai_cli.json fts5=results/fts5.json dense=results/dense.json ...
+```
+
+The models were fetched with `curl` from Hugging Face at pinned revisions: `Qdrant/bge-small-en-v1.5-onnx-Q` at `aa8f8b06` and `minishlab/potion-base-8M` at `bf8b0566`. Both are MIT. Queries to bge carry its retrieval prefix, "Represent this sentence for searching relevant passages: ". The fusion takes the top 200 of each list.
+
+Each query's time is the median of 21 runs with the index warm, or of 5 for the CLI, and the table gives the median and p95 of those over the 25 queries. A hybrid's query time is the dense query plus flai's in-process BM25 query plus the fusion. A Python approach's build starts from flai's cut sections, so the cut is not in it. In Go the cut takes about 75 ms: loading, cutting, and indexing took 196 to 211 ms over five runs, and indexing alone 123 to 131 ms. Refresh is the time to take in `workflow.md` again (13 sections): FTS5 deletes and inserts its rows, and the embedders embed its sections again. Memory is peak RSS from `getrusage`: for the embedders, a process that loads the model and the saved vectors and answers the set, and in brackets the building process.
+
+### Results on this corpus
+
+| Approach | R@5 | R@10 | MRR@10 | Query median / p95 | Model load | Build from nothing | Refresh, one file | Disk | Peak memory |
+|----------|-----|------|--------|--------------------|------------|--------------------|-------------------|------|-------------|
+| flai BM25, CLI (baseline) | 13/25 | 15/25 | 0.384 | 233 / 251 ms; about 200 ms of it the rebuild, 9 to 13 ms process start | None | Inside every call | Inside every call | None | 66 MB |
+| flai BM25, kept in memory | 13/25 | 15/25 | 0.384 | 6.9 / 20.8 ms | None | 196 to 211 ms | Index again, 123 to 131 ms | None | 70 MB |
+| SQLite FTS5, porter | 13/25 | 18/25 | 0.285 | 2.6 / 3.6 ms | None | 77 to 89 ms | 4.4 to 8.2 ms | 6.6 MB file | 30 MB |
+| Dense, bge-small int8 | 11/25 | 16/25 | 0.340 | 47.6 / 67.6 ms | 0.80 s | 271 s | 1.6 to 1.9 s | 67 MB model, 3.6 MB vectors, 190 MB venv | 273 MB (2.8 GB) |
+| Hybrid A: BM25 + dense, RRF | 15/25 | 19/25 | 0.368 | 57.4 / 87.7 ms | 0.80 s | 271 s and BM25's | 1.6 to 1.9 s | As dense | As dense |
+| Static, potion-base-8M | 11/25 | 14/25 | 0.240 | 0.28 / 1.08 ms | 0.64 s | 0.33 s | 20 to 21 ms | 31 MB model, 2.4 MB vectors | 127 MB (305 MB) |
+| Hybrid B: BM25 + static, RRF | 13/25 | 16/25 | 0.334 | 7.4 / 21.4 ms | 0.64 s | 0.33 s and BM25's | 20 to 21 ms | As static | As static |
+
+The CLI and the in-process index return the same top ten for every query. Taking in `flai-cli.md` (12 sections, one of them 340,847 bytes) cost FTS5 15 to 31 ms, dense 1.76 to 1.83 s, and static 5 to 8 ms. Model load includes importing the library. The answering document, any section of it, was in the top ten for 19 of 25 queries in every approach and for 20 in Hybrid A.
+
+Against the baseline, query by query:
+
+| Approach | Found at 10 that BM25 missed | Missed at 10 that BM25 found |
+|----------|------------------------------|------------------------------|
+| SQLite FTS5 | q04, q16, q18, q20, q23 | q13, q15 |
+| Dense alone | q03, q16, q18 | q06, q15 |
+| Hybrid A | q03, q16, q18, q22 | None |
+| Static alone | q03, q18 | q06, q15, q25 |
+| Hybrid B | q03, q18 | q25 |
+
+Of the five queries of [Where recall fails](#where-recall-fails), q01 and q02 ("concurrently", "concurrency cap") were missed by every approach. Each put `agent-coordination.md` § Coordinating stories that run in parallel first, so meaning pulls toward the same wrong section as the words do. q03 ("token spend per story") was found by every embedding: dense alone put ADR-0051 first. q04 was found only by FTS5, first. q05 was first in all.
+
+### What the results mean for flai
+
+**Recall.** Hybrid A found the most: 19 of 25 at ten and 15 at five, against BM25's 15 and 13. It lost no query BM25 found. Its MRR is a little below BM25's, because BM25 ranks its hits higher when it finds them. Hybrid B found one more at ten, net. FTS5's porter stemming found three more at ten, net, without a model, but ranks its hits lower. Twenty-five queries are a small set: the differences are one to four queries, a direction, not proof. No approach closes "concurrently" to "WIP limit": a glossary, which needs no model, is still the measured gap. Sections too large to read stay a problem for embeddings too. Both models read only a section's first 512 tokens, and q21's design answer, `flaiover-dashboard.md` § Views at 63 KB, was found by no approach; it was found only through its smaller `docs/` sections.
+
+**Latency.** The largest measured gain is not recall. Of the CLI's 233 ms, about 200 ms rebuilds the index, and the same index kept in memory answers in 6.9 ms; FTS5 on disk answers in 2.6 ms. That is the [incremental index](#incremental-indexes) of State of the art. A transformer on the query path costs about 48 ms a query on this CPU, more than an in-memory BM25 query, and less than today's CLI. Static embeddings cost 0.28 ms, nothing beside BM25.
+
+**Build and refresh.** The dense build took 271 s and a changed file 1.6 to 1.9 s. Dense vectors can only be a cache kept between calls, keyed by a hash of each section's text, and a query can see one stale until it is refreshed. Static vectors build in 0.33 s, so they could even be rebuilt per call, as BM25 is today. FTS5 takes in a changed file in 4 to 31 ms.
+
+**Footprint.** FTS5 adds a 6.6 MB file. Static adds a 31 MB model and 2.4 MB of vectors, which would double the 31 MB `bin/flai` if it shipped inside the binary; fetched on first use, it would leave the binary alone. Dense needs a 67 MB model, ONNX Runtime, and 273 MB resident to answer, 2.8 GB to build in batches of 64. Here it ran in a 190 MB Python environment.
+
+**Go fit, Local and free, Licence, Determinism.** All four approaches ran locally with no key, and both models are MIT. All are deterministic for a fixed model and corpus; the fusion breaks ties by path and heading. FTS5 has two cgo-free Go drivers. Static inference is a tokenizer and a table lookup, which pure Go can do; that Go form was not built here. Dense inference needs ONNX Runtime, which is cgo, or hugot's Go backend, which was not tried, or a separate process behind the adapter. That process would cost what this trial measured: a Python environment, a model, and a resident process.
+
+**Files as source.** Every index here was derived from the files, and deleting it loses nothing. FTS5, being persisted, is the one that has to be kept in step, by the per-file hash `flai serve` already takes.
+
+### Not tried
+
+- **SQLite vec1.** Python's `sqlite3` does not ship it, and loading it needs a native build or the Go ncruces driver. It was not trivial, so it was skipped. Exact cosine in NumPy over 2,358 vectors stood in; vec1 is approximate.
+- **txtai with `hybrid`.** It needs PyTorch and Faiss. Downloads from PyPI and Hugging Face ran at about 60 to 120 KB/s during the trial: the two models took about 25 minutes, and fastembed's packages about an hour. PyTorch would have taken hours. Hybrid A measures the same design.
+- **Ollama, all-minilm, and nomic-embed-text.** Ollama is not installed, and installing it on the host was out of bounds. fastembed's ONNX model stood in for a local embedding model.
+- **hugot's Go backend, a static model in Go, and FTS5 through ncruces.** Each would need Go code in flai or a scratch module with new dependencies. The Python runs measured the designs, not their Go speed; modernc's SQLite is slower than C in CPU-bound work.
+- **Bounded sections and a glossary.** They were left to the recommendation. They need no model, and the results above say where each would apply.
