@@ -274,29 +274,9 @@ func Save(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOpti
 		_ = writeAtomic(abs, old)
 		return nil, err
 	}
-	checkPath := clean
-	if p, err := filepath.Rel(repo.Root, abs); err == nil {
-		checkPath = filepath.ToSlash(p)
-	}
-	known := map[string]bool{}
-	for _, f := range before.Findings {
-		known[f.Rule+"\x00"+f.Path+"\x00"+f.Message] = true
-	}
-	res := &Result{Path: clean, Hash: Hash(content), Warnings: []check.Finding{}}
-	var blocking []check.Finding
-	for _, f := range after.Findings {
-		onPath := filepath.ToSlash(f.Path) == checkPath
-		isNew := !known[f.Rule+"\x00"+f.Path+"\x00"+f.Message]
-		// Refuse what the edit introduces, at any level: the repository's
-		// gate is the strict check, and every document rule is a warning.
-		// An error already on the file also refuses, until the edit fixes it.
-		switch {
-		case isNew || (onPath && f.Level == check.Error):
-			blocking = append(blocking, f)
-		case onPath:
-			res.Warnings = append(res.Warnings, f)
-		}
-	}
+	res := &Result{Path: clean, Hash: Hash(content)}
+	warnings, blocking := judge(repo, before, after, abs)
+	res.Warnings = warnings
 	if len(blocking) > 0 {
 		if err := writeAtomic(abs, old); err != nil {
 			return nil, fmt.Errorf("the check refused %s and restoring it failed: %w", clean, err)
@@ -314,7 +294,7 @@ func Save(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOpti
 	inRoot, _ := filepath.Rel(root, abs)
 	// A failed commit is not a failed save: the file is written and valid,
 	// so the result says what happened and the caller decides.
-	sha, inRepo, err := commit(r, root, inRoot, commitMessage(repo, clean, opt))
+	sha, inRepo, err := commit(r, root, commitMessage(repo, clean, opt), inRoot)
 	switch {
 	case !inRepo:
 	case err != nil:
@@ -323,6 +303,39 @@ func Save(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOpti
 		res.Committed, res.Commit = true, sha
 	}
 	return res, nil
+}
+
+// judge sorts the check's findings after a save of the files at abs against
+// its findings before: blocking are what the save introduces, at any level,
+// and errors already on a saved file; warnings are the rest on a saved file.
+func judge(repo *workitem.Repo, before, after *check.Result, abs ...string) (warnings, blocking []check.Finding) {
+	saved := map[string]bool{}
+	for _, a := range abs {
+		p := a
+		if rel, err := filepath.Rel(repo.Root, a); err == nil {
+			p = rel
+		}
+		saved[filepath.ToSlash(p)] = true
+	}
+	known := map[string]bool{}
+	for _, f := range before.Findings {
+		known[f.Rule+"\x00"+f.Path+"\x00"+f.Message] = true
+	}
+	warnings = []check.Finding{}
+	for _, f := range after.Findings {
+		onPath := saved[filepath.ToSlash(f.Path)]
+		isNew := !known[f.Rule+"\x00"+f.Path+"\x00"+f.Message]
+		// Refuse what the edit introduces, at any level: the repository's
+		// gate is the strict check, and every document rule is a warning.
+		// An error already on the file also refuses, until the edit fixes it.
+		switch {
+		case isNew || (onPath && f.Level == check.Error):
+			blocking = append(blocking, f)
+		case onPath:
+			warnings = append(warnings, f)
+		}
+	}
+	return warnings, blocking
 }
 
 // place is where an edit is made: the repository whose tree holds the
@@ -398,16 +411,17 @@ func onStoryBranch(r execx.Runner, root, story, clean string) error {
 	return nil
 }
 
-// commit records one path on the current branch of the checkout at root.
-// inRepo is false when root is not a git work tree, which is not an error.
-func commit(r execx.Runner, root, path, msg string) (sha string, inRepo bool, err error) {
+// commit records paths in one commit on the current branch of the checkout
+// at root. inRepo is false when root is not a git work tree, which is not an
+// error.
+func commit(r execx.Runner, root, msg string, paths ...string) (sha string, inRepo bool, err error) {
 	if _, err := r.Run(root, "git", "rev-parse", "--is-inside-work-tree"); err != nil {
 		return "", false, nil //nolint:nilerr // no repository means nothing to commit to, by design
 	}
-	if _, err := r.Run(root, "git", "add", "--", path); err != nil {
+	if _, err := r.Run(root, "git", append([]string{"add", "--"}, paths...)...); err != nil {
 		return "", true, err
 	}
-	if _, err := r.Run(root, "git", "commit", "--quiet", "-m", msg, "--", path); err != nil {
+	if _, err := r.Run(root, "git", append([]string{"commit", "--quiet", "-m", msg, "--"}, paths...)...); err != nil {
 		return "", true, err
 	}
 	sha, err = r.Run(root, "git", "rev-parse", "--short", "HEAD")
