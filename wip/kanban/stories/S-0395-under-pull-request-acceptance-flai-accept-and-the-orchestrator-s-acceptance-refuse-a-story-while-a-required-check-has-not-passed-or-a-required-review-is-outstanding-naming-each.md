@@ -3,15 +3,18 @@ id: S-0395
 type: story
 nature: feature
 title: Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each
-status: ready
+status: in-progress
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:37:54Z
-updated: 2026-10-17T16:03:13Z
+updated: 2026-10-17T17:33:51Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:53Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T17:33:51Z
+    by: agent-S-0395
 tags: [cli, dashboard]
 topics: [release, orchestration]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/accept_forge_test.go, flai/cmd/accept.go, flai/cmd/accept_forge_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, "flaiover/src/routes/review/[id]/+page.svelte", design/adrs, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md]
@@ -38,10 +41,10 @@ usage:
           cost: 0.7096
 forecast:
   duration: 28m
-  delivery: 2026-10-17T16:34:00Z
+  delivery: 2026-10-17T18:04:00Z
   basis: "Its own forecast of 28m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-17T16:03:13Z
+  at: 2026-10-17T17:33:42Z
 finalized:
   by: alex
   at: 2026-10-17T06:42:38Z

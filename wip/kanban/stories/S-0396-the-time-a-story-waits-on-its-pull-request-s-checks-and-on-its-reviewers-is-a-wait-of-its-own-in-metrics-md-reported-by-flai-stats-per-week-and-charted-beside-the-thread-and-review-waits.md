@@ -3,15 +3,18 @@ id: S-0396
 type: story
 nature: feature
 title: The time a story waits on its pull request's checks and on its reviewers is a wait of its own in metrics.md, reported by flai stats per week and charted beside the thread and review waits
-status: ready
+status: in-progress
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:38:48Z
-updated: 2026-10-17T16:03:13Z
+updated: 2026-10-17T17:33:51Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:55Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T17:33:51Z
+    by: agent-S-0396
 tags: [cli, dashboard]
 topics: [analysis, dashboard]
 touches: [flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts, design/adrs, design/system/metrics.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md]
@@ -38,10 +41,10 @@ usage:
           cost: 0.7096
 forecast:
   duration: 42m
-  delivery: 2026-10-17T16:49:00Z
+  delivery: 2026-10-17T18:19:00Z
   basis: "Its own forecast of 42m; 2nd in the pull order with an in-progress limit of 5, behind S-0395."
   by: flai
-  at: 2026-10-17T16:03:13Z
+  at: 2026-10-17T17:33:42Z
 finalized:
   by: alex
   at: 2026-10-17T06:43:19Z

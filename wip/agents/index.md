@@ -7,6 +7,8 @@ updated: 2026-10-17T17:33:42Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0395](S-0395.md) | Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each | in-progress | agent-S-0395 | 2026-10-17T17:33:51Z |
+| [S-0396](S-0396.md) | The time a story waits on its pull request's checks and on its reviewers is a wait of its own in metrics.md, reported by flai stats per week and charted beside the thread and review waits | in-progress | agent-S-0396 | 2026-10-17T17:33:51Z |
 
 ## Strategic agents
 

@@ -7,8 +7,6 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0395
-  - S-0396
   - S-0397
 ---
 
