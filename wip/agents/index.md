@@ -7,6 +7,7 @@ updated: 2026-10-17T01:08:46Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0439](S-0439.md) | The dashboard's Components page lists every component of the project and renders the one the operator picks, live, from the project's own dev server | in-progress | agent-S-0439 | 2026-10-17T01:08:57Z |
 
 ## Strategic agents
 

@@ -3,15 +3,18 @@ id: S-0439
 type: story
 nature: feature
 title: The dashboard's Components page lists every component of the project and renders the one the operator picks, live, from the project's own dev server
-status: ready
+status: in-progress
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:34:32Z
-updated: 2026-10-17T01:02:24Z
+updated: 2026-10-17T01:08:57Z
 transitions:
   - to: ready
     at: 2026-10-17T01:02:14Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T01:08:57Z
+    by: agent-S-0439
 tags: [dashboard]
 topics: [components, design, dashboard]
 touches: [flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/components/+server.ts, flaiover/src/routes/api/components/components.test.ts, flaiover/src/routes/api/components/start/+server.ts, flaiover/src/routes/api/components/stop/+server.ts, flaiover/src/lib/explorer/protocol.ts, flaiover/src/lib/explorer/protocol.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/SiteMenu.svelte, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, flaiover/src/lib/components/explorer/ComponentList.svelte, flaiover/src/lib/components/explorer/ComponentFrame.svelte, docs/users/flaiover.md, design/system/flaiover-dashboard.md]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-10-16T21:50:02Z
 forecast:
   duration: 37m
-  delivery: 2026-10-17T01:44:00Z
-  basis: "Its own forecast of 37m; 3rd in the pull order with an in-progress limit of 5, behind S-0438, S-0440 and S-0441."
+  delivery: 2026-10-17T01:50:00Z
+  basis: "Its own forecast of 37m; 3rd in the pull order with an in-progress limit of 5, behind S-0440 and S-0441."
   by: flai
-  at: 2026-10-17T01:02:24Z
+  at: 2026-10-17T01:08:46Z
 finalized:
   by: orchestrator
   at: 2026-10-16T21:52:00Z
