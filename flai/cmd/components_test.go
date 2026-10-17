@@ -228,6 +228,100 @@ func TestComponentsListJSON(t *testing.T) {
 	}
 }
 
+// S-0443: each component carries its examples file's examples and its path,
+// given whether or not the file exists; a file that does not fit the format
+// gives the examples that parsed; the text counts a component's examples.
+func TestComponentsListExamples(t *testing.T) {
+	root, _ := componentsFixture(t)
+	useNode(t, componentsNode())
+	writeExamples := func(rel, data string) {
+		t.Helper()
+		p := filepath.Join(root, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeExamples("design/components/ui/src/lib/Button.examples.json", `{
+  "examples": [
+    {"name": "Small", "props": {"label": "Save", "size": "sm"}},
+    {"name": "Large, dark, narrow", "props": {"label": "Delete", "size": "lg"}, "theme": "dark", "width": 375}
+  ]
+}
+`)
+	// kit is the sub-project's name and packages/kit its path: the file is
+	// found by the name. Its second example's props are not an object.
+	writeExamples("design/components/kit/src/Card.examples.json", `{"examples": [{"name": "Empty", "props": {"items": []}, "colour": "red"}, {"name": "Broken", "props": "x"}]}`)
+
+	out, errOut, code := runIn(t, root, "components", "list", "--json")
+	if code != 0 {
+		t.Fatalf("exit %d: %s %s", code, out, errOut)
+	}
+	var got struct {
+		Projects []struct {
+			Name       string `json:"name"`
+			Components []struct {
+				Path     string `json:"path"`
+				Examples []struct {
+					Name  string                     `json:"name"`
+					Props map[string]json.RawMessage `json:"props"`
+					Theme string                     `json:"theme"`
+					Width int                        `json:"width"`
+				} `json:"examples"`
+				ExamplesPath *string `json:"examples_path"`
+			} `json:"components"`
+		} `json:"projects"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	ui, kit := got.Projects[0], got.Projects[2]
+	button, field, card := ui.Components[0], ui.Components[1], kit.Components[0]
+	if button.ExamplesPath == nil || *button.ExamplesPath != "design/components/ui/src/lib/Button.examples.json" || len(button.Examples) != 2 {
+		t.Fatalf("Button: %+v", button)
+	}
+	if small := button.Examples[0]; small.Name != "Small" || string(small.Props["label"]) != `"Save"` || small.Theme != "" || small.Width != 0 {
+		t.Errorf("Small: %+v", small)
+	}
+	if large := button.Examples[1]; large.Name != "Large, dark, narrow" || string(large.Props["size"]) != `"lg"` || large.Theme != "dark" || large.Width != 375 {
+		t.Errorf("Large: %+v", large)
+	}
+	if field.ExamplesPath == nil || *field.ExamplesPath != "design/components/ui/src/lib/forms/Field.examples.json" || field.Examples == nil || len(field.Examples) != 0 {
+		t.Errorf("a component without a file has examples [] and the path its first goes to: %+v", field)
+	}
+	if card.ExamplesPath == nil || *card.ExamplesPath != "design/components/kit/src/Card.examples.json" || len(card.Examples) != 2 ||
+		card.Examples[0].Name != "Empty" || string(card.Examples[0].Props["items"]) != "[]" || card.Examples[1].Props == nil || len(card.Examples[1].Props) != 0 {
+		t.Errorf("a file that does not fit the format gives what parsed, props {} where they are not an object: %+v", card)
+	}
+	if strings.Contains(out, `"examples": null`) || strings.Contains(out, `"props": null`) || strings.Contains(out, `"theme": ""`) || strings.Contains(out, `"width": 0`) {
+		t.Errorf("examples and props are never null, an absent theme and width left out:\n%s", out)
+	}
+
+	out, errOut, code = runIn(t, root, "components", "list")
+	if code != 0 {
+		t.Fatalf("exit %d: %s %s", code, out, errOut)
+	}
+	for _, line := range []string{"\n  src/lib/Button.svelte (2 examples)\n", "\n  src/lib/forms/Field.svelte\n", "\n  src/Card.svelte (2 examples)\n"} {
+		if !strings.Contains(out, line) {
+			t.Errorf("text has %q:\n%s", line, out)
+		}
+	}
+
+	// A file that cannot be read fails the list, saying which.
+	if err := os.Remove(filepath.Join(root, "design/components/kit/src/Card.examples.json")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "design/components/kit/src/Card.examples.json"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runIn(t, root, "components", "list")
+	if code != 1 || !strings.Contains(errOut, "cannot read the examples file design/components/kit/src/Card.examples.json") {
+		t.Errorf("an unreadable examples file: %d %q %s", code, out, errOut)
+	}
+}
+
 // S-0437: --project lists the one sub-project it names, and an unknown name
 // is an error that lists the names there are.
 func TestComponentsListProject(t *testing.T) {

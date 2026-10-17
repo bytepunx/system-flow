@@ -86,12 +86,64 @@ type ComponentsStatus struct {
 // ComponentsProject is one sub-project in components.list's answer, as
 // flai components list --json prints it.
 type ComponentsProject struct {
-	Name       string                 `json:"name"`
-	Path       string                 `json:"path"`
-	Kind       string                 `json:"kind"`
-	Supported  bool                   `json:"supported"`
-	Setup      string                 `json:"setup,omitempty"`
-	Components []components.Component `json:"components"`
+	Name       string            `json:"name"`
+	Path       string            `json:"path"`
+	Kind       string            `json:"kind"`
+	Supported  bool              `json:"supported"`
+	Setup      string            `json:"setup,omitempty"`
+	Components []ListedComponent `json:"components"`
+}
+
+// ListedComponent is one component in components.list's answer: the
+// component and its props, its examples, and where its examples file is
+// (S-0443, ADR-0164).
+type ListedComponent struct {
+	components.Component
+	// Examples are its examples file's, in the file's order; empty when it
+	// has no file. A file that does not fit the format still gives the
+	// examples that parsed, an example's props {} when they are not an
+	// object, and flai check reports what does not fit.
+	Examples []components.Example `json:"examples"`
+	// ExamplesPath is its examples file's path relative to the checkout,
+	// given whether or not the file exists, so that the page knows where a
+	// first example goes.
+	ExamplesPath string `json:"examples_path"`
+}
+
+// ListComponents is the catalogue of projects, sub-projects of the checkout
+// at root whose manifest is m, in their order: a Svelte one with its
+// components, their props read with node through r, and their examples,
+// any other kind unsupported. Its error is the one components.List gives,
+// which wraps components.ErrNodeMissing or components.ErrSvelteMissing when
+// a tool is missing, or that of an examples file that cannot be read.
+func ListComponents(ctx context.Context, r components.Runner, root string, m manifest.Manifest, projects []manifest.Project) ([]ComponentsProject, error) {
+	fsys := os.DirFS(root)
+	listed := make([]ComponentsProject, 0, len(projects))
+	for _, sp := range projects {
+		lp := ComponentsProject{Name: sp.Name, Path: sp.Path, Kind: sp.Kind, Components: []ListedComponent{}}
+		if s, ok := sp.ComponentSettings(); ok {
+			comps, err := components.List(ctx, r, root, sp.Path, s.Include, s.Exclude)
+			if err != nil {
+				return nil, err
+			}
+			lp.Supported, lp.Setup = true, s.Setup
+			for _, c := range comps {
+				file := components.ExamplesPath(m, sp.Name, c.Path)
+				examples, _, err := components.Examples(fsys, file)
+				if err != nil {
+					return nil, err
+				}
+				for i := range examples {
+					if examples[i].Props == nil {
+						examples[i].Props = map[string]json.RawMessage{}
+					}
+				}
+				lp.Components = append(lp.Components, ListedComponent{Component: c, Examples: examples, ExamplesPath: file})
+			}
+		}
+		listed = append(listed, lp)
+	}
+	return listed, nil
 }
 
 // ComponentServers are the sub-projects' component dev servers flai serve
@@ -402,8 +454,8 @@ func componentMethods(host Host) map[string]channel.Method {
 
 		// components.list: the catalogue, as flai components list --json
 		// prints it: every sub-project in the manifest's order, or the one
-		// named, a Svelte one with its components and their props, read from
-		// the main checkout or the story's worktree.
+		// named, a Svelte one with its components, their props, and their
+		// examples, read from the main checkout or the story's worktree.
 		"components.list": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			in, e := decode[componentsParams](raw)
 			if e != nil {
@@ -421,20 +473,12 @@ func componentMethods(host Host) map[string]channel.Method {
 				}
 				projects = projects[i : i+1]
 			}
-			listed := make([]ComponentsProject, 0, len(projects))
-			for _, sp := range projects {
-				lp := ComponentsProject{Name: sp.Name, Path: sp.Path, Kind: sp.Kind, Components: []components.Component{}}
-				if s, ok := sp.ComponentSettings(); ok {
-					comps, err := components.List(ctx, nodeRunner, c.dir, sp.Path, s.Include, s.Exclude)
-					if errors.Is(err, components.ErrNodeMissing) || errors.Is(err, components.ErrSvelteMissing) {
-						return nil, &channel.Error{Code: Rule, Message: c.rel(p.Root, err.Error())}
-					}
-					if err != nil {
-						return nil, failed(errors.New(c.rel(p.Root, err.Error())))
-					}
-					lp.Supported, lp.Setup, lp.Components = true, s.Setup, comps
-				}
-				listed = append(listed, lp)
+			listed, err := ListComponents(ctx, nodeRunner, c.dir, c.m, projects)
+			switch {
+			case errors.Is(err, components.ErrNodeMissing) || errors.Is(err, components.ErrSvelteMissing):
+				return nil, &channel.Error{Code: Rule, Message: c.rel(p.Root, err.Error())}
+			case err != nil:
+				return nil, failed(errors.New(c.rel(p.Root, err.Error())))
 			}
 			return map[string]any{"projects": listed}, nil
 		},

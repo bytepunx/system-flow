@@ -513,6 +513,53 @@ func TestComponentsListWithAStoryReadsItsWorktree(t *testing.T) {
 	}
 }
 
+// S-0443: each component in components.list carries its examples and its
+// examples file's path, read from the checkout the list is of: a story's
+// worktree's file, not main's, with the story; a component without a file
+// has none and the path its first goes to.
+func TestComponentsListCarriesExamplesFromItsCheckout(t *testing.T) {
+	p := shipyardStories(t)
+	host := componentsHost(new(bool), &[]Entry{}, &fakeServers{running: map[string]bool{}})
+	withNode(t, &listNode{stdout: `{"components":[{"path":"src/lib/Button.svelte","props":[{"name":"label","kind":"string","required":true}]},{"path":"src/lib/Card.svelte","props":[]}]}`})
+	const file = "design/components/ui/src/lib/Button.examples.json"
+	writeFile(t, p.Root, file, []byte(`{"examples": [{"name": "Main's", "props": {"label": "Main"}}]}`))
+	wt := filepath.Join(p.Root, ".flai-cache", "worktrees", "S-0002")
+	writeFile(t, wt, file, []byte(`{"examples": [{"name": "Save", "props": {"label": "Save"}, "theme": "light"}, {"name": "Narrow", "props": {"label": "Go"}, "width": 375}]}`))
+
+	var list struct {
+		Projects []ComponentsProject `json:"projects"`
+	}
+	if e := ask(t, host, p, "components.list", `{"story":"S-0002"}`, &list); e != nil {
+		t.Fatal(e)
+	}
+	button, card := list.Projects[0].Components[0], list.Projects[2].Components[0]
+	if button.ExamplesPath != file || len(button.Examples) != 2 || button.Examples[0].Name != "Save" || string(button.Examples[0].Props["label"]) != `"Save"` ||
+		button.Examples[0].Theme != "light" || button.Examples[1].Name != "Narrow" || button.Examples[1].Width != 375 {
+		t.Errorf("Button's examples are the worktree's: %+v", button)
+	}
+	if card.Path != "src/lib/Card.svelte" || card.ExamplesPath != "design/components/kit/src/lib/Card.examples.json" || card.Examples == nil || len(card.Examples) != 0 {
+		t.Errorf("Card has no examples file: %+v", card)
+	}
+
+	m, ok := MethodsFor("test", func() time.Time { return t0 }, host)["components.list"]
+	if !ok {
+		t.Fatal("no method components.list")
+	}
+	res, rerr := m(context.Background(), p, json.RawMessage(`{"project":"ui"}`))
+	if rerr != nil {
+		t.Fatal(rerr)
+	}
+	data, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"projects":[{"name":"ui","path":"ui","kind":"sveltekit","supported":true,"components":[{"project":"ui","path":"src/lib/Button.svelte","name":"Button",` +
+		`"props":[{"name":"label","kind":"string","required":true}],"examples":[{"name":"Main's","props":{"label":"Main"}}],"examples_path":"` + file + `"}]}]}`
+	if string(data) != want {
+		t.Errorf("without a story, main's examples, in this shape:\n%s\nwant\n%s", data, want)
+	}
+}
+
 // S-0442, ADR-0145: a story that is not a work item is NotFound; a task, a
 // story neither in progress nor in review, and one without a worktree are
 // refused, saying how to open it, by every components method, and nothing

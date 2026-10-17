@@ -58,16 +58,6 @@ flai's harness, which renders one component by its path (ADR-0163).`,
 	return c
 }
 
-// componentsProject is one sub-project in flai components list's answer.
-type componentsProject struct {
-	Name       string                 `json:"name"`
-	Path       string                 `json:"path"`
-	Kind       string                 `json:"kind"`
-	Supported  bool                   `json:"supported"`
-	Setup      string                 `json:"setup,omitempty"`
-	Components []components.Component `json:"components"`
-}
-
 func newComponentsListCmd(a *app) *cobra.Command {
 	var project string
 	c := &cobra.Command{
@@ -81,8 +71,10 @@ name, its kind (string, number, boolean, union with its literals, array,
 object, function, snippet, or unknown), its type as the source writes it, its
 default after =, and required when it has neither a default nor an optional
 type. A component whose props cannot be read, such as one that does not
-parse, is listed with the reason. A sub-project of any other kind is listed
-as unsupported, with its kind.
+parse, is listed with the reason. A component with examples, named sets of
+its props in its examples file under design/components (ADR-0164), is
+listed with how many it has. A sub-project of any other kind is listed as
+unsupported, with its kind.
 
 Props are read by a script flai embeds, run with node in the sub-project's
 folder on the sub-project's own svelte/compiler; no component is run. So
@@ -91,9 +83,14 @@ when either is missing, list fails, exit status 1, saying what to install.
 
 --json prints {"projects": [{"name", "path", "kind", "supported", "setup",
 "components": [{"project", "path", "name", "props": [{"name", "kind",
-"type", "default", "required", "literals"}], "error"}]}]}, setup only when
-the sub-project names one, and type, default, literals, and error only when
-they have a value.`,
+"type", "default", "required", "literals"}], "error", "examples": [{"name",
+"props", "theme", "width"}], "examples_path"}]}]}, setup only when the
+sub-project names one, and type, default, literals, error, theme, and width
+only when they have a value. examples_path is the component's examples
+file, design/components/<sub-project>/<its path, .svelte made
+.examples.json>, whether or not it exists, and examples is [] when it does
+not. A file that does not fit the format gives the examples that parsed, and
+flai check reports what does not fit; one that cannot be read fails list.`,
 		Example: `  flai components list
   flai components list --project flaiover
   flai components list --json`,
@@ -111,17 +108,9 @@ they have a value.`,
 				}
 				projects = projects[i : i+1]
 			}
-			listed := make([]componentsProject, 0, len(projects))
-			for _, p := range projects {
-				lp := componentsProject{Name: p.Name, Path: p.Path, Kind: p.Kind, Components: []components.Component{}}
-				if s, ok := p.ComponentSettings(); ok {
-					comps, err := components.List(cmd.Context(), componentsRunner, repo.Root, p.Path, s.Include, s.Exclude)
-					if err != nil {
-						return err
-					}
-					lp.Supported, lp.Setup, lp.Components = true, s.Setup, comps
-				}
-				listed = append(listed, lp)
+			listed, err := hostapi.ListComponents(cmd.Context(), componentsRunner, repo.Root, repo.Manifest, projects)
+			if err != nil {
+				return err
 			}
 			if a.jsonOut {
 				return a.printJSON(map[string]any{"projects": listed})
@@ -134,9 +123,9 @@ they have a value.`,
 }
 
 // printComponents writes flai components list's text: a block for each
-// sub-project, its components under it, and each one's props aligned under
-// that.
-func printComponents(w io.Writer, listed []componentsProject) error {
+// sub-project, its components under it, each with how many examples it has
+// when it has any, and each one's props aligned under that.
+func printComponents(w io.Writer, listed []hostapi.ComponentsProject) error {
 	if len(listed) == 0 {
 		_, err := fmt.Fprintln(w, "no sub-projects in system-flow.yaml: add one of kind sveltekit or svelte under projects to list its components")
 		return err
@@ -156,7 +145,11 @@ func printComponents(w io.Writer, listed []componentsProject) error {
 		}
 		fmt.Fprintf(&b, "%s (%s, %s): %s\n", p.Name, p.Path, head, plural(len(p.Components), "component"))
 		for _, c := range p.Components {
-			fmt.Fprintf(&b, "  %s\n", c.Path)
+			if n := len(c.Examples); n > 0 {
+				fmt.Fprintf(&b, "  %s (%s)\n", c.Path, plural(n, "example"))
+			} else {
+				fmt.Fprintf(&b, "  %s\n", c.Path)
+			}
 			switch {
 			case c.Error != "":
 				fmt.Fprintf(&b, "    error: %s\n", oneLine(c.Error))
