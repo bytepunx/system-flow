@@ -3,12 +3,15 @@ id: S-0395
 type: story
 nature: feature
 title: Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each
-status: backlog
+status: ready
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:37:54Z
-updated: 2026-10-17T06:42:38Z
-transitions: []
+updated: 2026-10-17T06:44:14Z
+transitions:
+  - to: ready
+    at: 2026-10-17T06:43:53Z
+    by: alex
 tags: [cli, dashboard]
 topics: [release, orchestration]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/accept_forge_test.go, flai/cmd/accept.go, flai/cmd/accept_forge_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, "flaiover/src/routes/review/[id]/+page.svelte", design/adrs, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 40
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 8
+          output: 136
+          cache_read: 2828896
+          cache_write: 1503
+          cost: 0.7096
 forecast:
   duration: 28m
-  delivery: 2026-10-17T10:43:00Z
-  basis: "Its own forecast of 28m; 5th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393 and S-0394."
+  delivery: 2026-10-17T07:15:00Z
+  basis: "Its own forecast of 28m; 1st in the pull order with an in-progress limit of 5, behind S-0392."
   by: flai
-  at: 2026-10-17T06:40:03Z
+  at: 2026-10-17T06:44:14Z
 finalized:
   by: alex
   at: 2026-10-17T06:42:38Z

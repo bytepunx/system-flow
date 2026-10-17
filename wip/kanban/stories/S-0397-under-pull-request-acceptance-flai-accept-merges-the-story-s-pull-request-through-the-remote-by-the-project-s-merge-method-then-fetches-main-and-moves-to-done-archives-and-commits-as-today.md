@@ -3,12 +3,15 @@ id: S-0397
 type: story
 nature: feature
 title: Under pull-request acceptance, flai accept merges the story's pull request through the remote by the project's merge method, then fetches main and moves to done, archives, and commits as today
-status: backlog
+status: ready
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:39:46Z
-updated: 2026-10-17T06:43:36Z
-transitions: []
+updated: 2026-10-17T06:44:14Z
+transitions:
+  - to: ready
+    at: 2026-10-17T06:43:58Z
+    by: alex
 tags: [cli, template]
 topics: [release, orchestration]
 touches: [flai/cmd/accept.go, flai/cmd/accept_remote.go, flai/cmd/accept_remote_test.go, flai/internal/serve/forgemerge.go, flai/internal/serve/forgemerge_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 39
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 8
+          output: 136
+          cache_read: 2828895
+          cache_write: 1502
+          cost: 0.7096
 forecast:
   duration: 45m
-  delivery: 2026-10-17T11:31:00Z
-  basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395 and S-0396."
+  delivery: 2026-10-17T08:02:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0392, S-0395 and S-0396."
   by: flai
-  at: 2026-10-17T06:40:03Z
+  at: 2026-10-17T06:44:14Z
 finalized:
   by: alex
   at: 2026-10-17T06:43:36Z

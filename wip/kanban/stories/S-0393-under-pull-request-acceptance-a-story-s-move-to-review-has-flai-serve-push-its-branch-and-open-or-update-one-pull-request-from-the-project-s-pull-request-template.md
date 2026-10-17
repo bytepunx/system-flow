@@ -3,12 +3,15 @@ id: S-0393
 type: story
 nature: feature
 title: Under pull-request acceptance, a story's move to review has flai serve push its branch and open or update one pull request from the project's pull request template
-status: backlog
+status: ready
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:34:50Z
-updated: 2026-10-17T06:42:11Z
-transitions: []
+updated: 2026-10-17T06:44:14Z
+transitions:
+  - to: ready
+    at: 2026-10-17T06:43:48Z
+    by: alex
 tags: [cli, template]
 topics: [release]
 touches: [flai/internal/forge/pullrequest.go, flai/internal/forge/pullrequest_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/serve.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, template/root/.github/pull_request_template.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, template/CHANGELOG.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 40
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 9
+          output: 137
+          cache_read: 2828896
+          cache_write: 1503
+          cost: 0.7096
 forecast:
   duration: 1h5m
-  delivery: 2026-10-17T08:53:00Z
-  basis: "Its own forecast of 1h5m; 3rd in the pull order with an in-progress limit of 5, behind S-0241 and S-0392."
+  delivery: 2026-10-17T08:54:00Z
+  basis: "Its own forecast of 1h5m; 4th in the pull order with an in-progress limit of 5, behind S-0392, S-0395, S-0396 and S-0397."
   by: flai
-  at: 2026-10-17T06:40:03Z
+  at: 2026-10-17T06:44:14Z
 finalized:
   by: alex
   at: 2026-10-17T06:42:11Z

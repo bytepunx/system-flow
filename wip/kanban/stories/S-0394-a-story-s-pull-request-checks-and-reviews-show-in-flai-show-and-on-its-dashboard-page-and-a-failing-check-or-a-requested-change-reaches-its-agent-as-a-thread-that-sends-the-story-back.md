@@ -3,12 +3,15 @@ id: S-0394
 type: story
 nature: feature
 title: A story's pull request checks and reviews show in flai show and on its dashboard page, and a failing check or a requested change reaches its agent as a thread that sends the story back
-status: backlog
+status: ready
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:36:28Z
-updated: 2026-10-17T06:41:42Z
-transitions: []
+updated: 2026-10-17T06:44:14Z
+transitions:
+  - to: ready
+    at: 2026-10-17T06:43:51Z
+    by: alex
 tags: [cli, dashboard]
 topics: [release, dashboard]
 touches: [flai/internal/forge/state.go, flai/internal/forge/state_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/serve.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/cmd/items.go, flai/cmd/show_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flaiover/src/lib/server/agent.ts, "flaiover/src/routes/api/items/[id]/forge/+server.ts", "flaiover/src/routes/api/items/[id]/forge/forge.test.ts", flaiover/src/lib/components/ForgeStatus.svelte, flaiover/src/lib/components/ForgeStatus.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", "flaiover/src/routes/review/[id]/+page.svelte", design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 40
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 9
+          output: 136
+          cache_read: 2828896
+          cache_write: 1503
+          cost: 0.7096
 forecast:
   duration: 1h15m
-  delivery: 2026-10-17T10:13:00Z
-  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 5, behind S-0241, S-0392 and S-0393."
+  delivery: 2026-10-17T10:14:00Z
+  basis: "Its own forecast of 1h15m; 5th in the pull order with an in-progress limit of 5, behind S-0392, S-0395, S-0396, S-0397 and S-0393."
   by: flai
-  at: 2026-10-17T06:40:03Z
+  at: 2026-10-17T06:44:14Z
 finalized:
   by: alex
   at: 2026-10-17T06:41:42Z
