@@ -1,5 +1,6 @@
 // S-0215: the table under the agent-waiting chart lists the longest waits of the window with their
-// item, the thread waited on or review, when they started and ended, and who was awaited.
+// item, the thread waited on or review, when they started and ended, and who was awaited; S-0396
+// adds the waits in review on the required checks and on the reviewers.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import WaitTable from './WaitTable.svelte';
@@ -96,6 +97,43 @@ describe('WaitTable', () => {
 			'30m',
 			'—'
 		]);
+	});
+
+	// under pull-request acceptance (S-0396, ADR-0168): a wait in review on the required checks,
+	// awaited by the check that finished last, and one on the reviewers that a push ended
+	const pr: LongestWait[] = [
+		{
+			item: 'S-0011',
+			kind: 'checks',
+			started: '2026-09-29T10:00:00Z',
+			ended: '2026-09-29T10:40:00Z',
+			seconds: 2400,
+			awaited: 'ci / test'
+		},
+		{
+			item: 'S-0011',
+			kind: 'reviewers',
+			started: '2026-09-29T10:40:00Z',
+			ended: '2026-09-29T12:40:00Z',
+			seconds: 7200
+		}
+	];
+
+	it('names a wait on the checks and one on the reviewers by their kinds, with the story linked', () => {
+		show({ rows: pr, type: 'story' });
+		expect(cells()).toEqual([
+			['S-0011', 'checks', '—', '2026-09-29 06:00 EDT', '2026-09-29 06:40 EDT', '40m', 'ci / test'],
+			['S-0011', 'reviewers', '—', '2026-09-29 06:40 EDT', '2026-09-29 08:40 EDT', '2h', '—']
+		]);
+		expect(links(0)).toEqual(['/items/S-0011']);
+		expect(links(1)).toEqual(['/items/S-0011']);
+	});
+
+	it('lists a checks wait that started with the spell in review it falls in beside it', () => {
+		// a push at the very moment the story moved to review: the same item and start, two kinds
+		const both: LongestWait[] = [{ ...rows[1], item: 'S-0011', started: pr[0].started }, pr[0]];
+		show({ rows: both, type: 'story' });
+		expect(cells().map((c) => c[1])).toEqual(['review', 'checks']);
 	});
 
 	it('says so when no wait has a part in the window', () => {

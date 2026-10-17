@@ -716,6 +716,74 @@ describe('chart builders', () => {
 			'week of 2026-08-03 (2026-W32), 2 stories done<br/>threads: 1h<br/>review: 3h<br/>mean per story: 2h'
 		);
 	});
+	/** A week under pull-request acceptance (S-0396): the parts of its review on checks, reviewers. */
+	const withParts = (wk: WaitWeek, checks: number, reviewers: number): WaitWeek => {
+		const total = (s: number) => ({
+			total_seconds: s,
+			...(wk.items > 0 ? { mean_seconds: s / wk.items } : {})
+		});
+		return { ...wk, checks: total(checks), reviewers: total(reviewers) };
+	};
+	it('agent waiting draws the waits on checks and on reviewers as series of their own, stacked on the rest of review', () => {
+		const [w31, w32, w33, ...rest] = report.waiting!.weeks;
+		const pr: Report = {
+			...report,
+			waiting: {
+				...report.waiting!,
+				weeks: [
+					withParts(w31, 0, 0),
+					// a week whose review was all checks and reviewers
+					withParts(w32, 3600, 3600),
+					withParts(w33, 7200, 18000),
+					...rest.map((wk) => withParts(wk, 0, 0))
+				]
+			}
+		};
+		const o = agentWaiting(pr, light) as Waits;
+		expect(o.series.map((s) => [s.name, s.type, s.stack])).toEqual([
+			['threads', 'bar', 'waiting'],
+			['review', 'bar', 'waiting'],
+			['on checks', 'bar', 'waiting'],
+			['on reviewers', 'bar', 'waiting'],
+			['mean per story', 'line', undefined]
+		]);
+		expect(o.series.map((s) => s.itemStyle.color)).toEqual([
+			CATEGORICAL.light[2],
+			CATEGORICAL.light[7],
+			CATEGORICAL.light[6],
+			CATEGORICAL.light[3],
+			light.textSecondary
+		]);
+		// review is drawn less its parts, so a bar is as high as without them
+		const hours = (i: number) => o.series[i].data.map((d) => d.value[1]);
+		expect(hours(1)).toEqual([0, 0, 7, 0, 0, 0]);
+		expect(hours(2)).toEqual([0, 1, 2, 0, 0, 0]);
+		expect(hours(3)).toEqual([0, 1, 5, 0, 0, 0]);
+		expect(hours(4)).toEqual([null, 4, 15, null, null, null]);
+		// the tooltip names the whole review, then its parts, as flai stats prints them
+		expect(
+			o.tooltip.formatter(o.series.map((s) => ({ seriesName: s.name, data: s.data[2] })))
+		).toBe(
+			'week of 2026-08-10 (2026-W33), 1 story done<br/>threads: 1h<br/>review: 14h<br/>on checks: 2h<br/>on reviewers: 5h<br/>mean per story: 15h'
+		);
+	});
+	it('agent waiting draws no checks or reviewers series when every week has none, in local mode', () => {
+		const local: Report = {
+			...report,
+			waiting: {
+				...report.waiting!,
+				weeks: report.waiting!.weeks.map((wk) => withParts(wk, 0, 0))
+			}
+		};
+		// the same chart as from a flai older than S-0396, whose weeks have neither
+		const drawn = (r: Report) =>
+			(agentWaiting(r, light) as Waits).series.map((s) => ({
+				...s,
+				data: s.data.map((d) => ({ ...d, week: d.week.week }))
+			}));
+		expect(drawn(local)).toEqual(drawn(report));
+		expect(report.waiting!.weeks[0].checks).toBeUndefined();
+	});
 	it("agent waiting spans the report's window in weeks (ADR-0054)", () => {
 		const hour = 3600e3;
 		// from the week that holds 2 August, the window's start, to the one that holds now, half a week

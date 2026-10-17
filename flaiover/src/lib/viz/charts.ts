@@ -69,6 +69,12 @@ export type ItemMetrics = {
 	/** What its agent waited on threads while in progress, and in review (S-0205); absent when none. */
 	wait_threads_seconds?: number;
 	wait_review_seconds?: number;
+	/**
+	 * The parts of its review spent on the required checks and on the reviewers, under pull-request
+	 * acceptance with kept forge state (S-0396, ADR-0168); absent otherwise and from older flai.
+	 */
+	wait_checks_seconds?: number;
+	wait_reviewers_seconds?: number;
 };
 /** The count of a set of errors and the p50 and p85 of their absolute values, absent when empty. */
 export type ErrorSpread = { count: number; p50_seconds?: number; p85_seconds?: number };
@@ -258,9 +264,12 @@ export type UsageReport = {
 };
 /** The thread waits of a week that the orchestrator, or a confirmation, ended (ADR-0091). */
 export type WaitShare = { count: number; total_seconds: number };
+/** A wait of a week summed over its items, and over their number, absent with none. */
+export type WaitTotal = { total_seconds: number; mean_seconds?: number };
 /**
  * One ISO week of waiting (S-0205): the items completed in it, and what their agents waited on
- * threads and in review, summed over them and over their number, absent with none.
+ * threads and in review, summed over them and over their number, absent with none. `checks` and
+ * `reviewers` are parts of `review`, never taken out of it, 0 in `local` mode (S-0396).
  */
 export type WaitWeek = {
 	week: string;
@@ -273,15 +282,20 @@ export type WaitWeek = {
 		orchestrator: WaitShare;
 		confirmed: WaitShare;
 	};
-	review: { total_seconds: number; mean_seconds?: number };
+	review: WaitTotal;
+	/** Absent from a flai older than S-0396. */
+	checks?: WaitTotal;
+	reviewers?: WaitTotal;
 };
 /**
- * One of the longest waits of the window (S-0215, ADR-0114): a thread's, or a spell in review,
- * with its seconds in the window; `ended` and `awaited` are absent while it is open.
+ * One of the longest waits of the window (S-0215, ADR-0114): a thread's, a spell in review, or,
+ * under pull-request acceptance, a wait in review on the required checks or on the reviewers
+ * (S-0396, ADR-0168), with its seconds in the window; `ended` and `awaited` are absent while it is
+ * open, and `awaited` also when a push ended it.
  */
 export type LongestWait = {
 	item: string;
-	kind: 'thread' | 'review';
+	kind: 'thread' | 'review' | 'checks' | 'reviewers';
 	thread?: string;
 	started: string;
 	ended?: string;
@@ -921,13 +935,25 @@ export function throughput(r: Report, t: Theme): Opt {
 	});
 }
 
-/** A week's hours at its Monday; null, a gap in the line, for a mean over a week with no items. */
-type WaitPoint = { value: [number, number | null]; week: WaitWeek };
+/**
+ * The parts of review on the agent-waiting chart (S-0396): slots the threads, 2, and review, 7,
+ * do not take, and not 1, which the charts keep for cancelled work and work over the p85.
+ */
+const WAIT_PART_SLOT = { checks: 6, reviewers: 3 };
+/**
+ * A week's hours at its Monday; null, a gap in the line, for a mean over a week with no items. The
+ * seconds the tooltip names, when they are not the bar's: the whole review, beside its parts.
+ */
+type WaitPoint = { value: [number, number | null]; week: WaitWeek; seconds?: number };
 /**
  * Agent waiting (S-0215): one stacked bar per ISO week of the window, the hours the agents of the
  * items completed in it waited on threads and in review, with the mean of both per item as a line,
  * a gap in a week with no items. flai lays out the weeks from the one that holds the window's
- * start to the one that holds now, and the axis spans them (ADR-0054).
+ * start to the one that holds now, and the axis spans them (ADR-0054). When any week has time in
+ * review on the required checks or on the reviewers (S-0396), they are series of their own,
+ * stacked on the rest of review, which they are parts of, so a bar's height is still the time
+ * waited; the tooltip names the whole review above them, as `flai stats` prints it. Without them,
+ * in `local` mode or from an older flai, the chart draws as it did.
  */
 export function agentWaiting(r: Report, t: Theme): Opt {
 	const weeks = r.waiting?.weeks ?? [];
@@ -935,14 +961,26 @@ export function agentWaiting(r: Report, t: Theme): Opt {
 		value: [place(Date.parse(wk.start), 'week'), seconds === null ? null : seconds / 3600],
 		week: wk
 	});
-	const bar = (name: string, color: string, seconds: (wk: WaitWeek) => number) => ({
+	const bar = (
+		name: string,
+		color: string,
+		seconds: (wk: WaitWeek) => number,
+		named?: (wk: WaitWeek) => number
+	) => ({
 		name,
 		type: 'bar',
 		stack: 'waiting',
 		barMaxWidth: 24,
 		itemStyle: { color, borderColor: t.surface, borderWidth: 1 },
-		data: weeks.map((wk) => point(wk, seconds(wk)))
+		data: weeks.map((wk) => ({
+			...point(wk, seconds(wk)),
+			...(named ? { seconds: named(wk) } : {})
+		}))
 	});
+	const checks = (wk: WaitWeek) => wk.checks?.total_seconds ?? 0;
+	const reviewers = (wk: WaitWeek) => wk.reviewers?.total_seconds ?? 0;
+	const parts = weeks.some((wk) => checks(wk) > 0 || reviewers(wk) > 0);
+	const review = colorFor(t, STATE_SLOT, 'review', 0);
 	const mean = {
 		...line(t, `mean per ${r.type}`, t.textSecondary, 'emptyCircle', [], true),
 		// a point between two gaps is drawn by its mark alone, so every mark shows
@@ -959,7 +997,18 @@ export function agentWaiting(r: Report, t: Theme): Opt {
 		weeks.length > 0
 			? [
 					bar('threads', t.series[2], (wk) => wk.threads.total_seconds),
-					bar('review', colorFor(t, STATE_SLOT, 'review', 0), (wk) => wk.review.total_seconds),
+					...(parts
+						? [
+								bar(
+									'review',
+									review,
+									(wk) => Math.max(0, wk.review.total_seconds - checks(wk) - reviewers(wk)),
+									(wk) => wk.review.total_seconds
+								),
+								bar('on checks', t.series[WAIT_PART_SLOT.checks], checks),
+								bar('on reviewers', t.series[WAIT_PART_SLOT.reviewers], reviewers)
+							]
+						: [bar('review', review, (wk) => wk.review.total_seconds)]),
 					mean
 				]
 			: [];
@@ -969,7 +1018,7 @@ export function agentWaiting(r: Report, t: Theme): Opt {
 		if (list.length === 0) return '';
 		const wk = list[0].data.week;
 		const lines = list.map(
-			(p) => `${p.marker ?? ''}${p.seriesName}: ${human(p.data.value[1]! * 3600)}`
+			(p) => `${p.marker ?? ''}${p.seriesName}: ${human(p.data.seconds ?? p.data.value[1]! * 3600)}`
 		);
 		return `week of ${wk.start} (${wk.week}), ${wk.items} ${noun(wk.items)} done<br/>${lines.join('<br/>')}`;
 	};

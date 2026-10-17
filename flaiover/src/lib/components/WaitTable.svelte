@@ -1,7 +1,8 @@
 <script lang="ts">
 	// The longest waits of the window under the agent-waiting chart (S-0215): each with its item,
 	// the thread it waited on or review, when it started and ended, its time in the window, and who
-	// was awaited.
+	// was awaited. A wait in review on the required checks or on the reviewers (S-0396) is named by
+	// its kind, and has no thread.
 	import { resolve } from '$app/paths';
 	import { human, type LongestWait } from '$lib/viz/charts';
 	import { localTime } from '$lib/localtime';
@@ -21,7 +22,7 @@
 				><th class="pr-4">ended</th><th class="pr-4">waited</th><th>awaited</th></tr
 			></thead
 		><tbody
-			>{#each rows as row (row.item + (row.thread ?? '') + row.started)}<tr
+			>{#each rows as row (row.item + row.kind + (row.thread ?? '') + row.started)}<tr
 					><td class="pr-4"
 						><a class="font-mono underline" href={resolve('/items/[id]', { id: row.item })}
 							>{row.item}</a
@@ -31,7 +32,7 @@
 								class="font-mono underline"
 								href={resolve('/items/[id]', { id: row.item }) +
 									`?thread=${encodeURIComponent(row.thread)}`}>{row.thread}</a
-							>{:else}review{/if}</td
+							>{:else if row.kind === 'review'}review{:else}—{/if}</td
 					><td class="pr-4 font-mono whitespace-nowrap">{localTime(row.started)}</td><td
 						class="pr-4 font-mono whitespace-nowrap">{row.ended ? localTime(row.ended) : 'open'}</td
 					><td class="pr-4">{human(row.seconds)}</td><td>{row.awaited ?? '—'}</td></tr
