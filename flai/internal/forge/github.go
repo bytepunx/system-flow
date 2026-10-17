@@ -219,6 +219,36 @@ func (g *GitHub) Reviews(ctx context.Context, pr PullRequest) ([]Review, error) 
 	return reviews, nil
 }
 
+// RequiredApprovals is the highest count of approving reviews that base's
+// rulesets and its classic protection require. Either may be out of reach
+// without failing the read, as for requiredChecks.
+func (g *GitHub) RequiredApprovals(ctx context.Context, base string) (int, error) {
+	if base == "" {
+		return 0, fmt.Errorf("read the approvals a base branch requires in %s on GitHub: no base branch given; name the pull request's base", g.Repository())
+	}
+	most := 0
+	rules := g.repoPath("/rules/branches/" + url.PathEscape(base) + "?per_page=" + strconv.Itoa(perPage))
+	err := pages(ctx, g, rules, func(page []githubRule) error {
+		for _, rule := range page {
+			if rule.Type == "pull_request" && rule.Parameters != nil {
+				most = max(most, rule.Parameters.RequiredApprovingReviewCount)
+			}
+		}
+		return nil
+	})
+	if err != nil && !outOfReach(err) {
+		return 0, fmt.Errorf("read the rules on %s in %s on GitHub for the approvals it requires: %w", base, g.Repository(), err)
+	}
+	var reviews struct {
+		RequiredApprovingReviewCount int `json:"required_approving_review_count"`
+	}
+	_, err = g.call(ctx, http.MethodGet, g.repoPath("/branches/"+url.PathEscape(base)+"/protection/required_pull_request_reviews"), nil, &reviews)
+	if err != nil && !outOfReach(err) {
+		return 0, fmt.Errorf("read the protection of %s in %s on GitHub for the approvals it requires: %w", base, g.Repository(), err)
+	}
+	return max(most, reviews.RequiredApprovingReviewCount), nil
+}
+
 // Merge merges the pull request by method, provided its head is still
 // pr.HeadSHA; GitHub's refusal (405, or 409 for a moved head) is
 // ErrMergeRefused.
@@ -581,6 +611,7 @@ type githubRule struct {
 		RequiredStatusChecks []struct {
 			Context string `json:"context"`
 		} `json:"required_status_checks"`
+		RequiredApprovingReviewCount int `json:"required_approving_review_count"`
 	} `json:"parameters"`
 }
 

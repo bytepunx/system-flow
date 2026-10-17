@@ -30,6 +30,8 @@ type Status struct {
 	Checks []CheckStatus `json:"checks"`
 	// Reviews are every review, oldest first.
 	Reviews []ReviewStatus `json:"reviews"`
+	// RequiredApprovals is the approving reviews the base branch requires, as last read.
+	RequiredApprovals int `json:"required_approvals"`
 	// Events are each change, oldest first, appended and never rewritten.
 	Events []StatusEvent `json:"events,omitempty"`
 	// SentBack are the failures flai sent the story back to in-progress for.
@@ -195,6 +197,34 @@ func (s Status) Record(pr PullRequest, checks []Check, reviews []Review, now tim
 		next.Reviews = append(next.Reviews, ReviewStatus{Author: r.Author, State: r.State, URL: r.URL, Body: r.Body, SubmittedAt: r.SubmittedAt})
 	}
 	return next
+}
+
+// Decisions are each reviewer's latest review that approves, requests
+// changes, or was dismissed, as the forge counts a reviewer's decision: a
+// later review that only comments does not change it. One per reviewer, in
+// the order of each reviewer's first review; a reviewer who only commented
+// has none.
+func (s Status) Decisions() []ReviewStatus {
+	var order []string
+	latest := map[string]ReviewStatus{}
+	seen := map[string]bool{}
+	for _, r := range s.Reviews {
+		if !seen[r.Author] {
+			seen[r.Author] = true
+			order = append(order, r.Author)
+		}
+		switch r.State {
+		case ReviewApproved, ReviewChangesRequested, ReviewDismissed:
+			latest[r.Author] = r
+		}
+	}
+	var out []ReviewStatus
+	for _, author := range order {
+		if r, ok := latest[author]; ok {
+			out = append(out, r)
+		}
+	}
+	return out
 }
 
 // CheckKey is the key a failed check is sent back under: the check at one commit.

@@ -414,6 +414,85 @@ func TestGitHubReviewsRefuseAStateFlaiDoesNotKnow(t *testing.T) {
 	}
 }
 
+// The calls RequiredApprovals makes for main: its rules, then its classic protection.
+const (
+	rulesPath   = "GET /repos/octo/repo/rules/branches/main"
+	reviewsPath = "GET /repos/octo/repo/branches/main/protection/required_pull_request_reviews"
+)
+
+func TestGitHubRequiredApprovals(t *testing.T) {
+	adminOnly := map[string]string{"message": "Must have admin rights to Repository."}
+	rules := func(counts ...int) []any {
+		out := []any{map[string]any{"type": "required_status_checks", "parameters": map[string]any{"required_status_checks": []any{}}}}
+		for _, n := range counts {
+			out = append(out, map[string]any{"type": "pull_request", "parameters": map[string]any{"required_approving_review_count": n}})
+		}
+		return out
+	}
+	for _, tc := range []struct {
+		name          string
+		rulesStatus   int
+		rules         any
+		reviewsStatus int
+		reviews       any
+		want          int
+	}{
+		{"rulesets alone", http.StatusOK, rules(1, 2), http.StatusNotFound, map[string]string{"message": "Branch not protected"}, 2},
+		{"classic protection alone", http.StatusOK, []any{}, http.StatusOK, map[string]any{"required_approving_review_count": 3}, 3},
+		{"both, the higher of them", http.StatusOK, rules(2), http.StatusOK, map[string]any{"required_approving_review_count": 1}, 2},
+		{"both out of reach, 403", http.StatusForbidden, adminOnly, http.StatusForbidden, adminOnly, 0},
+		{"both out of reach, 404", http.StatusNotFound, map[string]string{"message": "Not Found"}, http.StatusNotFound, map[string]string{"message": "Not Found"}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFakeGitHub(t)
+			f.reply(rulesPath, tc.rulesStatus, tc.rules)
+			f.reply(reviewsPath, tc.reviewsStatus, tc.reviews)
+			got, err := f.forge().RequiredApprovals(context.Background(), "main")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tc.want {
+				t.Errorf("RequiredApprovals = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestGitHubRequiredApprovalsFailWhenGitHubFails(t *testing.T) {
+	serverError := map[string]string{"message": "Server Error"}
+	for _, path := range []string{rulesPath, reviewsPath} {
+		f := newFakeGitHub(t)
+		if path == rulesPath {
+			f.reply(rulesPath, http.StatusInternalServerError, serverError)
+			f.reply(reviewsPath, http.StatusOK, map[string]any{"required_approving_review_count": 1})
+		} else {
+			f.reply(rulesPath, http.StatusOK, []any{})
+			f.reply(reviewsPath, http.StatusInternalServerError, serverError)
+		}
+		_, err := f.forge().RequiredApprovals(context.Background(), "main")
+		if err == nil {
+			t.Errorf("RequiredApprovals with %s answering 500 answered no error", path)
+			continue
+		}
+		for _, want := range []string{"500", "main", "octo/repo"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("RequiredApprovals with %s answering 500: error %q does not name %q", path, err, want)
+			}
+		}
+		noToken(t, err)
+	}
+}
+
+func TestGitHubRequiredApprovalsNeedABase(t *testing.T) {
+	f := newFakeGitHub(t)
+	if _, err := f.forge().RequiredApprovals(context.Background(), ""); err == nil {
+		t.Error("RequiredApprovals without a base answered no error")
+	}
+	if calls := f.calls(); len(calls) != 0 {
+		t.Errorf("calls = %v, want none", calls)
+	}
+}
+
 func TestGitHubFollowsTheNextPage(t *testing.T) {
 	f := newFakeGitHub(t)
 	f.handle("GET /repos/octo/repo/pulls/7/reviews", func(w http.ResponseWriter, r *http.Request) {

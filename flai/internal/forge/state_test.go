@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ func prAt(commit string) PullRequest {
 func TestWriteStatusThenReadStatusRoundTrips(t *testing.T) {
 	dir := t.TempDir()
 	want := Status{
-		Story: "S-0394", PullRequest: 42, URL: "https://github.com/o/r/pull/42", HeadSHA: "aaa", ReadAt: "2026-10-17T08:00:00Z",
+		Story: "S-0394", PullRequest: 42, URL: "https://github.com/o/r/pull/42", HeadSHA: "aaa", ReadAt: "2026-10-17T08:00:00Z", RequiredApprovals: 2,
 		Checks:   []CheckStatus{{Name: "test", State: CheckFailed, URL: "https://ci/1", Summary: "2 failed", Since: "2026-10-17T07:55:00Z"}},
 		Reviews:  []ReviewStatus{{Author: "alex", State: ReviewChangesRequested, URL: "https://github.com/o/r/pull/42#r1", Body: "Rename it.", SubmittedAt: "2026-10-17T07:50:00Z"}},
 		Events:   []StatusEvent{{At: "2026-10-17T07:55:00Z", Kind: EventCheck, Name: "test", From: "pending", To: "failed", Commit: "aaa"}},
@@ -32,6 +33,9 @@ func TestWriteStatusThenReadStatusRoundTrips(t *testing.T) {
 	}
 	if !strings.HasSuffix(string(data), "}\n") {
 		t.Errorf("the status file does not end in a newline: %q", data)
+	}
+	if !strings.Contains(string(data), `"required_approvals": 2`) {
+		t.Errorf("the status file does not keep required_approvals: %s", data)
 	}
 	got, ok, err := ReadStatus(dir, "S-0394")
 	if err != nil || !ok {
@@ -172,6 +176,36 @@ func TestRecordDoesNotShareItsEventsWithTheStatusItWasMadeFrom(t *testing.T) {
 	}
 	if len(was.Events) != 1 || was.Events[:2][1] != (StatusEvent{}) {
 		t.Errorf("Record wrote into the status it was made from: %+v", was.Events[:2])
+	}
+}
+
+func TestDecisionsAreEachReviewersLatestDecidingReview(t *testing.T) {
+	review := func(author string, state ReviewState, n int) ReviewStatus {
+		return ReviewStatus{Author: author, State: state, URL: "https://github.com/o/r/pull/42#r" + strconv.Itoa(n)}
+	}
+	for _, tc := range []struct {
+		name    string
+		reviews []ReviewStatus
+		want    []ReviewStatus
+	}{
+		{"approve then request changes", []ReviewStatus{review("ann", ReviewApproved, 1), review("ann", ReviewChangesRequested, 2)}, []ReviewStatus{review("ann", ReviewChangesRequested, 2)}},
+		{"request changes then approve", []ReviewStatus{review("ann", ReviewChangesRequested, 1), review("ann", ReviewApproved, 2)}, []ReviewStatus{review("ann", ReviewApproved, 2)}},
+		{"changes requested then dismissed", []ReviewStatus{review("ann", ReviewChangesRequested, 1), review("ann", ReviewDismissed, 2)}, []ReviewStatus{review("ann", ReviewDismissed, 2)}},
+		{"approved then a comment", []ReviewStatus{review("ann", ReviewApproved, 1), review("ann", ReviewCommented, 2)}, []ReviewStatus{review("ann", ReviewApproved, 1)}},
+		{"only comments", []ReviewStatus{review("ann", ReviewCommented, 1), review("ann", ReviewPending, 2)}, nil},
+		{"in the order of each reviewer's first review", []ReviewStatus{
+			review("bob", ReviewCommented, 1),
+			review("ann", ReviewChangesRequested, 2),
+			review("cat", ReviewCommented, 3),
+			review("ann", ReviewApproved, 4),
+			review("bob", ReviewChangesRequested, 5),
+		}, []ReviewStatus{review("bob", ReviewChangesRequested, 5), review("ann", ReviewApproved, 4)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := (Status{Reviews: tc.reviews}).Decisions(); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("Decisions =\n%+v\nwant\n%+v", got, tc.want)
+			}
+		})
 	}
 }
 

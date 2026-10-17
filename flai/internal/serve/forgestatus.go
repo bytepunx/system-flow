@@ -73,7 +73,8 @@ func (p *forgePass) readBack(ctx context.Context, repo *workitem.Repo, it *worki
 }
 
 // readPullRequest reads story's pull request, its required checks on the
-// head commit, and its reviews from the forge, and keeps them.
+// head commit, its reviews, and the approvals its base requires from the
+// forge, and keeps them.
 func (p *forgePass) readPullRequest(ctx context.Context, repo *workitem.Repo, story string, token ForgeToken) (forge.Status, error) {
 	push := ForgePush{Repo: repo, Story: story, Git: gitOf(p.o), Token: token, NewForge: p.o.NewForge}
 	f, err := push.adapter(push.git(), mainCheckout(repo), story)
@@ -101,8 +102,13 @@ func (p *forgePass) readPullRequest(ctx context.Context, repo *workitem.Repo, st
 	if err != nil {
 		return forge.Status{}, readReason(f, story, err)
 	}
+	approvals, err := f.RequiredApprovals(fctx, pr.Base)
+	if err != nil {
+		return forge.Status{}, readReason(f, story, err)
+	}
 	was.Story = story
 	next := was.Record(pr, checks, reviews, p.o.Now())
+	next.RequiredApprovals = approvals
 	return next, forge.WriteStatus(repo.CacheDir(), next)
 }
 
@@ -123,8 +129,7 @@ type failure struct {
 
 // failures are the failures at st's head commit that flai has not sent the
 // story back for: each required check that failed, and each reviewer whose
-// latest review that approves, requests changes, or was dismissed requests
-// changes, as the forge counts a reviewer's decision.
+// decision, as forge.Status.Decisions counts it, requests changes.
 func failures(st forge.Status) []failure {
 	var out []failure
 	add := func(f failure) {
@@ -137,15 +142,8 @@ func failures(st forge.Status) []failure {
 			add(failure{key: forge.CheckKey(c.Name, st.HeadSHA), kind: forge.EventCheck, name: c.Name, url: c.URL, text: c.Summary})
 		}
 	}
-	latest := map[string]string{}
-	for _, r := range st.Reviews {
-		switch r.State {
-		case forge.ReviewApproved, forge.ReviewChangesRequested, forge.ReviewDismissed:
-			latest[r.Author] = r.URL
-		}
-	}
-	for _, r := range st.Reviews {
-		if r.State == forge.ReviewChangesRequested && latest[r.Author] == r.URL {
+	for _, r := range st.Decisions() {
+		if r.State == forge.ReviewChangesRequested {
 			add(failure{key: forge.ReviewKey(r.URL), kind: forge.EventReview, name: r.Author, url: r.URL, text: r.Body})
 		}
 	}

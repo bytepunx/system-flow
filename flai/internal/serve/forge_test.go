@@ -22,17 +22,19 @@ import (
 // fakeForge is a forge with one repository, keeping its pull requests by
 // head branch and counting what was asked of it; heads are the head commit
 // of each head branch, and checks and reviews what each pull request has,
-// by its head branch. readErr fails the reads of checks.
+// by its head branch. readErr fails the reads of checks; approvals is what
+// every base branch requires.
 type fakeForge struct {
-	mu      sync.Mutex
-	prs     map[string]forge.PullRequest
-	opens   int
-	down    error
-	readErr error
-	number  int
-	heads   map[string]string
-	checks  map[string][]forge.Check
-	reviews map[string][]forge.Review
+	mu        sync.Mutex
+	prs       map[string]forge.PullRequest
+	opens     int
+	down      error
+	readErr   error
+	number    int
+	heads     map[string]string
+	checks    map[string][]forge.Check
+	reviews   map[string][]forge.Review
+	approvals int
 }
 
 func newFakeForge() *fakeForge {
@@ -83,6 +85,11 @@ func (f *fakeForge) Reviews(_ context.Context, pr forge.PullRequest) ([]forge.Re
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.reviews[pr.Head], nil
+}
+func (f *fakeForge) RequiredApprovals(context.Context, string) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.approvals, nil
 }
 
 // set gives the pull request of the head branch head the head commit sha,
@@ -515,5 +522,28 @@ func TestFlaiServePushesAStoryInReviewToABareRemote(t *testing.T) {
 	}
 	if lab.forge.opens != 2 {
 		t.Errorf("the request was opened or updated %d times, want 2", lab.forge.opens)
+	}
+}
+
+// A read keeps the approvals the pull request's base requires in the status
+// file, and a later read keeps what the forge then answers.
+func TestAReadKeepsTheApprovalsTheBaseRequires(t *testing.T) {
+	lab, _ := newStatusLab(t)
+	lab.forge.approvals = 2
+	lab.look()
+	if st := lab.status(); st.RequiredApprovals != 2 {
+		t.Fatalf("the kept status: required approvals %d, want 2", st.RequiredApprovals)
+	}
+	data, err := os.ReadFile(forge.StatusPath(lab.repo.CacheDir(), lab.story))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"required_approvals": 2`) {
+		t.Errorf("the status file does not keep required_approvals:\n%s", data)
+	}
+	lab.forge.approvals = 0
+	lab.look()
+	if st := lab.status(); st.RequiredApprovals != 0 {
+		t.Errorf("after the rule is lifted: required approvals %d, want 0", st.RequiredApprovals)
 	}
 }

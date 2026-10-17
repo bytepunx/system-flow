@@ -1,6 +1,7 @@
 // Package forge is the contract pull-request acceptance reaches a project's
 // forge through: find a story's pull request by its head branch, open or
-// update it, read the checks and reviews on it, and merge it by a method.
+// update it, read the checks and reviews on it and the approvals its base
+// requires, and merge it by a method.
 // A Forge is bound to one repository when it is made, and gets its token
 // from a TokenFunc at each call rather than holding it. GitHub is the one
 // adapter; what is particular to a forge (its API paths, how it names a
@@ -37,6 +38,9 @@ type Forge interface {
 	Checks(ctx context.Context, pr PullRequest) ([]Check, error)
 	// Reviews are the reviews submitted on the pull request, oldest first.
 	Reviews(ctx context.Context, pr PullRequest) ([]Review, error)
+	// RequiredApprovals is the most approving reviews the base branch
+	// requires before a pull request into it merges, 0 when it requires none.
+	RequiredApprovals(ctx context.Context, base string) (int, error)
 	// Merge merges the pull request by method, refusing with
 	// ErrMergeRefused when the forge will not merge it or its head is no
 	// longer pr.HeadSHA.
