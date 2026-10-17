@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-16
+updated: 2026-10-17
 status: active
 ---
 
@@ -2818,6 +2818,7 @@ Subcommands:
 - [actions](#flai-serve-actions): The host actions there are, what each lets a dashboard do, and where each is enabled
 - [agent](#flai-serve-agent): What flai serve starts when a story becomes ready: each story's harness, or your command
 - [checks](#flai-serve-checks): The named commands a story in review is checked with, on this host
+- [components](#flai-serve-components): How long flai serve keeps a component dev server nobody looks at, on this host
 - [disable](#flai-serve-disable): Stop flai serve performing a host action for this project
 - [enable](#flai-serve-enable): Let flai serve perform a host action for this project when its dashboard asks
 - [import](#flai-serve-import): The folders whose git repositories the board offers to import into system-flow
@@ -3176,6 +3177,47 @@ Bound how long one run of every command together may take (default 15).
 
 ```text
 flai serve checks timeout <minutes>
+```
+
+#### flai serve components
+
+How long flai serve keeps a component dev server nobody looks at, on this host.
+
+```text
+flai serve components
+```
+
+flai serve runs a Svelte sub-project's own Vite dev server, with flai's component harness, when the dashboard's Components page asks it to (components.start), on 127.0.0.1 and a port flai picks. It runs the project's code on this host, so it is a host action, off until you enable it (flai serve enable components). Each start and stop is in flai serve journal.
+
+flai serve stops a dev server that had no components.status, which the page asks while it is open, for components.idle, 30 minutes by default, and every dev server when it stops. flai serve components idle sets it, as a Go duration such as 45m or 2h, for every project on this host; it takes effect at once, with no restart.
+
+Examples:
+
+```bash
+flai serve enable components
+flai serve components idle 45m
+flai serve components show --json
+```
+
+Subcommands:
+
+- [idle](#flai-serve-components-idle): Stop a dev server after this long without a components.status (default 30m)
+- [show](#flai-serve-components-show): Print components.idle and whether the action is enabled here
+
+##### flai serve components idle
+
+Stop a dev server after this long without a components.status (default 30m).
+
+```text
+flai serve components idle <duration>
+```
+
+##### flai serve components show
+
+Print components.idle and whether the action is enabled here.
+
+```text
+flai serve components show
 ```
 
 #### flai serve disable
