@@ -3,16 +3,37 @@ id: T-1885
 type: task
 nature: feature
 title: flai/internal/components reads each component's examples under design/components, and flai check reports components.examples for one that does not fit its component
-status: backlog
+status: done
 parent: S-0443
 owner: alex
 created: 2026-10-16T21:38:22Z
-updated: 2026-10-16T21:48:30Z
-transitions: []
+updated: 2026-10-17T04:13:18Z
+transitions:
+  - to: ready
+    at: 2026-10-17T04:04:37Z
+    by: agent-S-0443
+  - to: in-progress
+    at: 2026-10-17T04:04:38Z
+    by: agent-S-0443
+  - to: done
+    at: 2026-10-17T04:13:18Z
+    by: agent-S-0443
 stream: S-0443
 tags: [cli]
 touches: [flai/internal/components/examples.go, flai/internal/components/examples_test.go, flai/internal/check/check.go, flai/internal/check/components_test.go]
 after: [T-1884]
+usage:
+  source: log
+  seconds: 520
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 41
+      output: 16373
+      cache_read: 2058580
+      cache_write: 69995
+      cost: 1.1373
 ---
 # T-1885 flai/internal/components reads each component's examples under design/components, and flai check reports components.examples for one that does not fit its component
 

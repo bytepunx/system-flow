@@ -3,16 +3,37 @@ id: T-1888
 type: task
 nature: feature
 title: The Components page lists a component's examples, loads one into the panel, and saves the panel's values as a new example through file.save
-status: backlog
+status: done
 parent: S-0443
 owner: alex
 created: 2026-10-16T21:38:38Z
-updated: 2026-10-16T21:48:35Z
-transitions: []
+updated: 2026-10-17T04:40:54Z
+transitions:
+  - to: ready
+    at: 2026-10-17T04:29:28Z
+    by: agent-S-0443
+  - to: in-progress
+    at: 2026-10-17T04:29:28Z
+    by: agent-S-0443
+  - to: done
+    at: 2026-10-17T04:40:54Z
+    by: agent-S-0443
 stream: S-0443
 tags: [dashboard]
-touches: [flaiover/src/lib/components/explorer/ExampleList.svelte, flaiover/src/lib/components/explorer/ExampleList.svelte.test.ts, flaiover/src/routes/api/components/examples/+server.ts, flaiover/src/routes/api/components/examples/examples.test.ts, flaiover/src/routes/design/components/+page.svelte]
+touches: [flaiover/src/lib/components/explorer/ExampleList.svelte, flaiover/src/lib/components/explorer/ExampleList.svelte.test.ts, flaiover/src/routes/api/components/examples/+server.ts, flaiover/src/routes/api/components/examples/examples.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/lib/server/repo.ts]
 after: [T-1886, T-1887]
+usage:
+  source: log
+  seconds: 686
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 67
+      output: 26550
+      cache_read: 3338041
+      cache_write: 113498
+      cost: 1.8441
 ---
 # T-1888 The Components page lists a component's examples, loads one into the panel, and saves the panel's values as a new example through file.save
 

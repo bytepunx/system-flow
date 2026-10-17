@@ -3,15 +3,36 @@ id: T-1884
 type: task
 nature: feature
 title: An ADR records the examples files under design/components, their path and JSON, and that a save with no hash creates one
-status: backlog
+status: done
 parent: S-0443
 owner: alex
 created: 2026-10-16T21:38:18Z
-updated: 2026-10-16T21:48:27Z
-transitions: []
+updated: 2026-10-17T04:04:03Z
+transitions:
+  - to: ready
+    at: 2026-10-17T03:58:25Z
+    by: agent-S-0443
+  - to: in-progress
+    at: 2026-10-17T03:58:26Z
+    by: agent-S-0443
+  - to: done
+    at: 2026-10-17T04:04:03Z
+    by: agent-S-0443
 stream: S-0443
 tags: [cli, dashboard]
 touches: [design/adrs, design/adrs/README.md, design/system/component-library.md]
+usage:
+  source: log
+  seconds: 337
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 19636
+      cache_read: 2468792
+      cache_write: 83943
+      cost: 1.3639
 ---
 # T-1884 An ADR records the examples files under design/components, their path and JSON, and that a save with no hash creates one
 

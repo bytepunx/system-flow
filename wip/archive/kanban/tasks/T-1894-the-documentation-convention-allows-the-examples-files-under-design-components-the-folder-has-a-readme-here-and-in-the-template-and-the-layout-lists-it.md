@@ -3,16 +3,37 @@ id: T-1894
 type: task
 nature: feature
 title: The documentation convention allows the examples files under design/components, the folder has a README here and in the template, and the layout lists it
-status: backlog
+status: done
 parent: S-0443
 owner: alex
 created: 2026-10-16T21:48:51Z
-updated: 2026-10-16T21:48:51Z
-transitions: []
+updated: 2026-10-17T04:13:42Z
+transitions:
+  - to: ready
+    at: 2026-10-17T04:04:39Z
+    by: agent-S-0443
+  - to: in-progress
+    at: 2026-10-17T04:04:40Z
+    by: agent-S-0443
+  - to: done
+    at: 2026-10-17T04:13:42Z
+    by: agent-S-0443
 stream: S-0443
 tags: [template, dashboard]
 touches: [design/conventions/documentation.md, template/root/design/conventions/documentation.md, design/system/documentation-standard.md, design/components/README.md, template/root/design/components/README.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl, design/system/repository-layout.md, template/CHANGELOG.md, template/template.yaml]
 after: [T-1884]
+usage:
+  source: log
+  seconds: 542
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 15641
+      cache_read: 1966529
+      cache_write: 66865
+      cost: 1.0864
 ---
 # T-1894 The documentation convention allows the examples files under design/components, the folder has a README here and in the template, and the layout lists it
 

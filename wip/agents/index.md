@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-17T03:57:03Z
+updated: 2026-10-17T05:07:28Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0443](S-0443.md) | A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check | in-progress | agent-S-0443 | 2026-10-17T03:57:14Z |
 
 ## Strategic agents
 

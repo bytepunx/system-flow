@@ -3,16 +3,37 @@ id: T-1886
 type: task
 nature: feature
 title: file.save with no hash creates a file that is absent, so the first example of a component can be saved
-status: backlog
+status: done
 parent: S-0443
 owner: alex
 created: 2026-10-16T21:38:25Z
-updated: 2026-10-16T21:48:32Z
-transitions: []
+updated: 2026-10-17T04:20:27Z
+transitions:
+  - to: ready
+    at: 2026-10-17T04:04:38Z
+    by: agent-S-0443
+  - to: in-progress
+    at: 2026-10-17T04:04:39Z
+    by: agent-S-0443
+  - to: done
+    at: 2026-10-17T04:20:27Z
+    by: agent-S-0443
 stream: S-0443
 tags: [cli]
-touches: [flai/internal/docedit/file.go, flai/internal/docedit/file_test.go]
+touches: [flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/cmd/file.go, flai/cmd/file_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
 after: [T-1884]
+usage:
+  source: log
+  seconds: 948
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 81
+      output: 31937
+      cache_read: 4015384
+      cache_write: 136529
+      cost: 2.2184
 ---
 # T-1886 file.save with no hash creates a file that is absent, so the first example of a component can be saved
 
