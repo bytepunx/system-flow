@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:19:30Z
-updated: 2026-10-17T07:43:16Z
+updated: 2026-10-17T16:03:13Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 35m
-  delivery: 2026-10-17T17:24:00Z
-  basis: "Its own forecast of 35m; 20th in the pull order with an in-progress limit of 5, behind S-0395, S-0396, S-0397, S-0393, S-0394, S-0241, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409 and S-0410."
+  delivery: 2026-10-18T01:34:00Z
+  basis: "Its own forecast of 35m; 19th in the pull order with an in-progress limit of 5, behind S-0395, S-0396, S-0397, S-0394, S-0241, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409 and S-0410."
   by: flai
-  at: 2026-10-17T07:43:16Z
+  at: 2026-10-17T16:03:13Z
 ---
 # S-0411 A story's card and page show its OpenCode agent's status from a stream the adapter reads, from --format json or opencode serve's events as an ADR decides
 
