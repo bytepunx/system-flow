@@ -240,24 +240,31 @@ func (p ForgePush) newForge(name, remote string) (forge.Forge, error) {
 	return p.NewForge(name, remote, p.Token.Read)
 }
 
+// adapter is the project's forge, bound to origin's repository, once the
+// token can be read: a push and a read of story's pull request reach the
+// forge through it.
+func (p ForgePush) adapter(git execx.Runner, root, story string) (forge.Forge, error) {
+	name := p.Repo.Manifest.Acceptance.ForgeOrDefault()
+	if p.Token.Read == nil {
+		return nil, fmt.Errorf("flai was given no way to read the %s token, so it pushes nothing: start flai serve with flai serve start", name)
+	}
+	if _, err := p.Token.Read(); err != nil {
+		return nil, fmt.Errorf("%s's pull request cannot be opened without the %s token, so flai pushes nothing: %w (flai serve, and flai host that starts it, read it from the environment they started with)", story, name, err)
+	}
+	url, err := git.Run(root, "git", "remote", "get-url", "origin")
+	if err != nil {
+		return nil, fmt.Errorf("the project has no origin remote to push %s to (%s): add the forge's repository with git remote add origin, then its URL", storygit.Branch(story), gitSaid(url, err))
+	}
+	return p.newForge(name, strings.TrimSpace(url))
+}
+
 // push pushes it's branch and opens or updates its pull request, recording
 // in st what it did as it goes, so that a push that succeeded is kept when
 // the request after it fails.
 func (p ForgePush) push(ctx context.Context, it *workitem.Item, st *ForgeState) error {
 	git, root := p.git(), mainCheckout(p.Repo)
-	name := p.Repo.Manifest.Acceptance.ForgeOrDefault()
 	branch := storygit.Branch(it.ID)
-	if p.Token.Read == nil {
-		return fmt.Errorf("flai was given no way to read the %s token, so it pushes nothing: start flai serve with flai serve start", name)
-	}
-	if _, err := p.Token.Read(); err != nil {
-		return fmt.Errorf("%s's pull request cannot be opened without the %s token, so flai pushes nothing: %w (flai serve, and flai host that starts it, read it from the environment they started with)", it.ID, name, err)
-	}
-	url, err := git.Run(root, "git", "remote", "get-url", "origin")
-	if err != nil {
-		return fmt.Errorf("the project has no origin remote to push %s to (%s): add the forge's repository with git remote add origin, then its URL", branch, gitSaid(url, err))
-	}
-	f, err := p.newForge(name, strings.TrimSpace(url))
+	f, err := p.adapter(git, root, it.ID)
 	if err != nil {
 		return err
 	}
@@ -515,7 +522,9 @@ func (p *forgePass) token(name string) ForgeToken {
 
 // look pushes each story in review, when the project accepts through pull
 // requests and the forge host action is on, and settles each one's failure
-// thread; it resolves the failure thread of a story that left review.
+// thread; it resolves the failure thread of a story that left review. It
+// then reads each pushed story's pull request back, and sends the story to
+// in-progress on a failure there (forgestatus.go).
 func (p *forgePass) look(ctx context.Context) {
 	if !p.enabled() {
 		return
@@ -531,6 +540,7 @@ func (p *forgePass) look(ctx context.Context) {
 	}
 	token := p.token(repo.Manifest.Acceptance.ForgeOrDefault())
 	inReview := map[string]bool{}
+	var reads readLook
 	var pushed, opened, updated, failed []string
 	for _, it := range items {
 		if it.Type != workitem.Story || it.Status != workitem.Review {
@@ -548,6 +558,9 @@ func (p *forgePass) look(ctx context.Context) {
 		}
 		p.settle(repo, st)
 		p.journal(was, st)
+		if st.PullRequest > 0 && (st.Outcome == ForgePushed || st.Outcome == ForgeUpToDate) {
+			p.readBack(ctx, repo, it, token, &reads)
+		}
 		switch st.Outcome {
 		case ForgeFailed:
 			failed = append(failed, st.Story)
@@ -562,6 +575,8 @@ func (p *forgePass) look(ctx context.Context) {
 		}
 	}
 	p.leftReview(repo, inReview)
+	p.closedSendBacks(repo, items)
+	reads.log(p.o.Logger, p.e.Root)
 	if len(pushed)+len(opened)+len(updated) > 0 {
 		p.o.Logger.Info("stories in review pushed", "component", "serve", "root", p.e.Root,
 			"pushed", strings.Join(pushed, ","), "opened", strings.Join(opened, ","), "updated", strings.Join(updated, ","))

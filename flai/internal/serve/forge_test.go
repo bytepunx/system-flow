@@ -20,16 +20,24 @@ import (
 )
 
 // fakeForge is a forge with one repository, keeping its pull requests by
-// head branch and counting what was asked of it.
+// head branch and counting what was asked of it; heads are the head commit
+// of each head branch, and checks and reviews what each pull request has,
+// by its head branch. readErr fails the reads of checks.
 type fakeForge struct {
-	mu     sync.Mutex
-	prs    map[string]forge.PullRequest
-	opens  int
-	down   error
-	number int
+	mu      sync.Mutex
+	prs     map[string]forge.PullRequest
+	opens   int
+	down    error
+	readErr error
+	number  int
+	heads   map[string]string
+	checks  map[string][]forge.Check
+	reviews map[string][]forge.Review
 }
 
-func newFakeForge() *fakeForge { return &fakeForge{prs: map[string]forge.PullRequest{}} }
+func newFakeForge() *fakeForge {
+	return &fakeForge{prs: map[string]forge.PullRequest{}, heads: map[string]string{}, checks: map[string][]forge.Check{}, reviews: map[string][]forge.Review{}}
+}
 
 func (f *fakeForge) Name() string       { return "github" }
 func (f *fakeForge) Repository() string { return "o/r" }
@@ -44,6 +52,7 @@ func (f *fakeForge) FindPullRequest(_ context.Context, head string) (forge.PullR
 		return forge.PullRequest{}, false, f.down
 	}
 	pr, ok := f.prs[head]
+	pr.HeadSHA = f.heads[head]
 	return pr, ok, nil
 }
 
@@ -58,14 +67,30 @@ func (f *fakeForge) OpenPullRequest(_ context.Context, in forge.PullRequestInput
 	}
 	pr.Base, pr.Title, pr.Body = in.Base, in.Title, in.Body
 	f.prs[in.Head] = pr
+	pr.HeadSHA = f.heads[in.Head]
 	return pr, nil
 }
 
-func (f *fakeForge) Checks(context.Context, forge.PullRequest) ([]forge.Check, error) {
-	return nil, nil
+func (f *fakeForge) Checks(_ context.Context, pr forge.PullRequest) ([]forge.Check, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.readErr != nil {
+		return nil, f.readErr
+	}
+	return f.checks[pr.Head], nil
 }
-func (f *fakeForge) Reviews(context.Context, forge.PullRequest) ([]forge.Review, error) {
-	return nil, nil
+func (f *fakeForge) Reviews(_ context.Context, pr forge.PullRequest) ([]forge.Review, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.reviews[pr.Head], nil
+}
+
+// set gives the pull request of the head branch head the head commit sha,
+// and the checks and reviews given.
+func (f *fakeForge) set(head, sha string, checks []forge.Check, reviews []forge.Review) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.heads[head], f.checks[head], f.reviews[head] = sha, checks, reviews
 }
 func (f *fakeForge) Merge(context.Context, forge.PullRequest, forge.MergeMethod) (forge.Merged, error) {
 	return forge.Merged{}, forge.ErrMergeRefused
