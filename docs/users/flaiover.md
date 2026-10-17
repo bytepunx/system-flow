@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-16
+updated: 2026-10-17
 status: active
 ---
 
@@ -28,7 +28,7 @@ The header is the same on every page.
   | Workflow | Overview, Board, Inbox (with the number of things that need you), Threads, Activity, Planner, Orchestrator, Analyzer |
   | Status | Charts, ADRs, Docs, Search |
   | Host | Updates (the [Host](#host) page), Settings |
-  | Design | [Design system](#design-system) |
+  | Design | [Design system](#design-system), [Components](#components) |
 
   Point at a group, click it, or tap it to show its pages. Move the pointer off the menu, or press Escape, and the row shows the group of the page you are on again. The group and the page you are on are bold and coloured. A group shows the number its pages show, so the Inbox count also stands beside Workflow.
 - **Host flai badge**, at the right: whether a flai on the host has the dashboard connected. See [Host flai](#host-flai).
@@ -562,6 +562,40 @@ To accept a proposal, accept its story on the board. Its branch is merged, the p
 **Request a change** asks an agent for a change to the design system. Choose the epic, the nature, a title, and write what to change and why in your own words. **Request the change** makes a story under that epic and moves it to ready for a story's agent to pull ([ADR-0151](../../design/adrs/0151-the-operator-and-agents-change-a-design-system-by-edits-on-the-design-page.md)). The story has topic `design`, your words as its goal, and three criteria: the tokens changed as asked, the generated stylesheet in step with them, and the UI's tests passing. It claims the token file, and the stylesheet when the manifest names one, so a second request is held on the board until the first is accepted. Once its agent changes the tokens on its branch, the story shows under **Proposals**.
 
 If flai refuses the story, your words stay and its findings are listed. If the story is made but cannot move to ready, the page says so and the story stays in backlog: move it from the board.
+
+## Components
+
+Components, the second page of the Design group, lists the project's Svelte components and renders the one you pick, live. The component renders from its sub-project's own Vite dev server, with the sub-project's own config, plugins, and stylesheet, so it looks as it does in the app. `flai serve` on the host runs that dev server for the page ([Render a component live](flai.md#render-a-component-live) in flai.md).
+
+**The list.** At the left is each sub-project of the manifest, with its kind, and its components grouped by folder. The filter box matches a component's name or path. A sub-project that is not SvelteKit or Svelte is listed with its kind and no components. A component whose props flai could not read is still listed, marked `props unreadable`: hover over it for why. It can still be framed.
+
+**The frame.** Pick a component to frame it. The address keeps your pick as `?p=<sub-project>&c=<path>`, so a reload or a copied link frames it again. The component renders with no props. The frame is as tall as what it renders. Above it:
+
+| Control | Choices |
+|---------|---------|
+| Theme | **Light**, **Dark**, or **Both**, side by side; it starts at the dashboard's theme |
+| Width | **375**, **768**, or **1280** pixels, or **Fill**, the panel's width |
+
+**The dev server.** Below the controls the page says whether its sub-project's dev server runs. **Start** starts it. A start can take up to a minute while Vite gets ready. While it runs, the page gives its address and **Stop**. A change you save to a component reaches the frame without a reload.
+
+The page asks the host again every minute while it is open, and when a document of the project changes. Each ask keeps the dev server running: the host stops one that nobody has looked at for its idle time, 30 minutes by default. Each ask also reads the list again, so a component you add or remove shows within a minute.
+
+**The frame needs a browser on the host.** The dev server listens on 127.0.0.1 only, so the frame loads only in a browser on the host machine, such as one at `127.0.0.1:4242`. From another machine the list shows, but the frame cannot load.
+
+**Before it works.** The operator turns on the `components` host action for the project. Starting a dev server runs the sub-project's code as the operator; the [operators guide](../operators/index.md#the-components-host-action-s-0438) says what that means. Listing the components needs no action.
+
+What the page can say:
+
+| The page says | What it means |
+|---------------|---------------|
+| The components host action is off, with `flai serve enable components` | The action is off for this project. Run the command on the host, in the project. The list still shows; the dev server cannot start |
+| This flai cannot show the components yet; upgrade flai on the host | The flai on the host is older than the dashboard. The line under it says what it lacks |
+| An error in red under **Start** | The dev server did not start. flai's message is shown whole, with Vite's last lines of output. A sub-project without `vite` installed is refused with the fix: `npm install` or `pnpm install` in its folder |
+| Its last dev server failed, with its output | The last dev server failed to start or exited on its own. Its last lines stay until one starts again |
+| `<path>` did not render, in the frame's place | The component failed to import or render. The harness's message follows, and `at <file>:<line>:<column>` when it knows where. The frame comes back when the component renders again, such as after you save a fix, or when you pick another |
+| Its props could not be read | flai could not read the component's props. It still renders, with no props |
+| No sub-project is Svelte, so there is nothing to frame | The manifest has no sub-project of kind `sveltekit` or `svelte` |
+| Could not read the components | The host did not answer. What was shown stays until the next ask |
 
 ## Theme
 

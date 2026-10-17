@@ -8,8 +8,8 @@
 	// started from the page, and a failed start shows flai's message with Vite's last lines. The
 	// page tells the operator to turn the components host action on while it is off, and to upgrade
 	// flai on the host when it is too old to answer. While open, the page asks again every minute,
-	// which keeps the host from stopping the dev server as idle, and on a change to the project's
-	// files, which may add or remove a component.
+	// which keeps the host from stopping the dev server as idle and finds a component file added or
+	// removed, and on a change to the manifest, whose components key says which files are components.
 	import type { ComponentsCatalogue, ComponentsProject, ComponentsStatus } from '$lib/server/repo';
 	import type { Theme } from '$lib/explorer/protocol';
 	import { api } from '$lib/api';
@@ -132,7 +132,7 @@
 	onMount(() => {
 		void load();
 		const timer = setInterval(() => void load(), POLL_MS);
-		// a component file added, removed, or renamed changes the catalogue
+		// flai serve watches the manifest but not a sub-project's sources: a new component shows at the next ask
 		const stop = follow(['document'], () => void load());
 		return () => {
 			clearInterval(timer);
