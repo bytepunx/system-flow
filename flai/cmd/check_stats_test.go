@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
@@ -178,19 +179,100 @@ func TestStatsPrintsTheEmptyWakes(t *testing.T) {
 	a := &app{out: &out}
 	mean := 1.5
 	week := metrics.WaitWeek{Items: 8, Threads: metrics.ThreadWaitTotal{WaitTotal: metrics.WaitTotal{Total: 3600}}, Review: metrics.WaitTotal{Total: 7200}}
-	printWaiting(a, metrics.Waiting{EmptyWakes: metrics.EmptyWakes{Count: 12, Mean: &mean}, Weeks: []metrics.WaitWeek{week}})
+	printWaiting(a, metrics.Waiting{EmptyWakes: metrics.EmptyWakes{Count: 12, Mean: &mean}, Weeks: []metrics.WaitWeek{week}}, false)
 	if want := "  empty wakes  total 12 · mean 1.5 per item with usage\n"; !strings.HasSuffix(out.String(), want) {
 		t.Errorf("printed:\n%s\nwant it to end with:\n%s", out.String(), want)
 	}
 	out.Reset()
-	printWaiting(a, metrics.Waiting{Weeks: []metrics.WaitWeek{week}})
+	printWaiting(a, metrics.Waiting{Weeks: []metrics.WaitWeek{week}}, false)
 	if want := "  in review    total 2h · mean 15m\n  empty wakes  total 0\n"; !strings.HasSuffix(out.String(), want) {
 		t.Errorf("printed:\n%s\nwant it to end with:\n%s", out.String(), want)
 	}
 	out.Reset()
-	printWaiting(a, metrics.Waiting{EmptyWakes: metrics.EmptyWakes{Count: 3}, Weeks: []metrics.WaitWeek{{}}})
+	printWaiting(a, metrics.Waiting{EmptyWakes: metrics.EmptyWakes{Count: 3}, Weeks: []metrics.WaitWeek{{}}}, false)
 	if out.Len() != 0 {
 		t.Errorf("nothing completed printed %q", out.String())
+	}
+}
+
+// waitingProject is a project whose one story was in review four hours, from
+// six to ten on the 1st of October, under the acceptance given, with its pull
+// request's forge state kept: its build pending an hour from the push, then
+// alice's approval two hours later.
+func waitingProject(t *testing.T, acceptance string) string {
+	t.Helper()
+	root := tempProject(t)
+	manifest := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n" + acceptance
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Reviewed", Owner: "t", Now: time.Now()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	it.Created = "2026-09-30T09:00:00Z"
+	it.Transitions = []workitem.Transition{{To: workitem.Backlog, At: it.Created, By: "t"}}
+	for _, m := range [][2]string{{workitem.Ready, "2026-09-30T10:00:00Z"}, {workitem.InProgress, "2026-09-30T11:00:00Z"},
+		{workitem.Review, "2026-10-01T06:00:00Z"}, {workitem.Done, "2026-10-01T10:00:00Z"}} {
+		it.Transitions = append(it.Transitions, workitem.Transition{To: m[0], At: m[1], By: "t"})
+	}
+	it.Status = workitem.Done
+	if err := repo.Save(it); err != nil {
+		t.Fatal(err)
+	}
+	st := forge.Status{Story: it.ID, PullRequest: 1, HeadSHA: "a", ReadAt: "2026-10-01T09:00:00Z", Events: []forge.StatusEvent{
+		{At: "2026-10-01T06:00:00Z", Kind: forge.EventHead, To: "a", Commit: "a"},
+		{At: "2026-10-01T06:00:00Z", Kind: forge.EventCheck, Name: "build", To: string(forge.CheckPending), Commit: "a"},
+		{At: "2026-10-01T07:00:00Z", Kind: forge.EventCheck, Name: "build", From: string(forge.CheckPending), To: string(forge.CheckPassed), Commit: "a"},
+		{At: "2026-10-01T09:00:00Z", Kind: forge.EventReview, Name: "alice", To: string(forge.ReviewApproved), Commit: "a"},
+	}}
+	if err := forge.WriteStatus(repo.CacheDir(), st); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// S-0396, ADR-0168: under pull-request acceptance the waiting section prints
+// the checks wait and the reviewers wait under its review line, each total
+// and mean over the completed items.
+func TestStatsPrintsTheChecksAndReviewersWaitsUnderPullRequestAcceptance(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := waitingProject(t, "acceptance:\n  mode: pull-request\n")
+	out, errOut, code := runInAt(t, root, time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC), "stats")
+	if code != 0 {
+		t.Fatalf("stats: %s", errOut)
+	}
+	want := "\nwaiting, over 1 completed:\n  on threads   total 0m · mean 0m\n  in review    total 4h · mean 4h\n" +
+		"  on checks    total 1h · mean 1h\n  on reviewers total 2h · mean 2h\n  empty wakes  total 0\n"
+	if !strings.Contains(out, want) {
+		t.Errorf("missing %q in:\n%s", want, out)
+	}
+}
+
+// S-0396, ADR-0168: in local mode the waiting section prints neither the
+// checks wait nor the reviewers wait, even with forge state kept from an
+// earlier mode, and its other lines are as they were.
+func TestStatsPrintsNoChecksOrReviewersWaitInLocalMode(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := waitingProject(t, "")
+	out, errOut, code := runInAt(t, root, time.Date(2026, 10, 3, 20, 0, 0, 0, time.UTC), "stats")
+	if code != 0 {
+		t.Fatalf("stats: %s", errOut)
+	}
+	want := "\nwaiting, over 1 completed:\n  on threads   total 0m · mean 0m\n  in review    total 4h · mean 4h\n  empty wakes  total 0\n"
+	if !strings.Contains(out, want) {
+		t.Errorf("missing %q in:\n%s", want, out)
+	}
+	// nor from weeks that carry the two waits
+	var buf bytes.Buffer
+	week := metrics.WaitWeek{Items: 1, Review: metrics.WaitTotal{Total: 3600}, Checks: metrics.WaitTotal{Total: 600}, Reviewers: metrics.WaitTotal{Total: 1200}}
+	printWaiting(&app{out: &buf}, metrics.Waiting{Weeks: []metrics.WaitWeek{week}}, false)
+	if s := buf.String(); strings.Contains(s, "on checks") || strings.Contains(s, "on reviewers") {
+		t.Errorf("local mode printed:\n%s", s)
 	}
 }
 

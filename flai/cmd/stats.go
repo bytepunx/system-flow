@@ -84,7 +84,7 @@ coordination.logged is false and its weeks carry no conflicts.`,
 			if a.jsonOut {
 				return a.printJSON(rep)
 			}
-			printSummary(a, rep)
+			printSummary(a, rep, repo.Manifest.Acceptance.PullRequest())
 			return nil
 		},
 	}
@@ -95,7 +95,9 @@ coordination.logged is false and its weeks carry no conflicts.`,
 	return c
 }
 
-func printSummary(a *app, rep *metrics.Report) {
+// printSummary prints the report; pullRequest is whether the project accepts
+// stories through pull requests, which adds the checks and reviewers waits.
+func printSummary(a *app, rep *metrics.Report, pullRequest bool) {
 	fmt.Fprintf(a.out, "%s completed in the last %gd (since %s)\n", workitem.Folder(rep.Type), rep.WindowDays, rep.WindowStart[:10])
 	printGroup(a, rep.Summary)
 	printUsage(a, rep.Type, rep.Usage)
@@ -127,7 +129,7 @@ func printSummary(a *app, rep *metrics.Report) {
 	printStrategicDays(a, rep)
 	printForecasts(a, rep.Forecasts)
 	printCostOfDelay(a, rep)
-	printWaiting(a, rep.Waiting)
+	printWaiting(a, rep.Waiting, pullRequest)
 	printTurns(a, rep.Turns)
 	printClaims(a, rep)
 	printCoordination(a, rep.Coordination)
@@ -372,15 +374,18 @@ func columnsByState[V any](m map[string]V) []string {
 }
 
 // printWaiting prints how long the agents of the items completed in the
-// window waited on threads and in review, in all and per item (S-0205), and
+// window waited on threads and in review, in all and per item (S-0205), in
+// review on checks and reviewers under pull-request acceptance (ADR-0168), and
 // their empty wakes (S-0272).
-func printWaiting(a *app, w metrics.Waiting) {
+func printWaiting(a *app, w metrics.Waiting, pullRequest bool) {
 	var items int
-	var threads, review float64
+	var threads, review, checks, reviewers float64
 	for _, wk := range w.Weeks {
 		items += wk.Items
 		threads += wk.Threads.Total
 		review += wk.Review.Total
+		checks += wk.Checks.Total
+		reviewers += wk.Reviewers.Total
 	}
 	if items == 0 {
 		return
@@ -388,6 +393,10 @@ func printWaiting(a *app, w metrics.Waiting) {
 	fmt.Fprintf(a.out, "\nwaiting, over %d completed:\n", items)
 	fmt.Fprintf(a.out, "  %-12s total %s · mean %s\n", "on threads", metrics.Human(threads), metrics.Human(threads/float64(items)))
 	fmt.Fprintf(a.out, "  %-12s total %s · mean %s\n", "in review", metrics.Human(review), metrics.Human(review/float64(items)))
+	if pullRequest {
+		fmt.Fprintf(a.out, "  %-12s total %s · mean %s\n", "on checks", metrics.Human(checks), metrics.Human(checks/float64(items)))
+		fmt.Fprintf(a.out, "  %-12s total %s · mean %s\n", "on reviewers", metrics.Human(reviewers), metrics.Human(reviewers/float64(items)))
+	}
 	// the empty wakes of their agents (S-0272, ADR-0105)
 	line := fmt.Sprintf("  %-12s total %d", "empty wakes", w.EmptyWakes.Count)
 	if w.EmptyWakes.Mean != nil {
