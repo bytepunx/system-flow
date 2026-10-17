@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T06:00:19Z
-updated: 2026-10-16T22:44:54Z
+updated: 2026-10-17T00:45:46Z
 transitions: []
 tags: [cli, dashboard]
 topics: [cli, dashboard, analysis]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 39m
-  delivery: 2026-10-17T21:46:00Z
-  basis: "Its own forecast of 39m; 41st in the pull order with an in-progress limit of 5, behind S-0436, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432 and S-0433."
+  delivery: 2026-10-18T00:02:00Z
+  basis: "Its own forecast of 39m; 41st in the pull order with an in-progress limit of 5, behind S-0438, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432 and S-0433."
   by: flai
-  at: 2026-10-16T22:44:54Z
+  at: 2026-10-17T00:45:46Z
 ---
 # S-0434 flai stats reports per week the threads opened to the operator per completed story and how many asked what a digest entry already answered, and the dashboard charts it
 
