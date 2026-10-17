@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:16:14Z
-updated: 2026-10-17T02:34:36Z
+updated: 2026-10-17T02:38:26Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -18,13 +18,28 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 198
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 20
+          output: 242
+          cache_read: 5296392
+          cache_write: 8341
+          cost: 1.3298
 draft: true
 forecast:
   duration: 50m
   delivery: 2026-10-17T12:02:00Z
-  basis: "Its own forecast of 50m; 21st in the pull order with an in-progress limit of 5, behind S-0441, S-0442, S-0444, S-0443, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406 and S-0407."
-  by: flai
-  at: 2026-10-17T02:34:36Z
+  basis: "flai forecast's 43m (101 s per unit times size 25) raised to 50m for the ADR and the first caller of guard.Hold, whose bounded waits need timed tests; delivery is flai's play-out at 50m, 20th in the pull order behind S-0407."
+  by: planner-S-0408
+  at: 2026-10-17T02:38:26Z
 ---
 # S-0408 An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles
 
@@ -55,10 +70,10 @@ A story's agent on OpenCode asks before it writes a protected path, as one on Cl
 
 ### Planning
 
-- **Touches.** None were declared. Every touch is the planner's:
-  - **Layout:** `flai/cmd/guard.go` and `flai/internal/guard/call.go`, where `Hold` and the `Ask` verdict live, with their tests; `flai/internal/guard/opencode.go`, S-0407's reader, for the `permission.asked` input; `flai/internal/harness/opencode.go` and `opencodeconfig.go` for the capability and the `ask` or `deny` rules, and `harness_test.go` for the capabilities test; the two plugin copies; `flai/tests/integration/opencode_test.go`. `flai/internal/ask/ask.go` is reused unchanged.
+- **Touches.** None were declared. Every touch is the planner's, checked again on 2026-10-17:
+  - **Layout:** `flai/cmd/guard.go` and `flai/internal/guard/call.go`, where `guard.Hold` and the `Ask` verdict live, with their tests; `flai/internal/guard/opencode.go`, S-0407's reader, for the `permission.asked` input; `flai/internal/harness/opencode.go` and `opencodeconfig.go` for the capability and the `ask` or `deny` rules, and `harness_test.go` for the capabilities test; the two plugin copies; `flai/tests/integration/opencode_test.go`. The OpenCode files do not exist yet: S-0405 to S-0407 add them. `flai/internal/ask/ask.go` is reused unchanged.
   - **Design:** the docs, `agent-adapters.md`, and `template/CHANGELOG.md` for criterion 5.
-  - **Folder kept:** `design/adrs`, because the ADR's file name is not known until `flai adr new`; it is a shared path, so it holds nothing.
-  - **Co-change:** `flai touches suggest` lists hub documents and `harness_test.go`; only `harness_test.go` is added.
-- **Forecast.** 50m against flai's 39m. The ADR and the first caller of `guard.Hold`, whose bounded waits and thread reuse need timed tests, add a quarter. The delivery, 2026-10-16T14:32Z, is flai's play-out moved by the raise times the cycle factor.
-- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467.
+  - **Folder kept:** `design/adrs`, because the ADR's file name is not known until `flai adr new`; it also covers the index `flai adr new` updates. It is a shared path, so it holds nothing.
+  - **Co-change:** `flai touches suggest` lists hub documents and `harness_test.go`; only `harness_test.go` is added. Left out with reasons: `flai/internal/harness/harness.go`, since `Capabilities` already has `Ask` and `flai/internal/serve/agents.go` already lifts the start refusal on it; `template/template.yaml`, which only a publish bumps; `docs/users/flai-reference.md`, needed only if `flai guard` gains a flag, which `flai task done` would add.
+- **Forecast.** 50m against flai's 43m. The ADR and the first caller of `guard.Hold`, whose bounded waits and thread reuse need timed tests, add about a sixth. The delivery, 2026-10-17T12:02Z, is flai's play-out at 50m.
+- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467 for the epic and on this story's plan thread.

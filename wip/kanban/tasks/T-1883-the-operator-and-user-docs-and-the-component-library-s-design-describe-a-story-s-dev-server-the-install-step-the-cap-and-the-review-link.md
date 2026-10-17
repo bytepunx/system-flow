@@ -3,15 +3,21 @@ id: T-1883
 type: task
 nature: feature
 title: The operator and user docs and the component library's design describe a story's dev server, the install step, the cap, and the review link
-status: backlog
+status: in-progress
 parent: S-0442
 owner: alex
 created: 2026-10-16T21:37:41Z
-updated: 2026-10-16T21:40:57Z
-transitions: []
+updated: 2026-10-17T03:29:00Z
+transitions:
+  - to: ready
+    at: 2026-10-17T03:26:46Z
+    by: agent-S-0442
+  - to: in-progress
+    at: 2026-10-17T03:26:47Z
+    by: agent-S-0442
 stream: S-0442
 tags: [dashboard, cli]
-touches: [docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]
+touches: [docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, docs/users/flai.md]
 after: [T-1880, T-1881, T-1882]
 ---
 # T-1883 The operator and user docs and the component library's design describe a story's dev server, the install step, the cap, and the review link

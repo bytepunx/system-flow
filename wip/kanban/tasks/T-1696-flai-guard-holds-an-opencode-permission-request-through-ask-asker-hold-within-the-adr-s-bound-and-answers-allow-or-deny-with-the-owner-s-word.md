@@ -7,7 +7,7 @@ status: backlog
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:27Z
-updated: 2026-10-16T05:16:27Z
+updated: 2026-10-17T02:39:26Z
 transitions: []
 stream: S-0408
 tags: [cli]
@@ -28,3 +28,5 @@ after: [T-1695]
 `flai guard --harness opencode` behaves as the ADR says for a protected write, and its tests pass.
 
 ## Notes
+
+- If this task gives `flai guard` a flag, add `docs/users/flai-reference.md` to its touches with `flai touches` and regenerate it with `make flai-reference`, as the orchestrator approved on TH-0490.

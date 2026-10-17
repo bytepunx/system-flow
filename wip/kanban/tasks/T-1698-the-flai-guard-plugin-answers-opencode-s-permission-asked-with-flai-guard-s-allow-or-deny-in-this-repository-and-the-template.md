@@ -7,7 +7,7 @@ status: backlog
 parent: S-0408
 owner: alex
 created: 2026-10-16T05:16:38Z
-updated: 2026-10-16T05:16:38Z
+updated: 2026-10-17T02:39:22Z
 transitions: []
 stream: S-0408
 tags: [cli, template]
@@ -24,6 +24,8 @@ after: [T-1696]
 
 ## Done when
 
-Both copies are the same, and a held request in the known `opencode` version is answered with `flai guard`'s word.
+Both copies are the same, and the plugin's reply to a recorded `permission.asked` input is the allow or deny `flai guard` prints for it. The run against a real `opencode` is T-1699's.
 
 ## Notes
+
+- Done when reworded by planner-S-0408, as the orchestrator approved on TH-0490: a task should not depend on the integration run a later layer builds.

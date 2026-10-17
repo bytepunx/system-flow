@@ -17,15 +17,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 1221
+      seconds: 1419
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 201
-          output: 3648
-          cache_read: 77419493
-          cache_write: 47855
-          cost: 19.4204
+          input: 221
+          output: 3890
+          cache_read: 82715885
+          cache_write: 56196
+          cost: 20.7502
 ---
 # E-0023 An OpenCode adapter runs a story's agent on OpenCode with the guard, the permission prompt, the roles, and usage measured, through its plugin hooks and its server's events, so a non-Claude model works a story end to end
 

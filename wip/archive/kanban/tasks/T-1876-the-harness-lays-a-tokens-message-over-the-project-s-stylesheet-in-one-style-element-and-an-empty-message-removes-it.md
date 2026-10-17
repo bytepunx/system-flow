@@ -3,15 +3,36 @@ id: T-1876
 type: task
 nature: feature
 title: The harness lays a tokens message over the project's stylesheet in one style element, and an empty message removes it
-status: backlog
+status: done
 parent: S-0441
 owner: alex
 created: 2026-10-16T21:36:27Z
-updated: 2026-10-16T21:36:27Z
-transitions: []
+updated: 2026-10-17T02:58:57Z
+transitions:
+  - to: ready
+    at: 2026-10-17T02:35:15Z
+    by: agent-S-0441
+  - to: in-progress
+    at: 2026-10-17T02:35:16Z
+    by: agent-S-0441
+  - to: done
+    at: 2026-10-17T02:58:57Z
+    by: agent-S-0441
 stream: S-0441
 tags: [cli]
 touches: [flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go]
+usage:
+  source: log
+  seconds: 1421
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 21266
+      cache_read: 2485444
+      cache_write: 111868
+      cost: 1.5529
 ---
 # T-1876 The harness lays a tokens message over the project's stylesheet in one style element, and an empty message removes it
 

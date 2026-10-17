@@ -3,15 +3,36 @@ id: T-1879
 type: task
 nature: feature
 title: flai/internal/components starts a dev server in a story's worktree, installing the sub-project's dependencies by its lock file when they are missing
-status: backlog
+status: done
 parent: S-0442
 owner: alex
 created: 2026-10-16T21:37:19Z
-updated: 2026-10-16T21:37:19Z
-transitions: []
+updated: 2026-10-17T02:53:25Z
+transitions:
+  - to: ready
+    at: 2026-10-17T02:38:22Z
+    by: agent-S-0442
+  - to: in-progress
+    at: 2026-10-17T02:38:23Z
+    by: agent-S-0442
+  - to: done
+    at: 2026-10-17T02:53:25Z
+    by: agent-S-0442
 stream: S-0442
 tags: [cli]
 touches: [flai/internal/components/worktree.go, flai/internal/components/worktree_test.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go]
+usage:
+  source: log
+  seconds: 902
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 40
+      output: 225
+      cache_read: 1594298
+      cache_write: 97862
+      cost: 0.7723
 ---
 # T-1879 flai/internal/components starts a dev server in a story's worktree, installing the sub-project's dependencies by its lock file when they are missing
 

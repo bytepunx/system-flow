@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:37:05Z
-updated: 2026-10-17T02:35:31Z
+updated: 2026-10-17T03:26:03Z
 transitions:
   - to: ready
     at: 2026-10-17T01:02:20Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0442
 tags: [dashboard, cli]
 topics: [components, dashboard, cli]
-touches: [flai/internal/components/worktree.go, flai/internal/components/worktree_test.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flai/cmd/serve_actions.go, docs/users/flai-reference.md, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, flaiover/src/routes/api/components/+server.ts, flaiover/src/routes/api/components/start/+server.ts, flaiover/src/routes/api/components/stop/+server.ts, flaiover/src/routes/api/components/components.test.ts, flaiover/src/lib/server/repo.ts, "flaiover/src/routes/review/[id]/+page.svelte", flaiover/src/lib/explorer/changed.ts, flaiover/src/lib/explorer/changed.test.ts, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]
+touches: [flai/internal/components/worktree.go, flai/internal/components/worktree_test.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flai/cmd/serve_actions.go, docs/users/flai-reference.md, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, flaiover/src/routes/api/components/+server.ts, flaiover/src/routes/api/components/start/+server.ts, flaiover/src/routes/api/components/stop/+server.ts, flaiover/src/routes/api/components/components.test.ts, flaiover/src/lib/server/repo.ts, "flaiover/src/routes/review/[id]/+page.svelte", flaiover/src/lib/explorer/changed.ts, flaiover/src/lib/explorer/changed.test.ts, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, flaiover/src/lib/components/explorer/ComponentList.svelte, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts]
 after: [S-0439]
 agent:
   harness: claude-code
@@ -25,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3037
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-17
+      ceremony: 2
+      hand_edits: 1
+      work: 49
+  models:
+    - model: claude-opus-5-5
+      input: 396
+      output: 2233
+      cache_read: 22339490
+      cache_write: 879327
+      cost: 10.5967
   strategic:
     - kind: orchestrator
       seconds: 655

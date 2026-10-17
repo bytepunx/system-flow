@@ -3,16 +3,37 @@ id: T-1878
 type: task
 nature: feature
 title: Tried and saved tokens are checked by hand on the Components page, and the dashboard's docs and the component library's design describe them
-status: backlog
+status: done
 parent: S-0441
 owner: alex
 created: 2026-10-16T21:36:40Z
-updated: 2026-10-16T21:40:53Z
-transitions: []
+updated: 2026-10-17T03:21:53Z
+transitions:
+  - to: ready
+    at: 2026-10-17T03:07:36Z
+    by: agent-S-0441
+  - to: in-progress
+    at: 2026-10-17T03:07:37Z
+    by: agent-S-0441
+  - to: done
+    at: 2026-10-17T03:21:53Z
+    by: agent-S-0441
 stream: S-0441
 tags: [dashboard]
 touches: [docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]
 after: [T-1876, T-1877]
+usage:
+  source: log
+  seconds: 856
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 145
+      output: 55695
+      cache_read: 6509406
+      cache_write: 292984
+      cost: 4.0671
 ---
 # T-1878 Tried and saved tokens are checked by hand on the Components page, and the dashboard's docs and the component library's design describe them
 
