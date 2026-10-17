@@ -672,7 +672,8 @@ func TestServeComponentsActionAndIdle(t *testing.T) {
 	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
 	root := tempProject(t)
 	out, _, _ := runIn(t, root, "serve", "components")
-	if !strings.Contains(out, "idle: 30m (default)") || !strings.Contains(out, "components action is off for this project; flai serve enable components") {
+	if !strings.Contains(out, "idle: 30m (default)") || !strings.Contains(out, "max_servers: 3 (default): at most this many dev servers run at once per project") ||
+		!strings.Contains(out, "components action is off for this project; flai serve enable components") {
 		t.Errorf("by default: %s", out)
 	}
 	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "components: off everywhere") || !strings.Contains(out, "Vite dev server") {
@@ -687,8 +688,18 @@ func TestServeComponentsActionAndIdle(t *testing.T) {
 	if code != 0 || !strings.Contains(out, "idle: 45m: a dev server") {
 		t.Fatalf("idle 45m: %d %s %s", code, out, errOut)
 	}
+	// S-0442: components.max_servers, a positive whole number, 3 by default
+	for _, bad := range []string{"0", "-1", "two", "2.5", ""} {
+		if _, errOut, code := runIn(t, root, "serve", "components", "max-servers", "--", bad); code == 0 || !strings.Contains(errOut, "positive whole number") {
+			t.Errorf("max-servers %q is refused: %d %s", bad, code, errOut)
+		}
+	}
+	out, errOut, code = runIn(t, root, "serve", "components", "max-servers", "5")
+	if code != 0 || !strings.Contains(out, "max_servers: 5: at most") || !strings.Contains(out, "idle: 45m: a dev server") {
+		t.Fatalf("max-servers 5: %d %s %s", code, out, errOut)
+	}
 	cfg, _ := os.ReadFile(os.Getenv("FLAI_CONFIG"))
-	if !strings.Contains(string(cfg), `"components"`) || !strings.Contains(string(cfg), `"idle": "45m"`) {
+	if !strings.Contains(string(cfg), `"components"`) || !strings.Contains(string(cfg), `"idle": "45m"`) || !strings.Contains(string(cfg), `"max_servers": 5`) {
 		t.Errorf("kept in the host's configuration: %s", cfg)
 	}
 	if out, _, code := runIn(t, root, "serve", "enable", "components"); code != 0 || !strings.Contains(out, "components enabled for") {
@@ -699,22 +710,27 @@ func TestServeComponentsActionAndIdle(t *testing.T) {
 		Idle        string `json:"idle"`
 		IdleSeconds int    `json:"idle_seconds"`
 		IdleSet     bool   `json:"idle_set"`
+		MaxServers  int    `json:"max_servers"`
+		MaxSet      bool   `json:"max_servers_set"`
 		EnabledHere bool   `json:"enabled_here"`
 	}
-	if err := json.Unmarshal([]byte(js), &shown); err != nil || shown.Idle != "45m" || shown.IdleSeconds != 2700 || !shown.IdleSet || !shown.EnabledHere {
+	if err := json.Unmarshal([]byte(js), &shown); err != nil || shown.Idle != "45m" || shown.IdleSeconds != 2700 || !shown.IdleSet || shown.MaxServers != 5 || !shown.MaxSet || !shown.EnabledHere {
 		t.Errorf("show --json: %v %s", err, js)
 	}
 	if st, _, _ := runIn(t, root, "hostapi", "components.status"); !strings.Contains(st, `"enabled":true`) || !strings.Contains(st, `"enable":"flai serve enable components"`) {
 		t.Errorf("the dashboard is told the action is on: %s", st)
 	}
 
-	// flai serve's own host has the supervisor, on components.idle as set,
-	// and stops it when asked
+	// flai serve's own host has the supervisor, on components.idle and
+	// components.max_servers as set, and stops it when asked
 	var sink bytes.Buffer
 	a := &app{out: &sink, errOut: &sink, cwd: root}
 	host, stop := a.serveHost(t.Context())
 	if host.Components == nil || host.Components.Idle() != 45*time.Minute || !host.Enabled(hostapi.ActionComponents, root) {
 		t.Errorf("serveHost: %+v", host)
+	}
+	if most, ok := host.Components.(interface{ MaxServers() int }); !ok || most.MaxServers() != 5 {
+		t.Errorf("serveHost's supervisor reads components.max_servers: %+v", host.Components)
 	}
 	stopped := make(chan struct{})
 	go func() { stop(); close(stopped) }()
@@ -723,7 +739,7 @@ func TestServeComponentsActionAndIdle(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		t.Fatal("serveHost's stop did not return")
 	}
-	if _, err := host.Components.Start(t.Context(), root, "t", manifest.Project{Name: "ui", Path: "ui", Kind: manifest.ProjectKindSvelteKit}); err == nil || !strings.Contains(err.Error(), "flai serve is stopping") {
+	if _, err := host.Components.Start(t.Context(), root, "t", manifest.Project{Name: "ui", Path: "ui", Kind: manifest.ProjectKindSvelteKit}, "", ""); err == nil || !strings.Contains(err.Error(), "flai serve is stopping") {
 		t.Errorf("once stopped, it starts no dev server: %v", err)
 	}
 	if out, _, _ := runIn(t, root, "serve", "disable", "components"); !strings.Contains(out, "components disabled for") {

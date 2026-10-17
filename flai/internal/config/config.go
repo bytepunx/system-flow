@@ -245,6 +245,9 @@ type ComponentsConfig struct {
 	// before flai serve stops it, as a Go duration such as 30m; 30 minutes
 	// when empty.
 	Idle string `json:"idle,omitempty"`
+	// MaxServers is how many component dev servers flai serve runs at once
+	// per project, main's and every story's together; 3 when zero.
+	MaxServers int `json:"max_servers,omitempty"`
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,

@@ -724,6 +724,7 @@ flai components list
 flai components list --project flaiover --json
 flai components config flaiover --setup src/routes/layout.css
 flai components serve --project flaiover
+flai components serve --project flaiover --story S-0042
 ```
 
 Subcommands:
@@ -804,9 +805,11 @@ Run the Vite dev server of the sub-project --project names with flai's component
 
 flai writes a Vite config under .flai-cache/components/&lt;project&gt;/&lt;sub-project&gt;/ that loads the sub-project's own Vite config and merges flai's harness plugin into it, then runs the sub-project's own vite, from its node\_modules, in its folder, on 127.0.0.1 and a free port (ADR-0163). Once the harness answers, it prints the harness's URL, the port's /\_\_flai/components/ on 127.0.0.1, and under it the sub-project and how to stop it. Open the URL with ?c=&lt;path&gt;, a component's path in the sub-project as flai components list prints it, to render that component after the components key's setup module; a saved change reaches the page as a hot update. Vite's own output goes to standard error.
 
+--story serves the sub-project in that story's worktree instead, by the manifest its branch holds, on a port of its own, so that it runs beside the main checkout's (S-0442). The story must be in progress or in review and have a worktree; one without is refused with how to open it (flai stream open). A worktree is a fresh checkout, so when the sub-project's vite is not installed there flai first installs its dependencies by the lock file found in its folder or one above it, up to the worktree's root: pnpm install --frozen-lockfile for pnpm-lock.yaml, npm ci for package-lock.json, yarn install --frozen-lockfile for yarn.lock. A failed install is the command's error, with its last lines of output.
+
 This runs the project's code and its dependencies on this machine, as the sub-project's own dev server does, reachable from this machine only. The dashboard has flai serve start the same dev server only once the operator turns the components host action on (flai serve enable components).
 
-A sub-project without vite installed is refused with what to install, and a dev server that exits on its own ends the command, exit status 1, with its last lines of output. --json prints {"project", "url", "port", "pid"} once the harness answers.
+A sub-project without vite installed is refused with what to install, and a dev server that exits on its own ends the command, exit status 1, with its last lines of output. --json prints {"project", "url", "port", "pid"}, and "story" with --story, once the harness answers.
 
 Examples:
 
@@ -814,6 +817,7 @@ Examples:
 flai components serve
 flai components serve --project flaiover
 flai components serve --project flaiover --json
+flai components serve --project flaiover --story S-0042
 ```
 
 Flags:
@@ -821,6 +825,7 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--project` string | serve the sub-project of this name, of kind sveltekit or svelte; needed when the manifest has more than one |
+| `--story` string | serve it in this story's worktree, installing its dependencies there first when they are missing; the story must be in progress or in review |
 
 ### flai config
 
@@ -2818,7 +2823,7 @@ Subcommands:
 - [actions](#flai-serve-actions): The host actions there are, what each lets a dashboard do, and where each is enabled
 - [agent](#flai-serve-agent): What flai serve starts when a story becomes ready: each story's harness, or your command
 - [checks](#flai-serve-checks): The named commands a story in review is checked with, on this host
-- [components](#flai-serve-components): How long flai serve keeps a component dev server nobody looks at, on this host
+- [components](#flai-serve-components): How long flai serve keeps a component dev server nobody looks at, and how many it runs, on this host
 - [disable](#flai-serve-disable): Stop flai serve performing a host action for this project
 - [enable](#flai-serve-enable): Let flai serve perform a host action for this project when its dashboard asks
 - [import](#flai-serve-import): The folders whose git repositories the board offers to import into system-flow
@@ -3181,7 +3186,7 @@ flai serve checks timeout <minutes>
 
 #### flai serve components
 
-How long flai serve keeps a component dev server nobody looks at, on this host.
+How long flai serve keeps a component dev server nobody looks at, and how many it runs, on this host.
 
 ```text
 flai serve components
@@ -3191,18 +3196,22 @@ flai serve runs a Svelte sub-project's own Vite dev server, with flai's componen
 
 flai serve stops a dev server that had no components.status, which the page asks while it is open, for components.idle, 30 minutes by default, and every dev server when it stops. flai serve components idle sets it, as a Go duration such as 45m or 2h, for every project on this host; it takes effect at once, with no restart.
 
+The page also runs a dev server in the worktree of a story in progress or in review, beside the main checkout's, on a port of its own (S-0442); flai serve stops it once the story leaves review, to done, cancelled, or back to in progress, or is no longer in progress or in review at all. At most components.max\_servers dev servers run or start at once per project, main's and every story's together, 3 by default; a start beyond it is refused, naming the ones running. flai serve components max-servers sets it, for every project on this host, at once.
+
 Examples:
 
 ```bash
 flai serve enable components
 flai serve components idle 45m
+flai serve components max-servers 4
 flai serve components show --json
 ```
 
 Subcommands:
 
 - [idle](#flai-serve-components-idle): Stop a dev server after this long without a components.status (default 30m)
-- [show](#flai-serve-components-show): Print components.idle and whether the action is enabled here
+- [max-servers](#flai-serve-components-max-servers): Run at most this many component dev servers at once per project, main's and every story's (default 3)
+- [show](#flai-serve-components-show): Print components.idle, components.max\_servers, and whether the action is enabled here
 
 ##### flai serve components idle
 
@@ -3212,9 +3221,17 @@ Stop a dev server after this long without a components.status (default 30m).
 flai serve components idle <duration>
 ```
 
+##### flai serve components max-servers
+
+Run at most this many component dev servers at once per project, main's and every story's (default 3).
+
+```text
+flai serve components max-servers <n>
+```
+
 ##### flai serve components show
 
-Print components.idle and whether the action is enabled here.
+Print components.idle, components.max\_servers, and whether the action is enabled here.
 
 ```text
 flai serve components show

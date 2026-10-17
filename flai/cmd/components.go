@@ -17,11 +17,17 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/components"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // componentsRunner runs node for flai components list; tests replace it.
 var componentsRunner components.Runner = components.System{}
+
+// componentsInstaller runs the package manager flai components serve --story
+// installs a worktree's dependencies with; tests replace it.
+var componentsInstaller components.Runner = components.System{}
 
 // newComponentsCmd groups the commands on the component library: the
 // catalogue of a project's Svelte components and the manifest key that says
@@ -45,7 +51,8 @@ flai's harness, which renders one component by its path (ADR-0163).`,
 		Example: `  flai components list
   flai components list --project flaiover --json
   flai components config flaiover --setup src/routes/layout.css
-  flai components serve --project flaiover`,
+  flai components serve --project flaiover
+  flai components serve --project flaiover --story S-0042`,
 	}
 	c.AddCommand(newComponentsListCmd(a), newComponentsConfigCmd(a), newComponentsServeCmd(a))
 	return c
@@ -314,7 +321,7 @@ func (a *app) printComponentsConfig(name string, c *manifest.Components) error {
 }
 
 func newComponentsServeCmd(a *app) *cobra.Command {
-	var project string
+	var project, story string
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Run a Svelte sub-project's own Vite dev server with flai's component harness, in the foreground",
@@ -334,6 +341,17 @@ render that component after the components key's setup module; a saved
 change reaches the page as a hot update. Vite's own output goes to standard
 error.
 
+--story serves the sub-project in that story's worktree instead, by the
+manifest its branch holds, on a port of its own, so that it runs beside the
+main checkout's (S-0442). The story must be in progress or in review and
+have a worktree; one without is refused with how to open it (flai stream
+open). A worktree is a fresh checkout, so when the sub-project's vite is not
+installed there flai first installs its dependencies by the lock file found
+in its folder or one above it, up to the worktree's root: pnpm install
+--frozen-lockfile for pnpm-lock.yaml, npm ci for package-lock.json, yarn
+install --frozen-lockfile for yarn.lock. A failed install is the command's
+error, with its last lines of output.
+
 This runs the project's code and its dependencies on this machine, as the
 sub-project's own dev server does, reachable from this machine only. The
 dashboard has flai serve start the same dev server only once the operator
@@ -341,41 +359,66 @@ turns the components host action on (flai serve enable components).
 
 A sub-project without vite installed is refused with what to install, and
 a dev server that exits on its own ends the command, exit status 1, with its
-last lines of output. --json prints {"project", "url", "port", "pid"} once
-the harness answers.`,
+last lines of output. --json prints {"project", "url", "port", "pid"}, and
+"story" with --story, once the harness answers.`,
 		Example: `  flai components serve
   flai components serve --project flaiover
-  flai components serve --project flaiover --json`,
+  flai components serve --project flaiover --json
+  flai components serve --project flaiover --story S-0042`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			sub, err := components.PickSubProject(repo.Manifest.Projects, project)
+			root, m, id := repo.Root, repo.Manifest, ""
+			if story != "" {
+				if id, root, err = hostapi.ComponentsWorktree(repo, story); err != nil {
+					return err
+				}
+				wt, err := workitem.Open(root)
+				if err != nil {
+					return fmt.Errorf("cannot read %s's worktree at %s: %w; open it again with flai stream open %s", id, root, err, id)
+				}
+				m = wt.Manifest
+			}
+			sub, err := components.PickSubProject(m.Projects, project)
 			if err != nil {
 				return err
 			}
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()
-			return a.serveComponents(ctx, repo.Root, repo.Manifest.Name, sub)
+			return a.serveComponents(ctx, root, m.Name, sub, id)
 		},
 	}
 	c.Flags().StringVar(&project, "project", "", "serve the sub-project of this name, of kind sveltekit or svelte; needed when the manifest has more than one")
+	c.Flags().StringVar(&story, "story", "", "serve it in this story's worktree, installing its dependencies there first when they are missing; the story must be in progress or in review")
 	return c
 }
 
-// serveComponents starts sub's dev server, prints where its harness answers,
-// and runs until ctx ends, then stops it, or until it exits on its own, then
+// serveComponents starts sub's dev server in the checkout at root, a
+// story's worktree when story is set, prints where its harness answers, and
+// runs until ctx ends, then stops it, or until it exits on its own, then
 // returns why.
-func (a *app) serveComponents(ctx context.Context, root, project string, sub manifest.Project) error {
-	s, err := components.Serve(ctx, components.ServeOptions{Root: root, Project: project, Sub: sub, Output: a.errOut})
+func (a *app) serveComponents(ctx context.Context, root, project string, sub manifest.Project, story string) error {
+	log := a.logger().With("component", "components", "project", sub.Name)
+	if story != "" {
+		log = log.With("story", story)
+	}
+	opts := components.ServeOptions{Root: root, Project: project, Sub: sub, Output: a.errOut}
+	var s *components.DevServer
+	var err error
+	if story == "" {
+		s, err = components.Serve(ctx, opts)
+	} else {
+		s, err = components.ServeWorktree(ctx, components.WorktreeOptions{ServeOptions: opts, Runner: componentsInstaller, Logger: log})
+	}
 	if err != nil {
 		return err
 	}
-	log := a.logger().With("component", "components", "project", sub.Name, "pid", s.PID(), "port", s.Port())
+	log = log.With("pid", s.PID(), "port", s.Port())
 	log.Info("component dev server started")
-	if err := a.printComponentsServe(sub, s); err != nil {
+	if err := a.printComponentsServe(sub, story, s); err != nil {
 		return errors.Join(err, s.Stop())
 	}
 	select {
@@ -391,11 +434,20 @@ func (a *app) serveComponents(ctx context.Context, root, project string, sub man
 }
 
 // printComponentsServe says where sub's dev server s answers: its harness's
-// URL on a line of its own, then the sub-project and how to stop it.
-func (a *app) printComponentsServe(sub manifest.Project, s *components.DevServer) error {
+// URL on a line of its own, then the sub-project, the story whose worktree
+// it serves when there is one, and how to stop it.
+func (a *app) printComponentsServe(sub manifest.Project, story string, s *components.DevServer) error {
 	if a.jsonOut {
-		return a.printJSON(map[string]any{"project": sub.Name, "url": s.URL(), "port": s.Port(), "pid": s.PID()})
+		out := map[string]any{"project": sub.Name, "url": s.URL(), "port": s.Port(), "pid": s.PID()}
+		if story != "" {
+			out["story"] = story
+		}
+		return a.printJSON(out)
 	}
-	_, err := fmt.Fprintf(a.out, "%s\n  sub-project %s (%s), Vite pid %d; Ctrl-C stops it\n", s.URL(), sub.Name, sub.Path, s.PID())
+	in := ""
+	if story != "" {
+		in = " in " + story + "'s worktree"
+	}
+	_, err := fmt.Fprintf(a.out, "%s\n  sub-project %s (%s)%s, Vite pid %d; Ctrl-C stops it\n", s.URL(), sub.Name, sub.Path, in, s.PID())
 	return err
 }

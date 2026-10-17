@@ -22,6 +22,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/components"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // fakeNode answers for node as props.mjs would: each component path it is
@@ -670,5 +671,153 @@ func TestComponentsServeRefuses(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, ".flai-cache", "components", "t", "cli")); err == nil {
 		t.Error("an unsupported sub-project got a harness")
+	}
+}
+
+// copyInstall is a package manager that installs a sub-project's
+// dependencies by copying the script at vite into the folder it runs in,
+// and remembers each folder it ran in.
+type copyInstall struct {
+	vite string
+	dirs []string
+}
+
+func (c *copyInstall) LookPath(name string) (string, error) { return "/usr/bin/" + name, nil }
+
+func (c *copyInstall) Run(_ context.Context, dir, _, _ string, _ ...string) ([]byte, []byte, error) {
+	c.dirs = append(c.dirs, dir)
+	script, err := os.ReadFile(c.vite)
+	if err != nil {
+		return nil, nil, err
+	}
+	bin := filepath.Join(dir, "node_modules", ".bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		return nil, nil, err
+	}
+	return nil, nil, os.WriteFile(filepath.Join(bin, "vite"), script, 0o755)
+}
+
+// useInstaller makes flai components serve --story run i in place of the
+// package manager for the test.
+func useInstaller(t *testing.T, i components.Runner) {
+	t.Helper()
+	old := componentsInstaller
+	t.Cleanup(func() { componentsInstaller = old })
+	componentsInstaller = i
+}
+
+// storyWorktrees gives the project at root an epic and stories: S-0001 in
+// progress and S-0002 ready, each with a worktree that holds the main
+// checkout's manifest and ui with a pnpm lock file and no dependencies,
+// S-0003 in progress without one, and a task, T-0001.
+func storyWorktrees(t *testing.T, root string) {
+	t.Helper()
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 16, 8, 0, 0, 0, time.UTC)
+	if _, err := repo.Create(workitem.NewOptions{Type: workitem.Epic, Title: "Yard", Owner: "olive", Now: now}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := os.ReadFile(filepath.Join(root, manifest.File))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, st := range []struct {
+		states   []string
+		worktree bool
+	}{
+		{[]string{workitem.Ready, workitem.InProgress}, true},
+		{[]string{workitem.Ready}, true},
+		{[]string{workitem.Ready, workitem.InProgress}, false},
+	} {
+		it, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Crane", Parent: "E-0001", Owner: "olive", Now: now})
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, _ := os.ReadFile(it.Path)
+		_ = os.WriteFile(it.Path, []byte(strings.Replace(string(body), "## Acceptance criteria\n- [ ]\n", "## Acceptance criteria\n- [x] works\n", 1)), 0o644)
+		it, _ = repo.Get(it.ID)
+		for i, to := range st.states {
+			if _, err := repo.Transition(it, to, "olive", "", now.Add(time.Duration(i+1)*time.Minute)); err != nil {
+				t.Fatalf("%s to %s: %v", it.ID, to, err)
+			}
+		}
+		if !st.worktree {
+			continue
+		}
+		wt := repo.WorktreePath(it.ID)
+		for rel, data := range map[string]string{manifest.File: string(m), "ui/src/app.css": "p {}\n", "ui/pnpm-lock.yaml": "lockfileVersion: '9.0'\n"} {
+			p := filepath.Join(wt, filepath.FromSlash(rel))
+			if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(p, []byte(data), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if _, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Rig", Parent: "S-0001", Owner: "olive", Now: now}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0442: --story serves the sub-project in the story's worktree, after
+// installing its dependencies there by its lock file, and --json names the
+// story.
+func TestComponentsServeStoryRunsInItsWorktree(t *testing.T) {
+	root := oneSvelteFixture(t)
+	storyWorktrees(t, root)
+	state := fakeComponentsVite(t, root, "ui", "serve")
+	install := &copyInstall{vite: filepath.Join(root, "ui", "node_modules", ".bin", "vite")}
+	useInstaller(t, install)
+	wt := filepath.Join(root, ".flai-cache", "worktrees", "S-0001")
+	s := serveComponentsIn(t, root, "components", "serve", "--story", "S-1", "--json")
+	var got struct {
+		Project string `json:"project"`
+		Story   string `json:"story"`
+		URL     string `json:"url"`
+		PID     int    `json:"pid"`
+	}
+	s.waitOutput(t, func(out string) bool { return json.Unmarshal([]byte(out), &got) == nil })
+	if got.Project != "ui" || got.Story != "S-0001" || !harnessURL.MatchString(got.URL) || got.PID != fakeVitePID(t, state) {
+		t.Errorf("--story --json: %+v", got)
+	}
+	if len(install.dirs) != 1 || install.dirs[0] != filepath.Join(wt, "ui") {
+		t.Errorf("the worktree's dependencies are installed in it: %v", install.dirs)
+	}
+	config := filepath.Join(wt, ".flai-cache", "components", "t", "ui", components.HarnessConfig)
+	if args, _ := os.ReadFile(filepath.Join(state, "args")); !strings.HasPrefix(string(args), "--config\n"+config+"\n") {
+		t.Errorf("vite ran on the worktree's harness config %s:\n%s", config, args)
+	}
+	if err := s.stop(t); err != nil {
+		t.Errorf("stop: %v", err)
+	}
+	if !processGone(got.PID) {
+		t.Errorf("the fake vite, pid %d, is still running", got.PID)
+	}
+}
+
+// S-0442, ADR-0145: --story refuses what is not a story in progress or in
+// review with a worktree, saying how to open one, and starts nothing.
+func TestComponentsServeStoryRefuses(t *testing.T) {
+	root := oneSvelteFixture(t)
+	storyWorktrees(t, root)
+	install := &copyInstall{}
+	useInstaller(t, install)
+	for _, tc := range []struct{ story, errOut string }{
+		{"S-0099", "S-0099 not found; name a story in progress or in review with a worktree"},
+		{"T-0001", "T-0001 is a task; name a story (S-nnnn) in progress or in review"},
+		{"S-0002", "S-0002 is ready: flai serves a story's components only while it is in progress or in review"},
+		{"S-0003", "S-0003 has no worktree; open it with flai stream open S-0003"},
+	} {
+		out, errOut, code := runIn(t, root, "components", "serve", "--story", tc.story)
+		if code != 1 || out != "" || !strings.Contains(errOut, tc.errOut) {
+			t.Errorf("--story %s: %d %q %s", tc.story, code, out, errOut)
+		}
+	}
+	if len(install.dirs) != 0 {
+		t.Errorf("a refused story installs nothing: %v", install.dirs)
 	}
 }

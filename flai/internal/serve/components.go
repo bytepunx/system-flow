@@ -1,36 +1,66 @@
 package serve
 
 // The component dev servers flai serve supervises (S-0438, ADR-0163): one
-// per project and sub-project, started by components.start with the
-// sub-project's own vite and flai's harness, answered by components.status,
-// which marks it used, stopped by components.stop, by components.idle
-// without a components.status, and every one when flai serve stops. One
-// that exits on its own is forgotten, and why is kept as its last error.
+// per project, sub-project, and checkout, main's or a story's worktree
+// (S-0442), started by components.start with the sub-project's own vite and
+// flai's harness, a story's after its dependencies are installed, answered by
+// components.status, which marks it used, stopped by components.stop, by
+// components.idle without a components.status, a story's once its story
+// leaves review or is no longer in progress or in review, and every one when
+// flai serve stops. At most components.max_servers run or start per project.
+// One that exits on its own is forgotten, and why is kept as its last error.
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/components"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // DefaultComponentsIdle is components.idle when the operator has not set it.
 const DefaultComponentsIdle = 30 * time.Minute
+
+// DefaultComponentsMaxServers is components.max_servers when the operator
+// has not set it: the dev servers that may run or start at once for one
+// project, main's and every story's together.
+const DefaultComponentsMaxServers = 3
+
+// DefaultComponentsStoryEvery is how often Run looks whether a story whose
+// worktree has a dev server has left review, when ComponentsOptions gives no
+// StoryEvery.
+const DefaultComponentsStoryEvery = 5 * time.Second
 
 // ComponentsOptions configure NewComponents.
 type ComponentsOptions struct {
 	// Idle is the operator's components.idle, asked at every look; nil, or
 	// an answer that is not positive, is DefaultComponentsIdle.
 	Idle func() time.Duration
+	// MaxServers is the operator's components.max_servers, asked at every
+	// start; nil, or an answer that is not positive, is
+	// DefaultComponentsMaxServers.
+	MaxServers func() int
 	// Every is how often Run looks for idle dev servers; a tenth of the idle
 	// time, at most a minute and at least a second, when zero.
 	Every time.Duration
+	// StoryEvery is how often Run looks at the stories whose worktrees have
+	// dev servers; DefaultComponentsStoryEvery when zero.
+	StoryEvery time.Duration
+	// Story reads the story id names in the project at root, for the stop
+	// on leaving review; from the project's work items when nil. An ID no
+	// item has is an error that wraps workitem.ErrNotFound.
+	Story func(root, id string) (*workitem.Item, error)
+	// Install runs the package manager that installs a story's worktree's
+	// dependencies; components.System when nil.
+	Install components.Runner
 	// Now is the clock idleness is measured by; time.Now when nil.
 	Now func() time.Time
 	// Logger is flai serve's log; nothing is logged when nil.
@@ -54,15 +84,42 @@ type Components struct {
 	lastErr map[devKey]string
 }
 
-// devKey names one sub-project of one project, by the project's root.
-type devKey struct{ root, sub string }
+// devKey names one sub-project of one project, by the project's root, in
+// the main checkout when story is empty and in story's worktree otherwise.
+type devKey struct{ root, sub, story string }
+
+// String names the dev server's sub-project and checkout for an error.
+func (k devKey) String() string {
+	if k.story == "" {
+		return "sub-project " + k.sub
+	}
+	return "sub-project " + k.sub + " in " + k.story + "'s worktree"
+}
+
+// owner names whose dev server it is in a list: main's ui, S-0441's ui.
+func (k devKey) owner() string {
+	if k.story == "" {
+		return "main's " + k.sub
+	}
+	return k.story + "'s " + k.sub
+}
+
+// logger is log with the dev server's root, sub-project, and story.
+func (k devKey) logger(log *slog.Logger) *slog.Logger {
+	log = log.With("component", "components", "root", k.root, "project", k.sub)
+	if k.story != "" {
+		log = log.With("story", k.story)
+	}
+	return log
+}
 
 // devServer is one dev server, starting or running.
 type devServer struct {
-	ready chan struct{} // closed once the start answered, s or err set
-	s     *components.DevServer
-	err   error
-	used  time.Time // the last start or status; guarded by Components.mu
+	ready   chan struct{} // closed once the start answered, s or err set
+	s       *components.DevServer
+	err     error
+	started time.Time // when it was asked to start, by Components' clock
+	used    time.Time // the last start or status; guarded by Components.mu
 }
 
 // NewComponents is a supervisor of no dev servers yet, with its options'
@@ -74,8 +131,21 @@ func NewComponents(o ComponentsOptions) *Components {
 	if o.Logger == nil {
 		o.Logger = slog.New(slog.DiscardHandler)
 	}
+	if o.Story == nil {
+		o.Story = readStory
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Components{o: o, ctx: ctx, cancel: cancel, servers: map[devKey]*devServer{}, lastErr: map[devKey]string{}}
+}
+
+// readStory is the story id names among the work items of the project at
+// root.
+func readStory(root, id string) (*workitem.Item, error) {
+	repo, err := workitem.Open(root)
+	if err != nil {
+		return nil, err
+	}
+	return repo.Get(id)
 }
 
 // Idle is components.idle as it stands: a dev server without a Status for
@@ -89,45 +159,109 @@ func (c *Components) Idle() time.Duration {
 	return DefaultComponentsIdle
 }
 
+// MaxServers is components.max_servers as it stands: the most dev servers
+// that run or start at once for one project.
+func (c *Components) MaxServers() int {
+	if c.o.MaxServers != nil {
+		if n := c.o.MaxServers(); n > 0 {
+			return n
+		}
+	}
+	return DefaultComponentsMaxServers
+}
+
+// serversFull is the refusal of a start beyond components.max_servers. It
+// wraps hostapi.ErrComponentServersFull, which the dashboard is answered as
+// a rule.
+type serversFull struct{ msg string }
+
+func (e serversFull) Error() string { return e.msg }
+
+func (e serversFull) Unwrap() error { return hostapi.ErrComponentServersFull }
+
 // Start starts sub's dev server for the project at root, whose manifest
-// names it project, and answers it once it answers. While one runs or is
-// starting for the same sub-project, it answers that one, so that two starts
-// at once start one server. ctx bounds only the wait: a start it gives up on
-// goes on, and Status says when it answers.
-func (c *Components) Start(ctx context.Context, root, project string, sub manifest.Project) (hostapi.ComponentServer, error) {
-	k := devKey{root, sub.Name}
+// names it project, and answers it once it answers: in the main checkout
+// when story is empty, and otherwise in dir, story's worktree, after
+// installing the sub-project's dependencies there when they are missing.
+// While one runs or is starting for the same sub-project and checkout, it
+// answers that one, so that two starts at once start one server. A start
+// that would run more than components.max_servers for the project is
+// refused, naming the ones running. ctx bounds only the wait: a start it
+// gives up on goes on, and Status says when it answers.
+func (c *Components) Start(ctx context.Context, root, project string, sub manifest.Project, story, dir string) (hostapi.ComponentServer, error) {
+	k := devKey{root, sub.Name, story}
+	if story == "" {
+		dir = root
+	}
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
-		return hostapi.ComponentServer{}, fmt.Errorf("cannot start sub-project %s's component dev server: flai serve is stopping; start it again once flai serve runs", sub.Name)
+		return hostapi.ComponentServer{}, fmt.Errorf("cannot start the component dev server of %s: flai serve is stopping; start it again once flai serve runs", k)
 	}
 	d, already := c.servers[k]
 	if !already {
-		d = &devServer{ready: make(chan struct{})}
+		if err := c.full(k); err != nil {
+			c.mu.Unlock()
+			return hostapi.ComponentServer{}, err
+		}
+		d = &devServer{ready: make(chan struct{}), started: c.o.Now()}
 		c.servers[k] = d
 		c.wg.Add(1)
-		go c.launch(k, d, project, sub)
+		go c.launch(k, d, project, sub, dir)
 	}
 	d.used = c.o.Now()
 	c.mu.Unlock()
 	select {
 	case <-d.ready:
 	case <-ctx.Done():
-		return hostapi.ComponentServer{}, fmt.Errorf("sub-project %s's component dev server is still starting, and the request ended first (%w); components.status says when it answers", sub.Name, ctx.Err())
+		return hostapi.ComponentServer{}, fmt.Errorf("the component dev server of %s is still starting, and the request ended first (%w); components.status says when it answers", k, ctx.Err())
 	}
 	if d.err != nil {
 		return hostapi.ComponentServer{}, d.err
 	}
-	out := c.Status(root, sub.Name)
+	out := c.Status(root, sub.Name, story)
 	out.AlreadyRunning = already && out.Running
 	return out, nil
 }
 
-// launch starts d, keeps the outcome, and watches the server it started.
-func (c *Components) launch(k devKey, d *devServer, project string, sub manifest.Project) {
+// full is the refusal of a new dev server for k when components.max_servers
+// run or start for its project already, or nil. c.mu is held.
+func (c *Components) full(k devKey) error {
+	limit := c.MaxServers()
+	var keys []devKey
+	for o := range c.servers {
+		if o.root == k.root {
+			keys = append(keys, o)
+		}
+	}
+	if len(keys) < limit {
+		return nil
+	}
+	slices.SortFunc(keys, func(a, b devKey) int { return c.servers[a].started.Compare(c.servers[b].started) })
+	names := make([]string, len(keys))
+	for i, o := range keys {
+		names[i] = o.owner()
+	}
+	servers := "servers"
+	if len(keys) == 1 {
+		servers = "server"
+	}
+	return serversFull{msg: fmt.Sprintf("cannot start %s component dev server: flai runs %d component dev %s for this project, components.max_servers: %s; stop one first, or raise components.max_servers on the host with flai serve components max-servers", k.owner(), len(keys), servers, strings.Join(names, ", "))}
+}
+
+// launch starts d in dir, keeps the outcome, and watches the server it
+// started: Serve in the main checkout, ServeWorktree in a story's worktree.
+func (c *Components) launch(k devKey, d *devServer, project string, sub manifest.Project, dir string) {
 	defer c.wg.Done()
-	s, err := components.Serve(c.ctx, components.ServeOptions{Root: k.root, Project: project, Sub: sub, Timeout: c.o.Timeout})
-	log := c.o.Logger.With("component", "components", "root", k.root, "project", sub.Name)
+	log := k.logger(c.o.Logger)
+	opts := components.ServeOptions{Root: dir, Project: project, Sub: sub, Timeout: c.o.Timeout}
+	var s *components.DevServer
+	var err error
+	if k.story == "" {
+		s, err = components.Serve(c.ctx, opts)
+	} else {
+		s, err = components.ServeWorktree(c.ctx, components.WorktreeOptions{ServeOptions: opts, Runner: c.o.Install, Logger: log})
+	}
 	c.mu.Lock()
 	d.s, d.err = s, err
 	if err != nil {
@@ -166,12 +300,13 @@ func (c *Components) watch(k devKey, d *devServer, log *slog.Logger) {
 }
 
 // Status is how the dev server of the sub-project named sub of the project
-// at root stands, and marks it used.
-func (c *Components) Status(root, sub string) hostapi.ComponentServer {
-	k := devKey{root, sub}
+// at root stands, in the main checkout when story is empty and in story's
+// worktree otherwise, and marks it used.
+func (c *Components) Status(root, sub, story string) hostapi.ComponentServer {
+	k := devKey{root, sub, story}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	out := hostapi.ComponentServer{Project: sub, LastError: c.lastErr[k]}
+	out := hostapi.ComponentServer{Project: sub, Story: story, LastError: c.lastErr[k]}
 	d, ok := c.servers[k]
 	if !ok {
 		return out
@@ -192,10 +327,11 @@ func (c *Components) Status(root, sub string) hostapi.ComponentServer {
 }
 
 // Stop stops the dev server of the sub-project named sub of the project at
-// root, waiting for one that is starting, and says whether one ran.
-func (c *Components) Stop(root, sub string) (hostapi.ComponentStopped, error) {
-	k := devKey{root, sub}
-	out := hostapi.ComponentStopped{Project: sub}
+// root, in the main checkout when story is empty and in story's worktree
+// otherwise, waiting for one that is starting, and says whether one ran.
+func (c *Components) Stop(root, sub, story string) (hostapi.ComponentStopped, error) {
+	k := devKey{root, sub, story}
+	out := hostapi.ComponentStopped{Project: sub, Story: story}
 	c.mu.Lock()
 	d, ok := c.servers[k]
 	c.mu.Unlock()
@@ -213,32 +349,41 @@ func (c *Components) Stop(root, sub string) (hostapi.ComponentStopped, error) {
 	}
 	out.Stopped, out.PID = true, d.s.PID()
 	if err := d.s.Stop(); err != nil {
-		return out, fmt.Errorf("cannot stop sub-project %s's component dev server: %w", sub, err)
+		return out, fmt.Errorf("cannot stop the component dev server of %s: %w", k, err)
 	}
-	c.o.Logger.Info("component dev server stopped", "component", "components", "root", root, "project", sub, "pid", out.PID, "reason", "asked")
+	k.logger(c.o.Logger).Info("component dev server stopped", "pid", out.PID, "reason", "asked")
 	return out, nil
 }
 
-// Run looks for idle dev servers every so often, stopping each that had no
-// Status for components.idle, until ctx ends; then it stops every one, as
-// Close does, and returns what Close returns.
+// Run looks for idle dev servers, and for the stories whose worktrees' dev
+// servers are to stop, every so often, stopping each, until ctx ends; then
+// it stops every one, as Close does, and returns what Close returns.
 func (c *Components) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
 			return c.Close()
-		case <-time.After(c.every()):
+		case <-time.After(min(c.every(), c.storyEvery())):
 		}
 		c.stopIdle()
+		c.stopLeft()
 	}
 }
 
-// every is how long Run waits between looks.
+// every is how long Run waits between looks for idle dev servers.
 func (c *Components) every() time.Duration {
 	if c.o.Every > 0 {
 		return c.o.Every
 	}
 	return min(max(c.Idle()/10, time.Second), time.Minute)
+}
+
+// storyEvery is how long Run waits between looks at the stories.
+func (c *Components) storyEvery() time.Duration {
+	if c.o.StoryEvery > 0 {
+		return c.o.StoryEvery
+	}
+	return DefaultComponentsStoryEvery
 }
 
 // stopIdle stops each running dev server unused for components.idle.
@@ -261,13 +406,101 @@ func (c *Components) stopIdle() {
 	}
 	c.mu.Unlock()
 	for i, d := range stale {
-		log := c.o.Logger.With("component", "components", "root", keys[i].root, "project", keys[i].sub, "pid", d.s.PID())
+		log := keys[i].logger(c.o.Logger).With("pid", d.s.PID())
 		if err := d.s.Stop(); err != nil {
 			log.Warn("idle component dev server not stopped", "err", err.Error())
 			continue
 		}
 		log.Info("component dev server stopped", "reason", "idle", "idle", idle.String())
 	}
+}
+
+// storyServer is a running dev server of a story's worktree, as stopLeft
+// looks at it.
+type storyServer struct {
+	k devKey
+	d *devServer
+}
+
+// stopLeft stops each running dev server of a story's worktree whose story
+// StoryLeft says has left. A story that cannot be read, for a reason other
+// than its not being there, keeps its servers until the next look.
+func (c *Components) stopLeft() {
+	type story struct{ root, id string }
+	byStory := map[story][]storyServer{}
+	c.mu.Lock()
+	for k, d := range c.servers {
+		if k.story == "" {
+			continue
+		}
+		select {
+		case <-d.ready:
+		default:
+			continue // a server starting is looked at once it answers
+		}
+		if d.s != nil {
+			s := story{k.root, k.story}
+			byStory[s] = append(byStory[s], storyServer{k, d})
+		}
+	}
+	c.mu.Unlock()
+	for s, servers := range byStory {
+		it, err := c.o.Story(s.root, s.id)
+		if err != nil && !errors.Is(err, workitem.ErrNotFound) {
+			c.o.Logger.Warn("story of a component dev server not read", "component", "components", "root", s.root, "story", s.id, "err", err.Error())
+			continue
+		}
+		if err != nil {
+			it = nil
+		}
+		status := "gone"
+		if it != nil {
+			status = it.Status
+		}
+		for _, sv := range servers {
+			if !StoryLeft(it, sv.d.started) {
+				continue
+			}
+			c.mu.Lock()
+			mine := c.servers[sv.k] == sv.d
+			if mine {
+				delete(c.servers, sv.k)
+			}
+			c.mu.Unlock()
+			if !mine {
+				continue // stopped or replaced since
+			}
+			log := sv.k.logger(c.o.Logger).With("pid", sv.d.s.PID(), "status", status)
+			if err := sv.d.s.Stop(); err != nil {
+				log.Warn("component dev server of a story that left review not stopped", "err", err.Error())
+				continue
+			}
+			log.Info("component dev server stopped", "reason", "story left review")
+		}
+	}
+}
+
+// StoryLeft says whether the dev server of the worktree of the story it,
+// started at since, is to stop: it is, when the story is no longer on the
+// board (it nil, or archived), is neither in progress nor in review, or moved
+// out of review, to done, cancelled, or back to in progress, at or after
+// since; a story that moved from in progress to review keeps it. A
+// transition's time has whole seconds, so since is taken to its second.
+func StoryLeft(it *workitem.Item, since time.Time) bool {
+	if it == nil || it.Archived || it.Status != workitem.InProgress && it.Status != workitem.Review {
+		return true
+	}
+	from := since.Truncate(time.Second)
+	prev := ""
+	for _, t := range it.Transitions {
+		if prev == workitem.Review && t.To != workitem.Review {
+			if at, err := time.Parse(time.RFC3339, t.At); err == nil && !at.Before(from) {
+				return true
+			}
+		}
+		prev = t.To
+	}
+	return false
 }
 
 // Close stops every dev server, ends any start in flight, refuses starts
