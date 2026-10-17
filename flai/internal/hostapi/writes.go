@@ -279,6 +279,15 @@ var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]{8,64}$`)
 // credentials. Publishing is the one way accepted work reaches the remote.
 const ActionPush = "push"
 
+// ActionForge is the host action under which flai serve pushes each story
+// in review under pull-request acceptance to origin and opens or updates its
+// pull request, with the host's git credentials and the token the host
+// names for the forge (S-0393, ADR-0165). flai serve does it from what it
+// sees in the project's files; no method asks for it. Off, which is the
+// default, nothing is pushed. The agents flai serve starts never hold the
+// token, and flai guard refuses them flai forge push.
+const ActionForge = "forge"
+
 // ActionAutoPublish is the host action that has every flai push --pending,
 // wherever it runs, first tag a release of everything accumulated (S-0094).
 // Off, which is the default, a push tags nothing. Since ADR-0067 it and flai
@@ -375,6 +384,7 @@ const ActionComponents = "components"
 // do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
 	ActionPush:        "publish when you press Publish: tag what was accepted since each component's last release and push the branch and the tags, with your git credentials, never forced; a holder of the dashboard token can then publish everything accepted and unreleased",
+	ActionForge:       "push each story that moves to review, while acceptance.mode in system-flow.yaml is pull-request, to origin with your git credentials, and open its one pull request against the main branch, or update the one it has, with the forge's token from the variable flai serve forge names (GITHUB_TOKEN for GitHub by default, ADR-0165), never forcing a branch but a story's own that a sync rebased, with --force-with-lease; a push or a request that fails is said on a thread on the story and tried again at the next look. The agents flai serve starts never get the token's variable, and flai guard refuses them flai forge push. Off, or with acceptance.mode local, nothing is pushed",
 	ActionAutoPublish: "has flai push --pending, run in a shell, first tag a release of everything merged and unreleased since each component's last tag; off, pushing releases nothing and what is accepted waits for Publish or flai release --pending. It is the operator's shell tool, outside the workflow (ADR-0067): no dashboard sees or changes it",
 	ActionAutoApprove: "has flai's MCP tool permission_prompt allow, without asking you, a flai serve agent's Edit or Write of a path Claude Code protects, such as a file in a .claude/ folder (its settings, hooks, and agent definitions) or .mcp.json but never .git, in its own in-progress story's worktree, which Claude Code run headless refuses without a person's approval, and lets that story's sub-agents make those writes too, which flai guard otherwise refuses them; off, permission_prompt asks the story's owner on a thread and waits for allow. A story whose branch changes such a path is accepted by you only, so you read those changes at acceptance (ADR-0106). It is the operator's shell tool (ADR-0067): no dashboard sees or changes it",
 	ActionAutoUpgrade: "has flai serve ask flai host to install the newest flai release tagged in this project's history, verified as flai host upgrade --version installs it, and restart flai serve and the MCP servers on it, whenever the flai serving the project is older than that release, checked every minute; it waits while a dashboard write runs in flai serve, and asks again for a refused release no sooner than 15 minutes later; off, flai serve asks you on a thread on the project's system-flow.yaml, once for each newer release. It replaces the flai on this host, so it is the operator's shell tool (ADR-0067, ADR-0158): no dashboard sees or changes it",

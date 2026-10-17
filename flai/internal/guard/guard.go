@@ -108,6 +108,12 @@
 // shared paths, with shared_paths_edit or flai shared add or remove
 // (S-0295, ADR-0096): they decide which overlaps hold a story. Only the
 // operator's own session does; listing and checking them are reads.
+//
+// No session flai serve starts, and no sub-agent, runs flai forge push
+// (S-0393): the forge host action has flai serve push a story's branch and
+// open its pull request on the move to review, with the host's credentials
+// and the forge's token, which no agent holds; flai forge push is the
+// operator's. flai forge check and status read, and are left alone.
 package guard
 
 import (
@@ -415,6 +421,53 @@ const (
 	resolvesOwn  = "it resolves only a thread it opened; one another opened is for its opener or the operator to resolve"
 	answersOwn   = "on a thread it opened it only follows up, with neither recommendation nor source: it never recommends or answers its own question"
 )
+
+// forgePushes are the subcommands of flai forge that push a story and open
+// its pull request, the operator's alone (S-0393).
+var forgePushes = []string{"push"}
+
+// operatorsPush says why no agent runs flai forge push (S-0393).
+const operatorsPush = "the forge host action has flai serve push a story's branch and open or update its pull request when the story moves to review, with the host's credentials and the forge's token, which no agent holds; flai forge push is the operator's (S-0393)"
+
+// askForPush ends the refusal of a session's own flai forge push: what it
+// does instead.
+const askForPush = "Move the story to review and leave the push to flai serve, or ask the operator on a thread with thread_open; flai forge status and check read and are open to you."
+
+// forging are the rules that find flai forge push on a command line, and no
+// git command.
+var forging = rules{
+	flai: func(cmd, sub string, _ []string) (string, string) {
+		if cmd == "forge" && slices.Contains(forgePushes, sub) {
+			return operatorsPush, ""
+		}
+		return "", ""
+	},
+}
+
+// forgePush decides on a command line that runs flai forge push, by a
+// sub-agent or in a session flai serve started: the zero Verdict when it runs
+// none or the operator's own session runs it. The orchestrator's refusal
+// names the call, so that its activity document logs it.
+func (g Guard) forgePush(c Call) Verdict {
+	if c.Kind != Shell || !c.Subagent && !g.served(c) {
+		return Verdict{}
+	}
+	for _, words := range commands(c.Command) {
+		if why, _ := g.refuse(words, forging); why == "" {
+			continue
+		}
+		call := strings.Join(words, " ")
+		if c.Subagent {
+			return deny(fmt.Sprintf("a sub-agent (%s) cannot run %q: %s. Put what you need pushed in your final message.", cmp.Or(c.Agent, "unnamed"), call, operatorsPush))
+		}
+		v := deny(fmt.Sprintf("%s cannot run %q: %s. %s", g.who(c), call, operatorsPush, askForPush))
+		if c.Role == RoleOrchestrate {
+			v.Call = call
+		}
+		return v
+	}
+	return Verdict{}
+}
 
 // Guard decides on the calls of one flai: Commands are the names of its
 // commands, so that a word flai on a command line counts as running flai

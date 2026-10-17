@@ -110,13 +110,16 @@ func deny(why string) Verdict {
 	return Verdict{Outcome: Deny, Reason: why}
 }
 
-// Decide decides on c under g's policy: the shared paths for every caller,
-// then the rules of a sub-agent, or of the session's own role, and the
+// Decide decides on c under g's policy: the shared paths and flai forge push
+// for every caller, then the rules of a sub-agent, or of the session's own role, and the
 // author a served agent writes as. A story's own agent's write to a path flai
 // protects in its worktree, which they would allow, is put to the story's
 // owner (Ask) while auto-approve is off.
 func Decide(g Guard, c Call) Verdict {
 	if v := g.shared(c); v.Outcome != Allow {
+		return v
+	}
+	if v := g.forgePush(c); v.Outcome != Allow {
 		return v
 	}
 	if c.Subagent {

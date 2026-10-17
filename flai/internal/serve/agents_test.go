@@ -105,7 +105,7 @@ func newAgentLab(t *testing.T) *agentLab {
 	script := "#!/bin/sh\n" +
 		"trap 'touch \"" + lab.outDir + "/ended-$$\"; exit 143' TERM\n" +
 		"out=\"" + lab.outDir + "/$FLAI_STORY.txt\"\n" +
-		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; echo \"host: ${FLAI_HOST_URL-unset} ${FLAI_HOST_TOKEN-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; echo \"gateway: ${ANTHROPIC_BASE_URL-unset} ${ANTHROPIC_AUTH_TOKEN-unset}\"; } > \"$out\"\n" +
+		"{ echo \"args: $*\"; echo \"dir: $(pwd)\"; echo \"agent: $FLAI_AGENT\"; echo \"story: $FLAI_STORY\"; echo \"session: $FLAI_SESSION\"; echo \"answered: $FLAI_ANSWERED\"; echo \"host: ${FLAI_HOST_URL-unset} ${FLAI_HOST_TOKEN-unset}\"; echo \"config: ${FLAI_CONFIG-unset}\"; echo \"gateway: ${ANTHROPIC_BASE_URL-unset} ${ANTHROPIC_AUTH_TOKEN-unset}\"; echo \"forge: ${GITHUB_TOKEN-unset} ${S0393_FORGE_TOKEN-unset} ${S0393_KEPT-unset}\"; } > \"$out\"\n" +
 		"while [ -f \"" + lab.outDir + "/hold\" ] && [ ! -f \"" + lab.outDir + "/release-$FLAI_STORY\" ]; do sleep 0.05; done\n" +
 		"touch \"" + lab.outDir + "/ended-$$\"\n"
 	if err := os.WriteFile(lab.stub, []byte(script), 0o755); err != nil {
@@ -376,6 +376,43 @@ func TestAnAgentIsStartedWithoutTheHostsAddressTokenOrConfig(t *testing.T) {
 		if !strings.Contains(string(got), want) {
 			t.Errorf("the stub was given\n%s\nwithout %q", got, want)
 		}
+	}
+}
+
+// S-0393: an agent gets no forge's token, neither in the forge's default
+// variable nor in the one the host names, whatever the project's acceptance
+// mode, and keeps the rest of its environment.
+func TestAnAgentIsStartedWithoutAForgesToken(t *testing.T) {
+	t.Setenv(config.DefaultGitHubTokenEnv, "ghp_default-never-given")
+	t.Setenv("S0393_FORGE_TOKEN", "ghp_named-never-given")
+	t.Setenv("S0393_KEPT", "kept")
+	lab := newAgentLab(t)
+	lab.cfg.ForgeTokenEnvs = []string{"S0393_FORGE_TOKEN"}
+	id := lab.ready("Tokenless")
+	lab.l.look(context.Background(), false)
+	waitFor(t, "the stub ended", func() bool { r := lab.run(id); return r != nil && r.Ended != "" })
+	got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+	if !strings.Contains(string(got), "forge: unset unset kept\n") || strings.Contains(string(got), "ghp_") {
+		t.Errorf("the stub was given\n%s\nwant neither forge token and the rest kept", got)
+	}
+}
+
+// The forges' tokens are left out of an environment whether or not the host
+// names a variable for one, and with no say from the host at all.
+func TestWithoutForgeTokens(t *testing.T) {
+	env := []string{"PATH=/bin", "GITHUB_TOKEN=d", "GH_PAT=n", "GITHUB_TOKEN_X=x", "HOME=/h"}
+	lab := newAgentLab(t)
+	lab.cfg.ForgeTokenEnvs = []string{"GH_PAT"}
+	if got := lab.l.withoutForgeTokens(slices.Clone(env)); !slices.Equal(got, []string{"PATH=/bin", "GITHUB_TOKEN_X=x", "HOME=/h"}) {
+		t.Errorf("named: env = %v, want both tokens left out and the rest kept", got)
+	}
+	lab.cfg.ForgeTokenEnvs = nil
+	if got := lab.l.withoutForgeTokens(slices.Clone(env)); !slices.Equal(got, []string{"PATH=/bin", "GH_PAT=n", "GITHUB_TOKEN_X=x", "HOME=/h"}) {
+		t.Errorf("default: env = %v, want GITHUB_TOKEN left out", got)
+	}
+	bare := &launcher{}
+	if got := bare.withoutForgeTokens(slices.Clone(env)); !slices.Equal(got, []string{"PATH=/bin", "GH_PAT=n", "GITHUB_TOKEN_X=x", "HOME=/h"}) {
+		t.Errorf("no config: env = %v, want GITHUB_TOKEN left out", got)
 	}
 }
 

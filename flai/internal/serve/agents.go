@@ -94,6 +94,10 @@ type AgentConfig struct {
 	// AutoApprove is whether the auto-approve host action is enabled for the
 	// project: a protected write is allowed without asking (ADR-0086).
 	AutoApprove bool
+	// ForgeTokenEnvs are the variables the host reads each forge's token
+	// from, as flai serve forge names them (ADR-0165): no agent flai serve
+	// starts gets one (S-0393).
+	ForgeTokenEnvs []string
 }
 
 // HarnessLifts are what the operator lifts on one harness, taking the risk
@@ -1100,6 +1104,27 @@ func agentEnv(env []string) []string {
 	})
 }
 
+// withoutForgeTokens is env without the variables each forge's token is
+// read from: the forge's default, such as GITHUB_TOKEN, and any the host
+// names with flai serve forge (ADR-0165). No agent flai serve starts gets
+// one, whatever the project's acceptance mode: a story reaches its forge
+// only through flai serve's forge host action, on the host (S-0393).
+func (l *launcher) withoutForgeTokens(env []string) []string {
+	drop := map[string]bool{}
+	for _, f := range config.KnownForges() {
+		drop[config.DefaultForgeTokenEnv(f)] = true
+	}
+	if l.config != nil {
+		for _, name := range l.config(l.entry.Root).ForgeTokenEnvs {
+			drop[name] = true
+		}
+	}
+	return slices.DeleteFunc(env, func(kv string) bool {
+		name, _, _ := strings.Cut(kv, "=")
+		return drop[name]
+	})
+}
+
 // runMarks are the variables that say what a run is for.
 var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS"}
 
@@ -1347,7 +1372,8 @@ func (l *launcher) openLog(subject string, at time.Time) (*os.File, error) {
 
 // spawn starts argv as run's process, in the project's directory, its
 // output in the log openLog opens for subject, and its environment flai
-// serve's without the host's address, token, and config, with FLAI_AGENT,
+// serve's without the host's address, token, and config, the providers'
+// spend keys, and the forges' tokens, with FLAI_AGENT,
 // the session started at, FLAI_STARTED_BY, and env. It sets run's command,
 // log, PID, and process start, and has the launcher wait for it unless it
 // hands its agents over. It records nothing: the caller does, as started or
@@ -1366,7 +1392,7 @@ func (l *launcher) spawn(ctx context.Context, run *AgentRun, argv []string, subj
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), argv[0], argv[1:]...)
 	cmd.Dir = l.entry.Root
 	cmd.Stdout, cmd.Stderr = out, out
-	cmd.Env = append(l.withoutSpendKeys(agentEnv(os.Environ())), "FLAI_AGENT="+run.Agent, "FLAI_SESSION="+at.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
+	cmd.Env = append(l.withoutForgeTokens(l.withoutSpendKeys(agentEnv(os.Environ()))), "FLAI_AGENT="+run.Agent, "FLAI_SESSION="+at.Format("20060102T150405"), "FLAI_STARTED_BY=flai-serve")
 	cmd.Env = append(cmd.Env, env...)
 	Detach(cmd)
 	if err := cmd.Start(); err != nil {

@@ -857,6 +857,33 @@ func TestTheDashboardPublishesAndNeverPushes(t *testing.T) {
 	}
 }
 
+// S-0393: forge is a host action, off by default, that a dashboard sees and
+// that says what it has flai serve do: push a story under pull-request
+// acceptance and open its pull request with the token the host names,
+// which no agent holds. No method asks for it.
+func TestForgeIsAHostActionOffByDefault(t *testing.T) {
+	means, ok := Actions[ActionForge]
+	if !ok || ActionForge != "forge" || !DashboardSees(ActionForge) {
+		t.Fatalf("forge is a host action a dashboard sees: %q", means)
+	}
+	for _, want := range []string{"pull-request", "origin", "pull request", "flai serve forge", "GITHUB_TOKEN", "never get the token's variable", "flai forge push", "acceptance.mode local, nothing is pushed"} {
+		if !strings.Contains(means, want) {
+			t.Errorf("forge's text lacks %q: %q", want, means)
+		}
+	}
+	if EnableCommand(ActionForge) != "flai serve enable forge" {
+		t.Errorf("enabled with %q", EnableCommand(ActionForge))
+	}
+	if on, ok := enabledActions(Host{}, "/x")[ActionForge]; !ok || on {
+		t.Errorf("project.info names forge, off with nothing enabled: %v %v", on, ok)
+	}
+	for name, sp := range specs() {
+		if sp.action == ActionForge {
+			t.Errorf("%s asks for the forge action, which flai serve takes alone", name)
+		}
+	}
+}
+
 // S-0257: auto-approve, which has permission_prompt allow a flai serve
 // agent's write under .claude/ without asking, is the operator's shell tool
 // as auto-publish is (ADR-0067): a dashboard is neither told of it nor turns

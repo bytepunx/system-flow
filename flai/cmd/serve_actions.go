@@ -567,20 +567,25 @@ func (a *app) agentConfig(root string) serve.AgentConfig {
 	for name, set := range cfg.Agent.Harnesses {
 		lifts[name] = serve.HarnessLifts{GuardNone: set.Guard == config.GuardNone, DenyProtected: set.DenyProtected}
 	}
+	var forgeTokens []string
+	for _, f := range config.KnownForges() {
+		forgeTokens = append(forgeTokens, cfg.ForgeTokenEnv(f))
+	}
 	self, _ := os.Executable()
 	return serve.AgentConfig{
-		Flai:         self,
-		Enabled:      cfg.ActionEnabled(hostapi.ActionAgent, root),
-		Plan:         cfg.ActionEnabled(hostapi.ActionPlan, root),
-		Orchestrate:  cfg.ActionEnabled(hostapi.ActionOrchestrate, root),
-		Analyze:      cfg.ActionEnabled(hostapi.ActionAnalyze, root),
-		Command:      cfg.Agent.Command,
-		Harnesses:    hosts,
-		Providers:    cfg.Agent.Providers,
-		Name:         cfg.Agent.Name,
-		AutoRestarts: cfg.Agent.AutoRestartLimit(),
-		Lifts:        lifts,
-		AutoApprove:  cfg.ActionEnabled(hostapi.ActionAutoApprove, root),
+		Flai:           self,
+		Enabled:        cfg.ActionEnabled(hostapi.ActionAgent, root),
+		Plan:           cfg.ActionEnabled(hostapi.ActionPlan, root),
+		Orchestrate:    cfg.ActionEnabled(hostapi.ActionOrchestrate, root),
+		Analyze:        cfg.ActionEnabled(hostapi.ActionAnalyze, root),
+		Command:        cfg.Agent.Command,
+		Harnesses:      hosts,
+		Providers:      cfg.Agent.Providers,
+		Name:           cfg.Agent.Name,
+		AutoRestarts:   cfg.Agent.AutoRestartLimit(),
+		Lifts:          lifts,
+		AutoApprove:    cfg.ActionEnabled(hostapi.ActionAutoApprove, root),
+		ForgeTokenEnvs: forgeTokens,
 	}
 }
 

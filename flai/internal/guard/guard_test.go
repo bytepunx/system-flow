@@ -1385,3 +1385,86 @@ func TestOnlyTheOperatorsSessionStartsTheAnalyzer(t *testing.T) {
 		}
 	}
 }
+
+// S-0393: flai forge push is the operator's. Every session flai serve
+// starts, and every sub-agent, is refused it, however the command line runs
+// flai, with a reason naming the forge host action; flai forge check and
+// status read and pass; the operator's own session runs all three.
+func TestFlaiForgePushIsTheOperators(t *testing.T) {
+	commands := append(append([]string{}, g.Commands...), "forge")
+	sub := func(e Event) Event { e.AgentID, e.AgentType = "a1", "verifier"; return e }
+	sessions := []struct {
+		name  string
+		guard Guard
+		sub   bool   // the calls are a sub-agent's
+		who   string // how the refusal names the caller
+		ask   string // what the refusal says to do instead
+	}{
+		{"story's agent", Guard{Commands: commands, Story: "S-0001", Served: true}, false, "the story's agent cannot", "Move the story to review"},
+		{"story's agent's sub-agent", Guard{Commands: commands, Story: "S-0001", Served: true}, true, "a sub-agent (verifier) cannot", "final message"},
+		{"planner", Guard{Commands: commands, Role: RolePlan}, false, "the planner cannot", "thread_open"},
+		{"planner's sub-agent", Guard{Commands: commands, Role: RolePlan}, true, "a sub-agent (verifier) cannot", "final message"},
+		{"orchestrator", Guard{Commands: commands, Role: RoleOrchestrate, Permissions: allOn}, false, "the orchestrator cannot", "thread_open"},
+		{"analyzer", Guard{Commands: commands, Role: RoleAnalyze}, false, "the analyzer cannot", "thread_open"},
+		{"session flai serve started", Guard{Commands: commands, Served: true}, false, "a session flai serve started cannot", "thread_open"},
+		{"operator's sub-agent", Guard{Commands: commands}, true, "a sub-agent (verifier) cannot", "final message"},
+	}
+	pushes := []Event{
+		bash("", "flai forge push S-0001"),
+		bash("", "cd /w && scripts/flai.sh forge push S-0001"),
+		bash("", "/home/alex/.flai/bin/flai forge push S-0001 --json"),
+		bash("", "bin/flai --config c.json forge push S-0001"),
+		bash("", "GITHUB_TOKEN=x env flai forge push S-0001"),
+		bash("", "bash -c 'flai forge push S-0001'"),
+		bash("", "flai board --json; flai forge push S-0001"),
+	}
+	reads := []Event{
+		bash("", "flai forge check --json"),
+		bash("", "scripts/flai.sh forge status S-0001"),
+		bash("", "flai forge push --help"),
+	}
+	for _, s := range sessions {
+		as := func(e Event) Event {
+			if s.sub {
+				return sub(e)
+			}
+			return e
+		}
+		for _, e := range pushes {
+			r := s.guard.Decide(as(e))
+			if !strings.Contains(r.Why, s.who) || !strings.Contains(r.Why, "forge host action") || !strings.Contains(r.Why, "flai forge push is the operator's") || !strings.Contains(r.Why, s.ask) {
+				t.Errorf("%s: %q: %q", s.name, e.ToolInput.Command, r.Why)
+			}
+			if r.Needs != "" {
+				t.Errorf("%s: no permission allows it, yet the refusal needs %s", s.name, r.Needs)
+			}
+		}
+		for _, e := range reads {
+			r := s.guard.Decide(as(e))
+			if strings.Contains(r.Why, "flai forge push is the operator's") {
+				t.Errorf("%s: %q refused as a push: %s", s.name, e.ToolInput.Command, r.Why)
+			}
+		}
+	}
+	// a story's agent, which reads and writes through flai freely, is let
+	// through the reads altogether
+	for _, e := range reads {
+		if why := (Guard{Commands: commands, Story: "S-0001", Served: true}).Check(e); why != "" {
+			t.Errorf("the story's agent: %q refused: %s", e.ToolInput.Command, why)
+		}
+	}
+	operator := Guard{Commands: commands}
+	for _, e := range append(append([]Event{}, pushes...), reads...) {
+		if why := operator.Check(e); why != "" {
+			t.Errorf("the operator's session: %q refused: %s", e.ToolInput.Command, why)
+		}
+	}
+	// the orchestrator's refusal names the call, so that its activity
+	// document logs it; a story's agent's does not
+	if r := (Guard{Commands: commands, Role: RoleOrchestrate, Permissions: allOn}).Decide(bash("", "flai forge push S-0001")); r.Call != "flai forge push S-0001" {
+		t.Errorf("the orchestrator's refusal: %+v", r)
+	}
+	if r := (Guard{Commands: commands, Story: "S-0001", Served: true}).Decide(bash("", "flai forge push S-0001")); r.Call != "" {
+		t.Errorf("a story's agent's refusal is logged as the orchestrator's: %+v", r)
+	}
+}

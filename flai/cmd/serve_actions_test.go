@@ -82,7 +82,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, components, dashboard, host, orchestrate, plan, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, components, dashboard, forge, host, orchestrate, plan, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -616,12 +616,19 @@ func TestServeForge(t *testing.T) {
 	if got := saved()["github"]; got.TokenEnv != "FLAI_GH_TOKEN" {
 		t.Errorf("a refused value changes nothing: %+v", got)
 	}
+	// S-0393: flai serve is told the variable it keeps from every agent
+	if got := (&app{}).agentConfig(root).ForgeTokenEnvs; len(got) != 1 || got[0] != "FLAI_GH_TOKEN" {
+		t.Errorf("the forge tokens kept from the agents: %q, want FLAI_GH_TOKEN", got)
+	}
 	data, err := os.ReadFile(cfgPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if out, _, _ := run("github", "--reset"); out != "forge github: its token in the variable GITHUB_TOKEN (default), not set in this environment\n" || saved() != nil {
 		t.Errorf("reset: %q %+v", out, saved())
+	}
+	if got := (&app{}).agentConfig(root).ForgeTokenEnvs; len(got) != 1 || got[0] != "GITHUB_TOKEN" {
+		t.Errorf("the forge tokens kept from the agents once reset: %q, want GITHUB_TOKEN", got)
 	}
 	if strings.Contains(seen.String()+string(data), token) {
 		t.Errorf("the token is in what flai printed or wrote:\n%s\n%s", seen.String(), data)
