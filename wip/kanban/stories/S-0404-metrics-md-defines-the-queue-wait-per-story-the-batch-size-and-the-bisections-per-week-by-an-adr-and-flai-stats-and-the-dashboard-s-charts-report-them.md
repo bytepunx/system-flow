@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:58Z
-updated: 2026-10-17T17:33:42Z
+updated: 2026-10-17T18:25:19Z
 transitions: []
 tags: [cli, dashboard]
 topics: [analysis, orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 37m
-  delivery: 2026-10-17T22:01:00Z
-  basis: "Its own forecast of 37m; 11th in the pull order with an in-progress limit of 5, behind S-0395, S-0396, S-0397, S-0241, S-0398, S-0399, S-0400, S-0401, S-0402 and S-0403."
+  delivery: 2026-10-17T22:51:00Z
+  basis: "Its own forecast of 37m; 9th in the pull order with an in-progress limit of 5, behind S-0397, S-0241, S-0398, S-0399, S-0400, S-0401, S-0402 and S-0403."
   by: flai
-  at: 2026-10-17T17:33:42Z
+  at: 2026-10-17T18:25:19Z
 ---
 # S-0404 metrics.md defines the queue wait per story, the batch size, and the bisections per week by an ADR, and flai stats and the dashboard's charts report them
 
