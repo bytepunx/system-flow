@@ -3,15 +3,36 @@ id: T-1890
 type: task
 nature: feature
 title: flaiover's manifest entry names its components' setup stylesheet and excludes what cannot render in the harness
-status: backlog
+status: done
 parent: S-0444
 owner: alex
 created: 2026-10-16T21:39:16Z
-updated: 2026-10-16T21:39:59Z
-transitions: []
+updated: 2026-10-17T05:14:38Z
+transitions:
+  - to: ready
+    at: 2026-10-17T05:09:30Z
+    by: agent-S-0444
+  - to: in-progress
+    at: 2026-10-17T05:09:31Z
+    by: agent-S-0444
+  - to: done
+    at: 2026-10-17T05:14:38Z
+    by: agent-S-0444
 stream: S-0444
 tags: [dashboard]
 touches: [system-flow.yaml]
+usage:
+  source: log
+  seconds: 307
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 10636
+      cache_read: 1900739
+      cache_write: 54930
+      cost: 0.9303
 ---
 # T-1890 flaiover's manifest entry names its components' setup stylesheet and excludes what cannot render in the harness
 

@@ -3,16 +3,37 @@ id: T-1891
 type: task
 nature: feature
 title: Each flaiover component that needs data to render gets an examples file under design/components/flaiover, in light and dark
-status: backlog
+status: done
 parent: S-0444
 owner: alex
 created: 2026-10-16T21:40:04Z
-updated: 2026-10-16T21:49:04Z
-transitions: []
+updated: 2026-10-17T05:28:17Z
+transitions:
+  - to: ready
+    at: 2026-10-17T05:14:48Z
+    by: agent-S-0444
+  - to: in-progress
+    at: 2026-10-17T05:14:49Z
+    by: agent-S-0444
+  - to: done
+    at: 2026-10-17T05:28:16Z
+    by: agent-S-0444
 stream: S-0444
 tags: [dashboard]
-touches: [design/components/flaiover]
+touches: [design/components/flaiover, system-flow.yaml]
 after: [T-1890]
+usage:
+  source: log
+  seconds: 807
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 176
+      output: 57649
+      cache_read: 10301919
+      cache_write: 297718
+      cost: 5.042
 ---
 # T-1891 Each flaiover component that needs data to render gets an examples file under design/components/flaiover, in light and dark
 

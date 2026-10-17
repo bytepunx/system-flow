@@ -3,11 +3,11 @@ id: S-0444
 type: story
 nature: feature
 title: Every component of flaiover renders on the Components page, with the setup its stylesheet needs and examples for the components that need data
-status: in-progress
+status: done
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:39:02Z
-updated: 2026-10-17T06:39:47Z
+updated: 2026-10-17T06:40:02Z
 transitions:
   - to: ready
     at: 2026-10-17T01:02:25Z
@@ -20,6 +20,12 @@ transitions:
     by: agent-S-0444
   - to: in-progress
     at: 2026-10-17T06:39:19Z
+    by: alex
+  - to: review
+    at: 2026-10-17T06:39:50Z
+    by: alex
+  - to: done
+    at: 2026-10-17T06:40:02Z
     by: alex
 tags: [dashboard]
 topics: [components, dashboard, design]
@@ -47,15 +53,15 @@ usage:
       cost: 11.376
   strategic:
     - kind: orchestrator
-      seconds: 1507
+      seconds: 3140
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 83
-          output: 1458
-          cache_read: 18126244
-          cache_write: 23827
-          cost: 4.5502
+          input: 88
+          output: 1492
+          cache_read: 19731652
+          cache_write: 27550
+          cost: 4.9536
         - model: claude-sonnet-5-5
           input: 4
           output: 34
