@@ -620,6 +620,27 @@ describe('editing the design system on the design page (S-0383)', () => {
 		await reload();
 		expect(q('design-edit')).toBeNull();
 	});
+
+	it('takes up the draft another tab writes, and drops its edits when another tab drops it', async () => {
+		projectState.current = 'alpha';
+		await open();
+		const other = (newValue: string | null) =>
+			window.dispatchEvent(
+				new StorageEvent('storage', { key: draftKey('alpha'), newValue, storageArea: localStorage })
+			);
+		localStorage.setItem(draftKey('alpha'), JSON.stringify({ [lightPrimary]: PRIMARY }));
+		other(localStorage.getItem(draftKey('alpha')));
+		await settle();
+		expect(field('color.primary, light').value).toBe('#336699');
+		expect(changedMarks()).toEqual(['edit-color.primary']);
+
+		localStorage.removeItem(draftKey('alpha'));
+		other(null);
+		await settle();
+		expect(changedMarks()).toEqual([]);
+		expect(button('Save').disabled).toBe(true);
+		expect(localStorage.getItem(draftKey('alpha'))).toBeNull();
+	});
 });
 
 const STYLESHEET = 'flaiover/src/routes/layout.css';

@@ -11,7 +11,7 @@
 	// leaving with unsaved changes asks first.
 	// The unsaved edits are kept in this browser per project (S-0441, ADR-0151): written on each
 	// change, restored over the saved tokens when the page loads again, and dropped once saved or
-	// discarded.
+	// discarded. A draft another tab writes, or drops from the Components page, is taken up here.
 	// Proposals (S-0384) lists the open stories whose branches change the token file or the
 	// guidance, through /api/design/proposals, read again when a document or a work item changes;
 	// comparing one reads its design system from its worktree and shows it beside the main branch's,
@@ -29,7 +29,7 @@
 	import { enhance, render } from '$lib/markdown';
 	import { themeState } from '$lib/theme.svelte';
 	import { projectState } from '$lib/project.svelte';
-	import { loadDraft, saveDraft } from '$lib/design/draft';
+	import { loadDraft, onDraft, saveDraft } from '$lib/design/draft';
 	import {
 		changed,
 		composeTokenFile,
@@ -380,6 +380,15 @@
 		if (restored) saveDraft(project, pruneEdits(saved, edits));
 	});
 
+	/** Takes up the draft another tab wrote, so that a drop on the Components page drops the edits. */
+	function adopt(draft: Edits) {
+		if (!restored || !editable) return;
+		const kept = pruneEdits(saved, draft);
+		if (Object.keys(kept).length > 0 && !editing) startEditing();
+		edits = kept;
+		generation++;
+	}
+
 	// Unsaved edits are kept in this browser, not saved: ask before leaving, in the app and out of it.
 	beforeNavigate((nav) => {
 		if (dirty && !confirm('Leave without saving your changes?')) nav.cancel();
@@ -391,6 +400,7 @@
 		// proposal's merge changes them. A story moved, accepted, or cancelled, or an epic closed,
 		// changes the proposals or the epics offered.
 		const stops = [
+			onDraft(project, adopt),
 			follow(['document'], () => void refresh()),
 			follow(['item'], () => {
 				if (!design?.exists) return;

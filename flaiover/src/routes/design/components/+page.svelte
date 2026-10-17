@@ -12,12 +12,16 @@
 	// removed, and on a change to the manifest, whose components key says which files are components.
 	// Beside the frame (S-0440), the props panel sets the component's props, which are sent to the
 	// harness whole on each change and kept in the URL as ?props=, base64url JSON, so that a link
-	// renders the same; the event log lists the calls of its function props.
+	// renders the same; the event log lists the calls of its function props. The frames show the
+	// tried tokens (S-0441): the Design page's unsaved edits, kept in this browser as the project's
+	// draft and followed from another tab by the storage event, laid over the saved tokens.
 	import type {
 		ComponentProp,
 		ComponentsCatalogue,
 		ComponentsProject,
-		ComponentsStatus
+		ComponentsStatus,
+		DesignSystem,
+		DesignTheme
 	} from '$lib/server/repo';
 	import type { Called, Props, Theme } from '$lib/explorer/protocol';
 	import {
@@ -41,6 +45,10 @@
 	import ComponentFrame from '$lib/components/explorer/ComponentFrame.svelte';
 	import PropsPanel from '$lib/components/explorer/PropsPanel.svelte';
 	import EventLog, { logged, type Logged } from '$lib/components/explorer/EventLog.svelte';
+	import { projectState } from '$lib/project.svelte';
+	import { clearDraft, loadDraft, onDraft, type Edits } from '$lib/design/draft';
+	import { editedThemes } from '$lib/design/tokens';
+	import { stylesheetDeclarations } from '$lib/explorer/tokens';
 
 	const ENABLE = 'flai serve enable components';
 	// Asking at least this often keeps the host from stopping a dev server as idle.
@@ -205,11 +213,82 @@
 		events = logged(events, { at: Date.now(), name: m.name, args: m.args });
 	}
 
+	// ---- Tried tokens (S-0441) ----
+	// The saved tokens are read only while there is a draft to lay over them, again on a document
+	// change, which a save of the token file is, and forgotten with the draft, so that a later draft
+	// is laid over what is saved by then. The frames are sent the generated stylesheet's custom
+	// properties for the tried themes, every one, light and dark.
+
+	// The layout remounts the page on a change of project, so its draft is this mount's.
+	const draftProject = projectState.current;
+	let draft = $state.raw<Edits>({});
+	// The saved themes, and the token file's text, which says which tokens dark overrides.
+	let saved: { themes: DesignTheme[]; raw: string | null } | null = $state.raw(null);
+	let savedError = $state<string | null>(null);
+	let reading = false;
+
+	const held = (o: object) => Object.keys(o).length > 0;
+	const tried = $derived.by(() => {
+		if (!saved || !held(draft)) return null;
+		const { light, dark } = stylesheetDeclarations(editedThemes(saved.themes, draft, saved.raw));
+		return held(light) || held(dark) ? { light, dark } : null;
+	});
+
+	/** The token file's text, for a resolver document's dark context; null when it is not read,
+	 * and then dark takes only its own edits, as on the Design page before the file is read. */
+	async function readRaw(): Promise<string | null> {
+		const r = await api('/api/design/tokens');
+		if (!r.ok) return null;
+		const body = await r.json().catch(() => ({}));
+		return typeof body.content === 'string' ? body.content : null;
+	}
+
+	/** Reads the saved tokens the draft is laid over; a failed read keeps what was last read. */
+	async function readSaved() {
+		if (reading) return;
+		reading = true;
+		try {
+			const r = await api('/api/design');
+			const body = await r.json().catch(() => ({}));
+			if (!r.ok) throw new Error(body.error ?? r.statusText);
+			const design = body as DesignSystem;
+			// a plain token file's one value serves both themes, so a light edit reaches dark
+			const raw = design.resolver ? await readRaw() : '{}';
+			if (held(draft)) saved = { themes: design.themes, raw };
+			savedError = null;
+		} catch (e) {
+			savedError = `Could not read the saved tokens to lay the tried ones over: ${errorText(e)}`;
+		} finally {
+			reading = false;
+		}
+	}
+
+	/** Takes the project's draft, reading the saved tokens when there are none to lay it over. */
+	function takeDraft(edits: Edits) {
+		draft = edits;
+		if (!held(edits)) saved = savedError = null;
+		else if (!saved) void readSaved();
+	}
+
+	/** Drops the draft, here and on the Design page's next reload, and the frames' tried tokens. */
+	function dropDraft() {
+		clearDraft(draftProject);
+		takeDraft({});
+	}
+
+	onMount(() => {
+		takeDraft(loadDraft(draftProject));
+		return onDraft(draftProject, takeDraft);
+	});
+
 	onMount(() => {
 		void load();
 		const timer = setInterval(() => void load(), POLL_MS);
 		// flai serve watches the manifest but not a sub-project's sources: a new component shows at the next ask
-		const stop = follow(['document'], () => void load());
+		const stop = follow(['document'], () => {
+			void load();
+			if (held(draft)) void readSaved();
+		});
 		return () => {
 			clearInterval(timer);
 			stop();
@@ -307,6 +386,23 @@
 					>
 				</div>
 			</div>
+			{#if tried}
+				<div
+					class="mt-2 flex flex-wrap items-center gap-3 text-sm"
+					role="status"
+					data-testid="components-tried"
+				>
+					<span class="text-muted">
+						Showing tried tokens: the Design page's unsaved edits, kept in this browser.
+					</span>
+					<button type="button" class={[button, 'border-line']} onclick={dropDraft}
+						>Drop tried tokens</button
+					>
+				</div>
+			{/if}
+			{#if savedError}
+				<p class="mt-2 text-xs text-warn" data-testid="components-tried-error">{savedError}</p>
+			{/if}
 			{#if component?.error}
 				<p class="mt-2 text-xs text-warn" data-testid="component-props-error">
 					Its props could not be read: {component.error}
@@ -369,6 +465,7 @@
 										functions={logs}
 										{snippets}
 										missing={unset}
+										tokens={tried}
 										onevent={called}
 									/>
 								</div>

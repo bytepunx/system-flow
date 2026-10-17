@@ -5,16 +5,22 @@
 // turn the host action on or upgrade flai, and asks again every minute. S-0440: beside the frame,
 // the props panel sends the component its props, a change as a props message, keeps them in the
 // URL, and shows a required prop without a value in the frame's place; the event log lists the
-// calls of its function props.
+// calls of its function props. S-0441: the frames are sent the tried tokens, the Design page's
+// unsaved edits kept in this browser, on load and on another tab's change, and again on each
+// ready; the page says it shows them, and drops them on request.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type {
 	Component,
 	ComponentProp,
 	ComponentsCatalogue,
-	ComponentsStatus
+	ComponentsStatus,
+	DesignSystem,
+	DesignToken
 } from '$lib/server/repo';
 import { fromQuery, toQuery } from '$lib/explorer/controls';
+import { draftKey } from '$lib/design/draft';
+import { colorFromHex } from '$lib/design/tokens';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -535,6 +541,145 @@ describe('the components page (S-0439)', () => {
 
 			await click(q(`component-${BUTTON}`));
 			expect(entries()).toHaveLength(0);
+		});
+	});
+
+	describe('the tried tokens (S-0441)', () => {
+		const colour = (name: string, hex: string): DesignToken => ({
+			path: `color.${name}`,
+			type: 'color',
+			value: { colorSpace: 'srgb', hex },
+			css: hex,
+			variables: [{ name: `--color-${name}`, value: hex }],
+			line: 1
+		});
+		const tokens = [colour('background', '#ffffff'), colour('primary', '#2563eb')];
+		// a plain token file: its one value serves both themes
+		const design: DesignSystem = {
+			path: 'design/system/design-system.tokens.json',
+			exists: true,
+			guidance: 'design/system/design-system.md',
+			headings: [],
+			resolver: false,
+			themes: [
+				{ name: 'light', tokens },
+				{ name: 'dark', tokens }
+			],
+			problems: [],
+			css: '',
+			tailwind: '',
+			contrast: []
+		};
+		const primary = (hex: string) => ({ 'light:color.primary': colorFromHex(hex) });
+		// The tokens message a draft of primary at hex gives: dark is light's, so it carries none.
+		const triedTokens = (hex: string) => ({
+			source: 'flai-components',
+			version: 1,
+			type: 'tokens',
+			light: { '--color-background': '#ffffff', '--color-primary': hex },
+			dark: {}
+		});
+		const EMPTY = { source: 'flai-components', version: 1, type: 'tokens', light: {}, dark: {} };
+		const KEY = draftKey(null);
+
+		const serveTried = () =>
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/components') return answer({ catalogue, status: running });
+				if (url === '/api/design') return answer(design);
+				return answer({ error: `unexpected ${url}` }, 404);
+			});
+		const designGets = () => api.mock.calls.filter(([url]) => url === '/api/design').length;
+		/** Another tab writes the draft, or clears it with null. */
+		const fromAnotherTab = async (newValue: string | null) => {
+			window.dispatchEvent(
+				new StorageEvent('storage', { key: KEY, newValue, storageArea: localStorage })
+			);
+			await settle();
+		};
+		const tokensSent = (w: Fake) => posted(w).filter((m) => m.type === 'tokens');
+		/** Frames the button, and the harness is ready. */
+		const framed = async () => {
+			await click(q(`component-${BUTTON}`));
+			const [w] = fakeWindows();
+			await harness(w, { type: 'ready' });
+			return w;
+		};
+
+		afterEach(() => localStorage.clear());
+
+		it('sends a kept draft as tokens before the component, and says it shows tried tokens', async () => {
+			localStorage.setItem(KEY, JSON.stringify(primary('#ff0000')));
+			serveTried();
+			await show();
+			expect(designGets()).toBe(1);
+			// a plain token file needs no raw text to carry a light edit into dark
+			expect(api.mock.calls.some(([url]) => url === '/api/design/tokens')).toBe(false);
+			const w = await framed();
+			expect(posted(w).map((m) => m.type)).toEqual(['theme', 'tokens', 'select']);
+			expect(posted(w)[1]).toEqual(triedTokens('#ff0000'));
+			expect(text(q('components-tried')!)).toContain('Showing tried tokens');
+			expect(buttonNamed('Drop tried tokens')).toBeDefined();
+		});
+
+		it("reads nothing and sends nothing without a draft, then follows another tab's draft", async () => {
+			serveTried();
+			await show();
+			const w = await framed();
+			expect(designGets()).toBe(0);
+			expect(tokensSent(w)).toHaveLength(0);
+			expect(q('components-tried')).toBeNull();
+
+			await fromAnotherTab(JSON.stringify(primary('#ff0000')));
+			expect(designGets()).toBe(1);
+			expect(posted(w).at(-1)).toEqual(triedTokens('#ff0000'));
+			expect(q('components-tried')).not.toBeNull();
+
+			await fromAnotherTab(JSON.stringify(primary('#00ff00')));
+			// the saved tokens are read once while the draft lasts
+			expect(designGets()).toBe(1);
+			expect(posted(w).at(-1)).toEqual(triedTokens('#00ff00'));
+
+			// saved or discarded on the Design page: the frame is told to drop them
+			await fromAnotherTab(null);
+			expect(posted(w).at(-1)).toEqual(EMPTY);
+			expect(q('components-tried')).toBeNull();
+			await fromAnotherTab(JSON.stringify(primary('#0000ff')));
+			// a later draft is laid over the tokens saved by then
+			expect(designGets()).toBe(2);
+			expect(posted(w).at(-1)).toEqual(triedTokens('#0000ff'));
+		});
+
+		it('drops the draft and the tried tokens on request', async () => {
+			localStorage.setItem(KEY, JSON.stringify(primary('#ff0000')));
+			serveTried();
+			await show();
+			const w = await framed();
+			await click(buttonNamed('Drop tried tokens'));
+			expect(localStorage.getItem(KEY)).toBeNull();
+			expect(posted(w).at(-1)).toEqual(EMPTY);
+			expect(q('components-tried')).toBeNull();
+		});
+
+		it('sends the tried tokens again on each ready, so a reloaded harness keeps them', async () => {
+			localStorage.setItem(KEY, JSON.stringify(primary('#ff0000')));
+			serveTried();
+			await show();
+			const w = await framed();
+			const before = posted(w).length;
+			await harness(w, { type: 'ready' });
+			const again = posted(w).slice(before);
+			expect(again.map((m) => m.type)).toEqual(['theme', 'tokens', 'select']);
+			expect(tokensSent(w)).toEqual([triedTokens('#ff0000'), triedTokens('#ff0000')]);
+		});
+
+		it('reads the saved tokens again on a document change while a draft is kept', async () => {
+			localStorage.setItem(KEY, JSON.stringify(primary('#ff0000')));
+			serveTried();
+			await show();
+			expect(designGets()).toBe(1);
+			followed.f();
+			await settle();
+			expect(designGets()).toBe(2);
 		});
 	});
 
