@@ -3,15 +3,36 @@ id: T-1858
 type: task
 nature: feature
 title: An ADR records the dev server on a loopback port framed cross-origin, the components host action, the idle stop, and the page-to-harness protocol
-status: backlog
+status: done
 parent: S-0438
 owner: alex
 created: 2026-10-16T21:33:30Z
-updated: 2026-10-16T21:33:30Z
-transitions: []
+updated: 2026-10-16T23:11:39Z
+transitions:
+  - to: ready
+    at: 2026-10-16T23:09:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-16T23:09:42Z
+    by: system-flow
+  - to: done
+    at: 2026-10-16T23:11:39Z
+    by: system-flow
 stream: S-0438
 tags: [cli, dashboard]
 touches: [design/adrs, design/adrs/README.md, design/system/component-library.md]
+usage:
+  source: log
+  seconds: 117
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 138
+      cache_read: 1305544
+      cache_write: 20339
+      cost: 0.6164
 ---
 # T-1858 An ADR records the dev server on a loopback port framed cross-origin, the components host action, the idle stop, and the page-to-harness protocol
 

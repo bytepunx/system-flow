@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 740
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 62
-      output: 262
-      cache_read: 2396225
-      cache_write: 130741
-      cost: 1.1738
+      input: 45
+      output: 17612
+      cache_read: 2500101
+      cache_write: 82425
+      cost: 1.3528
 ---
 # T-1849 flai/internal/docedit reads and saves a non-markdown file by doc.save's rules, and writes the stylesheet with the token file
 

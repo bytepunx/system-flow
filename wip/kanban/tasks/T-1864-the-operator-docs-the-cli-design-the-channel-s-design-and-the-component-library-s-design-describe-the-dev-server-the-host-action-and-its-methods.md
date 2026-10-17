@@ -3,16 +3,37 @@ id: T-1864
 type: task
 nature: feature
 title: The operator docs, the CLI design, the channel's design, and the component library's design describe the dev server, the host action, and its methods
-status: backlog
+status: done
 parent: S-0438
 owner: alex
 created: 2026-10-16T21:34:18Z
-updated: 2026-10-16T21:34:18Z
-transitions: []
+updated: 2026-10-17T00:39:46Z
+transitions:
+  - to: ready
+    at: 2026-10-17T00:32:50Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-17T00:32:51Z
+    by: system-flow
+  - to: done
+    at: 2026-10-17T00:39:46Z
+    by: system-flow
 stream: S-0438
 tags: [cli, dashboard]
 touches: [docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, docs/users/flai.md, design/system/dashboard-host-channel.md, design/system/component-library.md]
 after: [T-1862, T-1863]
+usage:
+  source: log
+  seconds: 405
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 517
+      cache_read: 5135875
+      cache_write: 155524
+      cost: 2.4599
 ---
 # T-1864 The operator docs, the CLI design, the channel's design, and the component library's design describe the dev server, the host action, and its methods
 

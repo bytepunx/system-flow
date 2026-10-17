@@ -24,16 +24,16 @@ touches: [design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md,
 after: [T-1851]
 usage:
   source: log
-  seconds: 238
+  seconds: 243
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 70
-      output: 334
-      cache_read: 2991018
-      cache_write: 116389
-      cost: 1.4434
+      input: 55
+      output: 21658
+      cache_read: 3074364
+      cache_write: 101358
+      cost: 1.6635
 ---
 # T-1852 The CLI design, the user docs, and the design system tool's design say file.get and file.save are built, what they reach, and the size limit
 

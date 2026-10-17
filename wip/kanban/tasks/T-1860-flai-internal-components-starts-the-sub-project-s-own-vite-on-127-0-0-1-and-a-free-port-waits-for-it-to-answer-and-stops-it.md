@@ -3,16 +3,37 @@ id: T-1860
 type: task
 nature: feature
 title: flai/internal/components starts the sub-project's own vite on 127.0.0.1 and a free port, waits for it to answer, and stops it
-status: backlog
+status: done
 parent: S-0438
 owner: alex
 created: 2026-10-16T21:33:43Z
-updated: 2026-10-16T21:33:43Z
-transitions: []
+updated: 2026-10-16T23:28:34Z
+transitions:
+  - to: ready
+    at: 2026-10-16T23:12:22Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-16T23:12:23Z
+    by: system-flow
+  - to: done
+    at: 2026-10-16T23:28:34Z
+    by: system-flow
 stream: S-0438
 tags: [cli]
-touches: [flai/internal/components/devserver.go, flai/internal/components/devserver_test.go]
+touches: [flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/internal/components/proc_unix.go, flai/internal/components/proc_windows.go]
 after: [T-1858]
+usage:
+  source: log
+  seconds: 971
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 186
+      cache_read: 1363713
+      cache_write: 87099
+      cost: 0.6745
 ---
 # T-1860 flai/internal/components starts the sub-project's own vite on 127.0.0.1 and a free port, waits for it to answer, and stops it
 

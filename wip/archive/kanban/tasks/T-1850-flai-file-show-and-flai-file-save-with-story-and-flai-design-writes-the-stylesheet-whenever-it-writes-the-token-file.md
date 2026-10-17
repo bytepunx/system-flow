@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 856
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 58
-      output: 265
-      cache_read: 2815071
-      cache_write: 128198
-      cost: 1.3671
+      input: 52
+      output: 20514
+      cache_read: 2911964
+      cache_write: 96004
+      cost: 1.5756
 ---
 # T-1850 flai file show and flai file save, with --story, and flai design writes the stylesheet whenever it writes the token file
 

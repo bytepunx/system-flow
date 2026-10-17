@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 463
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 86
-      output: 391
-      cache_read: 4489785
-      cache_write: 143264
-      cost: 2.152
+      input: 82
+      output: 32291
+      cache_read: 4583765
+      cache_write: 151121
+      cost: 2.4802
 ---
 # T-1851 The host methods file.get and file.save run flai file show and save, and the dashboard requires them
 

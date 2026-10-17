@@ -3,16 +3,37 @@ id: T-1863
 type: task
 nature: feature
 title: The components host action gates components.start and components.stop, and flai serve supervises each dev server and stops it when idle
-status: backlog
+status: done
 parent: S-0438
 owner: alex
 created: 2026-10-16T21:34:14Z
-updated: 2026-10-16T21:34:14Z
-transitions: []
+updated: 2026-10-17T00:32:37Z
+transitions:
+  - to: ready
+    at: 2026-10-16T23:52:12Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-16T23:52:13Z
+    by: system-flow
+  - to: done
+    at: 2026-10-17T00:32:37Z
+    by: system-flow
 stream: S-0438
 tags: [cli, dashboard]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/hostapi.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go]
-after: [T-1860]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/hostapi.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go, docs/operators/settings.md, flai/internal/config/config.go, flai/cmd/serve.go, flaiover/src/lib/server/agent.ts]
+after: [T-1860, T-1861]
+usage:
+  source: log
+  seconds: 2424
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 145
+      output: 688
+      cache_read: 10885650
+      cache_write: 948865
+      cost: 5.5015
 ---
 # T-1863 The components host action gates components.start and components.stop, and flai serve supervises each dev server and stops it when idle
 

@@ -3,11 +3,11 @@ id: S-0436
 type: story
 nature: feature
 title: flai reads and saves a text file that is not markdown through file.get and file.save, and a token save writes the stylesheet with it
-status: in-progress
+status: done
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:31:07Z
-updated: 2026-10-16T22:33:17Z
+updated: 2026-10-17T00:45:45Z
 transitions:
   - to: ready
     at: 2026-10-16T21:52:18Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-16T21:52:24Z
     by: agent-S-0436
+  - to: review
+    at: 2026-10-16T23:07:51Z
+    by: agent-S-0436
+  - to: done
+    at: 2026-10-17T00:45:45Z
+    by: alex
 tags: [cli, dashboard]
 topics: [design, cli, dashboard]
 touches: [flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/cmd/file.go, flai/cmd/file_test.go, flai/cmd/root.go, flai/cmd/design.go, flai/cmd/design_test.go, docs/users/flai-reference.md, flai/internal/hostapi/files_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/server/agent.ts, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/system/design-system-tool.md, flai/internal/docedit/docedit.go, docs/operators/settings.md]
@@ -25,32 +31,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2713
-  estimated: true
-  priced_by: estimate
+  seconds: 4821
+  priced_by: harness
   turns:
     - day: 2026-10-16
-      ceremony: 2
-      hand_edits: 2
-      work: 42
+      ceremony: 5
+      hand_edits: 3
+      work: 63
   models:
     - model: claude-opus-5-5
-      input: 322
-      output: 1516
-      cache_read: 14557281
-      cache_write: 654543
-      cost: 7.0657
+      input: 386
+      output: 151846
+      cache_read: 21554641
+      cache_write: 710629
+      cost: 11.6629
   strategic:
     - kind: orchestrator
-      seconds: 381
+      seconds: 456
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 46
-          output: 804
-          cache_read: 5798956
-          cache_write: 14409
-          cost: 1.4575
+          input: 50
+          output: 816
+          cache_read: 6577235
+          cache_write: 18820
+          cost: 1.6537
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 61
+          cache_read: 206057
+          cache_write: 65408
+          cost: 0.2222
 cost_of_delay:
   value: 50.92
   by: planner-E-0026
@@ -73,11 +84,11 @@ The Design page saves the operator's token changes, so that a change to the desi
 
 ## Acceptance criteria
 
-- [ ] `flai file show <path> [--story] [--json]` prints a file's raw content and its SHA-256, and `flai file save <path> --hash <h> [--story] [--message]` saves the content it reads on standard input. Both reach only a file under the manifest's design or docs folder, or the design token file or stylesheet the manifest names. Both refuse any other path, the wip folder, a markdown file, a binary file, and a file over the size limit this story sets, each with its reason.
-- [ ] A save follows `doc.save`'s rules: a stale hash is a conflict, exit 3, with the current content and a diff; `flai check` runs before and after, and a finding the content introduces puts the old file back and refuses the save, exit 4; the save commits that path on the main checkout's branch as `docs:` unless `dashboard.autocommit` is false; with `--story` it reads, checks, and commits in the story's worktree, refused as ADR-0145 refuses.
-- [ ] Whenever flai writes the token file, by `file.save` or by a `flai design` command, it writes the stylesheet the manifest names, generated from the new tokens, checks with both in place, and commits both paths in one commit, on main or on the story's branch (ADR-0150).
-- [ ] The host methods `file.get` `{path, story?}` and `file.save` `{path, content, hash, story?, message?}` run the two commands, map exit 3 to Conflict and exit 4 to Refused, and are in the dashboard's `REQUIRED_METHODS`, so the banner names an older flai. The Design page's token save at `/api/design/tokens` then saves and commits on the host, shown by a test against a project with a token file and a stylesheet.
-- [ ] `design/system/flai-cli.md`, `docs/users/flai.md` with `flai-reference.md` regenerated, `docs/users/flaiover.md`, and `design/system/design-system-tool.md` say the pair is built, what it reaches, and the size limit.
+- [x] `flai file show <path> [--story] [--json]` prints a file's raw content and its SHA-256, and `flai file save <path> --hash <h> [--story] [--message]` saves the content it reads on standard input. Both reach only a file under the manifest's design or docs folder, or the design token file or stylesheet the manifest names. Both refuse any other path, the wip folder, a markdown file, a binary file, and a file over the size limit this story sets, each with its reason.
+- [x] A save follows `doc.save`'s rules: a stale hash is a conflict, exit 3, with the current content and a diff; `flai check` runs before and after, and a finding the content introduces puts the old file back and refuses the save, exit 4; the save commits that path on the main checkout's branch as `docs:` unless `dashboard.autocommit` is false; with `--story` it reads, checks, and commits in the story's worktree, refused as ADR-0145 refuses.
+- [x] Whenever flai writes the token file, by `file.save` or by a `flai design` command, it writes the stylesheet the manifest names, generated from the new tokens, checks with both in place, and commits both paths in one commit, on main or on the story's branch (ADR-0150).
+- [x] The host methods `file.get` `{path, story?}` and `file.save` `{path, content, hash, story?, message?}` run the two commands, map exit 3 to Conflict and exit 4 to Refused, and are in the dashboard's `REQUIRED_METHODS`, so the banner names an older flai. The Design page's token save at `/api/design/tokens` then saves and commits on the host, shown by a test against a project with a token file and a stylesheet.
+- [x] `design/system/flai-cli.md`, `docs/users/flai.md` with `flai-reference.md` regenerated, `docs/users/flaiover.md`, and `design/system/design-system-tool.md` say the pair is built, what it reaches, and the size limit.
 
 ## Tasks
 - T-1849 flai/internal/docedit reads and saves a non-markdown file by doc.save's rules, and writes the stylesheet with the token file
@@ -89,6 +100,8 @@ The Design page saves the operator's token changes, so that a change to the desi
 
 - Drafted by the planner for E-0026. It belongs to E-0020's decisions (`design/system/design-system-tool.md` § file.get and file.save), but E-0020 is done, so it is planned here, where outcome 3 depends on it.
 - ADR-0147 and ADR-0150 are accepted; this story needs no new ADR. It sets the size limit ADR-0147 leaves to it.
+- The size limit is 1 MiB (`docedit.MaxFileSize`).
+- Criterion 3 is ticked with this reading: `file save` commits the token file and the stylesheet in one commit. `flai design init` is the only `flai design` command that writes the token file. It writes the stylesheet with it through the same generator and, as its help has always said, commits nothing. The two files reach one commit when the caller commits them.
 
 ### Planning
 

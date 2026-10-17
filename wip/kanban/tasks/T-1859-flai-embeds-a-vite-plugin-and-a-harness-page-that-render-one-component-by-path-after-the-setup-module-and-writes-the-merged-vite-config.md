@@ -3,16 +3,37 @@ id: T-1859
 type: task
 nature: feature
 title: flai embeds a Vite plugin and a harness page that render one component by path after the setup module, and writes the merged Vite config
-status: backlog
+status: done
 parent: S-0438
 owner: alex
 created: 2026-10-16T21:33:39Z
-updated: 2026-10-16T21:33:39Z
-transitions: []
+updated: 2026-10-16T23:28:23Z
+transitions:
+  - to: ready
+    at: 2026-10-16T23:12:21Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-16T23:12:21Z
+    by: system-flow
+  - to: done
+    at: 2026-10-16T23:28:23Z
+    by: system-flow
 stream: S-0438
 tags: [cli]
 touches: [flai/internal/components/harness/plugin.mjs, flai/internal/components/harness/harness.html, flai/internal/components/harness/harness.mjs, flai/internal/components/harness.go, flai/internal/components/harness_test.go]
 after: [T-1858]
+usage:
+  source: log
+  seconds: 962
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 94
+      output: 456
+      cache_read: 5002073
+      cache_write: 164090
+      cost: 2.4017
 ---
 # T-1859 flai embeds a Vite plugin and a harness page that render one component by path after the setup module, and writes the merged Vite config
 

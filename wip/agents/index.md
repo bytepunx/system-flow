@@ -1,18 +1,18 @@
 ---
 title: Active streams
-updated: 2026-10-16T22:44:54Z
+updated: 2026-10-17T00:45:46Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0436](S-0436.md) | flai reads and saves a text file that is not markdown through file.get and file.save, and a token save writes the stylesheet with it | in-progress | agent-S-0436 | 2026-10-16T22:37:47Z |
+| [S-0438](S-0438.md) | flai runs a Svelte sub-project's own Vite dev server on the host, behind the components host action, with a harness that renders any one of its components live | in-progress | system-flow | 2026-10-17T00:42:01Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 79 | 751.0673 USD | 31390 | 2026-10-16T21:51:32Z |
-| [orchestrator](orchestrator.md) | 578 | 780.4740 USD | 655673 | 2026-10-16T22:45:32Z |
+| [orchestrator](orchestrator.md) | 580 | 782.6865 USD | 657113 | 2026-10-16T23:09:32Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |
