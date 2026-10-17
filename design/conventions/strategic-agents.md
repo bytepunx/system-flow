@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-07
+updated: 2026-10-17
 audience: agent
 order: 140
 status: active
@@ -71,7 +71,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - With `plan_backlog_stories`, settle the threads a story's planner opened (its opener is `planner-S-nnnn`), whatever `answer_threads` says, and log each with `activity_log`. Approve a plan whose tasks, touches, and figures fit the story. Answer its questions, with a `source` when one settles them. For a cost of delay input it asks for, take the figure it recommends unless the thread or the story gives a reason for one of the alternatives it lists, and set it with `item_edit` `cost_of_delay` on the story: the inputs only, never a value, which the planner works out on its next run. Then reply, naming what you set, and resolve the thread. When a question asks for a change of scope or a decision not yet recorded, recommend instead and leave the thread open. Never confirm a recommendation.
 - With `accept_reviews`, take each story in review in turn. Never move a story to `done` with `item_move`.
   1. Verify it at the head of its branch, `story/<S-nnnn>`: read its last result with `flai verify <S-nnnn> --last --json`, and when it did not pass or its commit is not the branch's head, run `flai verify <S-nnnn> --json`, or the MCP tool `verify`. A run that did not pass is a blocker. Then hand its worktree, `.flai-cache/worktrees/<S-nnnn>` in the project, and that result to the verifier. It reads the result with `flai verify <S-nnnn> --last` rather than running the suite, checks the diff against each acceptance criterion, naming for each the changed files that meet it, and names the commit it verified.
-  2. Run `flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run` with that commit, and read the blockers.
+  2. Run `flai accept <S-nnnn> --by orchestrator --verified <commit> --dry-run` with that commit, and read the blockers. Under pull-request acceptance they include the pull request's required checks that have not passed, its standing requested changes, and its missing approvals. Only CI and the team's reviewers clear those.
   3. With no blocker and every criterion matched to changed files, write the evidence: a `Verdict:` line from the verifier's report, and one list item per criterion, `- <n>: <files>`. Run `flai accept <S-nnnn> --by orchestrator --verified <commit> --evidence -`, with the evidence on standard input through a heredoc, since you cannot write a file. Log the acceptance with `activity_log`, naming the story and the commit. A commit added after the verifier's run makes flai refuse: verify again.
   4. Otherwise leave the story in review. Open a thread on it with `thread_open` saying what is missing: each blocker, and each criterion you could not check against the diff. Log that decision.
 - `flai guard` refuses a call outside your permissions. Do not work around a refusal.
@@ -80,6 +80,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Log every action with `activity_log`: what you did, to which item, and the policy figure that justified it (the value, the value over duration, the forecast, or the candidate's rank).
 - Wait on `wait_for_events` between decisions.
 - Never edit code or documents, and never work a story yourself.
+- Never approve a pull request's review. The team's reviewers do.
 
 ## As the analyzer
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.98 - 2026-10-17
+
+- S-0395 Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each (patch, ADR-0169): in `strategic-agents.md`, the orchestrator's dry run step says that under pull-request acceptance the blockers include the pull request's required checks that have not passed, its standing requested changes, and its missing approvals, which only CI and the team's reviewers clear. The orchestrator gains a rule that it never approves a pull request's review. The blockers need a flai that has them, the release that carries S-0395.
+
 ## 1.0.97 - 2026-10-17
 
 - S-0393 Under pull-request acceptance, a story's move to review has flai serve push its branch and open or update one pull request from the project's pull request template (patch).

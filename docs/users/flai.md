@@ -2182,6 +2182,8 @@ Only you keep a removal: `--keep-removal` with `--by orchestrator` is refused. T
 
 A story whose branch changes a protected path ([Writes to protected paths](#writes-to-protected-paths)) is accepted by you alone, since the change reaches every agent once it is merged (S-0286, [ADR-0106](../../design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md)). You are its operator as the story's owner or the project's `owner` in `system-flow.yaml`; when neither is set, anyone but the orchestrator is. `flai accept --dry-run` names the operator and lists the files, such as `only the operator (alex) accepts S-0031: its branch changes paths Claude Code protects: .claude/settings.json, .mcp.json`, and `--json` has them as `operator_only` and `protected`. An acceptance by anyone else, an agent accepting on its own name among them, is refused before anything is merged, with the files named. Read the files in the diff before you accept. The board accepts as the project's `owner`, or as `designer` when none is set; when the story names an owner, set the project's `owner` to your name to accept it from the board.
 
+Under `acceptance.mode: pull-request`, acceptance also waits for the pull request's required checks, its standing requested changes, and its required approvals ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)).
+
 Another git process can hold the main checkout's index lock when acceptance commits: `flai serve`'s replan, an agent's commit, or another acceptance. Acceptance then waits and tries again, for up to about nine seconds, and never removes the lock file (S-0307). When the lock is still held, the acceptance fails and exits non-zero, in the dashboard too. The error shows git's own message and says what is left:
 
 ```text
@@ -2241,7 +2243,7 @@ flai forge push S-0042                                 # push it and open or upd
 
 A project chooses in `system-flow.yaml` how a story in review is accepted ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)): `acceptance.mode` is `local`, the default, which merges on this machine as above, or `pull-request`, which accepts through a pull request on the project's forge. `acceptance.forge` is the forge, `github`, the default and only one. `acceptance.merge_method` is how the forge merges the pull request: `merge`, the default, `squash`, or `rebase`.
 
-Under `pull-request`, a story's move to review has `flai serve` push its branch and open its pull request, then read its required checks and reviews back and send the story back to its agent when one fails, as below. Nothing merges one yet: `flai accept` still merges on this machine whatever the mode. Later releases gate acceptance on the checks and reviews, and merge the pull request by `merge_method`.
+Under `pull-request`, a story's move to review has `flai serve` push its branch and open its pull request, then read its required checks and reviews back and send the story back to its agent when one fails, as below. Every acceptance waits for those checks and reviews ([below](#the-acceptance-waits-for-the-pull-request)). Nothing merges one yet: `flai accept` still merges on this machine whatever the mode. A later release merges the pull request by `merge_method`.
 
 A value the manifest does not take, such as `pull_request`, stops every command that reads the manifest, naming the key and the values it takes, rather than falling back to `local`. Fix it or remove it by hand. `flai manifest set` refuses such a value before writing it.
 
@@ -2289,7 +2291,7 @@ Once `flai serve` has pushed a story in review, the same look reads its pull req
     review alex: changes-requested https://github.com/acme/shop/pull/12#pullrequestreview-9
 ```
 
-A check's state is `pending`, `passed`, or `failed`, then its log and its summary when the forge gives them. A review's state is `approved`, `changes-requested`, `commented`, `dismissed`, or `pending`, then its link. `--json` and the MCP `item_get` give it as `pull_request`: `{story, pull_request, url, head_sha, read_at, checks, reviews, sent_back}`. A kept file flai cannot read is warned of and left out, and the story still shows; `item_get` says why in `pull_request_error`.
+A check's state is `pending`, `passed`, or `failed`, then its log and its summary when the forge gives them. A review's state is `approved`, `changes-requested`, `commented`, `dismissed`, or `pending`, then its link. `--json` and the MCP `item_get` give it as `pull_request`: `{story, pull_request, url, head_sha, read_at, checks, reviews, required_approvals, sent_back}`. `required_approvals` is how many approving reviews the base branch requires, 0 when it requires none or the token cannot read its rules. A kept file flai cannot read is warned of and left out, and the story still shows; `item_get` says why in `pull_request_error`.
 
 When a required check fails, or a reviewer requests changes, flai sends the story back to its agent:
 
@@ -2299,6 +2301,21 @@ When a required check fails, or a reviewer requests changes, flai sends the stor
 4. The agent fixes the branch, closes out, and moves the story to review again. `flai serve` pushes the fix at its next look. It resolves the thread once the story is back in review at a new commit, or once the story is done or cancelled.
 
 A pending check does nothing, and the story waits in review. Each failure sends the story back once. A check is sent back once per commit, so the same check failing on the fix's commit sends it back again. A review is sent back once, across the fix's commits, until the reviewer reviews again. A reviewer's decision is their latest review that approves, requests changes, or was dismissed, so a comment after a request for changes leaves the request standing. A read that fails, such as the forge being down, opens no thread and leaves the kept state as it was; `flai serve` reads again at its next look.
+
+#### The acceptance waits for the pull request
+
+Under `acceptance.mode: pull-request`, a story is not accepted until its pull request passes ([ADR-0169](../../design/adrs/0169-under-pull-request-acceptance-every-acceptance-the-operator-s-and-the.md)). That holds for your acceptance, the dashboard's, and the orchestrator's. `flai accept S-0042 --dry-run` lists what stands in the way, each by name, and the real run refuses on it before anything is merged:
+
+| Code | Blocks when |
+|------|-------------|
+| `pull_request_missing` | `flai serve` has kept no pull request for the story yet |
+| `forge_stale` | `flai serve` last read the pull request at another commit than the branch's head; it is listed alone, and clears at the next look |
+| `check_failing` | A required check failed; one per check, with its log |
+| `check_pending` | A required check has not finished; one per check |
+| `changes_requested` | A reviewer's decision requests changes; one per reviewer, with the review |
+| `approvals_missing` | Fewer reviewers approve than the base branch requires |
+
+`--json` lists them in `forge_blockers` as `{code, message, name, url}`, `name` being the check or the reviewer, and each is in `blockers` too. It also gives `pull_request`, the pull request's URL. flai reads only the state `flai serve` keeps, so no token is needed to accept, and the shell, the dashboard, and the orchestrator judge the same state. Only CI and your reviewers clear these blockers: the orchestrator never approves a review. Under `local`, nothing changes.
 
 #### flai forge push and flai forge status
 
@@ -2357,6 +2374,8 @@ The preview adds these blockers to an acceptance by the orchestrator, and `flai 
 | `criterion_unevidenced` | The evidence has no item for a criterion, or its item names no file the branch changes |
 | `protected_paths` | The branch changes a path Claude Code protects, which only you accept |
 | `not_story` | The item is an epic, which is yours to accept |
+
+Under `acceptance.mode: pull-request`, the pull request's blockers stop the orchestrator as they stop you ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)). It never approves a review, so a story whose base branch requires approvals waits for your reviewers.
 
 `--by orchestrator` is refused while `accept_reviews` is off, and the refusal names it. `--verified` and `--evidence` are refused with any other `--by`. In the orchestrator's session (`FLAI_ROLE=orchestrate`), an acceptance with any other `--by`, or none, is refused by flai and by `flai guard`. The MCP tool `item_move` still refuses it a move to done, and names `flai accept --by orchestrator`. `flai move S-0031 done` takes the same flags as `flai accept`. The orchestrator never keeps a removal of main's lines: `--keep-removal` with `--by orchestrator` is refused, so a path the story's branch undoes of main's change stays a blocker, and the orchestrator leaves it to you on a thread.
 

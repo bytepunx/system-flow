@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-14
+updated: 2026-10-17
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -401,6 +401,8 @@ The evidence, `--evidence <file>` or `-` for standard input, is markdown: a `Ver
 flai holds the permission itself, as well as the guard: `flai accept --by orchestrator`, and `accept.run` given `by: orchestrator`, are refused while `accept_reviews` is off, naming it, and under `FLAI_ROLE=orchestrate` an acceptance with any other `--by` is refused. `item_move` refuses the orchestrator a move to done as it refuses every agent, and names `flai accept --by orchestrator` and the permission.
 
 The orchestrator never keeps a removal of main's lines ([ADR-0155](../adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md)). A path the story's rebased branch undoes of main's change is a blocker in the preview, as for any acceptance ([workflow.md](workflow.md#branches-and-collisions-adr-0019)). It cannot tell an intended removal from a lost change, so it leaves that blocker for the operator, on a thread, as step 4 says. flai refuses `--keep-removal` with `--by orchestrator`, and `accept.run` refuses `keep_removals` with `by: orchestrator`. The operator restores the path with `flai stream restore`, keeps the removal with a reason, or sends the story back.
+
+Under `acceptance.mode: pull-request`, the preview also lists the forge blockers, the same for the orchestrator as for the operator ([ADR-0169](../adrs/0169-under-pull-request-acceptance-every-acceptance-the-operator-s-and-the.md)): a missing pull request, a state not read at the branch head, each required check failing or pending, each reviewer's standing requested change, and missing approvals. The orchestrator reads them in its dry run like any other blocker, and they stop it as they stop the operator: it leaves the story in review, as step 4 says. Only CI and the team's reviewers clear them. The orchestrator never approves a review: flai opens the pull request with the operator's token, and an approval by the gated party would open its own gate.
 
 ### Publishing a release (S-0222)
 
