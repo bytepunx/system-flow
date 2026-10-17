@@ -1,7 +1,8 @@
 // The page's side of the component harness's protocol (S-0439, ADR-0163): what the Components
 // page posts to the harness it frames from a sub-project's dev server, and what it takes back.
 // Every message is {source: 'flai-components', version: 1, type, ...}; the page posts only to the
-// dev server's origin and takes answers only from that origin and its own frame.
+// dev server's origin and takes answers only from that origin and its own frame. A select and a
+// props message name the props to log and those to render as snippets (S-0440).
 
 export const SOURCE = 'flai-components';
 export const VERSION = 1;
@@ -13,8 +14,8 @@ export type Props = Record<string, unknown>;
 
 /** What the page posts to the harness. */
 export type PageMessage =
-	| { type: 'select'; component: string; props?: Props; functions?: string[] }
-	| { type: 'props'; props: Props; functions?: string[] }
+	| { type: 'select'; component: string; props?: Props; functions?: string[]; snippets?: string[] }
+	| { type: 'props'; props: Props; functions?: string[]; snippets?: string[] }
 	| { type: 'theme'; theme: Theme }
 	| { type: 'tokens'; light: Tokens; dark: Tokens };
 
@@ -52,10 +53,11 @@ export type PageWindow = {
 
 /** A connection to one harness frame. */
 export type Client = {
-	/** Mounts the component at path, with props and a logger for each name in functions. */
-	select(component: string, props?: Props, functions?: string[]): void;
-	/** Gives the mounted component props without remounting it. */
-	props(props: Props, functions?: string[]): void;
+	/** Mounts the component at path, with props, a logger for each name in functions, and each
+	 * name in snippets whose value is a string as a snippet of that text. */
+	select(component: string, props?: Props, functions?: string[], snippets?: string[]): void;
+	/** Gives the mounted component props, every one it is to have, without remounting it. */
+	props(props: Props, functions?: string[], snippets?: string[]): void;
 	/** Sets the harness document's theme. */
 	theme(theme: Theme): void;
 	/** Lays CSS custom properties over the stylesheet's; empty objects clear them. */
@@ -161,8 +163,9 @@ export function connect(
 
 	page.addEventListener('message', receive);
 	return {
-		select: (component, props, functions) => send({ type: 'select', component, props, functions }),
-		props: (props, functions) => send({ type: 'props', props, functions }),
+		select: (component, props, functions, snippets) =>
+			send({ type: 'select', component, props, functions, snippets }),
+		props: (props, functions, snippets) => send({ type: 'props', props, functions, snippets }),
 		theme: (theme) => send({ type: 'theme', theme }),
 		tokens: (light, dark) => send({ type: 'tokens', light, dark }),
 		close() {

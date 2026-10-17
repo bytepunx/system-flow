@@ -2,10 +2,19 @@
 // the picked component from its dev server's harness in light, dark, or both at a chosen width,
 // sends it the theme and the component, sizes the frame from the harness, shows a harness error in
 // its place, starts a stopped dev server and shows a failed start's output, tells the operator to
-// turn the host action on or upgrade flai, and asks again every minute.
+// turn the host action on or upgrade flai, and asks again every minute. S-0440: beside the frame,
+// the props panel sends the component its props, a change as a props message, keeps them in the
+// URL, and shows a required prop without a value in the frame's place; the event log lists the
+// calls of its function props.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import type { Component, ComponentsCatalogue, ComponentsStatus } from '$lib/server/repo';
+import type {
+	Component,
+	ComponentProp,
+	ComponentsCatalogue,
+	ComponentsStatus
+} from '$lib/server/repo';
+import { fromQuery, toQuery } from '$lib/explorer/controls';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -45,12 +54,20 @@ const SWATCH = 'src/lib/components/design/Swatch.svelte';
 const BROKEN = 'src/lib/components/Broken.svelte';
 const VITE_LINES = 'vite did not answer in 60s; its last lines:\nerror: port 5199 in use';
 
-const component = (path: string): Component => ({
+const component = (path: string, props: ComponentProp[] = []): Component => ({
 	project: 'flaiover',
 	path,
 	name: path.slice(path.lastIndexOf('/') + 1, -'.svelte'.length),
-	props: []
+	props
 });
+const SWATCH_PROPS: ComponentProp[] = [
+	{ name: 'label', kind: 'string', type: 'string', required: true },
+	{ name: 'count', kind: 'number', type: 'number', default: '3', required: false },
+	{ name: 'items', kind: 'array', type: 'string[]', required: false },
+	{ name: 'children', kind: 'snippet', type: 'Snippet', required: false },
+	{ name: 'onpick', kind: 'function', type: '(n: number) => void', required: false }
+];
+const LOGGED = { functions: ['onpick'], snippets: ['children'] };
 const catalogue: ComponentsCatalogue = {
 	projects: [
 		{
@@ -61,7 +78,7 @@ const catalogue: ComponentsCatalogue = {
 			components: [
 				{ ...component(BROKEN), error: 'Unexpected token' },
 				component(BUTTON),
-				component(SWATCH),
+				component(SWATCH, SWATCH_PROPS),
 				component('src/routes/Chart.svelte')
 			]
 		},
@@ -386,6 +403,139 @@ describe('the components page (S-0439)', () => {
 		expect(q('components-start-error')!.tagName).toBe('PRE');
 		expect(gets()).toBe(2);
 		expect(buttonNamed('Start')).toBeDefined();
+	});
+
+	describe('the props panel and the event log (S-0440)', () => {
+		const field = <T extends HTMLElement = HTMLInputElement>(name: string) =>
+			document.querySelector<T>(`#props-panel-${name}`)!;
+		const type = async (el: HTMLInputElement | HTMLTextAreaElement, text: string) => {
+			el.value = text;
+			el.dispatchEvent(new Event('input', { bubbles: true }));
+			await settle();
+		};
+		// The props the URL was last given, as the page writes it.
+		const urlProps = () => {
+			const [href] = goto.mock.lastCall as unknown[];
+			const url = new URL(String(href), 'http://localhost');
+			return { c: url.searchParams.get('c'), props: fromQuery(url.searchParams.get('props')) };
+		};
+		const box = () => q('component-frame-box') as HTMLElement;
+		const entries = () => [...document.querySelectorAll('[data-testid="event-log-entry"]')];
+
+		it("sends the picked component its defaults, logs and snippets, and shows a required prop's want in the frame's place", async () => {
+			serve();
+			await show();
+			await click(q(`component-${SWATCH}`));
+			const [w] = fakeWindows();
+			await harness(w, { type: 'ready' });
+			expect(posted(w).map((m) => m.type)).toEqual(['theme', 'select']);
+			expect(posted(w)[1]).toMatchObject({ component: SWATCH, props: { count: 3 }, ...LOGGED });
+			expect(urlProps()).toEqual({ c: SWATCH, props: { count: 3 } });
+			expect(q('prop-label')!.querySelector('[data-testid="prop-missing"]')).not.toBeNull();
+			expect(q('component-missing')!.textContent).toContain('needs a value for label');
+			expect(box().hidden).toBe(true);
+			// the harness rendering it does not lift the want
+			await harness(w, { type: 'rendered', component: SWATCH });
+			expect(q('component-missing')).not.toBeNull();
+		});
+
+		it('sends each change as props without remounting, keeps it in the URL, and holds back invalid JSON', async () => {
+			serve();
+			await show();
+			await click(q(`component-${SWATCH}`));
+			const [w] = fakeWindows();
+			await harness(w, { type: 'ready' });
+			await type(field('label'), 'Go');
+			expect(posted(w).at(-1)).toEqual({
+				source: 'flai-components',
+				version: 1,
+				type: 'props',
+				props: { count: 3, label: 'Go' },
+				...LOGGED
+			});
+			expect(urlProps()).toEqual({ c: SWATCH, props: { count: 3, label: 'Go' } });
+			expect(q('component-missing')).toBeNull();
+			expect(box().hidden).toBe(false);
+
+			const sent = posted(w).length;
+			const written = goto.mock.calls.length;
+			await type(field<HTMLTextAreaElement>('items'), '["a",');
+			expect(q('prop-items')!.querySelector('[data-testid="prop-error"]')).not.toBeNull();
+			expect(field<HTMLTextAreaElement>('items').value).toBe('["a",');
+			expect(posted(w)).toHaveLength(sent);
+			expect(goto.mock.calls).toHaveLength(written);
+			// another prop's change is held back too, until the JSON parses
+			await type(field('count'), '4');
+			expect(posted(w)).toHaveLength(sent);
+			await type(field<HTMLTextAreaElement>('items'), '["a", "b"]');
+			expect(posted(w).at(-1)).toMatchObject({
+				type: 'props',
+				props: { count: 4, label: 'Go', items: ['a', 'b'] }
+			});
+			await type(field<HTMLTextAreaElement>('children'), 'Hello');
+			expect(posted(w).at(-1)).toMatchObject({ props: { children: 'Hello' }, ...LOGGED });
+
+			(q('props-reset') as HTMLElement).click();
+			await settle();
+			expect(posted(w).at(-1)).toMatchObject({ type: 'props', props: { count: 3 } });
+			expect(Object.keys(posted(w).at(-1)!.props as object)).toEqual(['count']);
+			expect(urlProps().props).toEqual({ count: 3 });
+			expect(q('component-missing')).not.toBeNull();
+			// one select: every change went to the component mounted
+			expect(posted(w).filter((m) => m.type === 'select')).toHaveLength(1);
+		});
+
+		it('renders the props a link gives, and starts another component from its defaults', async () => {
+			const props = toQuery({ label: 'Hi', count: 5, items: ['x'] });
+			where.url = new URL(
+				`http://localhost/design/components?p=flaiover&c=${SWATCH}&props=${props}`
+			);
+			serve();
+			await show();
+			expect(field('label').value).toBe('Hi');
+			expect(field('count').value).toBe('5');
+			expect(JSON.parse(field<HTMLTextAreaElement>('items').value)).toEqual(['x']);
+			const [w] = fakeWindows();
+			await harness(w, { type: 'ready' });
+			expect(posted(w).find((m) => m.type === 'select')).toMatchObject({
+				component: SWATCH,
+				props: { label: 'Hi', count: 5, items: ['x'] },
+				...LOGGED
+			});
+			expect(q('component-missing')).toBeNull();
+
+			await click(q(`component-${BUTTON}`));
+			expect(urlProps()).toEqual({ c: BUTTON, props: {} });
+			await click(q(`component-${SWATCH}`));
+			expect(field('label').value).toBe('');
+			expect(field('count').value).toBe('3');
+		});
+
+		it("lists the calls of the component's function props, and clears them on another pick", async () => {
+			serve();
+			await show();
+			await click(q(`component-${SWATCH}`));
+			const [w] = fakeWindows();
+			await harness(w, { type: 'ready' });
+			expect(q('event-log-none')).not.toBeNull();
+			await harness(w, { type: 'event', component: SWATCH, name: 'onpick', args: [2] });
+			await harness(w, { type: 'event', component: SWATCH, name: 'onpick', args: [{ n: 3 }] });
+			// a late call of the component picked before is not its
+			await harness(w, { type: 'event', component: BUTTON, name: 'onclick', args: [] });
+			expect(entries().map((e) => e.querySelector('code')!.textContent)).toEqual([
+				'[{"n":3}]',
+				'[2]'
+			]);
+			expect(entries()[0].textContent).toContain('onpick');
+			expect(entries()[0].querySelector('time')).not.toBeNull();
+			for (let i = 0; i < 55; i++)
+				await harness(w, { type: 'event', component: SWATCH, name: 'onpick', args: [i] });
+			expect(entries()).toHaveLength(50);
+			expect(entries()[0].querySelector('code')!.textContent).toBe('[54]');
+
+			await click(q(`component-${BUTTON}`));
+			expect(entries()).toHaveLength(0);
+		});
 	});
 
 	it('asks the status again every minute, and on a change to the project', async () => {

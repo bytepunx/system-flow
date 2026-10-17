@@ -10,8 +10,26 @@
 	// flai on the host when it is too old to answer. While open, the page asks again every minute,
 	// which keeps the host from stopping the dev server as idle and finds a component file added or
 	// removed, and on a change to the manifest, whose components key says which files are components.
-	import type { ComponentsCatalogue, ComponentsProject, ComponentsStatus } from '$lib/server/repo';
-	import type { Theme } from '$lib/explorer/protocol';
+	// Beside the frame (S-0440), the props panel sets the component's props, which are sent to the
+	// harness whole on each change and kept in the URL as ?props=, base64url JSON, so that a link
+	// renders the same; the event log lists the calls of its function props.
+	import type {
+		ComponentProp,
+		ComponentsCatalogue,
+		ComponentsProject,
+		ComponentsStatus
+	} from '$lib/server/repo';
+	import type { Called, Props, Theme } from '$lib/explorer/protocol';
+	import {
+		PROPS_PARAM,
+		fromQuery,
+		functions,
+		missing,
+		parse,
+		toQuery,
+		toTexts,
+		toValues
+	} from '$lib/explorer/controls';
 	import { api } from '$lib/api';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -21,6 +39,8 @@
 	import { themeState } from '$lib/theme.svelte';
 	import ComponentList from '$lib/components/explorer/ComponentList.svelte';
 	import ComponentFrame from '$lib/components/explorer/ComponentFrame.svelte';
+	import PropsPanel from '$lib/components/explorer/PropsPanel.svelte';
+	import EventLog, { logged, type Logged } from '$lib/components/explorer/EventLog.svelte';
 
 	const ENABLE = 'flai serve enable components';
 	// Asking at least this often keeps the host from stopping a dev server as idle.
@@ -45,6 +65,22 @@
 	let single = $state<Theme>(themeState.dark ? 'dark' : 'light');
 	let width = $state<number | null>(null);
 
+	// The props the URL gave as the page opened, for the component it names, until another is picked.
+	let linked: { project: string; path: string; values: Props } | null = $state.raw({
+		project: page.url.searchParams.get('p') ?? '',
+		path: page.url.searchParams.get('c') ?? '',
+		values: fromQuery(page.url.searchParams.get(PROPS_PARAM))
+	});
+	// The props panel's texts, for the component they were written for, and the props last sent
+	// from them: text that does not parse holds back every prop until it does.
+	let edits: {
+		project: string;
+		path: string;
+		texts: Record<string, string>;
+		values: Props;
+	} | null = $state.raw(null);
+	let events = $state.raw<Logged[]>([]);
+
 	const projects = $derived(catalogue?.projects ?? []);
 	// The sub-project the dev server controls are for: the picked one, else the first supported.
 	const project = $derived<ComponentsProject | undefined>(
@@ -58,6 +94,17 @@
 	const picked = $derived(
 		component && project ? { project: project.name, path: component.path } : null
 	);
+
+	const forPicked = (o: { project: string; path: string } | null) =>
+		!!o && o.project === project?.name && o.path === component?.path;
+	const propsOf = $derived(component?.props ?? []);
+	// Without edits, the URL's props for the component it names, else the defaults.
+	const start = $derived(toTexts(propsOf, forPicked(linked) ? linked!.values : {}));
+	const texts = $derived(forPicked(edits) ? edits!.texts : start);
+	const values = $derived(forPicked(edits) ? edits!.values : toValues(propsOf, start));
+	const logs = $derived(functions(propsOf));
+	const snippets = $derived(propsOf.filter((p) => p.kind === 'snippet').map((p) => p.name));
+	const unset = $derived(propsOf.filter((p) => missing(p, texts[p.name])).map((p) => p.name));
 
 	/** Shows the one theme. */
 	function one(theme: Theme) {
@@ -115,18 +162,47 @@
 		}
 	}
 
-	/** Frames the component, and keeps it in the URL so that a reload frames it again. */
-	function pick(name: string, path: string) {
-		pickedProject = name;
-		pickedPath = path;
+	/** Keeps the component picked and its props in the URL, so that a reload or a link frames the
+	 * same; no props is no PROPS_PARAM. */
+	function keep(props: Props) {
 		const kept = Object.fromEntries(page.url.searchParams);
-		const query = new URLSearchParams({ ...kept, p: name, c: path });
+		delete kept[PROPS_PARAM];
+		const q = toQuery(props);
+		const query = new URLSearchParams({
+			...kept,
+			p: pickedProject,
+			c: pickedPath,
+			...(q ? { [PROPS_PARAM]: q } : {})
+		});
 		// eslint-disable-next-line svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it
 		void goto(resolve('/design/components') + `?${query}`, {
 			replaceState: true,
 			keepFocus: true,
 			noScroll: true
 		});
+	}
+
+	/** Frames the component with its default props, and keeps it in the URL. */
+	function pick(name: string, path: string) {
+		if (name !== pickedProject || path !== pickedPath) {
+			linked = edits = null;
+			events = [];
+		}
+		pickedProject = name;
+		pickedPath = path;
+		keep(values);
+	}
+
+	/** Takes the panel's texts; once every one parses, its props are sent and kept in the URL. */
+	function edit(props: ComponentProp[], next: Record<string, string>) {
+		if (!picked) return;
+		const valid = props.every((p) => parse(p, next[p.name]).ok);
+		edits = { ...picked, texts: next, values: valid ? toValues(props, next) : values };
+		if (valid) keep(edits.values);
+	}
+
+	function called(m: Called) {
+		events = logged(events, { at: Date.now(), name: m.name, args: m.args });
 	}
 
 	onMount(() => {
@@ -278,17 +354,41 @@
 						data-testid="components-start-error">{startError}</pre>
 				{/if}
 			</div>
-			{#if component && server?.running && server.url}
-				<div class="mt-4 flex gap-4 overflow-x-auto" data-testid="components-frames">
-					{#each themes as theme, i (i)}
-						<div class={[!width && 'min-w-0 flex-1']}>
-							<ComponentFrame server={server.url} component={component.path} {theme} {width} />
+			<div class="mt-4 flex flex-col gap-6 xl:flex-row">
+				<div class="min-w-0 flex-1">
+					{#if component && server?.running && server.url}
+						<div class="flex gap-4 overflow-x-auto" data-testid="components-frames">
+							{#each themes as theme, i (i)}
+								<div class={[!width && 'min-w-0 flex-1']}>
+									<ComponentFrame
+										server={server.url}
+										component={component.path}
+										{theme}
+										{width}
+										props={values}
+										functions={logs}
+										{snippets}
+										missing={unset}
+										onevent={called}
+									/>
+								</div>
+							{/each}
 						</div>
-					{/each}
+					{:else if project && !component}
+						<p class="text-sm text-muted">Pick a component to frame it.</p>
+					{/if}
 				</div>
-			{:else if project && !component}
-				<p class="mt-4 text-sm text-muted">Pick a component to frame it.</p>
-			{/if}
+				{#if component}
+					<div class="flex flex-col gap-6 xl:w-80 xl:shrink-0">
+						<PropsPanel
+							props={component.props}
+							{texts}
+							onchange={(next) => edit(component.props, next)}
+						/>
+						<EventLog {events} onclear={() => (events = [])} />
+					</div>
+				{/if}
+			</div>
 		</section>
 	</div>
 {/if}

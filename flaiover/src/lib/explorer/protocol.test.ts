@@ -70,6 +70,32 @@ describe('connect', () => {
 		]);
 	});
 
+	it('names the functions to log and the snippets to render on a select and on props (S-0440)', () => {
+		const { frame, client, answer } = setup();
+		answer({ type: 'ready' });
+		client.select('A.svelte', { label: 'Go', children: 'Hi' }, ['onclick'], ['children']);
+		client.props({ label: 'Stop', children: 'Bye' }, ['onclick'], ['children']);
+		expect(frame.posted.map((p) => p.message)).toEqual([
+			{
+				source: 'flai-components',
+				version: 1,
+				type: 'select',
+				component: 'A.svelte',
+				props: { label: 'Go', children: 'Hi' },
+				functions: ['onclick'],
+				snippets: ['children']
+			},
+			{
+				source: 'flai-components',
+				version: 1,
+				type: 'props',
+				props: { label: 'Stop', children: 'Bye' },
+				functions: ['onclick'],
+				snippets: ['children']
+			}
+		]);
+	});
+
 	it('keeps only the last of each kind before ready, in theme, tokens, select, props order', () => {
 		const { frame, client, answer } = setup();
 		client.props({ n: 1 });
