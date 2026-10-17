@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:20Z
-updated: 2026-10-17T16:03:13Z
+updated: 2026-10-17T17:33:42Z
 transitions: []
 tags: [cli]
 topics: [orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-17T19:54:00Z
-  basis: "Its own forecast of 50m; 9th in the pull order with an in-progress limit of 5, behind S-0395, S-0396, S-0397, S-0394, S-0241, S-0398, S-0399 and S-0400."
+  delivery: 2026-10-17T20:55:00Z
+  basis: "Its own forecast of 50m; 8th in the pull order with an in-progress limit of 5, behind S-0395, S-0396, S-0397, S-0241, S-0398, S-0399 and S-0400."
   by: flai
-  at: 2026-10-17T16:03:13Z
+  at: 2026-10-17T17:33:42Z
 ---
 # S-0401 A batch settles a rebase that stops inside the manifest's shared paths by the regenerate-and-merge steps and never sends a story back for it, and tells the story's agent of a conflict outside them by message
 
