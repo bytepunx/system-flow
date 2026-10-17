@@ -9,7 +9,7 @@ topics: [components, design, dashboard, cli]
 
 The design of E-0026. The dashboard gets a Components page where the operator sees every component of their system, changes its props, and watches it follow changes to the design system and the source, live, without an IDE, a rebuild, or a redeploy. It takes up what [design-system-tool.md § The project's own components](design-system-tool.md#the-projects-own-components) left out of E-0020: rendering a project's components needs its own compiler and build, which only the host has.
 
-The shape was settled on TH-0483. Each section names the story that builds it. The catalogue (S-0437), the dev server (S-0438), the Components page (S-0439), its controls for props (S-0440), live tokens (S-0441), a story's worktree (S-0442), and examples (S-0443) are built. The sections after them say what is decided and is to be built, and each story brings its section up to date as it lands.
+The shape was settled on TH-0483. Each section names the story that builds it. The catalogue (S-0437), the dev server (S-0438), the Components page (S-0439), its controls for props (S-0440), live tokens (S-0441), a story's worktree (S-0442), examples (S-0443), and flaiover's own components (S-0444) are built.
 
 ## How it fits together
 
@@ -284,4 +284,51 @@ The check reads only files ending in `.examples.json`, and runs the props reader
 
 ## flaiover's own components (S-0444)
 
-Every component of flaiover renders on the Components page, with the setup its stylesheet needs and examples for the components that need data. flaiover's manifest entry names its setup, `src/routes/layout.css`, written with `flai components config`, and leaves out only components that cannot render outside the app, each listed here with its reason. Each component that needs data gets an examples file under `design/components/flaiover/`.
+This repository uses its own component library on flaiover, a real SvelteKit app, so the library is proven beyond its fixture. Every component the catalogue lists renders in the harness without an `error`, in light and dark, from its defaults or from an example.
+
+### The setup and what is left out
+
+flaiover's manifest entry, written with `flai components config`, names its setup and leaves out what only the app can fill:
+
+```yaml
+- name: flaiover
+  path: flaiover
+  kind: sveltekit
+  components:
+    exclude: [src/lib/components/AgentStream.svelte, …]
+    setup: src/routes/layout.css
+```
+
+The setup is the app's own stylesheet: Tailwind, the typography plugin, the app's palette as custom properties for light and dark, and the `dark` variant on `[data-theme='dark']`, so the harness's `theme` message switches a component as the app's toggle does.
+
+A component is left out when everything it shows comes from the app's server or its app-wide stores, so that in the harness it shows only an empty frame or the server's error, whatever its props. A component with markup of its own beside a fetch that fails, such as AcceptConfirm or Threads, is listed.
+
+| Component | Why it is left out |
+|-----------|--------------------|
+| EditorDialog, HostFlai, HostFlaiBanner, InboxBadge, UnsignedBanner | It takes no props and shows only what an app-wide store holds (`editorState`, `hostFlai`, `projectState`, `inboxState`). The app's layout fills the store from the host channel, and the harness never does, so it renders nothing. |
+| OpenQuestions | It lists only the questions in the app-wide `inboxState`, so it shows an empty list whatever its props. |
+| DocEditor, ItemEditor, Review | It loads the document or item its one prop names from `/api` before it shows anything, so the harness shows only the server's error. |
+| SettingsPanel, HostPanel, HostProcesses | It shows only the settings it loads from `/api`, so the harness shows only "Loading…" or the server's error. |
+| AgentStream | It shows only the entries `/api` streams, so it shows an empty box. The panels that embed it are listed. |
+| HostAgentNotice, PlanAction, StoryAgent | It shows only what `/api/host-agent` or `/api/items/<id>/plan` answers, so it renders nothing. |
+
+That leaves 53 of flaiover's 69 components listed.
+
+### Its examples
+
+Each listed component that has a required prop, or whose defaults show nothing, has an examples file under `design/components/flaiover/` ([Examples](#examples-s-0443)): 47 files, each with at least one example that renders its main state from data shaped as the app's own types. The examples leave `theme` out, so the page shows both themes, except one of Chart's, whose `theme` prop fixes the chart's palette. ComponentFrame's examples frame `http://127.0.0.1:5173/__flai/components/`, Vite's default port, since flai picks the dev server's port at each start: the frame loads only where a dev server answers there. The design components' examples carry every token of this repository's design system, as the Design page passes them, so they are the largest files, up to 148 KB as the page indents them; `components.list` carries them all.
+
+### The test
+
+`flai/internal/components/flaiover_test.go`, in the integration tier, serves a copy of flaiover with the components key `system-flow.yaml` gives it, its `node_modules` linked to the installed one. It asks the dev server for the setup and for each listed component's module, as the harness imports them. A component that does not compile, or imports what does not resolve, is answered with Vite's error, and fails the test with its path; a broken component the test writes into the copy is its control. It skips under `-short`, without `node`, and without flaiover's dependencies installed.
+
+### What the pass found
+
+A headless pass rendered every listed component's examples, or its defaults, in the harness the Components page frames, in light and dark: 161 renders, none with an `error`. What renders wrongly, or not as in the app:
+
+- **Fetches the harness cannot answer.** The harness is served by flaiover's own dev server, so a component's `/api` fetch reaches flaiover's server, which answers 500 without the dashboard's token and has no host channel. AcceptConfirm, CancelConfirm, ImportPrompt, Messages, NewAdrForm, NewItemForm, and the stream inside ActivityView, PlannerPanel, OrchestratorPanel, and AnalyzerPanel show "Internal Server Error", or an empty select where the answer would fill one. Threads says "No threads here."
+- **Dialogs.** A dialog draws a fixed overlay, so the harness reports its content's height as 0, and the page frames it at 160 pixels, cutting off one taller than that ([I-0160](../issues/I-0160-the-components-page-frames-a-component-that-draws-a-fixed-overlay-such-as-a-dialog-at-160px-as-its-content-s-height-is-0-cutting-the-dialog-off.md)).
+- **TokenEditor.** It sets `data-theme` on each value cell, so the other theme's hex fields are dark text on a dark field, on the Design page as in the harness ([I-0159](../issues/I-0159-tokeneditor-sets-data-theme-on-each-value-cell-so-the-other-theme-s-hex-fields-are-dark-text-on-a-dark-field-and-cannot-be-read.md)).
+- **CardReorder** shows nothing: its buttons appear only while a parent with Tailwind's `group` class is hovered or focused, and the harness gives it none.
+- **Gallery** outside PreviewFrame has no `gallery.css`, so its success and warning alerts have no colour of their own.
+- **StrategicAgentPanel** cannot show a run in progress: a running run calls its `stream` prop, and the harness's logger answers `undefined`. PlannerPanel, OrchestratorPanel, and AnalyzerPanel, which pass a real `stream`, show it.
