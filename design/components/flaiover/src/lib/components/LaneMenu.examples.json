@@ -1,0 +1,13 @@
+{
+  "examples": [
+    {
+      "name": "The in-progress lane's menu",
+      "props": {
+        "lane": "in-progress",
+        "count": 3,
+        "x": 16,
+        "y": 16
+      }
+    }
+  ]
+}

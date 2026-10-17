@@ -1,0 +1,99 @@
+{
+  "examples": [
+    {
+      "name": "A plan in three layers",
+      "props": {
+        "plan": {
+          "tasks": [
+            {
+              "id": "T-1888",
+              "state": "done"
+            },
+            {
+              "id": "T-1889",
+              "state": "in-progress",
+              "after": [
+                "T-1888"
+              ]
+            },
+            {
+              "id": "T-1890",
+              "state": "ready",
+              "after": [
+                "T-1888"
+              ]
+            },
+            {
+              "id": "T-1891",
+              "state": "waiting",
+              "after": [
+                "T-1889",
+                "T-1890"
+              ],
+              "waiting_for": [
+                "T-1889",
+                "T-1890"
+              ]
+            }
+          ],
+          "layers": [
+            [
+              "T-1888"
+            ],
+            [
+              "T-1889",
+              "T-1890"
+            ],
+            [
+              "T-1891"
+            ]
+          ]
+        },
+        "titles": {
+          "T-1888": "Load the stylesheet in the component harness",
+          "T-1889": "Leave out what only the app can fill",
+          "T-1890": "Write examples for the board's components",
+          "T-1891": "Write examples for the agents' components"
+        }
+      }
+    },
+    {
+      "name": "Two tasks waiting on each other",
+      "props": {
+        "plan": {
+          "tasks": [
+            {
+              "id": "T-1888",
+              "state": "ready"
+            },
+            {
+              "id": "T-1889",
+              "state": "waiting",
+              "after": [
+                "T-1890"
+              ],
+              "waiting_for": [
+                "T-1890"
+              ]
+            },
+            {
+              "id": "T-1890",
+              "state": "waiting",
+              "after": [
+                "T-1889"
+              ],
+              "waiting_for": [
+                "T-1889"
+              ]
+            }
+          ],
+          "layers": [
+            [
+              "T-1888"
+            ]
+          ]
+        }
+      }
+    }
+  ]
+}

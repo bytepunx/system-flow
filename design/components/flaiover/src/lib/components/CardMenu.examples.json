@@ -1,0 +1,22 @@
+{
+  "examples": [
+    {
+      "name": "A story's menu in progress",
+      "props": {
+        "card": {
+          "id": "S-0444",
+          "type": "story",
+          "status": "in-progress",
+          "blocked": false
+        },
+        "lane": "in-progress",
+        "laneCount": 3,
+        "writable": true,
+        "agentEnabled": true,
+        "planEnabled": true,
+        "x": 16,
+        "y": 16
+      }
+    }
+  ]
+}

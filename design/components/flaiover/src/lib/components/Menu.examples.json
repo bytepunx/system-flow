@@ -1,0 +1,43 @@
+{
+  "examples": [
+    {
+      "name": "A menu with two groups",
+      "props": {
+        "x": 16,
+        "y": 16,
+        "label": "S-0444",
+        "groups": [
+          {
+            "entries": [
+              {
+                "action": "open",
+                "label": "Open"
+              },
+              {
+                "action": "block",
+                "label": "Block…"
+              },
+              {
+                "action": "cancel",
+                "label": "Cancel…"
+              }
+            ]
+          },
+          {
+            "heading": "in-progress",
+            "entries": [
+              {
+                "action": "create",
+                "label": "Create item here"
+              },
+              {
+                "action": "limit",
+                "label": "Change WIP limit…"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

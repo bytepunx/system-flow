@@ -1,0 +1,15 @@
+{
+  "examples": [
+    {
+      "name": "A new story in backlog",
+      "props": {}
+    },
+    {
+      "name": "A new epic to start in ready",
+      "props": {
+        "initialType": "epic",
+        "initialLane": "ready"
+      }
+    }
+  ]
+}

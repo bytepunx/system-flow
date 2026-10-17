@@ -1,0 +1,20 @@
+{
+  "examples": [
+    {
+      "name": "Two open epics",
+      "props": {
+        "epics": [
+          {
+            "id": "E-0026",
+            "title": "Component Library"
+          },
+          {
+            "id": "E-0021",
+            "title": "A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent"
+          }
+        ],
+        "tokens": "design/system/design-system.tokens.json"
+      }
+    }
+  ]
+}

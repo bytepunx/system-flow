@@ -1,0 +1,113 @@
+{
+  "examples": [
+    {
+      "name": "A notice, every prop set",
+      "props": {
+        "props": [
+          {
+            "name": "text",
+            "kind": "string",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "ondismiss",
+            "kind": "function",
+            "type": "() => void",
+            "required": true
+          },
+          {
+            "name": "class",
+            "kind": "string",
+            "type": "string",
+            "default": "''",
+            "required": false
+          },
+          {
+            "name": "role",
+            "kind": "union",
+            "type": "'status' | 'alert'",
+            "default": "'status'",
+            "required": false,
+            "literals": [
+              "\"status\"",
+              "\"alert\""
+            ]
+          },
+          {
+            "name": "testid",
+            "kind": "string",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "links",
+            "kind": "unknown",
+            "type": "LinkOptions",
+            "required": false
+          }
+        ],
+        "texts": {
+          "text": "The board was reordered.",
+          "class": "",
+          "role": "\"status\"",
+          "testid": "reorder-notice",
+          "links": "{\n  \"story\": \"S-0444\"\n}"
+        }
+      }
+    },
+    {
+      "name": "A required prop missing",
+      "props": {
+        "props": [
+          {
+            "name": "text",
+            "kind": "string",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "ondismiss",
+            "kind": "function",
+            "type": "() => void",
+            "required": true
+          },
+          {
+            "name": "class",
+            "kind": "string",
+            "type": "string",
+            "default": "''",
+            "required": false
+          },
+          {
+            "name": "role",
+            "kind": "union",
+            "type": "'status' | 'alert'",
+            "default": "'status'",
+            "required": false,
+            "literals": [
+              "\"status\"",
+              "\"alert\""
+            ]
+          },
+          {
+            "name": "testid",
+            "kind": "string",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "links",
+            "kind": "unknown",
+            "type": "LinkOptions",
+            "required": false
+          }
+        ],
+        "texts": {
+          "class": "",
+          "role": "\"alert\""
+        }
+      }
+    }
+  ]
+}

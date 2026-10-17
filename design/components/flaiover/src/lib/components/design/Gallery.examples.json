@@ -1,0 +1,10 @@
+{
+  "examples": [
+    {
+      "name": "Light panel",
+      "props": {
+        "caption": "Light"
+      }
+    }
+  ]
+}

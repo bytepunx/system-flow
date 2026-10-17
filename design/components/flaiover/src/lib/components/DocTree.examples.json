@@ -1,0 +1,115 @@
+{
+  "examples": [
+    {
+      "name": "The design folder with a system document open",
+      "width": 280,
+      "props": {
+        "current": "design/system/component-library.md",
+        "nodes": [
+          {
+            "name": "design",
+            "path": "design",
+            "kind": "dir",
+            "children": [
+              {
+                "name": "adrs",
+                "path": "design/adrs",
+                "kind": "dir",
+                "children": [
+                  {
+                    "name": "ADR-0163-components-render-in-a-harness.md",
+                    "path": "design/adrs/ADR-0163-components-render-in-a-harness.md",
+                    "kind": "file",
+                    "title": "ADR-0163 Components render in a harness"
+                  },
+                  {
+                    "name": "ADR-0164-examples-files-beside-components.md",
+                    "path": "design/adrs/ADR-0164-examples-files-beside-components.md",
+                    "kind": "file",
+                    "title": "ADR-0164 Examples files beside components"
+                  }
+                ]
+              },
+              {
+                "name": "conventions",
+                "path": "design/conventions",
+                "kind": "dir",
+                "children": [
+                  {
+                    "name": "README.md",
+                    "path": "design/conventions/README.md",
+                    "kind": "file",
+                    "title": "Conventions"
+                  },
+                  {
+                    "name": "git.md",
+                    "path": "design/conventions/git.md",
+                    "kind": "file",
+                    "title": "Git"
+                  }
+                ]
+              },
+              {
+                "name": "system",
+                "path": "design/system",
+                "kind": "dir",
+                "children": [
+                  {
+                    "name": "overview.md",
+                    "path": "design/system/overview.md",
+                    "kind": "file",
+                    "title": "Overview"
+                  },
+                  {
+                    "name": "component-library.md",
+                    "path": "design/system/component-library.md",
+                    "kind": "file",
+                    "title": "Component library"
+                  },
+                  {
+                    "name": "flaiover-dashboard.md",
+                    "path": "design/system/flaiover-dashboard.md",
+                    "kind": "file",
+                    "title": "The flaiover dashboard"
+                  },
+                  {
+                    "name": "workflow.md",
+                    "path": "design/system/workflow.md",
+                    "kind": "file",
+                    "title": "Workflow"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "docs",
+            "path": "docs",
+            "kind": "dir",
+            "children": [
+              {
+                "name": "operators",
+                "path": "docs/operators",
+                "kind": "dir",
+                "children": [
+                  {
+                    "name": "getting-started.md",
+                    "path": "docs/operators/getting-started.md",
+                    "kind": "file",
+                    "title": "Getting started"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "README.md",
+            "path": "README.md",
+            "kind": "file",
+            "title": "system-flow"
+          }
+        ]
+      }
+    }
+  ]
+}

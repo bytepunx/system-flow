@@ -1,0 +1,15 @@
+{
+  "examples": [
+    {
+      "name": "Uncommitted paths in the worktree",
+      "props": {
+        "id": "S-0444",
+        "branch": "story/S-0444",
+        "paths": [
+          "flaiover/src/lib/components/BoardCard.svelte",
+          "design/components/flaiover/src/lib/components/BoardCard.examples.json"
+        ]
+      }
+    }
+  ]
+}

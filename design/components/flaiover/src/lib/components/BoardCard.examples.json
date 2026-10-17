@@ -1,0 +1,74 @@
+{
+  "examples": [
+    {
+      "name": "A story in progress with tasks",
+      "props": {
+        "card": {
+          "id": "S-0444",
+          "type": "story",
+          "title": "Flaiover's components load its stylesheet and leave out what only the app can fill",
+          "nature": "improvement",
+          "parent": "E-0003",
+          "parent_title": "Flaiover dashboard",
+          "status": "in-progress",
+          "blocked": false,
+          "age_seconds": 7200,
+          "tasks": {
+            "ready": 2,
+            "waiting": 1,
+            "in_progress": 1,
+            "done": 3,
+            "layers": 3
+          }
+        },
+        "draggable": true,
+        "activity": {
+          "state": "working",
+          "run": {
+            "story": "S-0444",
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "agent-S-0444",
+            "pid": 41210,
+            "started": "2026-10-16T09:12:00Z"
+          }
+        }
+      },
+      "width": 320
+    },
+    {
+      "name": "A blocked draft story",
+      "props": {
+        "card": {
+          "id": "S-0447",
+          "type": "story",
+          "title": "Show each component's examples in the harness's picker",
+          "nature": "feature",
+          "parent": "E-0003",
+          "status": "ready",
+          "blocked": true,
+          "draft": true,
+          "age_seconds": 259200
+        }
+      },
+      "width": 320
+    },
+    {
+      "name": "A task",
+      "props": {
+        "card": {
+          "id": "T-1891",
+          "type": "task",
+          "title": "Write the examples files for the board's components",
+          "nature": "improvement",
+          "parent": "S-0444",
+          "status": "in-progress",
+          "blocked": false,
+          "age_seconds": 1800
+        }
+      },
+      "width": 320
+    }
+  ]
+}

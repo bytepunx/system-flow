@@ -1,0 +1,20 @@
+{
+  "examples": [
+    {
+      "name": "Changing the in-progress limit",
+      "props": {
+        "lane": "in-progress",
+        "limit": 3,
+        "count": 2
+      }
+    },
+    {
+      "name": "A lane with no limit",
+      "props": {
+        "lane": "review",
+        "limit": 0,
+        "count": 4
+      }
+    }
+  ]
+}

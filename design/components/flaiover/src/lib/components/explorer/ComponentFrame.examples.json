@@ -1,0 +1,39 @@
+{
+  "examples": [
+    {
+      "name": "Gallery, light",
+      "props": {
+        "server": "http://127.0.0.1:5173/__flai/components/",
+        "component": "src/lib/components/design/Gallery.svelte",
+        "theme": "light",
+        "width": null,
+        "props": {
+          "caption": "Light"
+        },
+        "functions": [],
+        "snippets": [],
+        "missing": [],
+        "tokens": null
+      }
+    },
+    {
+      "name": "A notice, dark, 480px",
+      "props": {
+        "server": "http://127.0.0.1:5173/__flai/components/",
+        "component": "src/lib/components/DismissibleNotice.svelte",
+        "theme": "dark",
+        "width": 480,
+        "props": {
+          "text": "The board was reordered.",
+          "role": "status"
+        },
+        "functions": [
+          "ondismiss"
+        ],
+        "snippets": [],
+        "missing": [],
+        "tokens": null
+      }
+    }
+  ]
+}

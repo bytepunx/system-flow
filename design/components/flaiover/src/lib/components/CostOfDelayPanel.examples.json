@@ -1,0 +1,26 @@
+{
+  "examples": [
+    {
+      "name": "All three inputs set",
+      "props": {
+        "fields": {
+          "revenue_per_week": "1200",
+          "penalty_per_week": "300",
+          "time_lost_per_cycle": "1h30m"
+        },
+        "currency": "USD"
+      }
+    },
+    {
+      "name": "Nothing set yet",
+      "props": {
+        "fields": {
+          "revenue_per_week": "",
+          "penalty_per_week": "",
+          "time_lost_per_cycle": ""
+        },
+        "currency": "EUR"
+      }
+    }
+  ]
+}

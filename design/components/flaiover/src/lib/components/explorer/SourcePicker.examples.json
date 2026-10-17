@@ -1,0 +1,153 @@
+{
+  "examples": [
+    {
+      "name": "A story picked, three components changed",
+      "props": {
+        "stories": [
+          {
+            "id": "S-0444",
+            "title": "Every component of flaiover renders on the Components page",
+            "status": "in-progress"
+          },
+          {
+            "id": "S-0443",
+            "title": "A component keeps named examples of its props in a file beside the design",
+            "status": "review"
+          }
+        ],
+        "story": "S-0444",
+        "changed": [
+          {
+            "project": "flaiover",
+            "component": {
+              "project": "flaiover",
+              "path": "src/lib/components/explorer/ComponentList.svelte",
+              "name": "ComponentList",
+              "props": [
+                {
+                  "name": "projects",
+                  "kind": "array",
+                  "type": "readonly ComponentsProject[]",
+                  "required": true
+                },
+                {
+                  "name": "picked",
+                  "kind": "object",
+                  "type": "{ project: string; path: string } | null",
+                  "required": true
+                },
+                {
+                  "name": "onpick",
+                  "kind": "function",
+                  "type": "(project: string, path: string) => void",
+                  "required": true
+                },
+                {
+                  "name": "changed",
+                  "kind": "unknown",
+                  "type": "ReadonlySet<string>",
+                  "default": "new Set<string>()",
+                  "required": false
+                }
+              ],
+              "examples": [],
+              "examples_path": "design/components/flaiover/src/lib/components/explorer/ComponentList.examples.json"
+            }
+          },
+          {
+            "project": "flaiover",
+            "component": {
+              "project": "flaiover",
+              "path": "src/lib/components/explorer/ExampleList.svelte",
+              "name": "ExampleList",
+              "props": [
+                {
+                  "name": "examples",
+                  "kind": "array",
+                  "type": "readonly ComponentExample[]",
+                  "required": true
+                },
+                {
+                  "name": "path",
+                  "kind": "string",
+                  "type": "string",
+                  "required": false
+                },
+                {
+                  "name": "story",
+                  "kind": "string",
+                  "type": "string",
+                  "required": false
+                },
+                {
+                  "name": "onchoose",
+                  "kind": "function",
+                  "type": "(example: ComponentExample) => void",
+                  "required": true
+                },
+                {
+                  "name": "onsave",
+                  "kind": "function",
+                  "type": "(name: string) => Promise<SaveFailure | null>",
+                  "required": true
+                }
+              ],
+              "examples": [],
+              "examples_path": "design/components/flaiover/src/lib/components/explorer/ExampleList.examples.json"
+            }
+          },
+          {
+            "project": "flaiover",
+            "component": {
+              "project": "flaiover",
+              "path": "src/lib/components/design/TokenSheet.svelte",
+              "name": "TokenSheet",
+              "props": [
+                {
+                  "name": "themes",
+                  "kind": "array",
+                  "type": "readonly DesignTheme[]",
+                  "required": true
+                },
+                {
+                  "name": "contrast",
+                  "kind": "array",
+                  "type": "readonly DesignContrast[]",
+                  "required": true
+                }
+              ],
+              "examples": [],
+              "examples_path": "design/components/flaiover/src/lib/components/design/TokenSheet.examples.json"
+            }
+          }
+        ],
+        "changedError": null,
+        "picked": {
+          "project": "flaiover",
+          "path": "src/lib/components/explorer/ExampleList.svelte"
+        }
+      }
+    },
+    {
+      "name": "Main picked",
+      "props": {
+        "stories": [
+          {
+            "id": "S-0444",
+            "title": "Every component of flaiover renders on the Components page",
+            "status": "in-progress"
+          },
+          {
+            "id": "S-0443",
+            "title": "A component keeps named examples of its props in a file beside the design",
+            "status": "review"
+          }
+        ],
+        "story": null,
+        "changed": null,
+        "changedError": null,
+        "picked": null
+      }
+    }
+  ]
+}

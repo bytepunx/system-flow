@@ -1,0 +1,19 @@
+{
+  "examples": [
+    {
+      "name": "A status notice",
+      "props": {
+        "text": "S-0444 moved to review.",
+        "class": "rounded border border-line bg-raised px-3 py-2 text-sm"
+      }
+    },
+    {
+      "name": "An alert",
+      "props": {
+        "text": "flai refused the move: the worktree of S-0444 has uncommitted changes.",
+        "role": "alert",
+        "class": "rounded border border-danger px-3 py-2 text-sm text-danger"
+      }
+    }
+  ]
+}

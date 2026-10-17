@@ -1,0 +1,17 @@
+{
+  "examples": [
+    {
+      "name": "An open question to answer",
+      "props": {
+        "entry": {
+          "key": "question:S-0444:3f9a1c",
+          "kind": "question",
+          "title": "Should the harness show both themes side by side or one at a time?",
+          "href": "/items/S-0444",
+          "at": "2026-10-16T08:40:00Z",
+          "item": "S-0444"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "examples": [
+    {
+      "name": "A story branch with four files changed",
+      "props": {
+        "diff": {
+          "branch": "story/S-0444",
+          "base": "main",
+          "commits": 3,
+          "additions": 16,
+          "deletions": 3,
+          "truncated": false,
+          "files": [
+            {
+              "path": "flai/internal/components/check.go",
+              "status": "modified",
+              "additions": 7,
+              "deletions": 2,
+              "binary": false,
+              "truncated": false,
+              "patch": "@@ -41,9 +41,14 @@ func Check(root string) ([]Finding, error) {\n \tfor _, c := range components {\n \t\tex, err := readExamples(root, c)\n-\t\tif err != nil {\n-\t\t\treturn nil, err\n+\t\tif errors.Is(err, fs.ErrNotExist) {\n+\t\t\tcontinue\n+\t\t}\n+\t\tif err != nil {\n+\t\t\tout = append(out, finding(c, \"components.examples\", err.Error()))\n+\t\t\tcontinue\n \t\t}\n \t\tout = append(out, checkProps(c, ex)...)\n+\t\tout = append(out, checkNames(c, ex)...)\n \t}\n \treturn out, nil\n }\n"
+            },
+            {
+              "path": "design/components/flaiover/src/lib/components/Chart.examples.json",
+              "status": "added",
+              "additions": 8,
+              "deletions": 0,
+              "binary": false,
+              "truncated": false,
+              "patch": "@@ -0,0 +1,8 @@\n+{\n+  \"examples\": [\n+    {\n+      \"name\": \"Stories done per week by nature\",\n+      \"props\": { \"height\": 360 }\n+    }\n+  ]\n+}\n"
+            },
+            {
+              "path": "design/system/component-library.md",
+              "old_path": "design/system/components.md",
+              "status": "renamed",
+              "additions": 1,
+              "deletions": 1,
+              "binary": false,
+              "truncated": false,
+              "patch": "@@ -12,7 +12,7 @@ Each component may have an examples file beside its path.\n \n ## Examples\n \n-An example names its props and nothing else.\n+An example names its props, and may name a theme and a width.\n \n A function prop is never in an example: the page gives each one a logger.\n\\ No newline at end of file\n"
+            },
+            {
+              "path": "flaiover/static/harness-light.png",
+              "status": "added",
+              "additions": 0,
+              "deletions": 0,
+              "binary": true,
+              "truncated": false,
+              "patch": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "A branch that changes no files",
+      "props": {
+        "diff": {
+          "branch": "story/S-0450",
+          "base": "main",
+          "commits": 0,
+          "additions": 0,
+          "deletions": 0,
+          "truncated": false,
+          "files": []
+        }
+      }
+    }
+  ]
+}

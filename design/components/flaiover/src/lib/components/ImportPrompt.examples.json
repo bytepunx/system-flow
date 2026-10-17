@@ -1,0 +1,15 @@
+{
+  "examples": [
+    {
+      "name": "A repository offered for import",
+      "props": {
+        "project": {
+          "key": "acme-shop",
+          "name": "acme-shop",
+          "connected": false,
+          "candidate": true
+        }
+      }
+    }
+  ]
+}

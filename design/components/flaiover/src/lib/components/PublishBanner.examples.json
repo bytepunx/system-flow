@@ -1,0 +1,83 @@
+{
+  "examples": [
+    {
+      "name": "Ready to publish",
+      "props": {
+        "plans": [
+          {
+            "component": {
+              "name": "flai"
+            },
+            "level": "minor",
+            "from": "1.56.0",
+            "to": "1.57.0",
+            "items": [
+              {
+                "id": "S-0443",
+                "title": "A component's examples are kept under design/components",
+                "level": "minor"
+              },
+              {
+                "id": "S-0445",
+                "title": "flai check reports an example whose props do not fit",
+                "level": "patch"
+              }
+            ]
+          },
+          {
+            "component": {
+              "name": "flaiover"
+            },
+            "level": "patch",
+            "from": "0.52.1",
+            "to": "0.52.2",
+            "items": [
+              {
+                "id": "S-0444",
+                "title": "flaiover's components load its stylesheet",
+                "level": "patch"
+              }
+            ]
+          }
+        ],
+        "enabled": true,
+        "remote": {
+          "remote": "origin",
+          "fix": "git fetch --tags origin",
+          "message": ""
+        },
+        "unplanned": [
+          {
+            "id": "S-0440",
+            "title": "Controls for props",
+            "reason": "it changed no component's files, so no release covers it"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Behind the remote",
+      "props": {
+        "plans": [],
+        "enabled": true,
+        "remote": {
+          "remote": "origin",
+          "behind": [
+            {
+              "component": "flai",
+              "local": "flai/v1.56.0",
+              "remote": "flai/v1.57.0"
+            }
+          ],
+          "branch": {
+            "upstream": "origin/main",
+            "head": "a80bac47e1c2d3f4a5b6c7d8e9f0a1b2c3d4e5f6",
+            "fetched": false
+          },
+          "fix": "git pull --ff-only origin main",
+          "message": "this clone is behind origin"
+        }
+      }
+    }
+  ]
+}

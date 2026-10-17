@@ -1,0 +1,32 @@
+{
+  "examples": [
+    {
+      "name": "Three calls",
+      "props": {
+        "events": [
+          {
+            "at": 1792143674514,
+            "name": "onpick",
+            "args": [
+              "flaiover",
+              "src/lib/components/design/TokenSheet.svelte"
+            ]
+          },
+          {
+            "at": 1792143673174,
+            "name": "onpick",
+            "args": [
+              "flaiover",
+              "src/lib/components/BoardCard.svelte"
+            ]
+          },
+          {
+            "at": 1792143672304,
+            "name": "ondismiss",
+            "args": []
+          }
+        ]
+      }
+    }
+  ]
+}

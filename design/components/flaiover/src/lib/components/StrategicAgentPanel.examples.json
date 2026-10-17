@@ -1,0 +1,101 @@
+{
+  "examples": [
+    {
+      "name": "A planner with past runs",
+      "props": {
+        "kind": "planner",
+        "action": "plan",
+        "enabled": true,
+        "on": "flai serve starts the planner when you ask.",
+        "activity": {
+          "kind": "planner",
+          "accrued_cost": 2.07,
+          "accrued_seconds": 1860,
+          "tasks_completed": 2,
+          "last_run": "2026-10-15T11:42:10Z",
+          "path": "wip/agents/planner.md",
+          "entries": [
+            {
+              "at": "2026-10-14T15:08:00Z",
+              "summary": "Drafted four stories for E-0003, each with touches, a forecast, and a cost of delay",
+              "trigger": "the operator",
+              "items": [
+                "S-0443",
+                "S-0444",
+                "S-0445",
+                "S-0446"
+              ],
+              "seconds": 1140,
+              "cost": 1.32,
+              "estimated": false
+            },
+            {
+              "at": "2026-10-15T11:42:10Z",
+              "summary": "Planned S-0444: three tasks in two layers, forecast 4 hours",
+              "trigger": "the operator",
+              "items": [
+                "S-0444",
+                "T-1889",
+                "T-1890",
+                "T-1891"
+              ],
+              "seconds": 720,
+              "cost": 0.75,
+              "estimated": true
+            }
+          ]
+        },
+        "runs": [
+          {
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "planner",
+            "started": "2026-10-16T09:41:00Z",
+            "trigger": "the orchestrator",
+            "ended": "2026-10-16T09:52:30Z",
+            "outcome": "failed",
+            "why": "the planner exited with status 1: the usage limit was reached"
+          },
+          {
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "planner",
+            "started": "2026-10-15T11:30:00Z",
+            "ended": "2026-10-15T11:42:20Z",
+            "outcome": "worked",
+            "trigger": "the operator"
+          },
+          {
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "planner",
+            "started": "2026-10-13T10:00:00Z",
+            "error": "claude: command not found on the host's PATH"
+          }
+        ]
+      }
+    },
+    {
+      "name": "The host action off",
+      "props": {
+        "kind": "analyzer",
+        "action": "analyze",
+        "enabled": false,
+        "on": "flai serve starts the analyzer when you Run it, and when analysis.schedule comes round.",
+        "activity": {
+          "kind": "analyzer",
+          "accrued_cost": 0,
+          "accrued_seconds": 0,
+          "tasks_completed": 0,
+          "last_run": "",
+          "path": "wip/agents/analyzer.md",
+          "entries": []
+        },
+        "runs": []
+      }
+    }
+  ]
+}

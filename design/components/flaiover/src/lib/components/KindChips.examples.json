@@ -1,0 +1,18 @@
+{
+  "examples": [
+    {
+      "name": "A story's improvement",
+      "props": {
+        "type": "story",
+        "nature": "improvement"
+      }
+    },
+    {
+      "name": "An epic's feature",
+      "props": {
+        "type": "epic",
+        "nature": "feature"
+      }
+    }
+  ]
+}

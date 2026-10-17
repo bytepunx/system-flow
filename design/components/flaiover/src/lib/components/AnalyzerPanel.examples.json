@@ -1,0 +1,116 @@
+{
+  "examples": [
+    {
+      "name": "An analyzer running, with past runs",
+      "props": {
+        "view": {
+          "enabled": true,
+          "activity": {
+            "kind": "analyzer",
+            "accrued_cost": 3.42,
+            "accrued_seconds": 2710,
+            "tasks_completed": 2,
+            "last_run": "2026-10-14T06:21:40Z",
+            "path": "wip/agents/analyzer.md",
+            "entries": [
+              {
+                "at": "2026-10-09T06:18:12Z",
+                "summary": "Analyzed risk: two open issues recur in the integration tier (report design/analysis/2026-10-09-risk.md)",
+                "trigger": "schedule",
+                "items": [
+                  "I-0158"
+                ],
+                "seconds": 1290,
+                "cost": 1.61,
+                "estimated": false
+              },
+              {
+                "at": "2026-10-14T06:21:40Z",
+                "summary": "Analyzed bottlenecks: review waits longest, a median of 19 hours (report design/analysis/2026-10-14-bottlenecks.md)",
+                "trigger": "schedule",
+                "items": [
+                  "I-0159",
+                  "I-0160"
+                ],
+                "seconds": 1420,
+                "cost": 1.81,
+                "estimated": true
+              }
+            ]
+          },
+          "run": {
+            "story": "",
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "analyzer",
+            "pid": 51877,
+            "started": "2026-10-16T09:30:00Z",
+            "focus": "intent",
+            "trigger": "the operator"
+          },
+          "runs": [
+            {
+              "story": "",
+              "harness": "claude",
+              "model": "opus",
+              "command": "claude",
+              "agent": "analyzer",
+              "pid": 51877,
+              "started": "2026-10-16T09:30:00Z",
+              "focus": "intent",
+              "trigger": "the operator"
+            },
+            {
+              "story": "",
+              "harness": "claude",
+              "model": "opus",
+              "command": "claude",
+              "agent": "analyzer",
+              "started": "2026-10-14T05:58:00Z",
+              "ended": "2026-10-14T06:21:45Z",
+              "exit": 0,
+              "outcome": "worked",
+              "focus": "bottlenecks",
+              "trigger": "schedule",
+              "report": "design/analysis/2026-10-14-bottlenecks.md"
+            },
+            {
+              "story": "",
+              "harness": "claude",
+              "model": "opus",
+              "command": "claude",
+              "agent": "analyzer",
+              "started": "2026-10-09T05:56:30Z",
+              "ended": "2026-10-09T06:18:20Z",
+              "exit": 0,
+              "outcome": "worked",
+              "focus": "risk",
+              "trigger": "schedule",
+              "report": "design/analysis/2026-10-09-risk.md"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "The analyze action off",
+      "props": {
+        "view": {
+          "enabled": false,
+          "activity": {
+            "kind": "analyzer",
+            "accrued_cost": 0,
+            "accrued_seconds": 0,
+            "tasks_completed": 0,
+            "last_run": "",
+            "path": "wip/agents/analyzer.md",
+            "entries": []
+          },
+          "run": null,
+          "runs": []
+        }
+      }
+    }
+  ]
+}

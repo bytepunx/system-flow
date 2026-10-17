@@ -1,0 +1,25 @@
+{
+  "examples": [
+    {
+      "name": "Two components without a release",
+      "props": {
+        "unreleased": [
+          {
+            "component": "design",
+            "files": [
+              "design/system/component-library.md",
+              "design/components/README.md",
+              "design/adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md"
+            ]
+          },
+          {
+            "component": "scripts",
+            "files": [
+              "scripts/flaiover-test.sh"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

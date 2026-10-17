@@ -1,0 +1,320 @@
+{
+  "examples": [
+    {
+      "name": "Stories done per week by nature",
+      "props": {
+        "option": {
+          "backgroundColor": "transparent",
+          "textStyle": {
+            "color": "#1c1917"
+          },
+          "animationDuration": 300,
+          "grid": {
+            "left": 56,
+            "right": 24,
+            "top": 40,
+            "bottom": 48,
+            "containLabel": false
+          },
+          "legend": {
+            "show": true,
+            "top": 0,
+            "textStyle": {
+              "color": "#645853"
+            },
+            "icon": "circle",
+            "itemWidth": 10,
+            "itemHeight": 10
+          },
+          "tooltip": {
+            "trigger": "axis",
+            "backgroundColor": "#fdfbf3",
+            "borderColor": "#e3ddcc",
+            "textStyle": {
+              "color": "#1c1917"
+            },
+            "axisPointer": {
+              "type": "shadow"
+            }
+          },
+          "xAxis": {
+            "axisLine": {
+              "lineStyle": {
+                "color": "#e3ddcc"
+              }
+            },
+            "axisLabel": {
+              "color": "#645853"
+            },
+            "splitLine": {
+              "show": false
+            },
+            "type": "category",
+            "data": [
+              "2026-W37",
+              "2026-W38",
+              "2026-W39",
+              "2026-W40",
+              "2026-W41",
+              "2026-W42"
+            ]
+          },
+          "yAxis": {
+            "axisLine": {
+              "show": false
+            },
+            "axisLabel": {
+              "color": "#645853"
+            },
+            "splitLine": {
+              "lineStyle": {
+                "color": "#e3ddcc"
+              }
+            },
+            "type": "value",
+            "minInterval": 1,
+            "name": "done",
+            "nameTextStyle": {
+              "color": "#645853"
+            }
+          },
+          "series": [
+            {
+              "name": "feature",
+              "type": "bar",
+              "stack": "week",
+              "barMaxWidth": 24,
+              "itemStyle": {
+                "color": "#2f6ec4",
+                "borderColor": "#fdfbf3",
+                "borderWidth": 1
+              },
+              "data": [
+                3,
+                4,
+                2,
+                5,
+                3,
+                1
+              ]
+            },
+            {
+              "name": "improvement",
+              "type": "bar",
+              "stack": "week",
+              "barMaxWidth": 24,
+              "itemStyle": {
+                "color": "#1d9a2e",
+                "borderColor": "#fdfbf3",
+                "borderWidth": 1
+              },
+              "data": [
+                2,
+                1,
+                3,
+                2,
+                4,
+                2
+              ]
+            },
+            {
+              "name": "remediation",
+              "type": "bar",
+              "stack": "week",
+              "barMaxWidth": 24,
+              "itemStyle": {
+                "color": "#b0632a",
+                "borderColor": "#fdfbf3",
+                "borderWidth": 1
+              },
+              "data": [
+                0,
+                1,
+                2,
+                0,
+                1,
+                0
+              ]
+            }
+          ]
+        },
+        "theme": {
+          "dark": false,
+          "surface": "#fdfbf3",
+          "text": "#1c1917",
+          "textSecondary": "#645853",
+          "grid": "#e3ddcc",
+          "series": [
+            "#2f6ec4",
+            "#d0483f",
+            "#0e8fa9",
+            "#b5820a",
+            "#c0559a",
+            "#1d9a2e",
+            "#6f5bc8",
+            "#b0632a"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Stories done per week by nature, dark palette",
+      "theme": "dark",
+      "props": {
+        "option": {
+          "backgroundColor": "transparent",
+          "textStyle": {
+            "color": "#f7f3e3"
+          },
+          "animationDuration": 300,
+          "grid": {
+            "left": 56,
+            "right": 24,
+            "top": 40,
+            "bottom": 48,
+            "containLabel": false
+          },
+          "legend": {
+            "show": true,
+            "top": 0,
+            "textStyle": {
+              "color": "#a79a95"
+            },
+            "icon": "circle",
+            "itemWidth": 10,
+            "itemHeight": 10
+          },
+          "tooltip": {
+            "trigger": "axis",
+            "backgroundColor": "#272220",
+            "borderColor": "#433b38",
+            "textStyle": {
+              "color": "#f7f3e3"
+            },
+            "axisPointer": {
+              "type": "shadow"
+            }
+          },
+          "xAxis": {
+            "axisLine": {
+              "lineStyle": {
+                "color": "#433b38"
+              }
+            },
+            "axisLabel": {
+              "color": "#a79a95"
+            },
+            "splitLine": {
+              "show": false
+            },
+            "type": "category",
+            "data": [
+              "2026-W37",
+              "2026-W38",
+              "2026-W39",
+              "2026-W40",
+              "2026-W41",
+              "2026-W42"
+            ]
+          },
+          "yAxis": {
+            "axisLine": {
+              "show": false
+            },
+            "axisLabel": {
+              "color": "#a79a95"
+            },
+            "splitLine": {
+              "lineStyle": {
+                "color": "#433b38"
+              }
+            },
+            "type": "value",
+            "minInterval": 1,
+            "name": "done",
+            "nameTextStyle": {
+              "color": "#a79a95"
+            }
+          },
+          "series": [
+            {
+              "name": "feature",
+              "type": "bar",
+              "stack": "week",
+              "barMaxWidth": 24,
+              "itemStyle": {
+                "color": "#3f86d9",
+                "borderColor": "#272220",
+                "borderWidth": 1
+              },
+              "data": [
+                3,
+                4,
+                2,
+                5,
+                3,
+                1
+              ]
+            },
+            {
+              "name": "improvement",
+              "type": "bar",
+              "stack": "week",
+              "barMaxWidth": 24,
+              "itemStyle": {
+                "color": "#33a646",
+                "borderColor": "#272220",
+                "borderWidth": 1
+              },
+              "data": [
+                2,
+                1,
+                3,
+                2,
+                4,
+                2
+              ]
+            },
+            {
+              "name": "remediation",
+              "type": "bar",
+              "stack": "week",
+              "barMaxWidth": 24,
+              "itemStyle": {
+                "color": "#c27a3c",
+                "borderColor": "#272220",
+                "borderWidth": 1
+              },
+              "data": [
+                0,
+                1,
+                2,
+                0,
+                1,
+                0
+              ]
+            }
+          ]
+        },
+        "theme": {
+          "dark": true,
+          "surface": "#272220",
+          "text": "#f7f3e3",
+          "textSecondary": "#a79a95",
+          "grid": "#433b38",
+          "series": [
+            "#3f86d9",
+            "#e05a52",
+            "#1e9fbb",
+            "#b88b1f",
+            "#d55f9d",
+            "#33a646",
+            "#8b7ce6",
+            "#c27a3c"
+          ]
+        },
+        "height": 280
+      }
+    }
+  ]
+}

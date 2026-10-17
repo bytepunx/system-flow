@@ -1,0 +1,45 @@
+{
+  "examples": [
+    {
+      "name": "Three stories done in the window",
+      "props": {
+        "rows": [
+          {
+            "id": "S-0443",
+            "title": "Replies settle the threads an agent waits on",
+            "completed": "2026-10-15T16:42:00Z",
+            "nature": "feature",
+            "model": "claude-opus-5-5",
+            "forecast_seconds": 14400,
+            "cycle_time_seconds": 18900,
+            "forecast_error_seconds": 4500,
+            "delivery_error_seconds": 3600,
+            "estimate_error_seconds": 2700
+          },
+          {
+            "id": "S-0441",
+            "title": "The board keeps its scroll position after a move",
+            "completed": "2026-10-14T09:15:00Z",
+            "nature": "improvement",
+            "model": "claude-sonnet-5",
+            "forecast_seconds": 7200,
+            "cycle_time_seconds": 5400,
+            "forecast_error_seconds": -1800,
+            "delivery_error_seconds": -900,
+            "estimate_error_seconds": -1200
+          },
+          {
+            "id": "S-0438",
+            "title": "flai check reports a stale worktree once",
+            "completed": "2026-10-12T21:03:00Z",
+            "nature": "remediation",
+            "model": "claude-opus-5-5",
+            "forecast_seconds": 3600,
+            "cycle_time_seconds": 3900,
+            "forecast_error_seconds": 300
+          }
+        ]
+      }
+    }
+  ]
+}

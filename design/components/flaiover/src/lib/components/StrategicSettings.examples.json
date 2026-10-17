@@ -1,0 +1,155 @@
+{
+  "examples": [
+    {
+      "name": "The planner's settings",
+      "props": {
+        "block": "planning",
+        "strategic": {
+          "editable": true,
+          "enable": "flai serve enable settings",
+          "settings": [
+            {
+              "key": "planning.agent",
+              "kind": "agent",
+              "meaning": "The planner's agent, over the project's: what it sets wins, and what it leaves out is the project's agent's.",
+              "value": {
+                "harness": "claude",
+                "model": "opus",
+                "config": {
+                  "effort": "high"
+                }
+              },
+              "set": true
+            },
+            {
+              "key": "planning.replan",
+              "kind": "choice",
+              "values": [
+                "never",
+                "deterministic",
+                "agent"
+              ],
+              "default": "deterministic",
+              "meaning": "What flai serve does when a story is accepted or cancelled or the pull order changes: never nothing, deterministic plays the board out again and moves forecast deliveries, and agent does that and queues the planner for each story whose delivery moved.",
+              "set": false
+            },
+            {
+              "key": "planning.schedule",
+              "kind": "cron",
+              "meaning": "When flai serve runs the planner over the ready column, a five-field cron expression in UTC or daily; unset, there is no schedule.",
+              "value": "0 6 * * 1",
+              "set": true
+            },
+            {
+              "key": "planning.hour_rate",
+              "kind": "number",
+              "meaning": "What an hour of work costs, in the project's currency, which prices a cost of delay's time lost; unset means unknown, not free.",
+              "value": 85,
+              "set": true
+            },
+            {
+              "key": "planning.cycle",
+              "kind": "duration",
+              "default": "168h",
+              "meaning": "The period a cost of delay's time lost is counted over.",
+              "set": false
+            },
+            {
+              "key": "planning.default_duration",
+              "kind": "duration",
+              "default": "1h",
+              "meaning": "The work a story is forecast to take when there is too little history to forecast it from.",
+              "set": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "The orchestrator's settings, read-only",
+      "props": {
+        "block": "orchestration",
+        "strategic": {
+          "editable": false,
+          "enable": "flai serve enable settings",
+          "settings": [
+            {
+              "key": "orchestration.permissions.promote_to_ready",
+              "kind": "boolean",
+              "values": [
+                "true",
+                "false"
+              ],
+              "default": "false",
+              "meaning": "Lets the orchestrator move a story to ready.",
+              "risk": "Agents may pull, work, and spend on a story you have not chosen to start.",
+              "value": true,
+              "set": true
+            },
+            {
+              "key": "orchestration.permissions.answer_threads",
+              "kind": "choice",
+              "values": [
+                "off",
+                "recommend",
+                "autonomous"
+              ],
+              "default": "off",
+              "meaning": "How the orchestrator answers threads: off leaves them to you, recommend replies with a recommendation for you, and autonomous answers them itself.",
+              "risk": "With autonomous, agents act on answers you did not give; with recommend, the decision stays yours.",
+              "value": "recommend",
+              "set": true
+            },
+            {
+              "key": "orchestration.permissions.accept_reviews",
+              "kind": "boolean",
+              "values": [
+                "true",
+                "false"
+              ],
+              "default": "false",
+              "meaning": "Lets the orchestrator accept a story in review, as flai accept does.",
+              "risk": "Work is merged to the main branch without your review, and a story accepted wrongly has to be undone by hand.",
+              "set": false
+            },
+            {
+              "key": "orchestration.policy",
+              "kind": "choice",
+              "values": [
+                "cod",
+                "wsjf",
+                "throughput",
+                "fifo"
+              ],
+              "default": "fifo",
+              "meaning": "How the ready column is ordered: cod by cost of delay, wsjf by cost of delay over forecast duration, throughput shortest first, and fifo leaves your order alone.",
+              "value": "wsjf",
+              "set": true
+            },
+            {
+              "key": "orchestration.release.policy",
+              "kind": "choice",
+              "values": [
+                "judgement",
+                "threshold",
+                "theme"
+              ],
+              "default": "judgement",
+              "meaning": "When accepted stories not yet released are due a release: judgement leaves it to you, threshold at a value or a count of unreleased work, and theme when every story of an epic or a tag is accepted.",
+              "value": "threshold",
+              "set": true
+            },
+            {
+              "key": "orchestration.release.count",
+              "kind": "number",
+              "whole": true,
+              "meaning": "Under threshold, the number of accepted stories not yet released at which a release is due.",
+              "value": 3,
+              "set": true
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

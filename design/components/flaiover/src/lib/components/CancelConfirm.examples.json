@@ -1,0 +1,10 @@
+{
+  "examples": [
+    {
+      "name": "Cancelling a story",
+      "props": {
+        "id": "S-0444"
+      }
+    }
+  ]
+}

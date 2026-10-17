@@ -1,0 +1,57 @@
+{
+  "examples": [
+    {
+      "name": "Agent working",
+      "props": {
+        "activity": {
+          "state": "working",
+          "run": {
+            "story": "S-0444",
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "agent-S-0444",
+            "pid": 41210,
+            "started": "2026-10-16T09:12:00Z"
+          }
+        }
+      }
+    },
+    {
+      "name": "Agent waiting for the designer",
+      "props": {
+        "activity": {
+          "state": "waiting",
+          "why": "asked which theme the harness opens in",
+          "run": {
+            "story": "S-0444",
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "agent-S-0444",
+            "pid": 41210,
+            "started": "2026-10-16T09:12:00Z"
+          }
+        }
+      }
+    },
+    {
+      "name": "Agent failed",
+      "props": {
+        "activity": {
+          "state": "failed",
+          "why": "the close-out's tests failed",
+          "run": {
+            "story": "S-0444",
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "agent-S-0444",
+            "pid": 41210,
+            "started": "2026-10-16T09:12:00Z"
+          }
+        }
+      }
+    }
+  ]
+}

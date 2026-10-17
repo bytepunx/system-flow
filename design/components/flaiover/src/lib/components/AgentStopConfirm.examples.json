@@ -1,0 +1,48 @@
+{
+  "examples": [
+    {
+      "name": "An agent at work",
+      "props": {
+        "story": "S-0444",
+        "activity": {
+          "state": "working",
+          "run": {
+            "story": "S-0444",
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "agent-S-0444",
+            "pid": 48213,
+            "started": "2026-10-16T09:12:04Z"
+          }
+        },
+        "status": "in-progress"
+      }
+    },
+    {
+      "name": "An agent that ended waiting for an answer",
+      "props": {
+        "story": "S-0441",
+        "activity": {
+          "state": "waiting",
+          "why": "waiting for the designer on TH-0509",
+          "thread": "TH-0509",
+          "run": {
+            "story": "S-0441",
+            "harness": "claude",
+            "model": "opus",
+            "command": "claude",
+            "agent": "agent-S-0441",
+            "started": "2026-10-15T16:20:00Z",
+            "ended": "2026-10-15T17:02:30Z",
+            "exit": 0,
+            "outcome": "asked",
+            "thread": "TH-0509"
+          }
+        },
+        "status": "in-progress",
+        "error": "flai could not stop the agent: the story's run file is locked by another flai"
+      }
+    }
+  ]
+}

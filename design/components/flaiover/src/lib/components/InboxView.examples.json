@@ -1,0 +1,100 @@
+{
+  "examples": [
+    {
+      "name": "Something of every kind",
+      "props": {
+        "inbox": {
+          "total": 6,
+          "counts": {
+            "review": 1,
+            "thread": 2,
+            "question": 1,
+            "blocked": 1,
+            "overlap": 1
+          },
+          "entries": [
+            {
+              "key": "review:S-0443",
+              "kind": "review",
+              "title": "S-0443 A component's examples are kept under design/components",
+              "detail": "in review since 2026-10-16",
+              "href": "/review/S-0443",
+              "item": "S-0443",
+              "at": "2026-10-16T08:12:00Z"
+            },
+            {
+              "key": "thread:TH-0512",
+              "kind": "thread",
+              "title": "Should an example name its theme when it shows both?",
+              "detail": "orchestrator recommends an answer to confirm, on S-0444",
+              "href": "/items/S-0444?thread=TH-0512",
+              "item": "S-0444",
+              "at": "2026-10-16T09:40:00Z",
+              "recommendation": {
+                "author": "orchestrator",
+                "at": "2026-10-16T09:41:00Z",
+                "text": "Leave the theme out, so the page shows the example in light and dark.",
+                "source": {
+                  "path": "design/system/component-library.md",
+                  "heading": "Examples (S-0443)"
+                }
+              }
+            },
+            {
+              "key": "thread:TH-0509",
+              "kind": "thread",
+              "title": "Which port should the harness use?",
+              "detail": "agent-S-0441 asks, on S-0441",
+              "href": "/items/S-0441?thread=TH-0509",
+              "item": "S-0441",
+              "at": "2026-10-15T17:02:00Z"
+            },
+            {
+              "key": "question:S-0445:width",
+              "kind": "question",
+              "title": "Should the frame's width be saved with an example?",
+              "href": "/items/S-0445?question=question%3AS-0445%3Awidth",
+              "item": "S-0445"
+            },
+            {
+              "key": "blocked:T-1892",
+              "kind": "blocked",
+              "title": "T-1892 Record the harness's screenshots",
+              "detail": "blocked: waiting on the designer",
+              "href": "/items/T-1892",
+              "item": "T-1892"
+            },
+            {
+              "key": "overlap:S-0444:S-0446",
+              "kind": "overlap",
+              "title": "S-0444 and S-0446 both touch flaiover/src/lib/components",
+              "href": "/items/S-0444",
+              "item": "S-0444"
+            }
+          ],
+          "notes": [
+            "The inbox was read at 2026-10-16 10:00 UTC."
+          ]
+        },
+        "writable": true
+      }
+    },
+    {
+      "name": "Nothing needs you",
+      "props": {
+        "inbox": {
+          "total": 0,
+          "counts": {
+            "review": 0,
+            "thread": 0,
+            "question": 0,
+            "blocked": 0,
+            "overlap": 0
+          },
+          "entries": [],
+          "notes": []
+        }
+      }
+    }
+  ]
+}

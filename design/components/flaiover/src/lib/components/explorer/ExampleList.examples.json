@@ -1,0 +1,35 @@
+{
+  "examples": [
+    {
+      "name": "Three examples, on a story branch",
+      "props": {
+        "examples": [
+          {
+            "name": "A status",
+            "props": {
+              "text": "The board was reordered.",
+              "role": "status"
+            }
+          },
+          {
+            "name": "An alert, dark",
+            "props": {
+              "text": "The release was refused: main has moved on.",
+              "role": "alert"
+            },
+            "theme": "dark"
+          },
+          {
+            "name": "Narrow",
+            "props": {
+              "text": "S-0444 moved to review."
+            },
+            "width": 360
+          }
+        ],
+        "path": "design/components/flaiover/src/lib/components/DismissibleNotice.examples.json",
+        "story": "S-0444"
+      }
+    }
+  ]
+}

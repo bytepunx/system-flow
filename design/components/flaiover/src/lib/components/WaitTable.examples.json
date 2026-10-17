@@ -1,0 +1,44 @@
+{
+  "examples": [
+    {
+      "name": "Longest waits on threads and in review",
+      "props": {
+        "type": "story",
+        "rows": [
+          {
+            "item": "S-0443",
+            "kind": "review",
+            "started": "2026-10-15T11:20:00Z",
+            "ended": "2026-10-15T16:42:00Z",
+            "seconds": 19320,
+            "awaited": "operator"
+          },
+          {
+            "item": "S-0444",
+            "kind": "thread",
+            "thread": "TH-0312",
+            "started": "2026-10-16T08:05:00Z",
+            "seconds": 7200,
+            "awaited": "designer"
+          },
+          {
+            "item": "S-0441",
+            "kind": "thread",
+            "thread": "TH-0307",
+            "started": "2026-10-13T14:30:00Z",
+            "ended": "2026-10-13T15:10:00Z",
+            "seconds": 2400,
+            "awaited": "agent-S-0438"
+          }
+        ]
+      }
+    },
+    {
+      "name": "No waits in the window",
+      "props": {
+        "type": "story",
+        "rows": []
+      }
+    }
+  ]
+}

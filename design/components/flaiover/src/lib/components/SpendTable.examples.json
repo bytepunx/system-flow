@@ -1,0 +1,71 @@
+{
+  "examples": [
+    {
+      "name": "Two days of story spend, all models and per model",
+      "props": {
+        "bucket": "day",
+        "rows": [
+          {
+            "at": "2026-10-15T00:00:00Z",
+            "of": "all models",
+            "items": 3,
+            "tokens": 4820000,
+            "cost": 41.37,
+            "seconds": 16200,
+            "priced_by": "harness",
+            "tokens_per_item": 1606667,
+            "cost_per_item": 13.79,
+            "minutes_per_item": 90,
+            "tokens_per_minute": 17852,
+            "tokens_per_dollar": 116510,
+            "mean_tokens": 4100000,
+            "mean_cost": 35.2
+          },
+          {
+            "at": "2026-10-15T00:00:00Z",
+            "of": "claude-opus-5-5",
+            "items": 2,
+            "tokens": 3900000,
+            "cost": 36.12,
+            "seconds": 12600,
+            "tokens_per_item": 1950000,
+            "cost_per_item": 18.06,
+            "minutes_per_item": 105,
+            "tokens_per_minute": 18571,
+            "tokens_per_dollar": 107973
+          },
+          {
+            "at": "2026-10-15T00:00:00Z",
+            "of": "claude-sonnet-5",
+            "items": 1,
+            "tokens": 920000,
+            "cost": 5.25,
+            "seconds": 3600,
+            "estimated": true,
+            "tokens_per_item": 920000,
+            "cost_per_item": 5.25,
+            "minutes_per_item": 60,
+            "tokens_per_minute": 15333,
+            "tokens_per_dollar": 175238
+          },
+          {
+            "at": "2026-10-14T00:00:00Z",
+            "of": "story",
+            "items": 2,
+            "tokens": 3380000,
+            "cost": 29.03,
+            "seconds": 10800,
+            "estimated": true,
+            "tokens_per_item": 1690000,
+            "cost_per_item": 14.52,
+            "minutes_per_item": 90,
+            "tokens_per_minute": 15648,
+            "tokens_per_dollar": 116431,
+            "mean_tokens": 3380000,
+            "mean_cost": 29.03
+          }
+        ]
+      }
+    }
+  ]
+}

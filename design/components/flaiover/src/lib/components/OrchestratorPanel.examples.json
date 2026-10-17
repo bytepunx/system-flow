@@ -1,0 +1,147 @@
+{
+  "examples": [
+    {
+      "name": "An orchestrator running, with its decisions",
+      "props": {
+        "view": {
+          "enabled": true,
+          "held": false,
+          "activity": {
+            "kind": "orchestrator",
+            "accrued_cost": 6.18,
+            "accrued_seconds": 9840,
+            "tasks_completed": 4,
+            "last_run": "2026-10-16T09:20:11Z",
+            "path": "wip/agents/orchestrator.md",
+            "entries": [
+              {
+                "at": "2026-10-16T07:05:00Z",
+                "summary": "Promoted S-0445 to ready: its cost of delay, 1,200 a week, is the backlog's highest",
+                "items": [
+                  "S-0445"
+                ],
+                "seconds": 240,
+                "cost": 0.31,
+                "estimated": false
+              },
+              {
+                "at": "2026-10-16T07:40:30Z",
+                "summary": "Asked the planner to plan S-0446: it has no touches and no forecast",
+                "items": [
+                  "S-0446"
+                ],
+                "seconds": 180,
+                "cost": 0.22,
+                "estimated": false
+              },
+              {
+                "at": "2026-10-16T08:55:00Z",
+                "summary": "Ordered the ready column by wsjf: S-0445 first, at 600 a week per day forecast",
+                "items": [
+                  "S-0445",
+                  "S-0447"
+                ],
+                "seconds": 120,
+                "cost": 0.14,
+                "estimated": false
+              },
+              {
+                "at": "2026-10-16T09:20:11Z",
+                "summary": "Answered TH-0512 with a recommendation: leave the theme out of an example",
+                "items": [
+                  "S-0444"
+                ],
+                "seconds": 300,
+                "cost": 0.4,
+                "estimated": true
+              }
+            ],
+            "refusals": [
+              {
+                "at": "2026-10-16T08:10:00Z",
+                "call": "item_move S-0443 done",
+                "needs": "accept_reviews"
+              }
+            ]
+          },
+          "run": {
+            "story": "",
+            "harness": "claude",
+            "model": "sonnet",
+            "command": "claude",
+            "agent": "orchestrator",
+            "pid": 40112,
+            "started": "2026-10-16T06:58:00Z"
+          },
+          "runs": [
+            {
+              "story": "",
+              "harness": "claude",
+              "model": "sonnet",
+              "command": "claude",
+              "agent": "orchestrator",
+              "pid": 40112,
+              "started": "2026-10-16T06:58:00Z"
+            },
+            {
+              "story": "",
+              "harness": "claude",
+              "model": "sonnet",
+              "command": "claude",
+              "agent": "orchestrator",
+              "started": "2026-10-15T14:00:00Z",
+              "ended": "2026-10-15T18:30:00Z",
+              "exit": 1,
+              "outcome": "failed",
+              "why": "the harness exited with status 1: the usage limit was reached"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Held by the operator",
+      "props": {
+        "view": {
+          "enabled": true,
+          "held": true,
+          "activity": {
+            "kind": "orchestrator",
+            "accrued_cost": 0.31,
+            "accrued_seconds": 240,
+            "tasks_completed": 1,
+            "last_run": "2026-10-16T07:05:00Z",
+            "path": "wip/agents/orchestrator.md",
+            "entries": [
+              {
+                "at": "2026-10-16T07:05:00Z",
+                "summary": "Promoted S-0445 to ready: its cost of delay, 1,200 a week, is the backlog's highest",
+                "items": [
+                  "S-0445"
+                ],
+                "seconds": 240,
+                "cost": 0.31,
+                "estimated": false
+              }
+            ]
+          },
+          "run": null,
+          "runs": [
+            {
+              "story": "",
+              "harness": "claude",
+              "model": "sonnet",
+              "command": "claude",
+              "agent": "orchestrator",
+              "started": "2026-10-16T06:58:00Z",
+              "ended": "2026-10-16T07:10:00Z",
+              "outcome": "stopped",
+              "stopped": "2026-10-16T07:10:00Z",
+              "held": true
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

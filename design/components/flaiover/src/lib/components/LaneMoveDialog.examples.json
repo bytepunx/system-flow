@@ -1,0 +1,44 @@
+{
+  "examples": [
+    {
+      "name": "Moving ready stories forward",
+      "props": {
+        "from": "ready",
+        "to": "in-progress",
+        "stories": [
+          {
+            "id": "S-0445",
+            "title": "List each component's props in the harness"
+          },
+          {
+            "id": "S-0446",
+            "title": "Give the board a compact density"
+          },
+          {
+            "id": "S-0447",
+            "title": "Show each component's examples in the harness's picker"
+          }
+        ],
+        "picked": [
+          "S-0445"
+        ]
+      }
+    },
+    {
+      "name": "Sending a story back from review",
+      "props": {
+        "from": "review",
+        "to": "in-progress",
+        "stories": [
+          {
+            "id": "S-0443",
+            "title": "Record flaky serve tests as issues"
+          }
+        ],
+        "picked": [
+          "S-0443"
+        ]
+      }
+    }
+  ]
+}

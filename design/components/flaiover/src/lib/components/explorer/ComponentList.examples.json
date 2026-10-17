@@ -1,0 +1,326 @@
+{
+  "examples": [
+    {
+      "name": "Two sub-projects, one picked",
+      "props": {
+        "projects": [
+          {
+            "name": "flaiover",
+            "path": "flaiover",
+            "kind": "sveltekit",
+            "supported": true,
+            "setup": "src/routes/layout.css",
+            "components": [
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/AgentDot.svelte",
+                "name": "AgentDot",
+                "props": [
+                  {
+                    "name": "activity",
+                    "kind": "unknown",
+                    "type": "StoryActivity",
+                    "required": false
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/AgentDot.examples.json"
+              },
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/BoardCard.svelte",
+                "name": "BoardCard",
+                "props": [
+                  {
+                    "name": "card",
+                    "kind": "object",
+                    "type": "Card",
+                    "required": true
+                  },
+                  {
+                    "name": "draggable",
+                    "kind": "boolean",
+                    "type": "boolean",
+                    "default": "false",
+                    "required": false
+                  },
+                  {
+                    "name": "dragging",
+                    "kind": "boolean",
+                    "type": "boolean",
+                    "default": "false",
+                    "required": false
+                  },
+                  {
+                    "name": "waiting",
+                    "kind": "boolean",
+                    "type": "boolean",
+                    "default": "false",
+                    "required": false
+                  },
+                  {
+                    "name": "activity",
+                    "kind": "unknown",
+                    "type": "StoryActivity",
+                    "required": false
+                  },
+                  {
+                    "name": "ondragstart",
+                    "kind": "function",
+                    "type": "() => void",
+                    "required": false
+                  },
+                  {
+                    "name": "ondragend",
+                    "kind": "function",
+                    "type": "() => void",
+                    "required": false
+                  },
+                  {
+                    "name": "onkeydown",
+                    "kind": "function",
+                    "type": "(e: KeyboardEvent) => void",
+                    "required": false
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/BoardCard.examples.json"
+              },
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/DismissibleNotice.svelte",
+                "name": "DismissibleNotice",
+                "props": [
+                  {
+                    "name": "text",
+                    "kind": "string",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "ondismiss",
+                    "kind": "function",
+                    "type": "() => void",
+                    "required": true
+                  },
+                  {
+                    "name": "class",
+                    "kind": "string",
+                    "type": "string",
+                    "default": "''",
+                    "required": false
+                  },
+                  {
+                    "name": "role",
+                    "kind": "union",
+                    "type": "'status' | 'alert'",
+                    "default": "'status'",
+                    "required": false,
+                    "literals": [
+                      "\"status\"",
+                      "\"alert\""
+                    ]
+                  },
+                  {
+                    "name": "testid",
+                    "kind": "string",
+                    "type": "string",
+                    "required": false
+                  },
+                  {
+                    "name": "links",
+                    "kind": "unknown",
+                    "type": "LinkOptions",
+                    "required": false
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/DismissibleNotice.examples.json"
+              },
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/Menu.svelte",
+                "name": "Menu",
+                "props": [
+                  {
+                    "name": "x",
+                    "kind": "number",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "y",
+                    "kind": "number",
+                    "type": "number",
+                    "required": true
+                  },
+                  {
+                    "name": "label",
+                    "kind": "string",
+                    "type": "string",
+                    "required": true
+                  },
+                  {
+                    "name": "testid",
+                    "kind": "string",
+                    "type": "string",
+                    "required": false
+                  },
+                  {
+                    "name": "groups",
+                    "kind": "array",
+                    "type": "MenuGroup[]",
+                    "required": true
+                  },
+                  {
+                    "name": "onpick",
+                    "kind": "function",
+                    "type": "(action: string, group: number) => void",
+                    "required": true
+                  },
+                  {
+                    "name": "onclose",
+                    "kind": "function",
+                    "type": "(how: MenuClose) => void",
+                    "required": true
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/Menu.examples.json"
+              },
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/design/Gallery.svelte",
+                "name": "Gallery",
+                "props": [
+                  {
+                    "name": "caption",
+                    "kind": "string",
+                    "type": "string",
+                    "required": true
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/design/Gallery.examples.json"
+              },
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/design/TokenSheet.svelte",
+                "name": "TokenSheet",
+                "props": [
+                  {
+                    "name": "themes",
+                    "kind": "array",
+                    "type": "readonly DesignTheme[]",
+                    "required": true
+                  },
+                  {
+                    "name": "contrast",
+                    "kind": "array",
+                    "type": "readonly DesignContrast[]",
+                    "required": true
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/design/TokenSheet.examples.json"
+              },
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/explorer/ComponentList.svelte",
+                "name": "ComponentList",
+                "props": [
+                  {
+                    "name": "projects",
+                    "kind": "array",
+                    "type": "readonly ComponentsProject[]",
+                    "required": true
+                  },
+                  {
+                    "name": "picked",
+                    "kind": "object",
+                    "type": "{ project: string; path: string } | null",
+                    "required": true
+                  },
+                  {
+                    "name": "onpick",
+                    "kind": "function",
+                    "type": "(project: string, path: string) => void",
+                    "required": true
+                  },
+                  {
+                    "name": "changed",
+                    "kind": "unknown",
+                    "type": "ReadonlySet<string>",
+                    "default": "new Set<string>()",
+                    "required": false
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/explorer/ComponentList.examples.json"
+              },
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/explorer/EventLog.svelte",
+                "name": "EventLog",
+                "props": [
+                  {
+                    "name": "events",
+                    "kind": "array",
+                    "type": "readonly Logged[]",
+                    "required": true
+                  },
+                  {
+                    "name": "onclear",
+                    "kind": "function",
+                    "type": "() => void",
+                    "required": false
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/explorer/EventLog.examples.json"
+              },
+              {
+                "project": "flaiover",
+                "path": "src/lib/components/explorer/PropsPanel.svelte",
+                "name": "PropsPanel",
+                "props": [
+                  {
+                    "name": "props",
+                    "kind": "array",
+                    "type": "readonly ComponentProp[]",
+                    "required": true
+                  },
+                  {
+                    "name": "texts",
+                    "kind": "object",
+                    "type": "Record<string, string>",
+                    "required": true
+                  },
+                  {
+                    "name": "onchange",
+                    "kind": "function",
+                    "type": "(texts: Record<string, string>) => void",
+                    "required": true
+                  }
+                ],
+                "examples": [],
+                "examples_path": "design/components/flaiover/src/lib/components/explorer/PropsPanel.examples.json"
+              }
+            ]
+          },
+          {
+            "name": "flai",
+            "path": "flai",
+            "kind": "go",
+            "supported": false,
+            "components": []
+          }
+        ],
+        "picked": {
+          "project": "flaiover",
+          "path": "src/lib/components/design/TokenSheet.svelte"
+        }
+      }
+    }
+  ]
+}
