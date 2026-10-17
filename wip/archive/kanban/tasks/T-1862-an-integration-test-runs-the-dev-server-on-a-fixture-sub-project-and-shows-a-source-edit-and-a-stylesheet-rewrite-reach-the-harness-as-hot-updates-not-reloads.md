@@ -24,16 +24,16 @@ touches: [flai/internal/components/integration_test.go, flai/internal/components
 after: [T-1861]
 usage:
   source: log
-  seconds: 2845
+  seconds: 2847
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 151
-      output: 600
-      cache_read: 8152880
-      cache_write: 423262
-      cost: 3.9869
+      input: 132
+      output: 64607
+      cache_read: 8322339
+      cache_write: 410727
+      cost: 5.1482
 ---
 # T-1862 An integration test runs the dev server on a fixture sub-project and shows a source edit and a stylesheet rewrite reach the harness as hot updates, not reloads
 

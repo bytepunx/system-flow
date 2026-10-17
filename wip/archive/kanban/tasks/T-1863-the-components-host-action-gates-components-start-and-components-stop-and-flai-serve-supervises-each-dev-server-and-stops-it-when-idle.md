@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 2424
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 145
-      output: 688
-      cache_read: 10885650
-      cache_write: 948865
-      cost: 5.5015
+      input: 182
+      output: 89154
+      cache_read: 11484225
+      cache_write: 566774
+      cost: 7.1042
 ---
 # T-1863 The components host action gates components.start and components.stop, and flai serve supervises each dev server and stops it when idle
 

@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-17T01:02:24Z
+updated: 2026-10-17T01:08:46Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0438](S-0438.md) | flai runs a Svelte sub-project's own Vite dev server on the host, behind the components host action, with a harness that renders any one of its components live | in-progress | system-flow | 2026-10-17T00:42:01Z |
 
 ## Strategic agents
 

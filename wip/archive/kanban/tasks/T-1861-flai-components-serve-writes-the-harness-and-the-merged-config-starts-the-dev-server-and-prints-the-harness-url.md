@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 1081
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 349
-      cache_read: 2910010
-      cache_write: 343745
-      cost: 1.5127
+      input: 50
+      output: 24512
+      cache_read: 3157474
+      cache_write: 155829
+      cost: 1.9532
 ---
 # T-1861 flai components serve writes the harness and the merged config, starts the dev server, and prints the harness URL
 

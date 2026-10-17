@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 117
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 20
-      output: 138
-      cache_read: 1305544
-      cache_write: 20339
-      cost: 0.6164
+      output: 9988
+      cache_read: 1286642
+      cache_write: 63499
+      cost: 0.7959
 ---
 # T-1858 An ADR records the dev server on a loopback port framed cross-origin, the components host action, the idle stop, and the page-to-harness protocol
 

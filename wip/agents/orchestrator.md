@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 782.6865
-accrued_seconds: 657113
-tasks_completed: 580
-last_run: 2026-10-16T23:09:32Z
+accrued_cost: 789.2346
+accrued_seconds: 663903
+tasks_completed: 583
+last_run: 2026-10-17T01:02:42Z
 ---
 
 # Orchestrator activity
@@ -4071,6 +4071,27 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0436
 - Seconds: 75
 - Cost: 0.4184 USD, estimated
+
+### 2026-10-17T00:46:13Z
+
+- Summary: The operator accepted S-0436, settling TH-0486. Under publish (judgement, 1 pending, 50.92 USD a week), published flai 1.53.0 → 1.54.0 (minor) and flaiover 0.48.0 → 0.48.1 (patch), tags flai/v1.54.0 and flaiover/v0.48.1, pushed, bundling S-0436. Reason: file.get and file.save land complete and fix the Design page's token save.
+- Items: S-0436
+- Seconds: 5801
+- Cost: 4.2674 USD, estimated
+
+### 2026-10-17T01:02:29Z
+
+- Summary: The operator moved E-0026's S-0439 to S-0442 to ready. Under order_ready, applied flai order --by throughput: S-0440 (26m), S-0441 (31m), S-0439 (37m), S-0442 (58m). The after holds (S-0439 waits on S-0438; the rest on S-0439) still gate what can be pulled.
+- Items: S-0439, S-0440, S-0441, S-0442
+- Seconds: 976
+- Cost: 2.0601 USD, estimated
+
+### 2026-10-17T01:02:42Z
+
+- Summary: The operator also moved S-0443 and S-0444 to ready. Under order_ready, re-applied flai order --by throughput: S-0440 26m, S-0441 31m, S-0439 37m, S-0442 58m, S-0444 1h, S-0443 1h4m. The after chain still gates pulling.
+- Items: S-0443, S-0444
+- Seconds: 13
+- Cost: 0.2206 USD, estimated
 
 ## Refusals
 

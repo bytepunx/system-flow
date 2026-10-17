@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 962
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 94
-      output: 456
-      cache_read: 5002073
-      cache_write: 164090
-      cost: 2.4017
+      input: 79
+      output: 38919
+      cache_read: 5013280
+      cache_write: 247417
+      cost: 3.1012
 ---
 # T-1859 flai embeds a Vite plugin and a harness page that render one component by path after the setup module, and writes the merged Vite config
 

@@ -3,11 +3,11 @@ id: S-0438
 type: story
 nature: feature
 title: flai runs a Svelte sub-project's own Vite dev server on the host, behind the components host action, with a harness that renders any one of its components live
-status: in-progress
+status: done
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:33:15Z
-updated: 2026-10-17T00:41:49Z
+updated: 2026-10-17T01:08:46Z
 transitions:
   - to: ready
     at: 2026-10-16T23:08:05Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-16T23:08:15Z
     by: agent-S-0438
+  - to: review
+    at: 2026-10-17T01:07:21Z
+    by: system-flow
+  - to: done
+    at: 2026-10-17T01:08:46Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [components, design, cli, dashboard]
 touches: [design/adrs, design/adrs/README.md, design/system/component-library.md, flai/internal/components/harness/plugin.mjs, flai/internal/components/harness/harness.html, flai/internal/components/harness/harness.mjs, flai/internal/components/harness.go, flai/internal/components/harness_test.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/cmd/components.go, flai/cmd/components_test.go, docs/users/flai-reference.md, flai/internal/components/integration_test.go, flai/internal/components/testdata, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/hostapi.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go, docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, docs/users/flai.md, design/system/dashboard-host-channel.md, flai/internal/components/proc_unix.go, flai/internal/components/proc_windows.go, flai/internal/components/serve.go, flai/internal/components/serve_test.go, flai/cmd/serve.go, flai/internal/config/config.go, flaiover/src/lib/server/agent.ts, design/issues/I-0156-flai-guard-refuses-a-story-s-sub-agents-flai-components-list-and-serve-which-only-read-or-run-the-project-s-own-dev-server.md, design/issues/summary.md]
@@ -26,23 +32,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5485
-  estimated: true
-  priced_by: estimate
+  seconds: 7173
+  priced_by: harness
   turns:
     - day: 2026-10-16
       hand_edits: 2
       work: 44
     - day: 2026-10-17
-      hand_edits: 1
-      work: 14
+      ceremony: 1
+      hand_edits: 3
+      work: 42
   models:
     - model: claude-opus-5-5
-      input: 662
-      output: 3307
-      cache_read: 37498738
-      cache_write: 2259511
-      cost: 18.483
+      input: 738
+      output: 361673
+      cache_read: 46588535
+      cache_write: 2299255
+      cost: 28.8199
   strategic:
     - kind: orchestrator
       seconds: 1738
@@ -116,3 +122,15 @@ A component renders as the project builds it, and follows each change to its sou
 - **Forecast.** flai's 55m (size 34, at 96 s a unit) raised to 1h20m. Nothing in the history merges a project's Vite config with SvelteKit's plugin or runs a live dev server in a test, and T-1859's note keeps a second way open if the first fails. Delivery is flai's start, 20:03Z, plus 1h20m.
 - **Cost of delay.** 110.09 USD a week, flai's share of E-0026's 600 USD penalty by the raised forecast, kept: every later story waits on it.
 - The forecast carries `by: system-flow`: the CLI wrote it under the host's `FLAI_AGENT`. The planner wrote it.
+
+### Accepted by the orchestrator
+
+- Verified: cba39804bceaad9f3d408f41f0cb45db0f553732
+- At: 2026-10-17T01:08:46Z
+
+Verdict: all five criteria met at cba3980; flai verify passed at that commit against main 5de85b6; no convention breach.
+- 1: design/adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md, design/adrs/README.md
+- 2: flai/cmd/components.go, flai/internal/components/harness.go, flai/internal/components/harness/plugin.mjs, flai/internal/components/harness/harness.html, flai/internal/components/harness/harness.mjs, flai/internal/components/devserver.go, flai/internal/components/serve.go, flai/internal/components/harness_test.go, flai/internal/components/devserver_test.go, flai/internal/components/serve_test.go
+- 3: flai/internal/hostapi/writes.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go, flai/internal/config/config.go, flai/cmd/serve_actions.go, flai/cmd/serve.go, flaiover/src/lib/server/agent.ts
+- 4: flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/vite.config.js, flai/internal/components/testdata/harness/src/lib/Hello.svelte
+- 5: docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/dashboard-host-channel.md, design/system/component-library.md

@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 971
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 186
-      cache_read: 1363713
-      cache_write: 87099
-      cost: 0.6745
+      input: 22
+      output: 10930
+      cache_read: 1407888
+      cache_write: 69483
+      cost: 0.8709
 ---
 # T-1860 flai/internal/components starts the sub-project's own vite on 127.0.0.1 and a free port, waits for it to answer, and stops it
 

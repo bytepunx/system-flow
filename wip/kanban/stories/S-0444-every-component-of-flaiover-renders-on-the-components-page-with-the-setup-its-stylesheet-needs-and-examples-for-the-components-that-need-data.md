@@ -3,12 +3,15 @@ id: S-0444
 type: story
 nature: feature
 title: Every component of flaiover renders on the Components page, with the setup its stylesheet needs and examples for the components that need data
-status: backlog
+status: ready
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:39:02Z
-updated: 2026-10-17T00:45:46Z
-transitions: []
+updated: 2026-10-17T01:02:25Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:02:25Z
+    by: alex
 tags: [dashboard]
 topics: [components, dashboard, design]
 touches: [system-flow.yaml, design/components/flaiover, flai/internal/components/flaiover_test.go, design/system/component-library.md]
@@ -24,15 +27,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 373
+      seconds: 379
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 41
-          output: 767
-          cache_read: 5187103
-          cache_write: 8818
-          cost: 1.3027
+          input: 43
+          output: 796
+          cache_read: 5625625
+          cache_write: 10275
+          cost: 1.413
 cost_of_delay:
   value: 82.57
   by: planner-E-0026

@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0021]
 created: 2026-10-16T04:29:21Z
-updated: 2026-10-16T04:34:35Z
+updated: 2026-10-17T00:46:06Z
 ---
 
 # TH-0463 E-0021 needs cost of delay inputs and two design answers: recommend time lost 1h per cycle, review limit counts, orchestrator never approves
@@ -47,3 +47,12 @@ A fourth input, found while drafting the second story.
 
 - **Recommended:** yes, for story branches only. flai serve updates `story/S-nnnn` on the remote with `--force-with-lease`, naming the head it last pushed, so that it never overwrites a commit someone else pushed. It never forces `main` or any other branch. An ADR records this as the one exception, and `git.md` says so in both the baseline and the template.
 - Alternative: under pull-request acceptance, `flai stream sync` merges main into the story branch instead of rebasing it. No force push is needed, but the history differs between the two modes, and the trial merge, the conflict log, and the close-out's sync check all change.
+
+### 2026-10-17T00:46:06Z planner-E-0021
+Still open after 20 hours. Your answers unblock three things:
+
+- **Question 1:** the cost of delay values of S-0392 to S-0397. All six have none, so the cost of delay and WSJF orderings rank them last.
+- **Question 4:** S-0393's criterion 4, and its tasks T-1611 and T-1612.
+- **Questions 2 and 3:** the ADRs of S-0395 and S-0397.
+
+S-0392, which you finalized, needs no answer to start.

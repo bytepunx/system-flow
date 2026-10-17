@@ -17,24 +17,24 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 13310
-  estimated: true
-  priced_by: estimate
+  seconds: 14998
+  priced_by: harness
   turns:
     - day: 2026-10-16
       ceremony: 7
       hand_edits: 7
       work: 159
     - day: 2026-10-17
-      hand_edits: 1
-      work: 14
+      ceremony: 1
+      hand_edits: 3
+      work: 42
   models:
     - model: claude-opus-5-5
-      input: 1454
-      output: 322725
-      cache_read: 78012183
-      cache_write: 3649102
-      cost: 41.2314
+      input: 1530
+      output: 681091
+      cache_read: 87101980
+      cache_write: 3688846
+      cost: 51.5683
   strategic:
     - kind: planner
       seconds: 1821
@@ -53,15 +53,15 @@ usage:
           cache_write: 650437
           cost: 257.0809
     - kind: orchestrator
-      seconds: 7999
+      seconds: 14789
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 534
-          output: 9731
-          cache_read: 74883318
-          cache_write: 172545
-          cost: 18.8173
+          input: 660
+          output: 12311
+          cache_read: 100954439
+          cache_write: 220422
+          cost: 25.3653
         - model: claude-sonnet-5-5
           input: 36
           output: 199

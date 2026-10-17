@@ -24,16 +24,16 @@ touches: [docs/operators/index.md, docs/operators/settings.md, design/system/fla
 after: [T-1862, T-1863]
 usage:
   source: log
-  seconds: 405
+  seconds: 415
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 517
-      cache_read: 5135875
-      cache_write: 155524
-      cost: 2.4599
+      input: 81
+      output: 39862
+      cache_read: 5134811
+      cache_write: 253415
+      cost: 3.1764
 ---
 # T-1864 The operator docs, the CLI design, the channel's design, and the component library's design describe the dev server, the host action, and its methods
 
