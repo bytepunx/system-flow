@@ -1,0 +1,105 @@
+{
+  "examples": [
+    {
+      "name": "A failing check and a requested change",
+      "props": {
+        "status": {
+          "story": "S-0394",
+          "pull_request": 7,
+          "url": "https://github.com/bytepunx/system-flow/pull/7",
+          "head_sha": "0123456789abcdef0123456789abcdef01234567",
+          "read_at": "2026-10-17T10:00:00Z",
+          "checks": [
+            {
+              "name": "flai",
+              "state": "failed",
+              "url": "https://github.com/bytepunx/system-flow/actions/runs/1",
+              "summary": "go test failed in internal/forge",
+              "since": "2026-10-17T09:58:00Z"
+            },
+            {
+              "name": "flaiover",
+              "state": "passed",
+              "url": "https://github.com/bytepunx/system-flow/actions/runs/2",
+              "since": "2026-10-17T09:57:00Z"
+            }
+          ],
+          "reviews": [
+            {
+              "author": "alex",
+              "state": "changes-requested",
+              "url": "https://github.com/bytepunx/system-flow/pull/7#pullrequestreview-1",
+              "body": "Name the check in the thread.",
+              "submitted_at": "2026-10-17T09:59:00Z"
+            }
+          ],
+          "sent_back": [
+            {
+              "key": "check:flai@0123456789abcdef0123456789abcdef01234567",
+              "kind": "check",
+              "name": "flai",
+              "commit": "0123456789abcdef0123456789abcdef01234567",
+              "url": "https://github.com/bytepunx/system-flow/actions/runs/1",
+              "thread": "TH-0120",
+              "at": "2026-10-17T10:00:00Z"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "All passed and approved",
+      "props": {
+        "status": {
+          "story": "S-0394",
+          "pull_request": 8,
+          "url": "https://github.com/bytepunx/system-flow/pull/8",
+          "head_sha": "89abcdef0123456789abcdef0123456789abcdef",
+          "read_at": "2026-10-17T11:00:00Z",
+          "checks": [
+            {
+              "name": "flai",
+              "state": "passed",
+              "url": "https://github.com/bytepunx/system-flow/actions/runs/3",
+              "since": "2026-10-17T10:55:00Z"
+            },
+            {
+              "name": "flaiover",
+              "state": "passed",
+              "url": "https://github.com/bytepunx/system-flow/actions/runs/4",
+              "since": "2026-10-17T10:54:00Z"
+            }
+          ],
+          "reviews": [
+            {
+              "author": "alex",
+              "state": "approved",
+              "url": "https://github.com/bytepunx/system-flow/pull/8#pullrequestreview-2",
+              "submitted_at": "2026-10-17T10:58:00Z"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Checks pending, no reviews yet",
+      "props": {
+        "status": {
+          "story": "S-0394",
+          "pull_request": 9,
+          "url": "https://github.com/bytepunx/system-flow/pull/9",
+          "head_sha": "fedcba9876543210fedcba9876543210fedcba98",
+          "read_at": "2026-10-17T12:00:00Z",
+          "checks": [
+            {
+              "name": "flai",
+              "state": "pending",
+              "since": "2026-10-17T11:59:00Z"
+            }
+          ],
+          "reviews": []
+        }
+      }
+    }
+  ]
+}

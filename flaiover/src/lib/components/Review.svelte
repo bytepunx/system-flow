@@ -19,6 +19,7 @@
 	import { acceptLabel, issueRows, type Issue, type IssueRow } from '$lib/issues';
 	import DiffView from '$lib/components/DiffView.svelte';
 	import Threads from '$lib/components/Threads.svelte';
+	import ForgeStatus, { type PullRequestStatus } from '$lib/components/ForgeStatus.svelte';
 	import { render, enhance } from '$lib/markdown';
 	import { localTime } from '$lib/localtime';
 	import { themeState } from '$lib/theme.svelte';
@@ -177,6 +178,11 @@
 	let verify = $state<VerifyView | null>(null);
 	let verifyError = $state<string | null>(null);
 
+	// The pull request (S-0394): the story's, its required checks and its reviews, as flai serve
+	// last read them from the forge; null when it has none or it cannot be read, and then the
+	// section is left out.
+	let pullRequest = $state<PullRequestStatus | null>(null);
+
 	// Components (S-0442): the catalogue as the story's worktree has it, so a component the branch
 	// adds counts; null while unread, or when it cannot be read, and then nothing is offered.
 	let catalogue = $state.raw<ComponentsCatalogue | null>(null);
@@ -294,6 +300,7 @@
 		unmade = [];
 		verify = null;
 		verifyError = null;
+		pullRequest = null;
 		catalogue = null;
 		undone = [];
 		kept = {};
@@ -323,6 +330,7 @@
 		}
 		void loadChecks(target);
 		void loadVerify(target);
+		if (item.type === 'story') void loadPullRequest(target);
 	}
 
 	async function loadDiff(target: string) {
@@ -439,6 +447,17 @@
 			if (target === id) verify = report ? verifyView(report) : null;
 		} catch (e) {
 			if (target === id) verifyError = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	async function loadPullRequest(target: string) {
+		try {
+			const data = await get<{ pull_request?: PullRequestStatus | null }>(
+				`/api/items/${target}/forge`
+			);
+			if (target === id) pullRequest = data.pull_request ?? null;
+		} catch {
+			// no pull request read, or no flai connected: the page leaves the section out
 		}
 	}
 
@@ -1262,6 +1281,8 @@
 			{/if}
 		</section>
 	{/if}
+
+	<ForgeStatus status={pullRequest} class="mt-4" />
 
 	{#if verify || verifyError}
 		<section

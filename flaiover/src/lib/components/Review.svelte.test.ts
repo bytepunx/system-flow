@@ -85,6 +85,8 @@ function backend(over: {
 	verify?: () => unknown;
 	/** The story's worktree catalogue, GET /api/components?story=. */
 	components?: () => unknown;
+	/** The story's pull request as flai serve kept it, GET /api/items/[id]/forge. */
+	forge?: () => unknown;
 }) {
 	let statusIdx = 0;
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
@@ -116,6 +118,8 @@ function backend(over: {
 		if (url.startsWith('/api/components?story='))
 			return over.components ? over.components() : json({ error: 'no components' }, 502);
 		if (url.endsWith('/verify')) return over.verify ? over.verify() : json({ report: null });
+		if (url.endsWith('/forge'))
+			return over.forge ? over.forge() : json({ story: 'S-0041', pull_request: null });
 		if (url.endsWith('/accept'))
 			return over.accept ? over.accept() : ndjson([{ event: 'done', result: {} }]);
 		if (url.endsWith('/move') && init?.method === 'POST') return over.move ? over.move() : json({});
@@ -1197,6 +1201,66 @@ describe('Review', () => {
 			expect(section()).toBeNull();
 			expect(document.body.textContent).not.toContain('Verification');
 			expect(document.querySelector('[role="alert"]')).toBeNull();
+		});
+	});
+
+	describe('the pull request (S-0394)', () => {
+		const PULL_REQUEST = {
+			story: 'S-0041',
+			pull_request: 7,
+			url: 'https://github.com/bytepunx/system-flow/pull/7',
+			head_sha: '0123456789abcdef0123456789abcdef01234567',
+			read_at: '2026-10-17T10:00:00Z',
+			checks: [
+				{
+					name: 'flai',
+					state: 'failed',
+					url: 'https://github.com/bytepunx/system-flow/actions/runs/1',
+					summary: 'go test failed',
+					since: '2026-10-17T09:58:00Z'
+				}
+			],
+			reviews: [
+				{
+					author: 'alex',
+					state: 'changes-requested',
+					url: 'https://github.com/bytepunx/system-flow/pull/7#pullrequestreview-1'
+				}
+			]
+		};
+		const section = () => document.querySelector('[data-testid="forge-status"]');
+
+		it('shows the link to it, each required check, and each review, after the checks', async () => {
+			backend({ forge: () => json({ story: 'S-0041', pull_request: PULL_REQUEST }) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(api.mock.calls.map((call) => call[0])).toContain('/api/items/S-0041/forge');
+			const checks = document.querySelector('[data-testid="checks-section"]')!;
+			expect(checks.nextElementSibling).toBe(section());
+			const link = section()!.querySelector<HTMLAnchorElement>('h2 a')!;
+			expect(link.textContent!.trim()).toBe('Pull request #7');
+			expect(link.getAttribute('href')).toBe(PULL_REQUEST.url);
+			const check = section()!.querySelector('[data-check="flai"]')!;
+			expect(check.textContent).toContain('failed');
+			expect(check.textContent).toContain('go test failed');
+			expect(check.querySelector('a')!.getAttribute('href')).toBe(PULL_REQUEST.checks[0].url);
+			const review = section()!.querySelector('[data-review="alex"]')!;
+			expect(review.textContent).toContain('changes requested');
+			expect(review.querySelector('a')!.getAttribute('href')).toBe(PULL_REQUEST.reviews[0].url);
+		});
+
+		it('shows nothing for a story with none, nor when it cannot be read', async () => {
+			backend({});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(section()).toBeNull();
+			unmount(c!);
+			document.body.innerHTML = '';
+			backend({ forge: () => json({ error: 'no flai connected' }, 503) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(section()).toBeNull();
+			expect(document.querySelector('[data-testid="checks-section"]')).not.toBeNull();
 		});
 	});
 

@@ -845,6 +845,78 @@ describe('the item page (S-0154)', () => {
 		});
 	});
 
+	// S-0394: a story's page shows its pull request as flai serve last read it from the forge
+	describe("a story's pull request (S-0394)", () => {
+		const pullRequest = {
+			story: 'S-0154',
+			pull_request: 7,
+			url: 'https://github.com/bytepunx/system-flow/pull/7',
+			head_sha: '0123456789abcdef0123456789abcdef01234567',
+			read_at: '2026-09-29T08:00:00Z',
+			checks: [
+				{
+					name: 'flai',
+					state: 'failed',
+					url: 'https://github.com/bytepunx/system-flow/actions/runs/1',
+					since: '2026-09-29T07:58:00Z'
+				}
+			],
+			reviews: [{ author: 'alex', state: 'approved', submitted_at: '2026-09-29T07:59:00Z' }]
+		};
+		const show = async (item: Record<string, unknown>, forge: () => unknown) => {
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154') return answer({ item, children: [] });
+				if (url.endsWith('/forge')) return forge();
+				if (url === '/api/board') return answer({ writable: false });
+				if (url.startsWith('/api/threads')) return answer([]);
+				return answer({ enabled: false });
+			});
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+		};
+		const section = () => document.querySelector('[data-testid="forge-status"]');
+
+		it('shows the link to it, each required check, and each review', async () => {
+			await show(story, () => answer({ story: 'S-0154', pull_request: pullRequest }));
+			expect(asked('/api/items/S-0154/forge')).toBeGreaterThan(0);
+			expect(section()!.closest('aside')).not.toBeNull();
+			const link = section()!.querySelector<HTMLAnchorElement>('h2 a')!;
+			expect(link.textContent!.trim()).toBe('Pull request #7');
+			expect(link.getAttribute('href')).toBe(pullRequest.url);
+			const check = section()!.querySelector('[data-check="flai"]')!;
+			expect(check.textContent).toContain('failed');
+			expect(check.querySelector('a')!.getAttribute('href')).toBe(pullRequest.checks[0].url);
+			expect(section()!.querySelector('[data-review="alex"]')!.textContent).toContain('approved');
+		});
+
+		it('shows nothing for a story with none', async () => {
+			await show(story, () => answer({ story: 'S-0154', pull_request: null }));
+			expect(section()).toBeNull();
+		});
+
+		it('shows nothing, and the page still, when it cannot be read', async () => {
+			await show(story, () => ({ ok: false, json: async () => ({ error: 'no flai connected' }) }));
+			expect(section()).toBeNull();
+			expect(document.querySelector('h1')!.textContent).toContain(story.title);
+			unmount(c!);
+			document.body.innerHTML = '';
+			await show(story, () => Promise.reject(new Error('network down')));
+			expect(section()).toBeNull();
+			expect(document.querySelector('h1')!.textContent).toContain(story.title);
+		});
+
+		it("is not asked for on an epic's or a task's page", async () => {
+			const forge = () => answer({ story: 'S-0154', pull_request: pullRequest });
+			await show({ ...story, id: 'E-0013', type: 'epic' }, forge);
+			expect(section()).toBeNull();
+			unmount(c!);
+			document.body.innerHTML = '';
+			await show({ ...story, id: 'T-0606', type: 'task', parent: 'S-0154' }, forge);
+			expect(section()).toBeNull();
+			expect(api.mock.calls.some(([u]) => String(u).endsWith('/forge'))).toBe(false);
+		});
+	});
+
 	// S-0336: a story's page lists its conversations with other stories' agents under its threads
 	describe("a story's conversations (S-0336)", () => {
 		const conversation = {

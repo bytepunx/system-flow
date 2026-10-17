@@ -12,6 +12,7 @@
 	import StoryAgent from '$lib/components/StoryAgent.svelte';
 	import PlanAction from '$lib/components/PlanAction.svelte';
 	import TaskPlan from '$lib/components/TaskPlan.svelte';
+	import ForgeStatus, { type PullRequestStatus } from '$lib/components/ForgeStatus.svelte';
 	import { toggleCriterion } from '$lib/review';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
@@ -76,6 +77,9 @@
 	let expectedCost = $state<ExpectedCost | undefined>();
 	// The paths an open story's branch undoes of main's change (ADR-0155), when flai sends any.
 	let undoesMain = $state<string[]>([]);
+	// A story's pull request as flai serve last read it from the forge (S-0394): null for a story
+	// with none, for any other item, and when it cannot be read, and then the page shows nothing.
+	let pullRequest = $state<PullRequestStatus | null>(null);
 	let html = $state('');
 	let error = $state<string | null>(null);
 	let notice = $state<string | null>(null);
@@ -194,6 +198,17 @@
 			epic.item.status !== 'cancelled';
 		if (open && parentFor === key) openParent = of.parent;
 	}
+	// Asked at every load, so a story flai sends back for a failed check shows it as it moves.
+	async function askForge(of: Item) {
+		if (of.type !== 'story') {
+			pullRequest = null;
+			return;
+		}
+		const data = await api(`/api/items/${encodeURIComponent(of.id)}/forge`)
+			.then((r) => (r.ok ? r.json() : null))
+			.catch(() => null);
+		if (item?.id === of.id) pullRequest = data?.pull_request ?? null;
+	}
 	async function load(keep = false) {
 		const r = await api(`/api/items/${id}`);
 		if (!r.ok) {
@@ -212,6 +227,7 @@
 			writableFor = item!.id;
 		}
 		void askParent(item!);
+		void askForge(item!);
 		const next = render(item!.body, item!.path);
 		if (keep && next + canEdit === rendered) return;
 		// cleared first, so that the same body is drawn again rather than left as it was
@@ -528,6 +544,7 @@
 					onhold={(h) => (hold = h)}
 					onactivity={(a) => (activity = a)}
 				/>{/if}
+			{#if item.type === 'story'}<ForgeStatus status={pullRequest} />{/if}
 			<section class="rounded border border-line bg-surface p-3">
 				<h2 class="mb-2 font-medium">History</h2>
 				<ol class="space-y-1 text-xs">
