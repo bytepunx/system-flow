@@ -205,7 +205,65 @@ The Components page renders a story's worktree, so the operator sees a component
 
 ## Examples (S-0443)
 
-A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check. An example is a named set of props, for a component that renders only with data. Each component's examples are one JSON file under `design/components/<sub-project>/`, at a path that mirrors the component's path in the sub-project. The page lists them, loads one into the props panel, and saves a new one on main or on the story it shows. `flai check` reports an example that names a prop the component lacks, misses a required prop, or gives a value that does not fit its prop's kind.
+A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check. An example is a named set of props, for a component that renders only with data. The page lists them, loads one into the props panel, and saves a new one on main or on the story it shows. [ADR-0164](../adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md) records the decision, on TH-0483's answer 4.
+
+### The file
+
+Each component's examples are one file, `design/components/<sub-project>/<path>`: the sub-project's manifest `name`, then the component's path in the sub-project with `.svelte` replaced by `.examples.json`. `flaiover/src/lib/components/Card.svelte` has its examples in `design/components/flaiover/src/lib/components/Card.examples.json`. Mirroring the path keeps two components of one name apart, and finds the file from the component.
+
+The file is JSON, an exception to "Everything is markdown" as the token file is ([documentation.md](../conventions/documentation.md)). It holds `examples`, an array in the order the page lists them, and nothing else. Each example has these keys and no others:
+
+| Key | Type | Required | Meaning |
+|-----|------|----------|---------|
+| `name` | string, not empty | yes | Names the example; unique in its file. |
+| `props` | object, prop name to JSON value | yes, may be `{}` | The props, as the panel sends them ([Controls for props](#controls-for-props-s-0440)): a snippet's text, no function prop. |
+| `theme` | `"light"` or `"dark"` | no | The one theme the page shows. Absent, the page keeps what it shows. |
+| `width` | integer, 1 or more | no | The frame's width in CSS pixels. Absent, the page keeps what it shows. |
+
+```json
+{
+  "examples": [
+    {
+      "name": "A long title",
+      "props": { "title": "Quarterly report for the north region", "open": true },
+      "theme": "dark",
+      "width": 375
+    }
+  ]
+}
+```
+
+The page writes the file with two-space indentation and a final newline. It writes `theme` when it shows one theme, not both, and `width` when a width is picked, not the panel's own.
+
+### Saving one
+
+The page saves through `file.save`, on main or on the story its source names. `design/components/` is under the design folder, so [ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)'s reach is unchanged. A component's first example creates its file: a save with an empty hash creates a file that is absent, with its folders, and an empty hash on a file that exists is refused as a conflict, with its current content and hash. The check runs before and after as for any save, so an example that does not fit its component is refused with the finding; a refused create leaves no file and no folder behind.
+
+### The check
+
+`flai check` reports `components.examples`, a warning, which `flai check --strict` fails on, for:
+
+- a file that does not parse as JSON or does not fit the format: a key it does not name, an empty or repeated `name`, `props` that is not an object, a `theme` that is not `light` or `dark`, a `width` that is not a positive integer;
+- an example that names a prop its component lacks, misses a required prop that is not a function, or gives a value that does not fit its prop's kind;
+- a file whose component does not exist: no supported sub-project of that name, or no component at that path in its catalogue;
+- a file whose component's props flai could not read, once, with the reader's error.
+
+Each finding names the example and its line: the prop's key for a finding about one prop, the example's opening brace for one about the example, the syntax error for JSON that does not parse, and line 1 for a file without its component.
+
+| Kind | A value that fits |
+|------|-------------------|
+| `string`, `snippet` | a string |
+| `number` | a number |
+| `boolean` | `true` or `false` |
+| `union` | one of its literals |
+| `array` | an array |
+| `object` | an object |
+| `unknown` | any value |
+| `function` | none; the page gives it a logger |
+
+`null` fits every kind but `function`: flai leaves `null` out of a type when it reads its kind ([Props](#props)), so the kind cannot say whether `null` is allowed.
+
+The check reads only files ending in `.examples.json`, and runs the props reader only for the components that have one. A project without such a file gets no finding. A project that has one but no supported sub-project, or a host without `node`, is passed over with one note: a warning `flai check --strict` passes over, saying what was not checked and why.
 
 ## flaiover's own components (S-0444)
 
