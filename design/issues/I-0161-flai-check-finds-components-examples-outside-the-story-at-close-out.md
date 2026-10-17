@@ -6,7 +6,7 @@ status: open
 count: 2
 first_reported: 2026-10-17T07:25:00Z
 last_reported: 2026-10-17T08:50:40Z
-updated: 2026-10-17T08:50:40Z
+updated: 2026-10-17T16:03:19Z
 ---
 
 # I-0161 flai check finds `components.examples` outside the story at close-out
@@ -119,3 +119,5 @@ flai check found outside the story:
 `design/components/flaiover/src/lib/components/explorer/SourcePicker.examples.json`: its examples are not checked, since the props of src/lib/components/explorer/SourcePicker.svelte in flaiover could not be read: svelte is not installed in flaiover, and flai reads components' props with its own svelte/compiler: run npm install (or its package manager's install) in flaiover, then run this again
 
 ## Remediation
+
+Story S-0446 remediates this issue, created from it at 2026-10-17T16:03:19Z.
