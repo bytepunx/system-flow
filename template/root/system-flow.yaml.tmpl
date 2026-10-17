@@ -46,6 +46,10 @@ tests: # the test tiers, cheapest first, that flai test runs for the paths each 
 #     base_url: https://litellm.example.com
 #     models: # the harness's model aliases and their names on the provider
 #       opus: anthropic/claude-opus-5-5
+# acceptance: # how a story in review is accepted; flai manifest set writes it
+#   mode: local # or pull-request: accept through a pull request on the forge; check the token first with flai forge check
+#   forge: github # the forge, at origin's repository; its token is the host's, named with flai serve forge
+#   merge_method: merge # or squash, rebase: how the forge merges the pull request
 claims:
   shared: # paths many stories change in their own sections or new files: an overlap inside one holds no story; flai shared edits them
     - {{ .layout.design }}/adrs

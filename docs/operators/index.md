@@ -123,6 +123,21 @@ Beside it, `requests.json` (mode 0600) records each write that can end the conne
 
 > **Correction, 2026-09-20.** From flai 1.5.3 to 1.6.1, an acceptance made from the board was pushed and published with your credentials although nothing had enabled it (I-0028). Acceptance had moved from the container, which held no credential, to `flai serve` on the host, which has yours, and the push was not turned off on the way. This page said during that time that nothing was pushed unasked and that the token was not the power to publish; both were wrong. If you accepted from the board with one of those releases, check what was pushed against what you meant to release. The release after 1.6.1 restores the default described above. Since S-0087, acceptance itself does not push at all, whatever this setting is; since S-0195 only publishing does.
 
+### A forge token for pull-request acceptance (S-0392)
+
+A project whose `system-flow.yaml` sets `acceptance.mode: pull-request` is to accept stories through a pull request on its forge, GitHub today ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)). Nothing opens or merges one yet; later releases do. flai reaches the forge with a token that is your host's, never the project's:
+
+```bash
+export GITHUB_TOKEN=github_pat_...                     # where flai host or flai serve starts
+flai serve forge github --token-env FLAI_GITHUB_TOKEN  # optional: read it from another variable
+flai serve forge                                       # the variable, and whether it is set here
+flai forge check                                       # in the project: can the token read and push to origin's repository?
+```
+
+- **The token** needs read and push access to the repository: `contents: write` for a fine-grained token, the `repo` scope for a classic one.
+- **Where it lives.** In the variable `forges.github.token_env` names in your flai configuration, `GITHUB_TOKEN` when unset ([settings](settings.md#flai-configuration)). flai reads it only when it calls the forge and never writes it anywhere. Export it where `flai host` is started, as a provider's key ([Starting an agent](#starting-an-agent-when-a-story-becomes-ready)): `flai serve` reads its own environment, so a variable set after the host started is not seen until the host starts again from an environment that has it.
+- **Check it** with `flai forge check` in the project before you switch the mode. It names the repository and the variable, says `read` and `push`, and exits 1 with the reason and the fix when the token cannot do both.
+
 ### Starting an agent when a story becomes ready
 
 `flai serve` can start an agent for each story that becomes ready, so that a move to ready on the board starts work with no one at a keyboard. Each story names its agent: a harness, a model, and options (`flai agent set` gives new stories a default; `flai edit` or the dashboard changes one story's). flai starts a harness it knows through its adapter, with the program and the arguments you set for it on this host. For a story that names no harness, it runs a command you wrote, if you set one. It is a host action, off until you enable it ([ADR-0038](../../design/adrs/0038-flai-serve-starts-a-story-s-own-agent-through-an-adapter-with-what-the-operator.md)).

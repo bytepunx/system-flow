@@ -33,6 +33,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [epic](#flai-epic) | Create epics (flai show prints one, flai move transitions it) |
 | [file](#flai-file) | Read and save a text file that is not markdown |
 | [forecast](#flai-forecast) | Print a story's forecast duration and delivery, worked out from history and the pull order |
+| [forge](#flai-forge) | The project's forge, through which pull-request acceptance merges a story |
 | [guard](#flai-guard) | Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook |
 | [host](#flai-host) | Run flai host: the one process per machine that keeps flai serve and the MCP servers running |
 | [hostapi](#flai-hostapi) | Answer one method of the dashboard's API for this project, as flai serve would |
@@ -108,6 +109,7 @@ Subcommands:
 - [epic](#flai-epic): Create epics (flai show prints one, flai move transitions it)
 - [file](#flai-file): Read and save a text file that is not markdown
 - [forecast](#flai-forecast): Print a story's forecast duration and delivery, worked out from history and the pull order
+- [forge](#flai-forge): The project's forge, through which pull-request acceptance merges a story
 - [guard](#flai-guard): Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook
 - [host](#flai-host): Run flai host: the one process per machine that keeps flai serve and the MCP servers running
 - [hostapi](#flai-hostapi): Answer one method of the dashboard's API for this project, as flai serve would
@@ -1628,6 +1630,42 @@ flai forecast S-0210
 flai forecast S-0210 --json
 ```
 
+### flai forge
+
+The project's forge, through which pull-request acceptance merges a story.
+
+A project whose system-flow.yaml sets acceptance.mode: pull-request accepts a story through a pull request on its forge, acceptance.forge (github, the default), rather than by merging on this machine (ADR-0165). flai reaches the forge's repository named by the origin remote, with a token it reads from the environment variable this host names for the forge: GITHUB\_TOKEN unless flai serve forge &lt;forge&gt; --token-env &lt;NAME&gt; names another.
+
+Examples:
+
+```bash
+flai forge check
+flai forge check --json
+```
+
+Subcommands:
+
+- [check](#flai-forge-check): Say whether the forge token this host names can read and push to the repository behind origin
+
+#### flai forge check
+
+Say whether the forge token this host names can read and push to the repository behind origin.
+
+```text
+flai forge check
+```
+
+Print the forge (acceptance.forge, github by default, under either acceptance mode, so the token can be checked before switching), the repository the origin remote names, the environment variable the token is read from, and whether the token can read the repository and push to it. The variable is named; the token never is.
+
+The exit status is 1, with the reason, when the project has no origin remote, origin is not a repository on the forge, the variable is unset or empty, the forge does not accept the token, the repository is not found or not visible to the token, the forge refuses the token or has rate-limited it, or the token can read but not push. What was learned before the failure is printed still. With --json the result is {"forge", "repository", "token\_env", "read", "push", "ok", "reason"}.
+
+Examples:
+
+```bash
+flai forge check
+flai forge check --json
+```
+
 ### flai guard
 
 Refuse a sub-agent's writes, hold the planner to planning, the orchestrator to its permissions, and the analyzer to its report, and keep a story's agent from waiting on its sub-agents with wait\_for\_events, as a Claude Code hook.
@@ -2105,6 +2143,9 @@ planning.cycle (duration; default 168h)
 planning.default_duration (duration; default 1h)
 analysis.agent (agent)
 analysis.schedule (cron)
+acceptance.mode (choice: local, pull-request; default local)
+acceptance.forge (choice: github; default github)
+acceptance.merge_method (choice: merge, squash, rebase; default merge)
 tests (tests)
 ```
 
@@ -2826,6 +2867,7 @@ Subcommands:
 - [components](#flai-serve-components): How long flai serve keeps a component dev server nobody looks at, and how many it runs, on this host
 - [disable](#flai-serve-disable): Stop flai serve performing a host action for this project
 - [enable](#flai-serve-enable): Let flai serve perform a host action for this project when its dashboard asks
+- [forge](#flai-serve-forge): Set the environment variable a forge's token is read from, such as GITHUB\_TOKEN for github
 - [import](#flai-serve-import): The folders whose git repositories the board offers to import into system-flow
 - [journal](#flai-serve-journal): Every host action a dashboard asked for: when, what, which project, for whom, and what became of it
 - [orchestrate](#flai-serve-orchestrate): Stop the project's orchestrator and hold it stopped, or start it again
@@ -3284,6 +3326,34 @@ Flags:
 | Flag | Meaning |
 |------|---------|
 | `--all-projects` | every project on this host, not only the one in the working directory |
+
+#### flai serve forge
+
+Set the environment variable a forge's token is read from, such as GITHUB\_TOKEN for github.
+
+```text
+flai serve forge [<forge>] [--token-env <NAME>] [--reset] [flags]
+```
+
+A project that accepts by pull request reaches its forge, such as github, with a token; you say here which environment variable holds it on this host. --token-env names the variable, GITHUB\_TOKEN for github when you name none, and --reset goes back to that default. No flag takes a token: it stays in the variable, which flai reads only when it calls the forge, and is never written to the configuration, a log, a work item, or a start record.
+
+With no forge, every forge flai calls is shown; with a forge and no flag, that forge: the variable its token is read from, and whether that variable is set in this environment, never its value. flai serve reads its own environment, so export the variable where flai serve starts too.
+
+Examples:
+
+```bash
+flai serve forge
+flai serve forge github --token-env FLAI_GITHUB_TOKEN
+flai serve forge github --reset
+flai serve forge --json
+```
+
+Flags:
+
+| Flag | Meaning |
+|------|---------|
+| `--reset` | read the forge's token from its default variable again |
+| `--token-env` string | the name of the environment variable that holds the forge's token, such as GITHUB\_TOKEN; never the token |
 
 #### flai serve import
 

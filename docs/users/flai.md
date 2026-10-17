@@ -212,11 +212,12 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 | `agent.attended_minutes` | none | Retired ([ADR-0043](../../design/adrs/0043-flai-serve-starts-a-ready-story-s-agent-whenever-the-in-progress-limit-has-room.md)): a configuration that sets it still loads, and nothing reads it. `flai serve agent set --attended-minutes` is accepted and does nothing |
 | `agent.harnesses.<name>.program`, `agent.harnesses.<name>.args` | `flai serve agent harness <name> --program <path> -- [args...]`, `--reset` | The program a harness is on this host, and the arguments that replace its adapter's defaults and say what the agent may do |
 | `agent.providers.<name>` | `flai serve agent provider <name> --api --base-url --key-env [--model alias=name]...`, `--reset` | Where the model calls of an agent that names provider `<name>` go: the API, the URL, the name of the variable that holds the key, and model aliases. See [Where its model's calls go](#where-its-models-calls-go-a-provider) |
+| `forges.<name>.token_env` | `flai serve forge <name> --token-env <NAME>`, `--reset` | The name of the environment variable on this host that holds the forge's token, for a project that accepts through a pull request; `GITHUB_TOKEN` for `github` when unset. Never the token. See [Accepting through a pull request](#accepting-through-a-pull-request) |
 | `checks.commands` | `flai serve checks set --name <name> -- <program> [args...]`, `flai serve checks clear [name]` | The named commands a story in review is checked with, in order, in its worktree; empty means the manifest's `checks:` |
 | `checks.timeout_minutes` | `flai serve checks timeout <minutes>` | The bound on one run of every check together; 15 when unset |
 | `import_roots` | `flai serve import add <folder>`, `flai serve import remove <folder>` | The folders whose git repositories the board offers to import, and whose repositories with a `system-flow.yaml` `flai serve` serves |
 
-`flai serve agent show`, `flai serve agent provider`, `flai serve checks show`, `flai serve import list`, and `flai serve actions` print them. The [operator guide](../operators/index.md) says what enabling each host action gives a dashboard.
+`flai serve agent show`, `flai serve agent provider`, `flai serve forge`, `flai serve checks show`, `flai serve import list`, and `flai serve actions` print them. The [operator guide](../operators/index.md) says what enabling each host action gives a dashboard.
 
 Environment variables flai reads:
 
@@ -230,6 +231,7 @@ Environment variables flai reads:
 | `FLAI_RELEASES_API` | Another source of releases for `flai self-upgrade` and `flai host check` and `upgrade` |
 | `FLAI_INSTALL_DIR` | Where `flai self-upgrade` from a checkout installs (`~/.flai/bin` by default) |
 | `GITHUB_TOKEN`, `GH_TOKEN` | GitHub API and registry authentication for `flai self-upgrade` and `flai dashboard`; `gh auth token` is borrowed when neither is set |
+| The variable `forges.<name>.token_env` names, `GITHUB_TOKEN` for `github` by default | The forge's token, read only when flai calls the forge, such as `flai forge check`; nothing is borrowed when it is unset ([Accepting through a pull request](#accepting-through-a-pull-request)) |
 
 `flai host` sets `FLAI_HOST_URL` and `FLAI_HOST_TOKEN` for the processes it runs; do not set them yourself.
 
@@ -1956,7 +1958,7 @@ When it ends, `flai serve` records how: `worked` when it wrote a report, `failed
 
 #### Changing the strategic agents' settings
 
-`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, and the planner's and the analyzer's agents and schedules (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
+`flai manifest set` writes these agents' settings in `system-flow.yaml`: what the orchestrator may do, how it orders the ready column and when a release is due, and the planner's and the analyzer's agents and schedules (S-0229, [ADR-0101](../../design/adrs/0101-with-the-settings-host-action-on-the-dashboard-edits-the-strategic-agents.md)). It also writes how a story is accepted, the `acceptance` keys (S-0392). The dashboard's Orchestrator, Planner, and Analyzer pages run it for you while the `settings` host action is on ([flaiover](flaiover.md#editing-a-strategic-agents-settings)).
 
 ```bash
 flai manifest set orchestration.permissions.promote_to_ready=true orchestration.policy=wsjf
@@ -1979,6 +1981,9 @@ flai manifest set analysis.schedule=daily --autocommit --json
 | `planning.schedule`, `analysis.schedule` | A five-field cron expression in UTC, such as `0 6 * * 1-5`, or `daily`; none by default |
 | `planning.hour_rate` | A number of zero or more, in the project's currency |
 | `planning.cycle`, `planning.default_duration` | A Go duration longer than zero, such as `168h`; `168h` and `1h` by default |
+| `acceptance.mode` | `local` or `pull-request`; `local` by default ([Accepting through a pull request](#accepting-through-a-pull-request)) |
+| `acceptance.forge` | `github`, the default and only forge |
+| `acceptance.merge_method` | `merge`, `squash`, or `rebase`; `merge` by default |
 
 `flai manifest set --help` lists the keys with their kinds, and [project-manifest.md](../../design/system/project-manifest.md) says what each does. `--unset <key>` removes a key, so that its default applies. Everything else in the file, its order, and its comments are kept. `planning.currency` is not among the keys: changing it would re-denominate every amount on the items, which flai does not convert, so you edit it by hand. Neither is `orchestration.agent`.
 
@@ -2210,6 +2215,25 @@ flai push --pending --publish   # also publish the template when those commits m
 An accepted item that no plan can cover is named with the reason (`left out:`) instead of being skipped silently: one touching two components with no tag saying which it delivers to, for example. Tag it, or its epic, and it is planned next time.
 
 A story that is `done` but was never accepted (an older flai, a hand edit) is flagged by `flai check` as `story.unaccepted`, and `flai accept` completes it.
+
+### Accepting through a pull request
+
+```bash
+flai serve forge                                       # the variable each forge's token is read from, and whether it is set
+flai serve forge github --token-env FLAI_GITHUB_TOKEN  # read GitHub's token from another variable on this host
+flai forge check                                       # can that token read and push to the repository behind origin?
+flai manifest set acceptance.mode=pull-request acceptance.merge_method=squash
+```
+
+A project chooses in `system-flow.yaml` how a story in review is accepted ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)): `acceptance.mode` is `local`, the default, which merges on this machine as above, or `pull-request`, which accepts through a pull request on the project's forge. `acceptance.forge` is the forge, `github`, the default and only one. `acceptance.merge_method` is how the forge merges the pull request: `merge`, the default, `squash`, or `rebase`.
+
+Nothing acts on `pull-request` yet. `flai accept` still merges on this machine whatever the mode. Later releases open the pull request, read its checks and reviews, gate acceptance on them, and merge it by `merge_method`. Until then, set the mode only to get ready, and check the token first.
+
+A value the manifest does not take, such as `pull_request`, stops every command that reads the manifest, naming the key and the values it takes, rather than falling back to `local`. Fix it or remove it by hand. `flai manifest set` refuses such a value before writing it.
+
+The token is your host's, never the project's. flai reads it from an environment variable: `GITHUB_TOKEN` for GitHub, unless `flai serve forge github --token-env <NAME>` names another; `--reset` goes back to `GITHUB_TOKEN`. No flag takes the token, and flai never writes it to the configuration, a log, a work item, or an error. It reads the variable only when it calls the forge. `flai serve` reads its own environment, so export the variable where `flai host` or `flai serve` starts ([operator guide](../operators/index.md#a-forge-token-for-pull-request-acceptance-s-0392)).
+
+`flai forge check` reads the repository from the `origin` remote, which must be on github.com, and asks GitHub whether the token can read it and push to it. It works under either mode, so check before you switch. It prints the forge, the repository, the variable, and `read` and `push`, `yes` or `no`, and never the token. It exits 1 with the reason and the fix when there is no `origin`, `origin` is not on GitHub, the variable is unset, GitHub rejects the token, the repository is not found or not visible to the token, GitHub refuses the token or has rate-limited it, or the token can read but not push. The token needs write access to the repository's contents: `contents: write` for a fine-grained token, the `repo` scope for a classic one. `--json` gives `{forge, repository, token_env, read, push, ok, reason}`.
 
 ### When the orchestrator accepts
 

@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-10-12
+updated: 2026-10-17
 status: draft
 ---
 
@@ -80,6 +80,17 @@ LITELLM_MASTER_KEY="$(sed -n 's/^LITELLM_MASTER_KEY=//p' .flai-cache/litellm/adm
 ```
 
 What each check found is in [agent-adapters.md](../../design/system/agent-adapters.md) § Checked against OpenRouter and § Checked against LiteLLM.
+
+### Forge check
+
+`flai/tests/integration/forge_github_test.go` reads a real GitHub repository through the forge adapter ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)). It writes nothing to the repository, and it is skipped, naming what is missing, unless the repository and the token are set.
+
+| Variable | Default | What |
+|----------|---------|------|
+| `FLAI_FORGE_TEST_REPO` | none: the check skips | The repository, as `owner/name`, such as `bytepunx/system-flow` |
+| `GITHUB_TOKEN` | none: the check skips | A token that can read the repository; `GITHUB_TOKEN="$(gh auth token)"` lends it `gh`'s for one run |
+| `FLAI_FORGE_TEST_HEAD` | unset: checks and reviews are not read | A branch of the repository with an open pull request, whose checks and reviews the check reads |
+| `FLAI_FORGE_TEST_API` | `https://api.github.com` | The API's root, for GitHub Enterprise |
 
 An agent `flai serve` starts gets flai serve's environment without `FLAI_HOST_URL`, `FLAI_HOST_TOKEN`, and `FLAI_CONFIG`, plus `FLAI_AGENT`, `FLAI_STORY`, `FLAI_SESSION`, and `FLAI_STARTED_BY`. A `flai serve` it runs to try a change, with a `--config` of its own, does not reach the operator's host. `scripts/flaiover-dev.sh` gives the dev server the dashboard token file that `flai dashboard token --json` names.
 

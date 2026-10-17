@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.96 - 2026-10-17
+
+- S-0392 A project chooses local or pull-request acceptance in its manifest, and the host names the variable that holds the forge's token (patch, ADR-0165): the template's `system-flow.yaml` shows, commented out, an `acceptance` block with `mode` (`local`, the default, or `pull-request`), `forge` (`github`, the default and only one), and `merge_method` (`merge`, the default, `squash`, or `rebase`). `flai manifest set` writes each key, and a value outside a key's values stops every command that reads the manifest rather than falling back to `local`. The forge's token is the host's, read from `GITHUB_TOKEN` unless `flai serve forge github --token-env <NAME>` names another variable, and never in the manifest; `flai forge check` says whether it can read and push to the repository `origin` names. Nothing opens or merges a pull request yet: `flai accept` merges on the host under either mode until the later stories of E-0021. The key and the commands need a flai that has them, the release that carries S-0392; an older flai ignores the block.
+
 ## 1.0.95 - 2026-10-17
 
 - S-0443 A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check (patch).
