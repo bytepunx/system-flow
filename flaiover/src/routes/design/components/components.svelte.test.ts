@@ -683,6 +683,142 @@ describe('the components page (S-0439)', () => {
 		});
 	});
 
+	describe("a story's worktree (S-0442)", () => {
+		const STORY = 'S-0442';
+		const STORY_HARNESS = 'http://127.0.0.1:5299/__flai/components/';
+		const board = {
+			columns: {
+				ready: [{ id: 'S-0443', type: 'story', title: 'Examples', status: 'ready' }],
+				'in-progress': [
+					{ id: STORY, type: 'story', title: "A story's worktree", status: 'in-progress' }
+				],
+				review: [{ id: 'S-0440', type: 'story', title: 'Props', status: 'review' }]
+			}
+		};
+		// main's dev server runs; the story's is its own, on another port
+		const both: ComponentsStatus = {
+			...running,
+			servers: [
+				running.servers[0],
+				{ project: 'flaiover', story: STORY, running: true, url: STORY_HARNESS, port: 5299 }
+			]
+		};
+		const diff = {
+			story: STORY,
+			files: [
+				{ path: `flaiover/${BUTTON}`, status: 'modified' },
+				{ path: 'flaiover/src/lib/explorer/changed.ts', status: 'added' }
+			]
+		};
+		let posts: unknown[] = [];
+		const serveStory = (status: ComponentsStatus = both) => {
+			posts = [];
+			api.mockImplementation(async (url: string, init?: RequestInit) => {
+				if (url === '/api/board') return answer(board);
+				if (url === '/api/components' || url === `/api/components?story=${STORY}`)
+					return answer({ catalogue, status });
+				if (url === `/api/items/${STORY}/diff`) return answer(diff);
+				if (url === '/api/components/start') {
+					posts.push(JSON.parse(String(init?.body)));
+					return answer(status);
+				}
+				return answer({ error: `unexpected ${url}` }, 404);
+			});
+		};
+		const urls = () => api.mock.calls.map(([url]) => url as string);
+		const select = () => q('source-picker-select') as HTMLSelectElement;
+		const choose = async (value: string) => {
+			select().value = value;
+			select().dispatchEvent(new Event('change', { bubbles: true }));
+			await settle();
+		};
+		const lastUrl = () => String((goto.mock.lastCall as unknown[])[0]);
+
+		it('offers Main and the stories in progress or in review, Main picked without a story', async () => {
+			serveStory();
+			await show();
+			expect([...select().options].map((o) => o.value)).toEqual(['', STORY, 'S-0440']);
+			expect(select().value).toBe('');
+			expect(q('source-changed')).toBeNull();
+			expect(urls()).not.toContain(`/api/items/${STORY}/diff`);
+		});
+
+		it('reads the story the URL names from its worktree, and lists first, marked, the components its branch changes', async () => {
+			where.url = new URL(
+				`http://localhost/design/components?story=${STORY}&p=flaiover&c=${SWATCH}`
+			);
+			serveStory();
+			await show();
+			expect(select().value).toBe(STORY);
+			expect(urls()).toContain(`/api/components?story=${STORY}`);
+			expect(urls()).not.toContain('/api/components');
+			expect(urls()).toContain(`/api/items/${STORY}/diff`);
+			const marked = [...document.querySelectorAll('[data-testid^="source-changed-src/"]')];
+			expect(marked.map((b) => b.getAttribute('data-testid'))).toEqual([
+				`source-changed-${BUTTON}`
+			]);
+			expect(marked[0].querySelector('[data-testid="source-changed-mark"]')).not.toBeNull();
+			// in the catalogue too, the changed component comes first in its folder, marked
+			const folder = q('component-folder')!;
+			const listed = [...folder.querySelectorAll('button')];
+			expect(listed.map((b) => b.getAttribute('data-testid'))).toEqual([
+				`component-${BUTTON}`,
+				`component-${BROKEN}`
+			]);
+			expect(listed[0].querySelector('[data-testid="component-changed-mark"]')).not.toBeNull();
+			expect(listed[1].querySelector('[data-testid="component-changed-mark"]')).toBeNull();
+			// the frame is the story's dev server's
+			expect(new URL(frames()[0].src).origin + new URL(frames()[0].src).pathname).toBe(
+				STORY_HARNESS
+			);
+			await click(marked[0]);
+			expect(q(`component-${BUTTON}`)!.getAttribute('aria-current')).toBe('true');
+			expect(new URL(lastUrl(), 'http://localhost').searchParams.get('story')).toBe(STORY);
+		});
+
+		it('keeps the source chosen in the URL and reads it afresh, Main as no story', async () => {
+			where.url = new URL(`http://localhost/design/components?p=flaiover&c=${BUTTON}`);
+			serveStory();
+			await show();
+			expect(new URL(frames()[0].src).origin).toBe(DEV);
+			await choose(STORY);
+			expect(lastUrl()).toBe(
+				`/design/components?p=flaiover&c=${encodeURIComponent(BUTTON)}&story=${STORY}`
+			);
+			expect(urls()).toContain(`/api/components?story=${STORY}`);
+			expect(new URL(frames()[0].src).origin).toBe('http://127.0.0.1:5299');
+			expect(q(`source-changed-${BUTTON}`)).not.toBeNull();
+			await choose('');
+			expect(lastUrl()).toBe(`/design/components?p=flaiover&c=${encodeURIComponent(BUTTON)}`);
+			expect(urls().at(-1)).toBe('/api/components');
+			expect(new URL(frames()[0].src).origin).toBe(DEV);
+			expect(q('source-changed')).toBeNull();
+		});
+
+		it("starts the story's dev server while only main's runs", async () => {
+			where.url = new URL(`http://localhost/design/components?story=${STORY}`);
+			serveStory(running);
+			await show();
+			expect(buttonNamed('Start')).toBeDefined();
+			await click(buttonNamed('Start'));
+			expect(posts).toEqual([{ project: 'flaiover', story: STORY }]);
+		});
+
+		it("says when the story's branch cannot be read, and still lists its catalogue", async () => {
+			where.url = new URL(`http://localhost/design/components?story=${STORY}`);
+			serveStory();
+			const served = api.getMockImplementation()!;
+			api.mockImplementation(async (url: string, init?: RequestInit) =>
+				url.endsWith('/diff')
+					? answer({ error: `${STORY} has no branch story/${STORY}` }, 400)
+					: served(url, init)
+			);
+			await show();
+			expect(q('source-changed-error')!.textContent).toContain('has no branch');
+			expect(q(`component-${BUTTON}`)).not.toBeNull();
+		});
+	});
+
 	it('asks the status again every minute, and on a change to the project', async () => {
 		vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
 		serve();

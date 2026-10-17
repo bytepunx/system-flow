@@ -191,6 +191,71 @@ describe('/api/components (S-0439)', () => {
 		expect(typeof params.request_id).toBe('string');
 	});
 
+	describe("a story's worktree (S-0442)", () => {
+		const getOf = (query: string) =>
+			GET({ url: new URL(`http://x/api/components${query}`) } as never);
+
+		it('asks the catalogue and the status of the story named, and of main without one', async () => {
+			expect((await getOf('?story=S-0442')).status).toBe(200);
+			expect(asks('components.list')).toEqual([
+				{ method: 'components.list', params: { story: 'S-0442' } }
+			]);
+			expect(asks('components.status')).toEqual([
+				{ method: 'components.status', params: { story: 'S-0442' } }
+			]);
+			asked = [];
+			expect((await getOf('?story=')).status).toBe(200);
+			expect(asks('components.list')).toEqual([{ method: 'components.list', params: {} }]);
+		});
+
+		it("starts and stops the story's dev server, then answers its status", async () => {
+			const server = { ...status(true).servers[0], story: 'S-0442' };
+			script['components.start'] = { data: server };
+			script['components.stop'] = { data: { project: 'web', stopped: true, pid: 4242 } };
+			script['components.status'] = { data: { ...status(true), servers: [server] } };
+			const r = await post(START, { project: 'web', story: 'S-0442' });
+			expect(r.status).toBe(200);
+			expect((await r.json()).servers[0].story).toBe('S-0442');
+			expect(asks('components.start')[0].params).toMatchObject({
+				project: 'web',
+				story: 'S-0442'
+			});
+			expect((await post(STOP, { project: 'web', story: 'S-0442' })).status).toBe(200);
+			expect(asks('components.stop')[0].params).toMatchObject({ project: 'web', story: 'S-0442' });
+			expect(asks('components.status').map((a) => a.params)).toEqual([
+				{ story: 'S-0442' },
+				{ story: 'S-0442' }
+			]);
+		});
+
+		it('passes no story to flai when the body names none', async () => {
+			script['components.start'] = { data: status(true).servers[0] };
+			expect((await post(START, { project: 'web' })).status).toBe(200);
+			expect('story' in asks('components.start')[0].params).toBe(false);
+		});
+
+		it('refuses a malformed story with 400, before asking flai', async () => {
+			const responses = [
+				await getOf('?story=main'),
+				await post(START, { project: 'web', story: 'T-1881' }),
+				await post(STOP, { project: 'web', story: 42 })
+			];
+			for (const r of responses) {
+				expect(r.status).toBe(400);
+				expect((await r.json()).error).toContain('S-0042');
+			}
+			expect(asked.filter((a) => a.method.startsWith('components.'))).toEqual([]);
+		});
+
+		it("answers flai's refusal of a story with no worktree as 400", async () => {
+			const message = 'S-0007 has no worktree: start it with flai story start S-0007';
+			script['components.list'] = { error: new AgentError(502, message, -32011) };
+			const r = await getOf('?story=S-0007');
+			expect(r.status).toBe(400);
+			expect((await r.json()).error).toBe(message);
+		});
+	});
+
 	it('answers 501 telling to upgrade a host flai without the four methods', async () => {
 		script = { 'project.info': { data: { name: 'p', key: 'p' } } };
 		const responses = [await get(), await post(START), await post(STOP)];

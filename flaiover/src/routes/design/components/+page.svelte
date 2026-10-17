@@ -14,7 +14,10 @@
 	// harness whole on each change and kept in the URL as ?props=, base64url JSON, so that a link
 	// renders the same; the event log lists the calls of its function props. The frames show the
 	// tried tokens (S-0441): the Design page's unsaved edits, kept in this browser as the project's
-	// draft and followed from another tab by the storage event, laid over the saved tokens.
+	// draft and followed from another tab by the storage event, laid over the saved tokens. The
+	// source picker (S-0442), kept in the URL as ?story=, reads the catalogue and the dev servers
+	// from a story's worktree instead of main's, and lists first, marked, the components its branch
+	// changes, from its stream.diff.
 	import type {
 		ComponentProp,
 		ComponentsCatalogue,
@@ -49,6 +52,11 @@
 	import { clearDraft, loadDraft, onDraft, type Edits } from '$lib/design/draft';
 	import { editedThemes } from '$lib/design/tokens';
 	import { stylesheetDeclarations } from '$lib/explorer/tokens';
+	import SourcePicker, {
+		openStories,
+		type SourceStory
+	} from '$lib/components/explorer/SourcePicker.svelte';
+	import { changedComponents, changedFirst, componentFile, diffPaths } from '$lib/explorer/changed';
 
 	const ENABLE = 'flai serve enable components';
 	// Asking at least this often keeps the host from stopping a dev server as idle.
@@ -89,14 +97,41 @@
 	} | null = $state.raw(null);
 	let events = $state.raw<Logged[]>([]);
 
-	const projects = $derived(catalogue?.projects ?? []);
+	// The story whose worktree the page reads, undefined for main's; the stories it may pick; and the
+	// paths its branch changes, null until its diff is read.
+	let story = $state(page.url.searchParams.get('story') || undefined);
+	let stories = $state.raw<SourceStory[]>([]);
+	let changedPaths = $state.raw<string[] | null>(null);
+	let changedError = $state<string | null>(null);
+
+	const changed = $derived(
+		catalogue && changedPaths ? changedComponents(catalogue, changedPaths) : new Set<string>()
+	);
+	// The catalogue's sub-projects, each with the components the story's branch changes first.
+	const projects = $derived(
+		(catalogue?.projects ?? []).map((p) => ({
+			...p,
+			components: changedFirst(p.components, changed)
+		}))
+	);
+	const changedList = $derived(
+		story && catalogue && changedPaths
+			? projects.flatMap((p) =>
+					p.components
+						.filter((c) => changed.has(componentFile(c)))
+						.map((c) => ({ project: p.name, component: c }))
+				)
+			: null
+	);
 	// The sub-project the dev server controls are for: the picked one, else the first supported.
 	const project = $derived<ComponentsProject | undefined>(
 		projects.find((p) => p.name === pickedProject && p.supported) ??
 			projects.find((p) => p.supported)
 	);
 	const component = $derived(project?.components.find((c) => c.path === pickedPath));
-	const server = $derived(status?.servers.find((s) => s.project === project?.name));
+	const server = $derived(
+		status?.servers.find((s) => s.project === project?.name && s.story === story)
+	);
 	const off = $derived(refused ?? (status && !status.enabled ? status.enable || ENABLE : null));
 	const themes = $derived<Theme[]>(both ? ['light', 'dark'] : [single]);
 	const picked = $derived(
@@ -122,11 +157,42 @@
 
 	const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+	/** Lists the stories in progress or in review, from the board; none when it cannot be read. */
+	async function loadStories() {
+		try {
+			const r = await api('/api/board');
+			stories = r.ok ? openStories((await r.json()).columns ?? {}) : [];
+		} catch {
+			stories = [];
+		}
+	}
+
+	/** Reads the paths the story's branch changes, from its stream.diff, if it is still picked. */
+	async function loadChanged(from: string) {
+		try {
+			const r = await api(`/api/items/${encodeURIComponent(from)}/diff`);
+			const body = await r.json().catch(() => ({}));
+			if (from !== story) return;
+			if (!r.ok) throw new Error(body.error ?? r.statusText);
+			changedPaths = diffPaths(body);
+			changedError = null;
+		} catch (e) {
+			if (from === story) changedError = errorText(e);
+		}
+	}
+
 	/** Reads the catalogue and the dev servers; a failed read keeps what was last shown. */
 	async function load() {
+		const from = story;
+		void loadStories();
+		if (from) void loadChanged(from);
 		try {
-			const r = await api('/api/components');
+			const r = await api(
+				from ? `/api/components?story=${encodeURIComponent(from)}` : '/api/components'
+			);
 			const body = await r.json().catch(() => ({}));
+			// an answer for the source picked before is not this one's
+			if (from !== story) return;
 			if (r.status === 501) {
 				tooOld = body.error ?? r.statusText;
 				return;
@@ -140,8 +206,26 @@
 			status = body.status as ComponentsStatus;
 			tooOld = refused = error = null;
 		} catch (e) {
-			error = `Could not read the components: ${errorText(e)}`;
+			if (from === story) error = `Could not read the components: ${errorText(e)}`;
 		}
+	}
+
+	/** Reads the source chosen, main's or a story's worktree, and keeps it in the URL. */
+	function choose(next: string | undefined) {
+		if (next === story) return;
+		story = next;
+		catalogue = status = changedPaths = null;
+		error = changedError = startError = null;
+		const kept = Object.fromEntries(page.url.searchParams);
+		delete kept.story;
+		const q = new URLSearchParams({ ...kept, ...(next ? { story: next } : {}) }).toString();
+		// eslint-disable-next-line svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it
+		void goto(resolve('/design/components') + (q ? `?${q}` : ''), {
+			replaceState: true,
+			keepFocus: true,
+			noScroll: true
+		});
+		void load();
 	}
 
 	/** Starts or stops the sub-project's dev server, taking the status the host answers. */
@@ -152,7 +236,7 @@
 			const r = await api(`/api/components/${action}`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ project: name })
+				body: JSON.stringify({ project: name, ...(story ? { story } : {}) })
 			});
 			const body = await r.json().catch(() => ({}));
 			if (r.ok) status = body as ComponentsStatus;
@@ -175,11 +259,13 @@
 	function keep(props: Props) {
 		const kept = Object.fromEntries(page.url.searchParams);
 		delete kept[PROPS_PARAM];
+		delete kept.story;
 		const q = toQuery(props);
 		const query = new URLSearchParams({
 			...kept,
 			p: pickedProject,
 			c: pickedPath,
+			...(story ? { story } : {}),
 			...(q ? { [PROPS_PARAM]: q } : {})
 		});
 		// eslint-disable-next-line svelte/no-navigation-without-resolve -- the path is resolve()d; the rule does not follow the query added to it
@@ -314,6 +400,17 @@
 	The project's Svelte components, each framed from its sub-project's dev server. The dev server
 	listens on 127.0.0.1, so the frame shows only in a browser on the host.
 </p>
+<div class="mt-4">
+	<SourcePicker
+		{stories}
+		{story}
+		onchoose={choose}
+		changed={changedList}
+		{changedError}
+		{picked}
+		onpick={pick}
+	/>
+</div>
 {#if error}
 	<p class="mt-4 rounded border border-danger bg-danger-soft p-3 text-sm text-danger" role="alert">
 		{error}
@@ -337,7 +434,7 @@
 {:else}
 	<div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
 		<nav aria-label="Components">
-			<ComponentList {projects} {picked} onpick={pick} />
+			<ComponentList {projects} {picked} onpick={pick} {changed} />
 		</nav>
 		<section class="min-w-0" aria-labelledby="components-frame-heading">
 			<h2 id="components-frame-heading" class="text-lg font-semibold">

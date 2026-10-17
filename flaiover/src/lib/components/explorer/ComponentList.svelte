@@ -5,11 +5,13 @@
 -->
 <script lang="ts">
 	import type { Component, ComponentsProject } from '$lib/server/repo';
+	import { componentFile } from '$lib/explorer/changed';
 
 	let {
 		projects,
 		picked,
-		onpick
+		onpick,
+		changed = new Set<string>()
 	}: {
 		/** The catalogue's sub-projects, as components.list answers them. */
 		projects: readonly ComponentsProject[];
@@ -17,6 +19,8 @@
 		picked: { project: string; path: string } | null;
 		/** Called with the sub-project's manifest name and the component's path. */
 		onpick: (project: string, path: string) => void;
+		/** The files, as componentFile gives them, of the components a story's branch changes (S-0442). */
+		changed?: ReadonlySet<string>;
 	} = $props();
 
 	type Folder = { dir: string; components: Component[] };
@@ -104,6 +108,10 @@
 									onclick={() => onpick(project.name, c.path)}
 								>
 									{c.name}
+									{#if changed.has(componentFile(c))}<span
+											class="text-xs text-primary"
+											data-testid="component-changed-mark">changed</span
+										>{/if}
 									{#if c.error}<span class="text-xs text-warn">props unreadable</span>{/if}
 								</button>
 							</li>

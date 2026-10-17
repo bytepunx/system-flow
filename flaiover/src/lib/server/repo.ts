@@ -319,6 +319,8 @@ export type ComponentsCatalogue = { projects: ComponentsProject[] };
 export type ComponentServer = {
 	/** The sub-project's name in the manifest. */
 	project: string;
+	/** The story whose worktree the dev server runs in (S-0442); absent for the main checkout's. */
+	story?: string;
 	/** Its dev server runs and answers. */
 	running: boolean;
 	/** Its dev server was started and does not answer yet. */
@@ -656,41 +658,54 @@ export class Repo extends EventEmitter {
 	/**
 	 * The component catalogue, flai's components.list (S-0437): every sub-project, a Svelte one with
 	 * its components and their props. Asked afresh each time: a component file may be added at any time.
+	 * With story, the catalogue in that open story's worktree (S-0442); flai refuses a story that is
+	 * not open or has no worktree.
 	 */
-	async components(): Promise<ComponentsCatalogue> {
-		return upgraded('list the components', () => this.ask<ComponentsCatalogue>('components.list'));
+	async components(story?: string): Promise<ComponentsCatalogue> {
+		return upgraded('list the components', () =>
+			this.ask<ComponentsCatalogue>('components.list', story ? { story } : {})
+		);
 	}
 
 	/**
 	 * How every supported sub-project's component dev server stands, flai's components.status (S-0438),
 	 * and whether the components host action is on. Asked afresh each time; asking keeps a running
-	 * dev server from being stopped as idle.
+	 * dev server from being stopped as idle. With story, that story's dev servers (S-0442).
 	 */
-	async componentsStatus(): Promise<ComponentsStatus> {
+	async componentsStatus(story?: string): Promise<ComponentsStatus> {
 		return upgraded('show the component dev servers', () =>
-			this.ask<ComponentsStatus>('components.status')
+			this.ask<ComponentsStatus>('components.status', story ? { story } : {})
 		);
 	}
 
 	/**
 	 * Start a sub-project's component dev server, flai's components.start under the components host
 	 * action (S-0438), and answer it once its harness answers; one that runs is answered as it is.
-	 * project may be left out when one sub-project is supported. flai waits a minute for Vite, so the
-	 * ask waits longer, to answer flai's own message, which carries Vite's last lines of output.
+	 * project may be left out when one sub-project is supported; with story, the dev server runs in
+	 * that story's worktree (S-0442). flai waits a minute for Vite, so the ask waits longer, to answer
+	 * flai's own message, which carries Vite's last lines of output.
 	 */
-	async componentsStart(project?: string): Promise<ComponentServer> {
+	async componentsStart(project?: string, story?: string): Promise<ComponentServer> {
 		const { data } = await upgraded('start a component dev server', () =>
-			this.write<ComponentServer>('components.start', project ? { project } : {}, {
-				timeoutMs: 90000
-			})
+			this.write<ComponentServer>(
+				'components.start',
+				{ ...(project ? { project } : {}), ...(story ? { story } : {}) },
+				{ timeoutMs: 90000 }
+			)
 		);
 		return data;
 	}
 
-	/** Stop a sub-project's component dev server when one runs, flai's components.stop (S-0438). */
-	async componentsStop(project?: string): Promise<ComponentStopped> {
+	/**
+	 * Stop a sub-project's component dev server when one runs, flai's components.stop (S-0438); with
+	 * story, that story's (S-0442).
+	 */
+	async componentsStop(project?: string, story?: string): Promise<ComponentStopped> {
 		const { data } = await upgraded('stop a component dev server', () =>
-			this.write<ComponentStopped>('components.stop', project ? { project } : {})
+			this.write<ComponentStopped>('components.stop', {
+				...(project ? { project } : {}),
+				...(story ? { story } : {})
+			})
 		);
 		return data;
 	}
