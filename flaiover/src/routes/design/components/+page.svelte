@@ -17,8 +17,11 @@
 	// draft and followed from another tab by the storage event, laid over the saved tokens. The
 	// source picker (S-0442), kept in the URL as ?story=, reads the catalogue and the dev servers
 	// from a story's worktree instead of main's, and lists first, marked, the components its branch
-	// changes, from its stream.diff.
+	// changes, from its stream.diff. Beside the panel (S-0443), the component's examples, its
+	// examples file's named sets of props: choosing one loads its props, theme, and width into the
+	// panel, and Save as example saves the panel as one, on main or on the story the page reads.
 	import type {
+		ComponentExample,
 		ComponentProp,
 		ComponentsCatalogue,
 		ComponentsProject,
@@ -57,6 +60,10 @@
 		type SourceStory
 	} from '$lib/components/explorer/SourcePicker.svelte';
 	import { changedComponents, changedFirst, componentFile, diffPaths } from '$lib/explorer/changed';
+	import ExampleList, {
+		exampleFrom,
+		type SaveFailure
+	} from '$lib/components/explorer/ExampleList.svelte';
 
 	const ENABLE = 'flai serve enable components';
 	// Asking at least this often keeps the host from stopping a dev server as idle.
@@ -293,6 +300,49 @@
 		const valid = props.every((p) => parse(p, next[p.name]).ok);
 		edits = { ...picked, texts: next, values: valid ? toValues(props, next) : values };
 		if (valid) keep(edits.values);
+	}
+
+	/** Loads the example's props into the panel, and its theme and width where it gives them. */
+	function chooseExample(example: ComponentExample) {
+		if (!picked) return;
+		const next = toTexts(propsOf, example.props);
+		edits = { ...picked, texts: next, values: toValues(propsOf, next) };
+		keep(edits.values);
+		if (example.theme) one(example.theme);
+		if (example.width) width = example.width;
+	}
+
+	/** Saves the panel as the example name in the picked component's examples file, on the story
+	 * the page reads or on main, and lists the file's examples as saved; why not when it fails. */
+	async function saveExample(name: string): Promise<SaveFailure | null> {
+		const target = picked;
+		if (!target) return { error: 'Pick a component to save an example of it.' };
+		try {
+			const r = await api('/api/components/examples', {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					project: target.project,
+					component: target.path,
+					example: exampleFrom(name, values, themes, width),
+					...(story ? { story } : {})
+				})
+			});
+			const body = await r.json().catch(() => ({}));
+			if (!r.ok)
+				return {
+					error: body.error ?? r.statusText,
+					findings: body.findings,
+					conflict: r.status === 409
+				};
+			const saved = catalogue?.projects
+				.find((p) => p.name === target.project)
+				?.components.find((c) => c.path === target.path);
+			if (saved) saved.examples = body.examples as ComponentExample[];
+			return null;
+		} catch (e) {
+			return { error: errorText(e) };
+		}
 	}
 
 	function called(m: Called) {
@@ -574,6 +624,15 @@
 				</div>
 				{#if component}
 					<div class="flex flex-col gap-6 xl:w-80 xl:shrink-0">
+						{#key `${project?.name}:${component.path}`}
+							<ExampleList
+								examples={component.examples ?? []}
+								path={component.examples_path}
+								{story}
+								onchoose={chooseExample}
+								onsave={saveExample}
+							/>
+						{/key}
 						<PropsPanel
 							props={component.props}
 							{texts}

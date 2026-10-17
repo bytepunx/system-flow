@@ -297,6 +297,23 @@ export type Component = {
 	props: ComponentProp[];
 	/** Why its props could not be read, such as a parse error; absent when they were. */
 	error?: string;
+	/** Its examples, in its examples file's order, [] when it has none (S-0443, ADR-0164); absent
+	 * from a host flai older than S-0443. */
+	examples?: ComponentExample[];
+	/** Its examples file's repository path, given whether or not the file exists; absent from a
+	 * host flai older than S-0443. */
+	examples_path?: string;
+};
+
+/** One named set of a component's props, as its examples file keeps it (ADR-0164). */
+export type ComponentExample = {
+	name: string;
+	/** Prop name to value, as the props panel sends them; a function prop is left out. */
+	props: Record<string, unknown>;
+	/** The one theme the page shows; absent, the page keeps the theme or themes it shows. */
+	theme?: 'light' | 'dark';
+	/** The frame's width in CSS pixels; absent, the page keeps the width it shows. */
+	width?: number;
 };
 
 /** One sub-project of the manifest in the catalogue; only a supported one has components. */
