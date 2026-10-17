@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/itemnew"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
@@ -222,7 +223,16 @@ cost: that duration priced at the project's cost per agent hour, an
 estimate, absent while no story has been measured from its logs
 (ADR-0083). --json gives it as expected_cost. What strategic agents such as
 the planner spent on the item is printed per kind, apart from what its
-agents spent.`,
+agents spent.
+
+A story under pull-request acceptance that flai serve has read the pull
+request of gets a pull request section (ADR-0167): its number, URL, head
+commit, and when it was read, then each required check's name, state, log
+link, and summary, and each review's author, state, and link, as flai serve
+last read them. It is read from .flai-cache, never from the forge; a kept
+state that cannot be read is warned of and left out. --json gives it as
+pull_request: {"story", "pull_request", "url", "head_sha", "read_at",
+"checks", "reviews", "sent_back"}.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -250,6 +260,15 @@ agents spent.`,
 			if it.Type == workitem.Story {
 				plan = workitem.PlanOf(children, it.ID)
 			}
+			// a story's pull request as flai serve last read it (ADR-0167);
+			// a cache file that cannot be read does not hide the item
+			var pr *forge.Status
+			if it.Type == workitem.Story {
+				var prErr error
+				if pr, prErr = keptPullRequest(repo, it.ID); prErr != nil {
+					a.logger().Warn("pull request status not read", "component", "show", "item", it.ID, "err", prErr.Error())
+				}
+			}
 			// what the item is expected to cost, priced only when it has a
 			// duration to price (ADR-0083)
 			var rate *float64
@@ -268,6 +287,9 @@ agents spent.`,
 				}
 				if plan != nil {
 					out["plan"] = plan
+				}
+				if pr != nil {
+					out["pull_request"] = pr
 				}
 				return a.printJSON(out)
 			}
@@ -338,6 +360,12 @@ agents spent.`,
 			for _, b := range it.Blocked {
 				until := orDefault(b.Until, "open")
 				fmt.Fprintf(a.out, "  blocked: %s to %s: %s\n", b.From, until, b.Reason)
+			}
+			if pr != nil {
+				fmt.Fprintf(a.out, "  pull request: #%d %s at %s, read %s\n", pr.PullRequest, pr.URL, short(pr.HeadSHA), pr.ReadAt)
+				for _, l := range pullRequestLines(pr) {
+					fmt.Fprintf(a.out, "    %s\n", l)
+				}
 			}
 			if len(children) > 0 {
 				fmt.Fprintln(a.out, "  children:")

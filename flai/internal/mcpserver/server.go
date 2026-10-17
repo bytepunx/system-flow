@@ -21,6 +21,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
@@ -451,6 +452,10 @@ type ItemOut struct {
 	CostOfDelay *workitem.CostOfDelay `json:"cost_of_delay,omitempty" jsonschema:"what each week of waiting for the item costs: the inputs it is worked out from with who set them and when, and the value per week with who set it and when (ADR-0080)"`
 	Forecast    *workitem.Forecast    `json:"forecast,omitempty" jsonschema:"a story's expected duration and delivery, what they rest on, and who set it and when"`
 	Currency    string                `json:"currency,omitempty" jsonschema:"the currency of the cost of delay's amounts"`
+	// PullRequest is a story's pull request as flai serve last read it, and
+	// PullRequestError why its kept state could not be read (ADR-0167).
+	PullRequest      *forge.Status `json:"pull_request,omitempty" jsonschema:"a story's pull request under pull-request acceptance, as flai serve last read it from the forge: its number, url, head_sha, and read_at; checks, each required check's name, state (pending, passed, failed), url (its log), summary, and since; reviews, each review's author, state (approved, changes-requested, commented, dismissed, pending), url, body, and submitted_at; and sent_back, the failures flai sent the story back to in-progress for, each with its thread"`
+	PullRequestError string        `json:"pull_request_error,omitempty" jsonschema:"why the story's kept pull request state could not be read, and what clears it"`
 	// Hash is what item_edit takes to refuse a change made meanwhile.
 	Hash string `json:"hash"`
 }
@@ -490,8 +495,27 @@ func (s *server) itemOut(ctx context.Context, it *workitem.Item) (ItemOut, error
 	}
 	if it.Type == workitem.Story {
 		out.Plan = workitem.PlanOf(children, it.ID)
+		out.PullRequest, out.PullRequestError = s.keptPullRequest(it.ID)
 	}
 	return out, nil
+}
+
+// keptPullRequest is story's pull request as flai serve last read it, without
+// its events, or nil when it has not read one; a kept state that cannot be
+// read is why, so that the item is still served. It never calls the forge.
+func (s *server) keptPullRequest(story string) (*forge.Status, string) {
+	st, ok, err := forge.ReadStatus(s.repo.CacheDir(), story)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("pull request status not read", "component", "mcp", "agent", s.agent, "item", story, "err", err.Error())
+		}
+		return nil, err.Error()
+	}
+	if !ok {
+		return nil, ""
+	}
+	st.Events = nil
+	return &st, ""
 }
 
 func (s *server) itemGet(ctx context.Context, _ *mcp.CallToolRequest, in ItemIDIn) (*mcp.CallToolResult, ItemOut, error) {

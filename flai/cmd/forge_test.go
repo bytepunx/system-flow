@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -475,6 +476,52 @@ func TestForgePushOpensThePullRequestThenIsUpToDate(t *testing.T) {
 	}
 	if after, _, _ := gh.counts(); after != before {
 		t.Errorf("flai forge status called the forge %d times; want none", after-before)
+	}
+
+	// S-0394 criterion 2: once flai serve has read the pull request back,
+	// flai forge status prints its checks and reviews from the kept state,
+	// and --json gives it, without the events, still calling no forge
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kept := keptPullRequestFixture("S-0001")
+	if err := forge.WriteStatus(repo.CacheDir(), kept); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runForge(t, root, "forge", "status", "S-0001")
+	want = "pull request: #1, " + url + "\n" +
+		"  read at abc123def456, 2026-10-17T16:00:00Z\n" +
+		"  check build: failed https://github.com/o/r/runs/1 (2 tests failed)\n" +
+		"  check lint: pending\n" +
+		"  review alice: changes-requested https://github.com/o/r/pull/7#pullrequestreview-1\n" +
+		"  review bob: approved\n" +
+		"branch: "
+	if code != 0 || !strings.Contains(out, want) {
+		t.Errorf("status with the pull request read: %d\nstdout: %s\nwant it to hold: %s\nstderr: %s", code, out, want, errOut)
+	}
+	out, errOut, code = runForge(t, root, "forge", "status", "S-0001", "--json")
+	var read struct {
+		PullRequest     int           `json:"pull_request"`
+		PullRequestRead *forge.Status `json:"pull_request_read"`
+	}
+	if err := json.Unmarshal([]byte(out), &read); err != nil || code != 0 {
+		t.Fatalf("status --json with the pull request read: %d %v\nstdout: %s\nstderr: %s", code, err, out, errOut)
+	}
+	kept.Events = nil
+	if read.PullRequest != 1 || !reflect.DeepEqual(read.PullRequestRead, &kept) {
+		t.Errorf("status --json: pull_request %d, pull_request_read %+v\nwant %+v", read.PullRequest, read.PullRequestRead, kept)
+	}
+	if after, _, _ := gh.counts(); after != before {
+		t.Errorf("flai forge status called the forge %d times; want none", after-before)
+	}
+
+	// a kept state that cannot be read fails the command with what clears it
+	if err := os.WriteFile(forge.StatusPath(repo.CacheDir(), "S-0001"), []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, errOut, code := runForge(t, root, "forge", "status", "S-0001"); code != 1 || !strings.Contains(errOut, "delete it, and flai serve reads the pull request afresh") {
+		t.Errorf("status with a corrupt kept state: %d %s", code, errOut)
 	}
 }
 

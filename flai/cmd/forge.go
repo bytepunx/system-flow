@@ -138,7 +138,10 @@ func newForgeStatusCmd(a *app) *cobra.Command {
 request's number and URL as flai last opened or found it ("none yet" before
 that), and whether origin's story/S-nnnn matches the local branch, read now
 with git ls-remote origin from this host; when origin cannot be read, it says
-so and why. It prints what flai's last push or look did and when.
+so and why. It prints what flai's last push or look did and when, and, once flai serve
+has read the pull request back (ADR-0167), the head commit and time of that
+read, each required check's name, state, log link, and summary, and each
+review's author, state, and link.
 
 When nothing was pushed, or the last push failed or no longer matches, it
 says why, the first of these that applies: acceptance.mode is local; the
@@ -152,8 +155,11 @@ It does not call the forge, so it works offline and costs no rate limit. The
 exit status is 0 whenever it can report. With --json the result is {"story",
 "status", "mode", "forge", "host_action", "token_env", "token_set",
 "pull_request", "url", "branch", "local_head", "remote_head", "remote_error",
-"matches", "outcome", "reason", "at", "thread", "why"}, empty fields left out
-but for the booleans.`,
+"matches", "outcome", "reason", "at", "thread", "why", "pull_request_read"},
+empty fields left out but for the booleans; "pull_request_read" is the pull
+request as flai serve last read it, as flai show --json gives it under
+"pull_request": {"story", "pull_request", "url", "head_sha", "read_at",
+"checks", "reviews", "sent_back"}.`,
 		Example: `  flai forge status S-0042
   flai forge status S-0042 --json`,
 		Args: cobra.ExactArgs(1),
@@ -196,6 +202,9 @@ type forgeStatus struct {
 	At          string             `json:"at,omitempty"`
 	Thread      string             `json:"thread,omitempty"`
 	Why         string             `json:"why,omitempty"`
+	// PullRequestRead is the pull request as flai serve last read it, nil
+	// before it has (ADR-0167); pull_request is taken by the number.
+	PullRequestRead *forge.Status `json:"pull_request_read,omitempty"`
 }
 
 // forgeStatus reads what flai last did for the story id from its state
@@ -219,6 +228,9 @@ func (a *app) forgeStatus(repo *workitem.Repo, id string, cfg config.Config) (fo
 		HostAction: cfg.ActionEnabled(hostapi.ActionForge, root), Branch: storyBranch(it.ID),
 		PullRequest: st.PullRequest, URL: st.URL, Outcome: st.Outcome, Reason: st.Reason, At: st.At, Thread: st.Thread,
 	}
+	if s.PullRequestRead, err = keptPullRequest(repo, it.ID); err != nil {
+		return forgeStatus{}, err
+	}
 	s.TokenEnv = cfg.ForgeTokenEnv(s.Forge)
 	_, tokenErr := cfg.ForgeTokenFunc(s.Forge, os.Getenv)()
 	s.TokenSet = tokenErr == nil
@@ -232,6 +244,41 @@ func (a *app) forgeStatus(repo *workitem.Repo, id string, cfg config.Config) (fo
 		s.Why = whyNotPushed(s, acc.PullRequest(), tokenErr)
 	}
 	return s, nil
+}
+
+// keptPullRequest is story's pull request as flai serve last read it, without
+// its events, or nil when it has not read one; it never calls the forge.
+func keptPullRequest(repo *workitem.Repo, story string) (*forge.Status, error) {
+	st, ok, err := forge.ReadStatus(repo.CacheDir(), story)
+	if err != nil || !ok {
+		return nil, err
+	}
+	st.Events = nil
+	return &st, nil
+}
+
+// pullRequestLines are a kept pull request's required checks, then its
+// reviews, one a line: its name, its state, and its link when it has one.
+func pullRequestLines(pr *forge.Status) []string {
+	lines := make([]string, 0, len(pr.Checks)+len(pr.Reviews))
+	for _, c := range pr.Checks {
+		l := fmt.Sprintf("check %s: %s", c.Name, c.State)
+		if c.URL != "" {
+			l += " " + c.URL
+		}
+		if c.Summary != "" {
+			l += " (" + c.Summary + ")"
+		}
+		lines = append(lines, l)
+	}
+	for _, r := range pr.Reviews {
+		l := fmt.Sprintf("review %s: %s", r.Author, r.State)
+		if r.URL != "" {
+			l += " " + r.URL
+		}
+		lines = append(lines, l)
+	}
+	return lines
 }
 
 // originHead is the head of branch on origin, "" when origin has none, or
@@ -291,6 +338,12 @@ func (a *app) printForgeStatus(s forgeStatus) error {
 		fmt.Fprintf(a.out, "pull request: #%d, %s\n", s.PullRequest, s.URL)
 	} else {
 		fmt.Fprintln(a.out, "pull request: none yet")
+	}
+	if pr := s.PullRequestRead; pr != nil {
+		fmt.Fprintf(a.out, "  read at %s, %s\n", short(pr.HeadSHA), pr.ReadAt)
+		for _, l := range pullRequestLines(pr) {
+			fmt.Fprintf(a.out, "  %s\n", l)
+		}
 	}
 	fmt.Fprintf(a.out, "branch: %s\n", branchFinding(s))
 	if s.Outcome != "" {

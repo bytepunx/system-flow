@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -211,6 +213,59 @@ func TestItemsAndRules(t *testing.T) {
 	}
 	if who, _ := f.call(t, "who_touches", map[string]any{"path": "docs"}); len(who["items"].([]any)) != 0 {
 		t.Errorf("nobody touches docs: %v", who)
+	}
+}
+
+// S-0394 criterion 2: item_get carries a story's pull request as flai serve
+// last read it, from the kept state and without its events; a story without
+// one, and a task, carry none; a kept state that cannot be read is said in
+// pull_request_error, and the item is still served.
+func TestItemGetCarriesTheKeptPullRequest(t *testing.T) {
+	f := setup(t)
+	for _, id := range []string{f.story.ID, f.task.ID} {
+		got, failed := f.call(t, "item_get", map[string]any{"id": id})
+		if _, has := got["pull_request"]; failed != "" || has || got["pull_request_error"] != nil {
+			t.Errorf("item_get %s before any read: %v %s", id, got, failed)
+		}
+	}
+	kept := forge.Status{
+		Story: f.story.ID, PullRequest: 7, URL: "https://github.com/o/r/pull/7", HeadSHA: "abc123", ReadAt: "2026-10-17T16:00:00Z",
+		Checks:  []forge.CheckStatus{{Name: "build", State: forge.CheckFailed, URL: "https://github.com/o/r/runs/1", Since: "2026-10-17T15:58:00Z"}},
+		Reviews: []forge.ReviewStatus{{Author: "alice", State: forge.ReviewChangesRequested, URL: "https://github.com/o/r/pull/7#pullrequestreview-1"}},
+		Events:  []forge.StatusEvent{{At: "2026-10-17T15:58:00Z", Kind: forge.EventCheck, Name: "build", To: "failed", Commit: "abc123"}},
+	}
+	if err := forge.WriteStatus(f.repo.CacheDir(), kept); err != nil {
+		t.Fatal(err)
+	}
+	res, err := f.cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "item_get", Arguments: map[string]any{"id": f.story.ID}})
+	if err != nil || res.IsError {
+		t.Fatalf("item_get: %v %+v", err, res)
+	}
+	data, _ := json.Marshal(res.StructuredContent)
+	var got struct {
+		PullRequest *forge.Status `json:"pull_request"`
+	}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	kept.Events = nil
+	if !reflect.DeepEqual(got.PullRequest, &kept) {
+		t.Errorf("pull_request = %+v\nwant %+v", got.PullRequest, kept)
+	}
+	if strings.Contains(string(data), `"events"`) {
+		t.Errorf("pull_request carries its events: %s", data)
+	}
+	if got, _ := f.call(t, "item_get", map[string]any{"id": f.task.ID}); got["pull_request"] != nil {
+		t.Errorf("a task carries a pull request: %v", got)
+	}
+
+	if err := os.WriteFile(forge.StatusPath(f.repo.CacheDir(), f.story.ID), []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	broken, failed := f.call(t, "item_get", map[string]any{"id": f.story.ID})
+	why, _ := broken["pull_request_error"].(string)
+	if failed != "" || broken["id"] != f.story.ID || broken["pull_request"] != nil || !strings.Contains(why, "delete it, and flai serve reads the pull request afresh") {
+		t.Errorf("item_get with a corrupt kept state: %v %s", broken, failed)
 	}
 }
 

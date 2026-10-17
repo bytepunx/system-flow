@@ -2,11 +2,14 @@ package cmd
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -112,5 +115,90 @@ func TestShowPricesAnEstimateAndNothingWithoutARate(t *testing.T) {
 	}
 	if out, _, _ := runIn(t, root, "show", "S-0001"); strings.Contains(out, "expected cost") {
 		t.Errorf("priced with no rate:\n%s", out)
+	}
+}
+
+// keptPullRequestFixture is a pull request as flai serve last read it, with
+// a failed required check, a pending one, two reviews, and an event.
+func keptPullRequestFixture(story string) forge.Status {
+	return forge.Status{
+		Story: story, PullRequest: 7, URL: "https://github.com/o/r/pull/7", HeadSHA: "abc123def4567890", ReadAt: "2026-10-17T16:00:00Z",
+		Checks: []forge.CheckStatus{
+			{Name: "build", State: forge.CheckFailed, URL: "https://github.com/o/r/runs/1", Summary: "2 tests failed", Since: "2026-10-17T15:58:00Z"},
+			{Name: "lint", State: forge.CheckPending, Since: "2026-10-17T15:59:00Z"},
+		},
+		Reviews: []forge.ReviewStatus{
+			{Author: "alice", State: forge.ReviewChangesRequested, URL: "https://github.com/o/r/pull/7#pullrequestreview-1", Body: "rename it", SubmittedAt: "2026-10-17T15:50:00Z"},
+			{Author: "bob", State: forge.ReviewApproved},
+		},
+		Events: []forge.StatusEvent{{At: "2026-10-17T15:58:00Z", Kind: forge.EventCheck, Name: "build", To: "failed", Commit: "abc123def4567890"}},
+	}
+}
+
+// S-0394 criterion 2: flai show prints a story's pull request, each required
+// check's name, state, log link, and summary, and each review's author,
+// state, and link, from the kept state; --json gives it as pull_request
+// without the events; a story without one, or a task, has none; and a kept
+// state that cannot be read is warned of without hiding the item.
+func TestShowPrintsTheKeptPullRequest(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	for _, args := range [][]string{{"story", "new", "Reviewed"}, {"story", "new", "Unread"}, {"task", "new", "--story", "S-0001", "Piece"}} {
+		if _, errOut, code := runIn(t, root, args...); code != 0 {
+			t.Fatalf("%v: %s", args, errOut)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := forge.WriteStatus(repo.CacheDir(), keptPullRequestFixture("S-0001")); err != nil {
+		t.Fatal(err)
+	}
+
+	out, errOut, code := runIn(t, root, "show", "S-0001")
+	want := "  pull request: #7 https://github.com/o/r/pull/7 at abc123def456, read 2026-10-17T16:00:00Z\n" +
+		"    check build: failed https://github.com/o/r/runs/1 (2 tests failed)\n" +
+		"    check lint: pending\n" +
+		"    review alice: changes-requested https://github.com/o/r/pull/7#pullrequestreview-1\n" +
+		"    review bob: approved\n"
+	if code != 0 || !strings.Contains(out, want) {
+		t.Errorf("show: %d %s\n%s\nwant it to hold:\n%s", code, errOut, out, want)
+	}
+
+	out, errOut, code = runIn(t, root, "show", "S-0001", "--json")
+	var got struct {
+		PullRequest *forge.Status `json:"pull_request"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil || code != 0 {
+		t.Fatalf("show --json: %d %v %s\n%s", code, err, errOut, out)
+	}
+	wantPR := keptPullRequestFixture("S-0001")
+	wantPR.Events = nil
+	if !reflect.DeepEqual(got.PullRequest, &wantPR) {
+		t.Errorf("pull_request = %+v\nwant %+v", got.PullRequest, wantPR)
+	}
+	if strings.Contains(out, `"events"`) {
+		t.Errorf("pull_request carries its events:\n%s", out)
+	}
+
+	for _, id := range []string{"S-0002", "T-0001"} {
+		if out, _, _ := runIn(t, root, "show", id); strings.Contains(out, "pull request") {
+			t.Errorf("show %s has a pull request:\n%s", id, out)
+		}
+		if out, _, _ := runIn(t, root, "show", id, "--json"); strings.Contains(out, `"pull_request"`) {
+			t.Errorf("show %s --json has a pull request:\n%s", id, out)
+		}
+	}
+
+	if err := os.WriteFile(forge.StatusPath(repo.CacheDir(), "S-0001"), []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, errOut, code = runIn(t, root, "show", "S-0001")
+	if code != 0 || !strings.HasPrefix(out, "S-0001 Reviewed\n") || strings.Contains(out, "pull request") || !strings.Contains(errOut, "pull request status not read") || !strings.Contains(errOut, "delete it") {
+		t.Errorf("show with a corrupt kept state: %d\nstdout: %s\nstderr: %s", code, out, errOut)
+	}
+	if out, _, code := runIn(t, root, "show", "S-0001", "--json"); code != 0 || strings.Contains(out, `"pull_request"`) || !strings.Contains(out, `"item"`) {
+		t.Errorf("show --json with a corrupt kept state: %d\n%s", code, out)
 	}
 }
