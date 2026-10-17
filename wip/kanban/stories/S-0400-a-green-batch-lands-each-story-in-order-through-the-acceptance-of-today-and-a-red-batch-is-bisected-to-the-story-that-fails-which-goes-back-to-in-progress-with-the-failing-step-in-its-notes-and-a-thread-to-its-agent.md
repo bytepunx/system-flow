@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:07Z
-updated: 2026-10-17T07:43:16Z
+updated: 2026-10-17T16:03:13Z
 transitions: []
 tags: [cli, dashboard]
 topics: [orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h15m
-  delivery: 2026-10-17T12:13:00Z
-  basis: "Its own forecast of 1h15m; 9th in the pull order with an in-progress limit of 5, behind S-0395, S-0396, S-0397, S-0393, S-0394, S-0241, S-0398 and S-0399."
+  delivery: 2026-10-17T20:21:00Z
+  basis: "Its own forecast of 1h15m; 8th in the pull order with an in-progress limit of 5, behind S-0395, S-0396, S-0397, S-0394, S-0241, S-0398 and S-0399."
   by: flai
-  at: 2026-10-17T07:43:16Z
+  at: 2026-10-17T16:03:13Z
 ---
 # S-0400 A green batch lands each story in order through the acceptance of today, and a red batch is bisected to the story that fails, which goes back to in-progress with the failing step in its notes and a thread to its agent
 

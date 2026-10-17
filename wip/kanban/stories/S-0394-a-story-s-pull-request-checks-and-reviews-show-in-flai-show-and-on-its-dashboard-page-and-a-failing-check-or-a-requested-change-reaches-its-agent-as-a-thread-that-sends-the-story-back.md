@@ -3,15 +3,18 @@ id: S-0394
 type: story
 nature: feature
 title: A story's pull request checks and reviews show in flai show and on its dashboard page, and a failing check or a requested change reaches its agent as a thread that sends the story back
-status: ready
+status: in-progress
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:36:28Z
-updated: 2026-10-17T06:44:14Z
+updated: 2026-10-17T16:03:23Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:51Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T16:03:23Z
+    by: agent-S-0394
 tags: [cli, dashboard]
 topics: [release, dashboard]
 touches: [flai/internal/forge/state.go, flai/internal/forge/state_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/serve.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/cmd/items.go, flai/cmd/show_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/folder.go, flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flaiover/src/lib/server/agent.ts, "flaiover/src/routes/api/items/[id]/forge/+server.ts", "flaiover/src/routes/api/items/[id]/forge/forge.test.ts", flaiover/src/lib/components/ForgeStatus.svelte, flaiover/src/lib/components/ForgeStatus.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", "flaiover/src/routes/review/[id]/+page.svelte", design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]

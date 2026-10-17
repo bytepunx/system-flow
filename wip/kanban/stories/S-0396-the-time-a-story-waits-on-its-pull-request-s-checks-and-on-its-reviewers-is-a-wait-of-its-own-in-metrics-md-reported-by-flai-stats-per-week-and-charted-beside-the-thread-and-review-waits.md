@@ -7,7 +7,7 @@ status: ready
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:38:48Z
-updated: 2026-10-17T07:43:16Z
+updated: 2026-10-17T16:03:13Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:55Z
@@ -38,10 +38,10 @@ usage:
           cost: 0.7096
 forecast:
   duration: 42m
-  delivery: 2026-10-17T08:29:00Z
+  delivery: 2026-10-17T16:49:00Z
   basis: "Its own forecast of 42m; 2nd in the pull order with an in-progress limit of 5, behind S-0395."
   by: flai
-  at: 2026-10-17T07:43:16Z
+  at: 2026-10-17T16:03:13Z
 finalized:
   by: alex
   at: 2026-10-17T06:43:19Z
