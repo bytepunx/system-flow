@@ -7,9 +7,13 @@
 // names, from its parent window, and posts only to it; with no origin it
 // renders ?c= and posts nothing.
 //
-// A select message may carry functions as a props message does, so that a
-// component that calls a function prop as it mounts has its logger.
-import { flushSync, mount, unmount } from 'svelte';
+// A select message may carry functions and snippets as a props message does,
+// so that a component that calls a function prop, or renders a snippet, as it
+// mounts has it. A props message carries every prop the page sets, not a
+// change: Frame spreads them over the mounted component, which takes them in
+// place, keeping its own state, and a prop left out falls back to its
+// default.
+import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import Frame from 'virtual:flai-components/Frame.svelte';
 import { components, root, setup, setupPath } from 'virtual:flai-components';
 
@@ -20,7 +24,9 @@ const origin = pageOrigin(params.get('origin'));
 const target = document.getElementById('flai-component');
 
 // current is the mounted component: its path, its Frame, whether it failed
-// since it last rendered, and the boundary's reset after it did.
+// since it last rendered, the boundary's reset after it did, and the loggers
+// and snippets it was given, kept so that a props message that does not
+// change one passes the same function again.
 let current = null;
 // wanted is the path the last select named, which an error is about until
 // that component mounts.
@@ -43,7 +49,7 @@ function post(message) {
 	if (origin) parent.postMessage({ source, version, ...message }, origin);
 }
 
-async function select(path, props, functions) {
+async function select(path, props, functions, snippets) {
 	const token = ++selection;
 	wanted = path;
 	close();
@@ -60,7 +66,7 @@ async function select(path, props, functions) {
 		return;
 	}
 	if (token !== selection) return;
-	const c = { path, frame: null, failed: false, reset: null };
+	const c = { path, frame: null, failed: false, reset: null, loggers: new Map(), snippets: new Map() };
 	current = c;
 	const onerror = (error, reset) => {
 		c.reset = reset;
@@ -72,17 +78,17 @@ async function select(path, props, functions) {
 		failed(path, e);
 		return;
 	}
-	render(props, functions);
+	render(props, functions, snippets);
 }
 
 // render gives the mounted component props, renders it again if it had
 // failed, and posts rendered unless it fails now.
-function render(props, functions) {
+function render(props, functions, snippets) {
 	const c = current;
 	if (!c?.frame) return;
 	c.failed = false;
 	try {
-		if (props !== undefined) c.frame.update(withLoggers(c.path, props, functions));
+		if (props !== undefined) c.frame.update(live(c, props, functions, snippets));
 		const reset = c.reset;
 		c.reset = null;
 		reset?.();
@@ -145,14 +151,39 @@ function fileOf(url) {
 	return p.slice(1);
 }
 
-// withLoggers is props with each name in functions a function that posts
-// event with its arguments.
-function withLoggers(path, props, functions) {
+// live is props as c's component takes them: each name in functions a
+// logger that posts event with its arguments, and each name in snippets
+// whose value is a string a snippet of that text.
+function live(c, props, functions, snippets) {
 	const out = { ...props };
-	for (const name of functions ?? []) {
-		out[name] = (...args) => post({ type: 'event', component: path, name, args: args.map((a) => jsonSafe(a)) });
+	for (const name of names(functions)) {
+		if (!c.loggers.has(name)) {
+			c.loggers.set(name, (...args) => post({ type: 'event', component: c.path, name, args: args.map((a) => jsonSafe(a)) }));
+		}
+		out[name] = c.loggers.get(name);
+	}
+	for (const name of names(snippets)) {
+		if (typeof out[name] !== 'string') continue;
+		if (c.snippets.get(name)?.text !== out[name]) c.snippets.set(name, { text: out[name], snippet: textSnippet(out[name]) });
+		out[name] = c.snippets.get(name).snippet;
 	}
 	return out;
+}
+
+function names(list) {
+	return Array.isArray(list) ? list.filter((n) => typeof n === 'string') : [];
+}
+
+// textSnippet is a snippet rendering text, as text rather than markup, in a
+// span, since a raw snippet renders one element; it takes no notice of the
+// arguments the component renders it with.
+function textSnippet(text) {
+	return createRawSnippet(() => ({
+		render: () => '<span></span>',
+		setup: (span) => {
+			span.textContent = text;
+		}
+	}));
 }
 
 // jsonSafe is value as far as JSON carries it: an event by its type and
@@ -225,10 +256,10 @@ function receive(event) {
 	if (!m || m.source !== source || m.version !== version) return;
 	switch (m.type) {
 		case 'select':
-			if (typeof m.component === 'string') select(m.component, m.props ?? {}, m.functions);
+			if (typeof m.component === 'string') select(m.component, m.props ?? {}, m.functions, m.snippets);
 			break;
 		case 'props':
-			render(m.props ?? {}, m.functions);
+			render(m.props ?? {}, m.functions, m.snippets);
 			break;
 		case 'theme':
 			if (m.theme === 'light' || m.theme === 'dark') document.documentElement.dataset.theme = m.theme;

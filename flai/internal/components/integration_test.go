@@ -6,9 +6,12 @@ package components
 // starts a real Vite dev server, the sub-project's own, on the fixture
 // sub-project testdata/harness, whose node_modules links to flaiover's, and
 // the test reads the hot updates Vite sends over its HMR WebSocket as the
-// fixture's component and setup stylesheet change. It needs node and
-// flaiover's dependencies installed, so it skips without them, and under
-// -short. The build tag keeps it off Windows: the fixture links
+// fixture's component and setup stylesheet change. Then (S-0440) it loads
+// the harness in a headless Chromium and checks that a props message updates
+// a component in place, keeping its own state. It needs node and flaiover's
+// dependencies installed, so it skips without them, and under -short; the
+// in-place check skips without Playwright's Chromium. The build tag keeps it
+// off Windows: the fixture links
 // node_modules with symlinks, and the test checks vite's process group.
 
 import (
@@ -133,6 +136,211 @@ func TestServeCarriesHotUpdatesOfTheComponentAndTheStylesheet(t *testing.T) {
 	if css := get(t, client, base+"/src/app.css", vite); !strings.Contains(css, "teal") {
 		t.Errorf("the stylesheet's module does not carry the rewrite:\n%s", css)
 	}
+
+	t.Run("a props message updates the component in place", func(t *testing.T) {
+		checkInPlace(t, dir, s.URL(), vite)
+	})
+}
+
+// inPlaceComponent is the fixture component whose own state, open, a props
+// message must leave as it is.
+const inPlaceComponent = "src/lib/Stateful.svelte"
+
+// inPlaceScript is a node script that loads the harness page in a headless
+// Chromium, with Playwright from flaiover's dependencies, and reports, as one
+// line of JSON, what the page showed and what the harness posted as it
+// selected inPlaceComponent, the test clicked its button, and a props message
+// changed its label and gave it a snippet. The page loads the harness at the
+// top, with ?origin= its own origin, so that it is its own parent: it posts
+// the page's messages to itself, as the dashboard posts them into the frame,
+// and receives what the harness posts. It reports skip, and why, when
+// Playwright or its browser is not installed.
+const inPlaceScript = `const [url, component] = process.argv.slice(2);
+const report = { errors: [], messages: [] };
+let chromium;
+try {
+	({ chromium } = await import('@playwright/test'));
+} catch (e) {
+	console.log(JSON.stringify({ skip: 'Playwright is not installed: ' + String(e?.message ?? e).split('\n')[0] }));
+	process.exit(0);
+}
+let browser;
+try {
+	browser = await chromium.launch();
+} catch (e) {
+	const why = String(e?.message ?? e);
+	if (/Executable doesn't exist|missing dependencies/.test(why)) {
+		console.log(JSON.stringify({ skip: 'Playwright has no Chromium to run: ' + why.split('\n')[0] }));
+		process.exit(0);
+	}
+	throw e;
+}
+const page = await browser.newPage();
+try {
+	page.on('pageerror', (e) => report.errors.push(String(e)));
+	page.on('console', (m) => {
+		if (m.type() === 'error' || m.type() === 'warning') report.errors.push(m.type() + ': ' + m.text());
+	});
+	await page.addInitScript(() => {
+		window.__flai = [];
+		addEventListener('message', (e) => {
+			const m = e.data;
+			if (m?.source === 'flai-components' && m.type !== 'select' && m.type !== 'props') window.__flai.push(m);
+		});
+	});
+	const seen = (types, n) =>
+		page.waitForFunction(([types, n]) => window.__flai.filter((m) => types.includes(m.type)).length >= n, [types, n], { timeout: 30000 });
+	const send = (m) => page.evaluate((m) => postMessage({ source: 'flai-components', version: 1, ...m }, location.origin), m);
+	const look = () =>
+		page.evaluate(() => {
+			const el = document.querySelector('.stateful');
+			if (!el) return null;
+			const slot = el.querySelector('.slot');
+			// Svelte's anchors, comments, are left out of the snippet's markup.
+			const markup = slot ? slot.innerHTML.replace(/<!--.*?-->/g, '') : null;
+			return { label: el.querySelector('button').textContent, open: !!el.querySelector('.open'), slot: markup, marked: el.dataset.mark === 'first' };
+		});
+	await page.goto(url + '?origin=' + encodeURIComponent(new URL(url).origin));
+	await seen(['ready'], 1);
+	await send({ type: 'select', component, props: { label: 'One' }, functions: ['onToggle'], snippets: ['children'] });
+	await seen(['rendered', 'error'], 1);
+	// A remount would replace the element, and the mark with it.
+	await page.evaluate(() => {
+		document.querySelector('.stateful').dataset.mark = 'first';
+	});
+	report.mounted = await look();
+	await page.click('.stateful button');
+	await seen(['event'], 1);
+	report.opened = await look();
+	await send({ type: 'props', props: { label: 'Two', children: 'Some <b>text</b>' }, functions: ['onToggle'], snippets: ['children'] });
+	await seen(['rendered', 'error'], 2);
+	report.changed = await look();
+	await page.click('.stateful button');
+	await seen(['event'], 2);
+	report.closed = await look();
+} catch (e) {
+	report.errors.push('the script: ' + String(e?.message ?? e));
+} finally {
+	report.messages = await page.evaluate(() => window.__flai).catch(() => []);
+	await browser.close();
+}
+console.log(JSON.stringify(report));
+`
+
+// inPlaceLook is what the page showed of inPlaceComponent: its button's
+// label, whether it was open, its snippet's markup, and whether its element
+// is the one it first mounted.
+type inPlaceLook struct {
+	Label  string  `json:"label"`
+	Open   bool    `json:"open"`
+	Slot   *string `json:"slot"`
+	Marked bool    `json:"marked"`
+}
+
+// inPlaceMessage is a message the harness posted, as far as the test reads
+// it.
+type inPlaceMessage struct {
+	Type      string          `json:"type"`
+	Component string          `json:"component"`
+	Name      string          `json:"name"`
+	Args      json.RawMessage `json:"args"`
+	Message   string          `json:"message"`
+}
+
+// checkInPlace runs inPlaceScript against the harness at harnessURL, in the
+// fixture sub-project's folder dir, so that it imports Playwright from its
+// node_modules, and checks that the component kept its own state, and its
+// element, through a props message, rendered the snippet's text as text, and
+// that its function prop's logger posted each call. It skips when Playwright
+// or its Chromium is not installed, as a manual check in a browser then
+// stands in for it.
+func checkInPlace(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	script := filepath.Join(dir, "inplace.mjs")
+	if err := os.WriteFile(script, []byte(inPlaceScript), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "node", script, harnessURL, inPlaceComponent)
+	cmd.Dir = dir
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("the in-place check failed: %v\n%s%s%s", err, out, stderr.String(), vite())
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	var r struct {
+		Skip     string           `json:"skip"`
+		Errors   []string         `json:"errors"`
+		Messages []inPlaceMessage `json:"messages"`
+		Mounted  *inPlaceLook     `json:"mounted"`
+		Opened   *inPlaceLook     `json:"opened"`
+		Changed  *inPlaceLook     `json:"changed"`
+		Closed   *inPlaceLook     `json:"closed"`
+	}
+	if err := json.Unmarshal([]byte(lines[len(lines)-1]), &r); err != nil {
+		t.Fatalf("the in-place check's report is not JSON: %v\n%s%s", err, out, stderr.String())
+	}
+	if r.Skip != "" {
+		t.Skip(r.Skip + "; check in a browser that a props message keeps the component's own state")
+	}
+	for _, e := range r.Errors {
+		t.Errorf("the page logged %s", e)
+	}
+	slot := "<span>Some &lt;b&gt;text&lt;/b&gt;</span>"
+	for _, c := range []struct {
+		when string
+		got  *inPlaceLook
+		want inPlaceLook
+	}{
+		{"once mounted", r.Mounted, inPlaceLook{Label: "One", Marked: true}},
+		{"once clicked", r.Opened, inPlaceLook{Label: "One", Open: true, Marked: true}},
+		{"after the props message", r.Changed, inPlaceLook{Label: "Two", Open: true, Slot: &slot, Marked: true}},
+		{"once clicked again", r.Closed, inPlaceLook{Label: "Two", Slot: &slot, Marked: true}},
+	} {
+		switch {
+		case c.got == nil:
+			t.Errorf("%s, the page showed no %s", c.when, inPlaceComponent)
+		case c.got.Label != c.want.Label || c.got.Open != c.want.Open || c.got.Marked != c.want.Marked ||
+			(c.got.Slot == nil) != (c.want.Slot == nil) || (c.got.Slot != nil && *c.got.Slot != *c.want.Slot):
+			t.Errorf("%s, the page showed %s, want %s", c.when, lookString(c.got), lookString(&c.want))
+		}
+	}
+	var events []string
+	rendered := 0
+	for _, m := range r.Messages {
+		switch m.Type {
+		case "error":
+			t.Errorf("the harness posted an error about %s: %s", m.Component, m.Message)
+		case "rendered":
+			if m.Component == inPlaceComponent {
+				rendered++
+			}
+		case "event":
+			events = append(events, m.Component+" "+m.Name+" "+string(m.Args))
+		}
+	}
+	if rendered != 2 {
+		t.Errorf("the harness posted rendered %d times, want 2: once mounted, once for the props message", rendered)
+	}
+	// The event is the click's by its type, and the function by its name.
+	want := []string{
+		inPlaceComponent + ` onToggle [true,{"type":"click"},"[function anonymous]"]`,
+		inPlaceComponent + ` onToggle [false,{"type":"click"},"[function anonymous]"]`,
+	}
+	if !slices.Equal(events, want) {
+		t.Errorf("the harness posted the events\n%s\nwant\n%s", strings.Join(events, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+func lookString(l *inPlaceLook) string {
+	slot := "no snippet"
+	if l.Slot != nil {
+		slot = "snippet " + *l.Slot
+	}
+	return fmt.Sprintf("{label %q, open %t, %s, the first element %t}", l.Label, l.Open, slot, l.Marked)
 }
 
 // flaioverModules is flaiover's installed node_modules, which has vite,
