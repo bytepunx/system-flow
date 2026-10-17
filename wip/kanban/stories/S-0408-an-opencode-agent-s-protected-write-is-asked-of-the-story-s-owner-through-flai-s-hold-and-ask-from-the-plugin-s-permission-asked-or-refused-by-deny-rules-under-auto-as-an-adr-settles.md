@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:16:14Z
-updated: 2026-10-17T06:44:14Z
+updated: 2026-10-17T07:43:16Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-17T14:23:00Z
-  basis: "Its own forecast of 50m; 17th in the pull order with an in-progress limit of 5, behind S-0392, S-0395, S-0396, S-0397, S-0393, S-0394, S-0241, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406 and S-0407."
+  delivery: 2026-10-17T15:10:00Z
+  basis: "Its own forecast of 50m; 17th in the pull order with an in-progress limit of 5, behind S-0395, S-0396, S-0397, S-0393, S-0394, S-0241, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406 and S-0407."
   by: flai
-  at: 2026-10-17T06:44:14Z
+  at: 2026-10-17T07:43:16Z
 ---
 # S-0408 An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles
 
