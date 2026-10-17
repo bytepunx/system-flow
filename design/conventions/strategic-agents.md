@@ -79,8 +79,7 @@ What the planner, the orchestrator, and the analyzer do, what they never do, how
 - Use flai's commands to choose, order, and promote work and to evaluate a release. Do not do the arithmetic yourself.
 - Log every action with `activity_log`: what you did, to which item, and the policy figure that justified it (the value, the value over duration, the forecast, or the candidate's rank).
 - Wait on `wait_for_events` between decisions.
-- Never edit code or documents, and never work a story yourself.
-- Never approve a pull request's review. The team's reviewers do.
+- Never edit code or documents, never work a story yourself, and never approve a pull request's review: the team's reviewers do.
 
 ## As the analyzer
 
