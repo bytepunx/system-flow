@@ -742,6 +742,146 @@ func (a *app) showChecksCommands() error {
 	return nil
 }
 
+// serveHost is the host flai serve itself answers with: a.host() and the
+// supervisor of the component dev servers (S-0438, ADR-0163), which stops
+// each one idle for components.idle until ctx ends, and then every one.
+// stop ends it as ctx ending does and waits until every dev server has
+// stopped; flai serve calls it as it stops.
+func (a *app) serveHost(ctx context.Context) (host hostapi.Host, stop func()) {
+	comps := serve.NewComponents(serve.ComponentsOptions{Idle: a.componentsIdle, Now: a.now, Logger: a.logger()})
+	runCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if err := comps.Run(runCtx); err != nil {
+			a.logger().Warn("component dev servers not all stopped", "component", "components", "err", err.Error())
+		}
+	}()
+	host = a.host()
+	host.Components = comps
+	return host, func() {
+		cancel()
+		<-done
+	}
+}
+
+// componentsIdle is the operator's components.idle, read from the
+// configuration at every look, so that a change takes effect without a
+// restart; serve.DefaultComponentsIdle when it is not set or not readable.
+func (a *app) componentsIdle() time.Duration {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return serve.DefaultComponentsIdle
+	}
+	idle, _ := componentsIdleOf(cfg)
+	return idle
+}
+
+// componentsIdleOf is cfg's components.idle, and whether it is set; the
+// default when it is not, or when it is not a positive duration.
+func componentsIdleOf(cfg config.Config) (time.Duration, bool) {
+	d, err := time.ParseDuration(strings.TrimSpace(cfg.Components.Idle))
+	if err != nil || d <= 0 {
+		return serve.DefaultComponentsIdle, false
+	}
+	return d, true
+}
+
+// flai serve components: the host's say about the component dev servers
+// flai serve runs under the components host action (S-0438).
+func newServeComponentsCmd(a *app) *cobra.Command {
+	c := &cobra.Command{
+		Use:   "components",
+		Short: "How long flai serve keeps a component dev server nobody looks at, on this host",
+		Long: `flai serve runs a Svelte sub-project's own Vite dev server, with flai's
+component harness, when the dashboard's Components page asks it to
+(components.start), on 127.0.0.1 and a port flai picks. It runs the
+project's code on this host, so it is a host action, off until you enable it
+(flai serve enable components). Each start and stop is in flai serve journal.
+
+flai serve stops a dev server that had no components.status, which the page
+asks while it is open, for components.idle, 30 minutes by default, and every
+dev server when it stops. flai serve components idle sets it, as a Go
+duration such as 45m or 2h, for every project on this host; it takes effect
+at once, with no restart.`,
+		Example: `  flai serve enable components
+  flai serve components idle 45m
+  flai serve components show --json`,
+		Args: cobra.NoArgs,
+		RunE: func(*cobra.Command, []string) error { return a.showComponentsSettings() },
+	}
+	idle := &cobra.Command{
+		Use:   "idle <duration>",
+		Short: "Stop a dev server after this long without a components.status (default 30m)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			given := strings.TrimSpace(args[0])
+			d, err := time.ParseDuration(given)
+			if err != nil || d <= 0 {
+				return fmt.Errorf("components.idle must be a positive duration, such as 30m or 2h, not %q", args[0])
+			}
+			cfg, path, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			cfg.Components.Idle = given
+			if err := config.Save(path, cfg); err != nil {
+				return err
+			}
+			return a.showComponentsSettings()
+		},
+	}
+	c.AddCommand(idle,
+		&cobra.Command{Use: "show", Short: "Print components.idle and whether the action is enabled here", Args: cobra.NoArgs,
+			RunE: func(*cobra.Command, []string) error { return a.showComponentsSettings() }},
+	)
+	return c
+}
+
+// showComponentsSettings prints components.idle and whether the components
+// action is on for the project in the working directory.
+func (a *app) showComponentsSettings() error {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return err
+	}
+	here, enabled := "", false
+	if repo, err := a.project(); err == nil {
+		here = mainRootOf(repo)
+		enabled = cfg.ActionEnabled(hostapi.ActionComponents, here)
+	}
+	idle, set := componentsIdleOf(cfg)
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"idle": shortDuration(idle), "idle_seconds": int(idle / time.Second), "idle_set": set, "enabled_here": enabled})
+	}
+	suffix := " (default)"
+	if set {
+		suffix = ""
+	}
+	fmt.Fprintf(a.out, "idle: %s%s: a dev server without a components.status for this long is stopped\n", shortDuration(idle), suffix)
+	if here != "" {
+		if enabled {
+			fmt.Fprintln(a.out, "the components action is on for this project; flai serve disable components turns it off")
+		} else {
+			fmt.Fprintln(a.out, "the components action is off for this project; flai serve enable components turns it on")
+		}
+	}
+	return nil
+}
+
+// shortDuration is d as Go writes it, without the zero units it ends with:
+// 30m rather than 30m0s.
+func shortDuration(d time.Duration) string {
+	s := d.String()
+	if strings.HasSuffix(s, "m0s") {
+		s = strings.TrimSuffix(s, "0s")
+	}
+	if strings.HasSuffix(s, "h0m") {
+		s = strings.TrimSuffix(s, "0m")
+	}
+	return s
+}
+
 // harnessHost is the program and arguments a harness runs with here: the
 // operator's where set, the adapter's defaults where not (S-0104).
 func (a *app) harnessHost(cfg config.Config, name string) harness.Host {

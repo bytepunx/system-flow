@@ -52,6 +52,10 @@ type Config struct {
 	// manifest's own checks: are used instead; this is not among Keys, and
 	// flai serve checks manages it.
 	Checks ChecksConfig `json:"checks,omitzero"`
+	// Components is the host's say about the component dev servers flai
+	// serve runs once the components action is enabled (S-0438); not among
+	// Keys, flai serve components manages it.
+	Components ComponentsConfig `json:"components,omitzero"`
 	// ImportRoots are the folders flai serve looks in for repositories that
 	// are not system-flow projects yet, which the board then offers to import
 	// (S-0098). Naming a folder is the operator's consent to importing, and
@@ -232,6 +236,15 @@ type ChecksConfig struct {
 	Commands []NamedCommand `json:"commands,omitempty"`
 	// TimeoutMinutes bounds one run of every command together; 15 when zero.
 	TimeoutMinutes int `json:"timeout_minutes,omitempty"`
+}
+
+// ComponentsConfig is the operator's say about the component dev servers
+// flai serve runs, on this host (ADR-0163).
+type ComponentsConfig struct {
+	// Idle is how long a dev server may go without a components.status
+	// before flai serve stops it, as a Go duration such as 30m; 30 minutes
+	// when empty.
+	Idle string `json:"idle,omitempty"`
 }
 
 // NamedCommand is one command by name: an argument list, run as it stands,

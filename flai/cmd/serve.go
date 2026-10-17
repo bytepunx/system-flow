@@ -143,7 +143,10 @@ there does.`,
 			}
 			servePprof(ctx, a.logger())
 			warnReleaseStamp(a.logger(), buildinfo.OwnStamp())
-			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: a.host(), Agent: a.agentConfig, MCP: mcp, Upgrade: hostUpgrade(mcp), Published: releasePublished(a.runner), ImportRoots: a.importRoots,
+			// the component dev servers stop when it does (S-0438)
+			host, stopComponents := a.serveHost(ctx)
+			defer stopComponents()
+			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: host, Agent: a.agentConfig, MCP: mcp, Upgrade: hostUpgrade(mcp), Published: releasePublished(a.runner), ImportRoots: a.importRoots,
 				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned})
 		},
 	}
@@ -195,7 +198,7 @@ there does.`,
 				return nil
 			},
 		},
-		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeImportCmd(a), newServeProjectCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeOrchestrateCmd(a), newServeChecksCmd(a),
+		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeImportCmd(a), newServeProjectCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeOrchestrateCmd(a), newServeChecksCmd(a), newServeComponentsCmd(a),
 		&cobra.Command{
 			Use:   "status",
 			Short: "Whether flai serve runs, which projects it serves, and which dashboards have it connected",

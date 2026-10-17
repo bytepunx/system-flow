@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -364,6 +365,12 @@ const ActionOrchestrate = "orchestrate"
 // for all three focuses. One analyzer runs per project at a time.
 const ActionAnalyze = "analyze"
 
+// ActionComponents is the host action under which flai serve runs a
+// sub-project's own Vite dev server, with flai's component harness, on
+// 127.0.0.1 (S-0438, ADR-0163): components.start and components.stop ask
+// for it. Starting one runs the project's code and dependencies on the host.
+const ActionComponents = "components"
+
 // Actions are the host actions there are, with what each lets a dashboard
 // do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
@@ -378,6 +385,7 @@ var Actions = map[string]string{
 	ActionSettings:    "change this project's host settings: turn the other host actions on and off, set its default agent, and rotate its MCP token; enabled for every project, also the agent's command, the harnesses, the providers, the checks, the import folders, and the dashboard token. A holder of the dashboard token can then run any command on this host, as you; only a shell turns this off",
 	ActionPlan:        "start the planner, with the project's planning agent (planning.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for an epic or a story when you press Plan or run flai plan; it writes work items and threads through flai and moves nothing past backlog; a holder of the dashboard token can then start it for any epic or story not done or cancelled",
 	ActionOrchestrate: "run the orchestrator, with the project's orchestration agent (orchestration.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for as long as this is on: started again when it ends, a minute after a failure, and stopped when this is turned off; it keeps work moving through flai only as far as orchestration.permissions in system-flow.yaml allow, each off by default, and logs each decision in wip/agents/orchestrator.md; a holder of the dashboard token can then stop it and hold it stopped, and start it again, from its page",
+	ActionComponents:  "start a Svelte sub-project's own Vite dev server, from its node_modules, with its own config, plugins, and dependencies and flai's component harness, on 127.0.0.1 and a port flai picks, on this machine and as you, when the Components page asks, and stop it; flai serve stops one that nothing asked about for components.idle (30 minutes by default), and every one when it stops. A holder of the dashboard token can then run the sub-project's code on this host",
 	ActionAnalyze:     "start the analyzer, with the project's analysis agent (analysis.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai analyze or call analyze.run, looking for bottlenecks, intent, or risk, or all three, and for all three each time analysis.schedule in system-flow.yaml comes round; it writes one report under design/analysis and edits nothing else, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
 }
 
@@ -423,6 +431,10 @@ type Host struct {
 	// Requests keeps the records of detached writes where a restart of flai
 	// serve does not lose them (S-0109). Nil keeps them in memory.
 	Requests Requests
+	// Components runs the sub-projects' component dev servers in flai
+	// serve's own process (S-0438, ADR-0163). Nil when nothing runs them
+	// here: components.status says none runs, and components.start refuses.
+	Components ComponentServers
 }
 
 // Entry is one host action asked for, whatever became of it.
@@ -468,6 +480,12 @@ type spec struct {
 	about func(raw json.RawMessage) (key, root string)
 	// build validates and returns the arguments (without --json) and what goes on standard input.
 	build func(p channel.Project, raw json.RawMessage) (args []string, stdin string, err *channel.Error)
+	// do, when set, answers in flai serve's own process instead of running
+	// flai with build's arguments, once build has accepted the params and
+	// the host action allows it: components.start and components.stop, whose
+	// dev servers flai serve supervises (S-0438). Its answer is journalled
+	// and remembered by request ID as a command's is.
+	do func(ctx context.Context, host Host, p channel.Project, raw json.RawMessage) (any, *channel.Error)
 	// dir, when set, is the folder the command runs in instead of the
 	// project's: test.run's story worktree (S-0273). It is asked once build
 	// has accepted the params, before the host action is.
@@ -2692,7 +2710,9 @@ func withJSON(args []string) []string {
 // writeMethods turns the specs into methods: validate, consult the journal,
 // run, and read the outcome the way the dashboard used to.
 func writeMethods(run Runner, now func() time.Time, host Host) map[string]channel.Method {
-	return methodsFrom(specs(), run, now, host)
+	out := methodsFrom(specs(), run, now, host)
+	maps.Copy(out, methodsFrom(componentSpecs(), run, now, host))
+	return out
 }
 
 // methodsFrom builds methods from a table of specs, with a journal of their own.
@@ -2769,26 +2789,40 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 					return repeated(id.RequestID, was)
 				}
 			}
-			r := Run{Dir: dir, Args: withJSON(args), Stdin: stdin}
-			if sp.progress {
-				r.OnEvent = func(ev map[string]any) { channel.Progress(ctx, ev) }
-			}
 			execCtx := ctx
 			if sp.detachTimeout > 0 {
 				var execCancel context.CancelFunc
 				execCtx, execCancel = context.WithTimeout(context.Background(), sp.detachTimeout)
 				defer execCancel()
 			}
-			done := perf.Track(ctx, perf.Exec("flai", args))
-			if key != "" {
-				writing.Add(1)
+			var res any
+			var rerr *channel.Error
+			if sp.do != nil {
+				done := perf.Track(ctx, name)
+				if key != "" {
+					writing.Add(1)
+				}
+				res, rerr = sp.do(execCtx, host, p, raw)
+				if key != "" {
+					writing.Add(-1)
+				}
+				done()
+			} else {
+				r := Run{Dir: dir, Args: withJSON(args), Stdin: stdin}
+				if sp.progress {
+					r.OnEvent = func(ev map[string]any) { channel.Progress(ctx, ev) }
+				}
+				done := perf.Track(ctx, perf.Exec("flai", args))
+				if key != "" {
+					writing.Add(1)
+				}
+				ran, err := run(execCtx, r)
+				if key != "" {
+					writing.Add(-1)
+				}
+				done()
+				res, rerr = outcome(answered(ran, sp.answers), err, sp.exits)
 			}
-			ran, err := run(execCtx, r)
-			if key != "" {
-				writing.Add(-1)
-			}
-			done()
-			res, rerr := outcome(answered(ran, sp.answers), err, sp.exits)
 			if w, ok := res.(Written); ok && rerr == nil && sp.judge != nil {
 				if e := sp.judge(w); e != nil {
 					res, rerr = nil, e
@@ -2832,7 +2866,8 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 }
 
 // writing counts the dashboard writes running in this process now, each a
-// flai command that a restart of flai serve would cut (ADR-0158).
+// flai command, or a dev server starting (S-0438), that a restart of flai
+// serve would cut (ADR-0158).
 var writing atomic.Int64
 
 // WritesRunning is how many dashboard writes run in this process now.

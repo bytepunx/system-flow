@@ -143,6 +143,11 @@ export const REQUIRED_METHODS = [
 	// S-0270: flai verify for a story, run behind the checks host action, and its last result
 	'verify.run',
 	'verify.status',
+	// S-0438: a sub-project's component dev server, started and stopped behind the components host action
+	'components.status',
+	'components.list',
+	'components.start',
+	'components.stop',
 	// S-0106: flai host, reached through flai serve
 	'host.status',
 	'host.check',
