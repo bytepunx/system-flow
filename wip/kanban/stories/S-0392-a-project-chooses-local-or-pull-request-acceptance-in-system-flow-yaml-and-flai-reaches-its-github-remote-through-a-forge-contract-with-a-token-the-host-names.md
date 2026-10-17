@@ -3,12 +3,15 @@ id: S-0392
 type: story
 nature: feature
 title: A project chooses local or pull-request acceptance in system-flow.yaml, and flai reaches its GitHub remote through a forge contract with a token the host names
-status: backlog
+status: ready
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:33:00Z
-updated: 2026-10-17T06:40:03Z
-transitions: []
+updated: 2026-10-17T06:40:50Z
+transitions:
+  - to: ready
+    at: 2026-10-17T06:40:50Z
+    by: alex
 tags: [cli, template]
 topics: [release]
 touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/forge/forge.go, flai/internal/forge/forge_test.go, flai/internal/forge/github.go, flai/internal/forge/github_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/tests/integration/forge_github_test.go, design/adrs, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]

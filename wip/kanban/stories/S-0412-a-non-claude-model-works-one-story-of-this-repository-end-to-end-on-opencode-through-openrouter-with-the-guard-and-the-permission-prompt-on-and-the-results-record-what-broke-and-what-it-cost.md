@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:20:15Z
-updated: 2026-10-17T05:07:28Z
+updated: 2026-10-17T06:40:03Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 30m
-  delivery: 2026-10-17T16:43:00Z
-  basis: "Its own forecast of 30m; 23rd in the pull order with an in-progress limit of 5, behind S-0444, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410 and S-0411."
+  delivery: 2026-10-17T18:16:00Z
+  basis: "Its own forecast of 30m; 22nd in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410 and S-0411."
   by: flai
-  at: 2026-10-17T05:07:28Z
+  at: 2026-10-17T06:40:03Z
 ---
 # S-0412 A non-Claude model works one story of this repository end to end on OpenCode through OpenRouter, with the guard and the permission prompt on, and the results record what broke and what it cost
 
