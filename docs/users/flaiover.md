@@ -542,7 +542,9 @@ The preview, the token sheet, and the contrast follow each change as you type. W
 
 **Discard changes** goes back to the saved tokens. **Done** closes the editor once nothing is unsaved. The page asks before you leave it with unsaved changes. A change to the token file made elsewhere while you edit updates the saved tokens and keeps your changes.
 
-**Saving needs a flai that reads and saves the token file.** With a flai on the host older than the dashboard, the banner says what it lacks, and the page says "This flai cannot save the token file yet; upgrade flai on the host." You can still change tokens and see the preview, but Save is off, and your changes last only until you leave the page.
+**Unsaved changes are kept in this browser**, per project, as you make them. They are not on the host: another browser does not see them. Reload the page, or come back to it later, and they are restored over the saved tokens, with "Your unsaved changes, kept in this browser, are restored: save or discard them." A save or **Discard changes** drops them. A Design page open in another tab of this browser takes up your changes too, and the Components page shows them as tried tokens ([Tried and saved tokens](#tried-and-saved-tokens)).
+
+**Saving needs a flai that reads and saves the token file.** With a flai on the host older than the dashboard, the banner says what it lacks, and the page says "This flai cannot save the token file yet; upgrade flai on the host." You can still change tokens and see the preview, but Save is off. Your changes stay in this browser until you discard them.
 
 ### Proposals
 
@@ -620,6 +622,18 @@ What the page can say:
 | An error and `not sent` under a prop | Its text does not parse. Nothing is sent until it does |
 | No sub-project is Svelte, so there is nothing to frame | The manifest has no sub-project of kind `sveltekit` or `svelte` |
 | Could not read the components | The host did not answer. What was shown stays until the next ask |
+
+### Tried and saved tokens
+
+The frames show the design tokens you change on the Design page ([Changing tokens](#changing-tokens)): first as you try them, then once you save them.
+
+**Tried.** While the Design page has unsaved changes, the frames render with them, in each theme. Above the frames the page says "Showing tried tokens: the Design page's unsaved edits, kept in this browser." Keep the Design page open in another tab and the frames follow each change as you make it, without a reload or a save. The tried tokens are the saved tokens with your changes laid over them, as the generated stylesheet would carry them. They show only in the browser you edited in.
+
+**Drop tried tokens** drops those unsaved changes: the frames go back to the saved tokens, and the Design page has none to restore. A Design page open in another tab drops them too.
+
+**Saved.** A save on the Design page writes the token file and, when the manifest names one, the design stylesheet, in one commit. The sub-project's dev server sees the stylesheet change and updates it in the frame: the component shows the saved value without a reload, and keeps its props and its own state. The save also drops the tried tokens, so what you see is what was saved. The stylesheet reaches the frame only when the sub-project's code imports it, such as through the setup module the components key names ([Render a component live](flai.md#render-a-component-live) in flai.md).
+
+If the page cannot read the saved tokens to lay your changes over, it says "Could not read the saved tokens to lay the tried ones over", with why, and keeps what it last read.
 
 ## Theme
 

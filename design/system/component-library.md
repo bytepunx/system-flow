@@ -138,7 +138,7 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 | page | `select` | `component`, `props?`, `functions?`, `snippets?` | Mount this component, by its path in the sub-project, with these props. |
 | page | `props` | `props`, `functions?`, `snippets?` | Set the mounted component's props without remounting it. Each name in `functions` gets a logger that posts `event`; each name in `snippets` with a string value is rendered as a snippet of that text. |
 | page | `theme` | `theme` | Set `data-theme` on the document to `light` or `dark`. |
-| page | `tokens` | `light`, `dark` | Lay these CSS custom properties over the stylesheet's, under `:root` and `[data-theme='dark']`; empty objects clear them. |
+| page | `tokens` | `light`, `dark` | Lay these CSS custom properties over the stylesheet's, under `:root` and `[data-theme='dark']`, in place of the last message's; empty objects clear them. |
 | harness | `ready` | `component?` | The harness has loaded and its `setup` module has run. |
 | harness | `rendered` | `component` | The component mounted, or took new props. |
 | harness | `error` | `component`, `message`, `file?`, `line?`, `column?` | The component failed to import or render; `file` and `line` say where. |
@@ -151,6 +151,8 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 - **Loggers.** Each name in `functions` is given a logger. A call posts `event` with the component, the prop's name, and each argument as JSON, or as far as JSON carries it: an Event as `{type, detail?}`, a DOM node as `<tag>`, a function as `[function name]` or `[function anonymous]`, and a cycle cut off.
 - **Snippets.** Each name in `snippets` whose value is a string is rendered as a snippet of that text, made with Svelte's `createRawSnippet`: a `<span>` holding the text as text, not markup. A listed name without a string value is passed as it is; a string not listed is passed as a plain string.
 - **Identity.** Loggers and snippets keep their identity between props messages: a logger is the same function each time, and a snippet the same while its text is.
+- **Tokens (S-0441).** A tokens message is whole, as a props message is. The harness writes it into one `<style data-flai-tokens>`: `:root { … }` for `light`, then `[data-theme='dark'] { … }` for `dark`, the selectors `flai design css` writes ([ADR-0159](../adrs/0159-the-generated-design-stylesheet-puts-the-dark-values-under-data-theme-dark-and.md)). It appends the element to the head, so it wins over the project's stylesheet by order at equal specificity. A `MutationObserver` on the head moves it back to the end when a `<style>` or a stylesheet `<link>` lands after it, such as a lazily imported component's styles. A name is taken with or without its leading `--`.
+- **Refused values.** A name that is not letters, digits, `_`, and `-`, a value that is not a string or a number, and a value holding `url(`, a brace, `;`, `<`, `@`, a backslash, or `/*` are left out, as the Design page's preview refuses them ([ADR-0149](../adrs/0149-the-design-page-previews-a-project-s-tokens-in-a-blank-same-origin-frame-it.md)). A message whose `light` or `dark` is not an object is dropped, and the last one stays. A message that leaves nothing to lay, such as empty objects, removes the element.
 
 ## The Components page (S-0439)
 
@@ -180,6 +182,12 @@ The operator changes a component's props on the Components page, a control for e
 ## Live tokens (S-0441)
 
 A token change on the Design page reaches the components on the Components page, as the operator tries it and once it is saved. A saved token rewrites the generated stylesheet (S-0436, [ADR-0150](../adrs/0150-a-token-save-from-the-design-page-lands-on-main-and-flai-writes-the-stylesheet.md)), and the dev server's hot update carries it into the frame. A tried, unsaved value is kept in the browser and sent to the harness, which lays it over the stylesheet's variables under the same names and theme selector as `flai design css` writes ([ADR-0159](../adrs/0159-the-generated-design-stylesheet-puts-the-dark-values-under-data-theme-dark-and.md)).
+
+- **Tried.** The Design page keeps its unsaved edits in the browser's `localStorage`, per project, as a draft. The Components page reads the draft, and follows it from another tab by the `storage` event. While there is one, it reads the saved design system, lays the draft over the saved themes as the Design page does, and sends each frame the custom properties the generated stylesheet would carry for them, every one, light and dark, as a `tokens` message. The harness lays them over the stylesheet's ([The protocol](#the-protocol)). The page says it shows tried tokens, with **Drop tried tokens**, which clears the draft and sends an empty `tokens` message.
+- **Saved.** The save needs nothing of the Components page. It writes the token file and the stylesheet in one commit, the sub-project's dev server sees the stylesheet change, and its hot update replaces the stylesheet in the harness without a reload. The save also clears the draft, so the page drops the tried tokens and the saved values show. The stylesheet reaches the harness only through the sub-project's own imports, such as its `setup` module.
+- **A tried value wins** over the stylesheet while the draft lasts: the tokens element stays last in the head after a hot update too. It carries every token, so the page reads the saved tokens beneath the draft again on each `document` change.
+
+[flaiover-dashboard.md § The Components page](flaiover-dashboard.md#the-components-page-s-0439) gives the page's modules; [the user guide](../../docs/users/flaiover.md#tried-and-saved-tokens) says what the operator sees.
 
 ## A story's worktree (S-0442)
 
