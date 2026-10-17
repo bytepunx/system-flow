@@ -107,11 +107,12 @@ func StartDevServer(ctx context.Context, opts DevServerOptions) (*DevServer, err
 	if !strings.HasPrefix(opts.Path, "/") {
 		opts.Path = "/" + opts.Path
 	}
-	vite := filepath.Join(opts.Dir, "node_modules", ".bin", viteBin)
-	if _, err := os.Stat(vite); errors.Is(err, fs.ErrNotExist) {
+	vite, ok, err := findVite(opts.Dir)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
 		return nil, fmt.Errorf("%w in %s, and flai runs the sub-project's own vite: install the sub-project's dependencies, e.g. npm install or pnpm install in %s, then run this again", ErrViteMissing, opts.Dir, opts.Dir)
-	} else if err != nil {
-		return nil, fmt.Errorf("cannot look for vite at %s: %w; check that the sub-project's folder can be read", vite, err)
 	}
 	port, err := freePort()
 	if err != nil {
@@ -283,6 +284,18 @@ func probe(ctx context.Context, client *http.Client, url string) int {
 	_, _ = io.Copy(io.Discard, resp.Body)
 	_ = resp.Body.Close()
 	return resp.StatusCode
+}
+
+// findVite is the vite launcher of the sub-project in dir, in its
+// node_modules/.bin, and whether it is there.
+func findVite(dir string) (string, bool, error) {
+	vite := filepath.Join(dir, "node_modules", ".bin", viteBin)
+	if _, err := os.Stat(vite); errors.Is(err, fs.ErrNotExist) {
+		return vite, false, nil
+	} else if err != nil {
+		return vite, false, fmt.Errorf("cannot look for vite at %s: %w; check that the sub-project's folder can be read", vite, err)
+	}
+	return vite, true, nil
 }
 
 // freePort is a loopback port nothing listens on, found by listening on
