@@ -3,16 +3,37 @@ id: T-1606
 type: task
 nature: feature
 title: flai forge check says whether the token the host names can read and push to the repository behind origin
-status: backlog
+status: done
 parent: S-0392
 owner: alex
 created: 2026-10-16T04:33:44Z
-updated: 2026-10-16T04:33:44Z
-transitions: []
+updated: 2026-10-17T07:12:46Z
+transitions:
+  - to: ready
+    at: 2026-10-17T07:03:22Z
+    by: agent-S-0392
+  - to: in-progress
+    at: 2026-10-17T07:03:22Z
+    by: agent-S-0392
+  - to: done
+    at: 2026-10-17T07:12:46Z
+    by: agent-S-0392
 stream: S-0392
 tags: [cli]
 touches: [flai/cmd/forge.go, flai/cmd/forge_test.go, flai/cmd/root.go]
 after: [T-1602, T-1603, T-1604]
+usage:
+  source: log
+  seconds: 564
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 14653
+      cache_read: 1805176
+      cache_write: 61589
+      cost: 1.006
 ---
 # T-1606 flai forge check says whether the token the host names can read and push to the repository behind origin
 

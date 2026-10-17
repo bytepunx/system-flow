@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0021]
 created: 2026-10-16T04:29:21Z
-updated: 2026-10-17T00:46:06Z
+updated: 2026-10-17T06:44:09Z
 ---
 
 # TH-0463 E-0021 needs cost of delay inputs and two design answers: recommend time lost 1h per cycle, review limit counts, orchestrator never approves
@@ -56,3 +56,12 @@ Still open after 20 hours. Your answers unblock three things:
 - **Questions 2 and 3:** the ADRs of S-0395 and S-0397.
 
 S-0392, which you finalized, needs no answer to start.
+
+### 2026-10-17T06:44:09Z planner-E-0021
+You finalized S-0393 to S-0397 and moved them to ready, so I am ending the planning run. Two things stay open here:
+
+- **Question 1:** S-0392 to S-0397 have no cost of delay values. Once you set inputs on E-0021, `flai cod` works the values out, and the next planner run writes them.
+- **Questions 2 to 4:** the stories carry my recommendations. When their agents reach them, they should read these as still open:
+  - S-0393's criterion 4, the force-push exception
+  - S-0395's rule that the orchestrator never approves a review
+  - the review limit, which no story changes

@@ -3,15 +3,30 @@ id: T-1605
 type: task
 nature: feature
 title: An ADR records pull-request acceptance as a project's choice, the forge contract, and where the forge token lives
-status: backlog
+status: done
 parent: S-0392
 owner: alex
 created: 2026-10-16T04:33:36Z
-updated: 2026-10-16T04:33:36Z
-transitions: []
+updated: 2026-10-17T07:03:20Z
+transitions:
+  - to: ready
+    at: 2026-10-17T07:03:18Z
+    by: agent-S-0392
+  - to: in-progress
+    at: 2026-10-17T07:03:18Z
+    by: agent-S-0392
+  - to: done
+    at: 2026-10-17T07:03:20Z
+    by: agent-S-0392
 stream: S-0392
 tags: [cli]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 2
+  estimated: true
+  priced_by: harness
+  models: []
 ---
 # T-1605 An ADR records pull-request acceptance as a project's choice, the forge contract, and where the forge token lives
 

@@ -3,16 +3,37 @@ id: T-1608
 type: task
 nature: feature
 title: The design, user, and operator docs, the reference, and the template's manifest describe the acceptance setting, the forge, and its token
-status: backlog
+status: done
 parent: S-0392
 owner: alex
 created: 2026-10-16T04:33:56Z
-updated: 2026-10-16T04:33:56Z
-transitions: []
+updated: 2026-10-17T07:19:36Z
+transitions:
+  - to: ready
+    at: 2026-10-17T07:13:14Z
+    by: agent-S-0392
+  - to: in-progress
+    at: 2026-10-17T07:13:14Z
+    by: agent-S-0392
+  - to: done
+    at: 2026-10-17T07:19:35Z
+    by: agent-S-0392
 stream: S-0392
 tags: [cli, template]
-touches: [design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
+touches: [design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, docs/contributors/index.md]
 after: [T-1605, T-1606]
+usage:
+  source: log
+  seconds: 381
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 200
+      output: 89767
+      cache_read: 11059153
+      cache_write: 377314
+      cost: 6.1631
 ---
 # T-1608 The design, user, and operator docs, the reference, and the template's manifest describe the acceptance setting, the forge, and its token
 

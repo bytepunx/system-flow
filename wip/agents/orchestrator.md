@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 829.8512
-accrued_seconds: 684129
-tasks_completed: 599
-last_run: 2026-10-17T06:39:48Z
+accrued_cost: 836.3731
+accrued_seconds: 684410
+tasks_completed: 603
+last_run: 2026-10-17T06:44:29Z
 ---
 
 # Orchestrator activity
@@ -4204,6 +4204,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0444, E-0026
 - Seconds: 3266
 - Cost: 0.8068 USD, estimated
+
+### 2026-10-17T06:40:20Z
+
+- Summary: The operator ticked S-0444's criterion 2 and accepted it, completing E-0026; my accept dry run was refused with "already done". Under publish (judgement, 1 pending, 82.57 USD a week), published flai 1.56.0 → 1.57.0 (minor), tag flai/v1.57.0, pushed, bundling S-0444. E-0026's nine stories, S-0436 to S-0444, are all released.
+- Items: S-0444, E-0026
+- Seconds: 32
+- Cost: 0.9764 USD, estimated
+
+### 2026-10-17T06:41:03Z
+
+- Summary: The operator moved S-0392 (E-0021, forecast 1h) to ready. Under order_ready, applied flai order --by throughput; S-0392 is alone in ready.
+- Items: S-0392
+- Seconds: 43
+- Cost: 1.4948 USD, estimated
+
+### 2026-10-17T06:41:11Z
+
+- Summary: agent-S-0392 pulled S-0392, taking E-0021 to in-progress. Under order_ready, re-applied flai order --by throughput on the now-empty ready column.
+- Items: S-0392, E-0021
+- Seconds: 8
+- Cost: 0.5029 USD, estimated
+
+### 2026-10-17T06:44:29Z
+
+- Summary: The operator finalized and moved E-0021's S-0393 to S-0397 to ready. Under order_ready, applied flai order --by throughput: S-0395 28m, S-0396 42m, S-0397 45m, S-0393 1h5m, S-0394 1h15m. The after chain (S-0393 waits on S-0392, each later story on the one before) still gates pulling.
+- Items: S-0393, S-0394, S-0395, S-0396, S-0397
+- Seconds: 198
+- Cost: 3.5478 USD, estimated
 
 ## Refusals
 

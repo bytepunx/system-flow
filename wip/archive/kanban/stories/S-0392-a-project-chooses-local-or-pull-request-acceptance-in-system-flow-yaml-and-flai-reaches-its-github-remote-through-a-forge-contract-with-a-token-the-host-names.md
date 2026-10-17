@@ -3,23 +3,60 @@ id: S-0392
 type: story
 nature: feature
 title: A project chooses local or pull-request acceptance in system-flow.yaml, and flai reaches its GitHub remote through a forge contract with a token the host names
-status: ready
+status: done
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:33:00Z
-updated: 2026-10-17T06:40:50Z
+updated: 2026-10-17T07:43:16Z
 transitions:
   - to: ready
     at: 2026-10-17T06:40:50Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T06:41:06Z
+    by: agent-S-0392
+  - to: review
+    at: 2026-10-17T07:31:15Z
+    by: agent-S-0392
+  - to: done
+    at: 2026-10-17T07:43:16Z
+    by: orchestrator
 tags: [cli, template]
 topics: [release]
-touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/forge/forge.go, flai/internal/forge/forge_test.go, flai/internal/forge/github.go, flai/internal/forge/github_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/tests/integration/forge_github_test.go, design/adrs, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md]
+touches: [flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/config/config.go, flai/internal/config/config_test.go, flai/internal/forge/forge.go, flai/internal/forge/forge_test.go, flai/internal/forge/github.go, flai/internal/forge/github_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/cmd/root.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/tests/integration/forge_github_test.go, design/adrs, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, docs/operators/index.md, template/root/system-flow.yaml.tmpl, template/CHANGELOG.md, flai/internal/manifest/provider.go, flai/cmd/serve.go, docs/contributors/index.md, design/issues/I-0161-flai-check-finds-components-examples-outside-the-story-at-close-out.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: log
+  seconds: 3025
+  priced_by: harness
+  turns:
+    - day: 2026-10-17
+      ceremony: 1
+      test_runs: 1
+      hand_edits: 2
+      work: 54
+  models:
+    - model: claude-opus-5-5
+      input: 442
+      output: 198866
+      cache_read: 24499894
+      cache_write: 835882
+      cost: 13.6533
+  strategic:
+    - kind: orchestrator
+      seconds: 47
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 21
+          output: 371
+          cache_read: 6948340
+          cache_write: 17579
+          cost: 1.7463
 forecast:
   duration: 1h
   delivery: 2026-10-17T07:44:00Z
@@ -38,12 +75,12 @@ An operator whose team gates main with pull requests can tell flai so. They set 
 
 ## Acceptance criteria
 
-- [ ] `system-flow.yaml` takes `acceptance.mode`, which is `local` (the default) or `pull-request`, plus `acceptance.forge` (`github`) and `acceptance.merge_method` (`merge`, `squash`, or `rebase`, default `merge`). Each is validated at load and settable with `flai manifest set`. A manifest without them loads and behaves exactly as today.
-- [ ] The host names the variable that holds a forge's token in flai's host configuration, beside the providers (ADR-0129), with `flai serve forge github --token-env <NAME>`. The default name is `GITHUB_TOKEN`. flai reads the token from that variable only when it calls the forge, and never writes it to the configuration, a log, a work item, or a start record.
-- [ ] `flai/internal/forge` defines the contract that acceptance uses: find a pull request by its head branch, open one or update it, read its required checks and its reviews, and merge it by a method. A GitHub adapter implements the contract over the REST API with the standard library, and is tested against a fake server.
-- [ ] `flai forge check` prints the forge, the repository it reads from the `origin` remote, the variable it reads the token from, and whether the token can read the repository and push to it. It names the variable but never the token, and exits non-zero with the reason when any of these fails.
-- [ ] An integration test against a real repository runs only where `FLAI_FORGE_TEST_REPO` and the token are set. Otherwise it is skipped, naming what is missing, so `make integration` and a close-out pass without them.
-- [ ] An ADR records the setting, the contract, and where the token lives. `design/system/project-manifest.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, the generated reference, `docs/operators/settings.md`, and the template's `system-flow.yaml`, as a commented default, describe them.
+- [x] `system-flow.yaml` takes `acceptance.mode`, which is `local` (the default) or `pull-request`, plus `acceptance.forge` (`github`) and `acceptance.merge_method` (`merge`, `squash`, or `rebase`, default `merge`). Each is validated at load and settable with `flai manifest set`. A manifest without them loads and behaves exactly as today.
+- [x] The host names the variable that holds a forge's token in flai's host configuration, beside the providers (ADR-0129), with `flai serve forge github --token-env <NAME>`. The default name is `GITHUB_TOKEN`. flai reads the token from that variable only when it calls the forge, and never writes it to the configuration, a log, a work item, or a start record.
+- [x] `flai/internal/forge` defines the contract that acceptance uses: find a pull request by its head branch, open one or update it, read its required checks and its reviews, and merge it by a method. A GitHub adapter implements the contract over the REST API with the standard library, and is tested against a fake server.
+- [x] `flai forge check` prints the forge, the repository it reads from the `origin` remote, the variable it reads the token from, and whether the token can read the repository and push to it. It names the variable but never the token, and exits non-zero with the reason when any of these fails.
+- [x] An integration test against a real repository runs only where `FLAI_FORGE_TEST_REPO` and the token are set. Otherwise it is skipped, naming what is missing, so `make integration` and a close-out pass without them.
+- [x] An ADR records the setting, the contract, and where the token lives. `design/system/project-manifest.md`, `design/system/flai-cli.md`, `docs/users/flai.md`, the generated reference, `docs/operators/settings.md`, and the template's `system-flow.yaml`, as a commented default, describe them.
 
 ## Tasks
 - T-1602 The manifest takes acceptance.mode, acceptance.forge, and acceptance.merge_method, validated at load and settable with flai manifest set
@@ -83,3 +120,16 @@ An operator whose team gates main with pull requests can tell flai so. They set 
   - Third: T-1608, after T-1605 and T-1606.
 - **Forecast: 1h.** `flai forecast` gave 48m: 96 s per unit of size over 61 done feature stories on claude-opus-5-5 in the large band, times size 30. Raised a quarter to 1h for a new package with an HTTP adapter and a fake forge the later stories reuse, plus an ADR, across seven tasks in three layers. flai's replan now sets the delivery from this duration.
 - **Cost of delay: not yet set.** `flai cod` refuses: neither E-0021 nor this story has inputs. They are asked for on TH-0463.
+
+### Accepted by the orchestrator
+
+- Verified: 2cf214718c2995ddaa6cb7b32de934aae2f4897c
+- At: 2026-10-17T07:43:16Z
+
+Verdict: all six criteria met at 2cf2147; flai verify passed at that commit against main c2eecad, integration and smoke included; the token is read only when the forge is called and never logged, printed or stored; standard library only; no convention breach.
+- 1: flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/provider.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings_test.go
+- 2: flai/internal/config/config.go, flai/cmd/serve_actions.go, flai/cmd/serve.go, flai/internal/config/config_test.go, flai/cmd/serve_actions_test.go
+- 3: flai/internal/forge/forge.go, flai/internal/forge/github.go, flai/internal/forge/forge_test.go, flai/internal/forge/github_test.go
+- 4: flai/cmd/forge.go, flai/cmd/forge_test.go, flai/cmd/root.go
+- 5: flai/tests/integration/forge_github_test.go, docs/contributors/index.md
+- 6: design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md, design/adrs/README.md, design/system/project-manifest.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/settings.md, template/root/system-flow.yaml.tmpl

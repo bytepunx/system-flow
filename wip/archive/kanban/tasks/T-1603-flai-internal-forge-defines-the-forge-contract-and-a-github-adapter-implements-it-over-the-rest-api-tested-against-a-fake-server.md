@@ -3,15 +3,36 @@ id: T-1603
 type: task
 nature: feature
 title: flai/internal/forge defines the forge contract, and a GitHub adapter implements it over the REST API, tested against a fake server
-status: backlog
+status: done
 parent: S-0392
 owner: alex
 created: 2026-10-16T04:33:26Z
-updated: 2026-10-16T04:40:32Z
-transitions: []
+updated: 2026-10-17T07:02:30Z
+transitions:
+  - to: ready
+    at: 2026-10-17T06:42:32Z
+    by: agent-S-0392
+  - to: in-progress
+    at: 2026-10-17T06:42:33Z
+    by: agent-S-0392
+  - to: done
+    at: 2026-10-17T07:02:30Z
+    by: agent-S-0392
 stream: S-0392
 tags: [cli]
 touches: [flai/internal/forge/forge.go, flai/internal/forge/forge_test.go, flai/internal/forge/github.go, flai/internal/forge/github_test.go]
+usage:
+  source: log
+  seconds: 1197
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 12756
+      cache_read: 1571496
+      cache_write: 53616
+      cost: 0.8758
 ---
 # T-1603 flai/internal/forge defines the forge contract, and a GitHub adapter implements it over the REST API, tested against a fake server
 

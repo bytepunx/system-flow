@@ -3,32 +3,48 @@ id: E-0021
 type: epic
 nature: feature
 title: A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-16T04:27:54Z
-updated: 2026-10-16T05:25:43Z
+updated: 2026-10-17T06:41:06Z
 transitions:
   - to: ready
     at: 2026-10-16T05:25:43Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T06:41:06Z
+    by: agent-S-0392
 tags: [cli, dashboard, template]
 topics: [cli, orchestration, release, dashboard]
 touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/workitem, flai/cmd, flaiover/src, design/system/workflow.md, design/system/pushing-from-the-board.md, design/system/metrics.md, design/conventions/git.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 3025
+  priced_by: harness
+  turns:
+    - day: 2026-10-17
+      ceremony: 1
+      test_runs: 1
+      hand_edits: 2
+      work: 54
+  models:
+    - model: claude-opus-5-5
+      input: 442
+      output: 198866
+      cache_read: 24499894
+      cache_write: 835882
+      cost: 13.6533
   strategic:
     - kind: orchestrator
-      seconds: 18897
+      seconds: 19146
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 117
-          output: 1934
-          cache_read: 39618091
-          cache_write: 27566
-          cost: 9.9388
+          input: 183
+          output: 3026
+          cache_read: 61712596
+          cache_write: 54051
+          cost: 15.4846
 ---
 # E-0021 A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent
 
@@ -61,3 +77,4 @@ To be drafted by the planner. Order: the setting and the forge contract first, w
 - The planner reads first: `design/system/workflow.md` § Transitions and who makes them and § What waits on an acceptance; `design/system/pushing-from-the-board.md`; `design/conventions/git.md`; ADR-0032, ADR-0093, ADR-0031; `flai/internal/serve` for the push host action.
 - Open to the designer: whether a story in review under pull-request acceptance still holds the review column's limit while it waits on CI, or whether a wait on the forge counts apart; whether the orchestrator may approve a pull request's review itself when `accept_reviews` is on, or only merge one a person approved.
 - Secrets: the forge token lives in the variable the host names, as a provider's key does (ADR-0129), and is never written to a log, an item, or the start record.
+- 2026-10-17T06:41:06Z: moved to in-progress: follows S-0392, which moved to in-progress

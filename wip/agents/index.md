@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-17T06:44:14Z
+updated: 2026-10-17T07:43:16Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0392](S-0392.md) | A project chooses local or pull-request acceptance in system-flow.yaml, and flai reaches its GitHub remote through a forge contract with a token the host names | in-progress | agent-S-0392 | 2026-10-17T06:41:06Z |
 
 ## Strategic agents
 
