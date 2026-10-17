@@ -1,6 +1,6 @@
 ---
 title: The component library
-updated: 2026-10-16
+updated: 2026-10-17
 status: active
 topics: [components, design, dashboard, cli]
 ---
@@ -9,7 +9,7 @@ topics: [components, design, dashboard, cli]
 
 The design of E-0026. The dashboard gets a Components page where the operator sees every component of their system, changes its props, and watches it follow changes to the design system and the source, live, without an IDE, a rebuild, or a redeploy. It takes up what [design-system-tool.md § The project's own components](design-system-tool.md#the-projects-own-components) left out of E-0020: rendering a project's components needs its own compiler and build, which only the host has.
 
-The shape was settled on TH-0483. Each section names the story that builds it. Nothing here is built yet; this document says what is decided and is to be built, and each story brings its section up to date as it lands.
+The shape was settled on TH-0483. Each section names the story that builds it. The catalogue (S-0437) and the dev server (S-0438) are built. The sections after them say what is decided and is to be built, and each story brings its section up to date as it lands.
 
 ## How it fits together
 
@@ -94,13 +94,40 @@ A component the compiler cannot parse is listed with its error. A missing `node`
 
 flai runs a sub-project's own Vite dev server on the host, with the project's own config, plugins, and dependencies, so aliases, Tailwind, and the design stylesheet behave as in the app. A plugin flai embeds serves a harness page that renders one component by its path, inside an error boundary, after the `setup` module. Vite's hot module replacement carries each saved change, to the source or the stylesheet, into the harness.
 
-[ADR-0163](../adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md) records the decision.
+[ADR-0163](../adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md) records the decision. `internal/components` holds the harness and the dev server.
 
-- flai writes a Vite config under `.flai-cache/components/<project>/<sub-project>/` that loads the sub-project's own config and merges flai's plugin into it, and runs the sub-project's own `vite` in its folder.
-- The dev server binds 127.0.0.1 on a port flai picks. The browser on the host frames it; the dashboard's container never reaches it.
-- Starting it runs the project's code on the host, so it sits behind a new host action, `components`, off until the operator runs `flai serve enable components`. `components.start` and `components.stop` are gated by it and journalled; `components.status` and `components.list` are reads.
-- flai stops a dev server without a `components.status` call for `components.idle`, 30 minutes by default, and every dev server when `flai serve` stops.
-- The harness at `/__flai/components/` imports the `setup` module, then mounts the component `?c=<path>` or a `select` message names, inside an error boundary.
+### The dev server
+
+`flai components serve [--project <name>]` runs one in the foreground, in a shell ([flai.md § Render a component live](../../docs/users/flai.md#render-a-component-live)). `flai serve` runs the same one when the dashboard asks ([Under flai serve](#under-flai-serve)).
+
+- The sub-project is the one `--project` names, of kind `sveltekit` or `svelte`. With no `--project`, it is the only such sub-project; with none, or more than one, the command is refused and says why.
+- flai writes the harness into `.flai-cache/components/<project>/<sub-project>/`, again at every start: `plugin.mjs`, `harness.mjs`, `harness.html`, and a `vite.config.mjs`. The config loads the sub-project's own Vite config, the one Vite would find in its folder, with the sub-project's own Vite (`loadConfigFromFile`, so a TypeScript config works). It merges flai's plugin into it, with the sub-project's folder as Vite's root.
+- flai runs `node_modules/.bin/vite --config <that config> --host 127.0.0.1 --port <free> --strictPort` in the sub-project's folder, in a process group of its own. It waits up to a minute for the harness page to answer 200.
+- A sub-project without `vite` in its `node_modules` is refused, naming the sub-project and the fix: `npm install` or `pnpm install` in its folder. A dev server that exits before it answers, or does not answer in time, is stopped, and the error carries its last lines of output.
+- Stopping it ends its whole process group: SIGTERM, then SIGKILL five seconds later.
+
+The dev server binds 127.0.0.1. The browser on the host frames it; the dashboard's container never reaches it.
+
+### The harness
+
+The harness at `/__flai/components/` imports the `setup` module, posts `ready`, and mounts the component `?c=<path>` or a `select` message names, inside a `<svelte:boundary>`. A component that throws, or fails to import, posts `error`; the next props or hot update renders it again.
+
+- **SvelteKit.** The plugin adds its middleware directly in `configureServer`, not in a hook it returns, so the harness page is answered before SvelteKit's router, which answers every other path.
+- **Virtual modules.** The page's script, the error boundary (`Frame.svelte`), and the catalogue are modules no file backs: `virtual:flai-components/harness.mjs`, `virtual:flai-components/Frame.svelte`, and `virtual:flai-components`. So `svelte` and every other import resolve from the sub-project, not from `.flai-cache`. The catalogue maps each component's path to a function that imports it, found as `flai components list` finds them.
+- **Its own optimizer cache.** The harness's dependencies are optimized into `node_modules/.vite-flai-components` in the sub-project, not Vite's own cache. So the harness and the app's own dev server do not each make the other optimize them again.
+- **No error overlay.** Vite's overlay would cover the frame, so the plugin turns it off; the harness posts `error`, and the page shows it.
+- **Changes.** A saved change reaches the harness as a hot update, after which it renders the component again and posts `rendered`. A component added or removed while the dev server runs reloads the page, so the page sends `select` again on each `ready`.
+- **Where an error is.** A compile error's `file`, `line`, and `column` are the source's, from Vite. A runtime error's are the first frame of its stack in the sub-project's own code, outside `node_modules`, so its line is the compiled JavaScript's, not the source's.
+
+### Under flai serve
+
+Starting a dev server runs the project's code on the host, so it sits behind the host action `components`, off until the operator runs `flai serve enable components` ([the components host action](../../docs/operators/index.md#the-components-host-action-s-0438)). `components.start` and `components.stop` are gated by it and journalled; `components.status` and `components.list` are reads. [dashboard-host-channel.md](dashboard-host-channel.md#decision) gives each method's params and answer.
+
+- `flai serve` supervises one dev server per project and sub-project. A second start answers the one that runs, or waits for the one starting.
+- It stops a dev server that had no `components.status` for `components.idle`, a host setting of 30 minutes by default (`flai serve components idle <duration>`). It looks every tenth of that, but no more often than every second and no less often than every minute, and reads the setting at every look, so a change applies without a restart.
+- It stops every dev server when it stops.
+- A dev server that fails to start, or exits on its own, is dropped, and why is kept as the sub-project's `last_error` until one starts again.
+- Vite's output is dropped; `flai serve`'s log records each start, stop, and exit.
 
 ### The protocol
 
@@ -108,7 +135,7 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 
 | From | Type | Fields | Meaning |
 |------|------|--------|---------|
-| page | `select` | `component`, `props?` | Mount this component, by its path in the sub-project, with these props. |
+| page | `select` | `component`, `props?`, `functions?` | Mount this component, by its path in the sub-project, with these props. |
 | page | `props` | `props`, `functions?` | Set the mounted component's props without remounting it. Each name in `functions` gets a logger that posts `event`. |
 | page | `theme` | `theme` | Set `data-theme` on the document to `light` or `dark`. |
 | page | `tokens` | `light`, `dark` | Lay these CSS custom properties over the stylesheet's, under `:root` and `[data-theme='dark']`; empty objects clear them. |
@@ -117,6 +144,8 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 | harness | `error` | `component`, `message`, `file?`, `line?`, `column?` | The component failed to import or render; `file` and `line` say where. |
 | harness | `event` | `component`, `name`, `args` | A function prop was called, with its arguments as far as JSON carries them. |
 | harness | `size` | `width`, `height` | The rendered content's size, in CSS pixels, each time it changes. |
+
+`select` takes `functions` as `props` does, so that a component that calls a function prop as it mounts already has its logger. ADR-0163's table names `functions` on `props` only.
 
 ## The Components page (S-0439)
 

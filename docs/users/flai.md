@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-16
+updated: 2026-10-17
 status: active
 ---
 
@@ -1384,6 +1384,39 @@ set sub-project ui's components
 ```
 
 flai checks the manifest as it would be after the change, as `flai check` does. It refuses a glob that does not parse, a setup that names no file in the sub-project, and the key on a sub-project that is not `sveltekit` or `svelte`, each with its field and the reason. It also refuses an unknown sub-project and a call with no flag. Nothing is written, and the exit status is 1. With `--json` a refusal is `{"refused": [{"field": ..., "reason": ...}]}`, and a change `{"project": ..., "components": ...}`, with `components` null after `--unset`. `flai check` reports the same problems in a key you edit by hand as `manifest.components` errors.
+
+## Render a component live
+
+`flai components serve` runs a Svelte sub-project's own Vite dev server with flai's harness, which renders one component by its path ([ADR-0163](../../design/adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md)). It uses the sub-project's own `vite`, config, plugins, and dependencies, so the component renders as it does in the app. The design is in [component-library.md](../../design/system/component-library.md#the-dev-server-and-its-harness-s-0438).
+
+```bash
+flai components serve                           # the one sub-project of kind sveltekit or svelte
+flai components serve --project flaiover        # needed when the manifest has more than one
+flai components serve --project flaiover --json
+```
+
+It stays in the foreground. Once the harness answers, it prints its URL, then the sub-project, Vite's process ID, and how to stop it:
+
+```text
+http://127.0.0.1:41537/__flai/components/
+  sub-project flaiover (flaiover), Vite pid 50412; Ctrl-C stops it
+```
+
+`--json` prints `{"project", "url", "port", "pid"}` instead. Vite's own output goes to standard error.
+
+Open the URL with `?c=` and a component's path as `flai components list` prints it, such as `http://127.0.0.1:41537/__flai/components/?c=src/lib/components/Chart.svelte`. The harness imports the sub-project's `setup` module first ([Where flai finds them](#where-flai-finds-them)), then renders the component with no props. A component that fails to import or render shows nothing, and its error is in the browser's console.
+
+A change you save to a component or to the stylesheet reaches the page as a hot update, without a reload. A component added or removed while it runs reloads the page.
+
+Ctrl-C, or SIGTERM, stops Vite and everything it started. If Vite exits on its own, the command exits 1 with Vite's last lines of output.
+
+flai writes the harness and a Vite config under `.flai-cache/components/<project>/<sub-project>/`, again at each start; edit the sub-project's own config, not that one. It refuses, exit 1:
+
+- a manifest with no sub-project of kind `sveltekit` or `svelte`, or more than one with no `--project`;
+- a `--project` the manifest does not have, or one of another kind;
+- a sub-project without `vite` in its `node_modules`, naming the sub-project and the fix: install its dependencies, such as `npm install` or `pnpm install` in its folder.
+
+The dev server listens on 127.0.0.1 only, so only a browser on this machine reaches it. It runs the sub-project's code and dependencies as you, as its own dev server does. The dashboard's Components page has `flai serve` run the same dev server, once the operator enables the `components` host action ([The components host action](../operators/index.md#the-components-host-action-s-0438)).
 
 ## Check the repository
 

@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-15
+updated: 2026-10-17
 status: active
 ---
 
@@ -213,6 +213,26 @@ What a compromised container could still do is what the dashboard itself does: a
 | `dashboard.notify_url` | `system-flow.yaml`, per project | unset | A webhook for the designer's inbox. When it is an `http` or `https` URL, the dashboard's server POSTs `{ "project": "<name>", "entry": { "key", "kind", "title", "href", "at" } }` as JSON for each inbox entry that appears after the server started: `kind` is `thread`, `question`, `review`, `blocked`, or `overlap`, and `href` is a path in the dashboard. One attempt per entry, a five second timeout, no retry; a failure is a warning in the log naming the host only, since the URL may carry a secret. The project token, file contents, and anything else are never sent. Entries that existed at start are not posted, so a restart does not replay the inbox. Read once at start: restart the dashboard after changing it |
 | `dashboard.autocommit` | `system-flow.yaml`, per project | `true` | Documents saved from the dashboard's editor are committed on the main checkout by `flai serve`, one path per commit, authored by your git identity, with a `Co-Authored-By: flaiover` trailer. `false` leaves them uncommitted: agents on story branches then do not see the edit until someone commits it, and an acceptance from the board lists it as an uncommitted change. Nothing is pushed ([ADR-0023](../../design/adrs/0023-documents-are-saved-through-flai.md)) |
 | `worktrees.relative_paths` | `~/.flai/config.json`, per user (`flai config set`) | `false` | With git 2.48 or newer, `flai stream open` links new worktrees with relative paths, for clones that are moved or shared. The dashboard no longer has any use for it. Sets `extensions.relativeWorktrees` on the clone, after which git older than 2.48 refuses the repository. Never enabled automatically. How to turn it back off is in [the flai guide](../users/flai.md) |
+
+### The components host action (S-0438)
+
+`flai serve` can run a Svelte sub-project's own Vite dev server, with flai's component harness, on your machine, because the dashboard's Components page asked ([ADR-0163](../../design/adrs/0163-flai-runs-a-sub-project-s-own-vite-dev-server-on-127-0-0-1-behind-the.md)). It runs the sub-project's own `vite`, from its `node_modules`, in its folder, with its own config, plugins, and dependencies, as you. It is a host action, off until you enable it:
+
+```bash
+flai serve enable components        # for the project in the working directory; --all-projects for every project
+flai serve components idle 45m      # stop a dev server nobody looks at after this long; 30m by default
+flai serve components show          # the idle time, and whether the action is on here
+flai serve journal                  # every start and stop, refused ones included
+flai serve disable components
+```
+
+The dev server listens on 127.0.0.1, on a port flai picks, and nowhere else. The Components page frames it directly, cross-origin, so it renders only in a browser on this host, as yours is at 127.0.0.1:4242. The dashboard's container never reaches the port, and a dashboard opened from another machine lists the components but cannot render them.
+
+`flai serve` runs one dev server per project and sub-project. It stops one that had no `components.status`, which the page asks while it is open, for `components.idle`, and every one when it stops. `flai serve components idle` takes a Go duration, such as `45m` or `2h`, for every project on this host, and applies at once, with no restart ([settings](settings.md#flai-configuration)). Vite's own output is dropped: `flai serve`'s log has each start, stop, and exit, and `components.status` keeps why a dev server failed to start or exited on its own, with its last lines, until one starts again.
+
+**Understand what enabling it means.** Whoever holds the dashboard token can start and stop a Svelte sub-project's dev server on your machine, as you. That runs the sub-project's code and its dependencies, its Vite config and plugins included, as its own dev server does. Nothing is installed: a sub-project without `vite` in its `node_modules` is refused with the fix, `npm install` or `pnpm install` in its folder. Reading whether one runs and listing the components needs no action.
+
+To run the same dev server by hand, without the action or `flai serve`, run `flai components serve` in a shell in the project. It stays in the foreground until Ctrl-C ([Render a component live](../users/flai.md#render-a-component-live)).
 
 ### The host host action (S-0106)
 
