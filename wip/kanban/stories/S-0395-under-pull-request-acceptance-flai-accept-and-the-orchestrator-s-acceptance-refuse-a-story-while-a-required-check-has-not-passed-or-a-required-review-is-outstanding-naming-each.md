@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:37:54Z
-updated: 2026-10-17T01:02:24Z
+updated: 2026-10-17T01:08:46Z
 transitions: []
 tags: [cli, dashboard]
 topics: [release, orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 28m
-  delivery: 2026-10-17T05:48:00Z
-  basis: "Its own forecast of 28m; 10th in the pull order with an in-progress limit of 5, behind S-0438, S-0440, S-0441, S-0439, S-0442, S-0443, S-0241, S-0392, S-0393 and S-0394."
+  delivery: 2026-10-17T05:57:00Z
+  basis: "Its own forecast of 28m; 11th in the pull order with an in-progress limit of 5, behind S-0440, S-0441, S-0439, S-0442, S-0444, S-0443, S-0241, S-0392, S-0393 and S-0394."
   by: flai
-  at: 2026-10-17T01:02:24Z
+  at: 2026-10-17T01:08:46Z
 ---
 # S-0395 Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each
 

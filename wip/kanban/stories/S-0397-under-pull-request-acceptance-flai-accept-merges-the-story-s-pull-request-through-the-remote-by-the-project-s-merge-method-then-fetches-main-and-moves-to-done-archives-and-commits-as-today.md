@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:39:46Z
-updated: 2026-10-17T01:02:24Z
+updated: 2026-10-17T01:08:46Z
 transitions: []
 tags: [cli, template]
 topics: [release, orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-10-17T06:38:00Z
-  basis: "Its own forecast of 45m; 12th in the pull order with an in-progress limit of 5, behind S-0438, S-0440, S-0441, S-0439, S-0442, S-0443, S-0241, S-0392, S-0393, S-0394, S-0395 and S-0396."
+  delivery: 2026-10-17T06:46:00Z
+  basis: "Its own forecast of 45m; 13th in the pull order with an in-progress limit of 5, behind S-0440, S-0441, S-0439, S-0442, S-0444, S-0443, S-0241, S-0392, S-0393, S-0394, S-0395 and S-0396."
   by: flai
-  at: 2026-10-17T01:02:24Z
+  at: 2026-10-17T01:08:46Z
 ---
 # S-0397 Under pull-request acceptance, flai accept merges the story's pull request through the remote by the project's merge method, then fetches main and moves to done, archives, and commits as today
 
