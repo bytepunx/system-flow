@@ -6,6 +6,7 @@ date: 2026-10-17
 supersedes: []
 superseded_by: []
 refines: [ADR-0081, ADR-0114, ADR-0167]
+topics: [analysis, cli, dashboard]
 ---
 
 # ADR-0168 Under pull-request acceptance flai stats reports a checks wait and a reviewers wait of their own, read from the kept forge events and falling inside the story's review intervals
