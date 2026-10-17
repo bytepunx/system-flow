@@ -3,16 +3,37 @@ id: T-1622
 type: task
 nature: feature
 title: The workflow, the CLI and dashboard design, and the user docs describe the checks and reviews read back and the send back on a failure
-status: backlog
+status: done
 parent: S-0394
 owner: alex
 created: 2026-10-16T04:37:14Z
-updated: 2026-10-16T04:37:14Z
-transitions: []
+updated: 2026-10-17T17:05:03Z
+transitions:
+  - to: ready
+    at: 2026-10-17T16:49:38Z
+    by: agent-S-0394
+  - to: in-progress
+    at: 2026-10-17T16:49:39Z
+    by: agent-S-0394
+  - to: done
+    at: 2026-10-17T17:05:03Z
+    by: agent-S-0394
 stream: S-0394
 tags: [cli, dashboard]
-touches: [design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md]
+touches: [design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md, docs/users/flai-reference.md, design/system/agent-adapters.md, docs/operators/index.md]
 after: [T-1616, T-1618, T-1620, T-1621]
+usage:
+  source: log
+  seconds: 924
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 161
+      output: 67983
+      cache_read: 9733374
+      cache_write: 294032
+      cost: 4.971
 ---
 # T-1622 The workflow, the CLI and dashboard design, and the user docs describe the checks and reviews read back and the send back on a failure
 

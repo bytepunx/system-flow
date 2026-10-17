@@ -3,16 +3,37 @@ id: T-1620
 type: task
 nature: feature
 title: flai serve starts a story's agent when flai sent the story back with a thread on a failing check or a requested change
-status: backlog
+status: done
 parent: S-0394
 owner: alex
 created: 2026-10-16T04:37:02Z
-updated: 2026-10-16T04:37:02Z
-transitions: []
+updated: 2026-10-17T16:49:22Z
+transitions:
+  - to: ready
+    at: 2026-10-17T16:31:00Z
+    by: agent-S-0394
+  - to: in-progress
+    at: 2026-10-17T16:31:01Z
+    by: agent-S-0394
+  - to: done
+    at: 2026-10-17T16:49:22Z
+    by: agent-S-0394
 stream: S-0394
 tags: [cli]
-touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+touches: [flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/harness/adapters.go]
 after: [T-1617]
+usage:
+  source: log
+  seconds: 1101
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 109
+      output: 45895
+      cache_read: 6570930
+      cache_write: 198499
+      cost: 3.3559
 ---
 # T-1620 flai serve starts a story's agent when flai sent the story back with a thread on a failing check or a requested change
 

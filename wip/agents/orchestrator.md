@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 849.7932
-accrued_seconds: 692361
-tasks_completed: 607
-last_run: 2026-10-17T08:57:00Z
+accrued_cost: 853.5428
+accrued_seconds: 718000
+tasks_completed: 609
+last_run: 2026-10-17T16:04:19Z
 ---
 
 # Orchestrator activity
@@ -4260,6 +4260,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0393
 - Seconds: 2
 - Cost: 0.0000 USD
+
+### 2026-10-17T16:04:08Z
+
+- Summary: The operator accepted S-0393, which resolved TH-0496 and confirmed the force-with-lease exception. Under publish (judgement, 1 pending, unvalued), published flai 1.58.0 → 1.59.0 (minor) and template 1.0.96 → 1.0.97 (patch), tag flai/v1.59.0, template v1.0.97, pushed, bundling S-0393. I opened one thread on safety.md § Rules noting it still says every force push needs confirmation, against git.md's new exception, and recommended a small follow-up story.
+- Items: S-0393
+- Seconds: 25628
+- Cost: 3.5607 USD, estimated
+
+### 2026-10-17T16:04:19Z
+
+- Summary: After S-0393's acceptance, S-0394 was pulled. Under order_ready, re-applied flai order --by throughput: S-0395 28m, S-0396 42m, S-0397 45m.
+- Items: S-0394
+- Seconds: 11
+- Cost: 0.1889 USD, estimated
 
 ## Refusals
 

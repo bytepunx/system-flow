@@ -3,16 +3,37 @@ id: T-1617
 type: task
 nature: feature
 title: flai serve reads each pull request's checks and reviews into the kept state, and on a failing check or a requested change opens one thread and sends the story back
-status: backlog
+status: done
 parent: S-0394
 owner: alex
 created: 2026-10-16T04:36:47Z
-updated: 2026-10-16T04:36:47Z
-transitions: []
+updated: 2026-10-17T17:20:23Z
+transitions:
+  - to: ready
+    at: 2026-10-17T16:15:36Z
+    by: agent-S-0394
+  - to: in-progress
+    at: 2026-10-17T16:15:36Z
+    by: agent-S-0394
+  - to: done
+    at: 2026-10-17T16:30:19Z
+    by: agent-S-0394
 stream: S-0394
 tags: [cli]
-touches: [flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/serve.go]
+touches: [flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/agents.go]
 after: [T-1615]
+usage:
+  source: log
+  seconds: 883
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 71
+      output: 29855
+      cache_read: 4274467
+      cache_write: 129126
+      cost: 2.183
 ---
 # T-1617 flai serve reads each pull request's checks and reviews into the kept state, and on a failing check or a requested change opens one thread and sends the story back
 

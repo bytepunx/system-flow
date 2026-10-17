@@ -3,16 +3,37 @@ id: T-1619
 type: task
 nature: feature
 title: A host read method gives the dashboard a story's pull request, checks, and reviews from the kept state
-status: backlog
+status: done
 parent: S-0394
 owner: alex
 created: 2026-10-16T04:36:58Z
-updated: 2026-10-16T04:36:58Z
-transitions: []
+updated: 2026-10-17T16:28:25Z
+transitions:
+  - to: ready
+    at: 2026-10-17T16:15:38Z
+    by: agent-S-0394
+  - to: in-progress
+    at: 2026-10-17T16:15:39Z
+    by: agent-S-0394
+  - to: done
+    at: 2026-10-17T16:28:25Z
+    by: agent-S-0394
 stream: S-0394
 tags: [cli, dashboard]
-touches: [flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go]
+touches: [flai/internal/hostapi/reads.go, flai/internal/hostapi/reads_test.go, flaiover/src/lib/server/agent.ts]
 after: [T-1615]
+usage:
+  source: log
+  seconds: 766
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 6240
+      cache_read: 893336
+      cache_write: 26986
+      cost: 0.4562
 ---
 # T-1619 A host read method gives the dashboard a story's pull request, checks, and reviews from the kept state
 

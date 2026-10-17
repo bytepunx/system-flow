@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-17T16:03:13Z
+updated: 2026-10-17T17:33:42Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0394](S-0394.md) | A story's pull request checks and reviews show in flai show and on its dashboard page, and a failing check or a requested change reaches its agent as a thread that sends the story back | in-progress | agent-S-0394 | 2026-10-17T16:03:23Z |
 
 ## Strategic agents
 
