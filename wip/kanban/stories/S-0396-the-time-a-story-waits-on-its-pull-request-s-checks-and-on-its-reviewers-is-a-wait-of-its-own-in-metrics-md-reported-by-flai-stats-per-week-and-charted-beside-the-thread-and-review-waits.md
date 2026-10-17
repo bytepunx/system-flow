@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:38:48Z
-updated: 2026-10-17T05:07:28Z
+updated: 2026-10-17T06:40:03Z
 transitions: []
 tags: [cli, dashboard]
 topics: [analysis, dashboard]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 42m
-  delivery: 2026-10-17T09:25:00Z
-  basis: "Its own forecast of 42m; 7th in the pull order with an in-progress limit of 5, behind S-0444, S-0241, S-0392, S-0393, S-0394 and S-0395."
+  delivery: 2026-10-17T10:58:00Z
+  basis: "Its own forecast of 42m; 6th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394 and S-0395."
   by: flai
-  at: 2026-10-17T05:07:28Z
+  at: 2026-10-17T06:40:03Z
 ---
 # S-0396 The time a story waits on its pull request's checks and on its reviewers is a wait of its own in metrics.md, reported by flai stats per week and charted beside the thread and review waits
 
