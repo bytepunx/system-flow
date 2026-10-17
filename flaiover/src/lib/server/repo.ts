@@ -259,6 +259,98 @@ export type FileSave = {
 	story?: string;
 };
 
+/** The kind of value a component's prop takes, as flai components list reads it (S-0437). */
+export type ComponentPropKind =
+	| 'string'
+	| 'number'
+	| 'boolean'
+	| 'union'
+	| 'array'
+	| 'object'
+	| 'function'
+	| 'snippet'
+	| 'unknown';
+
+/** One prop of a component, in the order its $props() destructures them (Go's components.Prop). */
+export type ComponentProp = {
+	name: string;
+	kind: ComponentPropKind;
+	/** Its type as the source writes it; absent when it has none. */
+	type?: string;
+	/** Its default as the source writes it; absent when it has none. */
+	default?: string;
+	/** The type does not mark it optional and it has no default. */
+	required: boolean;
+	/** A union's members, each as JSON: "a", 1, true. */
+	literals?: string[];
+};
+
+/** One .svelte file of a sub-project (Go's components.Component). */
+export type Component = {
+	/** The sub-project's path relative to the project root, in slash form. */
+	project: string;
+	/** The file's path relative to the sub-project, in slash form. */
+	path: string;
+	/** The file's base name without .svelte. */
+	name: string;
+	/** [] when it has no $props() or they could not be read. */
+	props: ComponentProp[];
+	/** Why its props could not be read, such as a parse error; absent when they were. */
+	error?: string;
+};
+
+/** One sub-project of the manifest in the catalogue; only a supported one has components. */
+export type ComponentsProject = {
+	name: string;
+	path: string;
+	kind: string;
+	/** Whether its kind is sveltekit or svelte, so that flai lists its components. */
+	supported: boolean;
+	/** The module its harness imports first, the manifest's components.setup; absent when none. */
+	setup?: string;
+	/** Sorted by path; [] for a sub-project that is not supported. */
+	components: Component[];
+};
+
+/** The component catalogue as flai's components.list answers it, what flai components list --json prints. */
+export type ComponentsCatalogue = { projects: ComponentsProject[] };
+
+/** How one sub-project's component dev server stands (Go's hostapi.ComponentServer, S-0438). */
+export type ComponentServer = {
+	/** The sub-project's name in the manifest. */
+	project: string;
+	/** Its dev server runs and answers. */
+	running: boolean;
+	/** Its dev server was started and does not answer yet. */
+	starting?: boolean;
+	/** Set by a start that answered the dev server that ran rather than start one. */
+	already_running?: boolean;
+	/** The harness page, http://127.0.0.1:<port>/__flai/components/. */
+	url?: string;
+	port?: number;
+	/** The process ID of the sub-project's vite. */
+	pid?: number;
+	/** When vite was started, RFC 3339, UTC. */
+	since?: string;
+	/** Why its last dev server failed to start or exited on its own, until one starts again. */
+	last_error?: string;
+};
+
+/** What flai's components.stop answers: stopped is false when no dev server ran. */
+export type ComponentStopped = { project: string; stopped: boolean; pid?: number };
+
+/** The component dev servers as flai's components.status answers them (Go's hostapi.ComponentsStatus). */
+export type ComponentsStatus = {
+	/** Whether the components host action is on for the project. */
+	enabled: boolean;
+	/** What the operator runs on the host to turn it on: flai serve enable components. */
+	enable: string;
+	/** How long a dev server may go unasked before flai stops it; absent when flai runs no dev servers. */
+	idle_seconds?: number;
+	/** Every supported sub-project's, in the manifest's order. */
+	servers: ComponentServer[];
+};
+
 /** JSON-RPC's code for a method the host flai does not offer: it is older than this dashboard. */
 const METHOD_NOT_FOUND = -32601;
 /** flai's code for an item or thread that does not exist (internal/hostapi). */
@@ -562,6 +654,48 @@ export class Repo extends EventEmitter {
 	}
 
 	/**
+	 * The component catalogue, flai's components.list (S-0437): every sub-project, a Svelte one with
+	 * its components and their props. Asked afresh each time: a component file may be added at any time.
+	 */
+	async components(): Promise<ComponentsCatalogue> {
+		return upgraded('list the components', () => this.ask<ComponentsCatalogue>('components.list'));
+	}
+
+	/**
+	 * How every supported sub-project's component dev server stands, flai's components.status (S-0438),
+	 * and whether the components host action is on. Asked afresh each time; asking keeps a running
+	 * dev server from being stopped as idle.
+	 */
+	async componentsStatus(): Promise<ComponentsStatus> {
+		return upgraded('show the component dev servers', () =>
+			this.ask<ComponentsStatus>('components.status')
+		);
+	}
+
+	/**
+	 * Start a sub-project's component dev server, flai's components.start under the components host
+	 * action (S-0438), and answer it once its harness answers; one that runs is answered as it is.
+	 * project may be left out when one sub-project is supported. flai waits a minute for Vite, so the
+	 * ask waits longer, to answer flai's own message, which carries Vite's last lines of output.
+	 */
+	async componentsStart(project?: string): Promise<ComponentServer> {
+		const { data } = await upgraded('start a component dev server', () =>
+			this.write<ComponentServer>('components.start', project ? { project } : {}, {
+				timeoutMs: 90000
+			})
+		);
+		return data;
+	}
+
+	/** Stop a sub-project's component dev server when one runs, flai's components.stop (S-0438). */
+	async componentsStop(project?: string): Promise<ComponentStopped> {
+		const { data } = await upgraded('stop a component dev server', () =>
+			this.write<ComponentStopped>('components.stop', project ? { project } : {})
+		);
+		return data;
+	}
+
+	/**
 	 * Listen for flai's word that a file changed, and for its return: a flai that comes back may have
 	 * missed changes, so everything asked is forgotten and open pages are told to look again.
 	 */
@@ -658,6 +792,35 @@ export function storyParam(value: unknown): string | undefined {
 			`story must be a story's ID such as S-0042, not ${JSON.stringify(value)}; leave it out to edit the main checkout`
 		);
 	return value;
+}
+
+/**
+ * The sub-project a component dev server endpoint starts or stops (S-0439): undefined when none is
+ * named, flai's one supported sub-project then, else its name in the manifest; anything but a string
+ * is refused with 400.
+ */
+export function subProjectParam(value: unknown): string | undefined {
+	if (value === undefined || value === null) return undefined;
+	if (typeof value !== 'string')
+		throw new RepoError(
+			400,
+			`project must be a sub-project's name in the manifest, not ${JSON.stringify(value)}; leave it out when one sub-project is Svelte`
+		);
+	return value.trim() || undefined;
+}
+
+/** Run fn, a host flai without the method it asks for told to upgrade (501), as /api/design/tokens does. */
+async function upgraded<T>(what: string, fn: () => Promise<T>): Promise<T> {
+	try {
+		return await fn();
+	} catch (e) {
+		if (e instanceof RepoError && e.status === 501)
+			throw new RepoError(
+				501,
+				`the host flai is too old to ${what} (${e.message}): upgrade flai on the host with flai self-upgrade`
+			);
+		throw e;
+	}
 }
 
 /** An item as flai marshals it: empty strings and nulls where the front matter had nothing. */
