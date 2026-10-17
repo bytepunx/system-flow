@@ -3,11 +3,11 @@ id: I-0157
 title: The host's installed flai is again behind the project's releases after I-0149 closed, so the MCP task_done refuses every close
 class: efficiency
 status: open
-count: 4
+count: 5
 cost: 3m
 first_reported: 2026-10-17T01:51:51Z
-last_reported: 2026-10-17T04:04:28Z
-updated: 2026-10-17T04:04:28Z
+last_reported: 2026-10-17T07:57:59Z
+updated: 2026-10-17T07:57:59Z
 ---
 
 # I-0157 The host's installed flai is again behind the project's releases after I-0149 closed, so the MCP task_done refuses every close
@@ -32,5 +32,9 @@ The MCP task_done refused T-1879: the server and the installed flai are 1.52.0, 
 ### 2026-10-17T04:04:28Z
 Story: S-0443.
 MCP task_done refused T-1884: the server and the installed flai at ~/.flai/bin/flai are 1.52.0, a minor version behind 1.55.3 in the project's history; closed with scripts/flai.sh task done instead.
+
+### 2026-10-17T07:57:59Z
+Story: S-0393.
+S-0393: the MCP task_done refused T-1610 because the installed flai 1.57.0 is behind flai 1.58.0 in the project's history. Tasks were closed with the tree's flai through scripts/flai.sh task done instead.
 
 ## Remediation
