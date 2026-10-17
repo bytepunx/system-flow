@@ -3,15 +3,18 @@ id: S-0393
 type: story
 nature: feature
 title: Under pull-request acceptance, a story's move to review has flai serve push its branch and open or update one pull request from the project's pull request template
-status: ready
+status: in-progress
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:34:50Z
-updated: 2026-10-17T06:44:14Z
+updated: 2026-10-17T07:43:28Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:48Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T07:43:28Z
+    by: agent-S-0393
 tags: [cli, template]
 topics: [release]
 touches: [flai/internal/forge/pullrequest.go, flai/internal/forge/pullrequest_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/serve.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, template/root/.github/pull_request_template.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, template/CHANGELOG.md]

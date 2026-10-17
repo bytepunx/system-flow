@@ -7,6 +7,7 @@ updated: 2026-10-17T07:43:16Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0393](S-0393.md) | Under pull-request acceptance, a story's move to review has flai serve push its branch and open or update one pull request from the project's pull request template | in-progress | agent-S-0393 | 2026-10-17T07:43:28Z |
 
 ## Strategic agents
 
