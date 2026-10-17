@@ -773,11 +773,11 @@ Print each Svelte sub-project's components and the props each takes.
 flai components list [flags]
 ```
 
-Print the component library: every sub-project of system-flow.yaml, in its order, or only the one --project names. A sub-project of kind sveltekit or svelte is listed with its components, each a .svelte file its components key finds, by its path relative to the sub-project, and under it each prop: its name, its kind (string, number, boolean, union with its literals, array, object, function, snippet, or unknown), its type as the source writes it, its default after =, and required when it has neither a default nor an optional type. A component whose props cannot be read, such as one that does not parse, is listed with the reason. A sub-project of any other kind is listed as unsupported, with its kind.
+Print the component library: every sub-project of system-flow.yaml, in its order, or only the one --project names. A sub-project of kind sveltekit or svelte is listed with its components, each a .svelte file its components key finds, by its path relative to the sub-project, and under it each prop: its name, its kind (string, number, boolean, union with its literals, array, object, function, snippet, or unknown), its type as the source writes it, its default after =, and required when it has neither a default nor an optional type. A component whose props cannot be read, such as one that does not parse, is listed with the reason. A component with examples, named sets of its props in its examples file under design/components (ADR-0164), is listed with how many it has. A sub-project of any other kind is listed as unsupported, with its kind.
 
 Props are read by a script flai embeds, run with node in the sub-project's folder on the sub-project's own svelte/compiler; no component is run. So node must be on PATH and svelte installed in each Svelte sub-project listed: when either is missing, list fails, exit status 1, saying what to install.
 
---json prints {"projects": [{"name", "path", "kind", "supported", "setup", "components": [{"project", "path", "name", "props": [{"name", "kind", "type", "default", "required", "literals"}], "error"}]}]}, setup only when the sub-project names one, and type, default, literals, and error only when they have a value.
+--json prints {"projects": [{"name", "path", "kind", "supported", "setup", "components": [{"project", "path", "name", "props": [{"name", "kind", "type", "default", "required", "literals"}], "error", "examples": [{"name", "props", "theme", "width"}], "examples\_path"}]}]}, setup only when the sub-project names one, and type, default, literals, error, theme, and width only when they have a value. examples\_path is the component's examples file, design/components/&lt;sub-project&gt;/&lt;its path, .svelte made .examples.json&gt;, whether or not it exists, and examples is [] when it does not. A file that does not fit the format gives the examples that parsed, and flai check reports what does not fit; one that cannot be read fails list.
 
 Examples:
 
@@ -1555,10 +1555,10 @@ Subcommands:
 Save a text file that is not markdown from standard input: conflict check, flai check, commit.
 
 ```text
-flai file save <path> --hash <sha256> [flags]
+flai file save <path> [--hash <sha256>] [flags]
 ```
 
-Reads the new content on standard input and saves it as it is. --hash is the hash flai file show gave for the content the editor loaded; when the file no longer has it the save fails as a conflict (exit 3) with the current content, its hash, and a diff. Content flai will not save is refused (exit 4) and the file is left as it was: binary content, content over 1048576 bytes (1 MiB), a token file flai cannot render as a stylesheet, and content the check has a new finding with. A saved file is committed on its own, as docs, unless --no-commit is given or the project sets dashboard.autocommit: false. Nothing is pushed.
+Reads the new content on standard input and saves it as it is. --hash is the hash flai file show gave for the content the editor loaded; when the file no longer has it the save fails as a conflict (exit 3) with the current content, its hash, and a diff. Without --hash, the save creates a file that is absent, with its folders, and removes them again when the check refuses it; without --hash on a file that exists, the save fails as a conflict (ADR-0164). Content flai will not save is refused (exit 4) and the file is left as it was: binary content, content over 1048576 bytes (1 MiB), a token file flai cannot render as a stylesheet, and content the check has a new finding with. A saved file is committed on its own, as docs, unless --no-commit is given or the project sets dashboard.autocommit: false. Nothing is pushed.
 
 Reaches what flai file show reaches and refuses what it refuses, with exit status 1 and the reason.
 

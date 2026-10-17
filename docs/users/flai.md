@@ -1247,6 +1247,7 @@ flai file show design/system/design-system.tokens.json --json   # content and it
 flai file show web/src/theme.css > theme.css                     # the content to stdout, the path and hash to stderr
 flai file save design/system/design-system.tokens.json --hash "$h" --message "darker primary" < tokens.json
 flai file save design/system/palette.json --story S-0042 --hash "$h" < palette.json   # committed on story/S-0042
+flai file save design/components/web/src/lib/Card.examples.json < card.json   # no --hash: create a file that is absent
 ```
 
 `flai file` does for a text file that is not markdown what `flai doc` does for a document ([Edit a document through flai](#edit-a-document-through-flai)). The dashboard saves the design token file this way ([ADR-0147](../../design/adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)).
@@ -1255,10 +1256,10 @@ flai file save design/system/palette.json --story S-0042 --hash "$h" < palette.j
 |-|-|
 | Reaches | A file under the design or docs folder, and the design token file and design stylesheet the manifest names, wherever they are ([Settings](../operators/settings.md)) |
 | Refuses, exit code 1 | Any other path, a path under the wip folder, a markdown file (use `flai doc show` and `flai doc save`), a binary file (a NUL byte in its first 8 KB), and a file over 1 MiB |
-| Conflict, exit code 3 | The file changed since `show` gave you its hash; the diff is printed, and `--json` gives the current content and its hash |
+| Conflict, exit code 3 | The file changed since `show` gave you its hash, or you gave no `--hash` and the file exists; the diff is printed, and `--json` gives the current content and its hash |
 | Refused, exit code 4 | Binary content, content over 1 MiB, a token file flai cannot turn into a stylesheet, or content the check finds anything new in; the file is left as it was |
 
-`show` prints the content as it is on standard output, and the path and its hash on standard error, so you can redirect the content to a file, edit it, and save it. `--json` gives `{path, content, hash}`. `save` reads the new content on standard input and saves it as it is, with the hash `show` gave. It runs the check before and after writing, and commits the file on its own as `docs:`, as `flai doc save` does: `--message` sets the subject, `--trailer` adds lines, and `--no-commit` or `dashboard.autocommit: false` skips the commit. Nothing is pushed. `--story S-nnnn` reads and saves in that story's worktree and commits on its branch, with the same refusals as `flai doc`.
+`show` prints the content as it is on standard output, and the path and its hash on standard error, so you can redirect the content to a file, edit it, and save it. `--json` gives `{path, content, hash}`. `save` reads the new content on standard input and saves it as it is, with the hash `show` gave. Without `--hash`, `save` creates a file that is not there yet, with any folders it needs; if the check refuses it, the file and those folders are removed again. This is how the dashboard saves a component's first example ([Component examples](#component-examples)). It runs the check before and after writing, and commits the file on its own as `docs:`, as `flai doc save` does: `--message` sets the subject, `--trailer` adds lines, and `--no-commit` or `dashboard.autocommit: false` skips the commit. Nothing is pushed. `--story S-nnnn` reads and saves in that story's worktree and commits on its branch, with the same refusals as `flai doc`.
 
 A save of the design token file, when the manifest names a design stylesheet, writes the stylesheet from the new tokens too ([The generated stylesheet](#the-generated-stylesheet)). The check runs with both in place, a finding puts both back, and both are committed in one commit ([ADR-0150](../../design/adrs/0150-a-token-save-from-the-design-page-lands-on-main-and-flai-writes-the-stylesheet.md)). `--json` names the stylesheet in `stylesheet`.
 
@@ -1340,13 +1341,13 @@ flai components list --json                # the same as JSON
 
 ```text
 flaiover (flaiover, sveltekit): 63 components
-  src/lib/components/Chart.svelte
+  src/lib/components/Chart.svelte (2 examples)
     option  object   Record<string, unknown>  required
     theme   unknown  Theme                    required
     height  number   number                   = 360
 ```
 
-The first line names the sub-project, its path, its kind, its setup module when it has one, and how many components it has. Under each component's path is a line per prop:
+The first line names the sub-project, its path, its kind, its setup module when it has one, and how many components it has. A component's path is followed by how many examples it has, when it has any ([Component examples](#component-examples)). Under each component's path is a line per prop:
 
 | Column | What it holds |
 |--------|---------------|
@@ -1358,7 +1359,7 @@ The first line names the sub-project, its path, its kind, its setup module when 
 
 A component with no props says `no props`. A component flai cannot read, such as one that does not parse, is listed with `error:` and the reason; the rest are listed as usual. A sub-project of any other kind is listed as `flai (flai): unsupported kind go`.
 
-`--json` gives `{"projects": [...]}`: each sub-project's `name`, `path`, `kind`, `supported`, `setup`, and `components`, and each component's `project`, `path`, `name`, `props`, and `error`. `--project` with a name the manifest does not have exits 1 and names the sub-projects it does have.
+`--json` gives `{"projects": [...]}`: each sub-project's `name`, `path`, `kind`, `supported`, `setup`, and `components`, and each component's `project`, `path`, `name`, `props`, `error`, `examples`, and `examples_path`. `examples` is `[]` when the component has none; `examples_path` is where its examples file is, or would be. `--project` with a name the manifest does not have exits 1 and names the sub-projects it does have.
 
 flai reads props with each Svelte sub-project's own `svelte/compiler` and never runs a component. So it needs `node` on `PATH` and Svelte 5 or later installed in the sub-project. When either is missing, the whole command exits 1 and says what to install: Node.js, or the sub-project's dependencies with `npm install` or its package manager's install. A sub-project of another kind needs neither.
 
@@ -1384,6 +1385,34 @@ set sub-project ui's components
 ```
 
 flai checks the manifest as it would be after the change, as `flai check` does. It refuses a glob that does not parse, a setup that names no file in the sub-project, and the key on a sub-project that is not `sveltekit` or `svelte`, each with its field and the reason. It also refuses an unknown sub-project and a call with no flag. Nothing is written, and the exit status is 1. With `--json` a refusal is `{"refused": [{"field": ..., "reason": ...}]}`, and a change `{"project": ..., "components": ...}`, with `components` null after `--unset`. `flai check` reports the same problems in a key you edit by hand as `manifest.components` errors.
+
+### Component examples
+
+An example is a named set of a component's props, so a component that renders only with data can be shown without typing its props each time ([ADR-0164](../../design/adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md)). A component's examples are one JSON file under `design/components/`: the sub-project's `name`, then the component's path with `.svelte` replaced by `.examples.json`. So the examples of `src/lib/components/Card.svelte` in the sub-project `flaiover` are `design/components/flaiover/src/lib/components/Card.examples.json`. [design/components/README.md](../../design/components/README.md) describes the folder, and [component-library.md § The file](../../design/system/component-library.md#the-file) the format.
+
+```json
+{
+  "examples": [
+    { "name": "A long title", "props": { "title": "Quarterly report for the north region" }, "theme": "dark", "width": 375 }
+  ]
+}
+```
+
+The dashboard's Components page lists them, loads one into its props panel, and saves new ones ([flaiover.md § Examples](flaiover.md#examples)). You can also write the file by hand. When you rename, move, or remove a component, or change its props, change its examples in the same story.
+
+`flai check` warns `components.examples`, which fails `--strict`, at the line of the problem:
+
+- a file that is not JSON, or does not fit the format: a key it does not know, an empty or repeated `name`, `props` that is not an object, a `theme` that is not `light` or `dark`, a `width` that is not a whole number of 1 or more;
+- an example that names a prop the component does not have, leaves out a required prop, or gives a value that does not fit the prop's kind;
+- a file whose component does not exist, at line 1: move it with its component, or remove it.
+
+For the example above with `titel` written for `title`:
+
+```text
+design/components/flaiover/src/lib/components/Card.examples.json:3: warning: components.examples: example "A long title": prop "titel" is not one its component takes; it takes title, open
+```
+
+To check props, flai reads them with `node`, as `flai components list` does. Without `node` on `PATH`, or with no `sveltekit` or `svelte` sub-project in the manifest, `flai check` gives one note saying what it did not check, and `--strict` passes over it. A project without examples files is not checked at all.
 
 ## Render a component live
 
@@ -1434,9 +1463,9 @@ flai check --strict --story S-0249                   # findings outside S-0249 a
 flai check --strict --story S-0249 --record-issues   # and each rule's are recorded in an issue
 ```
 
-Every finding is one line, `path:line: level: rule: message`, so editors and CI annotate it. Rules cover the manifest and layout, every work item in `kanban/` and `archive/` (front matter, IDs and file names, parents and children, state history, acceptance criteria, required sections), narratives and their index, the board's WIP limits and pull order, front matter on `design/` and `docs/` files including ADR numbering, and the design token file ([Keep a design system](#keep-a-design-system)). `README.md` files are exempt from front matter.
+Every finding is one line, `path:line: level: rule: message`, so editors and CI annotate it. Rules cover the manifest and layout, every work item in `kanban/` and `archive/` (front matter, IDs and file names, parents and children, state history, acceptance criteria, required sections), narratives and their index, the board's WIP limits and pull order, front matter on `design/` and `docs/` files including ADR numbering, the design token file ([Keep a design system](#keep-a-design-system)), and component examples ([Component examples](#component-examples)). `README.md` files are exempt from front matter.
 
-`--strict` fails on every warning but three. One is `board.wip-limit` for review over its limit: only you clear it, by accepting or sending back a story (S-0243, [ADR-0073](../../design/adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)). Another is `epic.lags-stories`, an open epic that its stories put further on than its status, because it was moved before S-0200 or moved back by hand: the message names the `flai move`s that catch it up, or `flai accept E-nnnn` when its stories are all done, and only you move an epic ([ADR-0076](../../design/adrs/0076-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)). Neither must stop an agent's close-out of another story. The third is `narrative.state`, a story in progress or in review whose narrative's `## Current state` or `## Next steps` is not written (see [Agent narratives](#agent-narratives)): a narrative is unwritten from `flai stream open` until its agent first writes it, and `flai verify` stops the story before review. All three are still printed, the summary line ends `(N that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes)`, and `--json` counts them in `advisory` as well as `warnings`. Ready or in-progress over its limit still fails `--strict`.
+`--strict` fails on every warning but four. One is `board.wip-limit` for review over its limit: only you clear it, by accepting or sending back a story (S-0243, [ADR-0073](../../design/adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)). Another is `epic.lags-stories`, an open epic that its stories put further on than its status, because it was moved before S-0200 or moved back by hand: the message names the `flai move`s that catch it up, or `flai accept E-nnnn` when its stories are all done, and only you move an epic ([ADR-0076](../../design/adrs/0076-an-epic-follows-its-stories-to-ready-and-in-progress-with-the-first-to-review.md)). Neither must stop an agent's close-out of another story. The third is `narrative.state`, a story in progress or in review whose narrative's `## Current state` or `## Next steps` is not written (see [Agent narratives](#agent-narratives)): a narrative is unwritten from `flai stream open` until its agent first writes it, and `flai verify` stops the story before review. The fourth is the note `components.examples` gives when it cannot check examples, with no `node` or no Svelte sub-project ([Component examples](#component-examples)). All four are still printed, the summary line ends `(N that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node or a Svelte sub-project)`, and `--json` counts them in `advisory` as well as `warnings`. Ready or in-progress over its limit still fails `--strict`.
 
 `--story S-nnnn` scopes the run to one story, as a story's close-out does (S-0249, [ADR-0085](../../design/adrs/0085-a-close-out-s-flai-check-reports-findings-outside-the-story-as-notes-and.md)). A finding is inside the story when it is on the story's or one of its tasks' files, its narrative, a thread anchored on the story or one of its tasks, a conversation the story is one of the two of, a path its branch changes against the main branch, or a path uncommitted in its worktree. Every other finding is outside it: another story's unmerged branch, a markdown finding in a thread, or an error on the main branch no longer stops the close-out of a story that did not cause it. A `wip.overlap` between the story and another story in progress is outside it too, since the pull hold and the other story's agent clear it, and one between two other stories is left out ([ADR-0115](../../design/adrs/0115-a-close-out-records-no-wip-overlap-and-notes-only-an-overlap-naming-its-story.md)). An `item.archive`, a done or cancelled item that waits to be archived, is left out when it is outside the story: it never names a story in progress, and only `flai archive` in the main checkout clears it, where `flai check` without `--story` still warns on it ([ADR-0122](../../design/adrs/0122-a-close-out-records-no-item-archive-and-a-check-scoped-to-a-story-leaves-out.md)). So is a `board.wip-limit`, a column of the board over its limit: the board counts the main checkout's stories, which no story branch changes, and only your acceptances, cancellations, or a raised limit clear it, while `flai check` without `--story` still reports it and `--strict` still fails on ready or in-progress over its limit (S-0348, [ADR-0133](../../design/adrs/0133-a-close-out-records-no-board-wip-limit-and-a-check-scoped-to-a-story-leaves-out.md)). So is an `issues.no-story`, an open issue no open story links, outside the story: it names that issue, not the story, and only your choice of a story for it clears it, on a story's review page when you accept or with `flai issue story`. One on an issue file the story changes stays inside, and `flai check` without `--story` still warns on every one (S-0365, [ADR-0136](../../design/adrs/0136-a-close-out-records-no-issues-no-story-and-a-check-scoped-to-a-story-leaves-out.md)). So is a `threads.archived`, an open or answered thread on an archived item, outside the story: it names that thread, not the story, and only you or the thread's opener clear it, with `flai thread resolve` in the main checkout. One on a thread anchored on the story or one of its tasks stays inside, and `flai check` without `--story` still warns on every one (S-0366, [ADR-0137](../../design/adrs/0137-a-close-out-records-no-threads-archived-and-a-check-scoped-to-a-story-leaves.md)). A markdown finding on the narrative of another story that is neither done nor cancelled is left out too: that story's agent edits its narrative by hand, and that story's own close-out checks the narrative and stops on the finding ([ADR-0123](../../design/adrs/0123-a-close-out-records-no-markdown-finding-on-another-open-story-s-narrative-and-a.md)). So is a `narrative.state` finding there, a `## Current state` or `## Next steps` that story's agent has not yet written: only it can write them, and its own close-out stops on them ([ADR-0125](../../design/adrs/0125-a-close-out-records-no-narrative-state-finding-on-another-open-story-s.md)). A markdown finding on any other file outside the story, such as a thread, a task, or the narrative of a done or cancelled story, stays outside. A finding outside keeps its level and is printed with `(outside S-nnnn)`, but neither an error nor `--strict` fails on it. The summary line counts them, and `--json` marks each `outside` and counts them in `outside`.
 

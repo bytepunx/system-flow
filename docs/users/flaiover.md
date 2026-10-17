@@ -623,6 +623,22 @@ What the page can say:
 | No sub-project is Svelte, so there is nothing to frame | The manifest has no sub-project of kind `sveltekit` or `svelte` |
 | Could not read the components | The host did not answer. What was shown stays until the next ask |
 
+### Examples
+
+An example is a named set of a component's props, kept in the repository, so a component that needs data renders without typing its props each time. Each component's examples are one file under `design/components/` ([Component examples](flai.md#component-examples) in flai.md).
+
+**The list.** Above the props panel, **Examples** lists the picked component's examples by name, in its file's order. A component without any says "No examples yet." Click an example to load it: its props replace the panel's, and the frame shows the theme and the width it was saved with, when it was saved with one. The address keeps the props, as for any change. The example you loaded is marked.
+
+**Save as example** keeps the panel's props as an example. Give it a name and click **Save**. It starts from the name of the example you loaded; a name the component already has says "Saving replaces the example of this name.", and the save replaces that example where it is, while a new name goes last. The example keeps the theme when the page shows **Light** or **Dark**, not **Both**, and the width when you picked one, not **Fill**. A function prop is never kept. The form says where the example goes: on main, or on the story's branch when **Source** names a story ([A story's components](#a-storys-components)). The save is committed there. A component's first example creates its file.
+
+| The page says | What it means |
+|---------------|---------------|
+| Saved the example "`<name>`" | It is saved and committed, and listed |
+| An error with findings | flai refused the save, such as for an example whose props do not fit the component. Your name and the panel's props stay; fix them and save again |
+| The file changed while it was saved | Someone saved the file meanwhile. Save again to add yours to it as it is now |
+
+With a flai on the host older than examples, the page lists none and offers no **Save as example**: upgrade flai on the host with `flai self-upgrade`.
+
 ### Tried and saved tokens
 
 The frames show the design tokens you change on the Design page ([Changing tokens](#changing-tokens)): first as you try them, then once you save them.

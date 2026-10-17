@@ -9,7 +9,7 @@ topics: [components, design, dashboard, cli]
 
 The design of E-0026. The dashboard gets a Components page where the operator sees every component of their system, changes its props, and watches it follow changes to the design system and the source, live, without an IDE, a rebuild, or a redeploy. It takes up what [design-system-tool.md § The project's own components](design-system-tool.md#the-projects-own-components) left out of E-0020: rendering a project's components needs its own compiler and build, which only the host has.
 
-The shape was settled on TH-0483. Each section names the story that builds it. The catalogue (S-0437), the dev server (S-0438), the Components page (S-0439), and its controls for props (S-0440) are built. The sections after them say what is decided and is to be built, and each story brings its section up to date as it lands.
+The shape was settled on TH-0483. Each section names the story that builds it. The catalogue (S-0437), the dev server (S-0438), the Components page (S-0439), its controls for props (S-0440), live tokens (S-0441), a story's worktree (S-0442), and examples (S-0443) are built. The sections after them say what is decided and is to be built, and each story brings its section up to date as it lands.
 
 ## How it fits together
 
@@ -85,7 +85,7 @@ A component the compiler cannot parse is listed with its error. A missing `node`
 
 ### Commands
 
-- `flai components list [--project <name>] [--json]` prints the catalogue: each component's sub-project, path, and name, and its props.
+- `flai components list [--project <name>] [--json]` prints the catalogue: each component's sub-project, path, and name, its props, and since S-0443 its examples ([In the catalogue](#in-the-catalogue)).
 - `flai components config <sub-project> [--include] [--exclude] [--setup] [--unset]` writes the manifest key, keeping the manifest's other keys, order, and comments, and refuses a value the check reports. `flai manifest set` does not reach this key.
 
 [flai-cli.md](flai-cli.md) describes both commands.
@@ -205,7 +205,7 @@ The Components page renders a story's worktree, so the operator sees a component
 
 ## Examples (S-0443)
 
-A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check. An example is a named set of props, for a component that renders only with data. The page lists them, loads one into the props panel, and saves a new one on main or on the story it shows. [ADR-0164](../adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md) records the decision, on TH-0483's answer 4.
+A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check. An example is a named set of props, for a component that renders only with data. The page lists them, loads one into the props panel, and saves a new one on main or on the story it shows. [ADR-0164](../adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md) records the decision, on TH-0483's answer 4, and [design/components/README.md](../components/README.md) says what the folder holds. `internal/components` (`examples.go`) finds, parses, and validates the files.
 
 ### The file
 
@@ -235,9 +235,26 @@ The file is JSON, an exception to "Everything is markdown" as the token file is 
 
 The page writes the file with two-space indentation and a final newline. It writes `theme` when it shows one theme, not both, and `width` when a width is picked, not the panel's own.
 
+### In the catalogue
+
+`components.list` and `flai components list --json` give each component of a supported sub-project two more fields:
+
+| Field | Holds |
+|-------|-------|
+| `examples` | Its file's examples, in the file's order; `[]` when it has no file |
+| `examples_path` | Its file's path in the repository, given whether or not the file exists, so the page knows where a first example goes |
+
+A file that does not fit the format gives the examples that parsed, with `props` `{}` where they are not an object; `flai check` reports what does not fit. A file that cannot be read fails the list. The text output adds `(N examples)` after a component that has any. Reading examples needs no `node`.
+
 ### Saving one
 
 The page saves through `file.save`, on main or on the story its source names. `design/components/` is under the design folder, so [ADR-0147](../adrs/0147-the-dashboard-reads-and-saves-a-text-file-that-is-not-markdown-through-file-get.md)'s reach is unchanged. A component's first example creates its file: a save with an empty hash creates a file that is absent, with its folders, and an empty hash on a file that exists is refused as a conflict, with its current content and hash. The check runs before and after as for any save, so an example that does not fit its component is refused with the finding; a refused create leaves no file and no folder behind.
+
+### On the page
+
+The Components page lists the picked component's examples above the props panel. Choosing one loads its props into the panel, and its theme and width when it gives them; the URL follows, as for any change of props. **Save as example** asks for a name, starting from the example last chosen, says when the name is one the file has, and saves the panel's props as that example, with the theme and width as [The file](#the-file) says. An example of the same name is replaced in its place; a new one goes last. The save goes on main, or on the story the source picker names ([Sources](#sources)). A conflict or a refusal is shown with flai's words and its findings, and the name and the panel's values are kept. **Save as example** is offered only when the catalogue gives `examples_path`.
+
+The page saves through `PUT /api/components/examples`. The route finds the file by `examples_path` in `components.list` for the source. When the catalogue gives the component examples, it reads the file and its hash with `file.get` and saves with that hash. When it gives none, it creates the file with an empty hash; if the file exists after all, flai's conflict gives its content and hash, and the route adds the example to that and saves once more. [flaiover-dashboard.md § API](flaiover-dashboard.md#api-s-0011) gives its answers.
 
 ### The check
 
@@ -263,7 +280,7 @@ Each finding names the example and its line: the prop's key for a finding about 
 
 `null` fits every kind but `function`: flai leaves `null` out of a type when it reads its kind ([Props](#props)), so the kind cannot say whether `null` is allowed.
 
-The check reads only files ending in `.examples.json`, and runs the props reader only for the components that have one. A project without such a file gets no finding. A project that has one but no supported sub-project, or a host without `node`, is passed over with one note: a warning `flai check --strict` passes over, saying what was not checked and why.
+The check reads only files ending in `.examples.json`, and runs the props reader only for the components that have one. A project without such a file gets no finding. A project that has one but no supported sub-project, or a host without `node`, is passed over with one note: a warning `flai check --strict` passes over, saying what was not checked and why. Without `node`, the format and whether each file's component exists are still checked; only the props are not.
 
 ## flaiover's own components (S-0444)
 
