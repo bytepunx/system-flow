@@ -5,6 +5,7 @@ package check
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -19,6 +20,7 @@ import (
 	"github.com/goccy/go-yaml"
 
 	"github.com/bytepunx/system-flow/flai/internal/analysis"
+	"github.com/bytepunx/system-flow/flai/internal/components"
 	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
@@ -113,6 +115,7 @@ func Run(repo *workitem.Repo, now time.Time) (*Result, error) {
 	c.experiments()
 	c.analysis()
 	c.designTokens()
+	c.componentExamples()
 	c.threads()
 	c.messages()
 	c.markdown()
@@ -1399,6 +1402,151 @@ func (c *checker) markdown() {
 		}
 		return nil
 	})
+}
+
+// nodeRunner runs node for the components.examples check; tests replace it.
+var nodeRunner components.Runner = components.System{}
+
+// componentExamples reports components.examples (ADR-0164): each examples
+// file under the design folder's components folder that does not fit the
+// format, names a component that does not exist, or has examples that do not
+// fit the component's props, read with node once for each sub-project with
+// examples. Warnings, at the problem's line, or line 1 for a file without its
+// component or whose component's props could not be read. A project without
+// examples files is not checked. One with no sub-project whose components
+// flai reads, or a host without node, gets one note, which --strict passes
+// over; without node the format and the components are still checked.
+func (c *checker) componentExamples() {
+	folder := filepath.Join(c.repo.Root, filepath.FromSlash(components.ExamplesFolder(c.repo.Manifest)))
+	var files []string
+	_ = filepath.WalkDir(folder, func(p string, e fs.DirEntry, err error) error {
+		if err == nil && e.Type().IsRegular() && strings.HasSuffix(e.Name(), components.ExamplesSuffix) {
+			files = append(files, p)
+		}
+		return nil //nolint:nilerr // an absent folder has no examples, and an unreadable entry is skipped
+	})
+	if len(files) == 0 {
+		return
+	}
+	shown := components.ExamplesFolder(c.repo.Manifest)
+	projects := map[string]manifest.Project{}
+	for _, p := range c.repo.Manifest.Projects {
+		if manifest.SupportsComponents(p.Kind) {
+			projects[p.Name] = p
+		}
+	}
+	if len(projects) == 0 {
+		c.advise("components.examples", folder, 1, "the %d examples files under %s are not checked: system-flow.yaml names no sub-project of kind %s, whose components they are of; add the sub-project under projects with its kind, or remove the files", len(files), shown, strings.Join(manifest.ComponentKinds, " or "))
+		return
+	}
+	_, nodeErr := nodeRunner.LookPath("node")
+	// Each sub-project's components, found once, and the files of those with
+	// examples, in the order they were found.
+	found := map[string]map[string]components.Component{}
+	var withExamples []string
+	byProject := map[string][]exampleFile{}
+	for _, path := range files {
+		f, ok := c.exampleFile(path, folder, projects, found)
+		if !ok {
+			continue
+		}
+		if _, ok := byProject[f.project]; !ok {
+			withExamples = append(withExamples, f.project)
+		}
+		byProject[f.project] = append(byProject[f.project], f)
+	}
+	if nodeErr != nil {
+		c.advise("components.examples", folder, 1, "the props of the examples under %s are not checked against their components': flai reads a component's props with node, which is not on PATH; install Node.js (https://nodejs.org) to check them", shown)
+		return
+	}
+	for _, name := range withExamples {
+		c.exampleProps(projects[name], byProject[name])
+	}
+}
+
+// exampleFile is one examples file whose format was checked and whose
+// component exists.
+type exampleFile struct {
+	path     string
+	project  string
+	comp     components.Component
+	examples []components.Example
+}
+
+// exampleFile checks the examples file at path, under folder: its format,
+// then that its component is one of a sub-project of projects, found once
+// into found. False when its component does not exist or its sub-project's
+// components could not be found, each reported.
+func (c *checker) exampleFile(path, folder string, projects map[string]manifest.Project, found map[string]map[string]components.Component) (exampleFile, bool) {
+	const rule = "components.examples"
+	data, err := os.ReadFile(path)
+	if err != nil {
+		c.add(Warning, rule, path, 1, "cannot read the examples file: %v; check that it is a readable file", err)
+		return exampleFile{}, false
+	}
+	examples, problems := components.ParseExamples(data)
+	for _, p := range problems {
+		c.add(Warning, rule, path, p.Line, "%s", p)
+	}
+	rel, err := filepath.Rel(folder, path)
+	if err != nil {
+		return exampleFile{}, false
+	}
+	name, compPath, ok := components.ExamplesComponent(filepath.ToSlash(rel))
+	if !ok {
+		c.add(Warning, rule, path, 1, "the file is in no sub-project's folder, so it is no component's; move it to the folder of the sub-project's name, at the component's path with .svelte made %s", components.ExamplesSuffix)
+		return exampleFile{}, false
+	}
+	p, ok := projects[name]
+	if !ok {
+		c.add(Warning, rule, path, 1, "system-flow.yaml names no sub-project %q of kind %s, so the file's component %s does not exist; move the file to the folder of its sub-project's name, or remove it", name, strings.Join(manifest.ComponentKinds, " or "), compPath)
+		return exampleFile{}, false
+	}
+	comps, ok := found[name]
+	if !ok {
+		s, _ := p.ComponentSettings()
+		list, err := components.Find(c.repo.Root, p.Path, s.Include, s.Exclude)
+		if err != nil {
+			c.add(Warning, rule, path, 1, "its examples are not checked: %v", err)
+			return exampleFile{}, false
+		}
+		comps = make(map[string]components.Component, len(list))
+		for _, comp := range list {
+			comps[comp.Path] = comp
+		}
+		found[name] = comps
+	}
+	comp, ok := comps[compPath]
+	if !ok {
+		c.add(Warning, rule, path, 1, "sub-project %q has no component %s, so the file is no component's; move it with its component, or remove it", name, compPath)
+		return exampleFile{}, false
+	}
+	return exampleFile{path: path, project: name, comp: comp, examples: examples}, true
+}
+
+// exampleProps reads the props of files' components, all of project, with
+// node once, and reports each example that does not fit its component's;
+// a file whose component's props could not be read is reported once, with
+// the reader's error.
+func (c *checker) exampleProps(project manifest.Project, files []exampleFile) {
+	const rule = "components.examples"
+	comps := make([]components.Component, len(files))
+	for i, f := range files {
+		comps[i] = f.comp
+	}
+	read, err := components.ReadProps(context.Background(), nodeRunner, c.repo.Root, comps)
+	for i, f := range files {
+		switch {
+		case err != nil:
+			c.add(Warning, rule, f.path, 1, "its examples are not checked, since the props of %s in %s could not be read: %v", f.comp.Path, project.Name, err)
+		case read[i].Error != "":
+			c.add(Warning, rule, f.path, 1, "its examples are not checked, since the props of %s in %s could not be read: %s", f.comp.Path, project.Name, read[i].Error)
+		default:
+			for _, p := range components.Validate(f.examples, read[i].Props) {
+				c.add(Warning, rule, f.path, p.Line, "%s", p)
+			}
+		}
+	}
 }
 
 // conflictMarkers reports each line that opens or closes a merge conflict in
