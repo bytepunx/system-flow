@@ -1701,11 +1701,11 @@ Say what flai last did for a story's pull request, whether origin has its branch
 flai forge status S-nnnn
 ```
 
-Print, for one story under pull-request acceptance (ADR-0166), its pull request's number and URL as flai last opened or found it ("none yet" before that), and whether origin's story/S-nnnn matches the local branch, read now with git ls-remote origin from this host; when origin cannot be read, it says so and why. It prints what flai's last push or look did and when.
+Print, for one story under pull-request acceptance (ADR-0166), its pull request's number and URL as flai last opened or found it ("none yet" before that), and whether origin's story/S-nnnn matches the local branch, read now with git ls-remote origin from this host; when origin cannot be read, it says so and why. It prints what flai's last push or look did and when, and, once flai serve has read the pull request back (ADR-0167), the head commit and time of that read, each required check's name, state, log link, and summary, and each review's author, state, and link.
 
 When nothing was pushed, or the last push failed or no longer matches, it says why, the first of these that applies: acceptance.mode is local; the forge host action is off for this project on this host (flai forge push still pushes on your word); the token's variable is unset, as this shell sees it (flai serve reads the environment it started with); the last push failed, with its reason, when, and its thread; the story is not in review; or nothing stops flai serve, which pushes it at its next look. The token is never printed.
 
-It does not call the forge, so it works offline and costs no rate limit. The exit status is 0 whenever it can report. With --json the result is {"story", "status", "mode", "forge", "host\_action", "token\_env", "token\_set", "pull\_request", "url", "branch", "local\_head", "remote\_head", "remote\_error", "matches", "outcome", "reason", "at", "thread", "why"}, empty fields left out but for the booleans.
+It does not call the forge, so it works offline and costs no rate limit. The exit status is 0 whenever it can report. With --json the result is {"story", "status", "mode", "forge", "host\_action", "token\_env", "token\_set", "pull\_request", "url", "branch", "local\_head", "remote\_head", "remote\_error", "matches", "outcome", "reason", "at", "thread", "why", "pull\_request\_read"}, empty fields left out but for the booleans; "pull\_request\_read" is the pull request as flai serve last read it, as flai show --json gives it under "pull\_request": {"story", "pull\_request", "url", "head\_sha", "read\_at", "checks", "reviews", "sent\_back"}.
 
 Examples:
 
@@ -3708,6 +3708,8 @@ Print one work item with its children and history.
 A story with tasks also gets its task plan (S-0176): each task's state, ready to start, waiting with the tasks of its after it waits for, in progress, done, or cancelled; and the layers, the open and done tasks grouped by the longest chain of after steps before each, so that the tasks of a layer can run at once when those of the layers before it are done. A task on a cycle of after, or waiting on one, is in no layer. --json gives the plan as plan, beside item and children.
 
 An item with a forecast duration, or else an estimate, gets its expected cost: that duration priced at the project's cost per agent hour, an estimate, absent while no story has been measured from its logs (ADR-0083). --json gives it as expected\_cost. What strategic agents such as the planner spent on the item is printed per kind, apart from what its agents spent.
+
+A story under pull-request acceptance that flai serve has read the pull request of gets a pull request section (ADR-0167): its number, URL, head commit, and when it was read, then each required check's name, state, log link, and summary, and each review's author, state, and link, as flai serve last read them. It is read from .flai-cache, never from the forge; a kept state that cannot be read is warned of and left out. --json gives it as pull\_request: {"story", "pull\_request", "url", "head\_sha", "read\_at", "checks", "reviews", "sent\_back"}.
 
 ### flai stats
 

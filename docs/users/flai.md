@@ -1081,7 +1081,7 @@ Started in a folder that is not itself a project, such as `~/git`, `flai mcp` se
 | `board` | The board as `flai board --json` prints it, a held ready story with `held` and why, a story with tasks with their counts in `tasks`; `all` adds epics and tasks |
 | `thread_get`, `thread_open`, `thread_reply`, `thread_resolve` | Read, start, answer, and close threads as the agent (`FLAI_AGENT`) |
 | `message_send`, `message_reply`, `message_get`, `message_escalate`, `message_share` | Start a conversation with another open story's agent (`to`, `text`, `about`), answer one (`id`, `text`, and `settled` for a reply that asks nothing, S-0372), read one (`id`), and ask the operator on a thread when the two do not agree (`id`, `reason`, S-0332, [ADR-0121](../../design/adrs/0121-flai-tells-two-stories-of-a-trial-merge-conflict-or-a-grown-overlap-with-a.md)), as `flai message send`, `reply`, `show`, and `escalate` do; `message_share` shares paths with a ready story your story holds (`id`, `paths`, `split`, S-0334, [ADR-0134](../../design/adrs/0134-flai-serve-asks-the-agent-of-a-story-in-progress-about-each-ready-story-it.md)), as `flai message share` does; `message_escalate` answers `thread` and `conversation`, and the others answer the conversation as `flai message show --json` prints it (S-0331, [ADR-0120](../../design/adrs/0120-agents-of-two-open-stories-message-each-other-in-conversations-kept-under-wip.md)). Send, reply, escalate, and share write as the session's own story, `FLAI_STORY`, else the story in an `agent-S-nnnn` name, else the story branch checked out; no argument names another, and a session with none is refused with nothing written. `message_get` needs no story. `flai guard` refuses a sub-agent `message_send`, `message_reply`, `message_escalate`, and `message_share` ([Messages between stories](#messages-between-stories)) |
-| `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file, and its `draft`, `cost_of_delay`, and `forecast` with the `currency`; transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours. So is moving a draft to ready: finalizing is yours |
+| `item_get`, `item_move` | Read an item with its children, a story's agent and the project's default, a story's task `plan` when it has tasks (see [Planning a story's tasks](#planning-a-storys-tasks)), and the hash of its file, and its `draft`, `cost_of_delay`, and `forecast` with the `currency`, and a story's `pull_request` once `flai serve` has read it (see [Checks, reviews, and the send back](#checks-reviews-and-the-send-back)); transition it with the workflow rules. Moving a story or epic to done is refused: acceptance is yours. So is moving a draft to ready: finalizing is yours |
 | `item_new`, `item_edit` | Create an epic, a story (with an `agent` over the project's default), or a task; change an item's own words, as `flai edit` does: `agent` replaces a story's agent whole and `clear_agent` removes it, `after` sets what an item waits for, a story's stories or a task's tasks of the same story (a creation that sets it, or that gives a `body`, is checked as `flai story new --body-stdin` is: a finding the item introduces, such as a missing section or a markdown lint rule, refuses it and leaves nothing), on an edit replacing them, and an empty list removes them, and the `hash` from `item_get` refuses a change made meanwhile. `draft` makes a story a draft, and `draft: false` is refused. `cost_of_delay` and `forecast` set the keys given; `clear_cost_of_delay` and `clear_forecast` remove them, and to remove one amount the agent clears the cost of delay and gives the keys to keep. Neither commits: the agent commits with its work |
 | `criteria_tick` | Tick and untick a story's acceptance criteria by number, `tick` and `untick` naming them as `flai criteria list` does, with the `hash` from `item_get`; returns the criteria after. Nothing is committed. Sub-agents, the planner, and the orchestrator are refused it ([Ticking acceptance criteria](#ticking-acceptance-criteria)) |
 | `stream_state` | Write a story's narrative's `## Current state` and `## Next steps`, as `flai stream state` does: `story`, with `current`, `next`, or both; an empty one leaves its section as it is. Nothing else in the narrative changes, and nothing is logged or committed. Returns `story`, `path`, `written`, `updated`, and `changed`. A story not in progress or in review, one with no narrative, and text the markdown lint rejects are tool errors ([Agent narratives](#agent-narratives)) |
@@ -2230,7 +2230,7 @@ flai forge push S-0042                                 # push it and open or upd
 
 A project chooses in `system-flow.yaml` how a story in review is accepted ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)): `acceptance.mode` is `local`, the default, which merges on this machine as above, or `pull-request`, which accepts through a pull request on the project's forge. `acceptance.forge` is the forge, `github`, the default and only one. `acceptance.merge_method` is how the forge merges the pull request: `merge`, the default, `squash`, or `rebase`.
 
-Under `pull-request`, a story's move to review has `flai serve` push its branch and open its pull request, as below. Nothing merges one yet: `flai accept` still merges on this machine whatever the mode. Later releases read the pull request's checks and reviews, gate acceptance on them, and merge it by `merge_method`.
+Under `pull-request`, a story's move to review has `flai serve` push its branch and open its pull request, then read its required checks and reviews back and send the story back to its agent when one fails, as below. Nothing merges one yet: `flai accept` still merges on this machine whatever the mode. Later releases gate acceptance on the checks and reviews, and merge the pull request by `merge_method`.
 
 A value the manifest does not take, such as `pull_request`, stops every command that reads the manifest, naming the key and the values it takes, rather than falling back to `local`. Fix it or remove it by hand. `flai manifest set` refuses such a value before writing it.
 
@@ -2257,7 +2257,37 @@ Under `acceptance.mode: pull-request`, with the `forge` host action on for the p
 - **Failures.** A push or a request that fails, such as an unset token, a refused push, or the forge being down, opens one thread on the story. It names the reason and what clears it. `flai serve` tries again at its next look and resolves the thread once the push and the request succeed.
 - **No agent holds the token.** Every agent `flai serve` starts runs without the token's variable, and `flai guard` refuses `flai forge push` to every agent.
 
-`flai serve checks` names commands the host runs on a story in review. They are not the forge's checks.
+`flai serve checks` names commands the host runs on a story in review. They are not the forge's checks, which flai reads back as below.
+
+#### Checks, reviews, and the send back
+
+```bash
+flai show S-0042            # the story, with its pull request's checks and reviews as flai serve last read them
+flai show S-0042 --json     # the same under pull_request
+flai forge status S-0042    # the same lines under the pull request's
+```
+
+Once `flai serve` has pushed a story in review, the same look reads its pull request back ([ADR-0167](../../design/adrs/0167-flai-serve-reads-each-pull-request-s-required-checks-and-reviews-into-kept.md)): the head commit, the required checks on it, and the reviews. Checks that the base branch's rules do not require are left out. flai keeps the latest read in `.flai-cache/forge/status/S-0042.json` in the main checkout, with an entry for each change and when it was seen. Commands and the dashboard read that file and never the forge, so an agent sees the same without the token, and reading costs no rate limit. What they show is as fresh as the last look: at most a minute old while `forge` is on.
+
+`flai show S-0042` prints the pull request after the story's history and blocks:
+
+```text
+  pull request: #12 https://github.com/acme/shop/pull/12 at 3f2a9c1d0b7e, read 2026-10-17T09:41:00Z
+    check ci: failed https://github.com/acme/shop/actions/runs/1/job/2 (2 tests failed)
+    check lint: passed https://github.com/acme/shop/actions/runs/1/job/3
+    review alex: changes-requested https://github.com/acme/shop/pull/12#pullrequestreview-9
+```
+
+A check's state is `pending`, `passed`, or `failed`, then its log and its summary when the forge gives them. A review's state is `approved`, `changes-requested`, `commented`, `dismissed`, or `pending`, then its link. `--json` and the MCP `item_get` give it as `pull_request`: `{story, pull_request, url, head_sha, read_at, checks, reviews, sent_back}`. A kept file flai cannot read is warned of and left out, and the story still shows; `item_get` says why in `pull_request_error`.
+
+When a required check fails, or a reviewer requests changes, flai sends the story back to its agent:
+
+1. `flai serve` opens one thread on the story, titled such as `Pull request #12 of S-0042: the required check ci failed` or `Pull request #12 of S-0042: alex requested changes`. It names the check and links its log, or names the reviewer and links the review. It quotes the check's summary or the review's comment, up to 500 characters.
+2. flai moves the story from review to in-progress, by `flai`, with a reason naming the same, such as `the required check ci failed on 3f2a9c1d0b7e of pull request #12`.
+3. With the `agent` host action on, `flai serve` starts the story's agent again: in its last session when it has one, told the thread, or else in a new session told to take the story up. Its inbox lists the thread. This spends none of `agent.auto_restarts`, and the story keeps its place under the in-progress limit. A story whose agent `flai serve` did not start, such as your own session's, gets no agent started beside it; that session's inbox lists the thread.
+4. The agent fixes the branch, closes out, and moves the story to review again. `flai serve` pushes the fix at its next look. It resolves the thread once the story is back in review at a new commit, or once the story is done or cancelled.
+
+A pending check does nothing, and the story waits in review. Each failure sends the story back once. A check is sent back once per commit, so the same check failing on the fix's commit sends it back again. A review is sent back once, across the fix's commits, until the reviewer reviews again. A reviewer's decision is their latest review that approves, requests changes, or was dismissed, so a comment after a request for changes leaves the request standing. A read that fails, such as the forge being down, opens no thread and leaves the kept state as it was; `flai serve` reads again at its next look.
 
 #### flai forge push and flai forge status
 
@@ -2279,11 +2309,12 @@ flai forge status S-0042 --json
 | `host action` | Whether `forge` is on for this project on this host |
 | `token` | The variable the token is read from, and whether it is set in this shell; never the token |
 | `pull request` | Its number and URL, or `none yet` |
+| `read at`, `check`, `review` | Under the pull request, once `flai serve` has read it back: the head commit and time of that read, then the check and review lines `flai show` prints ([above](#checks-reviews-and-the-send-back)) |
 | `branch` | Whether origin's `story/S-0042` matches the local head, read now with `git ls-remote origin`, or why origin could not be read |
 | `last look` | What the last push or look did, and when, or `none yet` |
 | `why` | When nothing was pushed, or the branch no longer matches: the first that applies of the mode is `local`, the host action is off, the token's variable is unset, the last push failed (with its reason, when, and its thread), the story is not in review, or nothing stops `flai serve`, which pushes it at its next look |
 
-It does not call the forge, so it works offline and costs no rate limit. It exits 0 whenever it can report. `flai serve` reads the environment it started with, so a variable set or unset in your shell since then can make `token` differ from what `flai serve` sees. `--json` gives `{story, status, mode, forge, host_action, token_env, token_set, pull_request, url, branch, local_head, remote_head, remote_error, matches, outcome, reason, at, thread, why}`, empty fields left out but for the booleans.
+It does not call the forge, so it works offline and costs no rate limit. It exits 0 whenever it can report. `flai serve` reads the environment it started with, so a variable set or unset in your shell since then can make `token` differ from what `flai serve` sees. `--json` gives `{story, status, mode, forge, host_action, token_env, token_set, pull_request, url, branch, local_head, remote_head, remote_error, matches, outcome, reason, at, thread, why, pull_request_read}`, empty fields left out but for the booleans. `pull_request` is the number; `pull_request_read` is what `flai show --json` gives as `pull_request`.
 
 flai keeps what it last did for each story in `.flai-cache/forge/S-0042.json` in the main checkout, which both commands write and `flai forge status` reads. It holds the head flai last pushed, which the next lease names, and never the token.
 

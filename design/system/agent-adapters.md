@@ -1,6 +1,6 @@
 ---
 title: Agent adapters for LiteLLM and OpenRouter
-updated: 2026-10-13
+updated: 2026-10-17
 status: active
 topics: [cli, template]
 ---
@@ -24,7 +24,7 @@ The adapter boundary is `flai/internal/harness/harness.go`:
 | Piece | What it is |
 |-------|------------|
 | `Adapter` | Two methods: `DefaultHost() Host`, the program and arguments when the operator set none, and `Start(req Request, host Host) (Start, error)`, which builds the command and refuses what the story says that the harness does not take. |
-| `Request` | What an agent is started for: `Story`, `Root`, `Project`, `Agent` (the `manifest.Agent`), `Name` (the `FLAI_AGENT` it works under), `Flai` (this executable, the agent's MCP server), `Role`, `Item`, `Focus`, `Session`, `Answered`, `Restart`, `AutoRestart`, `Commit`, `Started`, `Past`, `Begun`. |
+| `Request` | What an agent is started for: `Story`, `Root`, `Project`, `Agent` (the `manifest.Agent`), `Name` (the `FLAI_AGENT` it works under), `Flai` (this executable, the agent's MCP server), `Role`, `Item`, `Focus`, `Session`, `Answered`, `SentBack` (the thread and what failed when flai sent the story back from review, and whether the agent goes on in `Session`, S-0394), `Restart`, `AutoRestart`, `Commit`, `Started`, `Past`, `Begun`. |
 | `Host` | The operator's say on the host for one harness: `Program` and `Args`, set with `flai serve agent harness <name>` and the dashboard's `settings.harness` (`flai/internal/hostapi/settings.go`). |
 | `Start` | `Harness`, `Argv` (program first), `Env` added to `flai serve`'s own. Run as it stands, never through a shell. |
 | `Adapters` | A map of two: `ClaudeCode` (`"claude-code"`) and `Command` (`"command"`). `For` picks one by the story's `agent.harness`, falls back to `command` when the story names none and the operator set one, and refuses any other name with `flai cannot start harness %q; it can start claude-code, command`. |
@@ -41,7 +41,7 @@ The two adapters are in `flai/internal/harness/adapters.go`:
 | Config | Three keys, each checked against a pattern: `effort` (`low`, `medium`, `high`, `xhigh`, `max`) as `--effort`, `max_budget_usd` as `--max-budget-usd`, `fallback_model` as `--fallback-model`; any other key refuses the start | Not interpreted: `FLAI_AGENT_CONFIG`, a JSON object |
 | Roles | `--agents`: the project's `.claude/agents/explorer.md` and `verifier.md` read as JSON definitions with the role's model laid over them ([ADR-0065](../adrs/0065-a-story-s-agent-carries-a-model-per-sub-agent-role-and-claude-code-runs-each.md)); a role on another harness, or with config, refuses the start | `FLAI_AGENT_ROLES`, a JSON object |
 | MCP | `--mcp-config` with one server, `flai` on stdio, `<this flai> mcp --agent <name>`, and `--strict-mcp-config` so the project's `.mcp.json` and the operator's own servers are not loaded | Nothing: the command reaches flai however it likes |
-| Session | A random UUID `flai serve` makes (`newSession` in `flai/internal/serve/agents.go`, "the form Claude Code's sessions take"), passed as `--session-id` on a first start and as `--resume` when the agent is started again after its question was answered | Ignored; `FLAI_ANSWERED` carries the thread's ID instead |
+| Session | A random UUID `flai serve` makes (`newSession` in `flai/internal/serve/agents.go`, "the form Claude Code's sessions take"), passed as `--session-id` on a first start and as `--resume` when the agent is started again after its question was answered, or, since S-0394, after flai sent its story back from review on its pull request and its last run had a session ([ADR-0167](../adrs/0167-flai-serve-reads-each-pull-request-s-required-checks-and-reviews-into-kept.md)); a send back with no session to go on in starts a new one | Ignored; `FLAI_ANSWERED` carries the thread's ID instead. A send back sets nothing: the agent's inbox lists the thread |
 | Environment | `FLAI_ROLE`, and `FLAI_ITEM` for the planner; `flai serve` adds `FLAI_AGENT`, `FLAI_SESSION`, `FLAI_STORY`, and `FLAI_STARTED_BY=flai-serve` | The same, plus `FLAI_MODEL`, `FLAI_HARNESS`, `FLAI_AGENT_CONFIG`, `FLAI_AGENT_ROLES`, `FLAI_ANSWERED`, `FLAI_COMMIT`, `FLAI_FOCUS` |
 
 The manifest checks only shape (`flai/internal/manifest/agent.go`): a harness matches `^[a-z][a-z0-9._-]{0,63}$`, a model `^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,127}$`, and a config key is a lower-case word with a one-line value. Its error text names `claude-code` and `claude-opus-5-5` as examples, and the known roles are `explore` and `verify`. Whether a harness exists is decided only in `harness.For`, and only there is the list `claude-code, command`. No model name is validated anywhere: what the story writes goes to the harness as it stands.
