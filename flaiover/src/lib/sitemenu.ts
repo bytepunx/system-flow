@@ -35,7 +35,8 @@ export type PageKey =
 	| 'updates'
 	| 'settings'
 	| 'license'
-	| 'design';
+	| 'design'
+	| 'components';
 
 export const SITE_MENU: MenuGroup[] = [
 	{
@@ -86,7 +87,9 @@ export const SITE_MENU: MenuGroup[] = [
 		label: 'Design',
 		pages: [
 			// The project's design system: its tokens, its guidance, and a gallery they style (S-0382).
-			{ key: 'design', label: 'Design system', path: '/design' }
+			{ key: 'design', label: 'Design system', path: '/design' },
+			// Every component of the project, rendered live from its own dev server (S-0439).
+			{ key: 'components', label: 'Components', path: '/design/components' }
 		]
 	}
 ];
@@ -96,13 +99,22 @@ function under(pathname: string, path: string): boolean {
 	return pathname === path || pathname.startsWith(`${path}/`);
 }
 
-/** The group and page a path belongs to; either is null where the menu has none for it. */
+/**
+ * The group and page a path belongs to; either is null where the menu has none for it. Within a
+ * group the page with the longest path that answers wins, so a page below another's path, such as
+ * Components at /design/components below Design system at /design, is the one selected there.
+ */
 export function locate(
 	pathname: string,
 	menu: MenuGroup[] = SITE_MENU
 ): { group: GroupKey | null; page: PageKey | null } {
 	for (const g of menu) {
-		const page = g.pages.find((p) => under(pathname, p.path));
+		const page = g.pages
+			.filter((p) => under(pathname, p.path))
+			.reduce<MenuPage | undefined>(
+				(a, p) => (a && a.path.length >= p.path.length ? a : p),
+				undefined
+			);
 		if (page) return { group: g.key, page: page.key };
 		if (g.also?.some((a) => under(pathname, a))) return { group: g.key, page: null };
 	}

@@ -30,7 +30,8 @@
 		updates: resolve('/host'),
 		settings: resolve('/settings'),
 		license: resolve('/license'),
-		design: resolve('/design')
+		design: resolve('/design'),
+		components: resolve('/design/components')
 	};
 	const BADGE = { inbox: InboxBadge };
 

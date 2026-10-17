@@ -21,7 +21,7 @@ describe('the site menu (S-0172)', () => {
 			],
 			['Status', ['Charts', 'ADRs', 'Docs', 'Search']],
 			['Host', ['Updates', 'Settings', 'License']],
-			['Design', ['Design system']]
+			['Design', ['Design system', 'Components']]
 		]);
 	});
 
@@ -39,6 +39,13 @@ describe('the site menu (S-0172)', () => {
 		expect(locate('/settings')).toEqual({ group: 'host', page: 'settings' });
 		expect(locate('/license')).toEqual({ group: 'host', page: 'license' });
 		expect(locate('/design')).toEqual({ group: 'design', page: 'design' });
+	});
+
+	it('selects the longest page path that answers, Components below Design system (S-0439)', () => {
+		expect(locate('/design/components')).toEqual({ group: 'design', page: 'components' });
+		expect(locate('/design/components/Button')).toEqual({ group: 'design', page: 'components' });
+		expect(locate('/design/tokens')).toEqual({ group: 'design', page: 'design' });
+		expect(locate('/design/componentsx')).toEqual({ group: 'design', page: 'design' });
 	});
 
 	it('places a path only its group claims in the group, with no page', () => {
