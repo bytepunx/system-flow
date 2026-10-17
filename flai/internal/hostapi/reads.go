@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"slices"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
@@ -86,6 +88,28 @@ func idOnly(raw json.RawMessage) (string, *channel.Error) {
 	return in.ID, needID(in.ID)
 }
 
+// storyPullRequest is what forge.status answers: the story, and its pull
+// request as flai serve last read it, nil when it has read none.
+type storyPullRequest struct {
+	Story       string        `json:"story"`
+	PullRequest *forge.Status `json:"pull_request"`
+}
+
+// keptPullRequest is story's kept pull request status under cacheDir,
+// without its events, with paths in a failure given relative to root.
+func keptPullRequest(root, cacheDir, story string) (storyPullRequest, error) {
+	st, ok, err := forge.ReadStatus(cacheDir, story)
+	if err != nil {
+		return storyPullRequest{}, errors.New(inRepo(root, err))
+	}
+	out := storyPullRequest{Story: story}
+	if ok {
+		st.Events = nil
+		out.PullRequest = &st
+	}
+	return out, nil
+}
+
 func readMethods(now func() time.Time) map[string]channel.Method {
 	return map[string]channel.Method{
 		// item.show: what flai edit --show prints, an item's own words and
@@ -149,6 +173,27 @@ func readMethods(now func() time.Time) map[string]channel.Method {
 					return nil, err
 				}
 				return storygit.StoryDiff(r, repo, it.ID)
+			})
+		},
+
+		// forge.status: a story's pull request, its required checks and its
+		// reviews, as flai serve last read them from the forge (S-0394,
+		// ADR-0167). It reads only the kept state, never the forge, so it
+		// needs no host action.
+		"forge.status": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+			id, e := idOnly(raw)
+			if e == nil {
+				e = needStory(id)
+			}
+			if e != nil {
+				return nil, bad("%s; forge.status reads a story's pull request, so give a story's ID, such as S-0001", e.Message)
+			}
+			return answer(ctx, p, "forge.status", func(_ execx.Runner, repo *workitem.Repo, _ *slog.Logger) (any, error) {
+				it, err := repo.Get(id)
+				if err != nil {
+					return nil, err
+				}
+				return keptPullRequest(p.Root, repo.CacheDir(), it.ID)
 			})
 		},
 
