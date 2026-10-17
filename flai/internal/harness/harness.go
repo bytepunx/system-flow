@@ -57,6 +57,10 @@ type Request struct {
 	// the agent ended while it waited, and is started again to go on (S-0104,
 	// S-0335).
 	Answered string
+	// SentBack is what flai sent the story back from review to in-progress
+	// for, on its pull request, when flai serve started its agent for that
+	// (S-0394, ADR-0167); nil otherwise.
+	SentBack *SentBack
 	// Restart says how the story's last agent ended, when the operator has
 	// had a new one started for it (S-0116); empty when it entered ready.
 	Restart string
@@ -89,6 +93,23 @@ type Request struct {
 	// its own default.
 	ProviderName string
 	Provider     *manifest.Provider
+}
+
+// SentBack is a send back of a story from review to in-progress, which flai
+// makes on a failing required check or a requested change on its pull
+// request (ADR-0167), as the story's agent is told it.
+type SentBack struct {
+	Thread string // the thread flai serve opened on the story for it
+	What   string // what failed, as the move's reason names it
+	// Resumed is set when the agent goes on in its last run's session,
+	// Request.Session; a new session is told how to take the story up.
+	Resumed bool
+}
+
+// resumes says whether r goes on in a session an earlier run had: after an
+// answer, or after a send back with its last run's session.
+func (r Request) resumes() bool {
+	return r.Session != "" && (r.Answered != "" || r.SentBack != nil && r.SentBack.Resumed)
 }
 
 // Share is the sharing of paths that cleared a hold on the story an agent is
@@ -272,7 +293,9 @@ func options(harness string, config map[string]string, takes map[string]option) 
 // else, the way the project's conventions say, handing noisy work and the
 // check before review to sub-agents (ADR-0059), and asking the designer
 // through flai when it needs them. A resumed agent is told its question was
-// answered and goes on in the session that already holds the rest; one
+// answered and goes on in the session that already holds the rest; one whose
+// story flai sent back from review is told the thread that says why, in its
+// last session or, with none, as a story taken up (S-0394); one
 // started to commit a worktree is told to do only that (S-0140); one the
 // operator started past a hold or a full limit is told what it went past
 // (S-0182). Every agent working a story is told how its issues are recorded
@@ -311,10 +334,15 @@ If a change cannot be committed without the designer deciding something, ask wit
 
 %[4]s`, r.Name, r.Story, r.Answered, rules(r))
 	}
+	if b := r.SentBack; b != nil && b.Resumed {
+		return fmt.Sprintf(`flai sent %[1]s back from review to in-progress, on thread %[2]s: %[3]s. Read the thread with the flai MCP tool thread_get (flai thread show %[2]s on the host); your inbox lists it, awaiting you. Fix the branch in %[1]s's worktree, close out, and move %[1]s to review again; flai serve pushes the fix, and resolves %[2]s once %[1]s is back in review at a new commit.
+
+%[4]s`, r.Story, b.Thread, b.What, rules(r))
+	}
 	why := "because it entered ready."
 	open := startStory(r.Story, "Begin")
 	switch {
-	case r.Begun != nil, r.Restart != "" && r.AutoRestart != "":
+	case r.Begun != nil, r.Restart != "" && r.AutoRestart != "", r.SentBack != nil:
 		open = takeUp(r.Story, "Prime")
 	case r.Restart != "":
 		open = fmt.Sprintf("If %[1]s is still ready, ", r.Story) + startStory(r.Story, "begin") + " If it is in progress already, " + takeUp(r.Story, "prime")
@@ -322,6 +350,8 @@ If a change cannot be committed without the designer deciding something, ask wit
 		open = startStory(r.Story, "Begin") + fmt.Sprintf(" If story_start refuses %[1]s because the board holds it, start it as the operator asked with flai move %[1]s in-progress, which only warns of the hold, then ", r.Story) + takeUp(r.Story, "prime")
 	}
 	switch {
+	case r.SentBack != nil:
+		why = fmt.Sprintf("because flai sent it back from review to in-progress, on thread %[1]s: %[2]s. This host has no session of its last agent to go on in. The story is in progress, with a narrative, a branch, and a worktree: read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and read the thread with the flai MCP tool thread_get (flai thread show %[1]s on the host); your first inbox lists it, awaiting you. Fix the branch there, close out, and move %[3]s to review again; flai serve pushes the fix, and resolves %[1]s once %[3]s is back in review at a new commit.", r.SentBack.Thread, r.SentBack.What, r.Story)
 	case r.Begun != nil:
 		why = fmt.Sprintf("because the operator started it here, and this host has had no agent for it: it was begun %[1]s. Its branch and worktree may not be on this host, and what was not committed and pushed there is not here. Reconcile before you do anything else: run flai stream open %[2]s, which keeps the narrative and checks out story/%[2]s from this clone, else from the remote, else new from the main branch, and says which; read the narrative's Current state, Next steps, and log, and the story's tasks; compare them with what is committed on the branch; and go on from what is committed rather than starting over, doing again what the narrative says was done and is not there. Log what you found with flai stream log %[2]s.%[3]s", r.Begun.Said(), r.Story, answeredSince(r.Begun))
 	case r.Restart != "" && r.AutoRestart != "":

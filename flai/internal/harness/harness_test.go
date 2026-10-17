@@ -381,6 +381,70 @@ func TestAnAnsweredAgentGoesOnInItsSession(t *testing.T) {
 	}
 }
 
+// S-0394, ADR-0167: an agent whose story flai sent back from review goes on
+// in its last session, told the thread and what failed; with no session to
+// go on in, it is started in a new one and told to take the story up. The
+// operator's command is told nothing new: its inbox lists the thread.
+func TestASentBackAgentIsToldTheThread(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
+	r.SentBack = &SentBack{Thread: "TH-0009", What: "the required check ci failed on abc1234 of pull request #12", Resumed: true}
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after(st.Argv, "--resume") != r.Session || slices.Contains(st.Argv, "--session-id") {
+		t.Fatalf("resumed: %q", st.Argv)
+	}
+	p := st.Argv[2]
+	for _, want := range []string{
+		"flai sent S-0104 back from review to in-progress, on thread TH-0009: the required check ci failed on abc1234 of pull request #12.",
+		"Read the thread with the flai MCP tool thread_get (flai thread show TH-0009 on the host); your inbox lists it, awaiting you.",
+		"Fix the branch in S-0104's worktree, close out, and move S-0104 to review again; flai serve pushes the fix, and resolves TH-0009 once S-0104 is back in review at a new commit.",
+		"Do not hold the flai MCP tool wait_for_events for an answer", // the rules every story's agent has
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("resumed prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "answered your question") || strings.Contains(p, "flai stream open") {
+		t.Errorf("resumed prompt says an answer came, or to take the story up:\n%s", p)
+	}
+
+	r.SentBack.Resumed = false
+	st, err = (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after(st.Argv, "--session-id") != r.Session || slices.Contains(st.Argv, "--resume") {
+		t.Fatalf("a new session: %q", st.Argv)
+	}
+	p = st.Argv[2]
+	for _, want := range []string{
+		"started by flai serve on this host to work story S-0104",
+		"because flai sent it back from review to in-progress, on thread TH-0009: the required check ci failed on abc1234 of pull request #12. This host has no session of its last agent to go on in.",
+		"your first inbox lists it, awaiting you",
+		"flai prime --story S-0104",
+		"flai stream open S-0104",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("new session's prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "entered ready") || strings.Contains(p, "with the flai MCP tool story_start with S-0104") {
+		t.Errorf("a story sent back is not one that entered ready:\n%s", p)
+	}
+	cmd, err := (command{}).Start(r, Host{Program: "run-agent"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kv := range cmd.Env {
+		if strings.HasPrefix(kv, "FLAI_ANSWERED=") {
+			t.Errorf("command env: %q", cmd.Env)
+		}
+	}
+}
+
 // S-0140: an agent started to commit a story's worktree is told to do that
 // and nothing else; the operator's command is told the worktree.
 func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
@@ -2505,5 +2506,236 @@ func TestAClaudeCodeStartIsUnchangedByWhatOtherHarnessesCannotDo(t *testing.T) {
 	}
 	if strings.Contains(lab.logText(), "without flai guard") {
 		t.Errorf("the log says the roles run unguarded:\n%s", lab.logText())
+	}
+}
+
+// sendBack does what flai serve's forge pass does when a required check
+// fails at commit on story's pull request (ADR-0167): it opens a thread on the
+// story by flai serve and keeps the send back, made at at, in the story's
+// pull request status. The story's move is the test's.
+func (lab *agentLab) sendBack(story, commit string, at time.Time) *threads.Thread {
+	lab.t.Helper()
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Pull request #12 of " + story + ": the required check ci failed", On: story, Author: forgeAuthor, Text: "The required check ci failed.", Now: at})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	st, _, err := forge.ReadStatus(lab.repo.CacheDir(), story)
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	st.Story, st.PullRequest, st.HeadSHA = story, 12, commit
+	st.SentBack = append(st.SentBack, forge.SendBack{Key: forge.CheckKey("ci", commit), Kind: forge.EventCheck, Name: "ci", Commit: commit, Thread: th.ID, At: at.UTC().Format(time.RFC3339)})
+	if err := forge.WriteStatus(lab.repo.CacheDir(), st); err != nil {
+		lab.t.Fatal(err)
+	}
+	return th
+}
+
+// backToInProgress moves story from review to in-progress, as flai does when
+// it sends the story back.
+func (lab *agentLab) backToInProgress(story string) {
+	lab.t.Helper()
+	st, _ := lab.repo.Get(story)
+	if _, err := lab.repo.Transition(st, workitem.InProgress, sendBackBy, "the required check ci failed", lab.now); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// startedCount counts the agents the journal says were started.
+func (lab *agentLab) startedCount() int {
+	n := 0
+	for _, e := range lab.entries() {
+		if strings.HasPrefix(e.Detail, "started ") {
+			n++
+		}
+	}
+	return n
+}
+
+// S-0394, ADR-0167: a story flai sent back from review gets its agent started
+// once, in its last session, told the thread, whatever room the in-progress
+// limit leaves and without spending an automatic restart; a second look
+// starts no second agent, and a later send back starts it again.
+func TestAStorySentBackFromReviewGetsItsAgentOnce(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.cfg.Command = nil
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+	lab.limit(1)
+	lab.hold()
+	id := lab.readyWith("Sent back", &manifest.Agent{Harness: harness.ClaudeCode})
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	lab.move(id, workitem.Review)
+	lab.release(id)
+	waitFor(t, "it ends in review", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeWorked })
+	lab.endedAgo(id, 3*time.Minute)
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+
+	lab.backToInProgress(id)
+	th := lab.sendBack(id, "abc1234def5678", time.Now().Add(-2*time.Minute))
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs for the send back", func() bool { r := lab.run(id); return r.live() && r.SentBack == th.ID })
+	again := lab.run(id)
+	if again.Agent != first.Agent || again.Session != first.Session || again.AutoRestarts != 0 || again.Answered != "" {
+		t.Errorf("the same agent, in its session, spending no restart: %+v, first %+v", again, first)
+	}
+	out := filepath.Join(lab.outDir, id+".txt")
+	waitFor(t, "the stub was told the thread", func() bool { got, _ := os.ReadFile(out); return strings.Contains(string(got), th.ID) })
+	got, _ := os.ReadFile(out)
+	for _, want := range []string{
+		"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": the required check ci failed on abc1234def56 of pull request #12.",
+		"thread_get (flai thread show " + th.ID + " on the host); your inbox lists it, awaiting you",
+		"move " + id + " to review again; flai serve pushes the fix",
+		"--resume " + first.Session,
+	} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("the agent was given\n%s\nwithout %q", got, want)
+		}
+	}
+	if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "again for "+id+" as "+first.Agent+" in its session, flai having sent it back from review on "+th.ID) {
+		t.Errorf("journal: %+v", j)
+	}
+
+	// a second look starts no second agent for the same send back
+	lab.l.look(ctx, false)
+	if r := lab.run(id); !r.same(again) || lab.startedCount() != 2 {
+		t.Fatalf("started twice for one send back: %+v, journal %+v", r, lab.entries())
+	}
+	// the agent fixes the branch and moves the story to review again
+	lab.move(id, workitem.Review)
+	lab.release(id)
+	waitFor(t, "it ends in review again", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeWorked })
+	lab.l.look(ctx, false)
+	if lab.startedCount() != 2 {
+		t.Fatalf("started for a story in review: %+v", lab.entries())
+	}
+
+	// a later send back starts it again
+	lab.endedAgo(id, 90*time.Second)
+	lab.backToInProgress(id)
+	later := lab.sendBack(id, "0123456789abcdef", time.Now().Add(-time.Minute))
+	lab.l.look(ctx, false)
+	waitFor(t, "it is started for the later send back", func() bool { return lab.run(id).SentBack == later.ID })
+	if r := lab.run(id); r.Session != first.Session || lab.startedCount() != 3 {
+		t.Errorf("the later send back: %+v, journal %+v", r, lab.entries())
+	}
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+}
+
+// S-0394, ADR-0167: a story sent back with no run of its agent here is
+// started in a new session, told to take the story up; one whose run failed
+// after the send back is started for the send back, in its session, before
+// flai serve would restart it on its own, and spends no automatic restart.
+func TestAStorySentBackIsStartedAfreshOrBeforeARestart(t *testing.T) {
+	ctx := context.Background()
+	t.Run("no run, then a run without a session", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.cfg.Command = nil
+		lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+		id := lab.backlog("Begun elsewhere", &manifest.Agent{Harness: harness.ClaudeCode})
+		lab.toReady(id)
+		lab.move(id, workitem.InProgress)
+		th := lab.sendBack(id, "abc1234", time.Now().Add(-time.Minute))
+		// worked from a session of its own, which flai serve did not start:
+		// nothing is started beside it
+		lab.l.look(ctx, false)
+		if r := lab.run(id); r != nil {
+			t.Fatalf("a story flai serve never ran an agent for got one: %+v", r)
+		}
+		// a run from before sessions were kept, before the send back
+		ago := time.Now().Add(-2 * time.Minute).UTC().Format(time.RFC3339)
+		lab.l.dir.updateAgent(lab.root, func(s *AgentState) {
+			s.put(&AgentRun{Story: id, Agent: "builder-" + id, Started: ago, Ended: ago, Outcome: OutcomeWorked})
+		})
+		lab.l.look(ctx, false)
+		waitFor(t, "it ends", func() bool { r := lab.run(id); return r != nil && r.SentBack != "" && !r.live() })
+		r := lab.run(id)
+		if r.SentBack != th.ID || r.Session == "" || r.Agent != "builder-"+id || r.AutoRestarts != 0 {
+			t.Fatalf("run: %+v", r)
+		}
+		got, _ := os.ReadFile(filepath.Join(lab.outDir, id+".txt"))
+		for _, want := range []string{
+			"because flai sent it back from review to in-progress, on thread " + th.ID + ": the required check ci failed on abc1234 of pull request #12.",
+			"This host has no session of its last agent to go on in.",
+			"your first inbox lists it, awaiting you",
+			"flai stream open " + id,
+			"--session-id " + r.Session,
+		} {
+			if !strings.Contains(string(got), want) {
+				t.Errorf("the agent was given\n%s\nwithout %q", got, want)
+			}
+		}
+		if strings.Contains(string(got), "--resume") || strings.Contains(string(got), "story_start") {
+			t.Errorf("a new session resumed, or was told to start the story:\n%s", got)
+		}
+		if j := lab.entries(); len(j) != 1 || !strings.Contains(j[0].Detail, "in a new session, flai having sent it back from review on "+th.ID) {
+			t.Errorf("journal: %+v", j)
+		}
+	})
+	t.Run("a failed run from before the send back", func(t *testing.T) {
+		lab := newAgentLab(t)
+		lab.cfg.AutoRestarts = 2
+		id := lab.putEnded("Failed before", AgentRun{Outcome: OutcomeFailed, AutoRestarts: 1})
+		lab.endedAgo(id, 2*time.Minute)
+		th := lab.sendBack(id, "abc1234", time.Now().Add(-time.Minute))
+		lab.l.look(ctx, false)
+		waitFor(t, "it is started for the send back", func() bool { return lab.run(id).SentBack == th.ID })
+		if r := lab.run(id); r.Session != "earlier" || r.AutoRestarts != 0 || lab.startedCount() != 1 {
+			t.Errorf("run %+v, journal %+v", r, lab.entries())
+		}
+		waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	})
+}
+
+// S-0394, ADR-0167: what a send back does not start an agent for.
+func TestASentBackStorysAgentIsNotStartedWhenItShouldNotBe(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name string
+		run  AgentRun
+		ago  time.Duration // how long before now flai sent it back; its run started 2 minutes ago
+		set  func(lab *agentLab, id string, th *threads.Thread)
+	}{
+		{"its thread is resolved", AgentRun{Outcome: OutcomeWorked}, time.Minute, func(lab *agentLab, _ string, th *threads.Thread) {
+			if _, err := threads.Resolve(lab.repo, th.ID, "alex", "fixed by hand", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"its story is blocked", AgentRun{Outcome: OutcomeWorked}, time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			st, _ := lab.repo.Get(id)
+			if err := workitem.BlockItem(st, "the CI runner", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+			if err := lab.repo.Save(st); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"its story is still in review", AgentRun{Outcome: OutcomeWorked}, time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			lab.move(id, workitem.Review)
+		}},
+		{"its run started after the send back", AgentRun{Outcome: OutcomeWorked}, 5 * time.Minute, nil},
+		{"the operator stopped its run", AgentRun{Outcome: OutcomeStopped, Stopped: "2026-10-06T00:00:00Z"}, time.Minute, nil},
+		{"the agent action is off", AgentRun{Outcome: OutcomeWorked}, time.Minute, func(lab *agentLab, _ string, _ *threads.Thread) { lab.cfg.Enabled = false }},
+		{"nothing can start it", AgentRun{Outcome: OutcomeWorked}, time.Minute, func(lab *agentLab, _ string, _ *threads.Thread) { lab.cfg.Command = nil }},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			id := lab.putEnded("Sent back", c.run)
+			lab.endedAgo(id, 2*time.Minute)
+			th := lab.sendBack(id, "abc1234", time.Now().Add(-c.ago))
+			if c.set != nil {
+				c.set(lab, id, th)
+			}
+			lab.l.look(ctx, false)
+			if r := lab.run(id); r.Session != "earlier" || r.live() {
+				t.Errorf("started: %+v", r)
+			}
+			if j := lab.entries(); len(j) != 0 {
+				t.Errorf("journal: %+v", j)
+			}
+		})
 	}
 }

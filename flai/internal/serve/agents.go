@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
@@ -199,6 +200,10 @@ type AgentRun struct {
 	// question was answered, or the conversation a reply or a new message to
 	// its story came on (S-0335).
 	Answered string `json:"answered,omitempty"`
+	// SentBack is the thread flai serve opened when flai sent the story back
+	// from review to in-progress, when this run was started for it (S-0394,
+	// ADR-0167).
+	SentBack string `json:"sent_back,omitempty"`
 	// Trigger is what started a planner run (ADR-0084): asked, for the
 	// operator's asking, orchestrator, for the orchestrator's (S-0219), and
 	// otherwise the replanner's triggers, separated by semicolons. It is empty on a story's agent's run and on planner runs
@@ -506,6 +511,12 @@ type readyStory struct {
 	// story came on (S-0335).
 	Asked  *AgentRun
 	Answer string
+	// SentBack is what flai sent a story in progress back from review for,
+	// when flai serve starts its agent for that (S-0394, ADR-0167), and
+	// Resume the last run, whose session the agent goes on in, when it had
+	// one; nil for a new session.
+	SentBack *harness.SentBack
+	Resume   *AgentRun
 	// Started is set when the operator has its agent started now (S-0115),
 	// and Past says what that start went past: a hold's reason, a full
 	// in-progress limit, a full review (S-0243), or nothing (S-0182).
@@ -716,6 +727,9 @@ func (l *launcher) look(ctx context.Context, _ bool) {
 	cfg := l.config(l.entry.Root)
 	if cfg.Enabled {
 		l.resume(ctx, cfg, repo)
+		// before restartEnded: a run from before the send back that ended
+		// failed is started for the send back, spending no automatic restart
+		l.startSentBack(ctx, cfg, repo)
 		l.restartEnded(ctx, cfg, repo)
 	}
 	var sk skips
@@ -962,6 +976,72 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 	}
 }
 
+// startSentBack starts the agent of each story in progress and not blocked
+// that flai sent back from review on a failing required check or a requested
+// change, while the thread flai serve opened for it is open (ADR-0167): in
+// its last run's session, told the thread, or, when that run has no session,
+// in a new one, told to take the story up. It starts once per send back: only
+// when the story's newest run started before flai sent it back and has ended.
+// A story flai serve never ran an agent for is worked from a session of its
+// own, whose inbox lists the thread, so nothing is started beside it. Like
+// resume, it spends no automatic restart
+// and does not wait for room under the in-progress limit, whose place the
+// story kept, and it leaves alone a run the operator stopped, which waits
+// for their retry, and a story that nothing can start.
+func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
+	st := l.dir.AgentStates()[l.entry.Root]
+	// only a story whose pull request flai serve has read can have been sent back
+	files, _ := filepath.Glob(forge.StatusPath(repo.CacheDir(), "*"))
+	for _, f := range files {
+		it, err := repo.Get(strings.TrimSuffix(filepath.Base(f), ".json"))
+		if err != nil || it.Type != workitem.Story || it.Status != workitem.InProgress || it.IsBlocked() {
+			continue
+		}
+		run := st.Stories[it.ID]
+		if run == nil || run.live() || run.Stopped != "" {
+			continue
+		}
+		b, what, ok := sentBackFor(repo, it.ID)
+		if !ok {
+			continue
+		}
+		if at, err := time.Parse(time.RFC3339, b.At); err != nil || !startedBefore(run, at) {
+			continue
+		}
+		if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+			continue
+		}
+		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: b.Thread, What: what}}
+		if run.Session != "" {
+			s.Resume, s.SentBack.Resumed = run, true
+		}
+		l.log("agent started for a send back", "story", it.ID, "thread", b.Thread, "resumed", s.SentBack.Resumed)
+		l.start(ctx, cfg, s)
+	}
+}
+
+// sentBackFor is story's latest send back whose thread is open, and what
+// failed, as the move's reason names each failure the thread is for; false
+// when there is none, or the kept status cannot be read, which, as resume
+// does with what it cannot read, starts nothing.
+func sentBackFor(repo *workitem.Repo, story string) (forge.SendBack, string, bool) {
+	b, ok, err := OpenSendBack(repo, story)
+	if err != nil || !ok {
+		return forge.SendBack{}, "", false
+	}
+	st, _, err := forge.ReadStatus(repo.CacheDir(), story)
+	if err != nil {
+		return forge.SendBack{}, "", false
+	}
+	var backs []forge.SendBack
+	for _, s := range st.SentBack {
+		if s.Thread == b.Thread {
+			backs = append(backs, s)
+		}
+	}
+	return b, sendBackReason(st.PullRequest, backs), true
+}
+
 // restartEnded starts again, as flai serve agent restart does, the agent of
 // each story in progress and not blocked whose newest run started and ended
 // failed, neither asking nor stopped by the operator: in a new session, told
@@ -1129,7 +1209,8 @@ func (l *launcher) withoutForgeTokens(env []string) []string {
 var runMarks = []string{"FLAI_STORY", "FLAI_ROLE", "FLAI_ITEM", "FLAI_FOCUS"}
 
 // start starts an agent for story, or starts again the one that ended asking
-// in story.Asked, for story.Answer, and says whether it did. What its
+// in story.Asked, for story.Answer, or the one of story.Resume, for
+// story.SentBack, and says whether it did. What its
 // harness cannot do refuses it as startAllowed says (ADR-0131), as any
 // failed start is refused.
 func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory) bool {
@@ -1143,6 +1224,12 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		run.Agent, run.Answered = story.Asked.Agent, story.Answer
 		if story.Asked.Session != "" {
 			run.Session = story.Asked.Session
+		}
+	}
+	if story.SentBack != nil {
+		run.SentBack = story.SentBack.Thread
+		if story.Resume != nil {
+			run.Agent, run.Session = story.Resume.Agent, story.Resume.Session
 		}
 	}
 	run.StoryAgent = &manifest.Agent{}
@@ -1178,11 +1265,11 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 		return fail(err)
 	}
 	var shares []harness.Share
-	if story.Asked == nil && story.Commit == "" {
+	if story.Asked == nil && story.Resume == nil && story.Commit == "" {
 		shares = sharedWith(l.entry.Root, story.ID) // a resumed session knows them; a commit needs none
 	}
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Story: story.ID, Root: l.entry.Root, Project: l.entry.Key, Agent: story.Agent, Name: run.Agent, Flai: cfg.Flai,
-		Session: run.Session, Answered: run.Answered, Restart: story.Restart, AutoRestart: autoRestart(story.AutoRestarts, cfg.AutoRestarts), Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun,
+		Session: run.Session, Answered: run.Answered, SentBack: story.SentBack, Restart: story.Restart, AutoRestart: autoRestart(story.AutoRestarts, cfg.AutoRestarts), Commit: story.Commit, Started: story.Started, Past: story.Past, Begun: story.Begun,
 		Shares: shares})
 	if err != nil {
 		return fail(err)
@@ -1201,6 +1288,13 @@ func (l *launcher) start(ctx context.Context, cfg AgentConfig, story readyStory)
 			what = "a message on " + run.Answered
 		}
 		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s, %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, what, run.PID, run.Log)
+	}
+	if run.SentBack != "" {
+		how := "in a new session"
+		if story.Resume != nil {
+			how = "in its session"
+		}
+		entry.Detail = fmt.Sprintf("started %s (%s) again for %s as %s %s, flai having sent it back from review on %s (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, how, run.SentBack, run.PID, run.Log)
 	}
 	if story.Commit != "" {
 		entry.Detail = fmt.Sprintf("started %s (%s) for %s as %s to commit what its worktree holds (pid %d); log %s", run.Command, run.Harness, story.ID, run.Agent, run.PID, run.Log)

@@ -107,9 +107,9 @@ func (claudeCode) Start(r Request, host Host) (Start, error) {
 	}
 	argv := append(headless(host.Program, Prompt(r), mcp), "--name", strings.TrimSpace(r.Project+" "+subject))
 	// A session of its own, so that an agent that ended waiting for an
-	// answer goes on with what it knew.
+	// answer, or whose story was sent back, goes on with what it knew.
 	switch {
-	case r.Session != "" && r.Answered != "":
+	case r.resumes():
 		argv = append(argv, "--resume", r.Session)
 	case r.Session != "":
 		argv = append(argv, "--session-id", r.Session)
