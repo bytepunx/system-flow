@@ -368,3 +368,111 @@ func TestFileSaveWithAStory(t *testing.T) {
 		t.Errorf("nothing is committed in the main checkout:\n%s", joined)
 	}
 }
+
+// draftPath is a file the fixture lacks, two folders below design/system,
+// which the fixture has.
+const (
+	draftPath  = "design/system/drafts/2026/notes.json"
+	draftNotes = "{\n  \"notes\": []\n}\n"
+)
+
+// absent fails t unless the path is not there.
+func absent(t *testing.T, path, what string) {
+	t.Helper()
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("%s is not there: %v", what, err)
+	}
+}
+
+// S-0443, ADR-0164: a save with an empty hash creates a file that is absent,
+// with its folders, and commits it as any save; with a story, in its
+// worktree only. A hash on an absent file is still refused, creating nothing.
+func TestFileSaveCreatesAnAbsentFile(t *testing.T) {
+	repo, root, wt := fileProject(t, "")
+	git := &fakeGit{branch: "main"}
+	if _, err := FileSave(repo, git, draftPath, draftNotes, SaveOptions{Hash: Hash(draftNotes), Now: now}); err == nil || !strings.Contains(err.Error(), draftPath+" does not exist") {
+		t.Errorf("a hash on an absent file is refused: %v", err)
+	}
+	absent(t, filepath.Join(root, "design/system/drafts"), "a folder the refused save would have made")
+
+	res, err := FileSave(repo, git, draftPath, draftNotes, SaveOptions{Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Committed || res.Unchanged || res.Path != draftPath || res.Hash != Hash(draftNotes) {
+		t.Errorf("result: %+v", res)
+	}
+	if got := read(t, filepath.Join(root, draftPath)); got != draftNotes {
+		t.Errorf("the file is created as it is:\n%s", got)
+	}
+	joined := strings.Join(git.calls, "\n")
+	for _, w := range []string{
+		root + ": git add -- " + draftPath,
+		root + ": git commit --quiet -m docs: edit " + draftPath + " -- " + draftPath,
+	} {
+		if !strings.Contains(joined, w) {
+			t.Errorf("git should have run %q; ran:\n%s", w, joined)
+		}
+	}
+
+	git = &fakeGit{branch: "story/S-0001"}
+	if _, err := FileSave(repo, git, draftPath, draftNotes, SaveOptions{Story: "S-1", Now: now}); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(t, filepath.Join(wt, draftPath)); got != draftNotes {
+		t.Errorf("the file is created in the worktree:\n%s", got)
+	}
+	if w := wt + ": git commit --quiet -m docs: [S-0001] edit " + draftPath + " -- " + draftPath; !strings.Contains(strings.Join(git.calls, "\n"), w) {
+		t.Errorf("git should have run %q; ran:\n%s", w, git.calls)
+	}
+}
+
+// S-0443, ADR-0164: an empty hash on a file that exists is a conflict with
+// its current content and hash, and overwrites and commits nothing.
+func TestFileSaveRefusesAnEmptyHashOnAFileThatExists(t *testing.T) {
+	repo, root, _ := fileProject(t, "")
+	git := &fakeGit{branch: "main"}
+	_, err := FileSave(repo, git, palettePath, "{\"accent\": \"mine\"}\n", SaveOptions{Now: now})
+	c, ok := IsConflict(err)
+	if !ok {
+		t.Fatalf("an empty hash on a file that exists must be a conflict: %v", err)
+	}
+	if c.Path != palettePath || c.Current != mainPalette || c.Hash != Hash(mainPalette) {
+		t.Errorf("the conflict carries the current file: %+v", c)
+	}
+	if got := read(t, filepath.Join(root, palettePath)); got != mainPalette {
+		t.Errorf("the file is not overwritten:\n%s", got)
+	}
+	if committed(git) {
+		t.Errorf("nothing is committed: %v", git.calls)
+	}
+}
+
+// S-0443, ADR-0164: a created file the check refuses is removed with every
+// folder the save made, and the folders that were there are kept.
+func TestFileSaveRefusedCreateLeavesNothing(t *testing.T) {
+	introduced := check.Finding{Level: check.Warning, Rule: "test.introduced", Path: draftPath, Line: 1, Message: "introduced by the save"}
+	calls := 0
+	runCheck = func(repo *workitem.Repo, now time.Time) (*check.Result, error) {
+		res, err := check.Run(repo, now)
+		if calls++; err == nil && calls%2 == 0 {
+			res.Findings = append(res.Findings, introduced)
+		}
+		return res, err
+	}
+	t.Cleanup(func() { runCheck = check.Run })
+	repo, root, _ := fileProject(t, "")
+	git := &fakeGit{branch: "main"}
+	_, err := FileSave(repo, git, draftPath, draftNotes, SaveOptions{Now: now})
+	if r, ok := IsRefused(err); !ok || len(r.Findings) != 1 || r.Findings[0].Rule != introduced.Rule {
+		t.Fatalf("the finding refuses the create: %v", err)
+	}
+	absent(t, filepath.Join(root, draftPath), "the refused file")
+	absent(t, filepath.Join(root, "design/system/drafts"), "a folder the save made")
+	if st, err := os.Stat(filepath.Join(root, "design/system")); err != nil || !st.IsDir() {
+		t.Errorf("the folder that was there is kept: %v", err)
+	}
+	if committed(git) {
+		t.Errorf("nothing is committed: %v", git.calls)
+	}
+}

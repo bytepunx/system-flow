@@ -1805,17 +1805,22 @@ func itemSpecs() map[string]spec {
 			if e != nil {
 				return nil, "", e
 			}
-			if in.Path == "" || in.Content == nil || in.Hash == "" {
-				return nil, "", bad("path, content, and hash are required")
+			if in.Path == "" || in.Content == nil {
+				return nil, "", bad("path and content are required")
 			}
 			rel, e := fileRel(p, in.Path)
 			if e != nil {
 				return nil, "", e
 			}
-			if !docHash.MatchString(in.Hash) {
-				return nil, "", bad("hash is the one file.get gave for the content the file was loaded with")
+			// An empty hash creates a file that is absent (ADR-0164).
+			args := []string{"file", "save"}
+			if in.Hash != "" {
+				if !docHash.MatchString(in.Hash) {
+					return nil, "", bad("hash is the one file.get gave for the content the file was loaded with, or empty to create a file that is absent")
+				}
+				args = append(args, "--hash="+in.Hash)
 			}
-			args := []string{"file", "save", "--hash=" + in.Hash, "--trailer=" + Trailer}
+			args = append(args, "--trailer="+Trailer)
 			if text(in.Message) != "" {
 				args = append(args, "--message="+text(in.Message))
 			}

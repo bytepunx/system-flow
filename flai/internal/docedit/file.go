@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -82,7 +83,7 @@ func FileReach(m manifest.Manifest, rel string) (string, error) {
 // FileShow loads a text file that is not markdown for editing, from story's
 // worktree when story is not empty (ADR-0145, ADR-0147).
 func FileShow(repo *workitem.Repo, rel, story string) (*File, error) {
-	at, err := locateFile(repo, rel, story)
+	at, err := locateFile(repo, rel, story, false)
 	if err != nil {
 		return nil, err
 	}
@@ -98,12 +99,14 @@ func FileShow(repo *workitem.Repo, rel, story string) (*File, error) {
 // finding of the check the content introduces puts the file back and is a
 // *RefusedError, and the save is committed as docs unless autocommit is
 // off; with opt.Story, in that story's worktree and on its branch
-// (ADR-0145). When the file is the design token file and the manifest names
-// a stylesheet, the stylesheet is written from the new tokens, checked with
-// them, put back with them, and committed with them in one commit
-// (ADR-0150).
+// (ADR-0145). An empty opt.Hash creates a file that is absent, with its
+// folders, which a refusal removes again, and is a *ConflictError on a file
+// that exists (ADR-0164). When the file is the design token file and the
+// manifest names a stylesheet, the stylesheet is written from the new
+// tokens, checked with them, put back with them, and committed with them in
+// one commit (ADR-0150).
 func FileSave(repo *workitem.Repo, r execx.Runner, rel, content string, opt SaveOptions) (*FileResult, error) {
-	at, err := locateFile(repo, rel, opt.Story)
+	at, err := locateFile(repo, rel, opt.Story, opt.Hash == "")
 	if err != nil {
 		return nil, err
 	}
@@ -120,12 +123,16 @@ func FileSave(repo *workitem.Repo, r execx.Runner, rel, content string, opt Save
 	if reason := notText([]byte(content)); reason != "" {
 		return nil, &RefusedError{Path: clean, Reason: "the content you would save " + reason + "; nothing was saved"}
 	}
-	old, err := readText(abs, clean)
-	if err != nil {
-		return nil, err
-	}
-	if Hash(old) != opt.Hash {
-		return nil, &ConflictError{Path: clean, Current: old, Hash: Hash(old), Diff: diff(r, abs, clean, content)}
+	var old string
+	if !at.absent {
+		if old, err = readText(abs, clean); err != nil {
+			return nil, err
+		}
+		// No content hashes to "", so an empty hash on a file that exists is
+		// a conflict, as a stale one is.
+		if Hash(old) != opt.Hash {
+			return nil, conflict(r, abs, clean, content)
+		}
 	}
 	var sheet, css string
 	if s := repo.Manifest.DesignStylesheet(); s != "" && clean == path.Clean(repo.Manifest.DesignTokens()) && clean != path.Clean(s) {
@@ -134,7 +141,7 @@ func FileSave(repo *workitem.Repo, r execx.Runner, rel, content string, opt Save
 		}
 		sheet = path.Clean(s)
 	}
-	if content == old {
+	if !at.absent && content == old {
 		return &FileResult{Result: Result{Path: clean, Hash: Hash(old), Unchanged: true, Warnings: []check.Finding{}}}, nil
 	}
 
@@ -142,16 +149,27 @@ func FileSave(repo *workitem.Repo, r execx.Runner, rel, content string, opt Save
 	if err != nil {
 		return nil, err
 	}
-	if err := writeAtomic(abs, content); err != nil {
+	var restore func() error
+	if at.absent {
+		restore, err = createFile(abs, clean, content)
+		if errors.Is(err, fs.ErrExist) {
+			// Another writer created it after it was found absent.
+			return nil, conflict(r, abs, clean, content)
+		}
+	} else {
+		err = writeAtomic(abs, content)
+		restore = func() error { return writeAtomic(abs, old) }
+	}
+	if err != nil {
 		return nil, err
 	}
 	saved := []string{abs}
-	restore := func() error { return writeAtomic(abs, old) }
 	if sheet != "" {
 		sheetAbs := filepath.Join(at.root, filepath.FromSlash(sheet))
 		oldSheet, readErr := os.ReadFile(sheetAbs)
+		putBack := restore
 		restore = func() error {
-			if err := writeAtomic(abs, old); err != nil {
+			if err := putBack(); err != nil {
 				return err
 			}
 			if readErr != nil {
@@ -268,16 +286,19 @@ func writeStylesheet(root, sheet, css string) error {
 }
 
 // filePlace is where a file edit is made, and the root of the tree that
-// holds the file, in which it is committed.
+// holds the file, in which it is committed; absent when the file is not
+// there yet and the edit creates it.
 type filePlace struct {
 	place
-	root string
+	root   string
+	absent bool
 }
 
 // locateFile resolves rel for a file edit as locate does for a document: in
 // the tree flai runs in, falling back to the main checkout, or with a story,
-// in that story's worktree only, under its manifest.
-func locateFile(repo *workitem.Repo, rel, story string) (filePlace, error) {
+// in that story's worktree only, under its manifest. A file none of them
+// holds is refused, unless create, when it is placed, absent, in the first.
+func locateFile(repo *workitem.Repo, rel, story string, create bool) (filePlace, error) {
 	in, id, roots, where := repo, "", []string{repo.Root, repo.MainRoot}, ""
 	if story != "" {
 		var err error
@@ -299,7 +320,70 @@ func locateFile(repo *workitem.Repo, rel, story string) (filePlace, error) {
 			return filePlace{place: place{repo: in, abs: p, clean: clean, story: id}, root: root}, nil
 		}
 	}
+	if create {
+		p := filepath.Join(roots[0], filepath.FromSlash(clean))
+		return filePlace{place: place{repo: in, abs: p, clean: clean, story: id}, root: roots[0], absent: true}, nil
+	}
 	return filePlace{}, fmt.Errorf("%s does not exist%s", clean, where)
+}
+
+// createFile writes content to the file abs, clean in the repository, which
+// must not exist, creating the folders it lacks, and returns what removes
+// the file and those folders again. A file that is there by then is an
+// error matching fs.ErrExist, and nothing is left behind.
+func createFile(abs, clean, content string) (func() error, error) {
+	var made []string // deepest first
+	for dir := filepath.Dir(abs); ; dir = filepath.Dir(dir) {
+		_, err := os.Lstat(dir)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("create %s: %w", clean, err)
+		}
+		made = append(made, dir)
+	}
+	undo := func(file bool) error {
+		if file {
+			if err := os.Remove(abs); err != nil {
+				return err
+			}
+		}
+		for _, dir := range made {
+			if err := os.Remove(dir); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+		_ = undo(false)
+		return nil, fmt.Errorf("create the folders of %s: %w; check that no file stands in their way", clean, err)
+	}
+	f, err := os.OpenFile(abs, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		_ = undo(false)
+		return nil, fmt.Errorf("create %s: %w", clean, err)
+	}
+	_, err = f.WriteString(content)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		_ = undo(true)
+		return nil, fmt.Errorf("write %s: %w", clean, err)
+	}
+	return func() error { return undo(true) }, nil
+}
+
+// conflict is the *ConflictError of a save of content over the file at
+// abs, clean in the repository, as it is now.
+func conflict(r execx.Runner, abs, clean, content string) error {
+	current, err := readText(abs, clean)
+	if err != nil {
+		return err
+	}
+	return &ConflictError{Path: clean, Current: current, Hash: Hash(current), Diff: diff(r, abs, clean, content)}
 }
 
 // readText reads the file at abs, clean in the repository, refusing a file

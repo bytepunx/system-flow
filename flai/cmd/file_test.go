@@ -108,8 +108,32 @@ func TestFileRefusesWhatItDoesNotReach(t *testing.T) {
 	if got := readProjectFile(t, root, "wip/notes.txt"); got != "notes\n" {
 		t.Errorf("nothing is written: %q", got)
 	}
-	if _, errOut, code := runStdin(t, root, "x\n", "file", "save", filePalette); code != 1 || !strings.Contains(errOut, "--hash is required") {
-		t.Errorf("save without --hash: %d %s", code, errOut)
+	if _, errOut, code := runStdin(t, root, "x\n", "file", "save", filePalette); code != exitDocConflict {
+		t.Errorf("save without --hash on a file that exists is a conflict: %d %s", code, errOut)
+	}
+	if got := readProjectFile(t, root, filePalette); got != palette {
+		t.Errorf("a save without --hash leaves a file that exists as it was: %q", got)
+	}
+}
+
+// S-0443, ADR-0164: a save without --hash creates a file that is absent,
+// with its folders, and commits it.
+func TestFileSaveWithoutHashCreates(t *testing.T) {
+	root := fileCmdProject(t)
+	path := "design/system/drafts/new.json"
+	out, errOut, code := runStdin(t, root, "{}\n", "file", "save", path)
+	if code != 0 {
+		t.Fatalf("create: %d %s", code, errOut)
+	}
+	sha := gitIn(t, root, "rev-parse", "--short", "HEAD")
+	if want := "saved " + path + ", committed " + sha + "\n"; out != want {
+		t.Errorf("output %q, want %q", out, want)
+	}
+	if got := readProjectFile(t, root, path); got != "{}\n" {
+		t.Errorf("the created content: %q", got)
+	}
+	if files := gitIn(t, root, "show", "--name-only", "--format=", "HEAD"); files != path {
+		t.Errorf("the commit must hold the created path only, got %q", files)
 	}
 }
 

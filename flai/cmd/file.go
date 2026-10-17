@@ -76,12 +76,15 @@ refused.`, docedit.MaxFileSize),
 func newFileSaveCmd(a *app) *cobra.Command {
 	var opt docedit.SaveOptions
 	c := &cobra.Command{
-		Use:   "save <path> --hash <sha256>",
+		Use:   "save <path> [--hash <sha256>]",
 		Short: "Save a text file that is not markdown from standard input: conflict check, flai check, commit",
 		Long: fmt.Sprintf(`Reads the new content on standard input and saves it as it is. --hash is
 the hash flai file show gave for the content the editor loaded; when the
 file no longer has it the save fails as a conflict (exit 3) with the
-current content, its hash, and a diff. Content flai will not save is
+current content, its hash, and a diff. Without --hash, the save creates a
+file that is absent, with its folders, and removes them again when the
+check refuses it; without --hash on a file that exists, the save fails as
+a conflict (ADR-0164). Content flai will not save is
 refused (exit 4) and the file is left as it was: binary content, content
 over %d bytes (1 MiB), a token file flai cannot render as a stylesheet, and content
 the check has a new finding with. A saved file is committed on its own, as
@@ -108,9 +111,6 @@ story without a worktree and a worktree not on its branch are refused.`, docedit
 			repo, err := a.project()
 			if err != nil {
 				return err
-			}
-			if opt.Hash == "" {
-				return fmt.Errorf("--hash is required: the hash flai file show printed for the content you edited")
 			}
 			// One byte past the limit is enough for FileSave to refuse it.
 			data, err := io.ReadAll(io.LimitReader(cmd.InOrStdin(), docedit.MaxFileSize+1))

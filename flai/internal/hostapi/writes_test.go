@@ -221,7 +221,7 @@ var refused = map[string][]string{
 	"doc.show":           {`{"path":"../../etc/passwd"}`, `{"path":"system-flow.yaml"}`, `{"path":"-rf.md"}`, `{"path":"src/notes.md"}`, `{"path":"design/x.md","story":"--help"}`, `{"path":"design/x.md","story":"T-0001"}`},
 	"doc.save":           {`{"path":"design/x.md","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.sh","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123","story":"S-1 --no-commit",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123","story":"E-0001",` + rid + `}`},
 	"file.get":           {`{"path":"../../etc/passwd"}`, `{"path":"/etc/passwd"}`, `{"path":"system-flow.yaml"}`, `{"path":"-rf.json"}`, `{"path":"src/main.go"}`, `{"path":"design/system/overview.md"}`, `{"path":"wip/kanban/board.json"}`, `{"path":""}`, `{"path":"design/x.json","story":"--help"}`, `{"path":"design/x.json","story":"T-0001"}`},
-	"file.save":          {`{"path":"design/x.json","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.json","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.json","content":"c",` + rid + `}`, `{"content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"../x.json","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123","story":"S-1 --no-commit",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123","story":"E-0001",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123"}`},
+	"file.save":          {`{"path":"design/x.json","content":"c","hash":"--force",` + rid + `}`, `{"path":".git/hooks/pre-push","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.json","hash":"abcdef0123",` + rid + `}`, `{"content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.md","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"../x.json","content":"c","hash":"abcdef0123",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123","story":"S-1 --no-commit",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123","story":"E-0001",` + rid + `}`, `{"path":"design/x.json","content":"c","hash":"abcdef0123"}`},
 	"adr.new":            {`{"title":"t","body":"b","status":"final",` + rid + `}`, `{"title":"t","body":"b","refines":["--autocommit"],` + rid + `}`, `{"title":"t","body":"b","supersedes":["0"],` + rid + `}`},
 	"adr.template":       {`[]`},
 	"adr.accept":         {`{"id":"--trailer=x",` + rid + `}`},
@@ -1914,6 +1914,15 @@ func TestFileMethodsRunInAStorysWorktree(t *testing.T) {
 	}
 	if got := strings.Join(rec.runs[0].Args, " "); got != "file save --hash=abcdef0123456789 --trailer="+Trailer+" --story=S-0001 --json -- design/system/palette.json" || rec.runs[0].Dir != worktree || rec.runs[0].Stdin != "{}\n" {
 		t.Errorf("save ran %q in %s with %q, want flai file save --story in %s", got, rec.runs[0].Dir, rec.runs[0].Stdin, worktree)
+	}
+	// S-0443: no hash is a create, run with no --hash (ADR-0164).
+	create := `{"path":"design/components/flaiover/src/lib/Card.examples.json","content":"{}\n","story":"S-0001",` + rid + `}`
+	rec, e = call("file.save", create, Ran{Stdout: []byte(`{"path":"design/components/flaiover/src/lib/Card.examples.json","committed":true}`)})
+	if e != nil {
+		t.Fatalf("create: %+v", e)
+	}
+	if got := strings.Join(rec.runs[0].Args, " "); got != "file save --trailer="+Trailer+" --story=S-0001 --json -- design/components/flaiover/src/lib/Card.examples.json" || rec.runs[0].Dir != worktree {
+		t.Errorf("create ran %q in %s, want flai file save without --hash in %s", got, rec.runs[0].Dir, worktree)
 	}
 }
 
