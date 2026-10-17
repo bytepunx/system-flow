@@ -1,12 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-17T05:07:28Z
+updated: 2026-10-17T05:07:38Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0444](S-0444.md) | Every component of flaiover renders on the Components page, with the setup its stylesheet needs and examples for the components that need data | in-progress | agent-S-0444 | 2026-10-17T05:07:38Z |
 
 ## Strategic agents
 

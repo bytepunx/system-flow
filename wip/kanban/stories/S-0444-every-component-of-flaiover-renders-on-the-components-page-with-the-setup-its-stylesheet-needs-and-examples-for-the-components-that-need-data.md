@@ -3,15 +3,18 @@ id: S-0444
 type: story
 nature: feature
 title: Every component of flaiover renders on the Components page, with the setup its stylesheet needs and examples for the components that need data
-status: ready
+status: in-progress
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:39:02Z
-updated: 2026-10-17T05:07:28Z
+updated: 2026-10-17T05:07:38Z
 transitions:
   - to: ready
     at: 2026-10-17T01:02:25Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T05:07:38Z
+    by: agent-S-0444
 tags: [dashboard]
 topics: [components, dashboard, design]
 touches: [system-flow.yaml, design/components/flaiover, flai/internal/components/flaiover_test.go, design/system/component-library.md]

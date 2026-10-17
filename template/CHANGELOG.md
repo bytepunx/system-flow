@@ -2,6 +2,7 @@
 
 ## 1.0.95 - 2026-10-17
 
+- S-0443 A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check (patch).
 - S-0443 A component's examples files under `design/components/` are the second exception to "Everything is markdown" (patch, ADR-0164): `documentation.md` says that everything is markdown with YAML front matter except two kinds of JSON file, the design token file and the component examples files, one `*.examples.json` per component under `design/components/`. A new project has `design/components/README.md`, which says the folder holds supporting files for the project's components, today one examples file per component at `<sub-project>/<path>`, the sub-project's `name` and the component's path in it with `.svelte` replaced by `.examples.json`, holding `examples`, each with a `name`, its `props`, and an optional `theme` and `width`. It says the dashboard's Components page writes them through `file.save`, a story that changes a component keeps its examples in step, and `flai check` reports `components.examples`. `design/README.md` and `CLAUDE.md` list the folder in their layout tables. Saving an example from the page and the check need a flai that has them, the release that carries S-0443; an older flai neither checks the files nor lets the page create one.
 
 ## 1.0.94 - 2026-10-15

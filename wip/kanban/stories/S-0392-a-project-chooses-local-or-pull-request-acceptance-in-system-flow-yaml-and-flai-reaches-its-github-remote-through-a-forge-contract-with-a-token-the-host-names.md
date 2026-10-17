@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:33:00Z
-updated: 2026-10-17T03:57:03Z
+updated: 2026-10-17T05:07:28Z
 transitions: []
 tags: [cli, template]
 topics: [release]
@@ -19,10 +19,10 @@ agent:
     effort: high
 forecast:
   duration: 1h
-  delivery: 2026-10-17T05:02:00Z
-  basis: "Its own forecast of 1h; 4th in the pull order with an in-progress limit of 5, behind S-0444, S-0443 and S-0241."
+  delivery: 2026-10-17T06:12:00Z
+  basis: "Its own forecast of 1h; 3rd in the pull order with an in-progress limit of 5, behind S-0444 and S-0241."
   by: flai
-  at: 2026-10-17T03:57:03Z
+  at: 2026-10-17T05:07:28Z
 finalized:
   by: alex
   at: 2026-10-16T05:26:51Z
