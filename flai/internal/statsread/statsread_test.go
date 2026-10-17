@@ -3,6 +3,7 @@ package statsread
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -238,5 +240,66 @@ func TestReadWarnsOfAConflictLogItCannotRead(t *testing.T) {
 	}
 	if !warned {
 		t.Errorf("no warning of the bad log: %s", logged.String())
+	}
+}
+
+// keepStatus keeps a pull request status for S-0001 under the project's
+// cache, with a push and a check.
+func keepStatus(t *testing.T, repo *workitem.Repo) {
+	t.Helper()
+	st := forge.Status{Story: "S-0001", PullRequest: 1, HeadSHA: "a", ReadAt: "2026-10-01T10:00:00Z", Events: []forge.StatusEvent{
+		{At: "2026-10-01T10:00:00Z", Kind: forge.EventHead, To: "a", Commit: "a"},
+		{At: "2026-10-01T10:00:00Z", Kind: forge.EventCheck, Name: "build", To: "pending", Commit: "a"},
+	}}
+	if err := forge.WriteStatus(repo.CacheDir(), st); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0396, ADR-0168: in local mode Read loads no kept forge state, even with
+// a status file left from an earlier mode.
+func TestReadInLocalModeLoadsNoForgeState(t *testing.T) {
+	repo := project(t)
+	keepStatus(t, repo)
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opt.Forge != nil {
+		t.Errorf("local mode loaded forge state: %+v", opt.Forge)
+	}
+}
+
+// S-0396, ADR-0168: under pull-request acceptance Read loads each story's
+// kept forge events by its ID, a story with none kept left out; a status it
+// cannot read is left out with a warning naming it, and the rest still load.
+func TestReadUnderPullRequestAcceptanceLoadsTheForgeEvents(t *testing.T) {
+	repo := reopen(t, project(t), "acceptance:\n  mode: pull-request\n")
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opt.Forge == nil || len(opt.Forge) != 0 {
+		t.Errorf("no status kept: %+v, want an empty map", opt.Forge)
+	}
+	keepStatus(t, repo)
+	writeFile(t, forge.StatusPath(repo.CacheDir(), "S-0002"), "{not json\n")
+	var logged bytes.Buffer
+	_, opt, err = Read(execx.System{}, repo, slog.New(slog.NewJSONHandler(&logged, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evs, ok := opt.Forge["S-0001"]; len(opt.Forge) != 1 || !ok || len(evs) != 2 || evs[1].Name != "build" {
+		t.Errorf("forge = %+v, want S-0001's two events alone", opt.Forge)
+	}
+	var skipped map[string]any
+	for _, ev := range warnings(t, &logged) {
+		if ev["msg"] == "cannot read some kept pull request statuses" {
+			skipped = ev
+		}
+	}
+	if skipped == nil || skipped["level"] != "WARN" || skipped["component"] != "stats" || skipped["count"] != float64(1) ||
+		!strings.Contains(fmt.Sprint(skipped["paths"]), "S-0002.json") || skipped["err"] == nil || skipped["detail"] == nil {
+		t.Errorf("want a warning naming the status left out, got %s", logged.String())
 	}
 }

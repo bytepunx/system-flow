@@ -8,8 +8,10 @@ import (
 	"log/slog"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
@@ -22,12 +24,14 @@ import (
 // project: the strategic agents' activity documents, the threads, the
 // issues, the manifest's projects, the board's in-progress limit and pull
 // order, planning.default_duration, the files each story's commits
-// changed, the conversations between stories, and the conflict log. The
-// caller sets the window and grouping. When git cannot be read, Commits stays
-// nil, which leaves claims.drift out; a conversation that cannot be read is
-// left out; and a conflict log that cannot be read sets ConflictsUnreadable,
-// which leaves coordination's conflicts out. Read logs a warning on log for
-// each; any other read that fails stops it.
+// changed, the conversations between stories, the conflict log, and, under
+// pull-request acceptance only, each story's kept forge events. The caller
+// sets the window and grouping. When git cannot be read, Commits stays nil,
+// which leaves claims.drift out; a conversation that cannot be read is left
+// out; a conflict log that cannot be read sets ConflictsUnreadable, which
+// leaves coordination's conflicts out; and a story's kept forge state that
+// cannot be read is left out. Read logs a warning on log for each; any other
+// read that fails stops it.
 func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.Item, metrics.Options, error) {
 	var opt metrics.Options
 	items, err := repo.List(true)
@@ -64,7 +68,46 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 			"detail", "coordination's conflicts are left out and coordination.logged is false; correct or remove the line the error names in "+storygit.ConflictsPath(repo.CacheDir()))
 	}
 	opt.Conflicts, opt.ConflictsUnreadable = conflicts, err != nil
+	if repo.Manifest.Acceptance.PullRequest() {
+		opt.Forge = forgeEvents(repo.CacheDir(), log)
+	}
 	return items, opt, nil
+}
+
+// forgeEvents reads the events of every story's kept forge state under
+// cacheDir, by the story's canonical ID, an empty map when there is none. A
+// state that cannot be read is left out with a warning on log, so that flai
+// stats never fails on one (ADR-0168).
+func forgeEvents(cacheDir string, log *slog.Logger) map[string][]forge.StatusEvent {
+	out := map[string][]forge.StatusEvent{}
+	files, err := filepath.Glob(forge.StatusPath(cacheDir, "*"))
+	if err != nil {
+		log.Warn("cannot list the kept pull request statuses", "component", "stats", "err", err.Error(),
+			"detail", "the checks and reviewers waits are left out; check that the project's .flai-cache is readable")
+		return out
+	}
+	sort.Strings(files)
+	var skipped []string
+	var first error
+	for _, f := range files {
+		story := strings.TrimSuffix(filepath.Base(f), ".json")
+		st, ok, err := forge.ReadStatus(cacheDir, story)
+		if err != nil {
+			skipped = append(skipped, f)
+			if first == nil {
+				first = err
+			}
+			continue
+		}
+		if ok {
+			out[workitem.CanonicalID(story)] = st.Events
+		}
+	}
+	if len(skipped) > 0 {
+		log.Warn("cannot read some kept pull request statuses", "component", "stats", "count", len(skipped), "paths", skipped, "err", first.Error(),
+			"detail", "their stories' checks and reviewers waits are left out; delete each, and flai serve reads its pull request afresh while the story is in review")
+	}
+	return out
 }
 
 // conversations reads every conversation under wip/messages in the main

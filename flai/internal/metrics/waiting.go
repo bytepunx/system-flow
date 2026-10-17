@@ -1,15 +1,19 @@
 package metrics
 
 import (
+	"maps"
+	"slices"
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // Waiting is how long the agents of the items completed in each ISO week
-// waited on threads and in review (S-0205), and the empty wakes of the items
+// waited on threads and in review (S-0205), and in review on checks and
+// reviewers (ADR-0168), and the empty wakes of the items
 // completed in the window (S-0272), and the longest waits of the window on
 // their own (S-0215).
 type Waiting struct {
@@ -18,8 +22,9 @@ type Waiting struct {
 	Longest    []LongWait `json:"longest"`
 }
 
-// LongWait is one wait of an item, on a thread or in review, with the
-// seconds of it inside the window and who was awaited (ADR-0114).
+// LongWait is one wait of an item, on a thread, in review, or on its pull
+// request's checks or reviewers, with the seconds of it inside the window and
+// who was awaited (ADR-0114, ADR-0168).
 type LongWait struct {
 	Item    string `json:"item"`
 	Kind    string `json:"kind"`
@@ -28,16 +33,22 @@ type LongWait struct {
 	// Ended is absent while the wait is open.
 	Ended   string  `json:"ended,omitempty"`
 	Seconds float64 `json:"seconds"`
-	// Awaited is absent while the wait is open, and for a thread resolved
-	// with no entry that ended its wait.
+	// Awaited is absent while the wait is open, for a thread resolved with
+	// no entry that ended its wait, for a checks wait whose checks had
+	// finished when its head was first read, and for a wait a push ended.
 	Awaited string `json:"awaited,omitempty"`
 }
 
 // The kinds of a LongWait.
 const (
-	waitOnThread = "thread"
-	waitInReview = "review"
+	waitOnThread    = "thread"
+	waitInReview    = "review"
+	waitOnChecks    = "checks"
+	waitOnReviewers = "reviewers"
 )
+
+// waitKinds is the order of the kinds of LongWait among waits otherwise tied.
+var waitKinds = map[string]int{waitOnThread: 0, waitInReview: 1, waitOnChecks: 2, waitOnReviewers: 3}
 
 // longestWaits is how many waits waiting.longest lists.
 const longestWaits = 10
@@ -59,6 +70,11 @@ type WaitWeek struct {
 	EmptyWakes int             `json:"empty_wakes"`
 	Threads    ThreadWaitTotal `json:"threads"`
 	Review     WaitTotal       `json:"review"`
+	// Checks and Reviewers are the parts of Review waited on the pull
+	// requests' required checks and on their reviewers, an item without kept
+	// forge state counting 0 (ADR-0168).
+	Checks    WaitTotal `json:"checks"`
+	Reviewers WaitTotal `json:"reviewers"`
 }
 
 // WaitTotal is the seconds waited over a week's items and their mean, absent
@@ -98,10 +114,12 @@ const (
 	byConfirmation
 )
 
-// wait is a thread's wait, or a review wait without a thread, and who ended
-// it: for a thread, the kind of ender and the author of the entry that ended
-// it, empty without one; for review, the by of the transition out of it. It
-// is open while nothing ended it.
+// wait is a thread's wait, or a review, checks, or reviewers wait without a
+// thread, and who ended it: for a thread, the kind of ender and the author of
+// the entry that ended it, empty without one; for review, the by of the
+// transition out of it; for checks, the check that finished last; for
+// reviewers, the reviewer whose review ended it. It is open while nothing
+// ended it.
 type wait struct {
 	span
 	by      ender
@@ -215,9 +233,15 @@ func endedBy(waits []wait, by ender) []span {
 // inProgressSeconds is the seconds of the union of the spans that fall in
 // the item's in-progress intervals.
 func inProgressSeconds(it *workitem.Item, spans []span, now time.Time) float64 {
+	return within(spans, inProgress(it, now))
+}
+
+// within is the seconds of the union of the spans that fall in the
+// intervals, which do not overlap.
+func within(spans, intervals []span) float64 {
 	var total float64
 	for _, w := range union(spans) {
-		for _, p := range inProgress(it, now) {
+		for _, p := range intervals {
 			from, to := laterOf(w.from, p.from), earlierOf(w.to, p.to)
 			if to.After(from) {
 				total += to.Sub(from).Seconds()
@@ -275,9 +299,10 @@ func inProgress(it *workitem.Item, now time.Time) []span {
 
 // waiting lays out the waits of the items done in the window by the ISO week
 // they were completed in, from the one that holds the window's start to this
-// one, with the thread waits of each item by its canonical ID; sums their
-// empty wakes, over the window and per week; and lists the longest waits.
-func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[string][]wait, start, now time.Time) Waiting {
+// one, with the thread waits and the pull request waits of each item by its
+// canonical ID; sums their empty wakes, over the window and per week; and
+// lists the longest waits.
+func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[string][]wait, pulls map[string]forgeWait, start, now time.Time) Waiting {
 	out := Waiting{Weeks: []WaitWeek{}}
 	measured := 0 // the items that carry agents' usage
 	at := map[string]int{}
@@ -303,6 +328,8 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 		m := per[it.ID]
 		b.Threads.Total += orZero(m.WaitThreads)
 		b.Review.Total += orZero(m.WaitReview)
+		b.Checks.Total += orZero(m.WaitChecks)
+		b.Reviewers.Total += orZero(m.WaitReviewers)
 		ws := waits[workitem.CanonicalID(it.ID)]
 		b.Threads.Orchestrator.add(it, ws, byOrchestrator, now)
 		b.Threads.Confirmed.add(it, ws, byConfirmation, now)
@@ -310,21 +337,23 @@ func waiting(items []*workitem.Item, per map[string]ItemMetrics, waits map[strin
 	for i := range out.Weeks {
 		b := &out.Weeks[i]
 		if b.Items > 0 {
-			t, r := b.Threads.Total/float64(b.Items), b.Review.Total/float64(b.Items)
-			b.Threads.Mean, b.Review.Mean = &t, &r
+			n := float64(b.Items)
+			t, r, c, v := b.Threads.Total/n, b.Review.Total/n, b.Checks.Total/n, b.Reviewers.Total/n
+			b.Threads.Mean, b.Review.Mean, b.Checks.Mean, b.Reviewers.Mean = &t, &r, &c, &v
 		}
 		out.EmptyWakes.Count += b.EmptyWakes
 	}
 	out.EmptyWakes.Mean = over(float64(out.EmptyWakes.Count), float64(measured))
-	out.Longest = longest(items, waits, start, now)
+	out.Longest = longest(items, waits, pulls, start, now)
 	return out
 }
 
-// longest is the waits of the items not cancelled, on their threads and in
-// review, that have a part in the window, the most seconds first, at most
-// longestWaits of them (ADR-0114). The window's ends are taken to the whole
-// second, as the report prints them, so that the seconds are whole.
-func longest(items []*workitem.Item, waits map[string][]wait, start, now time.Time) []LongWait {
+// longest is the waits of the items not cancelled, on their threads, in
+// review, and on their pull requests' checks and reviewers, that have a part
+// in the window, the most seconds first, at most longestWaits of them
+// (ADR-0114, ADR-0168). The window's ends are taken to the whole second, as
+// the report prints them, so that the seconds are whole.
+func longest(items []*workitem.Item, waits map[string][]wait, pulls map[string]forgeWait, start, now time.Time) []LongWait {
 	start, now = start.Truncate(time.Second), now.Truncate(time.Second)
 	out := []LongWait{}
 	add := func(lw LongWait, s span, open bool) {
@@ -346,10 +375,25 @@ func longest(items []*workitem.Item, waits map[string][]wait, start, now time.Ti
 			add(LongWait{Item: it.ID, Kind: waitOnThread, Thread: w.thread, Awaited: w.awaited,
 				Seconds: inProgressSeconds(it, []span{in}, now)}, w.span, w.open)
 		}
-		for _, r := range inReview(it, now) {
+		reviews := inReview(it, now)
+		for _, r := range reviews {
 			in := inWindow(r.span, start, now)
 			add(LongWait{Item: it.ID, Kind: waitInReview, Awaited: r.awaited,
 				Seconds: max(0, in.to.Sub(in.from).Seconds())}, r.span, r.open)
+		}
+		pull, ok := pulls[workitem.CanonicalID(it.ID)]
+		if !ok {
+			continue
+		}
+		review := spansOf(reviews)
+		for _, k := range []struct {
+			kind  string
+			waits []wait
+		}{{waitOnChecks, pull.checks}, {waitOnReviewers, pull.reviewers}} {
+			for _, w := range k.waits {
+				add(LongWait{Item: it.ID, Kind: k.kind, Awaited: w.awaited,
+					Seconds: within([]span{inWindow(w.span, start, now)}, review)}, w.span, w.open)
+			}
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return longerWait(out[i], out[j]) })
@@ -357,8 +401,9 @@ func longest(items []*workitem.Item, waits map[string][]wait, start, now time.Ti
 }
 
 // longerWait reports whether a is listed before b: the more seconds first,
-// then the earlier start, then the item and the thread in ID order, a
-// thread's wait before a review wait.
+// then the earlier start, then the item in ID order, then a thread's wait,
+// a review wait, a checks wait, and a reviewers wait in that order, then the
+// thread in ID order.
 func longerWait(a, b LongWait) bool {
 	if a.Seconds != b.Seconds {
 		return a.Seconds > b.Seconds
@@ -369,8 +414,8 @@ func longerWait(a, b LongWait) bool {
 	if ia, ib := workitem.CanonicalID(a.Item), workitem.CanonicalID(b.Item); ia != ib {
 		return ia < ib
 	}
-	if (a.Thread == "") != (b.Thread == "") {
-		return b.Thread == ""
+	if ka, kb := waitKinds[a.Kind], waitKinds[b.Kind]; ka != kb {
+		return ka < kb
 	}
 	return threads.CanonicalID(a.Thread) < threads.CanonicalID(b.Thread)
 }
@@ -400,6 +445,152 @@ func inReview(it *workitem.Item, now time.Time) []wait {
 		out = append(out, w)
 	}
 	return out
+}
+
+// spansOf is the spans of the waits.
+func spansOf(waits []wait) []span {
+	out := make([]span, len(waits))
+	for i, w := range waits {
+		out[i] = w.span
+	}
+	return out
+}
+
+// forgeWait is a story's checks waits and reviewers waits, replayed from the
+// events of its kept forge state (ADR-0168).
+type forgeWait struct{ checks, reviewers []wait }
+
+// forgeWaits is the waits replayed from each story's kept forge events, by its
+// canonical ID; a story is in it exactly when it is in events.
+func forgeWaits(events map[string][]forge.StatusEvent, now time.Time) map[string]forgeWait {
+	out := make(map[string]forgeWait, len(events))
+	for id, evs := range events {
+		out[workitem.CanonicalID(id)] = replayForge(evs, now)
+	}
+	return out
+}
+
+// deriveWaitForge sets the seconds of the item's checks waits and reviewers
+// waits that fall in its review intervals, when it has kept forge state.
+func deriveWaitForge(m *ItemMetrics, it *workitem.Item, pulls map[string]forgeWait, now time.Time) {
+	pull, ok := pulls[workitem.CanonicalID(it.ID)]
+	if !ok {
+		return
+	}
+	review := spansOf(inReview(it, now))
+	checks, reviewers := within(spansOf(pull.checks), review), within(spansOf(pull.reviewers), review)
+	m.WaitChecks, m.WaitReviewers = &checks, &reviewers
+}
+
+// The waits a story's pull request can be in while its forge events replay.
+const (
+	onNothing = iota
+	onChecks
+	onReviewers
+)
+
+// replayForge replays a story's forge events read by read, the events of one
+// read sharing their time, each check's state and each reviewer's latest
+// review carried from read to read. Each push, an event of kind head, starts
+// a checks wait, ending the open wait of the head before it with nobody
+// awaited. The checks wait ends at the first read after which no required
+// check is pending, awaiting the check that finished last, or nobody when
+// none was pending at the push's own read. A reviewers wait starts then and
+// ends at the first later review that approves or requests changes, or as it
+// starts while an approval stands: a request for changes stands until its
+// reviewer reviews again, which is what the wait after the fix's push waits for. A wait still open runs to now, and a
+// read whose time cannot be parsed is passed over.
+func replayForge(events []forge.StatusEvent, now time.Time) forgeWait {
+	var out forgeWait
+	checks := map[string]string{}  // each required check's state
+	reviews := map[string]string{} // each reviewer's latest review's state
+	phase, cur, last := onNothing, wait{}, ""
+	keep := func() {
+		if phase == onChecks {
+			out.checks = append(out.checks, cur)
+		} else {
+			out.reviewers = append(out.reviewers, cur)
+		}
+		phase = onNothing
+	}
+	end := func(at time.Time, awaited string) {
+		cur.to, cur.awaited, cur.open = at, awaited, false
+		keep()
+	}
+	for i := 0; i < len(events); {
+		j := i + 1
+		for j < len(events) && events[j].At == events[i].At {
+			j++
+		}
+		read := events[i:j]
+		i = j
+		at, err := time.Parse(time.RFC3339, read[0].At)
+		if err != nil {
+			continue
+		}
+		pushed := slices.ContainsFunc(read, func(e forge.StatusEvent) bool { return e.Kind == forge.EventHead })
+		if pushed {
+			if phase != onNothing {
+				end(at, "")
+			}
+			phase, cur, last = onChecks, wait{span: span{at, now}, open: true}, ""
+		}
+		for _, e := range read {
+			switch e.Kind {
+			case forge.EventCheck:
+				if checks[e.Name] == string(forge.CheckPending) && e.To != string(forge.CheckPending) {
+					last = e.Name
+				}
+				checks[e.Name] = e.To
+			case forge.EventReview:
+				reviews[e.Name] = e.To
+				if phase == onReviewers && decides(e.To) {
+					end(at, e.Name)
+				}
+			}
+		}
+		if phase != onChecks || pending(checks) {
+			continue
+		}
+		if pushed {
+			last = ""
+		}
+		end(at, last)
+		phase, cur = onReviewers, wait{span: span{at, now}, open: true}
+		if who := standing(reviews); who != "" {
+			end(at, who)
+		}
+	}
+	if phase != onNothing {
+		keep()
+	}
+	return out
+}
+
+// pending reports whether some check is pending.
+func pending(checks map[string]string) bool {
+	for _, state := range checks {
+		if state == string(forge.CheckPending) {
+			return true
+		}
+	}
+	return false
+}
+
+// decides reports whether a review in state approves or requests changes.
+func decides(state string) bool {
+	return state == string(forge.ReviewApproved) || state == string(forge.ReviewChangesRequested)
+}
+
+// standing is the first reviewer, in login order, whose latest review
+// approves, empty when none does.
+func standing(reviews map[string]string) string {
+	for _, who := range slices.Sorted(maps.Keys(reviews)) {
+		if reviews[who] == string(forge.ReviewApproved) {
+			return who
+		}
+	}
+	return ""
 }
 
 func orZero(v *float64) float64 {

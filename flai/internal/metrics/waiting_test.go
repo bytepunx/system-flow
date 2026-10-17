@@ -3,10 +3,12 @@ package metrics
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/usage"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -162,12 +164,15 @@ func TestWaitingByTheWeek(t *testing.T) {
 		t.Fatal(err)
 	}
 	none := `"orchestrator":{"count":0,"total_seconds":0},"confirmed":{"count":0,"total_seconds":0}`
+	// ADR-0168: without kept forge state the checks and reviewers are 0
+	noPull, noPullMean := `"checks":{"total_seconds":0},"reviewers":{"total_seconds":0}`,
+		`"checks":{"total_seconds":0,"mean_seconds":0},"reviewers":{"total_seconds":0,"mean_seconds":0}`
 	want := `{"weeks":[` +
-		`{"week":"2026-W34","start":"2026-08-17","items":0,"empty_wakes":0,"threads":{"total_seconds":0,` + none + `},"review":{"total_seconds":0}},` +
+		`{"week":"2026-W34","start":"2026-08-17","items":0,"empty_wakes":0,"threads":{"total_seconds":0,` + none + `},"review":{"total_seconds":0},` + noPull + `},` +
 		`{"week":"2026-W35","start":"2026-08-24","items":6,"empty_wakes":0,` +
-		`"threads":{"total_seconds":36000,"mean_seconds":6000,` + none + `},"review":{"total_seconds":32400,"mean_seconds":5400}},` +
+		`"threads":{"total_seconds":36000,"mean_seconds":6000,` + none + `},"review":{"total_seconds":32400,"mean_seconds":5400},` + noPullMean + `},` +
 		`{"week":"2026-W36","start":"2026-08-31","items":2,"empty_wakes":0,` +
-		`"threads":{"total_seconds":7200,"mean_seconds":3600,` + none + `},"review":{"total_seconds":0,"mean_seconds":0}}],"empty_wakes":{"count":0},"longest":[`
+		`"threads":{"total_seconds":7200,"mean_seconds":3600,` + none + `},"review":{"total_seconds":0,"mean_seconds":0},` + noPullMean + `}],"empty_wakes":{"count":0},"longest":[`
 	if !strings.HasPrefix(string(data), want) {
 		t.Errorf("waiting =\n%s\nwant it to start\n%s", data, want)
 	}
@@ -325,7 +330,8 @@ func TestWaitsTheOrchestratorEndedAreCountedApart(t *testing.T) {
 	week := `{"week":"2026-W35","start":"2026-08-24","items":2,"empty_wakes":0,` +
 		`"threads":{"total_seconds":43200,"mean_seconds":21600,` +
 		`"orchestrator":{"count":2,"total_seconds":5400},"confirmed":{"count":1,"total_seconds":10800}},` +
-		`"review":{"total_seconds":0,"mean_seconds":0}}`
+		`"review":{"total_seconds":0,"mean_seconds":0},` +
+		`"checks":{"total_seconds":0,"mean_seconds":0},"reviewers":{"total_seconds":0,"mean_seconds":0}}`
 	if string(data) != week {
 		t.Errorf("week =\n%s\nwant\n%s", data, week)
 	}
@@ -469,5 +475,275 @@ func TestLongestWaitsTiesAndAResolvedThread(t *testing.T) {
 		{Item: "S-0001", Kind: "thread", Thread: "TH-0012", Started: "2026-08-25T01:00:00Z", Ended: "2026-08-25T03:00:00Z", Seconds: 3600, Awaited: "alex"},
 		{Item: "S-0001", Kind: "review", Started: "2026-08-25T01:00:00Z", Ended: "2026-08-25T02:00:00Z", Seconds: 3600, Awaited: "alex"},
 		{Item: "S-0002", Kind: "thread", Thread: "TH-0004", Started: "2026-08-25T01:00:00Z", Ended: "2026-08-25T03:00:00Z", Seconds: 3600},
+	})
+}
+
+// pullStory is a story created on 20 August 2026 and moved as the triples of
+// state, time, and by say.
+func pullStory(id string, moves ...string) *workitem.Item {
+	it := &workitem.Item{ID: id, Type: workitem.Story, Status: workitem.Backlog, Created: "2026-08-20T00:00:00Z"}
+	for i := 0; i < len(moves); i += 3 {
+		it.Transitions = append(it.Transitions, workitem.Transition{To: moves[i], At: moves[i+1], By: moves[i+2]})
+		it.Status = moves[i]
+	}
+	return it
+}
+
+// pullEvents are the forge events of the quintuples of time, kind, name,
+// from, and to given.
+func pullEvents(fields ...string) []forge.StatusEvent {
+	var out []forge.StatusEvent
+	for i := 0; i < len(fields); i += 5 {
+		out = append(out, forge.StatusEvent{At: fields[i], Kind: fields[i+1], Name: fields[i+2], From: fields[i+3], To: fields[i+4]})
+	}
+	return out
+}
+
+// pullItems are stories under pull-request acceptance done in the week of 24
+// August 2026, and pullState their kept forge events: S-0035 has none kept.
+func pullItems() []*workitem.Item {
+	ip, rv, done := workitem.InProgress, workitem.Review, workitem.Done
+	return []*workitem.Item{
+		// checks pending, then passed, then a comment and an approval
+		pullStory("S-0031", ip, "2026-08-25T00:00:00Z", "agent", rv, "2026-08-25T10:00:00Z", "agent", done, "2026-08-25T14:00:00Z", "alex"),
+		// checks finished at the first read, a second push mid reviewers wait,
+		// then changes requested
+		pullStory("S-0032", ip, "2026-08-26T00:00:00Z", "agent", rv, "2026-08-26T10:00:00Z", "agent", done, "2026-08-26T16:00:00Z", "alex"),
+		// sent back while its checks ran, an approval standing when they
+		// finished, and pushed again, its checks still running at now
+		pullStory("S-0033", ip, "2026-08-27T00:00:00Z", "agent", rv, "2026-08-27T10:00:00Z", "agent", ip, "2026-08-27T12:00:00Z", "flai",
+			rv, "2026-08-27T14:00:00Z", "agent", done, "2026-08-27T15:00:00Z", "alex"),
+		// kept forge state with no events
+		pullStory("S-0034", ip, "2026-08-28T00:00:00Z", "agent", rv, "2026-08-28T01:00:00Z", "agent", done, "2026-08-28T02:00:00Z", "alex"),
+		// no kept forge state
+		pullStory("S-0035", ip, "2026-08-28T00:00:00Z", "agent", rv, "2026-08-28T01:00:00Z", "agent", done, "2026-08-28T03:00:00Z", "alex"),
+	}
+}
+
+// pullState is the kept forge events of pullItems, by story.
+func pullState() map[string][]forge.StatusEvent {
+	head, check, review := forge.EventHead, forge.EventCheck, forge.EventReview
+	return map[string][]forge.StatusEvent{
+		"S-0031": pullEvents(
+			"2026-08-25T10:01:00Z", head, "", "", "a",
+			"2026-08-25T10:01:00Z", check, "build", "", "pending",
+			"2026-08-25T10:01:00Z", check, "lint", "", "pending",
+			"2026-08-25T10:05:00Z", check, "lint", "pending", "passed",
+			"2026-08-25T10:20:00Z", check, "build", "pending", "passed",
+			"2026-08-25T11:00:00Z", review, "bob", "", "commented",
+			"2026-08-25T12:00:00Z", review, "carol", "", "approved"),
+		"S-32": pullEvents( // read under any form of the story's ID
+			"2026-08-26T10:01:00Z", head, "", "", "a",
+			"2026-08-26T10:01:00Z", check, "build", "", "passed",
+			"2026-08-26T11:01:00Z", head, "", "a", "b",
+			"2026-08-26T11:01:00Z", check, "build", "passed", "pending",
+			"2026-08-26T11:31:00Z", check, "build", "pending", "passed",
+			"2026-08-26T13:31:00Z", review, "dave", "", "changes-requested"),
+		"S-0033": pullEvents(
+			"2026-08-27T10:01:00Z", head, "", "", "a",
+			"2026-08-27T10:01:00Z", check, "build", "", "pending",
+			"2026-08-27T10:01:00Z", review, "erin", "", "approved",
+			"2026-08-27T13:00:00Z", check, "build", "pending", "passed",
+			"2026-08-27T14:01:00Z", head, "", "a", "b",
+			"2026-08-27T14:01:00Z", check, "build", "passed", "pending"),
+		"S-0034": nil,
+	}
+}
+
+// S-0396, ADR-0168: each push starts a checks wait, which ends at the read
+// after which no required check is pending, at once when none was; a
+// reviewers wait follows to the first approval or request for changes, at
+// once with one standing; a push ends the open wait; and only their parts in
+// the story's review intervals count, an open one up to now. Present with
+// kept forge state, events or none, and absent without.
+func TestChecksAndReviewersWaitsPerItem(t *testing.T) {
+	rep := Compute(pullItems(), Options{Now: now, Since: tenDays, Forge: pullState()})
+	want := map[string][2]*float64{ // checks, reviewers
+		// 10:01 to 10:20; 10:20 to the approval at 12:00, the comment ending nothing
+		"S-0031": {val(1140), val(6000)},
+		// 0 at the first read and 11:01 to 11:31; 10:01 to the push at
+		// 11:01, and 11:31 to the changes requested at 13:31
+		"S-0032": {val(1800), val(3600 + 7200)},
+		// 10:01 to 13:00 counted to the send back at 12:00, and 14:01 to now
+		// counted to done at 15:00; the reviewers wait ends as it starts
+		"S-0033": {val(7140 + 3540), val(0)},
+		"S-0034": {val(0), val(0)},
+		"S-0035": {nil, nil},
+	}
+	for _, m := range rep.Items {
+		w := want[m.ID]
+		for k, got := range [2]*float64{m.WaitChecks, m.WaitReviewers} {
+			if (got == nil) != (w[k] == nil) || (got != nil && *got != *w[k]) {
+				t.Errorf("%s [checks, reviewers][%d] = %v, want %v", m.ID, k, deref(got), deref(w[k]))
+			}
+		}
+	}
+	data, err := json.Marshal(rep.Items[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keys := `"wait_review_seconds":14400,"wait_checks_seconds":1140,"wait_reviewers_seconds":6000`; !strings.Contains(string(data), keys) {
+		t.Errorf("S-0031 json lacks %s: %s", keys, data)
+	}
+	data, err = json.Marshal(rep.Items[4])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "wait_checks") || strings.Contains(string(data), "wait_reviewers") {
+		t.Errorf("S-0035 has no kept forge state and carries its waits: %s", data)
+	}
+}
+
+// S-0396, ADR-0168: a week's checks and reviewers sum its items' waits, an
+// item without kept forge state counting 0, and their means are over all its
+// items; the review wait, of which they are parts, is unchanged.
+func TestChecksAndReviewersWaitsByTheWeek(t *testing.T) {
+	weeks := Compute(pullItems(), Options{Now: now, Since: tenDays, Forge: pullState()}).Waiting.Weeks
+	data, err := json.Marshal(weeks[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `"review":{"total_seconds":57600,"mean_seconds":11520},` +
+		`"checks":{"total_seconds":13620,"mean_seconds":2724},"reviewers":{"total_seconds":16800,"mean_seconds":3360}}`; !strings.HasSuffix(string(data), want) {
+		t.Errorf("week =\n%s\nwant it to end\n%s", data, want)
+	}
+	for _, i := range []int{0, 2} {
+		if b := weeks[i]; b.Checks.Total != 0 || b.Checks.Mean != nil || b.Reviewers.Total != 0 || b.Reviewers.Mean != nil {
+			t.Errorf("%s, without items: checks %+v, reviewers %+v", b.Week, b.Checks, b.Reviewers)
+		}
+	}
+}
+
+// S-0396, ADR-0168: in local mode, which loads no kept forge state, no item
+// carries the waits, every week reports them 0, the longest waits gain no
+// kind, and every other figure is what it was.
+func TestWithoutKeptForgeStateNothingElseChanges(t *testing.T) {
+	with, err := json.Marshal(Compute(pullItems(), Options{Now: now, Since: tenDays, Forge: pullState()}).Summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep := Compute(pullItems(), Options{Now: now, Since: tenDays})
+	without, err := json.Marshal(rep.Summary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(with) != string(without) {
+		t.Errorf("summary changed with kept forge state:\n%s\n%s", with, without)
+	}
+	for _, m := range rep.Items {
+		if m.WaitChecks != nil || m.WaitReviewers != nil {
+			t.Errorf("%s carries checks %v and reviewers %v without kept forge state", m.ID, deref(m.WaitChecks), deref(m.WaitReviewers))
+		}
+	}
+	for _, b := range rep.Waiting.Weeks {
+		if b.Checks.Total != 0 || b.Reviewers.Total != 0 {
+			t.Errorf("%s checks %+v, reviewers %+v, want 0", b.Week, b.Checks, b.Reviewers)
+		}
+	}
+	for _, lw := range rep.Waiting.Longest {
+		if lw.Kind != waitInReview {
+			t.Errorf("longest without kept forge state lists %+v", lw)
+		}
+	}
+}
+
+// S-0396, ADR-0168: the checks and reviewers waits are listed among the
+// longest on their own, their seconds those in the review intervals: the
+// check that finished last and the reviewer whose review ended a wait are
+// awaited, nobody when a push ended it, and an open wait has no end.
+func TestLongestWaitsOnChecksAndReviewers(t *testing.T) {
+	w := Compute(pullItems(), Options{Now: now, Since: tenDays, Forge: pullState()}).Waiting
+	sameWaits(t, w.Longest, []LongWait{
+		{Item: "S-0032", Kind: "review", Started: "2026-08-26T10:00:00Z", Ended: "2026-08-26T16:00:00Z", Seconds: 21600, Awaited: "alex"},
+		{Item: "S-0031", Kind: "review", Started: "2026-08-25T10:00:00Z", Ended: "2026-08-25T14:00:00Z", Seconds: 14400, Awaited: "alex"},
+		{Item: "S-0032", Kind: "reviewers", Started: "2026-08-26T11:31:00Z", Ended: "2026-08-26T13:31:00Z", Seconds: 7200, Awaited: "dave"},
+		{Item: "S-0033", Kind: "review", Started: "2026-08-27T10:00:00Z", Ended: "2026-08-27T12:00:00Z", Seconds: 7200, Awaited: "flai"},
+		{Item: "S-0035", Kind: "review", Started: "2026-08-28T01:00:00Z", Ended: "2026-08-28T03:00:00Z", Seconds: 7200, Awaited: "alex"},
+		{Item: "S-0033", Kind: "checks", Started: "2026-08-27T10:01:00Z", Ended: "2026-08-27T13:00:00Z", Seconds: 7140, Awaited: "build"},
+		{Item: "S-0031", Kind: "reviewers", Started: "2026-08-25T10:20:00Z", Ended: "2026-08-25T12:00:00Z", Seconds: 6000, Awaited: "carol"},
+		{Item: "S-0032", Kind: "reviewers", Started: "2026-08-26T10:01:00Z", Ended: "2026-08-26T11:01:00Z", Seconds: 3600},
+		{Item: "S-0033", Kind: "review", Started: "2026-08-27T14:00:00Z", Ended: "2026-08-27T15:00:00Z", Seconds: 3600, Awaited: "alex"},
+		{Item: "S-0034", Kind: "review", Started: "2026-08-28T01:00:00Z", Ended: "2026-08-28T02:00:00Z", Seconds: 3600, Awaited: "alex"},
+	})
+	// a later window: S-0031's and S-0032's waits before it, and the open
+	// checks wait among the ten, with no end
+	w = Compute(pullItems(), Options{Now: now, Since: 5*24*time.Hour + 9*time.Hour, Forge: pullState()}).Waiting
+	sameWaits(t, w.Longest, []LongWait{ // from 2026-08-27T03:00:00Z
+		{Item: "S-0033", Kind: "review", Started: "2026-08-27T10:00:00Z", Ended: "2026-08-27T12:00:00Z", Seconds: 7200, Awaited: "flai"},
+		{Item: "S-0035", Kind: "review", Started: "2026-08-28T01:00:00Z", Ended: "2026-08-28T03:00:00Z", Seconds: 7200, Awaited: "alex"},
+		{Item: "S-0033", Kind: "checks", Started: "2026-08-27T10:01:00Z", Ended: "2026-08-27T13:00:00Z", Seconds: 7140, Awaited: "build"},
+		{Item: "S-0033", Kind: "review", Started: "2026-08-27T14:00:00Z", Ended: "2026-08-27T15:00:00Z", Seconds: 3600, Awaited: "alex"},
+		{Item: "S-0034", Kind: "review", Started: "2026-08-28T01:00:00Z", Ended: "2026-08-28T02:00:00Z", Seconds: 3600, Awaited: "alex"},
+		{Item: "S-0033", Kind: "checks", Started: "2026-08-27T14:01:00Z", Seconds: 3540},
+	})
+}
+
+// S-0396, ADR-0168: the replay keeps every wait, of 0 seconds too: one whose
+// checks had finished at the push's own read awaits nobody, one a push ended
+// awaits nobody, one that started with an approval standing awaits its
+// reviewer, one after a fix for requested changes waits for the reviewer to
+// review again, one still open runs to now, and a read whose time cannot be
+// parsed is passed over.
+func TestReplayForgeKeepsEveryWait(t *testing.T) {
+	at := func(s string) time.Time {
+		v, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	closed := func(from, to, awaited string) wait {
+		return wait{span: span{at(from), at(to)}, awaited: awaited}
+	}
+	state := pullState()
+	for _, c := range []struct {
+		story             string
+		events            []forge.StatusEvent
+		checks, reviewers []wait
+	}{
+		{"S-0032", state["S-32"],
+			[]wait{closed("2026-08-26T10:01:00Z", "2026-08-26T10:01:00Z", ""), closed("2026-08-26T11:01:00Z", "2026-08-26T11:31:00Z", "build")},
+			[]wait{closed("2026-08-26T10:01:00Z", "2026-08-26T11:01:00Z", ""), closed("2026-08-26T11:31:00Z", "2026-08-26T13:31:00Z", "dave")}},
+		{"S-0033", append(state["S-0033"], pullEvents("soon", forge.EventCheck, "build", "pending", "passed")...),
+			[]wait{closed("2026-08-27T10:01:00Z", "2026-08-27T13:00:00Z", "build"), {span: span{at("2026-08-27T14:01:00Z"), now}, open: true}},
+			[]wait{closed("2026-08-27T13:00:00Z", "2026-08-27T13:00:00Z", "erin")}},
+		{"S-0036", pullEvents(
+			"2026-08-29T10:00:00Z", forge.EventHead, "", "", "a",
+			"2026-08-29T11:00:00Z", forge.EventReview, "dave", "", "changes-requested",
+			"2026-08-29T12:00:00Z", forge.EventHead, "", "a", "b",
+			"2026-08-29T13:00:00Z", forge.EventReview, "dave", "changes-requested", "approved"),
+			[]wait{closed("2026-08-29T10:00:00Z", "2026-08-29T10:00:00Z", ""), closed("2026-08-29T12:00:00Z", "2026-08-29T12:00:00Z", "")},
+			[]wait{closed("2026-08-29T10:00:00Z", "2026-08-29T11:00:00Z", "dave"), closed("2026-08-29T12:00:00Z", "2026-08-29T13:00:00Z", "dave")}},
+	} {
+		got := replayForge(c.events, now)
+		if fmt.Sprint(got.checks) != fmt.Sprint(c.checks) || fmt.Sprint(got.reviewers) != fmt.Sprint(c.reviewers) {
+			t.Errorf("%s checks %+v\nwant %+v\nreviewers %+v\nwant %+v", c.story, got.checks, c.checks, got.reviewers, c.reviewers)
+		}
+	}
+}
+
+// S-0396, ADR-0168: waits otherwise tied go to a thread's, then a review
+// wait, then a checks wait, then a reviewers wait; and a checks wait ties a
+// review wait of the same start and seconds in the report.
+func TestLongestWaitsTieByKind(t *testing.T) {
+	tied := func(kind, thread string) LongWait {
+		return LongWait{Item: "S-0001", Kind: kind, Thread: thread, Started: "2026-08-25T10:00:00Z", Seconds: 3600}
+	}
+	got := []LongWait{tied("reviewers", ""), tied("checks", ""), tied("review", ""), tied("thread", "TH-0001")}
+	sort.Slice(got, func(i, j int) bool { return longerWait(got[i], got[j]) })
+	for i, kind := range []string{"thread", "review", "checks", "reviewers"} {
+		if got[i].Kind != kind {
+			t.Errorf("tied[%d] = %s, want %s", i, got[i].Kind, kind)
+		}
+	}
+	ip, rv := workitem.InProgress, workitem.Review
+	items := []*workitem.Item{pullStory("S-0001", ip, "2026-08-25T00:00:00Z", "agent", rv, "2026-08-25T10:00:00Z", "agent", ip, "2026-08-25T11:00:00Z", "flai")}
+	events := map[string][]forge.StatusEvent{"S-0001": pullEvents(
+		"2026-08-25T10:00:00Z", forge.EventHead, "", "", "a",
+		"2026-08-25T10:00:00Z", forge.EventCheck, "build", "", "pending",
+		"2026-08-25T11:00:00Z", forge.EventCheck, "build", "pending", "failed")}
+	sameWaits(t, Compute(items, Options{Now: now, Since: tenDays, Forge: events}).Waiting.Longest, []LongWait{
+		{Item: "S-0001", Kind: "review", Started: "2026-08-25T10:00:00Z", Ended: "2026-08-25T11:00:00Z", Seconds: 3600, Awaited: "flai"},
+		{Item: "S-0001", Kind: "checks", Started: "2026-08-25T10:00:00Z", Ended: "2026-08-25T11:00:00Z", Seconds: 3600, Awaited: "build"},
 	})
 }

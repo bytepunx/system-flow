@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
@@ -56,6 +57,11 @@ type Options struct {
 	Conversations       []*messages.Conversation
 	Conflicts           []storygit.Conflict
 	ConflictsUnreadable bool
+	// Forge are the events of each story's kept forge state, by its
+	// canonical ID, read by the caller under pull-request acceptance only: a
+	// story is in it exactly when it has kept forge state, and nil in local
+	// mode (ADR-0168).
+	Forge map[string][]forge.StatusEvent
 }
 
 // ItemMetrics are the per-item derived values.
@@ -96,6 +102,11 @@ type ItemMetrics struct {
 	// progress, and WaitReview the time it spent in review (S-0205).
 	WaitThreads *float64 `json:"wait_threads_seconds,omitempty"`
 	WaitReview  *float64 `json:"wait_review_seconds,omitempty"`
+	// WaitChecks and WaitReviewers are the parts of its time in review it
+	// waited on its pull request's required checks and on its reviewers,
+	// present exactly when it has kept forge state (ADR-0168).
+	WaitChecks    *float64 `json:"wait_checks_seconds,omitempty"`
+	WaitReviewers *float64 `json:"wait_reviewers_seconds,omitempty"`
 	// WaitThreadsOrchestrator is the part of WaitThreads whose waits the
 	// orchestrator ended (S-0220).
 	WaitThreadsOrchestrator *float64 `json:"wait_threads_orchestrator_seconds,omitempty"`
@@ -234,6 +245,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	}
 	perItem := map[string]ItemMetrics{}
 	waits := threadWaits(all, opt.Threads, opt.Now)
+	pulls := forgeWaits(opt.Forge, opt.Now)
 	replay := replayHolds(items, all, start, opt)
 	held := replay.seconds
 	rate := CostPerAgentHour(all)
@@ -241,6 +253,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		m := Derive(it, opt.Now)
 		m.ExpectedCost = ExpectedCostOf(it, rate)
 		deriveWaitThreads(&m, it, waits[workitem.CanonicalID(it.ID)], opt.Now)
+		deriveWaitForge(&m, it, pulls, opt.Now)
 		m.HeldSeconds = held[it.ID]
 		perItem[it.ID] = m
 		rep.Items = append(rep.Items, m)
@@ -293,7 +306,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	rep.Forecasts = forecasts(items, perItem, inWindow)
 	rep.CostOfDelay = costOfDelay(items, start, opt.Now)
 	rep.CostOfDelay.Order = costOrder(all, opt)
-	rep.Waiting = waiting(items, perItem, waits, start, opt.Now)
+	rep.Waiting = waiting(items, perItem, waits, pulls, start, opt.Now)
 	rep.Claims = claims(items, all, start, opt, replay)
 	rep.StrategicDays = strategicDays(opt.Activities, items, perItem, start, opt.Now)
 	rep.Turns = turns(all, start, opt.Now)
