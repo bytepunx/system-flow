@@ -1636,16 +1636,22 @@ The project's forge, through which pull-request acceptance merges a story.
 
 A project whose system-flow.yaml sets acceptance.mode: pull-request accepts a story through a pull request on its forge, acceptance.forge (github, the default), rather than by merging on this machine (ADR-0165). flai reaches the forge's repository named by the origin remote, with a token it reads from the environment variable this host names for the forge: GITHUB\_TOKEN unless flai serve forge &lt;forge&gt; --token-env &lt;NAME&gt; names another.
 
+With the forge host action on (flai serve enable forge), flai serve pushes each story in review to origin and opens or updates its one pull request (ADR-0166). flai forge check says whether the token can read and push to the repository; flai forge push does one story's push and pull request on your word; flai forge status says what flai last did for a story, and why nothing was pushed when nothing was.
+
 Examples:
 
 ```bash
 flai forge check
-flai forge check --json
+flai forge push S-0042
+flai forge status S-0042
+flai forge status S-0042 --json
 ```
 
 Subcommands:
 
 - [check](#flai-forge-check): Say whether the forge token this host names can read and push to the repository behind origin
+- [push](#flai-forge-push): Push a story in review to origin and open or update its pull request, on the operator's word
+- [status](#flai-forge-status): Say what flai last did for a story's pull request, whether origin has its branch, and why nothing was pushed
 
 #### flai forge check
 
@@ -1664,6 +1670,48 @@ Examples:
 ```bash
 flai forge check
 flai forge check --json
+```
+
+#### flai forge push
+
+Push a story in review to origin and open or update its pull request, on the operator's word.
+
+```text
+flai forge push S-nnnn
+```
+
+Do for one story what flai serve does at each look under the forge host action (ADR-0166), whether that action is on or not: push story/S-nnnn to origin with this host's git credentials when origin's branch is missing or not the local head, plainly, or with --force-with-lease on the head flai last pushed when a sync rebased it, then open the story's one pull request against the main branch, found by its head branch, or update it when its title, body, or base is not what flai would write. The token is read from the variable flai forge check names, in this shell's environment. What was done is recorded where flai forge status reads it.
+
+It needs acceptance.mode: pull-request in system-flow.yaml and the story in review. flai guard refuses it to every agent: it is the operator's.
+
+It prints the outcome (pushed, or up-to-date when origin had the local head already), the branch it pushed and whether with the lease, and the pull request's number, what was done to it (opened, updated, or unchanged), and its URL. The exit status is 1, with the reason and what clears it, when nothing was done (the mode is local, or the story is not in review) or the push or the request failed; what was done before a failure is printed still. With --json the result is the state flai records: {"story", "outcome", "reason", "at", "local\_head", "remote\_head", "last\_pushed", "pushed\_at", "forced", "pull\_request", "url", "request", "thread", "thread\_reason"}, empty fields left out; "forced" is about the push at "pushed\_at".
+
+Examples:
+
+```bash
+flai forge push S-0042
+flai forge push S-0042 --json
+```
+
+#### flai forge status
+
+Say what flai last did for a story's pull request, whether origin has its branch, and why nothing was pushed.
+
+```text
+flai forge status S-nnnn
+```
+
+Print, for one story under pull-request acceptance (ADR-0166), its pull request's number and URL as flai last opened or found it ("none yet" before that), and whether origin's story/S-nnnn matches the local branch, read now with git ls-remote origin from this host; when origin cannot be read, it says so and why. It prints what flai's last push or look did and when.
+
+When nothing was pushed, or the last push failed or no longer matches, it says why, the first of these that applies: acceptance.mode is local; the forge host action is off for this project on this host (flai forge push still pushes on your word); the token's variable is unset, as this shell sees it (flai serve reads the environment it started with); the last push failed, with its reason, when, and its thread; the story is not in review; or nothing stops flai serve, which pushes it at its next look. The token is never printed.
+
+It does not call the forge, so it works offline and costs no rate limit. The exit status is 0 whenever it can report. With --json the result is {"story", "status", "mode", "forge", "host\_action", "token\_env", "token\_set", "pull\_request", "url", "branch", "local\_head", "remote\_head", "remote\_error", "matches", "outcome", "reason", "at", "thread", "why"}, empty fields left out but for the booleans.
+
+Examples:
+
+```bash
+flai forge status S-0042
+flai forge status S-0042 --json
 ```
 
 ### flai guard

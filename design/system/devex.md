@@ -1,6 +1,6 @@
 ---
 title: Developer experience and operations
-updated: 2026-10-08
+updated: 2026-10-17
 status: active
 topics: [code, template]
 ---
@@ -20,7 +20,7 @@ What the template ships so a conforming repo is pleasant to work in from the fir
 | Make | `Makefile` | `make check` runs `flai check` and markdownlint, `make dashboard` runs `flai dashboard`, `make board`, `make stats` |
 | CI | `.github/workflows/system-flow-check.yml` | Runs `flai check --strict` and markdownlint on pull requests |
 | Agent instructions | `CLAUDE.md` | The baseline described in [template.md](template.md) |
-| Pull request template | `.github/pull_request_template.md` | Asks for the story ID and confirms the definition of done |
+| Pull request template | `.github/pull_request_template.md` | The story's pull request under pull-request acceptance: marked places, `<!-- flai:story -->` to `<!-- /flai:story -->` and likewise `criteria`, `definition-of-done`, and `verify`, where flai fills the story's ID, its acceptance criteria, and its last `flai verify` result and keeps the definition of done as written ([ADR-0166](../adrs/0166-under-pull-request-acceptance-flai-serve-pushes-a-story-s-branch-and-opens-or.md)) |
 
 ## Used by this monorepo
 

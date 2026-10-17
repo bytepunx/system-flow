@@ -205,7 +205,7 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 
 | Key | Set with | Meaning |
 |-----|----------|---------|
-| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `auto-publish`, `agent`, `dashboard`, `checks`, `settings`, `host`, `plan`, `orchestrate`, `analyze`, `auto-approve`, `auto-upgrade`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do; `auto-publish`, `auto-approve`, and `auto-upgrade` are shell only, and the dashboard neither shows nor changes them |
+| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `forge`, `auto-publish`, `agent`, `dashboard`, `checks`, `components`, `settings`, `host`, `plan`, `orchestrate`, `analyze`, `auto-approve`, `auto-upgrade`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do; `auto-publish`, `auto-approve`, and `auto-upgrade` are shell only, and the dashboard neither shows nor changes them |
 | `agent.command` | `flai serve agent set -- <program> [args...]`, `flai serve agent clear` | What is started for a ready story that names no harness: an argument list, never run through a shell, with `{story}`, `{root}`, `{model}`, `{harness}`, and `{provider}` replaced |
 | `agent.name` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents it starts, `agent` when empty; the story is appended, as in `agent-S-0104` |
 | `agent.auto_restarts` | `flai serve agent set --auto-restarts <n>` | How many times in a row `flai serve` restarts a story's agent on its own after it fails with its story in progress, 2 when unset, 0 never; past it, `flai serve` opens a thread on the story for you ([ADR-0108](../../design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md)) |
@@ -231,7 +231,7 @@ Environment variables flai reads:
 | `FLAI_RELEASES_API` | Another source of releases for `flai self-upgrade` and `flai host check` and `upgrade` |
 | `FLAI_INSTALL_DIR` | Where `flai self-upgrade` from a checkout installs (`~/.flai/bin` by default) |
 | `GITHUB_TOKEN`, `GH_TOKEN` | GitHub API and registry authentication for `flai self-upgrade` and `flai dashboard`; `gh auth token` is borrowed when neither is set |
-| The variable `forges.<name>.token_env` names, `GITHUB_TOKEN` for `github` by default | The forge's token, read only when flai calls the forge, such as `flai forge check`; nothing is borrowed when it is unset ([Accepting through a pull request](#accepting-through-a-pull-request)) |
+| The variable `forges.<name>.token_env` names, `GITHUB_TOKEN` for `github` by default | The forge's token, read only when flai calls the forge, such as `flai forge check`, `flai forge push`, and `flai serve`'s push of a story in review; nothing is borrowed when it is unset, and no agent `flai serve` starts gets it ([Accepting through a pull request](#accepting-through-a-pull-request)) |
 
 `flai host` sets `FLAI_HOST_URL` and `FLAI_HOST_TOKEN` for the processes it runs; do not set them yourself.
 
@@ -2223,17 +2223,69 @@ flai serve forge                                       # the variable each forge
 flai serve forge github --token-env FLAI_GITHUB_TOKEN  # read GitHub's token from another variable on this host
 flai forge check                                       # can that token read and push to the repository behind origin?
 flai manifest set acceptance.mode=pull-request acceptance.merge_method=squash
+flai serve enable forge                                # on the host: push each story in review and open its pull request
+flai forge status S-0042                               # its pull request, whether origin has its branch, and why not
+flai forge push S-0042                                 # push it and open or update its pull request now
 ```
 
 A project chooses in `system-flow.yaml` how a story in review is accepted ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)): `acceptance.mode` is `local`, the default, which merges on this machine as above, or `pull-request`, which accepts through a pull request on the project's forge. `acceptance.forge` is the forge, `github`, the default and only one. `acceptance.merge_method` is how the forge merges the pull request: `merge`, the default, `squash`, or `rebase`.
 
-Nothing acts on `pull-request` yet. `flai accept` still merges on this machine whatever the mode. Later releases open the pull request, read its checks and reviews, gate acceptance on them, and merge it by `merge_method`. Until then, set the mode only to get ready, and check the token first.
+Under `pull-request`, a story's move to review has `flai serve` push its branch and open its pull request, as below. Nothing merges one yet: `flai accept` still merges on this machine whatever the mode. Later releases read the pull request's checks and reviews, gate acceptance on them, and merge it by `merge_method`.
 
 A value the manifest does not take, such as `pull_request`, stops every command that reads the manifest, naming the key and the values it takes, rather than falling back to `local`. Fix it or remove it by hand. `flai manifest set` refuses such a value before writing it.
 
 The token is your host's, never the project's. flai reads it from an environment variable: `GITHUB_TOKEN` for GitHub, unless `flai serve forge github --token-env <NAME>` names another; `--reset` goes back to `GITHUB_TOKEN`. No flag takes the token, and flai never writes it to the configuration, a log, a work item, or an error. It reads the variable only when it calls the forge. `flai serve` reads its own environment, so export the variable where `flai host` or `flai serve` starts ([operator guide](../operators/index.md#a-forge-token-for-pull-request-acceptance-s-0392)).
 
-`flai forge check` reads the repository from the `origin` remote, which must be on github.com, and asks GitHub whether the token can read it and push to it. It works under either mode, so check before you switch. It prints the forge, the repository, the variable, and `read` and `push`, `yes` or `no`, and never the token. It exits 1 with the reason and the fix when there is no `origin`, `origin` is not on GitHub, the variable is unset, GitHub rejects the token, the repository is not found or not visible to the token, GitHub refuses the token or has rate-limited it, or the token can read but not push. The token needs write access to the repository's contents: `contents: write` for a fine-grained token, the `repo` scope for a classic one. `--json` gives `{forge, repository, token_env, read, push, ok, reason}`.
+`flai forge check` reads the repository from the `origin` remote, which must be on github.com, and asks GitHub whether the token can read it and push to it. It works under either mode, so check before you switch. It prints the forge, the repository, the variable, and `read` and `push`, `yes` or `no`, and never the token. It exits 1 with the reason and the fix when there is no `origin`, `origin` is not on GitHub, the variable is unset, GitHub rejects the token, the repository is not found or not visible to the token, GitHub refuses the token or has rate-limited it, or the token can read but not push. The token needs write access to the repository's contents: `contents: write` for a fine-grained token, the `repo` scope for a classic one. To open and update pull requests it also needs `pull requests: write` for a fine-grained token. `--json` gives `{forge, repository, token_env, read, push, ok, reason}`.
+
+#### The pull request on the move to review
+
+Under `acceptance.mode: pull-request`, with the `forge` host action on for the project (`flai serve enable forge`, off by default), `flai serve` looks at each story in review once a minute ([ADR-0166](../../design/adrs/0166-under-pull-request-acceptance-flai-serve-pushes-a-story-s-branch-and-opens-or.md)). The agent moves its story to review as before; it pushes nothing and opens no pull request itself.
+
+- **The push.** When `story/S-nnnn` on `origin` is missing or is not the local head, `flai serve` pushes it with the host's git credentials. After `flai stream sync` has rebased a branch it pushed, it pushes with `--force-with-lease` on the head it last pushed, so a push over someone else's commits is refused. That is the one force push flai makes; it never forces any other branch.
+- **The pull request.** It opens one against the main branch, titled `[S-0042] <title>`, or updates the one the branch has. It finds the pull request by its head branch, so a story that comes back to review keeps its pull request, and nothing about it is written to the story.
+- **The body.** flai fills the project's `.github/pull_request_template.md` where it marks a place, between `<!-- flai:<part> -->` and `<!-- /flai:<part> -->`:
+
+  | Part | What flai writes there |
+  |------|------------------------|
+  | `story` | The story's ID |
+  | `criteria` | Its acceptance criteria, ticked as the story has them |
+  | `definition-of-done` | Nothing: the checklist stays as the project wrote it |
+  | `verify` | Its last `flai verify` result and the commit it ran at |
+
+  A part the template does not mark is added at the end under its own heading, so a project without the file gets all four. A begin mark without its end mark, or the reverse, is a failure. The template's file has all four marks.
+- **Failures.** A push or a request that fails, such as an unset token, a refused push, or the forge being down, opens one thread on the story. It names the reason and what clears it. `flai serve` tries again at its next look and resolves the thread once the push and the request succeed.
+- **No agent holds the token.** Every agent `flai serve` starts runs without the token's variable, and `flai guard` refuses `flai forge push` to every agent.
+
+`flai serve checks` names commands the host runs on a story in review. They are not the forge's checks.
+
+#### flai forge push and flai forge status
+
+```bash
+flai forge push S-0042          # push story/S-0042 and open or update its pull request now
+flai forge push S-0042 --json
+flai forge status S-0042        # what flai last did, and why nothing was pushed
+flai forge status S-0042 --json
+```
+
+`flai forge push S-0042` does what `flai serve` does at a look, for one story, on your word, whether the `forge` host action is on or not. It reads the token from the variable `flai forge check` names, in your shell's environment. It needs the mode `pull-request` and the story in review. It prints the outcome, `pushed`, or `up-to-date` when origin had the local head already, the branch it pushed and whether with the lease, and the pull request's number, what was done to it (`opened`, `updated`, or `unchanged`), and its URL. It exits 1 with the reason and what clears it when it did nothing, because the mode is `local` or the story is not in review, or when the push or the request failed. What it did before a failure is printed still. `--json` gives the state flai records: `{story, outcome, reason, at, local_head, remote_head, last_pushed, pushed_at, forced, pull_request, url, request, thread, thread_reason}`, empty fields left out. `forced` is about the push at `pushed_at`.
+
+`flai forge status S-0042` prints, one finding a line:
+
+| Line | Says |
+|------|------|
+| `story` | The story and its status |
+| `mode` | The acceptance mode and the forge |
+| `host action` | Whether `forge` is on for this project on this host |
+| `token` | The variable the token is read from, and whether it is set in this shell; never the token |
+| `pull request` | Its number and URL, or `none yet` |
+| `branch` | Whether origin's `story/S-0042` matches the local head, read now with `git ls-remote origin`, or why origin could not be read |
+| `last look` | What the last push or look did, and when, or `none yet` |
+| `why` | When nothing was pushed, or the branch no longer matches: the first that applies of the mode is `local`, the host action is off, the token's variable is unset, the last push failed (with its reason, when, and its thread), the story is not in review, or nothing stops `flai serve`, which pushes it at its next look |
+
+It does not call the forge, so it works offline and costs no rate limit. It exits 0 whenever it can report. `flai serve` reads the environment it started with, so a variable set or unset in your shell since then can make `token` differ from what `flai serve` sees. `--json` gives `{story, status, mode, forge, host_action, token_env, token_set, pull_request, url, branch, local_head, remote_head, remote_error, matches, outcome, reason, at, thread, why}`, empty fields left out but for the booleans.
+
+flai keeps what it last did for each story in `.flai-cache/forge/S-0042.json` in the main checkout, which both commands write and `flai forge status` reads. It holds the head flai last pushed, which the next lease names, and never the token.
 
 ### When the orchestrator accepts
 

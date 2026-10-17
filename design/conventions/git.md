@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-10-08
+updated: 2026-10-17
 audience: agent
 order: 70
 status: active
@@ -26,13 +26,13 @@ How history is made in this repository.
 - Use conventional commit style. Commit messages name the story: subject line `<type>: [S-nnnn] what changed`, or the epic for cross-story work. Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`. Body says what and why, not how; a reader should not need the diff to understand purpose.
 - Commit messages end with a `Co-Authored-By:` trailer naming the model that authored the change, such as `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`, when an agent authored it.
 - Avoid incomplete commits by including the documentation and work item updates with the associated code changes.
-- Never force push. Never rewrite history that has been pushed. Never amend a commit that is not yours from this session.
+- Never force push. Never rewrite history that has been pushed. Never amend a commit that is not yours from this session. The one exception is a story's own branch under pull-request acceptance: after `flai stream sync` rebases `story/S-nnnn`, `flai serve`, never an agent, pushes it with `--force-with-lease` on the head it last pushed. Nothing else is ever forced, and an agent never force pushes.
 - The only secrets, credentials, tokens, or private keys allowed in the repository are ones that work only against a local, disposable environment.
 - If a real key lands in git, say so immediately; rotating it is the operator's decision.
 - Do not commit generated output, build artifacts, caches, or dependency folders. If `git status` shows one, fix `.gitignore` in the same change.
 - Verify the ignore rules do not hide files that must be committed. A fresh clone must build and pass `flai check --strict`.
 - Never create a remote repository. Creating one, and choosing its organization and visibility, is the operator's.
-- Pull requests follow `.github/pull_request_template.md`: the story ID and the definition of done, honestly ticked.
+- Under pull-request acceptance, flai opens and updates the story's pull request from `.github/pull_request_template.md`, filling the places it marks with the story's ID, its acceptance criteria, the definition of done, and its last `flai verify` result. Never open one yourself.
 - Accepting an item merges it, moves it to done, archives it, and commits: nothing is tagged and nothing is pushed.
 - Publishing is a deliberate step of its own, over everything accumulated since the last one, not tied to any single item: `git fetch`, then `flai release --pending` computes, tags, and pushes the branch and the tags, run by hand or from the board's Publish action, when the operator chooses to.
 - A component's bump, once published, is the highest delivery type among everything accepted for it since its last release, not one release per item:

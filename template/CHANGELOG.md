@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.97 - 2026-10-17
+
+- S-0393 Under pull-request acceptance, flai serve pushes a story's branch when it moves to review and opens or updates its one pull request from the project's pull request template (patch, ADR-0166): `git.md` names the one exception to never force pushing, a story's own branch that `flai stream sync` rebased, which `flai serve`, never an agent, pushes with `--force-with-lease` on the head it last pushed. Its rule on pull requests now says that under pull-request acceptance flai opens and updates the story's pull request from `.github/pull_request_template.md`, and that an agent never opens one itself. The template's `.github/pull_request_template.md` marks the places flai fills, each between `<!-- flai:<part> -->` and `<!-- /flai:<part> -->`: `story` for the story's ID, `criteria` for its acceptance criteria as ticked, `definition-of-done`, whose checklist flai keeps as the project wrote it, and `verify` for the story's last `flai verify` result and its commit. It gains the sections `Acceptance criteria` and `Last flai verify` for them. A project that removes a mark gets that part appended under its own heading. The push and the pull request need a flai that has them, the release that carries S-0393, with the `forge` host action on.
+
 ## 1.0.96 - 2026-10-17
 
 - S-0392 A project chooses local or pull-request acceptance in system-flow.yaml, and flai reaches its GitHub remote through a forge contract with a token the host names (patch).
