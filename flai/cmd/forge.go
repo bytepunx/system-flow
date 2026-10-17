@@ -12,6 +12,9 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/serve"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 // forgeCheckTimeout bounds flai forge check's call to the forge.
@@ -30,12 +33,292 @@ story through a pull request on its forge, acceptance.forge (github, the
 default), rather than by merging on this machine (ADR-0165). flai reaches the
 forge's repository named by the origin remote, with a token it reads from the
 environment variable this host names for the forge: GITHUB_TOKEN unless
-flai serve forge <forge> --token-env <NAME> names another.`,
+flai serve forge <forge> --token-env <NAME> names another.
+
+With the forge host action on (flai serve enable forge), flai serve pushes
+each story in review to origin and opens or updates its one pull request
+(ADR-0166). flai forge check says whether the token can read and push to the
+repository; flai forge push does one story's push and pull request on your
+word; flai forge status says what flai last did for a story, and why nothing
+was pushed when nothing was.`,
 		Example: `  flai forge check
-  flai forge check --json`,
+  flai forge push S-0042
+  flai forge status S-0042
+  flai forge status S-0042 --json`,
 	}
-	c.AddCommand(newForgeCheckCmd(a))
+	c.AddCommand(newForgeCheckCmd(a), newForgePushCmd(a), newForgeStatusCmd(a))
 	return c
+}
+
+func newForgePushCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "push S-nnnn",
+		Short: "Push a story in review to origin and open or update its pull request, on the operator's word",
+		Long: `Do for one story what flai serve does at each look under the forge host
+action (ADR-0166), whether that action is on or not: push story/S-nnnn to
+origin with this host's git credentials when origin's branch is missing or not
+the local head, plainly, or with --force-with-lease on the head flai last
+pushed when a sync rebased it, then open the story's one pull request against
+the main branch, found by its head branch, or update it when its title, body,
+or base is not what flai would write. The token is read from the variable flai
+forge check names, in this shell's environment. What was done is recorded
+where flai forge status reads it.
+
+It needs acceptance.mode: pull-request in system-flow.yaml and the story in
+review. flai guard refuses it to every agent: it is the operator's.
+
+It prints the outcome (pushed, or up-to-date when origin had the local head
+already), the branch it pushed and whether with the lease, and the pull
+request's number, what was done to it (opened, updated, or unchanged), and its
+URL. The exit status is 1, with the reason and what clears it, when nothing
+was done (the mode is local, or the story is not in review) or the push or the
+request failed; what was done before a failure is printed still. With --json
+the result is the state flai records: {"story", "outcome", "reason", "at",
+"local_head", "remote_head", "last_pushed", "pushed_at", "forced",
+"pull_request", "url", "request", "thread", "thread_reason"}, empty fields
+left out; "forced" is about the push at "pushed_at".`,
+		Example: `  flai forge push S-0042
+  flai forge push S-0042 --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			st, err := serve.PushStory(cmd.Context(), serve.ForgePush{
+				Repo: repo, Story: args[0], Git: a.runner, Token: a.serveForgeToken(repo.Manifest.Acceptance.ForgeOrDefault()),
+				NewForge: newForge, Now: a.now,
+			})
+			if st.Story == "" {
+				return err
+			}
+			if perr := a.printForgePush(st); perr != nil {
+				return errors.Join(err, perr)
+			}
+			if err != nil {
+				return err
+			}
+			if st.Outcome == serve.ForgeSkipped {
+				return errors.New(st.Reason)
+			}
+			return nil
+		},
+	}
+}
+
+// printForgePush prints what flai forge push did, one finding a line, or the
+// state as JSON; a reason goes out through the error path.
+func (a *app) printForgePush(st serve.ForgeState) error {
+	if a.jsonOut {
+		return a.printJSON(st)
+	}
+	fmt.Fprintf(a.out, "story: %s\noutcome: %s\n", st.Story, st.Outcome)
+	branch := storyBranch(st.Story)
+	switch {
+	case st.Outcome == serve.ForgeUpToDate:
+		fmt.Fprintf(a.out, "branch: origin had %s at %s already\n", branch, short(st.RemoteHead))
+	case st.Outcome == serve.ForgePushed || (st.Outcome == serve.ForgeFailed && st.PushedAt != "" && st.PushedAt == st.At):
+		lease := ""
+		if st.Forced {
+			lease = ", with --force-with-lease on the head flai last pushed, after a sync rebased it"
+		}
+		fmt.Fprintf(a.out, "branch: pushed %s at %s to origin%s\n", branch, short(st.LastPushed), lease)
+	}
+	if st.Request != "" {
+		fmt.Fprintf(a.out, "pull request: #%d %s, %s\n", st.PullRequest, st.Request, st.URL)
+	}
+	return nil
+}
+
+func newForgeStatusCmd(a *app) *cobra.Command {
+	return &cobra.Command{
+		Use:   "status S-nnnn",
+		Short: "Say what flai last did for a story's pull request, whether origin has its branch, and why nothing was pushed",
+		Long: `Print, for one story under pull-request acceptance (ADR-0166), its pull
+request's number and URL as flai last opened or found it ("none yet" before
+that), and whether origin's story/S-nnnn matches the local branch, read now
+with git ls-remote origin from this host; when origin cannot be read, it says
+so and why. It prints what flai's last push or look did and when.
+
+When nothing was pushed, or the last push failed or no longer matches, it
+says why, the first of these that applies: acceptance.mode is local; the
+forge host action is off for this project on this host (flai forge push still
+pushes on your word); the token's variable is unset, as this shell sees it
+(flai serve reads the environment it started with); the last push failed, with
+its reason, when, and its thread; the story is not in review; or nothing stops
+flai serve, which pushes it at its next look. The token is never printed.
+
+It does not call the forge, so it works offline and costs no rate limit. The
+exit status is 0 whenever it can report. With --json the result is {"story",
+"status", "mode", "forge", "host_action", "token_env", "token_set",
+"pull_request", "url", "branch", "local_head", "remote_head", "remote_error",
+"matches", "outcome", "reason", "at", "thread", "why"}, empty fields left out
+but for the booleans.`,
+		Example: `  flai forge status S-0042
+  flai forge status S-0042 --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			repo, err := a.project()
+			if err != nil {
+				return err
+			}
+			cfg, _, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			s, err := a.forgeStatus(repo, args[0], cfg)
+			if err != nil {
+				return err
+			}
+			return a.printForgeStatus(s)
+		},
+	}
+}
+
+// forgeStatus is what flai forge status found; it never holds the token.
+type forgeStatus struct {
+	Story       string             `json:"story"`
+	Status      string             `json:"status"`
+	Mode        string             `json:"mode"`
+	Forge       string             `json:"forge"`
+	HostAction  bool               `json:"host_action"`
+	TokenEnv    string             `json:"token_env"`
+	TokenSet    bool               `json:"token_set"`
+	PullRequest int                `json:"pull_request,omitempty"`
+	URL         string             `json:"url,omitempty"`
+	Branch      string             `json:"branch"`
+	LocalHead   string             `json:"local_head,omitempty"`
+	RemoteHead  string             `json:"remote_head,omitempty"`
+	RemoteError string             `json:"remote_error,omitempty"`
+	Matches     bool               `json:"matches"`
+	Outcome     serve.ForgeOutcome `json:"outcome,omitempty"`
+	Reason      string             `json:"reason,omitempty"`
+	At          string             `json:"at,omitempty"`
+	Thread      string             `json:"thread,omitempty"`
+	Why         string             `json:"why,omitempty"`
+}
+
+// forgeStatus reads what flai last did for the story id from its state
+// file, and origin's and the local branch from git, without calling the forge.
+func (a *app) forgeStatus(repo *workitem.Repo, id string, cfg config.Config) (forgeStatus, error) {
+	it, err := repo.Get(id)
+	if err != nil {
+		return forgeStatus{}, err
+	}
+	if it.Type != workitem.Story {
+		return forgeStatus{}, fmt.Errorf("%s is a %s: flai pushes a story's branch, so name its story", it.ID, it.Type)
+	}
+	st, ok, err := serve.ReadForgeState(repo, it.ID)
+	if err != nil {
+		return forgeStatus{}, err
+	}
+	acc := repo.Manifest.Acceptance
+	root := mainRootOf(repo)
+	s := forgeStatus{
+		Story: it.ID, Status: it.Status, Mode: acc.ModeOrDefault(), Forge: acc.ForgeOrDefault(),
+		HostAction: cfg.ActionEnabled(hostapi.ActionForge, root), Branch: storyBranch(it.ID),
+		PullRequest: st.PullRequest, URL: st.URL, Outcome: st.Outcome, Reason: st.Reason, At: st.At, Thread: st.Thread,
+	}
+	s.TokenEnv = cfg.ForgeTokenEnv(s.Forge)
+	_, tokenErr := cfg.ForgeTokenFunc(s.Forge, os.Getenv)()
+	s.TokenSet = tokenErr == nil
+	if local, err := a.runner.Run(root, "git", "rev-parse", "--verify", "--quiet", "refs/heads/"+s.Branch+"^{commit}"); err == nil {
+		s.LocalHead = strings.TrimSpace(local)
+	}
+	s.RemoteHead, s.RemoteError = a.originHead(root, s.Branch)
+	s.Matches = s.LocalHead != "" && s.RemoteHead == s.LocalHead
+	pushed := ok && (st.Outcome == serve.ForgePushed || st.Outcome == serve.ForgeUpToDate)
+	if !pushed || (!s.Matches && s.RemoteError == "") {
+		s.Why = whyNotPushed(s, acc.PullRequest(), tokenErr)
+	}
+	return s, nil
+}
+
+// originHead is the head of branch on origin, "" when origin has none, or
+// why origin could not be read.
+func (a *app) originHead(root, branch string) (head, why string) {
+	ref := "refs/heads/" + branch
+	out, err := a.runner.Run(root, "git", "ls-remote", "origin", ref)
+	if err != nil {
+		return "", fmt.Sprintf("could not read %s on origin (%s): check that origin is reachable from this host and that its git credentials can read it", branch, gitSaid(out, err))
+	}
+	for line := range strings.SplitSeq(out, "\n") {
+		if sha, name, ok := strings.Cut(strings.TrimSpace(line), "\t"); ok && name == ref {
+			return sha, ""
+		}
+	}
+	return "", ""
+}
+
+// whyNotPushed is the first reason that applies for s's branch not being on
+// origin as the local head, each saying what clears it.
+func whyNotPushed(s forgeStatus, pullRequest bool, tokenErr error) string {
+	switch {
+	case !pullRequest:
+		return fmt.Sprintf("acceptance.mode is %s, so %s is accepted on this machine and nothing is pushed: set acceptance.mode: pull-request in system-flow.yaml to have stories in review pushed and their pull requests opened", s.Mode, s.Story)
+	case !s.HostAction:
+		return fmt.Sprintf("the forge host action is off for this project on this host, so flai serve pushes nothing: turn it on with flai serve enable forge; flai forge push %s pushes the story on your word without it", s.Story)
+	case tokenErr != nil:
+		return fmt.Sprintf("%v (as this shell sees it; flai serve reads the environment it started with)", tokenErr)
+	case s.Outcome == serve.ForgeFailed:
+		why := fmt.Sprintf("the last push, at %s, failed: %s", s.At, s.Reason)
+		if s.Thread != "" {
+			why += fmt.Sprintf(" (thread %s)", s.Thread)
+		}
+		return why
+	case s.Status != workitem.Review:
+		return fmt.Sprintf("%s is %s, not in review: flai pushes a story's branch and opens its pull request once the story is in review", s.Story, s.Status)
+	}
+	return fmt.Sprintf("nothing stops flai serve from pushing %s: it pushes it at its next look, once a minute while it runs, or push it now with flai forge push %s", s.Story, s.Story)
+}
+
+// printForgeStatus prints s, one finding a line, or as JSON.
+func (a *app) printForgeStatus(s forgeStatus) error {
+	if a.jsonOut {
+		return a.printJSON(s)
+	}
+	action := "off"
+	if s.HostAction {
+		action = "on"
+	}
+	fmt.Fprintf(a.out, "story: %s (%s)\nmode: %s (forge %s)\nhost action: forge is %s\n", s.Story, s.Status, s.Mode, s.Forge, action)
+	set := "not set"
+	if s.TokenSet {
+		set = "set"
+	}
+	fmt.Fprintf(a.out, "token: read from %s, %s\n", s.TokenEnv, set)
+	if s.PullRequest > 0 {
+		fmt.Fprintf(a.out, "pull request: #%d, %s\n", s.PullRequest, s.URL)
+	} else {
+		fmt.Fprintln(a.out, "pull request: none yet")
+	}
+	fmt.Fprintf(a.out, "branch: %s\n", branchFinding(s))
+	if s.Outcome != "" {
+		fmt.Fprintf(a.out, "last look: %s, at %s\n", s.Outcome, s.At)
+	} else {
+		fmt.Fprintln(a.out, "last look: none yet")
+	}
+	if s.Why != "" {
+		fmt.Fprintf(a.out, "why: %s\n", s.Why)
+	}
+	return nil
+}
+
+// branchFinding says whether origin's branch matches the local one.
+func branchFinding(s forgeStatus) string {
+	switch {
+	case s.RemoteError != "":
+		return s.RemoteError
+	case s.LocalHead == "" && s.RemoteHead == "":
+		return fmt.Sprintf("neither this repository nor origin has %s", s.Branch)
+	case s.LocalHead == "":
+		return fmt.Sprintf("this repository has no %s; origin's is at %s", s.Branch, short(s.RemoteHead))
+	case s.RemoteHead == "":
+		return fmt.Sprintf("origin has no %s; the local head is at %s", s.Branch, short(s.LocalHead))
+	case s.Matches:
+		return fmt.Sprintf("origin's %s matches the local head at %s", s.Branch, short(s.LocalHead))
+	}
+	return fmt.Sprintf("origin's %s is at %s, the local head at %s", s.Branch, short(s.RemoteHead), short(s.LocalHead))
 }
 
 func newForgeCheckCmd(a *app) *cobra.Command {
