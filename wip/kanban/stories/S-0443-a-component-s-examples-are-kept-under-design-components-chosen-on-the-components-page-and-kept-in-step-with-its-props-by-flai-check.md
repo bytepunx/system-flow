@@ -3,15 +3,18 @@ id: S-0443
 type: story
 nature: feature
 title: A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check
-status: ready
+status: in-progress
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:38:09Z
-updated: 2026-10-17T03:34:53Z
+updated: 2026-10-17T03:57:14Z
 transitions:
   - to: ready
     at: 2026-10-17T01:02:23Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T03:57:14Z
+    by: agent-S-0443
 tags: [cli, dashboard, template]
 topics: [components, dashboard, cli, conventions]
 touches: [design/adrs, design/adrs/README.md, design/system/component-library.md, flai/internal/components/examples.go, flai/internal/components/examples_test.go, flai/internal/check/check.go, flai/internal/check/components_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flaiover/src/lib/components/explorer/ExampleList.svelte, flaiover/src/lib/components/explorer/ExampleList.svelte.test.ts, flaiover/src/routes/api/components/examples/+server.ts, flaiover/src/routes/api/components/examples/examples.test.ts, flaiover/src/routes/design/components/+page.svelte, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/conventions/documentation.md, template/root/design/conventions/documentation.md, design/system/documentation-standard.md, design/components/README.md, template/root/design/components/README.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl, design/system/repository-layout.md, template/CHANGELOG.md, template/template.yaml]
@@ -42,10 +45,10 @@ cost_of_delay:
   at: 2026-10-16T21:50:07Z
 forecast:
   duration: 1h4m
-  delivery: 2026-10-17T04:48:00Z
-  basis: "Its own forecast of 1h4m; 2nd in the pull order with an in-progress limit of 5, behind S-0442 and S-0444."
+  delivery: 2026-10-17T05:06:00Z
+  basis: "Its own forecast of 1h4m; 2nd in the pull order with an in-progress limit of 5, behind S-0444."
   by: flai
-  at: 2026-10-17T03:34:53Z
+  at: 2026-10-17T03:57:03Z
 finalized:
   by: orchestrator
   at: 2026-10-16T21:52:05Z
