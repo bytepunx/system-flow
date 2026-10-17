@@ -3,12 +3,15 @@ id: S-0443
 type: story
 nature: feature
 title: A component's examples are kept under design/components, chosen on the Components page, and kept in step with its props by flai check
-status: backlog
+status: ready
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:38:09Z
-updated: 2026-10-17T00:45:46Z
-transitions: []
+updated: 2026-10-17T01:02:24Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:02:23Z
+    by: alex
 tags: [cli, dashboard, template]
 topics: [components, dashboard, cli, conventions]
 touches: [design/adrs, design/adrs/README.md, design/system/component-library.md, flai/internal/components/examples.go, flai/internal/components/examples_test.go, flai/internal/check/check.go, flai/internal/check/components_test.go, flai/internal/docedit/file.go, flai/internal/docedit/file_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flaiover/src/lib/components/explorer/ExampleList.svelte, flaiover/src/lib/components/explorer/ExampleList.svelte.test.ts, flaiover/src/routes/api/components/examples/+server.ts, flaiover/src/routes/api/components/examples/examples.test.ts, flaiover/src/routes/design/components/+page.svelte, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/conventions/documentation.md, template/root/design/conventions/documentation.md, design/system/documentation-standard.md, design/components/README.md, template/root/design/components/README.md, design/README.md, template/root/design/README.md.tmpl, CLAUDE.md, template/root/CLAUDE.md.tmpl, design/system/repository-layout.md, template/CHANGELOG.md, template/template.yaml]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 373
+      seconds: 380
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 41
-          output: 767
-          cache_read: 5187103
-          cache_write: 8818
-          cost: 1.3027
+          input: 43
+          output: 796
+          cache_read: 5625626
+          cache_write: 10275
+          cost: 1.413
 cost_of_delay:
   value: 88.07
   by: planner-E-0026
   at: 2026-10-16T21:50:07Z
 forecast:
   duration: 1h4m
-  delivery: 2026-10-18T00:59:00Z
-  basis: "Its own forecast of 1h4m; 47th in the pull order with an in-progress limit of 5, behind S-0438, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0439, S-0440, S-0441 and S-0442."
+  delivery: 2026-10-17T04:00:00Z
+  basis: "Its own forecast of 1h4m; 5th in the pull order with an in-progress limit of 5, behind S-0438, S-0440, S-0441, S-0439 and S-0442."
   by: flai
-  at: 2026-10-17T00:45:46Z
+  at: 2026-10-17T01:02:24Z
 finalized:
   by: orchestrator
   at: 2026-10-16T21:52:05Z

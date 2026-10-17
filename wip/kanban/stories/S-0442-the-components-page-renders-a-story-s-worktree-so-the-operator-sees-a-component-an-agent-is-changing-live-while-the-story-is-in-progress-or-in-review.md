@@ -3,12 +3,15 @@ id: S-0442
 type: story
 nature: feature
 title: The Components page renders a story's worktree, so the operator sees a component an agent is changing live while the story is in progress or in review
-status: backlog
+status: ready
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:37:05Z
-updated: 2026-10-17T00:45:46Z
-transitions: []
+updated: 2026-10-17T01:02:24Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:02:20Z
+    by: alex
 tags: [dashboard, cli]
 topics: [components, dashboard, cli]
 touches: [flai/internal/components/worktree.go, flai/internal/components/worktree_test.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flai/cmd/serve_actions.go, docs/users/flai-reference.md, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, flaiover/src/routes/api/components/+server.ts, flaiover/src/routes/api/components/start/+server.ts, flaiover/src/routes/api/components/stop/+server.ts, flaiover/src/routes/api/components/components.test.ts, flaiover/src/lib/server/repo.ts, "flaiover/src/routes/review/[id]/+page.svelte", flaiover/src/lib/explorer/changed.ts, flaiover/src/lib/explorer/changed.test.ts, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 373
+      seconds: 617
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 41
-          output: 767
-          cache_read: 5187103
-          cache_write: 8818
-          cost: 1.3027
+          input: 50
+          output: 940
+          cache_read: 7235043
+          cache_write: 15212
+          cost: 1.8177
 cost_of_delay:
   value: 79.82
   by: planner-E-0026
   at: 2026-10-16T21:50:06Z
 forecast:
   duration: 58m
-  delivery: 2026-10-17T23:47:00Z
-  basis: "Its own forecast of 58m; 46th in the pull order with an in-progress limit of 5, behind S-0438, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0439, S-0440 and S-0441."
+  delivery: 2026-10-17T02:49:00Z
+  basis: "Its own forecast of 58m; 4th in the pull order with an in-progress limit of 5, behind S-0438, S-0440, S-0441 and S-0439."
   by: flai
-  at: 2026-10-17T00:45:46Z
+  at: 2026-10-17T01:02:24Z
 finalized:
   by: orchestrator
   at: 2026-10-16T21:52:04Z

@@ -3,12 +3,15 @@ id: S-0441
 type: story
 nature: feature
 title: A token change on the Design page reaches the components on the Components page, as the operator tries it and once it is saved
-status: backlog
+status: ready
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:36:09Z
-updated: 2026-10-17T00:45:46Z
-transitions: []
+updated: 2026-10-17T01:02:24Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:02:19Z
+    by: alex
 tags: [dashboard, cli]
 topics: [components, design, dashboard]
 touches: [flaiover/src/lib/design/draft.ts, flaiover/src/lib/design/draft.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, flaiover/src/lib/explorer/tokens.ts, flaiover/src/lib/explorer/tokens.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, flaiover/src/lib/components/explorer/ComponentFrame.svelte, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 373
+      seconds: 617
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 41
-          output: 767
-          cache_read: 5187103
-          cache_write: 8818
-          cost: 1.3027
+          input: 50
+          output: 941
+          cache_read: 7235043
+          cache_write: 15213
+          cost: 1.8177
 cost_of_delay:
   value: 42.66
   by: planner-E-0026
   at: 2026-10-16T21:50:04Z
 forecast:
   duration: 31m
-  delivery: 2026-10-17T23:14:00Z
-  basis: "Its own forecast of 31m; 45th in the pull order with an in-progress limit of 5, behind S-0438, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0439 and S-0440."
+  delivery: 2026-10-17T01:37:00Z
+  basis: "Its own forecast of 31m; 2nd in the pull order with an in-progress limit of 5, behind S-0438 and S-0440."
   by: flai
-  at: 2026-10-17T00:45:46Z
+  at: 2026-10-17T01:02:24Z
 finalized:
   by: orchestrator
   at: 2026-10-16T21:52:03Z

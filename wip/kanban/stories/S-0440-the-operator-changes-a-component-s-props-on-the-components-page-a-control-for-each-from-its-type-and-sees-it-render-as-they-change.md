@@ -3,12 +3,15 @@ id: S-0440
 type: story
 nature: feature
 title: The operator changes a component's props on the Components page, a control for each from its type, and sees it render as they change
-status: backlog
+status: ready
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:35:19Z
-updated: 2026-10-17T00:45:46Z
-transitions: []
+updated: 2026-10-17T01:02:24Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:02:16Z
+    by: alex
 tags: [dashboard, cli]
 topics: [components, dashboard]
 touches: [flaiover/src/lib/explorer/controls.ts, flaiover/src/lib/explorer/controls.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flaiover/src/lib/components/explorer/PropsPanel.svelte, flaiover/src/lib/components/explorer/PropsPanel.svelte.test.ts, flaiover/src/lib/components/explorer/EventLog.svelte, flaiover/src/routes/design/components/+page.svelte, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]
@@ -24,25 +27,25 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 373
+      seconds: 617
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 41
-          output: 767
-          cache_read: 5187103
-          cache_write: 8818
-          cost: 1.3027
+          input: 51
+          output: 941
+          cache_read: 7235043
+          cache_write: 15213
+          cost: 1.8177
 cost_of_delay:
   value: 35.78
   by: planner-E-0026
   at: 2026-10-16T21:50:03Z
 forecast:
   duration: 26m
-  delivery: 2026-10-17T22:46:00Z
-  basis: "Its own forecast of 26m; 44th in the pull order with an in-progress limit of 5, behind S-0438, S-0241, S-0392, S-0393, S-0394, S-0395, S-0396, S-0397, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403, S-0404, S-0405, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435 and S-0439."
+  delivery: 2026-10-17T01:32:00Z
+  basis: "Its own forecast of 26m; 1st in the pull order with an in-progress limit of 5, behind S-0438."
   by: flai
-  at: 2026-10-17T00:45:46Z
+  at: 2026-10-17T01:02:24Z
 finalized:
   by: orchestrator
   at: 2026-10-16T21:52:01Z
