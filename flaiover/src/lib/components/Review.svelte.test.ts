@@ -9,7 +9,7 @@ vi.mock('$lib/editor.svelte', () => ({
 	openEditor: (...args: unknown[]) => openEditor(...args)
 }));
 vi.mock('$app/paths', () => ({
-	resolve: (route: string, params: Record<string, string>) =>
+	resolve: (route: string, params: Record<string, string> = {}) =>
 		route.replace('[...path]', params.path ?? '').replace('[id]', params.id ?? '')
 }));
 
@@ -83,6 +83,8 @@ function backend(over: {
 	ownIssues?: unknown[];
 	issueStory?: (id: string) => unknown;
 	verify?: () => unknown;
+	/** The story's worktree catalogue, GET /api/components?story=. */
+	components?: () => unknown;
 }) {
 	let statusIdx = 0;
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
@@ -111,6 +113,8 @@ function backend(over: {
 			statusIdx++;
 			return json(v);
 		}
+		if (url.startsWith('/api/components?story='))
+			return over.components ? over.components() : json({ error: 'no components' }, 502);
 		if (url.endsWith('/verify')) return over.verify ? over.verify() : json({ report: null });
 		if (url.endsWith('/accept'))
 			return over.accept ? over.accept() : ndjson([{ event: 'done', result: {} }]);
@@ -759,6 +763,82 @@ describe('Review', () => {
 		c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
 		await settle();
 		expect(document.body.textContent).toContain('has no branch story/S-0041');
+	});
+
+	// S-0442: a branch that changes one of the worktree's components offers the Components page
+	// with the story picked; any other branch, or a catalogue flai cannot read, offers nothing.
+	describe('Open in Components (S-0442)', () => {
+		const component = (path: string, name: string) => ({
+			project: 'flaiover',
+			path,
+			name,
+			props: []
+		});
+		const catalogue = {
+			catalogue: {
+				projects: [
+					{
+						name: 'flaiover',
+						path: 'flaiover',
+						supported: true,
+						components: [
+							component('src/lib/components/Badge.svelte', 'Badge'),
+							component('src/lib/components/Card.svelte', 'Card'),
+							component('src/lib/components/Added.svelte', 'Added')
+						]
+					}
+				]
+			},
+			status: { servers: [] }
+		};
+		const changing =
+			(...paths: string[]) =>
+			() =>
+				json({ ...DIFF, files: paths.map((path) => ({ ...DIFF.files[0], path })) });
+		const offer = () => document.querySelector('[data-testid="open-in-components"]');
+
+		it('links to the Components page with the story picked and names the changed components', async () => {
+			backend({
+				diff: changing(
+					'docs/a.md',
+					'flaiover/src/lib/components/Card.svelte',
+					'flaiover/src/lib/components/Added.svelte'
+				),
+				components: () => json(catalogue)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(api.mock.calls.map((call) => call[0])).toContain('/api/components?story=S-0041');
+			const link = [...(offer()?.querySelectorAll('a') ?? [])].find(
+				(a) => a.textContent === 'Open in Components'
+			);
+			expect(link?.getAttribute('href')).toBe('/design/components?story=S-0041');
+			expect(offer()?.textContent?.replace(/\s+/g, ' ')).toContain(
+				'It changes the components Card, Added.'
+			);
+			expect(offer()?.textContent).not.toContain('Badge');
+		});
+
+		it('offers nothing when the branch changes no component', async () => {
+			backend({ components: () => json(catalogue) });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(api.mock.calls.map((call) => call[0])).toContain('/api/components?story=S-0041');
+			expect(offer()).toBeNull();
+			expect(document.body.textContent).not.toContain('Open in Components');
+		});
+
+		it('offers nothing, and shows no error, when the catalogue cannot be read', async () => {
+			backend({
+				diff: changing('flaiover/src/lib/components/Card.svelte'),
+				components: () => json({ error: 'flai 1.55.1 cannot list the components' }, 502)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(offer()).toBeNull();
+			expect(document.body.textContent).not.toContain('cannot list the components');
+			expect(document.querySelector('[role="alert"]')).toBeNull();
+		});
 	});
 
 	describe('issues (S-0198)', () => {

@@ -24,6 +24,8 @@
 	import { themeState } from '$lib/theme.svelte';
 	import { editable, editLabel, fileRef, linkSegments, type LinkSegment } from '$lib/filelinks';
 	import { openEditor } from '$lib/editor.svelte';
+	import { changedComponents, componentFile, diffPaths } from '$lib/explorer/changed';
+	import type { Component, ComponentsCatalogue } from '$lib/server/repo';
 	import { tick } from 'svelte';
 
 	type Item = {
@@ -175,6 +177,10 @@
 	let verify = $state<VerifyView | null>(null);
 	let verifyError = $state<string | null>(null);
 
+	// Components (S-0442): the catalogue as the story's worktree has it, so a component the branch
+	// adds counts; null while unread, or when it cannot be read, and then nothing is offered.
+	let catalogue = $state.raw<ComponentsCatalogue | null>(null);
+
 	function sleep(ms: number): Promise<void> {
 		return new Promise((r) => setTimeout(r, ms));
 	}
@@ -221,6 +227,17 @@
 		context: '',
 		note: 'text-muted'
 	};
+	// The catalogue's components the branch changes, from the diff the page already holds.
+	const changedList = $derived.by((): Component[] => {
+		if (!catalogue || !diff) return [];
+		const changed = changedComponents(catalogue, diffPaths(diff));
+		return catalogue.projects.flatMap((p) =>
+			p.components.filter((c) => changed.has(componentFile(c)))
+		);
+	});
+	const componentsHref = $derived(
+		`${resolve('/design/components')}?story=${encodeURIComponent(id)}`
+	);
 	const branchFile = (path: string) =>
 		((diff?.files ?? []) as DiffFile[]).find((f) => f.path === path);
 
@@ -277,6 +294,7 @@
 		unmade = [];
 		verify = null;
 		verifyError = null;
+		catalogue = null;
 		undone = [];
 		kept = {};
 		keeping = {};
@@ -298,6 +316,7 @@
 			})
 			.catch(() => (narrative = ''));
 		void loadDiff(target);
+		if (item.status === 'in-progress' || item.status === 'review') void loadCatalogue(target);
 		if (item.status === 'review') {
 			void loadPreview(target);
 			void loadIssues(target);
@@ -312,6 +331,19 @@
 			if (target === id) diff = d;
 		} catch (e) {
 			if (target === id) diffError = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	// The worktree's catalogue, for Open in Components. A refusal (an older flai, no Svelte
+	// sub-project, no worktree) leaves catalogue null: the page offers nothing, and says nothing.
+	async function loadCatalogue(target: string) {
+		try {
+			const r = await api(`/api/components?story=${encodeURIComponent(target)}`);
+			const body = await r.json().catch(() => null);
+			const read = (body as { catalogue?: ComponentsCatalogue } | null)?.catalogue;
+			if (target === id && r.ok && Array.isArray(read?.projects)) catalogue = read;
+		} catch {
+			// the same: a failed read offers nothing rather than an error beside the diff
 		}
 	}
 
@@ -788,6 +820,14 @@
 
 	<section class="mt-4 rounded border border-line bg-surface p-3 text-sm">
 		<h2 class="mb-2 font-medium">Changes on the branch</h2>
+		{#if changedList.length}
+			<p class="mb-2" data-testid="open-in-components">
+				It changes the components
+				<span class="font-medium">{changedList.map((c) => c.name).join(', ')}</span>.
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the path is resolve()d; only ?story= is added -->
+				<a class="underline" href={componentsHref}>Open in Components</a>
+			</p>
+		{/if}
 		{#if diffError}
 			<p class="text-muted">{diffError}</p>
 		{:else if !diff}
