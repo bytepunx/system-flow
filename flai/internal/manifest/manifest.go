@@ -70,6 +70,10 @@ type Manifest struct {
 	Orchestration Orchestration `yaml:"orchestration,omitempty" json:"orchestration,omitzero"`
 	// Analysis is the analyzer's agent and schedule (S-0223).
 	Analysis Analysis `yaml:"analysis,omitempty" json:"analysis,omitzero"`
+	// Acceptance is how a story in review is accepted: on this machine, or
+	// through a pull request on the project's forge (S-0392). Load refuses a
+	// value Acceptance.Errors finds wrong.
+	Acceptance Acceptance `yaml:"acceptance,omitempty" json:"acceptance,omitzero"`
 	// Claims is how stories' touches claim paths: the shared paths whose
 	// overlaps hold no story (S-0295, ADR-0096). A pattern that is not valid
 	// does not stop the load; Claims.Errors names it, and it frees nothing.
@@ -665,6 +669,105 @@ func (r Release) errors() []string {
 	return errs
 }
 
+// Acceptance is the project's say about how a story in review is accepted
+// (S-0392). Each key empty means its default, so a manifest without the
+// block accepts as flai always has.
+type Acceptance struct {
+	// Mode is one of AcceptanceModes; empty means AcceptLocal.
+	Mode string `yaml:"mode,omitempty" json:"mode,omitempty"`
+	// Forge is the forge, one of Forges, that pull-request acceptance goes
+	// through; empty means ForgeGitHub. Under AcceptLocal it is unused.
+	Forge string `yaml:"forge,omitempty" json:"forge,omitempty"`
+	// MergeMethod is how the forge merges an accepted pull request, one of
+	// MergeMethods; empty means MergeMerge.
+	MergeMethod string `yaml:"merge_method,omitempty" json:"merge_method,omitempty"`
+}
+
+// The values of acceptance.mode.
+const (
+	// AcceptLocal merges a story's branch on this machine, as flai accept
+	// does. It is the default.
+	AcceptLocal = "local"
+	// AcceptPullRequest accepts a story through a pull request on the
+	// project's forge.
+	AcceptPullRequest = "pull-request"
+)
+
+// AcceptanceModes are the values of acceptance.mode, in the order they are
+// listed to the operator.
+var AcceptanceModes = []string{AcceptLocal, AcceptPullRequest}
+
+// ForgeGitHub is GitHub, the default forge.
+const ForgeGitHub = "github"
+
+// Forges are the values of acceptance.forge.
+var Forges = []string{ForgeGitHub}
+
+// The values of acceptance.merge_method, as the forge merges a pull request.
+const (
+	// MergeMerge merges with a merge commit. It is the default.
+	MergeMerge = "merge"
+	// MergeSquash squashes the branch into one commit.
+	MergeSquash = "squash"
+	// MergeRebase rebases the branch's commits onto the base.
+	MergeRebase = "rebase"
+)
+
+// MergeMethods are the values of acceptance.merge_method, in the order they
+// are listed to the operator.
+var MergeMethods = []string{MergeMerge, MergeSquash, MergeRebase}
+
+// ModeOrDefault is acceptance.mode, or AcceptLocal when it is empty. It does
+// not say whether the mode is one of AcceptanceModes; Errors does.
+func (a Acceptance) ModeOrDefault() string {
+	if s := strings.TrimSpace(a.Mode); s != "" {
+		return s
+	}
+	return AcceptLocal
+}
+
+// PullRequest reports whether stories are accepted through pull requests.
+func (a Acceptance) PullRequest() bool {
+	return a.ModeOrDefault() == AcceptPullRequest
+}
+
+// ForgeOrDefault is acceptance.forge, or ForgeGitHub when it is empty, under
+// either mode. It does not say whether the forge is one of Forges; Errors
+// does.
+func (a Acceptance) ForgeOrDefault() string {
+	if s := strings.TrimSpace(a.Forge); s != "" {
+		return s
+	}
+	return ForgeGitHub
+}
+
+// MergeMethodOrDefault is acceptance.merge_method, or MergeMerge when it is
+// empty. It does not say whether the method is one of MergeMethods; Errors
+// does.
+func (a Acceptance) MergeMethodOrDefault() string {
+	if s := strings.TrimSpace(a.MergeMethod); s != "" {
+		return s
+	}
+	return MergeMerge
+}
+
+// Errors are what is wrong with the acceptance settings, one sentence each;
+// none when they are valid. A forge or a merge method set under AcceptLocal
+// is valid, and unused.
+func (a Acceptance) Errors() []string {
+	var errs []string
+	if m := a.ModeOrDefault(); !slices.Contains(AcceptanceModes, m) {
+		errs = append(errs, fmt.Sprintf("acceptance.mode %q is not an acceptance mode; write local (merge on this machine) or pull-request (merge through a pull request on the forge), or remove it for local", a.Mode))
+	}
+	if f := a.ForgeOrDefault(); !slices.Contains(Forges, f) {
+		errs = append(errs, fmt.Sprintf("acceptance.forge %q is not a forge flai reaches; write %s, or remove it for github", a.Forge, strings.Join(Forges, ", ")))
+	}
+	if m := a.MergeMethodOrDefault(); !slices.Contains(MergeMethods, m) {
+		errs = append(errs, fmt.Sprintf("acceptance.merge_method %q is not a merge method; write merge (a merge commit), squash (one commit), or rebase (the commits onto the base), or remove it for merge", a.MergeMethod))
+	}
+	return errs
+}
+
 // NamedCommand is one command by name: an argument list, run as it stands,
 // never through a shell. In an argument, {story} is replaced by the story's
 // ID and {root} by the directory it runs in; nothing else is interpreted.
@@ -1204,6 +1307,9 @@ func Load(path string) (Manifest, error) {
 	}
 	if r := repoPathProblem(m.DesignStylesheet(), "a file", exampleDesignStylesheet, exampleDesignStylesheet); r != "" {
 		return Manifest{}, fmt.Errorf("%s: design.stylesheet %q %s", path, m.Design.Stylesheet, r)
+	}
+	if errs := m.Acceptance.Errors(); len(errs) > 0 {
+		return Manifest{}, fmt.Errorf("%s: %s", path, strings.Join(errs, "; "))
 	}
 	if min := m.Flai.Minimum; min != "" {
 		if _, ok := buildinfo.Semver(min); !ok {

@@ -142,6 +142,9 @@ func TestEditSettingsRefusesWithTheFieldAndTheReason(t *testing.T) {
 		{"agent with an unknown field", []Assignment{{"analysis.agent", `{"modelname":"x"}`}}, nil, "analysis.agent", "is not an agent"},
 		{"text", []Assignment{{"orchestration.release.policy", "theme"}, {"orchestration.release.epic", "epic-7"}}, nil, "orchestration.release.epic", "is not an epic ID"},
 		{"empty", []Assignment{{"planning.cycle", " "}}, nil, "planning.cycle", "is empty"},
+		{"acceptance mode", []Assignment{{"acceptance.mode", "remote"}}, nil, "acceptance.mode", `"remote" is not an acceptance mode; write local`},
+		{"forge", []Assignment{{"acceptance.forge", "gitlab"}}, nil, "acceptance.forge", `"gitlab" is not a forge flai reaches; write github`},
+		{"merge method", []Assignment{{"acceptance.merge_method", "fast-forward"}}, nil, "acceptance.merge_method", `"fast-forward" is not a merge method; write merge`},
 		{"unknown key", []Assignment{{"planning.colour", "blue"}}, nil, "planning.colour", "is not a setting flai manifest set writes"},
 		{"unknown key unset", nil, []string{"dashboard.port"}, "dashboard.port", "is not a setting flai manifest set writes"},
 		{"currency", []Assignment{{"planning.currency", "GBP"}}, nil, "planning.currency", "re-denominates every amount"},
@@ -166,6 +169,44 @@ func TestEditSettingsRefusesWithTheFieldAndTheReason(t *testing.T) {
 				t.Errorf("the file changed:\n%s", data)
 			}
 		})
+	}
+}
+
+// S-0392: each acceptance key is written into an acceptance block added at
+// the end, set again in place, read back by Load, and unset so that its
+// default applies; the rest of the file is as it was.
+func TestEditSettingsWritesAcceptance(t *testing.T) {
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{
+		{"acceptance.mode", "pull-request"},
+		{"acceptance.forge", "github"},
+		{"acceptance.merge_method", "squash"},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "acceptance:\n  mode: pull-request\n  forge: github\n  merge_method: squash\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	if a := loaded(t, got).Acceptance; !a.PullRequest() || a.ForgeOrDefault() != ForgeGitHub || a.MergeMethodOrDefault() != MergeSquash {
+		t.Errorf("read back %+v", a)
+	}
+	for _, method := range MergeMethods {
+		again, err := EditSettings(got, []Assignment{{"acceptance.merge_method", method}}, nil)
+		if err != nil || string(again) != strings.Replace(want, "merge_method: squash", "merge_method: "+method, 1) {
+			t.Errorf("merge_method=%s: %v\n%s", method, err, again)
+		}
+	}
+	local, err := EditSettings(got, []Assignment{{"acceptance.mode", "local"}}, nil)
+	if err != nil || string(local) != strings.Replace(want, "mode: pull-request", "mode: local", 1) || loaded(t, local).Acceptance.PullRequest() {
+		t.Errorf("mode=local, its forge and merge method kept: %v\n%s", err, local)
+	}
+	unset, err := EditSettings(got, nil, []string{"acceptance.mode", "acceptance.forge", "acceptance.merge_method"})
+	if err != nil || string(unset) != settingsFixture+"acceptance:\n" {
+		t.Errorf("unset: %v\n%s", err, unset)
+	}
+	if a := loaded(t, unset).Acceptance; a.ModeOrDefault() != AcceptLocal || a.MergeMethodOrDefault() != MergeMerge {
+		t.Errorf("unset reads %+v", a)
 	}
 }
 
@@ -276,7 +317,7 @@ func TestSettingValues(t *testing.T) {
 	if a, ok := got["planning.agent"].Value.(*Agent); !ok || a.Model != "claude-sonnet-5" {
 		t.Errorf("planning.agent = %v", got["planning.agent"].Value)
 	}
-	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent"} {
+	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent", "acceptance.mode", "acceptance.forge", "acceptance.merge_method"} {
 		if v := got[key]; v.Set || v.Value != nil {
 			t.Errorf("%s is unset, got %v", key, v.Value)
 		}
@@ -286,6 +327,11 @@ func TestSettingValues(t *testing.T) {
 	}
 	if d := got["planning.default_duration"].Default; d != "1h" {
 		t.Errorf("planning.default_duration's default = %q, want 1h", d)
+	}
+	for key, want := range map[string]string{"acceptance.mode": AcceptLocal, "acceptance.forge": ForgeGitHub, "acceptance.merge_method": MergeMerge} {
+		if d := got[key].Default; d != want {
+			t.Errorf("%s's default = %q, want %q", key, d, want)
+		}
 	}
 }
 

@@ -17,12 +17,13 @@ import (
 
 // The strategic agents' settings that flai manifest set writes (S-0229,
 // ADR-0039): what the orchestrator may do and how it orders and releases,
-// and the planner's and the analyzer's agents and schedules; and the
-// project's test tiers (S-0273). The catalog says of each its kind, its
-// values, its default, and what it does; whether a value is allowed is
-// always the manifest's own validation (Planning.Errors,
-// Orchestration.Errors, Analysis.Errors, TestErrors) on the manifest as it
-// would be, so flai manifest set and flai check cannot disagree.
+// and the planner's and the analyzer's agents and schedules; the project's
+// test tiers (S-0273); and how a story is accepted (S-0392). The catalog
+// says of each its kind, its values, its default, and what it does; whether
+// a value is allowed is always the manifest's own validation
+// (Planning.Errors, Orchestration.Errors, Analysis.Errors,
+// Acceptance.Errors, TestErrors) on the manifest as it would be, so flai
+// manifest set and flai check cannot disagree.
 
 // Kind is what a setting's value is, and so how it is written and edited.
 type Kind string
@@ -196,6 +197,15 @@ func buildCatalog() []Setting {
 		Setting{Key: "analysis.schedule", Kind: KindCron,
 			Meaning: "When flai serve runs the analyzer, a five-field cron expression in UTC or daily; unset, it runs only when you ask.",
 			get:     func(m Manifest) (any, bool) { return text(m.Analysis.Schedule) }},
+		Setting{Key: "acceptance.mode", Kind: KindChoice, Values: AcceptanceModes, Default: AcceptLocal,
+			Meaning: "How a story in review is accepted: local merges its branch on this machine, as flai accept does, and pull-request merges it through a pull request on the project's forge.",
+			get:     func(m Manifest) (any, bool) { return text(m.Acceptance.Mode) }},
+		Setting{Key: "acceptance.forge", Kind: KindChoice, Values: Forges, Default: ForgeGitHub,
+			Meaning: "The forge pull-request acceptance goes through, reached at the origin remote with the token the host names; unused under local.",
+			get:     func(m Manifest) (any, bool) { return text(m.Acceptance.Forge) }},
+		Setting{Key: "acceptance.merge_method", Kind: KindChoice, Values: MergeMethods, Default: MergeMerge,
+			Meaning: "How the forge merges an accepted pull request: merge with a merge commit, squash into one commit, or rebase the commits onto the base; unused under local.",
+			get:     func(m Manifest) (any, bool) { return text(m.Acceptance.MergeMethod) }},
 		Setting{Key: "tests", Kind: KindTests,
 			Meaning: "The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none.",
 			get: func(m Manifest) (any, bool) {
@@ -815,6 +825,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.Planning.Errors()...)
 	msgs = append(msgs, m.Orchestration.Errors()...)
 	msgs = append(msgs, m.Analysis.Errors()...)
+	msgs = append(msgs, m.Acceptance.Errors()...)
 	msgs = append(msgs, m.TestErrors()...)
 	msgs = append(msgs, m.ProviderErrors()...)
 	msgs = append(msgs, m.ComponentErrors(nil)...)

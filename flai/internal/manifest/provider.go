@@ -38,6 +38,12 @@ var ProviderAPIs = []string{APIAnthropicMessages, APIOpenAIChat, APIOpenAIRespon
 
 var envNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
+// IsEnvName reports whether s is the name of an environment variable:
+// letters, digits, and _, not beginning with a digit.
+func IsEnvName(s string) bool {
+	return envNamePattern.MatchString(s)
+}
+
 // Problems are what is wrong with the values p sets, one phrase each, each
 // beginning with what, the entry's key such as providers.litellm: an api flai
 // does not know, a base_url that is not an absolute http or https URL, a

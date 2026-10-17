@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -437,6 +438,61 @@ func TestOrchestrationPermissions(t *testing.T) {
 		if len(got) != 1 || !strings.Contains(got[0], `orchestration.permissions.answer_threads "`+bad+`" is not a way of answering threads; write off`) {
 			t.Errorf("%q: %q", bad, got)
 		}
+	}
+}
+
+// S-0392: a manifest without acceptance loads with each key at its default
+// and marshals without the block; each value of each key loads, a forge and a
+// merge method under local among them; and a value outside a key's values is
+// refused at load, naming the key, the value, and what to write.
+func TestAcceptance(t *testing.T) {
+	head := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	a := loaded(t, []byte(head)).Acceptance
+	if a != (Acceptance{}) || a.ModeOrDefault() != AcceptLocal || a.PullRequest() || a.ForgeOrDefault() != ForgeGitHub || a.MergeMethodOrDefault() != MergeMerge || len(a.Errors()) != 0 {
+		t.Errorf("unset: %+v, mode %q, forge %q, merge method %q, %v", a, a.ModeOrDefault(), a.ForgeOrDefault(), a.MergeMethodOrDefault(), a.Errors())
+	}
+	for _, format := range []func(Manifest) ([]byte, error){
+		func(m Manifest) ([]byte, error) { return yaml.Marshal(m) },
+		func(m Manifest) ([]byte, error) { return json.Marshal(m) },
+	} {
+		if data, err := format(Manifest{}); err != nil || strings.Contains(string(data), "acceptance") {
+			t.Errorf("an unset acceptance block is written: %v\n%s", err, data)
+		}
+	}
+	if !slices.Equal(AcceptanceModes, []string{"local", "pull-request"}) || !slices.Equal(Forges, []string{"github"}) || !slices.Equal(MergeMethods, []string{"merge", "squash", "rebase"}) {
+		t.Errorf("values %v, %v, %v", AcceptanceModes, Forges, MergeMethods)
+	}
+
+	for _, mode := range AcceptanceModes {
+		for _, method := range MergeMethods {
+			got := loaded(t, []byte(head+"acceptance:\n  mode: "+mode+"\n  forge: github\n  merge_method: "+method+"\n")).Acceptance
+			if got.ModeOrDefault() != mode || got.PullRequest() != (mode == AcceptPullRequest) || got.ForgeOrDefault() != ForgeGitHub || got.MergeMethodOrDefault() != method {
+				t.Errorf("%s, %s: read %+v", mode, method, got)
+			}
+		}
+	}
+	if a = loaded(t, []byte(head+"acceptance:\n  mode: pull-request\n")).Acceptance; !a.PullRequest() || a.ForgeOrDefault() != ForgeGitHub || a.MergeMethodOrDefault() != MergeMerge {
+		t.Errorf("pull-request alone: forge %q, merge method %q", a.ForgeOrDefault(), a.MergeMethodOrDefault())
+	}
+
+	p := filepath.Join(t.TempDir(), File)
+	for _, c := range []struct{ block, want string }{
+		{"  mode: remote\n", `acceptance.mode "remote" is not an acceptance mode; write local (merge on this machine) or pull-request (merge through a pull request on the forge), or remove it for local`},
+		{"  mode: pull_request\n", `acceptance.mode "pull_request" is not an acceptance mode`},
+		{"  forge: gitlab\n", `acceptance.forge "gitlab" is not a forge flai reaches; write github, or remove it for github`},
+		{"  mode: pull-request\n  forge: GitHub\n", `acceptance.forge "GitHub" is not a forge flai reaches`},
+		{"  merge_method: fast-forward\n", `acceptance.merge_method "fast-forward" is not a merge method; write merge (a merge commit), squash (one commit), or rebase (the commits onto the base), or remove it for merge`},
+	} {
+		if err := os.WriteFile(p, []byte(head+"acceptance:\n"+c.block), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Load(p)
+		if err == nil || !strings.HasPrefix(err.Error(), p+": ") || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%q: got %v, want %s", c.block, err, c.want)
+		}
+	}
+	if errs := (Acceptance{Mode: "x", Forge: "y", MergeMethod: "z"}).Errors(); len(errs) != 3 {
+		t.Errorf("one error a key: %q", errs)
 	}
 }
 
