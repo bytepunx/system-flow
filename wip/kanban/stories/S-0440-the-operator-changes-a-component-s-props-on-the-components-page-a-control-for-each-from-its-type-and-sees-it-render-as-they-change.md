@@ -3,15 +3,18 @@ id: S-0440
 type: story
 nature: feature
 title: The operator changes a component's props on the Components page, a control for each from its type, and sees it render as they change
-status: ready
+status: in-progress
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:35:19Z
-updated: 2026-10-17T01:56:07Z
+updated: 2026-10-17T01:56:18Z
 transitions:
   - to: ready
     at: 2026-10-17T01:02:16Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T01:56:18Z
+    by: agent-S-0440
 tags: [dashboard, cli]
 topics: [components, dashboard]
 touches: [flaiover/src/lib/explorer/controls.ts, flaiover/src/lib/explorer/controls.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flaiover/src/lib/components/explorer/PropsPanel.svelte, flaiover/src/lib/components/explorer/PropsPanel.svelte.test.ts, flaiover/src/lib/components/explorer/EventLog.svelte, flaiover/src/routes/design/components/+page.svelte, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 617
+      seconds: 635
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 51
-          output: 941
-          cache_read: 7235043
-          cache_write: 15213
-          cost: 1.8177
+          input: 55
+          output: 976
+          cache_read: 8211890
+          cache_write: 16755
+          cost: 2.063
 cost_of_delay:
   value: 35.78
   by: planner-E-0026
