@@ -9,7 +9,7 @@ topics: [components, design, dashboard, cli]
 
 The design of E-0026. The dashboard gets a Components page where the operator sees every component of their system, changes its props, and watches it follow changes to the design system and the source, live, without an IDE, a rebuild, or a redeploy. It takes up what [design-system-tool.md § The project's own components](design-system-tool.md#the-projects-own-components) left out of E-0020: rendering a project's components needs its own compiler and build, which only the host has.
 
-The shape was settled on TH-0483. Each section names the story that builds it. The catalogue (S-0437) and the dev server (S-0438) are built. The sections after them say what is decided and is to be built, and each story brings its section up to date as it lands.
+The shape was settled on TH-0483. Each section names the story that builds it. The catalogue (S-0437), the dev server (S-0438), the Components page (S-0439), and its controls for props (S-0440) are built. The sections after them say what is decided and is to be built, and each story brings its section up to date as it lands.
 
 ## How it fits together
 
@@ -135,8 +135,8 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 
 | From | Type | Fields | Meaning |
 |------|------|--------|---------|
-| page | `select` | `component`, `props?`, `functions?` | Mount this component, by its path in the sub-project, with these props. |
-| page | `props` | `props`, `functions?` | Set the mounted component's props without remounting it. Each name in `functions` gets a logger that posts `event`. |
+| page | `select` | `component`, `props?`, `functions?`, `snippets?` | Mount this component, by its path in the sub-project, with these props. |
+| page | `props` | `props`, `functions?`, `snippets?` | Set the mounted component's props without remounting it. Each name in `functions` gets a logger that posts `event`; each name in `snippets` with a string value is rendered as a snippet of that text. |
 | page | `theme` | `theme` | Set `data-theme` on the document to `light` or `dark`. |
 | page | `tokens` | `light`, `dark` | Lay these CSS custom properties over the stylesheet's, under `:root` and `[data-theme='dark']`; empty objects clear them. |
 | harness | `ready` | `component?` | The harness has loaded and its `setup` module has run. |
@@ -145,7 +145,12 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 | harness | `event` | `component`, `name`, `args` | A function prop was called, with its arguments as far as JSON carries them. |
 | harness | `size` | `width`, `height` | The rendered content's size, in CSS pixels, each time it changes. |
 
-`select` takes `functions` as `props` does, so that a component that calls a function prop as it mounts already has its logger. ADR-0163's table names `functions` on `props` only.
+`select` takes `functions` and `snippets` as `props` does, so that a component that calls a function prop, or renders a snippet, as it mounts already has it. ADR-0163's table names `functions` on `props` only, and `snippets` nowhere; S-0440 added them.
+
+- **A props message is whole.** It carries every prop the page sets, not a change. The harness spreads them over the mounted component, which takes them in place, without a remount, and keeps its own state. A prop left out falls back to its default.
+- **Loggers.** Each name in `functions` is given a logger. A call posts `event` with the component, the prop's name, and each argument as JSON, or as far as JSON carries it: an Event as `{type, detail?}`, a DOM node as `<tag>`, a function as `[function name]` or `[function anonymous]`, and a cycle cut off.
+- **Snippets.** Each name in `snippets` whose value is a string is rendered as a snippet of that text, made with Svelte's `createRawSnippet`: a `<span>` holding the text as text, not markup. A listed name without a string value is passed as it is; a string not listed is passed as a plain string.
+- **Identity.** Loggers and snippets keep their identity between props messages: a logger is the same function each time, and a snippet the same while its text is.
 
 ## The Components page (S-0439)
 
@@ -153,7 +158,24 @@ The dashboard's Components page lists every component of the project and renders
 
 ## Controls for props (S-0440)
 
-The operator changes a component's props on the Components page, a control for each from its type, and sees it render as they change. Each prop gets a control from its kind in the catalogue: text, a number input, a checkbox, a select of a union's literals, and a JSON editor for an array, an object, or `unknown`. A snippet takes text. A function prop is replaced by a logger whose calls the panel lists. Each change reaches the harness without remounting the component, and the props are kept in the page's URL.
+The operator changes a component's props on the Components page, a control for each from its kind in the catalogue, and sees it render as they change. Each change reaches the harness without remounting the component, so it keeps its own state, and the props are kept in the page's URL. [flaiover-dashboard.md § The Components page](flaiover-dashboard.md#the-components-page-s-0439) gives the page's components and its URL; [the user guide](../../docs/users/flaiover.md#components) says what the operator sees.
+
+| Kind | Control | Sent as |
+|------|---------|---------|
+| `string` | A text input | The text; emptied, the empty string |
+| `number` | A number input | A number |
+| `boolean` | A checkbox, unset until it is clicked | `true` or `false` |
+| `union` | A select of its literals, with "(not set)" | The literal's value |
+| `array`, `object`, `unknown` | A JSON editor | Any valid JSON |
+| `snippet` | Text | The text, named in `snippets`, so the harness renders it as the snippet |
+| `function` | None | Left out, named in `functions`, so the harness gives it a logger |
+
+- **Defaults.** A control starts at its prop's default when the source writes the default as a literal: a string, a number, a boolean, `null`, or an array or object literal of them. Any other default, such as a call or a name, leaves the control empty, and the component's own default applies. Reset puts every control back to its default.
+- **Text that does not parse.** Each control keeps what the operator types. Text that does not parse, such as invalid JSON, is shown with its error. While any text does not parse, nothing is sent and the URL is not written.
+- **What is sent.** Every prop with a value, together: a `select` when a component is picked, a `props` message when only the props change, and nothing when they are the same as last sent. A prop without a value is left out and takes its default.
+- **Required props.** Svelte does not enforce a required prop at runtime, so the page does. A required prop without a value is marked, and the page shows which props need one in the frame's place until each has a value. This is the page's notice, not a harness error: the props are still sent meanwhile, and the frame stays loaded, hidden.
+- **Calls.** Each function prop's calls come back as `event`. The page lists the last 50, newest first, and empties the list when another component is picked.
+- **Links.** The props' values are kept in the URL, so a link opened in another tab renders the component with the same props. Picking another component drops them.
 
 ## Live tokens (S-0441)
 

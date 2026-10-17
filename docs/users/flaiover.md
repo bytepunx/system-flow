@@ -569,12 +569,34 @@ Components, the second page of the Design group, lists the project's Svelte comp
 
 **The list.** At the left is each sub-project of the manifest, with its kind, and its components grouped by folder. The filter box matches a component's name or path. A sub-project that is not SvelteKit or Svelte is listed with its kind and no components. A component whose props flai could not read is still listed, marked `props unreadable`: hover over it for why. It can still be framed.
 
-**The frame.** Pick a component to frame it. The address keeps your pick as `?p=<sub-project>&c=<path>`, so a reload or a copied link frames it again. The component renders with no props. The frame is as tall as what it renders. Above it:
+**The frame.** Pick a component to frame it. The address keeps your pick as `?p=<sub-project>&c=<path>`, so a reload or a copied link frames it again. The component renders with the props the props panel gives it. The frame is as tall as what it renders. Above it:
 
 | Control | Choices |
 |---------|---------|
 | Theme | **Light**, **Dark**, or **Both**, side by side; it starts at the dashboard's theme |
 | Width | **375**, **768**, or **1280** pixels, or **Fill**, the panel's width |
+
+**Props.** The props panel lists the picked component's props, each with its name, its type and its default as the source writes them, and `required` when it must have a value. On a wide screen the panel sits right of the frames; on a narrower one, below them. Each change renders in the frame as you make it. The component is not mounted again, so it keeps its own state, such as an open menu or typed text. Each prop has a control by its kind:
+
+| Kind | Control |
+|------|---------|
+| `string` | A text box. Emptied, it gives the empty string |
+| `number` | A number box |
+| `boolean` | A checkbox. It shows `not set` until you click it |
+| A union, such as `'sm' \| 'md' \| 'lg'` | A list of its values, with **(not set)** first |
+| An array, an object, or a type flai could not resolve | A JSON box. Any valid JSON is taken |
+| `Snippet` | A text box. The component renders your text as the snippet's content, as text, not HTML |
+| A function | No control. It shows **Logged**: its calls are listed under **Events** |
+
+A control starts at the prop's default when the source writes the default as a plain value, such as `'md'`, `3`, `false`, or `[]`. Otherwise it starts empty, and the component's own default applies. A prop without a value is not sent, so it takes its default. **Reset** puts every prop back to its default.
+
+Text that does not parse, such as JSON with a missing quote, stays as you typed it, with its error and `not sent` under it. While any prop's text does not parse, nothing is sent: the frame keeps the props it had, and the address is not changed.
+
+A required prop without a value says `Required: give it a value`. Until each required prop has one, the frame's place says `<path> needs a value for <props>.` Svelte does not stop a component that lacks a required prop, so this is the page's own notice, not an error from the component.
+
+**Events.** Under the props, **Events** lists the calls of the component's function props, newest first, up to the last 50. Each shows the time to the millisecond, the prop's name, and its arguments as JSON. An event argument shows as its type, and its detail for a custom event; an element as its tag, such as `<button>`. **Clear** empties the list. Picking another component empties it too.
+
+**Links that carry props.** The address keeps the props' values too, as `&props=`, so a reload, or the link opened in another tab, renders the component with the same props. The address has no `props` when no prop has a value. Picking another component drops the address's props, your changes, and the events: it starts at its defaults.
 
 **The dev server.** Below the controls the page says whether its sub-project's dev server runs. **Start** starts it. A start can take up to a minute while Vite gets ready. While it runs, the page gives its address and **Stop**. A change you save to a component reaches the frame without a reload.
 
@@ -594,6 +616,8 @@ What the page can say:
 | Its last dev server failed, with its output | The last dev server failed to start or exited on its own. Its last lines stay until one starts again |
 | `<path>` did not render, in the frame's place | The component failed to import or render. The harness's message follows, and `at <file>:<line>:<column>` when it knows where. The frame comes back when the component renders again, such as after you save a fix, or when you pick another |
 | Its props could not be read | flai could not read the component's props. It still renders, with no props |
+| `<path>` needs a value for `<props>`, in the frame's place | Those required props have no value. Give each one in the props panel and the frame comes back |
+| An error and `not sent` under a prop | Its text does not parse. Nothing is sent until it does |
 | No sub-project is Svelte, so there is nothing to frame | The manifest has no sub-project of kind `sveltekit` or `svelte` |
 | Could not read the components | The host did not answer. What was shown stays until the next ask |
 
