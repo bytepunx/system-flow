@@ -41,6 +41,12 @@ const (
 type Blocker struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	// Name is the check's name or the reviewer's login, when the blocker is
+	// one check's or one reviewer's.
+	Name string `json:"name,omitempty"`
+	// URL is the check's log, the review's page, or the pull request's page,
+	// when the blocker has one.
+	URL string `json:"url,omitempty"`
 }
 
 // AcceptOptions are what an acceptance adds to the preview (ADR-0093).

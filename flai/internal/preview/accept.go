@@ -13,6 +13,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conflictmark"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
+	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/protected"
 	"github.com/bytepunx/system-flow/flai/internal/release"
@@ -72,7 +73,24 @@ type Acceptance struct {
 	// still undoes of the main branch's changes (ADR-0155), each not kept
 	// also in Blockers.
 	UndoesMain []UndonePath `json:"undoes_main,omitempty"`
+	// ForgeBlockers are the forge blockers under pull-request acceptance
+	// (ADR-0169), each also in Blockers.
+	ForgeBlockers []Blocker `json:"forge_blockers,omitempty"`
+	// PullRequest is the URL of the story's pull request as flai serve kept
+	// it, when it kept one.
+	PullRequest string `json:"pull_request,omitempty"`
 }
+
+// Codes of the forge blockers an acceptance under pull-request acceptance
+// adds (ADR-0169).
+const (
+	BlockPullRequestMissing = "pull_request_missing" // flai serve has kept no pull request for the story
+	BlockForgeStale         = "forge_stale"          // the kept state was read at a commit other than the branch head
+	BlockCheckFailing       = "check_failing"        // a required check failed
+	BlockCheckPending       = "check_pending"        // a required check has not finished
+	BlockChangesRequested   = "changes_requested"    // a reviewer's latest decisive review requests changes
+	BlockApprovalsMissing   = "approvals_missing"    // fewer reviewers approve than the base branch requires
+)
 
 // UndonePath is a path the story's branch undoes of the main branch's change
 // (ADR-0155): main's lines the branch removes, and the operator's reason when
@@ -103,7 +121,10 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 // AcceptWith is Accept with what the acceptance adds: under
 // opts.Orchestrator, a blocker for each condition of ADR-0093 that fails,
 // beside every blocker Accept reports, and no blocker for a path the branch
-// undoes of main that opts.Keep keeps (ADR-0155).
+// undoes of main that opts.Keep keeps (ADR-0155). Under pull-request
+// acceptance, a story's acceptance, whoever accepts, also has a blocker for
+// each forge condition of ADR-0169 that fails, read from the state flai serve
+// keeps of its pull request.
 func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, now time.Time, log *slog.Logger, opts AcceptOptions) (*Acceptance, error) {
 	// Without git (a project that is not a repository) acceptance is the
 	// transition and the archive; with git it also merges and commits.
@@ -220,6 +241,11 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 			}
 		}
 	}
+	// the forge's checks and reviews gate every acceptance, the
+	// orchestrator's included (ADR-0169)
+	if it.Type == workitem.Story && repo.Manifest.Acceptance.PullRequest() && !res.Resumed {
+		forgeGate(r, repo, it.ID, res)
+	}
 	if opts.Orchestrator {
 		res.Evidence = opts.Evidence
 		res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected)
@@ -249,6 +275,88 @@ func threadsToResolve(repo *workitem.Repo, it *workitem.Item, res *Acceptance) {
 	for _, th := range open {
 		res.ResolvedThreads = append(res.ResolvedThreads, th.ID)
 	}
+}
+
+// forgeGate sets on res the forge blockers of story id under pull-request
+// acceptance (ADR-0169), each also in Blockers, and the URL of its pull
+// request when flai serve kept one. The kept state is judged against the
+// head of res.Branch, the story's branch when it exists; a state or a head
+// that cannot be read is itself a blocker, so the gate never opens unread.
+func forgeGate(r execx.Runner, repo *workitem.Repo, id string, res *Acceptance) {
+	st, kept, err := forge.ReadStatus(repo.CacheDir(), id)
+	switch {
+	case err != nil:
+		res.ForgeBlockers = []Blocker{{Code: BlockPullRequestMissing, Message: fmt.Sprintf("cannot read the pull request flai serve kept for %s: %v (ADR-0169)", id, err)}}
+	case kept && res.Branch != "":
+		out, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", res.Branch+"^{commit}")
+		if err != nil {
+			res.ForgeBlockers = []Blocker{{Code: BlockForgeStale, Message: fmt.Sprintf("cannot read the head of %s to check that flai serve read %s's pull request #%d there: %v; check that git can read the branch (ADR-0169)", res.Branch, id, st.PullRequest, err), URL: st.URL}}
+		} else {
+			res.ForgeBlockers = ForgeBlockers(id, st, kept, strings.TrimSpace(out))
+		}
+	default:
+		res.ForgeBlockers = ForgeBlockers(id, st, kept, "")
+	}
+	if kept {
+		res.PullRequest = st.URL
+	}
+	for _, b := range res.ForgeBlockers {
+		res.Blockers = append(res.Blockers, b.Message)
+	}
+}
+
+// ForgeBlockers are what in st, story id's pull request as flai serve kept
+// it, stops its acceptance under pull-request acceptance (ADR-0169): kept
+// says whether flai serve kept a status, and head is the story branch's head
+// commit, in full, or "" when it is not known.
+func ForgeBlockers(id string, st forge.Status, kept bool, head string) []Blocker {
+	branch := storygit.Branch(id)
+	if !kept {
+		return []Blocker{{Code: BlockPullRequestMissing, Message: fmt.Sprintf("flai serve has kept no pull request for %s: under pull-request acceptance it pushes %s and opens the pull request while the story is in review, behind the forge host action, and reads its checks and reviews; accept once it has (ADR-0166, ADR-0169)", id, branch)}}
+	}
+	if head != "" && st.HeadSHA != head {
+		return []Blocker{{Code: BlockForgeStale, Message: fmt.Sprintf("flai serve last read %s's pull request #%d at %s (at %s), but %s's head is %s: flai serve has not yet read the head, so its checks and reviews are not known; wait for its next look (ADR-0169)", id, st.PullRequest, shortSHA(st.HeadSHA), st.ReadAt, branch, shortSHA(head)), URL: st.URL}}
+	}
+	var out []Blocker
+	at := shortSHA(st.HeadSHA)
+	for _, c := range st.Checks {
+		switch c.State {
+		case forge.CheckFailed:
+			found := ""
+			if c.Summary != "" {
+				found = ": " + c.Summary
+			}
+			out = append(out, Blocker{Code: BlockCheckFailing, Name: c.Name, URL: c.URL, Message: fmt.Sprintf("%s's pull request #%d has the required check %s failing at %s%s; fix it on %s, and flai serve reads it again once the branch is pushed (ADR-0169)", id, st.PullRequest, c.Name, at, found, branch)})
+		case forge.CheckPending:
+			out = append(out, Blocker{Code: BlockCheckPending, Name: c.Name, URL: c.URL, Message: fmt.Sprintf("%s's pull request #%d has the required check %s still pending at %s; accept once it passes (ADR-0169)", id, st.PullRequest, c.Name, at)})
+		}
+	}
+	approvals := 0
+	for _, d := range st.Decisions() {
+		switch d.State {
+		case forge.ReviewApproved:
+			approvals++
+		case forge.ReviewChangesRequested:
+			out = append(out, Blocker{Code: BlockChangesRequested, Name: d.Author, URL: d.URL, Message: fmt.Sprintf("%s requested changes on %s's pull request #%d, and that review still stands; address it on the branch and have %s approve or dismiss it (ADR-0169)", d.Author, id, st.PullRequest, d.Author)})
+		}
+	}
+	if approvals < st.RequiredApprovals {
+		reviews := "approving reviews"
+		if approvals == 1 {
+			reviews = "approving review"
+		}
+		out = append(out, Blocker{Code: BlockApprovalsMissing, URL: st.URL, Message: fmt.Sprintf("%s's pull request #%d has %d %s of the %d its base branch requires; accept once enough reviewers approve (ADR-0169)", id, st.PullRequest, approvals, reviews, st.RequiredApprovals)})
+	}
+	return out
+}
+
+// shortSHA is a commit's name shortened to seven characters, as the forge
+// shows a pull request's commits; short keeps twelve for a verified commit.
+func shortSHA(sha string) string {
+	if len(sha) > 7 {
+		return sha[:7]
+	}
+	return sha
 }
 
 // ThreadItems are the items whose threads accepting it resolves: what
