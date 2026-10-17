@@ -1238,6 +1238,111 @@ func (a *app) showProviders(name string) error {
 	return nil
 }
 
+// flai serve forge: the name of the environment variable a forge's token is
+// read from, on this host (S-0392), kept beside the providers as their keys'
+// variables are (ADR-0129). No flag takes a token, and the command reads the
+// variable only to say whether it is set, never printing its value.
+func newServeForgeCmd(a *app) *cobra.Command {
+	var tokenEnv string
+	var reset bool
+	c := &cobra.Command{
+		Use:   "forge [<forge>] [--token-env <NAME>] [--reset]",
+		Short: "Set the environment variable a forge's token is read from, such as GITHUB_TOKEN for github",
+		Long: `A project that accepts by pull request reaches its forge, such as github,
+with a token; you say here which environment variable holds it on this host.
+--token-env names the variable, ` + config.DefaultGitHubTokenEnv + ` for github when you name none, and
+--reset goes back to that default. No flag takes a token: it stays in the
+variable, which flai reads only when it calls the forge, and is never written
+to the configuration, a log, a work item, or a start record.
+
+With no forge, every forge flai calls is shown; with a forge and no flag,
+that forge: the variable its token is read from, and whether that variable is
+set in this environment, never its value. flai serve reads its own
+environment, so export the variable where flai serve starts too.`,
+		Example: `  flai serve forge
+  flai serve forge github --token-env FLAI_GITHUB_TOKEN
+  flai serve forge github --reset
+  flai serve forge --json`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			given := cmd.Flags().Changed("token-env")
+			if len(args) == 0 {
+				if given || reset {
+					return fmt.Errorf("name the forge, such as github: flai serve forge <forge> --token-env <NAME>")
+				}
+				return a.showForges("")
+			}
+			name := args[0]
+			if !slices.Contains(config.KnownForges(), name) {
+				return fmt.Errorf("flai calls no forge %q; it calls %s", name, strings.Join(config.KnownForges(), ", "))
+			}
+			if !given && !reset {
+				return a.showForges(name)
+			}
+			if reset && given {
+				return fmt.Errorf("--reset takes no --token-env: it goes back to the variable %s", config.DefaultForgeTokenEnv(name))
+			}
+			if given && strings.TrimSpace(tokenEnv) == "" {
+				return fmt.Errorf("--token-env needs the name of a variable, such as %s; --reset goes back to it", config.DefaultForgeTokenEnv(name))
+			}
+			cfg, path, err := a.loadConfig()
+			if err != nil {
+				return err
+			}
+			if reset {
+				cfg = cfg.WithoutForge(name)
+			} else if cfg, err = cfg.WithForge(name, config.ForgeHost{TokenEnv: tokenEnv}); err != nil {
+				return err
+			}
+			if err := config.Save(path, cfg); err != nil {
+				return err
+			}
+			return a.showForges(name)
+		},
+	}
+	c.Flags().StringVar(&tokenEnv, "token-env", "", "the name of the environment variable that holds the forge's token, such as "+config.DefaultGitHubTokenEnv+"; never the token")
+	c.Flags().BoolVar(&reset, "reset", false, "read the forge's token from its default variable again")
+	return c
+}
+
+// showForges prints forge, or every forge flai calls when forge is empty: the
+// variable its token is read from, whether that is the default, and whether
+// it is set and not empty in this environment, never its value.
+func (a *app) showForges(forge string) error {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return err
+	}
+	names := config.KnownForges()
+	if forge != "" {
+		names = []string{forge}
+	}
+	out := map[string]any{}
+	for _, n := range names {
+		env := cfg.ForgeTokenEnv(n)
+		value, ok := os.LookupEnv(env)
+		set := ok && strings.TrimSpace(value) != ""
+		isDefault := env == config.DefaultForgeTokenEnv(n)
+		if a.jsonOut {
+			out[n] = map[string]any{"token_env": env, "default": isDefault, "token_set": set}
+			continue
+		}
+		note := ""
+		if isDefault {
+			note = " (default)"
+		}
+		state := "set in this environment"
+		if !set {
+			state = "not set in this environment"
+		}
+		fmt.Fprintf(a.out, "forge %s: its token in the variable %s%s, %s\n", n, env, note, state)
+	}
+	if a.jsonOut {
+		return a.printJSON(map[string]any{"forges": out})
+	}
+	return nil
+}
+
 // hostProviders are the host's providers for the dashboard's settings page
 // (S-0359): each entry's fields and whether the variables its key_env and
 // spend_key_env name are set and not empty in lookup's environment, never a

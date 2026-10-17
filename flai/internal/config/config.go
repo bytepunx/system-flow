@@ -47,6 +47,12 @@ type Config struct {
 	// list that is run as it stands, never through a shell. Like HostActions
 	// it is not among Keys; flai serve agent manages it.
 	Agent AgentStart `json:"agent,omitzero"`
+	// Forges are the forges flai calls for a project that accepts by pull
+	// request (S-0392): for each, by name, the name of the environment
+	// variable that holds its token, as Agent.Providers name a key's (ADR-0129).
+	// It never holds a token; flai serve forge manages it, so it is not among
+	// Keys.
+	Forges map[string]ForgeHost `json:"forges,omitempty"`
 	// Checks are the commands a story in review is checked with, once the
 	// checks action is enabled (S-0082). When Commands is empty the
 	// manifest's own checks: are used instead; this is not among Keys, and
@@ -228,6 +234,121 @@ func checkGuard(name, guard string) error {
 	return fmt.Errorf("agent.harnesses.%s.guard is %q: the only guard flai takes is %q, which lets a story's sub-agents run unguarded on a harness that cannot run flai guard (ADR-0131); set it with flai serve agent harness %s --guard none, or clear it with --guard \"\"", name, guard, GuardNone, name)
 }
 
+// ForgeHost is the host's say about one forge.
+type ForgeHost struct {
+	// TokenEnv is the name of the environment variable that holds the
+	// forge's token; the forge's default, such as GITHUB_TOKEN, when empty.
+	TokenEnv string `json:"token_env,omitempty"`
+}
+
+// DefaultGitHubTokenEnv is the variable GitHub's token is read from while
+// the host names none.
+const DefaultGitHubTokenEnv = "GITHUB_TOKEN"
+
+// defaultTokenEnvs are the forges flai calls, each with the variable its
+// token is read from while the host names none.
+var defaultTokenEnvs = map[string]string{manifest.ForgeGitHub: DefaultGitHubTokenEnv}
+
+// KnownForges are the forges flai calls, in the order they are listed.
+func KnownForges() []string {
+	return slices.Sorted(maps.Keys(defaultTokenEnvs))
+}
+
+// DefaultForgeTokenEnv is the variable forge's token is read from while the
+// host names none, or "" for a forge flai does not call.
+func DefaultForgeTokenEnv(forge string) string {
+	return defaultTokenEnvs[forge]
+}
+
+// ForgeTokenEnv is the name of the variable forge's token is read from: the
+// host's forges entry, or the forge's default; "" for a forge flai does not
+// call.
+func (c Config) ForgeTokenEnv(forge string) string {
+	if _, ok := defaultTokenEnvs[forge]; !ok {
+		return ""
+	}
+	if env := c.Forges[forge].TokenEnv; env != "" {
+		return env
+	}
+	return defaultTokenEnvs[forge]
+}
+
+// ForgeTokenFunc returns a function that reads forge's token from the
+// variable ForgeTokenEnv names, through getenv, each time it is called and
+// never before, so that the token is read only when flai calls the forge.
+// The function refuses a forge flai does not call and a variable that is
+// unset or empty, naming the variable and the setting that renames it,
+// never a value.
+func (c Config) ForgeTokenFunc(forge string, getenv func(string) string) func() (string, error) {
+	env := c.ForgeTokenEnv(forge)
+	return func() (string, error) {
+		if env == "" {
+			return "", fmt.Errorf("flai calls no forge %q; it calls %s", forge, strings.Join(KnownForges(), ", "))
+		}
+		token := strings.TrimSpace(getenv(env))
+		if token == "" {
+			return "", fmt.Errorf("the %s token is read from the variable %s, which is not set in flai's environment: export it there, or name the variable that holds it with flai serve forge %s --token-env <NAME>", forge, env, forge)
+		}
+		return token, nil
+	}
+}
+
+// WithForge returns the configuration with forge's entry set to f, refusing
+// a forge flai does not call and a token_env that is not a variable's name;
+// an entry that sets nothing is removed. The map is copied.
+func (c Config) WithForge(forge string, f ForgeHost) (Config, error) {
+	if err := checkForges(map[string]ForgeHost{forge: f}); err != nil {
+		return c, err
+	}
+	next := maps.Clone(c.Forges)
+	if next == nil {
+		next = map[string]ForgeHost{}
+	}
+	if f == (ForgeHost{}) {
+		delete(next, forge)
+	} else {
+		next[forge] = f
+	}
+	if len(next) == 0 {
+		next = nil
+	}
+	c.Forges = next
+	return c, nil
+}
+
+// WithoutForge returns the configuration without forge's entry, so that its
+// token is read from the forge's default variable again. The map is copied.
+func (c Config) WithoutForge(forge string) Config {
+	next := maps.Clone(c.Forges)
+	delete(next, forge)
+	if len(next) == 0 {
+		next = nil
+	}
+	c.Forges = next
+	return c
+}
+
+// checkForges refuses a forges entry for a forge flai does not call and a
+// token_env that is not a variable's name, with every problem.
+func checkForges(forges map[string]ForgeHost) error {
+	var errs []string
+	for _, name := range slices.Sorted(maps.Keys(forges)) {
+		if _, ok := defaultTokenEnvs[name]; !ok {
+			errs = append(errs, fmt.Sprintf("forges.%s: flai calls no forge %q; it calls %s", name, name, strings.Join(KnownForges(), ", ")))
+			continue
+		}
+		// The value is not quoted: one that is not a variable's name may be
+		// the token itself, pasted in its place.
+		if env := forges[name].TokenEnv; env != "" && !manifest.IsEnvName(env) {
+			errs = append(errs, fmt.Sprintf("forges.%s.token_env is not the name of an environment variable; write one such as %s (letters, digits, _, not beginning with a digit), never the token, with flai serve forge %s --token-env <NAME>", name, defaultTokenEnvs[name], name))
+		}
+	}
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "; "))
+	}
+	return nil
+}
+
 // ChecksConfig is the operator's say about running checks for a story in
 // review, on this host.
 type ChecksConfig struct {
@@ -389,8 +510,9 @@ func Load(path string) (cfg Config, created bool, err error) {
 }
 
 // Parse decodes JSON into a Config, rejecting unknown keys, a negative
-// agent.auto_restarts, an agent.harnesses guard other than none, and an
-// agent.providers entry that is not whole or sets a value flai refuses.
+// agent.auto_restarts, an agent.harnesses guard other than none, an
+// agent.providers entry that is not whole or sets a value flai refuses, and a
+// forges entry checkForges refuses.
 func Parse(data []byte) (Config, error) {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
@@ -407,6 +529,9 @@ func Parse(data []byte) (Config, error) {
 		return Config{}, err
 	}
 	if err := checkProviders(cfg.Agent.Providers); err != nil {
+		return Config{}, err
+	}
+	if err := checkForges(cfg.Forges); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil

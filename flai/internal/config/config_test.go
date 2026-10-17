@@ -316,6 +316,131 @@ func TestAgentProviders(t *testing.T) {
 	}
 }
 
+// S-0392: a forge's token is read from GITHUB_TOKEN while the host names no
+// variable; forges round-trips through a save and a load, and is left out of
+// the file while unset; an unknown forge or a token_env that is not a
+// variable's name is refused when set and when loaded, without quoting it;
+// an entry that sets nothing is removed; and forges stays out of Keys.
+func TestForges(t *testing.T) {
+	c := Default()
+	if got := c.ForgeTokenEnv(manifest.ForgeGitHub); got != "GITHUB_TOKEN" {
+		t.Errorf("unset, github's token is read from %q; want GITHUB_TOKEN", got)
+	}
+	if got := c.ForgeTokenEnv("gitlab"); got != "" {
+		t.Errorf("a forge flai does not call has no variable: %q", got)
+	}
+	if got := KnownForges(); !reflect.DeepEqual(got, []string{"github"}) {
+		t.Errorf("known forges: %v", got)
+	}
+	data, err := json.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "forges") {
+		t.Errorf("unset is not written: %s", data)
+	}
+	set, err := c.WithForge(manifest.ForgeGitHub, ForgeHost{TokenEnv: "FLAI_GH_TOKEN"})
+	if err != nil {
+		t.Fatalf("WithForge: %v", err)
+	}
+	if c.Forges != nil {
+		t.Errorf("WithForge copies the map: %+v", c.Forges)
+	}
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, set); err != nil {
+		t.Fatal(err)
+	}
+	back, _, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(back.Forges, map[string]ForgeHost{"github": {TokenEnv: "FLAI_GH_TOKEN"}}) || back.ForgeTokenEnv(manifest.ForgeGitHub) != "FLAI_GH_TOKEN" {
+		t.Errorf("round trip: %+v", back.Forges)
+	}
+	if file, _ := os.ReadFile(path); !strings.Contains(string(file), `"forges": {`) || !strings.Contains(string(file), `"token_env": "FLAI_GH_TOKEN"`) {
+		t.Errorf("written as forges.github.token_env: %s", file)
+	}
+	const pasted = "ghp_pasted0123456789"
+	for _, bad := range []struct {
+		name, forge, env, want string
+	}{
+		{"unknown forge", "gitlab", "GITLAB_TOKEN", `forges.gitlab: flai calls no forge "gitlab"; it calls github`},
+		{"a token in its place", manifest.ForgeGitHub, pasted + " x", "forges.github.token_env is not the name of an environment variable; write one such as GITHUB_TOKEN"},
+		{"a leading digit", manifest.ForgeGitHub, "1TOKEN", "flai serve forge github --token-env <NAME>"},
+	} {
+		if _, err := back.WithForge(bad.forge, ForgeHost{TokenEnv: bad.env}); err == nil || !strings.Contains(err.Error(), bad.want) || strings.Contains(err.Error(), pasted) {
+			t.Errorf("%s is refused when set, saying so: %v", bad.name, err)
+		}
+		data, err := json.Marshal(map[string]any{"forges": map[string]ForgeHost{bad.forge: {TokenEnv: bad.env}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Parse(data); err == nil || !strings.Contains(err.Error(), bad.want) {
+			t.Errorf("%s in the file is refused on load: %v", bad.name, err)
+		}
+	}
+	if cleared, err := back.WithForge(manifest.ForgeGitHub, ForgeHost{}); err != nil || cleared.Forges != nil {
+		t.Errorf("an entry that sets nothing is removed: %+v %v", cleared.Forges, err)
+	}
+	if got := back.WithoutForge(manifest.ForgeGitHub); got.Forges != nil || got.ForgeTokenEnv(manifest.ForgeGitHub) != "GITHUB_TOKEN" || len(back.Forges) != 1 {
+		t.Errorf("removed, back to the default, and the map copied: %+v %+v", got.Forges, back.Forges)
+	}
+	for _, k := range Keys() {
+		if strings.HasPrefix(k, "forges") {
+			t.Error("flai config set cannot reach forges: only flai serve forge does")
+		}
+	}
+}
+
+// S-0392: the token is read through getenv only when the function is called,
+// from the variable the host names at the time the function was made, and an
+// unset or empty variable is refused naming it and the setting that renames
+// it, never a value.
+func TestForgeTokenFunc(t *testing.T) {
+	const token = "ghp_sentinel0123456789"
+	env := map[string]string{}
+	var asked []string
+	getenv := func(name string) string {
+		asked = append(asked, name)
+		return env[name]
+	}
+	c := Default()
+	read := c.ForgeTokenFunc(manifest.ForgeGitHub, getenv)
+	if len(asked) != 0 {
+		t.Errorf("nothing is read before the call: %v", asked)
+	}
+	_, err := read()
+	if err == nil || !strings.Contains(err.Error(), "the github token is read from the variable GITHUB_TOKEN, which is not set") || !strings.Contains(err.Error(), "flai serve forge github --token-env <NAME>") {
+		t.Errorf("an unset variable is refused, naming it and the setting: %v", err)
+	}
+	env["GITHUB_TOKEN"] = "  \n"
+	if _, err := read(); err == nil {
+		t.Error("a variable holding only space is refused")
+	}
+	env["GITHUB_TOKEN"] = token + "\n"
+	if got, err := read(); err != nil || got != token {
+		t.Errorf("read at the call: %q %v", got, err)
+	}
+	if !reflect.DeepEqual(asked, []string{"GITHUB_TOKEN", "GITHUB_TOKEN", "GITHUB_TOKEN"}) {
+		t.Errorf("read once per call, from GITHUB_TOKEN: %v", asked)
+	}
+	named, err := c.WithForge(manifest.ForgeGitHub, ForgeHost{TokenEnv: "FLAI_GH_TOKEN"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = named.ForgeTokenFunc(manifest.ForgeGitHub, getenv)()
+	if err == nil || !strings.Contains(err.Error(), "FLAI_GH_TOKEN") || strings.Contains(err.Error(), token) {
+		t.Errorf("the host's variable is read, not the default's, and its error holds no token: %v", err)
+	}
+	env["FLAI_GH_TOKEN"] = token
+	if got, err := named.ForgeTokenFunc(manifest.ForgeGitHub, getenv)(); err != nil || got != token {
+		t.Errorf("the host's variable: %q %v", got, err)
+	}
+	if _, err := c.ForgeTokenFunc("gitlab", getenv)(); err == nil || !strings.Contains(err.Error(), `flai calls no forge "gitlab"`) {
+		t.Errorf("a forge flai does not call is refused: %v", err)
+	}
+}
+
 // S-0355 (ADR-0131): a harness's guard none and deny_protected round-trip
 // through a save and a load, an entry that sets nothing is removed, and a
 // guard other than none is refused when set, saved, and loaded, saying what

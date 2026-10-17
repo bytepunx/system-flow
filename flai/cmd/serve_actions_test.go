@@ -554,6 +554,80 @@ func TestServeAgentProvider(t *testing.T) {
 	}
 }
 
+// S-0392: flai serve forge shows the variable each forge's token is read
+// from, GITHUB_TOKEN by default, and whether it is set here; --token-env
+// names another and --reset goes back; an unknown forge and a name that is
+// not a variable's are refused, changing nothing; and nothing the command
+// prints or writes holds the token, which no flag takes.
+func TestServeForge(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "cfg.json")
+	t.Setenv("FLAI_CONFIG", cfgPath)
+	const token = "ghp_never-shown-0123456789"
+	t.Setenv("GITHUB_TOKEN", "")
+	t.Setenv("FLAI_GH_TOKEN", token)
+	root := tempProject(t)
+	var seen strings.Builder
+	run := func(args ...string) (string, string, int) {
+		t.Helper()
+		out, errOut, code := runIn(t, root, append([]string{"serve", "forge"}, args...)...)
+		seen.WriteString(out + errOut)
+		return out, errOut, code
+	}
+	saved := func() map[string]config.ForgeHost {
+		t.Helper()
+		cfg, _, err := config.Load(cfgPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.Forges
+	}
+	if out, _, code := run(); code != 0 || out != "forge github: its token in the variable GITHUB_TOKEN (default), not set in this environment\n" {
+		t.Errorf("unset: %d %q", code, out)
+	}
+	out, errOut, code := run("github", "--token-env", "FLAI_GH_TOKEN")
+	if code != 0 || out != "forge github: its token in the variable FLAI_GH_TOKEN, set in this environment\n" {
+		t.Fatalf("set: %d %s %s", code, out, errOut)
+	}
+	if got := saved(); !reflect.DeepEqual(got, map[string]config.ForgeHost{"github": {TokenEnv: "FLAI_GH_TOKEN"}}) {
+		t.Errorf("saved: %+v", got)
+	}
+	if out, _, _ := run("github"); !strings.Contains(out, "forge github: its token in the variable FLAI_GH_TOKEN, set") {
+		t.Errorf("show one: %s", out)
+	}
+	if js, _, _ := run("--json"); !strings.Contains(js, `"github": {`) || !strings.Contains(js, `"token_env": "FLAI_GH_TOKEN"`) || !strings.Contains(js, `"token_set": true`) || !strings.Contains(js, `"default": false`) {
+		t.Errorf("--json: %s", js)
+	}
+	for _, bad := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"gitlab", "--token-env", "GITLAB_TOKEN"}, "gitlab\\\"; it calls github"},
+		{[]string{"gitlab"}, "flai calls no forge"},
+		{[]string{"github", "--token-env", "gh-token"}, "forges.github.token_env is not the name of an environment variable"},
+		{[]string{"github", "--token-env", token}, "never the token"},
+		{[]string{"github", "--token-env", ""}, "--token-env needs the name of a variable, such as GITHUB_TOKEN"},
+		{[]string{"--token-env", "X"}, "name the forge"},
+		{[]string{"github", "--reset", "--token-env", "X"}, "--reset takes no --token-env"},
+	} {
+		if _, errOut, code := run(bad.args...); code == 0 || !strings.Contains(errOut, bad.want) {
+			t.Errorf("%q is refused, saying why: %d %s", bad.args, code, errOut)
+		}
+	}
+	if got := saved()["github"]; got.TokenEnv != "FLAI_GH_TOKEN" {
+		t.Errorf("a refused value changes nothing: %+v", got)
+	}
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out, _, _ := run("github", "--reset"); out != "forge github: its token in the variable GITHUB_TOKEN (default), not set in this environment\n" || saved() != nil {
+		t.Errorf("reset: %q %+v", out, saved())
+	}
+	if strings.Contains(seen.String()+string(data), token) {
+		t.Errorf("the token is in what flai printed or wrote:\n%s\n%s", seen.String(), data)
+	}
+}
+
 // S-0294 (ADR-0108): --auto-restarts sets how many times flai serve restarts
 // a story's agent on its own, alone without touching the command, the name,
 // or the harnesses; show says it and whether it is the default; a negative

@@ -198,7 +198,7 @@ there does.`,
 				return nil
 			},
 		},
-		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeImportCmd(a), newServeProjectCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeOrchestrateCmd(a), newServeChecksCmd(a), newServeComponentsCmd(a),
+		newServeEnableCmd(a, true), newServeEnableCmd(a, false), newServeActionsCmd(a), newServeImportCmd(a), newServeProjectCmd(a), newServeJournalCmd(a), newServeAgentCmd(a), newServeOrchestrateCmd(a), newServeChecksCmd(a), newServeComponentsCmd(a), newServeForgeCmd(a),
 		&cobra.Command{
 			Use:   "status",
 			Short: "Whether flai serve runs, which projects it serves, and which dashboards have it connected",
