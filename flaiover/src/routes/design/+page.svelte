@@ -9,6 +9,9 @@
 	// through flai's file.save; flai's refusal, a change made meanwhile, or a flai too old to save is
 	// shown with the edits kept. A document change while editing refreshes only the saved tokens, and
 	// leaving with unsaved changes asks first.
+	// The unsaved edits are kept in this browser per project (S-0441, ADR-0151): written on each
+	// change, restored over the saved tokens when the page loads again, and dropped once saved or
+	// discarded.
 	// Proposals (S-0384) lists the open stories whose branches change the token file or the
 	// guidance, through /api/design/proposals, read again when a document or a work item changes;
 	// comparing one reads its design system from its worktree and shows it beside the main branch's,
@@ -25,6 +28,8 @@
 	import { follow } from '$lib/events';
 	import { enhance, render } from '$lib/markdown';
 	import { themeState } from '$lib/theme.svelte';
+	import { projectState } from '$lib/project.svelte';
+	import { loadDraft, saveDraft } from '$lib/design/draft';
 	import {
 		changed,
 		composeTokenFile,
@@ -80,6 +85,10 @@
 	let busy = $state(false);
 	// Bumped to mount the editors afresh, dropping text they hold that made no edit.
 	let generation = $state(0);
+	// The layout remounts the page on a change of project, so its draft is this mount's.
+	const project = projectState.current;
+	// Whether the kept draft has been read back: until then, the edits are not written over it.
+	let restored = $state(false);
 
 	let proposals = $state<DesignProposal[] | null>(null);
 	let proposalsError = $state<string | null>(null);
@@ -240,9 +249,21 @@
 		}
 	}
 
+	/** Takes up the edits kept from before a reload, once there are saved tokens to lay them over. */
+	function restore() {
+		if (restored || !editable) return;
+		restored = true;
+		const kept = pruneEdits(saved, loadDraft(project));
+		if (Object.keys(kept).length === 0) return;
+		startEditing();
+		edits = kept;
+		notice = 'Your unsaved changes, kept in this browser, are restored: save or discard them.';
+	}
+
 	// The proposals and the request form are offered only for a project with a token file.
 	async function refresh() {
 		await load();
+		restore();
 		if (!design?.exists) return;
 		void loadProposals();
 		void loadEpics();
@@ -353,7 +374,13 @@
 			: 'Loaded the current version. Your edits are kept on it: save to write them.';
 	}
 
-	// Unsaved edits are only in this tab: ask before leaving it, inside the app and out of it.
+	// The draft is the edits that differ from the saved tokens, so a save or a discard, which leaves
+	// none, drops it.
+	$effect(() => {
+		if (restored) saveDraft(project, pruneEdits(saved, edits));
+	});
+
+	// Unsaved edits are kept in this browser, not saved: ask before leaving, in the app and out of it.
 	beforeNavigate((nav) => {
 		if (dirty && !confirm('Leave without saving your changes?')) nav.cancel();
 	});

@@ -5,6 +5,8 @@
 // writes the edits into the token file through /api/design/tokens, and a refusal, a conflict, or a
 // flai too old to save is shown with the edits kept; Discard goes back to the saved tokens; leaving
 // with unsaved changes asks first.
+// S-0441: the unsaved edits are kept in this browser per project, restored over the saved tokens
+// when the page loads again, and dropped on save and on discard.
 // S-0384: the page lists the open stories that propose a change to the design system, compares
 // the one chosen with the main branch's tokens, closes it when it leaves the list, and offers the
 // form that requests a change under an open epic.
@@ -14,6 +16,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { DesignSystem, DesignToken } from '$lib/server/repo';
 import { composeTokenFile, editKey } from '$lib/design/tokens';
+import { draftKey, loadDraft, saveDraft } from '$lib/design/draft';
+import { projectState } from '$lib/project.svelte';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -240,6 +244,8 @@ describe('editing the design system on the design page (S-0383)', () => {
 		followed.of = {};
 		navigation.before = null;
 		document.body.innerHTML = '';
+		localStorage.clear();
+		projectState.current = null;
 	});
 
 	// Serves design.get, the guidance, and the token file's GET and PUT.
@@ -263,15 +269,27 @@ describe('editing the design system on the design page (S-0383)', () => {
 		});
 	}
 
-	// Mounts the page on the test token file, and enters Edit mode.
-	async function edit() {
+	// Mounts the page on the test token file.
+	async function open() {
 		vi.stubGlobal('confirm', confirm);
 		design = structuredClone(SHOWN);
 		serve();
 		c = mount(DesignPage, { target: document.body });
 		await settle();
+	}
+
+	// Mounts the page on the test token file, and enters Edit mode.
+	async function edit() {
+		await open();
 		button('Edit tokens').click();
 		await settle();
+	}
+
+	// Loads the page again, as a reload does.
+	async function reload() {
+		unmount(c!);
+		document.body.innerHTML = '';
+		await open();
 	}
 
 	const q = (testid: string) => document.querySelector<HTMLElement>(`[data-testid="${testid}"]`);
@@ -538,6 +556,69 @@ describe('editing the design system on the design page (S-0383)', () => {
 		confirm.mockReturnValueOnce(true);
 		navigation.before!({ cancel });
 		expect(cancel).toHaveBeenCalledTimes(1);
+	});
+
+	it('keeps each edit in this browser under the project, and restores it over the saved tokens on a reload', async () => {
+		projectState.current = 'alpha';
+		await edit();
+		type('color.primary, light', '#336699');
+		await settle();
+		expect(loadDraft('alpha')).toEqual({ [lightPrimary]: PRIMARY });
+		expect(loadDraft('beta')).toEqual({});
+
+		await reload();
+		expect(q('design-edit')).not.toBeNull();
+		expect(words(q('design-notice'))).toBe(
+			'Your unsaved changes, kept in this browser, are restored: save or discard them.'
+		);
+		expect(field('color.primary, light').value).toBe('#336699');
+		expect(changedMarks()).toEqual(['edit-color.primary']);
+		expect(preview().light).toContain('--ds-color-primary: #336699;');
+		expect(gets).toBe(1);
+		expect(button('Save').disabled).toBe(false);
+		expect(puts).toEqual([]);
+	});
+
+	it("restores another project's draft only in that project, and none that matches the saved tokens", async () => {
+		saveDraft('beta', { [lightPrimary]: PRIMARY });
+		const savedPrimary = SHOWN.themes[0].tokens.find((t) => t.path === 'color.primary')!.value;
+		saveDraft('alpha', { [lightPrimary]: savedPrimary });
+		projectState.current = 'alpha';
+		await open();
+		expect(q('design-edit')).toBeNull();
+		expect(localStorage.getItem(draftKey('alpha'))).toBeNull();
+		expect(loadDraft('beta')).toEqual({ [lightPrimary]: PRIMARY });
+	});
+
+	it('drops the kept draft once the edits are saved, and keeps it while a save is refused', async () => {
+		put = conflictFirst();
+		projectState.current = 'alpha';
+		await edit();
+		type('color.primary, light', '#336699');
+		button('Save').click();
+		await settle();
+		expect(q('design-save-error')).not.toBeNull();
+		expect(loadDraft('alpha')).toEqual({ [lightPrimary]: PRIMARY });
+
+		button('Save mine over it').click();
+		await settle();
+		expect(puts.map((p) => p.hash)).toEqual(['h1', 'h2']);
+		expect(localStorage.getItem(draftKey('alpha'))).toBeNull();
+		await reload();
+		expect(q('design-edit')).toBeNull();
+	});
+
+	it('drops the kept draft when the edits are discarded', async () => {
+		projectState.current = 'alpha';
+		await edit();
+		type('color.primary, light', '#336699');
+		await settle();
+		expect(loadDraft('alpha')).toEqual({ [lightPrimary]: PRIMARY });
+		button('Discard changes').click();
+		await settle();
+		expect(localStorage.getItem(draftKey('alpha'))).toBeNull();
+		await reload();
+		expect(q('design-edit')).toBeNull();
 	});
 });
 
