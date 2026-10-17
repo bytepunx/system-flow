@@ -3,15 +3,18 @@ id: S-0442
 type: story
 nature: feature
 title: The Components page renders a story's worktree, so the operator sees a component an agent is changing live while the story is in progress or in review
-status: ready
+status: in-progress
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:37:05Z
-updated: 2026-10-17T02:34:36Z
+updated: 2026-10-17T02:35:31Z
 transitions:
   - to: ready
     at: 2026-10-17T01:02:20Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T02:35:31Z
+    by: agent-S-0442
 tags: [dashboard, cli]
 topics: [components, dashboard, cli]
 touches: [flai/internal/components/worktree.go, flai/internal/components/worktree_test.go, flai/internal/components/devserver.go, flai/internal/components/devserver_test.go, flai/internal/serve/components.go, flai/internal/serve/components_test.go, flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/components.go, flai/cmd/components_test.go, flai/cmd/serve_actions.go, docs/users/flai-reference.md, flaiover/src/lib/components/explorer/SourcePicker.svelte, flaiover/src/lib/components/explorer/SourcePicker.svelte.test.ts, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, flaiover/src/routes/api/components/+server.ts, flaiover/src/routes/api/components/start/+server.ts, flaiover/src/routes/api/components/stop/+server.ts, flaiover/src/routes/api/components/components.test.ts, flaiover/src/lib/server/repo.ts, "flaiover/src/routes/review/[id]/+page.svelte", flaiover/src/lib/explorer/changed.ts, flaiover/src/lib/explorer/changed.test.ts, docs/operators/index.md, docs/operators/settings.md, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]
@@ -27,15 +30,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 617
+      seconds: 655
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 940
-          cache_read: 7235043
-          cache_write: 15212
-          cost: 1.8177
+          input: 66
+          output: 1198
+          cache_read: 11407911
+          cache_write: 26076
+          cost: 2.8665
 cost_of_delay:
   value: 79.82
   by: planner-E-0026
