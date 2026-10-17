@@ -1,0 +1,121 @@
+---
+id: S-0440
+type: story
+nature: feature
+title: The operator changes a component's props on the Components page, a control for each from its type, and sees it render as they change
+status: done
+parent: E-0026
+owner: alex
+created: 2026-10-16T21:35:19Z
+updated: 2026-10-17T02:34:36Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:02:16Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-17T01:56:18Z
+    by: agent-S-0440
+  - to: review
+    at: 2026-10-17T02:33:16Z
+    by: system-flow
+  - to: done
+    at: 2026-10-17T02:34:36Z
+    by: orchestrator
+tags: [dashboard, cli]
+topics: [components, dashboard]
+touches: [flaiover/src/lib/explorer/controls.ts, flaiover/src/lib/explorer/controls.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flaiover/src/lib/components/explorer/PropsPanel.svelte, flaiover/src/lib/components/explorer/PropsPanel.svelte.test.ts, flaiover/src/lib/components/explorer/EventLog.svelte, flaiover/src/routes/design/components/+page.svelte, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md, flai/internal/components/testdata/harness/src/lib/Stateful.svelte, flaiover/src/lib/components/explorer/ComponentFrame.svelte, flaiover/src/lib/components/explorer/EventLog.svelte.test.ts, flaiover/src/lib/explorer/protocol.test.ts, flaiover/src/lib/explorer/protocol.ts, flaiover/src/routes/design/components/components.svelte.test.ts, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md]
+after: [S-0439]
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
+usage:
+  source: log
+  seconds: 2238
+  priced_by: harness
+  turns:
+    - day: 2026-10-17
+      ceremony: 2
+      hand_edits: 3
+      work: 41
+  models:
+    - model: claude-opus-5-5
+      input: 294
+      output: 150006
+      cache_read: 13454559
+      cache_write: 519116
+      cost: 8.7894
+  strategic:
+    - kind: orchestrator
+      seconds: 635
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 55
+          output: 976
+          cache_read: 8211890
+          cache_write: 16755
+          cost: 2.063
+cost_of_delay:
+  value: 35.78
+  by: planner-E-0026
+  at: 2026-10-16T21:50:03Z
+forecast:
+  duration: 26m
+  delivery: 2026-10-17T02:25:00Z
+  basis: "Its own forecast of 26m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
+  by: flai
+  at: 2026-10-17T01:56:07Z
+finalized:
+  by: orchestrator
+  at: 2026-10-16T21:52:01Z
+---
+# S-0440 The operator changes a component's props on the Components page, a control for each from its type, and sees it render as they change
+
+## Goal
+
+The operator manipulates a component and sees how it renders as its data changes (outcome 2). A props panel beside the frame gives each prop a control from the kind S-0437 read: text, number, checkbox, a select for a union of literals, and a JSON editor for an array, an object, or a type flai could not resolve. A snippet prop takes text, and a function prop is a logger whose calls the panel lists. Each change reaches the harness as a `props` message, and the component updates in place, keeping its own state, with no remount. The props are kept in the URL, so a link reproduces what the operator sees.
+
+## Acceptance criteria
+
+- [x] The panel lists each prop of the picked component with its type as written and its default, and a control by kind: `string` text, `number` a number input, `boolean` a checkbox, `union` a select of its literals, `array`, `object`, and `unknown` a JSON editor, and `snippet` text rendered as a snippet. A required prop without a value is marked, and the frame shows the harness's error until it has one.
+- [x] Each change is sent as a `props` message, and the harness applies it to the mounted component through reactive props, without remounting it, so state the component holds, such as an open menu, survives a change of another prop. A reset puts every prop back to its default.
+- [x] A function prop is replaced in the harness by a logger, which posts an `event` with the prop's name and its arguments as JSON (or their type where they do not serialise). The panel lists the last 50 events with their time.
+- [x] Invalid JSON is shown in the editor and not sent. The picked component's props are kept in the page's URL, and a link opened in another tab renders the same.
+- [x] Tests cover the control for each kind, value parsing and the URL's round trip, the event log, and the harness's in-place update in S-0438's integration test. `docs/users/flaiover.md`, `design/system/flaiover-dashboard.md`, and `design/system/component-library.md` describe the panel.
+
+## Tasks
+- T-1870 A controls model maps each prop kind to a control, parses and serialises its value, and keeps the props in the URL
+- T-1871 The harness applies props messages to the mounted component in place, renders snippet text, and logs each function prop's calls as events
+- T-1872 The props panel and the event log sit beside the frame on the Components page, sending each change as a props message
+- T-1873 The dashboard's user docs and design and the component library's design describe the props panel and the event log
+
+## Notes
+
+- Drafted by the planner for E-0026, after S-0439, whose page it extends.
+- The harness's change is in flai (`flai/internal/components/harness/harness.mjs`), so this story touches flai as well as flaiover.
+- Criterion 1: Svelte does not enforce a required prop at runtime, so the harness raises no error for one without a value. The page shows its own notice in the frame's place, in the harness error's style, naming the props that need a value, until each has one.
+
+### Planning
+
+- **Touches.** The story declared none; every touch comes from its four tasks, file by file.
+  - **From layout:** the controls model beside S-0439's protocol client in `flaiover/src/lib/explorer/`; the panel and the log beside S-0439's components in `flaiover/src/lib/components/explorer/`; the page; the harness and its integration test in `flai/internal/components`.
+  - **Co-change, added:** `design/system/flaiover-dashboard.md`, which changed with 90% of the commits that touched these paths; T-1873 adds the panel to the page's entry.
+  - **Co-change, not added:** `flai-cli.md` and `flai.md` (47%), since no command changes; `docs/operators/index.md` (34%), since no host action changes.
+  - No folder touch.
+- **Forecast.** Kept at flai's 26m: size 16, at 96 s a unit over 61 done large feature stories. The in-place update may need a browser to prove, which T-1871 leaves to a recorded manual check if so. Delivery is flai's play-out, after S-0439.
+- **Cost of delay.** 35.78 USD a week, flai's share of E-0026's 600 USD penalty by forecast duration, kept.
+- The forecast carries `by: system-flow`: the CLI wrote it under the host's `FLAI_AGENT`. The planner wrote it.
+
+### Accepted by the orchestrator
+
+- Verified: b7a9b15cbacaa72ffb7c8d5b4fac9ebfc90f48c5
+- At: 2026-10-17T02:34:36Z
+
+Verdict: all five criteria met at b7a9b15; flai verify passed at that commit against main 399bb3b, integration and smoke included; no convention breach.
+- 1: flaiover/src/lib/explorer/controls.ts, flaiover/src/lib/components/explorer/PropsPanel.svelte, flaiover/src/lib/components/explorer/ComponentFrame.svelte, flaiover/src/routes/design/components/+page.svelte, flai/internal/components/harness/harness.mjs
+- 2: flaiover/src/lib/components/explorer/ComponentFrame.svelte, flai/internal/components/harness/harness.mjs, flaiover/src/lib/components/explorer/PropsPanel.svelte
+- 3: flai/internal/components/harness/harness.mjs, flaiover/src/lib/components/explorer/EventLog.svelte, flaiover/src/lib/explorer/protocol.ts
+- 4: flaiover/src/lib/explorer/controls.ts, flaiover/src/routes/design/components/+page.svelte
+- 5: flaiover/src/lib/explorer/controls.test.ts, flaiover/src/lib/components/explorer/PropsPanel.svelte.test.ts, flaiover/src/lib/components/explorer/EventLog.svelte.test.ts, flaiover/src/routes/design/components/components.svelte.test.ts, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Stateful.svelte, docs/users/flaiover.md, design/system/flaiover-dashboard.md, design/system/component-library.md

@@ -3,15 +3,18 @@ id: S-0441
 type: story
 nature: feature
 title: A token change on the Design page reaches the components on the Components page, as the operator tries it and once it is saved
-status: ready
+status: in-progress
 parent: E-0026
 owner: alex
 created: 2026-10-16T21:36:09Z
-updated: 2026-10-17T01:56:07Z
+updated: 2026-10-17T02:33:29Z
 transitions:
   - to: ready
     at: 2026-10-17T01:02:19Z
     by: alex
+  - to: in-progress
+    at: 2026-10-17T02:33:29Z
+    by: agent-S-0441
 tags: [dashboard, cli]
 topics: [components, design, dashboard]
 touches: [flaiover/src/lib/design/draft.ts, flaiover/src/lib/design/draft.test.ts, flaiover/src/routes/design/+page.svelte, flaiover/src/routes/design/design.svelte.test.ts, flaiover/src/lib/explorer/tokens.ts, flaiover/src/lib/explorer/tokens.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, flaiover/src/lib/components/explorer/ComponentFrame.svelte, docs/users/flaiover.md, design/system/component-library.md, design/system/flaiover-dashboard.md]

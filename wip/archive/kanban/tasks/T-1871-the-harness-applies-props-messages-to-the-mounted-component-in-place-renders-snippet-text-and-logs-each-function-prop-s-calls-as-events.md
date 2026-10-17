@@ -3,15 +3,36 @@ id: T-1871
 type: task
 nature: feature
 title: The harness applies props messages to the mounted component in place, renders snippet text, and logs each function prop's calls as events
-status: backlog
+status: done
 parent: S-0440
 owner: alex
 created: 2026-10-16T21:35:31Z
-updated: 2026-10-16T21:35:31Z
-transitions: []
+updated: 2026-10-17T02:04:40Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:57:27Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-17T01:57:28Z
+    by: system-flow
+  - to: done
+    at: 2026-10-17T02:04:40Z
+    by: system-flow
 stream: S-0440
 tags: [cli]
 touches: [flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go]
+usage:
+  source: log
+  seconds: 432
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 25765
+      cache_read: 2310965
+      cache_write: 89164
+      cost: 1.5097
 ---
 # T-1871 The harness applies props messages to the mounted component in place, renders snippet text, and logs each function prop's calls as events
 

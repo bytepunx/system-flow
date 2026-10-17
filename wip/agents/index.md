@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-17T01:57:28Z
+updated: 2026-10-17T02:34:36Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0440](S-0440.md) | The operator changes a component's props on the Components page, a control for each from its type, and sees it render as they change | in-progress | agent-S-0440 | 2026-10-17T01:56:18Z |
+| [S-0441](S-0441.md) | A token change on the Design page reaches the components on the Components page, as the operator tries it and once it is saved | in-progress | agent-S-0441 | 2026-10-17T02:33:29Z |
 
 ## Strategic agents
 

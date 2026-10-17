@@ -7,8 +7,6 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0440
-  - S-0441
   - S-0442
   - S-0444
   - S-0443
