@@ -3,15 +3,36 @@ id: T-1865
 type: task
 nature: feature
 title: The dashboard's /api/components routes call components.list, status, start, and stop on the host, answering 501 from an older flai
-status: backlog
+status: done
 parent: S-0439
 owner: alex
 created: 2026-10-16T21:34:43Z
-updated: 2026-10-16T21:34:43Z
-transitions: []
+updated: 2026-10-17T01:18:49Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:11:14Z
+    by: agent-S-0439
+  - to: in-progress
+    at: 2026-10-17T01:11:15Z
+    by: agent-S-0439
+  - to: done
+    at: 2026-10-17T01:18:49Z
+    by: agent-S-0439
 stream: S-0439
 tags: [dashboard]
 touches: [flaiover/src/lib/server/repo.ts, flaiover/src/lib/server/agent.ts, flaiover/src/routes/api/components/+server.ts, flaiover/src/routes/api/components/components.test.ts, flaiover/src/routes/api/components/start/+server.ts, flaiover/src/routes/api/components/stop/+server.ts]
+usage:
+  source: log
+  seconds: 454
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 19156
+      cache_read: 2701347
+      cache_write: 72265
+      cost: 1.345
 ---
 # T-1865 The dashboard's /api/components routes call components.list, status, start, and stop on the host, answering 501 from an older flai
 

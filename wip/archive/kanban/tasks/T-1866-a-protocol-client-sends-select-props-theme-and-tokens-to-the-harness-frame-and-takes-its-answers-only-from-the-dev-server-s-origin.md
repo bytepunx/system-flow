@@ -3,15 +3,36 @@ id: T-1866
 type: task
 nature: feature
 title: A protocol client sends select, props, theme, and tokens to the harness frame and takes its answers only from the dev server's origin
-status: backlog
+status: done
 parent: S-0439
 owner: alex
 created: 2026-10-16T21:34:47Z
-updated: 2026-10-16T21:34:47Z
-transitions: []
+updated: 2026-10-17T01:18:40Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:11:15Z
+    by: agent-S-0439
+  - to: in-progress
+    at: 2026-10-17T01:11:16Z
+    by: agent-S-0439
+  - to: done
+    at: 2026-10-17T01:18:40Z
+    by: agent-S-0439
 stream: S-0439
 tags: [dashboard]
 touches: [flaiover/src/lib/explorer/protocol.ts, flaiover/src/lib/explorer/protocol.test.ts]
+usage:
+  source: log
+  seconds: 444
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 7998
+      cache_read: 1127949
+      cache_write: 30174
+      cost: 0.5616
 ---
 # T-1866 A protocol client sends select, props, theme, and tokens to the harness frame and takes its answers only from the dev server's origin
 

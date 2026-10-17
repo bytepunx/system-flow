@@ -3,16 +3,37 @@ id: T-1868
 type: task
 nature: feature
 title: The Components page lists the catalogue with a filter, frames the picked component in light and dark at chosen widths, starts the dev server, and shows its errors
-status: backlog
+status: done
 parent: S-0439
 owner: alex
 created: 2026-10-16T21:35:00Z
-updated: 2026-10-16T21:35:00Z
-transitions: []
+updated: 2026-10-17T01:41:50Z
+transitions:
+  - to: ready
+    at: 2026-10-17T01:19:24Z
+    by: agent-S-0439
+  - to: in-progress
+    at: 2026-10-17T01:19:24Z
+    by: agent-S-0439
+  - to: done
+    at: 2026-10-17T01:41:50Z
+    by: agent-S-0439
 stream: S-0439
 tags: [dashboard]
 touches: [flaiover/src/routes/design/components/+page.svelte, flaiover/src/routes/design/components/components.svelte.test.ts, flaiover/src/lib/components/explorer/ComponentList.svelte, flaiover/src/lib/components/explorer/ComponentFrame.svelte]
 after: [T-1865, T-1866, T-1867]
+usage:
+  source: log
+  seconds: 1346
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 168
+      output: 63417
+      cache_read: 8943155
+      cache_write: 239243
+      cost: 4.4529
 ---
 # T-1868 The Components page lists the catalogue with a filter, frames the picked component in light and dark at chosen widths, starts the dev server, and shows its errors
 
