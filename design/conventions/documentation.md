@@ -1,6 +1,6 @@
 ---
 title: Documentation
-updated: 2026-10-15
+updated: 2026-10-17
 audience: agent
 order: 50
 status: active
@@ -13,7 +13,7 @@ Where documents live, what every file carries, how it is written, and how it sta
 
 ## Rules
 
-- Everything is markdown with YAML front matter, except the design token file: DTCG JSON at the path the manifest's `design.tokens` names, `design/system/design-system.tokens.json` by default. Diagrams are Mermaid. No binary images under `design/` or `wip/`.
+- Everything is markdown with YAML front matter, except two kinds of JSON file: the design token file, DTCG JSON at the path the manifest's `design.tokens` names, `design/system/design-system.tokens.json` by default; and the component examples files, one `*.examples.json` per component under `design/components/`, as that folder's `README.md` says. Diagrams are Mermaid. No binary images under `design/` or `wip/`.
 - Each document is separated by audience and concern:
   - `design/system`: current system
   - `design/adrs`: why behind decisions

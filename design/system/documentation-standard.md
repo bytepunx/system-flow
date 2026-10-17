@@ -1,6 +1,6 @@
 ---
 title: Documentation standard
-updated: 2026-10-15
+updated: 2026-10-17
 status: active
 topics: [all]
 ---
@@ -9,7 +9,10 @@ topics: [all]
 
 Applies to every markdown file in `design/`, `docs/`, and `wip/`, in this repo and in any project generated from the template.
 
-Every document is markdown with YAML front matter, with one exception: a project's design token file is JSON in the W3C Design Tokens Community Group (DTCG) format, with no front matter, at the path the manifest's `design.tokens` key names, `design/system/design-system.tokens.json` by default ([ADR-0146](../adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md)).
+Every document is markdown with YAML front matter, with two exceptions, both JSON with no front matter:
+
+- A project's design token file is JSON in the W3C Design Tokens Community Group (DTCG) format, at the path the manifest's `design.tokens` key names, `design/system/design-system.tokens.json` by default ([ADR-0146](../adrs/0146-a-project-s-design-tokens-are-a-dtcg-file-the-manifest-names-beside-its.md)).
+- A component's examples, named sets of its props, are one file per component under `design/components/`, at `design/components/<sub-project>/<path>`: the sub-project's manifest `name`, then the component's path in it with `.svelte` replaced by `.examples.json` ([ADR-0164](../adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md), [component-library.md § Examples](component-library.md#examples-s-0443)). The folder's `README.md` is markdown, as every index is.
 
 ## Front matter
 

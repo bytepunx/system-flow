@@ -9,5 +9,6 @@ Internal documentation for {{ .project_name }}. Outward-facing documentation liv
 | `tech/` | Every active technology: version, where used, why | Edited whenever a dependency changes |
 | `experiments/` | What each experiment found: hypothesis, success measure, what was done, results, and a recommendation | One per `experiment` story, written before it is accepted; kept as the record of what was tried |
 | `analysis/` | What the analyzer found: one report per run, its focus, the window its metrics cover, and each finding with its evidence, severity, and estimated impact | Written by the analyzer alone, one per run, and listed in its `README.md`; kept as the record of what was found |
+| `components/` | Supporting files for the project's components: one examples file per component, `<sub-project>/<path>.examples.json`, its named sets of props | Written by the Components page's save and by the stories that change a component; `flai check` keeps each in step with its component's props |
 
-Markdown only, YAML front matter on every file, Mermaid for diagrams. When an ADR changes a decision, update `system/` and `tech/` in the same change.
+Markdown only, YAML front matter on every file, Mermaid for diagrams, but for the two JSON exceptions `conventions/documentation.md` names: the design token file and the examples files under `components/`. When an ADR changes a decision, update `system/` and `tech/` in the same change.

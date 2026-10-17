@@ -1,6 +1,6 @@
 ---
 title: Repository layout
-updated: 2026-10-07
+updated: 2026-10-17
 status: active
 topics: [all]
 ---
@@ -23,7 +23,8 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 │   ├── conventions/        # how agents work here, one file per topic, primed every session
 │   ├── issues/             # recurring friction with counts and cost, see continuous-improvement.md
 │   ├── experiments/        # what each experiment story found, one results document per story
-│   └── analysis/           # what the analyzer found, one report per run
+│   ├── analysis/           # what the analyzer found, one report per run
+│   └── components/         # supporting files for components, one examples file per component
 ├── docs/                   # outward-facing documentation, one subfolder per audience
 │   ├── README.md
 │   ├── users/
@@ -51,7 +52,7 @@ A conforming monorepo has this shape. Folder names are defaults; a project may r
 
 ### `design/`
 
-Internal. Written for the people and agents building the system. Six subfolders by documentation type, each described in [design/README.md](../README.md). No other subfolders are added without an ADR.
+Internal. Written for the people and agents building the system. Its subfolders by documentation type, each described in [design/README.md](../README.md). No other subfolders are added without an ADR.
 
 `design/conventions/` is agent-facing: one short file per topic area stating how work is done in this repository, plus a `README.md` index in read order. The template ships the baseline; a project adds its own rules below the marker line in each file. Every agent session reads this folder first. See [conventions.md](conventions.md) and [ADR-0013](../adrs/0013-conventions-folder.md).
 
@@ -74,6 +75,8 @@ Work in process. Everything in here is expected to change daily. See [work-hiera
 `design/experiments/` records what experiments found: one results document per `experiment` story, `<S-nnnn>-<slug>.md`, named as the story's file is, with front matter `title`, `updated`, `status`, and `story`, and the sections Hypothesis, Success measure, What was done, Results, and Recommendation, which says adopt, adapt, or drop. The template ships the folder's `README.md` and `template.md` to start one from. An experiment story is accepted only with its results document committed on its branch, and `flai check` validates every document in the folder. It is kept apart from `design/system/`, which says how the system is, because an experiment that is dropped does not describe it. See [workflow.md](workflow.md) and [ADR-0066](../adrs/0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md).
 
 `design/analysis/` holds the analyzer's reports (S-0223): one per run, `<date>-<focus>.md`, the date the day it ran in UTC as `YYYY-MM-DD` and the focus `bottlenecks`, `intent`, or `risk`, or `all` for a run asked for none. Its front matter has `title`, `updated`, `status` (`draft` while the analyzer writes it, `active` once the run has ended, and `deprecated` when a later report replaces it), `focus`, and the window its metrics cover, `from` and `to`, as dates; it has one section per finding, with its evidence, its severity, and its estimated impact. The template ships the folder's `README.md`, which says what a report holds and indexes the reports, one row each. Only the analyzer writes here, and `flai check` validates every report and warns of one the index does not list and of a row with no report. It is kept apart from `design/system/`, which says how the system is, because a report says what one run found at one time. See [strategic-agents.md](strategic-agents.md).
+
+`design/components/` holds supporting files for a project's components (S-0443): today one examples file per component, `design/components/<sub-project>/<path>`, the sub-project's manifest `name` and the component's path in it with `.svelte` replaced by `.examples.json`. Each is JSON, an exception to "Everything is markdown" as the design token file is, holding the component's examples, named sets of its props that flaiover's Components page lists and loads. The page writes them through `file.save`, on main or on the story it shows, and a story that changes a component keeps its examples in step; `flai check` reports `components.examples` for a file that does not fit the format or its component. The template ships the folder's `README.md`. See [component-library.md § Examples](component-library.md#examples-s-0443) and [ADR-0164](../adrs/0164-a-component-s-examples-are-named-sets-of-props-in-one-json-file-per-component.md).
 
 ### `scripts/`
 

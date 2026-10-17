@@ -11,9 +11,10 @@ Internal documentation for the system-flow monorepo. Nothing here is written for
 | `issues/` | Recurring friction, defects, blockers, and inefficiencies with counts and cost. | Recorded as they occur; `summary.md` regenerated with every occurrence. |
 | `experiments/` | What each experiment found: hypothesis, success measure, what was done, results, and a recommendation (ADR-0066). | One per `experiment` story, written before it is accepted; kept as the record of what was tried. |
 | `analysis/` | What the analyzer found: one report per run, its focus, the window its metrics cover, and each finding with its evidence, severity, and estimated impact. | Written by the analyzer alone, one per run, and listed in its `README.md`; kept as the record of what was found. |
+| `components/` | Supporting files for the project's components: one examples file per component, `<sub-project>/<path>.examples.json`, its named sets of props (ADR-0164). | Written by the Components page's save and by the stories that change a component; `flai check` keeps each in step with its component's props. |
 
 Rules that apply to everything under `design/`:
 
-- Markdown only. Diagrams are Mermaid fenced blocks so they render in the dashboard.
+- Markdown only, but for the two JSON exceptions [conventions/documentation.md](conventions/documentation.md) names: the design token file and the examples files under `components/`. Diagrams are Mermaid fenced blocks so they render in the dashboard.
 - Every file carries YAML front matter with at least `title` and `updated`. See [system/documentation-standard.md](system/documentation-standard.md).
 - When an ADR changes a decision, update the affected `system/` and `tech/` documents in the same change.
