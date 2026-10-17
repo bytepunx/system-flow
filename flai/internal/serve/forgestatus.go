@@ -237,9 +237,19 @@ func openThread(repo *workitem.Repo, id string) bool {
 // openSendBack opens the one thread on st's story for its fresh failures.
 // A review's comment or a check's summary is the forge's text, not flai's:
 // when the project's lint refuses it quoted, it is opened with each in a
-// code block instead.
+// code block instead. An open thread flai serve opened on the story with the
+// same title is the one a look before opened for the same failures and could
+// not record: it is used again rather than a second one opened.
 func (p *forgePass) openSendBack(repo *workitem.Repo, st forge.Status, fresh []failure, now time.Time) (*threads.Thread, error) {
 	opt := threads.NewOptions{Title: sendBackTitle(st, fresh), On: st.Story, Author: forgeAuthor, Text: sendBackText(st, fresh, false), Now: now}
+	if all, err := threads.For(repo, st.Story); err == nil {
+		title := workitem.CleanTitle(opt.Title)
+		for _, th := range all {
+			if th.Open() && th.Opener() == forgeAuthor && th.Title == title {
+				return th, nil
+			}
+		}
+	}
 	th, err := threads.New(repo, opt)
 	var lint *mdlint.Error
 	if errors.As(err, &lint) {

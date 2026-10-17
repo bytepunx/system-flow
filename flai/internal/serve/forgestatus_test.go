@@ -307,6 +307,29 @@ func TestAFailedSendBackMoveIsMadeAgainWithoutANewThread(t *testing.T) {
 	}
 }
 
+// A send back whose record was lost after its thread was opened, as when the
+// kept state could not be written, uses that open thread again rather than
+// opening a second one for the same failure.
+func TestASendBackNotRecordedUsesItsOpenThreadAgain(t *testing.T) {
+	lab, _ := newStatusLab(t)
+	lab.forge.set(lab.branch(), headA, []forge.Check{buildFailed("")}, nil)
+	lab.clock = lab.clock.Add(time.Hour)
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Pull request #1 of " + lab.story + ": the required check build failed", On: lab.story, Author: forgeAuthor, Text: "Sent back.", Now: lab.clock})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lab.look()
+	if ths := lab.threadsOn(); len(ths) != 1 || !ths[0].Open() {
+		t.Fatalf("threads after a send back not recorded: %+v", ths)
+	}
+	if st := lab.status(); len(st.SentBack) != 1 || st.SentBack[0].Thread != th.ID {
+		t.Fatalf("sent back %+v, want it on %s", st.SentBack, th.ID)
+	}
+	if it := lab.item(); it.Status != workitem.InProgress || lab.sentBackBy() != 1 {
+		t.Fatalf("the story after a send back not recorded: %s", it.Status)
+	}
+}
+
 // A comment the project's lint refuses as a blockquote, here for mixing its
 // emphasis styles, is quoted in a code block instead.
 func TestACommentTheLintRefusesQuotedIsQuotedInACodeBlock(t *testing.T) {

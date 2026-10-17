@@ -984,10 +984,10 @@ func (l *launcher) resume(ctx context.Context, cfg AgentConfig, repo *workitem.R
 // when the story's newest run started before flai sent it back and has ended.
 // A story flai serve never ran an agent for is worked from a session of its
 // own, whose inbox lists the thread, so nothing is started beside it. Like
-// resume, it spends no automatic restart
-// and does not wait for room under the in-progress limit, whose place the
-// story kept, and it leaves alone a run the operator stopped, which waits
-// for their retry, and a story that nothing can start.
+// resume, it spends no automatic restart and does not wait for room under
+// the in-progress limit, whose place the story kept, and it leaves alone a
+// run the operator stopped, which waits for their retry, and a story that
+// nothing can start.
 func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *workitem.Repo) {
 	st := l.dir.AgentStates()[l.entry.Root]
 	// only a story whose pull request flai serve has read can have been sent back
