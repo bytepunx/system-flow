@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 902
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 40
-      output: 225
-      cache_read: 1594298
-      cache_write: 97862
-      cost: 0.7723
+      input: 23
+      output: 9410
+      cache_read: 1671638
+      cache_write: 43972
+      cost: 0.7803
 ---
 # T-1879 flai/internal/components starts a dev server in a story's worktree, installing the sub-project's dependencies by its lock file when they are missing
 

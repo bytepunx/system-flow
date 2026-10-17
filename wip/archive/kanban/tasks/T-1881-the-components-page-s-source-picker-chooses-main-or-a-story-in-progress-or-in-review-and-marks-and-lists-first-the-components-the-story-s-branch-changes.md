@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 1050
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 138
-      output: 830
-      cache_read: 7998123
-      cache_write: 165410
-      cost: 3.7257
+      input: 113
+      output: 45397
+      cache_read: 8064492
+      cache_write: 212136
+      cost: 3.7644
 ---
 # T-1881 The Components page's source picker chooses main or a story in progress or in review, and marks and lists first the components the story's branch changes
 
