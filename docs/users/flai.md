@@ -1416,6 +1416,12 @@ flai writes the harness and a Vite config under `.flai-cache/components/<project
 - a `--project` the manifest does not have, or one of another kind;
 - a sub-project without `vite` in its `node_modules`, naming the sub-project and the fix: install its dependencies, such as `npm install` or `pnpm install` in its folder.
 
+`--story S-nnnn` serves the sub-project from that story's worktree instead, with the worktree's own manifest, so you see a component as the story's branch has it ([component-library.md § Sources](../../design/system/component-library.md#sources)). The story must be in progress or in review and have a worktree. A worktree has no `node_modules`, so when the sub-project's `vite` is missing there, flai first installs its dependencies by the lock file it finds in the sub-project's folder or a folder above it: `pnpm install --frozen-lockfile`, `npm ci`, or `yarn install --frozen-lockfile`. A failed install exits 1 with the package manager's last lines. The harness goes under the worktree's `.flai-cache/components/`, and `--json` adds `story`.
+
+```bash
+flai components serve --story S-0442 --project flaiover
+```
+
 The dev server listens on 127.0.0.1 only, so only a browser on this machine reaches it. It runs the sub-project's code and dependencies as you, as its own dev server does. The dashboard's Components page has `flai serve` run the same dev server, once the operator enables the `components` host action ([The components host action](../operators/index.md#the-components-host-action-s-0438)).
 
 ## Check the repository
