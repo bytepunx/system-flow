@@ -7,7 +7,7 @@ status: backlog
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:39:46Z
-updated: 2026-10-17T06:40:03Z
+updated: 2026-10-17T06:43:36Z
 transitions: []
 tags: [cli, template]
 topics: [release, orchestration]
@@ -18,13 +18,15 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 forecast:
   duration: 45m
   delivery: 2026-10-17T11:31:00Z
   basis: "Its own forecast of 45m; 7th in the pull order with an in-progress limit of 5, behind S-0241, S-0392, S-0393, S-0394, S-0395 and S-0396."
   by: flai
   at: 2026-10-17T06:40:03Z
+finalized:
+  by: alex
+  at: 2026-10-17T06:43:36Z
 ---
 # S-0397 Under pull-request acceptance, flai accept merges the story's pull request through the remote by the project's merge method, then fetches main and moves to done, archives, and commits as today
 
