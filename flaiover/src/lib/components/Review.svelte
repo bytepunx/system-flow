@@ -58,6 +58,10 @@
 		operator_only?: string;
 		/** Paths the branch undoes of main's change: each blocks until restored or kept (ADR-0155). */
 		undoes_main?: Undone[];
+		/** What the pull request holds acceptance on, under pull-request acceptance, each also in blockers (ADR-0169). */
+		forge_blockers?: ForgeBlocker[];
+		/** The story's pull request's URL, when flai serve kept one. */
+		pull_request?: string;
 		plan?: {
 			level: string;
 			commits: string[];
@@ -68,6 +72,8 @@
 	};
 	/** A path the branch undoes of main's change, as flai's preview and refusal give it (ADR-0155). */
 	type Undone = { path: string; lines: string[]; old_base: string };
+	/** A forge blocker as flai's preview gives it: name is a check's or a reviewer's, url its page (ADR-0169). */
+	type ForgeBlocker = { code: string; message: string; name?: string; url?: string };
 	/** A file of the story's diff, as /diff gives it and DiffView shows it. */
 	type DiffFile = {
 		path: string;
@@ -209,13 +215,21 @@
 	);
 	// an undone path neither kept nor yet restored holds Accept; its blocker is left to the card
 	const unresolved = $derived(undone.filter((u) => !kept[u.path]));
+	// The forge blockers are listed by kind, so the general list leaves out their messages.
+	const forgeBlockers = $derived(preview?.forge_blockers ?? []);
+	const blockers = $derived.by(() => {
+		if (!preview) return [];
+		const forge = new Set(forgeBlockers.map((b) => b.message));
+		return otherBlockers(preview).filter((b) => !forge.has(b));
+	});
 	const canAccept = $derived(
 		writable &&
 			inReview &&
 			!running &&
 			!result &&
 			!!preview &&
-			!otherBlockers(preview).length &&
+			!blockers.length &&
+			!forgeBlockers.length &&
 			!preview.worktree_uncommitted?.length &&
 			!unresolved.length &&
 			!needsChoice &&
@@ -233,6 +247,17 @@
 		context: '',
 		note: 'text-muted'
 	};
+	// a forge blocker's kind in plain words, and what its url opens (ADR-0169)
+	const forgeKind: Record<string, string> = {
+		pull_request_missing: 'No pull request',
+		forge_stale: 'Not read at the head',
+		check_failing: 'Check failing',
+		check_pending: 'Check pending',
+		changes_requested: 'Changes requested',
+		approvals_missing: 'Approvals missing'
+	};
+	const forgeLink = (code: string) =>
+		code.startsWith('check_') ? 'log' : code === 'changes_requested' ? 'review' : 'pull request';
 	// The catalogue's components the branch changes, from the diff the page already holds.
 	const changedList = $derived.by((): Component[] => {
 		if (!catalogue || !diff) return [];
@@ -1038,14 +1063,50 @@
 						{#if undoneError}<p class="mt-1 text-danger" role="alert">{undoneError}</p>{/if}
 					</div>
 				{/if}
-				{#if otherBlockers(preview).length}
+				<!-- What the pull request holds acceptance on, by kind, under pull-request acceptance (ADR-0169). -->
+				{#if forgeBlockers.length}
+					<div
+						class="mb-2 rounded border border-danger bg-danger-soft p-2 text-danger"
+						role="alert"
+						data-testid="forge-blockers"
+					>
+						<p class="font-medium">
+							{#if preview.pull_request}The <a
+									class="underline"
+									href={preview.pull_request}
+									target="_blank"
+									rel="external noopener noreferrer">pull request</a
+								>{:else}The pull request{/if} holds this acceptance:
+						</p>
+						<ul class="mt-1 ml-4 list-disc space-y-1">
+							{#each forgeBlockers as b (b.message)}
+								<li data-code={b.code}>
+									<span class="flex flex-wrap items-baseline gap-2">
+										<span class="font-medium">{forgeKind[b.code] ?? b.code}</span>
+										{#if b.name}<span class="font-mono">{b.name}</span>{/if}
+										{#if b.url}<a
+												class="text-xs underline"
+												href={b.url}
+												target="_blank"
+												rel="external noopener noreferrer"
+												aria-label="{b.name ?? forgeKind[b.code] ?? b.code} {forgeLink(b.code)}"
+												>{forgeLink(b.code)}</a
+											>{/if}
+									</span>
+									<p class="text-xs">{b.message}</p>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
+				{#if blockers.length}
 					<div
 						class="mb-2 rounded border border-danger bg-danger-soft p-2 text-danger"
 						role="alert"
 					>
 						<p class="font-medium">This cannot be accepted from here yet:</p>
 						<ul class="mt-1 ml-4 list-disc">
-							{#each otherBlockers(preview) as b (b)}<li>{b}</li>{/each}
+							{#each blockers as b (b)}<li>{b}</li>{/each}
 						</ul>
 					</div>
 				{/if}
@@ -1086,6 +1147,16 @@
 					{#if preview.branch}
 						<li>
 							Rebase <code>{preview.branch}</code>, fast-forward it into main, remove its worktree.
+						</li>
+					{/if}
+					{#if preview.pull_request && !forgeBlockers.length}
+						<li data-testid="accept-pull-request">
+							Its <a
+								class="underline"
+								href={preview.pull_request}
+								target="_blank"
+								rel="external noopener noreferrer">pull request</a
+							> passes its required checks and reviews.
 						</li>
 					{/if}
 					<li>Move the story to done, archive it with its tasks and narrative, and commit.</li>

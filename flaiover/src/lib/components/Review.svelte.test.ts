@@ -1264,6 +1264,147 @@ describe('Review', () => {
 		});
 	});
 
+	// ADR-0169: under pull-request acceptance the confirmation lists what the pull request holds
+	// acceptance on, by kind, from the preview's forge_blockers, each of which is in blockers too.
+	describe('the pull request’s blockers (S-0395)', () => {
+		const PR = 'https://github.com/bytepunx/system-flow/pull/7';
+		const FORGE = [
+			{
+				code: 'check_failing',
+				name: 'lint',
+				url: 'https://ci/lint',
+				message:
+					"S-0041's pull request #7 has the required check lint failing at abc1234: 2 errors; fix it on story/S-0041 (ADR-0169)"
+			},
+			{
+				code: 'check_pending',
+				name: 'test',
+				message:
+					"S-0041's pull request #7 has the required check test pending at abc1234 (ADR-0169)"
+			},
+			{
+				code: 'changes_requested',
+				name: 'alex',
+				url: `${PR}#pullrequestreview-1`,
+				message: "alex requests changes on S-0041's pull request #7 (ADR-0169)"
+			},
+			{
+				code: 'approvals_missing',
+				url: PR,
+				message: "S-0041's pull request #7 has 0 of the 1 approvals main requires (ADR-0169)"
+			}
+		];
+		const OTHER = 'S-0041 has an open task T-0001; finish or cancel it before accepting';
+		const box = () => document.querySelector('[data-testid="forge-blockers"]');
+		const entry = (code: string) => box()!.querySelector(`[data-code="${code}"]`)!;
+		const words = (e: Element) => (e.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+		it('lists each by its kind, name, and link, links the pull request, and holds Accept', async () => {
+			backend({
+				preview: {
+					branch: 'story/S-0041',
+					plan: null,
+					blockers: [OTHER, ...FORGE.map((b) => b.message)],
+					forge_blockers: FORGE,
+					pull_request: PR
+				}
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			const pr = box()!.querySelector<HTMLAnchorElement>('p a')!;
+			expect(pr.getAttribute('href')).toBe(PR);
+			expect(pr.getAttribute('target')).toBe('_blank');
+			expect(pr.getAttribute('rel')).toBe('external noopener noreferrer');
+			expect(box()!.querySelectorAll('li')).toHaveLength(4);
+			const failing = entry('check_failing');
+			expect(words(failing)).toContain('Check failing lint log');
+			expect(words(failing)).toContain(FORGE[0].message);
+			expect(failing.querySelector('a')!.getAttribute('href')).toBe('https://ci/lint');
+			expect(failing.querySelector('a')!.getAttribute('aria-label')).toBe('lint log');
+			const pending = entry('check_pending');
+			expect(words(pending)).toContain('Check pending test');
+			expect(pending.querySelector('a')).toBeNull();
+			const changes = entry('changes_requested');
+			expect(words(changes)).toContain('Changes requested alex review');
+			expect(changes.querySelector('a')!.getAttribute('href')).toBe(FORGE[2].url);
+			const approvals = entry('approvals_missing');
+			expect(words(approvals)).toContain('Approvals missing pull request');
+			expect(approvals.querySelector('a')!.getAttribute('href')).toBe(PR);
+			// the general list keeps the other blocker and leaves out the messages listed by kind
+			const general = [...document.querySelectorAll('[role="alert"]')].find((e) =>
+				e.textContent?.includes('This cannot be accepted from here yet')
+			)!;
+			expect([...general.querySelectorAll('li')].map(words)).toEqual([OTHER]);
+			const text = document.body.textContent ?? '';
+			for (const b of FORGE) expect(text.split(b.message)).toHaveLength(2);
+			expect(document.querySelector('[data-testid="accept-pull-request"]')).toBeNull();
+			expect(button('Accept').disabled).toBe(true);
+		});
+
+		it('names a missing pull request and a stale read without a link, and holds Accept alone', async () => {
+			const missing = {
+				code: 'pull_request_missing',
+				message: 'flai serve has kept no pull request for S-0041 (ADR-0169)'
+			};
+			backend({
+				preview: {
+					branch: 'story/S-0041',
+					plan: null,
+					blockers: [missing.message],
+					forge_blockers: [missing]
+				}
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(words(box()!)).toContain('The pull request holds this acceptance:');
+			expect(box()!.querySelector('a')).toBeNull();
+			expect(words(entry('pull_request_missing'))).toContain('No pull request');
+			expect(document.body.textContent).not.toContain('This cannot be accepted from here yet');
+			expect(button('Accept').disabled).toBe(true);
+			unmount(c!);
+			document.body.innerHTML = '';
+			const stale = {
+				code: 'forge_stale',
+				url: PR,
+				message:
+					"flai serve read S-0041's pull request #7 at abc1234, not at story/S-0041's head (ADR-0169)"
+			};
+			backend({
+				preview: {
+					branch: 'story/S-0041',
+					plan: null,
+					blockers: [stale.message],
+					forge_blockers: [stale],
+					pull_request: PR
+				}
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(words(entry('forge_stale'))).toContain('Not read at the head pull request');
+			expect(button('Accept').disabled).toBe(true);
+		});
+
+		it('links a pull request that holds nothing, and keeps Accept on', async () => {
+			backend({ preview: { branch: 'story/S-0041', plan: null, pull_request: PR } });
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(box()).toBeNull();
+			const line = document.querySelector('[data-testid="accept-pull-request"]')!;
+			expect(words(line)).toBe('Its pull request passes its required checks and reviews.');
+			expect(line.querySelector('a')!.getAttribute('href')).toBe(PR);
+			expect(button('Accept').disabled).toBe(false);
+		});
+
+		it('shows neither under local acceptance', async () => {
+			backend({});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			expect(box()).toBeNull();
+			expect(document.querySelector('[data-testid="accept-pull-request"]')).toBeNull();
+			expect(button('Accept').disabled).toBe(false);
+		});
+	});
+
 	// Found live (S-0088): the narrative pane showed markdown as literal text ("1. Accept.", "**x**")
 	// instead of rendering it, unlike every other place in the dashboard that shows a document body.
 	it('renders markdown in the narrative pane rather than showing it as literal text', async () => {
