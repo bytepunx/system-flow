@@ -3,15 +3,36 @@ id: T-1624
 type: task
 nature: feature
 title: An ADR records that under pull-request acceptance every acceptance, the orchestrator's included, waits for the required checks and reviews
-status: backlog
+status: done
 parent: S-0395
 owner: alex
 created: 2026-10-16T04:38:08Z
-updated: 2026-10-16T04:38:08Z
-transitions: []
+updated: 2026-10-17T17:41:56Z
+transitions:
+  - to: ready
+    at: 2026-10-17T17:36:40Z
+    by: agent-S-0395
+  - to: in-progress
+    at: 2026-10-17T17:36:43Z
+    by: agent-S-0395
+  - to: done
+    at: 2026-10-17T17:41:56Z
+    by: agent-S-0395
 stream: S-0395
 tags: [cli]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 313
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 7662
+      cache_read: 1348507
+      cache_write: 41580
+      cost: 0.6715
 ---
 # T-1624 An ADR records that under pull-request acceptance every acceptance, the orchestrator's included, waits for the required checks and reviews
 

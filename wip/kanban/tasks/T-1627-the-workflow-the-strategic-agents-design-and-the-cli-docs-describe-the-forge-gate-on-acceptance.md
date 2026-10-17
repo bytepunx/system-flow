@@ -3,16 +3,37 @@ id: T-1627
 type: task
 nature: feature
 title: The workflow, the strategic agents' design, and the CLI docs describe the forge gate on acceptance
-status: backlog
+status: done
 parent: S-0395
 owner: alex
 created: 2026-10-16T04:38:24Z
-updated: 2026-10-16T04:38:24Z
-transitions: []
+updated: 2026-10-17T18:01:53Z
+transitions:
+  - to: ready
+    at: 2026-10-17T17:36:42Z
+    by: agent-S-0395
+  - to: in-progress
+    at: 2026-10-17T17:57:21Z
+    by: agent-S-0395
+  - to: done
+    at: 2026-10-17T18:01:53Z
+    by: agent-S-0395
 stream: S-0395
 tags: [cli]
-touches: [design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, design/system/flaiover-dashboard.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/CHANGELOG.md]
 after: [T-1624, T-1625, T-1626]
+usage:
+  source: log
+  seconds: 272
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 77
+      output: 24138
+      cache_read: 4248004
+      cache_write: 130984
+      cost: 2.1154
 ---
 # T-1627 The workflow, the strategic agents' design, and the CLI docs describe the forge gate on acceptance
 

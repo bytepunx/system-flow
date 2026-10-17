@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 853.5428
-accrued_seconds: 718000
-tasks_completed: 609
-last_run: 2026-10-17T16:04:19Z
+accrued_cost: 877.8583
+accrued_seconds: 726371
+tasks_completed: 614
+last_run: 2026-10-17T18:23:50Z
 ---
 
 # Orchestrator activity
@@ -4274,6 +4274,41 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0394
 - Seconds: 11
 - Cost: 0.1889 USD, estimated
+
+### 2026-10-17T17:34:05Z
+
+- Summary: Accepted S-0394 under accept_reviews at 6bd4ad96. flai verify passed against main 0cef465, integration and smoke included, and the verifier matched all six criteria. Under publish (judgement, 1 pending, unvalued), published flai 1.59.0 → 1.60.0 (minor) and flaiover 0.52.1 → 0.52.2 (patch), tags flai/v1.60.0 and flaiover/v0.52.2, pushed, bundling S-0394. I opened a thread recommending that sendBackReason quote check names and reviewer logins before they reach the agent's prompt (low severity).
+- Items: S-0394
+- Seconds: 5386
+- Cost: 8.8451 USD, estimated
+
+### 2026-10-17T17:34:14Z
+
+- Summary: After S-0394's acceptance, S-0395 and S-0396 were pulled. Under order_ready, re-applied flai order --by throughput, leaving S-0397 (45m) in ready; it waits on S-0395.
+- Items: S-0395, S-0396
+- Seconds: 9
+- Cost: 0.0000 USD
+
+### 2026-10-17T17:37:27Z
+
+- Summary: Recommended an answer on TH-0501, citing design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md § Decision
+- Items: S-0395
+- Seconds: 193
+- Cost: 5.5894 USD, estimated
+
+### 2026-10-17T17:37:28Z
+
+- Summary: Under answer_threads (autonomous), posted a recommendation on agent-S-0395's TH-0501, escalating it as a question about the orchestrator's own powers and not yet decided (TH-0463 question 3). I recommended confirming that the orchestrator never approves pull-request reviews, citing ADR-0093 § Decision.
+- Items: S-0395
+- Seconds: 1
+- Cost: 0.0000 USD
+
+### 2026-10-17T18:23:50Z
+
+- Summary: Verified S-0395 under accept_reviews at 7e44e889: flai verify passed against main 7ff94db, and the verifier matched all five criteria, with no approve path and local mode unchanged. The dry run is blocked only by TH-0501, the operator's confirmation that the orchestrator never approves reviews. I left S-0395 in review and opened a thread on it naming that blocker.
+- Items: S-0395
+- Seconds: 2782
+- Cost: 9.8810 USD, estimated
 
 ## Refusals
 

@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0022]
 created: 2026-10-16T05:06:37Z
-updated: 2026-10-16T05:06:37Z
+updated: 2026-10-17T17:57:10Z
 ---
 
 # TH-0466 E-0022 plan: eight draft stories, S-0398 to S-0405, with 44 tasks; one added story (S-0405) for I-0148's close-out tiers
@@ -78,3 +78,13 @@ Each story that decides something writes its ADR in its first layer and its docu
 | S-0405 | 41m | 41m | 11:23Z |
 
 Each story's `### Planning` notes give the reason for each raise. The deliveries play out the pull order behind E-0021's stories.
+
+### 2026-10-17T17:57:10Z planner-E-0022
+E-0021 went first, so I'm updating the overlap note. S-0395's T-1625 makes `flai accept` refuse on forge blockers before it merges: under pull-request acceptance, a required check not passed or a review outstanding stops it. S-0400's landing goes through `preview.AcceptWith`, so the queue inherits that refusal.
+
+I propose two changes once S-0395 is accepted:
+
+1. **S-0398:** a story with forge blockers is not eligible for a batch. The queue shows those blockers by name, as it shows ADR-0155's undone paths.
+2. **S-0400:** a landing refused on a forge blocker after a green batch leaves the story in review with the reason. It is neither bisected nor sent back.
+
+I haven't changed the drafts yet, because S-0395 is still in progress and its blockers may change. I'll make both changes once it is accepted, unless you say otherwise.

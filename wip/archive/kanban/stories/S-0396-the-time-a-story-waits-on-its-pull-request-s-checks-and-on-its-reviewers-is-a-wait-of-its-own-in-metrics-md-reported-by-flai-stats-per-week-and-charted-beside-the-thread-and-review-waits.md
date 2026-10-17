@@ -3,11 +3,11 @@ id: S-0396
 type: story
 nature: feature
 title: The time a story waits on its pull request's checks and on its reviewers is a wait of its own in metrics.md, reported by flai stats per week and charted beside the thread and review waits
-status: in-progress
+status: done
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:38:48Z
-updated: 2026-10-17T17:33:51Z
+updated: 2026-10-17T18:25:19Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:55Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-17T17:33:51Z
     by: agent-S-0396
+  - to: review
+    at: 2026-10-17T18:22:49Z
+    by: agent-S-0396
+  - to: done
+    at: 2026-10-17T18:25:19Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [analysis, dashboard]
-touches: [flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts, design/adrs, design/system/metrics.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md]
+touches: [flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, flai/cmd/stats.go, flai/cmd/check_stats_test.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/components/WaitTable.svelte.test.ts, design/adrs, design/system/metrics.md, design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, flai/internal/metrics/metrics.go, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md]
 after: [S-0394]
 agent:
   harness: claude-code
@@ -25,9 +31,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2962
+  priced_by: harness
+  turns:
+    - day: 2026-10-17
+      ceremony: 1
+      hand_edits: 2
+      work: 57
+  models:
+    - model: claude-opus-5-5
+      input: 296
+      output: 121678
+      cache_read: 14279425
+      cache_write: 559136
+      cost: 8.688
   strategic:
     - kind: orchestrator
       seconds: 39
@@ -57,14 +75,14 @@ A slow CI or a slow reviewer shows up where the operator and the analyzer alread
 
 ## Acceptance criteria
 
-- [ ] An ADR defines two waits, and `design/system/metrics.md` § Waiting carries them:
+- [x] An ADR defines two waits, and `design/system/metrics.md` § Waiting carries them:
   - **The checks wait** runs from each push of a story's head to the time every required check on that head has finished.
   - **The reviewers wait** runs from then to the first approval that meets the main branch's rule, or to the first requested change.
   - Both are read from the events S-0394 keeps, and both fall inside the story's `review` intervals.
-- [ ] `flai stats --json` carries `items[].wait_checks_seconds` and `items[].wait_reviewers_seconds`, absent when the story had no pull request. It also carries `checks` and `reviewers` in each of `waiting.weeks[]`, with `total_seconds` and `mean_seconds`. The longest waits gain the kinds `checks` and `reviewers`. `flai stats` prints one line for each, under the review line.
-- [ ] The dashboard's agent-waiting chart draws the two waits as series of their own beside the thread and review waits, and its longest-waits table names their kinds.
-- [ ] A project in `local` mode, or one with no kept events, reports the two as zero or absent, as each field's definition says, and its other figures do not change.
-- [ ] `design/system/flaiover-dashboard.md`, `docs/users/flai.md`, and `docs/users/flaiover.md` describe the new waits.
+- [x] `flai stats --json` carries `items[].wait_checks_seconds` and `items[].wait_reviewers_seconds`, absent when the story had no pull request. It also carries `checks` and `reviewers` in each of `waiting.weeks[]`, with `total_seconds` and `mean_seconds`. The longest waits gain the kinds `checks` and `reviewers`. `flai stats` prints one line for each, under the review line.
+- [x] The dashboard's agent-waiting chart draws the two waits as series of their own beside the thread and review waits, and its longest-waits table names their kinds.
+- [x] A project in `local` mode, or one with no kept events, reports the two as zero or absent, as each field's definition says, and its other figures do not change.
+- [x] `design/system/flaiover-dashboard.md`, `docs/users/flai.md`, and `docs/users/flaiover.md` describe the new waits.
 
 ## Tasks
 - T-1628 An ADR defines the checks wait and the reviewers wait, and metrics.md carries their definitions and fields
@@ -100,3 +118,15 @@ A slow CI or a slow reviewer shows up where the operator and the analyzer alread
   - Fourth: T-1632, after T-1630 and T-1631.
 - **Forecast: 42m.** `flai forecast` gave 34m: 96 s per unit over 61 done feature stories on claude-opus-5-5 in the large band, times size 21. Raised about a quarter for a metrics ADR and spanning flai and flaiover with both test tiers. flai's replan sets the delivery from this duration.
 - **Cost of delay: not yet set.** `flai cod` refuses until E-0021 has inputs, asked for on TH-0463.
+
+### Accepted by the orchestrator
+
+- Verified: e3020d92d4129b99e22dedc564b4a753d7b055e4
+- At: 2026-10-17T18:25:19Z
+
+Verdict: all five criteria met at e3020d9; flai verify passed at that commit against main 7ff94db, integration and smoke included; the metrics.md change has its ADR (ADR-0168); local mode and projects without kept events are unchanged, shown by tests; no convention breach.
+- 1: design/adrs/0168-under-pull-request-acceptance-flai-stats-reports-a-checks-wait-and-a-reviewers.md, design/adrs/README.md, design/system/metrics.md, flai/internal/metrics/waiting.go
+- 2: flai/internal/metrics/metrics.go, flai/internal/metrics/waiting.go, flai/internal/statsread/statsread.go, flai/cmd/stats.go, flai/internal/metrics/waiting_test.go, flai/cmd/check_stats_test.go
+- 3: flaiover/src/lib/viz/charts.ts, flaiover/src/lib/components/WaitTable.svelte, flaiover/src/lib/viz/charts.test.ts, flaiover/src/lib/components/WaitTable.svelte.test.ts
+- 4: flai/internal/metrics/waiting_test.go, flai/internal/statsread/statsread_test.go, flai/cmd/check_stats_test.go
+- 5: design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flaiover.md

@@ -3,16 +3,37 @@ id: T-1629
 type: task
 nature: feature
 title: The metrics package computes the checks and reviewers waits per item, per week, and among the longest waits, from the kept forge events statsread loads
-status: backlog
+status: done
 parent: S-0396
 owner: alex
 created: 2026-10-16T04:39:03Z
-updated: 2026-10-16T04:39:03Z
-transitions: []
+updated: 2026-10-17T17:47:00Z
+transitions:
+  - to: ready
+    at: 2026-10-17T17:36:07Z
+    by: agent-S-0396
+  - to: in-progress
+    at: 2026-10-17T17:37:55Z
+    by: agent-S-0396
+  - to: done
+    at: 2026-10-17T17:47:00Z
+    by: agent-S-0396
 stream: S-0396
 tags: [cli]
-touches: [flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go]
+touches: [flai/internal/metrics/waiting.go, flai/internal/metrics/waiting_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, design/adrs/0168-under-pull-request-acceptance-flai-stats-reports-a-checks-wait-and-a-reviewers.md, design/system/metrics.md, flai/internal/metrics/metrics.go]
 after: [T-1628]
+usage:
+  source: log
+  seconds: 545
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 30325
+      cache_read: 3558821
+      cache_write: 139352
+      cost: 2.1653
 ---
 # T-1629 The metrics package computes the checks and reviewers waits per item, per week, and among the longest waits, from the kept forge events statsread loads
 

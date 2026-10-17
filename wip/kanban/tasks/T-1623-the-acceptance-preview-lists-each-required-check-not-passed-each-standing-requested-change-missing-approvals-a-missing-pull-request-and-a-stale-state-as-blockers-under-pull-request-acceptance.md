@@ -3,15 +3,37 @@ id: T-1623
 type: task
 nature: feature
 title: The acceptance preview lists each required check not passed, each standing requested change, missing approvals, a missing pull request, and a stale state as blockers under pull-request acceptance
-status: backlog
+status: done
 parent: S-0395
 owner: alex
 created: 2026-10-16T04:38:05Z
-updated: 2026-10-16T04:38:05Z
-transitions: []
+updated: 2026-10-17T17:46:24Z
+transitions:
+  - to: ready
+    at: 2026-10-17T17:36:41Z
+    by: agent-S-0395
+  - to: in-progress
+    at: 2026-10-17T17:42:17Z
+    by: agent-S-0395
+  - to: done
+    at: 2026-10-17T17:46:24Z
+    by: agent-S-0395
 stream: S-0395
 tags: [cli]
-touches: [flai/internal/preview/accept.go, flai/internal/preview/accept_forge_test.go]
+touches: [flai/internal/preview/accept.go, flai/internal/preview/accept_forge_test.go, flai/internal/preview/orchestrator.go]
+after: [T-1895]
+usage:
+  source: log
+  seconds: 247
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 11554
+      cache_read: 2033387
+      cache_write: 62698
+      cost: 1.0126
 ---
 # T-1623 The acceptance preview lists each required check not passed, each standing requested change, missing approvals, a missing pull request, and a stale state as blockers under pull-request acceptance
 

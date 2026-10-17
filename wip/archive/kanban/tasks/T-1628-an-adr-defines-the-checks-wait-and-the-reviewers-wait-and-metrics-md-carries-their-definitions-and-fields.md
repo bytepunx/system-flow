@@ -3,15 +3,36 @@ id: T-1628
 type: task
 nature: feature
 title: An ADR defines the checks wait and the reviewers wait, and metrics.md carries their definitions and fields
-status: backlog
+status: done
 parent: S-0396
 owner: alex
 created: 2026-10-16T04:38:56Z
-updated: 2026-10-16T04:38:56Z
-transitions: []
+updated: 2026-10-17T17:37:41Z
+transitions:
+  - to: ready
+    at: 2026-10-17T17:36:06Z
+    by: agent-S-0396
+  - to: in-progress
+    at: 2026-10-17T17:36:09Z
+    by: agent-S-0396
+  - to: done
+    at: 2026-10-17T17:37:41Z
+    by: agent-S-0396
 stream: S-0396
 tags: [cli]
 touches: [design/adrs, design/system/metrics.md]
+usage:
+  source: log
+  seconds: 92
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 9339
+      cache_read: 1096024
+      cache_write: 42917
+      cost: 0.6668
 ---
 # T-1628 An ADR defines the checks wait and the reviewers wait, and metrics.md carries their definitions and fields
 
