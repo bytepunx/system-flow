@@ -8,11 +8,12 @@ package components
 // the test reads the hot updates Vite sends over its HMR WebSocket as the
 // fixture's component and setup stylesheet change. Then (S-0440) it loads
 // the harness in a headless Chromium and checks that a props message updates
-// a component in place, keeping its own state. It needs node and flaiover's
-// dependencies installed, so it skips without them, and under -short; the
-// in-place check skips without Playwright's Chromium. The build tag keeps it
-// off Windows: the fixture links
-// node_modules with symlinks, and the test checks vite's process group.
+// a component in place, keeping its own state, and (S-0441) that a tokens
+// message lays its values over the stylesheet's. It needs node and
+// flaiover's dependencies installed, so it skips without them, and under
+// -short; the browser checks skip without Playwright's Chromium. The build
+// tag keeps it off Windows: the fixture links node_modules with symlinks,
+// and the test checks vite's process group.
 
 import (
 	"context"
@@ -107,7 +108,12 @@ func TestServeCarriesHotUpdatesOfTheComponentAndTheStylesheet(t *testing.T) {
 			t.Errorf("the harness page lacks %s:\n%s", want, page)
 		}
 	}
-	get(t, client, base+"/@id/virtual:flai-components/harness.mjs", vite)
+	harness := get(t, client, base+"/@id/virtual:flai-components/harness.mjs", vite)
+	for _, want := range []string{"case 'tokens':", "'data-flai-tokens'", "new MutationObserver(keepLast)"} {
+		if !strings.Contains(harness, want) {
+			t.Errorf("the harness module lacks %s:\n%s", want, harness)
+		}
+	}
 	get(t, client, base+"/@id/virtual:flai-components/Frame.svelte", vite)
 	catalogue := get(t, client, base+"/@id/__x00__virtual:flai-components", vite)
 	for _, want := range []string{`"src/lib/Hello.svelte": () => import(`, `export const setupPath = "src/app.css";`} {
@@ -140,22 +146,27 @@ func TestServeCarriesHotUpdatesOfTheComponentAndTheStylesheet(t *testing.T) {
 	t.Run("a props message updates the component in place", func(t *testing.T) {
 		checkInPlace(t, dir, s.URL(), vite)
 	})
+	t.Run("a tokens message lays its values over the stylesheet's", func(t *testing.T) {
+		checkTokens(t, dir, s.URL(), vite)
+	})
 }
 
 // inPlaceComponent is the fixture component whose own state, open, a props
 // message must leave as it is.
 const inPlaceComponent = "src/lib/Stateful.svelte"
 
-// inPlaceScript is a node script that loads the harness page in a headless
-// Chromium, with Playwright from flaiover's dependencies, and reports, as one
-// line of JSON, what the page showed and what the harness posted as it
-// selected inPlaceComponent, the test clicked its button, and a props message
-// changed its label and gave it a snippet. The page loads the harness at the
-// top, with ?origin= its own origin, so that it is its own parent: it posts
-// the page's messages to itself, as the dashboard posts them into the frame,
-// and receives what the harness posts. It reports skip, and why, when
-// Playwright or its browser is not installed.
-const inPlaceScript = `const [url, component] = process.argv.slice(2);
+// pageScriptStart and pageScriptEnd wrap the body of a node script that loads
+// the harness page in a headless Chromium, with Playwright from flaiover's
+// dependencies, and reports, as one line of JSON, what the body found, what
+// the page logged as an error or a warning, and what the harness posted. The
+// page loads the harness at the top, with ?origin= its own origin, so that it
+// is its own parent: it posts the page's messages to itself, as the
+// dashboard posts them into the frame, and receives what the harness posts.
+// The body runs once the harness is ready, with the script's arguments after
+// the harness URL as args, and send and seen to post and await messages. The
+// script reports skip, and why, when Playwright or its browser is not
+// installed.
+const pageScriptStart = `const [url, ...args] = process.argv.slice(2);
 const report = { errors: [], messages: [] };
 let chromium;
 try {
@@ -185,12 +196,31 @@ try {
 		window.__flai = [];
 		addEventListener('message', (e) => {
 			const m = e.data;
-			if (m?.source === 'flai-components' && m.type !== 'select' && m.type !== 'props') window.__flai.push(m);
+			// The page's own messages come back to it too; only the harness's are kept.
+			if (m?.source === 'flai-components' && !['select', 'props', 'theme', 'tokens'].includes(m.type)) window.__flai.push(m);
 		});
 	});
 	const seen = (types, n) =>
 		page.waitForFunction(([types, n]) => window.__flai.filter((m) => types.includes(m.type)).length >= n, [types, n], { timeout: 30000 });
 	const send = (m) => page.evaluate((m) => postMessage({ source: 'flai-components', version: 1, ...m }, location.origin), m);
+	await page.goto(url + '?origin=' + encodeURIComponent(new URL(url).origin));
+	await seen(['ready'], 1);
+`
+
+const pageScriptEnd = `
+} catch (e) {
+	report.errors.push('the script: ' + String(e?.message ?? e));
+} finally {
+	report.messages = await page.evaluate(() => window.__flai).catch(() => []);
+	await browser.close();
+}
+console.log(JSON.stringify(report));
+`
+
+// inPlaceScript is the body of a page script that reports what the page
+// showed as the harness selected inPlaceComponent, the test clicked its
+// button, and a props message changed its label and gave it a snippet.
+const inPlaceScript = `	const [component] = args;
 	const look = () =>
 		page.evaluate(() => {
 			const el = document.querySelector('.stateful');
@@ -200,8 +230,6 @@ try {
 			const markup = slot ? slot.innerHTML.replace(/<!--.*?-->/g, '') : null;
 			return { label: el.querySelector('button').textContent, open: !!el.querySelector('.open'), slot: markup, marked: el.dataset.mark === 'first' };
 		});
-	await page.goto(url + '?origin=' + encodeURIComponent(new URL(url).origin));
-	await seen(['ready'], 1);
 	await send({ type: 'select', component, props: { label: 'One' }, functions: ['onToggle'], snippets: ['children'] });
 	await seen(['rendered', 'error'], 1);
 	// A remount would replace the element, and the mark with it.
@@ -217,15 +245,7 @@ try {
 	report.changed = await look();
 	await page.click('.stateful button');
 	await seen(['event'], 2);
-	report.closed = await look();
-} catch (e) {
-	report.errors.push('the script: ' + String(e?.message ?? e));
-} finally {
-	report.messages = await page.evaluate(() => window.__flai).catch(() => []);
-	await browser.close();
-}
-console.log(JSON.stringify(report));
-`
+	report.closed = await look();`
 
 // inPlaceLook is what the page showed of inPlaceComponent: its button's
 // label, whether it was open, its snippet's markup, and whether its element
@@ -237,9 +257,9 @@ type inPlaceLook struct {
 	Marked bool    `json:"marked"`
 }
 
-// inPlaceMessage is a message the harness posted, as far as the test reads
+// harnessMessage is a message the harness posted, as far as the test reads
 // it.
-type inPlaceMessage struct {
+type harnessMessage struct {
 	Type      string          `json:"type"`
 	Component string          `json:"component"`
 	Name      string          `json:"name"`
@@ -247,48 +267,65 @@ type inPlaceMessage struct {
 	Message   string          `json:"message"`
 }
 
-// checkInPlace runs inPlaceScript against the harness at harnessURL, in the
-// fixture sub-project's folder dir, so that it imports Playwright from its
-// node_modules, and checks that the component kept its own state, and its
-// element, through a props message, rendered the snippet's text as text, and
-// that its function prop's logger posted each call. It skips when Playwright
-// or its Chromium is not installed, as a manual check in a browser then
+// runPage writes the page script around body to name in the fixture
+// sub-project's folder dir, so that it imports Playwright from its
+// node_modules, runs it with args, the harness URL first, and decodes its
+// report into report. It fails the test for each error the page logged, and
+// returns what the harness posted. It skips the test when Playwright or its
+// Chromium is not installed, saying that byHand, a check in a browser, then
 // stands in for it.
-func checkInPlace(t *testing.T, dir, harnessURL string, vite func() string) {
+func runPage(t *testing.T, dir, name, body, byHand string, vite func() string, report any, args ...string) []harnessMessage {
 	t.Helper()
-	script := filepath.Join(dir, "inplace.mjs")
-	if err := os.WriteFile(script, []byte(inPlaceScript), 0o644); err != nil {
+	script := filepath.Join(dir, name)
+	if err := os.WriteFile(script, []byte(pageScriptStart+body+pageScriptEnd), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "node", script, harnessURL, inPlaceComponent)
+	cmd := exec.CommandContext(ctx, "node", append([]string{script}, args...)...)
 	cmd.Dir = dir
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		t.Fatalf("the in-place check failed: %v\n%s%s%s", err, out, stderr.String(), vite())
+		t.Fatalf("the page script %s failed: %v\n%s%s%s", name, err, out, stderr.String(), vite())
 	}
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	last := []byte(lines[len(lines)-1])
 	var r struct {
 		Skip     string           `json:"skip"`
 		Errors   []string         `json:"errors"`
-		Messages []inPlaceMessage `json:"messages"`
-		Mounted  *inPlaceLook     `json:"mounted"`
-		Opened   *inPlaceLook     `json:"opened"`
-		Changed  *inPlaceLook     `json:"changed"`
-		Closed   *inPlaceLook     `json:"closed"`
+		Messages []harnessMessage `json:"messages"`
 	}
-	if err := json.Unmarshal([]byte(lines[len(lines)-1]), &r); err != nil {
-		t.Fatalf("the in-place check's report is not JSON: %v\n%s%s", err, out, stderr.String())
+	if err := json.Unmarshal(last, &r); err != nil {
+		t.Fatalf("the page script %s's report is not JSON: %v\n%s%s", name, err, out, stderr.String())
 	}
 	if r.Skip != "" {
-		t.Skip(r.Skip + "; check in a browser that a props message keeps the component's own state")
+		t.Skip(r.Skip + "; check in a browser " + byHand)
+	}
+	if err := json.Unmarshal(last, report); err != nil {
+		t.Fatalf("the page script %s's report does not decode: %v\n%s", name, err, last)
 	}
 	for _, e := range r.Errors {
 		t.Errorf("the page logged %s", e)
 	}
+	return r.Messages
+}
+
+// checkInPlace runs inPlaceScript against the harness at harnessURL, and
+// checks that the component kept its own state, and its element, through a
+// props message, rendered the snippet's text as text, and that its function
+// prop's logger posted each call.
+func checkInPlace(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Mounted *inPlaceLook `json:"mounted"`
+		Opened  *inPlaceLook `json:"opened"`
+		Changed *inPlaceLook `json:"changed"`
+		Closed  *inPlaceLook `json:"closed"`
+	}
+	messages := runPage(t, dir, "inplace.mjs", inPlaceScript, "that a props message keeps the component's own state", vite, &r,
+		harnessURL, inPlaceComponent)
 	slot := "<span>Some &lt;b&gt;text&lt;/b&gt;</span>"
 	for _, c := range []struct {
 		when string
@@ -310,7 +347,7 @@ func checkInPlace(t *testing.T, dir, harnessURL string, vite func() string) {
 	}
 	var events []string
 	rendered := 0
-	for _, m := range r.Messages {
+	for _, m := range messages {
 		switch m.Type {
 		case "error":
 			t.Errorf("the harness posted an error about %s: %s", m.Component, m.Message)
@@ -332,6 +369,105 @@ func checkInPlace(t *testing.T, dir, harnessURL string, vite func() string) {
 	}
 	if !slices.Equal(events, want) {
 		t.Errorf("the harness posted the events\n%s\nwant\n%s", strings.Join(events, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// tokensScript is the body of a page script that reports what the page
+// showed of the fixture stylesheet's --fixture-ink, and of the harness's
+// tokens style element, before any tokens message, after one, after another
+// stylesheet landed after its element, in the dark theme, after a malformed
+// message, and after an empty one.
+const tokensScript = `	const look = () =>
+		page.evaluate(() => {
+			const styles = document.querySelectorAll('style[data-flai-tokens]');
+			return {
+				ink: getComputedStyle(document.documentElement).getPropertyValue('--fixture-ink').trim(),
+				styles: styles.length,
+				last: styles.length === 1 && document.head.lastElementChild === styles[0],
+				css: styles[0]?.textContent ?? ''
+			};
+		});
+	const until = (f, arg) => page.waitForFunction(f, arg, { timeout: 30000 });
+	const themed = (theme) => until((theme) => document.documentElement.dataset.theme === theme, theme);
+	report.before = await look();
+	await send({ type: 'tokens', light: { '--fixture-ink': 'red', '--fixture-bad': 'url(x)' }, dark: { 'fixture-ink': 'green' } });
+	await until(() => getComputedStyle(document.documentElement).getPropertyValue('--fixture-ink').trim() === 'red');
+	report.tried = await look();
+	// A hot update, or a component's own styles, land after the element.
+	await page.evaluate(async () => {
+		const later = document.createElement('style');
+		later.id = 'later';
+		later.textContent = ':root { --fixture-ink: blue }';
+		document.head.append(later);
+		await new Promise((r) => setTimeout(r, 0));
+	});
+	report.appended = await look();
+	await send({ type: 'theme', theme: 'dark' });
+	await themed('dark');
+	report.dark = await look();
+	// The harness takes messages in order, so the malformed one is behind it
+	// once the theme is light again.
+	await send({ type: 'tokens', light: 'blue', dark: {} });
+	await send({ type: 'theme', theme: 'light' });
+	await themed('light');
+	report.dropped = await look();
+	await page.evaluate(() => document.getElementById('later').remove());
+	await send({ type: 'tokens', light: {}, dark: {} });
+	await until(() => !document.querySelector('style[data-flai-tokens]'));
+	report.cleared = await look();`
+
+// tokensLook is what the page showed: the computed --fixture-ink, how many
+// tokens style elements the head held, whether the one is last in it, and
+// its CSS.
+type tokensLook struct {
+	Ink    string `json:"ink"`
+	Styles int    `json:"styles"`
+	Last   bool   `json:"last"`
+	CSS    string `json:"css"`
+}
+
+// checkTokens runs tokensScript against the harness at harnessURL, and
+// checks that a tokens message's values win over the stylesheet's, in light
+// and dark, from one style element that stays last in the head, that a
+// malformed message is dropped, and that an empty one removes the element.
+func checkTokens(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Before   *tokensLook `json:"before"`
+		Tried    *tokensLook `json:"tried"`
+		Appended *tokensLook `json:"appended"`
+		Dark     *tokensLook `json:"dark"`
+		Dropped  *tokensLook `json:"dropped"`
+		Cleared  *tokensLook `json:"cleared"`
+	}
+	messages := runPage(t, dir, "tokens.mjs", tokensScript, "that a tokens message lays its values over the stylesheet's", vite, &r,
+		harnessURL)
+	for _, m := range messages {
+		if m.Type == "error" {
+			t.Errorf("the harness posted an error about %s: %s", m.Component, m.Message)
+		}
+	}
+	if r.Before == nil || r.Before.Ink == "" || r.Before.Ink == "red" {
+		t.Fatalf("before any tokens message, the page showed %+v, want the stylesheet's own --fixture-ink", r.Before)
+	}
+	css := ":root { --fixture-ink: red }\n[data-theme='dark'] { --fixture-ink: green }\n"
+	for _, c := range []struct {
+		when string
+		got  *tokensLook
+		want tokensLook
+	}{
+		{"after a tokens message", r.Tried, tokensLook{Ink: "red", Styles: 1, Last: true, CSS: css}},
+		{"after a stylesheet landed after it", r.Appended, tokensLook{Ink: "red", Styles: 1, Last: true, CSS: css}},
+		{"in the dark theme", r.Dark, tokensLook{Ink: "green", Styles: 1, Last: true, CSS: css}},
+		{"after a malformed tokens message", r.Dropped, tokensLook{Ink: "red", Styles: 1, Last: true, CSS: css}},
+		{"after an empty tokens message", r.Cleared, tokensLook{Ink: r.Before.Ink}},
+	} {
+		switch {
+		case c.got == nil:
+			t.Errorf("%s, the page reported nothing", c.when)
+		case *c.got != c.want:
+			t.Errorf("%s, the page showed %+v, want %+v", c.when, *c.got, c.want)
+		}
 	}
 }
 

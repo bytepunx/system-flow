@@ -13,6 +13,10 @@
 // change: Frame spreads them over the mounted component, which takes them in
 // place, keeping its own state, and a prop left out falls back to its
 // default.
+//
+// A tokens message (S-0441) is whole as well: its light and dark custom
+// properties replace the last message's, in one <style data-flai-tokens>
+// kept last in the head, and a message with none removes it.
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import Frame from 'virtual:flai-components/Frame.svelte';
 import { components, root, setup, setupPath } from 'virtual:flai-components';
@@ -33,6 +37,8 @@ let current = null;
 let wanted = '';
 let selection = 0;
 let size = '';
+// tokenStyle is the style element the last tokens message wrote, or null.
+let tokenStyle = null;
 
 // pageOrigin is value when it is an origin, such as http://127.0.0.1:4242,
 // or empty.
@@ -215,28 +221,56 @@ function jsonSafe(value, seen = new WeakSet(), depth = 0) {
 	return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, jsonSafe(v, seen, depth + 1)]));
 }
 
+// tokens lays the custom properties in light and dark over the stylesheet's,
+// under the selectors flai design css writes (ADR-0159), in the one style
+// element tokenStyle, last in the head so that it wins; with none to lay, it
+// removes the element. A message is whole: it replaces the last one.
 function tokens(light, dark) {
 	const css = block(':root', light) + block("[data-theme='dark']", dark);
-	let style = document.getElementById('flai-tokens');
 	if (!css) {
-		style?.remove();
+		tokenStyle?.remove();
+		tokenStyle = null;
 		return;
 	}
-	if (!style) {
-		style = document.createElement('style');
-		style.id = 'flai-tokens';
+	if (!tokenStyle) {
+		tokenStyle = document.createElement('style');
+		tokenStyle.setAttribute('data-flai-tokens', '');
 	}
-	style.textContent = css;
-	// Last in the head, so that it lies over the stylesheet's values.
-	document.head.append(style);
+	tokenStyle.textContent = css;
+	document.head.append(tokenStyle);
 }
+
+// keepLast moves tokenStyle back to the end of the head when a stylesheet,
+// such as a hot update's or a lazily loaded component's, lands after it.
+// Its own move adds nothing after it, so it does not set itself off again.
+function keepLast() {
+	if (tokenStyle?.parentNode !== document.head) return;
+	for (let n = tokenStyle.nextElementSibling; n; n = n.nextElementSibling) {
+		if (n.matches('style, link[rel~="stylesheet"]')) {
+			document.head.append(tokenStyle);
+			return;
+		}
+	}
+}
+
+// isVars is whether v may be a tokens message's light or dark: an object of
+// custom properties, or left out.
+function isVars(v) {
+	return v === undefined || (typeof v === 'object' && v !== null && !Array.isArray(v));
+}
+
+// unsafeValue is what a token's value must not carry into the stylesheet,
+// as the Design page's preview refuses it (ADR-0149 § 4): url(, a brace, a
+// semicolon, <, @, a backslash, or a comment, which would swallow the
+// declarations after it.
+const unsafeValue = /url\(|[{};<@\\]|\/\*/i;
 
 // block is selector's rule setting each custom property in vars, by name
 // with or without its leading --; a name or value that would break out of
 // the rule is left out.
 function block(selector, vars) {
 	const decls = Object.entries(vars ?? {})
-		.filter(([n, v]) => /^(--)?[\w-]+$/.test(n) && ['string', 'number'].includes(typeof v) && !/[;{}<]/.test(String(v)))
+		.filter(([n, v]) => /^(--)?[\w-]+$/.test(n) && ['string', 'number'].includes(typeof v) && !unsafeValue.test(String(v)))
 		.map(([n, v]) => `${n.startsWith('--') ? n : '--' + n}: ${v}`);
 	return decls.length ? `${selector} { ${decls.join('; ')} }\n` : '';
 }
@@ -265,7 +299,7 @@ function receive(event) {
 			if (m.theme === 'light' || m.theme === 'dark') document.documentElement.dataset.theme = m.theme;
 			break;
 		case 'tokens':
-			tokens(m.light, m.dark);
+			if (isVars(m.light) && isVars(m.dark)) tokens(m.light, m.dark);
 			break;
 	}
 }
@@ -284,6 +318,7 @@ if (import.meta.hot) {
 	import.meta.hot.on('vite:afterUpdate', () => render());
 }
 new ResizeObserver(measure).observe(target);
+new MutationObserver(keepLast).observe(document.head, { childList: true });
 window.addEventListener('message', receive);
 post(asked ? { type: 'ready', component: asked } : { type: 'ready' });
 if (asked) select(asked, {});
