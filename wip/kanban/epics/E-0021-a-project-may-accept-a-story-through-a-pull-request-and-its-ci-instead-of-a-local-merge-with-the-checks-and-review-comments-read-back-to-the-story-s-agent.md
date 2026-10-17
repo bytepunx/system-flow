@@ -19,32 +19,38 @@ topics: [cli, orchestration, release, dashboard]
 touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/workitem, flai/cmd, flaiover/src, design/system/workflow.md, design/system/pushing-from-the-board.md, design/system/metrics.md, design/conventions/git.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 3025
+  seconds: 7390
   priced_by: harness
   turns:
     - day: 2026-10-17
-      ceremony: 1
+      ceremony: 6
       test_runs: 1
-      hand_edits: 2
-      work: 54
+      hand_edits: 4
+      work: 100
   models:
     - model: claude-opus-5-5
-      input: 442
-      output: 198866
-      cache_read: 24499894
-      cache_write: 835882
-      cost: 13.6533
+      input: 984
+      output: 426542
+      cache_read: 53812896
+      cache_write: 1699513
+      cost: 28.9985
   strategic:
     - kind: orchestrator
-      seconds: 19146
+      seconds: 27095
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 183
-          output: 3026
-          cache_read: 61712596
-          cache_write: 54051
-          cost: 15.4846
+          input: 331
+          output: 5233
+          cache_read: 114255052
+          cache_write: 117454
+          cost: 28.6724
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 61
+          cache_read: 210724
+          cache_write: 73132
+          cost: 0.2323
 ---
 # E-0021 A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent
 

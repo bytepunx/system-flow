@@ -3,11 +3,11 @@ id: S-0393
 type: story
 nature: feature
 title: Under pull-request acceptance, a story's move to review has flai serve push its branch and open or update one pull request from the project's pull request template
-status: in-progress
+status: done
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:34:50Z
-updated: 2026-10-17T07:43:28Z
+updated: 2026-10-17T16:03:13Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:48Z
@@ -15,9 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-10-17T07:43:28Z
     by: agent-S-0393
+  - to: review
+    at: 2026-10-17T08:55:48Z
+    by: agent-S-0393
+  - to: done
+    at: 2026-10-17T16:03:13Z
+    by: alex
 tags: [cli, template]
 topics: [release]
-touches: [flai/internal/forge/pullrequest.go, flai/internal/forge/pullrequest_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/serve.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, template/root/.github/pull_request_template.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, template/CHANGELOG.md]
+touches: [flai/internal/forge/pullrequest.go, flai/internal/forge/pullrequest_test.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/serve.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/cmd/forge.go, flai/cmd/forge_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, template/root/.github/pull_request_template.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, docs/operators/settings.md, template/CHANGELOG.md, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/guard/call.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, flai/cmd/serve.go, flai/internal/forge/forge.go, design/system/devex.md]
 after: [S-0392]
 agent:
   harness: claude-code
@@ -25,20 +31,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4365
+  priced_by: harness
+  turns:
+    - day: 2026-10-17
+      ceremony: 5
+      hand_edits: 2
+      work: 46
+  models:
+    - model: claude-opus-5-5
+      input: 542
+      output: 227676
+      cache_read: 29313002
+      cache_write: 863631
+      cost: 15.3452
   strategic:
     - kind: orchestrator
-      seconds: 48
+      seconds: 4420
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 161
-          cache_read: 3539327
-          cache_write: 2525
-          cost: 0.888
+          input: 87
+          output: 1231
+          cache_read: 31145892
+          cache_write: 31744
+          cost: 7.816
 forecast:
   duration: 1h5m
   delivery: 2026-10-17T08:54:00Z
@@ -57,13 +75,13 @@ A team that reviews on GitHub sees each story arrive as a pull request without a
 
 ## Acceptance criteria
 
-- [ ] Under `acceptance.mode: pull-request`, with the new host action `forge` on, `flai serve` pushes `story/S-nnnn` to `origin` for each story in review whose branch on the remote is missing or behind. It then opens a pull request against the main branch, titled `[S-nnnn] <title>`, or updates the one the branch already has, so a story has one pull request however often it returns to review. With the mode `local`, or with the host action off, nothing is pushed.
-- [ ] `flai forge status S-nnnn` prints the story's pull request, its URL, and whether the remote branch matches the local one. When nothing was pushed, it says why: the mode, the host action, the token, or a failure.
-- [ ] The pull request's body fills `.github/pull_request_template.md` with the story's ID, its acceptance criteria, the definition of done, and the result of the story's last `flai verify`, with its commit. A project without that file gets a body with the same four parts. The template's `pull_request_template.md` gains the places for them.
-- [ ] A story branch that a sync rebased is pushed with `--force-with-lease` naming the head flai last pushed. No other branch is ever forced. This criterion stands as TH-0463 answers question 4.
-- [ ] A push or a request that fails, for example an unset token, a refused push, or the forge being down, opens one thread on the story naming the reason and what clears it. flai serve tries again at its next look, and resolves the thread once the push and the request succeed.
-- [ ] `flai forge push S-nnnn` does the same on the operator's word. `flai guard` refuses it to every agent. Every agent `flai serve` starts runs without the forge token's variable in its environment.
-- [ ] An ADR records the push and the request on the move to review, the host action, and the exception for story branches. `design/system/workflow.md`, `design/conventions/git.md` and the template's, `design/system/flai-cli.md`, `docs/users/flai.md`, the reference, `docs/operators/index.md`, and `docs/operators/settings.md` describe them.
+- [x] Under `acceptance.mode: pull-request`, with the new host action `forge` on, `flai serve` pushes `story/S-nnnn` to `origin` for each story in review whose branch on the remote is missing or behind. It then opens a pull request against the main branch, titled `[S-nnnn] <title>`, or updates the one the branch already has, so a story has one pull request however often it returns to review. With the mode `local`, or with the host action off, nothing is pushed.
+- [x] `flai forge status S-nnnn` prints the story's pull request, its URL, and whether the remote branch matches the local one. When nothing was pushed, it says why: the mode, the host action, the token, or a failure.
+- [x] The pull request's body fills `.github/pull_request_template.md` with the story's ID, its acceptance criteria, the definition of done, and the result of the story's last `flai verify`, with its commit. A project without that file gets a body with the same four parts. The template's `pull_request_template.md` gains the places for them.
+- [x] A story branch that a sync rebased is pushed with `--force-with-lease` naming the head flai last pushed. No other branch is ever forced. This criterion stands as TH-0463 answers question 4.
+- [x] A push or a request that fails, for example an unset token, a refused push, or the forge being down, opens one thread on the story naming the reason and what clears it. flai serve tries again at its next look, and resolves the thread once the push and the request succeed.
+- [x] `flai forge push S-nnnn` does the same on the operator's word. `flai guard` refuses it to every agent. Every agent `flai serve` starts runs without the forge token's variable in its environment.
+- [x] An ADR records the push and the request on the move to review, the host action, and the exception for story branches. `design/system/workflow.md`, `design/conventions/git.md` and the template's, `design/system/flai-cli.md`, `docs/users/flai.md`, the reference, `docs/operators/index.md`, and `docs/operators/settings.md` describe them.
 
 ## Tasks
 - T-1609 A story's pull request title and body are built from the project's pull request template, its criteria, the definition of done, and its last flai verify result

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 836.3731
-accrued_seconds: 684410
-tasks_completed: 603
-last_run: 2026-10-17T06:44:29Z
+accrued_cost: 849.7932
+accrued_seconds: 692361
+tasks_completed: 607
+last_run: 2026-10-17T08:57:00Z
 ---
 
 # Orchestrator activity
@@ -4232,6 +4232,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0393, S-0394, S-0395, S-0396, S-0397
 - Seconds: 198
 - Cost: 3.5478 USD, estimated
+
+### 2026-10-17T07:43:58Z
+
+- Summary: Accepted S-0392 under accept_reviews at 2cf21471. I re-ran flai verify because the last run was at 7de1dca; it passed against main c2eecad, integration and smoke included. The verifier matched all six criteria, with the token never logged or stored and the standard library only. Under publish (judgement, 1 pending, unvalued), published flai 1.57.0 → 1.58.0 (minor) and template 1.0.95 → 1.0.96 (patch), tag flai/v1.58.0, template v1.0.96, pushed, bundling S-0392. Reason: the setting is dormant and documented as such, and forge check is complete.
+- Items: S-0392
+- Seconds: 3569
+- Cost: 6.3137 USD, estimated
+
+### 2026-10-17T07:44:06Z
+
+- Summary: After S-0392's acceptance, S-0393 was pulled. Under order_ready, re-applied flai order --by throughput: S-0395 28m, S-0396 42m, S-0397 45m, S-0394 1h15m.
+- Items: S-0393
+- Seconds: 8
+- Cost: 0.1784 USD, estimated
+
+### 2026-10-17T08:56:58Z
+
+- Summary: Recommended an answer on TH-0496, citing design/conventions/safety.md § Rules
+- Items: S-0393
+- Seconds: 4372
+- Cost: 6.9280 USD, estimated
+
+### 2026-10-17T08:57:00Z
+
+- Summary: S-0393 reached review. Its criterion 4 rests on the operator's unanswered TH-0463 question 4, yet ADR-0166 (accepted) and both git.md copies add a force-with-lease exception. Under answer_threads (autonomous), I posted a recommendation on agent-S-0393's TH-0496, escalating it as a baseline safety rule not yet decided: confirm, and also name the exception in both safety.md copies, citing safety.md § Rules. S-0393 stays in review, blocked by TH-0496; its last verify (2238cd4) is behind the head (6131ebd), so I will verify again after the answer.
+- Items: S-0393
+- Seconds: 2
+- Cost: 0.0000 USD
 
 ## Refusals
 

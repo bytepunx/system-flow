@@ -3,15 +3,36 @@ id: T-1609
 type: task
 nature: feature
 title: A story's pull request title and body are built from the project's pull request template, its criteria, the definition of done, and its last flai verify result
-status: backlog
+status: done
 parent: S-0393
 owner: alex
 created: 2026-10-16T04:35:21Z
-updated: 2026-10-16T04:35:21Z
-transitions: []
+updated: 2026-10-17T07:57:33Z
+transitions:
+  - to: ready
+    at: 2026-10-17T07:44:47Z
+    by: agent-S-0393
+  - to: in-progress
+    at: 2026-10-17T07:44:50Z
+    by: agent-S-0393
+  - to: done
+    at: 2026-10-17T07:57:33Z
+    by: agent-S-0393
 stream: S-0393
 tags: [cli, template]
 touches: [flai/internal/forge/pullrequest.go, flai/internal/forge/pullrequest_test.go, template/root/.github/pull_request_template.md]
+usage:
+  source: log
+  seconds: 763
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 26
+      output: 10872
+      cache_read: 1399798
+      cache_write: 41241
+      cost: 0.7328
 ---
 # T-1609 A story's pull request title and body are built from the project's pull request template, its criteria, the definition of done, and its last flai verify result
 

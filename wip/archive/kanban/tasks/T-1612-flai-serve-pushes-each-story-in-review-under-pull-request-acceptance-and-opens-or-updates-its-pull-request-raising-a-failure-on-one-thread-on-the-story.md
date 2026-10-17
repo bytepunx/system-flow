@@ -3,16 +3,37 @@ id: T-1612
 type: task
 nature: feature
 title: flai serve pushes each story in review under pull-request acceptance and opens or updates its pull request, raising a failure on one thread on the story
-status: backlog
+status: done
 parent: S-0393
 owner: alex
 created: 2026-10-16T04:35:39Z
-updated: 2026-10-16T04:35:39Z
-transitions: []
+updated: 2026-10-17T08:16:03Z
+transitions:
+  - to: ready
+    at: 2026-10-17T07:58:15Z
+    by: agent-S-0393
+  - to: in-progress
+    at: 2026-10-17T07:58:17Z
+    by: agent-S-0393
+  - to: done
+    at: 2026-10-17T08:16:03Z
+    by: agent-S-0393
 stream: S-0393
 tags: [cli]
-touches: [flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/serve.go]
+touches: [flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/serve.go, flai/internal/forge/forge.go, flai/cmd/forge.go, flai/cmd/serve.go]
 after: [T-1609, T-1610]
+usage:
+  source: log
+  seconds: 1066
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 46388
+      cache_read: 5972335
+      cache_write: 175959
+      cost: 3.1265
 ---
 # T-1612 flai serve pushes each story in review under pull-request acceptance and opens or updates its pull request, raising a failure on one thread on the story
 

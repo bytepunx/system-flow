@@ -3,15 +3,36 @@ id: T-1610
 type: task
 nature: feature
 title: The forge host action exists, agents start without the forge token's variable, and flai guard refuses them flai forge push
-status: backlog
+status: done
 parent: S-0393
 owner: alex
 created: 2026-10-16T04:35:26Z
-updated: 2026-10-16T04:35:26Z
-transitions: []
+updated: 2026-10-17T07:57:25Z
+transitions:
+  - to: ready
+    at: 2026-10-17T07:44:47Z
+    by: agent-S-0393
+  - to: in-progress
+    at: 2026-10-17T07:44:50Z
+    by: agent-S-0393
+  - to: done
+    at: 2026-10-17T07:57:25Z
+    by: agent-S-0393
 stream: S-0393
 tags: [cli]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/serve/start.go, flai/internal/serve/start_test.go, flai/internal/guard/guard.go, flai/internal/guard/guard_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/guard/call.go, flai/internal/serve/agents.go, flai/internal/serve/agents_test.go]
+usage:
+  source: log
+  seconds: 755
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 102
+      output: 42850
+      cache_read: 5516883
+      cache_write: 162541
+      cost: 2.8881
 ---
 # T-1610 The forge host action exists, agents start without the forge token's variable, and flai guard refuses them flai forge push
 
