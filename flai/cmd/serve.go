@@ -147,7 +147,7 @@ there does.`,
 			host, stopComponents := a.serveHost(ctx)
 			defer stopComponents()
 			return serve.Run(ctx, serve.Options{Folder: folder, Dir: a.serveDir(), Version: buildinfo.Version, Logger: a.logger(), Now: a.now, Host: host, Agent: a.agentConfig, MCP: mcp, Upgrade: hostUpgrade(mcp), Published: releasePublished(a.runner), ImportRoots: a.importRoots,
-				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned})
+				Images: a.serveImageLists(), Docker: a.runner, AllowUnsigned: a.hostAllowsUnsigned, ForgeToken: a.serveForgeToken})
 		},
 	}
 	c.Flags().IntVar(&exitWith, "exit-with", 0, "stop when the process with this PID is gone")
@@ -463,4 +463,17 @@ func (a *app) ensureServeUnderHost(ctx context.Context) (serve.Status, bool, err
 		time.Sleep(100 * time.Millisecond)
 	}
 	return serve.Status{}, false, fmt.Errorf("flai host runs but flai serve did not come up; see flai host status and %s", dir.Log())
+}
+
+// serveForgeToken is how flai serve reads the forge's token: from the
+// variable the configuration names at each look, so that a variable renamed
+// with flai serve forge is read from the next look on.
+func (a *app) serveForgeToken(name string) serve.ForgeToken {
+	cfg, _, err := a.loadConfig()
+	if err != nil {
+		return serve.ForgeToken{Read: func() (string, error) {
+			return "", fmt.Errorf("could not read flai's configuration for the variable that holds the %s token: %w", name, err)
+		}}
+	}
+	return serve.ForgeToken{Env: cfg.ForgeTokenEnv(name), Read: cfg.ForgeTokenFunc(name, os.Getenv)}
 }

@@ -12,7 +12,6 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/config"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
-	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // forgeCheckTimeout bounds flai forge check's call to the forge.
@@ -131,16 +130,9 @@ func (a *app) checkForge(root, name string, cfg config.Config) forgeCheck {
 }
 
 // newForge is the adapter for the forge name, bound to the repository remote
-// names; a forge flai gains adds its branch here.
+// names, calling the GitHub API at githubAPIBase.
 func newForge(name, remote string, token forge.TokenFunc) (forge.Forge, error) {
-	if name == manifest.ForgeGitHub {
-		owner, repo, err := forge.ParseGitHubRemote(remote)
-		if err != nil {
-			return nil, fmt.Errorf("origin is not a repository on github: %w; point origin at the GitHub repository stories are accepted into", err)
-		}
-		return forge.NewGitHub(forge.GitHubOptions{BaseURL: githubAPIBase, Owner: owner, Name: repo, Token: token})
-	}
-	return nil, fmt.Errorf("flai has no adapter for the forge %q; acceptance.forge takes %s", name, strings.Join(manifest.Forges, ", "))
+	return forge.New(name, remote, token, githubAPIBase)
 }
 
 // forgeAccessReason says why the forge would not answer whether the token

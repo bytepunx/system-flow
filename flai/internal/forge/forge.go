@@ -13,6 +13,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 )
 
 // Forge is a forge's view of one repository, as acceptance uses it.
@@ -39,6 +41,20 @@ type Forge interface {
 	// ErrMergeRefused when the forge will not merge it or its head is no
 	// longer pr.HeadSHA.
 	Merge(ctx context.Context, pr PullRequest, method MergeMethod) (Merged, error)
+}
+
+// New is the adapter for the forge name, bound to the repository remote
+// names, calling GitHub's API at githubAPI (GitHubAPI when empty); a forge
+// flai gains adds its branch here.
+func New(name, remote string, token TokenFunc, githubAPI string) (Forge, error) {
+	if name == manifest.ForgeGitHub {
+		owner, repo, err := ParseGitHubRemote(remote)
+		if err != nil {
+			return nil, fmt.Errorf("origin is not a repository on github: %w; point origin at the GitHub repository stories are accepted into", err)
+		}
+		return NewGitHub(GitHubOptions{BaseURL: githubAPI, Owner: owner, Name: repo, Token: token})
+	}
+	return nil, fmt.Errorf("flai has no adapter for the forge %q; acceptance.forge takes %s", name, strings.Join(manifest.Forges, ", "))
 }
 
 // TokenFunc answers the token a Forge calls its forge with; an adapter

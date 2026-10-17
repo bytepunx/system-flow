@@ -232,6 +232,13 @@ type Options struct {
 	// asked before each dial of a project's dashboard, which a project's
 	// manifest overrides (S-0239); nil is off.
 	AllowUnsigned func() bool
+	// ForgeToken says how the token of a forge acceptance.forge names is
+	// read (ADR-0165), for the push of each story in review under
+	// pull-request acceptance (ADR-0166); nil reads none, so each such push
+	// fails saying so. NewForge makes the forge's adapter, forge.New with
+	// GitHub's API when nil.
+	ForgeToken func(forge string) ForgeToken
+	NewForge   NewForge
 }
 
 // allowsUnsigned is whether the allowance is in force for the project at
@@ -470,6 +477,11 @@ func Run(ctx context.Context, o Options) error {
 	// every minute, and at once when it is first served (ADR-0158).
 	upgrades := newUpgrader(o)
 	defer upgrades.wait()
+	// Each served project's stories in review are pushed, and their pull
+	// requests opened, once a minute under pull-request acceptance while its
+	// forge host action is on (ADR-0166); a push in flight is waited for.
+	var forgeLooks sync.WaitGroup
+	defer forgeLooks.Wait()
 	if agent := o.Agent; agent != nil {
 		o.Agent = func(root string) AgentConfig {
 			cfg := agent(root)
@@ -611,6 +623,7 @@ func Run(ctx context.Context, o Options) error {
 			replanner.look(cctx)
 			orch.look(cctx)
 			analyst.look(cctx)
+			newForgePass(o, e, &forgeLooks).start(cctx)
 			go func() {
 				for {
 					select {
