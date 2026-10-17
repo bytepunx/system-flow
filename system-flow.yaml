@@ -22,6 +22,9 @@ projects:
     path: flaiover
     kind: sveltekit
     tags: [dashboard]
+    components:
+      exclude: [src/lib/components/DocEditor.svelte, src/lib/components/EditorDialog.svelte, src/lib/components/HostAgentNotice.svelte, src/lib/components/HostFlai.svelte, src/lib/components/HostFlaiBanner.svelte, src/lib/components/HostPanel.svelte, src/lib/components/HostProcesses.svelte, src/lib/components/InboxBadge.svelte, src/lib/components/ItemEditor.svelte, src/lib/components/PlanAction.svelte, src/lib/components/Review.svelte, src/lib/components/SettingsPanel.svelte, src/lib/components/StoryAgent.svelte, src/lib/components/UnsignedBanner.svelte]
+      setup: src/routes/layout.css
   - name: template
     path: template
     kind: template
