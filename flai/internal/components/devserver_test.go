@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -191,13 +192,28 @@ func (s *syncBuffer) String() string {
 	return s.b.String()
 }
 
-func closed(c <-chan struct{}) bool {
-	select {
-	case <-c:
-		return true
-	default:
-		return false
+// holdPorts makes pickPort, for the test, answer a port the test holds open
+// for its first n picks and a free port after, and returns the held port and
+// the count of picks.
+func holdPorts(t *testing.T, n int) (int, *int) {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = l.Close() })
+	held := l.Addr().(*net.TCPAddr).Port
+	picks := new(int)
+	saved := pickPort
+	t.Cleanup(func() { pickPort = saved })
+	pickPort = func() (int, error) {
+		*picks++
+		if *picks <= n {
+			return held, nil
+		}
+		return freePort()
+	}
+	return held, picks
 }
 
 func TestStartDevServerRunsTheSubProjectsViteAndWaitsForItToAnswer(t *testing.T) {
@@ -319,11 +335,52 @@ func TestStopFromManyGoroutinesStopsOnce(t *testing.T) {
 	waitGone(t, s.PID())
 }
 
+// I-0162: the port freePort picked was taken before vite bound it.
+func TestStartDevServerStartsViteAgainOnAnotherPortWhenItsPortWasTaken(t *testing.T) {
+	opts, _ := newFakeVite(t, "serve")
+	held, picks := holdPorts(t, 1)
+	s, err := StartDevServer(context.Background(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Stop() })
+	if *picks != 2 || s.Port() == held {
+		t.Errorf("picked %d ports and serves on %d, the held one %d; want two picks and another port", *picks, s.Port(), held)
+	}
+	if resp, err := http.Get(s.URL()); err != nil || resp.StatusCode != http.StatusOK {
+		t.Errorf("GET %s: %v %v", s.URL(), resp, err)
+	} else {
+		_ = resp.Body.Close()
+	}
+}
+
+func TestStartDevServerGivesUpAfterThreePortsAllTaken(t *testing.T) {
+	opts, state := newFakeVite(t, "serve")
+	_, picks := holdPorts(t, portTries)
+	_, err := StartDevServer(context.Background(), opts)
+	if err == nil {
+		t.Fatal("a vite whose every port was taken started")
+	}
+	if *picks != portTries {
+		t.Errorf("picked %d ports, want %d", *picks, portTries)
+	}
+	for _, w := range []string{"each of the 3 free ports", "taken before it bound it", "address already in use"} {
+		if !strings.Contains(err.Error(), w) {
+			t.Errorf("error lacks %q:\n%v", w, err)
+		}
+	}
+	waitGone(t, readPID(t, state, "pid"))
+}
+
 func TestStartDevServerReturnsTheLastLinesOfAViteThatExitsEarly(t *testing.T) {
 	opts, state := newFakeVite(t, "exit-early")
+	_, picks := holdPorts(t, 0)
 	_, err := StartDevServer(context.Background(), opts)
 	if err == nil {
 		t.Fatal("a vite that exited started")
+	}
+	if *picks != 1 {
+		t.Errorf("picked %d ports for a vite that exited for another reason, want 1", *picks)
 	}
 	msg := err.Error()
 	for _, w := range []string{"exited before it answered at http://127.0.0.1:", "exit status 1", "line 7\n", "line 25\nboom"} {

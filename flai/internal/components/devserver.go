@@ -42,9 +42,21 @@ const probeTimeout = 2 * time.Second
 // open, held by something it started, before it is no longer read.
 const waitDelay = 5 * time.Second
 
+// portTries is how many free ports StartDevServer starts vite on before it
+// gives up, when each is taken before vite binds it.
+const portTries = 3
+
+// portTaken is what vite's last lines say when its port was in use: Vite's
+// "Port 5173 is already in use", or a bind's "address already in use".
+const portTaken = "already in use"
+
 // stopGrace is how long Stop gives a dev server to end on its own, and then
 // to end once killed. A variable so that a test can shorten it.
 var stopGrace = 5 * time.Second
+
+// pickPort finds the port StartDevServer starts vite on. A variable so that a
+// test can hand it a port that is taken.
+var pickPort = freePort
 
 // ErrViteMissing is wrapped by the error StartDevServer returns when the
 // sub-project has no vite in its node_modules.
@@ -92,7 +104,9 @@ type DevServer struct {
 // StartDevServer starts the Vite dev server of the sub-project in
 // opts.Dir, on 127.0.0.1 and a free port, and returns once an HTTP GET of its
 // URL answers 200, as the harness page does. ctx bounds only that wait: once
-// it answers, the server runs until Stop. A server that exits first, that
+// it answers, the server runs until Stop. A server that exits first because
+// its port was taken before it bound it is started again on another free
+// port, portTries ports in all. A server that exits first otherwise, that
 // does not answer 200 within the timeout, or whose wait ctx ends, is stopped,
 // with nothing it started left behind, and the error says why, with its last
 // lines of output. A sub-project without vite installed is refused with
@@ -114,10 +128,30 @@ func StartDevServer(ctx context.Context, opts DevServerOptions) (*DevServer, err
 	if !ok {
 		return nil, fmt.Errorf("%w in %s, and flai runs the sub-project's own vite: install the sub-project's dependencies, e.g. npm install or pnpm install in %s, then run this again", ErrViteMissing, opts.Dir, opts.Dir)
 	}
-	port, err := freePort()
-	if err != nil {
-		return nil, err
+	var taken error
+	for range portTries {
+		port, err := pickPort()
+		if err != nil {
+			return nil, err
+		}
+		s, err := launch(vite, port, opts)
+		if err != nil {
+			return nil, err
+		}
+		err = s.await(ctx, opts.Timeout)
+		if err == nil {
+			return s, nil
+		}
+		if !s.lostPort() {
+			return nil, err
+		}
+		taken = err
 	}
+	return nil, fmt.Errorf("the Vite dev server in %s found each of the %d free ports flai picked on 127.0.0.1 taken before it bound it; check what else on this host is opening ports, then run this again: %w", opts.Dir, portTries, taken)
+}
+
+// launch starts vite on port and returns the server, not yet waited for.
+func launch(vite string, port int, opts DevServerOptions) (*DevServer, error) {
 	var args []string
 	if opts.Config != "" {
 		args = append(args, "--config", opts.Config)
@@ -143,10 +177,29 @@ func StartDevServer(ctx context.Context, opts DevServerOptions) (*DevServer, err
 		done:    make(chan struct{}),
 	}
 	go s.wait()
-	if err := s.await(ctx, opts.Timeout); err != nil {
-		return nil, err
-	}
 	return s, nil
+}
+
+// lostPort reports whether the server exited on its own because its port
+// was in use, as its last lines say.
+func (s *DevServer) lostPort() bool {
+	if !closed(s.done) {
+		return false
+	}
+	s.mu.Lock()
+	stopped := s.stopped
+	s.mu.Unlock()
+	return !stopped && bytes.Contains(s.out.last(), []byte(portTaken))
+}
+
+// closed reports whether c is closed.
+func closed(c <-chan struct{}) bool {
+	select {
+	case <-c:
+		return true
+	default:
+		return false
+	}
 }
 
 // URL is where the server answers: http://127.0.0.1:<port><Path>.
@@ -300,7 +353,8 @@ func findVite(dir string) (string, bool, error) {
 
 // freePort is a loopback port nothing listens on, found by listening on
 // port 0 and closing it. Another process may take it before vite does;
-// --strictPort makes vite exit then, rather than take another.
+// --strictPort makes vite exit then, rather than take another, and
+// StartDevServer picks another.
 func freePort() (int, error) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

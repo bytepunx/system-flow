@@ -1,6 +1,6 @@
 ---
 title: The component library
-updated: 2026-10-17
+updated: 2026-10-18
 status: active
 topics: [components, design, dashboard, cli]
 ---
@@ -103,6 +103,7 @@ flai runs a sub-project's own Vite dev server on the host, with the project's ow
 - The sub-project is the one `--project` names, of kind `sveltekit` or `svelte`. With no `--project`, it is the only such sub-project; with none, or more than one, the command is refused and says why.
 - flai writes the harness into `.flai-cache/components/<project>/<sub-project>/`, again at every start: `plugin.mjs`, `harness.mjs`, `harness.html`, and a `vite.config.mjs`. The config loads the sub-project's own Vite config, the one Vite would find in its folder, with the sub-project's own Vite (`loadConfigFromFile`, so a TypeScript config works). It merges flai's plugin into it, with the sub-project's folder as Vite's root.
 - flai runs `node_modules/.bin/vite --config <that config> --host 127.0.0.1 --port <free> --strictPort` in the sub-project's folder, in a process group of its own. It waits up to a minute for the harness page to answer 200.
+- flai finds the free port by listening on port 0 and closing it, so another process can take the port before Vite binds it. Vite then exits saying the port is in use, and flai starts it again on another free port, three ports in all, before it gives up (S-0447, [I-0162](../issues/I-0162-the-components-dev-server-test-picks-a-free-port-and-closes-it-before-the-fake-vite-binds-it-so-a-concurrent-test-run-on-the-host-can-take-the-port-and-fail-the-integration-tier.md)). Vite takes a port number, not a listener, so the gap cannot be closed.
 - A sub-project without `vite` in its `node_modules` is refused, naming the sub-project and the fix: `npm install` or `pnpm install` in its folder. A dev server that exits before it answers, or does not answer in time, is stopped, and the error carries its last lines of output.
 - Stopping it ends its whole process group: SIGTERM, then SIGKILL five seconds later.
 
