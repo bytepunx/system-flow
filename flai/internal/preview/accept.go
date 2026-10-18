@@ -79,6 +79,40 @@ type Acceptance struct {
 	// PullRequest is the URL of the story's pull request as flai serve kept
 	// it, when it kept one.
 	PullRequest string `json:"pull_request,omitempty"`
+	// Remote is how the story's pull request is merged through the remote
+	// under pull-request acceptance, in place of the local merge (ADR-0170);
+	// nil under local acceptance.
+	Remote *RemoteMerge `json:"remote,omitempty"`
+}
+
+// RemoteMerge is the merge of a story's pull request on the forge under
+// pull-request acceptance (ADR-0170): what the preview read of it from the
+// state flai serve kept, and, once the real run has made it, what the merge
+// came to.
+type RemoteMerge struct {
+	// PullRequest is the pull request's number as flai serve kept it; 0 while
+	// it kept none.
+	PullRequest int `json:"pull_request,omitempty"`
+	// Head is the head the forge gate passed at, the kept status's head
+	// commit: a pull request whose head has moved since is not merged.
+	Head string `json:"head,omitempty"`
+	// Method is acceptance.merge_method, or its default.
+	Method forge.MergeMethod `json:"method"`
+	// AlreadyMerged is a pull request flai serve read as merged on the forge
+	// already, which the acceptance accepts with no second merge.
+	AlreadyMerged bool `json:"already_merged,omitempty"`
+	// ThroughServe is a merge flai accept hands to flai serve on the host,
+	// since the forge's token cannot be read in its own environment.
+	ThroughServe bool `json:"through_serve,omitempty"`
+	// Outcome is what the real run's merge came to: merged, or
+	// already-merged; SHA is the commit the merge left at the head of
+	// origin's main, empty for a pull request merged before.
+	Outcome string `json:"outcome,omitempty"`
+	SHA     string `json:"sha,omitempty"`
+	// BranchDeleted is whether the story's branch was deleted on origin, and
+	// BranchReason why not when it was not; the merge stands either way.
+	BranchDeleted bool   `json:"branch_deleted,omitempty"`
+	BranchReason  string `json:"branch_reason,omitempty"`
 }
 
 // Codes of the forge blockers an acceptance under pull-request acceptance
@@ -278,15 +312,26 @@ func threadsToResolve(repo *workitem.Repo, it *workitem.Item, res *Acceptance) {
 }
 
 // forgeGate sets on res the forge blockers of story id under pull-request
-// acceptance (ADR-0169), each also in Blockers, and the URL of its pull
-// request when flai serve kept one. The kept state is judged against the
-// head of res.Branch, the story's branch when it exists; a state or a head
-// that cannot be read is itself a blocker, so the gate never opens unread.
+// acceptance (ADR-0169), each also in Blockers, the URL of its pull request
+// when flai serve kept one, and the merge through the remote that takes the
+// local merge's place (ADR-0170). The kept state is judged against the head
+// of res.Branch, the story's branch when it exists; a state or a head that
+// cannot be read is itself a blocker, so the gate never opens unread. A pull
+// request flai serve read as merged on the forge already passes: its checks
+// and reviews were met where it merged, and it is accepted with no second
+// merge.
 func forgeGate(r execx.Runner, repo *workitem.Repo, id string, res *Acceptance) {
 	st, kept, err := forge.ReadStatus(repo.CacheDir(), id)
+	res.Remote = &RemoteMerge{Method: forge.MergeMethod(repo.Manifest.Acceptance.MergeMethodOrDefault())}
+	if err == nil && kept {
+		res.Remote.PullRequest, res.Remote.Head = st.PullRequest, st.HeadSHA
+		res.Remote.AlreadyMerged = st.State == forge.PullRequestMerged
+	}
 	switch {
 	case err != nil:
 		res.ForgeBlockers = []Blocker{{Code: BlockPullRequestMissing, Message: fmt.Sprintf("cannot read the pull request flai serve kept for %s: %v (ADR-0169)", id, err)}}
+	case kept && st.State == forge.PullRequestMerged:
+		res.ForgeBlockers = nil
 	case kept && res.Branch != "":
 		out, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", res.Branch+"^{commit}")
 		if err != nil {

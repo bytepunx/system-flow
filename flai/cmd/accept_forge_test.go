@@ -109,10 +109,11 @@ func TestEveryAcceptanceWaitsForThePullRequestsChecksAndReviews(t *testing.T) {
 	}
 }
 
-// ADR-0169: a story whose kept state was read at its branch's head, with its
-// required checks passed and its approvals met, is accepted and merged
-// locally, by the operator and by the orchestrator alike.
-func TestAStoryThePullRequestPassesIsAcceptedAndMergedLocally(t *testing.T) {
+// ADR-0169, ADR-0170: a story whose kept state was read at its branch's
+// head, with its required checks passed and its approvals met, is accepted,
+// its pull request merged through the remote, by the operator and by the
+// orchestrator alike.
+func TestAStoryThePullRequestPassesIsAcceptedThroughTheRemote(t *testing.T) {
 	for who, args := range map[string]func(head string) []string{
 		"the operator": func(string) []string { return []string{"accept", "S-0001", "--by", "alex", "--json"} },
 		"the orchestrator": func(head string) []string {
@@ -120,8 +121,7 @@ func TestAStoryThePullRequestPassesIsAcceptedAndMergedLocally(t *testing.T) {
 		},
 	} {
 		t.Run(who, func(t *testing.T) {
-			root, head := forgeGatedStoryInReview(t, "pull-request")
-			keepStatus(t, root, passingStatus(head))
+			root, _, head, f := remoteProject(t, "")
 
 			out, errOut, code := runIn(t, root, args(head)...)
 			if code != 0 {
@@ -134,8 +134,11 @@ func TestAStoryThePullRequestPassesIsAcceptedAndMergedLocally(t *testing.T) {
 			if res.Status != workitem.Done || !res.Merged || len(res.ForgeBlockers) != 0 || res.PullRequest != forgePRURL {
 				t.Errorf("the acceptance must be done and merged, naming the pull request: %+v", res)
 			}
+			if got := f.asked(); len(got) != 1 {
+				t.Errorf("the pull request is merged on the forge once: %v", got)
+			}
 			if !strings.Contains(gitIn(t, root, "show", "main:cli/feature.go"), "package cli") {
-				t.Error("the story branch is merged into main locally")
+				t.Error("the main branch holds the story's change, merged on the forge")
 			}
 		})
 	}

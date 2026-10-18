@@ -70,6 +70,22 @@ design/conventions/work-management.md and git.md:
   4. tell every story in progress or in review whose touches cover a path
      the merge changed which paths those are, for its agent's MCP inbox
 
+Under acceptance.mode: pull-request (ADR-0170), step 0 merges no branch on
+this machine. Once the pull request's checks and reviews pass (ADR-0169), it
+refuses, naming them, while the main branch has commits not on origin's main
+that change paths outside the wip folder; merges the story's pull request on
+the forge by acceptance.merge_method, at the head the checks passed at, and
+deletes the story's branch on origin; fetches main and brings the main branch
+up to origin's, rebasing its unpublished wip commits onto it in a temporary
+worktree and moving it with git reset --keep, which keeps uncommitted edits;
+and removes the story's worktree and branch. The merge is made here when the
+forge's token can be read here, while the forge host action is on;
+otherwise flai serve on the host makes it, and flai accept waits for its
+answer (the dashboard's acceptance never hands it over). A pull request
+merged on the forge already is accepted with no second merge, and a merge the
+forge refuses stops the acceptance, with its reason, before anything changes
+here. Steps 1 to 4 are as under local acceptance.
+
 Acceptance computes no release, creates no tag, and pushes nothing (S-0087):
 that is a deliberate step of its own, run when the operator chooses to
 publish what has accumulated on main, not tied to any one item. See flai
@@ -222,6 +238,11 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if err := keptHeld(it.ID, res.UndoesMain, opts.Keep); err != nil {
 		return nil, err
 	}
+	// under pull-request acceptance the merge is made through the remote,
+	// here or by flai serve, as the token can be read (ADR-0170)
+	if res.Remote != nil {
+		res.Remote.ThroughServe = !a.remoteRoute(repo).direct
+	}
 	if len(res.Blockers) > 0 && !o.dryRun {
 		if left := notKept(res.UndoesMain); len(left) > 0 {
 			return nil, undoneRefused(it.ID, res.Blockers, left)
@@ -244,9 +265,20 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		return a.finishCommit(repo, it, acc, o)
 	}
 
-	// 0. bring the story branch into the main branch (ADR-0019)
+	// 0. bring the story branch into the main branch (ADR-0019): under
+	// pull-request acceptance by merging its pull request on the forge and
+	// bringing main up to origin's (ADR-0170); a resumed acceptance's merge
+	// is behind it
 	var changed []string // what the merge brought, for the stories still open
-	if it.Type == workitem.Story {
+	switch {
+	case it.Type != workitem.Story:
+	case repo.Manifest.Acceptance.PullRequest():
+		if res.Remote != nil && useGit {
+			if changed, err = a.acceptThroughRemote(context.Background(), repo, it, res); err != nil {
+				return nil, err
+			}
+		}
+	default:
 		before := ""
 		if hasBranch {
 			before = a.headOf(repo.MainRoot)
@@ -862,7 +894,9 @@ func (a *app) printAccept(acc *accepted) error {
 				fmt.Fprintf(a.out, "would keep the removal of the main branch's lines at %s: %s\n", u.Path, u.KeptReason)
 			}
 		}
-		if res.Branch != "" {
+		if res.Remote != nil {
+			fmt.Fprintln(a.out, remotePlanLine(res))
+		} else if res.Branch != "" {
 			fmt.Fprintf(a.out, "would merge %s into the main branch and remove its worktree\n", res.Branch)
 		}
 		if res.CommitOnly {
@@ -892,10 +926,17 @@ func (a *app) printAccept(acc *accepted) error {
 	} else {
 		fmt.Fprintf(a.out, "%s %s: done, %d items archived, committed", verb, res.ID, res.Archived)
 	}
-	if res.Merged {
+	remote := res.Remote != nil && res.Remote.Outcome != ""
+	switch {
+	case remote:
+		fmt.Fprintf(a.out, ", %s, %s removed", remoteMergedLine(res.Remote), res.Branch)
+	case res.Merged:
 		fmt.Fprintf(a.out, ", %s merged and removed", res.Branch)
 	}
 	fmt.Fprintln(a.out, "; nothing released yet, run flai release --pending to publish")
+	if remote && !res.Remote.BranchDeleted && res.Remote.BranchReason != "" {
+		fmt.Fprintf(a.out, "origin's %s not deleted: %s\n", res.Branch, res.Remote.BranchReason)
+	}
 	for _, u := range res.UndoesMain {
 		if u.KeptReason != "" {
 			fmt.Fprintf(a.out, "kept the removal of the main branch's lines at %s; the reason is under ### Removals kept in the Notes of %s\n", u.Path, res.ID)

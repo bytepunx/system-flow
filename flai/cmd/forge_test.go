@@ -328,6 +328,14 @@ func (gh *pullsStandIn) serve(w http.ResponseWriter, r *http.Request) {
 		p := &gh.pulls[n-1]
 		p.Title, p.Body, p.Base.Ref = in.Title, in.Body, in.Base
 		_ = json.NewEncoder(w).Encode(p)
+	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, pulls+"/"):
+		// a pull request by its number, as a push reads it to find a merge (S-0397)
+		n, _ := strconv.Atoi(strings.TrimPrefix(r.URL.Path, pulls+"/"))
+		if n < 1 || n > len(gh.pulls) {
+			http.Error(w, `{"message":"Not Found"}`, http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(gh.pulls[n-1])
 	default:
 		http.Error(w, `{"message":"unexpected request"}`, http.StatusTeapot)
 	}
