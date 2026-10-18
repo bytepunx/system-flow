@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -35,7 +36,9 @@ import (
 // updates it when its title, body, or base is not what flai would write.
 // A failure opens one thread on the story, adds an entry to it only when
 // the reason changes, and is resolved by the first look that succeeds.
-// flai forge push runs the same PushStory on the operator's word.
+// flai forge push runs the same PushStory on the operator's word. A story
+// whose pull request is merged on the forge, by a reviewer or by flai serve's
+// merge (forgemerge.go), is not pushed again and gets no other pull request.
 
 const (
 	// forgeEvery is how often the stories in review are looked at.
@@ -61,6 +64,10 @@ const (
 	ForgeFailed ForgeOutcome = "failed"
 	// ForgeSkipped is nothing done, for the reason given.
 	ForgeSkipped ForgeOutcome = "skipped"
+	// ForgeMerged is nothing done because the story's pull request is merged
+	// on the forge: its branch is not pushed again, and no other pull
+	// request is opened for it (S-0397).
+	ForgeMerged ForgeOutcome = "merged"
 )
 
 // The changes a push makes to a story's pull request.
@@ -268,6 +275,16 @@ func (p ForgePush) push(ctx context.Context, it *workitem.Item, st *ForgeState) 
 	if err != nil {
 		return err
 	}
+	pr, merged, err := mergedRequest(ctx, p.Repo, f, p.Token.Env, it.ID, st.PullRequest, p.now())
+	if err != nil {
+		return err
+	}
+	if merged {
+		st.Outcome, st.PullRequest, st.URL = ForgeMerged, pr.Number, pr.URL
+		st.Reason = fmt.Sprintf("%s's pull request #%d is merged on %s %s, so flai pushes %s no more and opens no other pull request for it: accept the story with flai accept %s",
+			it.ID, pr.Number, f.Name(), f.Repository(), branch, it.ID)
+		return nil
+	}
 	local, err := git.Run(root, "git", "rev-parse", "--verify", "--quiet", "refs/heads/"+branch+"^{commit}")
 	if err != nil || local == "" {
 		return fmt.Errorf("this repository has no branch %s to push: open it with flai stream open %s, or move %s back to in-progress", branch, it.ID, it.ID)
@@ -332,6 +349,55 @@ func (p ForgePush) request(ctx context.Context, f forge.Forge, git execx.Runner,
 	}
 	st.PullRequest, st.URL, st.Request = pr.Number, pr.URL, change
 	return nil
+}
+
+// mergedRequest is story's pull request when the forge has merged it, found
+// by the number flai kept for it: from the kept status once flai has seen it
+// merged, and from the forge otherwise, when pushed, the number of the push
+// record, or the kept status's, names one. A merge it finds on the forge is
+// kept, so that it is asked no more. A story with no number kept has none
+// merged.
+func mergedRequest(ctx context.Context, repo *workitem.Repo, f forge.Forge, env, story string, pushed int, now time.Time) (forge.PullRequest, bool, error) {
+	kept, _, err := forge.ReadStatus(repo.CacheDir(), story)
+	if err != nil {
+		return forge.PullRequest{}, false, err
+	}
+	if kept.State == forge.PullRequestMerged {
+		return forge.PullRequest{Number: kept.PullRequest, URL: kept.URL, Head: storygit.Branch(story), HeadSHA: kept.HeadSHA, State: kept.State}, true, nil
+	}
+	n := cmp.Or(pushed, kept.PullRequest)
+	if n == 0 {
+		return forge.PullRequest{}, false, nil
+	}
+	fctx, cancel := context.WithTimeout(ctx, forgeTimeout)
+	defer cancel()
+	pr, err := f.PullRequest(fctx, n)
+	switch {
+	case errors.Is(err, forge.ErrNotFound):
+		// a number the forge does not know merged nothing; a repository the
+		// token cannot see fails the push's own calls, which say so
+		return forge.PullRequest{}, false, nil
+	case err != nil:
+		return forge.PullRequest{}, false, forgeReason(f, env, story, err)
+	}
+	if pr.State != forge.PullRequestMerged || pr.Head != storygit.Branch(story) {
+		return pr, false, nil
+	}
+	return pr, true, keepMerged(repo, story, pr, now)
+}
+
+// keepMerged records in story's kept status that its pull request pr is
+// merged, keeping the checks and reviews last read.
+func keepMerged(repo *workitem.Repo, story string, pr forge.PullRequest, now time.Time) error {
+	st, ok, err := forge.ReadStatus(repo.CacheDir(), story)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		st = forge.Status{Story: story, HeadSHA: pr.HeadSHA, ReadAt: now.UTC().Format(time.RFC3339)}
+	}
+	st.PullRequest, st.URL, st.State = pr.Number, cmp.Or(pr.URL, st.URL), forge.PullRequestMerged
+	return forge.WriteStatus(repo.CacheDir(), st)
 }
 
 // sameRequest is whether pr already has what in would write: the forge may
@@ -709,6 +775,9 @@ func failureText(st ForgeState) string {
 
 // pushedNote says what a push that succeeded did.
 func pushedNote(st ForgeState) string {
+	if st.Outcome == ForgeMerged {
+		return fmt.Sprintf("flai serve found %s's pull request #%d merged on the forge, so it pushes %s no more.", st.Story, st.PullRequest, storygit.Branch(st.Story))
+	}
 	branch := fmt.Sprintf("origin's %s is at %s", storygit.Branch(st.Story), short(st.RemoteHead))
 	if st.Outcome == ForgePushed {
 		branch = fmt.Sprintf("pushed %s at %s", storygit.Branch(st.Story), short(st.LastPushed))

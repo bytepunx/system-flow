@@ -24,6 +24,10 @@ type Status struct {
 	URL string `json:"url"`
 	// HeadSHA is the commit at the head of the pull request when it was read.
 	HeadSHA string `json:"head_sha"`
+	// State is whether the pull request was open, closed, or merged when it
+	// was read; empty in a status kept before flai recorded it. A merged
+	// one is not pushed again and gets no other pull request.
+	State PullRequestState `json:"state,omitempty"`
 	// ReadAt is when it was last read, RFC 3339.
 	ReadAt string `json:"read_at"`
 	// Checks are the required checks only, in the forge's order.
@@ -156,6 +160,7 @@ func (s Status) Record(pr PullRequest, checks []Check, reviews []Review, now tim
 		PullRequest: pr.Number,
 		URL:         pr.URL,
 		HeadSHA:     pr.HeadSHA,
+		State:       pr.State,
 		ReadAt:      at,
 		Checks:      make([]CheckStatus, 0, len(checks)),
 		Reviews:     make([]ReviewStatus, 0, len(reviews)),

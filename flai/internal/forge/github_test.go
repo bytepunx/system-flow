@@ -198,6 +198,34 @@ func TestGitHubFindPullRequest(t *testing.T) {
 	}
 }
 
+// S-0397: a pull request is read by its number in any state, so that one
+// merged on the forge is found though FindPullRequest sees open ones only.
+func TestGitHubPullRequestByNumber(t *testing.T) {
+	f := newFakeGitHub(t)
+	merged := githubPullJSON(7, "story/S-0001", "abc123", "S-0001 A story")
+	merged["state"], merged["merged_at"] = "closed", "2026-10-17T10:00:00Z"
+	f.reply("GET /repos/octo/repo/pulls/7", http.StatusOK, merged)
+	g := f.forge()
+	pr, err := g.PullRequest(context.Background(), 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pr.Number != 7 || pr.Head != "story/S-0001" || pr.HeadSHA != "abc123" || pr.State != PullRequestMerged {
+		t.Errorf("PullRequest(7) = %+v, want #7 from story/S-0001 at abc123, merged", pr)
+	}
+	_, err = g.PullRequest(context.Background(), 8)
+	if !errors.Is(err, ErrNotFound) || !strings.Contains(err.Error(), "#8") {
+		t.Errorf("PullRequest(8), which GitHub does not have = %v, want ErrNotFound naming #8", err)
+	}
+	noToken(t, err)
+	if _, err := g.PullRequest(context.Background(), 0); err == nil {
+		t.Error("PullRequest(0) answered no error")
+	}
+	if calls := f.calls(); len(calls) != 2 {
+		t.Errorf("calls = %v, want the two reads of a number", calls)
+	}
+}
+
 func TestGitHubPullRequestStates(t *testing.T) {
 	merged := githubPullJSON(1, "a", "s", "t")
 	merged["state"], merged["merged_at"] = "closed", "2026-10-17T10:00:00Z"

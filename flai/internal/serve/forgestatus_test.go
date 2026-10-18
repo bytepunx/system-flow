@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -342,5 +343,57 @@ func TestACommentTheLintRefusesQuotedIsQuotedInACodeBlock(t *testing.T) {
 	}
 	if lab.item().Status != workitem.InProgress {
 		t.Fatalf("the story is %s", lab.item().Status)
+	}
+}
+
+// S-0397: a pull request a reviewer merged on the forge, whose branch the
+// forge deleted, is not pushed again and gets no new pull request; the kept
+// status records it merged, and a check that failed on it sends nothing back.
+func TestAMergedPullRequestIsNeitherPushedAgainNorReopened(t *testing.T) {
+	lab, git := newStatusLab(t)
+	if st := lab.look(); st.Outcome != ForgePushed || st.PullRequest != 1 {
+		t.Fatalf("the first look: %+v", st)
+	}
+	lab.forge.set(lab.branch(), headA, []forge.Check{buildFailed("2 failed")}, nil)
+	lab.forge.setState(lab.branch(), forge.PullRequestMerged)
+	git.mu.Lock()
+	git.remote = "" // the forge deleted the branch on the merge
+	git.mu.Unlock()
+	for look := range 2 {
+		st := lab.look()
+		if st.Outcome != ForgeMerged || st.PullRequest != 1 || !strings.Contains(st.Reason, "is merged") || len(git.pushes) != 1 || lab.forge.opens != 1 {
+			t.Fatalf("look %d after the merge: %+v, pushes %v, opens %d", look+1, st, git.pushes, lab.forge.opens)
+		}
+	}
+	if st := lab.status(); st.State != forge.PullRequestMerged || st.PullRequest != 1 {
+		t.Errorf("the kept status: %+v, want #1 merged", st)
+	}
+	if lab.sentBackBy() != 0 || lab.item().Status != workitem.Review {
+		t.Errorf("a merged pull request sent the story back: %s", lab.item().Status)
+	}
+	for _, th := range lab.threadsOn() {
+		if th.Open() {
+			t.Errorf("a thread is open after the merge: %s %s", th.ID, th.Title)
+		}
+	}
+}
+
+// A read that finds no open pull request, because the forge merged it, keeps
+// it merged by the number flai kept, with no error and no send back.
+func TestAReadOfAMergedPullRequestKeepsItMerged(t *testing.T) {
+	lab, _ := newStatusLab(t)
+	lab.look()
+	lab.forge.set(lab.branch(), headA, []forge.Check{buildFailed("2 failed")}, nil)
+	lab.forge.setState(lab.branch(), forge.PullRequestMerged)
+	var look readLook
+	lab.pass.readBack(context.Background(), lab.repo, lab.item(), lab.pass.token("github"), &look)
+	if len(look.failed) != 0 {
+		t.Fatalf("the read of a merged pull request failed: %v", look.errs)
+	}
+	if st := lab.status(); st.State != forge.PullRequestMerged {
+		t.Errorf("the kept status is %q, want merged", st.State)
+	}
+	if lab.sentBackBy() != 0 {
+		t.Error("a merged pull request sent the story back")
 	}
 }

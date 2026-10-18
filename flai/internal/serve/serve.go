@@ -624,6 +624,9 @@ func Run(ctx context.Context, o Options) error {
 			orch.look(cctx)
 			analyst.look(cctx)
 			newForgePass(o, e, &forgeLooks).start(cctx)
+			// flai accept's requests to merge a pull request are taken every
+			// second, and answered behind the forge host action (S-0397)
+			newMergePass(o, e, &forgeLooks).start(cctx)
 			go func() {
 				for {
 					select {

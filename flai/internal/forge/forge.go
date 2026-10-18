@@ -29,6 +29,10 @@ type Forge interface {
 	// FindPullRequest is the open pull request whose head branch is head;
 	// false when there is none.
 	FindPullRequest(ctx context.Context, head string) (PullRequest, bool, error)
+	// PullRequest is the pull request numbered number, open, closed, or
+	// merged: FindPullRequest sees open ones only, so a merge made on the
+	// forge is found by its number. ErrNotFound when there is none.
+	PullRequest(ctx context.Context, number int) (PullRequest, error)
 	// OpenPullRequest opens a pull request from in.Head into in.Base, or,
 	// when one is open for in.Head already, updates its title, body, and
 	// base to in's, and answers the pull request as it then stands.

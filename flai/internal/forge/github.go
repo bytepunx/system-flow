@@ -126,6 +126,18 @@ func (g *GitHub) FindPullRequest(ctx context.Context, head string) (PullRequest,
 	return pulls[0].pullRequest(), true, nil
 }
 
+// PullRequest is the pull request numbered number, in whatever state it is.
+func (g *GitHub) PullRequest(ctx context.Context, number int) (PullRequest, error) {
+	if number <= 0 {
+		return PullRequest{}, fmt.Errorf("read pull request #%d in %s on GitHub: a pull request's number is 1 or more; name the story's pull request", number, g.Repository())
+	}
+	var pull githubPull
+	if _, err := g.call(ctx, http.MethodGet, g.repoPath("/pulls/"+strconv.Itoa(number)), nil, &pull); err != nil {
+		return PullRequest{}, fmt.Errorf("read pull request #%d in %s on GitHub: %w", number, g.Repository(), err)
+	}
+	return pull.pullRequest(), nil
+}
+
 // OpenPullRequest opens a pull request from in.Head into in.Base, or
 // updates the title, body, and base of the one open from in.Head.
 func (g *GitHub) OpenPullRequest(ctx context.Context, in PullRequestInput) (PullRequest, error) {

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -23,18 +24,21 @@ import (
 // head branch and counting what was asked of it; heads are the head commit
 // of each head branch, and checks and reviews what each pull request has,
 // by its head branch. readErr fails the reads of checks; approvals is what
-// every base branch requires.
+// every base branch requires. merges are the methods each merge was asked
+// by, and mergeRefusal the forge's refusal of every merge.
 type fakeForge struct {
-	mu        sync.Mutex
-	prs       map[string]forge.PullRequest
-	opens     int
-	down      error
-	readErr   error
-	number    int
-	heads     map[string]string
-	checks    map[string][]forge.Check
-	reviews   map[string][]forge.Review
-	approvals int
+	mu           sync.Mutex
+	prs          map[string]forge.PullRequest
+	opens        int
+	down         error
+	readErr      error
+	number       int
+	heads        map[string]string
+	checks       map[string][]forge.Check
+	reviews      map[string][]forge.Review
+	approvals    int
+	merges       []forge.MergeMethod
+	mergeRefusal error
 }
 
 func newFakeForge() *fakeForge {
@@ -54,6 +58,9 @@ func (f *fakeForge) FindPullRequest(_ context.Context, head string) (forge.PullR
 		return forge.PullRequest{}, false, f.down
 	}
 	pr, ok := f.prs[head]
+	if ok && pr.State != forge.PullRequestOpen {
+		return forge.PullRequest{}, false, nil // GitHub lists open ones only
+	}
 	pr.HeadSHA = f.heads[head]
 	return pr, ok, nil
 }
@@ -99,8 +106,55 @@ func (f *fakeForge) set(head, sha string, checks []forge.Check, reviews []forge.
 	defer f.mu.Unlock()
 	f.heads[head], f.checks[head], f.reviews[head] = sha, checks, reviews
 }
-func (f *fakeForge) Merge(context.Context, forge.PullRequest, forge.MergeMethod) (forge.Merged, error) {
-	return forge.Merged{}, forge.ErrMergeRefused
+
+// PullRequest is the pull request numbered number, in any state.
+func (f *fakeForge) PullRequest(_ context.Context, number int) (forge.PullRequest, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.down != nil {
+		return forge.PullRequest{}, f.down
+	}
+	for head, pr := range f.prs {
+		if pr.Number == number {
+			pr.HeadSHA = f.heads[head]
+			return pr, nil
+		}
+	}
+	return forge.PullRequest{}, fmt.Errorf("GET /pulls/%d answered 404 Not Found: %w", number, forge.ErrNotFound)
+}
+
+// Merge merges the pull request by method, as GitHub does: refused with
+// mergeRefusal when it is set, or when pr's head is no longer the branch's.
+func (f *fakeForge) Merge(_ context.Context, pr forge.PullRequest, method forge.MergeMethod) (forge.Merged, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.merges = append(f.merges, method)
+	if f.mergeRefusal != nil {
+		return forge.Merged{}, f.mergeRefusal
+	}
+	if pr.HeadSHA != f.heads[pr.Head] {
+		return forge.Merged{}, fmt.Errorf("PUT /pulls/%d/merge answered 409 Conflict: Head branch was modified. Review and try the merge again.: %w", pr.Number, forge.ErrMergeRefused)
+	}
+	open := f.prs[pr.Head]
+	open.State = forge.PullRequestMerged
+	f.prs[pr.Head] = open
+	return forge.Merged{SHA: "merged-by-" + string(method)}, nil
+}
+
+// mergesAsked are the methods each merge was asked by.
+func (f *fakeForge) mergesAsked() []forge.MergeMethod {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.merges)
+}
+
+// setState gives the pull request of the head branch head the state state.
+func (f *fakeForge) setState(head string, state forge.PullRequestState) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	pr := f.prs[head]
+	pr.State = state
+	f.prs[head] = pr
 }
 
 func (f *fakeForge) pr(head string) (forge.PullRequest, bool) {
@@ -151,6 +205,10 @@ func (g *fakeGit) Run(_, name string, args ...string) (string, error) {
 		g.pushes = append(g.pushes, args)
 		if g.pushErr != nil {
 			return "", g.pushErr
+		}
+		if slices.Contains(args, "--delete") {
+			g.remote = ""
+			return "", nil
 		}
 		g.remote = g.local
 		return "", nil

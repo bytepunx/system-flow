@@ -65,6 +65,9 @@ func (p *forgePass) readBack(ctx context.Context, repo *workitem.Repo, it *worki
 		look.errs = append(look.errs, it.ID+": "+err.Error())
 		return
 	}
+	if st.State == forge.PullRequestMerged {
+		return // merged: nothing on it sends the story back
+	}
 	why := fmt.Sprintf("%s is back in review at %s, so flai serve reads its checks and reviews again.", it.ID, short(st.HeadSHA))
 	p.resolveSendBacks(repo, st, func(b forge.SendBack) bool { return b.Commit != st.HeadSHA }, why)
 	if p.sendBack(repo, st) {
@@ -92,7 +95,21 @@ func (p *forgePass) readPullRequest(ctx context.Context, repo *workitem.Repo, st
 		return forge.Status{}, readReason(f, story, err)
 	}
 	if !found {
-		return forge.Status{}, fmt.Errorf("%s has no open pull request on %s %s to read; flai serve opens it at its next look", story, f.Name(), f.Repository())
+		// a pull request merged on the forge is open no more: it is kept as
+		// merged, and its checks and reviews as last read
+		pushed, _, err := ReadForgeState(repo, story)
+		if err != nil {
+			return forge.Status{}, err
+		}
+		_, merged, err := mergedRequest(fctx, repo, f, token.Env, story, pushed.PullRequest, p.o.Now())
+		if err != nil {
+			return forge.Status{}, readReason(f, story, err)
+		}
+		if !merged {
+			return forge.Status{}, fmt.Errorf("%s has no open pull request on %s %s to read; flai serve opens it at its next look", story, f.Name(), f.Repository())
+		}
+		st, _, err := forge.ReadStatus(repo.CacheDir(), story)
+		return st, err
 	}
 	checks, err := f.Checks(fctx, pr)
 	if err != nil {
