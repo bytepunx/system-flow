@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:59:12Z
-updated: 2026-10-18T18:57:00Z
+updated: 2026-10-18T19:29:13Z
 transitions: []
 tags: [cli]
 topics: [conventions, template]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 41m
-  delivery: 2026-10-18T23:00:00Z
+  delivery: 2026-10-18T23:33:00Z
   basis: "Its own forecast of 41m; 9th in the pull order with an in-progress limit of 5, behind S-0241, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403 and S-0404."
   by: flai
-  at: 2026-10-18T18:57:00Z
+  at: 2026-10-18T19:29:13Z
 ---
 # S-0405 With the merge queue on, a story's close-out and flai verify leave the test tiers the manifest marks for the queue to the batch, so a close-out main outruns no longer runs integration and smoke twice
 
