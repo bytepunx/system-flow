@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:53Z
-updated: 2026-10-18T02:19:03Z
+updated: 2026-10-18T02:20:14Z
 transitions: []
 tags: [cli, dashboard]
 topics: [orchestration]
@@ -34,11 +34,11 @@ The stories enqueued for acceptance are verified together, once, by `flai serve`
 
 ## Acceptance criteria
 
-- [ ] `flai queue add S-nnnn` and `flai queue remove S-nnnn`, and the host writes behind the review page's queue button, enqueue and dequeue a story in review, recording who and when in the queue's state. `add` refuses a story that is not eligible, naming each reason. `flai accept` by hand takes the story out of the queue, and drops a batch that holds it.
-- [ ] With a new host action `merge-queue` on and `orchestration.permissions.accept_reviews` on, `flai serve` takes up to `merge_queue.batch_max` (4 unless set) eligible enqueued stories, in queue order, and builds the batch in `.flai-cache/worktrees/` on a branch of its own: main, then each story's branch rebased onto the one before. A story whose rebase stops is left out of the batch, with the stop and its paths as its outcome; the rest go on.
+- [ ] `flai queue add S-nnnn` and `flai queue remove S-nnnn`, and the host writes behind the review page's queue button, enqueue and dequeue a story in review, recording who and when in the queue's state. `add` refuses a story that is not eligible, naming each reason, and refuses under pull-request acceptance, saying the queue runs under local acceptance only. `flai accept` by hand takes the story out of the queue, and drops a batch that holds it.
+- [ ] With a new host action `merge-queue` on, `orchestration.permissions.accept_reviews` on, and `acceptance.mode` local, `flai serve` takes up to `merge_queue.batch_max` (4 unless set) eligible enqueued stories, in queue order, and builds the batch in `.flai-cache/worktrees/` on a branch of its own: main, then each story's branch rebased onto the one before. A story whose rebase stops is left out of the batch, with the stop and its paths as its outcome; the rest go on. Under pull-request acceptance it starts no batch and logs why once.
 - [ ] The batch is verified once with the tiers `flai verify` selects for the paths the batch changes against main, in `flai serve`'s process. Its step and result are kept in the queue's state, and `flai queue`, `flai board`, and the dashboard show them as they change. A story's own `flai verify` result is not changed by it.
 - [ ] `flai queue hold` and `flai queue resume`, and the host write behind a hold switch on the board, hold the queue: no batch starts while it is held, and one under verification finishes and waits.
-- [ ] `merge_queue.batch_max` is validated by the manifest's checks and set with `flai manifest set`; `docs/operators/settings.md` indexes it and the host action, `docs/operators/index.md` says how to turn the queue on and hold it, the template's manifest carries the key commented out, and `template/CHANGELOG.md` names it. `design/system/flai-cli.md` and `docs/users/flai.md` describe the commands.
+- [ ] `merge_queue.batch_max` is validated by the manifest's checks and set with `flai manifest set`; `docs/operators/settings.md` indexes it and the host action, `docs/operators/index.md` says how to turn the queue on and hold it, and that it runs under local acceptance only, the template's manifest carries the key commented out, and `template/CHANGELOG.md` names it. `design/system/flai-cli.md` and `docs/users/flai.md` describe the commands.
 
 ## Tasks
 - T-1640 The manifest takes merge_queue.batch_max and the host takes the merge-queue host action, off by default
@@ -53,6 +53,7 @@ The stories enqueued for acceptance are verified together, once, by `flai serve`
 - Drafted by the planner for E-0022, after S-0398, whose state file and view this story writes to.
 - Landing a green batch and bisecting a red one are the next story's. Until it lands, a verified batch waits in the state, and stories are still accepted by hand.
 - A rebase that stops on a shared path is settled by a later story of E-0022; here it leaves the story out of the batch.
+- Local acceptance only, as S-0398's ADR records: under pull-request acceptance a batch's rebase would leave every story stopped on ADR-0169's `forge_stale`.
 
 ### Planning
 
@@ -67,5 +68,6 @@ The stories enqueued for acceptance are verified together, once, by `flai serve`
   - Documentation: the operator rules in `documentation.md` need the settings index and the operators' guide. The template's manifest is `template/root/system-flow.yaml.tmpl`.
   - Co-change: `flai touches suggest` added `docs/users/flai-reference.md`, `docs/users/flaiover.md`, `design/system/flaiover-dashboard.md`, and `template/template.yaml`, the template's version.
   - No folder touch.
-- **Forecast.** Raised from flai's 1h9m to 1h30m. A long-running loop in `flai serve` that makes worktrees and rebases needs tests on real repositories, and flai's size measure does not weigh that.
+  - E-0021's S-0395 has since changed `flai/cmd/accept.go` and `flai/internal/hostapi/writes.go`; S-0397 changes them again. The touches stand. Whoever goes second rebases onto the other.
+- **Forecast.** Raised from flai's 1h9m to 1h30m. A long-running loop in `flai serve` that makes worktrees and rebases needs tests on real repositories, and flai's size measure does not weigh that. The local-only check adds a test case, not a figure.
 - **Cost of delay.** Waits on TH-0465 question 1.

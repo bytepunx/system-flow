@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:36Z
-updated: 2026-10-18T02:19:03Z
+updated: 2026-10-18T02:19:48Z
 transitions: []
 tags: [cli, dashboard]
 topics: [orchestration]
@@ -34,9 +34,10 @@ The operator sees, before anything is batched, which stories in review a merge q
 ## Acceptance criteria
 
 - [ ] `flai queue`, and `flai queue --json`, list the stories in review that are eligible, in the order they last entered review: the last `flai verify` passed at the head of the story's branch, every acceptance criterion is ticked, no thread on the story or its tasks is open, and no path is recorded as undoing main's change (ADR-0155). Each other story in review is listed after them with every reason it is not eligible, each by name.
+- [ ] Under `acceptance.mode: pull-request` (ADR-0165), `flai queue` says the queue does not run in that mode, because the forge's required checks gate each story (ADR-0169), and lists no story as eligible. `flai board`, the MCP `board`, and the dashboard say the same in place of the queue.
 - [ ] The queue's state is one file in the main checkout's `.flai-cache`, read through one package: the stories enqueued, with who enqueued each and when, the batch under verification and its step, and each story's last outcome. This story writes nothing to it; with no file, the queue shows no batch and no outcomes.
 - [ ] `flai board`, the MCP `board`, and the host read `board.get` carry the queue: the eligible stories in order, the reasons of the others, and the batch and its step. The dashboard's board marks each card in review as eligible or not, with its reasons, and shows the batch and its step above the review lane.
-- [ ] An ADR records the queue as TH-0465 settles it: what runs it, the host action and the permission it runs under, eligibility, the batch's upper size, and that a story undoing main's change is never batched. `design/system/workflow.md` § What waits on an acceptance, `design/system/flai-cli.md`, `design/system/flaiover-dashboard.md`, and `docs/users/flai.md` describe `flai queue` and the view.
+- [ ] An ADR records the queue as TH-0465 settles it: what runs it, the host action and the permission it runs under, that it runs under local acceptance only, eligibility, the batch's upper size, and that a story undoing main's change is never batched. `design/system/workflow.md` § What waits on an acceptance, `design/system/flai-cli.md`, `design/system/flaiover-dashboard.md`, and `docs/users/flai.md` describe `flai queue` and the view.
 
 ## Tasks
 - T-1638 An ADR records the merge queue: what runs it, its host action and permission, eligibility, the batch's upper size, and that a story undoing main's change is never batched
@@ -50,6 +51,7 @@ The operator sees, before anything is batched, which stories in review a merge q
 
 - Drafted by the planner for E-0022, first of its stories. The rest of the epic writes the state this story reads: S-0399 enqueues and batches, and S-0400 lands and bisects.
 - The design answers it rests on are asked on TH-0465 (questions 2 to 4). The ADR records the answers given there.
+- The queue runs under local acceptance only, as proposed on TH-0466 after S-0395 was accepted. ADR-0169 blocks every acceptance under pull-request acceptance on `forge_stale` when the kept forge state was read at a commit other than the branch's head. A batch rebases each story, so a queue landing would always stop there. In that mode the forge's CI already verifies each story, and S-0397 merges through the remote.
 
 ### Planning
 
@@ -58,5 +60,6 @@ The operator sees, before anything is batched, which stories in review a merge q
   - Layout: the new package `flai/internal/mergequeue` and `flai/cmd/queue.go`. The board's three surfaces, as the explorer found them: `flai/cmd/board.go`, `flai/internal/mcpserver/server.go`, and `board.get` in `flai/internal/hostapi/hostapi.go`. The dashboard board and its cards.
   - Co-change: `flai touches suggest` added `docs/users/flai-reference.md`, regenerated when a command is added, and `docs/users/flaiover.md`, the dashboard's guide.
   - Folder touch kept: `design/adrs`, because the ADR's file name is known only once `flai adr new` writes it. It is a shared path, so it holds no story.
-- **Forecast.** flai's 47m is kept: the view reads what flai already reads, through one new package.
+  - The local-only rule reads `manifest.Acceptance.PullRequest()`, which S-0395's line of E-0021 added. It needs no new touch.
+- **Forecast.** flai's 47m is kept: the view reads what flai already reads, through one new package. The local-only rule is one check and a message.
 - **Cost of delay.** Waits on TH-0465 question 1: the epic has no inputs, so `flai cod` refuses. It is written once the inputs are set.
