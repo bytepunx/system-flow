@@ -4,10 +4,10 @@ title: S-0448 is verified but criterion 5 can only be checked after it is releas
 anchor:
   path: wip/kanban/stories/S-0448-the-components-page-lists-starts-and-stops-through-the-dashboard-the-components-methods-take-their-sub-project-as-sub-project-and-no-call-s-params-can-overwrite-the-channel-s-project-key.md
   item: S-0448
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-18T02:54:34Z
-updated: 2026-10-18T02:54:34Z
+updated: 2026-10-18T18:56:59Z
 ---
 
 # TH-0510 S-0448 is verified but criterion 5 can only be checked after it is released, which needs it accepted first
@@ -45,3 +45,6 @@ So the check cannot come before the acceptance.
 - **Criterion 5:** the live page on this host, covering list, start, frame and stop, with the versions used. It is unticked.
 
 Ticking or deferring a criterion is yours, not mine, so S-0448 stays in review. S-0446 and S-0447, which share `component-library.md` with it, are already in ready.
+
+### 2026-10-18T18:56:59Z alex
+Resolved: S-0448 was accepted

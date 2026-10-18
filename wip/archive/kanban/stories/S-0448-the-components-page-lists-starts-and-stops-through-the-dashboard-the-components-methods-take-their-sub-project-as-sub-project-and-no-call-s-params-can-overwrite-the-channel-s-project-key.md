@@ -3,10 +3,10 @@ id: S-0448
 type: story
 nature: remediation
 title: "The Components page lists, starts, and stops through the dashboard: the components methods take their sub-project as sub_project, and no call's params can overwrite the channel's project key"
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-18T02:25:46Z
-updated: 2026-10-18T18:56:40Z
+updated: 2026-10-18T18:56:59Z
 transitions:
   - to: ready
     at: 2026-10-18T02:26:04Z
@@ -19,6 +19,12 @@ transitions:
     by: agent-S-0448
   - to: in-progress
     at: 2026-10-18T18:55:27Z
+    by: alex
+  - to: review
+    at: 2026-10-18T18:56:46Z
+    by: alex
+  - to: done
+    at: 2026-10-18T18:56:59Z
     by: alex
 tags: [cli, dashboard]
 topics: [cli, dashboard]

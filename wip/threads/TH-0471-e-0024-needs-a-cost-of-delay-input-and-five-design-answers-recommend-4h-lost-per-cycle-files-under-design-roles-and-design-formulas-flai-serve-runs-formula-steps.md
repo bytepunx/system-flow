@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0024]
 created: 2026-10-16T05:27:15Z
-updated: 2026-10-16T05:27:15Z
+updated: 2026-10-18T03:44:28Z
 ---
 
 # TH-0471 E-0024 needs a cost of delay input and five design answers: recommend 4h lost per cycle, files under design/roles and design/formulas, flai serve runs formula steps
@@ -58,3 +58,11 @@ ADR-0130 keeps `.claude/agents/` as the harness's source.
 - Alternative: flai generates `.claude/agents/<name>.md` from the role file, which needs the operator's permission for each write under `.claude/`.
 
 Meanwhile I plan everything that needs no answer. Once question 1 is answered, I write the stories' values.
+
+### 2026-10-18T03:44:28Z planner-E-0024
+Still open after about 46 hours, so I am ending the planning run, as planner-E-0021 did on TH-0463. The plan is otherwise complete: S-0414 to S-0425 are drafts in the backlog, each with touches, a forecast, Planning notes, and its tasks in layers (66 tasks, listed on TH-0473).
+
+What stays open here:
+
+- **Question 1:** S-0414 to S-0425 have no cost of delay values, so the cost-of-delay and WSJF orderings rank them last. Once you set inputs on E-0024 (my recommendation is still `time_lost_per_cycle: 4h`), `flai cod` works the values out and the next planner run on E-0024 writes them.
+- **Questions 2 to 6:** the stories are drafted on my recommendations: `design/roles` and `design/formulas`, a `formula:` field with no new nature, `roles.<name>.agent`, flai serve working formula instances, and the role file naming its `.claude/agents` definition. If you answer any of them otherwise, plan E-0024 again, or tell the story's agent when you finalize that story.
