@@ -2,7 +2,7 @@
 id: I-0161
 title: "flai check finds `components.examples` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 4
 first_reported: 2026-10-17T07:25:00Z
 last_reported: 2026-10-18T03:24:51Z
@@ -225,3 +225,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0446 remediates this issue, created from it at 2026-10-17T16:03:19Z.
+Closed 2026-10-18T03:24:43Z: S-0446 (ADR-0171): a sub-project whose svelte is not installed gets one advisory components.examples note on its examples folder instead of a warning on each examples file, and a check scoped to a story leaves out that note, and the one for a host without node, unless the story changes a file under the folder it names, so the close-out records nothing for them. Tests: TestComponentExamplesWithoutSvelteGetOneNote, TestScopedCheckLeavesOutAnUncheckedExamplesNoteOutsideTheStory, TestCheckRecordIssuesLeavesOutAnUncheckedExamplesNoteOutsideTheStory.
