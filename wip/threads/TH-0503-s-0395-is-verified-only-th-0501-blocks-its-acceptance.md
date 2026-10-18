@@ -4,10 +4,10 @@ title: "S-0395 is verified; only TH-0501 blocks its acceptance"
 anchor:
   path: wip/kanban/stories/S-0395-under-pull-request-acceptance-flai-accept-and-the-orchestrator-s-acceptance-refuse-a-story-while-a-required-check-has-not-passed-or-a-required-review-is-outstanding-naming-each.md
   item: S-0395
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-17T18:23:49Z
-updated: 2026-10-17T18:23:49Z
+updated: 2026-10-18T02:19:03Z
 ---
 
 # TH-0503 S-0395 is verified; only TH-0501 blocks its acceptance
@@ -38,3 +38,6 @@ On wip/kanban/stories/S-0395-under-pull-request-acceptance-flai-accept-and-the-o
 ## Merge note
 
 S-0395 and S-0396 both touch `design/system/flaiover-dashboard.md`. S-0396's ADR is 0168 on its own branch, and this one is 0169, so the numbers do not collide.
+
+### 2026-10-18T02:19:03Z alex
+Resolved: S-0395 was accepted

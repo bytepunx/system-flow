@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-17T18:25:19Z
+updated: 2026-10-18T02:19:03Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0395](S-0395.md) | Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each | review | agent-S-0395 | 2026-10-17T18:22:09Z |
 
 ## Strategic agents
 

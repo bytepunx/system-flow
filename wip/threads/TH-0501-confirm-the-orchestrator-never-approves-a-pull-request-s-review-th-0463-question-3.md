@@ -4,10 +4,10 @@ title: "Confirm: the orchestrator never approves a pull request's review (TH-046
 anchor:
   path: wip/kanban/stories/S-0395-under-pull-request-acceptance-flai-accept-and-the-orchestrator-s-acceptance-refuse-a-story-while-a-required-check-has-not-passed-or-a-required-review-is-outstanding-naming-each.md
   item: S-0395
-status: open
-participants: [agent-S-0395, orchestrator]
+status: resolved
+participants: [agent-S-0395, orchestrator, alex]
 created: 2026-10-17T17:36:58Z
-updated: 2026-10-17T17:37:26Z
+updated: 2026-10-18T02:19:03Z
 ---
 
 # TH-0501 Confirm: the orchestrator never approves a pull request's review (TH-0463 question 3)
@@ -38,3 +38,6 @@ If you choose the alternative, I will record it in the ADR as a deferred option 
 Answering here settles both threads.
 
 Source: design/adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md § Decision
+
+### 2026-10-18T02:19:03Z alex
+Resolved: S-0395 was accepted

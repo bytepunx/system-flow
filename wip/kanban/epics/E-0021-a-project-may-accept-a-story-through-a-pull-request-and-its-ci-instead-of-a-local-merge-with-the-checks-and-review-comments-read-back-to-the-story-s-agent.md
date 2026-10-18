@@ -48,21 +48,21 @@ usage:
       cost: 0.5204
   strategic:
     - kind: orchestrator
-      seconds: 61095
+      seconds: 61208
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 607
-          output: 10021
-          cache_read: 222813874
-          cache_write: 204944
-          cost: 55.9088
+          input: 621
+          output: 10125
+          cache_read: 228650900
+          cache_write: 215799
+          cost: 57.3748
         - model: claude-sonnet-5-5
-          input: 56
-          output: 297
-          cache_read: 1091255
-          cache_write: 205181
-          cost: 1.061
+          input: 72
+          output: 381
+          cache_read: 1317975
+          cache_write: 259969
+          cost: 1.2914
 ---
 # E-0021 A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent
 

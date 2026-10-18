@@ -3,11 +3,11 @@ id: S-0395
 type: story
 nature: feature
 title: Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each
-status: review
+status: done
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:37:54Z
-updated: 2026-10-17T18:22:20Z
+updated: 2026-10-18T02:19:03Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:53Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-17T18:22:20Z
     by: agent-S-0395
+  - to: done
+    at: 2026-10-18T02:19:03Z
+    by: alex
 tags: [cli, dashboard]
 topics: [release, orchestration]
 touches: [flai/internal/preview/accept.go, flai/internal/preview/accept_forge_test.go, flai/cmd/accept_forge_test.go, design/adrs, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, flai/internal/forge/forge.go, flai/internal/forge/github.go, flai/internal/forge/github_test.go, flai/internal/forge/state.go, flai/internal/forge/state_test.go, flai/internal/serve/forge_test.go, flai/internal/serve/forgestatus.go, flai/internal/preview/orchestrator.go, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, design/conventions/strategic-agents.md, design/system/flaiover-dashboard.md, template/CHANGELOG.md, template/root/design/conventions/strategic-agents.md, design/issues/I-0162-the-components-dev-server-test-picks-a-free-port-and-closes-it-before-the-fake-vite-binds-it-so-a-concurrent-test-run-on-the-host-can-take-the-port-and-fail-the-integration-tier.md, design/issues/summary.md]
