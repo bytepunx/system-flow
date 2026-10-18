@@ -3,10 +3,10 @@ id: S-0448
 type: story
 nature: remediation
 title: "The Components page lists, starts, and stops through the dashboard: the components methods take their sub-project as sub_project, and no call's params can overwrite the channel's project key"
-status: review
+status: in-progress
 owner: alex
 created: 2026-10-18T02:25:46Z
-updated: 2026-10-18T02:51:51Z
+updated: 2026-10-18T18:56:40Z
 transitions:
   - to: ready
     at: 2026-10-18T02:26:04Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-18T02:51:51Z
     by: agent-S-0448
+  - to: in-progress
+    at: 2026-10-18T18:55:27Z
+    by: alex
 tags: [cli, dashboard]
 topics: [cli, dashboard]
 touches: [flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/components, design/system/component-library.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md, flai/internal/hostapi/params_test.go, design/system/dashboard-host-channel.md]
@@ -84,7 +87,6 @@ The first is refused, the second answers.
 - [x] The dashboard's `Repo` sends `sub_project` for `components.start` and `components.stop`, and the HTTP routes under `/api/components` keep their `project` body field, so the page and its URL are unchanged.
 - [x] The dashboard's agent puts the channel's `project` key after a call's params, so that no method's params can overwrite it, and a test fails if a call's params carry a `project` of their own.
 - [x] A Go test sends each of the four methods through the channel's `call` with the project key in its params, as the dashboard does, and fails on today's code: list and status answer every supported sub-project, start and stop with `sub_project` reach their handler. A test in flai fails if any channel method's params type has a field named `project`, so that no later method repeats this.
-- [ ] With the fixed flai and flaiover running on this host, the Components page lists flaiover's components, starts its dev server, frames a component, and stops the server, and the story's notes say so with the versions used.
 - [x] `design/system/component-library.md` and `design/system/flaiover-dashboard.md` name `sub_project` as the methods' parameter and say why `project` is the channel's alone, and `docs/users/flai-reference.md` is regenerated if it names the parameter.
 
 ## Tasks
@@ -99,3 +101,4 @@ The first is refused, the second answers.
 - Compatibility, for the release notes: a fixed flai under today's dashboard answers list and status, since it ignores `project`, but start and stop stay refused by the channel until the dashboard is upgraded too; a fixed dashboard under an older flai is refused as today. Both components are released together, and the host's flai is upgraded before the page is checked.
 - `flai components list --project` and `flai components serve --project` on the command line do not use the channel and keep their flag.
 - Criterion 5 is not verified here: it needs this story's flai and flaiover released and the host's flai serve and dashboard upgraded to them, which only the operator does, and an agent must not start a second flai serve. What was checked, on 2026-10-18 in the main checkout: the installed flai 1.57.0 refuses `flai hostapi components.status '{"project":"sf"}'` with `system-flow.yaml has no sub-project "sf"`. A flai built from story/S-0448 answers it with flaiover's dev server, answers `components.status` with `"sub_project":"flaiover"`, and answers `components.list` with the key, listing flai, flaiover with 54 components, and template. The page itself, starting the dev server, framing a component, and stopping it, is the operator's check once both are released.
+- 2026-10-18T18:55:27Z: moved to in-progress: There are unmet criteria we need to correct or change so we can validate the work done in this story.
