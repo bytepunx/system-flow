@@ -2,6 +2,7 @@
 
 ## 1.0.100 - 2026-10-18
 
+- S-0446 flai check finds `components.examples` outside the story at close-out (patch).
 - S-0446 A close-out records no issue for the note `components.examples` gives when a story's worktree has no sub-project install (patch, ADR-0171): in `work-management.md`, the close-out rule says that the check scoped to the story also leaves out the note `components.examples` gives when it could not check a component's examples for want of `node` or a sub-project's svelte, unless the story changes a file under the folder it names, since only installing the tool clears it and the main checkout's check still reports it. A sub-project whose svelte is not installed now gets one such note on its examples folder rather than a warning on each examples file. It needs a flai that has it, the release that carries S-0446.
 
 ## 1.0.99 - 2026-10-18
