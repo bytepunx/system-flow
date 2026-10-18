@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 800
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 129
-      output: 755
-      cache_read: 8598519
-      cache_write: 210425
-      cost: 3.8289
+      input: 133
+      output: 60972
+      cache_read: 8648646
+      cache_write: 339146
+      cost: 4.8601
 ---
 # T-1634 flai serve merges a story's pull request on the forge when asked, by the project's method, deletes the remote story branch, and answers whether it merged or why not
 

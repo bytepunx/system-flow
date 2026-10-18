@@ -24,16 +24,16 @@ touches: [flai/cmd/accept.go, flai/cmd/accept_remote.go, flai/cmd/accept_remote_
 after: [T-1634]
 usage:
   source: log
-  seconds: 1443
+  seconds: 1444
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 101
-      output: 498
-      cache_read: 6955528
-      cache_write: 566809
-      cost: 3.2696
+      input: 114
+      output: 52066
+      cache_read: 7385442
+      cache_write: 289611
+      cost: 4.1503
 ---
 # T-1635 flai accept under pull-request acceptance merges through the remote, directly or through flai serve, then fetches, rebases unpublished wip commits, and archives and commits as today
 

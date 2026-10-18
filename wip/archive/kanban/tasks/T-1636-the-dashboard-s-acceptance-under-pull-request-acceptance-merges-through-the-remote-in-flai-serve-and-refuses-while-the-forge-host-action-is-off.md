@@ -24,16 +24,16 @@ touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go]
 after: [T-1634]
 usage:
   source: log
-  seconds: 1441
+  seconds: 1458
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 35
-      output: 189
-      cache_read: 1180229
-      cache_write: 68313
-      cost: 0.5427
+      input: 33
+      output: 15041
+      cache_read: 2133461
+      cache_write: 83661
+      cost: 1.1989
 ---
 # T-1636 The dashboard's acceptance under pull-request acceptance merges through the remote in flai serve, and refuses while the forge host action is off
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 792
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 147
-      cache_read: 1054291
-      cache_write: 80395
-      cost: 0.4932
+      input: 17
+      output: 7854
+      cache_read: 1114050
+      cache_write: 43686
+      cost: 0.626
 ---
 # T-1633 An ADR records that under pull-request acceptance the merge goes through the remote, by flai serve when the token is not at hand, and that the acceptance commit reads as under local acceptance
 

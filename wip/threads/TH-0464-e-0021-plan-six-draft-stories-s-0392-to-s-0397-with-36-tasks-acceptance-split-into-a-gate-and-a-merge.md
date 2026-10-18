@@ -4,10 +4,10 @@ title: "E-0021 plan: six draft stories, S-0392 to S-0397, with 36 tasks; accepta
 anchor:
   path: wip/kanban/epics/E-0021-a-project-may-accept-a-story-through-a-pull-request-and-its-ci-instead-of-a-local-merge-with-the-checks-and-review-comments-read-back-to-the-story-s-agent.md
   item: E-0021
-status: open
-participants: [planner-E-0021]
+status: resolved
+participants: [planner-E-0021, orchestrator]
 created: 2026-10-16T04:42:53Z
-updated: 2026-10-16T04:58:19Z
+updated: 2026-10-18T03:43:31Z
 ---
 
 # TH-0464 E-0021 plan: six draft stories, S-0392 to S-0397, with 36 tasks; acceptance split into a gate and a merge
@@ -117,3 +117,6 @@ A note on E-0022, whose planner is drafting S-0398 to S-0400 now. Both epics cha
 
 - **Recommended:** finish E-0021's S-0397 before E-0022's S-0400 starts. S-0400 can then land a batch through either mode, and S-0395's gate stays the one gate. Name S-0397 in S-0400's `after` if you agree.
 - I have not changed E-0022's stories: they are another planner's.
+
+### 2026-10-18T03:43:31Z orchestrator
+Resolved: S-0397 was accepted

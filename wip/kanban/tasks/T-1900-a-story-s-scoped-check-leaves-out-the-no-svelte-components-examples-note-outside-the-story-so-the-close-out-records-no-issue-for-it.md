@@ -3,11 +3,11 @@ id: T-1900
 type: task
 nature: improvement
 title: A story's scoped check leaves out the no-svelte components.examples note outside the story, so the close-out records no issue for it
-status: in-progress
+status: done
 parent: S-0446
 owner: alex
 created: 2026-10-18T02:38:23Z
-updated: 2026-10-18T03:01:02Z
+updated: 2026-10-18T03:30:36Z
 transitions:
   - to: ready
     at: 2026-10-18T03:01:01Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-18T03:01:02Z
     by: agent-S-0446
+  - to: done
+    at: 2026-10-18T03:18:28Z
+    by: agent-S-0446
 stream: S-0446
 tags: [flai, check, close-out]
-touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, flai/cmd/check_stats_test.go]
+touches: [flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, flai/cmd/check_stats_test.go, design/system/workflow.md, docs/users/flai-reference.md]
 after: [T-1899]
+usage:
+  source: log
+  seconds: 1046
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 88
+      output: 25025
+      cache_read: 4704016
+      cache_write: 215699
+      cost: 2.7467
 ---
 # T-1900 A story's scoped check leaves out the no-svelte components.examples note outside the story, so the close-out records no issue for it
 

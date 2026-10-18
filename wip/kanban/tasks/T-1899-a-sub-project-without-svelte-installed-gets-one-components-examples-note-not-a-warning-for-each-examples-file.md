@@ -23,16 +23,16 @@ tags: [flai, check, components]
 touches: [flai/internal/check/check.go, flai/internal/check/components_test.go, design/adrs, design/adrs/README.md, design/system/component-library.md, docs/users/flai.md]
 usage:
   source: log
-  seconds: 191
+  seconds: 197
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 38
-      output: 236
-      cache_read: 1469539
-      cache_write: 67600
-      cost: 0.6682
+      input: 28
+      output: 7932
+      cache_read: 1490990
+      cache_write: 68368
+      cost: 0.8706
 ---
 # T-1899 A sub-project without svelte installed gets one components.examples note, not a warning for each examples file
 

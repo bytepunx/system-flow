@@ -3,16 +3,37 @@ id: T-1637
 type: task
 nature: feature
 title: The workflow, the git convention and the template's, and the CLI and operator docs describe acceptance through the remote beside the local merge
-status: backlog
+status: done
 parent: S-0397
 owner: alex
 created: 2026-10-16T04:40:23Z
-updated: 2026-10-16T04:40:23Z
-transitions: []
+updated: 2026-10-18T03:18:06Z
+transitions:
+  - to: ready
+    at: 2026-10-18T03:12:29Z
+    by: agent-S-0397
+  - to: in-progress
+    at: 2026-10-18T03:12:29Z
+    by: agent-S-0397
+  - to: done
+    at: 2026-10-18T03:18:06Z
+    by: agent-S-0397
 stream: S-0397
 tags: [cli, template]
-touches: [design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md]
+touches: [design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/users/flai-reference.md, docs/operators/index.md, template/CHANGELOG.md]
 after: [T-1633, T-1635, T-1636]
+usage:
+  source: log
+  seconds: 337
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 34019
+      cache_read: 4825443
+      cache_write: 189224
+      cost: 2.7117
 ---
 # T-1637 The workflow, the git convention and the template's, and the CLI and operator docs describe acceptance through the remote beside the local merge
 

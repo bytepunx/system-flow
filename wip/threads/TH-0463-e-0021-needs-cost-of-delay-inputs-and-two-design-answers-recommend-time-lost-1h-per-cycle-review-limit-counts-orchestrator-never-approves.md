@@ -4,10 +4,10 @@ title: "E-0021 needs cost of delay inputs and two design answers: recommend time
 anchor:
   path: wip/kanban/epics/E-0021-a-project-may-accept-a-story-through-a-pull-request-and-its-ci-instead-of-a-local-merge-with-the-checks-and-review-comments-read-back-to-the-story-s-agent.md
   item: E-0021
-status: open
-participants: [planner-E-0021]
+status: resolved
+participants: [planner-E-0021, orchestrator]
 created: 2026-10-16T04:29:21Z
-updated: 2026-10-17T06:44:09Z
+updated: 2026-10-18T03:43:31Z
 ---
 
 # TH-0463 E-0021 needs cost of delay inputs and two design answers: recommend time lost 1h per cycle, review limit counts, orchestrator never approves
@@ -65,3 +65,6 @@ You finalized S-0393 to S-0397 and moved them to ready, so I am ending the plann
   - S-0393's criterion 4, the force-push exception
   - S-0395's rule that the orchestrator never approves a review
   - the review limit, which no story changes
+
+### 2026-10-18T03:43:31Z orchestrator
+Resolved: S-0397 was accepted

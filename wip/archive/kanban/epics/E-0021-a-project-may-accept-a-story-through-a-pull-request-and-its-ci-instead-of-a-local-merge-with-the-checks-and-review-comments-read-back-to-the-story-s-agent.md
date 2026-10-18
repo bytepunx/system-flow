@@ -3,10 +3,10 @@ id: E-0021
 type: epic
 nature: feature
 title: A project may accept a story through a pull request and its CI instead of a local merge, with the checks and review comments read back to the story's agent
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-16T04:27:54Z
-updated: 2026-10-17T06:41:06Z
+updated: 2026-10-18T03:43:31Z
 transitions:
   - to: ready
     at: 2026-10-16T05:25:43Z
@@ -14,14 +14,19 @@ transitions:
   - to: in-progress
     at: 2026-10-17T06:41:06Z
     by: agent-S-0392
+  - to: review
+    at: 2026-10-18T03:32:07Z
+    by: agent-S-0397
+  - to: done
+    at: 2026-10-18T03:43:31Z
+    by: orchestrator
 tags: [cli, dashboard, template]
 topics: [cli, orchestration, release, dashboard]
 touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/workitem, flai/cmd, flaiover/src, design/system/workflow.md, design/system/pushing-from-the-board.md, design/system/metrics.md, design/conventions/git.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 21464
-  estimated: true
-  priced_by: estimate
+  seconds: 23017
+  priced_by: harness
   turns:
     - day: 2026-10-17
       ceremony: 13
@@ -29,22 +34,22 @@ usage:
       hand_edits: 11
       work: 313
     - day: 2026-10-18
-      ceremony: 2
-      hand_edits: 1
-      work: 39
+      ceremony: 4
+      hand_edits: 2
+      work: 63
   models:
     - model: claude-haiku-5-5
-      input: 224
-      output: 48111
-      cache_read: 14854233
-      cache_write: 409258
-      cost: 1.0557
+      input: 226
+      output: 92190
+      cache_read: 15049295
+      cache_write: 410968
+      cost: 1.0454
     - model: claude-opus-5-5
-      input: 2746
-      output: 971455
-      cache_read: 154536937
-      cache_write: 5334227
-      cost: 80.3614
+      input: 2894
+      output: 1200835
+      cache_read: 165722165
+      cache_write: 5518532
+      cost: 88.9213
     - model: claude-sonnet-5-5
       input: 38
       output: 14047
@@ -101,3 +106,5 @@ To be drafted by the planner. Order: the setting and the forge contract first, w
 - Open to the designer: whether a story in review under pull-request acceptance still holds the review column's limit while it waits on CI, or whether a wait on the forge counts apart; whether the orchestrator may approve a pull request's review itself when `accept_reviews` is on, or only merge one a person approved.
 - Secrets: the forge token lives in the variable the host names, as a provider's key does (ADR-0129), and is never written to a log, an item, or the start record.
 - 2026-10-17T06:41:06Z: moved to in-progress: follows S-0392, which moved to in-progress
+- 2026-10-18T03:32:07Z: moved to review: follows S-0397, which moved to review
+- 2026-10-18T03:43:31Z: moved to done: follows S-0397, which moved to done

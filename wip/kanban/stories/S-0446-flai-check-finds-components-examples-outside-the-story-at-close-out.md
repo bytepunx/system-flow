@@ -3,10 +3,10 @@ id: S-0446
 type: story
 nature: improvement
 title: "flai check finds `components.examples` outside the story at close-out"
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-17T16:03:19Z
-updated: 2026-10-18T02:54:45Z
+updated: 2026-10-18T03:41:55Z
 transitions:
   - to: ready
     at: 2026-10-18T02:53:21Z
@@ -14,9 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-18T02:54:45Z
     by: agent-S-0446
+  - to: review
+    at: 2026-10-18T03:41:55Z
+    by: agent-S-0446
 tags: [flai, check, components]
 topics: [components, close-out]
-touches: [flai/internal/check/check.go, flai/internal/check/components_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/system/component-library.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, design/adrs, design/adrs/README.md, design/issues/I-0161-flai-check-finds-components-examples-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [flai/internal/check/check.go, flai/internal/check/components_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/system/component-library.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, design/adrs, design/adrs/README.md, design/issues/I-0161-flai-check-finds-components-examples-outside-the-story-at-close-out.md, design/issues/summary.md, design/system/workflow.md, flai/cmd/check_stats_test.go, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, docs/users/flai-reference.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,20 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 355
-  estimated: true
-  priced_by: estimate
+  seconds: 2858
+  priced_by: harness
   turns:
     - day: 2026-10-18
-      hand_edits: 1
-      work: 27
+      hand_edits: 2
+      work: 52
   models:
     - model: claude-opus-5-5
-      input: 82
-      output: 519
-      cache_read: 3461656
-      cache_write: 193932
-      cost: 1.589
+      input: 224
+      output: 63541
+      cache_read: 11944155
+      cache_write: 547689
+      cost: 6.9742
   strategic:
     - kind: orchestrator
       seconds: 837
@@ -74,8 +76,8 @@ finalized:
 This story remediates [I-0161](../../../design/issues/I-0161-flai-check-finds-components-examples-outside-the-story-at-close-out.md), "flai check finds `components.examples` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0161 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0161 is closed with `flai issue close I-0161 --reason` saying what fixed it
+- [x] The cause I-0161 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0161 is closed with `flai issue close I-0161 --reason` saying what fixed it
 
 ## Tasks
 - T-1899 A sub-project without svelte installed gets one components.examples note, not a warning for each examples file
