@@ -6,7 +6,8 @@ wip_limits:
   ready: 10
   in-progress: 5
   review: 5
-order: []
+order:
+  - S-0448
 ---
 
 # Board

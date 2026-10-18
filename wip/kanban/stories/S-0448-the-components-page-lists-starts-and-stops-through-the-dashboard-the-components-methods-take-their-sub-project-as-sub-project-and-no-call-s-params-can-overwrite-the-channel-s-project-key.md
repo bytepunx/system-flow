@@ -2,12 +2,15 @@
 id: S-0448
 type: story
 nature: remediation
-title: "The Components page lists, starts, and stops through the dashboard again: the components methods take their sub-project as sub_project, and no call's params can overwrite the channel's project key"
-status: backlog
+title: "The Components page lists, starts, and stops through the dashboard: the components methods take their sub-project as sub_project, and no call's params can overwrite the channel's project key"
+status: ready
 owner: alex
 created: 2026-10-18T02:25:46Z
-updated: 2026-10-18T02:25:46Z
-transitions: []
+updated: 2026-10-18T02:26:04Z
+transitions:
+  - to: ready
+    at: 2026-10-18T02:26:04Z
+    by: alex
 tags: [cli, dashboard]
 topics: [cli, dashboard]
 touches: [flai/internal/hostapi/components.go, flai/internal/hostapi/components_test.go, flai/internal/channel/channel.go, flai/internal/channel/channel_test.go, flaiover/src/lib/server/agent.ts, flaiover/src/lib/server/agent.test.ts, flaiover/src/lib/server/repo.ts, flaiover/src/routes/api/components, design/system/component-library.md, design/system/flaiover-dashboard.md, docs/users/flai-reference.md]
@@ -22,7 +25,7 @@ cost_of_delay:
     by: alex
     at: 2026-10-18T02:25:46Z
 ---
-# S-0448 The Components page lists, starts, and stops through the dashboard again: the components methods take their sub-project as sub_project, and no call's params can overwrite the channel's project key
+# S-0448 The Components page lists, starts, and stops through the dashboard: the components methods take their sub-project as sub_project, and no call's params can overwrite the channel's project key
 
 ## Goal
 
