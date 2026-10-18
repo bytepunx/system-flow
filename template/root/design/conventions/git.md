@@ -1,6 +1,6 @@
 ---
 title: Git
-updated: 2026-10-17
+updated: 2026-10-18
 audience: agent
 order: 70
 status: active
@@ -33,7 +33,7 @@ How history is made in this repository.
 - Verify the ignore rules do not hide files that must be committed. A fresh clone must build and pass `flai check --strict`.
 - Never create a remote repository. Creating one, and choosing its organization and visibility, is the operator's.
 - Under pull-request acceptance, flai opens and updates the story's pull request from `.github/pull_request_template.md`, filling the places it marks with the story's ID, its acceptance criteria, the definition of done, and its last `flai verify` result. Never open one yourself.
-- Accepting an item merges it, moves it to done, archives it, and commits: nothing is tagged and nothing is pushed.
+- Accepting an item merges it, moves it to done, archives it, and commits. Under local acceptance flai merges the story branch here. Under pull-request acceptance flai merges the story's pull request on the forge by the project's merge method, through `flai serve` when the token is not at hand, deletes the story branch on `origin`, and brings main up to `origin`'s. Either way nothing is tagged and nothing else is pushed: the acceptance commit reaches the remote only when published.
 - Publishing is a deliberate step of its own, over everything accumulated since the last one, not tied to any single item: `git fetch`, then `flai release --pending` computes, tags, and pushes the branch and the tags, run by hand or from the board's Publish action, when the operator chooses to.
 - A component's bump, once published, is the highest delivery type among everything accepted for it since its last release, not one release per item:
   - an epic contributes no bump of its own: its stories carry theirs

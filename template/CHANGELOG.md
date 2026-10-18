@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.99 - 2026-10-18
+
+- S-0397 Under pull-request acceptance, flai accept merges the story's pull request through the remote by the project's merge method, then fetches main and moves to done, archives, and commits as today (patch, ADR-0170): `git.md`'s rule on accepting an item now covers both modes. Under local acceptance flai merges the story branch on the host. Under pull-request acceptance flai merges the story's pull request on the forge by `acceptance.merge_method`, through `flai serve` when the token is not at hand, deletes the story branch on `origin`, and brings main up to `origin`'s. Either way nothing is tagged and nothing else is pushed: the acceptance commit reaches the remote only when published. The merge needs a flai that has it, the release that carries S-0397; an older flai merges on the host under either mode.
+
 ## 1.0.98 - 2026-10-17
 
 - S-0395 Under pull-request acceptance, flai accept and the orchestrator's acceptance refuse a story while a required check has not passed or a required review is outstanding, naming each (patch).

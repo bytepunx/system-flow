@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-17
+updated: 2026-10-18
 status: active
 ---
 
@@ -2146,7 +2146,7 @@ To act on one, make its story as you would for any issue: check it on a story's 
 
 ```bash
 flai release S-0031 --dry-run          # what a release would look like now
-flai accept S-0031 --by alex           # move to done, archive, commit — no release, no tag, no push
+flai accept S-0031 --by alex           # merge, move to done, archive, commit — no release, no tag, no push
 flai accept E-0002 --by alex           # an epic whose stories are all done: the same
 git fetch                              # flai never fetches by itself
 flai release --pending                 # publish: tag whatever has accumulated and push it
@@ -2182,7 +2182,7 @@ Only you keep a removal: `--keep-removal` with `--by orchestrator` is refused. T
 
 A story whose branch changes a protected path ([Writes to protected paths](#writes-to-protected-paths)) is accepted by you alone, since the change reaches every agent once it is merged (S-0286, [ADR-0106](../../design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md)). You are its operator as the story's owner or the project's `owner` in `system-flow.yaml`; when neither is set, anyone but the orchestrator is. `flai accept --dry-run` names the operator and lists the files, such as `only the operator (alex) accepts S-0031: its branch changes paths Claude Code protects: .claude/settings.json, .mcp.json`, and `--json` has them as `operator_only` and `protected`. An acceptance by anyone else, an agent accepting on its own name among them, is refused before anything is merged, with the files named. Read the files in the diff before you accept. The board accepts as the project's `owner`, or as `designer` when none is set; when the story names an owner, set the project's `owner` to your name to accept it from the board.
 
-Under `acceptance.mode: pull-request`, acceptance also waits for the pull request's required checks, its standing requested changes, and its required approvals ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)).
+Under `acceptance.mode: pull-request`, acceptance also waits for the pull request's required checks, its standing requested changes, and its required approvals ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)). It then merges the pull request on the forge in place of the rebase and fast-forward here ([The merge on the forge](#the-merge-on-the-forge)).
 
 Another git process can hold the main checkout's index lock when acceptance commits: `flai serve`'s replan, an agent's commit, or another acceptance. Acceptance then waits and tries again, for up to about nine seconds, and never removes the lock file (S-0307). When the lock is still held, the acceptance fails and exits non-zero, in the dashboard too. The error shows git's own message and says what is left:
 
@@ -2192,7 +2192,7 @@ story/S-0031 is merged and S-0031 is done and archived, and its changes are stag
 
 Once the other git process has finished, run `flai accept S-0031` again. It merges, moves, and archives nothing a second time: it resolves the threads still open on what it archived and commits what the main checkout holds as `chore: [S-0031] accept and archive`, with the epic when one followed, and tells the open stories what the story changed. With `--dry-run` it says `would commit the acceptance of S-0031, done and archived but not committed: chore: [S-0031] accept and archive` and changes nothing. If no git process is running and the lock stays, git's message names the `index.lock` file to remove. The orchestrator leaves such an acceptance to you.
 
-Accepted work stays local until it is published. Publishing is the one way it reaches the remote ([ADR-0067](../../design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)): `git fetch`, then `flai release --pending`, or **Publish** on the dashboard's board, which runs the same on the host. Several acceptances release together: it computes, applies, tags, and pushes the branch and the tags, never forcing, sending the tags on their own for acceptances already pushed. Agents publish only when you ask them to. `flai board` lists what is accepted and not yet published (`accepted, not yet published: S-0031 (publishing is the operator's: git fetch, then flai release --pending)`), and `flai board --json` and the agents' `inbox` carry the IDs as `unpublished`.
+Accepted work stays local until it is published. Under `acceptance.mode: pull-request` the story's code reaches the remote at the forge's merge, and the acceptance commit still waits for publishing. Publishing is the one way it reaches the remote ([ADR-0067](../../design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)): `git fetch`, then `flai release --pending`, or **Publish** on the dashboard's board, which runs the same on the host. Several acceptances release together: it computes, applies, tags, and pushes the branch and the tags, never forcing, sending the tags on their own for acceptances already pushed. Agents publish only when you ask them to. `flai board` lists what is accepted and not yet published (`accepted, not yet published: S-0031 (publishing is the operator's: git fetch, then flai release --pending)`), and `flai board --json` and the agents' `inbox` carry the IDs as `unpublished`.
 
 What is pending is worked out from this clone's release tags and branch, and flai never fetches. So before it plans, `flai release --pending` asks the remote for its tags and for the head of the branch this clone tracks. When the remote has a newer `<name>/vX.Y.Z` than this clone, as after publishing from another clone and pulling without tags, or has commits on that branch this clone lacks, it plans, commits, and tags nothing, says what is missing, and refuses to publish (exit 3), naming what to run. Run it, then publish again:
 
@@ -2243,7 +2243,7 @@ flai forge push S-0042                                 # push it and open or upd
 
 A project chooses in `system-flow.yaml` how a story in review is accepted ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)): `acceptance.mode` is `local`, the default, which merges on this machine as above, or `pull-request`, which accepts through a pull request on the project's forge. `acceptance.forge` is the forge, `github`, the default and only one. `acceptance.merge_method` is how the forge merges the pull request: `merge`, the default, `squash`, or `rebase`.
 
-Under `pull-request`, a story's move to review has `flai serve` push its branch and open its pull request, then read its required checks and reviews back and send the story back to its agent when one fails, as below. Every acceptance waits for those checks and reviews ([below](#the-acceptance-waits-for-the-pull-request)). Nothing merges one yet: `flai accept` still merges on this machine whatever the mode. A later release merges the pull request by `merge_method`.
+Under `pull-request`, a story's move to review has `flai serve` push its branch and open its pull request, then read its required checks and reviews back and send the story back to its agent when one fails, as below. Every acceptance waits for those checks and reviews ([below](#the-acceptance-waits-for-the-pull-request)). Once they pass, `flai accept` merges the pull request on the forge by `merge_method`, not on this machine ([below](#the-merge-on-the-forge)).
 
 A value the manifest does not take, such as `pull_request`, stops every command that reads the manifest, naming the key and the values it takes, rather than falling back to `local`. Fix it or remove it by hand. `flai manifest set` refuses such a value before writing it.
 
@@ -2315,7 +2315,40 @@ Under `acceptance.mode: pull-request`, a story is not accepted until its pull re
 | `changes_requested` | A reviewer's decision requests changes; one per reviewer, with the review |
 | `approvals_missing` | Fewer reviewers approve than the base branch requires |
 
-`--json` lists them in `forge_blockers` as `{code, message, name, url}`, `name` being the check or the reviewer, and each is in `blockers` too. It also gives `pull_request`, the pull request's URL. flai reads only the state `flai serve` keeps, so no token is needed to accept, and the shell, the dashboard, and the orchestrator judge the same state. Only CI and your reviewers clear these blockers: the orchestrator never approves a review. Under `local`, nothing changes.
+`--json` lists them in `forge_blockers` as `{code, message, name, url}`, `name` being the check or the reviewer, and each is in `blockers` too. It also gives `pull_request`, the pull request's URL. flai reads only the state `flai serve` keeps, so judging these needs no token, and the shell, the dashboard, and the orchestrator judge the same state. Only CI and your reviewers clear these blockers: the orchestrator never approves a review. Under `local`, nothing changes.
+
+#### The merge on the forge
+
+```bash
+flai accept S-0042 --dry-run    # would merge pull request #12 through the remote by squash, or finds it merged already
+flai accept S-0042 --by alex    # merge it on the forge, bring main up to origin's, then done, archive, and commit
+```
+
+Under `acceptance.mode: pull-request`, once the pull request passes, `flai accept` merges it on the forge, not on this machine ([ADR-0170](../../design/adrs/0170-under-pull-request-acceptance-flai-accept-merges-the-story-s-pull-request-on.md)). In order, it:
+
+1. Refuses when your main branch has commits not on `origin`'s main that change paths outside `wip/`, naming each. No pull request carried them. Publish them first with `flai release --pending`, or move them onto a story's branch.
+2. Merges the pull request by `acceptance.merge_method`, at the head its checks passed at, and deletes `story/S-0042` on `origin`.
+3. Fetches `origin`'s main and brings your main branch up to it. Your unpublished `wip/` commits, such as moves of work items, are rebased onto it, so their hashes change. Uncommitted edits in the main checkout are kept.
+4. Removes the story's worktree and its local branch.
+5. Moves the story to done, archives it, and commits, as under `local`, with the same subject.
+
+When the token's variable is set in your shell, `flai accept` merges with it. When it is not, as for every agent and the orchestrator, `flai accept` asks `flai serve` on the host to merge and waits: 30 seconds for `flai serve` to take the request, and 5 minutes for its answer. So an agent can accept only while `flai serve` runs with the token. The dashboard's acceptance runs in `flai serve` and merges there.
+
+Each of these refuses the acceptance before anything changes here, and the story stays in review:
+
+- The `forge` host action is off. Every acceptance under `pull-request` is refused, naming `flai serve enable forge`.
+- `flai serve` did not take the request within 30 seconds. Start it, with `forge` on, and accept again.
+- The forge refuses the merge, for a conflict, a branch out of date, or a rule. The refusal gives the forge's reason.
+- The pull request was closed without merging, or its head moved since its checks were read.
+- The dashboard accepts, and the token's variable is unset where `flai serve` runs. Set it there, restart `flai serve`, and accept again.
+
+A step that fails after the forge has merged says so. Run `flai accept S-0042` again: it finds the merge and makes no second one.
+
+A pull request someone merged on the forge, such as a reviewer, is accepted with no second merge: `flai accept` fetches and goes on from step 3. `flai serve` no longer pushes the branch of a merged pull request, and opens no other pull request for it.
+
+`--dry-run` prints `would merge pull request #12 through the remote by squash, then fetch main and bring the main branch up to origin's`, with `through flai serve` after the method when it would hand the merge over. For a merged pull request it prints `pull request #12 is merged on the forge already: would accept S-0042 with no second merge`. `--json` has `remote`: `{pull_request, head, method, already_merged, through_serve}`, and after the real run `outcome`, `sha`, `branch_deleted`, and `branch_reason`.
+
+The story's code reaches `origin`'s main at the merge. The acceptance commit and the archive reach it only when you publish. A main branch that refuses every direct push refuses that publish too ([operator guide](../operators/index.md#local-or-pull-request-acceptance-s-0397)).
 
 #### flai forge push and flai forge status
 

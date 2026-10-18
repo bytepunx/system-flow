@@ -1,6 +1,6 @@
 ---
 title: flai command reference
-updated: 2026-10-17
+updated: 2026-10-18
 status: active
 ---
 
@@ -172,6 +172,8 @@ The operator's acceptance step as one command, per design/conventions/work-manag
 4. tell every story in progress or in review whose touches cover a path
    the merge changed which paths those are, for its agent's MCP inbox
 ```
+
+Under acceptance.mode: pull-request (ADR-0170), step 0 merges no branch on this machine. Once the pull request's checks and reviews pass (ADR-0169), it refuses, naming them, while the main branch has commits not on origin's main that change paths outside the wip folder; merges the story's pull request on the forge by acceptance.merge\_method, at the head the checks passed at, and deletes the story's branch on origin; fetches main and brings the main branch up to origin's, rebasing its unpublished wip commits onto it in a temporary worktree and moving it with git reset --keep, which keeps uncommitted edits; and removes the story's worktree and branch. The merge is made here when the forge's token can be read here, while the forge host action is on; otherwise flai serve on the host makes it, and flai accept waits for its answer (the dashboard's acceptance never hands it over). A pull request merged on the forge already is accepted with no second merge, and a merge the forge refuses stops the acceptance, with its reason, before anything changes here. Steps 1 to 4 are as under local acceptance.
 
 Acceptance computes no release, creates no tag, and pushes nothing (S-0087): that is a deliberate step of its own, run when the operator chooses to publish what has accumulated on main, not tied to any one item. See flai release --pending.
 

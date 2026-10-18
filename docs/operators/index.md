@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-17
+updated: 2026-10-18
 status: active
 ---
 
@@ -71,7 +71,7 @@ The dashboard has one login token, shared by every project it serves, and so one
 
 ### Accepting releases nothing; publishing reaches the remote (S-0087, S-0195)
 
-A story accepted from the board (or `flai accept`, or `flai move <story> done`) is merged, archived, and committed in your clone by `flai serve`, and that is all: nothing is tagged or pushed there. Accepted work stays local until you publish it. Publishing is the one way it reaches the remote ([ADR-0067](../../design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)). A release is cut when you publish, and covers everything merged since each component's last tag, not one release per story: three small stories against the same component become one release, not three. Agents publish only when you ask them to; turning on the orchestrator's `publish` permission is asking it to publish by the release policy (S-0222). `flai board` and the agents' MCP `inbox` list what is accepted and not yet published, as information.
+A story accepted from the board (or `flai accept`, or `flai move <story> done`) is merged, archived, and committed in your clone by `flai serve`, and that is all: nothing is tagged or pushed there. Under pull-request acceptance the merge is on the forge instead ([below](#local-or-pull-request-acceptance-s-0397)). Accepted work stays local until you publish it. Publishing is the one way it reaches the remote ([ADR-0067](../../design/adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)). A release is cut when you publish, and covers everything merged since each component's last tag, not one release per story: three small stories against the same component become one release, not three. Agents publish only when you ask them to; turning on the orchestrator's `publish` permission is asking it to publish by the release policy (S-0222). `flai board` and the agents' MCP `inbox` list what is accepted and not yet published, as information.
 
 Research and experiment stories are accepted the same way and never count towards a release, whatever they touched: their code reaches the main branch unreleased, and the next story that delivers to the component releases it. An experiment story is accepted only once its results document, `design/experiments/<S-nnnn>-<slug>.md`, is committed on its branch; until then acceptance, from the board or the host, refuses it and names the document ([ADR-0066](../../design/adrs/0066-an-experiment-story-is-accepted-like-any-other-and-records-its-results-in-a.md)). A flai older than this rule refuses every experiment story, so upgrade the host's flai (`flai self-upgrade`) before accepting one.
 
@@ -125,7 +125,7 @@ Beside it, `requests.json` (mode 0600) records each write that can end the conne
 
 ### A forge token for pull-request acceptance (S-0392)
 
-A project whose `system-flow.yaml` sets `acceptance.mode: pull-request` is to accept stories through a pull request on its forge, GitHub today ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)). With the `forge` host action on, `flai serve` opens a story's pull request when the story moves to review ([below](#the-forge-host-action-pull-requests-on-the-move-to-review-s-0393)). Nothing merges one yet; later releases do. flai reaches the forge with a token that is your host's, never the project's:
+A project whose `system-flow.yaml` sets `acceptance.mode: pull-request` is to accept stories through a pull request on its forge, GitHub today ([ADR-0165](../../design/adrs/0165-a-project-chooses-local-or-pull-request-acceptance-in-its-manifest-flai-reaches.md)). With the `forge` host action on, `flai serve` opens a story's pull request when the story moves to review ([below](#the-forge-host-action-pull-requests-on-the-move-to-review-s-0393)). Accepting the story merges it on the forge ([below](#local-or-pull-request-acceptance-s-0397)). flai reaches the forge with a token that is your host's, never the project's:
 
 ```bash
 export GITHUB_TOKEN=github_pat_...                     # where flai host or flai serve starts
@@ -165,9 +165,47 @@ With it off, or with the mode `local`, nothing is pushed and nothing is opened. 
 
 **When it fails.** A push or a request that fails opens one thread on the story, by `flai serve`, naming the reason and what clears it. Typical reasons are an unset token, a token the forge refuses, a push origin refuses, someone else's commits on the branch, or the forge being down. A changed reason adds an entry to the same thread. `flai serve` tries again at its next look and resolves the thread once the push and the request succeed, or once the story leaves review. `flai forge status S-nnnn` says why nothing was pushed: the mode, the host action, the token, or the failure.
 
-**Understand what enabling it means.** The story branches in review reach the remote with your credentials, and anyone who can move a story to review, an agent included, decides what is pushed there. Accepted work still reaches the main branch on the remote only when you publish.
+**Understand what enabling it means.** The story branches in review reach the remote with your credentials, and anyone who can move a story to review, an agent included, decides what is pushed there. Accepting a story then merges its code into the remote's main branch; the acceptance commit and the archive reach it only when you publish.
 
 `flai serve checks` names commands the host runs on a story in review ([the checks host action](#the-checks-host-action-s-0082)). They are not the forge's checks.
+
+### Local or pull-request acceptance (S-0397)
+
+A project chooses how a story is accepted in `system-flow.yaml`: `acceptance.mode` is `local`, the default, or `pull-request`, and `acceptance.merge_method` is `merge`, the default, `squash`, or `rebase`. Under `pull-request`, `flai accept` merges the story's pull request on the forge by that method ([ADR-0170](../../design/adrs/0170-under-pull-request-acceptance-flai-accept-merges-the-story-s-pull-request-on.md)).
+
+| | `local` | `pull-request` |
+|---|---|---|
+| The move to review | Nothing reaches the remote | `flai serve` pushes the branch and opens its pull request |
+| What acceptance waits for | The workflow's rules | Those, and the pull request's required checks and reviews |
+| The merge | In your clone: rebase, then fast-forward | On the forge, by `merge_method`; `story/S-nnnn` is deleted on `origin` and your main is brought up to `origin`'s |
+| What it needs | Nothing on the host | The token where `flai serve` runs, and the `forge` host action on |
+| The story's code on `origin`'s main | When you publish | At the acceptance |
+| The acceptance commit and the archive on `origin` | When you publish | When you publish |
+
+**The token.** It is read from `GITHUB_TOKEN`, or from the variable `flai serve forge github --token-env <NAME>` names ([above](#a-forge-token-for-pull-request-acceptance-s-0392)). The merge needs it as the pull request does. In a shell where it is set, `flai accept` merges with it. Agents never hold it, so an agent's or the orchestrator's `flai accept` asks `flai serve` to merge and waits up to 5 minutes for the answer. Their acceptances go through only while `flai serve` runs with the token. The dashboard's acceptance runs in `flai serve` and merges there.
+
+**The host action.** The merge is behind the `forge` host action (`flai serve enable forge`). While it is off, every acceptance under `pull-request` is refused, from the shell, the dashboard, and the orchestrator, and the refusal names the action.
+
+**Unpublished code blocks the merge.** `flai accept` refuses while your main branch has commits not on `origin`'s main that change paths outside `wip/`, and names them. No pull request carried them. Publish them, or move them onto a story's branch.
+
+**A protected main branch.** A main branch that takes changes only through pull requests is what `pull-request` is for: the story's code reaches it through the forge's merge. The acceptance commit and the archive are direct commits on your main, and reach `origin` only when you publish with `flai release --pending`, which pushes the branch. A main branch that refuses every direct push refuses that publish too. That is open: TH-0464 raised it, and a later epic is to settle it. Until it is settled, the account you publish with needs leave to push to main, such as a bypass in the branch's rules.
+
+**Switching from `local` to `pull-request`:**
+
+1. Export the token where `flai host` starts, and start the host again. `flai serve forge` says whether the variable is set, and `flai forge check` in the project whether the token can read and push.
+2. Set the mode and the method, and commit `system-flow.yaml`: `flai manifest set acceptance.mode=pull-request acceptance.merge_method=squash`.
+3. Bring `origin`'s main up to yours outside `wip/`: `git fetch`, `flai release --pending` for what is pending, then `git push origin main` for the rest. `git log origin/main..main -- . ':(exclude)wip'` then prints nothing.
+4. Turn on the host action: `flai serve enable forge`. Within a minute `flai serve` pushes each story in review and opens its pull request.
+5. Check a story in review: `flai forge status S-nnnn`, then `flai accept S-nnnn --dry-run`, which says `would merge pull request #<n> through the remote by squash`.
+6. Protect main on the forge if you want to, knowing what that means for publishing (above).
+
+**Switching back to `local`:**
+
+1. Lift any rule that refuses direct pushes to main: under `local`, the story's code reaches `origin` only when you publish.
+2. Set the mode and commit `system-flow.yaml`: `flai manifest set acceptance.mode=local`.
+3. Turn off the host action if nothing else needs it: `flai serve disable forge`.
+4. flai no longer reads or merges the open pull requests. Accept their stories here, then close the pull requests on the forge.
+5. Check a story in review: `flai accept S-nnnn --dry-run` says nothing of the remote.
 
 ### Starting an agent when a story becomes ready
 
