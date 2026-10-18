@@ -264,7 +264,7 @@ The page saves through `PUT /api/components/examples`. The route finds the file 
 - a file that does not parse as JSON or does not fit the format: a key it does not name, an empty or repeated `name`, `props` that is not an object, a `theme` that is not `light` or `dark`, a `width` that is not a positive integer;
 - an example that names a prop its component lacks, misses a required prop that is not a function, or gives a value that does not fit its prop's kind;
 - a file whose component does not exist: no supported sub-project of that name, or no component at that path in its catalogue;
-- a file whose component's props flai could not read, once, with the reader's error.
+- a file whose component's props flai could not read for any other reason, once, with the reader's error.
 
 Each finding names the example and its line: the prop's key for a finding about one prop, the example's opening brace for one about the example, the syntax error for JSON that does not parse, and line 1 for a file without its component.
 
@@ -281,7 +281,7 @@ Each finding names the example and its line: the prop's key for a finding about 
 
 `null` fits every kind but `function`: flai leaves `null` out of a type when it reads its kind ([Props](#props)), so the kind cannot say whether `null` is allowed.
 
-The check reads only files ending in `.examples.json`, and runs the props reader only for the components that have one. A project without such a file gets no finding. A project that has one but no supported sub-project, or a host without `node`, is passed over with one note: a warning `flai check --strict` passes over, saying what was not checked and why. Without `node`, the format and whether each file's component exists are still checked; only the props are not.
+The check reads only files ending in `.examples.json`, and runs the props reader only for the components that have one. A project without such a file gets no finding. A project that has one but no supported sub-project, or a host without `node`, is passed over with one note: a warning `flai check --strict` passes over, saying what was not checked and why. Without `node`, the format and whether each file's component exists are still checked; only the props are not. A sub-project whose svelte is not installed, such as one in a story's worktree without its `node_modules`, is passed over with one note too, on its examples folder `design/components/<sub-project>`, saying to install it ([ADR-0171](../adrs/0171-a-sub-project-whose-svelte-is-not-installed-gets-one-components-examples-note.md)). Its files' format and components are still checked.
 
 ## flaiover's own components (S-0444)
 

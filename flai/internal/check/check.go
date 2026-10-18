@@ -55,6 +55,10 @@ type Finding struct {
 	Stories []string `json:"stories,omitempty"`
 	// advisory marks a warning --strict passes over (advise).
 	advisory bool
+	// unchecked marks a components.examples note that examples were left
+	// unchecked for want of a tool on the host or in the worktree, node or a
+	// sub-project's svelte (ADR-0171).
+	unchecked bool
 }
 
 // Result is a whole run.
@@ -163,6 +167,14 @@ func (c *checker) advise(rule, path string, line int, format string, args ...any
 	c.add(Warning, rule, path, line, format, args...)
 	c.res.Findings[len(c.res.Findings)-1].advisory = true
 	c.res.Advisory++
+}
+
+// adviseUnchecked is advise for a components.examples note that examples on
+// path were left unchecked for want of node or a sub-project's svelte, marked
+// unchecked (ADR-0171).
+func (c *checker) adviseUnchecked(path, format string, args ...any) {
+	c.advise("components.examples", path, 1, format, args...)
+	c.res.Findings[len(c.res.Findings)-1].unchecked = true
 }
 
 // keyLine returns the 1-based line of a top-level front matter key.
@@ -1415,7 +1427,10 @@ var nodeRunner components.Runner = components.System{}
 // component or whose component's props could not be read. A project without
 // examples files is not checked. One with no sub-project whose components
 // flai reads, or a host without node, gets one note, which --strict passes
-// over; without node the format and the components are still checked.
+// over, and so does a sub-project whose svelte is not installed, on its
+// examples folder (ADR-0171); without node or svelte the format and the
+// components are still checked. The notes for node and svelte are marked
+// unchecked.
 func (c *checker) componentExamples() {
 	folder := filepath.Join(c.repo.Root, filepath.FromSlash(components.ExamplesFolder(c.repo.Manifest)))
 	var files []string
@@ -1456,11 +1471,11 @@ func (c *checker) componentExamples() {
 		byProject[f.project] = append(byProject[f.project], f)
 	}
 	if nodeErr != nil {
-		c.advise("components.examples", folder, 1, "the props of the examples under %s are not checked against their components': flai reads a component's props with node, which is not on PATH; install Node.js (https://nodejs.org) to check them", shown)
+		c.adviseUnchecked(folder, "the props of the examples under %s are not checked against their components': flai reads a component's props with node, which is not on PATH; install Node.js (https://nodejs.org) to check them", shown)
 		return
 	}
 	for _, name := range withExamples {
-		c.exampleProps(projects[name], byProject[name])
+		c.exampleProps(projects[name], byProject[name], folder, shown)
 	}
 }
 
@@ -1527,14 +1542,21 @@ func (c *checker) exampleFile(path, folder string, projects map[string]manifest.
 // exampleProps reads the props of files' components, all of project, with
 // node once, and reports each example that does not fit its component's;
 // a file whose component's props could not be read is reported once, with
-// the reader's error.
-func (c *checker) exampleProps(project manifest.Project, files []exampleFile) {
+// the reader's error. When svelte is not installed in project, the reader
+// stops for all its files, and the project's folder under folder, the
+// examples folder, shown as shown, gets one note instead, marked unchecked
+// (ADR-0171).
+func (c *checker) exampleProps(project manifest.Project, files []exampleFile, folder, shown string) {
 	const rule = "components.examples"
 	comps := make([]components.Component, len(files))
 	for i, f := range files {
 		comps[i] = f.comp
 	}
 	read, err := components.ReadProps(context.Background(), nodeRunner, c.repo.Root, comps)
+	if errors.Is(err, components.ErrSvelteMissing) {
+		c.adviseUnchecked(filepath.Join(folder, project.Name), "the props of the examples under %s/%s are not checked against their components': %v", shown, project.Name, err)
+		return
+	}
 	for i, f := range files {
 		switch {
 		case err != nil:

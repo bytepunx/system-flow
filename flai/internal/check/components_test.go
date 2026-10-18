@@ -251,10 +251,11 @@ func TestComponentExamplesWithoutTheirComponent(t *testing.T) {
 	}
 }
 
-// A sub-project whose props node cannot read at all, such as one without
-// svelte installed, has each of its files reported once, with the error.
+// A sub-project whose props node cannot read at all, for a reason other than
+// svelte not installed, such as a svelte older than 5, has each of its files
+// reported once, with the error.
 func TestComponentExamplesWhosePropsCannotBeRead(t *testing.T) {
-	withNode(t, &fakeNode{answer: `{"error":{"code":"svelte-missing","message":"cannot resolve svelte"}}`})
+	withNode(t, &fakeNode{answer: `{"error":{"code":"svelte-old","message":"4.2.0"}}`})
 	repo := examplesProject(t, webAndAPI, map[string]string{
 		cardFile:                          `{"examples": [{"name": "A", "props": {}}, {"name": "B", "props": {}}]}`,
 		"web/src/lib/Panel.examples.json": `{"examples": [{"name": "A", "props": {}}]}`,
@@ -264,8 +265,68 @@ func TestComponentExamplesWhosePropsCannotBeRead(t *testing.T) {
 		t.Fatalf("findings: %+v, want one for each file", got)
 	}
 	for _, fd := range got {
-		if fd.Line != 1 || fd.Level != Warning || !strings.Contains(fd.Message, "could not be read: svelte is not installed in web") {
+		if fd.Line != 1 || fd.Level != Warning || fd.advisory || fd.unchecked || !strings.Contains(fd.Message, "could not be read: web has svelte 4.2.0") {
 			t.Errorf("finding: %+v", fd)
+		}
+	}
+}
+
+// S-0446, I-0161: a sub-project whose svelte is not installed gets one note
+// on its examples folder, which --strict passes over, not a warning on each
+// of its files; each file's format and component are checked still.
+func TestComponentExamplesWithoutSvelteGetOneNote(t *testing.T) {
+	const missing = `{"error":{"code":"svelte-missing","message":"cannot resolve svelte"}}`
+	withNode(t, &fakeNode{answer: missing})
+	repo := examplesProject(t, webAndAPI, map[string]string{
+		cardFile:                          `{"examples": [{"name": "A", "props": {}}, {"name": "B", "props": {}}]}`,
+		"web/src/lib/Panel.examples.json": `{"examples": [{"name": "A", "props": {}}]}`,
+	})
+	res, err := Run(repo, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []Finding
+	for _, fd := range res.Findings {
+		if fd.Rule == "components.examples" {
+			got = append(got, fd)
+		}
+	}
+	if len(got) != 1 {
+		t.Fatalf("findings: %+v, want one note", got)
+	}
+	if note := got[0]; !note.advisory || !note.unchecked || note.Line != 1 || filepath.ToSlash(note.Path) != "design/components/web" ||
+		!strings.Contains(note.Message, "the props of the examples under design/components/web are not checked against their components': svelte is not installed in web") ||
+		!strings.Contains(note.Message, "run npm install (or its package manager's install) in web") {
+		t.Errorf("note: %+v", note)
+	}
+	if res.Advisory < 1 {
+		t.Errorf("advisory %d, want the note counted", res.Advisory)
+	}
+
+	withNode(t, &fakeNode{answer: missing})
+	repo = examplesProject(t, webAndAPI, map[string]string{
+		cardFile:                          `{"examples": [{"name": "A", "props": {}}]}`,
+		"web/src/lib/Panel.examples.json": "{\"examples\": [\n  {\"name\": \"A\", \"props\": {}, \"width\": -1}\n]}",
+		"web/src/lib/Gone.examples.json":  `{"examples": []}`,
+	})
+	got = findings(t, repo, "components.examples")
+	if len(got) != 3 {
+		t.Fatalf("findings: %+v, want the note, the width, and the missing component", got)
+	}
+	for _, w := range []struct {
+		path     string
+		line     int
+		advisory bool
+		text     string
+	}{
+		{"design/components/web", 1, true, "svelte is not installed in web"},
+		{"design/components/web/src/lib/Panel.examples.json", 2, false, `example "A": its width -1 is not a whole number`},
+		{"design/components/web/src/lib/Gone.examples.json", 1, false, `sub-project "web" has no component src/lib/Gone.svelte`},
+	} {
+		if !slices.ContainsFunc(got, func(fd Finding) bool {
+			return filepath.ToSlash(fd.Path) == w.path && fd.Line == w.line && fd.advisory == w.advisory && strings.Contains(fd.Message, w.text)
+		}) {
+			t.Errorf("no finding on %s:%d (advisory %v) with %q in %+v", w.path, w.line, w.advisory, w.text, got)
 		}
 	}
 }
@@ -285,7 +346,7 @@ func TestComponentExamplesNoteWhatIsNotChecked(t *testing.T) {
 		t.Fatalf("findings: %+v, want the note and the width", got)
 	}
 	note, width := got[0], got[1]
-	if !note.advisory || note.Line != 1 || filepath.ToSlash(note.Path) != "design/components" || !strings.Contains(note.Message, "are not checked against their components': flai reads a component's props with node, which is not on PATH; install Node.js") {
+	if !note.advisory || !note.unchecked || note.Line != 1 || filepath.ToSlash(note.Path) != "design/components" || !strings.Contains(note.Message, "are not checked against their components': flai reads a component's props with node, which is not on PATH; install Node.js") {
 		t.Errorf("note: %+v", note)
 	}
 	if width.advisory || width.Line != 2 || !strings.Contains(width.Message, `example "A": its width -1 is not a whole number`) {
@@ -306,7 +367,7 @@ func TestComponentExamplesNoteWhatIsNotChecked(t *testing.T) {
 			notes = append(notes, fd)
 		}
 	}
-	if len(notes) != 1 || !notes[0].advisory || !strings.Contains(notes[0].Message, "the 1 examples files under design/components are not checked: system-flow.yaml names no sub-project of kind sveltekit or svelte") {
+	if len(notes) != 1 || !notes[0].advisory || notes[0].unchecked || !strings.Contains(notes[0].Message, "the 1 examples files under design/components are not checked: system-flow.yaml names no sub-project of kind sveltekit or svelte") {
 		t.Errorf("findings without a Svelte sub-project: %+v, want one note", notes)
 	}
 	if res.Advisory < 1 {
