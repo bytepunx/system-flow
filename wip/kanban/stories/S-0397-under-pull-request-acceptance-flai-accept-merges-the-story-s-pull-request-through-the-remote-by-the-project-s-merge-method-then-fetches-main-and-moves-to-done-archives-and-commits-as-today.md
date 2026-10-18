@@ -3,15 +3,18 @@ id: S-0397
 type: story
 nature: feature
 title: Under pull-request acceptance, flai accept merges the story's pull request through the remote by the project's merge method, then fetches main and moves to done, archives, and commits as today
-status: ready
+status: in-progress
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:39:46Z
-updated: 2026-10-17T18:25:19Z
+updated: 2026-10-18T02:19:16Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:58Z
     by: alex
+  - to: in-progress
+    at: 2026-10-18T02:19:16Z
+    by: agent-S-0397
 tags: [cli, template]
 topics: [release, orchestration]
 touches: [flai/cmd/accept.go, flai/cmd/accept_remote.go, flai/cmd/accept_remote_test.go, flai/internal/serve/forgemerge.go, flai/internal/serve/forgemerge_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md]
@@ -38,10 +41,10 @@ usage:
           cost: 0.7096
 forecast:
   duration: 45m
-  delivery: 2026-10-17T19:14:00Z
+  delivery: 2026-10-18T03:08:00Z
   basis: "Its own forecast of 45m; 1st in the pull order with an in-progress limit of 5, with nothing ahead of it."
   by: flai
-  at: 2026-10-17T18:25:19Z
+  at: 2026-10-18T02:19:03Z
 finalized:
   by: alex
   at: 2026-10-17T06:43:36Z

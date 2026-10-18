@@ -7,6 +7,7 @@ updated: 2026-10-18T02:19:03Z
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0397](S-0397.md) | Under pull-request acceptance, flai accept merges the story's pull request through the remote by the project's merge method, then fetches main and moves to done, archives, and commits as today | in-progress | agent-S-0397 | 2026-10-18T02:19:16Z |
 
 ## Strategic agents
 
