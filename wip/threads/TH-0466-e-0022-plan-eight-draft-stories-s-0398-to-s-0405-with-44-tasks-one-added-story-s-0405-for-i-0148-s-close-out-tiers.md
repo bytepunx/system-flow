@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0022]
 created: 2026-10-16T05:06:37Z
-updated: 2026-10-17T17:57:10Z
+updated: 2026-10-18T02:20:32Z
 ---
 
 # TH-0466 E-0022 plan: eight draft stories, S-0398 to S-0405, with 44 tasks; one added story (S-0405) for I-0148's close-out tiers
@@ -88,3 +88,14 @@ I propose two changes once S-0395 is accepted:
 2. **S-0400:** a landing refused on a forge blocker after a green batch leaves the story in review with the reason. It is neither bisected nor sent back.
 
 I haven't changed the drafts yet, because S-0395 is still in progress and its blockers may change. I'll make both changes once it is accepted, unless you say otherwise.
+
+### 2026-10-18T02:20:32Z planner-E-0022
+S-0395 is accepted. Its ADR-0169 changed what I proposed on 2026-10-17, so I made a smaller change instead.
+
+ADR-0169 blocks every acceptance under pull-request acceptance on `forge_stale` when the kept forge state was read at a commit other than the branch's head. A batch rebases each story onto main, so a queue landing in that mode would always stop there. The forge's CI already verifies each story in that mode, and S-0397 merges through the remote. So I made the queue run under `acceptance.mode: local` only:
+
+- **S-0398:** a new criterion says `flai queue`, the board, and the dashboard report the queue as off under pull-request acceptance, with the reason. The ADR's criterion now records this. T-1638 and T-1639 were updated to match.
+- **S-0399:** `flai queue add` refuses under pull-request acceptance, and `flai serve` starts no batch there and logs why once. The operators' guide says so. T-1641 and T-1668 were updated to match.
+- **S-0400:** no change. Under local acceptance no forge blocker arises, so the change I proposed for S-0400 is withdrawn.
+
+Forecasts are unchanged, since each change is one check and a test case. `flai check --strict` passes. A queue that feeds the forge's own merge queue under pull-request acceptance would be a story of its own. I haven't drafted it; say if you want it.

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0021
 owner: alex
 created: 2026-10-16T04:39:46Z
-updated: 2026-10-18T02:19:16Z
+updated: 2026-10-18T03:06:42Z
 transitions:
   - to: ready
     at: 2026-10-17T06:43:58Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0397
 tags: [cli, template]
 topics: [release, orchestration]
-touches: [flai/cmd/accept.go, flai/cmd/accept_remote.go, flai/cmd/accept_remote_test.go, flai/internal/serve/forgemerge.go, flai/internal/serve/forgemerge_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md]
+touches: [flai/cmd/accept.go, flai/cmd/accept_remote.go, flai/cmd/accept_remote_test.go, flai/internal/serve/forgemerge.go, flai/internal/serve/forgemerge_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, design/adrs, design/system/workflow.md, design/system/flai-cli.md, design/conventions/git.md, template/root/design/conventions/git.md, docs/users/flai.md, docs/operators/index.md, template/CHANGELOG.md, flai/internal/forge/state_test.go, flai/internal/forge/forge.go, flai/internal/forge/github.go, flai/internal/forge/github_test.go, flai/internal/forge/state.go, flai/internal/serve/forge.go, flai/internal/serve/forge_test.go, flai/internal/serve/forgestatus.go, flai/internal/serve/forgestatus_test.go, flai/internal/serve/serve.go, flai/cmd/accept_forge_test.go, flai/cmd/forge_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go]
 after: [S-0395]
 agent:
   harness: claude-code
@@ -25,9 +25,28 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2849
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-18
+      ceremony: 2
+      hand_edits: 1
+      work: 39
+  models:
+    - model: claude-haiku-5-5
+      input: 100
+      output: 405
+      cache_read: 6424332
+      cache_write: 195062
+      cost: 0.4854
+    - model: claude-opus-5-5
+      input: 358
+      output: 1977
+      cache_read: 21632150
+      cache_write: 1102588
+      cost: 9.8819
   strategic:
     - kind: orchestrator
       seconds: 50

@@ -7,7 +7,7 @@ status: backlog
 parent: S-0399
 owner: alex
 created: 2026-10-16T05:00:51Z
-updated: 2026-10-16T05:00:51Z
+updated: 2026-10-18T02:20:19Z
 transitions: []
 stream: S-0399
 tags: [cli]
@@ -18,10 +18,10 @@ touches: [flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test
 ## Work
 
 - Give `state.go` a writer, under a file lock, so that `flai serve` and a shell never write the state at once.
-- `flai queue add S-nnnn` records the story with `by` (`FLAI_AGENT`, else the config's author) and `at`. It refuses a story that is not eligible, naming each reason from `eligible.go`.
+- `flai queue add S-nnnn` records the story with `by` (`FLAI_AGENT`, else the config's author) and `at`. It refuses a story that is not eligible, naming each reason from `eligible.go`, and refuses under pull-request acceptance, saying the queue runs under local acceptance only.
 - `flai queue remove S-nnnn` dequeues a story. `flai queue hold` and `resume` set the held flag.
 - `flai accept`, once it has merged a story, removes the story from the queue and marks a batch that holds it as dropped.
-- Test each command, its `--json`, its refusals, and the acceptance's removal.
+- Test each command, its `--json`, its refusals (the pull-request mode among them), and the acceptance's removal.
 - First in its layer: it waits for no task.
 
 ## Done when

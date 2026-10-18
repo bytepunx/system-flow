@@ -19,27 +19,32 @@ topics: [cli, orchestration, release, dashboard]
 touches: [flai/internal/serve, flai/internal/hostapi, flai/internal/workitem, flai/cmd, flaiover/src, design/system/workflow.md, design/system/pushing-from-the-board.md, design/system/metrics.md, design/conventions/git.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 18615
-  priced_by: harness
+  seconds: 21464
+  estimated: true
+  priced_by: estimate
   turns:
     - day: 2026-10-17
       ceremony: 13
       test_runs: 1
       hand_edits: 11
       work: 313
+    - day: 2026-10-18
+      ceremony: 2
+      hand_edits: 1
+      work: 39
   models:
     - model: claude-haiku-5-5
-      input: 124
-      output: 47706
-      cache_read: 8429901
-      cache_write: 214196
-      cost: 0.5703
+      input: 224
+      output: 48111
+      cache_read: 14854233
+      cache_write: 409258
+      cost: 1.0557
     - model: claude-opus-5-5
-      input: 2388
-      output: 969478
-      cache_read: 132904787
-      cache_write: 4231639
-      cost: 70.4795
+      input: 2746
+      output: 971455
+      cache_read: 154536937
+      cache_write: 5334227
+      cost: 80.3614
     - model: claude-sonnet-5-5
       input: 38
       output: 14047
@@ -48,15 +53,15 @@ usage:
       cost: 0.5204
   strategic:
     - kind: orchestrator
-      seconds: 61208
+      seconds: 89662
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 621
-          output: 10125
-          cache_read: 228650900
-          cache_write: 215799
-          cost: 57.3748
+          input: 697
+          output: 11825
+          cache_read: 260930617
+          cache_write: 232630
+          cost: 65.4712
         - model: claude-sonnet-5-5
           input: 72
           output: 381
