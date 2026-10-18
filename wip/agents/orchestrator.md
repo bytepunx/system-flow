@@ -4568,3 +4568,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai order --by throughput --apply --json 2>&1`
 - Needs: none
+
+### 2026-10-18T18:57:09Z
+
+- Call: `git worktree list`
+- Needs: none
