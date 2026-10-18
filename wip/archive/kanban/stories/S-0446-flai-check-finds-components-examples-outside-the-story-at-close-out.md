@@ -3,10 +3,10 @@ id: S-0446
 type: story
 nature: improvement
 title: "flai check finds `components.examples` outside the story at close-out"
-status: review
+status: done
 owner: alex
 created: 2026-10-17T16:03:19Z
-updated: 2026-10-18T03:41:55Z
+updated: 2026-10-18T19:29:13Z
 transitions:
   - to: ready
     at: 2026-10-18T02:53:21Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-18T03:41:55Z
     by: agent-S-0446
+  - to: done
+    at: 2026-10-18T19:29:13Z
+    by: alex
 tags: [flai, check, components]
 topics: [components, close-out]
 touches: [flai/internal/check/check.go, flai/internal/check/components_test.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/cmd/check.go, flai/cmd/check_test.go, design/system/component-library.md, design/system/flai-cli.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/CHANGELOG.md, docs/users/flai.md, design/adrs, design/adrs/README.md, design/issues/I-0161-flai-check-finds-components-examples-outside-the-story-at-close-out.md, design/issues/summary.md, design/system/workflow.md, flai/cmd/check_stats_test.go, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, docs/users/flai-reference.md]

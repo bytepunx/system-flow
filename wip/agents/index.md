@@ -1,13 +1,12 @@
 ---
 title: Active streams
-updated: 2026-10-18T18:57:00Z
+updated: 2026-10-18T19:29:13Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0446](S-0446.md) | flai check finds `components.examples` outside the story at close-out | review | agent-S-0446 | 2026-10-18T03:41:51Z |
 
 ## Strategic agents
 

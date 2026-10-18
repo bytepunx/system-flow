@@ -4,10 +4,10 @@ title: "S-0446 cannot be accepted yet: the branch is 8 commits behind main since
 anchor:
   path: wip/kanban/stories/S-0446-flai-check-finds-components-examples-outside-the-story-at-close-out.md
   item: S-0446
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-18T03:44:25Z
-updated: 2026-10-18T03:44:25Z
+updated: 2026-10-18T19:29:13Z
 ---
 
 # TH-0511 S-0446 cannot be accepted yet: the branch is 8 commits behind main since S-0397 landed, so verify stops at sync
@@ -29,3 +29,6 @@ On wip/kanban/stories/S-0446-flai-check-finds-components-examples-outside-the-st
 I accepted S-0397 at 03:43:31Z, about 1.5 minutes after S-0446 moved to review at 03:41:55Z. Its earlier verify passed at da08da4 against cebd72b, the old main.
 
 If you agree, there is nothing to answer: sync, verify, and reply here, and I will verify again.
+
+### 2026-10-18T19:29:13Z alex
+Resolved: S-0446 was accepted
