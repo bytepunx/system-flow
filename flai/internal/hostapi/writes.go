@@ -283,9 +283,11 @@ const ActionPush = "push"
 // in review under pull-request acceptance to origin and opens or updates its
 // pull request, with the host's git credentials and the token the host
 // names for the forge (S-0393, ADR-0165). flai serve does it from what it
-// sees in the project's files; no method asks for it. Off, which is the
-// default, nothing is pushed. The agents flai serve starts never hold the
-// token, and flai guard refuses them flai forge push.
+// sees in the project's files. Under it, too, the story's pull request is
+// merged on the forge when the story is accepted (ADR-0170), and accept.run
+// asks for it of a project under pull-request acceptance only. Off, which
+// is the default, nothing is pushed or merged. The agents flai serve starts
+// never hold the token, and flai guard refuses them flai forge push.
 const ActionForge = "forge"
 
 // ActionAutoPublish is the host action that has every flai push --pending,
@@ -384,7 +386,7 @@ const ActionComponents = "components"
 // do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
 	ActionPush:        "publish when you press Publish: tag what was accepted since each component's last release and push the branch and the tags, with your git credentials, never forced; a holder of the dashboard token can then publish everything accepted and unreleased",
-	ActionForge:       "push each story that moves to review, while acceptance.mode in system-flow.yaml is pull-request, to origin with your git credentials, and open its one pull request against the main branch, or update the one it has, with the forge's token from the variable flai serve forge names (GITHUB_TOKEN for GitHub by default, ADR-0165), never forcing a branch but a story's own that a sync rebased, with --force-with-lease; a push or a request that fails is said on a thread on the story and tried again at the next look. The agents flai serve starts never get the token's variable, and flai guard refuses them flai forge push. Off, or with acceptance.mode local, nothing is pushed",
+	ActionForge:       "push each story that moves to review, while acceptance.mode in system-flow.yaml is pull-request, to origin with your git credentials, and open its one pull request against the main branch, or update the one it has, with the forge's token from the variable flai serve forge names (GITHUB_TOKEN for GitHub by default, ADR-0165), never forcing a branch but a story's own that a sync rebased, with --force-with-lease; a push or a request that fails is said on a thread on the story and tried again at the next look. The agents flai serve starts never get the token's variable, and flai guard refuses them flai forge push. Accepting a story merges its pull request on the forge by acceptance.merge_method and deletes its branch on origin (ADR-0170): the dashboard's acceptance runs flai accept here, with the token's variable, and an agent's flai accept asks flai serve to merge. Off, or with acceptance.mode local, nothing is pushed or merged, and under pull-request acceptance every acceptance is refused",
 	ActionAutoPublish: "has flai push --pending, run in a shell, first tag a release of everything merged and unreleased since each component's last tag; off, pushing releases nothing and what is accepted waits for Publish or flai release --pending. It is the operator's shell tool, outside the workflow (ADR-0067): no dashboard sees or changes it",
 	ActionAutoApprove: "has flai's MCP tool permission_prompt allow, without asking you, a flai serve agent's Edit or Write of a path Claude Code protects, such as a file in a .claude/ folder (its settings, hooks, and agent definitions) or .mcp.json but never .git, in its own in-progress story's worktree, which Claude Code run headless refuses without a person's approval, and lets that story's sub-agents make those writes too, which flai guard otherwise refuses them; off, permission_prompt asks the story's owner on a thread and waits for allow. A story whose branch changes such a path is accepted by you only, so you read those changes at acceptance (ADR-0106). It is the operator's shell tool (ADR-0067): no dashboard sees or changes it",
 	ActionAutoUpgrade: "has flai serve ask flai host to install the newest flai release tagged in this project's history, verified as flai host upgrade --version installs it, and restart flai serve and the MCP servers on it, whenever the flai serving the project is older than that release, checked every minute; it waits while a dashboard write runs in flai serve, and asks again for a refused release no sooner than 15 minutes later; off, flai serve asks you on a thread on the project's system-flow.yaml, once for each newer release. It replaces the flai on this host, so it is the operator's shell tool (ADR-0067, ADR-0158): no dashboard sees or changes it",
@@ -472,6 +474,13 @@ type spec struct {
 	// action names the host action this method is: asked for while the
 	// operator has not enabled it, it is refused and says what enables it.
 	action string
+	// needs, when set, names the host action a call is in the project it is
+	// asked of, or "" for none, where action would gate every call:
+	// accept.run under pull-request acceptance merges on the forge
+	// (ADR-0170). The call is refused and journalled as action's are while
+	// the operator has not enabled it, and is not journalled otherwise.
+	// Asked once build has accepted the params.
+	needs func(p channel.Project) string
 	// uses names a host action this method performs as part of its work when
 	// it is enabled, and does without when it is not; it is journalled then.
 	uses string
@@ -567,6 +576,17 @@ func orchestratorAccepts(p channel.Project, id string) *channel.Error {
 		return &channel.Error{Code: Rule, Message: err.Error()}
 	}
 	return nil
+}
+
+// forgeAcceptance is the host action an acceptance in p is: ActionForge
+// under pull-request acceptance, whose merge is on the forge (ADR-0170),
+// and none under local acceptance. A manifest that cannot be read asks for
+// none: flai accept refuses it itself.
+func forgeAcceptance(p channel.Project) string {
+	if m, err := manifest.Load(filepath.Join(p.Root, manifest.File)); err == nil && m.Acceptance.PullRequest() {
+		return ActionForge
+	}
+	return ""
 }
 
 var (
@@ -1463,7 +1483,12 @@ func itemSpecs() map[string]spec {
 		// branch undoes of main's change and the reason its removal is kept,
 		// passed as --keep-removal and --reason pairs in order. flai's refusal
 		// for a path still undone (exit 4) is Refused with undoes_main as data.
-		"accept.run": {progress: true, exits: map[int]int{4: Refused}, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		// Under pull-request acceptance it merges the story's pull request on
+		// the forge (ADR-0170): flai accept runs here, in flai serve's
+		// environment, with the forge token's variable, so it merges directly
+		// and never hands off. It is refused while the forge host action is
+		// off, before flai runs, after orchestratorAccepts.
+		"accept.run": {progress: true, exits: map[int]int{4: Refused}, needs: forgeAcceptance, build: func(p channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
 			in, e := decode[struct {
 				ID                 string `json:"id"`
 				IncludeUncommitted bool   `json:"include_uncommitted"`
@@ -2777,10 +2802,14 @@ func methodsFrom(table map[string]spec, run Runner, now func() time.Time, host H
 				entry.Project, entry.Root = sp.about(raw)
 				which = entry.Root
 			}
-			if sp.action != "" && !host.enabled(sp.action, entry.Root) {
-				entry.Action, entry.Outcome = sp.action, "disabled"
+			action := sp.action
+			if action == "" && sp.needs != nil {
+				action = sp.needs(p)
+			}
+			if action != "" && !host.enabled(action, entry.Root) {
+				entry.Action, entry.Outcome = action, "disabled"
 				host.record(entry)
-				return nil, notEnabled(sp.action, which)
+				return nil, notEnabled(action, which)
 			}
 			if sp.hostwide && !host.enabledEverywhere(sp.action) {
 				entry.Action, entry.Outcome = sp.action, "disabled"

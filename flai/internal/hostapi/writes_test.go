@@ -658,6 +658,112 @@ func TestAcceptRunByTheOrchestratorNeedsAcceptReviews(t *testing.T) {
 	}
 }
 
+// S-0397, ADR-0170: under pull-request acceptance the dashboard's acceptance
+// merges the story's pull request on the forge, so it is the forge host
+// action. While that is off it is refused, running nothing, naming what
+// enables it, and journalled; the orchestrator's is refused for its
+// permission first. With it on, flai accept runs as it always has. Under
+// local acceptance the forge action gates nothing.
+func TestAcceptRunUnderPullRequestAcceptanceNeedsTheForgeAction(t *testing.T) {
+	p := withDocs(t) // owner: olive
+	var journal []Entry
+	on := false
+	host := Host{
+		Enabled: func(action, root string) bool { return on && action == ActionForge && root == p.Root },
+		Record:  func(e Entry) { journal = append(journal, e) },
+	}
+	call := func(params string) (*recorder, *channel.Error) {
+		rec := &recorder{ran: Ran{Stdout: []byte(`{"id":"S-0001"}`)}}
+		_, e := writeMethods(rec.run, time.Now, host)["accept.run"](context.Background(), p, json.RawMessage(params))
+		return rec, e
+	}
+	appendManifest := func(yaml string) {
+		path := filepath.Join(p.Root, "system-flow.yaml")
+		m, _ := os.ReadFile(path)
+		if err := os.WriteFile(path, append(m, yaml...), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	operator := `{"id":"S-0001",` + rid + `}`
+	orchestrator := `{"id":"S-0001","by":"orchestrator","verified":"abc1234",` + rid + `}`
+
+	if rec, e := call(operator); e != nil || len(rec.runs) != 1 || len(journal) != 0 {
+		t.Fatalf("under local acceptance the forge action off gates nothing: %+v, ran %d, journal %+v", e, len(rec.runs), journal)
+	}
+
+	appendManifest("acceptance:\n  mode: pull-request\n")
+	rec, e := call(operator)
+	if e == nil || e.Code != Disabled || len(rec.runs) != 0 {
+		t.Fatalf("with the forge action off the acceptance is refused and runs nothing: %+v, ran %d", e, len(rec.runs))
+	}
+	if want := `the host action "forge" is not enabled for this project. On the host, in the project, run: flai serve enable forge`; e.Message != want {
+		t.Errorf("the refusal must name the host action:\n got %q\nwant %q", e.Message, want)
+	}
+	if data, _ := e.Data.(map[string]any); data["action"] != ActionForge || data["enable"] != "flai serve enable forge" {
+		t.Errorf("the refusal's data says what enables it: %+v", e.Data)
+	}
+	if len(journal) != 1 || journal[0].Method != "accept.run" || journal[0].Action != ActionForge || journal[0].Outcome != "disabled" || journal[0].By != "olive" || journal[0].Root != p.Root {
+		t.Errorf("the refusal is journalled: %+v", journal)
+	}
+	journal = nil
+	if rec, e = call(orchestrator); e == nil || e.Code != Rule || len(rec.runs) != 0 || len(journal) != 0 {
+		t.Errorf("the orchestrator's acceptance is refused for accept_reviews before the forge action: %+v, ran %d, journal %+v", e, len(rec.runs), journal)
+	}
+	appendManifest("orchestration:\n  permissions:\n    accept_reviews: true\n")
+	if rec, e = call(orchestrator); e == nil || e.Code != Disabled || len(rec.runs) != 0 || len(journal) != 1 {
+		t.Errorf("with accept_reviews on, the orchestrator's acceptance is refused for the forge action: %+v, ran %d, journal %+v", e, len(rec.runs), journal)
+	}
+
+	on, journal = true, nil
+	for params, want := range map[string]string{
+		operator:     "accept S-0001 --by=olive --json",
+		orchestrator: "accept S-0001 --by=orchestrator --verified=abc1234 --json",
+	} {
+		rec, e = call(params)
+		if e != nil || len(rec.runs) != 1 {
+			t.Fatalf("with the forge action on, %s: %+v, ran %d", params, e, len(rec.runs))
+		}
+		if got := strings.Join(rec.runs[0].Args, " "); got != want || rec.runs[0].Dir != p.Root {
+			t.Errorf("ran %q in %s, want %q in the project", got, rec.runs[0].Dir, want)
+		}
+	}
+	if len(journal) != 0 {
+		t.Errorf("an acceptance the forge action allows is not journalled here: %+v", journal)
+	}
+}
+
+// S-0397, ADR-0170: the dashboard's flai accept runs in flai serve's own
+// environment, so the forge token's variable reaches it and it merges on
+// the forge directly, as flaiover, which never hands the merge off.
+func TestTheDashboardsAcceptanceRunsWithServesEnvironment(t *testing.T) {
+	p := withDocs(t) // owner: olive
+	path := filepath.Join(p.Root, "system-flow.yaml")
+	m, _ := os.ReadFile(path)
+	if err := os.WriteFile(path, append(m, "acceptance:\n  mode: pull-request\n"...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GITHUB_TOKEN", "the-token")
+	t.Setenv("FLAI_AGENT", "agent-S-0001")
+	exe := filepath.Join(t.TempDir(), "flai")
+	script := "#!/bin/sh\nprintf '{\"args\":\"%s\",\"token\":\"%s\",\"agent\":\"%s\"}' \"$*\" \"$GITHUB_TOKEN\" \"$FLAI_AGENT\"\n"
+	if err := os.WriteFile(exe, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	host := Host{Enabled: func(action, root string) bool { return action == ActionForge && root == p.Root }}
+	run := func(ctx context.Context, r Run) (Ran, error) { return runFlai(ctx, exe, r) }
+	res, e := writeMethods(run, time.Now, host)["accept.run"](context.Background(), p, json.RawMessage(`{"id":"S-0001",`+rid+`}`))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var said struct{ Args, Token, Agent string }
+	if err := json.Unmarshal(res.(Written).Data, &said); err != nil {
+		t.Fatalf("%v: %s", err, res.(Written).Data)
+	}
+	if said.Args != "accept S-0001 --by=olive --json" || said.Token != "the-token" || said.Agent != "flaiover" {
+		t.Errorf("flai accept ran with %+v, want its arguments, serve's token, and FLAI_AGENT=flaiover", said)
+	}
+}
+
 // S-0078, I-0028: flai runs on the host as the operator. What a dashboard may
 // make it do with their credentials is off until they enable it by name, and
 // every such request is written down, whatever became of it.
