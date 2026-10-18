@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:53Z
-updated: 2026-10-18T02:20:14Z
+updated: 2026-10-18T03:10:58Z
 transitions: []
 tags: [cli, dashboard]
 topics: [orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h30m
-  delivery: 2026-10-18T04:46:00Z
-  basis: "Its own forecast of 1h30m; 4th in the pull order with an in-progress limit of 5, behind S-0397, S-0241 and S-0398."
+  delivery: 2026-10-18T05:38:00Z
+  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0397, S-0446, S-0241 and S-0398."
   by: flai
-  at: 2026-10-18T02:19:03Z
+  at: 2026-10-18T03:10:58Z
 ---
 # S-0399 flai serve builds a batch of the enqueued stories in a worktree of its own, rebased on main in order, and verifies it once with the tiers flai verify runs, behind the merge-queue host action
 
