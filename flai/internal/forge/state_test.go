@@ -18,7 +18,7 @@ func prAt(commit string) PullRequest {
 func TestWriteStatusThenReadStatusRoundTrips(t *testing.T) {
 	dir := t.TempDir()
 	want := Status{
-		Story: "S-0394", PullRequest: 42, URL: "https://github.com/o/r/pull/42", HeadSHA: "aaa", ReadAt: "2026-10-17T08:00:00Z", RequiredApprovals: 2,
+		Story: "S-0394", PullRequest: 42, URL: "https://github.com/o/r/pull/42", HeadSHA: "aaa", State: PullRequestMerged, ReadAt: "2026-10-17T08:00:00Z", RequiredApprovals: 2,
 		Checks:   []CheckStatus{{Name: "test", State: CheckFailed, URL: "https://ci/1", Summary: "2 failed", Since: "2026-10-17T07:55:00Z"}},
 		Reviews:  []ReviewStatus{{Author: "alex", State: ReviewChangesRequested, URL: "https://github.com/o/r/pull/42#r1", Body: "Rename it.", SubmittedAt: "2026-10-17T07:50:00Z"}},
 		Events:   []StatusEvent{{At: "2026-10-17T07:55:00Z", Kind: EventCheck, Name: "test", From: "pending", To: "failed", Commit: "aaa"}},
@@ -34,8 +34,8 @@ func TestWriteStatusThenReadStatusRoundTrips(t *testing.T) {
 	if !strings.HasSuffix(string(data), "}\n") {
 		t.Errorf("the status file does not end in a newline: %q", data)
 	}
-	if !strings.Contains(string(data), `"required_approvals": 2`) {
-		t.Errorf("the status file does not keep required_approvals: %s", data)
+	if !strings.Contains(string(data), `"required_approvals": 2`) || !strings.Contains(string(data), `"state": "merged"`) {
+		t.Errorf("the status file does not keep required_approvals and the pull request's state: %s", data)
 	}
 	got, ok, err := ReadStatus(dir, "S-0394")
 	if err != nil || !ok {
@@ -85,7 +85,7 @@ func TestRecordAFirstReadAppendsTheHeadEachRequiredCheckAndEachReview(t *testing
 
 	at := "2026-10-17T08:00:00Z"
 	want := Status{
-		Story: "S-0394", PullRequest: 42, URL: "https://github.com/o/r/pull/42", HeadSHA: "aaa", ReadAt: at,
+		Story: "S-0394", PullRequest: 42, URL: "https://github.com/o/r/pull/42", HeadSHA: "aaa", State: PullRequestOpen, ReadAt: at,
 		Checks: []CheckStatus{
 			{Name: "lint", State: CheckPassed, URL: "https://ci/lint", Since: at},
 			{Name: "test", State: CheckPending, Summary: "has not reported yet", Since: at},
