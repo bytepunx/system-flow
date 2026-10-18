@@ -186,6 +186,15 @@ describe('AgentRegistry and AgentHub', () => {
 		});
 	});
 
+	it("sends the channel's project key over any project a call's params carry (S-0448)", async () => {
+		const { hub, url } = await setup();
+		const flai = await connect(url, KEY, () => ({ projects: [] }));
+		cleanup.push(() => flai.ws.terminate());
+		await hub.ask('components.list', { project: 'flaiover', story: 'S-0448' });
+		expect(flai.requests[0]).toMatchObject({ method: 'components.list' });
+		expect(flai.requests[0].params).toEqual({ project: 'harbour', story: 'S-0448' });
+	});
+
 	it('serves nothing to a connection that cannot prove the credential', async () => {
 		const { hub, url } = await setup();
 		const flai = await connect(url, 'some-other-key');

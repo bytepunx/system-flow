@@ -132,7 +132,9 @@ describe('/api/components (S-0439)', () => {
 		expect(r.status).toBe(200);
 		expect(await r.json()).toMatchObject(status(true));
 		const params = asks('components.start')[0].params;
-		expect(params.project).toBe('web');
+		// the sub-project reaches flai as sub_project: project is the channel's key (S-0448)
+		expect(params.sub_project).toBe('web');
+		expect('project' in params).toBe(false);
 		expect(typeof params.request_id).toBe('string');
 		expect(asks('components.status')).toEqual([{ method: 'components.status', params: {} }]);
 	});
@@ -141,7 +143,10 @@ describe('/api/components (S-0439)', () => {
 		script['components.start'] = { data: status(true).servers[0] };
 		expect((await post(START)).status).toBe(200);
 		expect((await post(START, { project: ' ' })).status).toBe(200);
-		for (const a of asks('components.start')) expect(a.params.project).toBeUndefined();
+		for (const a of asks('components.start')) {
+			expect('sub_project' in a.params).toBe(false);
+			expect('project' in a.params).toBe(false);
+		}
 	});
 
 	it('refuses a project that is not a string with 400, before asking flai', async () => {
@@ -187,7 +192,8 @@ describe('/api/components (S-0439)', () => {
 		expect(r.status).toBe(200);
 		expect(await r.json()).toMatchObject(status(false));
 		const params = asks('components.stop')[0].params;
-		expect(params.project).toBe('web');
+		expect(params.sub_project).toBe('web');
+		expect('project' in params).toBe(false);
 		expect(typeof params.request_id).toBe('string');
 	});
 
@@ -217,11 +223,14 @@ describe('/api/components (S-0439)', () => {
 			expect(r.status).toBe(200);
 			expect((await r.json()).servers[0].story).toBe('S-0442');
 			expect(asks('components.start')[0].params).toMatchObject({
-				project: 'web',
+				sub_project: 'web',
 				story: 'S-0442'
 			});
 			expect((await post(STOP, { project: 'web', story: 'S-0442' })).status).toBe(200);
-			expect(asks('components.stop')[0].params).toMatchObject({ project: 'web', story: 'S-0442' });
+			expect(asks('components.stop')[0].params).toMatchObject({
+				sub_project: 'web',
+				story: 'S-0442'
+			});
 			expect(asks('components.status').map((a) => a.params)).toEqual([
 				{ story: 'S-0442' },
 				{ story: 'S-0442' }

@@ -700,13 +700,14 @@ export class Repo extends EventEmitter {
 	 * action (S-0438), and answer it once its harness answers; one that runs is answered as it is.
 	 * project may be left out when one sub-project is supported; with story, the dev server runs in
 	 * that story's worktree (S-0442). flai waits a minute for Vite, so the ask waits longer, to answer
-	 * flai's own message, which carries Vite's last lines of output.
+	 * flai's own message, which carries Vite's last lines of output. The sub-project reaches flai as
+	 * sub_project, since project is the channel's key (S-0448).
 	 */
 	async componentsStart(project?: string, story?: string): Promise<ComponentServer> {
 		const { data } = await upgraded('start a component dev server', () =>
 			this.write<ComponentServer>(
 				'components.start',
-				{ ...(project ? { project } : {}), ...(story ? { story } : {}) },
+				{ ...(project ? { sub_project: project } : {}), ...(story ? { story } : {}) },
 				{ timeoutMs: 90000 }
 			)
 		);
@@ -715,12 +716,13 @@ export class Repo extends EventEmitter {
 
 	/**
 	 * Stop a sub-project's component dev server when one runs, flai's components.stop (S-0438); with
-	 * story, that story's (S-0442).
+	 * story, that story's (S-0442). The sub-project reaches flai as sub_project, since project is the
+	 * channel's key (S-0448).
 	 */
 	async componentsStop(project?: string, story?: string): Promise<ComponentStopped> {
 		const { data } = await upgraded('stop a component dev server', () =>
 			this.write<ComponentStopped>('components.stop', {
-				...(project ? { project } : {}),
+				...(project ? { sub_project: project } : {}),
 				...(story ? { story } : {})
 			})
 		);

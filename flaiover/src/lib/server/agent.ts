@@ -586,12 +586,15 @@ export class AgentHub extends EventEmitter {
 				timer,
 				onProgress
 			});
+			// project is the channel's alone: the key of the project this connection serves goes after a
+			// call's params, so none of them can overwrite it, and flai refuses a call naming another
+			// (S-0448). A method that takes a sub-project names it sub_project.
 			ws.send(
 				JSON.stringify({
 					jsonrpc: '2.0',
 					id,
 					method,
-					params: { project: info.project.key, ...params }
+					params: { ...params, project: info.project.key }
 				})
 			);
 		});
