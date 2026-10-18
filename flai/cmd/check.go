@@ -41,8 +41,11 @@ raised limit clear, an issues.no-story outside the story, which names an
 issue the story did not touch and only the operator's choice to make a story
 for it clears, a threads.archived outside the story, an open or answered
 thread on an archived item that only the operator or the thread's opener
-resolves in the main checkout, and a markdown or narrative.state finding on the narrative of
-another story that is neither done nor cancelled, which that story's own
+resolves in the main checkout, the note components.examples gives when it
+could not check examples for want of node or a sub-project's svelte, unless
+the story changes a file under the folder it names, which only installing
+the tool clears, and a markdown or narrative.state finding on the narrative
+of another story that is neither done nor cancelled, which that story's own
 close-out finds. A finding outside keeps its level and is printed with
 "(outside S-nnnn)"; it is a note that neither an error nor --strict fails
 on, and the summary counts it, as does outside in --json. Without --story
@@ -112,7 +115,7 @@ whether or not it passes; a failure to record is an error.`,
 				fmt.Fprintf(a.out, "%d items checked, %d errors, %d warnings", res.Items, res.Errors, res.Warnings)
 				if res.Advisory > 0 {
 					// S-0243: say which warnings --strict does not fail on.
-					fmt.Fprintf(a.out, " (%d that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node or a Svelte sub-project)", res.Advisory)
+					fmt.Fprintf(a.out, " (%d that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node, a Svelte sub-project, or a sub-project's svelte)", res.Advisory)
 				}
 				if res.Outside > 0 {
 					// S-0249: say how many findings were notes outside the story.
@@ -166,10 +169,11 @@ func (r recordedIssue) describe() string {
 // merge report it where it can be acted on, and an issue would only count
 // how often stories ran side by side (I-0076). An item.archive outside the
 // story never reaches it: the scoped check leaves it out (ADR-0122), as it
-// does a board.wip-limit (ADR-0133), an issues.no-story (ADR-0136), and a
-// threads.archived (ADR-0137) outside the story and a markdown or
-// narrative.state finding on another open story's narrative (ADR-0123,
-// ADR-0125).
+// does a board.wip-limit (ADR-0133), an issues.no-story (ADR-0136), a
+// threads.archived (ADR-0137), and the components.examples note for examples
+// left unchecked for want of node or a sub-project's svelte (ADR-0171)
+// outside the story and a markdown or narrative.state finding on another open
+// story's narrative (ADR-0123, ADR-0125).
 func (a *app) recordOutside(repo *workitem.Repo, res *check.Result, story string) ([]recordedIssue, error) {
 	byRule := map[string][]string{}
 	for _, f := range res.Findings {

@@ -65,7 +65,7 @@ func TestCheckSummaryNamesTheAdvisoryWarnings(t *testing.T) {
 	}
 	out, _, _ := runIn(t, root, "check")
 	if !strings.Contains(out, "warning: board.wip-limit: 4 stories in review, limit 3") ||
-		!strings.Contains(out, " warnings (1 that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node or a Svelte sub-project)\n") {
+		!strings.Contains(out, " warnings (1 that --strict passes over: review over its limit and an epic behind its stories, which only the operator clears, or a narrative not yet written, which flai stream state writes, or component examples left unchecked for want of node, a Svelte sub-project, or a sub-project's svelte)\n") {
 		t.Errorf("summary should name the advisory warning:\n%s", out)
 	}
 }

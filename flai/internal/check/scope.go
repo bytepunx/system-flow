@@ -31,9 +31,15 @@ import (
 // thread on an archived item the story did not touch, which only the operator
 // or the thread's opener resolves, in the main checkout, which no story
 // branch changes (ADR-0137, I-0135); one on a thread anchored on the story or
-// one of its tasks is inside it. So is a markdown or narrative.state finding
-// on the narrative of another story that is neither done nor cancelled: that
-// story's own close-out finds it (ADR-0123, I-0096; ADR-0125, I-0109).
+// one of its tasks is inside it. So is the note components.examples gives
+// when it could not check examples for want of node or a sub-project's
+// svelte, unless one of changed is under the examples folder it names, or a
+// folder of changed holds it: only installing the tool clears it, which no
+// story branch does; when one is, the story's own examples went unchecked,
+// and the note is inside it (ADR-0171, I-0161). So is a markdown or
+// narrative.state finding on the narrative of another story that is neither
+// done nor cancelled: that story's own close-out finds it (ADR-0123, I-0096;
+// ADR-0125, I-0109).
 func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []string) error {
 	st, err := repo.Get(story)
 	if err != nil {
@@ -50,7 +56,7 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 	if err != nil {
 		return fmt.Errorf("scope the check to %s: %w", st.ID, err)
 	}
-	var folders []string
+	var folders, paths []string
 	for _, p := range changed {
 		for _, root := range []string{repo.Root, repo.MainRoot} {
 			if root == "" {
@@ -61,6 +67,7 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 				folders = append(folders, abs+string(filepath.Separator))
 			}
 			in[abs] = true
+			paths = append(paths, abs)
 		}
 	}
 	resolve := func(path string) string {
@@ -81,15 +88,33 @@ func ScopeToStory(res *Result, repo *workitem.Repo, story string, changed []stri
 		}
 		return false
 	}
+	// under reports whether a changed path is folder or under it, or a
+	// changed folder holds it: an unchecked note's folder is no changed path
+	// itself (ADR-0171).
+	under := func(folder string) bool {
+		folder = resolve(folder)
+		for _, p := range paths {
+			if p == folder || strings.HasPrefix(p, folder+string(filepath.Separator)) {
+				return true
+			}
+		}
+		for _, f := range folders {
+			if strings.HasPrefix(folder+string(filepath.Separator), f) {
+				return true
+			}
+		}
+		return false
+	}
 	kept := res.Findings[:0]
 	for _, f := range res.Findings {
 		if (f.Rule == "wip.overlap" && !namesStory(f, st.ID)) ||
 			((f.Rule == "item.archive" || f.Rule == "board.wip-limit" || f.Rule == "issues.no-story" || f.Rule == "threads.archived") && !inside(f.Path)) ||
+			(f.unchecked && !under(f.Path)) ||
 			((strings.HasPrefix(f.Rule, "markdown.") || f.Rule == "narrative.state") && others[resolve(f.Path)]) {
 			res.drop(f)
 			continue
 		}
-		if !f.Outside && (f.Rule == "wip.overlap" || !inside(f.Path)) {
+		if !f.Outside && !f.unchecked && (f.Rule == "wip.overlap" || !inside(f.Path)) {
 			f.Outside = true
 			res.Outside++
 			switch {

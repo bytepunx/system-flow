@@ -529,6 +529,92 @@ func TestCheckRecordIssuesLeavesOutAThreadsArchivedOutsideTheStory(t *testing.T)
 	}
 }
 
+// I-0161, ADR-0171: a close-out on a host or in a worktree that cannot read
+// a component's props, here a PATH without node, neither notes nor records
+// the components.examples note for examples the story did not change, while
+// the unscoped check still reports it. When the story changes an examples
+// file, the note is inside it and still not recorded. (A sub-project whose
+// svelte is not installed gets the same note on its folder; the check
+// package's scope tests cover it, as node cannot be faked here.)
+func TestCheckRecordIssuesLeavesOutAnUncheckedExamplesNoteOutsideTheStory(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("PATH", t.TempDir())
+	root := overlapFixture(t, "", nil)
+	const examples = "design/components/web/src/lib/Card.examples.json"
+	manifest := filepath.Join(root, "system-flow.yaml")
+	data, err := os.ReadFile(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	write := func(path, content string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(manifest, string(data)+"projects:\n  - name: web\n    path: web\n    kind: sveltekit\n")
+	write(filepath.Join(root, "web", "src", "lib", "Card.svelte"), "")
+	write(filepath.Join(root, filepath.FromSlash(examples)), `{"examples": [{"name": "A", "props": {}}]}`)
+	const note = "warning: components.examples: the props of the examples under design/components are not checked against their components': flai reads a component's props with node, which is not on PATH"
+	git := gitScript{changed: "wip/kanban/epics/E-001-epic.md"}
+	out, errOut, code := runWithApp(t, &app{cwd: root, runner: git}, "check")
+	if code != 0 || !strings.Contains(out, note) {
+		t.Fatalf("unscoped, the run should note the examples left unchecked: exit %d\n%s%s", code, out, errOut)
+	}
+	var res struct {
+		Findings []struct {
+			Rule    string `json:"rule"`
+			Outside bool   `json:"outside"`
+		} `json:"findings"`
+		Outside  int               `json:"outside"`
+		Recorded []json.RawMessage `json:"recorded"`
+	}
+	out, errOut, code = runWithApp(t, &app{cwd: root, runner: git}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	if err := json.Unmarshal([]byte(out), &res); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	if strings.Contains(out, "components.examples") || res.Outside != 0 || len(res.Recorded) != 0 {
+		t.Errorf("scoped to S-004, which changes no examples, the note should be neither noted nor recorded: %s", out)
+	}
+	if names := issueFiles(t, root); len(names) != 0 {
+		t.Errorf("no issue should be opened, got %v", names)
+	}
+
+	// Here the story leaves E-001 alone, so its epic.lags-stories is outside
+	// it and recorded; the note is not.
+	var own struct {
+		Findings []struct {
+			Rule    string `json:"rule"`
+			Outside bool   `json:"outside"`
+		} `json:"findings"`
+		Recorded []struct {
+			Rule string `json:"rule"`
+		} `json:"recorded"`
+	}
+	out, errOut, code = runWithApp(t, &app{cwd: root, runner: gitScript{changed: examples}}, "check", "--strict", "--story", "S-004", "--record-issues", "--json")
+	if err := json.Unmarshal([]byte(out), &own); err != nil || code != 0 {
+		t.Fatalf("exit %d %v\n%s%s", code, err, out, errOut)
+	}
+	inside := 0
+	for _, f := range own.Findings {
+		if f.Rule == "components.examples" && !f.Outside {
+			inside++
+		}
+	}
+	recorded := 0
+	for _, r := range own.Recorded {
+		if r.Rule == "components.examples" {
+			recorded++
+		}
+	}
+	if inside != 1 || recorded != 0 {
+		t.Errorf("scoped to S-004, which changes %s, the note should be inside it and not recorded: %s", examples, out)
+	}
+}
+
 // I-0096, ADR-0123: another story in progress leaves a code span ending in a
 // space in its narrative, as S-0229 did; a close-out of S-004 neither notes
 // its markdown.MD038 nor records it in an issue, while the unscoped check

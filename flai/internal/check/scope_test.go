@@ -468,6 +468,113 @@ func archivedFindings(res *Result) []Finding {
 	return out
 }
 
+// I-0161, ADR-0171: scoped to a story, the note components.examples gives
+// for a sub-project whose svelte is not installed in the worktree, as
+// flaiover's was not at S-0392's and S-0393's close-outs, or for a host
+// without node, is left out of the result unless the story changes a file
+// under the folder it names, and its counts are taken back, advisory
+// included, so the run neither notes nor records it. When the story does,
+// the note is inside it and stays advisory. Unscoped, it is reported as
+// before.
+func TestScopedCheckLeavesOutAnUncheckedExamplesNoteOutsideTheStory(t *testing.T) {
+	const missing = `{"error":{"code":"svelte-missing","message":"cannot resolve svelte"}}`
+	for _, tc := range []struct {
+		name    string
+		node    *fakeNode
+		folder  string // the note's path
+		changed []string
+		inside  bool
+	}{
+		{"no svelte, nothing under its folder", &fakeNode{answer: missing}, "design/components/web", []string{"flai/main.go"}, false},
+		{"no svelte, no changed path", &fakeNode{answer: missing}, "design/components/web", nil, false},
+		{"no svelte, a file beside its folder", &fakeNode{answer: missing}, "design/components/web", []string{"design/components/README.md"}, false},
+		{"no svelte, a folder named like its folder", &fakeNode{answer: missing}, "design/components/web", []string{"design/components/webapp/src/lib/Card.examples.json"}, false},
+		{"no svelte, an examples file under its folder", &fakeNode{answer: missing}, "design/components/web", []string{"design/components/web/src/lib/Card.examples.json"}, true},
+		{"no svelte, a folder under its folder", &fakeNode{answer: missing}, "design/components/web", []string{"design/components/web/src/"}, true},
+		{"no svelte, a folder that holds its folder", &fakeNode{answer: missing}, "design/components/web", []string{"design/"}, true},
+		{"no node, nothing under its folder", &fakeNode{missing: true}, "design/components", []string{"flai/main.go"}, false},
+		{"no node, a file under its folder", &fakeNode{missing: true}, "design/components", []string{"design/components/README.md"}, true},
+		{"no node, an examples file under its folder", &fakeNode{missing: true}, "design/components", []string{"design/components/web/src/lib/Card.examples.json"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			withNode(t, tc.node)
+			root := scopeProject(t)
+			addSvelteExamples(t, root, `{"examples": [{"name": "A", "props": {}}]}`)
+			whole, scoped := runScoped(t, root, tc.changed)
+			got := examplesFindings(whole)
+			if len(got) != 1 || !got[0].unchecked || !got[0].advisory || filepath.ToSlash(got[0].Path) != tc.folder {
+				t.Fatalf("unscoped, the run should report one unchecked note on %s: %+v", tc.folder, got)
+			}
+			got = examplesFindings(scoped)
+			if !tc.inside {
+				if len(got) != 0 {
+					t.Errorf("scoped to S-004, which changes %v, the note on %s should be left out: %+v", tc.changed, tc.folder, got)
+				}
+				if len(scoped.Findings) != len(whole.Findings)-1 || scoped.Warnings != whole.Warnings-1 || scoped.Errors != whole.Errors {
+					t.Errorf("scoped findings %d warnings %d errors %d, want %d, %d, %d", len(scoped.Findings), scoped.Warnings, scoped.Errors, len(whole.Findings)-1, whole.Warnings-1, whole.Errors)
+				}
+			} else if len(got) != 1 || got[0].Outside || !got[0].advisory {
+				t.Errorf("scoped to S-004, which changes %v, the note on %s should be inside it, advisory: %+v", tc.changed, tc.folder, got)
+			}
+			assertCountsMatch(t, scoped)
+			advisory := 0
+			for _, f := range scoped.Findings {
+				if f.advisory && !f.Outside {
+					advisory++
+				}
+			}
+			if scoped.Advisory != advisory {
+				t.Errorf("scoped advisory %d, the findings kept give %d", scoped.Advisory, advisory)
+			}
+			if !scoped.OK(true) {
+				t.Errorf("scoped to S-004, the run should pass --strict: %+v", scoped.Findings)
+			}
+		})
+	}
+}
+
+// ADR-0171 §2, ADR-0164: any other components.examples finding outside the
+// story, such as an example that breaks the format, stays a note outside it,
+// as before.
+func TestScopedCheckNotesAnExamplesWarningOutsideTheStory(t *testing.T) {
+	withNode(t, &fakeNode{})
+	root := scopeProject(t)
+	addSvelteExamples(t, root, "{\"examples\": [\n  {\"name\": \"A\", \"props\": {}, \"width\": -1}\n]}")
+	whole, scoped := runScoped(t, root, []string{"flai/main.go"})
+	if got := examplesFindings(whole); len(got) != 1 || got[0].unchecked || got[0].advisory || got[0].Line != 2 {
+		t.Fatalf("unscoped, the run should report the width on line 2: %+v", got)
+	}
+	got := examplesFindings(scoped)
+	if len(got) != 1 || !got[0].Outside || !strings.Contains(got[0].Message, "its width -1 is not a whole number") {
+		t.Errorf("scoped to S-004, the width should be a note outside it: %+v", got)
+	}
+	if len(scoped.Findings) != len(whole.Findings) || scoped.Warnings != whole.Warnings {
+		t.Errorf("scoped findings %d warnings %d, want %d, %d", len(scoped.Findings), scoped.Warnings, len(whole.Findings), whole.Warnings)
+	}
+	assertCountsMatch(t, scoped)
+}
+
+// addSvelteExamples names a SvelteKit sub-project web in the fixture's
+// manifest, with the component src/lib/Card.svelte, and writes its examples
+// file with examples.
+func addSvelteExamples(t *testing.T, root, examples string) {
+	t.Helper()
+	edit(t, root, "system-flow.yaml", "  wip: wip\n", "  wip: wip\nprojects:\n  - name: web\n    path: web\n    kind: sveltekit\n")
+	writeFile(t, filepath.Join(root, "web", "src", "lib", "Card.svelte"), "")
+	writeFile(t, filepath.Join(root, filepath.FromSlash(cardPath)), examples)
+}
+
+// examplesFindings is res's components.examples findings.
+func examplesFindings(res *Result) []Finding {
+	var out []Finding
+	for _, f := range res.Findings {
+		if f.Rule == "components.examples" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
 // I-0096, ADR-0123: scoped to a story, a markdown finding on the narrative
 // of another story in progress, a code span ending in a space as S-0229's
 // was, is left out of the result, and its warning is taken back from the
