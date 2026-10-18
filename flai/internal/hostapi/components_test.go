@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/channel/channeltest"
 	"github.com/bytepunx/system-flow/flai/internal/components"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -149,7 +150,7 @@ func TestComponentWritesAreRefusedWhileTheActionIsOffAndReadsStillAnswer(t *test
 	on, journal, servers := false, []Entry{}, &fakeServers{running: map[string]bool{}}
 	host := componentsHost(&on, &journal, servers)
 	for _, method := range []string{"components.start", "components.stop"} {
-		e := ask(t, host, p, method, `{"project":"ui",`+rid+`}`, nil)
+		e := ask(t, host, p, method, `{"sub_project":"ui",`+rid+`}`, nil)
 		if e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable components") {
 			t.Errorf("%s with the action off: %+v", method, e)
 		}
@@ -200,14 +201,14 @@ func TestComponentsStartThenStatusThenStopAreJournalled(t *testing.T) {
 	if len(servers.started) != 1 || servers.started[0] != p.Root+"|Shipyard|ui||"+p.Root {
 		t.Errorf("the supervisor is asked for ui of the project at its root, by the manifest's name: %v", servers.started)
 	}
-	if e := ask(t, host, p, "components.start", `{"project":"ui","request_id":"req-0002-again"}`, &w); e != nil {
+	if e := ask(t, host, p, "components.start", `{"sub_project":"ui","request_id":"req-0002-again"}`, &w); e != nil {
 		t.Fatal(e)
 	}
 	if !w.Data.AlreadyRunning {
 		t.Errorf("a second start answers the running server: %+v", w.Data)
 	}
 	var st ComponentsStatus
-	if e := ask(t, host, p, "components.status", `{"project":"ui"}`, &st); e != nil {
+	if e := ask(t, host, p, "components.status", `{"sub_project":"ui"}`, &st); e != nil {
 		t.Fatal(e)
 	}
 	if !st.Enabled || st.IdleSeconds != 1800 || len(st.Servers) != 1 || !st.Servers[0].Running || st.Servers[0].Port != 5173 || st.Servers[0].Since != "2026-10-16T08:00:00Z" {
@@ -219,13 +220,13 @@ func TestComponentsStartThenStatusThenStopAreJournalled(t *testing.T) {
 	var stopped struct {
 		Data ComponentStopped `json:"data"`
 	}
-	if e := ask(t, host, p, "components.stop", `{"project":"ui","request_id":"req-0003-stop"}`, &stopped); e != nil {
+	if e := ask(t, host, p, "components.stop", `{"sub_project":"ui","request_id":"req-0003-stop"}`, &stopped); e != nil {
 		t.Fatal(e)
 	}
 	if !stopped.Data.Stopped || stopped.Data.PID != 42 {
 		t.Errorf("components.stop: %+v", stopped.Data)
 	}
-	if e := ask(t, host, p, "components.stop", `{"project":"ui","request_id":"req-0004-stop"}`, &stopped); e != nil || stopped.Data.Stopped {
+	if e := ask(t, host, p, "components.stop", `{"sub_project":"ui","request_id":"req-0004-stop"}`, &stopped); e != nil || stopped.Data.Stopped {
 		t.Errorf("a stop with none running says so: %+v %+v", stopped.Data, e)
 	}
 	want := []string{
@@ -244,17 +245,121 @@ func TestComponentsStartThenStatusThenStopAreJournalled(t *testing.T) {
 	}
 }
 
+// I-0163: the dashboard sends every call through the channel with the
+// project's key as project in its params, which the channel checks before
+// the method runs, so the components methods take their sub-project as
+// sub_project: components.list and components.status with the key alone
+// answer every sub-project, and components.start and components.stop with
+// the key and sub_project reach the supervisor for that one.
+func TestComponentsAnswerThroughTheChannelWithTheProjectKeyInTheirParams(t *testing.T) {
+	p := shipyard(t)
+	servers := &fakeServers{running: map[string]bool{}}
+	var mu sync.Mutex // the channel runs each call on a goroutine of its own
+	var journal []Entry
+	host := Host{
+		Enabled: func(action, _ string) bool { return action == ActionComponents },
+		Record: func(e Entry) {
+			mu.Lock()
+			defer mu.Unlock()
+			journal = append(journal, e)
+		},
+		Components: servers,
+	}
+	withNode(t, &listNode{stdout: `{"components":[{"path":"src/lib/Button.svelte","props":[{"name":"label","kind":"string","required":true}]}]}`})
+	dash := channeltest.New(t, "s3cret")
+	client := &channel.Client{URL: dash.URL, Key: []byte("s3cret"), Project: p, Methods: MethodsFor("test", func() time.Time { return t0 }, host),
+		Version: "test", PingEvery: time.Hour /* the test dashboard answers no ping */, MinBackoff: 10 * time.Millisecond, MaxBackoff: 40 * time.Millisecond, ReleaseKeys: dash.Keys}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		client.Run(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+	conn := dash.Wait(t)
+	// ask sends method through the channel as the dashboard does and decodes
+	// its answer into into, failing when it is refused or names a path on
+	// the host.
+	ask := func(method, params string, into any) {
+		t.Helper()
+		res, e := conn.Ask(t, method, params)
+		if e != nil {
+			t.Fatalf("%s %s through the channel: %+v", method, params, e)
+		}
+		if strings.Contains(string(res), p.Root) {
+			t.Errorf("%s names a path on the host:\n%s", method, res)
+		}
+		if err := json.Unmarshal(res, into); err != nil {
+			t.Fatalf("%s: %v\n%s", method, err, res)
+		}
+	}
+
+	var list struct {
+		Projects []ComponentsProject `json:"projects"`
+	}
+	ask("components.list", `{"project":"shipyard"}`, &list)
+	if len(list.Projects) != 2 || list.Projects[0].Name != "ui" || !list.Projects[0].Supported || list.Projects[1].Name != "cli" ||
+		len(list.Projects[0].Components) != 1 || list.Projects[0].Components[0].Name != "Button" {
+		t.Errorf("components.list with the project key alone is every sub-project's catalogue: %+v", list.Projects)
+	}
+
+	var w struct {
+		Data ComponentServer `json:"data"`
+	}
+	ask("components.start", `{"project":"shipyard","sub_project":"ui",`+rid+`}`, &w)
+	servers.mu.Lock()
+	started := slices.Clone(servers.started)
+	servers.mu.Unlock()
+	if len(started) != 1 || started[0] != p.Root+"|Shipyard|ui||"+p.Root || !w.Data.Running || w.Data.Project != "ui" {
+		t.Errorf("components.start with sub_project starts that one's dev server: %v %+v", started, w.Data)
+	}
+
+	var st ComponentsStatus
+	ask("components.status", `{"project":"shipyard"}`, &st)
+	if !st.Enabled || len(st.Servers) != 1 || st.Servers[0].Project != "ui" || !st.Servers[0].Running {
+		t.Errorf("components.status with the project key alone is every supported sub-project's server: %+v", st)
+	}
+
+	var stopped struct {
+		Data ComponentStopped `json:"data"`
+	}
+	ask("components.stop", `{"project":"shipyard","sub_project":"ui","request_id":"req-0002-stop"}`, &stopped)
+	if !stopped.Data.Stopped || stopped.Data.Project != "ui" || stopped.Data.PID != 42 {
+		t.Errorf("components.stop with sub_project stops that one's dev server: %+v", stopped.Data)
+	}
+
+	// the sub-project sent as project, as the dashboard did before I-0163, is
+	// another project's call, refused by the channel before the method runs
+	if _, e := conn.Ask(t, "components.start", `{"project":"ui",`+rid+`}`); e == nil || e.Code != channel.CodeUnknownProject {
+		t.Errorf("a call whose project is not the channel's key is refused: %+v", e)
+	}
+	servers.mu.Lock()
+	defer servers.mu.Unlock()
+	if len(servers.started) != 1 {
+		t.Errorf("a refused call starts nothing: %v", servers.started)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(journal) != 2 || journal[0].Detail != "started ui's component dev server at http://127.0.0.1:5173/__flai/components/ (pid 42)" ||
+		journal[1].Detail != "stopped ui's component dev server (pid 42)" || journal[0].Project != "shipyard" {
+		t.Errorf("the start and the stop are journalled under the project's key: %+v", journal)
+	}
+}
+
 func TestComponentsStartRefusals(t *testing.T) {
 	p := shipyard(t)
 	on, journal := true, []Entry{}
 	servers := &fakeServers{running: map[string]bool{}}
 	host := componentsHost(&on, &journal, servers)
 	for params, want := range map[string]string{
-		`{"project":"cli",` + rid + `}`:   `sub-project "cli" is of kind go`,
-		`{"project":"nope",` + rid + `}`:  `no sub-project "nope"`,
-		`{"project":["ui"],` + rid + `}`:  "params",
-		`{"project":"ui"}`:                "request_id",
-		`{"project":"ui","request_id":1}`: "request_id",
+		`{"sub_project":"cli",` + rid + `}`:   `sub-project "cli" is of kind go`,
+		`{"sub_project":"nope",` + rid + `}`:  `no sub-project "nope"`,
+		`{"sub_project":["ui"],` + rid + `}`:  "params",
+		`{"sub_project":"ui"}`:                "request_id",
+		`{"sub_project":"ui","request_id":1}`: "request_id",
 	} {
 		if e := ask(t, host, p, "components.start", params, nil); e == nil || e.Code != channel.CodeInvalidParams || !strings.Contains(e.Message, want) {
 			t.Errorf("components.start %s: %+v, want invalid params saying %q", params, e, want)
@@ -265,7 +370,7 @@ func TestComponentsStartRefusals(t *testing.T) {
 	}
 
 	servers.startErr = fmt.Errorf("cannot serve sub-project ui's components: %w in %s", components.ErrViteMissing, filepath.Join(p.Root, "ui"))
-	e := ask(t, host, p, "components.start", `{"project":"ui",`+rid+`}`, nil)
+	e := ask(t, host, p, "components.start", `{"sub_project":"ui",`+rid+`}`, nil)
 	if e == nil || e.Code != Rule || strings.Contains(e.Message, p.Root) || !strings.Contains(e.Message, "vite is not installed in ui") {
 		t.Errorf("a sub-project without vite is the operator's to fix: %+v", e)
 	}
@@ -274,7 +379,7 @@ func TestComponentsStartRefusals(t *testing.T) {
 	}
 
 	none := componentsHost(&on, &journal, nil)
-	if e := ask(t, none, p, "components.start", `{"project":"ui","request_id":"req-0005-none"}`, nil); e == nil || e.Code != Rule || !strings.Contains(e.Message, "runs no component dev servers") {
+	if e := ask(t, none, p, "components.start", `{"sub_project":"ui","request_id":"req-0005-none"}`, nil); e == nil || e.Code != Rule || !strings.Contains(e.Message, "runs no component dev servers") {
 		t.Errorf("a flai that runs no dev servers refuses a start: %+v", e)
 	}
 	var st ComponentsStatus
@@ -288,8 +393,8 @@ func TestComponentReadsRefuseWhatIsNotTheirs(t *testing.T) {
 	on, journal := true, []Entry{}
 	host := componentsHost(&on, &journal, &fakeServers{running: map[string]bool{}})
 	for method, params := range map[string][]string{
-		"components.status": {`{"project":"cli"}`, `{"project":"nope"}`, `[]`, `{"project":1}`},
-		"components.list":   {`{"project":"nope"}`, `[]`},
+		"components.status": {`{"sub_project":"cli"}`, `{"sub_project":"nope"}`, `[]`, `{"sub_project":1}`},
+		"components.list":   {`{"sub_project":"nope"}`, `[]`},
 	} {
 		for _, in := range params {
 			if e := ask(t, host, p, method, in, nil); e == nil || e.Code != channel.CodeInvalidParams {
@@ -298,14 +403,14 @@ func TestComponentReadsRefuseWhatIsNotTheirs(t *testing.T) {
 		}
 	}
 	withNode(t, &listNode{missing: true})
-	e := ask(t, host, p, "components.list", `{"project":"ui"}`, nil)
+	e := ask(t, host, p, "components.list", `{"sub_project":"ui"}`, nil)
 	if e == nil || e.Code != Rule || !strings.Contains(e.Message, "install Node.js") {
 		t.Errorf("components.list without node says what to install: %+v", e)
 	}
 	var list struct {
 		Projects []ComponentsProject `json:"projects"`
 	}
-	if e := ask(t, host, p, "components.list", `{"project":"cli"}`, &list); e != nil || len(list.Projects) != 1 || list.Projects[0].Supported || list.Projects[0].Components == nil {
+	if e := ask(t, host, p, "components.list", `{"sub_project":"cli"}`, &list); e != nil || len(list.Projects) != 1 || list.Projects[0].Supported || list.Projects[0].Components == nil {
 		t.Errorf("an unsupported sub-project is listed by its kind, without node: %+v %+v", list, e)
 	}
 }
@@ -422,17 +527,17 @@ func TestComponentsWithAStoryServeItsWorktree(t *testing.T) {
 	var w struct {
 		Data ComponentServer `json:"data"`
 	}
-	if e := ask(t, host, p, "components.start", `{"project":"ui","story":"S-1",`+rid+`}`, &w); e != nil {
+	if e := ask(t, host, p, "components.start", `{"sub_project":"ui","story":"S-1",`+rid+`}`, &w); e != nil {
 		t.Fatal(e)
 	}
 	if w.Data.Story != "S-0001" || !w.Data.Running {
 		t.Errorf("components.start with a story answers its server, with the story: %+v", w.Data)
 	}
 	// kit is only in the branch's manifest, so it is found in the worktree's
-	if e := ask(t, host, p, "components.start", `{"project":"kit","story":"S-0002","request_id":"req-0002-kit"}`, nil); e != nil {
+	if e := ask(t, host, p, "components.start", `{"sub_project":"kit","story":"S-0002","request_id":"req-0002-kit"}`, nil); e != nil {
 		t.Fatal(e)
 	}
-	if e := ask(t, host, p, "components.start", `{"project":"ui","request_id":"req-0003-main"}`, nil); e != nil {
+	if e := ask(t, host, p, "components.start", `{"sub_project":"ui","request_id":"req-0003-main"}`, nil); e != nil {
 		t.Fatal(e)
 	}
 	want := []string{
@@ -469,7 +574,7 @@ func TestComponentsWithAStoryServeItsWorktree(t *testing.T) {
 	var stopped struct {
 		Data ComponentStopped `json:"data"`
 	}
-	if e := ask(t, host, p, "components.stop", `{"project":"ui","story":"S-0001","request_id":"req-0004-stop"}`, &stopped); e != nil {
+	if e := ask(t, host, p, "components.stop", `{"sub_project":"ui","story":"S-0001","request_id":"req-0004-stop"}`, &stopped); e != nil {
 		t.Fatal(e)
 	}
 	if !stopped.Data.Stopped || stopped.Data.Story != "S-0001" || !servers.running["ui"] || servers.running["S-0001|ui"] {
@@ -545,7 +650,7 @@ func TestComponentsListCarriesExamplesFromItsCheckout(t *testing.T) {
 	if !ok {
 		t.Fatal("no method components.list")
 	}
-	res, rerr := m(context.Background(), p, json.RawMessage(`{"project":"ui"}`))
+	res, rerr := m(context.Background(), p, json.RawMessage(`{"sub_project":"ui"}`))
 	if rerr != nil {
 		t.Fatal(rerr)
 	}
@@ -584,7 +689,7 @@ func TestComponentsRefuseAStoryWithoutAnOpenWorktree(t *testing.T) {
 	}
 	for _, c := range cases {
 		for _, method := range []string{"components.start", "components.stop", "components.status", "components.list"} {
-			e := ask(t, host, p, method, `{"project":"ui","story":"`+c.story+`",`+rid+`}`, nil)
+			e := ask(t, host, p, method, `{"sub_project":"ui","story":"`+c.story+`",`+rid+`}`, nil)
 			if e == nil || e.Code != c.code || !strings.Contains(e.Message, c.want) || strings.Contains(e.Message, p.Root) {
 				t.Errorf("%s with %s (%s): %+v, want code %d saying %q", method, c.story, c.name, e, c.code, c.want)
 			}
@@ -605,12 +710,12 @@ func TestComponentsStartBeyondTheCapIsARule(t *testing.T) {
 	host := componentsHost(&on, &journal, servers)
 	msg := "cannot start S-0001's ui component dev server: flai runs 3 component dev servers for this project, components.max_servers: main's ui, S-0002's ui, S-0002's kit; stop one first"
 	servers.startErr = fmt.Errorf("%s: %w", msg, ErrComponentServersFull)
-	e := ask(t, host, p, "components.start", `{"project":"ui","story":"S-0001",`+rid+`}`, nil)
+	e := ask(t, host, p, "components.start", `{"sub_project":"ui","story":"S-0001",`+rid+`}`, nil)
 	if e == nil || e.Code != Rule || !strings.Contains(e.Message, msg) {
 		t.Errorf("a start beyond the cap: %+v", e)
 	}
 	servers.startErr = fmt.Errorf("cannot serve sub-project ui's components: cannot install: %w in %s", components.ErrNoLockFile, filepath.Join(p.Root, ".flai-cache", "worktrees", "S-0001", "ui"))
-	e = ask(t, host, p, "components.start", `{"project":"ui","story":"S-0001","request_id":"req-0002-lock"}`, nil)
+	e = ask(t, host, p, "components.start", `{"sub_project":"ui","story":"S-0001","request_id":"req-0002-lock"}`, nil)
 	if e == nil || e.Code != Rule || !strings.Contains(e.Message, "no lock file in ui") {
 		t.Errorf("a worktree with no lock file is a rule, named relative to the worktree: %+v", e)
 	}

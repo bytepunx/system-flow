@@ -834,6 +834,9 @@ func (c *Client) serveOnce(ctx context.Context, allow bool) error {
 }
 
 // call finds the method and checks the project before anything runs.
+// project in a call's params is the channel's project key alone, which the
+// dashboard stamps on every call, so no method may take a parameter of that
+// name: it would get the key, not its own argument (I-0163).
 func (c *Client) call(ctx context.Context, m message) (any, *Error) {
 	method, ok := c.Methods[m.Method]
 	if !ok {

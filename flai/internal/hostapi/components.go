@@ -184,10 +184,13 @@ func noComponentServers() *channel.Error {
 }
 
 // componentsParams are what every components method takes: the
-// sub-project, and the story whose worktree it is in.
+// sub-project, as sub_project, and the story whose worktree it is in. The
+// sub-project is not project: project in a call's params is the channel's
+// project key alone, which the dashboard stamps on every call, so a method
+// that read it would get the key, not the sub-project (I-0163).
 type componentsParams struct {
-	Project string `json:"project"`
-	Story   string `json:"story"`
+	SubProject string `json:"sub_project"`
+	Story      string `json:"story"`
 }
 
 // checkout is where a components method reads and serves: the project's
@@ -272,7 +275,7 @@ func ComponentsWorktree(repo *workitem.Repo, id string) (string, string, error) 
 }
 
 // subProjectOf is the checkout raw's story names and the sub-project its
-// project names there, or the one supported when it names none, as flai
+// sub_project names there, or the one supported when it names none, as flai
 // components serve --project picks it.
 func subProjectOf(p channel.Project, raw json.RawMessage) (checkout, manifest.Project, *channel.Error) {
 	in, e := decode[componentsParams](raw)
@@ -283,7 +286,7 @@ func subProjectOf(p channel.Project, raw json.RawMessage) (checkout, manifest.Pr
 	if e != nil {
 		return checkout{}, manifest.Project{}, e
 	}
-	sub, err := components.PickSubProject(c.m.Projects, strings.TrimSpace(in.Project))
+	sub, err := components.PickSubProject(c.m.Projects, strings.TrimSpace(in.SubProject))
 	if err != nil {
 		return checkout{}, manifest.Project{}, bad("%s", err)
 	}
@@ -409,10 +412,10 @@ func whose(story, sub string) string {
 func componentMethods(host Host) map[string]channel.Method {
 	return map[string]channel.Method{
 		// components.status: each supported sub-project's dev server, or the
-		// named one's, in the main checkout or the story's worktree, whether
-		// it runs, where, since when, and its last error; asking marks each
-		// used, so that the page that shows one keeps it from being stopped
-		// as idle.
+		// one sub_project names, in the main checkout or the story's
+		// worktree, whether it runs, where, since when, and its last error;
+		// asking marks each used, so that the page that shows one keeps it
+		// from being stopped as idle.
 		"components.status": func(_ context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			in, e := decode[componentsParams](raw)
 			if e != nil {
@@ -424,7 +427,7 @@ func componentMethods(host Host) map[string]channel.Method {
 			}
 			m := c.m
 			var subs []manifest.Project
-			if name := strings.TrimSpace(in.Project); name != "" {
+			if name := strings.TrimSpace(in.SubProject); name != "" {
 				sub, err := components.PickSubProject(m.Projects, name)
 				if err != nil {
 					return nil, bad("%s", err)
@@ -454,8 +457,9 @@ func componentMethods(host Host) map[string]channel.Method {
 
 		// components.list: the catalogue, as flai components list --json
 		// prints it: every sub-project in the manifest's order, or the one
-		// named, a Svelte one with its components, their props, and their
-		// examples, read from the main checkout or the story's worktree.
+		// sub_project names, a Svelte one with its components, their props,
+		// and their examples, read from the main checkout or the story's
+		// worktree.
 		"components.list": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			in, e := decode[componentsParams](raw)
 			if e != nil {
@@ -466,7 +470,7 @@ func componentMethods(host Host) map[string]channel.Method {
 				return nil, e
 			}
 			projects := c.m.Projects
-			if name := strings.TrimSpace(in.Project); name != "" {
+			if name := strings.TrimSpace(in.SubProject); name != "" {
 				i := slices.IndexFunc(projects, func(sp manifest.Project) bool { return sp.Name == name })
 				if i < 0 {
 					return nil, bad("%s", components.UnknownSubProject(name, projects))
