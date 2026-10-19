@@ -148,3 +148,33 @@ func DirtyOutsideWip(r execx.Runner, repo *workitem.Repo) []string {
 	}
 	return out
 }
+
+// Overwritten lists, sorted, the main checkout's uncommitted and untracked
+// files that the change from commit from to commit to also changes, from the
+// commit they share: the files git refuses to overwrite as it moves the
+// checkout's branch from one to the other. The checkout's other
+// uncommitted files are left out, since they stop nothing. Git is read
+// through r in mainRoot; an error says what could not be read.
+func Overwritten(r execx.Runner, mainRoot, from, to string) ([]string, error) {
+	st, err := r.Run(mainRoot, "git", "-c", "core.quotePath=false", "status", "--porcelain", "--no-renames", "--untracked-files=all")
+	if err != nil {
+		return nil, fmt.Errorf("read the main checkout's uncommitted files: %w; check that git can read %s", err, mainRoot)
+	}
+	dirty := workitem.PorcelainPaths(st)
+	if len(dirty) == 0 {
+		return nil, nil
+	}
+	diff, err := r.Run(mainRoot, "git", "-c", "core.quotePath=false", "diff", "--name-only", "--no-renames", from+"..."+to)
+	if err != nil {
+		return nil, fmt.Errorf("read the files the change from %s to %s changes: %w; check that both commits are in the repository", from, to, err)
+	}
+	changed := strings.Split(diff, "\n")
+	var out []string
+	for _, p := range dirty {
+		if slices.Contains(changed, p) && !slices.Contains(out, p) {
+			out = append(out, p)
+		}
+	}
+	slices.Sort(out)
+	return out, nil
+}
