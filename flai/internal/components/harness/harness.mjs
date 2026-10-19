@@ -24,6 +24,14 @@
 // A tokens message (S-0441) is whole as well: its light and dark custom
 // properties replace the last message's, in one <style data-flai-tokens>
 // kept last in the head, and a message with none removes it.
+//
+// Framed, a component's request to the app's own server, such as a fetch of
+// /api/..., is not sent (S-0449): the dev server's server code has no
+// dashboard token and no host channel, so it would answer 500. The harness
+// answers a fetch 501 with a JSON error, and an EventSource with an error
+// event and no connection, and posts each as an event, named fetch or
+// EventSource, so that the page's event log shows it. Vite's and flai's own
+// requests, a module or a static asset, and another origin's go through.
 import { createRawSnippet, flushSync, mount, unmount } from 'svelte';
 import Frame from 'virtual:flai-components/Frame.svelte';
 import { components, root, setup, setupPath } from 'virtual:flai-components';
@@ -70,6 +78,88 @@ function pageOrigin(value) {
 
 function post(message) {
 	if (origin) parent.postMessage({ source, version, ...message }, origin);
+}
+
+// forTheApp is whether a request for url, with the Accept header accept, is
+// for the app's own server code: to this dev server, and none of Vite's or
+// flai's own, under /@, /__, or /node_modules/, nor Vite's ping, nor a
+// module or a static asset, whose last segment has a file extension.
+function forTheApp(url, accept) {
+	if (url.origin !== location.origin || accept.includes('text/x-vite-ping')) return false;
+	const p = url.pathname;
+	if (p.startsWith('/@') || p.startsWith('/__') || p.startsWith('/node_modules/')) return false;
+	return !/\.[^/.]+$/.test(p.slice(p.lastIndexOf('/') + 1));
+}
+
+// requested is the URL, method, and Accept header of fetch's arguments,
+// taking the method and headers from init over the Request's, or null when
+// they do not name a URL, which fetch itself then refuses.
+function requested(input, init) {
+	try {
+		const req = input instanceof Request ? input : null;
+		const url = new URL(req ? req.url : String(input), document.baseURI);
+		const method = String(init?.method ?? req?.method ?? 'GET').toUpperCase();
+		const accept = new Headers(init?.headers ?? req?.headers).get('accept') ?? '';
+		return { url, method, accept };
+	} catch {
+		return null;
+	}
+}
+
+// pathOf is url's path and query, as a component on this origin names it.
+function pathOf(url) {
+	return url.pathname + url.search;
+}
+
+// answerTheAppsRequests replaces fetch and EventSource, before the setup
+// module or any component runs, so that a request for the app's own server
+// is answered here, and posted as an event of the component last selected.
+function answerTheAppsRequests() {
+	const send = window.fetch.bind(window);
+	window.fetch = function fetch(input, init) {
+		const r = requested(input, init);
+		if (!r || !forTheApp(r.url, r.accept)) return send(input, init);
+		const path = pathOf(r.url);
+		post({ type: 'event', component: wanted, name: 'fetch', args: [r.method, path] });
+		const body = JSON.stringify({ error: `flai's component harness does not answer the app's own requests: ${r.method} ${path}` });
+		return Promise.resolve(
+			new Response(body, { status: 501, statusText: 'Not Implemented', headers: { 'content-type': 'application/json' } })
+		);
+	};
+	const Native = window.EventSource;
+	if (!Native) return;
+	// An EventSource for the app's server opens no connection: it fails as
+	// one refused would, with an error event, and is closed.
+	window.EventSource = class EventSource extends EventTarget {
+		static CONNECTING = 0;
+		static OPEN = 1;
+		static CLOSED = 2;
+		constructor(url, init) {
+			let u;
+			try {
+				u = new URL(String(url), document.baseURI);
+			} catch {
+				return new Native(url, init);
+			}
+			if (!forTheApp(u, 'text/event-stream')) return new Native(url, init);
+			super();
+			this.url = u.href;
+			this.withCredentials = !!init?.withCredentials;
+			this.readyState = 0;
+			this.onopen = this.onmessage = this.onerror = null;
+			post({ type: 'event', component: wanted, name: 'EventSource', args: [pathOf(u)] });
+			setTimeout(() => {
+				if (this.readyState === 2) return;
+				this.readyState = 2;
+				const e = new Event('error');
+				this.onerror?.(e);
+				this.dispatchEvent(e);
+			});
+		}
+		close() {
+			this.readyState = 2;
+		}
+	};
 }
 
 async function select(path, props, functions, snippets) {
@@ -377,6 +467,7 @@ function receive(event) {
 }
 
 const asked = params.get('c') ?? '';
+if (origin) answerTheAppsRequests();
 try {
 	await setup();
 } catch (e) {

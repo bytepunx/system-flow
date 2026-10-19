@@ -12,7 +12,8 @@ package components
 // message lays its values over the stylesheet's, and (S-0449) how the
 // harness frames a component: in a margin, a fixed dialog whole, with
 // nothing of the component before, only once the page selects it, and with
-// the props the page sent while it loaded. It needs node and
+// the props the page sent while it loaded, and that it answers the
+// component's requests for the app's own server itself. It needs node and
 // flaiover's dependencies installed, so it skips without them, and under
 // -short; the browser checks skip without Playwright's Chromium. The build
 // tag keeps it off Windows: the fixture links node_modules with symlinks,
@@ -168,6 +169,9 @@ func TestServeCarriesHotUpdatesOfTheComponentAndTheStylesheet(t *testing.T) {
 	})
 	t.Run("a props message sent while a select loads reaches the component", func(t *testing.T) {
 		checkPropsWhileLoading(t, dir, s.URL(), vite)
+	})
+	t.Run("a request for the app's own server is answered by the harness", func(t *testing.T) {
+		checkFetches(t, dir, s.URL(), vite)
 	})
 }
 
@@ -765,6 +769,106 @@ func checkPropsWhileLoading(t *testing.T, dir, harnessURL string, vite func() st
 	noErrors(t, messages)
 	if r.Text == nil || !strings.HasSuffix(*r.Text, "the props!") {
 		t.Errorf("the component showed %v, want the props message's name, the props", stringOrNone(r.Text))
+	}
+}
+
+// fetcherComponent is the fixture component that asks the app's own server,
+// in its module and as it mounts, and fetches a module of the dev server's.
+const fetcherComponent = "src/lib/Fetcher.svelte"
+
+// fetchScript is the body of a page script that selects fetcherComponent
+// and reports what it was answered, as it shows it, and the path of every
+// request for /api the page sent.
+const fetchScript = `	const [component] = args;
+	const sent = [];
+	page.on('request', (r) => {
+		const u = new URL(r.url());
+		if (u.pathname.startsWith('/api/')) sent.push(u.pathname);
+	});
+	await send({ type: 'select', component });
+	await seen(['rendered', 'error'], 1);
+	await page.waitForSelector('.fetched', { timeout: 30000 });
+	report.answers = JSON.parse(await page.textContent('.fetched'));
+	report.sent = sent;`
+
+// fetchAnswer is a response as fetcherComponent shows it.
+type fetchAnswer struct {
+	Status     int    `json:"status"`
+	StatusText string `json:"statusText"`
+	Type       string `json:"type"`
+	Body       string `json:"body"`
+}
+
+// checkFetches runs fetchScript against the harness at harnessURL, and
+// checks that each request for the app's own server, by fetch or
+// EventSource, in the component's module or as it mounts, was answered by
+// the harness, never sent, and posted as an event, and that a fetch of a
+// module still reached the dev server.
+func checkFetches(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Answers *struct {
+			Module  int         `json:"module"`
+			String  fetchAnswer `json:"string"`
+			URL     fetchAnswer `json:"url"`
+			Request fetchAnswer `json:"request"`
+			Asset   fetchAnswer `json:"asset"`
+			Stream  int         `json:"stream"`
+		} `json:"answers"`
+		Sent []string `json:"sent"`
+	}
+	messages := runPage(t, dir, "fetches.mjs", fetchScript, "that a component's fetch of /api is answered 501 by the harness", vite, &r,
+		harnessURL, fetcherComponent)
+	noErrors(t, messages)
+	if r.Answers == nil {
+		t.Fatalf("%s showed no answers", fetcherComponent)
+	}
+	a := r.Answers
+	if a.Module != http.StatusNotImplemented {
+		t.Errorf("the module's fetch of /api/module was answered %d, want 501", a.Module)
+	}
+	for _, c := range []struct {
+		what   string
+		got    fetchAnswer
+		method string
+		path   string
+	}{
+		{"a string", a.String, "GET", "/api/x"},
+		{"a URL, with a method in lower case", a.URL, "PUT", "/api/y?z=1"},
+		{"a Request", a.Request, "POST", "/api/r"},
+	} {
+		want := fetchAnswer{
+			Status: http.StatusNotImplemented, StatusText: "Not Implemented", Type: "application/json",
+			Body: fmt.Sprintf(`{"error":"flai's component harness does not answer the app's own requests: %s %s"}`, c.method, c.path),
+		}
+		if c.got != want {
+			t.Errorf("the fetch by %s was answered %+v, want %+v", c.what, c.got, want)
+		}
+	}
+	if a.Asset.Status != http.StatusOK || !strings.Contains(a.Asset.Body, "--fixture-ink") {
+		t.Errorf("the fetch of /src/app.css was answered %+v, want the dev server's 200 with the stylesheet", a.Asset)
+	}
+	if a.Stream != 2 {
+		t.Errorf("the EventSource for /api/events was in state %d at its error, want 2, closed", a.Stream)
+	}
+	if len(r.Sent) != 0 {
+		t.Errorf("the page sent %v, want no request for /api", r.Sent)
+	}
+	var events []string
+	for _, m := range messages {
+		if m.Type == "event" {
+			events = append(events, m.Component+" "+m.Name+" "+string(m.Args))
+		}
+	}
+	want := []string{
+		fetcherComponent + ` fetch ["GET","/api/module"]`,
+		fetcherComponent + ` fetch ["GET","/api/x"]`,
+		fetcherComponent + ` fetch ["PUT","/api/y?z=1"]`,
+		fetcherComponent + ` fetch ["POST","/api/r"]`,
+		fetcherComponent + ` EventSource ["/api/events?project=x"]`,
+	}
+	if !slices.Equal(events, want) {
+		t.Errorf("the harness posted the events\n%s\nwant\n%s", strings.Join(events, "\n"), strings.Join(want, "\n"))
 	}
 }
 

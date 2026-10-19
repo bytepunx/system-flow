@@ -1441,6 +1441,8 @@ A change you save to a component or to the stylesheet reaches the page as a hot 
 
 When the dashboard's Components page frames the harness, the harness renders only the component the page picks, never the one the frame's URL first named, even after a reload. Picking another component removes everything the one before rendered, a portal in the page's body among it. The harness tells the page the size of everything the component draws, a dialog centred in a fixed backdrop among it, with the 10px margin on each side, so the frame holds it whole ([component-library.md § The harness](../../design/system/component-library.md#the-harness)).
 
+Framed, the harness also answers the component's requests to the app's own server, such as a `fetch` of `/api/...`, so that none reaches the app's server code, which answers 500 there. A `fetch` gets 501 Not Implemented, with a JSON `error` naming the request, and an `EventSource` fails without connecting. The page's event log lists each ([ADR-0172](../../design/adrs/0172-the-component-harness-answers-a-framed-component-s-requests-to-the-app-s-own.md)). Modules, static assets, Vite's and flai's own requests, and requests to other origins go through.
+
 Ctrl-C, or SIGTERM, stops Vite and everything it started. If Vite exits on its own, the command exits 1 with Vite's last lines of output.
 
 flai writes the harness and a Vite config under `.flai-cache/components/<project>/<sub-project>/`, again at each start; edit the sub-project's own config, not that one. It refuses, exit 1:
