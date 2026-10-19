@@ -230,6 +230,14 @@ func TestABatchOfTwoCleanStoriesIsBuiltInOrderAndVerifiedOnce(t *testing.T) {
 	if got, want := subjects(t, repo, bt.Branch), []string{a + "'s change", b + "'s change", "init"}; !slices.Equal(got, want) {
 		t.Errorf("the batch's branch has %v, want %v", got, want)
 	}
+	// S-0400: each story's verified head and its rebased head in the batch
+	wantHeads := []Head{
+		{Story: b, Verified: headB, Rebased: runGit(t, repo.MainRoot, "rev-parse", bt.Branch+"~1")},
+		{Story: a, Verified: headA, Rebased: runGit(t, repo.MainRoot, "rev-parse", bt.Branch)},
+	}
+	if !slices.Equal(bt.Heads, wantHeads) {
+		t.Errorf("heads %+v, want %+v", bt.Heads, wantHeads)
+	}
 	wt := filepath.Join(repo.MainRoot, filepath.FromSlash(bt.Worktree))
 	if got := runGit(t, wt, "rev-parse", "--abbrev-ref", "HEAD"); got != bt.Branch {
 		t.Errorf("the batch's worktree is on %s, want %s", got, bt.Branch)
@@ -272,6 +280,10 @@ func TestAStoryWhoseRebaseStopsIsLeftOutAndTheRestGoOn(t *testing.T) {
 	}
 	if got, want := subjects(t, repo, st.Batch.Branch), []string{c + "'s change", a + "'s change", "init"}; !slices.Equal(got, want) {
 		t.Errorf("the batch's branch has %v, want %v", got, want)
+	}
+	// S-0400: a story left out has no heads in the batch
+	if _, ok := st.Batch.HeadOf(b); ok || len(st.Batch.Heads) != 2 || st.Batch.Heads[1].Story != c || st.Batch.Heads[1].Rebased != runGit(t, repo.MainRoot, "rev-parse", st.Batch.Branch) {
+		t.Errorf("heads %+v, want %s's and %s's alone", st.Batch.Heads, a, c)
 	}
 	if len(st.Outcomes) != 1 {
 		t.Fatalf("outcomes %+v, want %s's alone", st.Outcomes, b)

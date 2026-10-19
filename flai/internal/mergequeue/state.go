@@ -63,6 +63,12 @@ type Batch struct {
 	// Dropped is why the batch was dropped, by whom and when; nil while it
 	// was not.
 	Dropped *Dropped `json:"dropped,omitempty"`
+	// Heads are each story's heads, in the order rebased; Bisect is the
+	// bisection of a batch that failed, and Landing the landing of the
+	// stories it lets land, each nil until it begins (S-0400).
+	Heads   []Head   `json:"heads,omitempty"`
+	Bisect  *Bisect  `json:"bisect,omitempty"`
+	Landing *Landing `json:"landing,omitempty"`
 }
 
 // LeftOut is a story left out of a batch and the paths its rebase onto the

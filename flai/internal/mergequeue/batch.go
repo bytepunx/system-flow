@@ -239,6 +239,11 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 		}
 		if out == nil {
 			head, kept = next, append(kept, e.Story)
+			if err := b.update(func(_ *State, batch *Batch) {
+				batch.Heads = append(batch.Heads, Head{Story: e.Story, Verified: e.Head, Rebased: next})
+			}); err != nil {
+				return err
+			}
 			continue
 		}
 		left = append(left, e.Story)
