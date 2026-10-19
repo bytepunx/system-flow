@@ -3,16 +3,37 @@ id: T-1665
 type: task
 nature: improvement
 title: While the merge-queue host action is on, flai verify leaves the tiers marked queue out and names each in its step
-status: backlog
+status: done
 parent: S-0405
 owner: alex
 created: 2026-10-16T05:02:32Z
-updated: 2026-10-16T05:02:32Z
-transitions: []
+updated: 2026-10-19T21:18:12Z
+transitions:
+  - to: ready
+    at: 2026-10-19T20:43:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-19T20:43:43Z
+    by: system-flow
+  - to: done
+    at: 2026-10-19T21:18:12Z
+    by: system-flow
 stream: S-0405
 tags: [cli]
-touches: [flai/internal/verify/select.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go]
+touches: [flai/internal/verify/select.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/verify/select_test.go, flai/internal/mcpserver/verify.go, flai/internal/mcpserver/verify_test.go, flai/cmd/mcp.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/verify/verify.go, flaiover/src/lib/review.ts, flaiover/src/lib/review.test.ts, flai/internal/mcpserver/server.go]
 after: [T-1654]
+usage:
+  source: log
+  seconds: 2069
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 131
+      output: 42859
+      cache_read: 8191156
+      cache_write: 338947
+      cost: 4.4479
 ---
 # T-1665 While the merge-queue host action is on, flai verify leaves the tiers marked queue out and names each in its step
 

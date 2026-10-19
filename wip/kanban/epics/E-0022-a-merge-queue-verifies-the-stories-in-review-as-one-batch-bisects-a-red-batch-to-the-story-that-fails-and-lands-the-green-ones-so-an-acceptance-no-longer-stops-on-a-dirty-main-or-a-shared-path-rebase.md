@@ -19,37 +19,43 @@ topics: [cli, orchestration, analysis]
 touches: [flai/internal/serve, flai/internal/workitem, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/workflow.md, design/system/agent-coordination.md, design/system/metrics.md, design/conventions/strategic-agents.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 9814
+  seconds: 14444
   priced_by: harness
   turns:
     - day: 2026-10-19
-      ceremony: 6
-      hand_edits: 4
-      work: 122
+      ceremony: 7
+      hand_edits: 6
+      work: 197
   models:
+    - model: claude-haiku-5-5
+      input: 64
+      output: 39414
+      cache_read: 3512975
+      cache_write: 195265
+      cost: 0.3131
     - model: claude-opus-5-5
-      input: 1276
-      output: 520594
-      cache_read: 78867644
-      cache_write: 3462508
-      cost: 46.1784
+      input: 1634
+      output: 638079
+      cache_read: 101321372
+      cache_write: 4391636
+      cost: 58.3711
   strategic:
     - kind: orchestrator
-      seconds: 6818
+      seconds: 12504
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 315
-          output: 5488
-          cache_read: 75018387
-          cache_write: 80060
-          cost: 18.8268
+          input: 431
+          output: 7611
+          cache_read: 90888636
+          cache_write: 111348
+          cost: 22.8136
         - model: claude-sonnet-5-5
-          input: 12
-          output: 65
-          cache_read: 171438
-          cache_write: 56807
-          cost: 0.1868
+          input: 24
+          output: 115
+          cache_read: 382373
+          cache_write: 128158
+          cost: 0.4178
 ---
 # E-0022 A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
 

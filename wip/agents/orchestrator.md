@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 928.1804
-accrued_seconds: 901307
-tasks_completed: 649
-last_run: 2026-10-19T18:59:27Z
+accrued_cost: 932.3982
+accrued_seconds: 906993
+tasks_completed: 651
+last_run: 2026-10-19T20:34:13Z
 ---
 
 # Orchestrator activity
@@ -4554,6 +4554,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0399
 - Seconds: 10
 - Cost: 0.0654 USD, estimated
+
+### 2026-10-19T20:34:06Z
+
+- Summary: Accepted S-0399 under accept_reviews at fd8ae70a83a3, after verify passed every step at head (integration 5m46s, smoke 6m33s) with the branch containing main and the dry run showing no blocker. The verifier matched criteria 1 to 5 to changed files, all ticked, and confirmed the queue is off by default, runs only with accept_reviews on, refuses under pull-request acceptance, and caps batches at batch_max. Release: 2 pending (S-0398, S-0399), unvalued, 0 USD a week, nothing held by whole_epics. Decided not to publish yet, under judgement, revising my earlier plan to publish with S-0399. The queue now builds and verifies a batch but cannot land one until S-0400, which is next in E-0022's chain. An operator who turned it on would gain nothing usable, and another minor release opens another host-upgrade thread. I will publish with S-0400.
+- Items: S-0399, S-0398
+- Seconds: 5679
+- Cost: 4.1445 USD, estimated
+
+### 2026-10-19T20:34:13Z
+
+- Summary: Re-applied the throughput order under order_ready after S-0405 left ready for in-progress: S-0404 37m, S-0403 42m, S-0402 45m, S-0401 50m, S-0400 1h15m. The order is unchanged.
+- Items: S-0405
+- Seconds: 7
+- Cost: 0.0733 USD, estimated
 
 ## Refusals
 

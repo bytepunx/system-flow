@@ -8,10 +8,8 @@ wip_limits:
   review: 5
 order:
   - S-0404
-  - S-0405
   - S-0403
   - S-0402
-  - S-0401
   - S-0400
 ---
 

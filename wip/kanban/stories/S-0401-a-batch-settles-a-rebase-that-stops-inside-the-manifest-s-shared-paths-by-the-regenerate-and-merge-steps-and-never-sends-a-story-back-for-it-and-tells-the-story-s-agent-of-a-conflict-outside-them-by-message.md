@@ -3,15 +3,18 @@ id: S-0401
 type: story
 nature: feature
 title: A batch settles a rebase that stops inside the manifest's shared paths by the regenerate-and-merge steps and never sends a story back for it, and tells the story's agent of a conflict outside them by message
-status: ready
+status: in-progress
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:20Z
-updated: 2026-10-19T20:33:45Z
+updated: 2026-10-19T21:50:49Z
 transitions:
   - to: ready
     at: 2026-10-19T04:53:18Z
     by: alex
+  - to: in-progress
+    at: 2026-10-19T21:50:49Z
+    by: agent-S-0401
 tags: [cli]
 topics: [orchestration]
 touches: [design/adrs, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, design/system/agent-coordination.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md]

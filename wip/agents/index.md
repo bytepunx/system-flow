@@ -1,13 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-19T20:33:45Z
+updated: 2026-10-19T21:52:13Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0405](S-0405.md) | With the merge queue on, a story's close-out and flai verify leave the test tiers the manifest marks for the queue to the batch, so a close-out main outruns no longer runs integration and smoke twice | in-progress | agent-S-0405 | 2026-10-19T20:34:01Z |
+| [S-0401](S-0401.md) | A batch settles a rebase that stops inside the manifest's shared paths by the regenerate-and-merge steps and never sends a story back for it, and tells the story's agent of a conflict outside them by message | in-progress | agent-S-0401 | 2026-10-19T21:50:49Z |
 
 ## Strategic agents
 
