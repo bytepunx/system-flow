@@ -450,3 +450,98 @@ func TestAFailingStoryNotInReviewIsNotMovedButLeavesTheQueue(t *testing.T) {
 		t.Errorf("outcomes %+v, want %s failing, not sent back", st.Outcomes, failing)
 	}
 }
+
+// sentBackAt records story's outcome as failing in batch 20261019-160000 at
+// head, as SendBack does, and opens its thread by flai serve; it answers the
+// thread.
+func sentBackAt(t *testing.T, repo *workitem.Repo, story, head string) *threads.Thread {
+	t.Helper()
+	if _, err := Update(repo.CacheDir(), func(s *State) error {
+		s.RecordOutcome(Outcome{Story: story, Outcome: OutcomeFailing, At: t2, Detail: "sent back to in-progress: merge queue batch 20261019-160000 fails with it at unit", Base: "ba5e0000000000000000", Head: head})
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	th, err := threads.New(repo, threads.NewOptions{Title: "Merge queue batch 20261019-160000 fails with " + story + " at unit", On: story, Author: "flai serve", Text: "Fix it.", Now: t2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return th
+}
+
+// thread is the thread id as it is now.
+func thread(t *testing.T, repo *workitem.Repo, id string) *threads.Thread {
+	t.Helper()
+	th, err := threads.Get(repo, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return th
+}
+
+// S-0400 criterion 4: a story the merge queue sent back that is in review
+// again has its send back's thread resolved by flai serve once its branch is
+// at a commit other than the one that failed, and is answered; while its
+// branch is still at that commit nothing is resolved. A thread on it that
+// flai serve did not open, or with another title, is left open, and so is
+// the send back's thread of a story still in progress.
+func TestASentBackStoryInReviewAtANewCommitHasItsThreadResolved(t *testing.T) {
+	repo, _ := gitProject(t, "")
+	back, head := readyStory(t, repo, "Back in review", t0.Add(time.Hour), "a.txt", "a\n")
+	th := sentBackAt(t, repo, back, head)
+	asked, err := threads.New(repo, threads.NewOptions{Title: "Merge queue batch 20261019-160000 fails with " + back + " at unit", On: back, Author: "alex", Text: "Why?", Now: t2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := threads.New(repo, threads.NewOptions{Title: "Pull request #12 of " + back + ": the required check ci failed", On: back, Author: "flai serve", Text: "Fix it.", Now: t2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	working, workingHead := readyStory(t, repo, "Still in progress", t0.Add(2*time.Hour), "b.txt", "b\n")
+	it, err := repo.Get(working)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.Transition(it, workitem.InProgress, "flai", "merge queue batch 20261019-160000 fails with it", t2); err != nil {
+		t.Fatal(err)
+	}
+	inProgress := sentBackAt(t, repo, working, workingHead)
+	wt := repo.WorktreePath(working)
+	writeFile(t, wt, "b.txt", "b, fixed\n")
+	runGit(t, wt, "commit", "-q", "-am", working+"'s fix")
+	at := t2.Add(time.Hour)
+	d := Deps{Runner: execx.System{}, Now: func() time.Time { return at }}
+
+	resolved, err := ResolveSentBack(d, repo)
+	if err != nil || len(resolved) != 0 {
+		t.Fatalf("resolved %v, %v; want nothing while %s is at the head that failed", resolved, err, back)
+	}
+	if !thread(t, repo, th.ID).Open() {
+		t.Fatalf("%s resolved while %s is at the head that failed", th.ID, back)
+	}
+
+	wt = repo.WorktreePath(back)
+	writeFile(t, wt, "a.txt", "a, fixed\n")
+	runGit(t, wt, "commit", "-q", "-am", back+"'s fix")
+	fixed := runGit(t, wt, "rev-parse", "HEAD")
+	resolved, err = ResolveSentBack(d, repo)
+	if err != nil || !slices.Equal(resolved, []string{back}) {
+		t.Fatalf("resolved %v, %v; want %s", resolved, err, back)
+	}
+	got := thread(t, repo, th.ID)
+	es := got.Entries()
+	last := es[len(es)-1]
+	if got.Open() || last.Author != "flai serve" || !strings.Contains(last.Text, back+" is back in review at "+fixed[:12]+", a new commit") || last.At != "2026-10-19T18:00:00Z" {
+		t.Errorf("%s open %v, last entry %+v; want it resolved by flai serve at the new commit", th.ID, got.Open(), last)
+	}
+	for _, id := range []string{asked.ID, other.ID, inProgress.ID} {
+		if !thread(t, repo, id).Open() {
+			t.Errorf("%s was resolved, want it left open", id)
+		}
+	}
+
+	resolved, err = ResolveSentBack(d, repo)
+	if err != nil || len(resolved) != 0 {
+		t.Errorf("resolved again %v, %v; want nothing", resolved, err)
+	}
+}

@@ -298,6 +298,51 @@ func SendBack(d Deps, repo *workitem.Repo) (bool, error) {
 	return moved, nil
 }
 
+// ResolveSentBack resolves, as flai serve, the open thread the queue's send
+// back opened on each story whose last outcome is OutcomeFailing and that is
+// in review again with its branch at a head other than the one that failed,
+// so that the thread no longer keeps it from the queue, and answers the
+// stories it resolved one for. It does nothing under pull-request acceptance.
+func ResolveSentBack(d Deps, repo *workitem.Repo) ([]string, error) {
+	d = withDefaults(d)
+	if repo.Manifest.Acceptance.PullRequest() {
+		return nil, nil
+	}
+	st, err := ReadState(repo.CacheDir())
+	if err != nil {
+		return nil, err
+	}
+	var resolved []string
+	for _, o := range st.Outcomes {
+		if o.Outcome != OutcomeFailing {
+			continue
+		}
+		it, err := repo.Get(o.Story)
+		if err != nil || it.Type != workitem.Story || it.Status != workitem.Review {
+			continue
+		}
+		head, err := d.Runner.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", storygit.Branch(it.ID)+"^{commit}")
+		if head = strings.TrimSpace(head); err != nil || head == "" || head == o.Head {
+			continue
+		}
+		all, err := threads.For(repo, it.ID)
+		if err != nil {
+			return resolved, fmt.Errorf("resolve the merge queue's send back thread on %s: read its threads: %w; fix the thread file it names, and flai serve tries again at its next look", it.ID, err)
+		}
+		for _, th := range all {
+			if !th.Open() || th.Opener() != sendBackAuthor || !strings.HasPrefix(th.Title, "Merge queue batch ") {
+				continue
+			}
+			why := fmt.Sprintf("%s is back in review at %s, a new commit; it is batched again once it is enqueued", it.ID, short(head))
+			if _, err := threads.Resolve(repo, th.ID, sendBackAuthor, why, d.Now()); err != nil {
+				return resolved, fmt.Errorf("resolve the merge queue's send back thread %s on %s: %w; resolve it with flai thread resolve %s", th.ID, it.ID, err, th.ID)
+			}
+			resolved = append(resolved, it.ID)
+		}
+	}
+	return resolved, nil
+}
+
 // openFailing opens the thread on the failing story of batch to its agent,
 // or answers the open one flai serve opened on it with the same title, as a
 // send-back before this one opened and could not record.

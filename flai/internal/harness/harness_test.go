@@ -445,6 +445,57 @@ func TestASentBackAgentIsToldTheThread(t *testing.T) {
 	}
 }
 
+// S-0400, ADR-0176: an agent whose story the merge queue sent back is told
+// that flai serve resolves the thread once the story is back in review at a
+// new commit and the queue batches it again once enqueued, not that flai
+// serve pushes the fix, in its last session and in a new one.
+func TestAnAgentTheMergeQueueSentBackIsToldTheQueueBatchesItAgain(t *testing.T) {
+	r := req(&manifest.Agent{Harness: ClaudeCode})
+	r.Session = "5f0c7d0e-1b2a-4c3d-8e9f-0a1b2c3d4e5f"
+	r.SentBack = &SentBack{Thread: "TH-0011", What: "merge queue batch 20261019-220000 fails with S-0104 at unit", Resumed: true, Queue: true}
+	queue := "Fix the branch in S-0104's worktree, close out, and move S-0104 to review again; flai serve resolves TH-0011 once S-0104 is back in review at a new commit, and the merge queue batches it again once it is enqueued."
+	st, err := (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after(st.Argv, "--resume") != r.Session {
+		t.Fatalf("resumed: %q", st.Argv)
+	}
+	p := st.Argv[2]
+	for _, want := range []string{
+		"flai sent S-0104 back from review to in-progress, on thread TH-0011: merge queue batch 20261019-220000 fails with S-0104 at unit.",
+		queue,
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("resumed prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "pushes the fix") {
+		t.Errorf("resumed prompt says flai serve pushes the fix of a story the merge queue sent back:\n%s", p)
+	}
+
+	r.SentBack.Resumed = false
+	st, err = (claudeCode{}).Start(r, Host{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after(st.Argv, "--session-id") != r.Session {
+		t.Fatalf("a new session: %q", st.Argv)
+	}
+	p = st.Argv[2]
+	for _, want := range []string{
+		"because flai sent it back from review to in-progress, on thread TH-0011: merge queue batch 20261019-220000 fails with S-0104 at unit. This host has no session of its last agent to go on in.",
+		"Fix the branch there, close out, and move S-0104 to review again; flai serve resolves TH-0011 once S-0104 is back in review at a new commit, and the merge queue batches it again once it is enqueued.",
+	} {
+		if !strings.Contains(p, want) {
+			t.Errorf("new session's prompt lacks %q:\n%s", want, p)
+		}
+	}
+	if strings.Contains(p, "pushes the fix") {
+		t.Errorf("new session's prompt says flai serve pushes the fix of a story the merge queue sent back:\n%s", p)
+	}
+}
+
 // S-0140: an agent started to commit a story's worktree is told to do that
 // and nothing else; the operator's command is told the worktree.
 func TestAnAgentStartedToCommitIsToldToDoOnlyThat(t *testing.T) {

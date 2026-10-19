@@ -24,6 +24,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -2738,4 +2739,176 @@ func TestASentBackStorysAgentIsNotStartedWhenItShouldNotBe(t *testing.T) {
 			}
 		})
 	}
+}
+
+// queueBatch is the merge queue batch the lab's queue send backs fail.
+const queueBatch = "20261019-220000"
+
+// queueSendBack does what the merge queue's send back does when batch
+// queueBatch fails with story at unit (ADR-0176): it opens a thread on the
+// story by flai serve and records the story's outcome, failing at at, at a
+// head of its branch. No pull request status is written. The story's move
+// is the test's.
+func (lab *agentLab) queueSendBack(story string, at time.Time) *threads.Thread {
+	lab.t.Helper()
+	th, err := threads.New(lab.repo, threads.NewOptions{Title: "Merge queue batch " + queueBatch + " fails with " + story + " at unit", On: story, Author: "flai serve",
+		Text: "Merge queue batch " + queueBatch + " fails with " + story + " at unit.", Now: at})
+	if err != nil {
+		lab.t.Fatal(err)
+	}
+	lab.queueOutcome(story, mergequeue.OutcomeFailing, "sent back to in-progress: merge queue batch "+queueBatch+" fails with it at unit", at)
+	return th
+}
+
+// queueOutcome records outcome, with detail, at at, as story's last in the
+// merge queue's state.
+func (lab *agentLab) queueOutcome(story, outcome, detail string, at time.Time) {
+	lab.t.Helper()
+	if _, err := mergequeue.Update(lab.repo.CacheDir(), func(s *mergequeue.State) error {
+		s.RecordOutcome(mergequeue.Outcome{Story: story, Outcome: outcome, At: at.UTC(), Detail: detail, Base: "ba5e0000000000000000", Head: "fa11fa11fa11fa11"})
+		return nil
+	}); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// queueBackToInProgress moves story from review to in-progress, as flai does
+// when the merge queue sends it back.
+func (lab *agentLab) queueBackToInProgress(story string) {
+	lab.t.Helper()
+	st, _ := lab.repo.Get(story)
+	if _, err := lab.repo.Transition(st, workitem.InProgress, sendBackBy, "merge queue batch "+queueBatch+" fails with "+story+" at 4e4e4e4e4e4e: unit failed", lab.now); err != nil {
+		lab.t.Fatal(err)
+	}
+}
+
+// S-0400, ADR-0176: a story the merge queue sent back gets its agent started
+// once, in its last session, told the thread and that the queue batches it
+// again once it is enqueued, with no pull request status at all; a second
+// look starts no second agent, nor does one after that agent ended.
+func TestAStoryTheMergeQueueSentBackGetsItsAgentOnce(t *testing.T) {
+	lab := newAgentLab(t)
+	ctx := context.Background()
+	lab.cfg.Command = nil
+	lab.cfg.Harnesses = map[string]harness.Host{harness.ClaudeCode: {Program: lab.stub}}
+	lab.hold()
+	id := lab.readyWith("Sent back by the queue", &manifest.Agent{Harness: harness.ClaudeCode})
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs", func() bool { return lab.run(id).live() })
+	first := lab.run(id)
+	lab.move(id, workitem.InProgress)
+	lab.move(id, workitem.Review)
+	lab.release(id)
+	waitFor(t, "it ends in review", func() bool { r := lab.run(id); return !r.live() && r.Outcome == OutcomeWorked })
+	lab.endedAgo(id, 3*time.Minute)
+	_ = os.Remove(filepath.Join(lab.outDir, "release-"+id))
+
+	lab.queueBackToInProgress(id)
+	th := lab.queueSendBack(id, time.Now().Add(-2*time.Minute))
+	if files, _ := filepath.Glob(forge.StatusPath(lab.repo.CacheDir(), "*")); len(files) != 0 {
+		t.Fatalf("pull request statuses %v, want none", files)
+	}
+	lab.l.look(ctx, false)
+	waitFor(t, "it runs for the send back", func() bool { r := lab.run(id); return r.live() && r.SentBack == th.ID })
+	again := lab.run(id)
+	if again.Agent != first.Agent || again.Session != first.Session || again.AutoRestarts != 0 || again.Answered != "" {
+		t.Errorf("the same agent, in its session, spending no restart: %+v, first %+v", again, first)
+	}
+	out := filepath.Join(lab.outDir, id+".txt")
+	waitFor(t, "the stub was told the thread", func() bool { got, _ := os.ReadFile(out); return strings.Contains(string(got), th.ID) })
+	got, _ := os.ReadFile(out)
+	for _, want := range []string{
+		"flai sent " + id + " back from review to in-progress, on thread " + th.ID + ": merge queue batch " + queueBatch + " fails with it at unit.",
+		"thread_get (flai thread show " + th.ID + " on the host); your inbox lists it, awaiting you",
+		"move " + id + " to review again; flai serve resolves " + th.ID + " once " + id + " is back in review at a new commit, and the merge queue batches it again once it is enqueued.",
+		"--resume " + first.Session,
+	} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("the agent was given\n%s\nwithout %q", got, want)
+		}
+	}
+	if strings.Contains(string(got), "pushes the fix") || strings.Contains(string(got), "sent back to in-progress: ") {
+		t.Errorf("the agent was told of a push, or the outcome's prefix:\n%s", got)
+	}
+	if j := lab.entries(); len(j) != 2 || !strings.Contains(j[1].Detail, "again for "+id+" as "+first.Agent+" in its session, flai having sent it back from review on "+th.ID) {
+		t.Errorf("journal: %+v", j)
+	}
+
+	// a second look starts no second agent for the same send back
+	lab.l.look(ctx, false)
+	if r := lab.run(id); !r.same(again) || lab.startedCount() != 2 {
+		t.Fatalf("started twice for one send back: %+v, journal %+v", r, lab.entries())
+	}
+	// nor does one once that agent ended, the story still in progress
+	lab.release(id)
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
+	lab.l.look(ctx, false)
+	if lab.startedCount() != 2 {
+		t.Fatalf("started again for the send back its agent was started for: %+v", lab.entries())
+	}
+}
+
+// S-0400, ADR-0176: what a merge queue send back does not start an agent for.
+func TestAStoryTheMergeQueueSentBackIsNotStartedWhenItShouldNotBe(t *testing.T) {
+	ctx := context.Background()
+	for _, c := range []struct {
+		name string
+		ago  time.Duration // how long before now the queue sent it back; its run started 2 minutes ago
+		set  func(lab *agentLab, id string, th *threads.Thread)
+	}{
+		{"its thread is resolved", time.Minute, func(lab *agentLab, _ string, th *threads.Thread) {
+			if _, err := threads.Resolve(lab.repo, th.ID, "alex", "fixed by hand", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"its thread is not flai serve's", time.Minute, func(lab *agentLab, id string, th *threads.Thread) {
+			if _, err := threads.Resolve(lab.repo, th.ID, "alex", "fixed by hand", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+			if _, err := threads.New(lab.repo, threads.NewOptions{Title: th.Title, On: id, Author: "alex", Text: "Is it?", Now: time.Now()}); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"its outcome is not failing", time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			lab.queueOutcome(id, mergequeue.OutcomeLanded, "landed by merge queue batch "+queueBatch+" as alex", time.Now().Add(-30*time.Second))
+		}},
+		{"its story is blocked", time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			st, _ := lab.repo.Get(id)
+			if err := workitem.BlockItem(st, "the CI runner", time.Now()); err != nil {
+				lab.t.Fatal(err)
+			}
+			if err := lab.repo.Save(st); err != nil {
+				lab.t.Fatal(err)
+			}
+		}},
+		{"its story is in review again", time.Minute, func(lab *agentLab, id string, _ *threads.Thread) {
+			lab.move(id, workitem.Review)
+		}},
+		{"its run started after the send back", 5 * time.Minute, nil},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			lab := newAgentLab(t)
+			id := lab.putEnded("Sent back by the queue", AgentRun{Outcome: OutcomeWorked})
+			lab.endedAgo(id, 2*time.Minute)
+			th := lab.queueSendBack(id, time.Now().Add(-c.ago))
+			if c.set != nil {
+				c.set(lab, id, th)
+			}
+			lab.l.look(ctx, false)
+			if r := lab.run(id); r.Session != "earlier" || r.live() || r.SentBack != "" {
+				t.Errorf("started: %+v", r)
+			}
+			if j := lab.entries(); len(j) != 0 {
+				t.Errorf("journal: %+v", j)
+			}
+		})
+	}
+	// the control: the same story, sent back a minute ago, is started
+	lab := newAgentLab(t)
+	id := lab.putEnded("Sent back by the queue", AgentRun{Outcome: OutcomeWorked})
+	lab.endedAgo(id, 2*time.Minute)
+	th := lab.queueSendBack(id, time.Now().Add(-time.Minute))
+	lab.l.look(ctx, false)
+	waitFor(t, "it is started for the send back", func() bool { return lab.run(id).SentBack == th.ID })
+	waitFor(t, "it ends", func() bool { return !lab.run(id).live() })
 }

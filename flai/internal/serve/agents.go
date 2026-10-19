@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/host"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -1018,6 +1019,60 @@ func (l *launcher) startSentBack(ctx context.Context, cfg AgentConfig, repo *wor
 		l.log("agent started for a send back", "story", it.ID, "thread", b.Thread, "resumed", s.SentBack.Resumed)
 		l.start(ctx, cfg, s)
 	}
+	l.startQueueSentBack(ctx, cfg, repo, st)
+}
+
+// startQueueSentBack starts the agent of each story the merge queue sent back
+// to in-progress (ADR-0176), as startSentBack does a forge's: one whose last
+// queue outcome is OutcomeFailing, not blocked, whose last run ended before
+// the send back, with the thread flai serve opened on it still open, told of
+// that thread and what failed.
+func (l *launcher) startQueueSentBack(ctx context.Context, cfg AgentConfig, repo *workitem.Repo, st AgentState) {
+	qs, err := mergequeue.ReadState(repo.CacheDir())
+	if err != nil {
+		return
+	}
+	for _, o := range qs.Outcomes {
+		if o.Outcome != mergequeue.OutcomeFailing {
+			continue
+		}
+		it, err := repo.Get(o.Story)
+		if err != nil || it.Type != workitem.Story || it.Status != workitem.InProgress || it.IsBlocked() {
+			continue
+		}
+		run := st.Stories[it.ID]
+		if run == nil || run.live() || run.Stopped != "" || !startedBefore(run, o.At) {
+			continue
+		}
+		thread, ok := queueSendBackThread(repo, it.ID)
+		if !ok {
+			continue
+		}
+		if (it.Agent == nil || it.Agent.Harness == "") && cfg.host(harness.Command).Program == "" {
+			continue
+		}
+		s := readyStory{ID: it.ID, Agent: it.Agent, SentBack: &harness.SentBack{Thread: thread, What: strings.TrimPrefix(o.Detail, "sent back to in-progress: "), Queue: true}}
+		if run.Session != "" {
+			s.Resume, s.SentBack.Resumed = run, true
+		}
+		l.log("agent started for a send back", "story", it.ID, "thread", thread, "resumed", s.SentBack.Resumed)
+		l.start(ctx, cfg, s)
+	}
+}
+
+// queueSendBackThread is the open thread the merge queue's send back opened
+// on story, by flai serve, and false when there is none.
+func queueSendBackThread(repo *workitem.Repo, story string) (string, bool) {
+	all, err := threads.For(repo, story)
+	if err != nil {
+		return "", false
+	}
+	for _, th := range all {
+		if th.Open() && th.Opener() == forgeAuthor && strings.HasPrefix(th.Title, "Merge queue batch ") {
+			return th.ID, true
+		}
+	}
+	return "", false
 }
 
 // sentBackFor is story's latest send back whose thread is open, and what

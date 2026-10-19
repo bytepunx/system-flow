@@ -104,6 +104,18 @@ type SentBack struct {
 	// Resumed is set when the agent goes on in its last run's session,
 	// Request.Session; a new session is told how to take the story up.
 	Resumed bool
+	// Queue is set when the merge queue sent the story back, from a batch
+	// that failed with it, rather than its pull request (ADR-0176).
+	Queue bool
+}
+
+// then is what follows the agent's fix of a story sent back on thread: the
+// push of its pull request, or, from the merge queue, its batching again.
+func (b *SentBack) then(story string) string {
+	if b.Queue {
+		return fmt.Sprintf("flai serve resolves %[2]s once %[1]s is back in review at a new commit, and the merge queue batches it again once it is enqueued", story, b.Thread)
+	}
+	return fmt.Sprintf("flai serve pushes the fix, and resolves %[2]s once %[1]s is back in review at a new commit", story, b.Thread)
 }
 
 // resumes says whether r goes on in a session an earlier run had: after an
@@ -335,9 +347,9 @@ If a change cannot be committed without the designer deciding something, ask wit
 %[4]s`, r.Name, r.Story, r.Answered, rules(r))
 	}
 	if b := r.SentBack; b != nil && b.Resumed {
-		return fmt.Sprintf(`flai sent %[1]s back from review to in-progress, on thread %[2]s: %[3]s. Read the thread with the flai MCP tool thread_get (flai thread show %[2]s on the host); your inbox lists it, awaiting you. Fix the branch in %[1]s's worktree, close out, and move %[1]s to review again; flai serve pushes the fix, and resolves %[2]s once %[1]s is back in review at a new commit.
+		return fmt.Sprintf(`flai sent %[1]s back from review to in-progress, on thread %[2]s: %[3]s. Read the thread with the flai MCP tool thread_get (flai thread show %[2]s on the host); your inbox lists it, awaiting you. Fix the branch in %[1]s's worktree, close out, and move %[1]s to review again; %[5]s.
 
-%[4]s`, r.Story, b.Thread, b.What, rules(r))
+%[4]s`, r.Story, b.Thread, b.What, rules(r), b.then(r.Story))
 	}
 	why := "because it entered ready."
 	open := startStory(r.Story, "Begin")
@@ -351,7 +363,7 @@ If a change cannot be committed without the designer deciding something, ask wit
 	}
 	switch {
 	case r.SentBack != nil:
-		why = fmt.Sprintf("because flai sent it back from review to in-progress, on thread %[1]s: %[2]s. This host has no session of its last agent to go on in. The story is in progress, with a narrative, a branch, and a worktree: read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and read the thread with the flai MCP tool thread_get (flai thread show %[1]s on the host); your first inbox lists it, awaiting you. Fix the branch there, close out, and move %[3]s to review again; flai serve pushes the fix, and resolves %[1]s once %[3]s is back in review at a new commit.", r.SentBack.Thread, r.SentBack.What, r.Story)
+		why = fmt.Sprintf("because flai sent it back from review to in-progress, on thread %[1]s: %[2]s. This host has no session of its last agent to go on in. The story is in progress, with a narrative, a branch, and a worktree: read the narrative's Current state and Next steps, reconcile them with git status in the worktree, and read the thread with the flai MCP tool thread_get (flai thread show %[1]s on the host); your first inbox lists it, awaiting you. Fix the branch there, close out, and move %[3]s to review again; %[4]s.", r.SentBack.Thread, r.SentBack.What, r.Story, r.SentBack.then(r.Story))
 	case r.Begun != nil:
 		why = fmt.Sprintf("because the operator started it here, and this host has had no agent for it: it was begun %[1]s. Its branch and worktree may not be on this host, and what was not committed and pushed there is not here. Reconcile before you do anything else: run flai stream open %[2]s, which keeps the narrative and checks out story/%[2]s from this clone, else from the remote, else new from the main branch, and says which; read the narrative's Current state, Next steps, and log, and the story's tasks; compare them with what is committed on the branch; and go on from what is committed rather than starting over, doing again what the narrative says was done and is not there. Log what you found with flai stream log %[2]s.%[3]s", r.Begun.Said(), r.Story, answeredSince(r.Begun))
 	case r.Restart != "" && r.AutoRestart != "":
