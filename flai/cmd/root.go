@@ -158,6 +158,7 @@ FLAI_CONFIG). Every command that prints data accepts --json.`,
 	root.AddCommand(newComponentsCmd(a))
 	root.AddCommand(newFileCmd(a))
 	root.AddCommand(newForgeCmd(a))
+	root.AddCommand(newQueueCmd(a))
 	return root
 }
 

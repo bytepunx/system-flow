@@ -51,6 +51,7 @@ Every command, subcommand, and flag, as `flai --help` prints them. The guide, wi
 | [prime](#flai-prime) | Print the conventions an agent reads at session start, in order |
 | [promote](#flai-promote) | List the backlog stories that could go to ready, or the drafts and what each lacks |
 | [push](#flai-push) | Push an acceptance that was made and not pushed |
+| [queue](#flai-queue) | List the stories in review the merge queue would batch, and why each other would not |
 | [release](#flai-release) | Compute a release for one item, publish everything accepted since the last release, or say whether a release is due |
 | [self-upgrade](#flai-self-upgrade) | Install the latest flai release over this binary, or list the published ones |
 | [serve](#flai-serve) | Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it |
@@ -127,6 +128,7 @@ Subcommands:
 - [prime](#flai-prime): Print the conventions an agent reads at session start, in order
 - [promote](#flai-promote): List the backlog stories that could go to ready, or the drafts and what each lacks
 - [push](#flai-push): Push an acceptance that was made and not pushed
+- [queue](#flai-queue): List the stories in review the merge queue would batch, and why each other would not
 - [release](#flai-release): Compute a release for one item, publish everything accepted since the last release, or say whether a release is due
 - [self-upgrade](#flai-self-upgrade): Install the latest flai release over this binary, or list the published ones
 - [serve](#flai-serve): Run flai on the host for the dashboards: it dials each registered project's dashboard and answers it
@@ -2811,6 +2813,25 @@ Flags:
 | `--dry-run` | say what would be pushed |
 | `--pending` | push the branch and tags of acceptances that were made and not pushed |
 | `--publish` | also publish template components whose version the pushed commits moved |
+
+### flai queue
+
+List the stories in review the merge queue would batch, and why each other would not.
+
+```text
+flai queue
+```
+
+List the stories in review that the merge queue would batch, in the order they last entered review: the last flai verify passed at the head of the story's branch, every acceptance criterion is ticked, no thread on the story or its tasks is open, and no path is recorded as undoing main's change (ADR-0155). Each other story in review follows, with every reason it is not eligible. Then the batch under verification and its step, and each story's last outcome, from the queue's state in .flai-cache/merge-queue.
+
+Read-only: it verifies, merges, and moves nothing (ADR-0173). Under acceptance.mode pull-request the queue does not run, because the forge's required checks gate each story (ADR-0169), and no story is listed.
+
+Examples:
+
+```bash
+flai queue
+flai queue --json
+```
 
 ### flai release
 
