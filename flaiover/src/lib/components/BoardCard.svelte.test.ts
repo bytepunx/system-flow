@@ -500,4 +500,53 @@ describe('BoardCard', () => {
 		component = render(base, { activity: { ...activity, elsewhere: undefined } });
 		expect(line()).toBeNull();
 	});
+
+	// S-0398: a story in review says its place in the merge queue, or that it is not eligible and why
+	describe('the merge queue mark', () => {
+		const mark = () => document.querySelector<HTMLElement>('[data-testid="queue-mark"]');
+		const inReview = { ...base, status: 'review' };
+
+		it('gives an eligible story its place in the queue', () => {
+			component = render(inReview, { queue: { place: 2 } });
+			expect(mark()!.textContent).toBe('queue 2');
+			expect(mark()!.getAttribute('title')).toBe('eligible: number 2 in the merge queue');
+			expect(mark()!.className).toContain('text-good');
+		});
+
+		it('says a story is not eligible, with every reason on hover and for a screen reader', () => {
+			const reasons = [
+				{ kind: 'verify_missing', text: 'S-0048 has no flai verify result' },
+				{ kind: 'thread_open', text: 'thread TH-0001 is not resolved', threads: ['TH-0001'] }
+			];
+			component = render(inReview, { queue: { reasons } });
+			const el = mark()!;
+			expect(el.firstChild!.textContent).toBe('not eligible');
+			expect(el.getAttribute('title')).toBe(
+				'S-0048 has no flai verify result\nthread TH-0001 is not resolved'
+			);
+			const hidden = el.querySelector('.sr-only')!;
+			expect(hidden.textContent).toBe(
+				': S-0048 has no flai verify result; thread TH-0001 is not resolved'
+			);
+			expect(el.textContent).toBe(
+				'not eligible: S-0048 has no flai verify result; thread TH-0001 is not resolved'
+			);
+		});
+
+		it('marks no card outside review, and no task', () => {
+			component = render({ ...base, status: 'in-progress' }, { queue: { place: 1 } });
+			expect(mark()).toBeNull();
+			unmount(component);
+			component = render(
+				{ ...base, id: 'T-0160', type: 'task', status: 'review' },
+				{ queue: { place: 1 } }
+			);
+			expect(mark()).toBeNull();
+		});
+
+		it('marks nothing in review without a mark from the queue', () => {
+			component = render(inReview);
+			expect(mark()).toBeNull();
+		});
+	});
 });

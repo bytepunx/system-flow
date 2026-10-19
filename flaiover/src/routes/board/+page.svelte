@@ -13,6 +13,7 @@
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
+	import MergeQueue, { queueMarks, type MergeQueueState } from '$lib/components/MergeQueue.svelte';
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
 	import { boardNatures } from '$lib/boardnatures.svelte';
@@ -61,6 +62,8 @@
 		order: string[];
 		writable: boolean;
 		columns: Record<string, Card[]>;
+		/** The merge queue (S-0398); absent from an older flai or when flai could not read it. */
+		queue?: MergeQueueState;
 	};
 
 	const states = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'];
@@ -130,6 +133,9 @@
 		const t = setInterval(() => void loadAgents(), 15000);
 		return () => clearInterval(t);
 	});
+
+	// Each card in review's place in the merge queue, or why it is not eligible (S-0398).
+	const marks = $derived(queueMarks(board?.queue));
 
 	const waitingIds = $derived(
 		new Set([
@@ -684,6 +690,9 @@
 				>
 					{shortCounts(counts)}
 				</p>
+				{#if state === 'review'}
+					<MergeQueue queue={board.queue} />
+				{/if}
 				{#if state === 'done'}
 					<PublishBanner
 						plans={publishPlans}
@@ -757,6 +766,7 @@
 							dragging={dragging === c.id}
 							waiting={state === 'done' && waitingIds.has(c.id)}
 							activity={activity[c.id]}
+							queue={marks[c.id]}
 							ondragstart={() => {
 								dragging = c.id;
 								// the last action's notice must not read as this drag's result

@@ -38,6 +38,57 @@
       "width": 320
     },
     {
+      "name": "A story in review, first in the merge queue",
+      "props": {
+        "card": {
+          "id": "S-0398",
+          "type": "story",
+          "title": "A merge queue lists the stories in review that are eligible",
+          "nature": "feature",
+          "parent": "E-0021",
+          "status": "review",
+          "blocked": false,
+          "age_seconds": 5400
+        },
+        "queue": {
+          "place": 1
+        }
+      },
+      "width": 320
+    },
+    {
+      "name": "A story in review that is not eligible for the merge queue",
+      "props": {
+        "card": {
+          "id": "S-0401",
+          "type": "story",
+          "title": "Show the queue's outcomes on the review page",
+          "nature": "improvement",
+          "parent": "E-0021",
+          "status": "review",
+          "blocked": false,
+          "age_seconds": 86400
+        },
+        "queue": {
+          "reasons": [
+            {
+              "kind": "verify_stale",
+              "text": "the last flai verify of S-0401 passed at 0123456789ab, but the head of story/S-0401 is 89abcdef0123: run flai verify S-0401 again at the head"
+            },
+            {
+              "kind": "criteria_unticked",
+              "text": "acceptance criteria 2, 3 unticked on S-0401: tick each one verified with flai criteria tick S-0401 <n>",
+              "criteria": [
+                2,
+                3
+              ]
+            }
+          ]
+        }
+      },
+      "width": 320
+    },
+    {
       "name": "A blocked draft story",
       "props": {
         "card": {

@@ -2,6 +2,7 @@
 import type { Item, Repo } from './repo';
 import type { TaskSummary } from '$lib/taskplan';
 import type { Share } from '$lib/activity';
+import type { MergeQueueState } from '$lib/components/MergeQueue.svelte';
 
 export const STATES = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'] as const;
 
@@ -34,6 +35,8 @@ export type Board = {
 	order: string[];
 	writable: boolean;
 	columns: Record<string, Card[]>;
+	/** The merge queue beside the board (S-0398); absent from an older flai or when flai could not read it. */
+	queue?: MergeQueueState;
 };
 
 /** A card as flai's board.get gives it (internal/workitem BoardCard). */
@@ -47,6 +50,7 @@ type FlaiBoard = {
 	columns: Record<string, FlaiCard[] | null>;
 	wip_limits: Record<string, number>;
 	order: string[] | null;
+	queue?: MergeQueueState | null;
 };
 
 /**
@@ -83,6 +87,7 @@ export async function board(repo: Repo, now = new Date()): Promise<Board> {
 		order: b.order ?? [],
 		// flai on the host does the writing (S-0075): a board that could be read can be written.
 		writable: true,
-		columns
+		columns,
+		...(b.queue ? { queue: b.queue } : {})
 	};
 }

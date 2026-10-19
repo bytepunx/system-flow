@@ -11,7 +11,9 @@
 	// on the messages page (S-0338). Those lines sit in a row under the card's link, drawn as part of
 	// the card, since a link cannot hold another. A story whose branch undoes main's change on some
 	// paths says so after DRAFT (S-0388), and a click on it opens the story's review page, where they
-	// are listed; it is not a link, since the card is one, so it navigates itself.
+	// are listed; it is not a link, since the card is one, so it navigates itself. A story in review
+	// says its place in the merge queue, or that it is not eligible, with every reason on hover and
+	// for a screen reader (S-0398).
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { age } from '$lib/age';
@@ -28,6 +30,7 @@
 	} from '$lib/activity';
 	import { tasksLine, tasksTitle, type TaskSummary } from '$lib/taskplan';
 	import AgentDot from './AgentDot.svelte';
+	import type { QueueMark } from './MergeQueue.svelte';
 
 	type Card = {
 		id: string;
@@ -51,6 +54,7 @@
 		dragging = false,
 		waiting = false,
 		activity,
+		queue,
 		ondragstart,
 		ondragend,
 		onkeydown
@@ -63,6 +67,8 @@
 		waiting?: boolean;
 		/** What the story's agent is doing (S-0104): a dot beside the ID. */
 		activity?: StoryActivity;
+		/** Its place in the merge queue, or why it is not eligible (S-0398); shown in review only. */
+		queue?: QueueMark;
 		ondragstart?: () => void;
 		ondragend?: () => void;
 		/** Alt+arrow reorders a focused card on the board (S-0057); the card itself decides nothing. */
@@ -79,6 +85,10 @@
 	const undoes = $derived(card.type === 'story' ? (card.undoes_main ?? []) : []);
 	const undoesLine = $derived(
 		`undoes main on ${undoes.length} ${undoes.length === 1 ? 'path' : 'paths'}`
+	);
+	const queueMark = $derived(card.type === 'story' && card.status === 'review' ? queue : undefined);
+	const queueReasons = $derived(
+		queueMark && 'reasons' in queueMark ? queueMark.reasons.map((r) => r.text) : []
 	);
 	// The badge's own navigation, in place of the card's: the review page lists the paths.
 	function toReview(e: Event) {
@@ -144,6 +154,16 @@
 			>{/if}
 		{#if activity?.elsewhere}<span class="font-semibold text-warn" data-testid="elsewhere"
 				>{elsewhereLine(activity.elsewhere)}</span
+			>{/if}
+		{#if queueMark && 'place' in queueMark}<span
+				class="font-semibold text-good"
+				data-testid="queue-mark"
+				title="eligible: number {queueMark.place} in the merge queue">queue {queueMark.place}</span
+			>{:else if queueMark}<span
+				class="font-semibold text-warn"
+				data-testid="queue-mark"
+				title={queueReasons.join('\n')}
+				>not eligible<span class="sr-only">: {queueReasons.join('; ')}</span></span
 			>{/if}
 		{#if card.type === 'story' && card.tasks}<span
 				data-testid="tasks"

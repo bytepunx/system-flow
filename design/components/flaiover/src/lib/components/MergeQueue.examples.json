@@ -1,0 +1,91 @@
+{
+  "examples": [
+    {
+      "name": "Two eligible, one batched at verify",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [
+            {
+              "story": "S-0398",
+              "title": "A merge queue lists the stories in review that are eligible",
+              "entered_review": "2026-10-18T09:00:00Z",
+              "head": "0123456789abcdef0123456789abcdef01234567",
+              "enqueued": true
+            },
+            {
+              "story": "S-0402",
+              "title": "The queue lands a batch",
+              "entered_review": "2026-10-18T11:30:00Z",
+              "head": "89abcdef0123456789abcdef0123456789abcdef"
+            }
+          ],
+          "ineligible": [
+            {
+              "story": "S-0401",
+              "title": "Show the queue's outcomes on the review page",
+              "entered_review": "2026-10-18T12:00:00Z",
+              "reasons": [
+                {
+                  "kind": "thread_open",
+                  "text": "thread TH-0465 is not resolved on S-0401 or its tasks: resolve each before the queue takes it",
+                  "threads": [
+                    "TH-0465"
+                  ]
+                }
+              ]
+            }
+          ],
+          "enqueued": [
+            {
+              "story": "S-0398",
+              "by": "alex",
+              "at": "2026-10-18T12:10:00Z"
+            }
+          ],
+          "batch": {
+            "stories": [
+              "S-0398"
+            ],
+            "step": "verify"
+          },
+          "outcomes": []
+        }
+      },
+      "width": 320
+    },
+    {
+      "name": "Empty, no batch",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [],
+          "ineligible": [],
+          "enqueued": [],
+          "outcomes": []
+        }
+      },
+      "width": 320
+    },
+    {
+      "name": "Off under pull-request acceptance",
+      "props": {
+        "queue": {
+          "mode": "pull-request",
+          "off": true,
+          "off_reason": "the merge queue runs under local acceptance only: under acceptance.mode pull-request the forge's required checks gate each story, and a batch rebases each story, so every landing would stop on forge_stale (ADR-0169, ADR-0173)",
+          "eligible": null,
+          "ineligible": null,
+          "enqueued": null,
+          "outcomes": null
+        }
+      },
+      "width": 320
+    },
+    {
+      "name": "No queue from an older flai",
+      "props": {},
+      "width": 320
+    }
+  ]
+}
