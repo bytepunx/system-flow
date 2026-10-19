@@ -1535,6 +1535,7 @@ flai verify S-0037 --json            # the result as JSON
 flai verify S-0037 --last            # the stored result of the last run; runs nothing
 flai verify S-0037 --record-issues   # also record the notes outside the story as issues, as the close-out does
 flai verify S-0037 --fresh           # run every tier, reusing none from the last run
+flai verify S-0037 --all             # leave no tier to the merge queue
 flai verify S-0037 --sync-only       # only the rebase and sync steps; stores nothing
 ```
 
@@ -1567,7 +1568,7 @@ not-reached tier markdown
 verify: S-0037 stopped at go-test (exit 1)
 ```
 
-With `--json` the answer is the report: `story`, the `commit` and `base` it verified, the `base_commit` the main branch had, the `merge_base` where the branch left it and the `patch` id of the branch's own change, the `fingerprint` of its tiers, `ran_at`, `duration_ms`, `passed`, `stopped_at`, the `paths` the branch changed, `steps` (each with `name`, `tier`, `state`, `duration_ms`, `findings`, and `omitted`, a passing step's `note`, a tier's `command` and `exit_code`, a reused tier's `reused_from`, and a skipped tier's `covered_by`), and `notes`. With `--record-issues` it adds `recorded`: the issues the notes were recorded in, in the story's worktree, as `flai check --record-issues` records them.
+With `--json` the answer is the report: `story`, the `commit` and `base` it verified, the `base_commit` the main branch had, the `merge_base` where the branch left it and the `patch` id of the branch's own change, the `fingerprint` of its tiers, `ran_at`, `duration_ms`, `passed`, `stopped_at`, the `paths` the branch changed, `steps` (each with `name`, `tier`, `state`, `duration_ms`, `findings`, and `omitted`, a passing step's `note`, a tier's `command` and `exit_code`, a reused tier's `reused_from`, and a skipped tier's `covered_by`; a tier left to the merge queue has `state` `queued`), and `notes`. With `--record-issues` it adds `recorded`: the issues the notes were recorded in, in the story's worktree, as `flai check --record-issues` records them.
 
 Every run stores its report, passed or not, in the project's `.flai-cache/verify/`. `--last` prints the story's stored report and runs nothing; with `--json` it prints `null` when there is none. The story's review page on the dashboard shows the same report ([Reviewing a story](flaiover.md#reviewing-a-story)).
 
@@ -1579,7 +1580,7 @@ A run resumes from the stored report when nothing that decides the tiers has cha
 |--------------|----|---------------------|
 | `commit` | The branch's head | A commit on the branch |
 | `base_commit` | The main branch's commit | A commit on main, or a `flai stream sync` that takes one |
-| `fingerprint` | A hash of the manifest's `tests` and of the selected tiers' names, directories, and commands | An edit to `tests`, or a change that selects other tiers |
+| `fingerprint` | A hash of the manifest's `tests`, of the selected tiers' names, directories, and commands, and of the names of the tiers left to the merge queue | An edit to `tests`, a change that selects other tiers, or a run that leaves other tiers to the queue, such as one with `--all` |
 
 The four steps before the tiers always run. The tiers before the first one the last run showed `failed` or `not-reached` do not: each is `reused`, with the command, exit code, and duration of the run that ran it, and the run goes on from the tier that failed. A last run that stopped before the tiers reuses none; one that passed every tier reuses them all. A report from an older flai, with no `fingerprint` or `base_commit`, gives a full run. `--fresh` forces a full run. `flai test` never resumes.
 
@@ -1597,6 +1598,26 @@ verify: S-0037 passed every step (reused 1 tier from 2026-10-08T09:12:40Z)
 ```
 
 In `--json` a reused tier has `state` `reused` and `reused_from`, that time in UTC. A tier reused a second time keeps the time of the run that ran it. The report a resumed run stores holds every step, the reused ones too.
+
+### Tiers left to the merge queue
+
+While the merge queue can batch for the project, `flai verify` leaves each selected tier that the manifest marks `queue: true` to the queue's batch, which runs it ([ADR-0174](../../design/adrs/0174-while-the-merge-queue-can-batch-flai-verify-and-the-close-out-leave-the-test.md), [settings](../operators/settings.md#project-manifest)). The queue can batch when all of these hold:
+
+- the `merge-queue` host action is on for the project, in the configuration the running flai reads;
+- `orchestration.permissions.accept_reviews` is on;
+- acceptance is local.
+
+A held queue still counts. Each tier left out is a step of its own, in the state `queued`, listed after the rest, and the run passes without it. A tier that only a `queue` tier covers runs, since the covering tier does not. In this repository `integration` and `smoke` are marked, so a change to flai's Go code runs `go-test` and leaves those two:
+
+```text
+passed tier go-test (15.1s)
+passed tier markdown (2.2s)
+queued tier integration: left to the merge queue
+queued tier smoke: left to the merge queue
+verify: S-0037 passed every step, integration and smoke left to the merge queue
+```
+
+`--all` leaves no tier to the queue: every tier the branch selects runs. Run it before you accept a story by hand while the queue can batch, since `flai accept` runs no tier. Otherwise the story lands without the `queue` tiers. Enqueueing it is the other way. The close-out runs `flai verify` without `--all`, so it leaves the same tiers. This repository's `scripts/flai.sh` reads `.flai-cache/config.json`, so a run through it leaves tiers to the queue only when that configuration turns the action on. `flai test --all` ignores the key and runs every tier.
 
 ### Resuming across a clean rebase
 
@@ -1621,7 +1642,7 @@ The close-out runs `flai verify --record-issues` without `--fresh`. So a second 
 
 flai verify commits nothing. The exit status is 0 when every step passed and 1 when a step failed. It is 2 when flai verify could not answer: the story has no worktree, the manifest's `tests` are not valid, the notes could not be recorded, or the run was stopped before it finished.
 
-Over MCP, the tool `verify` takes `story` and `max` and answers what `flai verify --json` prints; a failing step is an answer, not an error. It records no issues. A dashboard runs it through the host method `verify.run` while you have the `checks` host action on, and reads the stored report with `verify.status`, which needs no host action. The tool and `verify.run` resume as `flai verify` does; neither can force a full run. Sub-agents and the orchestrator may run `flai verify` and call the tool `verify`: `flai guard` lets them, but not with `--record-issues`, which writes issues.
+Over MCP, the tool `verify` takes `story`, `max`, and `all`, which is `--all`, and answers what `flai verify --json` prints; a failing step is an answer, not an error. It records no issues. A dashboard runs it through the host method `verify.run` while you have the `checks` host action on, and reads the stored report with `verify.status`, which needs no host action. The tool and `verify.run` resume as `flai verify` does; neither can force a full run. Sub-agents and the orchestrator may run `flai verify` and call the tool `verify`: `flai guard` lets them, but not with `--record-issues`, which writes issues.
 
 ## Flow metrics
 
@@ -2491,7 +2512,7 @@ It refuses, and changes nothing, a story that is not in review, an item that is 
 
 `flai queue remove S-nnnn` takes a story out. When the batch under verification holds it, the batch is dropped, so that the queue never lands a story no one has enqueued, and the next batch can start. It refuses a story that is not enqueued.
 
-Accepting a story by hand, with `flai accept`, `flai move S-nnnn done`, or from the board, takes it out of the queue too, and drops the batch that holds it. Its outcome is `accepted_by_hand`.
+Accepting a story by hand, with `flai accept`, `flai move S-nnnn done`, or from the board, takes it out of the queue too, and drops the batch that holds it. Its outcome is `accepted_by_hand`. An acceptance by hand runs no test tier, so while the queue can batch, run `flai verify S-nnnn --all` first, or the story lands without the tiers its close-out left to the queue.
 
 #### Holding the queue
 
@@ -2503,7 +2524,7 @@ Each of `add`, `remove`, `hold`, and `resume` prints one line saying what change
 
 With the `merge-queue` host action on, `orchestration.permissions.accept_reviews` on, and `acceptance.mode: local`, `flai serve` looks at the queue every 30 seconds, and at once when work items or threads change. It takes up to `merge_queue.batch_max` enqueued stories that are eligible, 4 unless set ([settings](../operators/settings.md#project-manifest)), in the order they were enqueued. It builds them into one batch in its own worktree, `.flai-cache/worktrees/merge-queue`, on a branch `merge-queue/<id>`: the main branch, then a copy of each story's commits rebased onto the one before. Your story branches never move. A story whose rebase stops is left out of the batch, with the outcome `left_out` naming the paths in conflict. It stays enqueued, and is not taken again until main or its branch moves.
 
-`flai serve` then verifies the batch once, with the tiers `flai verify` selects for the paths the batch changes against main ([Verify a story before review](#verify-a-story-before-review)). The batch's step moves through `building`, `rebasing S-nnnn`, `verifying`, `verifying <tier>`, and ends `verified` or `failed`. A story's own `flai verify` result is not changed.
+`flai serve` then verifies the batch once, with the tiers `flai verify` selects for the paths the batch changes against main ([Verify a story before review](#verify-a-story-before-review)). It runs every tier those paths select, those marked `queue` included, which a story's own `flai verify` leaves to the batch while the queue can batch ([Tiers left to the merge queue](#tiers-left-to-the-merge-queue)). So no story the queue lands lands without them. The batch's step moves through `building`, `rebasing S-nnnn`, `verifying`, `verifying <tier>`, and ends `verified` or `failed`. A story's own `flai verify` result is not changed.
 
 A verified batch waits: landing it is a later story's. Accept its stories by hand, as before. A failed batch waits too, until one of its stories is removed or accepted, which drops it. Then the next batch is built from the stories still enqueued.
 

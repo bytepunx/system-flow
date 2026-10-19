@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.102 - 2026-10-19
+
+- S-0405 While the merge queue can batch, a story's close-out and flai verify leave the test tiers the manifest marks queue to the batch, which runs them (patch).
+- S-0405 While the merge queue can batch, a story's close-out and flai verify leave the test tiers the manifest marks `queue: true` to the batch, which runs them (patch, ADR-0174): in `work-management.md`, the close-out rule says that while the merge queue can batch for the project, with the `merge-queue` host action on for it, `orchestration.permissions.accept_reviews` on, and acceptance local, `flai verify` lists each such tier as `queued`, left to the merge queue, and the close-out passes without it, and that `flai verify S-nnnn --all` runs it too. `scripts/close-out.sh` says in its header which tiers it leaves to the queue. A tier in `system-flow.yaml`'s `tests` may carry `queue: true`; the template's manifest marks none. The merge queue's batch runs every tier its paths select, those marked `queue` included. It needs a flai that has it, the release that carries S-0405; an older flai ignores the key and runs every tier, and its `flai manifest set tests=<JSON>` refuses a tier that carries it.
+
 ## 1.0.101 - 2026-10-19
 
 - S-0399 flai serve builds a batch of the enqueued stories in a worktree of its own, rebased on main in order, and verifies it once with the tiers flai verify runs, behind the merge-queue host action (patch).

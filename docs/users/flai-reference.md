@@ -4568,9 +4568,11 @@ check      flai check --strict, scoped to the story, passes
            before it failed (S-0342)
 ```
 
+While the merge queue can batch for the project, a tier the manifest marks queue is left to the queue's batch, which runs it, and not run here: the merge-queue host action is on for the project in the configuration this flai reads, orchestration.permissions.accept\_reviews is on, and acceptance is local. Each such tier the branch selects is listed after the rest as "queued tier &lt;name&gt;: left to the merge queue", the run passes without it, and a tier that only it covers runs. --all leaves no tier to the queue: every tier the branch selects runs (ADR-0174).
+
 When the story's last run was at the same head and base commit, and the tiers, their commands, and those the branch selects are the same, the steps before the tiers run again but the tiers before the first the last run showed failed or not reached do not: each is reported reused, with the time of the run that ran it, and the run goes on from the tier that failed (S-0341). After a clean rebase onto a newer main branch the head and base commit differ, but when the branch's own change has the same patch id (git patch-id --stable of its diff from the merge base, recorded only from a worktree with nothing uncommitted), the tiers are reused all the same, up to the first that the paths the main branch brought in between the two merge bases select, but for wip paths the branch does not change; that tier runs again with every tier after it. A note under the first reused tier, or under the first tier run again, says why (ADR-0156). Any other change makes the run full; --fresh forces one.
 
-flai verify commits nothing. The answer is a line for each step, its state and duration, the failing step's first findings under it, at most --max across the run, then the check's findings outside the story, which are notes that do not fail it, and last a line as the close-out ends: "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at &lt;step&gt; (&lt;exit status or state&gt;)", either followed by " (reused N tiers from &lt;time&gt;)" when tiers were reused, the earliest run they come from. With --json the answer is the report, with the story, the commit and base it was verified at and the base's commit, the merge base and the branch's patch id, when it ran, how long it took, passed, stopped\_at, the paths the branch changed, and each step's state, duration, and findings, a reused tier's reused\_from, a skipped tier's covered\_by, and the notes.
+flai verify commits nothing. The answer is a line for each step, its state and duration, the failing step's first findings under it, at most --max across the run, then the check's findings outside the story, which are notes that do not fail it, and last a line as the close-out ends: "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at &lt;step&gt; (&lt;exit status or state&gt;)", either followed by ", &lt;tiers&gt; left to the merge queue" when tiers were left to it, and then by " (reused N tiers from &lt;time&gt;)" when tiers were reused, the earliest run they come from. With --json the answer is the report, with the story, the commit and base it was verified at and the base's commit, the merge base and the branch's patch id, when it ran, how long it took, passed, stopped\_at, the paths the branch changed, and each step's state, duration, and findings, a reused tier's reused\_from, a skipped tier's covered\_by, a tier left to the merge queue as queued, and the notes.
 
 Each run's report is stored in the project's .flai-cache/verify, whether it passes or not; --last prints the story's stored report and runs nothing, or says there is none (null with --json), and exits 0 whatever it holds.
 
@@ -4587,6 +4589,7 @@ flai verify S-0270
 flai verify S-0270 --json
 flai verify S-0270 --record-issues
 flai verify S-0270 --fresh
+flai verify S-0270 --all
 flai verify S-0270 --last --json
 flai verify S-0270 --sync-only
 ```
@@ -4595,6 +4598,7 @@ Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--all` | leave no tier to the merge queue: run every tier the branch's changes select |
 | `--fresh` | force a full run: run every selected tier even when the last run at the same head, base, and tiers passed some |
 | `--last` | print the story's stored last result and run nothing |
 | `--max` int | the most findings to report across the run (default `5`) |
