@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 52
-      output: 18041
-      cache_read: 2354457
-      cache_write: 117622
-      cost: 1.4835
+      input: 46
+      output: 15248
+      cache_read: 2324438
+      cache_write: 134375
+      cost: 1.6128
 ---
 # T-1667 The dashboard's board marks each card in review as eligible or not with its reasons, and shows the queue's batch and step above the review lane
 

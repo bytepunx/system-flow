@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 28
-      output: 9858
-      cache_read: 1286500
-      cache_write: 64270
-      cost: 0.8106
+      input: 25
+      output: 8332
+      cache_read: 1270098
+      cache_write: 73424
+      cost: 0.8813
 ---
 # T-1655 flai queue lists the eligible stories in order, the others with their reasons, and the batch and its step, as text and as JSON
 

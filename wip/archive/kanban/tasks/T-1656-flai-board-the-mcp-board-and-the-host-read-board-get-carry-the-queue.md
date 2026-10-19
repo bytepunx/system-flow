@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 95
-      output: 32812
-      cache_read: 4282312
-      cache_write: 213932
-      cost: 2.6982
+      input: 83
+      output: 27734
+      cache_read: 4227713
+      cache_write: 244402
+      cost: 2.9334
 ---
 # T-1656 flai board, the MCP board, and the host read board.get carry the queue
 

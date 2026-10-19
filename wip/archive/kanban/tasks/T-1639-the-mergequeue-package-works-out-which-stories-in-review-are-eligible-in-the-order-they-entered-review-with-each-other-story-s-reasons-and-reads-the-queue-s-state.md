@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 85
-      output: 29401
-      cache_read: 3837028
-      cache_write: 191687
-      cost: 2.4176
+      input: 75
+      output: 24850
+      cache_read: 3788106
+      cache_write: 218989
+      cost: 2.6284
 ---
 # T-1639 The mergequeue package works out which stories in review are eligible, in the order they entered review, with each other story's reasons, and reads the queue's state
 

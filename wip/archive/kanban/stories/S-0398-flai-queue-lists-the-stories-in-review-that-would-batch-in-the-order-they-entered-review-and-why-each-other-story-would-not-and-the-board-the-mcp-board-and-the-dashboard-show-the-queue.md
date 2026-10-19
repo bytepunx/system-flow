@@ -3,11 +3,11 @@ id: S-0398
 type: story
 nature: feature
 title: flai queue lists the stories in review that would batch, in the order they entered review, and why each other story would not, and the board, the MCP board, and the dashboard show the queue
-status: in-progress
+status: done
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:36Z
-updated: 2026-10-19T15:28:45Z
+updated: 2026-10-19T18:58:59Z
 transitions:
   - to: ready
     at: 2026-10-19T04:52:30Z
@@ -15,6 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-19T14:34:41Z
     by: agent-S-0398
+  - to: review
+    at: 2026-10-19T18:57:39Z
+    by: agent-S-0398
+  - to: done
+    at: 2026-10-19T18:58:59Z
+    by: orchestrator
 tags: [cli, dashboard]
 topics: [orchestration]
 touches: [design/adrs, design/system/workflow.md, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/root.go, flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, flai/internal/mcpserver/folder.go, design/components/flaiover/src/lib/components/BoardCard.examples.json, design/components/flaiover/src/lib/components/MergeQueue.examples.json, flaiover/src/lib/server/board.ts, design/issues/I-0167-task-done-and-story-start-answers-exceed-claude-code-s-tool-output-limit-because-the-inbox-they-carry-lists-every-thread-awaiting-the-operator.md, design/issues/summary.md]
@@ -25,31 +31,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3266
+  seconds: 4217
   priced_by: harness
   turns:
     - day: 2026-10-19
-      ceremony: 1
-      hand_edits: 2
-      work: 43
+      ceremony: 5
+      hand_edits: 3
+      work: 60
   models:
     - model: claude-opus-5-5
-      input: 484
-      output: 167930
-      cache_read: 21916318
-      cache_write: 1094875
-      cost: 13.809
+      input: 532
+      output: 176893
+      cache_read: 26965234
+      cache_write: 1558850
+      cost: 18.7101
   strategic:
     - kind: orchestrator
-      seconds: 107
+      seconds: 4047
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 328
-          cache_read: 1723129
-          cache_write: 6116
-          cost: 0.4335
+          input: 82
+          output: 1414
+          cache_read: 8833629
+          cache_write: 22292
+          cost: 2.2203
 forecast:
   duration: 47m
   delivery: 2026-10-19T05:54:00Z
@@ -72,7 +78,7 @@ The operator sees, before anything is batched, which stories in review a merge q
 - [x] Under `acceptance.mode: pull-request` (ADR-0165), `flai queue` says the queue does not run in that mode, because the forge's required checks gate each story (ADR-0169), and lists no story as eligible. `flai board`, the MCP `board`, and the dashboard say the same in place of the queue.
 - [x] The queue's state is one file in the main checkout's `.flai-cache`, read through one package: the stories enqueued, with who enqueued each and when, the batch under verification and its step, and each story's last outcome. This story writes nothing to it; with no file, the queue shows no batch and no outcomes.
 - [x] `flai board`, the MCP `board`, and the host read `board.get` carry the queue: the eligible stories in order, the reasons of the others, and the batch and its step. The dashboard's board marks each card in review as eligible or not, with its reasons, and shows the batch and its step above the review lane.
-- [ ] An ADR records the queue as TH-0465 settles it: what runs it, the host action and the permission it runs under, that it runs under local acceptance only, eligibility, the batch's upper size, and that a story undoing main's change is never batched. `design/system/workflow.md` § What waits on an acceptance, `design/system/flai-cli.md`, `design/system/flaiover-dashboard.md`, and `docs/users/flai.md` describe `flai queue` and the view.
+- [x] An ADR records the queue as TH-0465 settles it: what runs it, the host action and the permission it runs under, that it runs under local acceptance only, eligibility, the batch's upper size, and that a story undoing main's change is never batched. `design/system/workflow.md` § What waits on an acceptance, `design/system/flai-cli.md`, `design/system/flaiover-dashboard.md`, and `docs/users/flai.md` describe `flai queue` and the view.
 
 ## Tasks
 - T-1638 An ADR records the merge queue: what runs it, its host action and permission, eligibility, the batch's upper size, and that a story undoing main's change is never batched
@@ -98,3 +104,15 @@ The operator sees, before anything is batched, which stories in review a merge q
   - The local-only rule reads `manifest.Acceptance.PullRequest()`, which S-0395's line of E-0021 added. It needs no new touch.
 - **Forecast.** flai's 47m is kept: the view reads what flai already reads, through one new package. The local-only rule is one check and a message.
 - **Cost of delay.** Waits on TH-0465 question 1: the epic has no inputs, so `flai cod` refuses. It is written once the inputs are set.
+
+### Accepted by the orchestrator
+
+- Verified: 0414c5e0b2e53cfdda7a7e9427776bd181651cfe
+- At: 2026-10-19T18:58:59Z
+
+Verdict: every criterion 1 to 5 is met by changed files and ticked; ADR-0173 is accepted as TH-0516 settled it; flai verify passed every step at head 0414c5e.
+- 1: flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/root.go, docs/users/flai-reference.md
+- 2: flai/internal/mergequeue/eligible.go, flai/cmd/queue.go, flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts
+- 3: flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go
+- 4: flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flaiover/src/lib/server/board.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/components/flaiover/src/lib/components/BoardCard.examples.json, design/components/flaiover/src/lib/components/MergeQueue.examples.json
+- 5: design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md, design/adrs/README.md, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md

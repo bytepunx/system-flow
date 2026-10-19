@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 89
-      output: 30988
-      cache_read: 4044141
-      cache_write: 202033
-      cost: 2.5481
+      input: 79
+      output: 26191
+      cache_read: 3992579
+      cache_write: 230809
+      cost: 2.7703
 ---
 # T-1675 The workflow, the CLI and dashboard designs, and the user guides describe flai queue and the queue on the board
 
