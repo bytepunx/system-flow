@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:45Z
-updated: 2026-10-18T19:29:13Z
+updated: 2026-10-19T04:53:39Z
 transitions: []
 tags: [cli]
 topics: [orchestration, conventions, template]
@@ -18,13 +18,15 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 forecast:
   duration: 42m
   delivery: 2026-10-19T00:04:00Z
   basis: "Its own forecast of 42m; 7th in the pull order with an in-progress limit of 5, behind S-0241, S-0398, S-0399, S-0400, S-0401 and S-0402."
   by: flai
   at: 2026-10-18T19:29:13Z
+finalized:
+  by: alex
+  at: 2026-10-19T04:53:39Z
 ---
 # S-0403 With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify
 
