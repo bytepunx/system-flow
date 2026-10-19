@@ -74,6 +74,9 @@ type Manifest struct {
 	// through a pull request on the project's forge (S-0392). Load refuses a
 	// value Acceptance.Errors finds wrong.
 	Acceptance Acceptance `yaml:"acceptance,omitempty" json:"acceptance,omitzero"`
+	// MergeQueue is the merge queue's say about its batches (S-0399,
+	// ADR-0173). Load refuses a value MergeQueue.Errors finds wrong.
+	MergeQueue MergeQueue `yaml:"merge_queue,omitempty" json:"merge_queue,omitzero"`
 	// Claims is how stories' touches claim paths: the shared paths whose
 	// overlaps hold no story (S-0295, ADR-0096). A pattern that is not valid
 	// does not stop the load; Claims.Errors names it, and it frees nothing.
@@ -768,6 +771,67 @@ func (a Acceptance) Errors() []string {
 	return errs
 }
 
+// MergeQueue is the project's say about the merge queue flai serve runs
+// behind the merge-queue host action (S-0399, ADR-0173). A manifest without
+// the block batches DefaultBatchMax stories at most.
+type MergeQueue struct {
+	// BatchMax is the most enqueued stories one batch holds, a whole number
+	// of one or more; unset means DefaultBatchMax.
+	BatchMax *int `yaml:"batch_max,omitempty" json:"batch_max,omitempty"`
+}
+
+// DefaultBatchMax is the most stories a batch of the merge queue holds when
+// merge_queue.batch_max is not set (ADR-0173).
+const DefaultBatchMax = 4
+
+// BatchMax is merge_queue.batch_max, or DefaultBatchMax when it is not set.
+// It does not say whether the value is one or more; MergeQueue.Errors does.
+func (m Manifest) BatchMax() int {
+	if b := m.MergeQueue.BatchMax; b != nil {
+		return *b
+	}
+	return DefaultBatchMax
+}
+
+// batchMaxProblem says why merge_queue.batch_max, as data writes it, is not
+// a whole number, which a load into MergeQueue would otherwise fail on with
+// the decoder's words or, for a fraction such as 2.5, cut to a whole one; ""
+// when it is one, is not set, or data does not parse, which the load says.
+func batchMaxProblem(data []byte) string {
+	var raw struct {
+		MergeQueue struct {
+			BatchMax any `yaml:"batch_max"`
+		} `yaml:"merge_queue"`
+	}
+	if yaml.Unmarshal(data, &raw) != nil {
+		return ""
+	}
+	written := ""
+	switch v := raw.MergeQueue.BatchMax.(type) {
+	case nil, int, int64, uint64:
+		return ""
+	case float64:
+		if v == math.Trunc(v) && !math.IsInf(v, 0) {
+			return ""
+		}
+		written = strconv.FormatFloat(v, 'f', -1, 64)
+	case string:
+		written = strconv.Quote(v)
+	default:
+		written = fmt.Sprint(v)
+	}
+	return fmt.Sprintf("merge_queue.batch_max %s is not a whole number; write the most enqueued stories one batch of the merge queue holds, such as %d, or remove it for %d", written, DefaultBatchMax, DefaultBatchMax)
+}
+
+// Errors are what is wrong with the merge queue's settings, one sentence
+// each; none when they are valid.
+func (q MergeQueue) Errors() []string {
+	if b := q.BatchMax; b != nil && *b < 1 {
+		return []string{fmt.Sprintf("merge_queue.batch_max %d is not a number of one or more; write the most enqueued stories one batch of the merge queue holds, such as %d, or remove it for %d", *b, DefaultBatchMax, DefaultBatchMax)}
+	}
+	return nil
+}
+
 // NamedCommand is one command by name: an argument list, run as it stands,
 // never through a shell. In an argument, {story} is replaced by the story's
 // ID and {root} by the directory it runs in; nothing else is interpreted.
@@ -1287,6 +1351,9 @@ func Load(path string) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	if p := batchMaxProblem(data); p != "" {
+		return Manifest{}, fmt.Errorf("%s: %s", path, p)
+	}
 	var m Manifest
 	if err := yaml.Unmarshal(data, &m); err != nil {
 		return Manifest{}, fmt.Errorf("parse %s: %w", path, err)
@@ -1309,6 +1376,9 @@ func Load(path string) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("%s: design.stylesheet %q %s", path, m.Design.Stylesheet, r)
 	}
 	if errs := m.Acceptance.Errors(); len(errs) > 0 {
+		return Manifest{}, fmt.Errorf("%s: %s", path, strings.Join(errs, "; "))
+	}
+	if errs := m.MergeQueue.Errors(); len(errs) > 0 {
 		return Manifest{}, fmt.Errorf("%s: %s", path, strings.Join(errs, "; "))
 	}
 	if min := m.Flai.Minimum; min != "" {

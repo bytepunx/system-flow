@@ -18,11 +18,12 @@ import (
 // The strategic agents' settings that flai manifest set writes (S-0229,
 // ADR-0039): what the orchestrator may do and how it orders and releases,
 // and the planner's and the analyzer's agents and schedules; the project's
-// test tiers (S-0273); and how a story is accepted (S-0392). The catalog
-// says of each its kind, its values, its default, and what it does; whether
-// a value is allowed is always the manifest's own validation
-// (Planning.Errors, Orchestration.Errors, Analysis.Errors,
-// Acceptance.Errors, TestErrors) on the manifest as it would be, so flai
+// test tiers (S-0273); how a story is accepted (S-0392); and the most
+// stories a batch of the merge queue holds (S-0399). The catalog says of
+// each its kind, its values, its default, and what it does; whether a value
+// is allowed is always the manifest's own validation (Planning.Errors,
+// Orchestration.Errors, Analysis.Errors, Acceptance.Errors,
+// MergeQueue.Errors, TestErrors) on the manifest as it would be, so flai
 // manifest set and flai check cannot disagree.
 
 // Kind is what a setting's value is, and so how it is written and edited.
@@ -158,12 +159,7 @@ func buildCatalog() []Setting {
 			get:     func(m Manifest) (any, bool) { return number(rel(m).Value) }},
 		Setting{Key: "orchestration.release.count", Kind: KindNumber, Whole: true,
 			Meaning: "Under threshold, the number of accepted stories not yet released at which a release is due.",
-			get: func(m Manifest) (any, bool) {
-				if c := rel(m).Count; c != nil {
-					return *c, true
-				}
-				return nil, false
-			}},
+			get:     func(m Manifest) (any, bool) { return count(rel(m).Count) }},
 		Setting{Key: "orchestration.release.epic", Kind: KindText,
 			Meaning: "Under theme, the epic, such as E-0001, whose stories, every one accepted, make a release due.",
 			get:     func(m Manifest) (any, bool) { return text(rel(m).Epic) }},
@@ -206,6 +202,9 @@ func buildCatalog() []Setting {
 		Setting{Key: "acceptance.merge_method", Kind: KindChoice, Values: MergeMethods, Default: MergeMerge,
 			Meaning: "How the forge merges an accepted pull request: merge with a merge commit, squash into one commit, or rebase the commits onto the base; unused under local.",
 			get:     func(m Manifest) (any, bool) { return text(m.Acceptance.MergeMethod) }},
+		Setting{Key: "merge_queue.batch_max", Kind: KindNumber, Whole: true, Default: strconv.Itoa(DefaultBatchMax),
+			Meaning: "The most enqueued stories flai serve's merge queue takes into one batch, verified together once, a whole number of one or more; the queue runs behind the merge-queue host action, while orchestration.permissions.accept_reviews is on, under local acceptance only.",
+			get:     func(m Manifest) (any, bool) { return count(m.MergeQueue.BatchMax) }},
 		Setting{Key: "tests", Kind: KindTests,
 			Meaning: "The project's test tiers, cheapest first, that flai test runs for the paths each selects: each a name, a command, the paths that select it, and the format of its output; unset, one plain tier runs scripts/test.sh when it exists, and [] means none.",
 			get: func(m Manifest) (any, bool) {
@@ -229,6 +228,13 @@ func number(f *float64) (any, bool) {
 		return nil, false
 	}
 	return *f, true
+}
+
+func count(c *int) (any, bool) {
+	if c == nil {
+		return nil, false
+	}
+	return *c, true
 }
 
 func agent(a *Agent) (any, bool) {
@@ -826,6 +832,7 @@ func (m Manifest) settingsProblems() []Problem {
 	msgs = append(msgs, m.Orchestration.Errors()...)
 	msgs = append(msgs, m.Analysis.Errors()...)
 	msgs = append(msgs, m.Acceptance.Errors()...)
+	msgs = append(msgs, m.MergeQueue.Errors()...)
 	msgs = append(msgs, m.TestErrors()...)
 	msgs = append(msgs, m.ProviderErrors()...)
 	msgs = append(msgs, m.ComponentErrors(nil)...)

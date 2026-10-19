@@ -82,7 +82,7 @@ func TestHostActionPush(t *testing.T) {
 		t.Fatalf("disabled: %d %s", code, out)
 	}
 
-	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, components, dashboard, forge, host, orchestrate, plan, push") {
+	if _, errOut, code := runIn(t, root, "serve", "enable", "pull"); code == 0 || !strings.Contains(errOut, "there are: agent, analyze, auto-approve, auto-publish, auto-upgrade, checks, components, dashboard, forge, host, merge-queue, orchestrate, plan, push") {
 		t.Errorf("an action there is not: %d %s", code, errOut)
 	}
 	out, _, code = runIn(t, root, "serve", "enable", "push")
@@ -239,6 +239,65 @@ func TestServeOrchestrateAction(t *testing.T) {
 	runIn(t, root, "serve", "disable", "orchestrate")
 	if (&app{}).agentConfig(root).Orchestrate {
 		t.Error("disabled, flai serve is still told it is on")
+	}
+}
+
+// S-0399, ADR-0173: merge-queue is off until the operator enables it, flai
+// serve actions names it and what it means, the dashboard's settings page
+// lists it, and enable and disable turn it on and off for the project.
+func TestServeMergeQueueAction(t *testing.T) {
+	t.Setenv("FLAI_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	root := tempProject(t)
+	enabled := func() bool {
+		t.Helper()
+		cfg, _, err := (&app{}).loadConfig()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return cfg.ActionEnabled(hostapi.ActionMergeQueue, root)
+	}
+	listed := func() map[string]any {
+		t.Helper()
+		got, err := json.Marshal((&app{}).hostSettings(root))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var settings struct {
+			Actions []map[string]any `json:"actions"`
+		}
+		if err := json.Unmarshal(got, &settings); err != nil {
+			t.Fatal(err)
+		}
+		for _, a := range settings.Actions {
+			if a["name"] == hostapi.ActionMergeQueue {
+				return a
+			}
+		}
+		return nil
+	}
+	if out, _, _ := runIn(t, root, "serve", "actions"); !strings.Contains(out, "merge-queue: off everywhere") || !strings.Contains(out, "merge_queue.batch_max") || !strings.Contains(out, "orchestration.permissions.accept_reviews") {
+		t.Errorf("actions names it and what it means: %s", out)
+	}
+	if enabled() {
+		t.Error("merge-queue is on by default")
+	}
+	if a := listed(); a == nil || a["here"] != false || a["everywhere"] != false {
+		t.Errorf("the settings page lists it, off: %v", a)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "enable", "merge-queue"); code != 0 || !strings.Contains(out, "merge-queue enabled for t") || !strings.Contains(out, "flai serve disable merge-queue") {
+		t.Fatalf("enable: %d %s %s", code, out, errOut)
+	}
+	if !enabled() {
+		t.Error("enabled, the host's configuration does not say so")
+	}
+	if a := listed(); a == nil || a["here"] != true {
+		t.Errorf("the settings page lists it, on: %v", a)
+	}
+	if out, errOut, code := runIn(t, root, "serve", "disable", "merge-queue"); code != 0 || !strings.Contains(out, "merge-queue disabled for t") {
+		t.Fatalf("disable: %d %s %s", code, out, errOut)
+	}
+	if enabled() {
+		t.Error("disabled, the host's configuration still has it on")
 	}
 }
 

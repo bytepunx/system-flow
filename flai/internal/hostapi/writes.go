@@ -382,6 +382,15 @@ const ActionAnalyze = "analyze"
 // for it. Starting one runs the project's code and dependencies on the host.
 const ActionComponents = "components"
 
+// ActionMergeQueue is the host action under which flai serve runs the merge
+// queue, a loop of its own with no model (S-0399, ADR-0173): while
+// orchestration.permissions.accept_reviews is on and acceptance.mode is
+// local, it batches at most merge_queue.batch_max enqueued eligible stories
+// in a worktree of its own and verifies the batch once. flai serve does it
+// from what it sees in the project's files. Off, which is the default, no
+// batch starts.
+const ActionMergeQueue = "merge-queue"
+
 // Actions are the host actions there are, with what each lets a dashboard
 // do, or, for one no dashboard sees (DashboardSees), what it has flai do.
 var Actions = map[string]string{
@@ -398,6 +407,7 @@ var Actions = map[string]string{
 	ActionPlan:        "start the planner, with the project's planning agent (planning.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for an epic or a story when you press Plan or run flai plan; it writes work items and threads through flai and moves nothing past backlog; a holder of the dashboard token can then start it for any epic or story not done or cancelled",
 	ActionOrchestrate: "run the orchestrator, with the project's orchestration agent (orchestration.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, for as long as this is on: started again when it ends, a minute after a failure, and stopped when this is turned off; it keeps work moving through flai only as far as orchestration.permissions in system-flow.yaml allow, each off by default, and logs each decision in wip/agents/orchestrator.md; a holder of the dashboard token can then stop it and hold it stopped, and start it again, from its page",
 	ActionComponents:  "start a Svelte sub-project's own Vite dev server, from its node_modules, with its own config, plugins, and dependencies and flai's component harness, on 127.0.0.1 and a port flai picks, on this machine and as you, when the Components page asks, in the main checkout or in the worktree of a story in progress or in review, whose dependencies flai first installs by the sub-project's lock file when they are missing, and stop it; at most components.max_servers (3 by default) run at once per project; flai serve stops one that nothing asked about for components.idle (30 minutes by default), a story's once the story leaves review, and every one when it stops. A holder of the dashboard token can then run the sub-project's code, and its branch's, on this host",
+	ActionMergeQueue:  "run the merge queue in flai serve, with no model, on this machine and as you, while orchestration.permissions.accept_reviews in system-flow.yaml is on and acceptance.mode is local: it takes up to merge_queue.batch_max (4 by default) eligible stories enqueued in review, in queue order, rebases each one's branch onto the one before it from the main branch, in a worktree of its own under .flai-cache/worktrees, and verifies the batch once with the tiers flai verify runs, running the project's tests on this host; a story whose rebase stops is left out of the batch. No batch starts while flai queue hold holds the queue. Off, or under pull-request acceptance, no batch starts and enqueued stories wait",
 	ActionAnalyze:     "start the analyzer, with the project's analysis agent (analysis.agent over agent in system-flow.yaml) and the harnesses and the command you set with flai serve agent, on this machine and as you, in the project's main checkout, when you run flai analyze or call analyze.run, looking for bottlenecks, intent, or risk, or all three, and for all three each time analysis.schedule in system-flow.yaml comes round; it writes one report under design/analysis and edits nothing else, and one runs per project at a time; a holder of the dashboard token can then start it whenever none runs",
 }
 

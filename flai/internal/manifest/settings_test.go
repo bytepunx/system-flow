@@ -145,6 +145,10 @@ func TestEditSettingsRefusesWithTheFieldAndTheReason(t *testing.T) {
 		{"acceptance mode", []Assignment{{"acceptance.mode", "remote"}}, nil, "acceptance.mode", `"remote" is not an acceptance mode; write local`},
 		{"forge", []Assignment{{"acceptance.forge", "gitlab"}}, nil, "acceptance.forge", `"gitlab" is not a forge flai reaches; write github`},
 		{"merge method", []Assignment{{"acceptance.merge_method", "fast-forward"}}, nil, "acceptance.merge_method", `"fast-forward" is not a merge method; write merge`},
+		{"batch max zero", []Assignment{{"merge_queue.batch_max", "0"}}, nil, "merge_queue.batch_max", "0 is not a number of one or more; write the most enqueued stories one batch of the merge queue holds, such as 4, or remove it for 4"},
+		{"batch max negative", []Assignment{{"merge_queue.batch_max", "-3"}}, nil, "merge_queue.batch_max", "-3 is not a number of one or more"},
+		{"batch max not a number", []Assignment{{"merge_queue.batch_max", "four"}}, nil, "merge_queue.batch_max", `"four" is not a whole number; write one such as 5`},
+		{"batch max not whole", []Assignment{{"merge_queue.batch_max", "2.5"}}, nil, "merge_queue.batch_max", `"2.5" is not a whole number`},
 		{"unknown key", []Assignment{{"planning.colour", "blue"}}, nil, "planning.colour", "is not a setting flai manifest set writes"},
 		{"unknown key unset", nil, []string{"dashboard.port"}, "dashboard.port", "is not a setting flai manifest set writes"},
 		{"currency", []Assignment{{"planning.currency", "GBP"}}, nil, "planning.currency", "re-denominates every amount"},
@@ -207,6 +211,43 @@ func TestEditSettingsWritesAcceptance(t *testing.T) {
 	}
 	if a := loaded(t, unset).Acceptance; a.ModeOrDefault() != AcceptLocal || a.MergeMethodOrDefault() != MergeMerge {
 		t.Errorf("unset reads %+v", a)
+	}
+}
+
+// S-0399: merge_queue.batch_max is written into a merge_queue block added at
+// the end, set again in place, read back by Load, and unset so that its
+// default, 4, applies; the rest of the file is as it was.
+func TestEditSettingsWritesBatchMax(t *testing.T) {
+	if s, ok := SettingFor("merge_queue.batch_max"); !ok || s.Kind != KindNumber || !s.Whole || s.Default != "4" {
+		t.Fatalf("merge_queue.batch_max in the catalog: %+v, %v", s, ok)
+	}
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"merge_queue.batch_max", "6"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "merge_queue:\n  batch_max: 6\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	if m := loaded(t, got); m.BatchMax() != 6 {
+		t.Errorf("read back %d", m.BatchMax())
+	}
+	again, err := EditSettings(got, []Assignment{{"merge_queue.batch_max", "1"}}, nil)
+	if err != nil || string(again) != settingsFixture+"merge_queue:\n  batch_max: 1\n" || loaded(t, again).BatchMax() != 1 {
+		t.Errorf("batch_max=1: %v\n%s", err, again)
+	}
+	unset, err := EditSettings(got, nil, []string{"merge_queue.batch_max"})
+	if err != nil || string(unset) != settingsFixture+"merge_queue:\n" || loaded(t, unset).BatchMax() != DefaultBatchMax {
+		t.Errorf("unset: %v\n%s", err, unset)
+	}
+	var v SettingValue
+	for _, sv := range loaded(t, got).SettingValues() {
+		if sv.Key == "merge_queue.batch_max" {
+			v = sv
+		}
+	}
+	if !v.Set || v.Value != 6 {
+		t.Errorf("its value: %+v", v)
 	}
 }
 
@@ -317,7 +358,7 @@ func TestSettingValues(t *testing.T) {
 	if a, ok := got["planning.agent"].Value.(*Agent); !ok || a.Model != "claude-sonnet-5" {
 		t.Errorf("planning.agent = %v", got["planning.agent"].Value)
 	}
-	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent", "acceptance.mode", "acceptance.forge", "acceptance.merge_method"} {
+	for _, key := range []string{"orchestration.permissions.publish", "planning.hour_rate", "analysis.schedule", "analysis.agent", "acceptance.mode", "acceptance.forge", "acceptance.merge_method", "merge_queue.batch_max"} {
 		if v := got[key]; v.Set || v.Value != nil {
 			t.Errorf("%s is unset, got %v", key, v.Value)
 		}
@@ -328,7 +369,7 @@ func TestSettingValues(t *testing.T) {
 	if d := got["planning.default_duration"].Default; d != "1h" {
 		t.Errorf("planning.default_duration's default = %q, want 1h", d)
 	}
-	for key, want := range map[string]string{"acceptance.mode": AcceptLocal, "acceptance.forge": ForgeGitHub, "acceptance.merge_method": MergeMerge} {
+	for key, want := range map[string]string{"acceptance.mode": AcceptLocal, "acceptance.forge": ForgeGitHub, "acceptance.merge_method": MergeMerge, "merge_queue.batch_max": "4"} {
 		if d := got[key].Default; d != want {
 			t.Errorf("%s's default = %q, want %q", key, d, want)
 		}

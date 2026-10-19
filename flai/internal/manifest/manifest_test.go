@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -493,6 +494,56 @@ func TestAcceptance(t *testing.T) {
 	}
 	if errs := (Acceptance{Mode: "x", Forge: "y", MergeMethod: "z"}).Errors(); len(errs) != 3 {
 		t.Errorf("one error a key: %q", errs)
+	}
+}
+
+// S-0399, ADR-0173: a manifest without merge_queue batches 4 stories at most
+// and marshals without the block; a batch_max of one or more loads as given;
+// zero, a negative number, and a value that is not a whole number are
+// refused at load, naming the key, the value, and what to write.
+func TestMergeQueue(t *testing.T) {
+	head := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n"
+	m := loaded(t, []byte(head))
+	if m.MergeQueue != (MergeQueue{}) || m.BatchMax() != 4 || DefaultBatchMax != 4 || len(m.MergeQueue.Errors()) != 0 {
+		t.Errorf("unset: %+v, batch max %d, %v", m.MergeQueue, m.BatchMax(), m.MergeQueue.Errors())
+	}
+	if loaded(t, []byte(head+"merge_queue:\n")).BatchMax() != DefaultBatchMax {
+		t.Error("an empty merge_queue block is not the default")
+	}
+	for _, format := range []func(Manifest) ([]byte, error){
+		func(m Manifest) ([]byte, error) { return yaml.Marshal(m) },
+		func(m Manifest) ([]byte, error) { return json.Marshal(m) },
+	} {
+		if data, err := format(Manifest{}); err != nil || strings.Contains(string(data), "merge_queue") {
+			t.Errorf("an unset merge_queue block is written: %v\n%s", err, data)
+		}
+	}
+	for _, n := range []int{1, 4, 12} {
+		if got := loaded(t, []byte(head+"merge_queue:\n  batch_max: "+strconv.Itoa(n)+"\n")).BatchMax(); got != n {
+			t.Errorf("batch_max %d reads as %d", n, got)
+		}
+	}
+
+	p := filepath.Join(t.TempDir(), File)
+	for _, c := range []struct{ value, want string }{
+		{"0", `merge_queue.batch_max 0 is not a number of one or more; write the most enqueued stories one batch of the merge queue holds, such as 4, or remove it for 4`},
+		{"-2", `merge_queue.batch_max -2 is not a number of one or more`},
+		{"four", `merge_queue.batch_max "four" is not a whole number; write the most enqueued stories one batch of the merge queue holds, such as 4, or remove it for 4`},
+		{`"4"`, `merge_queue.batch_max "4" is not a whole number`},
+		{"2.5", `merge_queue.batch_max 2.5 is not a whole number`},
+		{"[4]", `merge_queue.batch_max [4] is not a whole number`},
+		{"true", `merge_queue.batch_max true is not a whole number`},
+	} {
+		if err := os.WriteFile(p, []byte(head+"merge_queue:\n  batch_max: "+c.value+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Load(p)
+		if err == nil || !strings.HasPrefix(err.Error(), p+": ") || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("batch_max %s: got %v, want %s", c.value, err, c.want)
+		}
+	}
+	if got := loaded(t, []byte(head+"merge_queue:\n  batch_max: 3.0\n")).BatchMax(); got != 3 {
+		t.Errorf("batch_max 3.0, a whole number, reads as %d", got)
 	}
 }
 
