@@ -8,8 +8,11 @@ package components
 // the test reads the hot updates Vite sends over its HMR WebSocket as the
 // fixture's component and setup stylesheet change. Then (S-0440) it loads
 // the harness in a headless Chromium and checks that a props message updates
-// a component in place, keeping its own state, and (S-0441) that a tokens
-// message lays its values over the stylesheet's. It needs node and
+// a component in place, keeping its own state, (S-0441) that a tokens
+// message lays its values over the stylesheet's, and (S-0449) how the
+// harness frames a component: in a margin, a fixed dialog whole, with
+// nothing of the component before, only once the page selects it, and with
+// the props the page sent while it loaded. It needs node and
 // flaiover's dependencies installed, so it skips without them, and under
 // -short; the browser checks skip without Playwright's Chromium. The build
 // tag keeps it off Windows: the fixture links node_modules with symlinks,
@@ -21,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -28,6 +32,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -149,6 +154,21 @@ func TestServeCarriesHotUpdatesOfTheComponentAndTheStylesheet(t *testing.T) {
 	t.Run("a tokens message lays its values over the stylesheet's", func(t *testing.T) {
 		checkTokens(t, dir, s.URL(), vite)
 	})
+	t.Run("the component sits in a 10px margin, which its size includes", func(t *testing.T) {
+		checkMargin(t, dir, s.URL(), vite)
+	})
+	t.Run("a fixed dialog is framed whole", func(t *testing.T) {
+		checkDialog(t, dir, s.URL(), vite)
+	})
+	t.Run("a select leaves nothing of the component before", func(t *testing.T) {
+		checkNothingLeft(t, dir, s.URL(), vite)
+	})
+	t.Run("framed, the harness mounts only what the page selects", func(t *testing.T) {
+		checkOnlySelected(t, dir, s.URL()+"?c="+url.QueryEscape(helloComponent), vite)
+	})
+	t.Run("a props message sent while a select loads reaches the component", func(t *testing.T) {
+		checkPropsWhileLoading(t, dir, s.URL(), vite)
+	})
 }
 
 // inPlaceComponent is the fixture component whose own state, open, a props
@@ -159,7 +179,7 @@ const inPlaceComponent = "src/lib/Stateful.svelte"
 // the harness page in a headless Chromium, with Playwright from flaiover's
 // dependencies, and reports, as one line of JSON, what the body found, what
 // the page logged as an error or a warning, and what the harness posted. The
-// page loads the harness at the top, with ?origin= its own origin, so that it
+// page loads the harness URL at the top, with ?origin= its own origin added, so that it
 // is its own parent: it posts the page's messages to itself, as the
 // dashboard posts them into the frame, and receives what the harness posts.
 // The body runs once the harness is ready, with the script's arguments after
@@ -203,7 +223,17 @@ try {
 	const seen = (types, n) =>
 		page.waitForFunction(([types, n]) => window.__flai.filter((m) => types.includes(m.type)).length >= n, [types, n], { timeout: 30000 });
 	const send = (m) => page.evaluate((m) => postMessage({ source: 'flai-components', version: 1, ...m }, location.origin), m);
-	await page.goto(url + '?origin=' + encodeURIComponent(new URL(url).origin));
+	// lastSize is the last size the harness posted, once one follows its
+	// last rendered, or within 2s.
+	const lastSize = async () => {
+		await page
+			.waitForFunction(() => window.__flai.slice(window.__flai.findLastIndex((m) => m.type === 'rendered')).some((m) => m.type === 'size'), null, { timeout: 2000 })
+			.catch(() => {});
+		return page.evaluate(() => window.__flai.filter((m) => m.type === 'size').at(-1) ?? null);
+	};
+	const framed = new URL(url);
+	framed.searchParams.set('origin', framed.origin);
+	await page.goto(framed.href);
 	await seen(['ready'], 1);
 `
 
@@ -469,6 +499,290 @@ func checkTokens(t *testing.T, dir, harnessURL string, vite func() string) {
 			t.Errorf("%s, the page showed %+v, want %+v", c.when, *c.got, c.want)
 		}
 	}
+}
+
+// The fixture components the framing checks (S-0449) select: Hello renders
+// a line, Dialog a fixed backdrop centring a 300px dialog, and Leaky leaves
+// an element ahead of its own and one in the body when it is unmounted.
+const (
+	helloComponent  = "src/lib/Hello.svelte"
+	dialogComponent = "src/lib/Dialog.svelte"
+	leakyComponent  = "src/lib/Leaky.svelte"
+)
+
+// margin is the space the harness keeps around the component, in CSS
+// pixels, and dialogHeight the height of the fixture Dialog's dialog.
+const (
+	margin       = 10
+	dialogHeight = 300
+)
+
+// rect is an element's box in the viewport, as getBoundingClientRect gives it.
+type rect struct {
+	Top    float64 `json:"top"`
+	Left   float64 `json:"left"`
+	Bottom float64 `json:"bottom"`
+	Right  float64 `json:"right"`
+}
+
+// sizeMessage is a size message the harness posted.
+type sizeMessage struct {
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+// marginScript is the body of a page script that reports where the page
+// drew inPlaceComponent, which has no margin of its own, and the size the
+// harness last posted.
+const marginScript = `	const [component] = args;
+	await send({ type: 'select', component, props: { label: 'One' } });
+	await seen(['rendered', 'error'], 1);
+	report.size = await lastSize();
+	report.box = await page.evaluate(() => {
+		const r = document.querySelector('.stateful').getBoundingClientRect();
+		return { top: r.top, left: r.left, bottom: r.bottom, right: r.right };
+	});`
+
+// checkMargin runs marginScript against the harness at harnessURL, and
+// checks that the component sits margin from the frame's top and left, and
+// that the size posted is its box with margin on each side.
+func checkMargin(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Box  *rect        `json:"box"`
+		Size *sizeMessage `json:"size"`
+	}
+	messages := runPage(t, dir, "margin.mjs", marginScript, "that the component sits 10px from the frame's edges", vite, &r,
+		harnessURL, inPlaceComponent)
+	noErrors(t, messages)
+	if r.Box == nil || r.Size == nil {
+		t.Fatalf("the page reported the box %+v and the size %+v, want both", r.Box, r.Size)
+	}
+	if r.Box.Top != margin || r.Box.Left != margin {
+		t.Errorf("the component's top left is %v, %v, want %d, %d", r.Box.Top, r.Box.Left, margin, margin)
+	}
+	if w, h := math.Ceil(r.Box.Right+margin), math.Ceil(r.Box.Bottom+margin); r.Size.Width != w || r.Size.Height != h {
+		t.Errorf("the harness posted the size %vx%v for the box %+v, want %vx%v: the box and %dpx on each side", r.Size.Width, r.Size.Height, *r.Box, w, h, margin)
+	}
+}
+
+// dialogScript is the body of a page script that sizes the viewport as the
+// page sizes its frame, to each height the harness posts, 0 as unsized, until
+// it posts no other: first from the page's unsized 160px, then from 800px,
+// taller than the dialog. It reports, for each, the heights it set, and
+// where the dialog then is in a viewport how tall.
+const dialogScript = `	const [component] = args;
+	const unsized = 160;
+	const heights = () => page.evaluate(() => window.__flai.filter((m) => m.type === 'size').map((m) => m.height));
+	const posted = (n) =>
+		page.waitForFunction((n) => window.__flai.filter((m) => m.type === 'size').length > n, n, { timeout: 2000 }).catch(() => {});
+	const settle = async () => {
+		const steps = [];
+		for (let i = 0; i < 20; i++) {
+			const all = await heights();
+			const h = all.at(-1) || unsized;
+			const { width, height } = page.viewportSize();
+			if (h === height) break;
+			steps.push(h);
+			await page.setViewportSize({ width, height: h });
+			await posted(all.length);
+		}
+		const at = await page.evaluate(() => {
+			const r = document.querySelector('.dialog').getBoundingClientRect();
+			return { top: r.top, bottom: r.bottom, viewport: innerHeight };
+		});
+		return { steps, ...at };
+	};
+	await page.setViewportSize({ width: 800, height: unsized });
+	await send({ type: 'select', component });
+	await seen(['rendered', 'error'], 1);
+	await lastSize();
+	report.grown = await settle();
+	const n = (await heights()).length;
+	await page.setViewportSize({ width: 800, height: 800 });
+	await posted(n);
+	report.shrunk = await settle();`
+
+// dialogSettled is where the fixture Dialog's dialog was once the viewport
+// settled, how tall the viewport then was, and the heights set on the way.
+type dialogSettled struct {
+	Steps    []float64 `json:"steps"`
+	Top      float64   `json:"top"`
+	Bottom   float64   `json:"bottom"`
+	Viewport float64   `json:"viewport"`
+}
+
+// checkDialog runs dialogScript against the harness at harnessURL, and
+// checks that a frame sized as the harness says shows the whole dialog
+// within the margin, growing from the unsized frame and shrinking back from
+// a taller one, rather than growing without end (I-0160).
+func checkDialog(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Grown  *dialogSettled `json:"grown"`
+		Shrunk *dialogSettled `json:"shrunk"`
+	}
+	messages := runPage(t, dir, "dialog.mjs", dialogScript, "that a dialog is framed whole", vite, &r,
+		harnessURL, dialogComponent)
+	noErrors(t, messages)
+	for _, c := range []struct {
+		when string
+		got  *dialogSettled
+		most float64
+	}{
+		{"from the unsized frame", r.Grown, math.Inf(1)},
+		// Each step halves the room left over, and the last rounds up a pixel.
+		{"from a frame taller than the dialog", r.Shrunk, dialogHeight + 2*margin + 1},
+	} {
+		if c.got != nil {
+			t.Logf("%s, the frame was sized %v and settled at %vpx", c.when, c.got.Steps, c.got.Viewport)
+		}
+		switch {
+		case c.got == nil:
+			t.Errorf("%s, the page reported nothing", c.when)
+		case len(c.got.Steps) == 20:
+			t.Errorf("%s, the frame did not settle: it was sized %v", c.when, c.got.Steps)
+		case c.got.Viewport < dialogHeight+2*margin || c.got.Viewport > c.most:
+			t.Errorf("%s, the frame settled at %vpx, want from %d to %v: the dialog and %dpx above and below; it was sized %v",
+				c.when, c.got.Viewport, dialogHeight+2*margin, c.most, margin, c.got.Steps)
+		case c.got.Top < margin || c.got.Bottom > c.got.Viewport-margin:
+			t.Errorf("%s, the dialog is from %v to %v in a %vpx frame, want it %dpx within it", c.when, c.got.Top, c.got.Bottom, c.got.Viewport, margin)
+		}
+	}
+}
+
+// nothingLeftScript is the body of a page script that reports how many of
+// Leaky's elements, its own and those it leaves, the page holds once it is
+// selected, and once another component is.
+const nothingLeftScript = `	const [leaky, other] = args;
+	const count = () => page.evaluate(() => document.querySelectorAll('.leaky, .leaked').length);
+	await send({ type: 'select', component: leaky });
+	await seen(['rendered', 'error'], 1);
+	report.mounted = await count();
+	await send({ type: 'select', component: other });
+	await seen(['rendered', 'error'], 2);
+	report.after = await count();
+	report.other = await page.evaluate(() => !!document.querySelector('#flai-component .hello'));`
+
+// checkNothingLeft runs nothingLeftScript against the harness at harnessURL,
+// and checks that selecting another component removes all Leaky rendered.
+func checkNothingLeft(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Mounted int  `json:"mounted"`
+		After   int  `json:"after"`
+		Other   bool `json:"other"`
+	}
+	messages := runPage(t, dir, "nothingleft.mjs", nothingLeftScript, "that a select leaves nothing of the component before", vite, &r,
+		harnessURL, leakyComponent, helloComponent)
+	noErrors(t, messages)
+	if r.Mounted != 3 {
+		t.Fatalf("once %s mounted, the page held %d of its elements, want 3: its own, and the two it leaves", leakyComponent, r.Mounted)
+	}
+	if r.After != 0 {
+		t.Errorf("once %s was selected, the page still held %d of %s's elements, want none", helloComponent, r.After, leakyComponent)
+	}
+	if !r.Other {
+		t.Errorf("once %s was selected, the page did not show it", helloComponent)
+	}
+}
+
+// onlySelectedScript is the body of a page script, for a harness URL that
+// names a component as ?c=, that reports what the harness mounted and said
+// it rendered 2s after its ready, and once the page selected another.
+const onlySelectedScript = `	const [component] = args;
+	const look = () =>
+		page.evaluate(() => ({
+			hello: !!document.querySelector('.hello'),
+			stateful: !!document.querySelector('.stateful'),
+			rendered: window.__flai.filter((m) => m.type === 'rendered').map((m) => m.component)
+		}));
+	await page.waitForTimeout(2000);
+	report.before = await look();
+	await send({ type: 'select', component });
+	await seen(['rendered', 'error'], 1);
+	report.after = await look();`
+
+// shownLook is which fixture components the page showed, and those the
+// harness said it rendered.
+type shownLook struct {
+	Hello    bool     `json:"hello"`
+	Stateful bool     `json:"stateful"`
+	Rendered []string `json:"rendered"`
+}
+
+// checkOnlySelected runs onlySelectedScript against harnessURL, which names
+// helloComponent as ?c=, and checks that the framed harness mounts nothing
+// until the page selects, and then only what it selects.
+func checkOnlySelected(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Before *shownLook `json:"before"`
+		After  *shownLook `json:"after"`
+	}
+	messages := runPage(t, dir, "onlyselected.mjs", onlySelectedScript, "that a framed harness renders only what the page selects", vite, &r,
+		harnessURL, inPlaceComponent)
+	noErrors(t, messages)
+	for _, c := range []struct {
+		when string
+		got  *shownLook
+		want shownLook
+	}{
+		{"before the page selected", r.Before, shownLook{Rendered: []string{}}},
+		{"once the page selected " + inPlaceComponent, r.After, shownLook{Stateful: true, Rendered: []string{inPlaceComponent}}},
+	} {
+		switch {
+		case c.got == nil:
+			t.Errorf("%s, the page reported nothing", c.when)
+		case c.got.Hello != c.want.Hello || c.got.Stateful != c.want.Stateful || !slices.Equal(c.got.Rendered, c.want.Rendered):
+			t.Errorf("%s, the page showed %+v, want %+v", c.when, *c.got, c.want)
+		}
+	}
+}
+
+// propsWhileLoadingScript is the body of a page script that posts a select
+// and, before the harness can have loaded the component's module, a props
+// message, and reports the text the component then showed.
+const propsWhileLoadingScript = `	const [component] = args;
+	await page.evaluate((component) => {
+		const m = { source: 'flai-components', version: 1 };
+		postMessage({ ...m, type: 'select', component, props: { name: 'the select' } }, location.origin);
+		postMessage({ ...m, type: 'props', props: { name: 'the props' } }, location.origin);
+	}, component);
+	await seen(['rendered', 'error'], 1);
+	report.text = await page.evaluate(() => document.querySelector('.hello')?.textContent ?? null);`
+
+// checkPropsWhileLoading runs propsWhileLoadingScript against the harness at
+// harnessURL, and checks that the component mounted with the props message's
+// props, which the page sends after the select on every ready.
+func checkPropsWhileLoading(t *testing.T, dir, harnessURL string, vite func() string) {
+	t.Helper()
+	var r struct {
+		Text *string `json:"text"`
+	}
+	messages := runPage(t, dir, "propswhileloading.mjs", propsWhileLoadingScript, "that props sent while a component loads reach it", vite, &r,
+		harnessURL, helloComponent)
+	noErrors(t, messages)
+	if r.Text == nil || !strings.HasSuffix(*r.Text, "the props!") {
+		t.Errorf("the component showed %v, want the props message's name, the props", stringOrNone(r.Text))
+	}
+}
+
+// noErrors fails the test for each error the harness posted.
+func noErrors(t *testing.T, messages []harnessMessage) {
+	t.Helper()
+	for _, m := range messages {
+		if m.Type == "error" {
+			t.Errorf("the harness posted an error about %s: %s", m.Component, m.Message)
+		}
+	}
+}
+
+func stringOrNone(s *string) string {
+	if s == nil {
+		return "nothing"
+	}
+	return strconv.Quote(*s)
 }
 
 func lookString(l *inPlaceLook) string {

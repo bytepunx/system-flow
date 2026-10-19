@@ -1,6 +1,6 @@
 ---
 title: flai CLI
-updated: 2026-10-18
+updated: 2026-10-19
 status: active
 ---
 
@@ -1435,9 +1435,11 @@ http://127.0.0.1:41537/__flai/components/
 
 `--json` prints `{"project", "url", "port", "pid"}` instead. Vite's own output goes to standard error.
 
-Open the URL with `?c=` and a component's path as `flai components list` prints it, such as `http://127.0.0.1:41537/__flai/components/?c=src/lib/components/Chart.svelte`. The harness imports the sub-project's `setup` module first ([Where flai finds them](#where-flai-finds-them)), then renders the component with no props. A component that fails to import or render shows nothing, and its error is in the browser's console.
+Open the URL with `?c=` and a component's path as `flai components list` prints it, such as `http://127.0.0.1:41537/__flai/components/?c=src/lib/components/Chart.svelte`. The harness imports the sub-project's `setup` module first ([Where flai finds them](#where-flai-finds-them)), then renders the component with no props, 10px from each edge of the page. A component that fails to import or render shows nothing, and its error is in the browser's console.
 
 A change you save to a component or to the stylesheet reaches the page as a hot update, without a reload. A component added or removed while it runs reloads the page.
+
+When the dashboard's Components page frames the harness, the harness renders only the component the page picks, never the one the frame's URL first named, even after a reload. Picking another component removes everything the one before rendered, a portal in the page's body among it. The harness tells the page the size of everything the component draws, a dialog centred in a fixed backdrop among it, with the 10px margin on each side, so the frame holds it whole ([component-library.md § The harness](../../design/system/component-library.md#the-harness)).
 
 Ctrl-C, or SIGTERM, stops Vite and everything it started. If Vite exits on its own, the command exits 1 with Vite's last lines of output.
 

@@ -5,7 +5,14 @@
 // protocol of ADR-0163: every message is {source: "flai-components",
 // version: 1, type, ...}. It accepts messages only from the origin ?origin=
 // names, from its parent window, and posts only to it; with no origin it
-// renders ?c= and posts nothing.
+// renders ?c= and posts nothing. Framed, with an origin, it renders only the
+// component the page selects, which the page does on every ready, so a
+// reloaded frame never shows the component its URL first named.
+//
+// It frames the component with a margin, the padding harness.html gives
+// #flai-component, and posts the size of all the component draws, a fixed
+// dialog among it (S-0449). A select removes everything the component before
+// rendered, in #flai-component and in the body.
 //
 // A select message may carry functions and snippets as a props message does,
 // so that a component that calls a function prop, or renders a snippet, as it
@@ -36,7 +43,17 @@ let current = null;
 // that component mounts.
 let wanted = '';
 let selection = 0;
+// loading is whether the last select is importing its component's module,
+// and pending the last props message that came meanwhile, which the
+// component mounts with in place of the select's props.
+let loading = false;
+let pending = null;
 let size = '';
+// margin is the space around the component, harness.html's padding of target.
+const margin = 10;
+// own is what the body holds once the setup module has run; anything else in
+// it a component added, such as a portal.
+let own = new Set();
 // tokenStyle is the style element the last tokens message wrote, or null.
 let tokenStyle = null;
 
@@ -58,6 +75,8 @@ function post(message) {
 async function select(path, props, functions, snippets) {
 	const token = ++selection;
 	wanted = path;
+	loading = false;
+	pending = null;
 	close();
 	const load = Object.hasOwn(components, path) ? components[path] : null;
 	if (!load) {
@@ -65,13 +84,20 @@ async function select(path, props, functions, snippets) {
 		return;
 	}
 	let mod;
+	loading = true;
 	try {
 		mod = await load();
 	} catch (e) {
-		if (token === selection) failed(path, e);
+		if (token === selection) {
+			loading = false;
+			failed(path, e);
+		}
 		return;
 	}
 	if (token !== selection) return;
+	loading = false;
+	const given = pending ?? { props, functions, snippets };
+	pending = null;
 	const c = { path, frame: null, failed: false, reset: null, loggers: new Map(), snippets: new Map() };
 	current = c;
 	const onerror = (error, reset) => {
@@ -84,7 +110,7 @@ async function select(path, props, functions, snippets) {
 		failed(path, e);
 		return;
 	}
-	render(props, functions, snippets);
+	render(given.props, given.functions, given.snippets);
 }
 
 // render gives the mounted component props, renders it again if it had
@@ -105,10 +131,16 @@ function render(props, functions, snippets) {
 	if (!c.failed) post({ type: 'rendered', component: c.path });
 }
 
+// close unmounts the component and removes what it left: anything still in
+// target, such as what a mount that threw had rendered, and anything it
+// added to the body, such as a portal.
 function close() {
-	if (!current) return;
-	if (current.frame) unmount(current.frame);
+	if (current?.frame) unmount(current.frame);
 	current = null;
+	target.replaceChildren();
+	for (const n of [...document.body.childNodes]) {
+		if (!own.has(n)) n.remove();
+	}
 }
 
 function failed(path, error) {
@@ -275,13 +307,52 @@ function block(selector, vars) {
 	return decls.length ? `${selector} { ${decls.join('; ')} }\n` : '';
 }
 
+// measure posts the size of all the component draws, with the margin on each
+// side, when it changes: the union of target's box, its padding the margin,
+// and the box of every element in it or in what it added to the body, a
+// fixed or absolute one among them. A fixed element pinned to the viewport's
+// top and bottom, such as a dialog's backdrop or a drawer, grows with the
+// frame, so its own box is left out, but what it holds counts. Content above
+// or left of the margin, such as a centred dialog taller than the frame,
+// adds as much again, so that the frame grows until it fits. A horizontal
+// scroll bar adds its height, so that it hides nothing. While a select loads
+// its module, the last size stands.
 function measure() {
-	const rect = target.getBoundingClientRect();
-	const width = Math.ceil(Math.max(rect.width, target.scrollWidth));
-	const height = Math.ceil(Math.max(rect.height, target.scrollHeight));
+	if (loading) return;
+	const doc = document.documentElement;
+	const t = target.getBoundingClientRect();
+	const box = { top: Infinity, left: Infinity, bottom: t.bottom + scrollY - margin, right: t.right + scrollX - margin };
+	for (const el of target.children) drawn(el, false, box);
+	for (const n of document.body.children) {
+		if (!own.has(n)) drawn(n, false, box);
+	}
+	const bar = doc.scrollWidth > doc.clientWidth ? innerHeight - doc.clientHeight : 0;
+	const width = Math.ceil(box.right + margin + Math.max(0, margin - box.left));
+	const height = Math.ceil(box.bottom + margin + Math.max(0, margin - box.top) + bar);
 	if (`${width}x${height}` === size) return;
 	size = `${width}x${height}`;
 	post({ type: 'size', width, height });
+}
+
+// drawn widens box, in the document's coordinates, by el's box and those of
+// the elements in it, leaving out one with no size, such as one not
+// displayed, and a fixed one pinned to the viewport's top and bottom. A
+// fixed element, and what it holds, is placed in the viewport, so the
+// document's scroll does not move it.
+function drawn(el, inFixed, box) {
+	const isFixed = getComputedStyle(el).position === 'fixed';
+	const fixed = inFixed || isFixed;
+	const r = el.getBoundingClientRect();
+	const pinned = isFixed && r.top <= 0.5 && r.bottom >= document.documentElement.clientHeight - 0.5;
+	if ((r.width || r.height) && !pinned) {
+		const x = fixed ? 0 : scrollX;
+		const y = fixed ? 0 : scrollY;
+		box.top = Math.min(box.top, r.top + y);
+		box.left = Math.min(box.left, r.left + x);
+		box.bottom = Math.max(box.bottom, r.bottom + y);
+		box.right = Math.max(box.right, r.right + x);
+	}
+	for (const child of el.children) drawn(child, fixed, box);
 }
 
 function receive(event) {
@@ -293,7 +364,8 @@ function receive(event) {
 			if (typeof m.component === 'string') select(m.component, m.props ?? {}, m.functions, m.snippets);
 			break;
 		case 'props':
-			render(m.props ?? {}, m.functions, m.snippets);
+			if (loading) pending = { props: m.props ?? {}, functions: m.functions, snippets: m.snippets };
+			else render(m.props ?? {}, m.functions, m.snippets);
 			break;
 		case 'theme':
 			if (m.theme === 'light' || m.theme === 'dark') document.documentElement.dataset.theme = m.theme;
@@ -310,6 +382,7 @@ try {
 } catch (e) {
 	failed(asked, { message: `the setup module ${setupPath} failed: ${e?.message ?? e}`, loc: e?.loc, id: e?.id, stack: e?.stack });
 }
+own = new Set(document.body.childNodes);
 if (import.meta.hot) {
 	// A module that fails to compile, now or on a saved change, says where;
 	// a hot update renders the component again, and posts rendered once it
@@ -317,8 +390,12 @@ if (import.meta.hot) {
 	import.meta.hot.on('vite:error', ({ err }) => failed(current?.path ?? wanted, err));
 	import.meta.hot.on('vite:afterUpdate', () => render());
 }
+// The size changes as target's box does, as the component's elements or a
+// portal's change, and as the frame does, which moves a fixed dialog.
 new ResizeObserver(measure).observe(target);
+new MutationObserver(measure).observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+window.addEventListener('resize', measure);
 new MutationObserver(keepLast).observe(document.head, { childList: true });
 window.addEventListener('message', receive);
 post(asked ? { type: 'ready', component: asked } : { type: 'ready' });
-if (asked) select(asked, {});
+if (asked && !origin) select(asked, {});

@@ -1,6 +1,6 @@
 ---
 title: The component library
-updated: 2026-10-18
+updated: 2026-10-19
 status: active
 topics: [components, design, dashboard, cli]
 ---
@@ -111,13 +111,17 @@ The dev server binds 127.0.0.1. The browser on the host frames it; the dashboard
 
 ### The harness
 
-The harness at `/__flai/components/` imports the `setup` module, posts `ready`, and mounts the component `?c=<path>` or a `select` message names, inside a `<svelte:boundary>`. A component that throws, or fails to import, posts `error`; the next props or hot update renders it again.
+The harness at `/__flai/components/` imports the `setup` module, posts `ready`, and mounts the component a `select` message names, inside a `<svelte:boundary>`. Opened directly, with no `?origin=`, it mounts the component `?c=<path>` names instead. A component that throws, or fails to import, posts `error`; the next props or hot update renders it again.
 
+- **Only what the page selects (S-0449).** Framed, with `?origin=`, the harness does not mount `?c=`. The page sends `select` on every `ready`, so a frame that reloads shows the component the page has picked, not the one its URL first named. A `props` message that comes while a `select` is still importing its component is kept, and the component mounts with it.
+- **Nothing of the component before.** A `select` unmounts the component, then empties `#flai-component` and removes from the body whatever was added to it after the `setup` module ran, such as a portal. What a mount that threw had rendered goes with it.
+- **The margin.** `#flai-component` has 10px of padding, and the body none, so the component sits 10px from each edge of the frame.
 - **SvelteKit.** The plugin adds its middleware directly in `configureServer`, not in a hook it returns, so the harness page is answered before SvelteKit's router, which answers every other path.
 - **Virtual modules.** The page's script, the error boundary (`Frame.svelte`), and the catalogue are modules no file backs: `virtual:flai-components/harness.mjs`, `virtual:flai-components/Frame.svelte`, and `virtual:flai-components`. So `svelte` and every other import resolve from the sub-project, not from `.flai-cache`. The catalogue maps each component's path to a function that imports it, found as `flai components list` finds them.
 - **Its own optimizer cache.** The harness's dependencies are optimized into `node_modules/.vite-flai-components` in the sub-project, not Vite's own cache. So the harness and the app's own dev server do not each make the other optimize them again.
 - **No error overlay.** Vite's overlay would cover the frame, so the plugin turns it off; the harness posts `error`, and the page shows it.
 - **Changes.** A saved change reaches the harness as a hot update, after which it renders the component again and posts `rendered`. A component added or removed while the dev server runs reloads the page, so the page sends `select` again on each `ready`.
+- **Its size.** The harness posts `size` for everything the component draws, with the 10px margin on each side. That is the union of `#flai-component`'s box and the box of every element in it, or in what it added to the body, `fixed` and `absolute` ones among them, so a dialog is framed whole ([I-0160](../issues/I-0160-the-components-page-frames-a-component-that-draws-a-fixed-overlay-such-as-a-dialog-at-160px-as-its-content-s-height-is-0-cutting-the-dialog-off.md)). A `fixed` element pinned to the viewport's top and bottom, such as a dialog's backdrop or a drawer, grows with the frame, so its own box is left out; what it holds counts. Content above the top margin, such as a centred dialog taller than the frame, adds as much again, so the frame grows until the dialog fits. A frame taller than a centred dialog shrinks back, each size halving the room left over, to the dialog and its margins. When the content is wider than the frame, the height adds the horizontal scroll bar's. The harness measures again when the frame is resized, when anything in the body changes, and when `#flai-component` resizes, and posts only a size that changed. While a `select` imports its component, the last size stands.
 - **Where an error is.** A compile error's `file`, `line`, and `column` are the source's, from Vite. A runtime error's are the first frame of its stack in the sub-project's own code, outside `node_modules`, so its line is the compiled JavaScript's, not the source's.
 
 ### Under flai serve
@@ -132,7 +136,7 @@ Starting a dev server runs the project's code on the host, so it sits behind the
 
 ### The protocol
 
-The dashboard frames the harness cross-origin and talks to it by `postMessage`. Every message is an object with `source: "flai-components"`, `version: 1`, and `type`. The harness URL carries the page's origin as `?origin=`: the harness accepts messages only from that origin and posts only to it, and the page accepts messages only from the harness's origin and its own frame. Without `origin`, the harness renders `?c=` and posts nothing.
+The dashboard frames the harness cross-origin and talks to it by `postMessage`. Every message is an object with `source: "flai-components"`, `version: 1`, and `type`. The harness URL carries the page's origin as `?origin=`: the harness accepts messages only from that origin and posts only to it, and the page accepts messages only from the harness's origin and its own frame. Without `origin`, the harness renders `?c=` and posts nothing; with it, the harness renders only what `select` names.
 
 | From | Type | Fields | Meaning |
 |------|------|--------|---------|
@@ -144,7 +148,7 @@ The dashboard frames the harness cross-origin and talks to it by `postMessage`. 
 | harness | `rendered` | `component` | The component mounted, or took new props. |
 | harness | `error` | `component`, `message`, `file?`, `line?`, `column?` | The component failed to import or render; `file` and `line` say where. |
 | harness | `event` | `component`, `name`, `args` | A function prop was called, with its arguments as far as JSON carries them. |
-| harness | `size` | `width`, `height` | The rendered content's size, in CSS pixels, each time it changes. |
+| harness | `size` | `width`, `height` | The size of all the component draws, a fixed dialog among it, with the 10px margin on each side, in CSS pixels, each time it changes ([Its size](#the-harness)). |
 
 `select` takes `functions` and `snippets` as `props` does, so that a component that calls a function prop, or renders a snippet, as it mounts already has it. ADR-0163's table names `functions` on `props` only, and `snippets` nowhere; S-0440 added them.
 
@@ -328,7 +332,7 @@ Each listed component that has a required prop, or whose defaults show nothing, 
 A headless pass rendered every listed component's examples, or its defaults, in the harness the Components page frames, in light and dark: 161 renders, none with an `error`. What renders wrongly, or not as in the app:
 
 - **Fetches the harness cannot answer.** The harness is served by flaiover's own dev server, so a component's `/api` fetch reaches flaiover's server, which answers 500 without the dashboard's token and has no host channel. AcceptConfirm, CancelConfirm, ImportPrompt, Messages, NewAdrForm, NewItemForm, and the stream inside ActivityView, PlannerPanel, OrchestratorPanel, and AnalyzerPanel show "Internal Server Error", or an empty select where the answer would fill one. Threads says "No threads here."
-- **Dialogs.** A dialog draws a fixed overlay, so the harness reports its content's height as 0, and the page frames it at 160 pixels, cutting off one taller than that ([I-0160](../issues/I-0160-the-components-page-frames-a-component-that-draws-a-fixed-overlay-such-as-a-dialog-at-160px-as-its-content-s-height-is-0-cutting-the-dialog-off.md)).
+- **Dialogs.** A dialog draws a fixed overlay, so the harness reports its content's height as 0, and the page frames it at 160 pixels, cutting off one taller than that ([I-0160](../issues/I-0160-the-components-page-frames-a-component-that-draws-a-fixed-overlay-such-as-a-dialog-at-160px-as-its-content-s-height-is-0-cutting-the-dialog-off.md)). Since S-0449 the harness measures what a dialog draws, so the frame holds it whole ([The harness](#the-harness)).
 - **TokenEditor.** It sets `data-theme` on each value cell, so the other theme's hex fields are dark text on a dark field, on the Design page as in the harness ([I-0159](../issues/I-0159-tokeneditor-sets-data-theme-on-each-value-cell-so-the-other-theme-s-hex-fields-are-dark-text-on-a-dark-field-and-cannot-be-read.md)).
 - **CardReorder** shows nothing: its buttons appear only while a parent with Tailwind's `group` class is hovered or focused, and the harness gives it none.
 - **Gallery** outside PreviewFrame has no `gallery.css`, so its success and warning alerts have no colour of their own.
