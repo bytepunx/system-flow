@@ -3,11 +3,11 @@ id: S-0401
 type: story
 nature: feature
 title: A batch settles a rebase that stops inside the manifest's shared paths by the regenerate-and-merge steps and never sends a story back for it, and tells the story's agent of a conflict outside them by message
-status: in-progress
+status: review
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:20Z
-updated: 2026-10-19T21:50:49Z
+updated: 2026-10-19T22:35:31Z
 transitions:
   - to: ready
     at: 2026-10-19T04:53:18Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-19T21:50:49Z
     by: agent-S-0401
+  - to: review
+    at: 2026-10-19T22:35:31Z
+    by: agent-S-0401
 tags: [cli]
 topics: [orchestration]
-touches: [design/adrs, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, design/system/agent-coordination.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md]
+touches: [design/adrs, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, design/system/agent-coordination.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, design/issues/I-0167-task-done-and-story-start-answers-exceed-claude-code-s-tool-output-limit-because-the-inbox-they-carry-lists-every-thread-awaiting-the-operator.md]
 after: [S-0399]
 agent:
   harness: claude-code
@@ -25,20 +28,38 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2695
+  priced_by: harness
+  turns:
+    - day: 2026-10-19
+      ceremony: 5
+      hand_edits: 2
+      work: 60
+  models:
+    - model: claude-opus-5-5
+      input: 388
+      output: 203757
+      cache_read: 25478308
+      cache_write: 781549
+      cost: 13.8703
   strategic:
     - kind: orchestrator
-      seconds: 19
+      seconds: 2576
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 108
-          cache_read: 454216
-          cache_write: 937
-          cost: 0.1141
+          input: 118
+          output: 2346
+          cache_read: 20629167
+          cache_write: 28240
+          cost: 5.179
+        - model: claude-sonnet-5-5
+          input: 18
+          output: 78
+          cache_read: 335332
+          cache_write: 68908
+          cost: 0.3308
 forecast:
   duration: 50m
   delivery: 2026-10-19T21:28:00Z
@@ -57,10 +78,10 @@ A batch never stops, and never sends a story back, because two stories both chan
 
 ## Acceptance criteria
 
-- [ ] The batch's rebase of each story runs the steps `flai stream sync` and `flai accept` run on a stop: `summary.md` written again (ADR-0098), issue files merged by their instances and folded (ADR-0126), and the ADR index merged row by row (ADR-0157). A stop they settle is continued, and the story stays in the batch.
-- [ ] A stop on another path inside `claims.shared`, such as `design/system/flai-cli.md` or `docs/users/flai.md`, is settled as the ADR decides, and never sends the story back: the story stays enqueued and is shown waiting with the paths until it is settled. The ADR, refining ADR-0098, ADR-0126, and ADR-0157, records how, with the cases it cannot settle.
-- [ ] A stop on a path outside `claims.shared` leaves the story out of the batch, and is told to its agent by a message in the conversation of the two stories whose changes conflict, by `flai`, `about` the paths, as ADR-0121's trial-merge conflict is. A conflict with main itself, the story ahead having landed, sends the story back with the paths as the reason.
-- [ ] `design/system/workflow.md` § Branches and collisions, `design/system/agent-coordination.md`, and `docs/users/flai.md` describe what the queue settles and what it reports.
+- [x] The batch's rebase of each story runs the steps `flai stream sync` and `flai accept` run on a stop: `summary.md` written again (ADR-0098), issue files merged by their instances and folded (ADR-0126), and the ADR index merged row by row (ADR-0157). A stop they settle is continued, and the story stays in the batch.
+- [x] A stop on another path inside `claims.shared`, such as `design/system/flai-cli.md` or `docs/users/flai.md`, is settled as the ADR decides, and never sends the story back: the story stays enqueued and is shown waiting with the paths until it is settled. The ADR, refining ADR-0098, ADR-0126, and ADR-0157, records how, with the cases it cannot settle.
+- [x] A stop on a path outside `claims.shared` leaves the story out of the batch, and is told to its agent by a message in the conversation of the two stories whose changes conflict, by `flai`, `about` the paths, as ADR-0121's trial-merge conflict is. A conflict with main itself, the story ahead having landed, sends the story back with the paths as the reason.
+- [x] `design/system/workflow.md` § Branches and collisions, `design/system/agent-coordination.md`, and `docs/users/flai.md` describe what the queue settles and what it reports.
 
 ## Tasks
 - T-1645 An ADR records how the queue settles a rebase that stops inside the shared paths, and what it does with a stop outside them

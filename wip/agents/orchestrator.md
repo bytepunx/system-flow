@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 932.3982
-accrued_seconds: 906993
-tasks_completed: 651
-last_run: 2026-10-19T20:34:13Z
+accrued_cost: 943.9724
+accrued_seconds: 914349
+tasks_completed: 655
+last_run: 2026-10-19T22:36:49Z
 ---
 
 # Orchestrator activity
@@ -4568,6 +4568,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0405
 - Seconds: 7
 - Cost: 0.0733 USD, estimated
+
+### 2026-10-19T21:52:37Z
+
+- Summary: Accepted S-0405 under accept_reviews at 0d592a0e062b. Verify passed every tier at head, integration 5m39s and smoke 5m19s, with the branch containing main and the dry run showing no blocker. The verifier matched criteria 1 to 5 to changed files, all ticked. It confirmed queue tiers are skipped only while the merge-queue action can batch, and that the baseline close-out rule is mirrored in the template, 1.0.102. Release: 3 pending (S-0398, S-0399, S-0405), unvalued, 0 USD a week, nothing held by whole_epics. Decided not to publish yet, under judgement. The queue still cannot land a batch until S-0400, and S-0405's template entry needs the flai release that carries it. Releasing the merge queue as one usable unit with S-0400 is coherent.
+- Items: S-0405, S-0398, S-0399
+- Seconds: 4704
+- Cost: 5.3939 USD, estimated
+
+### 2026-10-19T21:52:45Z
+
+- Summary: Re-applied the throughput order under order_ready after S-0401 left ready for in-progress: S-0404 37m, S-0403 42m, S-0402 45m, S-0400 1h15m. The order is unchanged.
+- Items: S-0401
+- Seconds: 8
+- Cost: 0.1713 USD, estimated
+
+### 2026-10-19T21:54:20Z
+
+- Summary: Re-applied the throughput order under order_ready after S-0400 left ready for in-progress: S-0404 37m, S-0403 42m, S-0402 45m. The order is unchanged.
+- Items: S-0400
+- Seconds: 95
+- Cost: 0.7846 USD, estimated
+
+### 2026-10-19T22:36:49Z
+
+- Summary: Left S-0401 in review under accept_reviews. Verify passed every tier at head c8be8ced0cd5, the dry run showed no blocker, and the verifier matched criteria 1 to 4, all ticked. But ADR-0175, the decision criterion 2 rests on, is still proposed. I opened a thread asking its agent to accept it on the branch, or to say it waits for the operator, before I accept.
+- Items: S-0401
+- Seconds: 2549
+- Cost: 5.2244 USD, estimated
 
 ## Refusals
 
