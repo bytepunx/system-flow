@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-17
+updated: 2026-10-19
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -391,12 +391,22 @@ The acceptance preview adds four blockers for an acceptance by the orchestrator,
 
 | Condition | Blocker when |
 |-----------|--------------|
-| The verifier passed at the branch head | `--verified` is missing, or names a commit that is not the story branch's head |
+| The verifier passed at the branch head | `--verified` is missing, or names a commit that is not the story branch's head. In the merge queue's landing, `--batch` takes its place: each reason the queue does not let the story land from that batch now (below) |
 | Every criterion is ticked | A criterion under `## Acceptance criteria` is unticked; each is named |
 | The diff stays within the touches | A file the branch changes is under none of the story's touches, read as a claim reads them; each is named. The workflow's own records are the story's whatever it touches: the `wip` folder, the issues under `design/issues`, and an experiment's results |
 | No thread is open | A thread on the story or one of its tasks is not resolved; each is named |
 
 The evidence, `--evidence <file>` or `-` for standard input, is markdown: a `Verdict:` line from the verifier's report, and one list item per criterion, `- <n>: <files>`, naming the changed files that meet criterion `<n>`. flai refuses an orchestrator's acceptance without evidence, and one whose evidence names no changed file for a criterion. It writes the evidence, with the verified commit, under `### Accepted by the orchestrator` in the story's `## Notes`, in the acceptance commit, and returns it in `--json`. The done transition is recorded `by: orchestrator`, and the dashboard's review and story pages name who accepted.
+
+A story the orchestrator enqueued in the merge queue is accepted as the orchestrator by the queue's landing, with no turn of its own ([ADR-0176](../adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md), [workflow.md](workflow.md#what-waits-on-an-acceptance-s-0296)). `flai serve` runs `flai accept <S-nnnn> --by orchestrator --batch <id>`:
+
+| Differs from the steps above | How |
+|------------------------------|-----|
+| The verified commit | The story's rebased head in the batch that verified it. `--batch` takes the place of `--verified`, and is refused beside it |
+| The evidence | None is needed: the queue's eligibility checked the story's verify, its criteria, and its threads before the batch was built. Evidence given is checked and written as above |
+| The notes | `### Accepted by the orchestrator` names the verified commit, then `- Batch: <id>`, the time, and the evidence when given |
+
+The other blockers stand: every criterion ticked, the diff within the touches, no thread open, and no protected path.
 
 flai holds the permission itself, as well as the guard: `flai accept --by orchestrator`, and `accept.run` given `by: orchestrator`, are refused while `accept_reviews` is off, naming it, and under `FLAI_ROLE=orchestrate` an acceptance with any other `--by` is refused. `item_move` refuses the orchestrator a move to done as it refuses every agent, and names `flai accept --by orchestrator` and the permission.
 

@@ -376,12 +376,12 @@ describe('MergeQueue', () => {
 });
 
 describe('verifying', () => {
-	it('is true only for a batch with neither a result nor a drop, in a queue that runs', () => {
+	it('is true for a batch not dropped, in a queue that runs, being bisected or landed too (S-0400)', () => {
 		const batch = { stories: ['S-0003'], step: 'verify' };
 		expect(verifying({ ...running, batch })).toBe(true);
 		expect(
 			verifying({ ...running, batch: { ...batch, result: { passed: true, finished_at: 'x' } } })
-		).toBe(false);
+		).toBe(true);
 		expect(
 			verifying({ ...running, batch: { ...batch, dropped: { reason: 'r', by: 'a', at: 'x' } } })
 		).toBe(false);

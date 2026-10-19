@@ -92,10 +92,13 @@
 		]);
 	}
 
-	/** Whether a batch is being verified: it has neither a result nor been dropped, so its step may change. */
+	/**
+	 * Whether a batch is under way: not dropped, so its step may change. Since S-0400 a batch with a
+	 * result is still bisected or landed until flai serve removes it.
+	 */
 	export function verifying(q: MergeQueueState | null | undefined): boolean {
 		const b = q && !q.off ? q.batch : undefined;
-		return !!b && !b.result && !b.dropped;
+		return !!b && !b.dropped;
 	}
 
 	/** What a batched story comes to in its batch (S-0400), as the panel names it. */

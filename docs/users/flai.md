@@ -2415,7 +2415,7 @@ flai accept S-0031 --by orchestrator --verified 4f1c2a9 --dry-run
 flai accept S-0031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md   # --evidence - reads standard input
 ```
 
-`--verified` is the commit the verifier passed, which must be the story branch's head. `--evidence` is required, except with `--dry-run`. It is markdown without headings: one `Verdict:` line from the verifier's report, and one item per acceptance criterion naming the changed files that meet it. Quote the files in backticks to add a note after them; otherwise separate them with commas.
+`--verified` is the commit the verifier passed, which must be the story branch's head. `--evidence` is required, except with `--dry-run`. It is markdown without headings: one `Verdict:` line from the verifier's report, and one item per acceptance criterion naming the changed files that meet it. Quote the files in backticks to add a note after them; otherwise separate them with commas. When the merge queue lands a story the orchestrator enqueued, `--batch` takes the place of `--verified`, and no evidence is needed ([Landing and sending back](#landing-and-sending-back)).
 
 ```markdown
 Verdict: pass, tests and lint clean
@@ -2427,7 +2427,7 @@ The preview adds these blockers to an acceptance by the orchestrator, and `flai 
 
 | Code | Blocks when |
 |------|-------------|
-| `unverified` | `--verified` is missing, names no commit, or is not the story branch's head. A commit added after the verifier's run blocks until it verifies again |
+| `unverified` | `--verified` is missing, names no commit, or is not the story branch's head. A commit added after the verifier's run blocks until it verifies again. With `--batch`, each reason the merge queue does not let the story land from that batch now |
 | `criterion_unticked` | An acceptance criterion is unticked |
 | `outside_touches` | The branch changes a file under none of the story's touches. The `wip` folder, `design/issues`, and an experiment's results never count |
 | `thread_open` | A thread on the story or one of its tasks is not resolved |
@@ -2464,7 +2464,7 @@ flai queue hold           # build no new batch until resumed
 flai queue resume
 ```
 
-The merge queue verifies the stories in review as one batch, once, on the host, and is to land the green ones ([ADR-0173](../../design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md)). `flai queue` says which stories it would batch, in which order, and how the batch under verification stands. `flai serve` builds and verifies the batches, while the operator has the `merge-queue` host action on ([the operators guide](../operators/index.md#the-merge-queue-host-action-stories-in-review-verified-as-one-batch-s-0399)). Landing a batch is not built yet, so stories are still accepted by hand.
+The merge queue verifies the stories in review as one batch, once, on the host, and lands the green ones ([ADR-0173](../../design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md)). `flai queue` says which stories it would batch, in which order, and how the batch under verification stands. `flai serve` builds, verifies, and lands the batches, while the operator has the `merge-queue` host action on ([the operators guide](../operators/index.md#the-merge-queue-host-action-stories-in-review-verified-as-one-batch-s-0399)).
 
 A story in review is eligible when all of these hold:
 
@@ -2496,9 +2496,9 @@ batch: none
 | `undone_main` | Its branch undoes main's change to a path; the reason names the paths. The queue never batches it until you restore them, keep the removal, or send the story back |
 | `unreadable` | Its last `flai verify` result, or its record of undone paths, cannot be read |
 
-A story that is enqueued has `enqueued` after its line. `batch:` names the batch under verification and its step, or says `none`. Once the batch is verified, a line under it says `result: passed`, or `result: failed at <tier>`, with when it finished and a summary: the tiers that passed, or the failing tier's first findings. A batch dropped says who dropped it, when, and why. `outcomes` lists each story's last outcome when there is one, such as `left_out` or `accepted_by_hand`. A held queue starts with `held by <who> at <time>: no batch is built until flai queue resume`. These come from the queue's state, `.flai-cache/merge-queue/state.json` in the main checkout, kept on this host like `flai verify`'s results. With no file the queue is empty, with no batch and no outcome. With no story in review, `flai queue` says `no story is in review`.
+A story that is enqueued has `enqueued` after its line. `batch:` names the batch under verification and its step, or says `none`. Once the batch is verified, a line under it says `result: passed`, or `result: failed at <tier>`, with when it finished and a summary: the tiers that passed, or the failing tier's first findings. A batch dropped says who dropped it, when, and why. `outcomes` lists each story's last outcome when there is one, such as `left_out`, `accepted_by_hand`, `landed`, or `failing` ([Landing and sending back](#landing-and-sending-back)). A held queue starts with `held by <who> at <time>: no batch is built until flai queue resume`. These come from the queue's state, `.flai-cache/merge-queue/state.json` in the main checkout, kept on this host like `flai verify`'s results. With no file the queue is empty, with no batch and no outcome. With no story in review, `flai queue` says `no story is in review`.
 
-`--json` gives `mode`, then `eligible` and `ineligible`, each story with `story`, `title`, `entered_review`, `head`, `enqueued`, and `reasons`. Each reason has `kind` and `text`, and `criteria`, `threads`, or `paths` when it names them. Then come `enqueued`, each with `story`, `by`, and `at`; `held`, `held_by`, and `held_at` when the queue is held; `batch` when there is one, with `stories`, `step`, `left_out`, `result`, and `dropped`; and `outcomes`.
+`--json` gives `mode`, then `eligible` and `ineligible`, each story with `story`, `title`, `entered_review`, `head`, `enqueued`, and `reasons`. Each reason has `kind` and `text`, and `criteria`, `threads`, or `paths` when it names them. Then come `enqueued`, each with `story`, `by`, and `at`; `held`, `held_by`, and `held_at` when the queue is held; `batch` when there is one, with `stories`, `step`, `left_out`, `result`, `dropped`, and, once it has them, `heads`, `bisect`, and `landing`; and `outcomes`.
 
 #### Enqueueing a story
 
@@ -2516,7 +2516,7 @@ Accepting a story by hand, with `flai accept`, `flai move S-nnnn done`, or from 
 
 #### Holding the queue
 
-`flai queue hold` holds the queue: no new batch starts, and a batch under verification finishes and waits. The enqueued stories keep their places. Who held it and when are recorded, and `flai queue` shows them. `flai queue resume` lets the queue build batches again. Each leaves a queue that is already so as it is: a second hold keeps who held it first. The **Hold** switch on the board's merge queue panel does the same ([flaiover.md](flaiover.md#board)).
+`flai queue hold` holds the queue: no new batch starts, and a verified batch is neither landed nor bisected. A batch under verification when you hold it finishes, and is landed or bisected as it finishes. The enqueued stories keep their places. Who held it and when are recorded, and `flai queue` shows them. `flai queue resume` lets the queue build batches again. Each leaves a queue that is already so as it is: a second hold keeps who held it first. The **Hold** switch on the board's merge queue panel does the same ([flaiover.md](flaiover.md#board)).
 
 Each of `add`, `remove`, `hold`, and `resume` prints one line saying what changed, or that nothing did and why. `--json` gives `{action, story, changed, by, at, state}`: the action, the story when there is one, whether the state changed, who made the change and when, and the queue's state after it.
 
@@ -2526,11 +2526,26 @@ With the `merge-queue` host action on, `orchestration.permissions.accept_reviews
 
 `flai serve` then verifies the batch once, with the tiers `flai verify` selects for the paths the batch changes against main ([Verify a story before review](#verify-a-story-before-review)). It runs every tier those paths select, those marked `queue` included, which a story's own `flai verify` leaves to the batch while the queue can batch ([Tiers left to the merge queue](#tiers-left-to-the-merge-queue)). So no story the queue lands lands without them. The batch's step moves through `building`, `rebasing S-nnnn`, `verifying`, `verifying <tier>`, and ends `verified` or `failed`. A story's own `flai verify` result is not changed.
 
-A verified batch waits: landing it is a later story's. Accept its stories by hand, as before. A failed batch waits too, until one of its stories is removed or accepted, which drops it. Then the next batch is built from the stories still enqueued.
-
 Under `acceptance.mode: pull-request` the queue does not run. The forge's required checks gate each story ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)), and a batch rebases each one, so every landing would stop. `flai queue` says so in one line and lists no story; `--json` has `off` true and `off_reason`.
 
 `flai board` shows the queue on one line under the review column, `queue: S-0001, S-0003; batch: none`, or `queue off under acceptance.mode pull-request`. `flai board --json`, the MCP `board`, and `flai serve`'s `board.get` carry the whole of `flai queue --json` as `queue`, and the dashboard's board marks each card in review from it ([flaiover.md](flaiover.md#board)). When flai cannot read the queue, it logs a warning and leaves the queue off the board, which is shown as before.
+
+#### Landing and sending back
+
+Once a batch is verified, `flai serve` lands it or bisects it, with no one in between ([ADR-0176](../../design/adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md)).
+
+A batch that passed lands each story in queue order, one at a time. Each landing runs `flai accept <story> --by <who enqueued it> --batch <id>`, the same acceptance as yours: merge, done, archive, commit. The batch's step is `landing S-nnnn`, and the story's outcome is `landed`. `flai accept --batch` refuses, merging nothing, unless the queue's batch is the one named and not dropped, the story is the next it lands, the story's branch is still at the head the batch verified, and main is where the last landing left it. It is refused beside `--verified` and under `acceptance.mode: pull-request`. The orchestrator's landing needs no `--evidence` ([strategic-agents.md](../../design/system/strategic-agents.md#accepting-a-story-s-0221)).
+
+A batch that failed is bisected to the first story it fails with. Main itself counts as passing. Each step verifies main with the batch's first stories, at the last one's rebased head in the batch, and halves what is in doubt. The step reads `bisecting 2 of 4`, then `bisecting 2 of 4, verifying <tier>`, and ends `bisected`. Then:
+
+- the failing story moves back to in-progress, by `flai`, with the reason `merge queue batch <id> fails with S-nnnn at <commit>: <what failed>` in its notes;
+- a thread on it by `flai serve`, `Merge queue batch <id> fails with S-nnnn at <tier>`, says what failed, at which commit, and what to do;
+- it leaves the queue, with the outcome `failing`;
+- the stories before it land as above, and those after it stay enqueued for the next batch.
+
+With the `agent` host action on, `flai serve` starts the story's agent again, told the thread, when flai serve ran its last agent. To fix it, work on its branch, run `flai verify`, move it to review, and enqueue it again with `flai queue add`. Once it is back in review at a new commit, `flai serve` resolves the thread, so it is eligible again.
+
+When the main branch moves while a verified batch waits, other than by the batch's own landing, as when you accept a story by hand, the batch is dropped and the next batch is built from the new main. A landing that fails drops the batch too, and the stories not landed are batched again.
 
 ### Whether a release is due
 
