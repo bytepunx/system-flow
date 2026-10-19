@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-17
+updated: 2026-10-19
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -361,7 +361,7 @@ Whether E-0018 runs more stories at once with less conflict work at the end (S-0
 | Source | What is read |
 |--------|--------------|
 | Conversations | The files under `wip/messages` ([agent-coordination.md](agent-coordination.md#messages-between-stories)), whatever their status. Each event is placed by the time in its entry's heading, `### <time> <author>`, or by a share's `at`: a conversation has no kind, can mix notices with talk, and its `updated` moves with every entry, so neither `created` nor `updated` says when it agreed or ended |
-| Conflict log | `.flai-cache/conflicts.jsonl` in the main checkout, one JSON line per event, below. Append-only and never trimmed. A write that fails is logged as a warning and the command goes on |
+| Conflict log | `.flai-cache/conflicts.jsonl` in the main checkout, one JSON line per event, below. Append-only and never trimmed; a last line a write was cut off in is skipped when read and dropped by the next append. A write that fails is logged as a warning and the command goes on |
 | Board | The transitions of every story, archived ones included, and the conversations' `shares[]` ([ADR-0134](../adrs/0134-flai-serve-asks-the-agent-of-a-story-in-progress-about-each-ready-story-it.md)) |
 
 A line of the conflict log:
@@ -396,6 +396,47 @@ Each value is counted in the ISO week that holds its event, from the window's st
 
 Not counted: a narrowed claim and agreement in free text. Nothing records either against the conversation, so `agreed` is a floor: a pair that agreed in a reply, or by narrowing a claim, shows as opened and later closed with its story. The conflict log starts with the release that writes it, so weeks before it show no conflicts found or met.
 
+## Merge queue (S-0404)
+
+How long stories wait in the merge queue, how large its batches are, and how often a red batch is bisected ([ADR-0177](../adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)): per week, the stories the queue landed and sent back with their queue wait, the batches it built with their size, and its bisections ([ADR-0173](../adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md), [ADR-0176](../adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md)). Every value comes from one source.
+
+| Source | What is read |
+|--------|--------------|
+| Event log | `.flai-cache/merge-queue/events.jsonl` in the main checkout, beside the queue's `state.json`, one JSON line per event, below. Append-only and never trimmed. A write that fails is logged as a warning and the write to the queue goes on: the log measures, it does not gate. The callers do not write it: `mergequeue.Update`, the state's only writer, compares the state before and after each write and appends a line per event the write made, so flai serve, `flai queue add` and `remove`, the host API, and `flai accept`'s dequeue are all covered |
+
+A line of the event log:
+
+| Field | Definition |
+|-------|------------|
+| `at` | When, `YYYY-MM-DDTHH:MM:SSZ`. An `enqueued` line takes the enqueueing's time, a `landed` or `sent_back` line its outcome's time, a `verified` line the result's finish time; the rest the time of the write |
+| `event` | `enqueued`: a story entered the queue. `batch_built`: a batch left the building and rebasing steps, so its stories are the ones it verifies; a batch whose every story was left out writes none. `verified`: the batch's verification finished. `bisected`: a failed batch's bisection began. `landed`: the queue landed a story, outcome `landed`. `sent_back`: the story a red batch was bisected to was sent back, outcome `failing`. `dequeued`: a story left the queue other than by landing or being sent back |
+| `batch` | The batch's ID, on `batch_built`, `verified`, `bisected`, `landed`, and `sent_back` |
+| `stories` | On `enqueued`, `dequeued`, `landed`, and `sent_back`, the one story; on `batch_built`, `verified`, and `bisected`, the batch's stories in the order rebased |
+| `by` | On `enqueued`, who enqueued it |
+| `passed` | On `verified` only, whether the batch passed |
+| `left_out` | On `batch_built`, the stories selected for the batch whose rebase onto it stopped, when there are any |
+| `reason` | On `dequeued`, `removed` when no outcome came with it (`flai queue remove`, the host API), else the outcome recorded with it, such as `accepted_by_hand` or `left_out` |
+
+A queue wait: for each `landed` or `sent_back` line, the seconds from that story's latest `enqueued` line before it to it. A line with no `enqueued` line before it has no wait: the log starts with the release that writes it.
+
+Each value is counted in the ISO week that holds its event, from the window's start to now, as `coordination.weeks[]` is.
+
+| Value | Definition | Precision |
+|-------|------------|-----------|
+| `queue` | Absent when there is no log. An unreadable log is warned of on stderr, and the section is absent too | |
+| `queue.weeks[]` | One point per ISO week: `week` and `start`, as `claims.weeks[]` has them, then `landed`, `sent_back`, `wait_mean_seconds`, `wait_max_seconds`, `batches`, `batch_size_mean`, `batch_size_max`, and `bisections` | `start` is `YYYY-MM-DD`, a Monday |
+| `queue.weeks[].landed` | The `landed` lines | Whole count |
+| `queue.weeks[].sent_back` | The `sent_back` lines | Whole count |
+| `queue.weeks[].wait_mean_seconds` | The mean of the week's queue waits, those of its `landed` and `sent_back` lines; 0 with none | Not rounded |
+| `queue.weeks[].wait_max_seconds` | The longest of them; 0 with none | Whole seconds |
+| `queue.weeks[].batches` | The `batch_built` lines | Whole count |
+| `queue.weeks[].batch_size_mean` | The mean number of `stories` on those lines; 0 with none | Not rounded |
+| `queue.weeks[].batch_size_max` | The most `stories` on one of them; 0 with none | Whole count |
+| `queue.weeks[].bisections` | The `bisected` lines | Whole count |
+| `items[].queue_wait_seconds` | The sum of the item's queue waits that end in the window. Absent when it has none | Whole seconds |
+
+Not counted: hold and resume of the queue, and a dropped batch. A dropped batch's stories stay enqueued, so their wait goes on, and the next batch counts again. Before the release that writes the log, weeks show nothing, which is no evidence either way.
+
 ## Charts
 
 Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-the-window-chosen-its-time-axis-runs-from-the-window-s-start.md), S-0166), save CoD by Order, which projects from now ([What the pull order costs](#what-the-pull-order-costs-s-0213)). A time axis runs from the window's start to the report's now, whatever the data: a series by the day from the day that holds the start, a series in buckets from the bucket that holds the start to the one that holds now, with half a bucket either side. A chart per item plots only the items completed in the window, and time in state groups them by the day they were completed; `items` in `flai stats --json` holds every item of the type, and the dashboard picks them.
@@ -423,6 +464,7 @@ Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-t
 | Parallelism | Per day of the window, `claims.days[].in_progress`, with `held` as a second series, and a line at `claims.limit` | No limit line when `claims.limit` is absent ([Claims and touches](#claims-and-touches)) |
 | Hold Time | Stacked bar per week of the window, `claims.weeks[].held_seconds` in hours, one series per reason: `overlap`, `after`, and `no-touches`, the empty claim | A hold with more than one reason counts under the one it is named by, so a bar's height is the time held ([ADR-0113](../adrs/0113-flai-stats-reports-held-stories-per-day-held-time-by-reason-per-week-and-the.md)) |
 | Coordination | Per week of the window, bars of the conflicts found early, `coordination.weeks[].conflicts.found`, against those met late, `met_sync` plus `met_accept`; and the conversations `opened`, `agreed`, `escalated`, and `closed_with_story`, one series each, as lines or bars | Beside it, the stories started on a share in the window and the hold time they saved, the sums of `shares.started` and `shares.held_seconds` over the weeks. Without the conflict log, `logged` false, the chart says it could not be read ([Coordination](#coordination), [ADR-0138](../adrs/0138-flai-stats-reports-per-week-the-conversations-between-agents-and-how-they-ended.md)) |
+| Queue | Per week of the window, `queue.weeks[].wait_mean_seconds` and `wait_max_seconds` in hours, `batch_size_mean`, and `bisections`, one series each | Beside the agent-waiting chart. Without `queue`, the chart says the flai on the host sends none ([Merge queue](#merge-queue-s-0404), [ADR-0177](../adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)) |
 | Touches Drift | Stacked bar per story of `claims.drift[]` completed in the window, x its `completed` in `items[]`: `outside_count` and `unchanged_count`. On a second axis, `claims.weeks[].exact_share` per week | Cancelled stories left out. A week with no such story has no share, a gap, not 0. Without `claims.drift`, the chart says git could not be read |
 | CoD Outstanding | Stacked area per day of the window, `cost_of_delay.days[].outstanding`, one series per column in board order | Of the report's type. Beside it, the items without a value now, today's `days[].without_value` per column ([ADR-0112](../adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)) |
 | CoD Incurred | Bar per week of the window, `cost_of_delay.weeks[].incurred`, with the running mean per week as a line: the sum from the window's first week to this one over the number of those weeks | Of the report's type. Beside it, the items without a value now, as on CoD Outstanding |
