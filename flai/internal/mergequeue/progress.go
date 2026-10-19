@@ -37,6 +37,8 @@ type Bisect struct {
 	Failing string       `json:"failing,omitempty"`
 	Commit  string       `json:"commit,omitempty"`
 	Result  *Result      `json:"result,omitempty"`
+	// SentBack is whether the failing story was sent back.
+	SentBack bool `json:"sent_back,omitempty"`
 }
 
 // BisectStep is one step of a bisection: the stories, the batch's first, that
