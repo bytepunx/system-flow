@@ -189,6 +189,8 @@ Markdown flai accept commits passes the project's lint (S-0367): the fix command
 
 A story whose rebased branch undoes the main branch's change to a path, as a revert replayed over main's identical change does (ADR-0155, I-0124), is refused before anything is merged while the path is not kept: each path flai stream sync recorded and its branch still undoes, and each path the acceptance's own rebase finds. --dry-run lists each under undoes\_main, with main's lines the branch removes, and each not kept as a blocker. Restore main's version with flai stream restore &lt;id&gt; --path &lt;path&gt;, send the story back to in-progress, or, as the operator, keep the removal with --keep-removal &lt;path&gt; (repeatable) and --reason "&lt;why&gt;": one --reason per --keep-removal in order, or one for them all. A --keep-removal naming a path the record does not hold, one without a reason, a reason on more than one line, and any with --by orchestrator are refused before anything changes: an undone path waits for the operator. Each kept path and its reason are written, with the commit, under ### Removals kept in the story's Notes. With --json the refusal exits 4 and prints {"refused": {"id", "reason", "undoes\_main"}}, each path with its path, lines, and old\_base.
 
+--batch &lt;id&gt; is the merge queue's landing (ADR-0176): flai serve runs it for each story of a batch that passed, in queue order, as whoever enqueued the story. It takes the batch's verification in place of the story head's own: the verified commit is the story's rebased head in the batch. It is refused, before anything is merged, unless the queue's batch is the one named, is not dropped, and lets the story land, the story is the next of it to land, the story's branch is still at the head the batch rebased a copy of, and the main branch is where the batch's landing left it. With --by orchestrator it needs no --verified, which it is refused beside, and no --evidence; the batch and its verified commit are written under ### Accepted by the orchestrator, with the evidence when given. The story is recorded as landed in the queue's state, and the batch kept, where an acceptance without --batch takes the story out of the queue and drops the batch that holds it. Under acceptance.mode: pull-request, which has no merge queue, it is refused.
+
 Examples:
 
 ```bash
@@ -197,12 +199,14 @@ flai accept S-031 --by alex --dry-run
 flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
 flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
 flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"
+flai accept S-031 --by orchestrator --batch 20261019-041200
 ```
 
 Flags:
 
 | Flag | Meaning |
 |------|---------|
+| `--batch` string | the merge queue batch whose verification the acceptance takes, as flai serve lands it (ADR-0176) |
 | `--by` string | who accepted (default: config author) |
 | `--dry-run` | show what would block acceptance and change nothing |
 | `--evidence` string | with --by orchestrator: file holding its evidence, a Verdict: line and - &lt;n&gt;: &lt;files&gt; per criterion (- reads standard input) |

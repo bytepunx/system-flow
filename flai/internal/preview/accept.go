@@ -15,6 +15,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/experiment"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/protected"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -57,8 +58,13 @@ type Acceptance struct {
 	// orchestrator that fail (ADR-0093), each also in Blockers.
 	OrchestratorBlockers []Blocker `json:"orchestrator_blockers,omitempty"`
 	// Verified is the commit the orchestrator's verifier passed, resolved to
-	// its full name, when it names one.
+	// its full name, when it names one; for a landing, the story's rebased
+	// head in the merge queue batch that verified it (ADR-0176).
 	Verified string `json:"verified,omitempty"`
+	// Batch is the merge queue batch the story lands from, whose
+	// verification the acceptance takes, when it is the queue's landing
+	// (ADR-0176).
+	Batch string `json:"batch,omitempty"`
 	// Evidence is the orchestrator's evidence, when given.
 	Evidence *Evidence `json:"evidence,omitempty"`
 	// Protected are the files the story's branch changes on a path Claude
@@ -155,7 +161,10 @@ func Accept(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by string, n
 // AcceptWith is Accept with what the acceptance adds: under
 // opts.Orchestrator, a blocker for each condition of ADR-0093 that fails,
 // beside every blocker Accept reports, and no blocker for a path the branch
-// undoes of main that opts.Keep keeps (ADR-0155). Under pull-request
+// undoes of main that opts.Keep keeps (ADR-0155). With opts.Batch, the
+// queue's landing, a blocker for each reason the merge queue does not let the
+// story land from that batch now, and the story's rebased head in the batch
+// as the verified commit (ADR-0176). Under pull-request
 // acceptance, a story's acceptance, whoever accepts, also has a blocker for
 // each forge condition of ADR-0169 that fails, read from the state flai serve
 // keeps of its pull request.
@@ -280,15 +289,44 @@ func AcceptWith(r execx.Runner, repo *workitem.Repo, it *workitem.Item, by strin
 	if it.Type == workitem.Story && repo.Manifest.Acceptance.PullRequest() && !res.Resumed {
 		forgeGate(r, repo, it.ID, res)
 	}
+	// the queue's landing takes the batch's verification of the story's
+	// rebased head (ADR-0176); for the orchestrator, in place of its own
+	var landing []string
+	if opts.Batch != "" {
+		res.Batch = opts.Batch
+		landing = batchLanding(r, repo, it.ID, res)
+		if !opts.Orchestrator {
+			res.Blockers = append(res.Blockers, landing...)
+		}
+	}
 	if opts.Orchestrator {
 		res.Evidence = opts.Evidence
-		res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected)
+		res.OrchestratorBlockers, res.Verified = orchestratorBlockers(r, repo, it, opts, res.Protected, res.Verified, landing)
 		for _, b := range res.OrchestratorBlockers {
 			res.Blockers = append(res.Blockers, b.Message)
 		}
 	}
 	threadsToResolve(repo, it, res)
 	return res, nil
+}
+
+// batchLanding is every reason the merge queue does not let story id land
+// now from res.Batch, as mergequeue.Landable gives them, a queue's state or
+// main branch it cannot read among them, none when it may; when it may, it
+// sets res.Verified to the story's rebased head in the batch, the commit the
+// batch verified (ADR-0176).
+func batchLanding(r execx.Runner, repo *workitem.Repo, id string, res *Acceptance) []string {
+	head, reasons, err := mergequeue.Landable(r, repo, id, res.Batch)
+	switch {
+	case err != nil:
+		return []string{fmt.Sprintf("cannot check that %s may land from merge queue batch %s: %v", id, res.Batch, err)}
+	case len(reasons) > 0:
+		return reasons
+	case head.Rebased == "":
+		return []string{fmt.Sprintf("merge queue batch %s kept no rebased head for %s, so the commit it verified is not known; the batch must be built again from the main branch", res.Batch, id)}
+	}
+	res.Verified = head.Rebased
+	return nil
 }
 
 // threadsToResolve sets on res the threads still open or answered on what

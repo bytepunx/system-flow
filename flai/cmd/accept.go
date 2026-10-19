@@ -37,6 +37,9 @@ type acceptOptions struct {
 	verified string
 	evidence string
 	stdin    func() io.Reader // the command's standard input, for --evidence -
+	// batch is the merge queue batch whose verification the acceptance
+	// takes, as flai serve lands the story from it (ADR-0176).
+	batch string
 	// keepRemovals are the paths whose removal of the main branch's lines the
 	// operator keeps, and reasons why: one per path in order, or one for all
 	// (ADR-0155).
@@ -148,12 +151,28 @@ line, and any with --by orchestrator are refused before anything changes:
 an undone path waits for the operator. Each kept path and its reason are
 written, with the commit, under ### Removals kept in the story's Notes. With
 --json the refusal exits 4 and prints {"refused": {"id", "reason",
-"undoes_main"}}, each path with its path, lines, and old_base.`,
+"undoes_main"}}, each path with its path, lines, and old_base.
+
+--batch <id> is the merge queue's landing (ADR-0176): flai serve runs it for
+each story of a batch that passed, in queue order, as whoever enqueued the
+story. It takes the batch's verification in place of the story head's own:
+the verified commit is the story's rebased head in the batch. It is refused,
+before anything is merged, unless the queue's batch is the one named, is not
+dropped, and lets the story land, the story is the next of it to land, the
+story's branch is still at the head the batch rebased a copy of, and the main
+branch is where the batch's landing left it. With --by orchestrator it needs
+no --verified, which it is refused beside, and no --evidence; the batch and
+its verified commit are written under ### Accepted by the orchestrator, with
+the evidence when given. The story is recorded as landed in the queue's
+state, and the batch kept, where an acceptance without --batch takes the
+story out of the queue and drops the batch that holds it. Under
+acceptance.mode: pull-request, which has no merge queue, it is refused.`,
 		Example: `  flai accept S-031 --by alex
   flai accept S-031 --by alex --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
-  flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"`,
+  flai accept S-031 --by alex --keep-removal docs/guide.md --reason "the story rewrites the section"
+  flai accept S-031 --by orchestrator --batch 20261019-041200`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			repo, err := a.project()
@@ -173,6 +192,7 @@ written, with the commit, under ### Removals kept in the story's Notes. With
 	}
 	addAcceptFlags(c, &o)
 	c.Flags().BoolVar(&o.dryRun, "dry-run", false, "show what would block acceptance and change nothing")
+	c.Flags().StringVar(&o.batch, "batch", "", "the merge queue batch whose verification the acceptance takes, as flai serve lands it (ADR-0176)")
 	return c
 }
 
@@ -299,9 +319,10 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			}
 		}
 	}
-	// 0a. a story accepted by hand leaves the merge queue (ADR-0173)
+	// 0a. a story accepted by hand leaves the merge queue (ADR-0173); one
+	// the queue lands is recorded landed, its batch kept (ADR-0176)
 	if it.Type == workitem.Story {
-		a.leaveQueue(repo, it.ID, res.By)
+		a.leaveQueue(repo, it.ID, o.batch, res.By)
 	}
 
 	// 1. done (epics: walk through review if needed)
@@ -389,13 +410,21 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	return acc, nil
 }
 
-// leaveQueue takes story, which by accepted by hand, out of the merge queue
-// in the main checkout's .flai-cache, marks dropped the batch that holds it,
-// and records its outcome. The story is merged by then, so a state that
-// cannot be written is warned of, and the acceptance goes on.
-func (a *app) leaveQueue(repo *workitem.Repo, story, by string) {
-	if _, err := mergequeue.AcceptedByHand(repo.CacheDir(), story, by, a.now()); err != nil {
-		a.logger().Warn("accepted story not taken out of the merge queue", "component", "accept", "item", story, "err", err)
+// leaveQueue takes story, which by accepted, out of the merge queue in the
+// main checkout's .flai-cache and records its outcome: by hand, with batch
+// "", marking dropped the batch that holds it; as the landing of merge queue
+// batch batch, recording it landed there and keeping the batch (ADR-0176).
+// The story is merged by then, so a state that cannot be written is warned
+// of, and the acceptance goes on.
+func (a *app) leaveQueue(repo *workitem.Repo, story, batch, by string) {
+	var err error
+	if batch != "" {
+		_, err = mergequeue.Landed(repo.CacheDir(), story, batch, by, a.now())
+	} else {
+		_, err = mergequeue.AcceptedByHand(repo.CacheDir(), story, by, a.now())
+	}
+	if err != nil {
+		a.logger().Warn("accepted story not taken out of the merge queue", "component", "accept", "item", story, "batch", batch, "err", err)
 	}
 }
 
@@ -637,7 +666,10 @@ func (a *app) tellAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.
 // the orchestrator, --verified or --evidence for anyone else, the
 // orchestrator's acceptance while orchestration.permissions.accept_reviews is
 // off, and its real run without evidence or with evidence that cannot be read
-// (ADR-0093); and --keep-removal as keptRemovals refuses it (ADR-0155).
+// (ADR-0093); --batch under pull-request acceptance, which has no merge
+// queue, or beside --verified, whose place it takes, while the orchestrator's
+// landing from a batch needs no evidence (ADR-0176); and --keep-removal as
+// keptRemovals refuses it (ADR-0155).
 func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (preview.AcceptOptions, error) {
 	keep, err := keptRemovals(it.ID, o)
 	if err != nil {
@@ -651,17 +683,23 @@ func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			given = "--by " + o.by
 		}
 		return preview.AcceptOptions{}, fmt.Errorf("rule: the orchestrator accepts a story only as itself, so give --by %s, not %s (ADR-0093)", workitem.ActivityOrchestrator, given)
+	case o.batch != "" && repo.Manifest.Acceptance.PullRequest():
+		return preview.AcceptOptions{}, fmt.Errorf("rule: --batch %s is the merge queue's landing, and %s; accept %s without --batch", o.batch, mergequeue.OffUnderPullRequest, it.ID)
+	case o.batch != "" && o.verified != "":
+		return preview.AcceptOptions{}, fmt.Errorf("rule: --batch %s takes the merge queue batch's verification of %s's rebased head in place of --verified's: give one or the other (ADR-0176)", o.batch, it.ID)
 	case !orchestrator && (o.verified != "" || o.evidence != ""):
 		return preview.AcceptOptions{}, fmt.Errorf("rule: --verified and --evidence are the orchestrator's acceptance: give them with --by %s, or leave them out", workitem.ActivityOrchestrator)
 	case !orchestrator:
-		return preview.AcceptOptions{Keep: keep}, nil
+		return preview.AcceptOptions{Keep: keep, Batch: o.batch}, nil
 	}
 	if err := repo.OrchestratorPermits(manifest.PermitAcceptReviews, "accepts a story", it.ID); err != nil {
 		return preview.AcceptOptions{}, fmt.Errorf("rule: %w", err)
 	}
-	opts := preview.AcceptOptions{Orchestrator: true, Verified: o.verified}
+	opts := preview.AcceptOptions{Orchestrator: true, Verified: o.verified, Batch: o.batch}
 	if o.evidence == "" {
-		if o.dryRun {
+		// the queue's eligibility checked what the evidence would vouch for
+		// before the batch was built (ADR-0176)
+		if o.dryRun || o.batch != "" {
 			return opts, nil
 		}
 		return preview.AcceptOptions{}, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and one - <n>: <files> item per criterion (ADR-0093)", it.ID)
@@ -704,11 +742,16 @@ func (a *app) readEvidence(o acceptOptions) (string, error) {
 }
 
 // orchestratorNotes is what the orchestrator's acceptance writes under the
-// story's Notes (ADR-0093): the commit its verifier passed, when, and its
-// evidence as given.
+// story's Notes (ADR-0093): the commit its verifier passed, or, as the merge
+// queue's landing, the story's rebased head in the batch that verified it and
+// the batch (ADR-0176), when, and its evidence as given.
 func orchestratorNotes(res *preview.Acceptance, now time.Time) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "### Accepted by the orchestrator\n\n- Verified: %s\n- At: %s\n", res.Verified, now.UTC().Format(time.RFC3339))
+	fmt.Fprintf(&b, "### Accepted by the orchestrator\n\n- Verified: %s\n", res.Verified)
+	if res.Batch != "" {
+		fmt.Fprintf(&b, "- Batch: %s\n", res.Batch)
+	}
+	fmt.Fprintf(&b, "- At: %s\n", now.UTC().Format(time.RFC3339))
 	if res.Evidence != nil {
 		fmt.Fprintf(&b, "\n%s\n", res.Evidence.Text)
 	}
@@ -956,6 +999,9 @@ func (a *app) printAccept(acc *accepted) error {
 		if u.KeptReason != "" {
 			fmt.Fprintf(a.out, "kept the removal of the main branch's lines at %s; the reason is under ### Removals kept in the Notes of %s\n", u.Path, res.ID)
 		}
+	}
+	if res.Batch != "" {
+		fmt.Fprintf(a.out, "landed from merge queue batch %s, verified at %s\n", res.Batch, short(res.Verified))
 	}
 	if res.Evidence != nil {
 		fmt.Fprintf(a.out, "accepted by the orchestrator at %s; its evidence is under ### Accepted by the orchestrator in the Notes of %s\n", short(res.Verified), res.ID)

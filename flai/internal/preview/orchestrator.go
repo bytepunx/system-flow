@@ -17,8 +17,10 @@ import (
 )
 
 // An acceptance by the orchestrator (ADR-0093, S-0221) is refused unless the
-// verifier passed at the story branch's head, every acceptance criterion is
-// ticked, every file the branch changes is under the story's touches, no
+// verifier passed at the story branch's head, or, as the merge queue's
+// landing, the batch it lands from verified the story's rebased head
+// (ADR-0176), every acceptance criterion is ticked, every file the branch
+// changes is under the story's touches, no
 // thread on the story or its tasks is open, and the orchestrator's evidence,
 // when given, names for each criterion a file the branch changes; and the
 // branch changes no path Claude Code protects, which the operator alone
@@ -54,6 +56,10 @@ type AcceptOptions struct {
 	Orchestrator bool      // an acceptance by the orchestrator: adds ADR-0093's blockers
 	Verified     string    // the commit the orchestrator's verifier passed, as given
 	Evidence     *Evidence // the orchestrator's evidence, nil when not given
+	// Batch is the merge queue batch whose verification the acceptance
+	// takes, as flai serve lands the story from it (ADR-0176); "" for any
+	// other acceptance.
+	Batch string
 	// Keep are the paths whose removal of main's lines the operator keeps,
 	// each with its reason (ADR-0155).
 	Keep []KeptRemoval
@@ -156,8 +162,11 @@ func cleanPath(p string) string {
 // orchestratorBlockers is what stops the orchestrator accepting it under
 // ADR-0093, beside what stops any acceptance, with prot the protected files
 // its branch changes; verified is the commit given, resolved to its full
-// name, or "" when it names none.
-func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item, opts AcceptOptions, prot []string) (blockers []Blocker, verified string) {
+// name, or "" when it names none. As the merge queue's landing, opts.Batch,
+// the batch's verification stands in for the verifier's (ADR-0176): rebased
+// is the story's rebased head in the batch, which verified is, and landing
+// every reason the queue does not let the story land, each a blocker.
+func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item, opts AcceptOptions, prot []string, rebased string, landing []string) (blockers []Blocker, verified string) {
 	add := func(code, format string, args ...any) {
 		blockers = append(blockers, Blocker{Code: code, Message: fmt.Sprintf(format, args...)})
 	}
@@ -167,28 +176,15 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 	}
 	branch := storygit.Branch(it.ID)
 
-	// 1. the verifier passed at the branch's head
-	head, headErr := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", branch+"^{commit}")
-	head = strings.TrimSpace(head)
-	switch given := strings.TrimSpace(opts.Verified); {
-	case headErr != nil || head == "":
-		add(BlockUnverified, "%s has no branch %s to verify here, so no commit its verifier passed can be its head; the operator accepts it", it.ID, branch)
-	case given == "":
-		add(BlockUnverified, "the orchestrator's acceptance needs the commit its verifier passed: run the verifier on %s at its head %s and give --verified %s", branch, short(head), short(head))
-	case strings.HasPrefix(given, "-"):
-		add(BlockUnverified, "--verified %s is not a commit: give the commit the verifier passed, the head of %s, %s", given, branch, short(head))
-	default:
-		full, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", given+"^{commit}")
-		full = strings.TrimSpace(full)
-		switch {
-		case err != nil || full == "":
-			add(BlockUnverified, "--verified %s names no commit in this repository: give the commit the verifier passed, the head of %s, %s", given, branch, short(head))
-		case full != head:
-			verified = full
-			add(BlockUnverified, "--verified %s is not the head of %s, which is %s: the branch changed after the verifier's run, so verify again at %s", short(full), branch, short(head), short(head))
-		default:
-			verified = full
+	// 1. the verifier passed at the branch's head, or the batch the story
+	// lands from passed at its rebased head
+	if opts.Batch != "" {
+		for _, reason := range landing {
+			add(BlockUnverified, "%s", reason)
 		}
+		verified = rebased
+	} else {
+		verified = verifiedHead(r, repo, it.ID, opts.Verified, add)
 	}
 
 	// 2. every criterion is ticked
@@ -257,6 +253,36 @@ func orchestratorBlockers(r execx.Runner, repo *workitem.Repo, it *workitem.Item
 		add(BlockProtectedPaths, "%s changes paths Claude Code protects, %s, so only the operator (%s) accepts %s, whatever the orchestrator judges (ADR-0106)", branch, strings.Join(prot, ", "), operatorsOf(repo, it), it.ID)
 	}
 	return blockers, verified
+}
+
+// verifiedHead is the commit given, the one the orchestrator's verifier
+// passed, resolved to its full name, or "" when it names none; add takes a
+// blocker when it is not the head of story id's branch.
+func verifiedHead(r execx.Runner, repo *workitem.Repo, id, given string, add func(code, format string, args ...any)) (verified string) {
+	branch := storygit.Branch(id)
+	head, headErr := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", branch+"^{commit}")
+	head = strings.TrimSpace(head)
+	switch given = strings.TrimSpace(given); {
+	case headErr != nil || head == "":
+		add(BlockUnverified, "%s has no branch %s to verify here, so no commit its verifier passed can be its head; the operator accepts it", id, branch)
+	case given == "":
+		add(BlockUnverified, "the orchestrator's acceptance needs the commit its verifier passed: run the verifier on %s at its head %s and give --verified %s", branch, short(head), short(head))
+	case strings.HasPrefix(given, "-"):
+		add(BlockUnverified, "--verified %s is not a commit: give the commit the verifier passed, the head of %s, %s", given, branch, short(head))
+	default:
+		full, err := r.Run(repo.MainRoot, "git", "rev-parse", "--verify", "--quiet", given+"^{commit}")
+		full = strings.TrimSpace(full)
+		switch {
+		case err != nil || full == "":
+			add(BlockUnverified, "--verified %s names no commit in this repository: give the commit the verifier passed, the head of %s, %s", given, branch, short(head))
+		case full != head:
+			verified = full
+			add(BlockUnverified, "--verified %s is not the head of %s, which is %s: the branch changed after the verifier's run, so verify again at %s", short(full), branch, short(head), short(head))
+		default:
+			verified = full
+		}
+	}
+	return verified
 }
 
 // unevidenced is a blocker for each criterion the evidence has no item for,
