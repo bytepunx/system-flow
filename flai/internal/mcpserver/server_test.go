@@ -16,8 +16,10 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -1271,5 +1273,95 @@ func TestWaitForEventsHoldsWhileTheStoryOwesAReply(t *testing.T) {
 	why, _ := f.endsAtOnce(t, d)["why"].(string)
 	if !strings.Contains(why, mine.ID+" awaiting "+other.ID+"'s agent, "+owed.ID+" awaiting "+other.ID+"'s agent") {
 		t.Errorf("once replied, why names both conversations: %q", why)
+	}
+}
+
+// headRunner answers git rev-parse with head, as for a story branch whose
+// head is head, and runs no other git.
+type headRunner struct {
+	noGitRunner
+	head string
+}
+
+func (r headRunner) Run(dir, name string, args ...string) (string, error) {
+	if name == "git" && len(args) > 0 && args[0] == "rev-parse" {
+		return r.head + "\n", nil
+	}
+	return r.noGitRunner.Run(dir, name, args...)
+}
+
+// S-0398, ADR-0173: the board carries the merge queue as flai queue gives
+// it: the eligible stories in order, the reasons of the others, and the
+// batch and its step. Under pull-request acceptance the queue is off, with
+// the reason, and lists no story.
+func TestBoardToolCarriesTheMergeQueue(t *testing.T) {
+	const head = "0123456789abcdef0123456789abcdef01234567"
+	runner := headRunner{head: head}
+	f := setupWith(t, func(o *Options) { o.Runner = runner })
+	toReview := func(s *workitem.Item, at time.Time) {
+		t.Helper()
+		if _, err := f.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Do it", Parent: s.ID, Owner: "alex", Now: at}); err != nil {
+			t.Fatal(err)
+		}
+		for i, st := range []string{workitem.InProgress, workitem.Review} {
+			got, err := f.repo.Get(s.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.repo.Transition(got, st, "alex", "", at.Add(time.Duration(i)*time.Minute)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	ready := f.readyStory(t, "Ready to land", t0)
+	body, err := os.ReadFile(ready.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = os.WriteFile(ready.Path, []byte(strings.ReplaceAll(string(body), "- [ ]", "- [x]")), 0o644)
+	toReview(ready, t0.Add(time.Hour))
+	half := f.readyStory(t, "Half done", t0)
+	toReview(half, t0.Add(2*time.Hour))
+	if err := verify.SaveReport(f.repo, verify.Report{Story: ready.ID, Commit: head, Passed: true}); err != nil {
+		t.Fatal(err)
+	}
+	state := mergequeue.StatePath(f.repo.CacheDir())
+	_ = os.MkdirAll(filepath.Dir(state), 0o755)
+	_ = os.WriteFile(state, []byte(`{"enqueued":[],"batch":{"stories":["`+ready.ID+`"],"step":"verify"},"outcomes":[]}`), 0o644)
+
+	out, failed := f.call(t, "board", map[string]any{})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	q, err := mergequeue.Compute(runner, f.repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want any
+	data, _ := json.Marshal(q)
+	_ = json.Unmarshal(data, &want)
+	if !reflect.DeepEqual(out["queue"], want) {
+		t.Errorf("board's queue:\n%v\nwant flai queue's:\n%v", out["queue"], want)
+	}
+	if len(q.Eligible) != 1 || q.Eligible[0].Story != ready.ID || len(q.Ineligible) != 1 || q.Ineligible[0].Story != half.ID ||
+		q.Batch == nil || q.Batch.Step != "verify" {
+		t.Errorf("the fixture's queue: %+v", q)
+	}
+	var kinds []string
+	for _, r := range q.Ineligible[0].Reasons {
+		kinds = append(kinds, r.Kind)
+	}
+	if got := strings.Join(kinds, " "); got != "verify_missing criteria_unticked" {
+		t.Errorf("reasons: %s", got)
+	}
+	if out["columns"] == nil || out["order"] == nil {
+		t.Errorf("the board stays the board: %v", out)
+	}
+
+	f.repo.Manifest.Acceptance.Mode = "pull-request"
+	out, failed = f.call(t, "board", map[string]any{})
+	off, _ := out["queue"].(map[string]any)
+	if failed != "" || off["off"] != true || off["off_reason"] != mergequeue.OffUnderPullRequest || len(off["eligible"].([]any)) != 0 || off["batch"] != nil {
+		t.Errorf("under pull-request: %s %v", failed, out["queue"])
 	}
 }

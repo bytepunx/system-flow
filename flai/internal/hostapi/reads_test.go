@@ -4,13 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -226,5 +232,134 @@ func TestForgeStatusAnswersTheKeptPullRequest(t *testing.T) {
 	if _, rerr := call(`{"id":"S-0002"}`); rerr == nil || rerr.Code != channel.CodeInternal ||
 		!strings.Contains(rerr.Message, "delete it") || !strings.Contains(rerr.Message, filepath.Join(".flai-cache", "forge", "status", "S-0002.json")) || strings.Contains(rerr.Message, p.Root) {
 		t.Errorf("forge.status of a corrupt file: %+v", rerr)
+	}
+}
+
+// reviewing is harbour with Berths, S-0001, in review, the thread on it
+// open and no flai verify result, and a batch in the merge queue's state.
+func reviewing(t *testing.T) (channel.Project, *workitem.Repo) {
+	t.Helper()
+	p := harbour(t)
+	repo, err := workitem.Open(p.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	toReview(t, repo, "S-0001", t0.Add(time.Hour))
+	state := mergequeue.StatePath(repo.CacheDir())
+	_ = os.MkdirAll(filepath.Dir(state), 0o755)
+	if err := os.WriteFile(state, []byte(`{"enqueued":[],"batch":{"stories":["S-0001"],"step":"verify"},"outcomes":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p, repo
+}
+
+// toReview moves story, ready, to in-progress and then to review at at.
+func toReview(t *testing.T, repo *workitem.Repo, story string, at time.Time) {
+	t.Helper()
+	for _, st := range []string{workitem.InProgress, workitem.Review} {
+		it, err := repo.Get(story)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := repo.Transition(it, st, "olive", "", at); err != nil {
+			t.Fatalf("%s to %s: %v", story, st, err)
+		}
+	}
+}
+
+// boardQueue is board.get's queue at p, and the queue mergequeue.Compute
+// gives for repo, both as JSON decodes them.
+func boardQueue(t *testing.T, p channel.Project, repo *workitem.Repo) (got map[string]any, want any) {
+	t.Helper()
+	var v struct {
+		Queue map[string]any `json:"queue"`
+	}
+	if err := call(t, p, "board.get", `{}`, &v); err != nil {
+		t.Fatal(err)
+	}
+	q, err := mergequeue.Compute(execx.System{}, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, _ := json.Marshal(q)
+	_ = json.Unmarshal(data, &want)
+	return v.Queue, want
+}
+
+// S-0398, ADR-0173: board.get carries the merge queue as flai queue gives
+// it: the reasons of a story in review that is not eligible, and the batch
+// and its step. Under pull-request acceptance the queue is off, with the
+// reason, and lists no story.
+func TestBoardGetCarriesTheMergeQueue(t *testing.T) {
+	p, repo := reviewing(t)
+	got, want := boardQueue(t, p, repo)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("board.get queue:\n%v\nwant flai queue's:\n%v", got, want)
+	}
+	in, _ := got["ineligible"].([]any)
+	if el, _ := got["eligible"].([]any); got["mode"] != "local" || el == nil || len(el) != 0 || len(in) != 1 {
+		t.Fatalf("queue: %v", got)
+	}
+	var kinds []string
+	for _, r := range in[0].(map[string]any)["reasons"].([]any) {
+		kinds = append(kinds, r.(map[string]any)["kind"].(string))
+	}
+	if strings.Join(kinds, " ") != "verify_missing thread_open" {
+		t.Errorf("S-0001's reasons: %v", kinds)
+	}
+	if b, _ := got["batch"].(map[string]any); b["step"] != "verify" || !reflect.DeepEqual(b["stories"], []any{"S-0001"}) {
+		t.Errorf("batch: %v", got["batch"])
+	}
+
+	m := filepath.Join(p.Root, "system-flow.yaml")
+	data, _ := os.ReadFile(m)
+	_ = os.WriteFile(m, append(data, "acceptance:\n  mode: pull-request\n"...), 0o644)
+	got, _ = boardQueue(t, p, repo)
+	if el, _ := got["eligible"].([]any); got["off"] != true || got["off_reason"] != mergequeue.OffUnderPullRequest || len(el) != 0 || got["batch"] != nil {
+		t.Errorf("under pull-request: %v", got)
+	}
+}
+
+// S-0398: board.get lists a story in review whose last flai verify passed
+// at its branch's head, with every criterion ticked and no thread open, as
+// eligible, ahead of none, and the other with its reasons.
+func TestBoardGetListsTheEligibleStories(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: runs real git")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	p, repo := reviewing(t)
+	r := execx.System{}
+	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}, {"add", "-A"}, {"commit", "-q", "-m", "one"}, {"branch", storygit.Branch("S-0002")}} {
+		if out, err := r.Run(p.Root, "git", args...); err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+	}
+	head, err := r.Run(p.Root, "git", "rev-parse", storygit.Branch("S-0002"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Lift", Parent: "S-0002", Owner: "olive", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	cranes, _ := repo.Get("S-0002")
+	if _, err := repo.Transition(cranes, workitem.Ready, "olive", "", t0.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	toReview(t, repo, "S-0002", t0.Add(2*time.Hour))
+	if err := verify.SaveReport(repo, verify.Report{Story: "S-0002", Commit: strings.TrimSpace(head), Passed: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, want := boardQueue(t, p, repo)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("board.get queue:\n%v\nwant flai queue's:\n%v", got, want)
+	}
+	el, _ := got["eligible"].([]any)
+	in, _ := got["ineligible"].([]any)
+	if len(el) != 1 || el[0].(map[string]any)["story"] != "S-0002" || len(in) != 1 || in[0].(map[string]any)["story"] != "S-0001" {
+		t.Errorf("queue: %v", got)
 	}
 }

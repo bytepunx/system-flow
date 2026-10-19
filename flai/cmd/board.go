@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/release"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -30,7 +31,8 @@ func newBoardCmd(a *app) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			view := workitem.NewBoardView(items, board, a.now(), all, release.PendingIDs(a.runner, repo.Root, repo.Manifest, repo), repo.Holds(items))
+			base := workitem.NewBoardView(items, board, a.now(), all, release.PendingIDs(a.runner, repo.Root, repo.Manifest, repo), repo.Holds(items))
+			view := mergequeue.OnBoard(cmd.Context(), a.runner, repo, base, a.logger())
 			columns, counts, breaches := view.Columns, view.Counts, view.Breaches
 			if a.jsonOut {
 				return a.printJSON(view)
@@ -44,7 +46,6 @@ func newBoardCmd(a *app) *cobra.Command {
 				fmt.Fprintf(a.out, "%s%s\n", st, limit)
 				if len(cards) == 0 {
 					fmt.Fprintln(a.out, "  -")
-					continue
 				}
 				for _, cd := range cards {
 					flag := ""
@@ -65,6 +66,9 @@ func newBoardCmd(a *app) *cobra.Command {
 					if t := cd.Tasks; t != nil && st != workitem.Done && st != workitem.Cancelled {
 						fmt.Fprintf(a.out, "         tasks %d ready, %d waiting, %d in progress, %d done; %s\n", t.Ready, t.Waiting, t.InProgress, t.Done, plural(t.Layers, "layer"))
 					}
+				}
+				if line := queueSummary(view.Queue); st == workitem.Review && line != "" {
+					fmt.Fprintf(a.out, "         %s\n", line)
 				}
 			}
 			if len(board.Order) > 0 {
@@ -125,6 +129,31 @@ the one place flai, flai serve, flai check, and the dashboard read it from.
 			return nil
 		},
 	}
+}
+
+// queueSummary is the merge queue on the line under the review column: its
+// order and its batch, or that it is off; nothing when it was not read. The
+// reasons the others are not eligible are flai queue's to give.
+func queueSummary(q *mergequeue.Queue) string {
+	switch {
+	case q == nil:
+		return ""
+	case q.Off:
+		return "queue off under acceptance.mode " + q.Mode
+	}
+	order := "none"
+	if len(q.Eligible) > 0 {
+		ids := make([]string, 0, len(q.Eligible))
+		for _, e := range q.Eligible {
+			ids = append(ids, e.Story)
+		}
+		order = strings.Join(ids, ", ")
+	}
+	batch := "none"
+	if q.Batch != nil {
+		batch = strings.Join(q.Batch.Stories, ", ") + ", step " + q.Batch.Step
+	}
+	return "queue: " + order + "; batch: " + batch
 }
 
 func truncate(s string, n int) string {

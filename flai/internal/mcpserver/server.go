@@ -27,6 +27,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/search"
@@ -285,15 +286,20 @@ type BoardIn struct {
 	All     bool   `json:"all,omitempty" jsonschema:"include epics and tasks"`
 }
 
-func (s *server) board(ctx context.Context, _ *mcp.CallToolRequest, in BoardIn) (*mcp.CallToolResult, workitem.BoardView, error) {
+// board is the board with the merge queue beside it, as flai board --json
+// gives it (S-0398).
+func (s *server) board(ctx context.Context, _ *mcp.CallToolRequest, in BoardIn) (*mcp.CallToolResult, mergequeue.Board, error) {
 	view, err := s.boardView(ctx, in.All)
+	if err != nil {
+		return nil, mergequeue.Board{}, err
+	}
 	if view.Breaches == nil {
 		view.Breaches = []string{}
 	}
 	if view.Order == nil {
 		view.Order = []string{}
 	}
-	return nil, view, err
+	return nil, mergequeue.OnBoard(ctx, execx.Timed(ctx, s.gitRunner()), s.repo, view, s.logger), nil
 }
 
 // ThreadIDIn names a thread.

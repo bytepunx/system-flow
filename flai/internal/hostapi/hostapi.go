@@ -22,6 +22,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/conventions"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
@@ -322,7 +323,8 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			return out, nil
 		},
 
-		// board.get: the board as flai board --json gives it. all adds epics and tasks.
+		// board.get: the board as flai board --json gives it, the merge queue
+		// as queue included (S-0398). all adds epics and tasks.
 		"board.get": func(ctx context.Context, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
 			var in struct {
 				All bool `json:"all"`
@@ -353,7 +355,7 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 			done = perf.Track(ctx, "board.view")
 			v := workitem.NewBoardView(items, board, now(), in.All, pending, repo.Holds(items))
 			done()
-			defer perf.Track(ctx, "undone.read")()
+			done = perf.Track(ctx, "undone.read")
 			// an accepted or cancelled story's branch may be gone, and it
 			// undoes nothing on main any more
 			for _, st := range []string{workitem.Ready, workitem.InProgress, workitem.Review} {
@@ -364,7 +366,8 @@ func MethodsFor(version string, now func() time.Time, host Host) map[string]chan
 					}
 				}
 			}
-			return v, nil
+			done()
+			return mergequeue.OnBoard(ctx, r, repo, v, slog.Default()), nil
 		},
 
 		// items.list: by type and state; the archive and the bodies on request.

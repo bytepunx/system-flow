@@ -7,9 +7,11 @@ package mergequeue
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"slices"
 	"strconv"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -147,6 +150,30 @@ func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
 		}
 	}
 	return q, nil
+}
+
+// Board is the board with the merge queue beside it: what flai board --json,
+// the MCP board, and the host read board.get each give.
+type Board struct {
+	workitem.BoardView
+	// Queue is the merge queue as flai queue --json gives it; nil only when
+	// it cannot be computed, which is logged, so the board is still served.
+	Queue *Queue `json:"queue,omitempty"`
+}
+
+// OnBoard is v with repo's merge queue beside it, computed with Compute
+// through r. A queue that cannot be computed is warned of on log, when there
+// is one, and left off.
+func OnBoard(ctx context.Context, r execx.Runner, repo *workitem.Repo, v workitem.BoardView, log *slog.Logger) Board {
+	defer perf.Track(ctx, "merge.queue")()
+	q, err := Compute(r, repo)
+	if err != nil {
+		if log != nil {
+			log.Warn("the merge queue not read; left off the board", "component", "mergequeue", "err", err.Error())
+		}
+		return Board{BoardView: v}
+	}
+	return Board{BoardView: v, Queue: &q}
 }
 
 // enteredReview is when it last entered review, from its last transition to
