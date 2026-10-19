@@ -1,7 +1,7 @@
 ---
 id: ADR-0173
 title: "A merge queue in flai serve, with no model, runs behind the merge-queue host action and under accept_reviews, batches at most merge_queue.batch_max enqueued eligible stories under local acceptance only, and never batches a story whose branch undoes main's change"
-status: proposed
+status: accepted
 date: 2026-10-19
 supersedes: []
 superseded_by: []
@@ -17,7 +17,7 @@ E-0022 brings a merge queue to flai. It verifies the stories in review as one ba
 
 Acceptance is one story at a time, and it stops. [I-0150](../issues/I-0150-a-story-in-review-waits-days-for-the-operator-when-the-orchestrator-s-acceptance-stops-on-a-dirty-main-a-rebase-on-a-shared-path-or-a-gate-it-raised-itself.md) measures acceptances that stop on a dirty main checkout or on a rebase inside a shared path. S-0446's acceptance stopped because its branch was 8 commits behind main (TH-0511).
 
-The epic left three questions to the designer: what runs the queue, how large a batch may be, and whether a story whose branch undoes main's change ([ADR-0155](0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md)) may be batched. The planner recommended answers on TH-0465, questions 2 to 4. After E-0021 landed pull-request acceptance, the planner made the queue local-only (TH-0465, TH-0466). TH-0516 asks the operator to confirm these answers. This ADR records them.
+The epic left three questions to the designer: what runs the queue, how large a batch may be, and whether a story whose branch undoes main's change ([ADR-0155](0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md)) may be batched. The planner recommended answers on TH-0465, questions 2 to 4. After E-0021 landed pull-request acceptance, the planner made the queue local-only (TH-0465, TH-0466). The operator confirmed these answers on TH-0516. This ADR records them.
 
 ## Decision
 
