@@ -1,8 +1,10 @@
 // S-0398: the merge queue above the review lane, and each card in review's mark from it; S-0399:
-// its hold switch, and the batch's step, result, and drop.
+// its hold switch, and the batch's step, result, and drop; S-0400: a red batch's bisection, and
+// what each batched story comes to in the batch.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import MergeQueue, {
+	batchMark,
 	queueMarks,
 	refusalOf,
 	verifying,
@@ -168,6 +170,138 @@ describe('MergeQueue', () => {
 			/^Dropped by alex, 2026-10-1\d \d\d:\d\d .+: S-0003 was removed from the queue by alex$/
 		);
 		expect(el('merge-queue-result')).toBeNull();
+	});
+
+	describe('a red batch’s bisection and landing (S-0400)', () => {
+		const failed = {
+			passed: false,
+			stopped_at: 'unit',
+			summary: 'TestRebase failed',
+			finished_at: '2026-10-19T09:52:00Z'
+		};
+		const red = {
+			stories: ['S-0001', 'S-0002', 'S-0003', 'S-0004'],
+			started_at: '2026-10-19T09:30:00Z',
+			result: failed
+		};
+		const marks = () =>
+			[...el('merge-queue-batch')!.querySelectorAll('[data-story]')].map((s) => {
+				const next = s.nextElementSibling;
+				const mark = next?.getAttribute('data-testid') === 'merge-queue-mark' ? next : null;
+				return `${s.textContent} ${mark?.textContent ?? ''}`.trim().replace(/,$/, '');
+			});
+		const steps = () =>
+			[...el('merge-queue-bisect')!.querySelectorAll('li')].map((li) =>
+				li.textContent!.replace(/\s+/g, ' ').trim()
+			);
+		const passedStep = {
+			stories: ['S-0001', 'S-0002'],
+			commit: '0123456789abcdef',
+			started_at: '2026-10-19T09:53:00Z',
+			result: { passed: true, finished_at: '2026-10-19T10:00:00Z' }
+		};
+
+		it('shows each step of a bisection under way: one passed, one running', () => {
+			render({
+				...running,
+				batch: {
+					...red,
+					step: 'bisecting 2 of 4',
+					bisect: {
+						steps: [
+							passedStep,
+							{
+								stories: ['S-0001', 'S-0002', 'S-0003'],
+								commit: '89abcdef01234567',
+								started_at: '2026-10-19T10:01:00Z'
+							}
+						],
+						good: 2,
+						bad: 4
+					}
+				}
+			});
+			expect(steps()).toEqual([
+				'Bisect 1: main with S-0001, S-0002 at 0123456, passed',
+				'Bisect 2: main with S-0001, S-0002, S-0003 at 89abcde, running'
+			]);
+			expect(el('merge-queue-bisect')!.getAttribute('aria-label')).toBe('Bisection');
+			expect(el('merge-queue-failing')).toBeNull();
+			expect(el('merge-queue-mark')).toBeNull();
+			expect(text('merge-queue-batch')).toMatch(
+				/^Batch S-0001, S-0002, S-0003, S-0004 at step bisecting 2 of 4 /
+			);
+		});
+
+		it('names the story a bisection found as sent back, and the stories after it as still enqueued', () => {
+			render({
+				...running,
+				batch: {
+					...red,
+					step: 'landing S-0001',
+					bisect: {
+						steps: [
+							passedStep,
+							{
+								stories: ['S-0001', 'S-0002', 'S-0003'],
+								commit: '89abcdef01234567',
+								started_at: '2026-10-19T10:01:00Z',
+								result: failed
+							}
+						],
+						good: 2,
+						bad: 3,
+						failing: 'S-0003',
+						commit: '89abcdef01234567',
+						result: failed
+					},
+					landing: { stories: ['S-0001', 'S-0002'], landed: [], head: 'fedcba9876543210' }
+				}
+			});
+			expect(steps()[1]).toBe(
+				'Bisect 2: main with S-0001, S-0002, S-0003 at 89abcde, failed at unit: TestRebase failed'
+			);
+			expect(text('merge-queue-failing')).toBe(
+				'The batch fails with S-0003 at 89abcde: sent back to in-progress.'
+			);
+			expect(marks()).toEqual([
+				'S-0001 (to land)',
+				'S-0002 (to land)',
+				'S-0003 (sent back)',
+				'S-0004 (still enqueued)'
+			]);
+			const sentBack = document.querySelectorAll('[data-testid="merge-queue-mark"]')[2];
+			expect(sentBack.className).toContain('text-danger');
+		});
+
+		it('marks the stories a landing has landed and those it has still to land', () => {
+			render({
+				...running,
+				batch: {
+					stories: ['S-0001', 'S-0002'],
+					started_at: '2026-10-19T09:30:00Z',
+					step: 'landing S-0002',
+					result: { passed: true, finished_at: '2026-10-19T09:48:00Z' },
+					landing: { stories: ['S-0001', 'S-0002'], landed: ['S-0001'], head: 'fedcba98' }
+				},
+				outcomes: [{ story: 'S-0001', outcome: 'landed', at: '2026-10-19T09:50:00Z' }]
+			});
+			expect(marks()).toEqual(['S-0001 (landed)', 'S-0002 (to land)']);
+			expect(text('merge-queue-batch')).toMatch(
+				/^Batch S-0001 \(landed\), S-0002 \(to land\) at step landing S-0002 Passed/
+			);
+			expect(el('merge-queue-bisect')).toBeNull();
+		});
+
+		it('takes a failing outcome since the batch started as sent back, and none from before', () => {
+			const batch = { ...red, step: 'verified' };
+			const at = (t: string) => [{ story: 'S-0002', outcome: 'failing', at: t }];
+			expect(batchMark(batch, 'S-0002', at('2026-10-19T10:30:00Z'))).toBe('sent back');
+			expect(batchMark(batch, 'S-0003', at('2026-10-19T10:30:00Z'))).toBe('still enqueued');
+			expect(batchMark(batch, 'S-0001', at('2026-10-19T10:30:00Z'))).toBeUndefined();
+			expect(batchMark(batch, 'S-0002', at('2026-10-18T10:30:00Z'))).toBeUndefined();
+			expect(batchMark(batch, 'S-0002', null)).toBeUndefined();
+		});
 	});
 
 	it('says who held the queue and when', () => {

@@ -23,7 +23,25 @@
 		summary?: string;
 		finished_at: string;
 	};
-	/** The batch under verification (mergequeue.Batch): its stories, its step, and, once it has them, its result and why it was dropped. */
+	/** One step of a red batch's bisection (S-0400, mergequeue.BisectStep): main with the batch's first stories, verified at commit; no result while it runs. */
+	export type BisectStep = {
+		stories: string[];
+		commit: string;
+		started_at: string;
+		result?: BatchResult;
+	};
+	/** A red batch's bisection (mergequeue.Bisect): its steps in the order they ran, and, once found, the first story with which the batch fails. */
+	export type QueueBisect = {
+		steps: BisectStep[] | null;
+		good: number;
+		bad: number;
+		failing?: string;
+		commit?: string;
+		result?: BatchResult;
+	};
+	/** A verified batch's landing (mergequeue.Landing): the stories it lands in order, those landed so far, and main's head the next landing must find. */
+	export type QueueLanding = { stories: string[] | null; landed: string[] | null; head: string };
+	/** The batch under verification (mergequeue.Batch): its stories, its step, and, once it has them, its result and why it was dropped; since S-0400, each story's heads, a red batch's bisection, and the landing. */
 	export type QueueBatch = {
 		id?: string;
 		branch?: string;
@@ -33,6 +51,18 @@
 		step: string;
 		result?: BatchResult;
 		dropped?: { reason: string; by: string; at: string };
+		heads?: { story: string; verified: string; rebased: string }[] | null;
+		bisect?: QueueBisect;
+		landing?: QueueLanding;
+	};
+	/** A story's last outcome in the queue (mergequeue.Outcome): landed, failing, left_out, or accepted_by_hand, among others. */
+	export type QueueOutcome = {
+		story: string;
+		outcome: string;
+		at: string;
+		detail?: string;
+		base?: string;
+		head?: string;
 	};
 	/** The merge queue as board.get carries it (S-0398, mergequeue.Queue), held or not (S-0399). */
 	export type MergeQueueState = {
@@ -43,7 +73,7 @@
 		ineligible: QueueEntry[] | null;
 		enqueued?: { story: string; by: string; at: string }[] | null;
 		batch?: QueueBatch;
-		outcomes?: { story: string; outcome: string; at: string; detail?: string }[] | null;
+		outcomes?: QueueOutcome[] | null;
 		held?: boolean;
 		held_by?: string;
 		held_at?: string;
@@ -68,6 +98,36 @@
 		return !!b && !b.result && !b.dropped;
 	}
 
+	/** What a batched story comes to in its batch (S-0400), as the panel names it. */
+	export type BatchMark = 'landed' | 'sent back' | 'to land' | 'still enqueued';
+
+	/**
+	 * What story comes to in batch: landed once the landing has landed it; sent back when the
+	 * bisection found it failing, or its last outcome since the batch started is failing; to land
+	 * while the landing has it still to land; still enqueued when it comes after the failing story
+	 * and the batch does not land it. None before the batch has come to any of these.
+	 */
+	export function batchMark(
+		batch: QueueBatch,
+		story: string,
+		outcomes?: QueueOutcome[] | null
+	): BatchMark | undefined {
+		const since = batch.started_at ? Date.parse(batch.started_at) : -Infinity;
+		const failing =
+			batch.bisect?.failing ??
+			batch.stories.find((s) =>
+				(outcomes ?? []).some(
+					(o) => o.story === s && o.outcome === 'failing' && !(Date.parse(o.at) < since)
+				)
+			);
+		if (batch.landing?.landed?.includes(story)) return 'landed';
+		if (story === failing) return 'sent back';
+		if (batch.landing?.stories?.includes(story)) return 'to land';
+		if (failing && batch.stories.indexOf(story) > batch.stories.indexOf(failing))
+			return 'still enqueued';
+		return undefined;
+	}
+
 	/** A failed write's answer as the page shows it: flai's sentence and reasons when it refused, else its error. */
 	export function refusalOf(body: unknown, fallback: string): QueueRefusal {
 		const b = (body ?? {}) as { text?: unknown; reasons?: unknown; error?: unknown };
@@ -87,7 +147,9 @@
 	// (S-0399). Under pull-request acceptance the queue does not run, and flai says why; a flai on the
 	// host too old to send the queue sends none. Each card in review carries its own mark, so the
 	// reasons of the stories not eligible are there. The hold switch holds and resumes the queue
-	// through flai's queue.hold, offered while the merge-queue host action is on.
+	// through flai's queue.hold, offered while the merge-queue host action is on. A red batch's
+	// bisection shows each step and the story it found failing, and each batched story is marked
+	// with what it comes to in the batch: landed, sent back, to land, or still enqueued (S-0400).
 	import { api } from '$lib/api';
 	import { localTime } from '$lib/localtime';
 
@@ -106,6 +168,38 @@
 	const eligible = $derived(queue?.eligible ?? []);
 	const ineligible = $derived(queue?.ineligible ?? []);
 	const batch = $derived(queue?.batch);
+
+	// Each mark's colour; its words carry its meaning.
+	const markTone: Record<BatchMark, string> = {
+		landed: 'text-good',
+		'sent back': 'text-danger',
+		'to land': 'text-ink',
+		'still enqueued': 'text-warn'
+	};
+
+	// Each batched story with the comma before it, and its mark in words and colour after a space.
+	const marked = $derived(
+		(batch?.stories ?? []).map((story, i) => {
+			const mark = batch ? batchMark(batch, story, queue?.outcomes) : undefined;
+			return {
+				story,
+				mark,
+				sep: i > 0 ? ', ' : '',
+				gap: mark ? ' ' : '',
+				tone: mark ? markTone[mark] : ''
+			};
+		})
+	);
+	const failingAt = $derived(batch?.bisect?.commit ? ` at ${batch.bisect.commit.slice(0, 7)}` : '');
+
+	// A bisection step's result in a word and its colour, and, when it failed, where and why.
+	function stepResult(r: BatchResult | undefined) {
+		if (!r) return { word: 'running', tone: 'text-ink', why: '' };
+		if (r.passed) return { word: 'passed', tone: 'text-good', why: '' };
+		const at = r.stopped_at ? ` at ${r.stopped_at}` : '';
+		const why = r.summary ? `${at}: ${r.summary}` : at;
+		return { word: 'failed', tone: 'text-danger', why };
+	}
 
 	let holding = $state(false);
 	let holdError = $state<string | null>(null);
@@ -188,7 +282,13 @@
 		{#if batch}
 			<div class="mt-1" data-testid="merge-queue-batch">
 				<p>
-					Batch <span class="font-mono text-ink">{batch.stories.join(', ')}</span> at step
+					Batch
+					{#each marked as m (m.story)}{m.sep}<span class="font-mono text-ink" data-story={m.story}
+							>{m.story}</span
+						>{m.gap}{#if m.mark}<span class="font-semibold {m.tone}" data-testid="merge-queue-mark"
+								>({m.mark})</span
+							>{/if}{/each}
+					at step
 					<span class="font-semibold text-ink">{batch.step}</span>
 				</p>
 				{#if batch.result?.passed}
@@ -203,6 +303,24 @@
 							batch.result.finished_at
 						)}{batch.result.summary ? `: ${batch.result.summary}` : '.'}
 					</p>
+				{/if}
+				{#if batch.bisect}
+					<ol class="mt-1 space-y-0.5" aria-label="Bisection" data-testid="merge-queue-bisect">
+						{#each batch.bisect.steps ?? [] as st, i (i)}
+							{@const r = stepResult(st.result)}
+							<li data-step={i + 1}>
+								Bisect {i + 1}: main with
+								<span class="font-mono text-ink">{st.stories.join(', ')}</span> at
+								<span class="font-mono">{st.commit.slice(0, 7)}</span>,
+								<span class="font-semibold {r.tone}">{r.word}</span>{r.why}
+							</li>
+						{/each}
+					</ol>
+					{#if batch.bisect.failing}
+						<p class="mt-1 text-danger" data-testid="merge-queue-failing">
+							The batch fails with {batch.bisect.failing}{failingAt}: sent back to in-progress.
+						</p>
+					{/if}
 				{/if}
 				{#if batch.dropped}
 					<p class="text-warn" data-testid="merge-queue-dropped">
