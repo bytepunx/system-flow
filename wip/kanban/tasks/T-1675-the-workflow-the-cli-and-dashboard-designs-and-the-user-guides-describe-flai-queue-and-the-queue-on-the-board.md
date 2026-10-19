@@ -3,16 +3,37 @@ id: T-1675
 type: task
 nature: feature
 title: The workflow, the CLI and dashboard designs, and the user guides describe flai queue and the queue on the board
-status: backlog
+status: done
 parent: S-0398
 owner: alex
 created: 2026-10-16T05:03:25Z
-updated: 2026-10-16T05:03:25Z
-transitions: []
+updated: 2026-10-19T15:28:18Z
+transitions:
+  - to: ready
+    at: 2026-10-19T15:23:11Z
+    by: agent-S-0398
+  - to: in-progress
+    at: 2026-10-19T15:23:12Z
+    by: agent-S-0398
+  - to: done
+    at: 2026-10-19T15:28:18Z
+    by: agent-S-0398
 stream: S-0398
 tags: [cli, dashboard]
 touches: [design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md]
-after: [T-1638, T-1655, T-1667]
+after: [T-1655, T-1667]
+usage:
+  source: log
+  seconds: 306
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 89
+      output: 30988
+      cache_read: 4044141
+      cache_write: 202033
+      cost: 2.5481
 ---
 # T-1675 The workflow, the CLI and dashboard designs, and the user guides describe flai queue and the queue on the board
 

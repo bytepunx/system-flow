@@ -3,29 +3,47 @@ id: E-0022
 type: epic
 nature: improvement
 title: A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-16T04:27:57Z
-updated: 2026-10-16T04:59:12Z
-transitions: []
+updated: 2026-10-19T14:34:41Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:51:59Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-19T14:34:41Z
+    by: agent-S-0398
 tags: [cli, dashboard]
 topics: [cli, orchestration, analysis]
 touches: [flai/internal/serve, flai/internal/workitem, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/workflow.md, design/system/agent-coordination.md, design/system/metrics.md, design/conventions/strategic-agents.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 3266
+  priced_by: harness
+  turns:
+    - day: 2026-10-19
+      ceremony: 1
+      hand_edits: 2
+      work: 43
+  models:
+    - model: claude-opus-5-5
+      input: 484
+      output: 167930
+      cache_read: 21916318
+      cache_write: 1094875
+      cost: 13.809
   strategic:
     - kind: orchestrator
-      seconds: 1252
+      seconds: 1494
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 163
-          output: 2875
-          cache_read: 58972270
-          cache_write: 35225
-          cost: 14.7927
+          input: 223
+          output: 3958
+          cache_read: 63874908
+          cache_write: 47902
+          cost: 16.0249
 ---
 # E-0022 A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
 
@@ -61,3 +79,4 @@ To be drafted by the planner. Order: the queue's state and its view first, read-
 - The planner reads first: `design/system/workflow.md` § What waits on an acceptance and § Transitions and who makes them; `design/system/agent-coordination.md`; ADR-0093, ADR-0096, ADR-0121, ADR-0126, ADR-0155, ADR-0156, ADR-0157; `flai/internal/serve` and the acceptance in `flai/internal/workitem`.
 - Open to the designer: whether the queue is a fourth strategic process of flai's own, with no model, or a step the orchestrator asks for; what the batch's upper size is; whether a story whose branch undoes main's change ([ADR-0155](../../../design/adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md)) may be in a batch at all, since only the operator keeps a removal.
 - Cost of delay inputs are the operator's; I-0150 estimates 96 hours of calendar time lost per cycle.
+- 2026-10-19T14:34:41Z: moved to in-progress: follows S-0398, which moved to in-progress

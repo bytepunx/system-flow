@@ -3,16 +3,37 @@ id: T-1656
 type: task
 nature: feature
 title: flai board, the MCP board, and the host read board.get carry the queue
-status: backlog
+status: done
 parent: S-0398
 owner: alex
 created: 2026-10-16T05:01:53Z
-updated: 2026-10-16T05:01:53Z
-transitions: []
+updated: 2026-10-19T15:16:25Z
+transitions:
+  - to: ready
+    at: 2026-10-19T14:52:43Z
+    by: agent-S-0398
+  - to: in-progress
+    at: 2026-10-19T14:52:43Z
+    by: agent-S-0398
+  - to: done
+    at: 2026-10-19T15:16:25Z
+    by: agent-S-0398
 stream: S-0398
 tags: [cli]
-touches: [flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go]
+touches: [flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flai/internal/mcpserver/folder.go, flai/internal/mergequeue/eligible.go]
 after: [T-1639]
+usage:
+  source: log
+  seconds: 1422
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 95
+      output: 32812
+      cache_read: 4282312
+      cache_write: 213932
+      cost: 2.6982
 ---
 # T-1656 flai board, the MCP board, and the host read board.get carry the queue
 

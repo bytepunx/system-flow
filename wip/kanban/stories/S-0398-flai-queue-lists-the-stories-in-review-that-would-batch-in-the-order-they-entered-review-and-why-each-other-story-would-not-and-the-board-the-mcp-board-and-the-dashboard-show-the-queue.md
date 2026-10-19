@@ -3,27 +3,42 @@ id: S-0398
 type: story
 nature: feature
 title: flai queue lists the stories in review that would batch, in the order they entered review, and why each other story would not, and the board, the MCP board, and the dashboard show the queue
-status: ready
+status: in-progress
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:36Z
-updated: 2026-10-19T04:55:09Z
+updated: 2026-10-19T15:28:45Z
 transitions:
   - to: ready
     at: 2026-10-19T04:52:30Z
     by: alex
+  - to: in-progress
+    at: 2026-10-19T14:34:41Z
+    by: agent-S-0398
 tags: [cli, dashboard]
 topics: [orchestration]
-touches: [design/adrs, design/system/workflow.md, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/root.go, flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md]
+touches: [design/adrs, design/system/workflow.md, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/root.go, flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, flai/internal/mcpserver/folder.go, design/components/flaiover/src/lib/components/BoardCard.examples.json, design/components/flaiover/src/lib/components/MergeQueue.examples.json, flaiover/src/lib/server/board.ts, design/issues/I-0167-task-done-and-story-start-answers-exceed-claude-code-s-tool-output-limit-because-the-inbox-they-carry-lists-every-thread-awaiting-the-operator.md, design/issues/summary.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3266
+  priced_by: harness
+  turns:
+    - day: 2026-10-19
+      ceremony: 1
+      hand_edits: 2
+      work: 43
+  models:
+    - model: claude-opus-5-5
+      input: 484
+      output: 167930
+      cache_read: 21916318
+      cache_write: 1094875
+      cost: 13.809
   strategic:
     - kind: orchestrator
       seconds: 107
@@ -53,10 +68,10 @@ The operator sees, before anything is batched, which stories in review a merge q
 
 ## Acceptance criteria
 
-- [ ] `flai queue`, and `flai queue --json`, list the stories in review that are eligible, in the order they last entered review: the last `flai verify` passed at the head of the story's branch, every acceptance criterion is ticked, no thread on the story or its tasks is open, and no path is recorded as undoing main's change (ADR-0155). Each other story in review is listed after them with every reason it is not eligible, each by name.
-- [ ] Under `acceptance.mode: pull-request` (ADR-0165), `flai queue` says the queue does not run in that mode, because the forge's required checks gate each story (ADR-0169), and lists no story as eligible. `flai board`, the MCP `board`, and the dashboard say the same in place of the queue.
-- [ ] The queue's state is one file in the main checkout's `.flai-cache`, read through one package: the stories enqueued, with who enqueued each and when, the batch under verification and its step, and each story's last outcome. This story writes nothing to it; with no file, the queue shows no batch and no outcomes.
-- [ ] `flai board`, the MCP `board`, and the host read `board.get` carry the queue: the eligible stories in order, the reasons of the others, and the batch and its step. The dashboard's board marks each card in review as eligible or not, with its reasons, and shows the batch and its step above the review lane.
+- [x] `flai queue`, and `flai queue --json`, list the stories in review that are eligible, in the order they last entered review: the last `flai verify` passed at the head of the story's branch, every acceptance criterion is ticked, no thread on the story or its tasks is open, and no path is recorded as undoing main's change (ADR-0155). Each other story in review is listed after them with every reason it is not eligible, each by name.
+- [x] Under `acceptance.mode: pull-request` (ADR-0165), `flai queue` says the queue does not run in that mode, because the forge's required checks gate each story (ADR-0169), and lists no story as eligible. `flai board`, the MCP `board`, and the dashboard say the same in place of the queue.
+- [x] The queue's state is one file in the main checkout's `.flai-cache`, read through one package: the stories enqueued, with who enqueued each and when, the batch under verification and its step, and each story's last outcome. This story writes nothing to it; with no file, the queue shows no batch and no outcomes.
+- [x] `flai board`, the MCP `board`, and the host read `board.get` carry the queue: the eligible stories in order, the reasons of the others, and the batch and its step. The dashboard's board marks each card in review as eligible or not, with its reasons, and shows the batch and its step above the review lane.
 - [ ] An ADR records the queue as TH-0465 settles it: what runs it, the host action and the permission it runs under, that it runs under local acceptance only, eligibility, the batch's upper size, and that a story undoing main's change is never batched. `design/system/workflow.md` § What waits on an acceptance, `design/system/flai-cli.md`, `design/system/flaiover-dashboard.md`, and `docs/users/flai.md` describe `flai queue` and the view.
 
 ## Tasks

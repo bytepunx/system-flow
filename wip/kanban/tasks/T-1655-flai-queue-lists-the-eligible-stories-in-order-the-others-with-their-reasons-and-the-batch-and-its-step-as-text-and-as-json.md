@@ -3,16 +3,37 @@ id: T-1655
 type: task
 nature: feature
 title: flai queue lists the eligible stories in order, the others with their reasons, and the batch and its step, as text and as JSON
-status: backlog
+status: done
 parent: S-0398
 owner: alex
 created: 2026-10-16T05:01:49Z
-updated: 2026-10-16T05:01:49Z
-transitions: []
+updated: 2026-10-19T14:52:15Z
+transitions:
+  - to: ready
+    at: 2026-10-19T14:43:44Z
+    by: agent-S-0398
+  - to: in-progress
+    at: 2026-10-19T14:43:45Z
+    by: agent-S-0398
+  - to: done
+    at: 2026-10-19T14:52:15Z
+    by: agent-S-0398
 stream: S-0398
 tags: [cli]
-touches: [flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/root.go]
+touches: [flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/root.go, docs/users/flai-reference.md]
 after: [T-1639]
+usage:
+  source: log
+  seconds: 510
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 9858
+      cache_read: 1286500
+      cache_write: 64270
+      cost: 0.8106
 ---
 # T-1655 flai queue lists the eligible stories in order, the others with their reasons, and the batch and its step, as text and as JSON
 

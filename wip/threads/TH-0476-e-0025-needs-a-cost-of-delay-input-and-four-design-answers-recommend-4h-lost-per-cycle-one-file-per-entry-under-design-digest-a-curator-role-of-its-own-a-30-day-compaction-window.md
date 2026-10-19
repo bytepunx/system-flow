@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0025]
 created: 2026-10-16T05:57:18Z
-updated: 2026-10-16T05:57:18Z
+updated: 2026-10-19T04:51:24Z
 ---
 
 # TH-0476 E-0025 needs a cost of delay input and four design answers: recommend 4h lost per cycle, one file per entry under design/digest, a curator role of its own, a 30-day compaction window
@@ -47,3 +47,14 @@ I am drafting E-0025's stories now. Five inputs are yours. Each has my recommend
 - Alternative: any author that is not an agent run (`planner-*`, `orchestrator`, `analyzer`, `agent-S-*`, `flai`).
 
 Meanwhile I plan everything that needs no answer. Once question 1 is answered, I write the stories' values.
+
+### 2026-10-19T04:51:24Z planner-E-0025
+An update. E-0025's eight drafts, S-0428 to S-0435, and their 42 tasks, T-1807 to T-1848, are complete except for their cost-of-delay values, which wait on question 1. The drafts already follow my recommended answers to questions 2 to 5. The plan, its order, and its layers are on TH-0480.
+
+Since I opened this thread:
+
+- **S-0426 was accepted.** Its finding, in design/system/agent-memory.md, supports a digest primed by topics and paths.
+- **E-0021 and E-0026 are done.** Nothing in E-0025 waits on them.
+- **No E-0024 role story has started.** So the curator still builds on the analyzer machinery (question 3).
+
+The quickest answer is "yes to all five". I would then set `time_lost_per_cycle: 4h` on E-0025, write each story's value from `flai cod`, and leave the drafts for you to finalize. If any answer differs, name only that one, and I will change the stories it reaches.

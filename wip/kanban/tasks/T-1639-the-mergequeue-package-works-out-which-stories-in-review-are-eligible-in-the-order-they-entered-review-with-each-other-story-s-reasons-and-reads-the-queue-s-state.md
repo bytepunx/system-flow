@@ -3,15 +3,36 @@ id: T-1639
 type: task
 nature: feature
 title: The mergequeue package works out which stories in review are eligible, in the order they entered review, with each other story's reasons, and reads the queue's state
-status: backlog
+status: done
 parent: S-0398
 owner: alex
 created: 2026-10-16T05:00:42Z
-updated: 2026-10-18T02:19:56Z
-transitions: []
+updated: 2026-10-19T14:43:12Z
+transitions:
+  - to: ready
+    at: 2026-10-19T14:35:44Z
+    by: agent-S-0398
+  - to: in-progress
+    at: 2026-10-19T14:35:45Z
+    by: agent-S-0398
+  - to: done
+    at: 2026-10-19T14:43:12Z
+    by: agent-S-0398
 stream: S-0398
 tags: [cli]
 touches: [flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go]
+usage:
+  source: log
+  seconds: 447
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 85
+      output: 29401
+      cache_read: 3837028
+      cache_write: 191687
+      cost: 2.4176
 ---
 # T-1639 The mergequeue package works out which stories in review are eligible, in the order they entered review, with each other story's reasons, and reads the queue's state
 

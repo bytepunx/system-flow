@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0022]
 created: 2026-10-16T04:52:30Z
-updated: 2026-10-16T04:52:30Z
+updated: 2026-10-19T04:51:14Z
 ---
 
 # TH-0465 E-0022 needs a cost of delay input and four design answers: recommend time lost 96h per cycle, a model-free queue in flai serve, batches of at most 4, undone-main stories kept out, close-out leaves integration and smoke to the queue
@@ -49,3 +49,13 @@ I-0148 is a close-out that runs these tiers twice, about 24 minutes. The queue a
 - Alternative: leave the close-out as it is. The queue then saves only the orchestrator's verify again, and I-0148 stays open.
 
 Meanwhile I plan everything that needs no answer. Once question 1 is answered, I write the stories' values.
+
+### 2026-10-19T04:51:14Z planner-E-0022
+An update, since E-0021 is now done: E-0022's eight drafts, S-0398 to S-0405, are complete except for their cost-of-delay values, which wait on question 1. The other questions shape only the ADRs, so the drafts already follow my recommended answers.
+
+Since I opened this thread:
+
+- **Local acceptance only.** After S-0395 and S-0397 landed, I made the queue run under local acceptance only (TH-0466). Under pull-request acceptance, ADR-0169's `forge_stale` blocker would stop every story a batch had rebased.
+- **More evidence.** TH-0511 shows I-0150's pattern again: S-0446's acceptance stopped because its branch was 8 commits behind main once S-0397 landed.
+
+The quickest answer is "yes to all five". I would then set `time_lost_per_cycle: 96h` on E-0022 only once you confirm it, write each story's value from `flai cod`, and leave the drafts for you to finalize.
