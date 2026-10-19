@@ -154,3 +154,191 @@ func TestQueueIsOffUnderPullRequestAcceptance(t *testing.T) {
 		t.Errorf("flai queue --json: %+v", q)
 	}
 }
+
+// readQueueState reads the merge queue's state file of the project at root.
+func readQueueState(t *testing.T, root string) mergequeue.State {
+	t.Helper()
+	st, err := mergequeue.ReadState(filepath.Join(root, ".flai-cache"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return st
+}
+
+// S-0399 criterion 1: flai queue add enqueues an eligible story in review
+// with who enqueued it, FLAI_AGENT, and when; a second add keeps its place
+// and changes nothing.
+func TestQueueAddRecordsWhoAndWhen(t *testing.T) {
+	root := queueProject(t)
+	t.Setenv("FLAI_AGENT", "orchestrator")
+	out, errOut, code := runIn(t, root, "queue", "add", "S-0001")
+	if code != 0 || out != "S-0001 enqueued by orchestrator at 2026-09-15T21:00:00Z, 1 in the queue\n" {
+		t.Fatalf("flai queue add: %d %q %s", code, out, errOut)
+	}
+	at := time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)
+	if st := readQueueState(t, root); len(st.Enqueued) != 1 || st.Enqueued[0] != (mergequeue.Enqueued{Story: "S-0001", By: "orchestrator", At: at}) {
+		t.Errorf("enqueued %+v", st.Enqueued)
+	}
+
+	t.Setenv("FLAI_AGENT", "alex")
+	js, errOut, code := runInAt(t, root, at.Add(time.Hour), "queue", "add", "s-1", "--json")
+	var ch mergequeue.Change
+	if code != 0 || json.Unmarshal([]byte(js), &ch) != nil {
+		t.Fatalf("flai queue add --json: %d %s %s", code, js, errOut)
+	}
+	if ch.Action != "add" || ch.Story != "S-0001" || ch.Changed || ch.By != "alex" || len(ch.State.Enqueued) != 1 || ch.State.Enqueued[0].By != "orchestrator" {
+		t.Errorf("a second add: %+v", ch)
+	}
+	out, _, _ = runIn(t, root, "queue", "add", "S-0001")
+	if out != "S-0001 is enqueued already, by orchestrator at 2026-09-15T21:00:00Z; nothing changed\n" {
+		t.Errorf("a second add says %q", out)
+	}
+	if out, _, _ := runIn(t, root, "queue"); !strings.Contains(out, "1. S-0001") || !strings.Contains(out, " enqueued\n") {
+		t.Errorf("flai queue after add:\n%s", out)
+	}
+}
+
+// S-0399 criterion 1: flai queue add refuses a story that is not eligible,
+// naming each reason by kind, and writes nothing.
+func TestQueueAddRefusesAnIneligibleStoryNamingEachReason(t *testing.T) {
+	root := queueProject(t)
+	_, errOut, code := runIn(t, root, "queue", "add", "S-0002")
+	if code == 0 {
+		t.Fatal("flai queue add enqueued an ineligible story")
+	}
+	for _, want := range []string{"S-0002 is not enqueued: it is not eligible for the merge queue", "verify_missing: S-0002 has no flai verify result", "criteria_unticked: acceptance criteria 2, 3 are unticked", "thread_open: thread TH-0001 is not resolved"} {
+		if !strings.Contains(errOut, want) {
+			t.Errorf("the refusal does not say %q:\n%s", want, errOut)
+		}
+	}
+	if _, err := os.Stat(mergequeue.StatePath(filepath.Join(root, ".flai-cache"))); err == nil {
+		t.Error("a refused add wrote the state")
+	}
+}
+
+// S-0399 criterion 1: flai queue add refuses a story not in review, and an
+// item that is not a story.
+func TestQueueAddRefusesAStoryNotInReview(t *testing.T) {
+	root := queueProject(t)
+	if _, errOut, code := runIn(t, root, "story", "new", "Later", "--epic", "E-0001"); code != 0 {
+		t.Fatal(errOut)
+	}
+	for id, want := range map[string]string{
+		"S-0003": "S-0003 is not enqueued: the merge queue takes a story in review, and S-0003 is backlog",
+		"T-0001": "T-0001 is not enqueued: the merge queue takes stories only",
+	} {
+		if _, errOut, code := runIn(t, root, "queue", "add", id); code == 0 || !strings.Contains(errOut, want) {
+			t.Errorf("flai queue add %s: %d, want %q:\n%s", id, code, want, errOut)
+		}
+	}
+}
+
+// S-0399 criterion 1, ADR-0173: under pull-request acceptance flai queue add
+// refuses, saying the queue runs under local acceptance only.
+func TestQueueAddRefusesUnderPullRequestAcceptance(t *testing.T) {
+	root := queueProject(t)
+	m := filepath.Join(root, "system-flow.yaml")
+	_ = os.WriteFile(m, []byte(read(t, m)+"acceptance:\n  mode: pull-request\n"), 0o644)
+	_, errOut, code := runIn(t, root, "queue", "add", "S-0001")
+	if code == 0 || !strings.Contains(errOut, "S-0001 is not enqueued: the merge queue runs under local acceptance only") {
+		t.Errorf("flai queue add: %d %s", code, errOut)
+	}
+}
+
+// S-0399 criterion 1: flai queue remove takes a story out and drops the
+// batch that holds it; a story not enqueued is refused, named.
+func TestQueueRemoveDequeuesAndDropsTheBatch(t *testing.T) {
+	root := queueProject(t)
+	t.Setenv("FLAI_AGENT", "alex")
+	at := time.Date(2026, 9, 15, 20, 0, 0, 0, time.UTC)
+	writeQueueState(t, root, mergequeue.State{
+		Enqueued: []mergequeue.Enqueued{{Story: "S-0001", By: "orchestrator", At: at}, {Story: "S-0004", By: "alex", At: at}},
+		Batch:    &mergequeue.Batch{Stories: []string{"S-0001", "S-0004"}, Step: "verify"},
+	})
+	out, errOut, code := runIn(t, root, "queue", "remove", "S-0001")
+	if code != 0 || out != "S-0001 removed from the merge queue by alex at 2026-09-15T21:00:00Z; the batch that holds it is dropped\n" {
+		t.Fatalf("flai queue remove: %d %q %s", code, out, errOut)
+	}
+	st := readQueueState(t, root)
+	if len(st.Enqueued) != 1 || st.Enqueued[0].Story != "S-0004" {
+		t.Errorf("enqueued %+v", st.Enqueued)
+	}
+	if st.Batch == nil || st.Batch.Dropped == nil || st.Batch.Dropped.Reason != "S-0001 was removed from the queue by alex" || st.Batch.Dropped.By != "alex" {
+		t.Errorf("batch %+v", st.Batch)
+	}
+
+	_, errOut, code = runIn(t, root, "queue", "remove", "S-0001")
+	if code == 0 || !strings.Contains(errOut, "S-0001 is not enqueued in the merge queue, so there is nothing to remove") {
+		t.Errorf("a second remove: %d %s", code, errOut)
+	}
+
+	js, errOut, code := runIn(t, root, "queue", "remove", "S-0004", "--json")
+	var ch mergequeue.Change
+	if code != 0 || json.Unmarshal([]byte(js), &ch) != nil {
+		t.Fatalf("flai queue remove --json: %d %s %s", code, js, errOut)
+	}
+	if ch.Action != "remove" || ch.Story != "S-0004" || !ch.Changed || len(ch.State.Enqueued) != 0 {
+		t.Errorf("remove --json: %+v", ch)
+	}
+}
+
+// S-0399 criterion 4: flai queue hold holds the queue with who and when,
+// flai queue shows it held, and flai queue resume clears it; each says when
+// nothing changed.
+func TestQueueHoldAndResume(t *testing.T) {
+	root := queueProject(t)
+	t.Setenv("FLAI_AGENT", "alex")
+	out, errOut, code := runIn(t, root, "queue", "hold")
+	if code != 0 || out != "merge queue held by alex at 2026-09-15T21:00:00Z: it builds no batch until flai queue resume\n" {
+		t.Fatalf("flai queue hold: %d %q %s", code, out, errOut)
+	}
+	if st := readQueueState(t, root); !st.Held || st.HeldBy != "alex" || !st.HeldAt.Equal(time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)) {
+		t.Errorf("held %+v", st)
+	}
+	t.Setenv("FLAI_AGENT", "orchestrator")
+	if out, _, _ := runIn(t, root, "queue", "hold"); out != "merge queue held already, by alex at 2026-09-15T21:00:00Z; nothing changed\n" {
+		t.Errorf("a second hold says %q", out)
+	}
+	if out, _, _ := runIn(t, root, "queue"); !strings.HasPrefix(out, "held by alex at 2026-09-15T21:00:00Z: no batch is built until flai queue resume\neligible (1)\n") {
+		t.Errorf("flai queue while held:\n%s", out)
+	}
+	js, _, _ := runIn(t, root, "queue", "--json")
+	var q mergequeue.Queue
+	if err := json.Unmarshal([]byte(js), &q); err != nil || !q.Held || q.HeldBy != "alex" || q.HeldAt.IsZero() {
+		t.Errorf("flai queue --json while held: %v %s", err, js)
+	}
+
+	js, errOut, code = runIn(t, root, "queue", "resume", "--json")
+	var ch mergequeue.Change
+	if code != 0 || json.Unmarshal([]byte(js), &ch) != nil {
+		t.Fatalf("flai queue resume --json: %d %s %s", code, js, errOut)
+	}
+	if ch.Action != "resume" || !ch.Changed || ch.By != "orchestrator" || ch.State.Held || ch.State.HeldBy != "" {
+		t.Errorf("resume --json: %+v", ch)
+	}
+	if out, _, _ := runIn(t, root, "queue", "resume"); out != "merge queue is not held; nothing changed\n" {
+		t.Errorf("a second resume says %q", out)
+	}
+	if out, _, _ := runIn(t, root, "queue"); strings.Contains(out, "held") {
+		t.Errorf("flai queue after resume:\n%s", out)
+	}
+}
+
+// S-0399: flai queue shows the batch's result and why it was dropped.
+func TestQueueShowsTheBatchsResultAndDrop(t *testing.T) {
+	root := queueProject(t)
+	at := time.Date(2026, 9, 15, 20, 0, 0, 0, time.UTC)
+	batch := &mergequeue.Batch{Stories: []string{"S-0001", "S-0004"}, Step: "verify"}
+	batch.Result = &mergequeue.Result{StoppedAt: "integration", Summary: "TestShip failed", FinishedAt: at}
+	batch.Dropped = &mergequeue.Dropped{Reason: "S-0001 was accepted by hand by alex", By: "alex", At: at}
+	writeQueueState(t, root, mergequeue.State{Batch: batch})
+	out, _, _ := runIn(t, root, "queue")
+	want := "batch: S-0001, S-0004, step verify\n  result: failed at integration, finished 2026-09-15T20:00:00Z: TestShip failed\n  dropped by alex at 2026-09-15T20:00:00Z: S-0001 was accepted by hand by alex\n"
+	if !strings.Contains(out, want) {
+		t.Errorf("flai queue does not say %q:\n%s", want, out)
+	}
+	writeQueueState(t, root, mergequeue.State{Batch: &mergequeue.Batch{Stories: []string{"S-0001"}, Step: "land", Result: &mergequeue.Result{Passed: true, FinishedAt: at}}})
+	if out, _, _ := runIn(t, root, "queue"); !strings.Contains(out, "batch: S-0001, step land\n  result: passed, finished 2026-09-15T20:00:00Z\n") {
+		t.Errorf("flai queue with a passed batch:\n%s", out)
+	}
+}

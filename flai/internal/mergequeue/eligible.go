@@ -1,8 +1,8 @@
 // Package mergequeue works out which stories in review the merge queue would
 // batch, in the order they last entered review, and why each other story in
-// review would not, and reads the queue's state (ADR-0173). It verifies,
-// merges, and moves nothing. flai queue, flai board, the MCP board, and the
-// host read board.get each carry its Queue as queue.
+// review would not, and reads and writes the queue's state (ADR-0173). It
+// verifies, merges, and moves nothing. flai queue, flai board, the MCP board,
+// and the host read board.get each carry its Queue as queue.
 package mergequeue
 
 import (
@@ -58,6 +58,11 @@ type Queue struct {
 	Enqueued   []Enqueued `json:"enqueued"`
 	Batch      *Batch     `json:"batch,omitempty"`
 	Outcomes   []Outcome  `json:"outcomes"`
+	// Held says the queue builds no batch until it is resumed, and HeldBy
+	// and HeldAt, in UTC, who held it and when, as the state has them.
+	Held   bool      `json:"held,omitempty"`
+	HeldBy string    `json:"held_by,omitempty"`
+	HeldAt time.Time `json:"held_at,omitzero"`
 }
 
 // Entry is a story in review as the queue sees it.
@@ -105,6 +110,7 @@ func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
 		return q, err
 	}
 	q.Enqueued, q.Batch, q.Outcomes = st.Enqueued, st.Batch, st.Outcomes
+	q.Held, q.HeldBy, q.HeldAt = st.Held, st.HeldBy, st.HeldAt
 	items, err := repo.List(false)
 	if err != nil {
 		return q, fmt.Errorf("list the items to find the stories in review for the merge queue: %w; fix the item file it names", err)

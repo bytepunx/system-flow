@@ -2198,6 +2198,7 @@ analysis.schedule (cron)
 acceptance.mode (choice: local, pull-request; default local)
 acceptance.forge (choice: github; default github)
 acceptance.merge_method (choice: merge, squash, rebase; default merge)
+merge_queue.batch_max (number, whole; default 4)
 tests (tests)
 ```
 
@@ -2822,15 +2823,91 @@ List the stories in review the merge queue would batch, and why each other would
 flai queue
 ```
 
-List the stories in review that the merge queue would batch, in the order they last entered review: the last flai verify passed at the head of the story's branch, every acceptance criterion is ticked, no thread on the story or its tasks is open, and no path is recorded as undoing main's change (ADR-0155). Each other story in review follows, with every reason it is not eligible. Then the batch under verification and its step, and each story's last outcome, from the queue's state in .flai-cache/merge-queue.
+List the stories in review that the merge queue would batch, in the order they last entered review: the last flai verify passed at the head of the story's branch, every acceptance criterion is ticked, no thread on the story or its tasks is open, and no path is recorded as undoing main's change (ADR-0155). Each other story in review follows, with every reason it is not eligible. Then the batch under verification, its step, and its result, and each story's last outcome, from the queue's state in .flai-cache/merge-queue; first, when the queue is held, who held it and when.
 
-Read-only: it verifies, merges, and moves nothing (ADR-0173). Under acceptance.mode pull-request the queue does not run, because the forge's required checks gate each story (ADR-0169), and no story is listed.
+The listing verifies, merges, and moves nothing (ADR-0173). flai queue add and remove enqueue a story and take it out, and flai queue hold and resume stop the queue building batches and let it again; flai accept takes the story it accepts out of the queue. Under acceptance.mode pull-request the queue does not run, because the forge's required checks gate each story (ADR-0169), and no story is listed.
 
 Examples:
 
 ```bash
 flai queue
 flai queue --json
+flai queue add S-0042
+flai queue hold
+```
+
+Subcommands:
+
+- [add](#flai-queue-add): Enqueue a story in review that is eligible for the merge queue
+- [hold](#flai-queue-hold): Hold the merge queue: it builds no batch until resumed
+- [remove](#flai-queue-remove): Take a story out of the merge queue
+- [resume](#flai-queue-resume): Resume a held merge queue
+
+#### flai queue add
+
+Enqueue a story in review that is eligible for the merge queue.
+
+```text
+flai queue add <story>
+```
+
+Enqueue a story in review in the merge queue, recorded with who enqueued it (FLAI\_AGENT, else the config's author) and when. The queue lands each story as the one who enqueued it (ADR-0173).
+
+Refused, and nothing changes, for a story not in review, for one not eligible, naming every reason flai queue gives, and under acceptance.mode pull-request, where the queue does not run. A story enqueued already keeps its place and who enqueued it, and nothing changes.
+
+Examples:
+
+```bash
+flai queue add S-0042
+flai queue add S-0042 --json
+```
+
+#### flai queue hold
+
+Hold the merge queue: it builds no batch until resumed.
+
+```text
+flai queue hold
+```
+
+Hold the merge queue, recorded with who held it (FLAI\_AGENT, else the config's author) and when: it builds no batch until flai queue resume. The stories enqueued keep their places. A queue held already keeps who held it first, and nothing changes.
+
+Examples:
+
+```bash
+flai queue hold
+```
+
+#### flai queue remove
+
+Take a story out of the merge queue.
+
+```text
+flai queue remove <story>
+```
+
+Take a story out of the merge queue. The batch under verification that holds it is marked dropped, so that the queue does not land a story no one has enqueued. Refused for a story not enqueued.
+
+Examples:
+
+```bash
+flai queue remove S-0042
+```
+
+#### flai queue resume
+
+Resume a held merge queue.
+
+```text
+flai queue resume
+```
+
+Resume a held merge queue, so that it builds batches again. Who resumed it and when are printed and logged. A queue not held is left as it is.
+
+Examples:
+
+```bash
+flai queue resume
 ```
 
 ### flai release

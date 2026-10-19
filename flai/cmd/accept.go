@@ -18,6 +18,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/guard"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/preview"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -298,6 +299,10 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 			}
 		}
 	}
+	// 0a. a story accepted by hand leaves the merge queue (ADR-0173)
+	if it.Type == workitem.Story {
+		a.leaveQueue(repo, it.ID, res.By)
+	}
 
 	// 1. done (epics: walk through review if needed)
 	items, err := repo.List(false)
@@ -382,6 +387,16 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	// 4. tell the stories still open what changed under their claim (S-0132)
 	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
 	return acc, nil
+}
+
+// leaveQueue takes story, which by accepted by hand, out of the merge queue
+// in the main checkout's .flai-cache, marks dropped the batch that holds it,
+// and records its outcome. The story is merged by then, so a state that
+// cannot be written is warned of, and the acceptance goes on.
+func (a *app) leaveQueue(repo *workitem.Repo, story, by string) {
+	if _, err := mergequeue.AcceptedByHand(repo.CacheDir(), story, by, a.now()); err != nil {
+		a.logger().Warn("accepted story not taken out of the merge queue", "component", "accept", "item", story, "err", err)
+	}
 }
 
 // logAcceptConflict writes a line of the conflict log (S-0337) when err is
