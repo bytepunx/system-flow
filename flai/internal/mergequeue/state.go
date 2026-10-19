@@ -46,10 +46,15 @@ type Enqueued struct {
 // rebased, the branch and worktree it is built in, when it started, the step
 // it is at, its result once verified, and why it was dropped, when it was.
 type Batch struct {
-	ID       string   `json:"id,omitempty"`
-	Branch   string   `json:"branch,omitempty"`
-	Worktree string   `json:"worktree,omitempty"`
-	Stories  []string `json:"stories"`
+	ID       string `json:"id,omitempty"`
+	Branch   string `json:"branch,omitempty"`
+	Worktree string `json:"worktree,omitempty"`
+	// Base is the main branch's commit the batch was built on.
+	Base    string   `json:"base,omitempty"`
+	Stories []string `json:"stories"`
+	// LeftOut are the stories selected for the batch whose rebase onto it
+	// stopped, in the order they were selected.
+	LeftOut []LeftOut `json:"left_out,omitempty"`
 	// StartedAt is when the batch was built, in UTC.
 	StartedAt time.Time `json:"started_at,omitzero"`
 	Step      string    `json:"step"`
@@ -58,6 +63,13 @@ type Batch struct {
 	// Dropped is why the batch was dropped, by whom and when; nil while it
 	// was not.
 	Dropped *Dropped `json:"dropped,omitempty"`
+}
+
+// LeftOut is a story left out of a batch and the paths its rebase onto the
+// batch stopped on, none when it stopped on no conflict.
+type LeftOut struct {
+	Story string   `json:"story"`
+	Paths []string `json:"paths,omitempty"`
 }
 
 // Result is a batch's verification: whether it passed, the step or test
@@ -84,6 +96,10 @@ type Outcome struct {
 	Outcome string    `json:"outcome"`
 	At      time.Time `json:"at"`
 	Detail  string    `json:"detail,omitempty"`
+	// Base and Head are, for a story left out of a batch, the main branch's
+	// commit the batch was built on and the story's head then.
+	Base string `json:"base,omitempty"`
+	Head string `json:"head,omitempty"`
 }
 
 // OutcomeAcceptedByHand is the outcome of a story in the queue that someone

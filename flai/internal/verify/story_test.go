@@ -1078,3 +1078,115 @@ func TestVerifyRecordsNoPatchWithAnUncommittedChange(t *testing.T) {
 		t.Errorf("reused %d, ran %q; want every tier run", n, f.proc.ran)
 	}
 }
+
+// tierOptions are the options that verify the fixture's checkout with
+// Tiers, against main, with its tiers, git, and processes, keeping the
+// tiers each callback is called with.
+func (f *verifyFixture) tierOptions(started, ended *[]string) TierOptions {
+	return TierOptions{
+		Dir: f.root, Base: "main", Tiers: f.opts.Tiers, Git: f.git, RunOptions: f.opts.RunOptions,
+		Started: func(tier string) { *started = append(*started, tier) },
+		Ended:   func(s Step) { *ended = append(*ended, s.Name+":"+string(s.State)) },
+	}
+}
+
+// S-0399: Tiers runs the tiers flai verify's tier step selects for
+// what the checkout changed against the base, with none of the steps before
+// them and no CLOSE_OUT_STORY, calls back as each starts and ends, and
+// leaves the story's last report as it was.
+func TestVerifyTiersRunsTheTiersTheChangesSelectAndStoresNoReport(t *testing.T) {
+	f := newVerifyFixture(t)
+	before := Report{Story: "S-004", Commit: "aaaa", Passed: false, StoppedAt: "check", Steps: []Step{}}
+	if err := SaveReport(f.opts.Project, before); err != nil {
+		t.Fatal(err)
+	}
+	var started, ended []string
+	rep, err := Tiers(context.Background(), f.tierOptions(&started, &ended))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"go-test:passed", "integration:passed", "smoke:passed"}
+	if !rep.Passed || rep.StoppedAt != "" || !reflect.DeepEqual(states(rep), want) {
+		t.Fatalf("report %+v, steps %v, want %v", rep, states(rep), want)
+	}
+	if rep.Story != "" || rep.Commit != "0123abc" || rep.Base != "main" || rep.BaseCommit != "fedcba9" || rep.Fingerprint == "" ||
+		!reflect.DeepEqual(rep.Paths, []string{"flai/internal/x/x.go"}) || rep.DurationMS != 4500 {
+		t.Errorf("report %+v", rep)
+	}
+	if !reflect.DeepEqual(f.proc.ran, []string{"go test ./internal/x", "go test ./...", "smoke.sh"}) {
+		t.Errorf("ran %q", f.proc.ran)
+	}
+	if !reflect.DeepEqual(started, []string{"go-test", "integration", "smoke"}) || !reflect.DeepEqual(ended, want) {
+		t.Errorf("started %v, ended %v", started, ended)
+	}
+	for _, env := range f.proc.envs {
+		if slices.ContainsFunc(env, func(e string) bool { return strings.HasPrefix(e, StoryEnv+"=") }) {
+			t.Errorf("a tier ran with %q, want no %s", env, StoryEnv)
+		}
+	}
+	for _, ran := range f.git.ran {
+		if strings.Contains(ran, "rebase-merge") || strings.Contains(ran, "HEAD...main") {
+			t.Errorf("git ran %q, a step before the tiers", ran)
+		}
+	}
+	if last, ok, err := LastReport(f.opts.Project, "S-004"); err != nil || !ok || last.Commit != "aaaa" || last.StoppedAt != "check" {
+		t.Errorf("the story's last report %+v, %v, %v; want it as it was", last, ok, err)
+	}
+}
+
+// S-0399: Tiers stops at the first tier that fails, leaves the tiers
+// after it not reached and calls back for none of them, and skips a tier a
+// selected tier covers, as Verify does.
+func TestVerifyTiersStopsAtTheFirstTierThatFails(t *testing.T) {
+	f := newVerifyFixture(t)
+	f.proc.steps["go"] = step{stdout: "", stderr: "x_test.go:3: boom\n", exit: 1, took: time.Second}
+	var started, ended []string
+	rep, err := Tiers(context.Background(), f.tierOptions(&started, &ended))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"go-test:failed", "integration:not-reached", "smoke:not-reached"}; rep.Passed || rep.StoppedAt != "go-test" || !reflect.DeepEqual(states(rep), want) {
+		t.Errorf("passed %v at %q, steps %v, want %v", rep.Passed, rep.StoppedAt, states(rep), want)
+	}
+	if len(rep.Steps[0].Findings) == 0 || !reflect.DeepEqual(started, []string{"go-test"}) || !reflect.DeepEqual(ended, []string{"go-test:failed"}) {
+		t.Errorf("findings %+v, started %v, ended %v", rep.Steps[0].Findings, started, ended)
+	}
+
+	covered := newVerifyFixture(t)
+	covered.opts.Tiers = slices.Clone(storyTiers)
+	covered.opts.Tiers[2].Covers = []string{"go-test"}
+	started, ended = nil, nil
+	rep, err = Tiers(context.Background(), covered.tierOptions(&started, &ended))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"go-test:skipped", "integration:passed", "smoke:passed"}; !rep.Passed || !reflect.DeepEqual(states(rep), want) || rep.Steps[0].CoveredBy != "integration" {
+		t.Errorf("steps %v, want %v, covered by integration", states(rep), want)
+	}
+	if !reflect.DeepEqual(started, []string{"integration", "smoke"}) {
+		t.Errorf("started %v, want the tiers that ran", started)
+	}
+}
+
+// S-0399: a context that ends during a tier stops Tiers there, with
+// the report so far and the context's error; the tiers after it are not
+// reached.
+func TestVerifyTiersReportsTheContextEnding(t *testing.T) {
+	f := newVerifyFixture(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	opts := f.tierOptions(new([]string), new([]string))
+	opts.Proc = &cancellingProc{cancel: cancel}
+	rep, err := Tiers(ctx, opts)
+	if want := []string{"go-test:failed", "integration:not-reached", "smoke:not-reached"}; !errors.Is(err, context.Canceled) || rep.Passed || !reflect.DeepEqual(states(rep), want) {
+		t.Errorf("report %v, %v", states(rep), err)
+	}
+}
+
+// S-0399: a checkout whose HEAD git cannot read is an error with no report.
+func TestVerifyTiersRefusesACheckoutGitCannotRead(t *testing.T) {
+	f := newVerifyFixture(t)
+	delete(f.git.out, "rev-parse HEAD")
+	if rep, err := Tiers(context.Background(), f.tierOptions(new([]string), new([]string))); err == nil || !strings.Contains(err.Error(), f.root) || len(rep.Steps) != 0 {
+		t.Errorf("report %+v, %v; want an error naming the checkout", rep, err)
+	}
+}

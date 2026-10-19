@@ -360,14 +360,105 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		}
 	} else {
 		for _, s := range selected {
-			step := Step{Name: s.Tier.Name, Tier: true, State: NotReached, Command: s.Argv, Dir: s.Tier.Dir}
-			if s.CoveredBy != "" {
-				step.State, step.CoveredBy = Skipped, s.CoveredBy
-			}
-			rep.Steps = append(rep.Steps, step)
+			rep.Steps = append(rep.Steps, unrunStep(s))
 		}
 	}
 	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
+	return rep, runErr
+}
+
+// unrunStep is a selected tier that does not run as a step: skipped, naming
+// the tier that covers it, or else not reached.
+func unrunStep(s Selected) Step {
+	step := Step{Name: s.Tier.Name, Tier: true, State: NotReached, Command: s.Argv, Dir: s.Tier.Dir}
+	if s.CoveredBy != "" {
+		step.State, step.CoveredBy = Skipped, s.CoveredBy
+	}
+	return step
+}
+
+// TierOptions are what Tiers needs to verify a checkout with the tiers
+// its changes select.
+type TierOptions struct {
+	// Dir is the checkout whose HEAD is verified.
+	Dir string
+	// Base is the branch or commit the checkout's changes are counted
+	// against.
+	Base string
+	// Tiers are the project's tiers, cheapest first, as the checkout's
+	// manifest declares them.
+	Tiers []Tier
+	// Git runs git; nil is execx.System.
+	Git execx.Runner
+	// Started is called with a tier's name as it starts, and Ended with its
+	// step as it ends; nil calls nothing. Neither is called for a tier that
+	// is skipped or not reached.
+	Started func(tier string)
+	Ended   func(Step)
+	// RunOptions are the tiers' run's; FS is the checkout, read for the
+	// tiers' packages, and Now times every tier and stamps the report.
+	RunOptions
+}
+
+// Tiers runs, in the checkout at Dir, the tiers flai verify selects for
+// the paths its HEAD changed against Base (SelectStory), cheapest first, and
+// stops at the first that fails, as Verify runs them, and answers them as a
+// report with no story and no step before the tiers. It verifies a checkout
+// that is no story's, as the merge queue's batch: it reuses no earlier run,
+// sets no CLOSE_OUT_STORY, and stores no report. It returns an error, with no
+// report, when the checkout's HEAD or changes cannot be read, and, with the
+// report so far, when ctx ends.
+func Tiers(ctx context.Context, opts TierOptions) (Report, error) {
+	if opts.Git == nil {
+		opts.Git = execx.System{}
+	}
+	if opts.Now == nil {
+		opts.Now = time.Now
+	}
+	if opts.FS == nil {
+		opts.FS = os.DirFS(opts.Dir)
+	}
+	start := opts.Now()
+	commit, err := opts.Git.Run(opts.Dir, "git", "rev-parse", "HEAD")
+	if err != nil {
+		return Report{}, fmt.Errorf("verify the checkout %s: read the commit it has checked out: %w; check that it is a git worktree", opts.Dir, err)
+	}
+	paths, err := ChangedPaths(opts.Git, opts.Dir, opts.Base)
+	if err != nil {
+		return Report{}, fmt.Errorf("verify the checkout %s: %w", opts.Dir, err)
+	}
+	rep := Report{Commit: strings.TrimSpace(commit), Base: opts.Base, RanAt: start.UTC(), Passed: true, Paths: paths, Steps: []Step{}}
+	if base, err := opts.Git.Run(opts.Dir, "git", "rev-parse", "--verify", "--quiet", opts.Base+"^{commit}"); err == nil {
+		rep.BaseCommit = strings.TrimSpace(base)
+	}
+	selected := SelectStory(opts.FS, opts.Tiers, paths)
+	rep.Fingerprint = fingerprint(opts.Tiers, selected)
+	var runErr error
+	for _, s := range selected {
+		if s.CoveredBy != "" || !rep.Passed || ctx.Err() != nil {
+			rep.Steps = append(rep.Steps, unrunStep(s))
+			continue
+		}
+		if opts.Started != nil {
+			opts.Started(s.Tier.Name)
+		}
+		res, err := Run(ctx, opts.Dir, []Selected{s}, opts.RunOptions)
+		step := tierStep(res.Tiers[0])
+		rep.Steps = append(rep.Steps, step)
+		if step.State == Failed {
+			rep.Passed, rep.StoppedAt = false, step.Name
+		}
+		if opts.Ended != nil {
+			opts.Ended(step)
+		}
+		if err != nil {
+			runErr = err
+		}
+	}
+	if runErr == nil {
+		runErr = ctx.Err()
+	}
+	rep.DurationMS, rep.Duration = took(opts.Now().Sub(start))
 	return rep, runErr
 }
 
