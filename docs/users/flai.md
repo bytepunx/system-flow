@@ -130,7 +130,7 @@ LOG_FORMAT=json flai check 2>events.jsonl
 
 A request that takes `FLAI_SLOW_REQUEST` or longer is logged at `INFO`; the rest at `DEBUG`. `wait_for_work` and `wait_for_events` wait by design and are logged at `DEBUG` however long they take.
 
-Phases are named for what the time went to: `repo.open`, `repo.list` (every work item, the archive included when the method asks for it), `repo.get`, `board.load`, `board.view`, `release.pending`, `threads.read`, `threads.view`, `narratives.read`, `check.overlap` (the designer's inbox's overlapping touches), `docs.walk`, `doc.read`, `adrs.read`, `search.index`, `search.query`, `agent.state`, `agent.stream`, `manifest.load`, `changes.read`, `item.show`, `cancel.preview`, `accept.preview`, `stream.diff`, `stats.compute`, `order.by`, `promote.candidates`, `release.evaluate`, `encode`; and `exec.<program>.<command>` for each process flai started to answer, such as `exec.git.log`, or `exec.flai.move` for a write, which runs the flai command. Since S-0159 no read starts flai.
+Phases are named for what the time went to: `repo.open`, `repo.list` (every work item, the archive included when the method asks for it), `repo.get`, `board.load`, `board.view`, `undone.read` (the paths each open story's branch undoes of main's change), `merge.queue` (the merge queue beside the board), `release.pending`, `threads.read`, `threads.view`, `narratives.read`, `check.overlap` (the designer's inbox's overlapping touches), `docs.walk`, `doc.read`, `adrs.read`, `search.index`, `search.query`, `agent.state`, `agent.stream`, `manifest.load`, `changes.read`, `item.show`, `cancel.preview`, `accept.preview`, `stream.diff`, `stats.compute`, `order.by`, `promote.candidates`, `release.evaluate`, `encode`; and `exec.<program>.<command>` for each process flai started to answer, such as `exec.git.log`, or `exec.flai.move` for a write, which runs the flai command. Since S-0159 no read starts flai.
 
 To time one method with no transport at all, ask it of `flai hostapi` with `--timing`; its event goes to stderr at `INFO` whatever it took:
 
@@ -599,6 +599,8 @@ flai board limit in-progress 3   # the column's WIP limit; 0 for none
 `flai board limit` sets the WIP limit of `ready`, `in-progress`, or `review` in `wip/kanban/board.md`, the one place flai, `flai serve`, `flai check`, and the dashboard read it from; the other columns have none. A move past a limit warns and is made. `flai serve` starts an agent for a ready story only while `in-progress` has room and `review` is under its limit, so raising the in-progress limit lets it start the next one. A full review holds the pull until you accept or send back a story in it; stories already in progress go on (S-0243, [ADR-0073](../../design/adrs/0073-a-full-review-holds-the-pull-and-flai-check-strict-passes-over-review-over-its.md)). The board's lane menu in the dashboard does the same.
 
 `flai board --json` gives a held ready story's card `held`, with `code` and `reason` ([Touches](#touches)). Since S-0338, on a hold on overlap alone, `held` adds `asked`: for each story holding it whose agent `flai serve` asked about the hold since the story last entered ready ([Asked about a hold](#asked-about-a-hold)), `by`, the holding story, `conversation`, the conversation's ID, and `at`, when it asked. A holder not asked is left out. A story in ready, in progress, or in review that a share freed carries `shared`: each share in force on which it is the held story, with `holder`, `held`, `paths`, `split`, `by`, `at`, and `conversation`. The text board prints neither. The MCP `board` tool gives the same, and the dashboard's board shows both on the card ([flaiover.md](flaiover.md#board)).
+
+Under the review column `flai board` adds one line with the merge queue's order and batch, and `flai board --json` carries the queue as `queue` ([The merge queue](#the-merge-queue)).
 
 The `backlog` and `ready` columns are listed in pull order: the stories named in `order` in `wip/kanban/board.md`, in that order, then the rest by ID. Agents pull the first ready story, so this is how you say what comes next.
 
@@ -2429,6 +2431,53 @@ What it leaves for you to read:
 [Accepting a story](../../design/system/strategic-agents.md#accepting-a-story-s-0221) has the whole of it.
 
 The release follows the git convention. Components are the `projects` in `system-flow.yaml`. The component the item delivers to gets the delivery-type bump: feature story minor, remediation or improvement patch. An epic, accepted with its last story or by hand, gets none of its own: its stories carry theirs ([ADR-0078](../../design/adrs/0078-an-accepted-epic-contributes-no-release-bump-of-its-own-its-stories-carry-theirs.md)), and `flai release <epic>` says so. It is found from the item's tags (a project name or one of its `tags` aliases), then its epic's tags, and only among the components the item's commits touched: when the tags name several, the one with the most touched files delivers, the earlier tag breaking a tie, and a tag naming a component no commit touched never delivers, so that component gets no release at all. `--deliver` overrides all of that. With no tag deciding, the only touched component delivers, and several ask you for a tag or `--deliver`. `flai check` warns about that earlier (`story.component-tag`): an open story whose touches reach two or more components while no tag of its own or its epic's names one of them, with the `flai edit --tag` that fixes it. Every other component the item's commits touched gets a patch. Code components get an annotated tag `<name>/vX.Y.Z`; a `template` component gets its `template.yaml` version and `CHANGELOG.md` bumped instead. An item whose commits touch no component, such as design or docs work, releases nothing. A research or experiment story releases nothing either, whatever it touched: its findings or results are merged like any acceptance, and if its commits changed a component's files the plan says that component lands on main without a release. Publishing pushes the acceptance commit whether or not a release was cut.
+
+### The merge queue
+
+```bash
+flai queue          # the stories in review the merge queue would batch, in order, and why each other one is not eligible
+flai queue --json
+```
+
+The merge queue is to verify the stories in review as one batch and land the green ones ([ADR-0173](../../design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md)). For now it only reads: `flai queue` says which stories it would batch, and in which order. It enqueues, verifies, and lands nothing, and acceptance is as before.
+
+A story in review is eligible when all of these hold:
+
+- its last `flai verify` passed at the head of its branch ([Verify a story before review](#verify-a-story-before-review));
+- every acceptance criterion is ticked ([Ticking acceptance criteria](#ticking-acceptance-criteria));
+- no thread on the story or one of its tasks is open;
+- no path is recorded as undoing main's change ([Accept and release](#accept-and-release)).
+
+The eligible stories come first, numbered in the order the queue would take them: by when each last entered review, oldest first, then by ID. Every other story in review follows, with each reason it is not eligible on a line of its own, its kind and then what to do:
+
+```text
+eligible (1)
+  1. S-0001 Ship it                                        in review since 2026-09-15T21:00:00Z
+not eligible (1)
+  S-0002 Half done                                      in review since 2026-09-15T22:00:00Z
+       verify_missing: S-0002 has no flai verify result: run flai verify S-0002 at the head of its branch
+       criteria_unticked: acceptance criteria 2, 3 are unticked on S-0002: tick each one verified with flai criteria tick S-0002 <n>
+batch: none
+```
+
+| Kind | Not eligible because |
+|------|----------------------|
+| `verify_missing` | The story has no `flai verify` result |
+| `verify_failed` | Its last `flai verify` failed |
+| `verify_stale` | Its last `flai verify` passed at a commit that is not its branch's head |
+| `branch_unread` | The head of its branch cannot be read |
+| `criteria_unticked` | An acceptance criterion is unticked; the reason names each |
+| `thread_open` | A thread on the story or one of its tasks is not resolved; the reason names each |
+| `undone_main` | Its branch undoes main's change to a path; the reason names the paths. The queue never batches it until you restore them, keep the removal, or send the story back |
+| `unreadable` | Its last `flai verify` result, or its record of undone paths, cannot be read |
+
+A story that is enqueued has `enqueued` after its line. `batch:` names the batch under verification and its step, or says `none`, and `outcomes` lists each story's last outcome when there is one. These come from the queue's state, `.flai-cache/merge-queue/state.json` in the main checkout, kept on this host like `flai verify`'s results. With no file there is no batch and no outcome, and this version of flai writes nothing to it. With no story in review, `flai queue` says `no story is in review`.
+
+`--json` gives `mode`, then `eligible` and `ineligible`, each story with `story`, `title`, `entered_review`, `head`, `enqueued`, and `reasons`. Each reason has `kind` and `text`, and `criteria`, `threads`, or `paths` when it names them. Then come `enqueued`, `batch` when there is one, and `outcomes`.
+
+Under `acceptance.mode: pull-request` the queue does not run. The forge's required checks gate each story ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)), and a batch rebases each one, so every landing would stop. `flai queue` says so in one line and lists no story; `--json` has `off` true and `off_reason`.
+
+`flai board` shows the queue on one line under the review column, `queue: S-0001, S-0003; batch: none`, or `queue off under acceptance.mode pull-request`. `flai board --json`, the MCP `board`, and `flai serve`'s `board.get` carry the whole of `flai queue --json` as `queue`, and the dashboard's board marks each card in review from it ([flaiover.md](flaiover.md#board)). When flai cannot read the queue, it logs a warning and leaves the queue off the board, which is shown as before.
 
 ### Whether a release is due
 

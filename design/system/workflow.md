@@ -1,6 +1,6 @@
 ---
 title: Workflow and board policies
-updated: 2026-10-18
+updated: 2026-10-19
 status: active
 topics: [all]
 ---
@@ -116,6 +116,15 @@ A story in review holds no ready story by overlap ([ADR-0096](../adrs/0096-a-sto
 While the operator alone accepts, both waits last as long as the operator is away, and the board stands idle ([I-0088](../issues/I-0088-a-story-waits-in-review-for-the-operator-while-nothing-else-can-start-so-the-board-stands-idle-until-a-person-accepts.md)). With the `orchestrate` host action on and `orchestration.permissions.accept_reviews` on, the orchestrator accepts a story in review under [ADR-0093](../adrs/0093-with-accept-reviews-on-the-orchestrator-accepts-a-story-in-review-through-flai.md)'s conditions ([Accepting a story](strategic-agents.md#accepting-a-story-s-0221)), and the stories waiting on it start without a person. A wait remains only for a story the orchestrator cannot vouch for, which it leaves in review with a thread saying what is missing, and for one the operator keeps to review, by leaving a thread open on it.
 
 Under `acceptance.mode: pull-request`, CI and the team's reviewers add a wait, whoever accepts: no acceptance goes through until the pull request's required checks pass, no requested change stands, and the base branch's required approvals are given, as `flai serve` last read them at the branch head ([ADR-0169](../adrs/0169-under-pull-request-acceptance-every-acceptance-the-operator-s-and-the.md)). The orchestrator cannot clear this wait: it never approves a review. Once the wait clears, the acceptance merges the pull request on the forge rather than on the host ([ADR-0170](../adrs/0170-under-pull-request-acceptance-flai-accept-merges-the-story-s-pull-request-on.md)). An agent's acceptance, the orchestrator's included, goes through only while `flai serve` runs with the forge's token, and every acceptance is refused while the `forge` host action is off.
+
+E-0022's merge queue is to verify the stories in review as one batch and land the green ones, so that an acceptance no longer waits on one story at a time ([ADR-0173](../adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md)). So far it only reads (S-0398): it says which stories it would batch, and in which order, and enqueues, verifies, and lands nothing. A story in review is eligible when all of these hold:
+
+- its last `flai verify` passed at the head of its branch;
+- every acceptance criterion is ticked;
+- no thread on the story or one of its tasks is open;
+- no path is recorded as undoing main's change ([ADR-0155](../adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md)).
+
+Eligible stories are ordered by when each last entered review, oldest first, then by ID. `flai queue` lists them, then each other story in review with every reason it is not eligible. `flai board`, the MCP `board`, and the dashboard's board show the same queue. Under `acceptance.mode: pull-request` the queue does not run, since a batch rebases each story and every landing would stop on `forge_stale`, and it lists no story.
 
 ## Blocking
 
