@@ -3,12 +3,15 @@ id: S-0404
 type: story
 nature: feature
 title: metrics.md defines the queue wait per story, the batch size, and the bisections per week by an ADR, and flai stats and the dashboard's charts report them
-status: backlog
+status: ready
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:58Z
-updated: 2026-10-19T04:53:51Z
-transitions: []
+updated: 2026-10-19T04:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:53:59Z
+    by: alex
 tags: [cli, dashboard]
 topics: [analysis, orchestration]
 touches: [design/adrs, design/system/metrics.md, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 19
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 5
+          output: 108
+          cache_read: 454215
+          cache_write: 937
+          cost: 0.1141
 forecast:
   duration: 37m
-  delivery: 2026-10-18T23:59:00Z
-  basis: "Its own forecast of 37m; 8th in the pull order with an in-progress limit of 5, behind S-0241, S-0398, S-0399, S-0400, S-0401, S-0402 and S-0403."
+  delivery: 2026-10-19T05:36:00Z
+  basis: "Its own forecast of 37m; 1st in the pull order with an in-progress limit of 5, behind S-0449."
   by: flai
-  at: 2026-10-18T19:29:13Z
+  at: 2026-10-19T04:55:09Z
 finalized:
   by: alex
   at: 2026-10-19T04:53:51Z

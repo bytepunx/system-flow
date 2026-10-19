@@ -3,12 +3,15 @@ id: S-0398
 type: story
 nature: feature
 title: flai queue lists the stories in review that would batch, in the order they entered review, and why each other story would not, and the board, the MCP board, and the dashboard show the queue
-status: backlog
+status: ready
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:36Z
-updated: 2026-10-19T04:52:24Z
-transitions: []
+updated: 2026-10-19T04:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:52:30Z
+    by: alex
 tags: [cli, dashboard]
 topics: [orchestration]
 touches: [design/adrs, design/system/workflow.md, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/eligible_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/root.go, flai/cmd/board.go, flai/cmd/board_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/server_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/reads_test.go, flaiover/src/routes/board/+page.svelte, flaiover/src/lib/components/BoardCard.svelte, flaiover/src/lib/components/BoardCard.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md]
@@ -17,12 +20,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 107
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 22
+          output: 328
+          cache_read: 1723129
+          cache_write: 6116
+          cost: 0.4335
 forecast:
   duration: 47m
-  delivery: 2026-10-18T20:21:00Z
-  basis: "Its own forecast of 47m; 2nd in the pull order with an in-progress limit of 5, behind S-0241."
+  delivery: 2026-10-19T05:54:00Z
+  basis: "Its own forecast of 47m; 5th in the pull order with an in-progress limit of 5, behind S-0449, S-0404, S-0405, S-0403 and S-0402."
   by: flai
-  at: 2026-10-18T19:29:13Z
+  at: 2026-10-19T04:55:09Z
 finalized:
   by: alex
   at: 2026-10-19T04:52:24Z

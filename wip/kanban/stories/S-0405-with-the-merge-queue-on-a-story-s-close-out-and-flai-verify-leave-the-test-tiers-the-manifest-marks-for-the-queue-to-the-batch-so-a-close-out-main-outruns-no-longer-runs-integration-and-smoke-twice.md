@@ -3,12 +3,15 @@ id: S-0405
 type: story
 nature: improvement
 title: With the merge queue on, a story's close-out and flai verify leave the test tiers the manifest marks for the queue to the batch, so a close-out main outruns no longer runs integration and smoke twice
-status: backlog
+status: ready
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:59:12Z
-updated: 2026-10-19T04:53:47Z
-transitions: []
+updated: 2026-10-19T04:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:54:02Z
+    by: alex
 tags: [cli]
 topics: [conventions, template]
 touches: [design/adrs, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/verify/manifest.go, flai/internal/verify/select.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/template.yaml, template/CHANGELOG.md, system-flow.yaml, design/system/project-manifest.md, design/system/workflow.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 19
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 5
+          output: 107
+          cache_read: 454215
+          cache_write: 937
+          cost: 0.1141
 forecast:
   duration: 41m
-  delivery: 2026-10-18T23:33:00Z
-  basis: "Its own forecast of 41m; 9th in the pull order with an in-progress limit of 5, behind S-0241, S-0398, S-0399, S-0400, S-0401, S-0402, S-0403 and S-0404."
+  delivery: 2026-10-19T05:41:00Z
+  basis: "Its own forecast of 41m; 2nd in the pull order with an in-progress limit of 5, behind S-0449 and S-0404."
   by: flai
-  at: 2026-10-18T19:29:13Z
+  at: 2026-10-19T04:55:09Z
 finalized:
   by: alex
   at: 2026-10-19T04:53:47Z

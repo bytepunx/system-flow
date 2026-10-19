@@ -3,12 +3,15 @@ id: S-0399
 type: story
 nature: feature
 title: flai serve builds a batch of the enqueued stories in a worktree of its own, rebased on main in order, and verifies it once with the tiers flai verify runs, behind the merge-queue host action
-status: backlog
+status: ready
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:53Z
-updated: 2026-10-19T04:52:50Z
-transitions: []
+updated: 2026-10-19T04:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:53:03Z
+    by: alex
 tags: [cli, dashboard]
 topics: [orchestration]
 touches: [flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/serve/serve.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/config/config.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/settings.go, flai/internal/manifest/manifest_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/accept.go, flai/cmd/accept_queue_test.go, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/api/items/[id]/queue/+server.ts", flaiover/src/routes/api/queue/+server.ts, template/root/system-flow.yaml.tmpl, template/template.yaml, template/CHANGELOG.md, docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 20
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 108
+          cache_read: 454216
+          cache_write: 938
+          cost: 0.1141
 forecast:
   duration: 1h30m
-  delivery: 2026-10-18T21:58:00Z
-  basis: "Its own forecast of 1h30m; 3rd in the pull order with an in-progress limit of 5, behind S-0241 and S-0398."
+  delivery: 2026-10-19T07:31:00Z
+  basis: "Its own forecast of 1h30m; 8th in the pull order with an in-progress limit of 5, behind S-0449, S-0404, S-0405, S-0403, S-0402, S-0398, S-0401 and S-0400."
   by: flai
-  at: 2026-10-18T19:29:13Z
+  at: 2026-10-19T04:55:09Z
 finalized:
   by: alex
   at: 2026-10-19T04:52:50Z

@@ -3,12 +3,15 @@ id: S-0401
 type: story
 nature: feature
 title: A batch settles a rebase that stops inside the manifest's shared paths by the regenerate-and-merge steps and never sends a story back for it, and tells the story's agent of a conflict outside them by message
-status: backlog
+status: ready
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:20Z
-updated: 2026-10-19T04:53:09Z
-transitions: []
+updated: 2026-10-19T04:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:53:18Z
+    by: alex
 tags: [cli]
 topics: [orchestration]
 touches: [design/adrs, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, design/system/agent-coordination.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 19
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 108
+          cache_read: 454216
+          cache_write: 937
+          cost: 0.1141
 forecast:
   duration: 50m
-  delivery: 2026-10-18T22:52:00Z
-  basis: "Its own forecast of 50m; 5th in the pull order with an in-progress limit of 5, behind S-0241, S-0398, S-0399 and S-0400."
+  delivery: 2026-10-19T06:27:00Z
+  basis: "Its own forecast of 50m; 6th in the pull order with an in-progress limit of 5, behind S-0449, S-0404, S-0405, S-0403, S-0402 and S-0398."
   by: flai
-  at: 2026-10-18T19:29:13Z
+  at: 2026-10-19T04:55:09Z
 finalized:
   by: alex
   at: 2026-10-19T04:53:09Z

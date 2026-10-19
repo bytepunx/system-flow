@@ -3,12 +3,15 @@ id: S-0400
 type: story
 nature: feature
 title: A green batch lands each story in order through the acceptance of today, and a red batch is bisected to the story that fails, which goes back to in-progress with the failing step in its notes and a thread to its agent
-status: backlog
+status: ready
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:07Z
-updated: 2026-10-19T04:52:58Z
-transitions: []
+updated: 2026-10-19T04:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:53:06Z
+    by: alex
 tags: [cli, dashboard]
 topics: [orchestration]
 touches: [design/adrs, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/bisect_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/accept.go, flai/cmd/accept_queue_test.go, flai/internal/preview/accept.go, flai/internal/preview/accept_test.go, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/system/workflow.md, design/system/strategic-agents.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/operators/index.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 20
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 6
+          output: 108
+          cache_read: 454216
+          cache_write: 938
+          cost: 0.1141
 forecast:
   duration: 1h15m
-  delivery: 2026-10-18T23:19:00Z
-  basis: "Its own forecast of 1h15m; 4th in the pull order with an in-progress limit of 5, behind S-0241, S-0398 and S-0399."
+  delivery: 2026-10-19T06:58:00Z
+  basis: "Its own forecast of 1h15m; 7th in the pull order with an in-progress limit of 5, behind S-0449, S-0404, S-0405, S-0403, S-0402, S-0398 and S-0401."
   by: flai
-  at: 2026-10-18T19:29:13Z
+  at: 2026-10-19T04:55:09Z
 finalized:
   by: alex
   at: 2026-10-19T04:52:58Z

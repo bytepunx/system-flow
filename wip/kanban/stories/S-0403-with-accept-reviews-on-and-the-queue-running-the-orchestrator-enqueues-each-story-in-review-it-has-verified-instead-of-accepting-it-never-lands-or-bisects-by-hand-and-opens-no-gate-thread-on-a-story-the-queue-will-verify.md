@@ -3,12 +3,15 @@ id: S-0403
 type: story
 nature: feature
 title: With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify
-status: backlog
+status: ready
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:45Z
-updated: 2026-10-19T04:53:39Z
-transitions: []
+updated: 2026-10-19T04:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:53:57Z
+    by: alex
 tags: [cli]
 topics: [orchestration, conventions, template]
 touches: [flai/internal/mcpserver/queue.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/writes.go, flai/internal/guard/orchestrate_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/root/.claude/agents/orchestrator.md, ".claude/agents/orchestrator.md", template/template.yaml, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 19
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 5
+          output: 108
+          cache_read: 454215
+          cache_write: 937
+          cost: 0.1141
 forecast:
   duration: 42m
-  delivery: 2026-10-19T00:04:00Z
-  basis: "Its own forecast of 42m; 7th in the pull order with an in-progress limit of 5, behind S-0241, S-0398, S-0399, S-0400, S-0401 and S-0402."
+  delivery: 2026-10-19T05:41:00Z
+  basis: "Its own forecast of 42m; 3rd in the pull order with an in-progress limit of 5, behind S-0449, S-0404 and S-0405."
   by: flai
-  at: 2026-10-18T19:29:13Z
+  at: 2026-10-19T04:55:09Z
 finalized:
   by: alex
   at: 2026-10-19T04:53:39Z

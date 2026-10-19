@@ -3,12 +3,15 @@ id: S-0402
 type: story
 nature: feature
 title: A batch lands on main while the main checkout has uncommitted files no queued story claims, and the landing tells the operator what their checkout is behind
-status: backlog
+status: ready
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:32Z
-updated: 2026-10-19T04:53:13Z
-transitions: []
+updated: 2026-10-19T04:55:09Z
+transitions:
+  - to: ready
+    at: 2026-10-19T04:53:22Z
+    by: alex
 tags: [cli, dashboard]
 topics: [orchestration]
 touches: [design/adrs, flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/storygit/storygit.go, flai/internal/storygit/storygit_test.go, flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/operators/index.md, docs/users/flai.md]
@@ -18,12 +21,27 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 19
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 5
+          output: 108
+          cache_read: 454216
+          cache_write: 937
+          cost: 0.1141
 forecast:
   duration: 45m
-  delivery: 2026-10-19T00:08:00Z
-  basis: "Its own forecast of 45m; 6th in the pull order with an in-progress limit of 5, behind S-0241, S-0398, S-0399, S-0400 and S-0401."
+  delivery: 2026-10-19T05:44:00Z
+  basis: "Its own forecast of 45m; 4th in the pull order with an in-progress limit of 5, behind S-0449, S-0404, S-0405 and S-0403."
   by: flai
-  at: 2026-10-18T19:29:13Z
+  at: 2026-10-19T04:55:09Z
 finalized:
   by: alex
   at: 2026-10-19T04:53:13Z
