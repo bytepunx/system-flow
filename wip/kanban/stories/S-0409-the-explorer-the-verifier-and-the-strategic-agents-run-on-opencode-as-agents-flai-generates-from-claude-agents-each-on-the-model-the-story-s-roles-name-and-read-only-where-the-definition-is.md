@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:17:17Z
-updated: 2026-10-19T21:52:13Z
+updated: 2026-10-19T23:41:20Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 40m
-  delivery: 2026-10-20T02:22:00Z
-  basis: "Its own forecast of 40m; 9th in the pull order with an in-progress limit of 5, behind S-0401, S-0404, S-0403, S-0402, S-0400, S-0241, S-0406, S-0407 and S-0408."
+  delivery: 2026-10-20T03:29:00Z
+  basis: "Its own forecast of 40m; 8th in the pull order with an in-progress limit of 5, behind S-0404, S-0403, S-0402, S-0241, S-0406, S-0407 and S-0408."
   by: flai
-  at: 2026-10-19T21:52:13Z
+  at: 2026-10-19T23:41:20Z
 ---
 # S-0409 The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is
 

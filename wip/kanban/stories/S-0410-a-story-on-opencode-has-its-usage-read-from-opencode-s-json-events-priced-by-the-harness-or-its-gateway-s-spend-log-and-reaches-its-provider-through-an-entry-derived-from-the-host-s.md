@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:18:34Z
-updated: 2026-10-19T21:52:13Z
+updated: 2026-10-19T23:41:20Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 50m
-  delivery: 2026-10-20T03:16:00Z
-  basis: "Its own forecast of 50m; 10th in the pull order with an in-progress limit of 5, behind S-0401, S-0404, S-0403, S-0402, S-0400, S-0241, S-0406, S-0407, S-0408 and S-0409."
+  delivery: 2026-10-20T04:23:00Z
+  basis: "Its own forecast of 50m; 9th in the pull order with an in-progress limit of 5, behind S-0404, S-0403, S-0402, S-0241, S-0406, S-0407, S-0408 and S-0409."
   by: flai
-  at: 2026-10-19T21:52:13Z
+  at: 2026-10-19T23:41:20Z
 ---
 # S-0410 A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's
 
