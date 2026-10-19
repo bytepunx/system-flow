@@ -1318,14 +1318,15 @@ func TestSyncFilesMergeTheIssueFilesAndTheADRIndex(t *testing.T) {
 	}
 }
 
-// The text report names each issue file merged and each issue folded.
+// The text report names each file merged, by what it kept, and each issue
+// folded.
 func TestPrintSyncChecksNamesTheMergedFilesAndTheFolds(t *testing.T) {
 	var out strings.Builder
 	printSyncChecks(&out, &workitem.Item{ID: "S-0002"}, storygit.SyncResult{
-		Merged: []string{"design/issues/I-0118-the-sync-stops.md", "design/adrs/README.md"},
+		Merged: []string{"design/issues/I-0118-the-sync-stops.md", "design/adrs/README.md", "docs/users/flai.md"},
 		Folded: []storygit.Folded{{From: "I-0112", Into: "I-0111"}},
 	})
-	if want := "merged design/issues/I-0118-the-sync-stops.md: kept both sides' instances\nmerged design/adrs/README.md: kept both sides' rows\nfolded I-0112 into I-0111\n"; out.String() != want {
+	if want := "merged design/issues/I-0118-the-sync-stops.md: kept both sides' instances\nmerged design/adrs/README.md: kept both sides' rows\nmerged docs/users/flai.md: kept both sides' sections\nfolded I-0112 into I-0111\n"; out.String() != want {
 		t.Errorf("report:\n%s\nwant:\n%s", out.String(), want)
 	}
 }

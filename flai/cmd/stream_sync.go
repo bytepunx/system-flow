@@ -24,16 +24,21 @@ func syncStoppedFrom(res storygit.SyncResult) *syncStopped {
 }
 
 // mergedWhat is what a merge of p kept from both sides: the ADR index's rows
-// (ADR-0157), an issue file's instances (ADR-0126).
+// (ADR-0157), an issue file's instances (ADR-0126), and a shared markdown
+// file's sections (ADR-0175).
 func mergedWhat(p string) string {
-	if path.Base(p) == "README.md" && path.Base(path.Dir(p)) == "adrs" {
+	switch {
+	case path.Base(p) == "README.md" && path.Base(path.Dir(p)) == "adrs":
 		return "rows"
+	case path.Base(path.Dir(p)) == "issues" && strings.HasPrefix(path.Base(p), "I-"):
+		return "instances"
 	}
-	return "instances"
+	return "sections"
 }
 
 // printSyncChecks says, one line each, the files the rebase merged, issue
-// files by their instances and the ADR index by its rows (ADR-0157), and the
+// files by their instances, the ADR index by its rows (ADR-0157), and the
+// shared markdown files by their sections (ADR-0175), and the
 // issues it folded (ADR-0126), the files whose lint it fixed (S-0367),
 // how story's branch merges with the other open branches, with the
 // conversation that tells a conflicting pair and the old conflict thread a
