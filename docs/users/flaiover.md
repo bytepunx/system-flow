@@ -604,7 +604,7 @@ Components, the second page of the Design group, lists the project's Svelte comp
 | `Snippet` | A text box. The component renders your text as the snippet's content, as text, not HTML |
 | A function | No control. It shows **Logged**: its calls are listed under **Events** |
 
-A control starts at the prop's default when the source writes the default as a plain value, such as `'md'`, `3`, `false`, or `[]`. Otherwise it starts empty, and the component's own default applies. A prop without a value is not sent, so it takes its default. **Reset** puts every prop back to its default.
+A control starts at the prop's default when the source writes the default as a plain value, such as `'md'`, `3`, `false`, or `[]`. Otherwise a JSON box starts with the empty shape of the prop's type, such as `[{"id": "", "title": "", "tasks": 0}]` for a list of stories. Fill in its values; the shape is sent as it stands, so the component gets what the box shows. Where flai cannot work out the type, the box starts at `[]`, `{}`, or `null`. Any other control starts empty, and the component's own default applies. A prop without a value is not sent, so it takes its default. **Reset** puts every prop back to its default or its empty shape.
 
 Text that does not parse, such as JSON with a missing quote, stays as you typed it, with its error and `not sent` under it. While any prop's text does not parse, nothing is sent: the frame keeps the props it had, and the address is not changed.
 

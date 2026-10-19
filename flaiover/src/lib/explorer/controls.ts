@@ -1,7 +1,8 @@
 // The props panel's model (S-0440): the control each prop of the picked component takes, by the
 // kind flai read for it (S-0437), what the text in that control means, and the props in the
 // page's URL. The panel keeps each prop's control as text, so that what the operator types stays
-// until it parses; only what parses is sent, and a function prop gets the harness's logger.
+// until it parses; only what parses is sent, and a function prop gets the harness's logger. A
+// JSON prop without a literal default starts at the skeleton flai gives it, and sends it (S-0449).
 
 import type { ComponentProp } from '$lib/server/repo';
 import type { Props } from './protocol';
@@ -107,11 +108,13 @@ export function format(prop: ComponentProp, value: unknown): string {
 	}
 }
 
-/** prop's default as a value, where the source writes it as a literal its control can hold;
- * undefined where it has none, writes an expression, or writes a value of another kind. */
+/** The value prop's control starts at: its default, where the source writes it as a literal its
+ * control can hold; else, for a JSON control, the skeleton flai gives it (S-0449); else
+ * undefined. */
 export function initial(prop: ComponentProp): unknown {
 	const v = prop.default ? literal(prop.default) : null;
-	return v && fits(prop, v.value) ? v.value : undefined;
+	if (v && fits(prop, v.value)) return v.value;
+	return controlFor(prop)?.kind === 'json' ? prop.skeleton : undefined;
 }
 
 function fits(prop: ComponentProp, value: unknown): boolean {
@@ -147,8 +150,9 @@ export function functions(props: ComponentProp[]): string[] {
 	return props.filter((p) => p.kind === 'function').map((p) => p.name);
 }
 
-/** Each prop's text: its value in values where it has one there, else its default where initial
- * reads one. A prop with neither, and a function, has no text. With no values, the reset. */
+/** Each prop's text: its value in values where it has one there, else its initial value, a
+ * literal default or a JSON prop's skeleton. A prop with neither, and a function, has no text.
+ * With no values, the reset. */
 export function toTexts(props: ComponentProp[], values: Props = {}): Record<string, string> {
 	const texts: Record<string, string> = {};
 	for (const prop of props) {

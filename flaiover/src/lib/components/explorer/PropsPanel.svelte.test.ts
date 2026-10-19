@@ -1,6 +1,7 @@
 // S-0440: the props panel lists each prop with its type, its default, and a control by its kind,
 // shows text that does not parse with why, marks a required prop without a value, hands each
-// change up whole, and resets every prop to its default.
+// change up whole, and resets every prop to its default. S-0449: a JSON prop without a literal
+// default resets to its skeleton.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type { ComponentProp, ComponentPropKind } from '$lib/server/repo';
@@ -185,6 +186,24 @@ describe('PropsPanel (S-0440)', () => {
 		expect(control<HTMLInputElement>('label').value).toBe('');
 		expect(control<HTMLInputElement>('count').value).toBe('3');
 		expect(control<HTMLSelectElement>('variant').value).toBe('"primary"');
+	});
+
+	it('resets a JSON prop without a literal default to its skeleton (S-0449)', () => {
+		const props = [
+			prop('stories', 'array', { required: true, skeleton: [{ id: '' }] }),
+			prop('from', 'unknown', { default: 'latest()', skeleton: null }),
+			prop('items', 'array', { default: "['a']", skeleton: [''] })
+		];
+		const { onchange } = show({ stories: '[{"id": "S-1"}]', from: '"v2"', items: '[]' }, props);
+		q<HTMLButtonElement>('[data-testid="props-reset"]')!.click();
+		flushSync();
+		expect(onchange).toHaveBeenLastCalledWith({
+			stories: '[\n  {\n    "id": ""\n  }\n]',
+			from: 'null',
+			items: '[\n  "a"\n]'
+		});
+		expect(control<HTMLTextAreaElement>('stories').value).toBe('[\n  {\n    "id": ""\n  }\n]');
+		expect(inRow('stories', 'prop-missing')).toBeNull();
 	});
 
 	it('says when the component takes no props, and offers no reset', () => {

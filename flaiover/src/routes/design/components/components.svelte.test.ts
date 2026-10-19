@@ -7,7 +7,8 @@
 // URL, and shows a required prop without a value in the frame's place; the event log lists the
 // calls of its function props. S-0441: the frames are sent the tried tokens, the Design page's
 // unsaved edits kept in this browser, on load and on another tab's change, and again on each
-// ready; the page says it shows them, and drops them on request.
+// ready; the page says it shows them, and drops them on request. S-0449: a JSON prop without a
+// literal default starts at its skeleton, which is sent.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import type {
@@ -515,6 +516,50 @@ describe('the components page (S-0439)', () => {
 			await click(q(`component-${SWATCH}`));
 			expect(field('label').value).toBe('');
 			expect(field('count').value).toBe('3');
+		});
+
+		it('fills a JSON prop without a literal default with its skeleton, sends it, and resets to it (S-0449)', async () => {
+			const skeleton = [{ id: '', tasks: 0 }];
+			const stories: ComponentProp = {
+				name: 'stories',
+				kind: 'array',
+				type: 'Story[]',
+				required: true,
+				skeleton
+			};
+			const [flaiover, ...others] = catalogue.projects;
+			const components = flaiover.components.map((x) =>
+				x.path === SWATCH ? component(SWATCH, [stories]) : x
+			);
+			const listed = { projects: [{ ...flaiover, components }, ...others] };
+			api.mockImplementation(async (url: string) =>
+				url === '/api/components'
+					? answer({ catalogue: listed, status: running })
+					: answer({ error: `unexpected ${url}` }, 404)
+			);
+			await show();
+			await click(q(`component-${SWATCH}`));
+			const [w] = fakeWindows();
+			await harness(w, { type: 'ready' });
+			expect(JSON.parse(field<HTMLTextAreaElement>('stories').value)).toEqual(skeleton);
+			expect(posted(w)[1]).toMatchObject({
+				type: 'select',
+				component: SWATCH,
+				props: { stories: skeleton }
+			});
+			expect(urlProps()).toEqual({ c: SWATCH, props: { stories: skeleton } });
+			expect(q('component-missing')).toBeNull();
+			expect(box().hidden).toBe(false);
+
+			await type(field<HTMLTextAreaElement>('stories'), '[{"id": "S-1", "tasks": 2}]');
+			expect(posted(w).at(-1)).toMatchObject({
+				type: 'props',
+				props: { stories: [{ id: 'S-1', tasks: 2 }] }
+			});
+			(q('props-reset') as HTMLElement).click();
+			await settle();
+			expect(posted(w).at(-1)).toMatchObject({ type: 'props', props: { stories: skeleton } });
+			expect(JSON.parse(field<HTMLTextAreaElement>('stories').value)).toEqual(skeleton);
 		});
 
 		it("lists the calls of the component's function props, and clears them on another pick", async () => {

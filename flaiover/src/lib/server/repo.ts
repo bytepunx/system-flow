@@ -283,6 +283,10 @@ export type ComponentProp = {
 	required: boolean;
 	/** A union's members, each as JSON: "a", 1, true. */
 	literals?: string[];
+	/** The empty value of its type, which flai gives an array, object, or unknown prop: such as
+	 * [{"id": ""}], or [], {}, or null where flai could not resolve the type (S-0449); absent from
+	 * a host flai older than S-0449. */
+	skeleton?: unknown;
 };
 
 /** One .svelte file of a sub-project (Go's components.Component). */

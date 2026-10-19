@@ -211,6 +211,64 @@ describe('the panel', () => {
 	});
 });
 
+describe('the skeleton (S-0449)', () => {
+	const SKELETON = [{ id: '', title: '', count: 0 }];
+	const stories = prop('array', { name: 'stories', required: true, skeleton: SKELETON });
+	const from = prop('unknown', { name: 'from', required: true, skeleton: null });
+	const options = prop('object', { name: 'options', default: 'defaults()', skeleton: {} });
+
+	it('starts a JSON prop without a literal default at its skeleton, null included', () => {
+		expect(initial(stories)).toEqual(SKELETON);
+		expect(initial(from)).toBeNull();
+		expect(initial(options)).toEqual({});
+	});
+
+	it('keeps a literal default over the skeleton', () => {
+		expect(initial({ ...stories, default: '[]' })).toEqual([]);
+		expect(initial({ ...from, default: "'v1'" })).toBe('v1');
+	});
+
+	it('gives a JSON prop without a skeleton, as an older flai answers, no value as before', () => {
+		const older = prop('array', { name: 'stories', required: true });
+		expect(initial(older)).toBeUndefined();
+		expect(toTexts([older])).toEqual({});
+		expect(missing(older, toTexts([older]).stories)).toBe(true);
+	});
+
+	it('fills the field with the skeleton on a pick, and sends it', () => {
+		const texts = toTexts([stories, from, options]);
+		expect(texts).toEqual({
+			stories: '[\n  {\n    "id": "",\n    "title": "",\n    "count": 0\n  }\n]',
+			from: 'null',
+			options: '{}'
+		});
+		expect(toValues([stories, from, options], texts)).toEqual({
+			stories: SKELETON,
+			from: null,
+			options: {}
+		});
+	});
+
+	it('fills it for an example that leaves the prop out, and takes the value one gives', () => {
+		expect(toTexts([stories, from], { from: 'v2' })).toEqual({
+			stories: format(stories, SKELETON),
+			from: '"v2"'
+		});
+	});
+
+	it('resets an edited field to the skeleton', () => {
+		const edited = { stories: '[{"id": "S-1"}]', from: '"v2"' };
+		expect(toValues([stories, from], edited)).toEqual({ stories: [{ id: 'S-1' }], from: 'v2' });
+		expect(toTexts([stories, from])).toEqual({ stories: format(stories, SKELETON), from: 'null' });
+	});
+
+	it('does not mark a required JSON prop with a skeleton as without a value', () => {
+		const texts = toTexts([stories, from]);
+		expect(missing(stories, texts.stories)).toBe(false);
+		expect(missing(from, texts.from)).toBe(false);
+	});
+});
+
 describe('the URL', () => {
 	it('holds the props under one parameter that the page does not use already', () => {
 		expect(PROPS_PARAM).toBe('props');
