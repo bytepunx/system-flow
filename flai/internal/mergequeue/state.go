@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -169,7 +170,8 @@ func ReadState(cacheDir string) (State, error) {
 // change it, and writes what fn leaves in one step, so that flai serve and a
 // shell never write the state at once and no write is lost. An error from fn
 // writes nothing and is returned as it is; a state fn leaves as it was is
-// not written.
+// not written. A write appends its Events to the event log; one it cannot
+// append is logged at warn, and the write stands.
 func Update(cacheDir string, fn func(*State) error) (State, error) {
 	path := StatePath(cacheDir)
 	unlock, err := filelock.Lock(path+".lock", lockWait)
@@ -202,6 +204,10 @@ func Update(cacheDir string, fn func(*State) error) (State, error) {
 	}
 	if err := atomicfile.WriteFile(path, append(data, '\n'), 0o644); err != nil {
 		return State{}, fmt.Errorf("write the merge queue's state at %s: %w; check that the project's .flai-cache is writable", path, err)
+	}
+	if err := logEvents(cacheDir, before, st, time.Now()); err != nil {
+		slog.Default().Warn("merge queue events not logged", "component", "mergequeue", "path", EventsPath(cacheDir),
+			"detail", "the state was written, but the events of this write are missing from the event log, so the queue's measures undercount them", "err", err)
 	}
 	return st, nil
 }
