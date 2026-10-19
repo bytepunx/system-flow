@@ -6,9 +6,12 @@
 	change of props alone as a props message, which the harness gives the mounted component without
 	remounting it (S-0440); a function prop's calls come back as events. A harness error, or a
 	required prop without a value, is shown in the frame's place, with the frame kept loaded but
-	hidden, so that the next hot update's render, or the value, brings it back. Tried token values
-	are sent as they change, and an empty tokens message once they are gone (S-0441); the client
-	sends the last of each message again on every ready, so a reloaded harness keeps them.
+	hidden, so that the next hot update's render, or the value, brings it back. Only answers about
+	the component last selected count: one about another is a late answer to the pick before it, and
+	is dropped (S-0449). The frame's border is its wrapper's, which clips nothing, so content wider
+	than the frame scrolls on the frame's own scroll bars. Tried token values are sent as they
+	change, and an empty tokens message once they are gone (S-0441); the client sends the last of
+	each message again on every ready, so a reloaded harness keeps them.
 -->
 <script lang="ts">
 	import { untrack } from 'svelte';
@@ -76,14 +79,20 @@
 	const first = () => untrack(() => component);
 	const src = $derived(harnessUrl(server, location.origin, first()));
 
+	// An answer about another component is the pick's before it, come late: it is not this one's.
+	const ours = (m: { component: string }) => m.component === selected;
+
 	$effect(() => {
 		const c = connect(() => iframe?.contentWindow, server, {
-			rendered: () => (error = null),
-			error: (m) => (error = m),
+			rendered: (m) => {
+				if (ours(m)) error = null;
+			},
+			error: (m) => {
+				if (ours(m)) error = m;
+			},
 			size: (m) => (height = Math.ceil(m.height)),
-			// a call answered after another pick is the component's before it
 			event: (m) => {
-				if (m.component === component) onevent?.(m);
+				if (ours(m)) onevent?.(m);
 			}
 		});
 		selected = null;
@@ -158,9 +167,10 @@
 			{/if}
 		</div>
 	{/if}
-	<!-- the border is the wrapper's, so that the frame's height is the harness content's own -->
+	<!-- the border is the wrapper's, so that the frame's height is the harness content's own; the
+		wrapper clips nothing, so the frame's own scroll bars show whole -->
 	<div
-		class="overflow-hidden rounded-md border border-line"
+		class="border border-line"
 		style:width={width ? `${width + 2}px` : undefined}
 		hidden={!!error || missing.length > 0}
 		data-testid="component-frame-box"

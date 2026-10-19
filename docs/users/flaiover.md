@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-17
+updated: 2026-10-19
 status: active
 ---
 
@@ -585,7 +585,7 @@ Components, the second page of the Design group, lists the project's Svelte comp
 
 **The list.** At the left is each sub-project of the manifest, with its kind, and its components grouped by folder. The filter box matches a component's name or path. A sub-project that is not SvelteKit or Svelte is listed with its kind and no components. A component whose props flai could not read is still listed, marked `props unreadable`: hover over it for why. It can still be framed.
 
-**The frame.** Pick a component to frame it. The address keeps your pick as `?p=<sub-project>&c=<path>`, so a reload or a copied link frames it again. The component renders with the props the props panel gives it. The frame is as tall as what it renders. Above it:
+**The frame.** Pick a component to frame it. The address keeps your pick as `?p=<sub-project>&c=<path>`, so a reload or a copied link frames it again. The component renders with the props the props panel gives it. The frame is as tall as what the component draws, with a small margin around it, so the page scrolls to show all of it. A component wider than the frame scrolls sideways inside the frame. Only the component you picked last shows in the frame, and only its errors: a late answer about the one you picked before is ignored. Above it:
 
 | Control | Choices |
 |---------|---------|
