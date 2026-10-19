@@ -482,6 +482,135 @@ func TestContinueOverResolvedContinuesARebaseInAnyWorktree(t *testing.T) {
 	}
 }
 
+// ADR-0175: a stop on a shared markdown file is flai's to resolve, merged by
+// Shared, Merged taking a path both match; a stop with any other path is
+// not; and the trial merge and the conflict log still report the shared
+// file, unlike the files Merged merges.
+func TestSharedFilesAreResolvedAtAStopButStillReportedAsConflicts(t *testing.T) {
+	var calls []string
+	files := Files{
+		Merged: MergedFiles{Match: func(p string) bool { return p == "docs/m.md" }, Merge: func(p string) error {
+			calls = append(calls, "merged "+p)
+			return nil
+		}},
+		Shared: MergedFiles{Match: func(p string) bool { return strings.HasSuffix(p, ".md") }, Merge: func(p string) error {
+			calls = append(calls, "shared "+p)
+			return nil
+		}},
+	}
+	merge, _, ok := resolvable([]string{"docs/s.md", "docs/m.md"}, files)
+	if !ok || !reflect.DeepEqual(merge, []string{"docs/s.md", "docs/m.md"}) {
+		t.Fatalf("resolvable: %v %v, want both merged", merge, ok)
+	}
+	for _, p := range merge {
+		if err := files.merge(p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if want := []string{"shared docs/s.md", "merged docs/m.md"}; !reflect.DeepEqual(calls, want) {
+		t.Errorf("merged with %v, want %v", calls, want)
+	}
+	if _, _, ok := resolvable([]string{"docs/s.md", "x.txt"}, files); ok {
+		t.Error("a stop on x.txt beside a shared file is resolvable")
+	}
+	want := []string{"docs/s.md", "x.txt"}
+	if got := withoutResolved([]string{"docs/m.md", "docs/s.md", "x.txt"}, files); !reflect.DeepEqual(got, want) {
+		t.Errorf("the trial merge reports %v, want %v", got, want)
+	}
+	if got := files.Unresolved([]string{"docs/m.md", "docs/s.md", "x.txt"}); !reflect.DeepEqual(got, want) {
+		t.Errorf("unresolved %v, want %v", got, want)
+	}
+}
+
+// sharedGuide merges docs/guide.md, at a stop, by sections with
+// MergeMarkdown from its three versions in the index of the worktree wt.
+func sharedGuide(wt string) MergedFiles {
+	return MergedFiles{
+		Match: func(p string) bool { return p == "docs/guide.md" },
+		Merge: func(p string) error {
+			base, ours, theirs, err := Stages(execx.System{}, wt, p)
+			if err != nil {
+				return err
+			}
+			merged, err := MergeMarkdown(base, ours, theirs)
+			if err != nil {
+				return err
+			}
+			return os.WriteFile(filepath.Join(wt, filepath.FromSlash(p)), []byte(merged), 0o644)
+		},
+	}
+}
+
+// ADR-0175: a sync whose rebase stops on a shared markdown file both sides
+// added a section to merges it by sections and continues; one whose sides
+// change the same line of a section stops for the agent, and the stop is a
+// line of the conflict log with the file.
+func TestSyncMergesASharedMarkdownFileBySectionsAndStopsOnOneItCannotSettle(t *testing.T) {
+	repo := syncProject(t)
+	guide := md("# Guide", "", "## Use", "", "line one")
+	write(t, repo.MainRoot, "docs/guide.md", guide)
+	git(t, repo.MainRoot, "commit", "-q", "-am", "docs: guide")
+	story, wt := openStory(t, repo, "S-0001", "docs")
+	write(t, wt, "docs/guide.md", guide+md("", "## Branch", "", "branch text"))
+	git(t, wt, "commit", "-q", "-am", "feat: [S-0001] branch's section")
+	write(t, repo.MainRoot, "docs/guide.md", guide+md("", "## Main", "", "main text"))
+	git(t, repo.MainRoot, "commit", "-q", "-am", "docs: main's section")
+	o := syncOptions(repo, story)
+	o.Files.Shared = sharedGuide(wt)
+
+	res, err := Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Synced || strings.Join(res.Merged, ",") != "docs/guide.md" {
+		t.Fatalf("result: %+v", res)
+	}
+	want := md("# Guide", "", "## Use", "", "line one", "", "## Main", "", "main text", "", "## Branch", "", "branch text")
+	if got, _ := (execx.System{}).Run(wt, "git", "show", "HEAD:docs/guide.md"); got+"\n" != want {
+		t.Errorf("docs/guide.md:\n%s\nwant:\n%s", got, want)
+	}
+
+	merged, _ := os.ReadFile(filepath.Join(wt, "docs", "guide.md"))
+	write(t, wt, "docs/guide.md", strings.Replace(string(merged), "line one", "line one by the branch", 1))
+	git(t, wt, "commit", "-q", "-am", "feat: [S-0001] branch's line")
+	write(t, repo.MainRoot, "docs/guide.md", strings.Replace(guide+md("", "## Main", "", "main text"), "line one", "line one by main", 1))
+	git(t, repo.MainRoot, "commit", "-q", "-am", "docs: main's line")
+
+	res, err = Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Synced || res.Stopped != StopConflicts || strings.Join(res.Conflicts, ",") != "docs/guide.md" || len(res.Merged) != 0 {
+		t.Fatalf("result: %+v", res)
+	}
+	if !RebaseInProgress(execx.System{}, wt) {
+		t.Error("the rebase is not left waiting")
+	}
+	stop := []Conflict{{At: syncClock, Story: "S-0001", Where: WhereSync, Paths: []string{"docs/guide.md"}}}
+	if got := conflictLog(t, repo.CacheDir()); !reflect.DeepEqual(got, stop) {
+		t.Errorf("conflict log: %+v, want %+v", got, stop)
+	}
+}
+
+// ADR-0175: the trial merge still reports a conflict on a shared markdown
+// file between two stories, since its section merge can fail.
+func TestSyncTrialMergeStillReportsASharedMarkdownFile(t *testing.T) {
+	repo, story, one, _ := conflictingPair(t)
+	o := syncOptions(repo, story)
+	o.Files.Shared = sharedGuide(one)
+
+	res, err := Sync(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.TrialMergeSkipped != "" {
+		t.Skip(res.TrialMergeSkipped)
+	}
+	if len(res.Branches) != 1 || res.Branches[0].Clean || strings.Join(res.Branches[0].Conflicts, ",") != "docs/guide.md" {
+		t.Errorf("branches: %+v, want docs/guide.md reported", res.Branches)
+	}
+}
+
 // ADR-0126: after a clean rebase the fold runs with the base branch; what it
 // folds is committed on the branch with the generated files written again,
 // a deleted file included.

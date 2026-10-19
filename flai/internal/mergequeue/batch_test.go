@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -272,7 +274,9 @@ func TestABatchOfTwoCleanStoriesIsBuiltInOrderAndVerifiedOnce(t *testing.T) {
 // S-0399 criterion 2: a story whose rebase onto the batch stops is left out,
 // with its conflicting paths on the batch, the stop and the paths as its
 // outcome, and stays enqueued; the stories after it go on. Its branch is not
-// touched.
+// touched. S-0401 criterion 3: the stop is on a path outside claims.shared
+// that the story ahead changed, so flai messages the story from the story
+// ahead about it in the two stories' conversation (ADR-0175).
 func TestAStoryWhoseRebaseStopsIsLeftOutAndTheRestGoOn(t *testing.T) {
 	repo, proc := gitProject(t, "")
 	a, headA := readyStory(t, repo, "A", t0.Add(time.Hour), "x.txt", "one\ntwo by A\nthree\n")
@@ -303,7 +307,7 @@ func TestAStoryWhoseRebaseStopsIsLeftOutAndTheRestGoOn(t *testing.T) {
 	if o.Story != b || o.Outcome != OutcomeLeftOut || o.Base != main || o.Head != headB || !o.At.Equal(t1) {
 		t.Errorf("outcome %+v", o)
 	}
-	for _, says := range []string{"conflicts in x.txt", storygit.Branch(b), "stays enqueued", st.Batch.ID} {
+	for _, says := range []string{"conflicts in x.txt", storygit.Branch(b), "stays enqueued", st.Batch.ID, a} {
 		if !strings.Contains(o.Detail, says) {
 			t.Errorf("detail %q does not say %q", o.Detail, says)
 		}
@@ -315,15 +319,176 @@ func TestAStoryWhoseRebaseStopsIsLeftOutAndTheRestGoOn(t *testing.T) {
 	if _, ok := st.EnqueuedAs(b); !ok {
 		t.Errorf("%s is no longer enqueued", b)
 	}
+	if it, err := repo.Get(b); err != nil || it.Status != workitem.Review {
+		t.Errorf("%s is %+v, %v; want it left in review", b, it, err)
+	}
+	convs, err := messages.For(repo, b)
+	if err != nil || len(convs) != 1 {
+		t.Fatalf("conversations of %s: %+v, %v; want one", b, convs, err)
+	}
+	conv := convs[0]
+	e := conv.Entries()
+	if conv.From != a || conv.To != b || !slices.Equal(conv.About, []string{"x.txt"}) || conv.Awaiting() != b || len(e) != 1 ||
+		e[0].Author != storygit.ConflictAuthor || e[0].Story != a {
+		t.Fatalf("conversation %+v, entries %+v; want one from %s to %s about x.txt", conv, e, a, b)
+	}
+	for _, says := range []string{st.Batch.ID, "- `x.txt`", "flai stream sync " + b, "`flai message escalate`"} {
+		if !strings.Contains(e[0].Text, says) {
+			t.Errorf("message does not say %q:\n%s", says, e[0].Text)
+		}
+	}
 	untouched(t, repo, map[string]string{a: headA, b: headB, c: headC})
+}
+
+// S-0401 criterion 3: a stop on a path outside claims.shared that no story
+// ahead in the batch changed is a conflict with the main branch itself: the
+// story is sent back to in-progress, by flai, with the paths as the reason,
+// and leaves the queue; the stories after it go on (ADR-0175).
+func TestABatchSendsBackAStoryThatConflictsWithTheMainBranch(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, headA := readyStory(t, repo, "A", t0.Add(time.Hour), "x.txt", "one\ntwo by A\nthree\n")
+	c, headC := readyStory(t, repo, "C", t0.Add(2*time.Hour), "c.txt", "c\n")
+	writeFile(t, repo.MainRoot, "x.txt", "one\ntwo on main\nthree\n")
+	runGit(t, repo.MainRoot, "commit", "-q", "-am", "main's change")
+	main := runGit(t, repo.MainRoot, "rev-parse", "main")
+	enqueue(t, repo, a, c)
+
+	_, st := runBatch(t, deps(proc, t1), repo)
+	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{c}) || len(st.Batch.LeftOut) != 1 || st.Batch.LeftOut[0].Story != a ||
+		!slices.Equal(st.Batch.LeftOut[0].Paths, []string{"x.txt"}) || st.Batch.Step != StepVerified {
+		t.Fatalf("batch %+v, want %s alone with %s taken out on x.txt", st.Batch, c, a)
+	}
+	if len(st.Outcomes) != 1 {
+		t.Fatalf("outcomes %+v, want %s's alone", st.Outcomes, a)
+	}
+	o := st.Outcomes[0]
+	if o.Story != a || o.Outcome != OutcomeSentBack || o.Base != main || o.Head != headA || !o.At.Equal(t1) {
+		t.Errorf("outcome %+v", o)
+	}
+	reason := "the merge queue's batch " + st.Batch.ID + " could not rebase it onto main: conflicts in x.txt; sync it with flai stream sync " + a
+	if !strings.Contains(o.Detail, reason) {
+		t.Errorf("detail %q does not say %q", o.Detail, reason)
+	}
+	if _, ok := st.EnqueuedAs(a); ok {
+		t.Errorf("%s is still enqueued", a)
+	}
+	if _, ok := st.EnqueuedAs(c); !ok {
+		t.Errorf("%s is no longer enqueued", c)
+	}
+	it, err := repo.Get(a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last := it.Transitions[len(it.Transitions)-1]; it.Status != workitem.InProgress || last.To != workitem.InProgress || last.By != sendBackBy {
+		t.Errorf("%s is %s, last moved %+v; want it sent back to in-progress by flai", a, it.Status, last)
+	}
+	if !strings.Contains(it.Body, "moved to in-progress: "+reason) {
+		t.Errorf("%s's notes do not give the reason %q:\n%s", a, reason, it.Body)
+	}
+	if convs, err := messages.For(repo, a); err != nil || len(convs) != 0 {
+		t.Errorf("conversations of %s: %+v, %v; want none", a, convs, err)
+	}
+	untouched(t, repo, map[string]string{a: headA, c: headC})
+}
+
+// sharedFlaiCLI is a manifest that shares the flai CLI's design.
+const sharedFlaiCLI = "claims:\n  shared:\n    - design/system/flai-cli.md\n"
+
+// cliDesign is the shared design document on main, with one line in one
+// section.
+const cliDesign = "# flai CLI\n\n## Commands\n\nline one\n"
+
+// cliDesignOnMain commits cliDesign on main.
+func cliDesignOnMain(t *testing.T, repo *workitem.Repo) {
+	t.Helper()
+	writeFile(t, repo.MainRoot, "design/system/flai-cli.md", cliDesign)
+	runGit(t, repo.MainRoot, "add", "-A")
+	runGit(t, repo.MainRoot, "commit", "-q", "-m", "docs: the CLI's design")
+}
+
+// S-0401 criterion 2: two stories that both add a section at the end of a
+// markdown file inside claims.shared stop the second's rebase onto the batch
+// on it; the batch merges it by sections, both sections kept, the batch's
+// first, and both stories stay in the batch (ADR-0175).
+func TestTheBatchMergesASharedMarkdownFileBySections(t *testing.T) {
+	repo, proc := gitProject(t, sharedFlaiCLI)
+	cliDesignOnMain(t, repo)
+	a, headA := readyStory(t, repo, "A", t0.Add(time.Hour), "design/system/flai-cli.md", cliDesign+"\n## By A\n\nA's section\n")
+	b, headB := readyStory(t, repo, "B", t0.Add(2*time.Hour), "design/system/flai-cli.md", cliDesign+"\n## By B\n\nB's section\n")
+	enqueue(t, repo, a, b)
+	var logged bytes.Buffer
+	d := deps(proc, t1)
+	d.Log = slog.New(slog.NewTextHandler(&logged, nil))
+
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{a, b}) || len(st.Batch.LeftOut) != 0 || len(st.Outcomes) != 0 || st.Batch.Step != StepVerified {
+		t.Fatalf("batch %+v, outcomes %+v; want both stories kept", st.Batch, st.Outcomes)
+	}
+	want := cliDesign + "\n## By A\n\nA's section\n\n## By B\n\nB's section\n"
+	if got := runGit(t, repo.MainRoot, "show", st.Batch.Branch+":design/system/flai-cli.md") + "\n"; got != want {
+		t.Errorf("the shared design on the batch:\n%s\nwant:\n%s", got, want)
+	}
+	if !strings.Contains(logged.String(), "merged=[design/system/flai-cli.md]") {
+		t.Errorf("the log does not say the file was merged:\n%s", logged.String())
+	}
+	untouched(t, repo, map[string]string{a: headA, b: headB})
+}
+
+// S-0401 criterion 2: a stop on a markdown file inside claims.shared that
+// the section merge cannot settle, the same line changed two ways, here by
+// main, leaves the story waiting with the path: it stays enqueued and in
+// review, is never sent back, and is not picked again at the same main and
+// head; the stories after it go on (ADR-0175).
+func TestABatchLeavesAStoryWaitingOnASharedFileItCannotSettle(t *testing.T) {
+	repo, proc := gitProject(t, sharedFlaiCLI)
+	cliDesignOnMain(t, repo)
+	a, headA := readyStory(t, repo, "A", t0.Add(time.Hour), "design/system/flai-cli.md", strings.Replace(cliDesign, "line one", "line by A", 1))
+	c, headC := readyStory(t, repo, "C", t0.Add(2*time.Hour), "c.txt", "c\n")
+	writeFile(t, repo.MainRoot, "design/system/flai-cli.md", strings.Replace(cliDesign, "line one", "line on main", 1))
+	runGit(t, repo.MainRoot, "commit", "-q", "-am", "docs: main's line")
+	main := runGit(t, repo.MainRoot, "rev-parse", "main")
+	enqueue(t, repo, a, c)
+
+	_, st := runBatch(t, deps(proc, t1), repo)
+	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{c}) || len(st.Batch.LeftOut) != 1 || st.Batch.LeftOut[0].Story != a ||
+		!slices.Equal(st.Batch.LeftOut[0].Paths, []string{"design/system/flai-cli.md"}) {
+		t.Fatalf("batch %+v, want %s alone with %s waiting on the shared design", st.Batch, c, a)
+	}
+	if len(st.Outcomes) != 1 {
+		t.Fatalf("outcomes %+v, want %s's alone", st.Outcomes, a)
+	}
+	o := st.Outcomes[0]
+	if o.Story != a || o.Outcome != OutcomeWaiting || o.Base != main || o.Head != headA || !o.At.Equal(t1) {
+		t.Errorf("outcome %+v", o)
+	}
+	for _, says := range []string{"design/system/flai-cli.md", "stays enqueued", st.Batch.ID, storygit.Branch(a)} {
+		if !strings.Contains(o.Detail, says) {
+			t.Errorf("detail %q does not say %q", o.Detail, says)
+		}
+	}
+	if _, ok := st.EnqueuedAs(a); !ok {
+		t.Errorf("%s is no longer enqueued", a)
+	}
+	if it, err := repo.Get(a); err != nil || it.Status != workitem.Review {
+		t.Errorf("%s is %+v, %v; want it left in review", a, it, err)
+	}
+	q, err := Compute(execx.System{}, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(pick(q, main, 10)); !slices.Equal(got, []string{c}) {
+		t.Errorf("picked %v at the same main and head, want %s alone", got, c)
+	}
+	untouched(t, repo, map[string]string{a: headA, c: headC})
 }
 
 // S-0399 criterion 2: with every story left out there is nothing to verify:
 // the batch, its worktree, and its branch are removed, the outcomes kept,
 // and the queue does not build the same batch again while neither main nor
-// the story's branch moves.
+// the story's branch moves. The story conflicts with main on a shared path
+// that is not markdown, which is never merged, so it waits (ADR-0175).
 func TestABatchThatLeavesEveryStoryOutIsRemoved(t *testing.T) {
-	repo, proc := gitProject(t, "")
+	repo, proc := gitProject(t, "claims:\n  shared:\n    - x.txt\n")
 	a, headA := readyStory(t, repo, "A", t0.Add(time.Hour), "x.txt", "one\ntwo by A\nthree\n")
 	writeFile(t, repo.MainRoot, "x.txt", "one\ntwo on main\nthree\n")
 	runGit(t, repo.MainRoot, "commit", "-q", "-am", "main's change")
@@ -333,8 +498,11 @@ func TestABatchThatLeavesEveryStoryOutIsRemoved(t *testing.T) {
 	if !ran || st.Batch != nil || len(proc.ran) != 0 {
 		t.Fatalf("ran %v, batch %+v, tiers %v; want no batch left and nothing verified", ran, st.Batch, proc.ran)
 	}
-	if len(st.Outcomes) != 1 || st.Outcomes[0].Outcome != OutcomeLeftOut || !strings.Contains(st.Outcomes[0].Detail, "conflicts in x.txt") {
-		t.Errorf("outcomes %+v, want %s left out on x.txt", st.Outcomes, a)
+	if len(st.Outcomes) != 1 || st.Outcomes[0].Outcome != OutcomeWaiting || !strings.Contains(st.Outcomes[0].Detail, "x.txt") {
+		t.Errorf("outcomes %+v, want %s waiting on x.txt", st.Outcomes, a)
+	}
+	if _, ok := st.EnqueuedAs(a); !ok {
+		t.Errorf("%s is no longer enqueued", a)
 	}
 	if storygit.BranchExists(execx.System{}, repo.MainRoot, "merge-queue/20261019-160000") {
 		t.Error("the batch's branch is left")
@@ -675,6 +843,54 @@ func TestPickTakesTheEnqueuedEligibleStoriesInOrder(t *testing.T) {
 	}
 	if got, want := ids(pick(q, "m1", 2)), []string{"S-0006", "S-0002"}; !slices.Equal(got, want) {
 		t.Errorf("picked %v, want %v", got, want)
+	}
+}
+
+// ADR-0175: pick skips a story left waiting at the same main commit and
+// head, as it skips one left out, and takes it again once either moves; a
+// story sent back is not skipped for it.
+func TestPickSkipsAStoryWaitingAtTheSameMainAndHead(t *testing.T) {
+	q := Queue{
+		Eligible: []Entry{{Story: "S-0001", Head: "h1"}, {Story: "S-0002", Head: "h2"}, {Story: "S-0003", Head: "h3"}, {Story: "S-0004", Head: "h4"}},
+		Enqueued: []Enqueued{{Story: "S-0001"}, {Story: "S-0002"}, {Story: "S-0003"}, {Story: "S-0004"}},
+		Outcomes: []Outcome{
+			{Story: "S-0001", Outcome: OutcomeWaiting, Base: "m1", Head: "h1"},
+			{Story: "S-0002", Outcome: OutcomeWaiting, Base: "m0", Head: "h2"},
+			{Story: "S-0003", Outcome: OutcomeWaiting, Base: "m1", Head: "h0"},
+			{Story: "S-0004", Outcome: OutcomeSentBack, Base: "m1", Head: "h4"},
+		},
+	}
+	if got, want := ids(pick(q, "m1", 10)), []string{"S-0002", "S-0003", "S-0004"}; !slices.Equal(got, want) {
+		t.Errorf("picked %v, want %v", got, want)
+	}
+}
+
+// ADR-0175: a stop the batch cannot settle waits when every path flai does
+// not resolve is inside claims.shared, is left out when a story ahead
+// changed a path outside it, naming each such story with the paths it
+// shares, and is sent back when none did.
+func TestClassifyAStopByWhereItsPathsConflict(t *testing.T) {
+	shared := func(p string) bool { return strings.HasPrefix(p, "design/") }
+	before := []ahead{{Story: "S-0001", Paths: []string{"a.go", "design/x.md"}}, {Story: "S-0002", Paths: []string{"b.go"}}, {Story: "S-0003", Paths: []string{"a.go", "b.go"}}}
+	for _, tc := range []struct {
+		name  string
+		paths []string
+		want  stop
+	}{
+		{name: "shared alone", paths: []string{"design/x.md", "design/y.md"}, want: stop{Outcome: OutcomeWaiting}},
+		{name: "none", paths: nil, want: stop{Outcome: OutcomeWaiting}},
+		{name: "outside, changed ahead", paths: []string{"design/x.md", "a.go", "c.go"}, want: stop{Outcome: OutcomeLeftOut, Outside: []string{"a.go", "c.go"},
+			Ahead: []ahead{{Story: "S-0001", Paths: []string{"a.go"}}, {Story: "S-0003", Paths: []string{"a.go"}}}}},
+		{name: "outside, changed by none ahead", paths: []string{"design/x.md", "c.go"}, want: stop{Outcome: OutcomeSentBack, Outside: []string{"c.go"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := classify(tc.paths, shared, before); !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("classify %v: %+v, want %+v", tc.paths, got, tc.want)
+			}
+		})
+	}
+	if got := classify([]string{"c.go"}, shared, nil); got.Outcome != OutcomeSentBack {
+		t.Errorf("with no story ahead: %+v, want sent back", got)
 	}
 }
 

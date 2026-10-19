@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/adrindex"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -37,25 +38,30 @@ func generatedIn(r, wt *workitem.Repo, now func() time.Time) []storygit.Generate
 
 // SyncFiles is what a rebase of story's branch resolves itself in its
 // worktree, run reading git there: the generated files, the issue files it
-// merges by their instances, the ADR index it merges row by row, and the
-// fold of the issues the branch added into the base branch's open issues of
-// the same title (ADR-0098, ADR-0126, ADR-0157).
+// merges by their instances, the ADR index it merges row by row, the other
+// markdown files inside the manifest's claims.shared it merges by sections,
+// and the fold of the issues the branch added into the base branch's open
+// issues of the same title (ADR-0098, ADR-0126, ADR-0157, ADR-0175).
 func SyncFiles(r *workitem.Repo, story string, run execx.Runner, now func() time.Time) storygit.Files {
 	return FilesIn(r, RepoFor(r, story).Root, run, now)
 }
 
 // FilesIn is what a rebase stopped in the worktree at root, any checkout of
 // r's repository, resolves itself there, as SyncFiles is for a story's
-// worktree: the merge queue's batch worktree among them (ADR-0175).
+// worktree: the merge queue's batch worktree among them. A markdown file
+// inside r's claims.shared that is not the summary, an issue file, or the
+// ADR index is merged by sections with storygit.MergeMarkdown; one it does
+// not settle leaves the stop waiting (ADR-0175).
 func FilesIn(r *workitem.Repo, root string, run execx.Runner, now func() time.Time) storygit.Files {
 	copied := *r
 	copied.Root = root
 	wt := &copied
 	index := adrindex.Path(r)
+	merged := func(p string) bool { return p == index || isIssuePath(r, p) }
 	return storygit.Files{
 		Generated: generatedIn(r, wt, now),
 		Merged: storygit.MergedFiles{
-			Match: func(p string) bool { return p == index || isIssuePath(r, p) },
+			Match: merged,
 			Merge: func(p string) error {
 				if p == index {
 					return mergeStopped(run, wt, p, adrindex.Merge)
@@ -63,7 +69,24 @@ func FilesIn(r *workitem.Repo, root string, run execx.Runner, now func() time.Ti
 				return mergeStopped(run, wt, p, Merge)
 			},
 		},
+		Shared: storygit.MergedFiles{
+			Match: sharedMarkdown(r.SharedClaims(), func(p string) bool { return merged(p) || p == SummaryPath(r) }),
+			Merge: func(p string) error { return mergeStopped(run, wt, p, storygit.MergeMarkdown) },
+		},
 		Fold: func(base string) ([]storygit.Folded, []string, error) { return foldOnto(run, wt, base, now()) },
+	}
+}
+
+// sharedMarkdown says whether a path, as git names it, is a markdown file
+// inside claims that the other merge steps, covered, do not settle: the one
+// a stop merges by sections (ADR-0175).
+func sharedMarkdown(claims manifest.Claims, covered func(string) bool) func(string) bool {
+	return func(p string) bool {
+		if !strings.HasSuffix(p, ".md") || covered(p) {
+			return false
+		}
+		_, ok := claims.Match(p)
+		return ok
 	}
 }
 

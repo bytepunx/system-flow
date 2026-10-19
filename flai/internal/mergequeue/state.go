@@ -71,8 +71,9 @@ type Batch struct {
 	Landing *Landing `json:"landing,omitempty"`
 }
 
-// LeftOut is a story left out of a batch and the paths its rebase onto the
-// batch stopped on, none when it stopped on no conflict.
+// LeftOut is a story left out of a batch, left out, waiting, or sent back,
+// and the paths its rebase onto the batch stopped on, none when it stopped
+// on no conflict.
 type LeftOut struct {
 	Story string   `json:"story"`
 	Paths []string `json:"paths,omitempty"`
@@ -102,8 +103,9 @@ type Outcome struct {
 	Outcome string    `json:"outcome"`
 	At      time.Time `json:"at"`
 	Detail  string    `json:"detail,omitempty"`
-	// Base and Head are, for a story left out of a batch, the main branch's
-	// commit the batch was built on and the story's head then.
+	// Base and Head are, for a story left out of a batch, waiting, or sent
+	// back, the main branch's commit the batch was built on and the story's
+	// head then.
 	Base string `json:"base,omitempty"`
 	Head string `json:"head,omitempty"`
 }
@@ -111,6 +113,19 @@ type Outcome struct {
 // OutcomeAcceptedByHand is the outcome of a story in the queue that someone
 // accepted with flai accept rather than the queue landing it.
 const OutcomeAcceptedByHand = "accepted_by_hand"
+
+// OutcomeWaiting is the outcome of a story selected for a batch whose rebase
+// onto it stopped on paths inside the manifest's claims.shared alone that the
+// merge steps could not settle: it is left out of the batch, stays enqueued,
+// is shown waiting with the paths, and is never sent back for them
+// (ADR-0175).
+const OutcomeWaiting = "waiting"
+
+// OutcomeSentBack is the outcome of a story selected for a batch whose rebase
+// onto it stopped on a path outside claims.shared that no story ahead in the
+// batch changed, a conflict with the main branch itself: it is sent back to
+// in-progress with the paths as the reason and leaves the queue (ADR-0175).
+const OutcomeSentBack = "sent_back"
 
 // lockWait is how long Update waits for another writer of the state, flai
 // serve's loop or a shell's flai queue, to finish with it.

@@ -128,8 +128,9 @@ type Folded struct {
 type FoldFunc func(base string) ([]Folded, []string, error)
 
 // Files is the committed files a rebase of a story's branch resolves itself:
-// the generated files it writes again, the files it merges, and the fold
-// after a clean rebase (ADR-0098, ADR-0126).
+// the generated files it writes again, the files it merges, the shared
+// markdown files it merges by sections, and the fold after a clean rebase
+// (ADR-0098, ADR-0126, ADR-0175).
 type Files struct {
 	// Generated is every generated file: a stop on them and merged files
 	// alone is continued, and the trial merge leaves them out of a pair's
@@ -138,6 +139,11 @@ type Files struct {
 	// Merged is the files a stop on them and generated files alone merges,
 	// which the trial merge leaves out of a pair's conflicts too.
 	Merged MergedFiles
+	// Shared is the markdown files inside the manifest's claims.shared that
+	// a stop on them, merged files, and generated files alone merges by
+	// sections, Merged taking a path both match. A section merge can fail,
+	// so the trial merge still reports them in a pair's conflicts (ADR-0175).
+	Shared MergedFiles
 	// Fold runs after a clean rebase; nil folds nothing.
 	Fold FoldFunc
 }
@@ -145,11 +151,32 @@ type Files struct {
 // merges says whether path is one of the files flai merges.
 func (f Files) merges(path string) bool { return f.Merged.Match != nil && f.Merged.Match(path) }
 
-// resolves says whether a stop on path is flai's to resolve: a generated
-// file, or one it merges.
-func (f Files) resolves(path string) bool {
-	return f.merges(path) || slices.ContainsFunc(f.Generated, func(g GeneratedFile) bool { return g.Path == path })
+// mergesShared says whether path is a shared file flai merges by sections:
+// one Shared matches and Merged does not.
+func (f Files) mergesShared(path string) bool {
+	return !f.merges(path) && f.Shared.Match != nil && f.Shared.Match(path)
 }
+
+// merge writes path merged at the stop, with Merged when it matches and
+// with Shared otherwise.
+func (f Files) merge(path string) error {
+	if f.merges(path) {
+		return f.Merged.Merge(path)
+	}
+	return f.Shared.Merge(path)
+}
+
+// resolves says whether a stop on path is flai's to resolve: a generated
+// file, one it merges, or a shared file it merges by sections.
+func (f Files) resolves(path string) bool {
+	return f.merges(path) || f.mergesShared(path) || slices.ContainsFunc(f.Generated, func(g GeneratedFile) bool { return g.Path == path })
+}
+
+// Unresolved is paths less the generated files and the files flai merges,
+// as the trial merge and the conflict log report a stop's paths: a shared
+// markdown file stays among them, since its section merge can fail
+// (ADR-0175).
+func (f Files) Unresolved(paths []string) []string { return withoutResolved(paths, f) }
 
 // generatedPaths is the generated files' paths.
 func (f Files) generatedPaths() []string {
@@ -190,7 +217,8 @@ type SyncOptions struct {
 	// old conflict threads it closes.
 	Now time.Time
 	// Files is what the rebase resolves itself: the generated files, the
-	// files it merges, and the fold after a clean rebase.
+	// files it merges, the shared markdown files it merges by sections, and
+	// the fold after a clean rebase.
 	Files Files
 	// Fix runs the project's fix commands over the files the branch changes
 	// after the clean rebase and fold; nil fixes nothing.
@@ -236,8 +264,9 @@ type SyncResult struct {
 	// Regenerated is the generated files written again to continue the
 	// rebase, once for each stop on them alone.
 	Regenerated []string `json:"regenerated"`
-	// Merged is the files merged to continue the rebase, once for each stop
-	// on them (ADR-0126).
+	// Merged is the files merged to continue the rebase, the shared files
+	// merged by sections among them, once for each stop on them (ADR-0126,
+	// ADR-0175).
 	Merged []string `json:"merged"`
 	// Folded is what the fold after the clean rebase folded and committed on
 	// the branch (ADR-0126).
@@ -265,9 +294,11 @@ func (s SyncResult) RebaseInProgress() bool {
 // Sync rebases the story's branch onto the main branch inside its worktree,
 // without stashing (ADR-0069), as flai stream sync does. It refuses, touching
 // nothing, a worktree with uncommitted changes or with a rebase already in
-// progress. A stop whose conflicts are all generated files and files flai
-// merges it resolves and continues (ADR-0098, ADR-0126); on any other
-// conflict the rebase is left in progress for the agent. A refusal or a stop
+// progress. A stop whose conflicts are all generated files, files flai
+// merges, and markdown files inside the manifest's claims.shared it merges
+// by sections it resolves and continues (ADR-0098, ADR-0126, ADR-0175); on
+// any other conflict, or a shared file the section merge does not settle,
+// the rebase is left in progress for the agent. A refusal or a stop
 // is a result, with how to continue and abort; an error is a sync that could
 // not be tried, a rebase git failed without stopping, or a fold written but
 // not committed, or a lint fix written but not committed. After a clean
@@ -458,8 +489,9 @@ func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (conflic
 
 // Settled is what ContinueOverResolved did to a stopped rebase.
 type Settled struct {
-	// Merged is the files merged to continue the rebase, once for each stop
-	// on them (ADR-0126).
+	// Merged is the files merged to continue the rebase, the shared files
+	// merged by sections among them, once for each stop on them (ADR-0126,
+	// ADR-0175).
 	Merged []string
 	// Regenerated is the generated files written again to continue it, once
 	// for each stop (ADR-0098).
@@ -472,13 +504,15 @@ type Settled struct {
 
 // ContinueOverResolved continues the rebase of story stopped in the worktree
 // at dir, whichever worktree it is, for as long as every path of each stop is
-// one files resolves, a generated file or a file flai merges: it merges each
-// of those first (ADR-0126), then writes the generated files again as the
+// one files resolves, a generated file, a file flai merges, or a shared
+// markdown file it merges by sections: it merges each of those first
+// (ADR-0126, ADR-0175), then writes the generated files again as the
 // worktree is at that stop, so that they are written from the merged files,
 // stages them all, and continues (ADR-0098). It runs no fold. A stop it does
-// not resolve, or whose merge, writing, or staging fails, is left waiting,
-// logged to log. An error is a continue git failed without stopping; what it
-// settled before it is reported with it.
+// not resolve, or whose merge, writing, or staging fails, as a section merge
+// that does not settle a shared file does, is left waiting, logged to log
+// at warn with the error. An error is a continue git failed without
+// stopping; what it settled before it is reported with it.
 func ContinueOverResolved(r execx.Runner, dir string, files Files, log *slog.Logger, story string) (Settled, error) {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
@@ -495,7 +529,7 @@ func ContinueOverResolved(r execx.Runner, dir string, files Files, log *slog.Log
 			return wait()
 		}
 		for _, p := range merge {
-			if err := files.Merged.Merge(p); err != nil {
+			if err := files.merge(p); err != nil {
 				log.Warn("file not merged; the rebase is left for the agent", "component", "git", "story", story, "path", p, "err", err)
 				return wait()
 			}
@@ -527,16 +561,17 @@ func ContinueOverResolved(r execx.Runner, dir string, files Files, log *slog.Log
 	return s, nil
 }
 
-// resolvable returns, when every one of conflicts is a generated file or one
-// flai merges, those it merges and the generated files to write again: the
-// conflicting ones, and each written from a file it merges. It reports false
-// otherwise, and for a stop with no conflicts.
+// resolvable returns, when every one of conflicts is a generated file, one
+// flai merges, or a shared file it merges by sections, those it merges and
+// the generated files to write again: the conflicting ones, and each written
+// from a file it merges. It reports false otherwise, and for a stop with no
+// conflicts.
 func resolvable(conflicts []string, files Files) (merge []string, regen []GeneratedFile, ok bool) {
 	for _, c := range conflicts {
 		if !files.resolves(c) {
 			return nil, nil, false
 		}
-		if files.merges(c) {
+		if files.merges(c) || files.mergesShared(c) {
 			merge = append(merge, c)
 		}
 	}
@@ -568,7 +603,9 @@ func relPath(root, p string) string {
 // generated files and the files flai merges are left out of a pair's
 // conflicts: the rebase writes them again or merges them when it stops on
 // them alone, so a pair whose only conflicts are those merges cleanly as far
-// as the check is concerned (ADR-0098, ADR-0126). A pair's conflicts are the paths both
+// as the check is concerned (ADR-0098, ADR-0126). The shared markdown files
+// the rebase merges by sections are still a pair's conflicts: a section
+// merge can fail (ADR-0175). A pair's conflicts are the paths both
 // stories changed since each left the main branch: the trial merge's base is
 // where the two branches meet, which is the other branch's old base when it
 // is stale, so it also stops where main has since changed what the other
@@ -626,7 +663,8 @@ func checkSync(o SyncOptions, res *SyncResult) error {
 
 // withoutResolved is conflicts less the generated files and the files flai
 // merges, which sync and acceptance write again or merge when a rebase stops
-// on them alone, so no agent settles them (ADR-0098, ADR-0126).
+// on them alone, so no agent settles them (ADR-0098, ADR-0126). The shared
+// files merged by sections stay: that merge can fail (ADR-0175).
 func withoutResolved(conflicts []string, files Files) []string {
 	generated := files.generatedPaths()
 	out := []string{}
