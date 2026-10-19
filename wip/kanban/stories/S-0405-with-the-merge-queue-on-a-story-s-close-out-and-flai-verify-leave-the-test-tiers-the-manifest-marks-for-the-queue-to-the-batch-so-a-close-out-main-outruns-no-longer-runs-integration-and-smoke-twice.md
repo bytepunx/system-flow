@@ -3,15 +3,18 @@ id: S-0405
 type: story
 nature: improvement
 title: With the merge queue on, a story's close-out and flai verify leave the test tiers the manifest marks for the queue to the batch, so a close-out main outruns no longer runs integration and smoke twice
-status: ready
+status: in-progress
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:59:12Z
-updated: 2026-10-19T18:58:59Z
+updated: 2026-10-19T20:34:01Z
 transitions:
   - to: ready
     at: 2026-10-19T04:54:02Z
     by: alex
+  - to: in-progress
+    at: 2026-10-19T20:34:01Z
+    by: agent-S-0405
 tags: [cli]
 topics: [conventions, template]
 touches: [design/adrs, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/verify/manifest.go, flai/internal/verify/select.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/cmd/verify.go, flai/cmd/verify_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, scripts/close-out.sh, template/root/scripts/close-out.sh, design/conventions/work-management.md, template/root/design/conventions/work-management.md, template/template.yaml, template/CHANGELOG.md, system-flow.yaml, design/system/project-manifest.md, design/system/workflow.md, design/system/flai-cli.md, docs/operators/settings.md, docs/users/flai.md]
@@ -27,21 +30,21 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 19
+      seconds: 26
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 5
-          output: 107
-          cache_read: 454215
-          cache_write: 937
-          cost: 0.1141
+          input: 7
+          output: 155
+          cache_read: 743765
+          cache_write: 3570
+          cost: 0.1874
 forecast:
   duration: 41m
-  delivery: 2026-10-19T19:44:00Z
+  delivery: 2026-10-19T21:19:00Z
   basis: "Its own forecast of 41m; 2nd in the pull order with an in-progress limit of 5, behind S-0404."
   by: flai
-  at: 2026-10-19T18:58:59Z
+  at: 2026-10-19T20:33:45Z
 finalized:
   by: alex
   at: 2026-10-19T04:53:47Z

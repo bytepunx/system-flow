@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:28Z
-updated: 2026-10-19T18:58:59Z
+updated: 2026-10-19T20:33:45Z
 transitions: []
 tags: [cli]
 topics: [cli, planning, analysis]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-10-20T08:02:00Z
-  basis: "Its own forecast of 45m; 29th in the pull order with an in-progress limit of 5, behind S-0404, S-0405, S-0403, S-0402, S-0401, S-0400, S-0399, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425 and S-0428."
+  delivery: 2026-10-20T09:33:00Z
+  basis: "Its own forecast of 45m; 28th in the pull order with an in-progress limit of 5, behind S-0404, S-0405, S-0403, S-0402, S-0401, S-0400, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425 and S-0428."
   by: flai
-  at: 2026-10-19T18:58:59Z
+  at: 2026-10-19T20:33:45Z
 ---
 # S-0429 flai digest harvest lists what the archive and the threads hold since a date, and a one-off seed fills the digest from the operator's answers and the closed issues so there is something to prime with
 
