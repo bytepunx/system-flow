@@ -17,6 +17,11 @@
 # (which scripts/check.sh in smoke and TestMonorepoIsClean in integration read
 # to scope themselves, ADR-0085). --record-issues records the check's findings
 # outside the story in design/issues, which the commit step commits (S-0249).
+# While the merge queue can batch for the project (the merge-queue host action
+# on for it in the configuration flai reads, which scripts/flai.sh sets to
+# .flai-cache/config.json, accept_reviews on, acceptance local), flai verify
+# leaves the tiers marked queue: true, here integration and smoke, to the
+# queue's batch, which runs them, and lists each as queued (ADR-0174).
 set -eu
 . "$(dirname "$0")/env.sh"
 cd "$ROOT"

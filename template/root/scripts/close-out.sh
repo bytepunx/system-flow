@@ -16,6 +16,10 @@
 # --record-issues records the check's findings outside the story in
 # design/issues, which the commit step commits. Add this project's other
 # checks as tiers in system-flow.yaml's tests, not as steps here.
+# While the merge queue can batch for the project (the merge-queue host action
+# on for it, accept_reviews on, acceptance local), flai verify leaves the tiers
+# marked queue: true to the queue's batch, which runs them, and lists each as
+# queued.
 set -eu
 cd "$(dirname "$0")/.."
 

@@ -87,7 +87,7 @@ tests:
     paths: ["**/*.md", "!**/node_modules/**", "!**/testdata/**", "!bin/**", "!flaiover/build/**", "!**/.svelte-kit/**", "!.flai-cache/**"]
     format: plain
     all_command: [scripts/lint-md.sh]
-    fix_command: [scripts/lint-md.sh, --fix, "{files}"]
+    fix_command: [scripts/lint-md.sh, "--fix", "{files}"]
   - name: template
     command: [scripts/template-test.sh]
     paths: ["template/**"]
@@ -106,11 +106,13 @@ tests:
     format: go-test-json
     all_only: true
     covers: [go-test]
+    queue: true
   - name: smoke
     command: [scripts/smoke.sh]
     paths: ["flai/**"]
     format: plain
     all_only: true
+    queue: true
 orchestration:
   permissions:
     accept_reviews: true
