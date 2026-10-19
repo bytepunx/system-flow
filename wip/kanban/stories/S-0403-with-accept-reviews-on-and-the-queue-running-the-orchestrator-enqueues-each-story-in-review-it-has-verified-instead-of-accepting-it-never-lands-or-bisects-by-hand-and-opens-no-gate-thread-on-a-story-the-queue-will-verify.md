@@ -3,15 +3,18 @@ id: S-0403
 type: story
 nature: feature
 title: With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify
-status: ready
+status: in-progress
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:45Z
-updated: 2026-10-19T21:52:13Z
+updated: 2026-10-19T23:41:28Z
 transitions:
   - to: ready
     at: 2026-10-19T04:53:57Z
     by: alex
+  - to: in-progress
+    at: 2026-10-19T23:41:28Z
+    by: agent-S-0403
 tags: [cli]
 topics: [orchestration, conventions, template]
 touches: [flai/internal/mcpserver/queue.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/writes.go, flai/internal/guard/orchestrate_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/root/.claude/agents/orchestrator.md, ".claude/agents/orchestrator.md", template/template.yaml, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md]
@@ -38,10 +41,10 @@ usage:
           cost: 0.1141
 forecast:
   duration: 42m
-  delivery: 2026-10-19T22:38:00Z
-  basis: "Its own forecast of 42m; 2nd in the pull order with an in-progress limit of 5, behind S-0401 and S-0404."
+  delivery: 2026-10-20T00:27:00Z
+  basis: "Its own forecast of 42m; 2nd in the pull order with an in-progress limit of 5, behind S-0404."
   by: flai
-  at: 2026-10-19T21:52:13Z
+  at: 2026-10-19T23:41:20Z
 finalized:
   by: alex
   at: 2026-10-19T04:53:39Z

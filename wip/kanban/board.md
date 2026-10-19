@@ -7,8 +7,6 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0404
-  - S-0403
   - S-0402
 ---
 

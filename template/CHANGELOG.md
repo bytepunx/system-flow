@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.103 - 2026-10-19
+
+- S-0405 With the merge queue on, a story's close-out and flai verify leave the test tiers the manifest marks for the queue to the batch, so a close-out main outruns no longer runs integration and smoke twice (patch).
+
 ## 1.0.102 - 2026-10-19
 
 - S-0405 While the merge queue can batch, a story's close-out and flai verify leave the test tiers the manifest marks queue to the batch, which runs them (patch).
