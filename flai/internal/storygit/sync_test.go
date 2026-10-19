@@ -441,6 +441,47 @@ func TestSyncLeavesAStopWhoseMergeFailsToTheAgent(t *testing.T) {
 	}
 }
 
+// ADR-0175: the stops a sync resolves are continued in any worktree, as the
+// merge queue's batch worktree continues a story's rebase stopped there: a
+// stop on files it merges and generated files alone is merged, written
+// again, and continued; a stop on any other path is left waiting with its
+// conflicts.
+func TestContinueOverResolvedContinuesARebaseInAnyWorktree(t *testing.T) {
+	r, dir := execx.Runner(execx.System{}), gitRepo(t)
+	commitFiles(t, dir, "docs: base", "docs/m.md")
+	git(t, dir, "branch", "topic")
+	commitFiles(t, dir, "docs: main's", "docs/m.md", "a.md")
+	wt := filepath.Join(t.TempDir(), "elsewhere")
+	git(t, dir, "worktree", "add", "-q", "--detach", wt, "topic")
+	commitFiles(t, wt, "feat: ours", "docs/m.md")
+	commitFiles(t, wt, "feat: ours again", "a.md")
+	gen := GeneratedFile{Path: "docs/gen.md", Regenerate: func() error {
+		return os.WriteFile(filepath.Join(wt, "docs", "gen.md"), []byte("regenerated\n"), 0o644)
+	}, From: func(p string) bool { return p == "docs/m.md" }}
+	files := Files{Generated: []GeneratedFile{gen}, Merged: mergedFiles(t, wt)}
+	if _, err := r.Run(wt, "git", "rebase", "main"); err == nil {
+		t.Fatal("the rebase did not stop")
+	}
+
+	s, err := ContinueOverResolved(r, wt, files, nil, "S-0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := Settled{Merged: []string{"docs/m.md"}, Regenerated: []string{"docs/gen.md"}, Waits: true, Conflicts: []string{"a.md"}}
+	if !reflect.DeepEqual(s, want) {
+		t.Fatalf("settled %+v, want %+v", s, want)
+	}
+	if !RebaseInProgress(r, wt) {
+		t.Fatal("the stop on a.md is not left waiting")
+	}
+	if got, _ := r.Run(wt, "git", "show", "HEAD:docs/m.md"); got+"\n" != "docs: base\ndocs: main's\nfeat: ours\n" {
+		t.Errorf("docs/m.md is not merged on the commit continued: %q", got)
+	}
+	if got, _ := r.Run(wt, "git", "show", "HEAD:docs/gen.md"); got != "regenerated" {
+		t.Errorf("docs/gen.md is not written again on the commit continued: %q", got)
+	}
+}
+
 // ADR-0126: after a clean rebase the fold runs with the base branch; what it
 // folds is committed on the branch with the generated files written again,
 // a deleted file included.

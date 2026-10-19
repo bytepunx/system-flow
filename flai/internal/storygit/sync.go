@@ -446,36 +446,69 @@ func stopped(o SyncOptions, res SyncResult, why string, conflicts []string) Sync
 }
 
 // continueOverGenerated continues the rebase stopped in the story's worktree
-// at path for as long as every path of each stop is a generated file or a
-// file flai merges: it merges each of those first (ADR-0126), then writes
-// the generated files again as the worktree is at that stop, so that they
-// are written from the merged files, stages them all, and continues
-// (ADR-0098). It adds each file it merges to res.Merged and each it writes
-// again to res.Regenerated. It reports whether the rebase is left waiting
-// for the agent, and that stop's conflicts.
+// at path with ContinueOverResolved, adding each file it merges to res.Merged
+// and each it writes again to res.Regenerated. It reports whether the rebase
+// is left waiting for the agent, and that stop's conflicts.
 func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (conflicts []string, waits bool, err error) {
-	id := o.Story.ID
-	for RebaseInProgress(o.Runner, path) {
-		conflicts = Conflicts(o.Runner, path)
-		merge, regen, ok := resolvable(conflicts, o.Files)
+	s, err := ContinueOverResolved(o.Runner, path, o.Files, o.Log, o.Story.ID)
+	res.Merged = append(res.Merged, s.Merged...)
+	res.Regenerated = append(res.Regenerated, s.Regenerated...)
+	return s.Conflicts, s.Waits, err
+}
+
+// Settled is what ContinueOverResolved did to a stopped rebase.
+type Settled struct {
+	// Merged is the files merged to continue the rebase, once for each stop
+	// on them (ADR-0126).
+	Merged []string
+	// Regenerated is the generated files written again to continue it, once
+	// for each stop (ADR-0098).
+	Regenerated []string
+	// Waits is whether a stop is left waiting, which the files do not
+	// resolve; Conflicts is that stop's conflicting paths.
+	Waits     bool
+	Conflicts []string
+}
+
+// ContinueOverResolved continues the rebase of story stopped in the worktree
+// at dir, whichever worktree it is, for as long as every path of each stop is
+// one files resolves, a generated file or a file flai merges: it merges each
+// of those first (ADR-0126), then writes the generated files again as the
+// worktree is at that stop, so that they are written from the merged files,
+// stages them all, and continues (ADR-0098). It runs no fold. A stop it does
+// not resolve, or whose merge, writing, or staging fails, is left waiting,
+// logged to log. An error is a continue git failed without stopping; what it
+// settled before it is reported with it.
+func ContinueOverResolved(r execx.Runner, dir string, files Files, log *slog.Logger, story string) (Settled, error) {
+	if log == nil {
+		log = slog.New(slog.DiscardHandler)
+	}
+	var s Settled
+	for RebaseInProgress(r, dir) {
+		conflicts := Conflicts(r, dir)
+		wait := func() (Settled, error) {
+			s.Waits, s.Conflicts = true, conflicts
+			return s, nil
+		}
+		merge, regen, ok := resolvable(conflicts, files)
 		if !ok {
-			return conflicts, true, nil
+			return wait()
 		}
 		for _, p := range merge {
-			if err := o.Files.Merged.Merge(p); err != nil {
-				o.Log.Warn("file not merged; the rebase is left for the agent", "component", "git", "story", id, "path", p, "err", err)
-				return conflicts, true, nil
+			if err := files.Merged.Merge(p); err != nil {
+				log.Warn("file not merged; the rebase is left for the agent", "component", "git", "story", story, "path", p, "err", err)
+				return wait()
 			}
-			res.Merged = append(res.Merged, p)
-			o.Log.Info("file merged to continue the rebase", "component", "git", "story", id, "path", p)
+			s.Merged = append(s.Merged, p)
+			log.Info("file merged to continue the rebase", "component", "git", "story", story, "path", p)
 		}
 		for _, f := range regen {
 			if err := f.Regenerate(); err != nil {
-				o.Log.Warn("generated file not regenerated; the rebase is left for the agent", "component", "git", "story", id, "path", f.Path, "err", err)
-				return conflicts, true, nil
+				log.Warn("generated file not regenerated; the rebase is left for the agent", "component", "git", "story", story, "path", f.Path, "err", err)
+				return wait()
 			}
-			res.Regenerated = append(res.Regenerated, f.Path)
-			o.Log.Info("generated file regenerated to continue the rebase", "component", "git", "story", id, "path", f.Path)
+			s.Regenerated = append(s.Regenerated, f.Path)
+			log.Info("generated file regenerated to continue the rebase", "component", "git", "story", story, "path", f.Path)
 		}
 		staged := slices.Clone(conflicts)
 		for _, f := range regen {
@@ -483,15 +516,15 @@ func continueOverGenerated(o SyncOptions, path string, res *SyncResult) (conflic
 				staged = append(staged, f.Path)
 			}
 		}
-		if _, err := o.Runner.Run(path, "git", append([]string{"add", "--"}, staged...)...); err != nil {
-			o.Log.Warn("resolved files not staged; the rebase is left for the agent", "component", "git", "story", id, "paths", staged, "err", err)
-			return conflicts, true, nil
+		if _, err := r.Run(dir, "git", append([]string{"add", "--"}, staged...)...); err != nil {
+			log.Warn("resolved files not staged; the rebase is left for the agent", "component", "git", "story", story, "paths", staged, "err", err)
+			return wait()
 		}
-		if err := ContinueRebase(o.Runner, path); err != nil && !RebaseInProgress(o.Runner, path) {
-			return nil, false, err
+		if err := ContinueRebase(r, dir); err != nil && !RebaseInProgress(r, dir) {
+			return s, err
 		}
 	}
-	return nil, false, nil
+	return s, nil
 }
 
 // resolvable returns, when every one of conflicts is a generated file or one

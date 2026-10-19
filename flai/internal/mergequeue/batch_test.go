@@ -1,9 +1,12 @@
 package mergequeue
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -128,13 +132,20 @@ func runGit(t *testing.T, dir string, args ...string) string {
 
 // readyStory makes a story in review at review whose branch, in its own
 // worktree, commits content to rel, with a passing flai verify result at its
-// head, enqueued; it answers the story and its head.
+// head; it answers the story and its head.
 func readyStory(t *testing.T, repo *workitem.Repo, title string, review time.Time, rel, content string) (string, string) {
+	t.Helper()
+	return readyStoryChanging(t, repo, title, review, func(_, wt string) { writeFile(t, wt, rel, content) })
+}
+
+// readyStoryChanging is readyStory whose branch commits what change writes
+// in its worktree wt for the story id.
+func readyStoryChanging(t *testing.T, repo *workitem.Repo, title string, review time.Time, change func(id, wt string)) (string, string) {
 	t.Helper()
 	s, _ := story(t, repo, title, []bool{true}, review)
 	wt := repo.WorktreePath(s.ID)
 	runGit(t, repo.MainRoot, "worktree", "add", "-q", "-b", storygit.Branch(s.ID), wt, "main")
-	writeFile(t, wt, rel, content)
+	change(s.ID, wt)
 	runGit(t, wt, "add", "-A")
 	runGit(t, wt, "commit", "-q", "-m", s.ID+"'s change")
 	head := runGit(t, wt, "rev-parse", "HEAD")
@@ -335,6 +346,142 @@ func TestABatchThatLeavesEveryStoryOutIsRemoved(t *testing.T) {
 		t.Error("the same story was batched again at the same main and head")
 	}
 	untouched(t, repo, map[string]string{a: headA})
+}
+
+// adrIndexPath is the ADR index the stories add rows to.
+const adrIndexPath = "design/adrs/README.md"
+
+// adrIndex is an ADR index whose table holds the rows of the ADRs numbered
+// in ns.
+func adrIndex(ns ...int) string {
+	var rows strings.Builder
+	for _, n := range ns {
+		fmt.Fprintf(&rows, "| [%04d](%04d-decision-%d.md) | Decision %d | accepted |\n", n, n, n, n)
+	}
+	return "# Architecture Decision Records\n\nOne decision per file.\n\n| ADR | Title | Status |\n|-----|-------|--------|\n" + rows.String()
+}
+
+// sharedRecords commits on main issue I-0001, the issue summary written from
+// it, and an ADR index of ADRs 1 and 2, the files each story then changes.
+func sharedRecords(t *testing.T, repo *workitem.Repo) {
+	t.Helper()
+	if _, err := issues.New(repo, issues.NewOptions{Title: "Shared friction", Class: "efficiency", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := issues.WriteSummary(repo, t0); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, repo.MainRoot, adrIndexPath, adrIndex(1, 2))
+	runGit(t, repo.MainRoot, "add", "-A")
+	runGit(t, repo.MainRoot, "commit", "-q", "-m", "docs: issues and ADRs")
+}
+
+// recording is a story's change that bumps I-0001 for the story at at,
+// writes the issue summary again, and adds ADR adr to the index, as a story
+// that records an issue and an ADR commits them.
+func recording(t *testing.T, repo *workitem.Repo, at time.Time, adr int) func(id, wt string) {
+	return func(id, _ string) {
+		wt := issues.RepoFor(repo, id)
+		is, err := issues.Get(wt, "I-0001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := issues.Bump(is, id, "", "Again in "+id+".", at); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := issues.WriteSummary(wt, at); err != nil {
+			t.Fatal(err)
+		}
+		writeFile(t, wt.Root, adrIndexPath, adrIndex(1, 2, adr))
+	}
+}
+
+// S-0401 criterion 1: two stories that both bump one issue, write the issue
+// summary again, and add a row to the ADR index stop the second's rebase
+// onto the batch on all three; the batch merges the issue and the index,
+// writes the summary again from the merge, and continues, as flai stream
+// sync does, so both stories stay in the batch (ADR-0175).
+func TestTheBatchMergesTheIssuesTheSummaryAndTheADRIndexItStopsOn(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	sharedRecords(t, repo)
+	a, headA := readyStoryChanging(t, repo, "A", t0.Add(time.Hour), recording(t, repo, t0.Add(time.Hour), 3))
+	b, headB := readyStoryChanging(t, repo, "B", t0.Add(2*time.Hour), recording(t, repo, t0.Add(2*time.Hour), 4))
+	enqueue(t, repo, a, b)
+	var logged bytes.Buffer
+	d := deps(proc, t1)
+	d.Log = slog.New(slog.NewTextHandler(&logged, nil))
+
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{a, b}) || len(st.Batch.LeftOut) != 0 || len(st.Outcomes) != 0 || st.Batch.Step != StepVerified {
+		t.Fatalf("batch %+v, outcomes %+v; want both stories kept", st.Batch, st.Outcomes)
+	}
+	if got, want := subjects(t, repo, st.Batch.Branch), []string{b + "'s change", a + "'s change", "docs: issues and ADRs", "init"}; !slices.Equal(got, want) {
+		t.Errorf("the batch's branch has %v, want %v", got, want)
+	}
+	show := func(rel string) string { return runGit(t, repo.MainRoot, "show", st.Batch.Branch+":"+rel) + "\n" }
+	if got, want := show(adrIndexPath), adrIndex(1, 2, 3, 4); got != want {
+		t.Errorf("the ADR index on the batch:\n%s\nwant:\n%s", got, want)
+	}
+	issue := show("design/issues/I-0001-shared-friction.md")
+	for _, says := range []string{"count: 3", "Again in " + a + ".", "Again in " + b + "."} {
+		if !strings.Contains(issue, says) {
+			t.Errorf("I-0001 on the batch does not say %q:\n%s", says, issue)
+		}
+	}
+	summary := show("design/issues/summary.md")
+	if !strings.Contains(summary, "[I-0001]") || strings.Contains(summary, "<<<<<<<") || !strings.Contains(summary, "| 3 |") {
+		t.Errorf("the summary on the batch is not written from the merged issue:\n%s", summary)
+	}
+	wt := filepath.Join(repo.MainRoot, filepath.FromSlash(st.Batch.Worktree))
+	if storygit.RebaseInProgress(execx.System{}, wt) || runGit(t, wt, "status", "--porcelain") != "" {
+		t.Error("the batch's worktree is left with a rebase or changes")
+	}
+	for _, says := range []string{"component=mergequeue", "story=" + b, adrIndexPath, "design/issues/I-0001-shared-friction.md", "regenerated=[design/issues/summary.md]"} {
+		if !strings.Contains(logged.String(), says) {
+			t.Errorf("the log does not say %q:\n%s", says, logged.String())
+		}
+	}
+	untouched(t, repo, map[string]string{a: headA, b: headB})
+}
+
+// S-0401 criterion 1: a stop on a path the merge steps do not settle beside
+// one they do is still aborted and the story left out, with the stop's
+// paths, and the batch's worktree is left clean on its branch.
+func TestTheBatchLeavesOutAStoryWhoseStopTheMergeStepsDoNotSettle(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	sharedRecords(t, repo)
+	both := func(adr int, line string) func(id, wt string) {
+		record := recording(t, repo, t0.Add(time.Duration(adr)*time.Hour), adr)
+		return func(id, wt string) {
+			record(id, wt)
+			writeFile(t, wt, "x.txt", "one\n"+line+"\nthree\n")
+		}
+	}
+	a, headA := readyStoryChanging(t, repo, "A", t0.Add(time.Hour), both(3, "two by A"))
+	b, headB := readyStoryChanging(t, repo, "B", t0.Add(2*time.Hour), both(4, "two by B"))
+	enqueue(t, repo, a, b)
+
+	_, st := runBatch(t, deps(proc, t1), repo)
+	if st.Batch == nil || !slices.Equal(st.Batch.Stories, []string{a}) || len(st.Batch.LeftOut) != 1 || st.Batch.LeftOut[0].Story != b {
+		t.Fatalf("batch %+v, want %s alone with %s left out", st.Batch, a, b)
+	}
+	if got := st.Batch.LeftOut[0].Paths; !slices.Contains(got, "x.txt") {
+		t.Errorf("left out on %v, want x.txt among them", got)
+	}
+	if len(st.Outcomes) != 1 || st.Outcomes[0].Outcome != OutcomeLeftOut || !strings.Contains(st.Outcomes[0].Detail, "x.txt") {
+		t.Errorf("outcomes %+v, want %s left out on x.txt", st.Outcomes, b)
+	}
+	if got, want := subjects(t, repo, st.Batch.Branch), []string{a + "'s change", "docs: issues and ADRs", "init"}; !slices.Equal(got, want) {
+		t.Errorf("the batch's branch has %v, want %v", got, want)
+	}
+	wt := filepath.Join(repo.MainRoot, filepath.FromSlash(st.Batch.Worktree))
+	if storygit.RebaseInProgress(execx.System{}, wt) || runGit(t, wt, "status", "--porcelain") != "" {
+		t.Error("the batch's worktree is left with a rebase or changes")
+	}
+	if got := runGit(t, wt, "rev-parse", "--abbrev-ref", "HEAD"); got != st.Batch.Branch {
+		t.Errorf("the batch's worktree is on %s, want %s", got, st.Batch.Branch)
+	}
+	untouched(t, repo, map[string]string{a: headA, b: headB})
 }
 
 // S-0399 criterion 3: a tier that fails fails the batch, its result naming

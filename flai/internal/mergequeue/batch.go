@@ -13,6 +13,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -101,10 +102,15 @@ type Deps struct {
 // It removes the last batch's worktree and branch, then builds the batch in
 // its own worktree, WorktreeName, on its own branch, from the main branch's
 // head, rebasing a copy of each story's verified head onto the batch in
-// turn; the stories' own branches and worktrees are not touched. A story
-// whose rebase stops is left out, its conflicting paths on the batch's
-// LeftOut and OutcomeLeftOut, naming the stop and the paths, its outcome, and
-// the next goes on. With every story left out the
+// turn; the stories' own branches and worktrees are not touched. A rebase
+// that stops runs the steps flai stream sync runs on a stop, in the batch's
+// worktree: it merges the issue files and the ADR index, writes the issue
+// summary again, and continues, and a story whose every stop they settle
+// stays in the batch; the fold after a clean rebase is left to the landing's
+// acceptance (ADR-0175). A story whose rebase stops where they do not settle
+// it is left out, its conflicting paths on the batch's LeftOut and
+// OutcomeLeftOut, naming the stop and the paths, its outcome, and the next
+// goes on. With every story left out the
 // batch is removed and the state left with none. Otherwise the batch is
 // verified once with d.Verify, and its result recorded; a batch dropped
 // meanwhile keeps its result and stays dropped. Each step is written to the
@@ -289,8 +295,11 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 // rebase rebases a copy of e's verified head, the commits it has beyond its
 // merge base with the main branch, onto the batch's head onto in the
 // batch's worktree, and moves the batch's branch to it: the new head. A
-// rebase that stops is aborted, and answers the story's outcome, left out,
-// and the paths it conflicted on; the batch's branch stays at onto. The
+// rebase that stops is continued over the stops the issue files, the ADR
+// index, and the issue summary settle, as flai stream sync continues it
+// (ADR-0175), and one they settle is a rebase that finished. A stop they do
+// not settle is aborted, and answers the story's outcome, left out, and the
+// paths that stop conflicted on; the batch's branch stays at onto. The
 // story's own branch never moves. An error is a worktree git could not put
 // back on the batch's branch.
 func (b *build) rebase(e Entry, onto string) (string, *Outcome, []string, error) {
@@ -302,7 +311,15 @@ func (b *build) rebase(e Entry, onto string) (string, *Outcome, []string, error)
 	// update-refs off, so that no branch at a commit rebased, the story's
 	// own among them, is moved with it
 	_, err = r.Run(wt, "git", "-c", "rebase.updateRefs=false", "rebase", "--quiet", "--onto", onto, strings.TrimSpace(from), e.Head)
-	if err == nil {
+	var settled storygit.Settled
+	if err != nil && storygit.RebaseInProgress(r, wt) {
+		settled, err = storygit.ContinueOverResolved(r, wt, issues.FilesIn(b.repo, wt, r, b.d.Now), b.d.Log, e.Story)
+	}
+	if err == nil && !settled.Waits {
+		if len(settled.Merged)+len(settled.Regenerated) > 0 {
+			b.d.Log.Info("merge queue batch settled a story's stops by merging and writing files again", "component", "mergequeue",
+				"batch", b.id, "story", e.Story, "merged", settled.Merged, "regenerated", settled.Regenerated)
+		}
 		if _, err := r.Run(wt, "git", "checkout", "--quiet", "-B", b.branch); err != nil {
 			return "", nil, nil, fmt.Errorf("build merge queue batch %s: move %s to %s rebased: %w; remove the worktree %s, and the queue builds the batch again", b.id, b.branch, e.Story, err, b.path)
 		}
@@ -314,8 +331,8 @@ func (b *build) rebase(e Entry, onto string) (string, *Outcome, []string, error)
 	}
 	var out *Outcome
 	var paths []string
-	if storygit.RebaseInProgress(r, wt) {
-		paths = storygit.Conflicts(r, wt)
+	if settled.Waits {
+		paths = settled.Conflicts
 		if _, aerr := r.Run(wt, "git", "rebase", "--abort"); aerr != nil {
 			return "", nil, nil, fmt.Errorf("build merge queue batch %s: abort the rebase of %s that stopped: %w; run git rebase --abort in %s, and the queue builds the batch again", b.id, e.Story, aerr, b.path)
 		}

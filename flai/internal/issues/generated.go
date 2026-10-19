@@ -19,7 +19,12 @@ import (
 // again in its worktree (ADR-0098): the summary alone today, written from
 // the issue files at now's time.
 func Generated(r *workitem.Repo, story string, now func() time.Time) []storygit.GeneratedFile {
-	wt := RepoFor(r, story)
+	return generatedIn(r, RepoFor(r, story), now)
+}
+
+// generatedIn is Generated written in wt, the project r checked out in the
+// worktree whose rebase stopped.
+func generatedIn(r, wt *workitem.Repo, now func() time.Time) []storygit.GeneratedFile {
 	return []storygit.GeneratedFile{{
 		Path: SummaryPath(r),
 		Regenerate: func() error {
@@ -36,10 +41,19 @@ func Generated(r *workitem.Repo, story string, now func() time.Time) []storygit.
 // fold of the issues the branch added into the base branch's open issues of
 // the same title (ADR-0098, ADR-0126, ADR-0157).
 func SyncFiles(r *workitem.Repo, story string, run execx.Runner, now func() time.Time) storygit.Files {
-	wt := RepoFor(r, story)
+	return FilesIn(r, RepoFor(r, story).Root, run, now)
+}
+
+// FilesIn is what a rebase stopped in the worktree at root, any checkout of
+// r's repository, resolves itself there, as SyncFiles is for a story's
+// worktree: the merge queue's batch worktree among them (ADR-0175).
+func FilesIn(r *workitem.Repo, root string, run execx.Runner, now func() time.Time) storygit.Files {
+	copied := *r
+	copied.Root = root
+	wt := &copied
 	index := adrindex.Path(r)
 	return storygit.Files{
-		Generated: Generated(r, story, now),
+		Generated: generatedIn(r, wt, now),
 		Merged: storygit.MergedFiles{
 			Match: func(p string) bool { return p == index || isIssuePath(r, p) },
 			Merge: func(p string) error {
