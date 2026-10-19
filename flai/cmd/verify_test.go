@@ -663,6 +663,122 @@ func TestVerifyFreshRunsEveryTier(t *testing.T) {
 	}
 }
 
+// queueFixture is verifyFixture whose worktree's manifest adds two tiers
+// marked queue for the files under docs/, integration, which covers unit,
+// and smoke; whose main checkout's manifest has accept_reviews as given; and
+// whose configuration turns the merge-queue host action on for the roots
+// given. It answers the main checkout.
+func queueFixture(t *testing.T, acceptReviews bool, roots func(root string) []string) string {
+	t.Helper()
+	root, worktree := verifyFixture(t, "exit 0")
+	tiers := "  - name: integration\n    command: [sh, -c, 'exit 0']\n    paths: [\"docs/**\"]\n    covers: [unit]\n    queue: true\n" +
+		"  - name: smoke\n    command: [sh, -c, 'exit 0']\n    paths: [\"docs/**\"]\n    queue: true\n"
+	appendFile(t, filepath.Join(worktree, "system-flow.yaml"), tiers)
+	if acceptReviews {
+		appendFile(t, filepath.Join(root, "system-flow.yaml"), "orchestration:\n  permissions:\n    accept_reviews: true\n")
+	}
+	cfg, err := json.Marshal(map[string]any{"host_actions": map[string][]string{"merge-queue": roots(root)}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(os.Getenv("FLAI_CONFIG"), cfg, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+// appendFile appends text to the file at path.
+func appendFile(t *testing.T, path, text string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, append(data, text...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// ADR-0174: while the merge queue can batch for the project, flai verify
+// leaves the tiers marked queue to it, naming each in its step and on the
+// last line, and passes; unit, which a queue tier covers, runs. With --all,
+// or with the host action or accept_reviews off, every tier runs as before.
+func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
+	this := func(root string) []string { return []string{root} }
+	root := queueFixture(t, true, this)
+	out, errOut, code := runVerify(t, root, verifyGit{}, "verify", "S-004")
+	if code != 0 {
+		t.Fatalf("exit %d\n%s%s", code, out, errOut)
+	}
+	for _, want := range []string{"\npassed tier unit (", "\nqueued tier integration: left to the merge queue\n", "\nqueued tier smoke: left to the merge queue\n"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("text lacks %q:\n%s", want, out)
+		}
+	}
+	if got := lastLine(out); got != "verify: S-004 passed every step, integration and smoke left to the merge queue" {
+		t.Errorf("last line %q:\n%s", got, out)
+	}
+	queued := "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:passed,tier integration:queued,tier smoke:queued"
+	for _, args := range [][]string{{"S-004"}, {"S-004", "--last"}} {
+		rep := verifyReport(t, root, 0, args...)
+		if got := stepStates(rep); got != queued || !rep.Passed || rep.Steps[4].CoveredBy != "" {
+			t.Errorf("verify %v: steps %s, want %s; unit %+v", args, got, queued, rep.Steps[4])
+		}
+	}
+
+	ran := "rebase:passed,sync:passed,narrative:passed,check:passed,tier unit:skipped,tier integration:passed,tier smoke:passed"
+	out, errOut, code = runVerify(t, root, verifyGit{}, "verify", "S-004", "--all")
+	if code != 0 || strings.Contains(out, "merge queue") || lastLine(out) != "verify: S-004 passed every step" {
+		t.Errorf("--all: exit %d, want 0 with every tier run\n%s%s", code, out, errOut)
+	}
+	if rep := verifyReport(t, root, 0, "S-004", "--all"); stepStates(rep) != ran {
+		t.Errorf("--all: steps %s, want %s", stepStates(rep), ran)
+	}
+
+	for _, tc := range []struct {
+		name          string
+		acceptReviews bool
+		roots         func(root string) []string
+	}{
+		{"the host action off", true, func(string) []string { return nil }},
+		{"the host action on for another project", true, func(string) []string { return []string{"/elsewhere"} }},
+		{"accept_reviews off", false, this},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := queueFixture(t, tc.acceptReviews, tc.roots)
+			if rep := verifyReport(t, root, 0, "S-004"); stepStates(rep) != ran {
+				t.Errorf("steps %s, want %s", stepStates(rep), ran)
+			}
+		})
+	}
+}
+
+// ADR-0174: the last line names the tiers left to the merge queue before
+// what it reused, which the close-out reads from the line's end.
+func TestVerifyOutcomeNamesTheQueuedTiersBeforeTheReused(t *testing.T) {
+	from := time.Date(2026, 9, 17, 1, 0, 0, 0, time.UTC)
+	tier := func(name string, state verify.State) verify.Step {
+		s := verify.Step{Name: name, Tier: true, State: state}
+		if state == verify.Reused {
+			s.ReusedFrom = &from
+		}
+		return s
+	}
+	for _, tc := range []struct {
+		steps []verify.Step
+		want  string
+	}{
+		{[]verify.Step{tier("unit", verify.Passed)}, "verify: S-004 passed every step"},
+		{[]verify.Step{tier("unit", verify.Passed), tier("smoke", verify.Queued)}, "verify: S-004 passed every step, smoke left to the merge queue"},
+		{[]verify.Step{tier("unit", verify.Reused), tier("a", verify.Queued), tier("b", verify.Queued), tier("c", verify.Queued)},
+			"verify: S-004 passed every step, a, b and c left to the merge queue (reused 1 tier from 2026-09-17T01:00:00Z)"},
+	} {
+		if got := verifyOutcome(verify.Report{Story: "S-004", Passed: true, Steps: tc.steps}, false); got != tc.want {
+			t.Errorf("outcome %q, want %q", got, tc.want)
+		}
+	}
+}
+
 // taggedGit is verifyGit in a project whose history holds the flai release
 // tags given.
 type taggedGit struct {

@@ -236,3 +236,61 @@ func TestVerifySaysTheFlaiIsOlderThanTheProjectWhenTheTiersRefuse(t *testing.T) 
 		}
 	}
 }
+
+// ADR-0174: while the host says the merge queue can batch for the project,
+// asked with its main checkout's root at each call, verify leaves the tiers
+// marked queue to it as queued steps and passes; with all, or while the queue
+// cannot batch, it runs them, and a run that left them reuses nothing for
+// one that runs them, while two that run them alike do.
+func TestVerifyLeavesTheQueueTiersToTheMergeQueueWhileItCanBatch(t *testing.T) {
+	batches, asked := true, ""
+	f, change, _ := verifyFixtureWith(t, func(o *Options) {
+		o.QueueBatches = func(root string) bool {
+			asked = root
+			return batches
+		}
+	})
+	manifest := testManifest + "  - name: late\n    command: [sh, -c, \"exit 0\"]\n    paths: [\"ok/**\"]\n    queue: true\n"
+	if err := os.WriteFile(filepath.Join(f.repo.WorktreePath(f.story.ID), "system-flow.yaml"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	change("ok/a.txt")
+	for _, c := range []struct {
+		name    string
+		batches bool
+		args    map[string]any
+		want    string
+	}{
+		{"the queue batches", true, map[string]any{"story": f.story.ID}, "ok=passed late=queued"},
+		{"all", true, map[string]any{"story": f.story.ID, "all": true}, "ok=passed late=passed"},
+		{"the queue cannot batch", false, map[string]any{"story": f.story.ID}, "ok=reused late=reused"},
+	} {
+		batches, asked = c.batches, ""
+		out, failed := f.call(t, "verify", c.args)
+		if failed != "" {
+			t.Fatalf("%s: %s", c.name, failed)
+		}
+		states, _ := steps(t, out)
+		if want := "rebase=passed sync=passed narrative=passed check=passed " + c.want; out["passed"] != true || states != want {
+			t.Errorf("%s: passed %v, steps %s, want %s", c.name, out["passed"], states, want)
+		}
+		if c.args["all"] == nil && asked != projectRoot(f.repo) {
+			t.Errorf("%s: asked for %q, want the project's root %q", c.name, asked, projectRoot(f.repo))
+		}
+	}
+
+	res, err := f.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range res.Tools {
+		if tool.Name != "verify" {
+			continue
+		}
+		for _, want := range []string{"marks queue", "queued, left to the merge queue", "all leaves no tier to the queue"} {
+			if !strings.Contains(tool.Description, want) {
+				t.Errorf("the description does not say %q: %s", want, tool.Description)
+			}
+		}
+	}
+}

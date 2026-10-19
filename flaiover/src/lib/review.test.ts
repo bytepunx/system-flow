@@ -222,6 +222,22 @@ describe('verifyView (S-0270)', () => {
 		]);
 	});
 
+	it('shows a tier left to the merge queue as queued, with no duration (ADR-0174)', () => {
+		const v = verifyView({
+			...failing,
+			passed: true,
+			stopped_at: undefined,
+			steps: [
+				{ name: 'go-test', tier: true, state: 'passed', duration_ms: 12000, duration: '12s' },
+				{ name: 'smoke', tier: true, state: 'queued', duration_ms: 0 }
+			]
+		});
+		expect(v.rows.map((r) => [r.name, r.state, r.label, r.duration])).toEqual([
+			['go-test', 'passed', 'passed', '12s'],
+			['smoke', 'queued', 'left to the merge queue', '']
+		]);
+	});
+
 	it('says a passing report passed every step, with no findings and no notes', () => {
 		const v = verifyView({
 			...failing,

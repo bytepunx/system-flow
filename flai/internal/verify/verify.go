@@ -86,13 +86,16 @@ type State string
 
 // The states of a tier in a run. Reused is a story's tier that passed in its
 // last run at the same head, base, and tiers, and was not run again (S-0341).
-// Skipped is a tier that a tier selected with it covers (S-0342).
+// Skipped is a tier that a tier selected with it covers (S-0342). Queued is
+// a story's tier marked Queue that it left to the merge queue's batch, which
+// runs it, while the queue can batch (ADR-0174).
 const (
 	Passed     State = "passed"
 	Failed     State = "failed"
 	NotReached State = "not-reached"
 	Reused     State = "reused"
 	Skipped    State = "skipped"
+	Queued     State = "queued"
 )
 
 // TierResult is what one tier did in a run.

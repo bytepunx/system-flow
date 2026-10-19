@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/signal"
 	"strconv"
@@ -13,6 +15,9 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	"github.com/bytepunx/system-flow/flai/internal/config"
+	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -26,7 +31,7 @@ const exitVerifyUnusable = 2
 // newVerifyCmd runs a story's close-out steps and the tiers its branch
 // selects in its worktree and answers one report (S-0270).
 func newVerifyCmd(a *app) *cobra.Command {
-	var record, last, syncOnly, fresh bool
+	var record, last, syncOnly, fresh, all bool
 	var maxFindings int
 	c := &cobra.Command{
 		Use:   "verify <story>",
@@ -51,6 +56,15 @@ after it are not reached:
              "skipped tier <name>: covered by <tier>", even after a step
              before it failed (S-0342)
 
+While the merge queue can batch for the project, a tier the manifest marks
+queue is left to the queue's batch, which runs it, and not run here: the
+merge-queue host action is on for the project in the configuration this flai
+reads, orchestration.permissions.accept_reviews is on, and acceptance is
+local. Each such tier the branch selects is listed after the rest as
+"queued tier <name>: left to the merge queue", the run passes without it, and
+a tier that only it covers runs. --all leaves no tier to the queue: every
+tier the branch selects runs (ADR-0174).
+
 When the story's last run was at the same head and base commit, and the
 tiers, their commands, and those the branch selects are the same, the steps
 before the tiers run again but the tiers before the first the last run showed
@@ -71,13 +85,15 @@ and duration, the failing step's first findings under it, at most --max
 across the run, then the check's findings outside the story, which are notes
 that do not fail it, and last a line as the close-out ends:
 "verify: S-nnnn passed every step", or "verify: S-nnnn stopped at <step>
-(<exit status or state>)", either followed by " (reused N tiers from <time>)"
-when tiers were reused, the earliest run they come from. With --json the
-answer is the report, with the story, the commit and base it was verified at
+(<exit status or state>)", either followed by ", <tiers> left to the merge
+queue" when tiers were left to it, and then by " (reused N tiers from
+<time>)" when tiers were reused, the earliest run they come from. With
+--json the answer is the report, with the story, the commit and base it was verified at
 and the base's commit, the merge base and the branch's patch id, when it ran,
 how long it took, passed, stopped_at, the
 paths the branch changed, and each step's state, duration, and findings, a
-reused tier's reused_from, a skipped tier's covered_by, and the notes.
+reused tier's reused_from, a skipped tier's covered_by, a tier left to the
+merge queue as queued, and the notes.
 
 Each run's report is stored in the project's .flai-cache/verify, whether it
 passes or not; --last prints the story's stored report and runs nothing, or
@@ -101,6 +117,7 @@ it finished.`,
   flai verify S-0270 --json
   flai verify S-0270 --record-issues
   flai verify S-0270 --fresh
+  flai verify S-0270 --all
   flai verify S-0270 --last --json
   flai verify S-0270 --sync-only`,
 		Args: func(_ *cobra.Command, args []string) error {
@@ -129,7 +146,7 @@ it finished.`,
 			if last {
 				return a.printLastVerify(repo, args[0], maxFindings)
 			}
-			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, fresh: fresh, max: maxFindings})
+			return a.verifyStory(cmd, repo, args[0], verifyOptions{record: record, syncOnly: syncOnly, fresh: fresh, all: all, max: maxFindings})
 		},
 	}
 	c.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
@@ -137,6 +154,7 @@ it finished.`,
 	})
 	c.Flags().BoolVar(&record, "record-issues", false, "record the check's findings outside the story in design/issues of its worktree, once per story and findings")
 	c.Flags().BoolVar(&fresh, "fresh", false, "force a full run: run every selected tier even when the last run at the same head, base, and tiers passed some")
+	c.Flags().BoolVar(&all, "all", false, "leave no tier to the merge queue: run every tier the branch's changes select")
 	c.Flags().BoolVar(&last, "last", false, "print the story's stored last result and run nothing")
 	c.Flags().BoolVar(&syncOnly, "sync-only", false, "run only the rebase and sync steps, and store no result")
 	c.Flags().IntVar(&maxFindings, "max", verify.DefaultMax, "the most findings to report across the run")
@@ -151,7 +169,9 @@ type verifyOptions struct {
 	syncOnly bool
 	// fresh runs every selected tier, reusing none from the last run.
 	fresh bool
-	max   int
+	// all leaves no tier to the merge queue (ADR-0174).
+	all bool
+	max int
 }
 
 // verifyRecorded is flai verify --json with --record-issues: the report,
@@ -171,7 +191,8 @@ func (a *app) verifyStory(cmd *cobra.Command, repo *workitem.Repo, story string,
 	}
 	opts := verify.StoryOptions{
 		Story: id, Project: repo, Worktree: worktree, Git: a.runner, Fresh: o.fresh,
-		RunOptions: verify.RunOptions{Max: o.max, Now: a.now},
+		LeaveToQueue: !o.all && !o.syncOnly && a.queueBatches(mainRootOf(repo)),
+		RunOptions:   verify.RunOptions{Max: o.max, Now: a.now},
 	}
 	var rep verify.Report
 	stopped := false
@@ -296,6 +317,8 @@ func verifyText(rep verify.Report, recorded []recordedIssue, stopped bool, maxNo
 			fmt.Fprintf(&b, "%s %s\n", s.State, name)
 		case s.State == verify.Skipped:
 			fmt.Fprintf(&b, "%s %s: covered by %s\n", s.State, name, s.CoveredBy)
+		case s.State == verify.Queued:
+			fmt.Fprintf(&b, "%s %s: left to the merge queue\n", s.State, name)
 		case s.State == verify.Reused && s.ReusedFrom != nil:
 			fmt.Fprintf(&b, "%s %s (from %s)\n", s.State, name, s.ReusedFrom.UTC().Format(time.RFC3339))
 		default:
@@ -350,10 +373,73 @@ func noteText(n verify.Note) string {
 }
 
 // verifyOutcome is the report's last line, in the close-out's form: the
-// story passed every step, or the step it stopped at and why, and then the
-// tiers it reused and the earliest run they come from, if any.
+// story passed every step, or the step it stopped at and why, then the tiers
+// it left to the merge queue, if any, and last the tiers it reused and the
+// earliest run they come from, if any, which the close-out reads from the
+// line's end.
 func verifyOutcome(rep verify.Report, stopped bool) string {
-	return verifyResult(rep, stopped) + reusedText(rep)
+	return verifyResult(rep, stopped) + queuedText(rep) + reusedText(rep)
+}
+
+// queuedText is ", <tiers> left to the merge queue" for a report that left
+// tiers to the queue, named in the order it lists them (ADR-0174); "" for
+// one that left none.
+func queuedText(rep verify.Report) string {
+	var names []string
+	for _, s := range rep.Steps {
+		if s.State == verify.Queued {
+			names = append(names, s.Name)
+		}
+	}
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return ", " + names[0] + " left to the merge queue"
+	}
+	return ", " + strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1] + " left to the merge queue"
+}
+
+// queueBatches reports whether the merge queue can batch for the project
+// whose main checkout is root, as flai serve builds a batch (ADR-0174): the
+// merge-queue host action is on for it in the configuration this flai reads,
+// and the main checkout's manifest lets the queue run. A configuration that
+// is missing turns nothing on and is not created; one or a manifest that
+// cannot be read is warned of and turns nothing on, so every tier runs.
+func (a *app) queueBatches(root string) bool {
+	on, err := a.hostActionOn(hostapi.ActionMergeQueue, root)
+	if err != nil {
+		a.logger().Warn("configuration unreadable, so no tier is left to the merge queue", "component", "verify", "err", err.Error())
+		return false
+	}
+	if !on {
+		return false
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		a.logger().Warn("project unreadable, so no tier is left to the merge queue", "component", "verify", "root", root, "err", err.Error())
+		return false
+	}
+	return mergequeue.Batches(true, repo.Manifest)
+}
+
+// hostActionOn reports whether a host action is on for the project at root
+// in the configuration this flai reads, without creating it: a missing one
+// turns nothing on.
+func (a *app) hostActionOn(action, root string) (bool, error) {
+	path := config.ResolvePath(a.configPath)
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("read the configuration %s: %w", path, err)
+	}
+	cfg, err := config.Parse(data)
+	if err != nil {
+		return false, fmt.Errorf("parse the configuration %s: %w; fix it, or run with --config naming another", path, err)
+	}
+	return cfg.ActionEnabled(action, root), nil
 }
 
 // verifyResult is the last line's outcome: the story passed every step, or

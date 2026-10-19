@@ -64,6 +64,22 @@ func SelectStory(fsys fs.FS, tiers []Tier, paths []string) []Selected {
 	return cover(tiers, selectStoryTiers(fsys, tiers, paths))
 }
 
+// SelectStoryLeavingQueue chooses the tiers SelectStory chooses, but answers
+// those marked Queue apart, in list order, as left to the merge queue's
+// batch, which runs them (ADR-0174). The rest are marked covered as
+// SelectStory marks them, but by none of those left out: a tier that only a
+// queue tier covers runs, as the tier that covers it does not.
+func SelectStoryLeavingQueue(fsys fs.FS, tiers []Tier, paths []string) (run, queued []Selected) {
+	for _, s := range selectStoryTiers(fsys, tiers, paths) {
+		if s.Tier.Queue {
+			queued = append(queued, s)
+		} else {
+			run = append(run, s)
+		}
+	}
+	return cover(tiers, run), queued
+}
+
 // selectStoryTiers is SelectStory before the covered tiers are marked.
 func selectStoryTiers(fsys fs.FS, tiers []Tier, paths []string) []Selected {
 	var out []Selected

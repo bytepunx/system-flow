@@ -14,19 +14,26 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
-const verifyDescription = "Verify a story before it goes to review (S-0270): run, in the story's worktree, what the close-out runs, cheapest first, stopping at the first step that fails: no rebase is left unfinished (rebase), the branch contains the main branch (sync), the narrative's Current state and Next steps are written (narrative), flai check --strict scoped to the story passes (check), and then the test and lint tiers the branch's changes select, each run with CLOSE_OUT_STORY set to the story. Answers passed, stopped_at naming the step that failed, the commit and the main branch it was verified against, the paths the tiers were selected for, and each step with its state (passed, failed, not-reached, or skipped, with covered_by naming the selected tier that covers a skipped one and runs in its place), its duration, and its findings, each a name, a path, a line, and a message, at most max across the run (5 by default; omitted counts the rest), a tier's with its command and exit code. A check finding outside the story is a note, in notes, not a failure. A failing step is an answer, not an error; a story with no worktree, or not a story, is refused. The answer is stored as the story's last, which flai verify --last prints. It commits nothing and records no issue. flai verify --json on the command line answers the same. Call it before you move a story to review, instead of having the verifier sub-agent run the tests, lint, and check; the verifier is kept for the review of the diff against the story's acceptance criteria and the conventions."
+const verifyDescription = "Verify a story before it goes to review (S-0270): run, in the story's worktree, what the close-out runs, cheapest first, stopping at the first step that fails: no rebase is left unfinished (rebase), the branch contains the main branch (sync), the narrative's Current state and Next steps are written (narrative), flai check --strict scoped to the story passes (check), and then the test and lint tiers the branch's changes select, each run with CLOSE_OUT_STORY set to the story. While the merge queue can batch for the project (the merge-queue host action on, accept_reviews on, acceptance local), a tier the manifest marks queue is not run but left to the queue's batch, which runs it, as a step in the state queued after the rest, and the run passes without it; all leaves no tier to the queue (ADR-0174). Answers passed, stopped_at naming the step that failed, the commit and the main branch it was verified against, the paths the tiers were selected for, and each step with its state (passed, failed, not-reached, skipped, with covered_by naming the selected tier that covers a skipped one and runs in its place, or queued, left to the merge queue), its duration, and its findings, each a name, a path, a line, and a message, at most max across the run (5 by default; omitted counts the rest), a tier's with its command and exit code. A check finding outside the story is a note, in notes, not a failure. A failing step is an answer, not an error; a story with no worktree, or not a story, is refused. The answer is stored as the story's last, which flai verify --last prints. It commits nothing and records no issue. flai verify --json on the command line answers the same. Call it before you move a story to review, instead of having the verifier sub-agent run the tests, lint, and check; the verifier is kept for the review of the diff against the story's acceptance criteria and the conventions."
 
 // VerifyIn verifies one story in its worktree (S-0270).
 type VerifyIn struct {
 	Project string `json:"project,omitempty" jsonschema:"the project, by key or folder: needed only when the server serves more than one"`
 	Story   string `json:"story" jsonschema:"the story to verify (S-nnnn, any zero padding), in its worktree under .flai-cache/worktrees"`
 	Max     int    `json:"max,omitempty" jsonschema:"the most findings to answer across the run; 5 when left out"`
+	All     bool   `json:"all,omitempty" jsonschema:"leave no tier to the merge queue: run every tier the branch's changes select, those marked queue too"`
 }
+
+// QueueBatches reports whether the merge queue can batch for the project
+// whose main checkout is root (ADR-0174).
+type QueueBatches func(root string) bool
 
 func (in VerifyIn) project() string { return in.Project }
 
 // verify answers what flai verify --json prints for the story the call
-// names, run in its worktree with the tiers its branch's manifest declares.
+// names, run in its worktree with the tiers its branch's manifest declares,
+// leaving those marked queue to the merge queue while it can batch, unless
+// the call asks for all.
 func (s *server) verify(ctx context.Context, _ *mcp.CallToolRequest, in VerifyIn) (*mcp.CallToolResult, verify.Report, error) {
 	if in.Max < 0 {
 		return nil, verify.Report{}, fmt.Errorf("max %d is not a number of findings; give 1 or more, or leave it out for %d", in.Max, verify.DefaultMax)
@@ -46,7 +53,8 @@ func (s *server) verify(ctx context.Context, _ *mcp.CallToolRequest, in VerifyIn
 	}
 	rep, err := verify.Verify(ctx, verify.StoryOptions{
 		Story: story, Project: s.repo, Worktree: wt, Tiers: tiers, Git: git,
-		RunOptions: verify.RunOptions{Max: in.Max},
+		LeaveToQueue: !in.All && s.queueBatches != nil && s.queueBatches(projectRoot(s.repo)),
+		RunOptions:   verify.RunOptions{Max: in.Max},
 	})
 	if err != nil {
 		return nil, verify.Report{}, err

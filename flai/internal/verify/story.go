@@ -60,6 +60,11 @@ type StoryOptions struct {
 	// Fresh runs every selected tier, whatever the story's last report
 	// would let the run reuse.
 	Fresh bool
+	// LeaveToQueue leaves each selected tier marked Queue to the merge
+	// queue's batch, which runs it: it is not run but reported Queued, after
+	// the tiers that run. Set it while the merge queue can batch for the
+	// project and the caller did not ask for every tier (ADR-0174).
+	LeaveToQueue bool
 	// RunOptions are the tiers' run's; FS is the worktree, read for the
 	// tiers' packages, and Now times every step and stamps the report.
 	RunOptions
@@ -83,7 +88,8 @@ type Report struct {
 	// (ADR-0156).
 	Patch string `json:"patch,omitempty"`
 	// Fingerprint hashes what selects and runs the tiers: the project's
-	// tiers and the selected ones' commands. A later run with the same
+	// tiers, the selected ones' commands, and those left to the merge
+	// queue (ADR-0174). A later run with the same
 	// Fingerprint reuses the tiers this one passed when it is at the same
 	// Commit and BaseCommit (S-0341), or, rebased, has the same Patch, but
 	// for the tiers that what Base changed between the two MergeBases sends
@@ -166,7 +172,9 @@ type Note struct {
 // story passes, and then each tier the branch's changes select (SelectStory)
 // passes, run with CLOSE_OUT_STORY set to the story. It stops at the first
 // step that fails; the steps after it are not reached, but for a tier that
-// another selected tier covers, which is skipped either way. When the story's
+// another selected tier covers, which is skipped either way. With
+// LeaveToQueue, the selected tiers marked Queue are not run but reported
+// Queued after the rest, and the run passes without them (ADR-0174). When the story's
 // last report has the same head, base commit, and fingerprint, and Fresh is
 // not set, the tiers before the first it shows failed or not reached are not
 // run again but reported Reused, with the time of the run that ran them; the
@@ -338,8 +346,13 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 		storyStep{StepNarrative, v.narrative},
 		storyStep{StepCheck, func() []Finding { return v.check(&rep) }},
 	))
-	selected := SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
-	rep.Fingerprint = fingerprint(v.opts.Tiers, selected)
+	var selected, queued []Selected
+	if v.opts.LeaveToQueue {
+		selected, queued = SelectStoryLeavingQueue(v.opts.FS, v.opts.Tiers, v.paths)
+	} else {
+		selected = SelectStory(v.opts.FS, v.opts.Tiers, v.paths)
+	}
+	rep.Fingerprint = fingerprint(v.opts.Tiers, selected, queued)
 	var runErr error
 	if rep.Passed {
 		reused, sentBack := v.reusable(rep.Fingerprint, selected)
@@ -363,8 +376,18 @@ func (v *storyRun) run(ctx context.Context) (Report, error) {
 			rep.Steps = append(rep.Steps, unrunStep(s))
 		}
 	}
+	for _, s := range queued {
+		rep.Steps = append(rep.Steps, queuedStep(s))
+	}
 	rep.DurationMS, rep.Duration = took(v.opts.Now().Sub(start))
 	return rep, runErr
+}
+
+// queuedStep is a selected tier left to the merge queue's batch as a step:
+// queued, whatever the steps before it did, since the batch runs it
+// (ADR-0174).
+func queuedStep(s Selected) Step {
+	return Step{Name: s.Tier.Name, Tier: true, State: Queued, Command: s.Argv, Dir: s.Tier.Dir}
 }
 
 // unrunStep is a selected tier that does not run as a step: skipped, naming
@@ -432,7 +455,7 @@ func Tiers(ctx context.Context, opts TierOptions) (Report, error) {
 		rep.BaseCommit = strings.TrimSpace(base)
 	}
 	selected := SelectStory(opts.FS, opts.Tiers, paths)
-	rep.Fingerprint = fingerprint(opts.Tiers, selected)
+	rep.Fingerprint = fingerprint(opts.Tiers, selected, nil)
 	var runErr error
 	for _, s := range selected {
 		if s.CoveredBy != "" || !rep.Passed || ctx.Err() != nil {
@@ -645,9 +668,11 @@ func (v *storyRun) reusable(fp string, selected []Selected) (steps []Step, sentB
 		}
 		sentBack = v.sentBack(selected, mainPaths)
 	}
+	// a tier left to the merge queue ran nothing and pairs with no selected
+	// tier; the fingerprint holds which were left (ADR-0174)
 	var tiers []Step
 	for _, s := range last.Steps {
-		if s.Tier {
+		if s.Tier && s.State != Queued {
 			tiers = append(tiers, s)
 		}
 	}
@@ -772,21 +797,27 @@ func shortHash(commit string) string {
 	return commit
 }
 
-// fingerprint hashes the project's tiers as declared and the selected ones'
-// names, directories, and commands: a change to any changes what a story's
-// tiers would run.
-func fingerprint(tiers []Tier, selected []Selected) string {
+// fingerprint hashes the project's tiers as declared, the selected ones'
+// names, directories, and commands, and the names of those left to the
+// merge queue: a change to any changes what a story's tiers would run, so a
+// run that leaves tiers to the queue reuses nothing from one that ran them,
+// nor the other way round (ADR-0174).
+func fingerprint(tiers []Tier, selected, queued []Selected) string {
 	type sel struct {
 		Name string   `json:"name"`
 		Dir  string   `json:"dir"`
 		Argv []string `json:"argv"`
 	}
 	in := struct {
-		Tiers    []Tier `json:"tiers"`
-		Selected []sel  `json:"selected"`
+		Tiers    []Tier   `json:"tiers"`
+		Selected []sel    `json:"selected"`
+		Queued   []string `json:"queued,omitempty"`
 	}{Tiers: tiers, Selected: []sel{}}
 	for _, s := range selected {
 		in.Selected = append(in.Selected, sel{Name: s.Tier.Name, Dir: s.Tier.Dir, Argv: s.Argv})
+	}
+	for _, s := range queued {
+		in.Queued = append(in.Queued, s.Tier.Name)
 	}
 	data, err := json.Marshal(in)
 	if err != nil {

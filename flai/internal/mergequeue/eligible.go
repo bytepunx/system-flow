@@ -20,6 +20,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -92,6 +93,15 @@ type Reason struct {
 // OffUnderPullRequest is why the queue does not run under pull-request
 // acceptance.
 const OffUnderPullRequest = "the merge queue runs under local acceptance only: under acceptance.mode pull-request the forge's required checks gate each story, and a batch rebases each story, so every landing would stop on forge_stale (ADR-0169, ADR-0173)"
+
+// Batches reports whether the merge queue can batch for a project, as flai
+// serve builds a batch: the merge-queue host action is on for it (actionOn),
+// its manifest lets the orchestrator accept reviews, and acceptance is local.
+// A hold does not count, since a held queue batches once resumed. While it
+// can, flai verify leaves the tiers marked queue to the batch (ADR-0174).
+func Batches(actionOn bool, m manifest.Manifest) bool {
+	return actionOn && m.Orchestration.Permissions.AcceptReviews && !m.Acceptance.PullRequest()
+}
 
 // Compute is the queue of repo's stories in review, reading each story
 // branch's head and its record of undone paths with git through r, and the

@@ -619,6 +619,144 @@ func TestVerifyResumesPastATierASelectedTierCovers(t *testing.T) {
 	}
 }
 
+// queueTiers are storyTiers with integration and smoke marked queue, as this
+// repository marks them (ADR-0174).
+func queueTiers() []Tier {
+	tiers := slices.Clone(storyTiers)
+	tiers[2].Queue, tiers[4].Queue = true, true
+	return tiers
+}
+
+// ADR-0174: with LeaveToQueue, the selected tiers marked queue are not run
+// but reported queued after the rest, whether the steps before the tiers
+// pass or one fails, and the run passes without them; without it they run.
+func TestVerifyLeavesTheQueueTiersToTheMergeQueue(t *testing.T) {
+	queued := func(name string, argv ...string) Step {
+		s := Step{Name: name, Tier: true, State: Queued, Command: argv}
+		if name == "integration" {
+			s.Dir = "flai"
+		}
+		return s
+	}
+	for _, tc := range []struct {
+		name  string
+		leave bool
+		setup func(t *testing.T, f *verifyFixture)
+		want  []string
+		ran   []string
+	}{
+		{name: "left to the queue", leave: true, setup: func(*testing.T, *verifyFixture) {},
+			want: []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:passed", "integration:queued", "smoke:queued"},
+			ran:  []string{"go test ./internal/x"}},
+		{name: "left to the queue after the check fails", leave: true, setup: func(t *testing.T, f *verifyFixture) {
+			f.editNarrative(t, "\n## Open questions\n", "\n")
+		}, want: []string{"rebase:passed", "sync:passed", "narrative:passed", "check:failed", "go-test:not-reached", "integration:queued", "smoke:queued"}},
+		{name: "run without LeaveToQueue", setup: func(*testing.T, *verifyFixture) {},
+			want: []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:passed", "integration:passed", "smoke:passed"},
+			ran:  []string{"go test ./internal/x", "go test ./...", "smoke.sh"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newVerifyFixture(t)
+			f.opts.Tiers, f.opts.LeaveToQueue = queueTiers(), tc.leave
+			tc.setup(t, f)
+			rep, err := Verify(context.Background(), f.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(states(rep), tc.want) || rep.Passed != (tc.ran != nil) {
+				t.Fatalf("passed %v, steps %v, want %v", rep.Passed, states(rep), tc.want)
+			}
+			if !reflect.DeepEqual(f.proc.ran, tc.ran) {
+				t.Errorf("ran %q, want %q", f.proc.ran, tc.ran)
+			}
+			if !tc.leave {
+				return
+			}
+			want := []Step{queued("integration", "go", "test", "./..."), queued("smoke", "smoke.sh")}
+			if !reflect.DeepEqual(rep.Steps[5:], want) {
+				t.Errorf("queued steps\n%+v\nwant\n%+v", rep.Steps[5:], want)
+			}
+			if n, _ := rep.Reused(); n != 0 {
+				t.Errorf("a first run reused %d tiers", n)
+			}
+		})
+	}
+}
+
+// ADR-0174: a tier that a queue tier covers is not skipped for it while the
+// queue tier is left out, since the covering tier does not run.
+func TestVerifyRunsATierWhoseCoverIsLeftToTheMergeQueue(t *testing.T) {
+	f := newVerifyFixture(t)
+	f.opts.Tiers, f.opts.LeaveToQueue = queueTiers(), true
+	f.opts.Tiers[2].Covers = []string{"go-test"}
+	rep, err := Verify(context.Background(), f.opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:passed", "integration:queued", "smoke:queued"}
+	if !rep.Passed || !reflect.DeepEqual(states(rep), want) || !reflect.DeepEqual(f.proc.ran, []string{"go test ./internal/x"}) {
+		t.Fatalf("steps %v, ran %q", states(rep), f.proc.ran)
+	}
+	if s := rep.Steps[4]; s.CoveredBy != "" {
+		t.Errorf("go-test step %+v names a tier that covers it", s)
+	}
+}
+
+// ADR-0174: a run reuses the tiers it ran from a last run that left the same
+// tiers to the queue, never a queued one, and nothing across a change of
+// LeaveToQueue, either way.
+func TestVerifyReusesAcrossLeavingToTheQueueOnlyWhenItLeavesTheSame(t *testing.T) {
+	t.Run("the same", func(t *testing.T) {
+		f := newVerifyFixture(t)
+		f.opts.Tiers, f.opts.LeaveToQueue = queueTiers(), true
+		first, err := Verify(context.Background(), f.opts)
+		if err != nil || !first.Passed {
+			t.Fatalf("first run %+v, %v", first, err)
+		}
+		f.proc.ran = nil
+		rep, err := Verify(context.Background(), f.opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"rebase:passed", "sync:passed", "narrative:passed", "check:passed", "go-test:reused", "integration:queued", "smoke:queued"}
+		if !rep.Passed || !reflect.DeepEqual(states(rep), want) || len(f.proc.ran) != 0 {
+			t.Fatalf("steps %v, ran %q", states(rep), f.proc.ran)
+		}
+		if n, _ := rep.Reused(); n != 1 {
+			t.Errorf("reused %d tiers, want 1", n)
+		}
+	})
+	for _, tc := range []struct {
+		name          string
+		before, after bool
+		ran           []string
+	}{
+		{"left, then run", true, false, []string{"go test ./internal/x", "go test ./...", "smoke.sh"}},
+		{"run, then left", false, true, []string{"go test ./internal/x"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newVerifyFixture(t)
+			f.opts.Tiers, f.opts.LeaveToQueue = queueTiers(), tc.before
+			first, err := Verify(context.Background(), f.opts)
+			if err != nil || !first.Passed {
+				t.Fatalf("first run %+v, %v", first, err)
+			}
+			f.opts.LeaveToQueue = tc.after
+			f.proc.ran = nil
+			rep, err := Verify(context.Background(), f.opts)
+			if err != nil || !rep.Passed {
+				t.Fatalf("report %+v, %v", rep, err)
+			}
+			if rep.Fingerprint == first.Fingerprint {
+				t.Errorf("the fingerprint %s did not change with LeaveToQueue", rep.Fingerprint)
+			}
+			if n, _ := rep.Reused(); n != 0 || !reflect.DeepEqual(f.proc.ran, tc.ran) {
+				t.Errorf("reused %d, ran %q, want %q", n, f.proc.ran, tc.ran)
+			}
+		})
+	}
+}
+
 // S-0341: a run reuses nothing when what its tiers read or run may differ
 // from the last run's, or when it is told not to.
 func TestVerifyRunsEveryTierWhenTheLastRunIsNotTheSame(t *testing.T) {

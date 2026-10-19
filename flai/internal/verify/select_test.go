@@ -257,6 +257,43 @@ func TestSelectResolvesAChainOfCoversToTheTierThatRuns(t *testing.T) {
 	}
 }
 
+// ADR-0174: SelectStoryLeavingQueue answers the tiers SelectStory selects
+// that are marked queue apart, in list order, and a tier that only a queue
+// tier covers runs, while one a chain through a queue tier to a tier that
+// runs covers stays covered; SelectStory itself leaves none out.
+func TestSelectStoryLeavingQueueAnswersTheQueueTiersApart(t *testing.T) {
+	tiers := []Tier{
+		{Name: "go-test", Dir: "flai", Paths: []string{"flai/**/*.go"}, Command: []string{"go", "test", "{packages}"}},
+		{Name: "lint", Paths: []string{"flai/**/*.go"}, Command: []string{"lint"}, Covers: []string{"integration"}},
+		{Name: "integration", AllOnly: true, Queue: true, Dir: "flai", Paths: []string{"flai/**"}, Command: []string{"go", "test", "{packages}"}, Covers: []string{"go-test", "vet"}},
+		{Name: "vet", Paths: []string{"flai/**/*.go"}, Command: []string{"vet"}},
+		{Name: "smoke", AllOnly: true, Queue: true, Command: []string{"smoke.sh"}},
+	}
+	fsys := fstest.MapFS{"flai/go.mod": {}, "flai/main.go": {}}
+	paths := []string{"flai/main.go"}
+	run, queued := SelectStoryLeavingQueue(fsys, tiers, paths)
+	if got, want := coverage(run), []string{"go-test covered by lint", "lint", "vet covered by lint"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("run %q, want %q", got, want)
+	}
+	var names []string
+	for _, s := range queued {
+		names = append(names, s.Tier.Name+" "+strings.Join(s.Argv, " "))
+	}
+	if want := []string{"integration go test ./...", "smoke smoke.sh"}; !reflect.DeepEqual(names, want) {
+		t.Errorf("queued %q, want %q", names, want)
+	}
+
+	// without lint, nothing that runs covers go-test or vet
+	alone := append(append([]Tier{}, tiers[0]), tiers[2:]...)
+	run, _ = SelectStoryLeavingQueue(fsys, alone, paths)
+	if got, want := coverage(run), []string{"go-test", "vet"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("run without lint %q, want %q", got, want)
+	}
+	if got, want := coverage(SelectStory(fsys, alone, paths)), []string{"go-test covered by integration", "integration", "vet covered by integration", "smoke"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("SelectStory %q, want %q", got, want)
+	}
+}
+
 // I-0105: this repository's manifest has flai test check a changed flaiover
 // file's format and lint with flaiover-lint, outside --all and before vitest,
 // rather than leaving prettier and eslint to the close-out's flaiover tier.

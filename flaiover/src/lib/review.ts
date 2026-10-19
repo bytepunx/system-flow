@@ -97,8 +97,8 @@ export async function readNdjson(
 	emit(pending + decoder.decode());
 }
 
-/** Where a step of flai verify got to (S-0270); a reused tier passed in an earlier run of the same head (S-0341), and a tier another selected tier covers is skipped (S-0342). */
-export type VerifyState = 'passed' | 'failed' | 'not-reached' | 'reused' | 'skipped';
+/** Where a step of flai verify got to (S-0270); a reused tier passed in an earlier run of the same head (S-0341), a tier another selected tier covers is skipped (S-0342), and a tier left to the merge queue's batch is queued (ADR-0174). */
+export type VerifyState = 'passed' | 'failed' | 'not-reached' | 'reused' | 'skipped' | 'queued';
 /** What a failed step found: a test, a check, or a linter's complaint, where it is, and what it says. */
 export type VerifyFinding = { name?: string; path?: string; line?: number; message?: string };
 /** One step of flai verify: one of its own, or a test or lint tier when `tier` is set. */
@@ -171,7 +171,8 @@ const STATE_LABEL: Record<VerifyState, string> = {
 	failed: 'failed',
 	'not-reached': 'not reached',
 	reused: 'reused',
-	skipped: 'skipped'
+	skipped: 'skipped',
+	queued: 'left to the merge queue'
 };
 
 /** A step's state in words: a skipped step names the tier that covers it, when the report does. */
@@ -180,8 +181,8 @@ function label(s: VerifyStep): string {
 	return STATE_LABEL[s.state] ?? s.state;
 }
 
-/** A step not reached or skipped ran nothing, so it has no duration. */
-const RAN_NOTHING: VerifyState[] = ['not-reached', 'skipped'];
+/** A step not reached, skipped, or left to the merge queue ran nothing, so it has no duration. */
+const RAN_NOTHING: VerifyState[] = ['not-reached', 'skipped', 'queued'];
 
 /** A duration in milliseconds as flai writes one when the report carries none: 340ms, 5.1s. */
 function took(ms: number): string {
@@ -194,7 +195,7 @@ function where(path?: string, line?: number, name?: string): string {
 	return [loc, name ?? ''].filter((s) => s).join(' ');
 }
 
-/** A step's duration as its row shows it: none when not reached or skipped, and for a reused tier the run it comes from. */
+/** A step's duration as its row shows it: none when not reached, skipped, or queued, and for a reused tier the run it comes from. */
 function rowDuration(s: VerifyStep): string {
 	if (RAN_NOTHING.includes(s.state)) return '';
 	if (s.state === 'reused' && s.reused_from) return `from ${localTime(s.reused_from)}`;

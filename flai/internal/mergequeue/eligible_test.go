@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
@@ -391,5 +392,31 @@ func TestAMalformedStateIsAnErrorOfTheQueue(t *testing.T) {
 	writeState(t, repo.CacheDir(), "{")
 	if _, err := Compute(scriptedGit{}, repo); err == nil || !strings.Contains(err.Error(), StatePath(repo.CacheDir())) {
 		t.Errorf("error %v, want one naming %s", err, StatePath(repo.CacheDir()))
+	}
+}
+
+// ADR-0174: the queue can batch only with the host action on, accept_reviews
+// on, and local acceptance, as flai serve builds a batch.
+func TestTheQueueBatchesOnlyWithTheActionAcceptReviewsAndLocalAcceptance(t *testing.T) {
+	on := manifest.Manifest{Orchestration: manifest.Orchestration{Permissions: manifest.Permissions{AcceptReviews: true}}}
+	local := on
+	local.Acceptance.Mode = manifest.AcceptLocal
+	pr := on
+	pr.Acceptance.Mode = manifest.AcceptPullRequest
+	for _, c := range []struct {
+		name   string
+		action bool
+		m      manifest.Manifest
+		want   bool
+	}{
+		{"every condition holds, acceptance by default", true, on, true},
+		{"every condition holds, acceptance named local", true, local, true},
+		{"the host action off", false, on, false},
+		{"accept_reviews off", true, manifest.Manifest{}, false},
+		{"pull-request acceptance", true, pr, false},
+	} {
+		if got := Batches(c.action, c.m); got != c.want {
+			t.Errorf("%s: Batches = %v, want %v", c.name, got, c.want)
+		}
 	}
 }
