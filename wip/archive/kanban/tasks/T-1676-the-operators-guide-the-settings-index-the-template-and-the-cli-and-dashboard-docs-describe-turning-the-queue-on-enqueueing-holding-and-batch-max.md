@@ -3,16 +3,37 @@ id: T-1676
 type: task
 nature: feature
 title: The operators' guide, the settings index, the template, and the CLI and dashboard docs describe turning the queue on, enqueueing, holding, and batch_max
-status: backlog
+status: done
 parent: S-0399
 owner: alex
 created: 2026-10-16T05:03:31Z
-updated: 2026-10-16T05:03:31Z
-transitions: []
+updated: 2026-10-19T20:04:13Z
+transitions:
+  - to: ready
+    at: 2026-10-19T19:55:56Z
+    by: agent-S-0399
+  - to: in-progress
+    at: 2026-10-19T19:55:57Z
+    by: agent-S-0399
+  - to: done
+    at: 2026-10-19T20:04:13Z
+    by: agent-S-0399
 stream: S-0399
 tags: [cli, dashboard]
-touches: [template/root/system-flow.yaml.tmpl, template/template.yaml, template/CHANGELOG.md, docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md]
+touches: [template/root/system-flow.yaml.tmpl, template/template.yaml, template/CHANGELOG.md, docs/operators/index.md, docs/operators/settings.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/users/flai.md, docs/users/flai-reference.md, docs/users/flaiover.md, design/system/dashboard-host-channel.md, design/system/project-manifest.md]
 after: [T-1668, T-1658]
+usage:
+  source: log
+  seconds: 496
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 153
+      output: 70804
+      cache_read: 10692136
+      cache_write: 392162
+      cost: 5.6586
 ---
 # T-1676 The operators' guide, the settings index, the template, and the CLI and dashboard docs describe turning the queue on, enqueueing, holding, and batch_max
 

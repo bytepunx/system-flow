@@ -3,16 +3,37 @@ id: T-1658
 type: task
 nature: feature
 title: Host writes enqueue, dequeue, and hold the queue, and the dashboard's review page and board offer them and show the batch's step
-status: backlog
+status: done
 parent: S-0399
 owner: alex
 created: 2026-10-16T05:02:03Z
-updated: 2026-10-16T05:02:03Z
-transitions: []
+updated: 2026-10-19T19:49:36Z
+transitions:
+  - to: ready
+    at: 2026-10-19T19:21:17Z
+    by: agent-S-0399
+  - to: in-progress
+    at: 2026-10-19T19:21:18Z
+    by: agent-S-0399
+  - to: done
+    at: 2026-10-19T19:49:36Z
+    by: agent-S-0399
 stream: S-0399
 tags: [cli, dashboard]
-touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/api/items/[id]/queue/+server.ts", flaiover/src/routes/api/queue/+server.ts]
+touches: [flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/MergeQueue.svelte, flaiover/src/lib/components/MergeQueue.svelte.test.ts, flaiover/src/routes/board/+page.svelte, "flaiover/src/routes/api/items/[id]/queue/+server.ts", flaiover/src/routes/api/queue/+server.ts, flaiover/src/lib/server/agent.ts, design/components/flaiover/src/lib/components/MergeQueue.examples.json, flaiover/src/routes/api/queue/queue.test.ts, "flaiover/src/routes/api/items/[id]/queue/queue.test.ts"]
 after: [T-1640, T-1641]
+usage:
+  source: log
+  seconds: 1698
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 195
+      output: 89890
+      cache_read: 13574328
+      cache_write: 497874
+      cost: 7.1839
 ---
 # T-1658 Host writes enqueue, dequeue, and hold the queue, and the dashboard's review page and board offer them and show the batch's step
 

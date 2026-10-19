@@ -3,16 +3,37 @@ id: T-1657
 type: task
 nature: feature
 title: The mergequeue package builds a batch worktree from main and the enqueued branches rebased in order, and verifies it once with the tiers flai verify selects
-status: backlog
+status: done
 parent: S-0399
 owner: alex
 created: 2026-10-16T05:01:58Z
-updated: 2026-10-16T05:01:58Z
-transitions: []
+updated: 2026-10-19T19:49:24Z
+transitions:
+  - to: ready
+    at: 2026-10-19T19:21:16Z
+    by: agent-S-0399
+  - to: in-progress
+    at: 2026-10-19T19:21:16Z
+    by: agent-S-0399
+  - to: done
+    at: 2026-10-19T19:49:24Z
+    by: agent-S-0399
 stream: S-0399
 tags: [cli]
-touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go]
+touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/verify/story.go, flai/internal/verify/story_test.go, flai/internal/mergequeue/state.go]
 after: [T-1641]
+usage:
+  source: log
+  seconds: 1688
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 102
+      output: 47225
+      cache_read: 7131529
+      cache_write: 261568
+      cost: 3.7742
 ---
 # T-1657 The mergequeue package builds a batch worktree from main and the enqueued branches rebased in order, and verifies it once with the tiers flai verify selects
 

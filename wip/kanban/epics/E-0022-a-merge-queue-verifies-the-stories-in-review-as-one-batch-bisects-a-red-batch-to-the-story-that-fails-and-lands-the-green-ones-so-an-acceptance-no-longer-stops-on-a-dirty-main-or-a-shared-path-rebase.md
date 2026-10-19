@@ -19,31 +19,37 @@ topics: [cli, orchestration, analysis]
 touches: [flai/internal/serve, flai/internal/workitem, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/workflow.md, design/system/agent-coordination.md, design/system/metrics.md, design/conventions/strategic-agents.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 4217
+  seconds: 9814
   priced_by: harness
   turns:
     - day: 2026-10-19
-      ceremony: 5
-      hand_edits: 3
-      work: 60
+      ceremony: 6
+      hand_edits: 4
+      work: 122
   models:
     - model: claude-opus-5-5
-      input: 532
-      output: 176893
-      cache_read: 26965234
-      cache_write: 1558850
-      cost: 18.7101
+      input: 1276
+      output: 520594
+      cache_read: 78867644
+      cache_write: 3462508
+      cost: 46.1784
   strategic:
     - kind: orchestrator
-      seconds: 5434
+      seconds: 6818
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 283
-          output: 5044
-          cache_read: 70985408
-          cache_write: 64078
-          cost: 17.8117
+          input: 315
+          output: 5488
+          cache_read: 75018387
+          cache_write: 80060
+          cost: 18.8268
+        - model: claude-sonnet-5-5
+          input: 12
+          output: 65
+          cache_read: 171438
+          cache_write: 56807
+          cost: 0.1868
 ---
 # E-0022 A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
 

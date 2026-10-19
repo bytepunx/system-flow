@@ -3,16 +3,37 @@ id: T-1668
 type: task
 nature: feature
 title: flai serve runs the queue for each project with the merge-queue host action and accept_reviews on, one batch at a time, and honours a hold
-status: backlog
+status: done
 parent: S-0399
 owner: alex
 created: 2026-10-16T05:02:49Z
-updated: 2026-10-18T02:20:23Z
-transitions: []
+updated: 2026-10-19T19:55:43Z
+transitions:
+  - to: ready
+    at: 2026-10-19T19:49:48Z
+    by: agent-S-0399
+  - to: in-progress
+    at: 2026-10-19T19:49:49Z
+    by: agent-S-0399
+  - to: done
+    at: 2026-10-19T19:55:43Z
+    by: agent-S-0399
 stream: S-0399
 tags: [cli]
 touches: [flai/internal/serve/mergequeue.go, flai/internal/serve/mergequeue_test.go, flai/internal/serve/serve.go]
 after: [T-1640, T-1657]
+usage:
+  source: log
+  seconds: 354
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 13923
+      cache_read: 2102527
+      cache_write: 77116
+      cost: 1.1127
 ---
 # T-1668 flai serve runs the queue for each project with the merge-queue host action and accept_reviews on, one batch at a time, and honours a hold
 

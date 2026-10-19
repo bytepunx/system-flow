@@ -3,15 +3,36 @@ id: T-1641
 type: task
 nature: feature
 title: flai queue add, remove, hold, and resume write the queue's state, and flai accept by hand takes its story out of the queue
-status: backlog
+status: done
 parent: S-0399
 owner: alex
 created: 2026-10-16T05:00:51Z
-updated: 2026-10-18T02:20:19Z
-transitions: []
+updated: 2026-10-19T19:21:02Z
+transitions:
+  - to: ready
+    at: 2026-10-19T19:00:27Z
+    by: agent-S-0399
+  - to: in-progress
+    at: 2026-10-19T19:00:28Z
+    by: agent-S-0399
+  - to: done
+    at: 2026-10-19T19:21:02Z
+    by: agent-S-0399
 stream: S-0399
 tags: [cli]
-touches: [flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/accept.go, flai/cmd/accept_queue_test.go]
+touches: [flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/accept.go, flai/cmd/accept_queue_test.go, docs/users/flai-reference.md, flai/internal/mergequeue/eligible.go]
+usage:
+  source: log
+  seconds: 1234
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 63
+      output: 29001
+      cache_read: 4379401
+      cache_write: 160626
+      cost: 2.3177
 ---
 # T-1641 flai queue add, remove, hold, and resume write the queue's state, and flai accept by hand takes its story out of the queue
 
