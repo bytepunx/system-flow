@@ -67,7 +67,9 @@ The manifest's check reports a glob that does not parse, a `setup` that names no
 
 flai embeds a script, `props.mjs`, and runs it with the host's `node` in the sub-project's folder, so `svelte/compiler` is the sub-project's own installed copy. The script parses each component with the compiler's `parse` and the modern AST. A component is never imported or run to list it.
 
-From the `$props()` destructuring it reads each prop's name, its default as written, whether it is required, and its TypeScript type as written. A local type alias, a local interface, or an inline object literal is resolved. An imported type is not: its kind is `unknown`, with its text kept.
+From the `$props()` destructuring it reads each prop's name, its default as written, whether it is required, and its TypeScript type as written. A local type alias, a local interface, or an inline object literal is resolved for its kind. An imported type is not: its kind is `unknown`, with its text kept.
+
+Each prop in the catalogue has `name`, `kind`, `type`, `default`, `required`, `literals` for a union, and, since S-0449, `skeleton`.
 
 | Kind | From a type such as |
 |------|---------------------|
@@ -82,6 +84,30 @@ From the `$props()` destructuring it reads each prop's name, its default as writ
 | `unknown` | an imported type, or anything else |
 
 A component the compiler cannot parse is listed with its error. A missing `node`, or a sub-project without `svelte` installed, is an error that names what is missing and how to fix it.
+
+#### Skeletons (S-0449)
+
+A prop of kind `array`, `object`, or `unknown` carries a `skeleton`: an empty value of its type, as JSON. The props panel starts the prop's JSON editor with it ([Controls for props](#controls-for-props-s-0440)). No other prop has one. The operator chose this on TH-0515.
+
+For the skeleton, the script resolves the prop's type whole, imported types included, with the sub-project's own `typescript` package, loaded from the sub-project as `svelte/compiler` is. It builds one TypeScript program for all of a run's components, with the sub-project's `tsconfig.json`, so path aliases such as SvelteKit's `$lib` resolve. Each component's scripts go into the program as a module beside the component's file. A SvelteKit sub-project whose options do not map `$lib`, such as a worktree where `.svelte-kit/tsconfig.json` is not generated yet, gets `$lib` mapped to `src/lib`. The prop's kind does not change: it is still read from the type as written.
+
+| Type | Skeleton |
+|------|----------|
+| `string`, `number`, `boolean` | `""`, `0`, `false` |
+| `Date` | `""` |
+| A union of literals | Its first member |
+| A union with `undefined` or `null` | The skeleton of the rest |
+| Another union | Its first member's skeleton |
+| An array | One element, the item's skeleton |
+| A tuple | Each element's skeleton |
+| An object or interface | Each property, optional ones included, with its skeleton. A function property is left out. |
+| A `Record` or index signature without named properties | `{}` |
+| A cycle, or more than six levels deep | `null` for an array, `{}` for an object |
+| A type that cannot be resolved | `[]` for an `array` prop, `{}` for an `object` prop, `null` for an `unknown` prop |
+
+A sub-project without `typescript` gives every such prop the last row's value. So does a type imported from a module that does not resolve. Inside a skeleton, a property whose type cannot be resolved is `null`. For `stories: Story[]`, with `Story` imported from `$lib`, the skeleton is one story with each field empty, such as `[{"id": "", "title": "", "points": 0}]`.
+
+The program costs time. Listing flaiover's 54 components takes about 2.3 seconds, against about 0.4 seconds without it. Most of it is reading the type declarations the components' imports reach.
 
 ### Commands
 
@@ -178,9 +204,9 @@ The operator changes a component's props on the Components page, a control for e
 | `snippet` | Text | The text, named in `snippets`, so the harness renders it as the snippet |
 | `function` | None | Left out, named in `functions`, so the harness gives it a logger |
 
-- **Defaults.** A control starts at its prop's default when the source writes the default as a literal: a string, a number, a boolean, `null`, or an array or object literal of them. Any other default, such as a call or a name, leaves the control empty, and the component's own default applies. Reset puts every control back to its default.
+- **Defaults.** A control starts at its prop's default when the source writes the default as a literal: a string, a number, a boolean, `null`, or an array or object literal of them. Any other default, such as a call or a name, leaves the control empty, and the component's own default applies. A JSON editor is the exception: without a literal default, it starts at its prop's skeleton ([Skeletons](#skeletons-s-0449)), so the component's own default does not apply (TH-0515). A literal default still wins over the skeleton. Reset puts every control back to its default, and a JSON editor without a literal default back to its skeleton.
 - **Text that does not parse.** Each control keeps what the operator types. Text that does not parse, such as invalid JSON, is shown with its error. While any text does not parse, nothing is sent and the URL is not written.
-- **What is sent.** Every prop with a value, together: a `select` when a component is picked, a `props` message when only the props change, and nothing when they are the same as last sent. A prop without a value is left out and takes its default.
+- **What is sent.** Every prop with a value, together: a `select` when a component is picked, a `props` message when only the props change, and nothing when they are the same as last sent. A prop without a value is left out and takes its default. A JSON editor's skeleton is a value, so it is sent: what the field shows is what the component gets (TH-0515).
 - **Required props.** Svelte does not enforce a required prop at runtime, so the page does. A required prop without a value is marked, and the page shows which props need one in the frame's place until each has a value. This is the page's notice, not a harness error: the props are still sent meanwhile, and the frame stays loaded, hidden.
 - **Calls.** Each function prop's calls come back as `event`. The page lists the last 50, newest first, and empties the list when another component is picked.
 - **Links.** The props' values are kept in the URL, so a link opened in another tab renders the component with the same props. Picking another component drops them.

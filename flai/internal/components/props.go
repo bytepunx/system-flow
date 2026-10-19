@@ -58,6 +58,10 @@ type Prop struct {
 	Required bool `json:"required"`
 	// Literals are a union's members, each as JSON: "a", 1, true.
 	Literals []string `json:"literals,omitempty"`
+	// Skeleton is an empty value of its type, as JSON, for a prop of kind
+	// array, object, or unknown only: [], {}, or null when its type cannot be
+	// resolved.
+	Skeleton json.RawMessage `json:"skeleton,omitempty"`
 }
 
 // ErrNodeMissing is wrapped by the error ReadProps returns when node is not

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -190,16 +191,16 @@ func TestReadPropsWithRealNodeAndNoSvelteSaysToInstallIt(t *testing.T) {
 	}
 }
 
-// installedSvelte is the svelte package of flaiover's node_modules in the
-// nearest folder at or above this package's that has one, or "".
-func installedSvelte(t *testing.T) string {
+// installed is the package name of flaiover's node_modules in the nearest
+// folder at or above this package's that has one, or "".
+func installed(t *testing.T, name string) string {
 	t.Helper()
 	dir, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
 	for {
-		p := filepath.Join(dir, "flaiover", "node_modules", "svelte")
+		p := filepath.Join(dir, "flaiover", "node_modules", name)
 		if _, err := os.Stat(filepath.Join(p, "package.json")); err == nil {
 			real, err := filepath.EvalSymlinks(p)
 			if err != nil {
@@ -215,34 +216,36 @@ func installedSvelte(t *testing.T) string {
 	}
 }
 
-// fixture is testdata/project copied under a temporary root as sub-project
-// web, with node_modules/svelte linked to an installed svelte.
-func fixture(t *testing.T) string {
+// fixture is testdata/<dir> copied under a temporary root as sub-project
+// web, with each of packages in its node_modules linked to flaiover's.
+func fixture(t *testing.T, dir string, packages ...string) string {
 	t.Helper()
 	if testing.Short() {
-		t.Skip("integration: reads flaiover's installed svelte from the monorepo")
+		t.Skip("integration: reads flaiover's installed packages from the monorepo")
 	}
 	needNode(t)
-	svelte := installedSvelte(t)
-	if svelte == "" {
-		t.Skip("no flaiover/node_modules/svelte above this package; run npm install in flaiover")
-	}
 	root := t.TempDir()
 	web := filepath.Join(root, "web")
-	if err := os.CopyFS(web, os.DirFS(filepath.Join("testdata", "project"))); err != nil {
+	if err := os.CopyFS(web, os.DirFS(filepath.Join("testdata", dir))); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(web, "node_modules"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(svelte, filepath.Join(web, "node_modules", "svelte")); err != nil {
-		t.Fatal(err)
+	for _, name := range packages {
+		p := installed(t, name)
+		if p == "" {
+			t.Skipf("no flaiover/node_modules/%s above this package; run npm install in flaiover", name)
+		}
+		if err := os.Symlink(p, filepath.Join(web, "node_modules", name)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return root
 }
 
 func TestListReadsEachKindFromFixtureComponents(t *testing.T) {
-	root := fixture(t)
+	root := fixture(t, "project", "svelte")
 	got, err := List(context.Background(), System{}, root, "web", nil, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -316,5 +319,139 @@ func TestListReadsEachKindFromFixtureComponents(t *testing.T) {
 	b := byPath["src/lib/Broken.svelte"]
 	if len(b.Props) != 0 || !strings.Contains(b.Error, "line 2") || !strings.Contains(b.Error, "Unexpected token") {
 		t.Errorf("unparsable component %+v, want no props and its parse error with its line", b)
+	}
+}
+
+// sameJSON reports whether got is the JSON value want is.
+func sameJSON(t *testing.T, got json.RawMessage, want string) bool {
+	t.Helper()
+	if len(got) == 0 {
+		return false
+	}
+	var g, w any
+	if err := json.Unmarshal(got, &g); err != nil {
+		t.Fatalf("skeleton %s is not JSON: %v", got, err)
+	}
+	if err := json.Unmarshal([]byte(want), &w); err != nil {
+		t.Fatalf("want %s is not JSON: %v", want, err)
+	}
+	return reflect.DeepEqual(g, w)
+}
+
+// skeletons are a component's props' skeletons by name, each as JSON, with
+// "" for a prop that has none.
+func skeletons(t *testing.T, got []Component, path string) map[string]string {
+	t.Helper()
+	for _, c := range got {
+		if c.Path != path {
+			continue
+		}
+		if c.Error != "" {
+			t.Fatalf("%s: error %q, want none", path, c.Error)
+		}
+		out := map[string]string{}
+		for _, p := range c.Props {
+			out[p.Name] = string(p.Skeleton)
+		}
+		return out
+	}
+	t.Fatalf("no component %s in %v", path, paths(got))
+	return nil
+}
+
+func checkSkeletons(t *testing.T, got map[string]string, want map[string]string) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Errorf("props %v, want %v", got, want)
+	}
+	for name, w := range want {
+		g, ok := got[name]
+		switch {
+		case !ok:
+			t.Errorf("no prop %s", name)
+		case w == "" && g != "":
+			t.Errorf("%s: skeleton %s, want none", name, g)
+		case w != "" && !sameJSON(t, json.RawMessage(g), w):
+			t.Errorf("%s: skeleton %s, want %s", name, g, w)
+		}
+	}
+}
+
+const storySkeleton = `{"id": "", "points": 0, "done": false, "size": "S", "owner": "", "due": "", "tags": [""], "pair": ["", 0], "meta": {}}`
+
+func TestListGivesEachJSONPropASkeletonOfItsResolvedType(t *testing.T) {
+	root := fixture(t, "typed", "svelte", "typescript")
+	got, err := List(context.Background(), System{}, root, "web", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkSkeletons(t, skeletons(t, got, "src/lib/Board.svelte"), map[string]string{
+		"label":   "",
+		"story":   storySkeleton,
+		"stories": "[" + storySkeleton + "]",
+		"tree":    `{"name": "", "children": [{}], "parent": {}}`,
+		"status":  `"open"`,
+		"deep":    `{"a": {"b": {"c": {"d": {"e": {"f": {}}}}}}}`,
+		"missing": `null`,
+		"ghost":   `[]`,
+		"extra":   `{}`,
+		"local":   `{"at": "", "ok": false}`,
+	})
+	checkSkeletons(t, skeletons(t, got, "src/lib/Imported.svelte"), map[string]string{
+		"story": storySkeleton,
+		"count": `0`,
+	})
+}
+
+func TestListMapsLibInASvelteKitSubProjectWhoseGeneratedTsconfigIsMissing(t *testing.T) {
+	root := fixture(t, "typed", "svelte", "typescript")
+	web := filepath.Join(root, "web")
+	files := map[string]string{
+		"tsconfig.json": `{"extends": "./.svelte-kit/tsconfig.json", "compilerOptions": {"strict": true}}`,
+		"package.json":  `{"name": "kit", "private": true, "type": "module", "devDependencies": {"@sveltejs/kit": "^2.0.0"}}`,
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(web, name), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := List(context.Background(), System{}, root, "web", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sk := skeletons(t, got, "src/lib/Imported.svelte"); !sameJSON(t, json.RawMessage(sk["story"]), storySkeleton) {
+		t.Errorf("story: skeleton %s, want %s", sk["story"], storySkeleton)
+	}
+}
+
+func TestListWithoutTypescriptGivesEachJSONPropItsKindsFallback(t *testing.T) {
+	root := fixture(t, "project", "svelte")
+	got, err := List(context.Background(), System{}, root, "web", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkSkeletons(t, skeletons(t, got, "src/lib/Kinds.svelte"), map[string]string{
+		"label": "", "count": "", "open": "", "size": "", "onpick": "", "children": "", "ratio": "",
+		"tags": `[]`, "ids": `[]`, "options": `{}`, "meta": `{}`, "theme": `null`,
+	})
+	checkSkeletons(t, skeletons(t, got, "src/lib/Untyped.svelte"), map[string]string{
+		"name": "", "step": "", "label": `null`,
+	})
+	for _, c := range got {
+		if c.Path != "src/lib/Kinds.svelte" {
+			continue
+		}
+		for _, p := range c.Props {
+			if p.Name != "theme" {
+				continue
+			}
+			out, err := json.Marshal(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(out), `"skeleton":null`) {
+				t.Errorf("theme marshals as %s, want its null skeleton kept", out)
+			}
+		}
 	}
 }

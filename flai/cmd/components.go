@@ -83,10 +83,13 @@ when either is missing, list fails, exit status 1, saying what to install.
 
 --json prints {"projects": [{"name", "path", "kind", "supported", "setup",
 "components": [{"project", "path", "name", "props": [{"name", "kind",
-"type", "default", "required", "literals"}], "error", "examples": [{"name",
-"props", "theme", "width"}], "examples_path"}]}]}, setup only when the
-sub-project names one, and type, default, literals, error, theme, and width
-only when they have a value. examples_path is the component's examples
+"type", "default", "required", "literals", "skeleton"}], "error",
+"examples": [{"name", "props", "theme", "width"}], "examples_path"}]}]},
+setup only when the sub-project names one, and type, default, literals,
+error, theme, and width only when they have a value. skeleton is given for
+each array, object, and unknown prop only: an empty value of its type, which
+flai resolves with the sub-project's own typescript, or [], {}, or null where
+it cannot. examples_path is the component's examples
 file, design/components/<sub-project>/<its path, .svelte made
 .examples.json>, whether or not it exists, and examples is [] when it does
 not. A file that does not fit the format gives the examples that parsed, and

@@ -5,22 +5,43 @@
 // one JSON object on standard output:
 //
 //   {"components": [{"path", "props": [{"name", "kind", "type", "default",
-//     "required", "literals"}], "error"}]}
+//     "required", "literals", "skeleton"}], "error"}]}
 //
 // or, when the compiler cannot be loaded, {"error": {"code", "message"}}.
-// It reads each component's source; it never runs one.
+// A prop of kind array, object, or unknown carries a skeleton, an empty value
+// of its type, resolved with the sub-project's own typescript when it has one
+// (S-0449). It reads each component's source; it never runs one.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 
 const objectTypes = new Set(['Record', 'Partial', 'Required', 'Readonly', 'Pick', 'Omit', 'Object']);
 
+// fallbacks are the skeletons of the json kinds when a prop's type cannot be
+// resolved; a prop of any other kind has no skeleton.
+const fallbacks = { array: [], object: {}, unknown: null };
+
+// propsAlias names the type typing gives the props; typedSkeletons reads it back.
+const propsAlias = '__flai_props__';
+
+// unresolved is the skeleton of a type that cannot be resolved, such as one
+// imported from a module that does not resolve; omitted is a function's,
+// whose key an object leaves out.
+const unresolved = Symbol('unresolved');
+const omitted = Symbol('omitted');
+
+// maxDepth is how many objects and arrays deep a skeleton goes.
+const maxDepth = 6;
+
+const require = createRequire(path.join(process.cwd(), 'package.json'));
 const compiler = loadCompiler();
 if (compiler.error) {
 	print({ error: compiler.error });
 } else {
 	const files = JSON.parse(fs.readFileSync(0, 'utf8'));
-	print({ components: files.map((file) => component(compiler.parse, file)) });
+	const read = files.map((file) => component(compiler.parse, file));
+	addSkeletons(read);
+	print({ components: read.map((r) => r.entry) });
 }
 
 function print(answer) {
@@ -30,7 +51,6 @@ function print(answer) {
 // loadCompiler resolves svelte/compiler from the sub-project, the working
 // directory, not from this script's location.
 function loadCompiler() {
-	const require = createRequire(path.join(process.cwd(), 'package.json'));
 	let version = '';
 	try {
 		version = require('svelte/package.json').version;
@@ -47,25 +67,36 @@ function loadCompiler() {
 	}
 }
 
-// component is one file's entry: its props, or the error that kept them.
+// component is one file's entry, its props or the error that kept them, and
+// the TypeScript that types its props, if its props have a type.
 function component(parse, file) {
+	const failed = (error) => ({ entry: { path: file, props: [], error }, typing: null });
 	let source;
 	try {
 		source = fs.readFileSync(file, 'utf8');
 	} catch (e) {
-		return { path: file, props: [], error: 'cannot read it: ' + e.message };
+		return failed('cannot read it: ' + e.message);
 	}
 	let ast;
 	try {
 		ast = parse(source, { modern: true });
 	} catch (e) {
-		return { path: file, props: [], error: parseError(e) };
+		return failed(parseError(e));
 	}
 	try {
-		return { path: file, props: props(source, ast) };
+		const { list, annotation } = props(source, ast);
+		return { entry: { path: file, props: list }, typing: annotation === null ? null : typing(source, ast, annotation) };
 	} catch (e) {
-		return { path: file, props: [], error: 'cannot read its props: ' + e.message };
+		return failed('cannot read its props: ' + e.message);
 	}
+}
+
+// typing is a module of the component's scripts, module first, with the type
+// of its props as propsAlias. export {} keeps each component's declarations
+// to its own module.
+function typing(source, ast, annotation) {
+	const body = (script) => (script ? source.slice(script.content.start, script.content.end) : '');
+	return [body(ast.module), body(ast.instance), 'type ' + propsAlias + ' = ' + annotation + ';', 'export {};', ''].join('\n');
 }
 
 function parseError(e) {
@@ -77,12 +108,13 @@ function parseError(e) {
 }
 
 // props reads the instance script's $props() declaration: the names it
-// destructures, with their defaults, and the members of its type.
+// destructures, with their defaults, and the members of its type, and its
+// type as written, or null when it has none.
 function props(source, ast) {
 	const text = (node) => source.slice(node.start, node.end);
 	const types = localTypes(ast);
 	const decl = propsDeclarator(ast.instance);
-	if (!decl) return [];
+	if (!decl) return { list: [], annotation: null };
 	const call = decl.init;
 	const annotation =
 		(decl.id.typeAnnotation && decl.id.typeAnnotation.typeAnnotation) ||
@@ -111,7 +143,7 @@ function props(source, ast) {
 	for (const [name, member] of byName) {
 		if (!seen.has(name)) out.push(prop(name, member, null, types, text));
 	}
-	return out;
+	return { list: out, annotation: annotation ? text(unwrap(annotation)) : null };
 }
 
 function firstParam(args) {
@@ -334,4 +366,168 @@ function kindOfValue(node) {
 		default:
 			return 'unknown';
 	}
+}
+
+// addSkeletons gives each prop of kind array, object, or unknown its
+// skeleton: an empty value of its type, or its kind's fallback when its type
+// cannot be resolved or the sub-project has no typescript.
+function addSkeletons(read) {
+	const json = (p) => Object.hasOwn(fallbacks, p.kind);
+	const typed = read.filter((r) => r.typing !== null && r.entry.props.some(json));
+	const ts = typed.length > 0 ? loadTypescript() : null;
+	const resolved = ts ? typedSkeletons(ts, typed) : new Map();
+	for (const r of read) {
+		const skeletonOf = resolved.get(r);
+		for (const p of r.entry.props) {
+			if (!json(p)) continue;
+			const s = skeletonOf ? skeletonOf(p.name) : undefined;
+			p.skeleton = s === undefined ? fallbacks[p.kind] : s;
+		}
+	}
+}
+
+// loadTypescript is the sub-project's own typescript, or null when it has
+// none, or one without the compiler API this script uses.
+function loadTypescript() {
+	try {
+		const ts = require('typescript');
+		return typeof ts.createProgram === 'function' ? ts : null;
+	} catch {
+		return null;
+	}
+}
+
+// typedSkeletons builds one program over the typed components, each as a
+// module beside its file, and gives, for each, a function from a prop's name
+// to its skeleton, or undefined when its type cannot be resolved.
+function typedSkeletons(ts, typed) {
+	const cwd = process.cwd();
+	const name = (r) => posix(path.resolve(cwd, r.entry.path)) + '.__flai.ts';
+	const modules = new Map(typed.map((r) => [name(r), r.typing]));
+	const options = compilerOptions(ts, cwd);
+	const program = ts.createProgram([...modules.keys()], options, compilerHost(ts, options, modules));
+	const checker = program.getTypeChecker();
+	const out = new Map();
+	// An old typescript, whose checker has no public isArrayType, gives the fallbacks.
+	if (typeof checker.isArrayType !== 'function') return out;
+	for (const r of typed) {
+		const file = program.getSourceFile(name(r));
+		const alias = file && file.statements.find((s) => ts.isTypeAliasDeclaration(s) && s.name.text === propsAlias);
+		if (!alias) continue;
+		const propsType = checker.getTypeFromTypeNode(alias.type);
+		const sk = skeletons(ts, checker, alias);
+		out.set(r, (prop) => {
+			const sym = checker.getPropertyOfType(propsType, prop);
+			if (!sym) return undefined;
+			const s = sk(checker.getTypeOfSymbolAtLocation(sym, alias), []);
+			return s === unresolved || s === omitted ? undefined : s;
+		});
+	}
+	return out;
+}
+
+function posix(p) {
+	return p.split(path.sep).join('/');
+}
+
+// compilerOptions are the sub-project's tsconfig.json's, when it has one,
+// for emitting nothing. A SvelteKit sub-project whose options do not map
+// $lib, as when .svelte-kit/tsconfig.json, which it extends, is not generated
+// yet, maps it to src/lib, as SvelteKit does.
+function compilerOptions(ts, cwd) {
+	let options = {};
+	const config = path.join(cwd, 'tsconfig.json');
+	if (ts.sys.fileExists(config)) {
+		const read = ts.readConfigFile(config, ts.sys.readFile);
+		if (!read.error) options = ts.parseJsonConfigFileContent(read.config, ts.sys, cwd, undefined, config).options;
+	}
+	if (!(options.paths && options.paths.$lib) && isSvelteKit()) {
+		const lib = posix(path.join(cwd, 'src', 'lib'));
+		options.paths = { ...options.paths, $lib: [lib], '$lib/*': [lib + '/*'] };
+	}
+	return { ...options, noEmit: true, skipLibCheck: true };
+}
+
+function isSvelteKit() {
+	try {
+		const pkg = require('./package.json');
+		return Boolean((pkg.dependencies || {})['@sveltejs/kit'] || (pkg.devDependencies || {})['@sveltejs/kit']);
+	} catch {
+		return false;
+	}
+}
+
+// compilerHost reads the disk, but for the components' modules, which it
+// serves from memory. Like tsc, it reads JSDoc only in JavaScript files,
+// where it gives types.
+function compilerHost(ts, options, modules) {
+	const host = ts.createCompilerHost(options, true);
+	if (ts.JSDocParsingMode) host.jsDocParsingMode = ts.JSDocParsingMode.ParseForTypeErrors;
+	const { getSourceFile, fileExists, readFile } = host;
+	host.getSourceFile = (file, language, ...rest) =>
+		modules.has(file) ? ts.createSourceFile(file, modules.get(file), language, true) : getSourceFile.call(host, file, language, ...rest);
+	host.fileExists = (file) => modules.has(file) || fileExists.call(host, file);
+	host.readFile = (file) => (modules.has(file) ? modules.get(file) : readFile.call(host, file));
+	return host;
+}
+
+// skeletons gives the function that builds a type's skeleton, given the
+// objects and arrays it is inside.
+function skeletons(ts, checker, at) {
+	const F = ts.TypeFlags;
+	const skeleton = (type, outer) => {
+		const f = type.flags;
+		if (f & (F.Any | F.Unknown | F.Never)) return unresolved;
+		if (f & (F.Null | F.Undefined | F.Void)) return null;
+		if (f & F.Boolean) return false;
+		if (type.isUnion()) return union(type, outer);
+		if (f & F.BooleanLiteral) return checker.typeToString(type) === 'true';
+		if (type.isStringLiteral() || type.isNumberLiteral()) return type.value;
+		if (f & F.StringLike) return '';
+		if (f & (F.NumberLike | F.BigIntLike)) return 0;
+		if (f & F.NonPrimitive) return {};
+		if (f & (F.Object | F.Intersection)) return object(type, outer);
+		return unresolved;
+	};
+	// union is the skeleton of its first member but undefined and null, false
+	// for a boolean, or null when there is no other member.
+	const union = (type, outer) => {
+		const rest = type.types.filter((t) => !(t.flags & (F.Null | F.Undefined | F.Void)));
+		if (rest.length === 0) return null;
+		if (rest.every((t) => t.flags & F.BooleanLiteral)) return rest.length > 1 ? false : skeleton(rest[0], outer);
+		return skeleton(rest[0], outer);
+	};
+	const item = (type, outer) => {
+		const s = skeleton(type, outer);
+		return s === unresolved || s === omitted ? null : s;
+	};
+	const object = (type, outer) => {
+		if (type.symbol && type.symbol.name === 'Date') return '';
+		const array = checker.isArrayType(type);
+		const tuple = checker.isTupleType(type);
+		if (outer.includes(type) || outer.length >= maxDepth) return array || tuple ? null : {};
+		const inner = [...outer, type];
+		if (array) {
+			const s = item(checker.getTypeArguments(type)[0], inner);
+			return s === null ? [] : [s];
+		}
+		if (tuple) {
+			return checker
+				.getTypeArguments(type)
+				.slice(0, type.target.elementFlags.length)
+				.map((t) => item(t, inner));
+		}
+		const members = checker.getPropertiesOfType(type).filter((p) => !/^__[@#]/.test(String(p.escapedName)));
+		if (members.length === 0) {
+			return checker.getSignaturesOfType(type, ts.SignatureKind.Call).length > 0 ? omitted : {};
+		}
+		const out = {};
+		for (const m of members) {
+			const s = skeleton(checker.getTypeOfSymbolAtLocation(m, at), inner);
+			if (s === omitted) continue;
+			out[m.name] = s === unresolved ? null : s;
+		}
+		return out;
+	};
+	return skeleton;
 }
