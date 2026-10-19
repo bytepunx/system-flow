@@ -63,6 +63,9 @@ type Tier struct {
 	// Covers names the tiers this one runs everything of: when it is
 	// selected with them, they are skipped rather than run (S-0342).
 	Covers []string `json:"covers,omitempty"`
+	// Queue leaves the tier to the merge queue's batch while the queue runs
+	// (S-0405).
+	Queue bool `json:"queue,omitempty"`
 }
 
 // Finding is one failure a tier's output names.

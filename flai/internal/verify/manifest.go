@@ -25,6 +25,7 @@ func FromManifest(tiers []manifest.TestTier) []Tier {
 			AllCommand: slices.Clone(t.AllCommand),
 			FixCommand: slices.Clone(t.FixCommand),
 			Covers:     slices.Clone(t.Covers),
+			Queue:      t.Queue,
 		})
 	}
 	return out

@@ -873,6 +873,9 @@ type TestTier struct {
 	// Covers are the names of the tiers this one runs everything of, so that
 	// when it is selected with them only this one runs (S-0342).
 	Covers []string `yaml:"covers,omitempty" json:"covers,omitempty"`
+	// Queue leaves the tier to the merge queue: while the queue runs, flai
+	// verify leaves it out and the queue's batch runs it (S-0405).
+	Queue bool `yaml:"queue,omitempty" json:"queue,omitempty"`
 }
 
 // The placeholders a tier's command may hold, each as an argument of its own.

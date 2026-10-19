@@ -1046,7 +1046,8 @@ func TestDesignStylesheet(t *testing.T) {
 }
 
 // S-0273: tests is an ordered list of tiers that loads with every field,
-// reads back the same through YAML and JSON, and is valid.
+// queue among them (S-0405), reads back the same through YAML and JSON, and
+// is valid.
 func TestTestsRoundTrip(t *testing.T) {
 	body := "version: 1\nname: demo\nlayout:\n  design: d\n  docs: docs\n  wip: wip\n" +
 		"tests:\n" +
@@ -1059,13 +1060,14 @@ func TestTestsRoundTrip(t *testing.T) {
 		"  fix_command: [gofmt, -w, \"{files}\"]\n" +
 		"- name: smoke\n" +
 		"  command: [scripts/smoke.sh]\n" +
-		"  all_only: true\n"
+		"  all_only: true\n" +
+		"  queue: true\n"
 	m := loaded(t, []byte(body))
 	want := []TestTier{
 		{Name: "unit", Command: []string{"go", "test", "-json", PlaceholderPackages}, Dir: "flai",
 			Paths: []string{"flai/**", "!flai/testdata/**"}, Format: FormatGoTestJSON, AllCommand: []string{"go", "test", "-json", "./..."},
 			FixCommand: []string{"gofmt", "-w", PlaceholderFiles}},
-		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true},
+		{Name: "smoke", Command: []string{"scripts/smoke.sh"}, AllOnly: true, Queue: true},
 	}
 	if !reflect.DeepEqual(m.Tests, want) {
 		t.Fatalf("tests:\n got %+v\nwant %+v", m.Tests, want)
@@ -1092,7 +1094,7 @@ func TestTestsRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(js, &fromJSON); err != nil || !reflect.DeepEqual(fromJSON, want) {
 		t.Errorf("JSON round trip: %v\n%s", err, js)
 	}
-	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) {
+	if !strings.Contains(string(js), `"all_only":true`) || !strings.Contains(string(js), `"all_command":`) || !strings.Contains(string(js), `"fix_command":`) || !strings.Contains(string(js), `"queue":true`) {
 		t.Errorf("JSON keys are not snake_case: %s", js)
 	}
 }
@@ -1187,6 +1189,11 @@ func TestTestErrors(t *testing.T) {
 		with(func(x *TestTier) { x.Command = []string{"go", "test", "{importers}"} }),
 		with(func(x *TestTier) { x.Command = []string{"sh", "-c", "echo ${HOME}"} }),
 		with(func(x *TestTier) { x.FixCommand = []string{"scripts/lint-md.sh", "--fix", "{files}"} }),
+		// S-0405: queue is accepted on any tier, with any other field.
+		with(func(x *TestTier) { x.Queue = true }),
+		with(func(x *TestTier) {
+			x.Queue, x.Paths, x.AllOnly, x.FixCommand = true, nil, true, []string{"scripts/lint-md.sh", "--fix", "{files}"}
+		}),
 	} {
 		if errs := (Manifest{Tests: []TestTier{tier}}).TestErrors(); len(errs) != 0 {
 			t.Errorf("%+v refused: %v", tier, errs)

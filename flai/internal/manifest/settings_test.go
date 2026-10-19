@@ -474,6 +474,33 @@ func TestEditSettingsWritesCovers(t *testing.T) {
 	}
 }
 
+// S-0405: a tier's queue is written, read back, and makes two tiers differ.
+func TestEditSettingsWritesQueue(t *testing.T) {
+	value := `[{"name":"smoke","command":["scripts/smoke.sh"],"paths":["**"],"all_only":true,"queue":true}]`
+	got, err := EditSettings([]byte(settingsFixture), []Assignment{{"tests", value}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := settingsFixture + "tests:\n" +
+		"  - name: smoke\n" +
+		"    command: [scripts/smoke.sh]\n" +
+		"    paths: [\"**\"]\n" +
+		"    all_only: true\n" +
+		"    queue: true\n"
+	if string(got) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+	}
+	m := loaded(t, got)
+	if len(m.Tests) != 1 || !m.Tests[0].Queue {
+		t.Errorf("reads back: %+v", m.Tests)
+	}
+	unqueued := slices.Clone(m.Tests)
+	unqueued[0].Queue = false
+	if sameTiers(m.Tests, unqueued) {
+		t.Error("tiers that differ in queue are the same")
+	}
+}
+
 // S-0273: a value that is not a list of tiers, and a tier the manifest's
 // validation refuses, are refused with the field and the reason, and nothing
 // is written.
