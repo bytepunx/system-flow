@@ -16,7 +16,25 @@
 		enqueued?: boolean;
 		reasons?: QueueReason[];
 	};
-	/** The merge queue as board.get carries it (S-0398, mergequeue.Queue). */
+	/** What the batch's verification found (S-0399): passed, or the tier it stopped at and why. */
+	export type BatchResult = {
+		passed: boolean;
+		stopped_at?: string;
+		summary?: string;
+		finished_at: string;
+	};
+	/** The batch under verification (mergequeue.Batch): its stories, its step, and, once it has them, its result and why it was dropped. */
+	export type QueueBatch = {
+		id?: string;
+		branch?: string;
+		worktree?: string;
+		stories: string[];
+		started_at?: string;
+		step: string;
+		result?: BatchResult;
+		dropped?: { reason: string; by: string; at: string };
+	};
+	/** The merge queue as board.get carries it (S-0398, mergequeue.Queue), held or not (S-0399). */
 	export type MergeQueueState = {
 		mode: string;
 		off?: boolean;
@@ -24,9 +42,14 @@
 		eligible: QueueEntry[] | null;
 		ineligible: QueueEntry[] | null;
 		enqueued?: { story: string; by: string; at: string }[] | null;
-		batch?: { stories: string[]; step: string };
+		batch?: QueueBatch;
 		outcomes?: { story: string; outcome: string; at: string; detail?: string }[] | null;
+		held?: boolean;
+		held_by?: string;
+		held_at?: string;
 	};
+	/** A write to the queue refused (mergequeue.Refusal): flai's sentence, and every reason a story is not eligible. */
+	export type QueueRefusal = { text: string; reasons: QueueReason[] };
 	/** A card's mark in review: its place among the eligible stories, or why it is not eligible. */
 	export type QueueMark = { place: number } | { reasons: QueueReason[] };
 
@@ -38,21 +61,76 @@
 			...(q.ineligible ?? []).map((e) => [e.story, { reasons: e.reasons ?? [] }])
 		]);
 	}
+
+	/** Whether a batch is being verified: it has neither a result nor been dropped, so its step may change. */
+	export function verifying(q: MergeQueueState | null | undefined): boolean {
+		const b = q && !q.off ? q.batch : undefined;
+		return !!b && !b.result && !b.dropped;
+	}
+
+	/** A failed write's answer as the page shows it: flai's sentence and reasons when it refused, else its error. */
+	export function refusalOf(body: unknown, fallback: string): QueueRefusal {
+		const b = (body ?? {}) as { text?: unknown; reasons?: unknown; error?: unknown };
+		const text =
+			typeof b.text === 'string' && b.text
+				? b.text
+				: typeof b.error === 'string' && b.error
+					? b.error
+					: fallback;
+		return { text, reasons: Array.isArray(b.reasons) ? (b.reasons as QueueReason[]) : [] };
+	}
 </script>
 
 <script lang="ts">
 	// The merge queue above the review lane (S-0398): the eligible stories in the order the queue
-	// takes them, and the batch under verification with its step. Under pull-request acceptance the
-	// queue does not run, and flai says why; a flai on the host too old to send the queue sends none.
-	// Each card in review carries its own mark, so the reasons of the stories not eligible are there.
+	// takes them, and the batch under verification with its step and, once verified, its result
+	// (S-0399). Under pull-request acceptance the queue does not run, and flai says why; a flai on the
+	// host too old to send the queue sends none. Each card in review carries its own mark, so the
+	// reasons of the stories not eligible are there. The hold switch holds and resumes the queue
+	// through flai's queue.hold, offered while the merge-queue host action is on.
+	import { api } from '$lib/api';
+	import { localTime } from '$lib/localtime';
+
 	type Props = {
 		/** The queue from board.get, or undefined when the flai on the host sent none. */
 		queue?: MergeQueueState;
+		/** Whether the merge-queue host action is on; undefined while unknown, and then nothing is offered. */
+		enabled?: boolean;
+		/** Whether the dashboard can write through flai. */
+		writable?: boolean;
+		/** Called once a hold or a resume is written, so that the page reads the queue again. */
+		onchanged?: () => void;
 	};
-	let { queue }: Props = $props();
+	let { queue, enabled, writable = false, onchanged }: Props = $props();
 
 	const eligible = $derived(queue?.eligible ?? []);
 	const ineligible = $derived(queue?.ineligible ?? []);
+	const batch = $derived(queue?.batch);
+
+	let holding = $state(false);
+	let holdError = $state<string | null>(null);
+
+	async function hold(held: boolean) {
+		holding = true;
+		holdError = null;
+		try {
+			const r = await api('/api/queue', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ held })
+			});
+			const body = await r.json().catch(() => ({}));
+			if (!r.ok) {
+				holdError = refusalOf(body, r.statusText).text;
+				return;
+			}
+			onchanged?.();
+		} catch (e) {
+			holdError = e instanceof Error ? e.message : String(e);
+		} finally {
+			holding = false;
+		}
+	}
 </script>
 
 <section
@@ -73,12 +151,65 @@
 			<p class="mt-1">Why: {queue.off_reason}</p>
 		</div>
 	{:else}
-		<p class="font-semibold text-ink">Merge queue</p>
-		{#if queue.batch}
-			<p class="mt-1" data-testid="merge-queue-batch">
-				Batch <span class="font-mono text-ink">{queue.batch.stories.join(', ')}</span> at step
-				<span class="font-semibold text-ink">{queue.batch.step}</span>
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			<p class="font-semibold text-ink">Merge queue</p>
+			{#if enabled && writable}
+				<label class="flex items-center gap-1 text-ink">
+					<input
+						type="checkbox"
+						role="switch"
+						checked={queue.held === true}
+						disabled={holding}
+						aria-label="Hold the merge queue"
+						data-testid="merge-queue-hold"
+						onchange={(e) => hold(e.currentTarget.checked)}
+					/>
+					Hold
+				</label>
+			{/if}
+		</div>
+		{#if queue.held}
+			<p class="mt-1 font-semibold text-warn" data-testid="merge-queue-held">
+				Held by {queue.held_by}{queue.held_at ? ` at ${localTime(queue.held_at)}` : ''}: no batch is
+				built until it is resumed.
 			</p>
+		{/if}
+		{#if enabled === false}
+			<p class="mt-1" data-testid="merge-queue-disabled">
+				No batch runs: the operator turns the queue on in a shell on the host with
+				<code class="rounded bg-ground px-1 text-ink">flai serve enable merge-queue</code>.
+			</p>
+		{/if}
+		{#if holdError}
+			<p class="mt-1 text-danger" role="alert" data-testid="merge-queue-hold-error">
+				{holdError}
+			</p>
+		{/if}
+		{#if batch}
+			<div class="mt-1" data-testid="merge-queue-batch">
+				<p>
+					Batch <span class="font-mono text-ink">{batch.stories.join(', ')}</span> at step
+					<span class="font-semibold text-ink">{batch.step}</span>
+				</p>
+				{#if batch.result?.passed}
+					<p class="text-good" data-testid="merge-queue-result">
+						Passed, {localTime(batch.result.finished_at)}{batch.result.summary
+							? `: ${batch.result.summary}`
+							: '.'}
+					</p>
+				{:else if batch.result}
+					<p class="text-danger" data-testid="merge-queue-result">
+						Failed{batch.result.stopped_at ? ` at ${batch.result.stopped_at}` : ''}, {localTime(
+							batch.result.finished_at
+						)}{batch.result.summary ? `: ${batch.result.summary}` : '.'}
+					</p>
+				{/if}
+				{#if batch.dropped}
+					<p class="text-warn" data-testid="merge-queue-dropped">
+						Dropped by {batch.dropped.by}, {localTime(batch.dropped.at)}: {batch.dropped.reason}
+					</p>
+				{/if}
+			</div>
 		{:else}
 			<p class="mt-1" data-testid="merge-queue-batch">No batch.</p>
 		{/if}

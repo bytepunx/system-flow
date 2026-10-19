@@ -55,6 +55,313 @@
       "width": 320
     },
     {
+      "name": "Held by the operator, with the hold switch",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [
+            {
+              "story": "S-0398",
+              "title": "A merge queue lists the stories in review that are eligible",
+              "entered_review": "2026-10-18T09:00:00Z",
+              "head": "0123456789abcdef0123456789abcdef01234567",
+              "enqueued": true
+            },
+            {
+              "story": "S-0402",
+              "title": "The queue lands a batch",
+              "entered_review": "2026-10-18T11:30:00Z",
+              "head": "89abcdef0123456789abcdef0123456789abcdef"
+            }
+          ],
+          "ineligible": [
+            {
+              "story": "S-0401",
+              "title": "Show the queue's outcomes on the review page",
+              "entered_review": "2026-10-18T12:00:00Z",
+              "reasons": [
+                {
+                  "kind": "thread_open",
+                  "text": "thread TH-0465 is not resolved on S-0401 or its tasks: resolve each before the queue takes it",
+                  "threads": [
+                    "TH-0465"
+                  ]
+                }
+              ]
+            }
+          ],
+          "enqueued": [
+            {
+              "story": "S-0398",
+              "by": "alex",
+              "at": "2026-10-18T12:10:00Z"
+            }
+          ],
+          "batch": {
+            "stories": [
+              "S-0398"
+            ],
+            "step": "verify"
+          },
+          "outcomes": [],
+          "held": true,
+          "held_by": "alex",
+          "held_at": "2026-10-19T09:30:00Z"
+        },
+        "enabled": true,
+        "writable": true
+      },
+      "width": 320
+    },
+    {
+      "name": "Batch passed",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [
+            {
+              "story": "S-0398",
+              "title": "A merge queue lists the stories in review that are eligible",
+              "entered_review": "2026-10-18T09:00:00Z",
+              "head": "0123456789abcdef0123456789abcdef01234567",
+              "enqueued": true
+            },
+            {
+              "story": "S-0402",
+              "title": "The queue lands a batch",
+              "entered_review": "2026-10-18T11:30:00Z",
+              "head": "89abcdef0123456789abcdef0123456789abcdef"
+            }
+          ],
+          "ineligible": [
+            {
+              "story": "S-0401",
+              "title": "Show the queue's outcomes on the review page",
+              "entered_review": "2026-10-18T12:00:00Z",
+              "reasons": [
+                {
+                  "kind": "thread_open",
+                  "text": "thread TH-0465 is not resolved on S-0401 or its tasks: resolve each before the queue takes it",
+                  "threads": [
+                    "TH-0465"
+                  ]
+                }
+              ]
+            }
+          ],
+          "enqueued": [
+            {
+              "story": "S-0398",
+              "by": "alex",
+              "at": "2026-10-18T12:10:00Z"
+            }
+          ],
+          "batch": {
+            "id": "B-20261019-0930",
+            "branch": "queue/B-20261019-0930",
+            "stories": [
+              "S-0398",
+              "S-0402"
+            ],
+            "started_at": "2026-10-19T09:30:00Z",
+            "step": "verified",
+            "result": {
+              "passed": true,
+              "summary": "every tier passed",
+              "finished_at": "2026-10-19T09:48:00Z"
+            }
+          },
+          "outcomes": []
+        },
+        "enabled": true,
+        "writable": true
+      },
+      "width": 320
+    },
+    {
+      "name": "Batch failed at a tier",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [
+            {
+              "story": "S-0398",
+              "title": "A merge queue lists the stories in review that are eligible",
+              "entered_review": "2026-10-18T09:00:00Z",
+              "head": "0123456789abcdef0123456789abcdef01234567",
+              "enqueued": true
+            },
+            {
+              "story": "S-0402",
+              "title": "The queue lands a batch",
+              "entered_review": "2026-10-18T11:30:00Z",
+              "head": "89abcdef0123456789abcdef0123456789abcdef"
+            }
+          ],
+          "ineligible": [
+            {
+              "story": "S-0401",
+              "title": "Show the queue's outcomes on the review page",
+              "entered_review": "2026-10-18T12:00:00Z",
+              "reasons": [
+                {
+                  "kind": "thread_open",
+                  "text": "thread TH-0465 is not resolved on S-0401 or its tasks: resolve each before the queue takes it",
+                  "threads": [
+                    "TH-0465"
+                  ]
+                }
+              ]
+            }
+          ],
+          "enqueued": [
+            {
+              "story": "S-0398",
+              "by": "alex",
+              "at": "2026-10-18T12:10:00Z"
+            }
+          ],
+          "batch": {
+            "id": "B-20261019-0930",
+            "branch": "queue/B-20261019-0930",
+            "stories": [
+              "S-0398",
+              "S-0402"
+            ],
+            "started_at": "2026-10-19T09:30:00Z",
+            "step": "verified",
+            "result": {
+              "passed": false,
+              "stopped_at": "integration",
+              "summary": "TestLanding failed in flai/internal/mergequeue",
+              "finished_at": "2026-10-19T09:52:00Z"
+            }
+          },
+          "outcomes": []
+        },
+        "enabled": true,
+        "writable": true
+      },
+      "width": 320
+    },
+    {
+      "name": "Batch dropped",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [
+            {
+              "story": "S-0398",
+              "title": "A merge queue lists the stories in review that are eligible",
+              "entered_review": "2026-10-18T09:00:00Z",
+              "head": "0123456789abcdef0123456789abcdef01234567",
+              "enqueued": true
+            },
+            {
+              "story": "S-0402",
+              "title": "The queue lands a batch",
+              "entered_review": "2026-10-18T11:30:00Z",
+              "head": "89abcdef0123456789abcdef0123456789abcdef"
+            }
+          ],
+          "ineligible": [
+            {
+              "story": "S-0401",
+              "title": "Show the queue's outcomes on the review page",
+              "entered_review": "2026-10-18T12:00:00Z",
+              "reasons": [
+                {
+                  "kind": "thread_open",
+                  "text": "thread TH-0465 is not resolved on S-0401 or its tasks: resolve each before the queue takes it",
+                  "threads": [
+                    "TH-0465"
+                  ]
+                }
+              ]
+            }
+          ],
+          "enqueued": [
+            {
+              "story": "S-0398",
+              "by": "alex",
+              "at": "2026-10-18T12:10:00Z"
+            }
+          ],
+          "batch": {
+            "stories": [
+              "S-0398"
+            ],
+            "step": "verify",
+            "dropped": {
+              "reason": "S-0398 was removed from the queue by alex",
+              "by": "alex",
+              "at": "2026-10-19T09:40:00Z"
+            }
+          },
+          "outcomes": []
+        },
+        "enabled": true,
+        "writable": true
+      },
+      "width": 320
+    },
+    {
+      "name": "Host action off",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [
+            {
+              "story": "S-0398",
+              "title": "A merge queue lists the stories in review that are eligible",
+              "entered_review": "2026-10-18T09:00:00Z",
+              "head": "0123456789abcdef0123456789abcdef01234567",
+              "enqueued": true
+            },
+            {
+              "story": "S-0402",
+              "title": "The queue lands a batch",
+              "entered_review": "2026-10-18T11:30:00Z",
+              "head": "89abcdef0123456789abcdef0123456789abcdef"
+            }
+          ],
+          "ineligible": [
+            {
+              "story": "S-0401",
+              "title": "Show the queue's outcomes on the review page",
+              "entered_review": "2026-10-18T12:00:00Z",
+              "reasons": [
+                {
+                  "kind": "thread_open",
+                  "text": "thread TH-0465 is not resolved on S-0401 or its tasks: resolve each before the queue takes it",
+                  "threads": [
+                    "TH-0465"
+                  ]
+                }
+              ]
+            }
+          ],
+          "enqueued": [
+            {
+              "story": "S-0398",
+              "by": "alex",
+              "at": "2026-10-18T12:10:00Z"
+            }
+          ],
+          "batch": {
+            "stories": [
+              "S-0398"
+            ],
+            "step": "verify"
+          },
+          "outcomes": []
+        },
+        "enabled": false,
+        "writable": true
+      },
+      "width": 320
+    },
+    {
       "name": "Empty, no batch",
       "props": {
         "queue": {

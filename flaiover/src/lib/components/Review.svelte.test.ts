@@ -87,6 +87,10 @@ function backend(over: {
 	components?: () => unknown;
 	/** The story's pull request as flai serve kept it, GET /api/items/[id]/forge. */
 	forge?: () => unknown;
+	/** The merge queue and whether its host action is on, GET /api/queue, afresh on each read. */
+	queue?: () => unknown;
+	/** An enqueue (POST) or a dequeue (DELETE), /api/items/[id]/queue. */
+	queueWrite?: (method: string) => unknown;
 }) {
 	let statusIdx = 0;
 	api.mockImplementation(async (url: string, init?: { method?: string; body?: string }) => {
@@ -95,6 +99,10 @@ function backend(over: {
 			return over.issueStory
 				? over.issueStory(made[1])
 				: json({ id: 'S-0099', title: 'x', issue: made[1], committed: true });
+		if (url === '/api/queue')
+			return over.queue ? over.queue() : json({ enabled: false, queue: null });
+		if (url.endsWith('/queue') && (init?.method === 'POST' || init?.method === 'DELETE'))
+			return over.queueWrite ? over.queueWrite(init.method) : json({});
 		if (url.startsWith('/api/issues?story=')) return json(over.ownIssues ?? []);
 		if (url === '/api/issues') return json(over.issues ?? []);
 		if (url.includes('/checks/tail'))
@@ -1407,6 +1415,156 @@ describe('Review', () => {
 
 	// Found live (S-0088): the narrative pane showed markdown as literal text ("1. Accept.", "**x**")
 	// instead of rendering it, unlike every other place in the dashboard that shows a document body.
+	// S-0399: the merge queue's button on a story in review, behind the merge-queue host action.
+	describe('the merge queue', () => {
+		const running = (enqueued: { story: string; by: string; at: string }[] = []) => ({
+			mode: 'local',
+			eligible: [],
+			ineligible: [],
+			enqueued,
+			outcomes: []
+		});
+		const pullRequest = {
+			mode: 'pull-request',
+			off: true,
+			off_reason: 'local only',
+			eligible: null,
+			ineligible: null
+		};
+		const queueMethods = () =>
+			api.mock.calls
+				.filter((c) => String(c[0]) === '/api/items/S-0041/queue')
+				.map((c) => (c[1] as { method?: string })?.method);
+		const text = (testid: string) => {
+			const el = document.querySelector(`[data-testid="${testid}"]`);
+			return el?.textContent?.replace(/\s+/g, ' ').trim();
+		};
+
+		it('enqueues the story, reads the queue again, and then offers to dequeue it', async () => {
+			let enqueued: { story: string; by: string; at: string }[] = [];
+			backend({
+				queue: () => json({ enabled: true, queue: running(enqueued) }),
+				queueWrite: () => {
+					enqueued = [{ story: 'S-0041', by: 'alex', at: '2026-10-19T10:00:00Z' }];
+					return json({ action: 'add', story: 'S-0041', changed: true, by: 'alex' });
+				}
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			const b = document.querySelector<HTMLButtonElement>('[data-testid="queue-button"]')!;
+			expect(b.textContent?.trim()).toBe('Enqueue');
+			expect(document.querySelector('[data-testid="queue-enqueued"]')).toBeNull();
+			b.click();
+			await settle();
+			expect(queueMethods()).toEqual(['POST']);
+			expect(button('Dequeue')).toBeTruthy();
+			expect(text('queue-enqueued')).toMatch(/^In the merge queue, enqueued by alex at 2026-10-1/);
+			expect(document.querySelector('[data-testid="queue-refusal"]')).toBeNull();
+		});
+
+		it('dequeues a story enqueued', async () => {
+			let enqueued = [{ story: 'S-0041', by: 'alex', at: '2026-10-19T10:00:00Z' }];
+			backend({
+				queue: () => json({ enabled: true, queue: running(enqueued) }),
+				queueWrite: () => {
+					enqueued = [];
+					return json({ action: 'remove', story: 'S-0041', changed: true, by: 'alex' });
+				}
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Dequeue').click();
+			await settle();
+			expect(queueMethods()).toEqual(['DELETE']);
+			expect(button('Enqueue')).toBeTruthy();
+			expect(document.querySelector('[data-testid="queue-enqueued"]')).toBeNull();
+		});
+
+		it('shows a refusal’s sentence and each reason, by kind, as flai gives them', async () => {
+			backend({
+				queue: () => json({ enabled: true, queue: running() }),
+				queueWrite: () =>
+					json(
+						{
+							error:
+								'S-0041 is not enqueued: it is not eligible for the merge queue: verify_missing: no result; thread_open: TH-0001 open',
+							story: 'S-0041',
+							text: 'S-0041 is not enqueued: it is not eligible for the merge queue',
+							reasons: [
+								{ kind: 'verify_missing', text: 'S-0041 has no flai verify result' },
+								{
+									kind: 'thread_open',
+									text: 'thread TH-0001 is not resolved',
+									threads: ['TH-0001']
+								}
+							]
+						},
+						422
+					)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Enqueue').click();
+			await settle();
+			expect(text('queue-refusal-text')).toBe(
+				'S-0041 is not enqueued: it is not eligible for the merge queue'
+			);
+			const reasons = [
+				...document.querySelectorAll<HTMLElement>('[data-testid="queue-refusal-reason"]')
+			];
+			expect(reasons.map((r) => r.dataset.kind)).toEqual(['verify_missing', 'thread_open']);
+			expect(reasons.map((r) => r.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+				'verify_missing: S-0041 has no flai verify result',
+				'thread_open: thread TH-0001 is not resolved'
+			]);
+			expect(button('Enqueue')).toBeTruthy();
+		});
+
+		it('shows flai’s error when a refusal carries no sentence of its own', async () => {
+			backend({
+				queue: () => json({ enabled: true, queue: running() }),
+				queueWrite: () =>
+					json(
+						{
+							error:
+								'the host action "merge-queue" is not enabled for this project. On the host, in the project, run: flai serve enable merge-queue'
+						},
+						403
+					)
+			});
+			c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+			await settle();
+			button('Enqueue').click();
+			await settle();
+			expect(text('queue-refusal-text')).toContain('flai serve enable merge-queue');
+			expect(document.querySelector('[data-testid="queue-refusal-reason"]')).toBeNull();
+		});
+
+		it('offers nothing while the action is off, under pull-request acceptance, or out of review', async () => {
+			const cases: [Parameters<typeof backend>[0], string][] = [
+				[{ queue: () => json({ enabled: false, queue: running() }) }, 'the action off'],
+				[{ queue: () => json({ enabled: true, queue: pullRequest }) }, 'pull-request acceptance'],
+				[{ queue: () => json({ enabled: true, queue: null }) }, 'no queue from the host'],
+				[
+					{
+						item: { ...STORY, status: 'in-progress' },
+						queue: () => json({ enabled: true, queue: running() })
+					},
+					'not in review'
+				]
+			];
+			for (const [over, why] of cases) {
+				backend(over);
+				c = mount(Review, { target: document.body, props: { id: 'S-0041' } });
+				await settle();
+				expect(document.querySelector('[data-testid="queue-button"]'), why).toBeNull();
+				unmount(c);
+				c = undefined;
+				document.body.innerHTML = '';
+			}
+		});
+	});
+
 	it('renders markdown in the narrative pane rather than showing it as literal text', async () => {
 		backend({
 			narrative:

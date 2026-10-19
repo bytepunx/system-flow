@@ -20,6 +20,11 @@
 	import DiffView from '$lib/components/DiffView.svelte';
 	import Threads from '$lib/components/Threads.svelte';
 	import ForgeStatus, { type PullRequestStatus } from '$lib/components/ForgeStatus.svelte';
+	import {
+		refusalOf,
+		type MergeQueueState,
+		type QueueRefusal
+	} from '$lib/components/MergeQueue.svelte';
 	import { render, enhance } from '$lib/markdown';
 	import { localTime } from '$lib/localtime';
 	import { themeState } from '$lib/theme.svelte';
@@ -193,6 +198,15 @@
 	// adds counts; null while unread, or when it cannot be read, and then nothing is offered.
 	let catalogue = $state.raw<ComponentsCatalogue | null>(null);
 
+	// The merge queue (S-0399): its state and whether the merge-queue host action is on, from
+	// /api/queue, for a story in review. Enqueue and Dequeue are offered while the action is on and
+	// the queue runs, which it does not under pull-request acceptance; a refusal shows flai's sentence
+	// and each reason as flai gives them.
+	let queueEnabled = $state(false);
+	let queueState = $state<MergeQueueState | null>(null);
+	let queueBusy = $state(false);
+	let queueRefusal = $state<QueueRefusal | null>(null);
+
 	function sleep(ms: number): Promise<void> {
 		return new Promise((r) => setTimeout(r, ms));
 	}
@@ -234,6 +248,10 @@
 			!unresolved.length &&
 			!needsChoice &&
 			!unsaved.length
+	);
+	const enqueuedAs = $derived(queueState?.enqueued?.find((e) => e.story === id));
+	const queueOffered = $derived(
+		writable && inReview && !result && queueEnabled && !!queueState && !queueState.off
 	);
 	const undoneActive = $derived(
 		writable && inReview && !result && !running && !restoring && !sendingUndone
@@ -332,6 +350,9 @@
 		keeping = {};
 		undoneErrors = {};
 		undoneError = null;
+		queueEnabled = false;
+		queueState = null;
+		queueRefusal = null;
 		try {
 			item = (await get<{ item: Item }>(`/api/items/${target}`)).item;
 		} catch (e) {
@@ -352,6 +373,7 @@
 		if (item.status === 'review') {
 			void loadPreview(target);
 			void loadIssues(target);
+			void loadQueue(target);
 		}
 		void loadChecks(target);
 		void loadVerify(target);
@@ -463,6 +485,35 @@
 			undoneError = e instanceof Error ? e.message : String(e);
 		} finally {
 			sendingUndone = false;
+		}
+	}
+
+	// The queue as flai reads it now; one that cannot be read offers nothing.
+	async function loadQueue(target: string) {
+		try {
+			const r = await api('/api/queue');
+			if (!r.ok || target !== id) return;
+			const body = await r.json();
+			queueEnabled = body.enabled === true;
+			queueState = body.queue ?? null;
+		} catch {
+			// nothing offered rather than an error beside the acceptance
+		}
+	}
+
+	// POST enqueues, DELETE dequeues, as the project's owner; the queue is read again after either.
+	async function queueWrite(method: 'POST' | 'DELETE') {
+		queueBusy = true;
+		queueRefusal = null;
+		try {
+			const r = await api(`/api/items/${id}/queue`, { method });
+			const body = await r.json().catch(() => ({}));
+			if (!r.ok) queueRefusal = refusalOf(body, r.statusText);
+			await loadQueue(id);
+		} catch (e) {
+			queueRefusal = { text: e instanceof Error ? e.message : String(e), reasons: [] };
+		} finally {
+			queueBusy = false;
 		}
 	}
 
@@ -1253,7 +1304,41 @@
 						disabled={running}
 						onclick={() => (sendingBack = !sendingBack)}>Send back</button
 					>
+					{#if queueOffered}
+						<button
+							type="button"
+							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+							disabled={running || queueBusy}
+							data-testid="queue-button"
+							onclick={() => queueWrite(enqueuedAs ? 'DELETE' : 'POST')}
+							>{enqueuedAs ? 'Dequeue' : 'Enqueue'}</button
+						>
+					{/if}
 				</div>
+				{#if queueOffered && enqueuedAs}
+					<p class="mt-2 text-xs text-muted" data-testid="queue-enqueued">
+						In the merge queue, enqueued by {enqueuedAs.by} at {localTime(enqueuedAs.at)}.
+					</p>
+				{/if}
+				{#if queueRefusal}
+					<div
+						class="mt-2 rounded border border-danger bg-danger-soft p-2 text-danger"
+						role="alert"
+						data-testid="queue-refusal"
+					>
+						<p class="font-medium">The merge queue is unchanged. flai said:</p>
+						<p data-testid="queue-refusal-text">{queueRefusal.text}</p>
+						{#if queueRefusal.reasons.length}
+							<ul class="mt-1 ml-4 list-disc">
+								{#each queueRefusal.reasons as r, i (i)}
+									<li data-testid="queue-refusal-reason" data-kind={r.kind}>
+										<span class="font-mono">{r.kind}</span>: {r.text}
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+				{/if}
 				{#if sendingBack}
 					<div class="mt-2">
 						<label class="block text-xs text-muted" for="send-back-reason"

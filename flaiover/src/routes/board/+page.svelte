@@ -13,7 +13,11 @@
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
-	import MergeQueue, { queueMarks, type MergeQueueState } from '$lib/components/MergeQueue.svelte';
+	import MergeQueue, {
+		queueMarks,
+		verifying,
+		type MergeQueueState
+	} from '$lib/components/MergeQueue.svelte';
 	import BoardLegend from '$lib/components/BoardLegend.svelte';
 	import { boardTypes, type ItemType } from '$lib/boardtypes.svelte';
 	import { boardNatures } from '$lib/boardnatures.svelte';
@@ -134,8 +138,33 @@
 		return () => clearInterval(t);
 	});
 
+	// The merge queue (S-0399) as /api/queue last read it, fresh from flai, with whether the
+	// merge-queue host action is on; until it answers, the board's own. The queue's state is in the
+	// host's .flai-cache, which no change notice reports, so while a batch is under verification the
+	// board asks for it every 10 seconds, to show its step and its result as they change; work items
+	// changing ask for it at once.
+	let liveQueue = $state<MergeQueueState | null | undefined>(undefined);
+	let queueEnabled = $state<boolean | undefined>(undefined);
+	const queue = $derived(liveQueue === undefined ? board?.queue : (liveQueue ?? undefined));
+	async function loadQueue() {
+		try {
+			const r = await api('/api/queue');
+			if (!r.ok) return;
+			const body = await r.json();
+			liveQueue = body.queue ?? null;
+			queueEnabled = body.enabled === true;
+		} catch {
+			// keep what we had
+		}
+	}
+	$effect(() => {
+		if (!verifying(queue)) return;
+		const t = setInterval(() => void loadQueue(), 10000);
+		return () => clearInterval(t);
+	});
+
 	// Each card in review's place in the merge queue, or why it is not eligible (S-0398).
-	const marks = $derived(queueMarks(board?.queue));
+	const marks = $derived(queueMarks(queue));
 
 	const waitingIds = $derived(
 		new Set([
@@ -148,6 +177,7 @@
 		load();
 		void loadPublish();
 		void loadAgents();
+		void loadQueue();
 		// The board and the Publish banner are read from the work items: a narrative, a thread, or a
 		// document changing asks for neither of them, and changes that arrive together ask once
 		// (S-0161). The agents are read from the items and the threads, and flai serve says when one
@@ -157,6 +187,7 @@
 			follow(['item'], () => {
 				load();
 				void loadPublish();
+				void loadQueue();
 			}),
 			follow(['item', 'thread'], () => void loadAgents()),
 			listen({ agent: () => agents() })
@@ -691,7 +722,12 @@
 					{shortCounts(counts)}
 				</p>
 				{#if state === 'review'}
-					<MergeQueue queue={board.queue} />
+					<MergeQueue
+						{queue}
+						enabled={queueEnabled}
+						writable={board.writable}
+						onchanged={() => void loadQueue()}
+					/>
 				{/if}
 				{#if state === 'done'}
 					<PublishBanner

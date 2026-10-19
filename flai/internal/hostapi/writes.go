@@ -23,9 +23,11 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/channel"
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/docedit"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/perf"
 	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -2762,7 +2764,161 @@ func withJSON(args []string) []string {
 func writeMethods(run Runner, now func() time.Time, host Host) map[string]channel.Method {
 	out := methodsFrom(specs(), run, now, host)
 	maps.Copy(out, methodsFrom(componentSpecs(), run, now, host))
+	maps.Copy(out, methodsFrom(queueSpecs(now, systemGit), run, now, host))
 	return out
+}
+
+// systemGit is the git the merge queue's writes read the stories' branches
+// with: this host's, timed on ctx.
+func systemGit(ctx context.Context) execx.Runner { return execx.Timed(ctx, execx.System{}) }
+
+// queueSpecs are the merge queue's writes under the merge-queue host action
+// (ADR-0173, S-0399): queue.add and queue.remove enqueue and dequeue a story,
+// and queue.hold holds the queue or resumes it, each stamped at now as the
+// dashboard's owner. They run no flai command, since flai queue records the
+// FLAI_AGENT a command run here has, flaiover: do writes the state in flai
+// serve's own process through mergequeue, reading each story's branch with
+// git. A refusal is Refused, with mergequeue's refusal as its data.
+func queueSpecs(now func() time.Time, git func(ctx context.Context) execx.Runner) map[string]spec {
+	checkStory := func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		_, e := queueStory(raw)
+		return nil, "", e
+	}
+	checkHold := func(_ channel.Project, raw json.RawMessage) ([]string, string, *channel.Error) {
+		_, e := queueHeld(raw)
+		return nil, "", e
+	}
+	return map[string]spec{
+		// queue.add: a story in review that is eligible, enqueued; one
+		// enqueued already keeps its place and who enqueued it.
+		"queue.add": {action: ActionMergeQueue, describe: describeQueue, build: checkStory,
+			do: func(ctx context.Context, _ Host, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+				id, e := queueStory(raw)
+				if e != nil {
+					return nil, e
+				}
+				repo, err := workitem.Open(p.Root)
+				if err != nil {
+					return nil, queueFailed(p, fmt.Errorf("open the project to enqueue %s in the merge queue: %w", id, err))
+				}
+				return queueAnswer(p)(mergequeue.Add(git(ctx), repo, id, owner(p), now()))
+			}},
+		// queue.remove: a story enqueued, taken out, and the batch that holds
+		// it dropped.
+		"queue.remove": {action: ActionMergeQueue, describe: describeQueue, build: checkStory,
+			do: func(_ context.Context, _ Host, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+				id, e := queueStory(raw)
+				if e != nil {
+					return nil, e
+				}
+				repo, err := workitem.Open(p.Root)
+				if err != nil {
+					return nil, queueFailed(p, fmt.Errorf("open the project to take %s out of the merge queue: %w", id, err))
+				}
+				return queueAnswer(p)(mergequeue.Remove(repo, id, owner(p), now()))
+			}},
+		// queue.hold: held true holds the queue, so that it builds no batch;
+		// held false resumes it.
+		"queue.hold": {action: ActionMergeQueue, describe: describeQueue, build: checkHold,
+			do: func(_ context.Context, _ Host, p channel.Project, raw json.RawMessage) (any, *channel.Error) {
+				held, e := queueHeld(raw)
+				if e != nil {
+					return nil, e
+				}
+				what, op := "resume", mergequeue.Resume
+				if held {
+					what, op = "hold", mergequeue.Hold
+				}
+				repo, err := workitem.Open(p.Root)
+				if err != nil {
+					return nil, queueFailed(p, fmt.Errorf("open the project to %s the merge queue: %w", what, err))
+				}
+				return queueAnswer(p)(op(repo, owner(p), now()))
+			}},
+	}
+}
+
+// queueStory is the story queue.add and queue.remove name as id.
+func queueStory(raw json.RawMessage) (string, *channel.Error) {
+	in, e := decode[struct {
+		ID string `json:"id"`
+	}](raw)
+	if e != nil {
+		return "", e
+	}
+	if e := needStory(in.ID); e != nil {
+		return "", e
+	}
+	return in.ID, nil
+}
+
+// queueHeld is what queue.hold asks for: true to hold the queue, false to
+// resume it, and nothing else.
+func queueHeld(raw json.RawMessage) (bool, *channel.Error) {
+	in, e := decode[struct {
+		Held *bool `json:"held"`
+	}](raw)
+	if e != nil {
+		return false, e
+	}
+	if in.Held == nil {
+		return false, bad("held is true to hold the merge queue, so that it builds no batch, or false to resume it")
+	}
+	return *in.Held, nil
+}
+
+// queueAnswer is a merge queue write's change as its answer in p: a
+// *mergequeue.Refusal is Refused, with the refusal as data, so that the
+// dashboard shows its sentence and each reason as flai gives them; a story no
+// item has is NotFound; anything else failed.
+func queueAnswer(p channel.Project) func(mergequeue.Change, error) (any, *channel.Error) {
+	return func(ch mergequeue.Change, err error) (any, *channel.Error) {
+		var refusal *mergequeue.Refusal
+		switch {
+		case errors.As(err, &refusal):
+			return nil, &channel.Error{Code: Refused, Message: refusal.Error(), Data: refusal}
+		case errors.Is(err, workitem.ErrNotFound):
+			return nil, &channel.Error{Code: NotFound, Message: fmt.Sprintf("%s; name a story in review", err)}
+		case err != nil:
+			return nil, queueFailed(p, err)
+		}
+		return written(ch)
+	}
+}
+
+// queueFailed is err, a merge queue write that failed in p, with the paths
+// it names relative to the repository, as the dashboard sees them.
+func queueFailed(p channel.Project, err error) *channel.Error {
+	return failed(errors.New(hostRelative(p.Root, err.Error())))
+}
+
+// describeQueue says for the journal what a merge queue write changed, or
+// that it changed nothing and why.
+func describeQueue(res any, err *channel.Error) (outcome, detail string) {
+	if err != nil {
+		return "failed", err.Message
+	}
+	w, _ := res.(Written)
+	var ch mergequeue.Change
+	_ = json.Unmarshal(w.Data, &ch)
+	st := ch.State
+	switch {
+	case ch.Action == mergequeue.ActionAdd && !ch.Changed:
+		return "done", ch.Story + " was enqueued already; nothing changed"
+	case ch.Action == mergequeue.ActionAdd:
+		return "done", fmt.Sprintf("enqueued %s, %d in the merge queue", ch.Story, len(st.Enqueued))
+	case ch.Action == mergequeue.ActionRemove && st.HoldsStory(ch.Story) && st.Batch.Dropped != nil:
+		return "done", "removed " + ch.Story + " from the merge queue and dropped the batch that holds it"
+	case ch.Action == mergequeue.ActionRemove:
+		return "done", "removed " + ch.Story + " from the merge queue"
+	case ch.Action == mergequeue.ActionHold && !ch.Changed:
+		return "done", "the merge queue was held already, by " + st.HeldBy + "; nothing changed"
+	case ch.Action == mergequeue.ActionHold:
+		return "done", "held the merge queue: it builds no batch until resumed"
+	case !ch.Changed:
+		return "done", "the merge queue was not held; nothing changed"
+	}
+	return "done", "resumed the merge queue"
 }
 
 // methodsFrom builds methods from a table of specs, with a journal of their own.

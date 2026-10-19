@@ -201,7 +201,12 @@ export const REQUIRED_METHODS = [
 	'analyze.run',
 	// S-0228: the orchestrator held stopped, and let start again, gated by the orchestrate host action
 	'orchestrate.stop',
-	'orchestrate.start'
+	'orchestrate.start',
+	// S-0399: a story enqueued in the merge queue and taken out, and the queue held and resumed, gated
+	// by the merge-queue host action (ADR-0173)
+	'queue.add',
+	'queue.remove',
+	'queue.hold'
 ];
 
 /**

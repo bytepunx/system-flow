@@ -15,6 +15,10 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/channel"
+	"github.com/bytepunx/system-flow/flai/internal/execx"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -3058,5 +3062,299 @@ func TestADraftRefusedToReadyIsARule(t *testing.T) {
 	_, e := writeMethods(rec.run, time.Now, Host{})["item.move"](context.Background(), p, json.RawMessage(`{"id":"`+draft.ID+`","to":"ready",`+rid+`}`))
 	if e == nil || e.Code != Rule || !strings.HasPrefix(e.Message, draft.ID+" is a draft: finalize it first") {
 		t.Errorf("a draft to ready: %+v", e)
+	}
+}
+
+// queueGit answers the git commands scripted for it, by their arguments, and
+// fails every other: the merge queue reads a story branch's head with it.
+type queueGit map[string]string
+
+func (g queueGit) Run(_, name string, args ...string) (string, error) {
+	if out, ok := g[strings.Join(args, " ")]; ok && name == "git" {
+		return out, nil
+	}
+	return "", errors.New("unscripted: " + name + " " + strings.Join(args, " "))
+}
+
+func (g queueGit) RunInput(dir, name, _ string, args ...string) (string, error) {
+	return g.Run(dir, name, args...)
+}
+
+func (queueGit) LookPath(name string) (string, error) { return name, nil }
+
+// quay is a project owned by olive, accepting locally, with S-0001 in review
+// and eligible for the merge queue (its criterion ticked, its task done, and
+// its last flai verify passed at its branch's head, as git says), S-0002 in
+// review with no verify result and a criterion unticked, and S-0003 ready.
+func quay(t *testing.T) (channel.Project, queueGit) {
+	t.Helper()
+	root := t.TempDir()
+	m := "version: 1\nname: Quay\nkey: quay\nowner: olive\nlayout:\n  design: design\n  docs: docs\n  wip: wip\n"
+	if err := os.WriteFile(filepath.Join(root, "system-flow.yaml"), []byte(m), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{"wip/kanban/epics", "wip/kanban/stories", "wip/kanban/tasks", "wip/agents", "wip/threads"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	move := func(it *workitem.Item, states ...string) {
+		for _, to := range states {
+			if _, err := repo.Transition(it, to, "olive", "", t0); err != nil {
+				t.Fatalf("%s to %s: %v", it.ID, to, err)
+			}
+		}
+	}
+	story := func(title, box string, review bool) *workitem.Item {
+		s, err := repo.Create(workitem.NewOptions{Type: workitem.Story, Title: title, Nature: "feature", Owner: "olive", Body: "## Acceptance criteria\n" + box + "\n", Now: t0})
+		if err != nil {
+			t.Fatal(err)
+		}
+		move(s, workitem.Ready)
+		if !review {
+			return s
+		}
+		move(s, workitem.InProgress)
+		task, err := repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "Build " + title, Parent: s.ID, Owner: "olive", Now: t0})
+		if err != nil {
+			t.Fatal(err)
+		}
+		move(task, workitem.Ready, workitem.InProgress, workitem.Done)
+		move(s, workitem.Review)
+		return s
+	}
+	berths := story("Berths", "- [x] works", true)
+	story("Cranes", "- [ ] works", true)
+	story("Tugs", "- [x] works", false)
+	if err := verify.SaveReport(repo, verify.Report{Story: berths.ID, Commit: "abc1234", Passed: true}); err != nil {
+		t.Fatal(err)
+	}
+	g := queueGit{"rev-parse --verify --quiet " + storygit.Branch(berths.ID) + "^{commit}": "abc1234"}
+	return channel.Project{Key: "quay", Name: "Quay", Root: root}, g
+}
+
+// queueMethods are the merge queue's writes in p's host, with its action on
+// when on says so, journalling into journal, stamped at t0, reading branches
+// with g.
+func queueMethods(on *bool, journal *[]Entry, g queueGit) map[string]channel.Method {
+	host := Host{
+		Enabled: func(action, _ string) bool { return *on && action == ActionMergeQueue },
+		Record:  func(e Entry) { *journal = append(*journal, e) },
+	}
+	now := func() time.Time { return t0 }
+	return methodsFrom(queueSpecs(now, func(context.Context) execx.Runner { return g }), nil, now, host)
+}
+
+// queueCall calls method with params, and decodes a successful answer's
+// data, the change, into a mergequeue.Change.
+func queueCall(t *testing.T, methods map[string]channel.Method, p channel.Project, method, params string) (mergequeue.Change, *channel.Error) {
+	t.Helper()
+	res, rerr := methods[method](context.Background(), p, json.RawMessage(params))
+	if rerr != nil {
+		return mergequeue.Change{}, rerr
+	}
+	w, ok := res.(Written)
+	if !ok {
+		t.Fatalf("%s answered %#v", method, res)
+	}
+	var ch mergequeue.Change
+	if err := json.Unmarshal(w.Data, &ch); err != nil {
+		t.Fatalf("%s: %v\n%s", method, err, w.Data)
+	}
+	return ch, nil
+}
+
+// queueRid is a request ID of its own for the nth call, so that the journal
+// answers no call for another.
+func queueRid(n int) string { return fmt.Sprintf(`"request_id":"req-%08d"`, n) }
+
+// ADR-0173, S-0399: the merge queue's writes are the merge-queue host action,
+// which the dashboard sees, answered in flai serve's own process.
+func TestQueueWritesAreTheMergeQueueAction(t *testing.T) {
+	if !DashboardSees(ActionMergeQueue) {
+		t.Errorf("merge-queue is a host action the dashboard sees and the operator enables with %s", EnableCommand(ActionMergeQueue))
+	}
+	specs := queueSpecs(time.Now, systemGit)
+	for _, name := range []string{"queue.add", "queue.remove", "queue.hold"} {
+		if sp, ok := specs[name]; !ok || sp.action != ActionMergeQueue || sp.reads || sp.do == nil {
+			t.Errorf("%s is a write under the merge-queue action, answered in flai serve: %+v", name, sp)
+		}
+	}
+	if _, ok := MethodsFor("test", nil, Host{})["queue.hold"]; !ok {
+		t.Error("the host serves queue.hold")
+	}
+}
+
+// With the action off, each write is refused, says what enables it, is
+// journalled as disabled, and writes no state.
+func TestQueueWritesAreRefusedWhileTheMergeQueueActionIsOff(t *testing.T) {
+	p, g := quay(t)
+	on, journal := false, []Entry{}
+	methods := queueMethods(&on, &journal, g)
+	calls := map[string]string{"queue.add": `{"id":"S-0001",`, "queue.remove": `{"id":"S-0001",`, "queue.hold": `{"held":true,`}
+	for method, params := range calls {
+		if _, e := queueCall(t, methods, p, method, params+rid+`}`); e == nil || e.Code != Disabled || !strings.Contains(e.Message, "flai serve enable merge-queue") {
+			t.Errorf("%s with the action off: %+v", method, e)
+		}
+	}
+	if len(journal) != len(calls) {
+		t.Fatalf("each refusal is journalled: %+v", journal)
+	}
+	for _, e := range journal {
+		if e.Action != ActionMergeQueue || e.Outcome != "disabled" || e.By != "olive" {
+			t.Errorf("journalled as the merge-queue action, disabled, for the owner: %+v", e)
+		}
+	}
+	if _, err := os.Stat(mergequeue.StatePath(filepath.Join(p.Root, ".flai-cache"))); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("nothing is written while the action is off: %v", err)
+	}
+}
+
+// queue.add enqueues an eligible story in review as the dashboard's owner,
+// at the host's clock; again, nothing changes; queue.remove takes it out,
+// and once it is out refuses, saying so.
+func TestQueueAddEnqueuesAsTheOwnerAndQueueRemoveTakesItOut(t *testing.T) {
+	p, g := quay(t)
+	on, journal := true, []Entry{}
+	methods := queueMethods(&on, &journal, g)
+
+	ch, e := queueCall(t, methods, p, "queue.add", `{"id":"S-0001",`+queueRid(1)+`}`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if ch.Action != mergequeue.ActionAdd || ch.Story != "S-0001" || !ch.Changed || ch.By != "olive" || !ch.At.Equal(t0) ||
+		len(ch.State.Enqueued) != 1 || ch.State.Enqueued[0].Story != "S-0001" || ch.State.Enqueued[0].By != "olive" || !ch.State.Enqueued[0].At.Equal(t0) {
+		t.Errorf("queue.add answered %+v", ch)
+	}
+	st, err := mergequeue.ReadState(filepath.Join(p.Root, ".flai-cache"))
+	if err != nil || len(st.Enqueued) != 1 || st.Enqueued[0].By != "olive" {
+		t.Errorf("the state records who enqueued it and when: %+v, %v", st, err)
+	}
+	if ch, e = queueCall(t, methods, p, "queue.add", `{"id":"S-0001",`+queueRid(2)+`}`); e != nil || ch.Changed || len(ch.State.Enqueued) != 1 {
+		t.Errorf("enqueued already, nothing changes: %+v, %+v", ch, e)
+	}
+	if ch, e = queueCall(t, methods, p, "queue.remove", `{"id":"S-0001",`+queueRid(3)+`}`); e != nil || ch.Action != mergequeue.ActionRemove || !ch.Changed || ch.By != "olive" || len(ch.State.Enqueued) != 0 {
+		t.Errorf("queue.remove answered %+v, %+v", ch, e)
+	}
+	_, e = queueCall(t, methods, p, "queue.remove", `{"id":"S-0001",`+queueRid(4)+`}`)
+	if r, ok := refusalOf(e); !ok || r.Story != "S-0001" || !strings.Contains(r.Text, "S-0001 is not enqueued in the merge queue") {
+		t.Errorf("removing a story not enqueued is refused, saying so: %+v", e)
+	}
+	want := []string{
+		"done enqueued S-0001, 1 in the merge queue",
+		"done S-0001 was enqueued already; nothing changed",
+		"done removed S-0001 from the merge queue",
+		"failed S-0001 is not enqueued in the merge queue, so there is nothing to remove; flai queue lists what is",
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("each write is journalled: %+v", journal)
+	}
+	for i, e := range journal {
+		if got := e.Outcome + " " + e.Detail; got != want[i] || e.Action != ActionMergeQueue || e.By != "olive" {
+			t.Errorf("journal entry %d: %q (%+v), want %q", i, got, e, want[i])
+		}
+	}
+}
+
+// refusalOf is e's refusal as the dashboard reads it from the wire: Refused,
+// with the refusal's sentence and its reasons as data.
+func refusalOf(e *channel.Error) (mergequeue.Refusal, bool) {
+	if e == nil || e.Code != Refused {
+		return mergequeue.Refusal{}, false
+	}
+	data, err := json.Marshal(e.Data)
+	if err != nil {
+		return mergequeue.Refusal{}, false
+	}
+	var r mergequeue.Refusal
+	return r, json.Unmarshal(data, &r) == nil && r.Text != ""
+}
+
+// A story not eligible is refused with every reason, each with its kind and
+// its text, as data; a story not in review is refused saying so; a story no
+// item has is not found; and what is not a story's ID never reaches the
+// queue.
+func TestQueueAddRefusesAStoryNotEligibleWithEveryReason(t *testing.T) {
+	p, g := quay(t)
+	on, journal := true, []Entry{}
+	methods := queueMethods(&on, &journal, g)
+
+	_, e := queueCall(t, methods, p, "queue.add", `{"id":"S-0002",`+queueRid(1)+`}`)
+	r, ok := refusalOf(e)
+	if !ok || r.Story != "S-0002" || r.Text != "S-0002 is not enqueued: it is not eligible for the merge queue" || len(r.Reasons) != 2 ||
+		r.Reasons[0].Kind != mergequeue.KindVerifyMissing || r.Reasons[1].Kind != mergequeue.KindCriteriaUnticked || r.Reasons[0].Text == "" || r.Reasons[1].Text == "" {
+		t.Errorf("a story not eligible: %+v (%+v)", r, e)
+	}
+	if e != nil && !strings.HasPrefix(e.Message, r.Text+": "+mergequeue.KindVerifyMissing+": ") {
+		t.Errorf("the message is the refusal's sentence with each reason: %q", e.Message)
+	}
+	_, e = queueCall(t, methods, p, "queue.add", `{"id":"S-0003",`+queueRid(2)+`}`)
+	if r, ok := refusalOf(e); !ok || !strings.Contains(r.Text, "the merge queue takes a story in review, and S-0003 is ready") || len(r.Reasons) != 0 {
+		t.Errorf("a story not in review: %+v", e)
+	}
+	if _, e = queueCall(t, methods, p, "queue.add", `{"id":"S-0099",`+queueRid(3)+`}`); e == nil || e.Code != NotFound || !strings.Contains(e.Message, "S-0099 not found") {
+		t.Errorf("a story no item has: %+v", e)
+	}
+	for _, params := range []string{`{"id":"T-0001",`, `{"id":"--help",`, `{"id":"S-0001 --json",`, `{`, `{"id":["S-0001"],`} {
+		for _, method := range []string{"queue.add", "queue.remove"} {
+			if _, e := queueCall(t, methods, p, method, params+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams {
+				t.Errorf("%s %s: %+v", method, params, e)
+			}
+		}
+	}
+	if _, e := queueCall(t, methods, p, "queue.add", `{"id":"S-0001"}`); e == nil || e.Code != channel.CodeInvalidParams {
+		t.Errorf("a write without a request ID: %+v", e)
+	}
+	if st, err := mergequeue.ReadState(filepath.Join(p.Root, ".flai-cache")); err != nil || len(st.Enqueued) != 0 {
+		t.Errorf("no refusal enqueues anything: %+v, %v", st, err)
+	}
+}
+
+// queue.hold holds the queue as the dashboard's owner and, held false,
+// resumes it; a queue held already keeps who held it, and held must be
+// given, true or false.
+func TestQueueHoldHoldsAndResumesTheQueue(t *testing.T) {
+	p, g := quay(t)
+	on, journal := true, []Entry{}
+	methods := queueMethods(&on, &journal, g)
+
+	ch, e := queueCall(t, methods, p, "queue.hold", `{"held":true,`+queueRid(1)+`}`)
+	if e != nil || ch.Action != mergequeue.ActionHold || !ch.Changed || ch.By != "olive" || !ch.State.Held || ch.State.HeldBy != "olive" || !ch.State.HeldAt.Equal(t0) {
+		t.Errorf("held: %+v, %+v", ch, e)
+	}
+	if ch, e = queueCall(t, methods, p, "queue.hold", `{"held":true,`+queueRid(2)+`}`); e != nil || ch.Changed || ch.State.HeldBy != "olive" {
+		t.Errorf("held already: %+v, %+v", ch, e)
+	}
+	if ch, e = queueCall(t, methods, p, "queue.hold", `{"held":false,`+queueRid(3)+`}`); e != nil || ch.Action != mergequeue.ActionResume || !ch.Changed || ch.State.Held {
+		t.Errorf("resumed: %+v, %+v", ch, e)
+	}
+	if ch, e = queueCall(t, methods, p, "queue.hold", `{"held":false,`+queueRid(4)+`}`); e != nil || ch.Changed {
+		t.Errorf("not held, nothing changes: %+v, %+v", ch, e)
+	}
+	if st, err := mergequeue.ReadState(filepath.Join(p.Root, ".flai-cache")); err != nil || st.Held {
+		t.Errorf("the state is resumed: %+v, %v", st, err)
+	}
+	for _, params := range []string{`{`, `{"held":"yes",`, `{"held":null,`, `{"held":1,`} {
+		if _, e := queueCall(t, methods, p, "queue.hold", params+rid+`}`); e == nil || e.Code != channel.CodeInvalidParams {
+			t.Errorf("queue.hold %s: %+v", params, e)
+		}
+	}
+	want := []string{
+		"done held the merge queue: it builds no batch until resumed",
+		"done the merge queue was held already, by olive; nothing changed",
+		"done resumed the merge queue",
+		"done the merge queue was not held; nothing changed",
+	}
+	if len(journal) != len(want) {
+		t.Fatalf("each write is journalled: %+v", journal)
+	}
+	for i, e := range journal {
+		if got := e.Outcome + " " + e.Detail; got != want[i] {
+			t.Errorf("journal entry %d: %q, want %q", i, got, want[i])
+		}
 	}
 }
