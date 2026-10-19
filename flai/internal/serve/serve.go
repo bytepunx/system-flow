@@ -482,6 +482,11 @@ func Run(ctx context.Context, o Options) error {
 	// forge host action is on (ADR-0166); a push in flight is waited for.
 	var forgeLooks sync.WaitGroup
 	defer forgeLooks.Wait()
+	// Each served project's merge queue builds and verifies one batch at a
+	// time, off the agents' turns, behind the merge-queue host action
+	// (S-0399, ADR-0173); a batch running is cancelled and waited for.
+	queues := newQueueRuns()
+	defer queues.wait()
 	if agent := o.Agent; agent != nil {
 		o.Agent = func(root string) AgentConfig {
 			cfg := agent(root)
@@ -627,6 +632,8 @@ func Run(ctx context.Context, o Options) error {
 			// flai accept's requests to merge a pull request are taken every
 			// second, and answered behind the forge host action (S-0397)
 			newMergePass(o, e, &forgeLooks).start(cctx)
+			queue := newQueuePass(o, e, queues)
+			queue.start(cctx)
 			go func() {
 				for {
 					select {
@@ -654,6 +661,7 @@ func Run(ctx context.Context, o Options) error {
 						replanner.look(cctx)
 						orch.look(cctx)
 						analyst.look(cctx)
+						queue.wake()
 					}
 				})
 				r.client.Run(clientCtx)
