@@ -7,7 +7,7 @@ status: backlog
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:57:36Z
-updated: 2026-10-18T19:29:13Z
+updated: 2026-10-19T04:52:24Z
 transitions: []
 tags: [cli, dashboard]
 topics: [orchestration]
@@ -17,13 +17,15 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 forecast:
   duration: 47m
   delivery: 2026-10-18T20:21:00Z
   basis: "Its own forecast of 47m; 2nd in the pull order with an in-progress limit of 5, behind S-0241."
   by: flai
   at: 2026-10-18T19:29:13Z
+finalized:
+  by: alex
+  at: 2026-10-19T04:52:24Z
 ---
 # S-0398 flai queue lists the stories in review that would batch, in the order they entered review, and why each other story would not, and the board, the MCP board, and the dashboard show the queue
 
