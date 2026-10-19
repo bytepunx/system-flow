@@ -6,6 +6,7 @@ date: 2026-10-19
 supersedes: []
 superseded_by: []
 refines: [ADR-0110, ADR-0156]
+topics: [cli, flai, orchestration]
 ---
 
 # ADR-0174 While the merge queue can batch, flai verify and the close-out leave the test tiers the manifest marks queue to the batch, which always runs them, and flai verify --all runs them
@@ -27,7 +28,7 @@ While the merge queue can batch, `flai verify` and the close-out leave the test 
   - acceptance is local.
 
   A hold does not count: a held queue resumes and batches later. With any condition off, no batch would run the tiers, so `flai verify` runs them as before.
-- **What `flai verify` does.** While the queue can batch, it selects the tiers as before, then leaves out each selected tier marked `queue`. Each tier it leaves out is a step of its own, in the state `queued`, named as left to the merge queue. The run passes without them. A tier that a `queue` tier covers ([S-0342](../../wip/archive/kanban/stories/)) is not skipped for it, since the covering tier does not run. The MCP `verify` tool and the close-out, which runs `flai verify`, do the same.
+- **What `flai verify` does.** While the queue can batch, it selects the tiers as before, then leaves out each selected tier marked `queue`. Each tier it leaves out is a step of its own, in the state `queued`, named as left to the merge queue. The run passes without them. A tier that a `queue` tier covers (S-0342) is not skipped for it, since the covering tier does not run. The MCP `verify` tool and the close-out, which runs `flai verify`, do the same.
 - **`--all`.** `flai verify --all`, and the MCP `verify` tool's `all`, leave no tier to the queue. `flai test --all` runs every tier, as before.
 - **The batch.** The queue's verification of a batch never leaves a tier out: it runs every tier its paths select, those marked `queue` included. So no story the queue lands lands without them.
 
