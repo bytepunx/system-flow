@@ -347,6 +347,38 @@ func TestAFailingTierFailsTheBatch(t *testing.T) {
 	}
 }
 
+// S-0405 criterion 3: the batch's verification, as flai serve runs it with
+// the manifest of the batch's worktree, runs the tiers marked queue that its
+// paths select, those flai verify leaves to the queue while it can batch, so
+// that no story lands without them (ADR-0174).
+func TestTheBatchRunsTheTiersMarkedQueue(t *testing.T) {
+	ran := filepath.Join(t.TempDir(), "ran")
+	tier := func(name string) string {
+		return "    command: [sh, -c, \"echo " + name + " >> '" + ran + "'\"]\n    paths: [\"**/*.txt\"]\n"
+	}
+	repo, _ := gitProject(t, "orchestration:\n  permissions:\n    accept_reviews: true\ntests:\n"+
+		"  - name: unit\n"+tier("unit")+
+		"  - name: smoke\n"+tier("smoke")+"    all_only: true\n    queue: true\n")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	enqueue(t, repo, a)
+
+	d := Deps{Runner: execx.System{}, Now: func() time.Time { return t1 }, Verify: CheckoutVerifier(execx.System{}, "")}
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || st.Batch.Step != StepVerified {
+		t.Fatalf("batch %+v, want it verified", st.Batch)
+	}
+	if r := st.Batch.Result; r == nil || !r.Passed || r.Summary != "passed unit, smoke" {
+		t.Errorf("result %+v, want unit and smoke passed", r)
+	}
+	data, err := os.ReadFile(ran)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Fields(string(data)); !slices.Equal(got, []string{"unit", "smoke"}) {
+		t.Errorf("ran %v, want unit and then smoke, the tier marked queue", got)
+	}
+}
+
 // S-0399 criterion 2: a batch takes at most merge_queue.batch_max stories,
 // in the order they were enqueued; the rest stay enqueued.
 func TestBatchMaxCapsTheBatch(t *testing.T) {

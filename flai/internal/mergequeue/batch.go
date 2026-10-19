@@ -61,7 +61,9 @@ type Verifier func(ctx context.Context, dir, base string, started func(tier stri
 
 // CheckoutVerifier is the Verifier flai serve runs: the test tiers of the
 // manifest in the batch's worktree, read for the flai at version, run with
-// verify.Tiers, git run through r.
+// verify.Tiers, git run through r. It leaves no tier out: the tiers marked
+// queue, which flai verify leaves to the batch while the queue can batch,
+// run here whenever the batch's paths select them (ADR-0174).
 func CheckoutVerifier(r execx.Runner, version string) Verifier {
 	return func(ctx context.Context, dir, base string, started func(string)) (verify.Report, error) {
 		tiers, err := verify.CheckoutTiersFor(dir, r, version)
