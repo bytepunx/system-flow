@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-18
+updated: 2026-10-19
 status: active
 ---
 
@@ -206,6 +206,39 @@ A project chooses how a story is accepted in `system-flow.yaml`: `acceptance.mod
 3. Turn off the host action if nothing else needs it: `flai serve disable forge`.
 4. flai no longer reads or merges the open pull requests. Accept their stories here, then close the pull requests on the forge.
 5. Check a story in review: `flai accept S-nnnn --dry-run` says nothing of the remote.
+
+### The merge-queue host action: stories in review verified as one batch (S-0399)
+
+The merge queue verifies the stories in review together, once, on the host, rather than one by one in an agent's turn ([ADR-0173](../../design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md)). With the `merge-queue` host action on, `flai serve` runs it for the project, with no model. It is off by default. Turn it on per project, in a shell on the host or from the dashboard's Settings page while `settings` is on:
+
+```bash
+flai manifest set orchestration.permissions.accept_reviews=true   # the queue runs only while this is on
+flai serve enable merge-queue     # for the project in the working directory; --all-projects for every project
+flai queue                        # what the queue would batch, the batch, its step, and its result
+flai serve disable merge-queue    # no batch starts again
+```
+
+**What it needs.** The action on, `orchestration.permissions.accept_reviews` on, and `acceptance.mode: local`, all three. With the `orchestrate` action on too, `accept_reviews` also lets the orchestrator accept stories in review itself ([above](#the-orchestrate-host-action-the-orchestrator-s-0218)). While the permission is off, the mode is `pull-request`, or the queue is held, no batch starts. `flai serve` then logs `merge queue not run` once, with the reason: `accept_reviews_off`, `pull_request`, `held`, or `unreadable`.
+
+**Local acceptance only.** Under `acceptance.mode: pull-request` the queue does not run. The forge's required checks gate each story, and a batch rebases each one, so every landing would stop. `flai queue add` refuses every story there and says the queue runs under local acceptance only. `flai queue`, `flai board`, and the dashboard say the queue does not run.
+
+**Enqueueing.** A story enters the queue only when someone enqueues it. Eligibility alone enqueues nothing. `flai queue add S-nnnn` in a shell, or **Enqueue** on the story's review page, enqueues a story in review that is eligible ([The merge queue](../users/flai.md#the-merge-queue) says what that takes). It refuses any other story and names each reason. `flai queue remove S-nnnn`, or **Dequeue**, takes it out. The dashboard's writes need the action on, and are made as the project's `owner`.
+
+**Holding it.** `flai queue hold`, or the **Hold** switch on the board's merge queue panel, holds the queue: no new batch starts, and a batch under verification finishes and waits. The enqueued stories keep their places. `flai queue resume`, or the switch again, lets it build batches again. Who held it and when is recorded, and `flai queue` and the panel show it.
+
+**What runs on the host.** `flai serve` looks at the queue every 30 seconds, and at once when the project's work items or threads change. It takes up to `merge_queue.batch_max` eligible enqueued stories, 4 unless set, in the order they were enqueued ([settings](settings.md#project-manifest)). It builds one batch:
+
+- in a worktree of its own, `.flai-cache/worktrees/merge-queue`, on a branch `merge-queue/<id>` from the main branch's head;
+- with a copy of each story's verified head rebased onto the one before. The stories' own branches and worktrees never move;
+- leaving out a story whose rebase stops. Its outcome is `left_out`, naming the paths in conflict. It stays enqueued, and is not taken again until main or its branch moves.
+
+It then verifies the batch once, in `flai serve`'s process, with the tiers `flai verify` selects for the paths the batch changes against main. One batch runs per project at a time. A story's own `flai verify` result is not changed. When `flai serve` stops mid-batch, the batch is stopped, and the next run builds it again.
+
+**Understand what enabling it means.** The batch runs the project's test commands on your machine, as you. Each command is the one in the batch's `system-flow.yaml`, so a story's branch, which its agent can change, decides what runs. Whoever holds the dashboard token can enqueue and dequeue a story in review and hold the queue, and so start a batch run.
+
+**Where to look.** The state is `.flai-cache/merge-queue/state.json` in the project's main checkout, on this host only, like `flai verify`'s results. It holds the stories enqueued, with who and when; the hold; the batch, with its step and its result; and each story's last outcome. The step is `building`, `rebasing S-nnnn`, `verifying`, `verifying <tier>`, `verified`, or `failed`. The result says whether the batch passed, or the tier it stopped at and why. `flai queue` and the board's panel show all of it. `serve.log` has each batch run, its failures, and each reason the queue does not run. The dashboard's writes are in `flai serve journal` under the action `merge-queue`.
+
+**Landing is not built yet.** Landing a batch is S-0400's. Until then a verified batch waits in the state, and nothing lands it: accept its stories by hand, with `flai accept` or from the board, as before. Accepting a story by hand takes it out of the queue and drops the batch that holds it, and the next batch can start. A failed batch waits too. Taking one of its stories out with `flai queue remove`, or accepting one, drops it, and the next look builds a batch from the stories still enqueued.
 
 ### Starting an agent when a story becomes ready
 

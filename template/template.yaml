@@ -1,4 +1,4 @@
-version: 1.0.100
+version: 1.0.101
 min_flai: 0.1.0
 description: system-flow monorepo template
 variables:

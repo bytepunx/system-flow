@@ -1,6 +1,6 @@
 ---
 title: A channel between the dashboard and flai on the host
-updated: 2026-10-18
+updated: 2026-10-19
 status: active
 topics: [cli, dashboard]
 ---
@@ -166,3 +166,12 @@ The stories, in build order, under E-0003:
     The two writes run no flai command. Their spec has a `do`, which answers in `flai serve`'s own process, where `hostapi.Host.Components` supervises the dev servers; the action still gates it, and its answer is journalled and remembered by request ID as a command's is. A flai that runs no dev servers, such as `flai hostapi` in a shell, refuses them and says to ask through `flai serve` or run `flai components serve`. A sub-project without `vite` installed is refused by rule (-32011); the paths in a message are relative to the repository. The four are in the dashboard's `REQUIRED_METHODS`, so the banner names a flai older than them.
 
     S-0442 adds `story?` to the params of all four ([component-library.md § Sources](component-library.md#sources)). With it, `components.list` reads the catalogue from the story's worktree, and the other three are that story's dev servers, each answered with `story`. A story that is not in progress or in review, or has no worktree, is refused. A start beyond `components.max_servers` is refused by rule, naming the dev servers that run.
+20. S-0399: the merge queue enqueued, dequeued, and held from the dashboard ([ADR-0173](../adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md), [flai-cli.md § The merge queue pass](flai-cli.md#the-merge-queue-pass)). The host action `merge-queue`, which the dashboard sees and `settings.action` turns on and off, gates three writes, one more instance of the host-actions pattern. It also has `flai serve` run the queue's batches, from what it sees in the project's files, with no write asking for them.
+
+    | Method | Params | Gated and journalled | Answer |
+    |--------|--------|----------------------|--------|
+    | `queue.add` | `{id, request_id}` | Yes | `mergequeue.Change`, `{action, story, changed, by, at, state}`: the story enqueued, or `changed` false when it was enqueued already, keeping its place |
+    | `queue.remove` | `{id, request_id}` | Yes | The same: the story taken out, and the batch that holds it dropped |
+    | `queue.hold` | `{held, request_id}` | Yes | The same: `held` true holds the queue, false resumes it; `changed` false when it was so already |
+
+    The three run no flai command, since a command run here records the `FLAI_AGENT` it has, `flaiover`. Their spec has a `do`, which writes the queue's state in `flai serve`'s own process through `internal/mergequeue`, as the project's owner (`owner` in `system-flow.yaml`, else `designer`), stamped with the time; `queue.add` reads each story's branch with the host's git to judge eligibility. Each is journalled under the action `merge-queue`, its detail saying what changed or that nothing did. A refusal, a story not in review, not eligible, or not enqueued, or any `queue.add` under pull-request acceptance, is Refused (-32010) with `mergequeue.Refusal` as data, `{story, text, reasons[]}`, each reason `{kind, text}` as `flai queue` gives it, so the dashboard shows them as flai words them; an ID no item has is not found (-32004). A `held` that is not a boolean, or an `id` that is not a story's, is a bad argument (-32602). The reads need no new method: `board.get` carries the queue, and `project.info`'s `host_actions` says whether the action is on. The three are in the dashboard's `REQUIRED_METHODS`, so the banner names a flai older than them.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.101 - 2026-10-19
+
+- S-0399 flai serve builds a batch of the enqueued stories in a worktree of its own, rebased on main in order, and verifies it once with the tiers flai verify runs, behind the merge-queue host action (patch).
+- S-0399 The template's `system-flow.yaml` shows the merge queue's batch size, commented out (patch, ADR-0173): a `merge_queue` block with `batch_max`, the most enqueued stories one batch verifies together, 4 when unset. A value that is not a whole number of one or more stops every command that reads the manifest, naming the key, and `flai manifest set merge_queue.batch_max=N` writes it. The queue runs in `flai serve` with no model, behind the `merge-queue` host action, off by default, while `orchestration.permissions.accept_reviews` is on, and under local acceptance only. `flai queue add`, `remove`, `hold`, and `resume` enqueue a story in review, take it out, and hold and resume the queue. Landing a verified batch is a later story's, so stories are still accepted by hand. The key, the commands, and the host action need a flai that has them, the release that carries S-0399; an older flai ignores the block.
+
 ## 1.0.100 - 2026-10-18
 
 - S-0446 flai check finds `components.examples` outside the story at close-out (patch).

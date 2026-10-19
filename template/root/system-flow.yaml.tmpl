@@ -50,6 +50,8 @@ tests: # the test tiers, cheapest first, that flai test runs for the paths each 
 #   mode: local # or pull-request: accept through a pull request on the forge; check the token first with flai forge check
 #   forge: github # the forge, at origin's repository; its token is the host's, named with flai serve forge
 #   merge_method: merge # or squash, rebase: how the forge merges the pull request
+# merge_queue: # the merge queue flai serve runs behind the merge-queue host action, under local acceptance only
+#   batch_max: 4 # the most enqueued stories one batch verifies together; flai manifest set writes it
 claims:
   shared: # paths many stories change in their own sections or new files: an overlap inside one holds no story; flai shared edits them
     - {{ .layout.design }}/adrs

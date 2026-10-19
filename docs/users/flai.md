@@ -205,7 +205,7 @@ The same file holds what `flai serve` may do on this host. These keys are not re
 
 | Key | Set with | Meaning |
 |-----|----------|---------|
-| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `forge`, `auto-publish`, `agent`, `dashboard`, `checks`, `components`, `settings`, `host`, `plan`, `orchestrate`, `analyze`, `auto-approve`, `auto-upgrade`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do; `auto-publish`, `auto-approve`, and `auto-upgrade` are shell only, and the dashboard neither shows nor changes them |
+| `host_actions` | `flai serve enable <action>`, `flai serve disable <action>` | For each host action (`push`, `forge`, `auto-publish`, `agent`, `dashboard`, `checks`, `components`, `settings`, `host`, `plan`, `orchestrate`, `analyze`, `merge-queue`, `auto-approve`, `auto-upgrade`), the projects it is on for: main checkout paths, or `*` for every project. Absent means none. `flai serve actions` says what each lets a dashboard do; `auto-publish`, `auto-approve`, and `auto-upgrade` are shell only, and the dashboard neither shows nor changes them |
 | `agent.command` | `flai serve agent set -- <program> [args...]`, `flai serve agent clear` | What is started for a ready story that names no harness: an argument list, never run through a shell, with `{story}`, `{root}`, `{model}`, `{harness}`, and `{provider}` replaced |
 | `agent.name` | `flai serve agent set --name` | The `FLAI_AGENT` prefix of the agents it starts, `agent` when empty; the story is appended, as in `agent-S-0104` |
 | `agent.auto_restarts` | `flai serve agent set --auto-restarts <n>` | How many times in a row `flai serve` restarts a story's agent on its own after it fails with its story in progress, 2 when unset, 0 never; past it, `flai serve` opens a thread on the story for you ([ADR-0108](../../design/adrs/0108-flai-serve-restarts-a-story-s-agent-that-ended-with-its-story-in-progress-up-to.md)) |
@@ -2435,11 +2435,15 @@ The release follows the git convention. Components are the `projects` in `system
 ### The merge queue
 
 ```bash
-flai queue          # the stories in review the merge queue would batch, in order, and why each other one is not eligible
+flai queue                # the stories in review the merge queue would batch, in order, and why each other one is not eligible
 flai queue --json
+flai queue add S-0042     # enqueue a story in review that is eligible
+flai queue remove S-0042  # take it out
+flai queue hold           # build no new batch until resumed
+flai queue resume
 ```
 
-The merge queue is to verify the stories in review as one batch and land the green ones ([ADR-0173](../../design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md)). For now it only reads: `flai queue` says which stories it would batch, and in which order. It enqueues, verifies, and lands nothing, and acceptance is as before.
+The merge queue verifies the stories in review as one batch, once, on the host, and is to land the green ones ([ADR-0173](../../design/adrs/0173-a-merge-queue-in-flai-serve-with-no-model-runs-behind-the-merge-queue-host.md)). `flai queue` says which stories it would batch, in which order, and how the batch under verification stands. `flai serve` builds and verifies the batches, while the operator has the `merge-queue` host action on ([the operators guide](../operators/index.md#the-merge-queue-host-action-stories-in-review-verified-as-one-batch-s-0399)). Landing a batch is not built yet, so stories are still accepted by hand.
 
 A story in review is eligible when all of these hold:
 
@@ -2471,9 +2475,37 @@ batch: none
 | `undone_main` | Its branch undoes main's change to a path; the reason names the paths. The queue never batches it until you restore them, keep the removal, or send the story back |
 | `unreadable` | Its last `flai verify` result, or its record of undone paths, cannot be read |
 
-A story that is enqueued has `enqueued` after its line. `batch:` names the batch under verification and its step, or says `none`, and `outcomes` lists each story's last outcome when there is one. These come from the queue's state, `.flai-cache/merge-queue/state.json` in the main checkout, kept on this host like `flai verify`'s results. With no file there is no batch and no outcome, and this version of flai writes nothing to it. With no story in review, `flai queue` says `no story is in review`.
+A story that is enqueued has `enqueued` after its line. `batch:` names the batch under verification and its step, or says `none`. Once the batch is verified, a line under it says `result: passed`, or `result: failed at <tier>`, with when it finished and a summary: the tiers that passed, or the failing tier's first findings. A batch dropped says who dropped it, when, and why. `outcomes` lists each story's last outcome when there is one, such as `left_out` or `accepted_by_hand`. A held queue starts with `held by <who> at <time>: no batch is built until flai queue resume`. These come from the queue's state, `.flai-cache/merge-queue/state.json` in the main checkout, kept on this host like `flai verify`'s results. With no file the queue is empty, with no batch and no outcome. With no story in review, `flai queue` says `no story is in review`.
 
-`--json` gives `mode`, then `eligible` and `ineligible`, each story with `story`, `title`, `entered_review`, `head`, `enqueued`, and `reasons`. Each reason has `kind` and `text`, and `criteria`, `threads`, or `paths` when it names them. Then come `enqueued`, `batch` when there is one, and `outcomes`.
+`--json` gives `mode`, then `eligible` and `ineligible`, each story with `story`, `title`, `entered_review`, `head`, `enqueued`, and `reasons`. Each reason has `kind` and `text`, and `criteria`, `threads`, or `paths` when it names them. Then come `enqueued`, each with `story`, `by`, and `at`; `held`, `held_by`, and `held_at` when the queue is held; `batch` when there is one, with `stories`, `step`, `left_out`, `result`, and `dropped`; and `outcomes`.
+
+#### Enqueueing a story
+
+A story enters the queue only when someone enqueues it; being eligible is not enough. `flai queue add S-nnnn` enqueues a story in review that is eligible, at the end of the queue, as `FLAI_AGENT`, else the `author` in your flai configuration, and when:
+
+```text
+S-0042 enqueued by alex at 2026-10-19T10:00:00Z, 1 in the queue
+```
+
+It refuses, and changes nothing, a story that is not in review, an item that is not a story, and a story that is not eligible, naming each reason as `flai queue` does, `kind: text`. Under `acceptance.mode: pull-request` it refuses every story, saying the queue runs under local acceptance only. A story enqueued already keeps its place and who enqueued it, and nothing changes. **Enqueue** on the story's review page does the same as the project's owner ([flaiover.md](flaiover.md#reviewing-a-story)).
+
+`flai queue remove S-nnnn` takes a story out. When the batch under verification holds it, the batch is dropped, so that the queue never lands a story no one has enqueued, and the next batch can start. It refuses a story that is not enqueued.
+
+Accepting a story by hand, with `flai accept`, `flai move S-nnnn done`, or from the board, takes it out of the queue too, and drops the batch that holds it. Its outcome is `accepted_by_hand`.
+
+#### Holding the queue
+
+`flai queue hold` holds the queue: no new batch starts, and a batch under verification finishes and waits. The enqueued stories keep their places. Who held it and when are recorded, and `flai queue` shows them. `flai queue resume` lets the queue build batches again. Each leaves a queue that is already so as it is: a second hold keeps who held it first. The **Hold** switch on the board's merge queue panel does the same ([flaiover.md](flaiover.md#board)).
+
+Each of `add`, `remove`, `hold`, and `resume` prints one line saying what changed, or that nothing did and why. `--json` gives `{action, story, changed, by, at, state}`: the action, the story when there is one, whether the state changed, who made the change and when, and the queue's state after it.
+
+#### The batch
+
+With the `merge-queue` host action on, `orchestration.permissions.accept_reviews` on, and `acceptance.mode: local`, `flai serve` looks at the queue every 30 seconds, and at once when work items or threads change. It takes up to `merge_queue.batch_max` enqueued stories that are eligible, 4 unless set ([settings](../operators/settings.md#project-manifest)), in the order they were enqueued. It builds them into one batch in its own worktree, `.flai-cache/worktrees/merge-queue`, on a branch `merge-queue/<id>`: the main branch, then a copy of each story's commits rebased onto the one before. Your story branches never move. A story whose rebase stops is left out of the batch, with the outcome `left_out` naming the paths in conflict. It stays enqueued, and is not taken again until main or its branch moves.
+
+`flai serve` then verifies the batch once, with the tiers `flai verify` selects for the paths the batch changes against main ([Verify a story before review](#verify-a-story-before-review)). The batch's step moves through `building`, `rebasing S-nnnn`, `verifying`, `verifying <tier>`, and ends `verified` or `failed`. A story's own `flai verify` result is not changed.
+
+A verified batch waits: landing it is a later story's. Accept its stories by hand, as before. A failed batch waits too, until one of its stories is removed or accepted, which drops it. Then the next batch is built from the stories still enqueued.
 
 Under `acceptance.mode: pull-request` the queue does not run. The forge's required checks gate each story ([The acceptance waits for the pull request](#the-acceptance-waits-for-the-pull-request)), and a batch rebases each one, so every landing would stop. `flai queue` says so in one line and lists no story; `--json` has `off` true and `off_reason`.
 
