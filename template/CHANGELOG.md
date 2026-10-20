@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.105 - 2026-10-20
+
+- S-0403 With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify (patch).
+
 ## 1.0.104 - 2026-10-20
 
 - S-0403 With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify (patch).
