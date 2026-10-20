@@ -1,6 +1,7 @@
 // S-0398: the merge queue above the review lane, and each card in review's mark from it; S-0399:
 // its hold switch, and the batch's step, result, and drop; S-0400: a red batch's bisection, and
-// what each batched story comes to in the batch.
+// what each batched story comes to in the batch; S-0402: a story the main checkout's uncommitted
+// files hold back, with its files and the command that frees them.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import MergeQueue, {
@@ -301,6 +302,93 @@ describe('MergeQueue', () => {
 			expect(batchMark(batch, 'S-0001', at('2026-10-19T10:30:00Z'))).toBeUndefined();
 			expect(batchMark(batch, 'S-0002', at('2026-10-18T10:30:00Z'))).toBeUndefined();
 			expect(batchMark(batch, 'S-0002', null)).toBeUndefined();
+		});
+	});
+
+	describe('a story the main checkout’s uncommitted files hold back (S-0402)', () => {
+		const command = "git stash push -- a.txt 'b c.md'";
+		const dirty: MergeQueueState = {
+			...running,
+			ineligible: [
+				...running.ineligible!,
+				{
+					...entry('S-0004', 'Overwrites'),
+					reasons: [
+						{
+							kind: 'dirty_main',
+							text: 'S-0004’s change would overwrite a.txt, b c.md, which the main checkout has not committed',
+							paths: ['a.txt', 'b c.md'],
+							command
+						}
+					]
+				}
+			]
+		};
+		const clipboard = (writeText: unknown) =>
+			Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+		afterEach(() => Reflect.deleteProperty(navigator, 'clipboard'));
+
+		it('names the story, its files, and the command that frees them, and says committing frees it too', () => {
+			render(dirty);
+			const rows = document.querySelectorAll('[data-testid="merge-queue-held-back-row"]');
+			expect(rows).toHaveLength(1);
+			expect(el('merge-queue-held-back-row')!.dataset.story).toBe('S-0004');
+			expect(text('merge-queue-held-back-row')).toBe(`S-0004: a.txt, b c.md ${command} Copy`);
+			expect(text('merge-queue-held-back-command')).toBe(command);
+			expect(text('merge-queue-held-back')).toMatch(
+				/^Held back: .+ Commit them, or set them aside/
+			);
+			expect(text('merge-queue-ineligible')).toBe(
+				'2 not eligible: the reasons are on their cards.'
+			);
+		});
+
+		it('copies the command to the clipboard', async () => {
+			const writeText = vi.fn().mockResolvedValue(undefined);
+			clipboard(writeText);
+			render(dirty);
+			el('merge-queue-held-back-copy')!.click();
+			await settle();
+			expect(writeText).toHaveBeenCalledWith(command);
+			expect(text('merge-queue-held-back-copy')).toBe('Copied');
+			expect(el('merge-queue-held-back-copy-error')).toBeNull();
+		});
+
+		it('says when the command could not be copied', async () => {
+			const writeText = vi.fn().mockRejectedValue(new Error('denied'));
+			clipboard(writeText);
+			render(dirty);
+			el('merge-queue-held-back-copy')!.click();
+			await settle();
+			expect(text('merge-queue-held-back-copy-error')).toBe(
+				'Not copied (denied): select the command and copy it.'
+			);
+			expect(text('merge-queue-held-back-copy')).toBe('Copy');
+		});
+
+		it('lists none when no story is held back', () => {
+			render(running);
+			expect(el('merge-queue-held-back')).toBeNull();
+			expect(el('merge-queue-held-back-row')).toBeNull();
+		});
+
+		it('marks a story the landing held back as held back, not to land', () => {
+			const batch = {
+				stories: ['S-0001', 'S-0002'],
+				step: 'landing S-0002',
+				landing: {
+					stories: ['S-0001', 'S-0002'],
+					landed: ['S-0001'],
+					head: 'fedcba98',
+					held_back: [{ story: 'S-0002', paths: ['a.txt'] }]
+				}
+			};
+			expect(batchMark(batch, 'S-0002')).toBe('held back');
+			expect(batchMark(batch, 'S-0001')).toBe('landed');
+			render({ ...running, batch });
+			const mark = document.querySelectorAll('[data-testid="merge-queue-mark"]')[1];
+			expect(mark.textContent).toBe('(held back)');
+			expect(mark.className).toContain('text-warn');
 		});
 	});
 

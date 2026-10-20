@@ -6,6 +6,8 @@
 		criteria?: number[];
 		threads?: string[];
 		paths?: string[];
+		/** For dirty_main (S-0402): the command that sets the uncommitted files aside. */
+		command?: string;
 	};
 	/** A story in review as the merge queue sees it. */
 	export type QueueEntry = {
@@ -39,8 +41,13 @@
 		commit?: string;
 		result?: BatchResult;
 	};
-	/** A verified batch's landing (mergequeue.Landing): the stories it lands in order, those landed so far, and main's head the next landing must find. */
-	export type QueueLanding = { stories: string[] | null; landed: string[] | null; head: string };
+	/** A verified batch's landing (mergequeue.Landing): the stories it lands in order, those landed so far, and main's head the next landing must find; since S-0402, those it held back for the main checkout's uncommitted files. */
+	export type QueueLanding = {
+		stories: string[] | null;
+		landed: string[] | null;
+		head: string;
+		held_back?: { story: string; paths?: string[] }[];
+	};
 	/** The batch under verification (mergequeue.Batch): its stories, its step, and, once it has them, its result and why it was dropped; since S-0400, each story's heads, a red batch's bisection, and the landing. */
 	export type QueueBatch = {
 		id?: string;
@@ -102,13 +109,14 @@
 	}
 
 	/** What a batched story comes to in its batch (S-0400), as the panel names it. */
-	export type BatchMark = 'landed' | 'sent back' | 'to land' | 'still enqueued';
+	export type BatchMark = 'landed' | 'sent back' | 'held back' | 'to land' | 'still enqueued';
 
 	/**
 	 * What story comes to in batch: landed once the landing has landed it; sent back when the
-	 * bisection found it failing, or its last outcome since the batch started is failing; to land
-	 * while the landing has it still to land; still enqueued when it comes after the failing story
-	 * and the batch does not land it. None before the batch has come to any of these.
+	 * bisection found it failing, or its last outcome since the batch started is failing; held back
+	 * when the landing left it for the main checkout's uncommitted files (S-0402); to land while the
+	 * landing has it still to land; still enqueued when it comes after the failing story and the
+	 * batch does not land it. None before the batch has come to any of these.
 	 */
 	export function batchMark(
 		batch: QueueBatch,
@@ -125,6 +133,7 @@
 			);
 		if (batch.landing?.landed?.includes(story)) return 'landed';
 		if (story === failing) return 'sent back';
+		if (batch.landing?.held_back?.some((h) => h.story === story)) return 'held back';
 		if (batch.landing?.stories?.includes(story)) return 'to land';
 		if (failing && batch.stories.indexOf(story) > batch.stories.indexOf(failing))
 			return 'still enqueued';
@@ -152,7 +161,9 @@
 	// reasons of the stories not eligible are there. The hold switch holds and resumes the queue
 	// through flai's queue.hold, offered while the merge-queue host action is on. A red batch's
 	// bisection shows each step and the story it found failing, and each batched story is marked
-	// with what it comes to in the batch: landed, sent back, to land, or still enqueued (S-0400).
+	// with what it comes to in the batch: landed, sent back, to land, or still enqueued (S-0400). A
+	// story whose change would overwrite the main checkout's uncommitted files is held back until they
+	// are clean, and the panel names it, its files, and the command that frees them (S-0402).
 	import { api } from '$lib/api';
 	import { localTime } from '$lib/localtime';
 
@@ -176,6 +187,7 @@
 	const markTone: Record<BatchMark, string> = {
 		landed: 'text-good',
 		'sent back': 'text-danger',
+		'held back': 'text-warn',
 		'to land': 'text-ink',
 		'still enqueued': 'text-warn'
 	};
@@ -193,6 +205,28 @@
 			};
 		})
 	);
+	// Each story the main checkout's uncommitted files hold back, with the files and the command
+	// that sets them aside; flai computes the reason live, so the row goes once they are clean.
+	const heldBack = $derived(
+		ineligible.flatMap((e) =>
+			(e.reasons ?? [])
+				.filter((r) => r.kind === 'dirty_main')
+				.map((r) => ({ story: e.story, paths: r.paths ?? [], command: r.command }))
+		)
+	);
+	let copied = $state<string | null>(null);
+	let copyError = $state<string | null>(null);
+
+	async function copy(story: string, command: string) {
+		copyError = null;
+		try {
+			await navigator.clipboard.writeText(command);
+			copied = story;
+		} catch (e) {
+			copied = null;
+			copyError = `Not copied (${e instanceof Error ? e.message : String(e)}): select the command and copy it.`;
+		}
+	}
 	const failingAt = $derived(batch?.bisect?.commit ? ` at ${batch.bisect.commit.slice(0, 7)}` : '');
 
 	// A bisection step's result in a word and its colour, and, when it failed, where and why.
@@ -345,6 +379,43 @@
 			</ol>
 		{:else}
 			<p class="mt-1" data-testid="merge-queue-empty">Empty: no story in review is eligible.</p>
+		{/if}
+		{#if heldBack.length}
+			<div class="mt-1" data-testid="merge-queue-held-back">
+				<p class="font-semibold text-warn">
+					Held back: the main checkout has uncommitted files these stories would overwrite. Commit
+					them, or set them aside, and each is batched once they are clean.
+				</p>
+				<ul class="mt-1 space-y-1">
+					{#each heldBack as h (h.story)}
+						<li data-story={h.story} data-testid="merge-queue-held-back-row">
+							<span class="font-mono text-ink">{h.story}</span>:
+							<span class="font-mono break-all text-ink">{h.paths.join(', ')}</span>
+							{#if h.command}
+								<span class="mt-0.5 flex flex-wrap items-center gap-1">
+									<code
+										class="rounded bg-ground px-1 break-all text-ink"
+										data-testid="merge-queue-held-back-command">{h.command}</code
+									>
+									<button
+										type="button"
+										class="rounded border border-line px-2 py-0.5 text-ink"
+										title="Copy the command"
+										data-testid="merge-queue-held-back-copy"
+										onclick={() => copy(h.story, h.command!)}
+										>{copied === h.story ? 'Copied' : 'Copy'}</button
+									>
+								</span>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+				{#if copyError}
+					<p class="mt-1 text-danger" role="alert" data-testid="merge-queue-held-back-copy-error">
+						{copyError}
+					</p>
+				{/if}
+			</div>
 		{/if}
 		{#if ineligible.length}
 			<p class="mt-1" data-testid="merge-queue-ineligible">

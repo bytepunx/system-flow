@@ -179,6 +179,62 @@
       "width": 320
     },
     {
+      "name": "A story held back by the main checkout's uncommitted files",
+      "props": {
+        "queue": {
+          "mode": "local",
+          "eligible": [
+            {
+              "story": "S-0398",
+              "title": "A merge queue lists the stories in review that are eligible",
+              "entered_review": "2026-10-18T09:00:00Z",
+              "head": "0123456789abcdef0123456789abcdef01234567",
+              "enqueued": true
+            }
+          ],
+          "ineligible": [
+            {
+              "story": "S-0403",
+              "title": "The orchestrator enqueues each story in review it has verified",
+              "entered_review": "2026-10-18T10:00:00Z",
+              "head": "89abcdef0123456789abcdef0123456789abcdef",
+              "enqueued": true,
+              "reasons": [
+                {
+                  "kind": "dirty_main",
+                  "text": "S-0403's change would overwrite flai/cmd/accept.go, which the main checkout has not committed, so the merge queue holds it back: commit them, or set them aside with git stash push -- flai/cmd/accept.go, and it is batched once they are clean (ADR-0178)",
+                  "paths": [
+                    "flai/cmd/accept.go"
+                  ],
+                  "command": "git stash push -- flai/cmd/accept.go"
+                }
+              ]
+            }
+          ],
+          "enqueued": [
+            {
+              "story": "S-0398",
+              "by": "alex",
+              "at": "2026-10-18T09:05:00Z"
+            },
+            {
+              "story": "S-0403",
+              "by": "orchestrator",
+              "at": "2026-10-18T10:05:00Z"
+            }
+          ],
+          "outcomes": [
+            {
+              "story": "S-0403",
+              "outcome": "held_back",
+              "at": "2026-10-18T11:00:00Z",
+              "detail": "S-0403's change would overwrite flai/cmd/accept.go, which the main checkout has not committed, so the merge queue holds it back: commit them, or set them aside with git stash push -- flai/cmd/accept.go, and it is batched once they are clean (ADR-0178)"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "Batch failed at a tier",
       "props": {
         "queue": {

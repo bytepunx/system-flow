@@ -240,7 +240,8 @@ func printQueue(w io.Writer, q mergequeue.Queue) {
 }
 
 // printBatch writes the batch under verification and its step, and, once
-// it has them, its result and why it was dropped.
+// it has them, its result, why it was dropped, and the stories its landing
+// holds back with the files that hold them (ADR-0178).
 func printBatch(w io.Writer, b *mergequeue.Batch) {
 	if b == nil {
 		fmt.Fprintln(w, "batch: none")
@@ -263,6 +264,11 @@ func printBatch(w io.Writer, b *mergequeue.Batch) {
 	}
 	if d := b.Dropped; d != nil {
 		fmt.Fprintf(w, "  dropped by %s at %s: %s\n", d.By, d.At.UTC().Format(time.RFC3339), d.Reason)
+	}
+	if l := b.Landing; l != nil {
+		for _, h := range l.HeldBack {
+			fmt.Fprintf(w, "  held back: %s, by the main checkout's uncommitted %s; free it: %s\n", h.Story, strings.Join(h.Paths, ", "), mergequeue.FreeCommand(h.Paths))
+		}
 	}
 }
 

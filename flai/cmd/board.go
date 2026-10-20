@@ -69,6 +69,9 @@ func newBoardCmd(a *app) *cobra.Command {
 				}
 				if line := queueSummary(view.Queue); st == workitem.Review && line != "" {
 					fmt.Fprintf(a.out, "         %s\n", line)
+					for _, held := range heldBackLines(view.Queue) {
+						fmt.Fprintf(a.out, "         %s\n", held)
+					}
 				}
 			}
 			if len(board.Order) > 0 {
@@ -154,6 +157,24 @@ func queueSummary(q *mergequeue.Queue) string {
 		batch = strings.Join(q.Batch.Stories, ", ") + ", step " + q.Batch.Step
 	}
 	return "queue: " + order + "; batch: " + batch
+}
+
+// heldBackLines are the stories in review the main checkout's uncommitted
+// files hold back, one line each with the files and the command that frees
+// it, until they are clean (ADR-0178).
+func heldBackLines(q *mergequeue.Queue) []string {
+	if q == nil {
+		return nil
+	}
+	var lines []string
+	for _, e := range q.Ineligible {
+		for _, r := range e.Reasons {
+			if r.Kind == mergequeue.KindDirtyMain {
+				lines = append(lines, fmt.Sprintf("held back: %s by the main checkout's uncommitted %s; free it: %s", e.Story, strings.Join(r.Paths, ", "), r.Command))
+			}
+		}
+	}
+	return lines
 }
 
 func truncate(s string, n int) string {
