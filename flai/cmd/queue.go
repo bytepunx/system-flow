@@ -3,12 +3,16 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/bytepunx/system-flow/flai/internal/guard"
+	"github.com/bytepunx/system-flow/flai/internal/mcpserver"
 	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
+	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
 func newQueueCmd(a *app) *cobra.Command {
@@ -56,32 +60,77 @@ queue does not run, because the forge's required checks gate each story
 }
 
 func newQueueAddCmd(a *app) *cobra.Command {
-	return &cobra.Command{
+	var by, verified, evidence string
+	c := &cobra.Command{
 		Use:   "add <story>",
 		Short: "Enqueue a story in review that is eligible for the merge queue",
 		Long: `Enqueue a story in review in the merge queue, recorded with who enqueued it
-(FLAI_AGENT, else the config's author) and when. The queue lands each story
-as the one who enqueued it (ADR-0173).
+(--by, else FLAI_AGENT, else the config's author) and when. The queue lands
+each story as the one who enqueued it (ADR-0173).
 
 Refused, and nothing changes, for a story not in review, for one not
 eligible, naming every reason flai queue gives, and under acceptance.mode
 pull-request, where the queue does not run. A story enqueued already keeps
-its place and who enqueued it, and nothing changes.`,
+its place and who enqueued it, and nothing changes.
+
+The orchestrator enqueues a story it has verified in place of accepting it,
+with --by orchestrator, while orchestration.permissions.accept_reviews is on
+(ADR-0093). It gives --verified, the commit its verifier checked, and
+--evidence, a file holding its evidence (- reads standard input): a Verdict:
+line and one item "- <n>: <files>" per criterion, without headings. Both are
+recorded with the story, and the queue lands it as the orchestrator with that
+evidence. The enqueue is refused as flai accept --by orchestrator refuses the
+orchestrator's acceptance: while accept_reviews is off, without either, with
+evidence that cannot be read, and unless --verified is the head of the
+story's branch, every criterion is ticked, every changed file is under the
+story's touches, no thread on the story or its tasks is open, the evidence
+names a changed file for every criterion, and the branch changes no path
+Claude Code protects. --verified and --evidence are refused without --by
+orchestrator, and under FLAI_ROLE=orchestrate any --by but orchestrator is.
+The MCP tool queue_add enqueues the same way.`,
 		Example: `  flai queue add S-0042
-  flai queue add S-0042 --json`,
+  flai queue add S-0042 --json
+  flai queue add S-0042 --by orchestrator --verified 4f1c2a9 --evidence evidence.md
+  flai queue add S-0042 --by orchestrator --verified 4f1c2a9 --evidence - < evidence.md`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			orchestrator := workitem.IsOrchestrator(by)
+			switch {
+			case os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate && !orchestrator:
+				given := "no --by"
+				if by != "" {
+					given = "--by " + by
+				}
+				return fmt.Errorf("rule: the orchestrator enqueues a story only as itself, so give --by %s, not %s (ADR-0093)", workitem.ActivityOrchestrator, given)
+			case !orchestrator && (verified != "" || evidence != ""):
+				return fmt.Errorf("rule: --verified and --evidence are the orchestrator's enqueue: give them with --by %s, or leave them out", workitem.ActivityOrchestrator)
+			}
 			repo, err := a.project()
 			if err != nil {
 				return err
 			}
-			ch, err := mergequeue.Add(a.runner, repo, args[0], a.movedBy(""), a.now())
+			var ch mergequeue.Change
+			if orchestrator {
+				text := ""
+				if evidence != "" {
+					if text, err = a.readEvidence(acceptOptions{evidence: evidence, stdin: cmd.InOrStdin}); err != nil {
+						return err
+					}
+				}
+				ch, err = mcpserver.EnqueueByOrchestrator(a.runner, repo, args[0], verified, text, a.now(), a.logger())
+			} else {
+				ch, err = mergequeue.Add(a.runner, repo, args[0], a.movedBy(by), a.now())
+			}
 			if err != nil {
 				return err
 			}
 			return a.printQueueChange(ch)
 		},
 	}
+	c.Flags().StringVar(&by, "by", "", "who enqueues (default FLAI_AGENT, else the config's author); orchestrator for the orchestrator's enqueue under accept_reviews")
+	c.Flags().StringVar(&verified, "verified", "", "with --by orchestrator: the commit its verifier checked, the story branch's head")
+	c.Flags().StringVar(&evidence, "evidence", "", "with --by orchestrator: file holding its evidence, a Verdict: line and - <n>: <files> per criterion (- reads standard input)")
+	return c
 }
 
 func newQueueRemoveCmd(a *app) *cobra.Command {

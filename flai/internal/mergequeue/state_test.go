@@ -1,6 +1,7 @@
 package mergequeue
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -217,6 +218,43 @@ func TestEnqueueAndDequeue(t *testing.T) {
 	}
 	if s.Dequeue("S-0002") || !s.Dequeue("s-0001") || len(s.Enqueued) != 0 {
 		t.Errorf("dequeue: %+v", s.Enqueued)
+	}
+}
+
+// S-0403: EnqueueEntry records the orchestrator's verified commit and
+// evidence with the story, in UTC, and a second entry for it keeps the
+// first's place and what it recorded; both are written to the state file.
+func TestEnqueueEntryRecordsTheOrchestratorsEvidence(t *testing.T) {
+	dir := t.TempDir()
+	at := time.Date(2026, 10, 19, 9, 0, 0, 0, time.FixedZone("x", 3600))
+	first := Enqueued{Story: "S-0001", By: "orchestrator", At: at, Verified: "4f1c2a9", Evidence: "Verdict: pass\n- 1: `cli/feature.go`"}
+	if _, err := Update(dir, func(s *State) error {
+		if !s.EnqueueEntry(first) || s.EnqueueEntry(Enqueued{Story: "s-1", By: "alex", At: at, Verified: "other", Evidence: "other"}) {
+			t.Error("enqueue twice")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	st, err := ReadState(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first.At = at.UTC()
+	if len(st.Enqueued) != 1 || st.Enqueued[0] != first || st.Enqueued[0].At.Location() != time.UTC {
+		t.Errorf("enqueued %+v, want %+v", st.Enqueued, first)
+	}
+	data, err := os.ReadFile(StatePath(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"verified": "4f1c2a9"`) || !strings.Contains(string(data), `"evidence": "Verdict: pass\n- 1: `+"`cli/feature.go`"+`"`) {
+		t.Errorf("the state file does not record the verified commit and the evidence:\n%s", data)
+	}
+	var plain State
+	plain.Enqueue("S-0002", "alex", at)
+	if data, _ := json.Marshal(plain.Enqueued[0]); strings.Contains(string(data), "verified") || strings.Contains(string(data), "evidence") {
+		t.Errorf("an enqueue by anyone else records neither: %s", data)
 	}
 }
 

@@ -35,11 +35,19 @@ type State struct {
 	Outcomes []Outcome `json:"outcomes"`
 }
 
-// Enqueued is a story enqueued: who enqueued it and when, in UTC.
+// Enqueued is a story enqueued: who enqueued it and when, in UTC, and, when
+// the orchestrator enqueued it under accept_reviews, what it vouched for the
+// story with (ADR-0093), which the queue lands the story with.
 type Enqueued struct {
 	Story string    `json:"story"`
 	By    string    `json:"by"`
 	At    time.Time `json:"at"`
+	// Verified is the commit the orchestrator's verifier checked, the head of
+	// the story's branch when it was enqueued, as given; "" for anyone else.
+	Verified string `json:"verified,omitempty"`
+	// Evidence is the orchestrator's evidence, a Verdict: line and one
+	// "- <n>: <files>" item per criterion, as given; "" for anyone else.
+	Evidence string `json:"evidence,omitempty"`
 }
 
 // Batch is the batch under verification: its stories, in the order they are
@@ -223,10 +231,18 @@ func (s *State) EnqueuedAs(story string) (Enqueued, bool) {
 // Enqueue puts story at the end of the queue as enqueued by by at at, and
 // reports false, changing nothing, when it is enqueued already.
 func (s *State) Enqueue(story, by string, at time.Time) bool {
-	if _, ok := s.EnqueuedAs(story); ok {
+	return s.EnqueueEntry(Enqueued{Story: story, By: by, At: at})
+}
+
+// EnqueueEntry puts e at the end of the queue, its time in UTC, with what it
+// records, and reports false, changing nothing, when its story is enqueued
+// already: that entry keeps its place and what it recorded.
+func (s *State) EnqueueEntry(e Enqueued) bool {
+	if _, ok := s.EnqueuedAs(e.Story); ok {
 		return false
 	}
-	s.Enqueued = append(s.Enqueued, Enqueued{Story: story, By: by, At: at.UTC()})
+	e.At = e.At.UTC()
+	s.Enqueued = append(s.Enqueued, e)
 	return true
 }
 
@@ -336,6 +352,25 @@ func (r *Refusal) Error() string {
 // story not in review or not eligible, it is refused with a *Refusal naming
 // why.
 func Add(r execx.Runner, repo *workitem.Repo, story, by string, at time.Time) (Change, error) {
+	return AddWith(r, repo, story, by, at, AddOptions{})
+}
+
+// AddOptions are what the orchestrator's enqueue adds (ADR-0093, S-0403):
+// the commit its verifier checked and its evidence, recorded with the story,
+// and Vouch, the check that they vouch for it.
+type AddOptions struct {
+	Verified string
+	Evidence string
+	// Vouch, when set, is called with the story once it is found in review,
+	// eligible, and not enqueued already; an error from it refuses the
+	// enqueue, as it is, and nothing changes.
+	Vouch func(it *workitem.Item) error
+}
+
+// AddWith is Add with what o adds: o.Verified and o.Evidence recorded with
+// the story it enqueues, once o.Vouch, when set, passes it. A story enqueued
+// already keeps what it was enqueued with first.
+func AddWith(r execx.Runner, repo *workitem.Repo, story, by string, at time.Time, o AddOptions) (Change, error) {
 	ch := Change{Action: ActionAdd, Story: story, By: by, At: at.UTC()}
 	if repo.Manifest.Acceptance.PullRequest() {
 		return ch, &Refusal{Story: story, Text: fmt.Sprintf("%s is not enqueued: %s; accept it with flai accept %s", story, OffUnderPullRequest, story)}
@@ -361,9 +396,14 @@ func Add(r execx.Runner, repo *workitem.Repo, story, by string, at time.Time) (C
 				return ch, &Refusal{Story: it.ID, Text: fmt.Sprintf("%s is not enqueued: it is not eligible for the merge queue", it.ID), Reasons: e.Reasons}
 			}
 		}
+		if o.Vouch != nil {
+			if err := o.Vouch(it); err != nil {
+				return ch, err
+			}
+		}
 	}
 	ch.State, err = Update(repo.CacheDir(), func(s *State) error {
-		ch.Changed = s.Enqueue(it.ID, by, at)
+		ch.Changed = s.EnqueueEntry(Enqueued{Story: it.ID, By: by, At: at, Verified: o.Verified, Evidence: o.Evidence})
 		return nil
 	})
 	return ch, err

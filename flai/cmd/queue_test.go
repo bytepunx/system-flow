@@ -342,3 +342,124 @@ func TestQueueShowsTheBatchsResultAndDrop(t *testing.T) {
 		t.Errorf("flai queue with a passed batch:\n%s", out)
 	}
 }
+
+// orchestratedQueueProject is orchestratedStoryInReview, with accept_reviews
+// on when permit says so, and its S-0001 verified at the head of its branch,
+// which head is, so that the merge queue finds it eligible.
+func orchestratedQueueProject(t *testing.T, permit bool) (root, head string) {
+	t.Helper()
+	root, head = orchestratedStoryInReview(t, permit)
+	if err := verify.SaveReport(openProject(t, root), verify.Report{Story: "S-0001", Commit: head, Passed: true}); err != nil {
+		t.Fatal(err)
+	}
+	return root, head
+}
+
+// assertNotEnqueued fails unless the project at root has written no merge
+// queue state, as a refused enqueue writes none.
+func assertNotEnqueued(t *testing.T, root string) {
+	t.Helper()
+	if _, err := os.Stat(mergequeue.StatePath(filepath.Join(root, ".flai-cache"))); err == nil {
+		t.Errorf("a refused add wrote the state: %+v", readQueueState(t, root).Enqueued)
+	}
+}
+
+// S-0403 criterion 1, ADR-0093: with accept_reviews on, flai queue add --by
+// orchestrator enqueues a story it can vouch for, recording the commit its
+// verifier checked and its evidence as given with the story.
+func TestQueueAddByTheOrchestratorRecordsItsEvidence(t *testing.T) {
+	root, head := orchestratedQueueProject(t, true)
+	evidence := "Verdict: pass, tests and lint clean\n- 1: `cli/feature.go`"
+	js, errOut, code := runStdin(t, root, evidence+"\n", "queue", "add", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", "-", "--json")
+	var ch mergequeue.Change
+	if code != 0 || json.Unmarshal([]byte(js), &ch) != nil {
+		t.Fatalf("flai queue add --by orchestrator: %d %s %s", code, js, errOut)
+	}
+	if !ch.Changed || ch.By != "orchestrator" || len(ch.State.Enqueued) != 1 {
+		t.Errorf("the change: %+v", ch)
+	}
+	want := mergequeue.Enqueued{Story: "S-0001", By: "orchestrator", At: time.Date(2026, 9, 19, 2, 0, 0, 0, time.UTC), Verified: head, Evidence: evidence}
+	if st := readQueueState(t, root); len(st.Enqueued) != 1 || st.Enqueued[0] != want {
+		t.Errorf("enqueued %+v, want %+v", st.Enqueued, want)
+	}
+
+	file := evidenceFile(t, "Verdict: other\n- 1: `cli/feature.go`\n")
+	out, errOut, code := runIn(t, root, "queue", "add", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", file)
+	if code != 0 || out != "S-0001 is enqueued already, by orchestrator at 2026-09-19T02:00:00Z; nothing changed\n" {
+		t.Errorf("a second add: %d %q %s", code, out, errOut)
+	}
+	if st := readQueueState(t, root); len(st.Enqueued) != 1 || st.Enqueued[0].Evidence != evidence {
+		t.Errorf("a second add keeps the first evidence: %+v", st.Enqueued)
+	}
+}
+
+// S-0403 criterion 1: flai queue add --by orchestrator is refused while
+// accept_reviews is off, naming the permission, and writes nothing.
+func TestQueueAddByTheOrchestratorOnlyUnderAcceptReviews(t *testing.T) {
+	root, head := orchestratedQueueProject(t, false)
+	_, errOut, code := runIn(t, root, "queue", "add", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n"))
+	want := "rule: the orchestrator enqueues a story for the merge queue to land only with orchestration.permissions.accept_reviews, which is off: ask the operator with thread_open on S-0001"
+	if code == 0 || !strings.Contains(errOut, want) {
+		t.Errorf("flai queue add with accept_reviews off: %d, want %q:\n%s", code, want, errOut)
+	}
+	assertNotEnqueued(t, root)
+}
+
+// S-0403 criterion 1, ADR-0093: the orchestrator's enqueue is refused, and
+// nothing written, as its acceptance would be: without the verified commit
+// or the evidence, with evidence that has no Verdict line, that leaves a
+// criterion out or names no changed file for it, or with a verified commit
+// that is not the branch's head.
+func TestQueueAddByTheOrchestratorHoldsTheEvidenceToTheAcceptancesRules(t *testing.T) {
+	root, head := orchestratedQueueProject(t, true)
+	good := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
+	initial := gitIn(t, root, "rev-parse", "main")
+	for name, c := range map[string]struct {
+		args []string
+		want []string
+	}{
+		"no evidence":       {[]string{"--verified", head}, []string{"rule: the orchestrator enqueues S-0001 only with the commit its verifier checked", "give both, --verified and --evidence"}},
+		"no verified":       {[]string{"--evidence", good}, []string{"give both, --verified and --evidence"}},
+		"no verdict":        {[]string{"--verified", head, "--evidence", evidenceFile(t, "- 1: `cli/feature.go`\n")}, []string{"rule: the orchestrator's evidence for S-0001 cannot be read as ADR-0093 asks: the evidence has no Verdict line"}},
+		"a heading":         {[]string{"--verified", head, "--evidence", evidenceFile(t, "# Report\nVerdict: pass\n- 1: `cli/feature.go`\n")}, []string{"rule: line 1 of the orchestrator's evidence is a heading (# Report)"}},
+		"criterion missing": {[]string{"--verified", head, "--evidence", evidenceFile(t, "Verdict: pass\n- 2: `cli/feature.go`\n")}, []string{"S-0001 is not enqueued: the orchestrator's acceptance of it with this commit and evidence would be refused", "criterion_unevidenced: the evidence has no item for acceptance criterion 1 (the feature ships)"}},
+		"file unchanged":    {[]string{"--verified", head, "--evidence", evidenceFile(t, "Verdict: pass\n- 1: `cli/other.go`\n")}, []string{"criterion_unevidenced: the evidence for acceptance criterion 1 (the feature ships) names no file the branch changes (it names cli/other.go)"}},
+		"not the head":      {[]string{"--verified", initial, "--evidence", good}, []string{"unverified: --verified " + initial[:12] + " is not the head of story/S-0001, which is " + head[:12]}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, errOut, code := runIn(t, root, append([]string{"queue", "add", "S-0001", "--by", "orchestrator"}, c.args...)...)
+			if code == 0 {
+				t.Fatal("the orchestrator's enqueue was not refused")
+			}
+			for _, want := range c.want {
+				if !strings.Contains(errOut, want) {
+					t.Errorf("the refusal does not say %q:\n%s", want, errOut)
+				}
+			}
+			assertNotEnqueued(t, root)
+		})
+	}
+}
+
+// S-0403 criterion 1: --verified and --evidence are refused without --by
+// orchestrator, and under FLAI_ROLE=orchestrate any other --by is, as flai
+// accept refuses them.
+func TestQueueAddRefusesTheOrchestratorsFlagsToAnyoneElse(t *testing.T) {
+	root, head := orchestratedQueueProject(t, true)
+	ev := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
+	_, errOut, code := runIn(t, root, "queue", "add", "S-0001", "--evidence", ev)
+	if code == 0 || !strings.Contains(errOut, "rule: --verified and --evidence are the orchestrator's enqueue: give them with --by orchestrator, or leave them out") {
+		t.Errorf("--evidence without --by orchestrator: %d %s", code, errOut)
+	}
+	if _, errOut, code := runIn(t, root, "queue", "add", "S-0001", "--by", "alex", "--verified", head); code == 0 || !strings.Contains(errOut, "rule: --verified and --evidence are the orchestrator's enqueue") {
+		t.Errorf("--verified with --by alex: %d %s", code, errOut)
+	}
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	for given, args := range map[string][]string{"--by alex": {"--by", "alex"}, "no --by": nil} {
+		_, errOut, code := runIn(t, root, append([]string{"queue", "add", "S-0001"}, args...)...)
+		if want := "rule: the orchestrator enqueues a story only as itself, so give --by orchestrator, not " + given; code == 0 || !strings.Contains(errOut, want) {
+			t.Errorf("%s under FLAI_ROLE=orchestrate: %d, want %q:\n%s", given, code, want, errOut)
+		}
+	}
+	assertNotEnqueued(t, root)
+}
