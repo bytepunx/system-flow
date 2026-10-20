@@ -3927,12 +3927,14 @@ Start a ready story in one call (S-0274), in place of the four calls an agent ma
    its worktree under .flai-cache/worktrees/S-nnnn, as flai stream open does.
 3. Prime: the story's context pack, fitted to --budget, as flai prime --story
    prints it.
-4. Inbox: the agent's inbox, as the MCP tool inbox answers it.
+4. Inbox: the agent's inbox, as the MCP tool inbox answers it, save that
+   it lists only the open threads on the story and its tasks and counts
+   the others, which flai thread list lists.
 ```
 
 A story that is not ready, or that the board holds (its claim overlaps a story in progress, or it names in after: a story that is not done), is refused and nothing changes. The agent is FLAI\_AGENT and the session FLAI\_SESSION; FLAI\_AGENT records the move and names whose inbox is read.
 
-The output is the move, the narrative, the branch and its worktree, the pack, and then the inbox: the threads awaiting you, the stories ready to pull, and what others changed. --json prints one object with the keys story, followed, worktree, branch, from, pack, and inbox, as the MCP tool story\_start answers it.
+The output is the move, the narrative, the branch and its worktree, the pack, and then the inbox: the story's threads awaiting you, how many on other items, the stories ready to pull, and what others changed. --json prints one object with the keys story, followed, worktree, branch, from, pack, and inbox, as the MCP tool story\_start answers it, at most 40,000 bytes of JSON (ADR-0179): pack is part 1 of the pack, or only its header when part 1 does not fit, the inbox's oldest changes are left out (changes\_omitted), and then its threads' last entries are shortened (entries\_shortened) where the answer needs it.
 
 Exit codes: 0 when the story started, 4 when it was refused and nothing changed, 3 when it moved to in-progress and a later step failed (what ran is printed, and the error names the command that finishes the step), and 1 when the start could not run.
 
@@ -4156,7 +4158,10 @@ Close a task in one call (ADR-0107). flai finds the task's story and works in th
    left is never added, and no touch is removed.
 7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note.
-8. Inbox: the agent's inbox, as the MCP tool inbox answers it.
+8. Inbox: the agent's inbox, as the MCP tool inbox answers it, but listing
+   only the threads on the story and its tasks; the threads on other items
+   are counted, and the MCP tool inbox or flai thread list lists them
+   (ADR-0179).
 ```
 
 The agent is FLAI\_AGENT and the session FLAI\_SESSION.
@@ -4165,7 +4170,7 @@ While a rebase is unfinished in the worktree, the commit and the sync refuse. Re
 
 Running the task's tests with flai test, fixing what they find, and ticking criteria with flai criteria tick stay the agent's. Close a fix by calling flai task done again: it commits the fix, syncs, and checks.
 
-The output is a line for each step that ran, with the paths left after the commit's, then the inbox. --json prints the result as the MCP tool task\_done answers it, the paths left as left.
+The output is a line for each step that ran, with the paths left after the commit's, then the inbox. --json prints the result as the MCP tool task\_done answers it, the paths left as left, the threads on other items counted in inbox.threads\_omitted. The result is at most 40,000 bytes of JSON (ADR-0179): the inbox's oldest changes are left out first, counted in changes\_omitted, then each listed thread's last entry is shortened, counted in entries\_shortened; flai thread show reads them whole.
 
 Exit codes: 0 when every step ran, 3 when the sync stopped the run, 4 when the check did, and 1 when another step did or the run could not start.
 
