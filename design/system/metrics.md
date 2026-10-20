@@ -1,6 +1,6 @@
 ---
 title: Flow metrics
-updated: 2026-10-19
+updated: 2026-10-20
 status: active
 topics: [cli, dashboard, analysis]
 ---
@@ -464,7 +464,7 @@ Every chart spans the window chosen ([ADR-0054](../adrs/0054-every-chart-spans-t
 | Parallelism | Per day of the window, `claims.days[].in_progress`, with `held` as a second series, and a line at `claims.limit` | No limit line when `claims.limit` is absent ([Claims and touches](#claims-and-touches)) |
 | Hold Time | Stacked bar per week of the window, `claims.weeks[].held_seconds` in hours, one series per reason: `overlap`, `after`, and `no-touches`, the empty claim | A hold with more than one reason counts under the one it is named by, so a bar's height is the time held ([ADR-0113](../adrs/0113-flai-stats-reports-held-stories-per-day-held-time-by-reason-per-week-and-the.md)) |
 | Coordination | Per week of the window, bars of the conflicts found early, `coordination.weeks[].conflicts.found`, against those met late, `met_sync` plus `met_accept`; and the conversations `opened`, `agreed`, `escalated`, and `closed_with_story`, one series each, as lines or bars | Beside it, the stories started on a share in the window and the hold time they saved, the sums of `shares.started` and `shares.held_seconds` over the weeks. Without the conflict log, `logged` false, the chart says it could not be read ([Coordination](#coordination), [ADR-0138](../adrs/0138-flai-stats-reports-per-week-the-conversations-between-agents-and-how-they-ended.md)) |
-| Queue | Per week of the window, `queue.weeks[].wait_mean_seconds` and `wait_max_seconds` in hours, `batch_size_mean`, and `bisections`, one series each | Beside the agent-waiting chart. Without `queue`, the chart says the flai on the host sends none ([Merge queue](#merge-queue-s-0404), [ADR-0177](../adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)) |
+| Merge Queue | Per week of the window, `queue.weeks[].wait_mean_seconds` and `wait_max_seconds` in hours, `batch_size_mean`, and `bisections`, one series each | Beside the agent-waiting chart. Without `queue`, the chart says the flai on the host sends none ([Merge queue](#merge-queue-s-0404), [ADR-0177](../adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)) |
 | Touches Drift | Stacked bar per story of `claims.drift[]` completed in the window, x its `completed` in `items[]`: `outside_count` and `unchanged_count`. On a second axis, `claims.weeks[].exact_share` per week | Cancelled stories left out. A week with no such story has no share, a gap, not 0. Without `claims.drift`, the chart says git could not be read |
 | CoD Outstanding | Stacked area per day of the window, `cost_of_delay.days[].outstanding`, one series per column in board order | Of the report's type. Beside it, the items without a value now, today's `days[].without_value` per column ([ADR-0112](../adrs/0112-flai-stats-counts-the-open-items-without-a-cost-of-delay-value-per-column-and.md)) |
 | CoD Incurred | Bar per week of the window, `cost_of_delay.weeks[].incurred`, with the running mean per week as a line: the sum from the window's first week to this one over the number of those weeks | Of the report's type. Beside it, the items without a value now, as on CoD Outstanding |

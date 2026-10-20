@@ -1729,6 +1729,18 @@ coordination:
 
 The conflicts come from the conflict log, `.flai-cache/conflicts.jsonl` in the main checkout. flai appends a line to it for each conflict it meets: when the trial merge at `flai stream sync` sends a pair a conflict message or changes the one there, when the story branch's rebase stops on conflicts at `flai stream sync` or `flai task done`, and when the rebase in `flai accept` stops before the acceptance is refused ([Story branches](#story-branches)). The log is never trimmed, and it starts with the release that writes it, so earlier weeks show no conflicts. A missing log means none. When the log cannot be read, `flai stats` warns on stderr, `logged` is false, no week has `conflicts`, and the section's conflicts line says `the conflict log could not be read; none are counted`. `agreed` counts a share or a clean merge at sync, not agreement in a reply or a narrowed claim, so it is a floor.
 
+Since S-0404 `flai stats` also reports the merge queue ([The merge queue](#the-merge-queue)) per ISO week of the window ([Merge queue](../../design/system/metrics.md#merge-queue-s-0404), [ADR-0177](../../design/adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md)). The table adds a merge queue section after the waiting section: `stories`, the stories the queue landed and sent back over the window and the longest any waited in the queue, from enqueued to landed or sent back; `batches`, the batches it built, their mean and largest number of stories, and the bisections of the batches that failed; then each week that counts any, with its mean wait too. It is left out when nothing is counted.
+
+```text
+merge queue:
+  stories        landed 1 · sent back 1 · longest wait 3h
+  batches        built 2 · mean size 1.5 · largest 2 · bisections 1
+  by week:
+    2026-W40 (2026-09-28)  stories landed 1 · sent back 1 · mean wait 2h · longest 3h; batches built 2 · mean size 1.5 · largest 2 · bisections 1
+```
+
+`--json` has them under `queue.weeks[]`, one per ISO week of the window: `week` and `start`, as in `claims.weeks[]`, then `landed`, `sent_back`, `wait_mean_seconds`, `wait_max_seconds`, `batches`, `batch_size_mean`, `batch_size_max`, and `bisections`; and each item's time in the queue under `items[].queue_wait_seconds`. They come from the queue's event log, `.flai-cache/merge-queue/events.jsonl` in the main checkout, to which the queue appends a line for each event it acts on. The log starts with the release that writes it, so earlier weeks show nothing. Without the log `queue` is absent and the section is left out; a log that cannot be read is warned of on stderr, and `queue` is absent too.
+
 Since S-0225 what the planner spent planning an item is charged to that item and the items above it, and `flai stats` reports it apart from what agents spent, never in the agents' totals or per-model figures ([Strategic usage](../../design/system/metrics.md#strategic-usage)). The table adds a `strategic usage, apart` line with its tokens, cost, and time over the items done in the window, and its cost per kind of agent, and a line with the project's cost per agent hour: the agents' cost over their hours across every story measured from its logs, archived ones included. `--json` has each item's under `items[].usage.strategic`, the totals under `usage.strategic`, each type's and each bucket's under `usage.spend.<type>.strategic`, and the rate under `usage.cost_per_agent_hour`. An item with a forecast duration, or else an estimate, has under `items[].expected_cost` what it is expected to cost at that rate, marked estimated, so it shows before any agent works it; it is absent until a story has been measured.
 
 Since S-0226 an orchestrator activity is charged too, split evenly between the work items it named, and what no item carries is its kind's project strategic total ([ADR-0095](../../design/adrs/0095-an-orchestrator-activity-s-usage-is-charged-evenly-to-the-work-items-it-named.md)). For each strategic agent, `flai stats` prints beside its document's totals what the items carry and the project total, cost and seconds each, which add up to the totals: the project total holds the activities that named no item, the planner's before S-0225 or with no planned item, and the analyzer's before S-0227 or with no issue named. `--json` has them under `strategic[].items` and `strategic[].project` ([Strategic agents](../../design/system/metrics.md#strategic-agents-s-0206)).
@@ -2570,6 +2582,8 @@ A batch that failed is bisected to the first story it fails with. Main itself co
 With the `agent` host action on, `flai serve` starts the story's agent again, told the thread, when flai serve ran its last agent. To fix it, work on its branch, run `flai verify`, move it to review, and enqueue it again with `flai queue add`. Once it is back in review at a new commit, `flai serve` resolves the thread, so it is eligible again.
 
 When the main branch moves while a verified batch waits, other than by the batch's own landing, as when you accept a story by hand, the batch is dropped and the next batch is built from the new main. A landing that fails drops the batch too, and the stories not landed are batched again.
+
+The queue keeps an event log, `.flai-cache/merge-queue/events.jsonl` in the main checkout: a line for each story enqueued, landed, sent back, or taken out, and for each batch built, verified, and bisected, which `flai stats` reads ([Flow metrics](#flow-metrics)). A line it cannot append is a warning, and the queue goes on.
 
 ### Whether a release is due
 

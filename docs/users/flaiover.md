@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-19
+updated: 2026-10-20
 status: active
 ---
 
@@ -346,6 +346,7 @@ Charts plots the flow metrics `flai stats` computes, so the numbers are the same
 | Time in State | A bar for each day of the window with items completed: how long, on average, those items spent in each state. Hover a bar for the items it averages; the table lists each item. Under it, the share of all their time per state |
 | Throughput | Completions per week of the window, by nature, weeks with none included |
 | Agent Waiting | How long agents waited on someone else, mostly you, each week of the window: on their threads and in review, stacked, with review split into its time on checks and on reviewers when stories are accepted through pull requests, and the mean wait per item as a dashed line. The table under it lists the ten longest waits ([Agent waiting](#agent-waiting)) |
+| Merge Queue | How long stories waited in the merge queue each week of the window, from being enqueued to being landed or sent back: the mean and the longest, in hours. On the right-hand axis, the mean number of stories in the batches it built, and as bars the failed batches it bisected. Choose the window only. Says so when the flai on the host sends no merge queue, because the queue there has logged nothing yet or the flai is older ([Merge queue](../../design/system/metrics.md#merge-queue-s-0404)) |
 | Tokens / Min | Tokens per minute of agent work over time, one line per model |
 | Tokens / Day | The tokens spent on the items done each day, stacked by model, with the mean per day so far as a dashed line |
 | Tokens per item | The tokens an item took on average, over time: a line for epics, for stories, and for tasks |
