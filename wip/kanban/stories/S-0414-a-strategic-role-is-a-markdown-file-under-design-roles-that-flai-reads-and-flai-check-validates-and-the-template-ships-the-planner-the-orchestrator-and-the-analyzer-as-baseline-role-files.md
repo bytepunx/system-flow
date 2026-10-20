@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:25Z
-updated: 2026-10-20T05:05:10Z
+updated: 2026-10-20T18:53:34Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, template, conventions]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 1h1m
-  delivery: 2026-10-20T09:12:00Z
+  delivery: 2026-10-20T23:00:00Z
   basis: "Its own forecast of 1h1m; 9th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
   by: flai
-  at: 2026-10-20T05:05:10Z
+  at: 2026-10-20T18:53:34Z
 ---
 # S-0414 A strategic role is a markdown file under design/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files
 

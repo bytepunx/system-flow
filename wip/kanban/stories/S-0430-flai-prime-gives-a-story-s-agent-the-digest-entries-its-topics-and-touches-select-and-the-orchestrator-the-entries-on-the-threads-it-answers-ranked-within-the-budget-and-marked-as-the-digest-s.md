@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:39Z
-updated: 2026-10-20T05:05:10Z
+updated: 2026-10-20T18:53:34Z
 transitions: []
 tags: [cli, template]
 topics: [cli, conventions, orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 48m
-  delivery: 2026-10-20T18:14:00Z
+  delivery: 2026-10-21T08:03:00Z
   basis: "Its own forecast of 48m; 23rd in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428 and S-0429."
   by: flai
-  at: 2026-10-20T05:05:10Z
+  at: 2026-10-20T18:53:34Z
 ---
 # S-0430 flai prime gives a story's agent the digest entries its topics and touches select, and the orchestrator the entries on the threads it answers, ranked within the budget and marked as the digest's
 
