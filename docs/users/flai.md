@@ -356,7 +356,7 @@ $EDITOR story.md                                # write the goal, criteria as - 
 flai story new "Invoice PDF export" --epic E-0001 --body-stdin --autocommit < story.md
 ```
 
-The heading (`# S-0007 Invoice PDF export`) and the front matter are flai's; the body is everything below the heading. `flai check` runs with the new item in place: if it reports anything the item introduces, nothing is created, the parent is left as it was, the findings are printed, and the exit code is 4. `--autocommit` commits the new item and its parent on their own (`chore: [S-0007] create story: ...`) unless the project sets `dashboard.autocommit: false`; `--trailer` adds trailer lines. Nothing is pushed.
+The heading (`# S-0007 Invoice PDF export`) and the front matter are flai's; the body is everything below the heading. `flai check` runs with the new item in place: if it reports anything the item introduces, nothing is created, the parent is left as it was, the findings are printed, and the exit code is 4. A `wip.overlap` is the exception: a task whose touches reach the claim of another story in progress is created, and the overlap is told as below (S-0451). `--autocommit` commits the new item and its parent on their own (`chore: [S-0007] create story: ...`) unless the project sets `dashboard.autocommit: false`; `--trailer` adds trailer lines. Nothing is pushed.
 
 ### Who works a story: its agent
 
