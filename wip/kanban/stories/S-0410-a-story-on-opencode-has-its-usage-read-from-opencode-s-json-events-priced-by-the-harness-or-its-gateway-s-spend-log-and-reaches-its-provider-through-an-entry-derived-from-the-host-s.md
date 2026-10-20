@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:18:34Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-20T21:19:38Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -18,13 +18,34 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 149
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 7
+          output: 135
+          cache_read: 2226442
+          cache_write: 1761
+          cost: 0.5586
+cost_of_delay:
+  value: 76.92
+  by: planner-E-0023
+  at: 2026-10-20T21:13:43Z
 forecast:
   duration: 50m
-  delivery: 2026-10-20T23:51:00Z
-  basis: "Its own forecast of 50m; 6th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408 and S-0409."
+  delivery: 2026-10-21T02:10:00Z
+  basis: "Its own forecast of 50m; 6th in the pull order with an in-progress limit of 5, behind S-0445, S-0450, S-0451, S-0241, S-0406, S-0407, S-0408 and S-0409."
   by: flai
-  at: 2026-10-20T19:00:58Z
+  at: 2026-10-20T21:19:38Z
+finalized:
+  by: orchestrator
+  at: 2026-10-20T21:14:08Z
 ---
 # S-0410 A story on OpenCode has its usage read from OpenCode's JSON events, priced by the harness or its gateway's spend log, and reaches its provider through an entry derived from the host's
 
@@ -61,4 +82,4 @@ A story worked on OpenCode carries the same `usage` as one worked on Claude Code
   - **Design:** `design/system/metrics.md`, which ADR-0130 says changes where the events are named; the docs for criterion 6.
   - **Co-change:** `flai touches suggest` lists only hub documents, none of which this story's criteria reach; none was added.
 - **Forecast.** 50m against flai's 37m. Recorded fixtures, replacing the Claude Code reader named outright in two serve files without changing Claude Code runs, and a gateway test, as S-0357's pricing work had, add a third. The delivery, 2026-10-16T16:12Z, is flai's play-out moved by the raise times the cycle factor.
-- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467.
+- **Cost of delay.** 76.92 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 50m of 5h25m. Kept as flai gives it.

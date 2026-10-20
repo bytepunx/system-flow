@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:16:14Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-20T21:19:38Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 198
+      seconds: 351
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 242
-          cache_read: 5296392
-          cache_write: 8341
-          cost: 1.3298
-draft: true
+          input: 28
+          output: 381
+          cache_read: 7838070
+          cache_write: 11960
+          cost: 1.9679
+cost_of_delay:
+  value: 76.92
+  by: planner-E-0023
+  at: 2026-10-20T21:13:40Z
 forecast:
   duration: 50m
-  delivery: 2026-10-20T22:11:00Z
-  basis: "Its own forecast of 50m; 4th in the pull order with an in-progress limit of 5, behind S-0241, S-0406 and S-0407."
+  delivery: 2026-10-21T00:30:00Z
+  basis: "Its own forecast of 50m; 4th in the pull order with an in-progress limit of 5, behind S-0445, S-0450, S-0451, S-0241, S-0406 and S-0407."
   by: flai
-  at: 2026-10-20T19:00:58Z
+  at: 2026-10-20T21:19:38Z
+finalized:
+  by: orchestrator
+  at: 2026-10-20T21:14:05Z
 ---
 # S-0408 An OpenCode agent's protected write is asked of the story's owner through flai's hold-and-ask from the plugin's permission.asked, or refused by deny rules under --auto, as an ADR settles
 
@@ -74,6 +80,6 @@ A story's agent on OpenCode asks before it writes a protected path, as one on Cl
   - **Layout:** `flai/cmd/guard.go` and `flai/internal/guard/call.go`, where `guard.Hold` and the `Ask` verdict live, with their tests; `flai/internal/guard/opencode.go`, S-0407's reader, for the `permission.asked` input; `flai/internal/harness/opencode.go` and `opencodeconfig.go` for the capability and the `ask` or `deny` rules, and `harness_test.go` for the capabilities test; the two plugin copies; `flai/tests/integration/opencode_test.go`. The OpenCode files do not exist yet: S-0405 to S-0407 add them. `flai/internal/ask/ask.go` is reused unchanged.
   - **Design:** the docs, `agent-adapters.md`, and `template/CHANGELOG.md` for criterion 5.
   - **Folder kept:** `design/adrs`, because the ADR's file name is not known until `flai adr new`; it also covers the index `flai adr new` updates. It is a shared path, so it holds nothing.
-  - **Co-change:** `flai touches suggest` lists hub documents and `harness_test.go`; only `harness_test.go` is added. Left out with reasons: `flai/internal/harness/harness.go`, since `Capabilities` already has `Ask` and `flai/internal/serve/agents.go` already lifts the start refusal on it; `template/template.yaml`, which only a publish bumps; `docs/users/flai-reference.md`, needed only if `flai guard` gains a flag, which `flai task done` would add.
-- **Forecast.** 50m against flai's 43m. The ADR and the first caller of `guard.Hold`, whose bounded waits and thread reuse need timed tests, add about a sixth. The delivery, 2026-10-17T12:02Z, is flai's play-out at 50m.
-- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467 for the epic and on this story's plan thread.
+  - **Co-change:** `flai touches suggest` lists hub documents and `harness_test.go`; only `harness_test.go` is added. Left out with reasons: `flai/internal/harness/harness.go`, since `Capabilities` already has `Ask` and `flai/internal/serve/agents.go` already lifts the start refusal on it; `template/template.yaml`, which only a publish bumps; `docs/users/flai-reference.md`, needed only if `flai guard` gains a flag, which T-1696's Notes then add.
+- **Forecast.** 50m against flai's 45m on 2026-10-20. The ADR and the first caller of `guard.Hold`, whose bounded waits and thread reuse need timed tests, add about a ninth. The delivery, 2026-10-21T00:23Z, is flai's play-out moved by the 5m raise.
+- **Cost of delay.** 76.92 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 50m of 5h25m. Kept as flai gives it. This story's plan thread, TH-0490, asked the same input.

@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:20:15Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-20T21:19:38Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -18,13 +18,32 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 148
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 7
+          output: 135
+          cache_read: 2226442
+          cache_write: 1761
+          cost: 0.5586
 draft: true
+cost_of_delay:
+  value: 46.15
+  by: planner-E-0023
+  at: 2026-10-20T21:13:46Z
 forecast:
   duration: 30m
-  delivery: 2026-10-21T01:03:00Z
-  basis: "Its own forecast of 30m; 8th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410 and S-0411."
+  delivery: 2026-10-21T03:22:00Z
+  basis: "Its own forecast of 30m; 8th in the pull order with an in-progress limit of 5, behind S-0445, S-0450, S-0451, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410 and S-0411."
   by: flai
-  at: 2026-10-20T19:00:58Z
+  at: 2026-10-20T21:19:38Z
 ---
 # S-0412 A non-Claude model works one story of this repository end to end on OpenCode through OpenRouter, with the guard and the permission prompt on, and the results record what broke and what it cost
 
@@ -60,4 +79,4 @@ The epic's proof: a story of this repository, small and real, is pulled, worked,
   - **Folder kept:** `design/issues`, because the issues' file names are not known until `flai issue new` makes them.
   - **Co-change:** `flai touches suggest` lists hub documents; none is reached by this story's criteria, so none was added.
 - **Forecast.** 30m against flai's 17m, which matched all 234 done stories since no experiment rung has three. Following a whole story's run through `flai show`, its narrative, and its threads, and filing an issue per defect, nearly doubles it. The target's own run is the target's agent time, not this story's. The delivery, 2026-10-16T17:24Z, is flai's play-out moved by the raise times the cycle factor.
-- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467.
+- **Cost of delay.** 46.15 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 30m of 5h25m. Kept as flai gives it.

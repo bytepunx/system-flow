@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:11Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-20T21:19:38Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 51m
-  delivery: 2026-10-21T02:40:00Z
-  basis: "Its own forecast of 51m; 13th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416 and S-0417."
+  delivery: 2026-10-21T04:59:00Z
+  basis: "Its own forecast of 51m; 13th in the pull order with an in-progress limit of 5, behind S-0445, S-0450, S-0451, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416 and S-0417."
   by: flai
-  at: 2026-10-20T19:00:58Z
+  at: 2026-10-20T21:19:38Z
 ---
 # S-0418 A role a project defines starts on an event, on a schedule, or for as long as its host action is on, as its role file's trigger says, coalesced and logged with its trigger as the planner's runs are
 

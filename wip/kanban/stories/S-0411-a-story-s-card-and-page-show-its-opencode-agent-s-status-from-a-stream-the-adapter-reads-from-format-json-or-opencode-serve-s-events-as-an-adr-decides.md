@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:19:30Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-20T21:19:38Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -18,13 +18,34 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 148
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 7
+          output: 135
+          cache_read: 2226442
+          cache_write: 1761
+          cost: 0.5586
+cost_of_delay:
+  value: 53.85
+  by: planner-E-0023
+  at: 2026-10-20T21:13:44Z
 forecast:
   duration: 35m
-  delivery: 2026-10-21T00:30:00Z
-  basis: "Its own forecast of 35m; 7th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407, S-0408, S-0409 and S-0410."
+  delivery: 2026-10-21T02:49:00Z
+  basis: "Its own forecast of 35m; 7th in the pull order with an in-progress limit of 5, behind S-0445, S-0450, S-0451, S-0241, S-0406, S-0407, S-0408, S-0409 and S-0410."
   by: flai
-  at: 2026-10-20T19:00:58Z
+  at: 2026-10-20T21:19:38Z
+finalized:
+  by: orchestrator
+  at: 2026-10-20T21:14:09Z
 ---
 # S-0411 A story's card and page show its OpenCode agent's status from a stream the adapter reads, from --format json or opencode serve's events as an ADR decides
 
@@ -59,4 +80,4 @@ The operator watching the board sees what a story's agent on OpenCode is doing, 
   - **Folder kept:** `design/adrs`, because the ADR's file name is not known until `flai adr new`; it is a shared path, so it holds nothing.
   - **Co-change:** `flai touches suggest` lists `docs/users/flai.md` in half the seed commits, from `agents.go`'s long history; this story changes no user-facing behaviour, so it is not added. The rest are hub documents.
 - **Forecast.** 35m against flai's 24m. Moving `stream.go`'s parsing behind a per-harness reader with Claude Code's entries unchanged, plus an ADR, adds about half. If the ADR chooses `opencode serve`, the story grows and the Notes say to split it. The delivery, 2026-10-16T16:51Z, is flai's play-out moved by the raise times the cycle factor.
-- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467.
+- **Cost of delay.** 53.85 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 35m of 5h25m. Kept as flai gives it.

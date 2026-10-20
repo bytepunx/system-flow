@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:13:48Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-20T21:19:38Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -17,13 +17,32 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 149
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 8
+          output: 136
+          cache_read: 2226443
+          cache_write: 1762
+          cost: 0.5586
 draft: true
+cost_of_delay:
+  value: 115.38
+  by: planner-E-0023
+  at: 2026-10-20T21:13:37Z
 forecast:
   duration: 1h15m
-  delivery: 2026-10-20T20:25:00Z
-  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0241."
+  delivery: 2026-10-20T22:44:00Z
+  basis: "Its own forecast of 1h15m; 2nd in the pull order with an in-progress limit of 5, behind S-0445, S-0450, S-0451 and S-0241."
   by: flai
-  at: 2026-10-20T19:00:58Z
+  at: 2026-10-20T21:19:38Z
 ---
 # S-0406 A story's agent may run on OpenCode headless with flai's MCP server, no guard, and no roles, and the findings the OpenCode section leaves to check are settled against a real opencode binary
 
@@ -66,4 +85,4 @@ An operator can set a story's `agent.harness` to `opencode` and `flai serve` run
   - **Folder kept:** `design/adrs`, because the ADR's file name is not known until `flai adr new`; it is a shared path, so it holds nothing.
   - **Co-change:** `flai touches suggest` lists hub documents (`docs/operators/settings.md`, `flaiover-dashboard.md`, `workflow.md`), none of which this story's criteria reach; none was added. No setting key is added, so `settings.md` stays as it is.
 - **Forecast.** 1h15m against flai's 51m. The four findings are checked by hand against an external binary, and the story adds a configuration merge, an ADR, and a binary-gated test: half again. The delivery, 2026-10-16T12:46Z, is flai's play-out moved by the raise times the cycle factor.
-- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467.
+- **Cost of delay.** 115.38 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 1h15m of 5h25m. Kept as flai gives it: this story is the gate every later E-0023 story waits for, and that is already priced as the epic's penalty while it is open.

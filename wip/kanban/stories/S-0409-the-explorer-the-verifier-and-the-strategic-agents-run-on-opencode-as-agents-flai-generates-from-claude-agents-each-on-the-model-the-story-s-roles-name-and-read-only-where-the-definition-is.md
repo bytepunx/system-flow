@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:17:17Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-20T21:19:38Z
 transitions: []
 tags: [cli]
 topics: [agents, cli]
@@ -18,13 +18,19 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+cost_of_delay:
+  value: 61.54
+  by: planner-E-0023
+  at: 2026-10-20T21:13:41Z
 forecast:
   duration: 40m
-  delivery: 2026-10-20T22:55:00Z
-  basis: "Its own forecast of 40m; 5th in the pull order with an in-progress limit of 5, behind S-0241, S-0406, S-0407 and S-0408."
+  delivery: 2026-10-21T01:14:00Z
+  basis: "Its own forecast of 40m; 5th in the pull order with an in-progress limit of 5, behind S-0445, S-0450, S-0451, S-0241, S-0406, S-0407 and S-0408."
   by: flai
-  at: 2026-10-20T19:00:58Z
+  at: 2026-10-20T21:19:38Z
+finalized:
+  by: orchestrator
+  at: 2026-10-20T21:14:06Z
 ---
 # S-0409 The explorer, the verifier, and the strategic agents run on OpenCode as agents flai generates from .claude/agents, each on the model the story's roles name and read-only where the definition is
 
@@ -59,4 +65,4 @@ A story on OpenCode hands search and verification to its explorer and verifier a
   - **Design:** the docs, `strategic-agents.md`, and `agent-adapters.md` for criterion 5.
   - **Co-change:** `flai touches suggest` lists only hub documents, none of which this story's criteria reach; none was added.
 - **Forecast.** 40m against flai's 31m. A tool-name table over five definitions, and strategic starts checked against the real binary, add about a quarter. The delivery, 2026-10-16T15:16Z, is flai's play-out moved by the raise times the cycle factor.
-- **Cost of delay.** Not set: E-0023 has no inputs, and `flai cod` refuses. Asked on TH-0467.
+- **Cost of delay.** 61.54 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 40m of 5h25m. Kept as flai gives it.

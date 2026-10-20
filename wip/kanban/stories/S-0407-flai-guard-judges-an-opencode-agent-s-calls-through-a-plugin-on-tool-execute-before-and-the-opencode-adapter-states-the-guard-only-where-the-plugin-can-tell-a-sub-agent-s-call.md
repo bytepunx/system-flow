@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:15:14Z
-updated: 2026-10-20T19:00:58Z
+updated: 2026-10-20T21:19:38Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -24,22 +24,28 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 104
+      seconds: 258
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 382
-          cache_read: 12107316
-          cache_write: 12168
-          cost: 3.0382
-draft: true
+          input: 36
+          output: 521
+          cache_read: 14648995
+          cache_write: 15789
+          cost: 3.6763
+cost_of_delay:
+  value: 69.23
+  by: planner-E-0023
+  at: 2026-10-20T21:13:38Z
 forecast:
   duration: 45m
-  delivery: 2026-10-20T21:15:00Z
-  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0241 and S-0406."
+  delivery: 2026-10-20T23:34:00Z
+  basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0445, S-0450, S-0451, S-0241 and S-0406."
   by: flai
-  at: 2026-10-20T19:00:58Z
+  at: 2026-10-20T21:19:38Z
+finalized:
+  by: orchestrator
+  at: 2026-10-20T21:14:03Z
 ---
 # S-0407 flai guard judges an OpenCode agent's calls through a plugin on tool.execute.before, and the opencode adapter states the guard only where the plugin can tell a sub-agent's call
 
@@ -86,4 +92,4 @@ A story's agent on OpenCode is held by the same guard as one on Claude Code. A p
   - **Co-change, not added:** `flai touches suggest` also lists hub documents (`flaiover-dashboard.md`, `docs/users/flaiover.md`, `design/adrs/README.md`, `docs/operators/settings.md`, `workflow.md`). None of the criteria reach them. `settings.md` already indexes `--harness` for `flai guard`, and no setting is added. The list also has `guard_test.go`, but the reader's tests go in `opencode_test.go`. `harness.go` is left out because S-0406 registers the adapter.
   - **Layout, not added:** `flai/internal/serve/agents.go`. `startAllowed` reads `Capabilities().Guard` for any harness, so a `Guard: true` lifts the refusal without a change there.
 - **Forecast.** 45m against flai's 40m. flai's figure grew from 36m with the three added touches. Those are mechanical: a help text, a regenerated reference, and one test case. The raise for a JavaScript plugin with no test pattern here, and for sub-agent tracking checked against the real binary, therefore drops from a third to about an eighth. The delivery, 2026-10-16T13:42Z, is flai's 13:36Z play-out moved by the 5m raise times the cycle factor 1.11.
-- **Cost of delay.** Not set: neither S-0407 nor E-0023 has inputs, so `flai cod` refuses. I asked on TH-0470, and the orchestrator's recommendation there waits for the operator. The epic's input is asked on TH-0467.
+- **Cost of delay.** 69.23 USD a week. E-0023 carries `penalty_per_week: 500`, the operator's answer to TH-0467 question 1, confirmed on TH-0470 on 2026-10-20 (as on E-0019). `flai cod` shares it among the epic's seven open stories by forecast, 45m of 5h25m. Kept as flai gives it. TH-0470 asked the same input.
