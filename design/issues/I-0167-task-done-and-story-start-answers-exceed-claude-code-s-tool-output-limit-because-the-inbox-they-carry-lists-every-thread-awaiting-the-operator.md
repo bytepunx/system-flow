@@ -7,7 +7,7 @@ count: 3
 cost: 4m
 first_reported: 2026-10-19T15:28:45Z
 last_reported: 2026-10-19T22:24:12Z
-updated: 2026-10-19T22:24:12Z
+updated: 2026-10-20T18:53:36Z
 ---
 
 # I-0167 task_done and story_start answers exceed Claude Code's tool output limit, because the inbox they carry lists every thread awaiting the operator
@@ -30,3 +30,5 @@ Story: S-0401.
 S-0401: story_start answered 87,568 characters, past Claude Code's limit; the pack was only its header and the inbox carried 31 threads awaiting the operator, so the answer was read from the saved file with jq.
 
 ## Remediation
+
+Story S-0450 remediates this issue, created from it at 2026-10-20T18:53:36Z.
