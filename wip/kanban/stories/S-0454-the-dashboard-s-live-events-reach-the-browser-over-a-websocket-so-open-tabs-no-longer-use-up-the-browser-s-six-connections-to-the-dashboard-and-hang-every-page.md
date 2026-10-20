@@ -6,7 +6,7 @@ title: The dashboard's live events reach the browser over a WebSocket, so open t
 status: backlog
 owner: alex
 created: 2026-10-20T22:10:33Z
-updated: 2026-10-20T22:10:33Z
+updated: 2026-10-20T22:12:50Z
 transitions: []
 tags: [dashboard]
 topics: [client-side, server-side]
@@ -15,7 +15,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-20T22:12:50Z
 ---
 # S-0454 The dashboard's live events reach the browser over a WebSocket, so open tabs no longer use up the browser's six connections to the dashboard and hang every page
 
