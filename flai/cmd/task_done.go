@@ -57,7 +57,10 @@ fails stops the run; the steps after it are not done.
    left is never added, and no touch is removed.
 7. Check: flai check --strict scoped to the story. A finding in the story
    stops the run; a finding outside it is a note.
-8. Inbox: the agent's inbox, as the MCP tool inbox answers it.
+8. Inbox: the agent's inbox, as the MCP tool inbox answers it, but listing
+   only the threads on the story and its tasks; the threads on other items
+   are counted, and the MCP tool inbox or flai thread list lists them
+   (ADR-0179).
 
 The agent is FLAI_AGENT and the session FLAI_SESSION.
 
@@ -71,7 +74,11 @@ flai task done again: it commits the fix, syncs, and checks.
 
 The output is a line for each step that ran, with the paths left after the
 commit's, then the inbox. --json prints the result as the MCP tool
-task_done answers it, the paths left as left.
+task_done answers it, the paths left as left, the threads on other items
+counted in inbox.threads_omitted. The result is at most 40,000 bytes of
+JSON (ADR-0179): the inbox's oldest changes are left out first, counted in
+changes_omitted, then each listed thread's last entry is shortened, counted
+in entries_shortened; flai thread show reads them whole.
 
 Exit codes: 0 when every step ran, 3 when the sync stopped the run, 4 when
 the check did, and 1 when another step did or the run could not start.
@@ -229,12 +236,16 @@ func printTaskDoneCheck(w io.Writer, story string, c *taskdone.Check) {
 	}
 }
 
-// printTaskDoneInbox summarises the inbox: the threads awaiting the agent,
-// the stories ready to pull in pull order, and what others changed.
+// printTaskDoneInbox summarises the inbox: the threads on the story awaiting
+// the agent, the count of those on other items, the stories ready to pull in
+// pull order, and what others changed.
 func printTaskDoneInbox(w io.Writer, in *inbox.Inbox) {
 	fmt.Fprintf(w, "inbox: %s awaiting %s\n", plural(in.AwaitingYou, "thread"), in.Agent)
 	for _, t := range in.Threads {
 		fmt.Fprintf(w, "  %s %s (awaiting %s, last by %s)\n", t.ID, t.Title, t.Awaiting, t.LastBy)
+	}
+	if in.ThreadsOmitted > 0 {
+		fmt.Fprintf(w, "inbox: %s on other items: flai thread list lists them\n", plural(in.ThreadsOmitted, "thread"))
 	}
 	pull := "can pull: yes"
 	if !in.CanPull {

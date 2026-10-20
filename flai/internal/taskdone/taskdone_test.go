@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -15,10 +16,13 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -706,6 +710,115 @@ func TestRunAnswersTheStorysMessages(t *testing.T) {
 	}
 	if m := res.Inbox.Messages[0]; m.With != "S-006" || m.Awaiting != "you" || m.Last.Text != "Who changes the readme?" {
 		t.Errorf("message %+v", m)
+	}
+}
+
+// longEntry is a thread's text of about 1,500 bytes, as I-0167's were.
+var longEntry = strings.Repeat("The operator's question, at length. ", 42)
+
+// openThreads opens n threads by the operator awaiting S-004's agent, on
+// each of on in turn, each with a long entry.
+func openThreads(t *testing.T, repo *workitem.Repo, n int, on ...string) {
+	t.Helper()
+	for i := range n {
+		if _, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on[i%len(on)], Author: "alex", Text: longEntry, Now: clock}); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// jsonSizes are the bytes v encodes to compact, as the MCP tool answers it,
+// and indented, as flai task done --json prints it.
+func jsonSizes(t *testing.T, v any) (compact, indented int) {
+	t.Helper()
+	c, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	i, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(c), len(i) + 1
+}
+
+// I-0167, ADR-0179: S-0398's instance, 33 open threads awaiting the agent on
+// other items, each with a long last entry, and none on the story but the
+// fixture's own, with a path left for an open sibling. The close answers as before, stopped and
+// error empty and the sibling's path left, and its inbox lists none of the
+// 33 and counts them, so that the answer is at most ctxpack.PartLimit bytes
+// of JSON, where the agent's whole inbox alone is over it.
+func TestRunAnswersTheStorysInboxWithManyThreadsElsewhere(t *testing.T) {
+	repo, wt := project(t)
+	story(t, repo, "S-006", workitem.InProgress, "docs/other")
+	openThreads(t, repo, 33, "S-006", "E-001")
+	setTouches(t, repo, "T-003", "src/one")
+	newTask(t, repo, "Second", "src/two.go")
+	write(t, wt, "src/one/a.go", "package one\n")
+	write(t, wt, "src/two.go", "package two\n")
+
+	res, err := Run(context.Background(), options(repo, "feat: [S-004] T-003 one"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Error != "" || strings.Join(res.Left, ",") != "src/two.go" {
+		t.Fatalf("stopped at %q: %s; left %v", res.Stopped, res.Error, res.Left)
+	}
+	in := res.Inbox
+	if in == nil || in.ThreadsOmitted != 33 || in.AwaitingYou != len(in.Threads) || in.EntriesShortened != 0 {
+		t.Fatalf("inbox lists none of the 33 and counts them: %+v", in)
+	}
+	for _, th := range in.Threads {
+		if th.Story != "S-004" {
+			t.Errorf("%s on %s is listed", th.ID, th.Story)
+		}
+	}
+	if compact, indented := jsonSizes(t, res); compact > ctxpack.PartLimit || indented > ctxpack.PartLimit {
+		t.Errorf("the answer is %d bytes compact, %d indented, over %d", compact, indented, ctxpack.PartLimit)
+	}
+	whole, err := inbox.Read(context.Background(), inbox.Options{Repo: repo, Agent: "agent-S-004", Now: func() time.Time { return clock }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compact, _ := jsonSizes(t, whole); len(whole.Threads) != len(in.Threads)+33 || compact <= ctxpack.PartLimit {
+		t.Errorf("the agent's whole inbox does not reproduce I-0167: %d threads, %d bytes", len(whole.Threads), compact)
+	}
+}
+
+// ADR-0179: a close whose story's own threads are over ctxpack.PartLimit,
+// 30 on its task each with a long last entry, lists them all and shortens
+// each last entry, counting them in entries_shortened, until the whole
+// answer fits.
+func TestRunFitsTheAnswerByShorteningTheStorysThreads(t *testing.T) {
+	repo, _ := project(t)
+	openThreads(t, repo, 30, "T-003")
+
+	res, err := Run(context.Background(), options(repo, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Error != "" {
+		t.Fatalf("stopped at %q: %s", res.Stopped, res.Error)
+	}
+	in := res.Inbox
+	if in == nil || in.ThreadsOmitted != 0 || in.EntriesShortened != 30 {
+		t.Fatalf("inbox lists the 30 and shortens them: %+v", in)
+	}
+	questions := 0
+	for _, th := range in.Threads {
+		if !strings.HasPrefix(th.Title, "Question ") {
+			continue // the fixture's own thread on S-004, short already
+		}
+		questions++
+		if th.Story != "S-004" || len(th.LastEntry) > inbox.ShortEntry+len("…") || !strings.HasSuffix(th.LastEntry, "…") {
+			t.Errorf("%s on %s, last entry of %d bytes", th.ID, th.Story, len(th.LastEntry))
+		}
+	}
+	if questions != 30 {
+		t.Errorf("%d of the 30 listed", questions)
+	}
+	if compact, indented := jsonSizes(t, res); compact > ctxpack.PartLimit || indented > ctxpack.PartLimit {
+		t.Errorf("the answer is %d bytes compact, %d indented, over %d", compact, indented, ctxpack.PartLimit)
 	}
 }
 

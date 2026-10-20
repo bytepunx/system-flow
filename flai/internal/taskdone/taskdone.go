@@ -4,13 +4,15 @@
 // covers for that task's close (ADR-0128), tells the other open stories
 // whose claim covers what the commit changed, syncs the story's branch,
 // moves the task to done, logs the narrative, widens the touches, checks the
-// story, and reads the agent's inbox, in that order, stopping at the first
-// step that fails. flai task done, the MCP tool task_done, and the host
-// channel's task.done answer its Result.
+// story, and reads the agent's inbox for the story, in that order, stopping
+// at the first step that fails. flai task done, the MCP tool task_done, and
+// the host channel's task.done answer its Result, fitted to
+// ctxpack.PartLimit bytes of JSON (ADR-0179).
 package taskdone
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -22,6 +24,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/check"
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
@@ -677,14 +680,36 @@ func (r *run) check() error {
 }
 
 // inbox reads the agent's inbox as the MCP tool inbox does, advancing its
-// cursor.
+// cursor, but listing only the threads on the story and its tasks and
+// counting the rest (ADR-0179), and fits the result to ctxpack.PartLimit.
 func (r *run) inbox(ctx context.Context) error {
-	in, err := inbox.Read(ctx, inbox.Options{Repo: r.o.Repo, Agent: r.o.Agent, Own: r.story.ID, Now: r.o.Now, Runner: r.o.Runner, Version: r.o.Version})
+	in, err := inbox.Read(ctx, inbox.Options{Repo: r.o.Repo, Agent: r.o.Agent, Story: r.story.ID, Own: r.story.ID, Now: r.o.Now, Runner: r.o.Runner, Version: r.o.Version})
 	if err != nil {
 		return fmt.Errorf("read %s's inbox: %w", r.o.Agent, err)
 	}
 	r.res.Inbox = &in
+	if !r.res.Fit() {
+		r.logger.Warn("task close answer over the limit", "component", "taskdone", "task", r.task.ID, "bytes", r.res.size(), "limit", ctxpack.PartLimit)
+	}
 	return nil
+}
+
+// Fit cuts the result's inbox, with inbox.Fit, until the whole result is at
+// most ctxpack.PartLimit bytes of JSON as flai task done --json prints it,
+// indented, which is never fewer bytes than the MCP tool task_done's compact
+// answer (ADR-0179), and reports whether it is. Nothing but the inbox is cut;
+// a result without one is left as it is.
+func (r *Result) Fit() bool {
+	return inbox.Fit(r.Inbox, ctxpack.PartLimit, r.size)
+}
+
+// size is how many bytes r encodes to as flai task done --json prints it.
+func (r *Result) size() int {
+	data, err := json.MarshalIndent(r, "", "  ")
+	if err != nil {
+		panic(err) // a result holds strings, numbers, and lists, which always encode
+	}
+	return len(data) + 1 // the encoder's newline
 }
 
 // rel is p relative to the main checkout, for messages.

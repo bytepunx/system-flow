@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,10 +15,12 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/taskdone"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -372,6 +375,71 @@ func TestTaskDoneAnswersWhatTheCommandPrints(t *testing.T) {
 
 	got, want := canonical(t, out, viaTool.Root), canonical(t, res, direct.Root)
 	if got != want {
+		t.Errorf("task_done answered\n%s\nflai task done --json prints\n%s", got, want)
+	}
+}
+
+// manyThreadsElsewhere is S-0398's instance (I-0167) in a close project:
+// S-006 in progress, 33 open threads by the operator awaiting S-004's agent
+// on S-006 and E-001, each with a last entry of about 1,500 bytes, none on
+// S-004, and T-003's file and an open sibling's in the worktree.
+func manyThreadsElsewhere(t *testing.T) *workitem.Repo {
+	t.Helper()
+	repo, wt := closeProject(t)
+	writeIn(t, repo.Root, "wip/kanban/stories/S-006-six.md", "---\nid: S-006\ntype: story\nnature: feature\ntitle: Six\nstatus: in-progress\nparent: E-001\nowner: agent\ncreated: 2026-08-25T09:00:00Z\nupdated: 2026-08-31T10:00:00Z\ntransitions:\n  - to: ready\n    at: 2026-08-25T10:00:00Z\n    by: agent\n  - to: in-progress\n    at: 2026-08-31T10:00:00Z\n    by: agent\ntags: []\ntouches: [docs/other]\n---\n\n# S-006 Six\n\n## Goal\ng\n\n## Acceptance criteria\n- [ ] works\n\n## Tasks\n\n## Notes\n")
+	long := strings.Repeat("The operator's question, at length. ", 42)
+	for i := range 33 {
+		on := []string{"S-006", "E-001"}[i%2]
+		if _, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on, Author: "alex", Text: long, Now: closeClock}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	sibling(t, repo, []string{"README.md"}, []string{"src/two.go"})
+	writeIn(t, wt, "README.md", "# good\n\nT-003's.\n")
+	writeIn(t, wt, "src/two.go", "package two\n")
+	return repo
+}
+
+// I-0167, ADR-0179: in S-0398's instance task_done answers at most
+// ctxpack.PartLimit bytes, with stopped, error, and left as before, no thread
+// of another item listed and the 33 counted in threads_omitted, and the same
+// result as taskdone.Run, which flai task done --json prints, gives for it.
+func TestTaskDoneFitsTheAnswerWithManyThreadsElsewhere(t *testing.T) {
+	const message = "docs: [S-004] T-003 the readme"
+	viaTool := manyThreadsElsewhere(t)
+	out, text, failed := closer(t, viaTool).callText(t, "task_done", map[string]any{"task": "T-003", "message": message})
+	if failed != "" {
+		t.Fatal(failed)
+	}
+	if len(text) > ctxpack.PartLimit {
+		t.Errorf("task_done answered %d bytes, over %d", len(text), ctxpack.PartLimit)
+	}
+	if out["stopped"] != "" || out["error"] != nil || strings.Join(strs(out["left"]), ",") != "src/two.go" {
+		t.Fatalf("stopped at %v: %v; left %v", out["stopped"], out["error"], out["left"])
+	}
+	if field(out, "inbox.threads_omitted") != float64(33) {
+		t.Errorf("inbox omitted %v", field(out, "inbox.threads_omitted"))
+	}
+	listed, _ := field(out, "inbox.threads").([]any)
+	for _, th := range listed {
+		if story := field(th.(map[string]any), "story"); story != "S-004" {
+			t.Errorf("a thread on %v is listed: %v", story, th)
+		}
+	}
+
+	direct := manyThreadsElsewhere(t)
+	res, err := taskdone.Run(context.Background(), taskdone.Options{Repo: direct, Runner: execx.System{}, Task: "T-003", Message: message, Agent: "agent-S-004", Session: "s1", Now: func() time.Time { return closeClock }, Version: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	printed, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(printed)+1 > ctxpack.PartLimit {
+		t.Errorf("flai task done --json prints %d bytes, over %d", len(printed)+1, ctxpack.PartLimit)
+	}
+	if got, want := canonical(t, out, viaTool.Root), canonical(t, res, direct.Root); got != want {
 		t.Errorf("task_done answered\n%s\nflai task done --json prints\n%s", got, want)
 	}
 }

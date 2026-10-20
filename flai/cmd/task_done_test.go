@@ -12,6 +12,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/taskdone"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -358,5 +359,28 @@ func TestTaskDoneNeedsAMessageOnlyToCommit(t *testing.T) {
 	out, errOut, code = taskDone(t, wt, second)
 	if code != 1 || !strings.Contains(out, "stopped at commit: a commit message is needed to commit src/two.go: flai task done "+second+` -m "<message>"`) {
 		t.Errorf("task done %s without -m: %d\n%s\n%s", second, code, out, errOut)
+	}
+}
+
+// ADR-0179: the inbox flai task done prints lists the threads on the story
+// and counts those on other items, naming where they are listed.
+func TestTaskDoneCountsTheThreadsOnOtherItems(t *testing.T) {
+	root, wt := taskDoneProject(t)
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, on := range []string{"E-001", "E-001"} {
+		if _, err := threads.New(repo, threads.NewOptions{Title: "Elsewhere", On: on, Author: "alex", Text: "And there?", Now: taskDoneClock}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	out, errOut, code := taskDone(t, wt, "T-003")
+	if code != 0 {
+		t.Fatalf("task done: %d\n%s\n%s", code, out, errOut)
+	}
+	if !strings.Contains(out, "\ninbox: 2 threads on other items: flai thread list lists them\n") || strings.Contains(out, "Elsewhere") {
+		t.Errorf("output:\n%s", out)
 	}
 }
