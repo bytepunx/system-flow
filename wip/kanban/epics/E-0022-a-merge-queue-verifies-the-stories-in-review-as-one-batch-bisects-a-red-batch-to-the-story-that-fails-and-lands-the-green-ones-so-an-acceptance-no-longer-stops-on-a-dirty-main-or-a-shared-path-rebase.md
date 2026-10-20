@@ -3,10 +3,10 @@ id: E-0022
 type: epic
 nature: improvement
 title: A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-16T04:27:57Z
-updated: 2026-10-19T14:34:41Z
+updated: 2026-10-20T05:03:39Z
 transitions:
   - to: ready
     at: 2026-10-19T04:51:59Z
@@ -14,19 +14,27 @@ transitions:
   - to: in-progress
     at: 2026-10-19T14:34:41Z
     by: agent-S-0398
+  - to: review
+    at: 2026-10-20T05:03:39Z
+    by: agent-S-0402
 tags: [cli, dashboard]
 topics: [cli, orchestration, analysis]
 touches: [flai/internal/serve, flai/internal/workitem, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/workflow.md, design/system/agent-coordination.md, design/system/metrics.md, design/conventions/strategic-agents.md, docs/operators/index.md, docs/users/flai.md, template]
 usage:
   source: sum
-  seconds: 23507
+  seconds: 36131
   priced_by: harness
   turns:
     - day: 2026-10-19
-      ceremony: 18
-      test_runs: 4
-      hand_edits: 11
-      work: 346
+      ceremony: 21
+      test_runs: 5
+      hand_edits: 15
+      work: 455
+    - day: 2026-10-20
+      ceremony: 13
+      test_runs: 8
+      hand_edits: 4
+      work: 213
   models:
     - model: claude-haiku-5-5
       input: 136
@@ -35,28 +43,28 @@ usage:
       cache_write: 396722
       cost: 0.6511
     - model: claude-opus-5-5
-      input: 2674
-      output: 1167511
-      cache_read: 173948493
-      cache_write: 6515203
-      cost: 95.9451
+      input: 4202
+      output: 1693792
+      cache_read: 284394387
+      cache_write: 9865575
+      cost: 149.7496
   strategic:
     - kind: orchestrator
-      seconds: 19860
+      seconds: 41778
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 693
-          output: 12538
-          cache_read: 134899002
-          cache_write: 193938
-          cost: 33.8681
+          input: 1025
+          output: 19401
+          cache_read: 206145143
+          cache_write: 299191
+          cost: 51.7563
         - model: claude-sonnet-5-5
-          input: 52
-          output: 249
-          cache_read: 877993
-          cache_write: 267522
-          cost: 0.9376
+          input: 98
+          output: 488
+          cache_read: 1746682
+          cache_write: 483936
+          cost: 1.8256
 ---
 # E-0022 A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
 
@@ -93,3 +101,4 @@ To be drafted by the planner. Order: the queue's state and its view first, read-
 - Open to the designer: whether the queue is a fourth strategic process of flai's own, with no model, or a step the orchestrator asks for; what the batch's upper size is; whether a story whose branch undoes main's change ([ADR-0155](../../../design/adrs/0155-a-rebased-story-branch-that-undoes-main-s-change-to-a-path-is-recorded-at-sync.md)) may be in a batch at all, since only the operator keeps a removal.
 - Cost of delay inputs are the operator's; I-0150 estimates 96 hours of calendar time lost per cycle.
 - 2026-10-19T14:34:41Z: moved to in-progress: follows S-0398, which moved to in-progress
+- 2026-10-20T05:03:39Z: moved to review: follows S-0402, which moved to review

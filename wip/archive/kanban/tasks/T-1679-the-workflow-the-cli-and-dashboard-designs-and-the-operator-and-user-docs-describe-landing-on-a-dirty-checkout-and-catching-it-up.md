@@ -3,16 +3,37 @@ id: T-1679
 type: task
 nature: feature
 title: The workflow, the CLI and dashboard designs, and the operator and user docs describe landing on a dirty checkout and catching it up
-status: backlog
+status: done
 parent: S-0402
 owner: alex
 created: 2026-10-16T05:03:42Z
-updated: 2026-10-16T05:03:42Z
-transitions: []
+updated: 2026-10-20T04:49:27Z
+transitions:
+  - to: ready
+    at: 2026-10-20T04:44:38Z
+    by: agent-S-0402
+  - to: in-progress
+    at: 2026-10-20T04:44:38Z
+    by: agent-S-0402
+  - to: done
+    at: 2026-10-20T04:49:26Z
+    by: agent-S-0402
 stream: S-0402
 tags: [cli]
-touches: [design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/operators/index.md, docs/users/flai.md]
+touches: [design/system/workflow.md, design/system/flai-cli.md, design/system/flaiover-dashboard.md, docs/operators/index.md, docs/users/flai.md, flai/cmd/accept.go, flai/cmd/accept_batch_dirty_test.go]
 after: [T-1671]
+usage:
+  source: log
+  seconds: 288
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 51
+      output: 17043
+      cache_read: 4671613
+      cache_write: 95051
+      cost: 1.9777
 ---
 # T-1679 The workflow, the CLI and dashboard designs, and the operator and user docs describe landing on a dirty checkout and catching it up
 

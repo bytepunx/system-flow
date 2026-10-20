@@ -3,15 +3,36 @@ id: T-1651
 type: task
 nature: feature
 title: An ADR adds the queue wait per story, the batch size, and the bisections to metrics.md
-status: backlog
+status: done
 parent: S-0404
 owner: alex
 created: 2026-10-16T05:01:28Z
-updated: 2026-10-16T05:01:28Z
-transitions: []
+updated: 2026-10-19T23:51:45Z
+transitions:
+  - to: ready
+    at: 2026-10-19T23:44:18Z
+    by: agent-S-0404
+  - to: in-progress
+    at: 2026-10-19T23:44:19Z
+    by: agent-S-0404
+  - to: done
+    at: 2026-10-19T23:51:45Z
+    by: agent-S-0404
 stream: S-0404
 tags: [cli]
 touches: [design/adrs, design/system/metrics.md]
+usage:
+  source: log
+  seconds: 446
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 6281
+      cache_read: 1056918
+      cache_write: 35698
+      cost: 0.5379
 ---
 # T-1651 An ADR adds the queue wait per story, the batch size, and the bisections to metrics.md
 

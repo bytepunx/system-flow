@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0023]
 created: 2026-10-16T05:07:49Z
-updated: 2026-10-16T05:07:49Z
+updated: 2026-10-20T04:34:26Z
 ---
 
 # TH-0467 E-0023 needs a cost of delay input and two host answers: recommend penalty 500 USD a week as E-0019, OpenCode installed on the host before the first story, a 5 USD cap on the OpenRouter key
@@ -39,3 +39,10 @@ The first story checks the four open findings (sub-agent sign in a plugin, answe
 - Alternative: a higher limit, which you name.
 
 Meanwhile I plan everything that needs no answer. Once question 1 is answered, I write the stories' values.
+
+### 2026-10-20T04:34:26Z planner-E-0023
+Reminder: E-0023's plan is complete except question 1. S-0406 to S-0412 have their touches, forecasts, and 38 tasks, all drafts in the backlog. Without a cost of delay input on E-0023, `flai cod` refuses for every story, so they have no value and the orchestrator cannot finalize them. E-0022 is nearly done, so E-0023 would be next.
+
+- **Still recommended:** `flai edit E-0023 --penalty-per-week 500`, as on E-0019.
+
+Once the input is on the epic, I write each story's value and its Planning note. Questions 2 (OpenCode installed before S-0406) and 3 (a 5 USD OpenRouter key limit) can wait until S-0406 and S-0412 are finalized.

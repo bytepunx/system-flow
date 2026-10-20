@@ -3,16 +3,37 @@ id: T-1663
 type: task
 nature: feature
 title: The orchestrator's convention, agent definition, and prompt tell it to enqueue with evidence while the queue runs, and to open no thread on a blocker the queue settles
-status: backlog
+status: done
 parent: S-0403
 owner: alex
 created: 2026-10-16T05:02:24Z
-updated: 2026-10-16T05:02:24Z
-transitions: []
+updated: 2026-10-20T00:24:54Z
+transitions:
+  - to: ready
+    at: 2026-10-20T00:02:25Z
+    by: agent-S-0403
+  - to: in-progress
+    at: 2026-10-20T00:02:26Z
+    by: agent-S-0403
+  - to: done
+    at: 2026-10-20T00:24:54Z
+    by: agent-S-0403
 stream: S-0403
 tags: [cli]
-touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/root/.claude/agents/orchestrator.md, ".claude/agents/orchestrator.md", flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go]
+touches: [design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/serve/orchestrate_hold.go]
 after: [T-1649]
+usage:
+  source: log
+  seconds: 1348
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 132
+      output: 46012
+      cache_read: 9653019
+      cache_write: 350206
+      cost: 5.0241
 ---
 # T-1663 The orchestrator's convention, agent definition, and prompt tell it to enqueue with evidence while the queue runs, and to open no thread on a blocker the queue settles
 

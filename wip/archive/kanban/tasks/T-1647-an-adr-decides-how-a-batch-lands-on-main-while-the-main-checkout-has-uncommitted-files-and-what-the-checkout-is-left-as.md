@@ -3,15 +3,36 @@ id: T-1647
 type: task
 nature: feature
 title: An ADR decides how a batch lands on main while the main checkout has uncommitted files, and what the checkout is left as
-status: backlog
+status: done
 parent: S-0402
 owner: alex
 created: 2026-10-16T05:01:13Z
-updated: 2026-10-16T05:01:13Z
-transitions: []
+updated: 2026-10-20T04:30:34Z
+transitions:
+  - to: ready
+    at: 2026-10-20T04:29:25Z
+    by: agent-S-0402
+  - to: in-progress
+    at: 2026-10-20T04:29:25Z
+    by: agent-S-0402
+  - to: done
+    at: 2026-10-20T04:30:34Z
+    by: agent-S-0402
 stream: S-0402
 tags: [cli]
 touches: [design/adrs]
+usage:
+  source: log
+  seconds: 69
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2921
+      cache_read: 800730
+      cache_write: 16292
+      cost: 0.339
 ---
 # T-1647 An ADR decides how a batch lands on main while the main checkout has uncommitted files, and what the checkout is left as
 

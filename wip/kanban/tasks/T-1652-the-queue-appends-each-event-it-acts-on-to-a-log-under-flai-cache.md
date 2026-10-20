@@ -3,15 +3,36 @@ id: T-1652
 type: task
 nature: feature
 title: The queue appends each event it acts on to a log under .flai-cache
-status: backlog
+status: done
 parent: S-0404
 owner: alex
 created: 2026-10-16T05:01:32Z
-updated: 2026-10-16T05:03:57Z
-transitions: []
+updated: 2026-10-19T23:52:13Z
+transitions:
+  - to: ready
+    at: 2026-10-19T23:44:19Z
+    by: agent-S-0404
+  - to: in-progress
+    at: 2026-10-19T23:44:20Z
+    by: agent-S-0404
+  - to: done
+    at: 2026-10-19T23:52:13Z
+    by: agent-S-0404
 stream: S-0404
 tags: [cli]
-touches: [flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go]
+touches: [flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/mergequeue/state.go]
+usage:
+  source: log
+  seconds: 473
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 56
+      output: 20281
+      cache_read: 3412667
+      cache_write: 115265
+      cost: 1.7367
 ---
 # T-1652 The queue appends each event it acts on to a log under .flai-cache
 

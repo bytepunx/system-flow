@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 943.9724
-accrued_seconds: 914349
-tasks_completed: 655
-last_run: 2026-10-19T22:36:49Z
+accrued_cost: 962.7484
+accrued_seconds: 936269
+tasks_completed: 663
+last_run: 2026-10-20T04:42:09Z
 ---
 
 # Orchestrator activity
@@ -4596,6 +4596,62 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0401
 - Seconds: 2549
 - Cost: 5.2244 USD, estimated
+
+### 2026-10-19T23:41:49Z
+
+- Summary: Accepted S-0400 under accept_reviews at 728368876184. Verify passed every tier at head with the branch containing main, and the dry run showed no blocker. The verifier matched criteria 1 to 6, all ticked; ADR-0176 is accepted, and landings keep ADR-0093's checks and ADR-0155's keep refusal. Published under judgement: 4 pending (S-0398, S-0399, S-0400, S-0405), unvalued, 0 USD a week. The reason: the merge queue is now usable end to end, and it is off by default. Released flai 1.64.0 to 1.65.0 (flai/v1.65.0, minor), flaiover 0.52.6 to 0.52.7 (flaiover/v0.52.7) and template 1.0.102 to 1.0.103, published to system-flow-template v1.0.103 (730937f). Pushed, with no warnings.
+- Items: S-0400, S-0398, S-0399, S-0405
+- Seconds: 3900
+- Cost: 2.4083 USD, estimated
+
+### 2026-10-19T23:41:58Z
+
+- Summary: Re-applied the throughput order under order_ready after S-0403 and S-0404 left ready for in-progress. S-0402 (45m) is the only ready story left.
+- Items: S-0403, S-0404
+- Seconds: 9
+- Cost: 0.1981 USD, estimated
+
+### 2026-10-19T23:52:28Z
+
+- Summary: Re-applied the throughput order under order_ready after S-0402 left ready for in-progress. The ready column is empty, with S-0402, S-0403 and S-0404 in progress and S-0401 in review.
+- Items: S-0402
+- Seconds: 630
+- Cost: 3.2486 USD, estimated
+
+### 2026-10-19T23:56:13Z
+
+- Summary: Recommended an answer on TH-0521, citing design/adrs/0176-the-merge-queue-lands-each-story-of-a-passing-batch-through-flai-accept-batch.md § Decision
+- Items: S-0402
+- Seconds: 225
+- Cost: 0.8272 USD, estimated
+
+### 2026-10-19T23:56:15Z
+
+- Summary: Under answer_threads (autonomous), posted a recommendation on TH-0521 (S-0402, criterion 4) instead of answering, because rewording an operator's criterion is a change of scope. I recommended option (1): land in the main checkout with git's check, as ADR-0176 already lands each story through flai accept there. Criterion 4 would become a report of the stories a dirty file holds back. Option (2), moving the ref from the batch worktree, would leave the landing reversed and staged under the operator's checkout. Source: ADR-0176 § Decision.
+- Items: S-0402
+- Seconds: 2
+- Cost: 0.0000 USD
+
+### 2026-10-20T00:15:40Z
+
+- Summary: Left TH-0522 (S-0403 asks to write .claude/agents/orchestrator.md, a protected path) unanswered. It is a permission prompt only the story's owner, alex, can answer, and it concerns my own definition, so I neither reply nor recommend. The change adds queue_add to my tools and the instruction to enqueue verified stories while the merge queue runs.
+- Items: S-0403
+- Seconds: 1165
+- Cost: 2.6629 USD, estimated
+
+### 2026-10-20T01:08:43Z
+
+- Summary: Left S-0404 in review under accept_reviews. The re-verify passed every tier at head f24cb90e4437 and the verifier matched criteria 1 to 5, all ticked. But the diff edits metrics.md's Conflict log row to claim cut-off-line handling that storygit's AppendConflict and ReadConflicts lack, and metrics.md is the stats contract that changes only by ADR. I confirmed this in the diff and the code, and opened a thread asking for the row to be reverted.
+- Items: S-0404
+- Seconds: 3183
+- Cost: 5.4973 USD, estimated
+
+### 2026-10-20T04:42:09Z
+
+- Summary: Left S-0403 in review under accept_reviews. Verify passed every tier at head 09d8c2bd10ed and the verifier matched criteria 1 to 5, all ticked, with no breach. But the dry run blocks the orchestrator: the branch changes .claude/agents/orchestrator.md and its template copy, protected paths only the operator accepts (ADR-0106). I opened a thread recommending the operator accept it, with the evidence.
+- Items: S-0403
+- Seconds: 12806
+- Cost: 3.9336 USD, estimated
 
 ## Refusals
 

@@ -3,16 +3,37 @@ id: T-1672
 type: task
 nature: feature
 title: The strategic agents' design, the CLI docs, and the template's changelog describe the orchestrator's enqueueing
-status: backlog
+status: done
 parent: S-0403
 owner: alex
 created: 2026-10-16T05:03:07Z
-updated: 2026-10-16T05:03:07Z
-transitions: []
+updated: 2026-10-20T00:28:33Z
+transitions:
+  - to: ready
+    at: 2026-10-20T00:25:05Z
+    by: agent-S-0403
+  - to: in-progress
+    at: 2026-10-20T00:25:06Z
+    by: agent-S-0403
+  - to: done
+    at: 2026-10-20T00:28:33Z
+    by: agent-S-0403
 stream: S-0403
 tags: [cli]
-touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, template/template.yaml, template/CHANGELOG.md]
+touches: [design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, template/template.yaml, template/CHANGELOG.md, docs/operators/settings.md]
 after: [T-1650, T-1663]
+usage:
+  source: log
+  seconds: 207
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 13467
+      cache_read: 2825207
+      cache_write: 102497
+      cost: 1.4704
 ---
 # T-1672 The strategic agents' design, the CLI docs, and the template's changelog describe the orchestrator's enqueueing
 

@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [planner-E-0022]
 created: 2026-10-16T04:52:30Z
-updated: 2026-10-19T04:51:14Z
+updated: 2026-10-20T05:03:52Z
 ---
 
 # TH-0465 E-0022 needs a cost of delay input and four design answers: recommend time lost 96h per cycle, a model-free queue in flai serve, batches of at most 4, undone-main stories kept out, close-out leaves integration and smoke to the queue
@@ -59,3 +59,10 @@ Since I opened this thread:
 - **More evidence.** TH-0511 shows I-0150's pattern again: S-0446's acceptance stopped because its branch was 8 commits behind main once S-0397 landed.
 
 The quickest answer is "yes to all five". I would then set `time_lost_per_cycle: 96h` on E-0022 only once you confirm it, write each story's value from `flai cod`, and leave the drafts for you to finalize.
+
+### 2026-10-20T05:03:52Z planner-E-0022
+E-0022 is built: S-0398, S-0399, S-0400, and S-0405 are done, and S-0401 to S-0404 are in review. Questions 2 to 5 are settled by TH-0516, TH-0521, and the stories you finalized.
+
+Question 1, the cost-of-delay input on E-0022, is still open. It no longer affects ordering or pulling, only the record. I have not guessed it.
+
+If you want the values recorded, set `time_lost_per_cycle` on E-0022 (I recommend 96h, as above). Then `flai cod S-nnnn` gives each story's value, and anyone can write those with `flai edit`. I am ending this planning run.

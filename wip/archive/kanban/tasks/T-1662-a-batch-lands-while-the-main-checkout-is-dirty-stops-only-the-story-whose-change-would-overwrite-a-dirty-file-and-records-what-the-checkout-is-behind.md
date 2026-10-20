@@ -3,16 +3,31 @@ id: T-1662
 type: task
 nature: feature
 title: A batch lands while the main checkout is dirty, stops only the story whose change would overwrite a dirty file, and records what the checkout is behind
-status: backlog
+status: done
 parent: S-0402
 owner: alex
 created: 2026-10-16T05:02:19Z
-updated: 2026-10-16T05:02:19Z
-transitions: []
+updated: 2026-10-20T04:34:19Z
+transitions:
+  - to: ready
+    at: 2026-10-20T04:34:16Z
+    by: agent-S-0402
+  - to: in-progress
+    at: 2026-10-20T04:34:16Z
+    by: agent-S-0402
+  - to: done
+    at: 2026-10-20T04:34:18Z
+    by: agent-S-0402
 stream: S-0402
 tags: [cli]
-touches: [flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go]
+touches: [flai/internal/mergequeue/land.go, flai/internal/mergequeue/land_test.go, flai/internal/mergequeue/eligible.go, flai/internal/mergequeue/progress.go, flai/internal/storygit/storygit.go]
 after: [T-1647, T-1648]
+usage:
+  source: log
+  seconds: 2
+  estimated: true
+  priced_by: harness
+  models: []
 ---
 # T-1662 A batch lands while the main checkout is dirty, stops only the story whose change would overwrite a dirty file, and records what the checkout is behind
 

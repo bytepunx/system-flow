@@ -3,11 +3,11 @@ id: S-0404
 type: story
 nature: feature
 title: metrics.md defines the queue wait per story, the batch size, and the bisections per week by an ADR, and flai stats and the dashboard's charts report them
-status: in-progress
+status: review
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:58Z
-updated: 2026-10-19T23:41:29Z
+updated: 2026-10-20T00:55:34Z
 transitions:
   - to: ready
     at: 2026-10-19T04:53:59Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-19T23:41:29Z
     by: agent-S-0404
+  - to: review
+    at: 2026-10-20T00:55:34Z
+    by: agent-S-0404
 tags: [cli, dashboard]
 topics: [analysis, orchestration]
-touches: [design/adrs, design/system/metrics.md, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/mergequeue/state.go, flai/internal/serve/mergequeue.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md]
+touches: [design/adrs, design/system/metrics.md, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/mergequeue/state.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/accept_queue_test.go, flai/cmd/stats_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, design/issues/I-0167-task-done-and-story-start-answers-exceed-claude-code-s-tool-output-limit-because-the-inbox-they-carry-lists-every-thread-awaiting-the-operator.md, docs/users/flai-reference.md]
 after: [S-0400]
 agent:
   harness: claude-code
@@ -25,20 +28,40 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4464
+  priced_by: harness
+  turns:
+    - day: 2026-10-19
+      ceremony: 2
+      hand_edits: 1
+      work: 35
+    - day: 2026-10-20
+      work: 30
+  models:
+    - model: claude-opus-5-5
+      input: 516
+      output: 186648
+      cache_read: 31407708
+      cache_write: 1060814
+      cost: 15.9835
   strategic:
     - kind: orchestrator
-      seconds: 23
+      seconds: 3206
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 7
-          output: 144
-          cache_read: 846166
-          cache_write: 4120
-          cost: 0.2132
+          input: 99
+          output: 2001
+          cache_read: 21380573
+          cache_write: 37557
+          cost: 5.3696
+        - model: claude-sonnet-5-5
+          input: 20
+          output: 119
+          cache_read: 358690
+          cache_write: 57866
+          cost: 0.3409
 forecast:
   duration: 37m
   delivery: 2026-10-20T00:22:00Z
@@ -57,11 +80,11 @@ The analyzer and the operator can see whether the queue removed the review waits
 
 ## Acceptance criteria
 
-- [ ] An ADR adds to `design/system/metrics.md` the queue wait per story (from its enqueueing to its landing or its send-back), the batch size, and the bisections, each defined, with what each is read from.
-- [ ] The queue appends each event it acts on, enqueued, batch built, verified, bisected, landed, sent back, dequeued, to a log under `.flai-cache`, one line per event with the time, the batch, and the stories, as the conflict log of ADR-0138 is kept.
-- [ ] `flai stats` and `flai stats --json` report, under `queue` and per ISO week of the window, the stories landed by the queue with the mean and longest queue wait, the batches with their mean and largest size, and the bisections, with each item's queue wait in `items[]`. With no log, the section is absent.
-- [ ] The dashboard's charts draw the queue's weekly figures beside the agent-waiting chart, and say so when the flai on the host sends none. The port fixture test covers the new fields.
-- [ ] `design/system/flaiover-dashboard.md` and `docs/users/flai.md` describe the new figures and chart.
+- [x] An ADR adds to `design/system/metrics.md` the queue wait per story (from its enqueueing to its landing or its send-back), the batch size, and the bisections, each defined, with what each is read from.
+- [x] The queue appends each event it acts on, enqueued, batch built, verified, bisected, landed, sent back, dequeued, to a log under `.flai-cache`, one line per event with the time, the batch, and the stories, as the conflict log of ADR-0138 is kept.
+- [x] `flai stats` and `flai stats --json` report, under `queue` and per ISO week of the window, the stories landed by the queue with the mean and longest queue wait, the batches with their mean and largest size, and the bisections, with each item's queue wait in `items[]`. With no log, the section is absent.
+- [x] The dashboard's charts draw the queue's weekly figures beside the agent-waiting chart, and say so when the flai on the host sends none. The port fixture test covers the new fields.
+- [x] `design/system/flaiover-dashboard.md` and `docs/users/flai.md` describe the new figures and chart.
 
 ## Tasks
 - T-1651 An ADR adds the queue wait per story, the batch size, and the bisections to metrics.md
