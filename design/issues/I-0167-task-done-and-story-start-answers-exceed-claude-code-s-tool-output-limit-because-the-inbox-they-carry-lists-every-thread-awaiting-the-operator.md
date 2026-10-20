@@ -2,12 +2,12 @@
 id: I-0167
 title: task_done and story_start answers exceed Claude Code's tool output limit, because the inbox they carry lists every thread awaiting the operator
 class: efficiency
-status: open
+status: closed
 count: 4
 cost: 3m
 first_reported: 2026-10-19T15:28:45Z
 last_reported: 2026-10-20T00:35:02Z
-updated: 2026-10-20T18:53:36Z
+updated: 2026-10-20T19:54:47Z
 ---
 
 # I-0167 task_done and story_start answers exceed Claude Code's tool output limit, because the inbox they carry lists every thread awaiting the operator
@@ -36,3 +36,4 @@ S-0404: story_start's answer was 87,106 characters with 32 threads awaiting in i
 ## Remediation
 
 Story S-0450 remediates this issue, created from it at 2026-10-20T18:53:36Z.
+Closed 2026-10-20T19:54:47Z: Fixed by S-0450 (ADR-0179): story_start and task_done, over MCP and with --json, now carry an inbox that lists only the threads on the story and its tasks and counts the rest in threads_omitted, and each whole answer is fitted to 40,000 bytes of JSON, cutting the oldest changes, then the pack to its header, then the listed threads' last entries. Tests reproduce S-0398's instance (33 threads elsewhere, task_done) and S-0399's (32 threads elsewhere, story_start). S-0450's own task_done answered 54,219 bytes before and 2,873 after, with 33 threads omitted.
