@@ -2,12 +2,16 @@ package inbox
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -337,5 +341,180 @@ func TestASettledConversationAwaitsNeitherStory(t *testing.T) {
 		if len(in.Messages) != 1 || in.Messages[0].Awaiting != "" || !in.Messages[0].Last.Settled {
 			t.Errorf("a settled conversation awaits neither story, as %s's agent sees it: %+v", as.story, in.Messages)
 		}
+	}
+}
+
+// jsonSize is how many bytes v encodes to as JSON.
+func jsonSize(t *testing.T, v any) int {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(b)
+}
+
+// ADR-0179: a story-scoped read lists the threads on the story and counts,
+// not lists, those on other items that it would otherwise have listed; awaiting_you
+// counts the listed ones. Without a story the same repository lists both, and
+// threads_omitted is zero and absent from the JSON.
+func TestAStoryScopedReadCountsTheThreadsOnOtherItems(t *testing.T) {
+	f := setup(t)
+	other := f.storyIn(t, "Other", []string{"docs/other"})
+	own, err := threads.New(f.repo, threads.NewOptions{Title: "Which way?", On: f.story.ID, Author: "alex", Text: "A or B?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	elsewhere, err := threads.New(f.repo, threads.NewOptions{Title: "There?", On: other.ID, Author: "alex", Text: "And there?", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.New(f.repo, threads.NewOptions{Title: "Mine there", On: other.ID, Author: "claude", Text: "Shall I?", Now: t0}); err != nil {
+		t.Fatal(err)
+	}
+
+	in := f.read(t, Options{Agent: "claude", Story: f.story.ID})
+	if got := threadIDs(in); len(got) != 1 || got[0] != own.ID || in.AwaitingYou != 1 || in.ThreadsOmitted != 1 {
+		t.Errorf("the story's thread listed, the one awaiting claude elsewhere counted: %v, awaiting %d, omitted %d", got, in.AwaitingYou, in.ThreadsOmitted)
+	}
+	if all := f.read(t, Options{Agent: "claude", Story: f.story.ID, All: true}); all.ThreadsOmitted != 2 {
+		t.Errorf("with all, every open thread elsewhere is counted: %d", all.ThreadsOmitted)
+	}
+
+	whole := f.read(t, Options{Agent: "claude"})
+	if got := threadIDs(whole); strings.Join(got, " ") != own.ID+" "+elsewhere.ID || whole.ThreadsOmitted != 0 {
+		t.Errorf("without a story both are listed and none counted: %v, omitted %d", got, whole.ThreadsOmitted)
+	}
+	b, err := json.Marshal(whole)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "threads_omitted") || strings.Contains(string(b), "entries_shortened") {
+		t.Errorf("the standalone inbox's JSON is as before: %s", b)
+	}
+}
+
+// I-0167: an inbox with 33 threads awaiting the agent on other items, none on
+// the story, each with a long last entry, and 50 changes, was over Claude
+// Code's tool-output limit. Read for the story, it lists none of the 33 and
+// counts them, and fitted it is at most ctxpack.PartLimit bytes of JSON.
+func TestTheStorysInboxWithManyThreadsElsewhereFitsThePartLimit(t *testing.T) {
+	f := setup(t)
+	other := f.storyIn(t, "Other", []string{"docs/other"})
+	long := strings.Repeat("The operator's question, at length. ", 42) // about 1,500 bytes
+	for i := range 33 {
+		on := other.ID
+		if i%2 == 1 {
+			on = f.epic.ID
+		}
+		if _, err := threads.New(f.repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on, Author: "alex", Text: long, Now: t0}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	changes := make([]Event, 0, MaxEvents)
+	for i := range MaxEvents {
+		c := workitem.Change{ID: fmt.Sprintf("S-%04d", 1000+i), Type: workitem.Story, Title: "A story with a long title", Kind: Edited, To: "body", By: "alex", At: t0.Add(time.Duration(i) * time.Second).Format(workitem.TimeFormat)}
+		changes = append(changes, Event{Change: c, Summary: Describe(c) + " " + strings.Repeat("x", 700)})
+	}
+
+	whole := f.read(t, Options{Agent: "claude"})
+	whole.Changes = changes
+	if len(whole.Threads) != 33 || jsonSize(t, whole) <= ctxpack.PartLimit {
+		t.Fatalf("the agent's whole inbox reproduces I-0167: %d threads, %d bytes", len(whole.Threads), jsonSize(t, whole))
+	}
+
+	in := f.read(t, Options{Agent: "claude", Story: f.story.ID})
+	if len(in.Threads) != 0 || in.AwaitingYou != 0 || in.ThreadsOmitted != 33 {
+		t.Fatalf("the story's inbox lists none of the 33 and counts them: %d listed, awaiting %d, omitted %d", len(in.Threads), in.AwaitingYou, in.ThreadsOmitted)
+	}
+	in.Changes = changes
+	if !Fit(&in, ctxpack.PartLimit, func() int { return jsonSize(t, &in) }) {
+		t.Fatal("the story's inbox fits")
+	}
+	if n := jsonSize(t, in); n > ctxpack.PartLimit || len(in.Changes) == 0 || in.Omitted != MaxEvents-len(in.Changes) {
+		t.Errorf("fitted to %d bytes with %d changes, %d omitted", n, len(in.Changes), in.Omitted)
+	}
+}
+
+// fitFixture is an inbox of ten changes of about 1,000 bytes each and two
+// threads, one with a long last entry and a long pending recommendation.
+func fitFixture() Inbox {
+	in := Inbox{Agent: "claude", Omitted: 3, Ready: []workitem.BoardCard{}}
+	for i := range 10 {
+		in.Changes = append(in.Changes, Event{Change: workitem.Change{ID: fmt.Sprintf("S-%04d", i), Kind: "moved", At: t0.Add(time.Duration(i) * time.Second).Format(workitem.TimeFormat)}, Summary: strings.Repeat("c", 1000)})
+	}
+	rec := &threads.Entry{Author: "codex", Text: "x" + strings.Repeat("é", 1500), Recommendation: true}
+	in.Threads = []ThreadSummary{
+		{ID: "TH-0001", LastEntry: strings.Repeat("e", 3000), PendingRecommendation: rec},
+		{ID: "TH-0002", LastEntry: "short"},
+	}
+	return in
+}
+
+// ADR-0179: Fit drops the fewest changes that fit, oldest first, counting
+// them, and leaves the threads whole while that is enough.
+func TestFitDropsTheOldestChangesFirst(t *testing.T) {
+	in := fitFixture()
+	want := in
+	want.Changes, want.Omitted = in.Changes[4:], in.Omitted+4
+	limit := jsonSize(t, want)
+
+	kept := in
+	if !Fit(&in, limit, func() int { return jsonSize(t, &in) }) {
+		t.Fatal("dropping four changes fits")
+	}
+	if len(in.Changes) != 6 || in.Changes[0].ID != "S-0004" || in.Omitted != 7 || in.EntriesShortened != 0 {
+		t.Errorf("the four oldest dropped and counted: %d changes from %s, omitted %d, shortened %d", len(in.Changes), in.Changes[0].ID, in.Omitted, in.EntriesShortened)
+	}
+	if in.Threads[0].LastEntry != kept.Threads[0].LastEntry {
+		t.Error("the threads are whole while dropping changes is enough")
+	}
+	if len(kept.Changes) != 10 || kept.Omitted != 3 {
+		t.Errorf("a copy of the inbox kept before stays whole: %d changes, %d omitted", len(kept.Changes), kept.Omitted)
+	}
+}
+
+// ADR-0179: when dropping every change is not enough, Fit shortens each
+// listed thread's last entry and pending recommendation at a rune boundary
+// with an ellipsis, counting each thread once, and never the caller's
+// entries; it says false when even that does not fit.
+func TestFitShortensEntriesOnlyWhenTheChangesAreNotEnough(t *testing.T) {
+	in := fitFixture()
+	none := in
+	none.Changes = []Event{}
+	limit := jsonSize(t, none) - 100
+
+	kept := in
+	rec := in.Threads[0].PendingRecommendation
+	recText := rec.Text
+	if !Fit(&in, limit, func() int { return jsonSize(t, &in) }) {
+		t.Fatal("shortening the entries fits")
+	}
+	if len(in.Changes) != 0 || in.Omitted != 13 || in.EntriesShortened != 1 {
+		t.Errorf("every change dropped, one thread shortened: %d changes, omitted %d, shortened %d", len(in.Changes), in.Omitted, in.EntriesShortened)
+	}
+	th := in.Threads[0]
+	if th.LastEntry != strings.Repeat("e", ShortEntry)+"…" {
+		t.Errorf("last entry shortened to %d bytes: %q", len(th.LastEntry), th.LastEntry)
+	}
+	if s := th.PendingRecommendation.Text; !utf8.ValidString(s) || !strings.HasSuffix(s, "…") || len(s) > ShortEntry+len("…") || !strings.HasPrefix(recText, strings.TrimSuffix(s, "…")) {
+		t.Errorf("recommendation shortened at a rune boundary: %d bytes, valid %v", len(s), utf8.ValidString(s))
+	}
+	if th.PendingRecommendation.Author != "codex" || !th.PendingRecommendation.Recommendation {
+		t.Errorf("the recommendation keeps the rest of its entry: %+v", th.PendingRecommendation)
+	}
+	if in.Threads[1].LastEntry != "short" {
+		t.Errorf("a short entry is kept: %q", in.Threads[1].LastEntry)
+	}
+	if rec.Text != recText || kept.Threads[0].LastEntry != strings.Repeat("e", 3000) || len(kept.Changes) != 10 {
+		t.Error("the caller's threads, entries, and changes are not written to")
+	}
+
+	tiny := fitFixture()
+	if Fit(&tiny, 100, func() int { return jsonSize(t, &tiny) }) {
+		t.Error("an inbox that cannot fit 100 bytes says so")
+	}
+	if tiny.EntriesShortened != 1 || len(tiny.Changes) != 0 {
+		t.Errorf("it is cut as far as it goes: %d changes, %d shortened", len(tiny.Changes), tiny.EntriesShortened)
 	}
 }

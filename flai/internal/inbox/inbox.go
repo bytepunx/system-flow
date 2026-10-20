@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/itemedit"
@@ -49,15 +50,22 @@ type Inbox struct {
 	Unpublished []string `json:"unpublished,omitempty" jsonschema:"the accepted items no release has covered yet, by ID: what publishing would send to the remote. Information for the operator, or for an agent the operator asks to publish; not a step to take on your own"`
 	// FlaiOutdated is set while this flai is older than the newest flai
 	// release in the project's history (S-0181).
-	FlaiOutdated *release.Outdated    `json:"flai_outdated,omitempty" jsonschema:"this MCP server's flai is older than the newest flai release tagged in the project's history, so it may lack rules and fields the project uses; listed on every call while it is true: tell the designer, who upgrades the host with the command named"`
-	AwaitingYou  int                  `json:"awaiting_you" jsonschema:"threads awaiting you; messages never count here"`
-	Threads      []ThreadSummary      `json:"threads"`
-	Messages     []MessageSummary     `json:"messages,omitempty" jsonschema:"the open conversations of this agent's story with the agents of other open stories (ADR-0120), in ID order; absent when it has none, or this session has no story of its own"`
-	Ready        []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; listed on every call"`
-	CanPull      bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room and review is under its limit, so that one may be pulled"`
-	PullHold     string               `json:"pull_hold,omitempty" jsonschema:"why no story may be pulled now: the in-progress limit is full, or review is full and waits on acceptance"`
-	Changes      []Event              `json:"changes" jsonschema:"what others changed since this agent last looked, newest kept, at most 50; reported once. A first look under a new name covers the last 24 hours of stories and epics only"`
-	Omitted      int                  `json:"changes_omitted" jsonschema:"how many older changes were left out of changes because of the cap; they are not reported later"`
+	FlaiOutdated *release.Outdated `json:"flai_outdated,omitempty" jsonschema:"this MCP server's flai is older than the newest flai release tagged in the project's history, so it may lack rules and fields the project uses; listed on every call while it is true: tell the designer, who upgrades the host with the command named"`
+	AwaitingYou  int               `json:"awaiting_you" jsonschema:"threads awaiting you; messages never count here"`
+	Threads      []ThreadSummary   `json:"threads"`
+	// ThreadsOmitted counts the open threads on other items that a
+	// story-scoped read leaves out of Threads (ADR-0179); zero, and absent,
+	// without a story.
+	ThreadsOmitted int `json:"threads_omitted,omitempty" jsonschema:"open threads on other items that this story's inbox leaves out, counted rather than listed (ADR-0179): call inbox to list them"`
+	// EntriesShortened counts the listed threads whose last entry or pending
+	// recommendation Fit shortened (ADR-0179).
+	EntriesShortened int                  `json:"entries_shortened,omitempty" jsonschema:"how many listed threads' last entries and pending recommendations were shortened to fit the answer (ADR-0179); read them whole with thread_get"`
+	Messages         []MessageSummary     `json:"messages,omitempty" jsonschema:"the open conversations of this agent's story with the agents of other open stories (ADR-0120), in ID order; absent when it has none, or this session has no story of its own"`
+	Ready            []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; listed on every call"`
+	CanPull          bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room and review is under its limit, so that one may be pulled"`
+	PullHold         string               `json:"pull_hold,omitempty" jsonschema:"why no story may be pulled now: the in-progress limit is full, or review is full and waits on acceptance"`
+	Changes          []Event              `json:"changes" jsonschema:"what others changed since this agent last looked, newest kept, at most 50; reported once. A first look under a new name covers the last 24 hours of stories and epics only"`
+	Omitted          int                  `json:"changes_omitted" jsonschema:"how many older changes were left out of changes because of the cap; they are not reported later"`
 }
 
 // Read builds the agent's inbox and advances its cursor past the changes it
@@ -84,6 +92,10 @@ func Read(ctx context.Context, opt Options) (Inbox, error) {
 		}
 		sum := Summarize(opt.Repo, opt.Agent, th)
 		if opt.Story != "" && sum.Story != story {
+			// counted where it would have been listed (ADR-0179)
+			if sum.Awaiting == "you" || opt.All {
+				out.ThreadsOmitted++
+			}
 			continue
 		}
 		if sum.Awaiting == "you" {
@@ -126,6 +138,74 @@ func Read(ctx context.Context, opt Options) (Inbox, error) {
 		return Inbox{}, err
 	}
 	return out, nil
+}
+
+// ShortEntry is the most bytes of a listed thread's last entry, and of its
+// pending recommendation's text, that Fit keeps when it shortens them, before
+// the ellipsis it appends (ADR-0179).
+const ShortEntry = 500
+
+// Fit cuts in until size, the encoded size of the answer that carries in, is
+// at most limit (ADR-0179), and reports whether it is. It cuts in place, so
+// that an answer holding in by pointer measures the cut: first the changes
+// from the oldest, the fewest that make the answer fit, each counted in
+// Omitted; then, when the answer is over without any changes, the last entry
+// and the pending recommendation's text of each listed thread to ShortEntry
+// bytes with an ellipsis, each thread so shortened counted once in
+// EntriesShortened. It never writes to the slices or entries in held before:
+// a caller that keeps a copy of *in keeps the inbox whole.
+func Fit(in *Inbox, limit int, size func() int) bool {
+	if in == nil || size() <= limit {
+		return true
+	}
+	changes, omitted := in.Changes, in.Omitted
+	drop := func(k int) {
+		in.Changes, in.Omitted = changes[k:], omitted+k
+	}
+	// the size falls as more changes are dropped: the fewest that fit
+	k := sort.Search(len(changes)+1, func(k int) bool {
+		drop(k)
+		return size() <= limit
+	})
+	if k <= len(changes) {
+		drop(k)
+		return true
+	}
+	drop(len(changes))
+	listed := make([]ThreadSummary, len(in.Threads))
+	copy(listed, in.Threads)
+	for i := range listed {
+		th := &listed[i]
+		cut := false
+		if s, ok := shorten(th.LastEntry); ok {
+			th.LastEntry, cut = s, true
+		}
+		if rec := th.PendingRecommendation; rec != nil {
+			if s, ok := shorten(rec.Text); ok {
+				short := *rec
+				short.Text = s
+				th.PendingRecommendation, cut = &short, true
+			}
+		}
+		if cut {
+			in.EntriesShortened++
+		}
+	}
+	in.Threads = listed
+	return size() <= limit
+}
+
+// shorten is s cut to ShortEntry bytes at a rune boundary, with an ellipsis,
+// and whether it was longer.
+func shorten(s string) (string, bool) {
+	if len(s) <= ShortEntry {
+		return s, false
+	}
+	n := ShortEntry
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n] + "…", true
 }
 
 // Board is the board of items, listed archive included: a done story stays
