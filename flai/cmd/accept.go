@@ -253,7 +253,8 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	if !o.dryRun {
 		res.By = orDefault(o.by, a.author())
 	}
-	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun {
+	// the merge queue's landing leaves them as they are (S-0402)
+	if dirty := res.Uncommitted; len(dirty) > 0 && !a.yes && !o.dryRun && o.batch == "" {
 		return nil, fmt.Errorf("working tree has uncommitted changes outside wip (%s); commit or stash them so the acceptance commit holds only acceptance, or pass --yes to include them", strings.Join(dirty, ", "))
 	}
 	if err := keptHeld(it.ID, res.UndoesMain, opts.Keep); err != nil {
@@ -278,7 +279,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	// what the acceptance commits from the main checkout passes the lint
 	// its fix leaves, or nothing changes (S-0367, TH-0413)
 	if useGit {
-		if err := a.refuseUnfixedUncommitted(context.Background(), it.ID, repo.Root); err != nil {
+		if err := a.refuseUnfixedUncommitted(context.Background(), it.ID, repo.Root, leftUncommitted(res)); err != nil {
 			return nil, err
 		}
 	}
@@ -602,12 +603,14 @@ func canonicalSet(ids []string) map[string]bool {
 
 // commitAcceptance is step 3: it runs the lint fix over what the main
 // checkout has not committed (S-0367) and commits everything there under the
-// acceptance's subject. git add and git commit are run again while another
+// acceptance's subject, but what the merge queue's landing leaves
+// uncommitted (S-0402). git add and git commit are run again while another
 // git process holds the index lock (I-0100). A commit that fails even so says
 // what the acceptance has done and how to finish it.
 func (a *app) commitAcceptance(repo *workitem.Repo, it *workitem.Item, res *preview.Acceptance, trailers []string) error {
-	a.fixUncommitted(context.Background(), it.ID, repo.Root)
-	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, "add", "-A"); err != nil {
+	left := leftUncommitted(res)
+	a.fixUncommitted(context.Background(), it.ID, repo.Root, left)
+	if _, err := storygit.RunPastIndexLock(a.runner, repo.Root, addArgs(left)...); err != nil {
 		return notCommitted(it.ID, res, "not yet staged", err)
 	}
 	msg := acceptSubject(it.ID, res.Epic)

@@ -22,13 +22,15 @@ import (
 // before the merge.
 
 // fixUncommitted runs the lint fix over what the checkout at root has not
-// committed, logging at warn what it could not do, and answers those paths.
-func (a *app) fixUncommitted(ctx context.Context, id, root string) []string {
+// committed but the paths left, which the acceptance leaves as they are
+// (S-0402), logging at warn what it could not do, and answers those paths.
+func (a *app) fixUncommitted(ctx context.Context, id, root string, left []string) []string {
 	paths, err := verify.ChangedPaths(a.runner, root, "")
 	if err != nil {
 		a.logger().Warn("the lint fix of the acceptance's uncommitted files did not run", "component", "accept", "item", id, "err", err)
 		return nil
 	}
+	paths = withoutLeft(paths, left)
 	fixed, err := verify.CheckoutFix(ctx, root, paths, a.logger())
 	if err != nil {
 		a.logger().Warn("the lint fix of the acceptance's uncommitted files did not run", "component", "accept", "item", id, "err", err)
@@ -59,10 +61,10 @@ type unfixedAt struct {
 }
 
 // refuseUnfixedUncommitted fixes the lint of what the main checkout at root
-// has not committed and refuses id's acceptance for what the fix left, before
-// anything else changes.
-func (a *app) refuseUnfixedUncommitted(ctx context.Context, id, root string) error {
-	paths := a.fixUncommitted(ctx, id, root)
+// has not committed, but the paths left, and refuses id's acceptance for what
+// the fix left, before anything else changes.
+func (a *app) refuseUnfixedUncommitted(ctx context.Context, id, root string, left []string) error {
+	paths := a.fixUncommitted(ctx, id, root, left)
 	if len(paths) == 0 {
 		return nil
 	}
