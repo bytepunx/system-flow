@@ -4,10 +4,10 @@ title: "S-0401 is verified and its criteria are met, but ADR-0175 is still propo
 anchor:
   path: wip/kanban/stories/S-0401-a-batch-settles-a-rebase-that-stops-inside-the-manifest-s-shared-paths-by-the-regenerate-and-merge-steps-and-never-sends-a-story-back-for-it-and-tells-the-story-s-agent-of-a-conflict-outside-them-by-message.md
   item: S-0401
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-19T22:36:47Z
-updated: 2026-10-19T22:36:47Z
+updated: 2026-10-20T18:53:34Z
 ---
 
 # TH-0519 S-0401 is verified and its criteria are met, but ADR-0175 is still proposed: accept it on the branch, or say it waits for the operator
@@ -34,3 +34,6 @@ On wip/kanban/stories/S-0401-a-batch-settles-a-rebase-that-stops-inside-the-mani
   - 3: `left_out` with `messages.Notify` from the story ahead, or `sendBack` when the conflict is with main.
   - 4: workflow.md, agent-coordination.md, flai-cli.md and flai.md.
 - **A narrowing to note:** the batch does not run the issue fold after a clean rebase, and leaves it to the landing's acceptance. ADR-0175 and `RunBatch`'s comment record this. I count it as meeting criterion 1's "and folded".
+
+### 2026-10-20T18:53:34Z alex
+Resolved: S-0401 was accepted

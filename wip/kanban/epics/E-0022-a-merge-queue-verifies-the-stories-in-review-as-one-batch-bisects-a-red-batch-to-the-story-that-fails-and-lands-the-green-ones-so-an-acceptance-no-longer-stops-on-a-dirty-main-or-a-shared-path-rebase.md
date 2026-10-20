@@ -50,21 +50,21 @@ usage:
       cost: 149.7496
   strategic:
     - kind: orchestrator
-      seconds: 41778
+      seconds: 43178
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1025
-          output: 19401
-          cache_read: 206145143
-          cache_write: 299191
-          cost: 51.7563
+          input: 1065
+          output: 20182
+          cache_read: 215879692
+          cache_write: 314245
+          cost: 54.2005
         - model: claude-sonnet-5-5
-          input: 98
-          output: 488
-          cache_read: 1746682
-          cache_write: 483936
-          cost: 1.8256
+          input: 116
+          output: 571
+          cache_read: 2101941
+          cache_write: 549455
+          cost: 2.17
 ---
 # E-0022 A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
 

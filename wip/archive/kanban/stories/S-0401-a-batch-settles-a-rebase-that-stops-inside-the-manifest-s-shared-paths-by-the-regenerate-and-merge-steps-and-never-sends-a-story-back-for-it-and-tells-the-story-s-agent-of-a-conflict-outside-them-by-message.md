@@ -3,11 +3,11 @@ id: S-0401
 type: story
 nature: feature
 title: A batch settles a rebase that stops inside the manifest's shared paths by the regenerate-and-merge steps and never sends a story back for it, and tells the story's agent of a conflict outside them by message
-status: review
+status: done
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:20Z
-updated: 2026-10-19T22:35:31Z
+updated: 2026-10-20T18:53:34Z
 transitions:
   - to: ready
     at: 2026-10-19T04:53:18Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-19T22:35:31Z
     by: agent-S-0401
+  - to: done
+    at: 2026-10-20T18:53:34Z
+    by: alex
 tags: [cli]
 topics: [orchestration]
 touches: [design/adrs, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/batch_test.go, flai/internal/storygit/sync.go, flai/internal/storygit/sync_test.go, flai/internal/storygit/mdmerge.go, flai/internal/storygit/mdmerge_test.go, design/system/agent-coordination.md, design/system/workflow.md, design/system/flai-cli.md, docs/users/flai.md, flai/internal/issues/generated.go, flai/internal/issues/generated_test.go, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/cmd/stream_sync.go, flai/cmd/stream_sync_test.go, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, design/issues/I-0167-task-done-and-story-start-answers-exceed-claude-code-s-tool-output-limit-because-the-inbox-they-carry-lists-every-thread-awaiting-the-operator.md]

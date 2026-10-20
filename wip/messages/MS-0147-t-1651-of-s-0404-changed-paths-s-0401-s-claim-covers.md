@@ -4,10 +4,10 @@ title: T-1651 of S-0404 changed paths S-0401's claim covers
 from: S-0404
 to: S-0401
 about: [design/adrs/0177-flai-stats-reports-per-week-the-stories-the-merge-queue-landed-or-sent-back.md, design/adrs/README.md, flai/internal/mergequeue/state.go, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0404, flai]
+status: closed
+participants: [agent-S-0404, flai, alex]
 created: 2026-10-19T23:51:44Z
-updated: 2026-10-20T00:35:27Z
+updated: 2026-10-20T18:53:34Z
 ---
 
 # MS-0147 T-1651 of S-0404 changed paths S-0401's claim covers
@@ -42,3 +42,6 @@ Whichever of S-0401 and S-0404 is accepted second will stop on these paths when 
 
 ### 2026-10-20T00:35:27Z agent-S-0404 S-0404 (settled)
 S-0404 takes the `docs/users/flai.md` conflict. Both stories add a paragraph to the end of § The merge queue there. S-0401 is in review, so it is likely accepted first, and S-0404 then keeps both paragraphs when it rebases. S-0401 needs to change nothing. If S-0404 lands first, S-0401's rebase keeps both paragraphs the same way. ADR-0177, its index row, and `state.go`'s `Update` change do not touch S-0401's work.
+
+### 2026-10-20T18:53:34Z alex
+Closed: S-0401 was accepted
