@@ -2,6 +2,7 @@ package guard
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -244,5 +245,67 @@ func TestTheOrchestratorsNewReadsPassWithEveryPermissionOff(t *testing.T) {
 		if r := none.Decide(bash("", c)); r.Why == "" {
 			t.Errorf("orchestrator %q passed", c)
 		}
+	}
+}
+
+// queueing is the orchestrator's guard with permissions p and flai queue
+// among the commands it knows.
+func queueing(p manifest.Permissions) Guard {
+	o := orchestrator(p)
+	o.Commands = append(o.Commands, "queue")
+	return o
+}
+
+// S-0403 criterion 2: while accept_reviews is on, the orchestrator enqueues a
+// story, with queue_add or flai queue add, only as itself, and lists the
+// queue whatever its permissions; it never lands a story with flai accept
+// --batch, nor takes one out of the queue, holds it, or resumes it, whatever
+// its permissions, and each refusal names queue_add.
+func TestTheOrchestratorOnlyEnqueuesInTheMergeQueue(t *testing.T) {
+	on, off := queueing(manifest.Permissions{AcceptReviews: true}), queueing(except(manifest.PermitAcceptReviews))
+	needs := "orchestration.permissions." + manifest.PermitAcceptReviews
+	for _, c := range []string{"flai queue", "flai queue --json", "scripts/flai.sh --config c.json queue --json"} {
+		if r := queueing(manifest.Permissions{}).Decide(bash("", c)); r.Why != "" {
+			t.Errorf("%q refused with every permission off: %+v", c, r)
+		}
+	}
+	for _, e := range []Event{
+		call(t, QueueAdd, `{"story":"S-0001","verified":"abc","evidence":"Verdict: pass\n- 1: x"}`),
+		bash("", "flai queue add S-0001 --by orchestrator --verified abc --evidence -"),
+		bash("", "scripts/flai.sh --config c.json queue add --by=orchestrator s-1 --verified=abc --evidence=evidence.md --json"),
+	} {
+		if r := on.Decide(e); r.Why != "" {
+			t.Errorf("on: %s refused: %+v", described(e), r)
+		}
+		if r := off.Decide(e); !strings.Contains(r.Why, ": it needs "+needs+", which is off. "+askOperator) || r.Needs != needs || r.Call == "" {
+			t.Errorf("off: %s: %+v", described(e), r)
+		}
+	}
+	if r := off.Decide(call(t, QueueAdd, `{"story":"S-0001"}`)); r.Call != "queue_add S-0001" || !strings.HasPrefix(r.Why, "the orchestrator cannot enqueue S-0001: ") {
+		t.Errorf("the refusal of queue_add names the story: %+v", r)
+	}
+	for _, c := range []string{"flai queue add S-0001", "flai queue add S-0001 --by alex --verified abc --evidence -"} {
+		if r := on.Decide(bash("", c)); r.Why != fmt.Sprintf("the orchestrator cannot run %q: %s. %s", c, enqueuesAsSelf, askOperator) || r.Needs != needs {
+			t.Errorf("on %q: %+v", c, r)
+		}
+	}
+	for _, c := range []string{
+		"flai queue remove S-0001",
+		"flai queue hold",
+		"flai queue resume",
+		"scripts/flai.sh --config c.json queue remove s-1 --json",
+		"flai accept S-0001 --by orchestrator --batch 20261019-041200",
+		"flai accept S-0001 --by=orchestrator --batch=20261019-041200 --dry-run",
+		"flai queue add S-0001 --by orchestrator --verified abc --evidence - && flai queue hold",
+	} {
+		for _, gr := range []Guard{on, queueing(allOn)} {
+			r := gr.Decide(bash("", c))
+			if !strings.Contains(r.Why, ": the orchestrator never does it, whatever its permissions: "+enqueuesOnly+". "+askOperator) || !strings.Contains(r.Why, "queue_add") || r.Needs != "" || r.Call == "" {
+				t.Errorf("%q: %+v", c, r)
+			}
+		}
+	}
+	if r := on.Decide(bash("", "flai accept S-0001 --by orchestrator --verified abc --evidence -")); r.Why != "" {
+		t.Errorf("the orchestrator's acceptance without --batch is flai accept's to judge by the queue: %+v", r)
 	}
 }

@@ -309,3 +309,103 @@ func mustRel(t *testing.T, root, path string) string {
 	}
 	return rel
 }
+
+// mergeQueueOn turns the merge-queue host action on for the projects at
+// roots in the configuration FLAI_CONFIG names.
+func mergeQueueOn(t *testing.T, roots ...string) {
+	t.Helper()
+	cfg, err := json.Marshal(map[string]any{"host_actions": map[string][]string{"merge-queue": roots}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(os.Getenv("FLAI_CONFIG"), cfg, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S-0403 criterion 2: while the merge-queue host action is on and the queue
+// batches, the orchestrator's acceptance is refused, by flai accept and flai
+// move alike, naming the queue and how to enqueue instead; its dry run still
+// previews. With the action off for the project it accepts as before.
+func TestTheOrchestratorEnqueuesRatherThanAcceptsWhileTheQueueRuns(t *testing.T) {
+	root, head := orchestratedStoryInReview(t, true)
+	mergeQueueOn(t, root)
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	ev := evidenceFile(t, "Verdict: pass\n- 1: `cli/feature.go`\n")
+	want := "rule: the merge-queue host action is on and the queue batches, so the merge queue lands S-0001, not the orchestrator: enqueue S-0001 with flai queue add S-0001 --by orchestrator --verified <commit> --evidence <file>, or the MCP tool queue_add"
+	for _, args := range [][]string{
+		{"accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", ev},
+		{"move", "S-0001", "done", "--by", "orchestrator", "--verified", head, "--evidence", ev},
+	} {
+		if _, errOut, code := runIn(t, root, args...); code == 0 || !strings.Contains(errOut, want) {
+			t.Errorf("flai %v must be refused naming the queue and queue_add: %d\n%s", args, code, errOut)
+		}
+	}
+	if out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", ev, "--dry-run"); code != 0 {
+		t.Errorf("the orchestrator's dry run previews while the queue runs: %d %s\n%s", code, errOut, out)
+	}
+	assertNothingAccepted(t, root, mainBefore)
+
+	mergeQueueOn(t, filepath.Join(t.TempDir(), "another"))
+	if out, errOut, code := runIn(t, root, "accept", "S-0001", "--by", "orchestrator", "--verified", head, "--evidence", ev); code != 0 {
+		t.Fatalf("with the queue off for the project the orchestrator accepts: %d %s\n%s", code, errOut, out)
+	}
+	if last := acceptedS0001(t, root).Transitions; last[len(last)-1].To != workitem.Done {
+		t.Errorf("the story is done: %+v", last)
+	}
+}
+
+// S-0403 criterion 2: under FLAI_ROLE=orchestrate --batch is refused, before
+// anything changes, whatever the queue: the orchestrator never lands a story
+// by hand.
+func TestTheOrchestratorNeverLandsAStoryByHand(t *testing.T) {
+	root, head := orchestratedStoryInReview(t, true)
+	mergeQueueOn(t, root)
+	landingState(t, root, head, "orchestrator", nil)
+	mainBefore := gitIn(t, root, "rev-parse", "main")
+	t.Setenv("FLAI_ROLE", "orchestrate")
+	want := "rule: --batch " + landingBatch + " is the merge queue's landing, which flai serve runs, and the orchestrator never lands a story by hand: enqueue S-0001 with flai queue add S-0001 --by orchestrator"
+	for _, args := range [][]string{
+		{"accept", "S-0001", "--by", "orchestrator", "--batch", landingBatch},
+		{"accept", "S-0001", "--batch", landingBatch, "--dry-run"},
+	} {
+		if _, errOut, code := runInAt(t, root, landedAt, args...); code == 0 || !strings.Contains(errOut, want) {
+			t.Errorf("flai %v under FLAI_ROLE=orchestrate must be refused with %q: %d\n%s", args, want, code, errOut)
+		}
+	}
+	assertNothingAccepted(t, root, mainBefore)
+	if st := readQueueState(t, root); len(st.Enqueued) != 1 || len(st.Batch.Landing.Landed) != 0 {
+		t.Errorf("a refused landing leaves the queue as it was: %+v", st)
+	}
+}
+
+// S-0403 criterion 2: the queue's landing of a story the orchestrator
+// enqueued with its evidence goes through while the queue runs, and writes
+// that evidence, and the commit its verifier checked, under ### Accepted by
+// the orchestrator in the story's Notes.
+func TestTheQueuesLandingWritesTheEvidenceTheOrchestratorEnqueuedWith(t *testing.T) {
+	root, head := orchestratedStoryInReview(t, true)
+	mergeQueueOn(t, root)
+	rebased := landingState(t, root, head, "orchestrator", nil)
+	evidence := "Verdict: pass, tests and lint clean\n- 1: `cli/feature.go`"
+	st := readQueueState(t, root)
+	st.Enqueued[0].Verified, st.Enqueued[0].Evidence = head[:12], evidence
+	writeQueueState(t, root, st)
+
+	out, errOut, code := runInAt(t, root, landedAt, "accept", "S-0001", "--by", "orchestrator", "--batch", landingBatch, "--json")
+	if code != 0 {
+		t.Fatalf("the queue's landing while the queue runs: %d %s\n%s", code, errOut, out)
+	}
+	var res accepted
+	if err := json.Unmarshal([]byte(out), &res); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	if res.Evidence == nil || res.Evidence.Text != evidence || res.Verified != rebased {
+		t.Errorf("--json must carry the enqueued evidence and the batch's verified commit: %+v", res.Acceptance)
+	}
+	section := "## Notes\n\n### Accepted by the orchestrator\n\n- Verified: " + rebased + "\n- Batch: " + landingBatch + "\n- Enqueued verified: " + head[:12] + "\n- At: 2026-09-17T09:00:00Z\n\n" + evidence + "\n"
+	if story := acceptedS0001(t, root); !story.Archived || !strings.HasSuffix(story.Body, section) {
+		t.Errorf("the Notes must end with the batch's verification and the enqueued evidence:\n%s\nwant\n%s", story.Body, section)
+	}
+	assertLanded(t, root, "orchestrator")
+}

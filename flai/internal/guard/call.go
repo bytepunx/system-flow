@@ -65,9 +65,11 @@ type Call struct {
 // it gives with its value as given, so that an edit that gives a story cost
 // of delay inputs is told from one that sets a value or removes one (S-0328);
 // it is nil when cost_of_delay is not an object. Commit is adr_new's commit,
-// which a sub-agent may not give true (S-0287, ADR-0127).
+// which a sub-agent may not give true (S-0287, ADR-0127). Story is the story
+// queue_add enqueues, which the orchestrator's refusal names (S-0403).
 type Args struct {
 	ID             string                     `json:"id"`
+	Story          string                     `json:"story"`
 	To             string                     `json:"to"`
 	Type           string                     `json:"type"`
 	Draft          bool                       `json:"draft"`

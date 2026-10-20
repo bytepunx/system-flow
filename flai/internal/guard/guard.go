@@ -57,12 +57,16 @@
 // nothing else, never a value or a removal (S-0328, ADR-0119); flai judges
 // which story. With accept_reviews it accepts a story in review, with
 // flai accept or flai move to done, only as itself, --by orchestrator
-// (S-0221, ADR-0093). A refusal names that permission; a call no permission
-// allows, such as an edit of a file, a commit, or a story placed by hand in
-// the pull order, it never makes. With publish it publishes through
-// release_publish alone, and never with flai release, flai push, git push, or
-// git tag, whatever its permissions (S-0222); no other session calls
-// release_publish. Its sub-agents are held as every sub-agent is.
+// (S-0221, ADR-0093), and enqueues one for the merge queue to land, with
+// queue_add or flai queue add, as itself too; it never lands one with flai
+// accept --batch, nor takes one out of the queue, holds it, or resumes it,
+// whatever its permissions (S-0403). A refusal names that permission; a call
+// no permission allows, such as an edit of a file, a commit, or a story
+// placed by hand in the pull order, it never makes. With publish it
+// publishes through release_publish alone, and never with flai release,
+// flai push, git push, or git tag, whatever its permissions (S-0222); no
+// other session calls release_publish. Its sub-agents are held as every
+// sub-agent is.
 //
 // An analyzer session, one flai serve starts with the role analyze, is held
 // to its report (S-0223): its own calls may read, flai stats among them, log
@@ -271,11 +275,22 @@ const Ready = "ready"
 var MCPOrchestrates = []string{"activity_log", "inbox", "thread_open", "wait_for_events"}
 
 // cliOrchestrates are the flai commands the orchestrator may run besides
-// cliReads, whatever its permissions, each with the subcommands it may run.
+// cliReads, whatever its permissions, each with the subcommands it may run:
+// flai queue with none lists the merge queue (S-0403).
 var cliOrchestrates = map[string][]string{
 	"issue":  {"new", "bump"},
+	"queue":  {""},
 	"thread": {"new"},
 }
+
+// QueueAdd is the MCP tool through which the orchestrator enqueues a story it
+// has verified for the merge queue to land, while
+// orchestration.permissions.accept_reviews is on (S-0403).
+const QueueAdd = "queue_add"
+
+// queueEnqueues are the subcommands of flai queue the orchestrator runs while
+// accept_reviews is on, as itself; it runs no other that writes (S-0403).
+var queueEnqueues = []string{"add"}
 
 // ReleasePublish is the MCP tool through which the orchestrator alone
 // publishes, while orchestration.permissions.publish is on (S-0222).
@@ -407,7 +422,15 @@ const acceptsAsSelf = "it accepts a story only as itself, so give --by orchestra
 
 // acceptsWithFlai says why the orchestrator never moves an item to done with
 // item_move (S-0221).
-const acceptsWithFlai = "item_move never moves an item to done; it accepts a story with flai accept <id> --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093)"
+const acceptsWithFlai = "item_move never moves an item to done; it accepts a story with flai accept <id> --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on (ADR-0093), or, while the merge queue runs, enqueues it with queue_add for the queue to land (S-0403)"
+
+// enqueuesAsSelf says why the orchestrator enqueues a story only as itself,
+// whatever accept_reviews lets it do (S-0403).
+const enqueuesAsSelf = "it enqueues a story only as itself, so give --by orchestrator with --verified and --evidence, or call queue_add: orchestration.permissions.accept_reviews lets it enqueue as nobody else (ADR-0093)"
+
+// enqueuesOnly says why the orchestrator never lands, takes out, holds, or
+// resumes anything in the merge queue by hand (S-0403, ADR-0176).
+const enqueuesOnly = "the merge queue lands, bisects, and sends back the stories enqueued itself, in flai serve, and taking one out, holding, and resuming the queue are the operator's; the orchestrator enqueues a story it has verified with queue_add, or flai queue add <id> --by orchestrator --verified <commit> --evidence <file>, while orchestration.permissions.accept_reviews is on"
 
 // threadValues are the flags of flai thread reply, resolve, and confirm,
 // flai's own among them, that take a value.
@@ -663,6 +686,9 @@ func (g Guard) orchestration() rules {
 			case needs != "" && !g.Permissions.Allows(needs):
 				return off(needs), needs
 			case needs == manifest.PermitAcceptReviews && !workitem.IsOrchestrator(value(rest, "--by")):
+				if cmd == "queue" {
+					return enqueuesAsSelf, needs
+				}
 				return acceptsAsSelf, needs
 			}
 			return "", ""
@@ -721,7 +747,17 @@ func orchestrated(cmd, sub string, rest []string) (needs, never string) {
 		}
 		return "", byHand
 	case "accept":
+		// --batch is the merge queue's landing, flai serve's alone (S-0403)
+		if named(rest, "--batch") {
+			return "", enqueuesOnly
+		}
 		return manifest.PermitAcceptReviews, ""
+	case "queue":
+		// flai queue with no subcommand lists, let through above
+		if slices.Contains(queueEnqueues, sub) {
+			return manifest.PermitAcceptReviews, ""
+		}
+		return "", enqueuesOnly
 	case "push", "release":
 		// flai release --evaluate is a read, let through above
 		return "", publishesThrough
@@ -1117,6 +1153,9 @@ func (g Guard) orchestrate(c Call) Verdict {
 			}
 		case tool == ReleasePublish:
 			what, needs = "publish a release", manifest.PermitPublish
+		case tool == QueueAdd:
+			call = strings.TrimSpace(tool + " " + in.Story)
+			what, needs = strings.TrimSpace("enqueue "+in.Story), manifest.PermitAcceptReviews
 		default:
 			never = "of flai's tools that write, it calls only thread_open and activity_log, thread_reply and thread_resolve as the thread allows, and those its permissions allow"
 		}

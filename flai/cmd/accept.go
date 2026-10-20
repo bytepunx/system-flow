@@ -135,6 +135,11 @@ path Claude Code protects, no thread on the story or its tasks is open, and
 names a changed file for each of them.
 The evidence is written, with the commit, under ### Accepted by the
 orchestrator in the story's Notes. With --dry-run the evidence is optional.
+While the merge-queue host action is on and the queue batches (accept_reviews
+on, under local acceptance), --by orchestrator is refused, naming the queue,
+but as the queue's landing or with --dry-run: the orchestrator enqueues the
+story instead, with flai queue add <id> --by orchestrator --verified <commit>
+--evidence <file> or the MCP tool queue_add, and the queue lands it (S-0403).
 
 A story whose rebased branch undoes the main branch's change to a path, as a
 revert replayed over main's identical change does (ADR-0155, I-0124), is
@@ -163,10 +168,14 @@ story's branch is still at the head the batch rebased a copy of, and the main
 branch is where the batch's landing left it. With --by orchestrator it needs
 no --verified, which it is refused beside, and no --evidence; the batch and
 its verified commit are written under ### Accepted by the orchestrator, with
-the evidence when given. The story is recorded as landed in the queue's
-state, and the batch kept, where an acceptance without --batch takes the
-story out of the queue and drops the batch that holds it. Under
-acceptance.mode: pull-request, which has no merge queue, it is refused.`,
+the evidence when given, else the evidence the orchestrator enqueued the
+story with and, as Enqueued verified, the commit its verifier checked then;
+a story enqueued without them lands with the batch's verification alone.
+The story is recorded as landed in the queue's state, and the batch kept,
+where an acceptance without --batch takes the story out of the queue and
+drops the batch that holds it. Under acceptance.mode: pull-request, which has
+no merge queue, it is refused, and under FLAI_ROLE=orchestrate too: the
+orchestrator never lands a story by hand.`,
 		Example: `  flai accept S-031 --by alex
   flai accept S-031 --by alex --dry-run
   flai accept S-031 --by orchestrator --verified 4f1c2a9 --dry-run
@@ -232,7 +241,7 @@ type accepted struct {
 
 // acceptItem runs the acceptance flow for a story or an epic.
 func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (*accepted, error) {
-	opts, err := a.acceptance(repo, it, o)
+	opts, enqueued, err := a.acceptance(repo, it, o)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +354,7 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 		// the orchestrator's evidence goes into the acceptance commit with
 		// the story (ADR-0093)
 		if opts.Orchestrator {
-			it.Body = withNotesSection(it.Body, orchestratorNotes(res, a.now()))
+			it.Body = withNotesSection(it.Body, orchestratorNotes(res, enqueued, a.now()))
 		}
 		// so does each removal of main's lines the operator keeps (ADR-0155)
 		if len(opts.Keep) > 0 {
@@ -670,51 +679,95 @@ func (a *app) tellAccepted(repo *workitem.Repo, it *workitem.Item, res *preview.
 // orchestrator's acceptance while orchestration.permissions.accept_reviews is
 // off, and its real run without evidence or with evidence that cannot be read
 // (ADR-0093); --batch under pull-request acceptance, which has no merge
-// queue, or beside --verified, whose place it takes, while the orchestrator's
-// landing from a batch needs no evidence (ADR-0176); and --keep-removal as
-// keptRemovals refuses it (ADR-0155).
-func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (preview.AcceptOptions, error) {
+// queue, beside --verified, whose place it takes, or under
+// FLAI_ROLE=orchestrate, since the orchestrator never lands a story by hand,
+// while the orchestrator's landing from a batch needs no evidence (ADR-0176);
+// the orchestrator's acceptance but as the queue's landing, or a dry run,
+// while the merge queue batches, since it enqueues a story instead (S-0403);
+// and --keep-removal as keptRemovals refuses it (ADR-0155). For the queue's
+// landing of a story the orchestrator enqueued with its evidence, and no
+// --evidence, it is also that enqueue, whose evidence the acceptance takes.
+func (a *app) acceptance(repo *workitem.Repo, it *workitem.Item, o acceptOptions) (preview.AcceptOptions, mergequeue.Enqueued, error) {
+	none := mergequeue.Enqueued{}
 	keep, err := keptRemovals(it.ID, o)
 	if err != nil {
-		return preview.AcceptOptions{}, err
+		return preview.AcceptOptions{}, none, err
 	}
 	orchestrator := workitem.IsOrchestrator(o.by)
+	role := os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate
 	switch {
-	case os.Getenv("FLAI_ROLE") == guard.RoleOrchestrate && !orchestrator:
+	case role && o.batch != "":
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --batch %s is the merge queue's landing, which flai serve runs, and the orchestrator never lands a story by hand: %s (ADR-0176)", o.batch, enqueueInstead(it.ID))
+	case role && !orchestrator:
 		given := "no --by"
 		if o.by != "" {
 			given = "--by " + o.by
 		}
-		return preview.AcceptOptions{}, fmt.Errorf("rule: the orchestrator accepts a story only as itself, so give --by %s, not %s (ADR-0093)", workitem.ActivityOrchestrator, given)
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator accepts a story only as itself, so give --by %s, not %s (ADR-0093)", workitem.ActivityOrchestrator, given)
 	case o.batch != "" && repo.Manifest.Acceptance.PullRequest():
-		return preview.AcceptOptions{}, fmt.Errorf("rule: --batch %s is the merge queue's landing, and %s; accept %s without --batch", o.batch, mergequeue.OffUnderPullRequest, it.ID)
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --batch %s is the merge queue's landing, and %s; accept %s without --batch", o.batch, mergequeue.OffUnderPullRequest, it.ID)
 	case o.batch != "" && o.verified != "":
-		return preview.AcceptOptions{}, fmt.Errorf("rule: --batch %s takes the merge queue batch's verification of %s's rebased head in place of --verified's: give one or the other (ADR-0176)", o.batch, it.ID)
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --batch %s takes the merge queue batch's verification of %s's rebased head in place of --verified's: give one or the other (ADR-0176)", o.batch, it.ID)
 	case !orchestrator && (o.verified != "" || o.evidence != ""):
-		return preview.AcceptOptions{}, fmt.Errorf("rule: --verified and --evidence are the orchestrator's acceptance: give them with --by %s, or leave them out", workitem.ActivityOrchestrator)
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: --verified and --evidence are the orchestrator's acceptance: give them with --by %s, or leave them out", workitem.ActivityOrchestrator)
 	case !orchestrator:
-		return preview.AcceptOptions{Keep: keep, Batch: o.batch}, nil
+		return preview.AcceptOptions{Keep: keep, Batch: o.batch}, none, nil
 	}
 	if err := repo.OrchestratorPermits(manifest.PermitAcceptReviews, "accepts a story", it.ID); err != nil {
-		return preview.AcceptOptions{}, fmt.Errorf("rule: %w", err)
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: %w", err)
+	}
+	// while the queue batches, it lands what the orchestrator would accept;
+	// a dry run changes nothing and previews what an enqueue vouches for
+	if o.batch == "" && !o.dryRun && a.queueBatches(mainRootOf(repo)) {
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the merge-queue host action is on and the queue batches, so the merge queue lands %s, not the orchestrator: %s, and flai serve lands it as the orchestrator once its batch passes (ADR-0176)", it.ID, enqueueInstead(it.ID))
 	}
 	opts := preview.AcceptOptions{Orchestrator: true, Verified: o.verified, Batch: o.batch}
 	if o.evidence == "" {
-		// the queue's eligibility checked what the evidence would vouch for
-		// before the batch was built (ADR-0176)
-		if o.dryRun || o.batch != "" {
-			return opts, nil
+		switch {
+		case o.batch != "":
+			// the queue's eligibility checked what the evidence would vouch
+			// for before the batch was built (ADR-0176); the evidence the
+			// orchestrator enqueued the story with goes into its Notes
+			return a.enqueuedEvidence(repo, it.ID, opts)
+		case o.dryRun:
+			return opts, none, nil
 		}
-		return preview.AcceptOptions{}, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and one - <n>: <files> item per criterion (ADR-0093)", it.ID)
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator's acceptance of %s needs its evidence: --evidence <file> or -, a Verdict: line and one - <n>: <files> item per criterion (ADR-0093)", it.ID)
 	}
 	text, err := a.readEvidence(o)
 	if err != nil {
-		return preview.AcceptOptions{}, err
+		return preview.AcceptOptions{}, none, err
 	}
 	if opts.Evidence, err = preview.ParseEvidence(text); err != nil {
-		return preview.AcceptOptions{}, fmt.Errorf("rule: the orchestrator's evidence for %s cannot be read as ADR-0093 asks: %w", it.ID, err)
+		return preview.AcceptOptions{}, none, fmt.Errorf("rule: the orchestrator's evidence for %s cannot be read as ADR-0093 asks: %w", it.ID, err)
 	}
-	return opts, nil
+	return opts, none, nil
+}
+
+// enqueueInstead says how the orchestrator enqueues story id for the merge
+// queue to land, in place of accepting or landing it itself (S-0403).
+func enqueueInstead(id string) string {
+	return fmt.Sprintf("enqueue %s with flai queue add %s --by %s --verified <commit> --evidence <file>, or the MCP tool queue_add", id, id, workitem.ActivityOrchestrator)
+}
+
+// enqueuedEvidence is opts with the evidence the orchestrator enqueued story
+// id with in the merge queue's state (S-0403), for the queue's landing of
+// it, and that enqueue; opts as they are, and no enqueue, when the story was
+// enqueued without evidence, as before flai recorded it, or is not enqueued,
+// which the landing's own checks refuse.
+func (a *app) enqueuedEvidence(repo *workitem.Repo, id string, opts preview.AcceptOptions) (preview.AcceptOptions, mergequeue.Enqueued, error) {
+	st, err := mergequeue.ReadState(repo.CacheDir())
+	if err != nil {
+		return preview.AcceptOptions{}, mergequeue.Enqueued{}, err
+	}
+	en, ok := st.EnqueuedAs(id)
+	if !ok || en.Evidence == "" {
+		return opts, mergequeue.Enqueued{}, nil
+	}
+	if opts.Evidence, err = preview.ParseEvidence(en.Evidence); err != nil {
+		return preview.AcceptOptions{}, mergequeue.Enqueued{}, fmt.Errorf("rule: the evidence the orchestrator enqueued %s with cannot be read as ADR-0093 asks: %w; take it out with flai queue remove %s, and the orchestrator enqueues it again with queue_add", id, err, id)
+	}
+	return opts, en, nil
 }
 
 // readEvidence is the text of the orchestrator's evidence: --evidence's file,
@@ -747,12 +800,17 @@ func (a *app) readEvidence(o acceptOptions) (string, error) {
 // orchestratorNotes is what the orchestrator's acceptance writes under the
 // story's Notes (ADR-0093): the commit its verifier passed, or, as the merge
 // queue's landing, the story's rebased head in the batch that verified it and
-// the batch (ADR-0176), when, and its evidence as given.
-func orchestratorNotes(res *preview.Acceptance, now time.Time) string {
+// the batch (ADR-0176), and the commit its verifier checked when it enqueued
+// the story, as enqueued records it (S-0403); when; and its evidence as given
+// or enqueued.
+func orchestratorNotes(res *preview.Acceptance, enqueued mergequeue.Enqueued, now time.Time) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "### Accepted by the orchestrator\n\n- Verified: %s\n", res.Verified)
 	if res.Batch != "" {
 		fmt.Fprintf(&b, "- Batch: %s\n", res.Batch)
+	}
+	if enqueued.Verified != "" {
+		fmt.Fprintf(&b, "- Enqueued verified: %s\n", enqueued.Verified)
 	}
 	fmt.Fprintf(&b, "- At: %s\n", now.UTC().Format(time.RFC3339))
 	if res.Evidence != nil {

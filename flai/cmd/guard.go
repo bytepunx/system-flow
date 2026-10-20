@@ -148,7 +148,11 @@ answer citing a source (source, --source) while it is autonomous, so that an
 answer it cannot source goes to the operator as a recommendation (S-0220);
 accept_reviews flai accept and flai move <story> done, each only with --by
 orchestrator, so that it accepts as itself and as nobody else (S-0221,
-ADR-0093); publish the MCP tool release_publish alone, while flai
+ADR-0093), and the MCP tool queue_add and flai queue add with --by
+orchestrator, which enqueue a story for the merge queue to land, while flai
+queue remove, hold, and resume and flai accept --batch are refused whatever
+its permissions, so that it never lands, bisects, holds, or dequeues by hand
+(S-0403); publish the MCP tool release_publish alone, while flai
 release other than --evaluate, flai push, git push, and git tag are refused
 whatever its permissions (S-0222, ADR-0094).
 On a thread it opened it follows up and resolves, but never recommends or
