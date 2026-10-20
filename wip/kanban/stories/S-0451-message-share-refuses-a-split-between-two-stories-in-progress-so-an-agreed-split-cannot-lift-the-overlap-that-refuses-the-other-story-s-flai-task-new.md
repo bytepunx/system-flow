@@ -6,7 +6,7 @@ title: message_share refuses a split between two stories in progress, so an agre
 status: backlog
 owner: alex
 created: 2026-10-20T18:59:50Z
-updated: 2026-10-20T18:59:50Z
+updated: 2026-10-20T19:01:44Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-10-20T18:59:50Z
+finalized:
+  by: alex
+  at: 2026-10-20T19:01:44Z
 ---
 # S-0451 message_share refuses a split between two stories in progress, so an agreed split cannot lift the overlap that refuses the other story's flai task new
 
