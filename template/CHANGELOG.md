@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.104 - 2026-10-20
+
+- S-0403 With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify (patch).
+- S-0403 While the merge queue runs, the orchestrator enqueues each story it has verified instead of accepting it, and the queue lands it as the orchestrator with its evidence (patch, ADR-0093, ADR-0173, ADR-0176): in `strategic-agents.md`, the section "As the orchestrator" says that under `accept_reviews`, while the merge queue runs for the project, with the `merge-queue` host action on, `accept_reviews` on, and acceptance local, it verifies each story as before, writes the evidence, and enqueues the story with the MCP tool `queue_add`, giving the commit its verifier checked and the evidence, in place of `flai accept --by orchestrator`. It logs each enqueue with `activity_log`, naming the story, its place in the queue, and the policy figure. It never lands, bisects, holds, resumes, or dequeues a story by hand, and opens no thread for a blocker the queue settles: a verify not at the branch's head, a dirty main checkout, or a rebase that stops inside the shared paths. `flai serve` says in its prompt whether the queue runs. The orchestrator's agent definition, `orchestrator.md`, gains the tool `queue_add`. It needs a flai that has it, the release that carries S-0403: `flai queue add --by orchestrator --verified --evidence` and `queue_add`, the refusal of `flai accept --by orchestrator` while the queue runs, and the guard's rules for the queue.
+
 ## 1.0.103 - 2026-10-19
 
 - S-0405 With the merge queue on, a story's close-out and flai verify leave the test tiers the manifest marks for the queue to the batch, so a close-out main outruns no longer runs integration and smoke twice (patch).
