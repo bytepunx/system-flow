@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/taskdone"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
@@ -72,10 +73,17 @@ const (
 
 // outdatedProject is I-0147's case: S-004's worktree with T-003's change in
 // it, on a main branch tagged flai/v1.10.0, served by flai 1.9.3 as
-// agent-S-004 in session s1, with the installed flai at installed.
-func outdatedProject(t *testing.T, installed string) (*fixture, string) {
+// agent-S-004 in session s1, with the installed flai at installed. With
+// rules above 0, the tagged commit carries that task-done rules number
+// (ADR-0180); with 0 it carries none.
+func outdatedProject(t *testing.T, installed string, rules int) (*fixture, string) {
 	t.Helper()
 	repo, wt := closeProject(t)
+	if rules > 0 {
+		writeIn(t, repo.Root, buildinfo.TaskDoneRulesPath, strconv.Itoa(rules)+"\n")
+		gitIn(t, repo.Root, "add", buildinfo.TaskDoneRulesPath)
+		gitIn(t, repo.Root, "commit", "-q", "-m", "flai 1.10.0")
+	}
 	gitIn(t, repo.Root, "tag", "flai/v1.10.0")
 	writeIn(t, wt, "README.md", "# good\n\nChanged on the story's branch.\n")
 	cs := connectServer(t, Options{Repo: repo, Runner: execx.System{}, Agent: "agent-S-004", Version: "1.9.3", Installed: installed, Now: func() time.Time { return closeClock }})
@@ -88,7 +96,7 @@ func outdatedProject(t *testing.T, installed string) (*fixture, string) {
 // message and the log, and answered with closed_by naming it.
 func TestTaskDoneClosesWithTheInstalledFlaiOnceItHasCaughtUp(t *testing.T) {
 	fake := newFakeFlai(t, `{"version":"1.10.0","commit":"c","date":"d","go":"go"}`, 0, closedResult, 0)
-	f, _ := outdatedProject(t, fake.path)
+	f, _ := outdatedProject(t, fake.path, 0)
 
 	out, failed := f.call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme", "log": "the readme"})
 	if failed != "" {
@@ -116,7 +124,7 @@ func TestTaskDoneClosesWithTheInstalledFlaiOnceItHasCaughtUp(t *testing.T) {
 // prints its result, which is the answer, not a tool error.
 func TestTaskDoneAnswersTheInstalledFlaisStop(t *testing.T) {
 	fake := newFakeFlai(t, `{"version":"1.10.1"}`, 0, stoppedResult, 3)
-	f, _ := outdatedProject(t, fake.path)
+	f, _ := outdatedProject(t, fake.path, 0)
 
 	out, failed := f.call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
 	if failed != "" {
@@ -143,11 +151,100 @@ func TestTaskDoneRefusesWhenTheInstalledFlaiHasNotCaughtUp(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fake := newFakeFlai(t, tc.version, tc.exit, closedResult, 0)
-			f, wt := outdatedProject(t, fake.path)
+			f, wt := outdatedProject(t, fake.path, 0)
 			head := gitIn(t, wt, "rev-parse", "HEAD")
 
 			out, failed := f.call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
 			for _, want := range append([]string{"this flai is 1.9.3, a minor version behind flai 1.10.0", "the installed flai at " + fake.path, "call task_done again once the host is upgraded"}, tc.want...) {
+				if !strings.Contains(failed, want) {
+					t.Errorf("answered %v, failed %q, want %q in it", out, failed, want)
+				}
+			}
+			if args := fake.recorded(t, "args"); args != "" {
+				t.Errorf("the installed flai's task done ran: %s", args)
+			}
+			if st := t003(t, f.repo); st != workitem.InProgress {
+				t.Errorf("T-003 is %s", st)
+			}
+			if gitIn(t, wt, "rev-parse", "HEAD") != head || gitIn(t, wt, "diff", "--name-only") != "README.md" {
+				t.Error("the worktree changed")
+			}
+		})
+	}
+}
+
+// I-0157, ADR-0180: a server a minor version behind a release that kept its
+// task-done rules number is not refused, so it closes the task itself and
+// the installed flai, behind too, is not asked.
+func TestTaskDoneClosesAMinorVersionBehindAReleaseThatKeptTheRules(t *testing.T) {
+	fake := newFakeFlai(t, `{"version":"1.9.3"}`, 0, closedResult, 0)
+	f, _ := outdatedProject(t, fake.path, buildinfo.TaskDoneRules)
+
+	out, failed := f.call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
+	if failed != "" {
+		t.Fatalf("a tool error: %s", failed)
+	}
+	if out["closed_by"] != nil || out["stopped"] != "" || field(out, "move.state") != workitem.Done || field(out, "commit.subject") != "docs: [S-004] T-003 the readme" {
+		t.Errorf("answered %v", out)
+	}
+	if args := fake.recorded(t, "args"); args != "" {
+		t.Errorf("the installed flai's task done ran: %s", args)
+	}
+}
+
+// I-0157, ADR-0180: under a release that raised the task-done rules number,
+// which refuses this server's flai, an installed flai that carries that
+// number or a higher one has caught up and closes the task though it is a
+// minor version behind; one that prints no number keeps ADR-0142's minor
+// rule, so it closes within a patch of the release.
+func TestTaskDoneClosesWithAnInstalledFlaiThatCarriesTheNewestRules(t *testing.T) {
+	newest := buildinfo.TaskDoneRules + 1
+	for _, tc := range []struct {
+		name, version, closedBy string
+	}{
+		{"the newest rules", `{"version":"1.9.4","task_done_rules":` + strconv.Itoa(newest) + `}`, "flai 1.9.4"},
+		{"higher rules", `{"version":"1.9.4","task_done_rules":` + strconv.Itoa(newest+1) + `}`, "flai 1.9.4"},
+		{"no rules, a patch ahead", `{"version":"1.10.1"}`, "flai 1.10.1"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fake := newFakeFlai(t, tc.version, 0, closedResult, 0)
+			f, _ := outdatedProject(t, fake.path, newest)
+
+			out, failed := f.call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
+			if failed != "" {
+				t.Fatalf("a tool error: %s", failed)
+			}
+			if out["closed_by"] != tc.closedBy+" at "+fake.path || field(out, "move.state") != workitem.Done {
+				t.Errorf("answered %v", out)
+			}
+			if got := fake.recorded(t, "args"); !strings.HasPrefix(got, "task\ndone\nT-003\n--json") {
+				t.Errorf("the installed flai ran with %q", got)
+			}
+		})
+	}
+}
+
+// ADR-0180: under a release that raised the task-done rules number, an
+// installed flai below that number is behind too, even at the release's own
+// version, and one that prints no number is behind a minor version; the
+// refusal names the server's rules and the installed flai's version and
+// number, and nothing changes.
+func TestTaskDoneRefusesAnInstalledFlaiBelowTheNewestRules(t *testing.T) {
+	newest := buildinfo.TaskDoneRules + 1
+	for _, tc := range []struct {
+		name, version, says string
+	}{
+		{"lower rules", `{"version":"1.10.0","task_done_rules":` + strconv.Itoa(buildinfo.TaskDoneRules) + `}`, "is 1.10.0 with task-done rules " + strconv.Itoa(buildinfo.TaskDoneRules) + ", behind too"},
+		{"no rules, a minor behind", `{"version":"1.9.4"}`, "is 1.9.4, behind too"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fake := newFakeFlai(t, tc.version, 0, closedResult, 0)
+			f, wt := outdatedProject(t, fake.path, newest)
+			head := gitIn(t, wt, "rev-parse", "HEAD")
+
+			out, failed := f.call(t, "task_done", map[string]any{"task": "T-003", "message": "docs: [S-004] T-003 the readme"})
+			raised := "this flai is 1.9.3, older than flai 1.10.0 in the project's history, which raised task done's rules from " + strconv.Itoa(buildinfo.TaskDoneRules) + " to " + strconv.Itoa(newest)
+			for _, want := range []string{raised, "the installed flai at " + fake.path + " " + tc.says, "call task_done again once the host is upgraded", "ADR-0180"} {
 				if !strings.Contains(failed, want) {
 					t.Errorf("answered %v, failed %q, want %q in it", out, failed, want)
 				}

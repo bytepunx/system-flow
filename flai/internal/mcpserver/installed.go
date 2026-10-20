@@ -22,19 +22,31 @@ type installedFlai struct {
 	env  []string // the server's environment, its agent and session included
 }
 
-// version is the installed flai's version, as flai version --json prints it.
-func (f installedFlai) version(ctx context.Context) (string, error) {
+// version is the installed flai's version and task-done rules number, as
+// flai version --json prints them; rules is 0 when it prints none, as a flai
+// from before the number does (ADR-0180).
+func (f installedFlai) version(ctx context.Context) (version string, rules int, err error) {
 	stdout, stderr, err := f.run(ctx, "version", "--json")
 	if err != nil {
-		return "", fmt.Errorf("%s version --json: %w%s", f.path, err, said("said", stderr))
+		return "", 0, fmt.Errorf("%s version --json: %w%s", f.path, err, said("said", stderr))
 	}
 	var v struct {
 		Version string `json:"version"`
+		Rules   int    `json:"task_done_rules"`
 	}
 	if err := json.Unmarshal(stdout, &v); err != nil || strings.TrimSpace(v.Version) == "" {
-		return "", fmt.Errorf("%s version --json printed no version%s", f.path, said("printed", string(stdout)))
+		return "", 0, fmt.Errorf("%s version --json printed no version%s", f.path, said("printed", string(stdout)))
 	}
-	return strings.TrimSpace(v.Version), nil
+	return strings.TrimSpace(v.Version), v.Rules, nil
+}
+
+// installedIs names an installed flai's version and, when it printed one,
+// its task-done rules number, for a refusal.
+func installedIs(version string, rules int) string {
+	if rules < 1 {
+		return version
+	}
+	return fmt.Sprintf("%s with task-done rules %d", version, rules)
 }
 
 // taskDone closes the task with flai task done --json, as the server's agent
