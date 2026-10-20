@@ -46,7 +46,8 @@ type Result struct {
 }
 
 // Create makes the item, checks the repository with it in place, and keeps
-// it only when the check reports nothing new. A refusal is a
+// it only when the check reports nothing new but a wip.overlap, which is
+// advisory (ADR-0019) and comes back in Warnings (I-0169). A refusal is a
 // *docedit.RefusedError carrying the findings, as for a refused save.
 func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	if opt.New.Now.IsZero() {
@@ -95,7 +96,13 @@ func Create(repo *workitem.Repo, r execx.Runner, opt Options) (*Result, error) {
 	res := &Result{Item: it, Path: rel, Warnings: []check.Finding{}}
 	var blocking []check.Finding
 	for _, f := range after.Findings {
-		if !known[f.Rule+"\x00"+f.Path+"\x00"+f.Message] {
+		switch {
+		case known[f.Rule+"\x00"+f.Path+"\x00"+f.Message]:
+		case f.Rule == "wip.overlap":
+			// touches that reach another story in progress are advisory
+			// (ADR-0019): the item stands, and the warning says so (I-0169)
+			res.Warnings = append(res.Warnings, f)
+		default:
 			blocking = append(blocking, f)
 		}
 	}

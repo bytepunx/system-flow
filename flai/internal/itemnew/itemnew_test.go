@@ -248,6 +248,42 @@ func TestATaskAfterATaskOfAnotherStoryIsRefused(t *testing.T) {
 	refusedLeavingNothing(t, repo, err, "task.after", "after names T-0002, a task of S-0002", storyWas)
 }
 
+// I-0169: a task whose touches reach the claim of another story in progress
+// is kept, and the check's wip.overlap comes back as a warning, since an
+// overlap is advisory (ADR-0019).
+func TestATaskWhoseTouchesReachAnotherStoryInProgressIsKeptWithAWarning(t *testing.T) {
+	now := time.Date(2026, 10, 3, 9, 0, 0, 0, time.UTC)
+	repo := planned(t, now)
+	for id, touches := range map[string]string{"S-0001": "flai/internal/guard", "S-0002": "flai/internal/other"} {
+		s, err := repo.Get(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.Status, s.Touches = workitem.InProgress, []string{touches}
+		if err := repo.Save(s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	task := plannedTask(now)
+	task.Touches = []string{"flai/internal/other"}
+	res, err := Create(repo, nil, Options{New: task})
+	if err != nil {
+		t.Fatalf("the task is kept: %v", err)
+	}
+	if _, err := os.Stat(res.Item.Path); err != nil {
+		t.Errorf("the task's file is written: %v", err)
+	}
+	var overlaps int
+	for _, f := range res.Warnings {
+		if f.Rule == "wip.overlap" {
+			overlaps++
+		}
+	}
+	if overlaps == 0 {
+		t.Errorf("a wip.overlap warning: %+v", res.Warnings)
+	}
+}
+
 // gitLog is a git that is always inside a work tree and records what it is
 // asked to do.
 type gitLog struct{ calls [][]string }
