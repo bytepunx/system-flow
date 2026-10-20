@@ -3,10 +3,10 @@ id: E-0022
 type: epic
 nature: improvement
 title: A merge queue verifies the stories in review as one batch, bisects a red batch to the story that fails, and lands the green ones, so an acceptance no longer stops on a dirty main or a shared-path rebase
-status: review
+status: done
 owner: alex
 created: 2026-10-16T04:27:57Z
-updated: 2026-10-20T05:03:39Z
+updated: 2026-10-20T19:00:27Z
 transitions:
   - to: ready
     at: 2026-10-19T04:51:59Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-20T05:03:39Z
     by: agent-S-0402
+  - to: done
+    at: 2026-10-20T19:00:27Z
+    by: alex
 tags: [cli, dashboard]
 topics: [cli, orchestration, analysis]
 touches: [flai/internal/serve, flai/internal/workitem, flai/internal/hostapi, flai/cmd, flaiover/src, design/system/workflow.md, design/system/agent-coordination.md, design/system/metrics.md, design/conventions/strategic-agents.md, docs/operators/index.md, docs/users/flai.md, template]
@@ -50,15 +53,15 @@ usage:
       cost: 149.7496
   strategic:
     - kind: orchestrator
-      seconds: 92904
+      seconds: 93263
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 1135
-          output: 21658
-          cache_read: 233590069
-          cache_write: 329831
-          cost: 58.6445
+          input: 1147
+          output: 21872
+          cache_read: 236684067
+          cache_write: 339659
+          cost: 59.4227
         - model: claude-sonnet-5-5
           input: 116
           output: 571
@@ -102,3 +105,4 @@ To be drafted by the planner. Order: the queue's state and its view first, read-
 - Cost of delay inputs are the operator's; I-0150 estimates 96 hours of calendar time lost per cycle.
 - 2026-10-19T14:34:41Z: moved to in-progress: follows S-0398, which moved to in-progress
 - 2026-10-20T05:03:39Z: moved to review: follows S-0402, which moved to review
+- 2026-10-20T19:00:27Z: moved to done: follows S-0404, which moved to done

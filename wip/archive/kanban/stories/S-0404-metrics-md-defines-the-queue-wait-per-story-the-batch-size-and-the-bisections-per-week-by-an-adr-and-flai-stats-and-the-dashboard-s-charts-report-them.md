@@ -3,11 +3,11 @@ id: S-0404
 type: story
 nature: feature
 title: metrics.md defines the queue wait per story, the batch size, and the bisections per week by an ADR, and flai stats and the dashboard's charts report them
-status: review
+status: done
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:58Z
-updated: 2026-10-20T00:55:34Z
+updated: 2026-10-20T19:00:27Z
 transitions:
   - to: ready
     at: 2026-10-19T04:53:59Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-20T00:55:34Z
     by: agent-S-0404
+  - to: done
+    at: 2026-10-20T19:00:27Z
+    by: alex
 tags: [cli, dashboard]
 topics: [analysis, orchestration]
 touches: [design/adrs, design/system/metrics.md, flai/internal/mergequeue/log.go, flai/internal/mergequeue/log_test.go, flai/internal/mergequeue/state.go, flai/internal/metrics/queue.go, flai/internal/metrics/queue_test.go, flai/internal/metrics/metrics.go, flai/cmd/stats.go, flaiover/src/lib/viz/charts.ts, flaiover/src/lib/viz/charts.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", design/system/flaiover-dashboard.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flaiover.md, flai/cmd/accept_queue_test.go, flai/cmd/stats_test.go, flai/internal/statsread/statsread.go, flai/internal/statsread/statsread_test.go, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, design/issues/I-0167-task-done-and-story-start-answers-exceed-claude-code-s-tool-output-limit-because-the-inbox-they-carry-lists-every-thread-awaiting-the-operator.md, docs/users/flai-reference.md]

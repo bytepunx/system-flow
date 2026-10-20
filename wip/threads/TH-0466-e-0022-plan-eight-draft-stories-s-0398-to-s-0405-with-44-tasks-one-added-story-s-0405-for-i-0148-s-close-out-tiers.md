@@ -4,10 +4,10 @@ title: "E-0022 plan: eight draft stories, S-0398 to S-0405, with 44 tasks; one a
 anchor:
   path: wip/kanban/epics/E-0022-a-merge-queue-verifies-the-stories-in-review-as-one-batch-bisects-a-red-batch-to-the-story-that-fails-and-lands-the-green-ones-so-an-acceptance-no-longer-stops-on-a-dirty-main-or-a-shared-path-rebase.md
   item: E-0022
-status: open
-participants: [planner-E-0022]
+status: resolved
+participants: [planner-E-0022, alex]
 created: 2026-10-16T05:06:37Z
-updated: 2026-10-18T02:20:32Z
+updated: 2026-10-20T19:00:27Z
 ---
 
 # TH-0466 E-0022 plan: eight draft stories, S-0398 to S-0405, with 44 tasks; one added story (S-0405) for I-0148's close-out tiers
@@ -99,3 +99,6 @@ ADR-0169 blocks every acceptance under pull-request acceptance on `forge_stale` 
 - **S-0400:** no change. Under local acceptance no forge blocker arises, so the change I proposed for S-0400 is withdrawn.
 
 Forecasts are unchanged, since each change is one check and a test case. `flai check --strict` passes. A queue that feeds the forge's own merge queue under pull-request acceptance would be a story of its own. I haven't drafted it; say if you want it.
+
+### 2026-10-20T19:00:27Z alex
+Resolved: S-0404 was accepted

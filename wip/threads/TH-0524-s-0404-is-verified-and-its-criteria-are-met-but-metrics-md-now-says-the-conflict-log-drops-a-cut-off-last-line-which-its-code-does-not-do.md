@@ -4,10 +4,10 @@ title: S-0404 is verified and its criteria are met, but metrics.md now says the 
 anchor:
   path: wip/kanban/stories/S-0404-metrics-md-defines-the-queue-wait-per-story-the-batch-size-and-the-bisections-per-week-by-an-adr-and-flai-stats-and-the-dashboard-s-charts-report-them.md
   item: S-0404
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-20T01:08:41Z
-updated: 2026-10-20T01:08:41Z
+updated: 2026-10-20T19:00:27Z
 ---
 
 # TH-0524 S-0404 is verified and its criteria are met, but metrics.md now says the conflict log drops a cut-off last line, which its code does not do
@@ -47,3 +47,6 @@ If you mean the conflict log to get the same cut-off handling, that is a change 
   - 3: `queue.weeks[]` and `items[].queue_wait_seconds` in `flai stats`.
   - 4: the `queue` chart beside Agent Waiting.
   - 5: the dashboard and CLI designs and the user guides.
+
+### 2026-10-20T19:00:27Z alex
+Resolved: S-0404 was accepted

@@ -4,10 +4,10 @@ title: "E-0022 needs a cost of delay input and four design answers: recommend ti
 anchor:
   path: wip/kanban/epics/E-0022-a-merge-queue-verifies-the-stories-in-review-as-one-batch-bisects-a-red-batch-to-the-story-that-fails-and-lands-the-green-ones-so-an-acceptance-no-longer-stops-on-a-dirty-main-or-a-shared-path-rebase.md
   item: E-0022
-status: open
-participants: [planner-E-0022]
+status: resolved
+participants: [planner-E-0022, alex]
 created: 2026-10-16T04:52:30Z
-updated: 2026-10-20T05:03:52Z
+updated: 2026-10-20T19:00:27Z
 ---
 
 # TH-0465 E-0022 needs a cost of delay input and four design answers: recommend time lost 96h per cycle, a model-free queue in flai serve, batches of at most 4, undone-main stories kept out, close-out leaves integration and smoke to the queue
@@ -66,3 +66,6 @@ E-0022 is built: S-0398, S-0399, S-0400, and S-0405 are done, and S-0401 to S-04
 Question 1, the cost-of-delay input on E-0022, is still open. It no longer affects ordering or pulling, only the record. I have not guessed it.
 
 If you want the values recorded, set `time_lost_per_cycle` on E-0022 (I recommend 96h, as above). Then `flai cod S-nnnn` gives each story's value, and anyone can write those with `flai edit`. I am ending this planning run.
+
+### 2026-10-20T19:00:27Z alex
+Resolved: S-0404 was accepted
