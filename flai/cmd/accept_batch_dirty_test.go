@@ -52,6 +52,10 @@ func TestALandingLeavesTheMainCheckoutsUncommittedFilesAsTheyAre(t *testing.T) {
 	landingState(t, root, head, "alex", nil)
 	dirty := dirtyMain(t, root)
 
+	preview, _, _ := runInAt(t, root, landedAt, "accept", "S-0001", "--by", "alex", "--batch", landingBatch, "--dry-run")
+	if !strings.Contains(preview, "the merge queue's landing leaves them as they are") || strings.Contains(preview, "refuses") {
+		t.Errorf("the dry run of a landing says the files are left as they are:\n%s", preview)
+	}
 	out, errOut, code := runInAt(t, root, landedAt, "accept", "S-0001", "--by", "alex", "--batch", landingBatch)
 	if code != 0 {
 		t.Fatalf("flai accept --batch on a dirty checkout: %d %s\n%s", code, errOut, out)

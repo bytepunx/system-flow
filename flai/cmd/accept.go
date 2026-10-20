@@ -942,7 +942,10 @@ func (a *app) printAccept(acc *accepted) error {
 		}
 		if len(res.Uncommitted) > 0 {
 			effect := "the real run refuses until they are committed or stashed, or --yes includes them"
-			if a.yes {
+			switch {
+			case res.Batch != "":
+				effect = "the merge queue's landing leaves them as they are, out of the acceptance commit (ADR-0178)"
+			case a.yes:
 				effect = "--yes includes them in the acceptance commit"
 			}
 			fmt.Fprintf(a.out, "uncommitted outside wip: %s; %s\n", strings.Join(res.Uncommitted, ", "), effect)

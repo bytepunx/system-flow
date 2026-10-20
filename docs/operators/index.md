@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-19
+updated: 2026-10-20
 status: active
 ---
 
@@ -242,11 +242,19 @@ It then verifies the batch once, in `flai serve`'s process, with the tiers `flai
 
 **What it lands.** Once a batch passes, `flai serve` accepts each of its stories in queue order with `flai accept <story> --by <who enqueued it> --batch <id>`, run with its own flai in the main checkout. Each is an ordinary acceptance: merge, done, archive, commit. A story the orchestrator enqueued is accepted as the orchestrator. Nothing is published: publish as before.
 
+**When your checkout has uncommitted files.** The landing goes ahead while your main checkout has uncommitted files outside `wip/`, and leaves them as they are: they are not linted or committed, and the acceptance commit holds only the acceptance ([ADR-0178](../../design/adrs/0178-the-merge-queue-lands-each-story-in-the-main-checkout-with-git-s-own-check.md)). The merge moves main and your checkout's files together, so your checkout is never left behind main and there is nothing to catch up. A story whose change would overwrite one of your uncommitted or untracked files is held back instead. It is not batched while the files are dirty, and a landing that finds such a file holds that story back and lands the rest. The story stays enqueued. You see it:
+
+- in `flai queue`, as the reason `dirty_main` under the story, and in the batch a landing held it back from, as `held back: S-nnnn, by the main checkout's uncommitted <files>; free it: git stash push -- <files>`;
+- in `flai board`, as `held back: S-nnnn by the main checkout's uncommitted <files>; free it: <command>` under the review column;
+- on the board's merge queue panel, in a **Held back** section with the files and the command, which **Copy** puts on your clipboard, and as `held back` on the story in the batch.
+
+To free it, commit the files, or set them aside with the command shown, `git stash push -- <files>`. The next batch takes the story once the files are clean. `serve.log` has `merge queue story held back` for each.
+
 **What it does with a red batch.** It bisects the batch to the first story it fails with: it verifies main with the batch's first stories and halves again. `flai queue` and the board's panel show each step. The stories before the failing one land. Those after it stay enqueued. The failing story goes back to in-progress, by `flai`, with a thread by `flai serve` titled `Merge queue batch <id> fails with S-nnnn at <tier>`, which says what failed and at which commit. With the `agent` action on, `flai serve` starts the story's agent again for the thread. You need do nothing but read it. Once the story is back in review at a new commit, `flai serve` resolves the thread, and the story can be enqueued again.
 
 **When main moves.** A commit to main while a verified batch waits, such as your acceptance of a story by hand, drops the batch. The next look builds it again from the new main. Accepting a story by hand also takes it out of the queue.
 
-**When a landing fails.** A landing `flai accept` refuses drops the batch, and `serve.log` has `merge queue batch dropped` with `flai accept`'s last lines. The next look builds a batch again from the stories not landed. While the cause stays, such as uncommitted changes in the main checkout outside `wip/`, each look builds, verifies, and drops the batch again. Fix what the log names, or hold the queue until you have.
+**When a landing fails.** A landing `flai accept` refuses drops the batch, and `serve.log` has `merge queue batch dropped` with `flai accept`'s last lines. The next look builds a batch again from the stories not landed. While the cause stays, each look builds, verifies, and drops the batch again. Uncommitted files in your main checkout are no longer such a cause ([above](#the-merge-queue-host-action-stories-in-review-verified-as-one-batch-s-0399)). Fix what the log names, or hold the queue until you have.
 
 ### Starting an agent when a story becomes ready
 
