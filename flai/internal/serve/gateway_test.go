@@ -78,9 +78,11 @@ const (
 	litellmMasterEnv = "LITELLM_MASTER_KEY"
 	// litellmHaikuEnv and litellmHaikuDefault are the slug the haiku alias
 	// resolves to by the unified API: by default a free OpenRouter model, so
-	// the check spends nothing (TH-0429).
+	// the check spends nothing (TH-0429). OpenRouter retired the free
+	// nemotron-3-super, answering 404, so the default is nemotron-3-ultra
+	// (I-0170, TH-0529).
 	litellmHaikuEnv     = "FLAI_TEST_LITELLM_HAIKU"
-	litellmHaikuDefault = "openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free"
+	litellmHaikuDefault = "openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free"
 	// litellmPassThroughEnv set to 1 runs the pass-through too: it forwards
 	// the body to Anthropic as is, so it needs the proxy's upstream Anthropic
 	// key and takes Anthropic's own model ID, litellmPassThroughHaiku.

@@ -283,7 +283,7 @@ flai serve disable agent
 
   ```sh
   flai serve agent provider litellm --api anthropic-messages --base-url http://127.0.0.1:4000 --key-env LITELLM_API_KEY \
-    --model haiku=openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free
+    --model haiku=openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free
   ```
 
   The virtual key comes from the proxy's `POST /key/generate` with the master key, such as `{"max_budget": 5, "budget_duration": "30d"}`. In this repository, `scripts/litellm.sh up` runs the proxy in Docker and writes the key to `.flai-cache/litellm/litellm.env`.

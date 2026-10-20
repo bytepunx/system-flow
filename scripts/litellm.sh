@@ -36,7 +36,7 @@
 #   LITELLM_PORT          host port, default 4000
 #   LITELLM_IMAGE         default ghcr.io/berriai/litellm:main-stable; pin a tag
 #   LITELLM_MAX_BUDGET    the virtual key's budget in USD per 30 days, default 5
-#   LITELLM_HAIKU_MODEL   default openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free
+#   LITELLM_HAIKU_MODEL   default openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free
 #
 # POSIX sh. Needs docker with the compose plugin, curl, jq, and openssl.
 set -eu
@@ -73,7 +73,7 @@ ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 LITELLM_PORT=${LITELLM_PORT:-4000}
 LITELLM_IMAGE=${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-stable}
 LITELLM_MAX_BUDGET=${LITELLM_MAX_BUDGET:-5}
-LITELLM_HAIKU_MODEL=${LITELLM_HAIKU_MODEL:-openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free}
+LITELLM_HAIKU_MODEL=${LITELLM_HAIKU_MODEL:-openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free}
 EOT
     )
     say "wrote $ADMIN (master key, salt key, database password, upstream keys)"
