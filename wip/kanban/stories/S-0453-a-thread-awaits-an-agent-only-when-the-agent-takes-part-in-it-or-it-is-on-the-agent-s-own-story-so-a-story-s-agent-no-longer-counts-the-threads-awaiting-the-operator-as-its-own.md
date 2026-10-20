@@ -6,7 +6,7 @@ title: A thread awaits an agent only when the agent takes part in it or it is on
 status: backlog
 owner: alex
 created: 2026-10-20T21:49:07Z
-updated: 2026-10-20T21:49:07Z
+updated: 2026-10-20T22:12:55Z
 transitions: []
 tags: [flai]
 topics: [mcp, inbox]
@@ -16,7 +16,9 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
+finalized:
+  by: alex
+  at: 2026-10-20T22:12:55Z
 ---
 # S-0453 A thread awaits an agent only when the agent takes part in it or it is on the agent's own story, so a story's agent no longer counts the threads awaiting the operator as its own
 
