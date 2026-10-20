@@ -152,15 +152,31 @@ func DirtyOutsideWip(r execx.Runner, repo *workitem.Repo) []string {
 // Overwritten lists, sorted, the main checkout's uncommitted and untracked
 // files that the change from commit from to commit to also changes, from the
 // commit they share: the files git refuses to overwrite as it moves the
-// checkout's branch from one to the other. The checkout's other
+// checkout's branch from one to the other (ADR-0178). The checkout's other
 // uncommitted files are left out, since they stop nothing. Git is read
 // through r in mainRoot; an error says what could not be read.
 func Overwritten(r execx.Runner, mainRoot, from, to string) ([]string, error) {
-	st, err := r.Run(mainRoot, "git", "-c", "core.quotePath=false", "status", "--porcelain", "--no-renames", "--untracked-files=all")
+	dirty, err := DirtyFiles(r, mainRoot)
 	if err != nil {
-		return nil, fmt.Errorf("read the main checkout's uncommitted files: %w; check that git can read %s", err, mainRoot)
+		return nil, err
 	}
-	dirty := workitem.PorcelainPaths(st)
+	return ChangedAmong(r, mainRoot, from, to, dirty)
+}
+
+// DirtyFiles lists the uncommitted and untracked files of the checkout at
+// root, each file of an untracked folder named, read through r.
+func DirtyFiles(r execx.Runner, root string) ([]string, error) {
+	st, err := r.Run(root, "git", "-c", "core.quotePath=false", "status", "--porcelain", "--no-renames", "--untracked-files=all")
+	if err != nil {
+		return nil, fmt.Errorf("read the uncommitted files of %s: %w; check that git can read it", root, err)
+	}
+	return workitem.PorcelainPaths(st), nil
+}
+
+// ChangedAmong lists, sorted, the paths of dirty that the change from commit
+// from to commit to changes, from the commit they share, as Overwritten
+// does; it runs no git when dirty is empty.
+func ChangedAmong(r execx.Runner, mainRoot, from, to string, dirty []string) ([]string, error) {
 	if len(dirty) == 0 {
 		return nil, nil
 	}

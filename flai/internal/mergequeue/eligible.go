@@ -38,6 +38,7 @@ const (
 	KindThreadOpen       = "thread_open"       // a thread on the story or one of its tasks is not resolved
 	KindUndoneMain       = "undone_main"       // a path is recorded as undoing main's change (ADR-0155)
 	KindUnreadable       = "unreadable"        // its last flai verify result or its record of undone paths cannot be read
+	KindDirtyMain        = "dirty_main"        // its change would overwrite files the main checkout has not committed (ADR-0178)
 )
 
 // Queue is the merge queue as it stands: the stories in review that are
@@ -87,7 +88,10 @@ type Reason struct {
 	Text     string   `json:"text"`
 	Criteria []int    `json:"criteria,omitempty"` // the unticked criteria's numbers
 	Threads  []string `json:"threads,omitempty"`  // the threads not resolved
-	Paths    []string `json:"paths,omitempty"`    // the paths undoing main's change
+	Paths    []string `json:"paths,omitempty"`    // the paths undoing main's change, or the uncommitted files the change would overwrite
+	// Command is what clears the reason where one command does: for
+	// KindDirtyMain, the git stash push that sets the files aside.
+	Command string `json:"command,omitempty"`
 }
 
 // OffUnderPullRequest is why the queue does not run under pull-request
@@ -129,6 +133,7 @@ func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
 	if err != nil {
 		return q, fmt.Errorf("read the threads to check the stories in review for the merge queue: %w; fix the thread file it names", err)
 	}
+	dirty := mainDirt(r, repo)
 	enqueued := map[string]bool{}
 	for _, e := range st.Enqueued {
 		enqueued[workitem.CanonicalID(e.Story)] = true
@@ -151,6 +156,9 @@ func Compute(r execx.Runner, repo *workitem.Repo) (Queue, error) {
 			e.Reasons = append(e.Reasons, *reason)
 		}
 		if reason := undoesMain(r, repo, it.ID); reason != nil {
+			e.Reasons = append(e.Reasons, *reason)
+		}
+		if reason := dirty.holds(r, repo, it.ID, e.Head); reason != nil {
 			e.Reasons = append(e.Reasons, *reason)
 		}
 		entries = append(entries, e)
@@ -301,6 +309,46 @@ func undoesMain(r execx.Runner, repo *workitem.Repo, story string) *Reason {
 	}
 	slices.Sort(paths)
 	return &Reason{Kind: KindUndoneMain, Paths: paths, Text: fmt.Sprintf("%s undoes the main branch's change to %s, and the queue never batches it: restore main's version with flai stream restore %s --path <path>, keep the removal by accepting it with flai accept %s --keep-removal <path> --reason \"<why>\", or send %s back to in-progress (ADR-0155)", storygit.Branch(story), strings.Join(paths, ", "), story, story, story)}
+}
+
+// dirt is the main checkout's uncommitted files and the main branch's head,
+// as the queue's eligibility reads them once for every story in review.
+type dirt struct {
+	files []string
+	main  string
+}
+
+// mainDirt reads repo's main checkout's uncommitted files and the main
+// branch's head through r. A checkout git cannot read has none to hold a
+// story back; the stories' other reasons say what git cannot read.
+func mainDirt(r execx.Runner, repo *workitem.Repo) dirt {
+	files, err := storygit.DirtyFiles(r, repo.MainRoot)
+	if err != nil || len(files) == 0 {
+		return dirt{}
+	}
+	_, head, err := mainHead(r, repo, "read the main branch")
+	if err != nil {
+		return dirt{}
+	}
+	return dirt{files: files, main: head}
+}
+
+// holds is the reason naming the uncommitted files of the main checkout that
+// story's change, its branch at head from the commit it shares with main,
+// would overwrite, so that the queue holds it back until they are clean, or
+// nil when there are none or its head is not known (ADR-0178).
+func (d dirt) holds(r execx.Runner, repo *workitem.Repo, story, head string) *Reason {
+	if len(d.files) == 0 || head == "" {
+		return nil
+	}
+	paths, err := storygit.ChangedAmong(r, repo.MainRoot, d.main, head, d.files)
+	if err != nil {
+		return &Reason{Kind: KindUnreadable, Text: fmt.Sprintf("cannot read which uncommitted files of the main checkout %s would overwrite: %v", storygit.Branch(story), err)}
+	}
+	if len(paths) == 0 {
+		return nil
+	}
+	return &Reason{Kind: KindDirtyMain, Paths: paths, Command: FreeCommand(paths), Text: HeldBackText(story, paths)}
 }
 
 // plural names ids after one or many, with the verb that agrees.

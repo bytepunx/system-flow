@@ -61,6 +61,8 @@ func Landable(r execx.Runner, repo *workitem.Repo, story, batch string) (Head, [
 		reasons = append(reasons, fmt.Sprintf("%s is not among the stories merge queue batch %s lands (%s); a story the batch does not land stays enqueued, or was sent back, and lands with a batch that passes with it", story, b.ID, orNone(l.Stories)))
 	case slices.ContainsFunc(l.Landed, func(x string) bool { return sameStory(x, story) }):
 		reasons = append(reasons, fmt.Sprintf("%s has landed from merge queue batch %s already; there is nothing more to land", story, b.ID))
+	case l.Holds(story):
+		reasons = append(reasons, fmt.Sprintf("%s is held back from merge queue batch %s, as its change would overwrite files the main checkout has not committed; it stays enqueued and is batched again once they are clean (ADR-0178)", story, b.ID))
 	default:
 		if next, ok := l.Next(); ok && !sameStory(next, story) {
 			reasons = append(reasons, fmt.Sprintf("%s is not the next story merge queue batch %s lands: %s is, as the batch lands its stories in queue order; land %s first", story, b.ID, next, next))
@@ -226,7 +228,9 @@ func buildOf(d Deps, repo *workitem.Repo, batch *Batch) *build {
 // main branch moved (DropIfMainMoved) and stops; it stops too when the batch
 // is dropped, has no landing, or every story landed, or when the next story
 // is no longer enqueued, as one removed from the queue, whose batch is
-// dropped. Each landing is written as the batch's step as it begins, and once
+// dropped. A story whose change would overwrite files the main checkout has
+// not committed is held back, still enqueued, and the rest land (holdBack,
+// ADR-0178). Each landing is written as the batch's step as it begins, and once
 // it is done the main branch's head is where the landing leaves it. A
 // landing that fails drops the batch, so that the stories not landed are
 // batched again from the main branch, and is returned. When ctx ends it
@@ -264,6 +268,16 @@ func Land(ctx context.Context, d Deps, accept Accepter, repo *workitem.Repo) (bo
 			reason := fmt.Sprintf("%s is no longer enqueued, so merge queue batch %s does not land it; the stories not landed are batched again from the main branch", story, batch.ID)
 			return landed, dropBatch(repo, batch.ID, reason, queueBy, d.Now())
 		}
+		held, err := overwrittenBy(d.Runner, repo, story)
+		if err != nil {
+			return landed, err
+		}
+		if len(held) > 0 {
+			if err := holdBack(d, repo, batch.ID, story, held); err != nil {
+				return landed, err
+			}
+			continue
+		}
 		b := buildOf(d, repo, batch)
 		if err := b.step(StepLanding + " " + story); err != nil {
 			return landed, err
@@ -294,6 +308,74 @@ func Land(ctx context.Context, d Deps, accept Accepter, repo *workitem.Repo) (bo
 		}
 		d.Log.Debug("merge queue story landed", "component", "mergequeue", "batch", batch.ID, "story", story, "by", en.By, "head", head)
 	}
+}
+
+// overwrittenBy lists the files the main checkout of repo has not committed
+// that story's change, its branch from the commit it shares with the main
+// branch, would overwrite, read through r (ADR-0178).
+func overwrittenBy(r execx.Runner, repo *workitem.Repo, story string) ([]string, error) {
+	_, head, err := mainHead(r, repo, "check which uncommitted files of the main checkout landing "+story+" would overwrite")
+	if err != nil {
+		return nil, err
+	}
+	paths, err := storygit.Overwritten(r, repo.MainRoot, head, storygit.Branch(story))
+	if err != nil {
+		return nil, fmt.Errorf("check which uncommitted files of the main checkout landing %s would overwrite: %w", story, err)
+	}
+	return paths, nil
+}
+
+// holdBack holds story back from the landing of merge queue batch id, with
+// paths, the files the main checkout has not committed that its change would
+// overwrite, and records it as the story's outcome, OutcomeHeldBack. The
+// story stays enqueued: the queue's eligibility keeps it out of a batch until
+// the files are clean (ADR-0178). A batch replaced, dropped, or holding it
+// back already is left as it is.
+func holdBack(d Deps, repo *workitem.Repo, id, story string, paths []string) error {
+	held := false
+	if _, err := Update(repo.CacheDir(), func(s *State) error {
+		b := s.Batch
+		if b == nil || b.ID != id || b.Dropped != nil || b.Landing == nil || b.Landing.Holds(story) {
+			return nil
+		}
+		b.Landing.HeldBack = append(b.Landing.HeldBack, LeftOut{Story: story, Paths: paths})
+		s.RecordOutcome(Outcome{Story: story, Outcome: OutcomeHeldBack, At: d.Now(), Detail: HeldBackText(story, paths)})
+		held = true
+		return nil
+	}); err != nil {
+		return err
+	}
+	if held {
+		d.Log.Warn("merge queue story held back; its change would overwrite uncommitted files in the main checkout", "component", "mergequeue", "batch", id, "story", story, "paths", paths, "free", FreeCommand(paths))
+	}
+	return nil
+}
+
+// HeldBackText says that story's change would overwrite paths, which the
+// main checkout has not committed, so the queue holds it back, and how the
+// operator frees it (ADR-0178).
+func HeldBackText(story string, paths []string) string {
+	return fmt.Sprintf("%s's change would overwrite %s, which the main checkout has not committed, so the merge queue holds it back: commit them, or set them aside with %s, and it is batched once they are clean (ADR-0178)", story, strings.Join(paths, ", "), FreeCommand(paths))
+}
+
+// FreeCommand is the command that sets paths aside in the main checkout,
+// freeing a story they hold back: git stash push with each path, quoted for
+// the shell where it needs it.
+func FreeCommand(paths []string) string {
+	quoted := make([]string, len(paths))
+	for i, p := range paths {
+		quoted[i] = shellQuote(p)
+	}
+	return "git stash push -- " + strings.Join(quoted, " ")
+}
+
+// shellQuote is p as a POSIX shell word: as it is when it holds only
+// letters, digits, and ./_-, else single quoted.
+func shellQuote(p string) string {
+	if p != "" && strings.Trim(p, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789./_-") == "" {
+		return p
+	}
+	return "'" + strings.ReplaceAll(p, "'", `'\''`) + "'"
 }
 
 // Advance takes repo's merge queue batch, once RunBatch has verified it, one
@@ -388,6 +470,15 @@ func Advance(ctx context.Context, d Deps, accept Accepter, repo *workitem.Repo) 
 	}); err != nil {
 		return did, err
 	}
-	d.Log.Info("merge queue batch landed", "component", "mergequeue", "batch", batch.ID, "landed", cur.Landing.Landed, "sent_back", sentBack)
+	d.Log.Info("merge queue batch landed", "component", "mergequeue", "batch", batch.ID, "landed", cur.Landing.Landed, "held_back", heldStories(cur.Landing), "sent_back", sentBack)
 	return true, nil
+}
+
+// heldStories are the stories l holds back, in the order they were held.
+func heldStories(l *Landing) []string {
+	ids := make([]string, 0, len(l.HeldBack))
+	for _, h := range l.HeldBack {
+		ids = append(ids, h.Story)
+	}
+	return ids
 }

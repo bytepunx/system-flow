@@ -483,3 +483,119 @@ func TestAdvanceDoesNothingWithNoVerifiedBatch(t *testing.T) {
 		})
 	}
 }
+
+// S-0402 criterion 2, ADR-0178: files the main checkout has not committed
+// that no story of the batch changes stop no landing, as the analyzer's
+// report and issues did on TH-0462; they are left as they were.
+func TestUncommittedFilesNoStoryChangesStopNoLanding(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	b, _ := readyStory(t, repo, "B", t0.Add(2*time.Hour), "b.txt", "b\n")
+	enqueue(t, repo, a, b)
+	writeFile(t, repo.MainRoot, "design/analysis/2026-10-19-all.md", "# report\n")
+	writeFile(t, repo.MainRoot, "design/issues/I-0150-x.md", "# issue\n")
+	writeFile(t, repo.MainRoot, "x.txt", "the operator's edit\n")
+	before := runGit(t, repo.MainRoot, "status", "--porcelain", "--untracked-files=all")
+
+	q, err := Compute(execx.System{}, repo)
+	if err != nil || len(q.Eligible) != 2 {
+		t.Fatalf("eligible %+v, ineligible %+v, %v; want both stories eligible", q.Eligible, q.Ineligible, err)
+	}
+	_, built := runBatch(t, deps(proc, t1), repo)
+	fa := &fakeAccept{t: t, repo: repo}
+	_, st := advance(t, deps(proc, t2), fa, repo)
+	if want := []acceptCall{{a, "alex", built.Batch.ID}, {b, "alex", built.Batch.ID}}; !slices.Equal(fa.calls, want) {
+		t.Errorf("accepted %+v, want %+v", fa.calls, want)
+	}
+	if len(st.Enqueued) != 0 || st.Batch != nil {
+		t.Errorf("enqueued %+v, batch %+v; want both landed and no batch", st.Enqueued, st.Batch)
+	}
+	if after := runGit(t, repo.MainRoot, "status", "--porcelain", "--untracked-files=all"); after != before {
+		t.Errorf("the main checkout's uncommitted files changed:\n%s\nwere\n%s", after, before)
+	}
+}
+
+// S-0402 criteria 3 and 4, ADR-0178: a file a story of the batch changes,
+// left uncommitted in the main checkout after the batch was built, holds that
+// story back only: the rest land, the story stays enqueued with the file in
+// its outcome, and the queue names it, the file, and the command that frees
+// it, until the file is clean; then it is batched again.
+func TestAnUncommittedFileAStoryChangesHoldsBackThatStoryOnly(t *testing.T) {
+	repo, proc := gitProject(t, "")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	b, _ := readyStory(t, repo, "B", t0.Add(2*time.Hour), "b.txt", "b\n")
+	enqueue(t, repo, a, b)
+	_, built := runBatch(t, deps(proc, t1), repo)
+	if bt := built.Batch; bt == nil || bt.Step != StepVerified || !slices.Equal(bt.Stories, []string{a, b}) {
+		t.Fatalf("batch %+v, want %s and %s verified", bt, a, b)
+	}
+	writeFile(t, repo.MainRoot, "a.txt", "the operator's own a\n")
+
+	fa := &fakeAccept{t: t, repo: repo}
+	did, st := advance(t, deps(proc, t2), fa, repo)
+	if !did {
+		t.Error("Advance did nothing")
+	}
+	if want := []acceptCall{{b, "alex", built.Batch.ID}}; !slices.Equal(fa.calls, want) {
+		t.Errorf("accepted %+v, want only %+v", fa.calls, want)
+	}
+	if len(st.Enqueued) != 1 || st.Enqueued[0].Story != a || st.Batch != nil {
+		t.Errorf("enqueued %+v, batch %+v; want %s still enqueued and the batch gone", st.Enqueued, st.Batch, a)
+	}
+	o, ok := outcomeOf(st, a)
+	if !ok || o.Outcome != OutcomeHeldBack || !o.At.Equal(t2) || o.Detail != HeldBackText(a, []string{"a.txt"}) {
+		t.Errorf("%s's outcome %+v, want held back on a.txt", a, o)
+	}
+	if !strings.Contains(o.Detail, "a.txt") || !strings.Contains(o.Detail, "git stash push -- a.txt") {
+		t.Errorf("the outcome must name the file and the command that frees it: %q", o.Detail)
+	}
+	if b, _ := os.ReadFile(filepath.Join(repo.MainRoot, "a.txt")); string(b) != "the operator's own a\n" {
+		t.Errorf("the operator's file was changed: %q", b)
+	}
+
+	q, err := Compute(execx.System{}, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reason *Reason
+	for _, e := range q.Ineligible {
+		for i := range e.Reasons {
+			if e.Story == a && e.Reasons[i].Kind == KindDirtyMain {
+				reason = &e.Reasons[i]
+			}
+		}
+	}
+	if reason == nil || !slices.Equal(reason.Paths, []string{"a.txt"}) || reason.Command != "git stash push -- a.txt" || reason.Text != HeldBackText(a, []string{"a.txt"}) {
+		t.Fatalf("the queue must name %s, a.txt, and the command that frees it: ineligible %+v", a, q.Ineligible)
+	}
+	if ran, again := runBatch(t, deps(proc, t3), repo); ran || again.Batch != nil {
+		t.Errorf("a held story is not batched while the file is dirty: %+v", again.Batch)
+	}
+
+	if err := os.Remove(filepath.Join(repo.MainRoot, "a.txt")); err != nil {
+		t.Fatal(err)
+	}
+	// the fake acceptance leaves B in review, so it is listed too
+	if q, err := Compute(execx.System{}, repo); err != nil || len(q.Ineligible) != 0 || !slices.ContainsFunc(q.Eligible, func(e Entry) bool { return e.Story == a }) {
+		t.Fatalf("once the file is clean %s is eligible again: eligible %+v, ineligible %+v, %v", a, q.Eligible, q.Ineligible, err)
+	}
+	if _, again := runBatch(t, deps(proc, t3), repo); again.Batch == nil || !slices.Equal(again.Batch.Stories, []string{a}) {
+		t.Errorf("once the file is clean %s is batched again: %+v", a, again.Batch)
+	}
+}
+
+// ADR-0178: the landing names no held story next, and the command that frees
+// a held story quotes each path the shell would split.
+func TestALandingSkipsAHeldStoryAndQuotesTheCommandThatFreesIt(t *testing.T) {
+	l := &Landing{Stories: []string{"S-0001", "S-0002", "S-0003"}, Landed: []string{"S-0001"}, HeldBack: []LeftOut{{Story: "S-0002", Paths: []string{"a.txt"}}}}
+	if next, ok := l.Next(); !ok || next != "S-0003" {
+		t.Errorf("Next = %s, %v; want S-0003, past the held S-0002", next, ok)
+	}
+	l.Landed = append(l.Landed, "S-0003")
+	if next, ok := l.Next(); ok {
+		t.Errorf("Next = %s; want none once every story not held has landed", next)
+	}
+	if got, want := FreeCommand([]string{"design/a.md", "docs/it's here.md"}), `git stash push -- design/a.md 'docs/it'\''s here.md'`; got != want {
+		t.Errorf("FreeCommand = %s, want %s", got, want)
+	}
+}

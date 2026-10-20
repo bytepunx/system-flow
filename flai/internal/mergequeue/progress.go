@@ -9,11 +9,14 @@ import (
 // bisection of a batch that failed, and the landing of the stories it lets
 // land, kept on the batch in the queue's state.
 
-// The outcomes a batch's end records: a story the queue landed, and the story
-// a red batch was bisected to, sent back to in-progress.
+// The outcomes a batch's end records: a story the queue landed, the story a
+// red batch was bisected to, sent back to in-progress, and a story held back
+// because its change would overwrite a file the main checkout has not
+// committed, still enqueued (ADR-0178).
 const (
-	OutcomeLanded  = "landed"
-	OutcomeFailing = "failing"
+	OutcomeLanded   = "landed"
+	OutcomeFailing  = "failing"
+	OutcomeHeldBack = "held_back"
 )
 
 // Head is a batched story's heads: Verified, the head its last passing verify
@@ -58,24 +61,33 @@ func (b *Bisect) Found() bool { return b != nil && b.Failing != "" }
 // order, the whole batch when it passed and the stories before the failing one
 // when it was bisected; those landed so far; and Head, the main branch's
 // commit the next landing must find, the batch's base at first and then the
-// head the last landing left.
+// head the last landing left. HeldBack are the stories it does not land
+// because their change would overwrite files the main checkout has not
+// committed, each with those files, in the order they were held (ADR-0178).
 type Landing struct {
-	Stories []string `json:"stories"`
-	Landed  []string `json:"landed"`
-	Head    string   `json:"head"`
+	Stories  []string  `json:"stories"`
+	Landed   []string  `json:"landed"`
+	Head     string    `json:"head"`
+	HeldBack []LeftOut `json:"held_back,omitempty"`
 }
 
-// Next is the next story to land, and false when every story has landed.
+// Next is the next story to land, and false when every story has landed or
+// is held back.
 func (l *Landing) Next() (string, bool) {
 	if l == nil {
 		return "", false
 	}
 	for _, s := range l.Stories {
-		if !slices.ContainsFunc(l.Landed, func(x string) bool { return sameStory(x, s) }) {
+		if !slices.ContainsFunc(l.Landed, func(x string) bool { return sameStory(x, s) }) && !l.Holds(s) {
 			return s, true
 		}
 	}
 	return "", false
+}
+
+// Holds reports whether l holds story back.
+func (l *Landing) Holds(story string) bool {
+	return l != nil && slices.ContainsFunc(l.HeldBack, func(h LeftOut) bool { return sameStory(h.Story, story) })
 }
 
 // HeadOf is story's heads in the batch, and false when the batch kept none
