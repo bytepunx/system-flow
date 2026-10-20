@@ -153,7 +153,7 @@ func OrchestratorStart(ctx context.Context, o Options, e Entry) (*AgentRun, erro
 	}
 	l := newLauncher(o, e)
 	l.handOver = true
-	l.orchestrate(ctx, o.Agent(e.Root), repo.Manifest.OrchestrationAgent(), "")
+	l.orchestrate(ctx, o.Agent(e.Root), repo.Manifest.OrchestrationAgent(), "", queueBatches(o, e, repo.Manifest))
 	out := o.Dir.AgentStates()[e.Root].Orchestrator
 	switch {
 	case out == nil || out.Session == run.Session:

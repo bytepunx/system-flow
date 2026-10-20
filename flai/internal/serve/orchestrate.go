@@ -11,6 +11,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/harness"
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -77,6 +78,13 @@ func newOrchestrator(o Options, e Entry, starter *launcher) *orchestrator {
 	return &orchestrator{o: o, e: e, starter: starter}
 }
 
+// queueBatches reports whether the merge queue batches for project e with
+// manifest m, as flai serve's queue pass judges it: the merge-queue host
+// action on, accept_reviews on, and local acceptance (ADR-0173, S-0403).
+func queueBatches(o Options, e Entry, m manifest.Manifest) bool {
+	return mergequeue.Batches(o.Host.Enabled != nil && o.Host.Enabled(hostapi.ActionMergeQueue, e.Root), m)
+}
+
 // look starts the orchestrator while the action is on and no run is going,
 // unless the operator holds it stopped (S-0228) or the last run failed less
 // than orchestrateRetry ago, and stops the run going while the action is
@@ -111,7 +119,7 @@ func (r *orchestrator) look(ctx context.Context) {
 	}
 	r.starter.mu.Lock()
 	defer r.starter.mu.Unlock()
-	r.said = r.starter.orchestrate(ctx, cfg, repo.Manifest.OrchestrationAgent(), r.said)
+	r.said = r.starter.orchestrate(ctx, cfg, repo.Manifest.OrchestrationAgent(), r.said, queueBatches(r.o, r.e, repo.Manifest))
 	r.seen = seenAs(r.o.Dir.AgentStates()[r.e.Root].Orchestrator) // told as it was recorded
 }
 
@@ -223,8 +231,10 @@ func (r *orchestrator) stop(run *AgentRun) {
 // does without the project's orchestrator definition, and when the agent's
 // provider cannot be had or its key is not set (ADR-0129). A refusal that is
 // said, the one returned last time, is not recorded, journalled, or logged
-// again.
-func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, said string) string {
+// again. queue says the merge queue batches for the project, which the
+// orchestrator's prompt then says, so that it enqueues the stories it has
+// verified instead of accepting them (S-0403).
+func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *manifest.Agent, said string, queue bool) string {
 	now := l.now().UTC()
 	run := &AgentRun{Agent: workitem.ActivityOrchestrator, Started: now.Format(time.RFC3339), Session: newSession()}
 	if agent != nil {
@@ -256,7 +266,7 @@ func (l *launcher) orchestrate(ctx context.Context, cfg AgentConfig, agent *mani
 		return refuse(err)
 	}
 	spec, keys, err := l.startOf(cfg, run, adapter, name, harness.Request{Role: conventions.RoleOrchestrate, Root: l.entry.Root, Project: l.entry.Key, Agent: agent,
-		Name: run.Agent, Flai: cfg.Flai, Session: run.Session})
+		Name: run.Agent, Flai: cfg.Flai, Session: run.Session, Queue: queue})
 	if err != nil {
 		return refuse(err)
 	}

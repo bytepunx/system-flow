@@ -1542,6 +1542,34 @@ func TestTheOrchestratorsPromptSaysHowItAcceptsAStory(t *testing.T) {
 	}
 }
 
+// S-0403, ADR-0173: while the merge queue runs for the project, the
+// orchestrator is told, after how it accepts a story, to enqueue each story
+// it has verified with queue_add instead of running flai accept, to log each
+// enqueue, and to leave the queue's own work and blockers to it. Without the
+// queue it is told none of it.
+func TestTheOrchestratorsPromptSaysToEnqueueWhileTheQueueRuns(t *testing.T) {
+	r := orchestrateReq(nil)
+	r.Queue = true
+	p := Prompt(r)
+	for _, w := range []string{
+		"The merge queue runs for this project: enqueue each story you have verified with the flai MCP tool queue_add, with the commit and the evidence, instead of running flai accept",
+		"log each enqueue with activity_log naming the story, its place in the queue, and the policy figure",
+		"Never land, bisect, hold, resume, or dequeue by hand",
+		"open no thread for a blocker the queue settles: a verify not at the branch's head, a dirty main checkout, or a rebase that stops inside the shared paths",
+	} {
+		if !strings.Contains(p, w) {
+			t.Errorf("the orchestrator's prompt with the queue lacks %q:\n%s", w, p)
+		}
+	}
+	accept, queue := strings.Index(p, "While accept_reviews is on"), strings.Index(p, "The merge queue runs")
+	if publish := strings.Index(p, "While publish is on"); accept < 0 || queue < accept || publish < queue {
+		t.Errorf("the queue's paragraph is not between accept_reviews (%d) and publish (%d), at %d", accept, publish, queue)
+	}
+	if p := Prompt(orchestrateReq(nil)); strings.Contains(p, "queue_add") || strings.Contains(p, "merge queue") {
+		t.Errorf("the orchestrator's prompt without the queue speaks of it:\n%s", p)
+	}
+}
+
 // S-0222: while publish is on, the orchestrator evaluates the release policy
 // after each acceptance and publishes through release_publish when a
 // threshold or theme is met, or under judgement when it judges the batch

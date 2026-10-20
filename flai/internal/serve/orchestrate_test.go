@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bytepunx/system-flow/flai/internal/hostapi"
+	"github.com/bytepunx/system-flow/flai/internal/manifest"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -306,5 +307,46 @@ func TestTheOrchestratorIsRefusedOnce(t *testing.T) {
 	lab.logs.mu.Unlock()
 	if n := strings.Count(logged, `msg="orchestrator could not be started"`); n != 2 {
 		t.Errorf("the refusals were logged %d times, want once each:\n%s", n, logged)
+	}
+}
+
+// The orchestrator is told the merge queue runs only while the merge-queue
+// host action is on for its project, accept_reviews is on, and acceptance
+// is local, so that its prompt says to enqueue then and to accept otherwise
+// (S-0403).
+func TestTheOrchestratorIsToldTheQueueRunsOnlyWhileItBatches(t *testing.T) {
+	root := t.TempDir()
+	e := Entry{Root: root}
+	for _, tc := range []struct {
+		name       string
+		on, accept bool
+		mode       string
+		other      bool
+		want       bool
+	}{
+		{name: "action, accept_reviews, local", on: true, accept: true, want: true},
+		{name: "action off", accept: true},
+		{name: "accept_reviews off", on: true},
+		{name: "pull-request acceptance", on: true, accept: true, mode: manifest.AcceptPullRequest},
+		{name: "action on for another project", on: true, accept: true, other: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			at := root
+			if tc.other {
+				at = filepath.Join(root, "other")
+			}
+			o := Options{Host: hostapi.Host{Enabled: func(action, r string) bool {
+				return tc.on && action == hostapi.ActionMergeQueue && r == at
+			}}}
+			var m manifest.Manifest
+			m.Orchestration.Permissions.AcceptReviews = tc.accept
+			m.Acceptance.Mode = tc.mode
+			if got := queueBatches(o, e, m); got != tc.want {
+				t.Errorf("queueBatches = %v, want %v", got, tc.want)
+			}
+		})
+	}
+	if queueBatches(Options{}, e, manifest.Manifest{}) {
+		t.Error("queueBatches with no host = true, want false")
 	}
 }
