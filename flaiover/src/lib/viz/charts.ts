@@ -1,8 +1,9 @@
 // Chart option builders: pure functions from a flai stats report to an
 // ECharts option, so they are unit-testable without a DOM. One y-axis per
-// chart, save the share on time beside Delivery Accuracy's errors and the
-// share of exact touches beside Touches Drift's paths, thin marks, legends
-// for two or more series, tooltips everywhere.
+// chart, save the share on time beside Delivery Accuracy's errors, the share
+// of exact touches beside Touches Drift's paths, and the batch sizes and
+// bisections beside the Merge Queue's hours, thin marks, legends for two or
+// more series, tooltips everywhere.
 import {
 	colorFor,
 	modelSlot,
@@ -75,6 +76,8 @@ export type ItemMetrics = {
 	 */
 	wait_checks_seconds?: number;
 	wait_reviewers_seconds?: number;
+	/** Its waits in the merge queue that ended in the window, summed (S-0404); absent with none. */
+	queue_wait_seconds?: number;
 };
 /** The count of a set of errors and the p50 and p85 of their absolute values, absent when empty. */
 export type ErrorSpread = { count: number; p50_seconds?: number; p85_seconds?: number };
@@ -161,6 +164,25 @@ export type Coordination = {
 	logged: boolean;
 	weeks: CoordinationWeek[];
 };
+/**
+ * One ISO week of the merge queue's event log: the stories it landed and sent back with their
+ * queue wait, the batches it built with their size, and its bisections; a mean or a longest is 0
+ * with none to take it over.
+ */
+export type QueueWeek = {
+	week: string;
+	start: string;
+	landed: number;
+	sent_back: number;
+	wait_mean_seconds: number;
+	wait_max_seconds: number;
+	batches: number;
+	batch_size_mean: number;
+	batch_size_max: number;
+	bisections: number;
+};
+/** The merge queue per ISO week of the window (S-0404, metrics.md § Merge queue). */
+export type Queue = { weeks: QueueWeek[] };
 /** The per-item error fields the planning charts read. */
 export type ErrorField =
 	'forecast_error_seconds' | 'delivery_error_seconds' | 'estimate_error_seconds';
@@ -364,7 +386,8 @@ export function normalise(r: Report): Report {
 		coordination: r.coordination && {
 			...r.coordination,
 			weeks: r.coordination.weeks ?? []
-		}
+		},
+		queue: r.queue && { ...r.queue, weeks: r.queue.weeks ?? [] }
 	};
 }
 
@@ -392,6 +415,8 @@ export type Report = {
 	cost_of_delay?: CostOfDelayReport;
 	/** Absent from a flai older than S-0337. */
 	coordination?: Coordination;
+	/** Absent when the merge queue has no event log, and from a flai older than S-0404. */
+	queue?: Queue;
 };
 
 /** The columns cost of delay is laid out in, in board order (S-0205). */
@@ -437,7 +462,8 @@ export const FLOW_KINDS = [
 	'cfd',
 	'time-in-state',
 	'throughput',
-	'agent-waiting'
+	'agent-waiting',
+	'queue'
 ] as const;
 /** The charts of what agents spent (S-0143, S-0163): they need items that carry usage. */
 export const USAGE_KINDS = [
@@ -486,6 +512,7 @@ export const TITLES: Record<Kind, string> = {
 	'time-in-state': 'Time in State',
 	throughput: 'Throughput',
 	'agent-waiting': 'Agent Waiting',
+	queue: 'Merge Queue',
 	'token-rate': 'Tokens / Min',
 	'tokens-spent': 'Tokens / Day',
 	'tokens-per-item': 'Tokens per item',
@@ -540,12 +567,13 @@ export const isClaimsKind = (kind: Kind): kind is ClaimsKind =>
  * stories, narrowed by nature and model; the chart per model shows every model, by the bucket.
  * The claims charts read the stories, which alone are held, by the day, the week, and the story,
  * as flai lays them out. flai lays the strategic charts out by the day over the report's type, so
- * only the type is chosen. Cost of delay takes the window alone.
+ * only the type is chosen. Cost of delay takes the window alone, and so does the merge queue,
+ * whose weeks flai counts from its event log, whatever the type.
  */
 export function controls(kind: Kind) {
 	if ((STRATEGIC_KINDS as readonly Kind[]).includes(kind))
 		return { type: true, epic: false, bucket: false, nature: false, model: false };
-	if (isClaimsKind(kind))
+	if (isClaimsKind(kind) || kind === 'queue')
 		return { type: false, epic: false, bucket: false, nature: false, model: false };
 	if (isForecastKind(kind))
 		return {
@@ -1033,6 +1061,106 @@ export function agentWaiting(r: Report, t: Theme): Opt {
 			(v) => `${Math.round(v * 10) / 10}`,
 			tip
 		),
+		series
+	});
+}
+
+/**
+ * Whether the report carries the merge queue: none without its event log, or from a flai older
+ * than S-0404.
+ */
+export const hasQueue = (r: Report) => r.queue !== undefined;
+/**
+ * A week's value at its Monday; null, a gap in the line, for a mean or a longest over a week with
+ * nothing to take it over, which flai sends as 0.
+ */
+type QueuePoint = { value: [number, number | null]; week: QueueWeek };
+/**
+ * Merge queue (S-0404, ADR-0177): per ISO week of the window, the mean and the longest wait in the
+ * queue of the stories it landed or sent back, in hours, and on a second axis the mean size of the
+ * batches it built and its bisections. A week with no story out of the queue has no wait, and one
+ * with no batch no size: a gap each, not 0. flai lays out the weeks from the one that holds the
+ * window's start to the one that holds now, and the axis spans them (ADR-0054).
+ */
+export function queueChart(r: Report, t: Theme): Opt {
+	const weeks = r.queue?.weeks ?? [];
+	const point = (wk: QueueWeek, v: number | null): QueuePoint => ({
+		value: [place(Date.parse(wk.start), 'week'), v],
+		week: wk
+	});
+	const out = (wk: QueueWeek) => wk.landed + wk.sent_back > 0;
+	const waited = (name: string, slot: number, symbol: string, of: (wk: QueueWeek) => number) => ({
+		...line(t, name, t.series[slot], symbol, []),
+		showSymbol: true,
+		connectNulls: false,
+		data: weeks.map((wk) => point(wk, out(wk) ? of(wk) / 3600 : null))
+	});
+	const series =
+		weeks.length > 0
+			? [
+					waited('mean wait', 0, 'circle', (wk) => wk.wait_mean_seconds),
+					waited('longest wait', 2, 'triangle', (wk) => wk.wait_max_seconds),
+					{
+						...line(t, 'mean batch size', t.series[5], 'rect', []),
+						showSymbol: true,
+						connectNulls: false,
+						yAxisIndex: 1,
+						data: weeks.map((wk) => point(wk, wk.batches > 0 ? wk.batch_size_mean : null))
+					},
+					{
+						name: 'bisections',
+						type: 'bar',
+						yAxisIndex: 1,
+						barMaxWidth: 12,
+						itemStyle: { color: t.series[3], borderColor: t.surface, borderWidth: 1 },
+						data: weeks.map((wk) => point(wk, wk.bisections))
+					}
+				]
+			: [];
+	const round = (v: number) => Math.round(v * 10) / 10;
+	type Hovered = { marker?: string; seriesName: string; data: QueuePoint };
+	/** A point's value as its tooltip names it: a wait as a duration, a size with its batches. */
+	const say = ({ seriesName, data }: Hovered) => {
+		const v = data.value[1] ?? 0;
+		const wk = data.week;
+		if (seriesName === 'bisections') return `${v}`;
+		if (seriesName !== 'mean batch size') return human(v * 3600);
+		const batches = `${wk.batches} ${wk.batches === 1 ? 'batch' : 'batches'}`;
+		return `${round(v)} (${batches}, largest ${wk.batch_size_max})`;
+	};
+	const tip = (ps: Hovered[]) => {
+		const list = ps.filter((p) => p?.data);
+		if (list.length === 0) return '';
+		const wk = list[0].data.week;
+		const shown = list.filter((p) => p.data.value[1] !== null);
+		const lines = shown.map((p) => `${p.marker ?? ''}${p.seriesName}: ${say(p)}`);
+		const ended = `${wk.landed} landed, ${wk.sent_back} sent back`;
+		return [`week of ${wk.start} (${wk.week}), ${ended}`, ...lines].join('<br/>');
+	};
+	const axes = bucketAxes(
+		t,
+		r,
+		'week',
+		weeks.map((wk) => Date.parse(wk.start)),
+		true,
+		'hours in queue',
+		(v) => `${round(v)}`,
+		tip
+	);
+	return base(t, {
+		...axes,
+		// room for the counts' labels on the right
+		grid: { ...axes.grid, right: 56 },
+		yAxis: [
+			axes.yAxis,
+			axisY(t, {
+				type: 'value',
+				name: 'batch size, bisections',
+				min: 0,
+				nameTextStyle: { color: t.textSecondary, align: 'right' },
+				splitLine: { show: false }
+			})
+		],
 		series
 	});
 }
@@ -2605,6 +2733,8 @@ export function build(
 			return throughput(r, t);
 		case 'agent-waiting':
 			return agentWaiting(r, t);
+		case 'queue':
+			return queueChart(r, t);
 		case 'token-rate':
 			return tokenRate(r, t);
 		case 'tokens-spent':

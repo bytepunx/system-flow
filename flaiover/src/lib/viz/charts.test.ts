@@ -64,6 +64,8 @@ import {
 	codWeekRows,
 	coordinationChart,
 	hasCoordination,
+	hasQueue,
+	queueChart,
 	shareTotals,
 	hasCostOfDelay,
 	hasOrder,
@@ -77,6 +79,8 @@ import {
 	type CostOfDelayReport,
 	type ErrorFilter,
 	type ItemMetrics,
+	type Queue,
+	type QueueWeek,
 	type Report,
 	type StrategicDay,
 	type WaitWeek
@@ -479,6 +483,44 @@ const codReport: Report = {
 	cost_of_delay: cod
 };
 
+/** A week of the merge queue as flai stats --json prints it (S-0404), in the Go side's names. */
+const queueWeek = (
+	week: string,
+	start: string,
+	[landed, sentBack, waitMean, waitMax]: number[],
+	[batches, sizeMean, sizeMax, bisections]: number[]
+): QueueWeek => ({
+	week,
+	start,
+	landed,
+	sent_back: sentBack,
+	wait_mean_seconds: waitMean,
+	wait_max_seconds: waitMax,
+	batches,
+	batch_size_mean: sizeMean,
+	batch_size_max: sizeMax,
+	bisections
+});
+// The merge queue over the weeks of the main fixture's window: in W32 a batch of two that landed
+// after 1 and 2 hours; in W33 two batches, of one and two, one story landed after an hour and one
+// sent back after 3, a bisection between; in W36 a red batch of three bisected, with no outcome yet.
+// S-001's waits, 3 hours, end in the window.
+const queue: Queue = {
+	weeks: [
+		queueWeek('2026-W31', '2026-07-27', [0, 0, 0, 0], [0, 0, 0, 0]),
+		queueWeek('2026-W32', '2026-08-03', [2, 0, 5400, 7200], [1, 2, 2, 0]),
+		queueWeek('2026-W33', '2026-08-10', [1, 1, 7200, 10800], [2, 1.5, 2, 1]),
+		queueWeek('2026-W34', '2026-08-17', [0, 0, 0, 0], [0, 0, 0, 0]),
+		queueWeek('2026-W35', '2026-08-24', [0, 0, 0, 0], [0, 0, 0, 0]),
+		queueWeek('2026-W36', '2026-08-31', [0, 0, 0, 0], [1, 3, 3, 1])
+	]
+};
+const queueing: Report = {
+	...report,
+	items: report.items.map((i) => (i.id === 'S-001' ? { ...i, queue_wait_seconds: 10800 } : i)),
+	queue
+};
+
 const light = theme(false);
 const dark = theme(true);
 /**
@@ -501,7 +543,9 @@ describe('chart builders', () => {
 					? forecasting
 					: cod
 						? codReport
-						: report;
+						: k === 'queue'
+							? queueing
+							: report;
 			const o = build(k, fixture, light) as {
 				useUTC?: boolean;
 				yAxis: unknown;
@@ -511,8 +555,9 @@ describe('chart builders', () => {
 			// every axis and tooltip reads the local zone (S-0329)
 			expect(o.useUTC, k).toBeUndefined();
 			expect(o.yAxis, k).toBeDefined();
-			// delivery accuracy and touches drift alone draw a share on a second axis
-			if (k === 'delivery-accuracy' || k === 'touches-drift')
+			// delivery accuracy and touches drift alone draw a share on a second axis, and the merge
+			// queue its counts beside its hours
+			if (k === 'delivery-accuracy' || k === 'touches-drift' || k === 'queue')
 				expect((o.yAxis as unknown[]).length).toBe(2);
 			else expect(Array.isArray(o.yAxis), `${k} must not use two y-axes`).toBe(false);
 			expect(o.tooltip, k).toBeDefined();
@@ -2724,6 +2769,125 @@ describe('the coordination chart (S-0337)', () => {
 		} as unknown as Report);
 		expect(nulls.coordination).toEqual({ logged: true, weeks: [] });
 		expect(normalise(older).coordination).toBeUndefined();
+	});
+});
+
+describe('the merge queue chart (S-0404)', () => {
+	type Point = { value: [number, number | null]; week: QueueWeek };
+	type Series = {
+		name: string;
+		type: string;
+		yAxisIndex?: number;
+		symbol?: string;
+		connectNulls?: boolean;
+		itemStyle: { color: string };
+		data: Point[];
+	};
+	type Option = {
+		legend: { show: boolean };
+		grid: { right: number };
+		xAxis: { type: string; min?: number; max?: number; minInterval?: number };
+		yAxis: { name: string; min?: number }[];
+		tooltip: { formatter: (p: unknown) => string };
+		series: Series[];
+	};
+	const day = 86400e3;
+	const mondays = ['07-27', '08-03', '08-10', '08-17', '08-24', '08-31'].map((d) =>
+		midnight(`2026-${d}`)
+	);
+	const axis = {
+		type: 'time',
+		minInterval: 7 * day,
+		min: midnight('2026-07-27') - 3.5 * day,
+		max: midnight('2026-08-31') + 3.5 * day
+	};
+
+	it("reads the queue and each item's queue wait in the names flai stats --json sends", () => {
+		// the fixture's keys are the Go side's json tags, and they come through the reader as sent
+		const r = normalise(queueing);
+		expect(Object.keys(r.queue!.weeks[0])).toEqual([
+			'week',
+			'start',
+			'landed',
+			'sent_back',
+			'wait_mean_seconds',
+			'wait_max_seconds',
+			'batches',
+			'batch_size_mean',
+			'batch_size_max',
+			'bisections'
+		]);
+		expect(r.queue).toEqual(queue);
+		expect(r.items.find((i) => i.id === 'S-001')?.queue_wait_seconds).toBe(10800);
+		expect(r.items.find((i) => i.id === 'S-002')?.queue_wait_seconds).toBeUndefined();
+		expect(hasQueue(r)).toBe(true);
+	});
+	it('plots the mean and longest wait in hours, and the mean batch size and bisections beside them', () => {
+		const o = queueChart(queueing, light) as Option;
+		expect(o.series.map((s) => [s.name, s.type, s.yAxisIndex])).toEqual([
+			['mean wait', 'line', undefined],
+			['longest wait', 'line', undefined],
+			['mean batch size', 'line', 1],
+			['bisections', 'bar', 1]
+		]);
+		// a week with no story out of the queue has no wait, and one with no batch no size: gaps
+		expect(o.series.map((s) => [s.name, s.data.map((d) => d.value[1])])).toEqual([
+			['mean wait', [null, 1.5, 2, null, null, null]],
+			['longest wait', [null, 2, 3, null, null, null]],
+			['mean batch size', [null, 2, 1.5, null, null, 3]],
+			['bisections', [0, 0, 1, 0, 0, 1]]
+		]);
+		for (const s of o.series) {
+			expect(
+				s.data.map((d) => d.value[0]),
+				s.name
+			).toEqual(mondays);
+			if (s.type === 'line') expect(s.connectNulls, s.name).toBe(false);
+		}
+		// four series in four colours, the three lines told apart by their marks too
+		expect(new Set(o.series.map((s) => s.itemStyle.color)).size).toBe(4);
+		expect(new Set(o.series.slice(0, 3).map((s) => s.symbol)).size).toBe(3);
+		const week = (n: number) =>
+			o.tooltip.formatter(o.series.map((s) => ({ seriesName: s.name, data: s.data[n] })));
+		expect(week(2)).toBe(
+			'week of 2026-08-10 (2026-W33), 1 landed, 1 sent back<br/>mean wait: 2h<br/>' +
+				'longest wait: 3h<br/>mean batch size: 1.5 (2 batches, largest 2)<br/>bisections: 1'
+		);
+		// a week with a batch and no outcome names no wait
+		expect(week(5)).toBe(
+			'week of 2026-08-31 (2026-W36), 0 landed, 0 sent back<br/>' +
+				'mean batch size: 3 (1 batch, largest 3)<br/>bisections: 1'
+		);
+		expect(o.tooltip.formatter([])).toBe('');
+		// from the week that holds the window's start to the one that holds now (ADR-0054)
+		expect(o.xAxis).toMatchObject(axis);
+		expect(o.yAxis.map((a) => a.name)).toEqual(['hours in queue', 'batch size, bisections']);
+		expect(o.yAxis[1]).toMatchObject({ min: 0 });
+		expect(o.grid.right).toBe(56);
+		expect(o.legend.show).toBe(true);
+		expect((build('queue', queueing, light) as Option).series).toEqual(o.series);
+	});
+	it('draws empty over the window without a queue, and reads no weeks as none', () => {
+		expect(hasQueue(report)).toBe(false);
+		expect(normalise(report).queue).toBeUndefined();
+		const o = build('queue', report, light) as Option;
+		expect(o.series).toEqual([]);
+		expect(o.xAxis).toMatchObject(axis);
+		const nulls = normalise({ ...report, queue: { weeks: null } } as unknown as Report);
+		expect(nulls.queue).toEqual({ weeks: [] });
+		expect((build('queue', nulls, light) as Option).series).toEqual([]);
+	});
+	it('lists the merge queue under the flow charts beside agent waiting, with the window alone', () => {
+		expect(FLOW_KINDS.slice(-2)).toEqual(['agent-waiting', 'queue']);
+		expect(KINDS).toContain('queue');
+		expect(titleOf('queue')).toBe('Merge Queue');
+		expect(controls('queue')).toEqual({
+			type: false,
+			epic: false,
+			bucket: false,
+			nature: false,
+			model: false
+		});
 	});
 });
 

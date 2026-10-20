@@ -188,7 +188,8 @@ describe('the charts page (S-0163)', () => {
 			'Cumulative Flow',
 			'Time in State',
 			'Throughput',
-			'Agent Waiting'
+			'Agent Waiting',
+			'Merge Queue'
 		]);
 		expect(
 			[...document.querySelectorAll('[data-testid="charts-usage"] a')].map((l) => l.textContent)
@@ -1204,6 +1205,104 @@ describe('the claims charts (S-0214)', () => {
 		answered = { items, claims: undefined };
 		await choose('window', '7d');
 		expect(notes()).toEqual(['claims-older']);
+	});
+
+	// the merge queue as flai sends it (S-0404) over the weeks of the window: in W39 a batch of two
+	// that landed after 1 and 3 hours; in W40 a red batch of one bisected and sent back after 2 hours
+	const queue = {
+		weeks: [
+			{
+				week: '2026-W39',
+				start: '2026-09-21',
+				landed: 2,
+				sent_back: 0,
+				wait_mean_seconds: 7200,
+				wait_max_seconds: 10800,
+				batches: 1,
+				batch_size_mean: 2,
+				batch_size_max: 2,
+				bisections: 0
+			},
+			{
+				week: '2026-W40',
+				start: '2026-09-28',
+				landed: 0,
+				sent_back: 1,
+				wait_mean_seconds: 7200,
+				wait_max_seconds: 7200,
+				batches: 1,
+				batch_size_mean: 1,
+				batch_size_max: 1,
+				bisections: 1
+			}
+		]
+	};
+	const queueNotes = () =>
+		['queue-none', 'queue-note', 'waiting-older'].filter(
+			(id) => document.querySelector(`[data-testid="${id}"]`) !== null
+		);
+
+	it('draws the merge queue per week beside agent waiting, with the window alone (S-0404)', async () => {
+		answered = { items, queue };
+		await open('queue');
+		expect(text('h1')).toBe('Merge Queue');
+		expect(controls()).toEqual(['window']);
+		const w39 = midnight('2026-09-21');
+		const w40 = midnight('2026-09-28');
+		expect(
+			drawn().series.map((s) => [
+				s.name,
+				(s.data as { value: [number, number | null] }[]).map((d) => d.value)
+			])
+		).toEqual([
+			[
+				'mean wait',
+				[
+					[w39, 2],
+					[w40, 2]
+				]
+			],
+			[
+				'longest wait',
+				[
+					[w39, 3],
+					[w40, 2]
+				]
+			],
+			[
+				'mean batch size',
+				[
+					[w39, 2],
+					[w40, 1]
+				]
+			],
+			[
+				'bisections',
+				[
+					[w39, 0],
+					[w40, 1]
+				]
+			]
+		]);
+		expect(queueNotes()).toEqual(['queue-note']);
+		expect(cells('queue-table')).toEqual([
+			['2026-W39', '2026-09-21', '2', '0', '2h', '3h', '1', '2', '2', '0'],
+			['2026-W40', '2026-09-28', '0', '1', '2h', '2h', '1', '1', '1', '1']
+		]);
+	});
+
+	it('says the flai on the host sends no merge queue when the report has none (S-0404)', async () => {
+		answered = { items };
+		await open('queue');
+		expect(queueNotes()).toEqual(['queue-none']);
+		expect(text('[data-testid="queue-none"]')).toContain('sends no merge queue');
+		expect(text('[data-testid="queue-none"]')).toContain('logged no event yet');
+		expect(text('[data-testid="queue-none"]')).toContain('flai self-upgrade');
+		expect(drawn().series).toEqual([]);
+		expect(cells('queue-table')).toEqual([]);
+		// the other charts say nothing of it
+		await go('cycle-time');
+		expect(queueNotes()).toEqual([]);
 	});
 });
 

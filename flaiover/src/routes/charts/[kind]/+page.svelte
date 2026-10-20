@@ -27,6 +27,7 @@
 		hasCoordination,
 		hasCostOfDelay,
 		hasOrder,
+		hasQueue,
 		hasSpend,
 		hours,
 		human,
@@ -392,6 +393,12 @@
 			The flai on the host sends no waiting, which this chart is drawn from: it is older than the
 			dashboard. Upgrade it with <code>flai self-upgrade</code>.
 		</p>
+	{:else if kind === 'queue' && report && !hasQueue(report)}
+		<p class="mb-2 text-sm text-muted" data-testid="queue-none">
+			The flai on the host sends no merge queue, which this chart is drawn from: either the merge
+			queue there has logged no event yet, or the flai is older than the dashboard. Then upgrade it
+			with <code>flai self-upgrade</code>.
+		</p>
 	{:else if forecastKind && !forecastSet}
 		<p class="mb-2 text-sm text-muted" data-testid="forecast-none">
 			No story done in the window has a forecast. The planner sets one when it plans a story, or set
@@ -483,6 +490,13 @@
 			those a rebase met at sync or at acceptance, late. The lines are the conversations between
 			stories opened each week, and those that agreed, were escalated, or closed with their story.
 			The hold time saved is what the stories started on a share would have waited for their holder.
+		</p>
+	{/if}
+	{#if kind === 'queue' && report?.queue}
+		<p class="mt-2 text-xs text-muted" data-testid="queue-note">
+			The lines are the mean and the longest time the stories the merge queue landed or sent back
+			each week waited in it, from their enqueueing; a week with none has no wait. On the right are
+			the mean number of stories in the batches it built, and as bars the red batches it bisected.
 		</p>
 	{/if}
 	{#if kind === 'agent-waiting' && report?.waiting}
@@ -632,6 +646,41 @@
 								><td>{human(w.shares.held_seconds)}</td></tr
 							>{/each}</tbody
 					>
+				</table>
+			{:else if kind === 'queue' && report}
+				<table class="min-w-full" data-testid="queue-table">
+					<thead>
+						<tr class="text-left text-muted">
+							<th class="pr-4">week</th>
+							<th class="pr-4">start</th>
+							<th class="pr-4">landed</th>
+							<th class="pr-4">sent back</th>
+							<th class="pr-4">mean wait</th>
+							<th class="pr-4">longest wait</th>
+							<th class="pr-4">batches</th>
+							<th class="pr-4">mean batch size</th>
+							<th class="pr-4">largest batch</th>
+							<th>bisections</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each report.queue?.weeks ?? [] as w (w.week)}
+							{@const out = w.landed + w.sent_back > 0}
+							{@const batched = w.batches > 0}
+							<tr>
+								<td class="pr-4 font-mono">{w.week}</td>
+								<td class="pr-4 font-mono">{w.start}</td>
+								<td class="pr-4">{w.landed}</td>
+								<td class="pr-4">{w.sent_back}</td>
+								<td class="pr-4">{out ? human(w.wait_mean_seconds) : '-'}</td>
+								<td class="pr-4">{out ? human(w.wait_max_seconds) : '-'}</td>
+								<td class="pr-4">{w.batches}</td>
+								<td class="pr-4">{batched ? Math.round(w.batch_size_mean * 10) / 10 : '-'}</td>
+								<td class="pr-4">{batched ? w.batch_size_max : '-'}</td>
+								<td>{w.bisections}</td>
+							</tr>
+						{/each}
+					</tbody>
 				</table>
 			{:else if kind === 'touches-drift' && report}
 				<table class="min-w-full" data-testid="drift-table">
