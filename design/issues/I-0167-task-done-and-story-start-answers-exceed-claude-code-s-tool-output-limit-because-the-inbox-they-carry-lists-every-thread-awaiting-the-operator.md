@@ -3,10 +3,10 @@ id: I-0167
 title: task_done and story_start answers exceed Claude Code's tool output limit, because the inbox they carry lists every thread awaiting the operator
 class: efficiency
 status: open
-count: 3
-cost: 4m
+count: 4
+cost: 3m
 first_reported: 2026-10-19T15:28:45Z
-last_reported: 2026-10-19T22:24:12Z
+last_reported: 2026-10-20T00:35:02Z
 updated: 2026-10-20T18:53:36Z
 ---
 
@@ -28,6 +28,10 @@ story_start S-0399 answered 101,139 characters, 32 threads awaiting the operator
 ### 2026-10-19T22:24:12Z
 Story: S-0401.
 S-0401: story_start answered 87,568 characters, past Claude Code's limit; the pack was only its header and the inbox carried 31 threads awaiting the operator, so the answer was read from the saved file with jq.
+
+### 2026-10-20T00:35:02Z
+Story: S-0404.
+S-0404: story_start's answer was 87,106 characters with 32 threads awaiting in its inbox and the pack only as a header, so Claude Code saved it to a file and the agent read it back with jq.
 
 ## Remediation
 
