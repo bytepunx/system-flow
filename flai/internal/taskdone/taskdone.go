@@ -67,6 +67,9 @@ type Options struct {
 	Now     func() time.Time // time.Now when nil
 	Version string           // the running flai's, for the inbox
 	Logger  *slog.Logger     // nil discards
+	// Rules is the running flai's task-done rules number (ADR-0180);
+	// buildinfo.TaskDoneRules when 0.
+	Rules int
 	// Fix rewrites in place the paths of the worktree that the project's fix
 	// commands select (S-0367), before the commit and after the sync's
 	// rebase; nil runs the fix commands the worktree's manifest declares.
@@ -216,7 +219,7 @@ type run struct {
 }
 
 // start fills in the defaults, finds the task, refuses the close while this
-// flai is outdated (ADR-0142), and finds its story and the story's worktree.
+// flai is outdated (ADR-0142, ADR-0180), and finds its story and the story's worktree.
 func start(o Options) (*run, error) {
 	if o.Repo == nil || o.Runner == nil {
 		return nil, errors.New("taskdone needs a project and a runner")
@@ -267,20 +270,27 @@ func start(o Options) (*run, error) {
 	return r, nil
 }
 
-// OutdatedError is Run's refusal to close a task while the running flai's
-// major or minor version is behind the newest flai release in the project's
-// history (ADR-0142).
+// OutdatedError is Run's refusal to close a task while the running flai is
+// older than the newest flai release in the project's history and that
+// release raised the task-done rules number or the major version, or, for a
+// release that carries no number, its minor version (ADR-0142, ADR-0180).
 type OutdatedError struct {
-	Task    string // the task not closed
-	Running string // the running flai's version
-	Newest  string // the newest flai release in the project's history
-	Behind  string // "major" or "minor"
-	Upgrade string // the command that upgrades the host's flai
+	Task         string // the task not closed
+	Running      string // the running flai's version
+	Newest       string // the newest flai release in the project's history
+	Behind       string // "major", "minor", or "rules"
+	RunningRules int    // the running flai's task-done rules number
+	NewestRules  int    // the newest release's, 0 when it carries none
+	Upgrade      string // the command that upgrades the host's flai
 }
 
 func (e *OutdatedError) Error() string {
-	return fmt.Sprintf("flai task done refuses to close %s: this flai is %s, a %s version behind flai %s in the project's history, and would close it by older rules (ADR-0142); upgrade it with %s and close it again",
-		e.Task, e.Running, e.Behind, e.Newest, e.Upgrade)
+	why := fmt.Sprintf("a %s version behind flai %s in the project's history", e.Behind, e.Newest)
+	if e.Behind == "rules" {
+		why = fmt.Sprintf("older than flai %s in the project's history, which raised task done's rules from %d to %d", e.Newest, e.RunningRules, e.NewestRules)
+	}
+	return fmt.Sprintf("flai task done refuses to close %s: this flai is %s, %s, and would close it by older rules (ADR-0142, ADR-0180); upgrade it with %s and close it again",
+		e.Task, e.Running, why, e.Upgrade)
 }
 
 // BehindRelease says how far version is behind the release newest by
@@ -300,20 +310,42 @@ func BehindRelease(version, newest string) string {
 	return ""
 }
 
+// BehindRules says why a flai of version and task-done rules number rules
+// may not close a task by the rules of the release newest, whose number is
+// newestRules (ADR-0180): "major" when its major version is below newest's,
+// "rules" when its number is below newestRules, or "" when neither. A
+// release or a flai that carries no number, 0, keeps ADR-0142's rule,
+// BehindRelease.
+func BehindRules(version string, rules int, newest string, newestRules int) string {
+	behind := BehindRelease(version, newest)
+	switch {
+	case newestRules < 1 || rules < 1 || behind == "major":
+		return behind
+	case rules < newestRules:
+		return "rules"
+	}
+	return ""
+}
+
 // refuseOutdated refuses to close the task with an *OutdatedError while the
-// running flai's major or minor version is behind the newest flai release in
-// the project's history (ADR-0142); a patch behind, or a build that is not a
-// release, closes it.
+// running flai is older than the newest flai release in the project's
+// history and BehindRules says why (ADR-0142, ADR-0180); a release that kept
+// the task-done rules number, a patch behind one that carries none, or a
+// build that is not a release closes it.
 func refuseOutdated(o Options, task string) error {
 	out := release.FlaiOutdated(o.Runner, mainRoot(o.Repo), o.Version)
 	if out == nil {
 		return nil
 	}
-	behind := BehindRelease(out.Running, out.Newest)
+	rules := o.Rules
+	if rules == 0 {
+		rules = buildinfo.TaskDoneRules
+	}
+	behind := BehindRules(out.Running, rules, out.Newest, out.NewestRules)
 	if behind == "" {
 		return nil
 	}
-	return &OutdatedError{Task: task, Running: out.Running, Newest: out.Newest, Behind: behind, Upgrade: out.Upgrade}
+	return &OutdatedError{Task: task, Running: out.Running, Newest: out.Newest, Behind: behind, RunningRules: rules, NewestRules: out.NewestRules, Upgrade: out.Upgrade}
 }
 
 // again is the command that runs this close again.

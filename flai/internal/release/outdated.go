@@ -16,8 +16,12 @@ import (
 type Outdated struct {
 	Running string `json:"running"`
 	Newest  string `json:"newest"`
-	Upgrade string `json:"upgrade"`
-	Message string `json:"message"`
+	// NewestRules is the newest release's task-done rules number, the
+	// buildinfo.TaskDoneRulesPath file at the commit its tag tags, or 0
+	// when that commit has none (ADR-0180).
+	NewestRules int    `json:"newest_rules,omitempty"`
+	Upgrade     string `json:"upgrade"`
+	Message     string `json:"message"`
 }
 
 // outdatedFor is how long an answer of FlaiOutdated is kept per project: the
@@ -32,9 +36,10 @@ type outdatedAnswer struct {
 var outdatedSeen sync.Map // root and running version → outdatedAnswer
 
 // FlaiOutdated compares the running flai's version with the newest flai/vX.Y.Z
-// tag reachable from the project's HEAD, and says so when it is older. nil
-// when it is not, when running is not a release (a dev build), or when git
-// cannot say. An answer is kept for a minute.
+// tag reachable from the project's HEAD, and says so when it is older, with
+// that tag's task-done rules number. nil when it is not, when running is not
+// a release (a dev build), or when git cannot say. An answer is kept for a
+// minute.
 func FlaiOutdated(r execx.Runner, root, running string) *Outdated {
 	if _, ok := buildinfo.Semver(running); !ok || r == nil {
 		return nil
@@ -58,10 +63,24 @@ func flaiOutdated(r execx.Runner, root, running string) *Outdated {
 		return nil
 	}
 	return &Outdated{
-		Running: strings.TrimPrefix(running, "v"),
-		Newest:  newest.String(),
-		Upgrade: buildinfo.UpgradeCommand,
+		Running:     strings.TrimPrefix(running, "v"),
+		Newest:      newest.String(),
+		NewestRules: tagRules(r, root, "flai/v"+newest.String()),
+		Upgrade:     buildinfo.UpgradeCommand,
 		Message: fmt.Sprintf("this flai is %s, older than flai %s in the project's history, so it may lack rules and fields the project uses: upgrade it with %s",
 			strings.TrimPrefix(running, "v"), newest, buildinfo.UpgradeCommand),
 	}
+}
+
+// tagRules is the task-done rules number at the commit tag tags, read from
+// buildinfo.TaskDoneRulesPath there (ADR-0180), or 0 when that commit has no
+// such file or it holds no positive integer: a release from before the
+// number, which keeps ADR-0142's minor-version rule.
+func tagRules(r execx.Runner, root, tag string) int {
+	text, err := r.Run(root, "git", "show", tag+":"+buildinfo.TaskDoneRulesPath)
+	if err != nil {
+		return 0
+	}
+	n, _ := buildinfo.ParseTaskDoneRules(text)
+	return n
 }

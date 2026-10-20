@@ -1082,7 +1082,7 @@ func TestRunRefusesAMinorOrMajorVersionBehind(t *testing.T) {
 			if !errors.As(err, &outdated) {
 				t.Fatalf("the refusal is not an *OutdatedError: %T", err)
 			}
-			if want := (OutdatedError{Task: "T-003", Running: tc.running, Newest: "1.10.0", Behind: tc.behind, Upgrade: buildinfo.UpgradeCommand}); *outdated != want {
+			if want := (OutdatedError{Task: "T-003", Running: tc.running, Newest: "1.10.0", Behind: tc.behind, RunningRules: buildinfo.TaskDoneRules, Upgrade: buildinfo.UpgradeCommand}); *outdated != want {
 				t.Errorf("refusal %+v, want %+v", *outdated, want)
 			}
 			if res.Task != "T-003" || res.Commit != nil || res.Move != nil || res.Log != nil || res.Touches != nil {
@@ -1140,6 +1140,113 @@ func TestRunClosesWithinAPatchOfTheNewestRelease(t *testing.T) {
 				t.Errorf("the inbox warns %v (%+v), want %v", warned, res.Inbox.FlaiOutdated, tc.warned)
 			}
 		})
+	}
+}
+
+// layerUnderRules is layerUnder with the newest flai release tagged on a
+// commit of main whose task-done rules file holds rules (ADR-0180).
+func layerUnderRules(t *testing.T, tag string, rules int) (*workitem.Repo, string) {
+	t.Helper()
+	repo, wt := project(t)
+	write(t, repo.Root, buildinfo.TaskDoneRulesPath, fmt.Sprintf("%d\n", rules))
+	git(t, repo.Root, "add", buildinfo.TaskDoneRulesPath)
+	git(t, repo.Root, "commit", "-q", "-m", "flai "+tag)
+	git(t, repo.Root, "tag", "-a", tag, "-m", tag)
+	setTouches(t, repo, "T-003", "src/one")
+	newTask(t, repo, "Second", "src/two.go")
+	write(t, wt, "src/one/a.go", "package one\n")
+	write(t, wt, "src/two.go", "package two\n")
+	return repo, wt
+}
+
+// I-0157, ADR-0180: a flai a minor version behind the newest release closes
+// the task when that release kept its task-done rules number, as each of
+// I-0157's instances should have, and the inbox it answers still warns.
+func TestRunClosesAMinorVersionBehindAReleaseThatKeptTheRules(t *testing.T) {
+	repo, _ := layerUnderRules(t, "flai/v1.10.0", 4)
+	o := options(repo, "feat: [S-004] T-003 one")
+	o.Version, o.Rules = "1.9.3", 4
+
+	res, err := Run(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Stopped != "" || res.Commit == nil || strings.Join(res.Commit.Paths, ",") != "src/one/a.go" {
+		t.Fatalf("stopped at %q: %s, commit %+v", res.Stopped, res.Error, res.Commit)
+	}
+	if st := get(t, repo, "T-003").Status; st != workitem.Done {
+		t.Errorf("T-003 is %s", st)
+	}
+	if res.Inbox == nil || res.Inbox.FlaiOutdated == nil || res.Inbox.FlaiOutdated.NewestRules != 4 {
+		t.Errorf("the inbox does not warn of 1.10.0 with rules 4: %+v", res.Inbox)
+	}
+}
+
+// ADR-0180: a release that raised the task-done rules number refuses a flai
+// below it, a minor or only a patch behind, and one a major version behind
+// is refused whatever its number; the refusal names both numbers and
+// changes nothing.
+func TestRunRefusesAFlaiBelowTheNewestRules(t *testing.T) {
+	for _, tc := range []struct {
+		version, tag  string
+		rules, newest int
+		behind, says  string
+	}{
+		{"1.9.3", "flai/v1.10.0", 4, 5, "rules", "this flai is 1.9.3, older than flai 1.10.0 in the project's history, which raised task done's rules from 4 to 5"},
+		{"1.10.0", "flai/v1.10.1", 4, 5, "rules", "this flai is 1.10.0, older than flai 1.10.1 in the project's history, which raised task done's rules from 4 to 5"},
+		{"0.12.0", "flai/v1.10.0", 5, 5, "major", "this flai is 0.12.0, a major version behind flai 1.10.0"},
+	} {
+		t.Run(tc.version+" under "+tc.tag, func(t *testing.T) {
+			repo, wt := layerUnderRules(t, tc.tag, tc.newest)
+			head := git(t, wt, "rev-parse", "HEAD")
+			o := options(repo, "feat: [S-004] T-003 one")
+			o.Version, o.Rules = tc.version, tc.rules
+
+			res, err := Run(context.Background(), o)
+			var outdated *OutdatedError
+			if !errors.As(err, &outdated) {
+				t.Fatalf("not refused: %v, stopped %q, commit %+v", err, res.Stopped, res.Commit)
+			}
+			if outdated.Behind != tc.behind || outdated.RunningRules != tc.rules || outdated.NewestRules != tc.newest {
+				t.Errorf("refusal %+v", *outdated)
+			}
+			for _, want := range []string{tc.says, "ADR-0180", "upgrade it with " + buildinfo.UpgradeCommand} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("error lacks %q: %v", want, err)
+				}
+			}
+			if res.Commit != nil || git(t, wt, "rev-parse", "HEAD") != head || get(t, repo, "T-003").Status != workitem.InProgress {
+				t.Errorf("a step ran: %+v", res)
+			}
+		})
+	}
+}
+
+// ADR-0180: BehindRules compares task-done rules numbers when both sides
+// carry one, keeps a major version behind as behind, and falls back to
+// BehindRelease when either carries none.
+func TestBehindRules(t *testing.T) {
+	for _, tc := range []struct {
+		version     string
+		rules       int
+		newest      string
+		newestRules int
+		want        string
+	}{
+		{"1.9.3", 1, "1.10.0", 1, ""},
+		{"1.9.3", 2, "1.10.0", 1, ""},
+		{"1.9.3", 1, "1.10.0", 2, "rules"},
+		{"1.10.0", 1, "1.10.2", 2, "rules"},
+		{"0.12.0", 1, "1.10.0", 1, "major"},
+		{"1.9.3", 1, "1.10.0", 0, "minor"},
+		{"1.9.3", 0, "1.10.0", 1, "minor"},
+		{"1.10.0", 1, "1.10.2", 0, ""},
+		{"dev", 1, "1.10.0", 2, "rules"},
+		{"dev", 0, "1.10.0", 2, ""},
+	} {
+		if got := BehindRules(tc.version, tc.rules, tc.newest, tc.newestRules); got != tc.want {
+			t.Errorf("BehindRules(%q, %d, %q, %d) = %q, want %q", tc.version, tc.rules, tc.newest, tc.newestRules, got, tc.want)
+		}
 	}
 }
 
