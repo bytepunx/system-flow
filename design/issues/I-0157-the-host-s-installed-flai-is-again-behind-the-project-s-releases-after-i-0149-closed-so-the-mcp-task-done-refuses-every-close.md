@@ -2,12 +2,12 @@
 id: I-0157
 title: The host's installed flai is again behind the project's releases after I-0149 closed, so the MCP task_done refuses every close
 class: efficiency
-status: open
+status: closed
 count: 14
 cost: 3m
 first_reported: 2026-10-17T01:51:51Z
 last_reported: 2026-10-20T00:35:02Z
-updated: 2026-10-20T00:35:02Z
+updated: 2026-10-20T21:06:10Z
 ---
 
 # I-0157 The host's installed flai is again behind the project's releases after I-0149 closed, so the MCP task_done refuses every close
@@ -76,3 +76,4 @@ S-0404: the MCP server's flai 1.63.1 refused task_done for T-1651 (newest 1.65.0
 ## Remediation
 
 Story S-0445 remediates this issue, created from it at 2026-10-17T16:03:15Z.
+Closed 2026-10-20T21:06:10Z: S-0445: flai task done refuses an older flai only when the newest flai release raised the task-done rules number (ADR-0180), kept in flai/internal/buildinfo/task-done-rules.txt, embedded as buildinfo.TaskDoneRules, printed by flai version --json as task_done_rules, and read at each flai tag's commit; a tag without it keeps ADR-0142's minor rule, and the MCP task_done's installed-flai fallback catches up by the same number. A minor release that keeps the number, as in every instance of I-0157, no longer stops a close: TestRunClosesAMinorVersionBehindAReleaseThatKeptTheRules (taskdone) and TestTaskDoneClosesAMinorVersionBehindAReleaseThatKeptTheRules (mcpserver) reproduce it.
