@@ -172,8 +172,8 @@ func (r Result) ExitCode() int {
 }
 
 // Run closes the task as ADR-0107 orders it. It returns an error only when
-// it could not start: a task, story, or worktree it cannot find, or a flai a
-// major or minor version behind the project's history (ADR-0142). Once the
+// it could not start: a task, story, or worktree it cannot find, or a flai
+// behind the newest release's task-done rules (ADR-0142, ADR-0180). Once the
 // commit step has begun, a step that fails, whether refused or unable to
 // run, is the Result's Stopped and Error, alongside what the steps before it
 // did: they have changed the repository, and the caller reports them either

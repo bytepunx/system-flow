@@ -4176,7 +4176,7 @@ Exit codes: 0 when every step ran, 3 when the sync stopped the run, 4 when the c
 
 A story or an epic is refused: a story goes to review with flai move S-nnnn review after its close-out, and an epic follows its stories.
 
-While this flai's major or minor version is behind the newest flai release in the project's history, the close is refused and nothing changes (ADR-0142); one patch behind only warns, in the inbox.
+While this flai is older than the newest flai release in the project's history and that release raised the task-done rules number, which flai version --json prints as task\_done\_rules, or the major version, the close is refused and nothing changes (ADR-0180); a release that kept the number only warns, in the inbox. A release from before the number refuses a flai a minor version behind it (ADR-0142).
 
 Examples:
 

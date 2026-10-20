@@ -1,6 +1,6 @@
 ---
 title: "Runbook: update"
-updated: 2026-10-15
+updated: 2026-10-20
 status: active
 ---
 
@@ -18,6 +18,8 @@ Before either, read the release notes on the [releases page](https://github.com/
    flai self-upgrade --check   # the installed version and the newest
    flai host check             # the same, for the flai the host runs
    ```
+
+   Agents stop closing tasks only behind a release that raised the major version or flai's task-done rules number, `task_done_rules` in `flai version --json`; behind any other release the host only warns ([ADR-0180](../../../design/adrs/0180-flai-task-done-refuses-an-older-flai-only-when-the-newest-flai-release-raised.md)); see [Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current).
 
 2. Update, and restart everything that runs flai, in one step:
 
@@ -44,7 +46,7 @@ Before either, read the release notes on the [releases page](https://github.com/
    ```
 
 5. Or let `flai serve` do it: with the `auto-upgrade` host action on for a project (`flai serve enable auto-upgrade`, in a shell), `flai serve` asks the host for each newer flai release tagged in the project's history, within about a minute of its being published. Off, it asks you on a thread on the project's `system-flow.yaml`. A host older than flai 1.50.1 has no such check: upgrade it once by hand, as in step 2, first. See [Keeping the host's flai current](../index.md#keeping-the-hosts-flai-current).
-6. Agents already running keep the flai they started with: an MCP server that `.mcp.json` started over stdio runs until its session ends. An MCP server that is flai 1.51.1 or newer closes tasks through the flai now installed ([ADR-0160](../../../design/adrs/0160-an-outdated-mcp-server-s-task-done-closes-the-task-with-the-installed-flai-once.md)). An older one keeps refusing `task_done`: start its session again, or have its agent run `flai task done` in a shell.
+6. Agents already running keep the flai they started with: an MCP server that `.mcp.json` started over stdio runs until its session ends. An MCP server that is flai 1.51.1 or newer closes tasks through the flai now installed ([ADR-0160](../../../design/adrs/0160-an-outdated-mcp-server-s-task-done-closes-the-task-with-the-installed-flai-once.md)). An older one keeps refusing `task_done` after a release that stops agents, as step 1 says: start its session again, or have its agent run `flai task done` in a shell.
 
 ### To go back, or to a chosen release
 
