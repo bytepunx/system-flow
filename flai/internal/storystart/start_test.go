@@ -13,6 +13,7 @@ import (
 	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/gittest"
+	"github.com/bytepunx/system-flow/flai/internal/inbox"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
@@ -451,5 +452,60 @@ func TestStartRecoversWhatACrashedStartLeft(t *testing.T) {
 	plan, err := os.ReadFile(filepath.Join(res.Worktree, "design/system/plan.md"))
 	if err != nil || string(plan) != "---\ntitle: Plan\n---\n\n# Plan\n\n## Shape\ntext\n" {
 		t.Errorf("the worktree should hold the main branch's files: %q %v", plan, err)
+	}
+}
+
+// ADR-0104, ADR-0179: Fit keeps part 1 of the pack while the answer fits
+// with it and the inbox's threads whole, else answers the pack's header and
+// only then shortens the threads' last entries; the inbox it was given stays
+// whole.
+func TestFitCutsThePackBeforeTheThreads(t *testing.T) {
+	pack := func(kb int) *ctxpack.Pack {
+		p := &ctxpack.Pack{Story: "S-0001", Title: "One", Conventions: []ctxpack.Convention{}, Omitted: []string{}, Items: []ctxpack.Item{}, Catalog: ctxpack.Catalog{NotLoaded: []ctxpack.Entry{}, InPart: []ctxpack.Entry{}}}
+		for i := range kb {
+			text := strings.Repeat("x", 1000)
+			p.Conventions = append(p.Conventions, ctxpack.Convention{Path: "c.md", Name: "c", Order: i, Topics: []string{"all"}, Kept: []ctxpack.Piece{}, LeftOut: []ctxpack.Piece{}, Text: text, Size: len(text)})
+		}
+		return p
+	}
+	box := func(threads int) *inbox.Inbox {
+		in := &inbox.Inbox{Agent: "agent-a", Threads: []inbox.ThreadSummary{}, Ready: []workitem.BoardCard{}, Changes: []inbox.Event{}}
+		for range threads {
+			in.Threads = append(in.Threads, inbox.ThreadSummary{ID: "TH-1", Story: "S-0001", Awaiting: "you", LastEntry: strings.Repeat("y", 1500)})
+		}
+		in.AwaitingYou = threads
+		return in
+	}
+	for _, c := range []struct {
+		name            string
+		packKB, threads int
+		part1           bool
+		shortened       int
+	}{
+		{"both fit", 10, 4, true, 0},
+		{"the pack's header fits with the threads", 30, 10, false, 0},
+		{"the threads are shortened under the header", 30, 30, false, 30},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			in := box(c.threads)
+			got := Fit(Result{Story: Moved{ID: "S-0001", Warnings: []string{}}, Pack: pack(c.packKB), Inbox: in})
+			if n := encodedSize(got); n > ctxpack.PartLimit {
+				t.Errorf("the answer is %d bytes, over %d", n, ctxpack.PartLimit)
+			}
+			if part1 := got.Pack.PartNumber == 1 && len(got.Pack.Conventions) > 0; part1 != c.part1 {
+				t.Errorf("part 1 kept %v, want %v: part %d, %d conventions", part1, c.part1, got.Pack.PartNumber, len(got.Pack.Conventions))
+			}
+			if got.Pack.PartCount == 0 {
+				t.Error("the pack does not say how many parts prime answers")
+			}
+			if got.Inbox.EntriesShortened != c.shortened || len(got.Inbox.Threads) != c.threads {
+				t.Errorf("%d of %d threads shortened, want %d of %d", got.Inbox.EntriesShortened, len(got.Inbox.Threads), c.shortened, c.threads)
+			}
+			for _, th := range in.Threads {
+				if len(th.LastEntry) != 1500 {
+					t.Fatalf("the inbox given was cut: %d bytes", len(th.LastEntry))
+				}
+			}
+		})
 	}
 }

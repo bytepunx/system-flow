@@ -3,6 +3,7 @@ package storystart
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -137,12 +138,61 @@ func Start(ctx context.Context, o Options) (Result, error) {
 	if res.Pack, err = ctxpack.ForStory(o.Repo, story.ID, o.Budget); err != nil {
 		return res, &StepError{Story: story.ID, Step: StepPrime, Finish: "flai prime --story " + story.ID, Err: err}
 	}
-	in, err := inbox.Read(ctx, inbox.Options{Repo: o.Repo, Agent: o.Agent, Own: story.ID, Now: o.Now, Runner: o.Runner, Version: o.Version})
+	// the story's threads listed, the others counted (ADR-0179)
+	in, err := inbox.Read(ctx, inbox.Options{Repo: o.Repo, Agent: o.Agent, Story: story.ID, Own: story.ID, Now: o.Now, Runner: o.Runner, Version: o.Version})
 	if err != nil {
 		return res, &StepError{Story: story.ID, Step: StepInbox, Finish: "the MCP tool inbox", Err: fmt.Errorf("read %s's inbox: %w", o.Agent, err)}
 	}
 	res.Inbox = &in
 	return res, nil
+}
+
+// Fit is res cut to ctxpack.PartLimit bytes of JSON, the answer story_start
+// and flai story start --json give (ADR-0104, ADR-0179).
+//
+// The pack is part 1 as prime cuts it, so that prime's parts 2 on follow,
+// with the inbox whole when the answer fits with it, else with its oldest
+// changes left out, counted in changes_omitted. When part 1 does not fit
+// even with no changes, the pack is its header alone, without a part number,
+// and every part is read with prime; the inbox is whole again, its oldest
+// changes left out and then its threads' last entries shortened, counted in
+// entries_shortened, as far as the answer needs.
+func Fit(res Result) Result {
+	res.Pack = res.Pack.Parts(ctxpack.PartLimit)[0]
+	whole := res.Inbox
+	if fitInbox(&res, whole) && (whole == nil || res.Inbox.EntriesShortened == whole.EntriesShortened) {
+		return res
+	}
+	head := *res.Pack
+	head.PartNumber, head.README = 0, nil
+	head.Conventions, head.Omitted, head.Items = []ctxpack.Convention{}, []string{}, []ctxpack.Item{}
+	head.Catalog = ctxpack.Catalog{NotLoaded: []ctxpack.Entry{}, InPart: []ctxpack.Entry{}}
+	res.Pack = &head
+	fitInbox(&res, whole)
+	return res
+}
+
+// fitInbox cuts a copy of whole in res, as inbox.Fit does, until res fits
+// ctxpack.PartLimit bytes, and reports whether it does; whole stays whole.
+func fitInbox(res *Result, whole *inbox.Inbox) bool {
+	size := func() int { return encodedSize(*res) }
+	if whole == nil {
+		return size() <= ctxpack.PartLimit
+	}
+	in := *whole
+	res.Inbox = &in
+	return inbox.Fit(&in, ctxpack.PartLimit, size)
+}
+
+// encodedSize is how many bytes v encodes to as JSON as flai story start
+// --json prints it, indented, which is never fewer than the MCP tool
+// story_start's compact answer (ADR-0179).
+func encodedSize(v any) int {
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		panic(err) // a start's result holds strings, numbers, and lists, which always encode
+	}
+	return len(b) + 1 // the encoder's newline
 }
 
 // Begin moves story to in-progress as agent, its epic following, or refuses

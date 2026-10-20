@@ -91,7 +91,7 @@ func Read(ctx context.Context, opt Options) (Inbox, error) {
 			continue
 		}
 		sum := Summarize(opt.Repo, opt.Agent, th)
-		if opt.Story != "" && sum.Story != story {
+		if opt.Story != "" && workitem.CanonicalID(sum.Story) != story {
 			// counted where it would have been listed (ADR-0179)
 			if sum.Awaiting == "you" || opt.All {
 				out.ThreadsOmitted++

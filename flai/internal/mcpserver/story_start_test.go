@@ -300,6 +300,52 @@ func TestStoryStartLeavesOutOldChangesToKeepPartOne(t *testing.T) {
 	}
 }
 
+// ADR-0179, I-0167: S-0399's instance. Thirty-two open threads await the
+// agent on other items, a story and a design document, each with a last
+// entry of 1,500 bytes, and one on the story: the answer is at most
+// ctxpack.PartLimit bytes, lists the story's thread alone, and counts the
+// others in threads_omitted.
+func TestStoryStartListsOnlyTheStorysThreads(t *testing.T) {
+	repo, epic := startProject(t, t.TempDir(), "t", startConvention("- Commit at landing."))
+	story := storyOfEpic(t, repo, epic, "Started", []string{"docs/started"}, workitem.Ready)
+	other := storyOfEpic(t, repo, epic, "Other", []string{"docs/other"}, workitem.Ready)
+	long := strings.Repeat("Which library do we take here? ", 50)[:1500]
+	for i := range 32 {
+		on := other.ID
+		if i%2 == 1 {
+			on = "design/system/plan.md"
+		}
+		if _, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Elsewhere %d", i), On: on, Author: "alex", Text: long, Now: t0}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mine, err := threads.New(repo, threads.NewOptions{Title: "On the story", On: story.ID, Author: "alex", Text: long, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := starter(t, repo, noGitRunner{}, nil)
+
+	out, failed := f.call(t, "story_start", map[string]any{"story": story.ID})
+	if failed != "" {
+		t.Fatalf("story_start: %s", failed)
+	}
+	data, err := json.Marshal(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) > ctxpack.PartLimit {
+		t.Errorf("the answer is %d bytes, over %d", len(data), ctxpack.PartLimit)
+	}
+	in := out["inbox"].(map[string]any)
+	listed, _ := in["threads"].([]any)
+	if len(listed) != 1 || listed[0].(map[string]any)["id"] != mine.ID || in["awaiting_you"] != 1.0 {
+		t.Errorf("the inbox lists %v, awaiting_you %v; want %s alone", listed, in["awaiting_you"], mine.ID)
+	}
+	if in["threads_omitted"] != 32.0 {
+		t.Errorf("threads_omitted %v, want 32", in["threads_omitted"])
+	}
+}
+
 // S-0274, S-0101: in a folder of projects, story_start takes project and
 // starts the story there, as the folder server's agent.
 func TestStoryStartTakesTheProjectInAFolder(t *testing.T) {

@@ -3,12 +3,16 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
+	ctxpack "github.com/bytepunx/system-flow/flai/internal/context"
+	"github.com/bytepunx/system-flow/flai/internal/threads"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -270,5 +274,79 @@ func TestStoryStartHelpNamesWhatItReplaces(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("help lacks %q:\n%s", want, out)
 		}
+	}
+}
+
+// storyStartThreads opens, as alex, 32 threads on other items, S-0002 and
+// a design document, each with a last entry of 1,500 bytes, and one on
+// S-0001, which it returns: S-0399's instance (I-0167).
+func storyStartThreads(t *testing.T, root string) string {
+	t.Helper()
+	repo, err := workitem.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 9, 15, 21, 0, 0, 0, time.UTC)
+	long := strings.Repeat("Which library do we take here? ", 50)[:1500]
+	for i := range 32 {
+		on := "S-0002"
+		if i%2 == 1 {
+			on = "design/system/plan.md"
+		}
+		if _, err := threads.New(repo, threads.NewOptions{Title: fmt.Sprintf("Elsewhere %d", i), On: on, Author: "alex", Text: long, Now: at}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	th, err := threads.New(repo, threads.NewOptions{Title: "On the story", On: "S-0001", Author: "alex", Text: long, Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return th.ID
+}
+
+// ADR-0179: --json lists the story's threads alone, counts the others in
+// threads_omitted, and is at most 40,000 bytes, as story_start answers.
+func TestStoryStartJSONListsOnlyTheStorysThreads(t *testing.T) {
+	root := storyStartProject(t)
+	mine := storyStartThreads(t, root)
+	out, errOut, code := runIn(t, root, "story", "start", "S-0001", "--json")
+	if code != 0 {
+		t.Fatalf("story start --json: %d\n%s\n%s", code, out, errOut)
+	}
+	if n := len(out); n > ctxpack.PartLimit {
+		t.Errorf("the answer is %d bytes, over %d", n, ctxpack.PartLimit)
+	}
+	var got struct {
+		Inbox struct {
+			AwaitingYou    int                   `json:"awaiting_you"`
+			Threads        []struct{ ID string } `json:"threads"`
+			ThreadsOmitted int                   `json:"threads_omitted"`
+		} `json:"inbox"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not JSON: %v\n%s", err, out)
+	}
+	in := got.Inbox
+	if len(in.Threads) != 1 || in.Threads[0].ID != mine || in.AwaitingYou != 1 || in.ThreadsOmitted != 32 {
+		t.Errorf("inbox: %d awaiting, %d omitted, threads %+v; want %s alone and 32 omitted", in.AwaitingYou, in.ThreadsOmitted, in.Threads, mine)
+	}
+}
+
+// ADR-0179: the text form lists the story's threads and says how many are
+// on other items, and that flai thread list lists them.
+func TestStoryStartSaysHowManyThreadsAreElsewhere(t *testing.T) {
+	root := storyStartProject(t)
+	mine := storyStartThreads(t, root)
+	out, errOut, code := runIn(t, root, "story", "start", "S-0001")
+	if code != 0 {
+		t.Fatalf("story start: %d\n%s\n%s", code, out, errOut)
+	}
+	for _, want := range []string{"inbox: 1 thread awaiting agent-a\n", "  " + mine + " On the story", "inbox: 32 threads on other items: flai thread list lists them\n"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "Elsewhere") {
+		t.Errorf("output lists a thread of another item:\n%s", out)
 	}
 }

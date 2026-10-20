@@ -36,7 +36,9 @@ The steps run in this order:
    its worktree under .flai-cache/worktrees/S-nnnn, as flai stream open does.
 3. Prime: the story's context pack, fitted to --budget, as flai prime --story
    prints it.
-4. Inbox: the agent's inbox, as the MCP tool inbox answers it.
+4. Inbox: the agent's inbox, as the MCP tool inbox answers it, save that
+   it lists only the open threads on the story and its tasks and counts
+   the others, which flai thread list lists.
 
 A story that is not ready, or that the board holds (its claim overlaps a
 story in progress, or it names in after: a story that is not done), is
@@ -44,10 +46,14 @@ refused and nothing changes. The agent is FLAI_AGENT and the session
 FLAI_SESSION; FLAI_AGENT records the move and names whose inbox is read.
 
 The output is the move, the narrative, the branch and its worktree, the
-pack, and then the inbox: the threads awaiting you, the stories ready to
-pull, and what others changed. --json prints one object with the keys story,
-followed, worktree, branch, from, pack, and inbox, as the MCP tool
-story_start answers it.
+pack, and then the inbox: the story's threads awaiting you, how many on
+other items, the stories ready to pull, and what others changed. --json
+prints one object with the keys story, followed, worktree, branch, from,
+pack, and inbox, as the MCP tool story_start answers it, at most 40,000
+bytes of JSON (ADR-0179): pack is part 1 of the pack, or only its header
+when part 1 does not fit, the inbox's oldest changes are left out
+(changes_omitted), and then its threads' last entries are shortened
+(entries_shortened) where the answer needs it.
 
 Exit codes: 0 when the story started, 4 when it was refused and nothing
 changed, 3 when it moved to in-progress and a later step failed (what ran is
@@ -81,6 +87,9 @@ the start could not run.`,
 				return err
 			}
 			if a.jsonOut {
+				if step == nil {
+					res = storystart.Fit(res)
+				}
 				if err := a.printJSON(res); err != nil {
 					return err
 				}
@@ -99,8 +108,9 @@ the start could not run.`,
 
 // printStoryStart prints what a start did: the move, with the epic's when it
 // followed, the narrative and the branch as flai stream open prints them,
-// the pack as flai prime --story prints it, and the inbox; after a failed
-// step, only what the steps before it did.
+// the pack as flai prime --story prints it, and the inbox, with how many
+// threads on other items it leaves out; after a failed step, only what the
+// steps before it did.
 func (a *app) printStoryStart(repo *workitem.Repo, res storystart.Result, step *storystart.StepError) error {
 	w := a.out
 	fmt.Fprintf(w, "%s → %s\n", res.Story.ID, res.Story.Status)
