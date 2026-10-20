@@ -7,7 +7,7 @@ status: backlog
 parent: E-0023
 owner: alex
 created: 2026-10-16T05:15:14Z
-updated: 2026-10-20T18:59:48Z
+updated: 2026-10-20T19:00:58Z
 transitions: []
 tags: [cli, template]
 topics: [agents, cli, template]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 45m
-  delivery: 2026-10-20T21:12:00Z
+  delivery: 2026-10-20T21:15:00Z
   basis: "Its own forecast of 45m; 3rd in the pull order with an in-progress limit of 5, behind S-0241 and S-0406."
   by: flai
-  at: 2026-10-20T18:59:48Z
+  at: 2026-10-20T19:00:58Z
 ---
 # S-0407 flai guard judges an OpenCode agent's calls through a plugin on tool.execute.before, and the opencode adapter states the guard only where the plugin can tell a sub-agent's call
 
