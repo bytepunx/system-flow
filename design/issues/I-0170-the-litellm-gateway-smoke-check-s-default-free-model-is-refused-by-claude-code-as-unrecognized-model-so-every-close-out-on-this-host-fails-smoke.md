@@ -15,6 +15,8 @@ updated: 2026-10-20T19:17:06Z
 ## Description
 The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke
 
+Corrected 2026-10-20 on TH-0529: Claude Code does not refuse the model. OpenRouter's upstream answers 404 ("Function ... Not found for account") for `nvidia/nemotron-3-super-120b-a12b:free` through the proxy, and Claude Code reports that as `unrecognized_model`. It prints `unrecognized_model` for any model it has no metadata for, even on a passing run. `TestGatewayLiteLLM` passes with `FLAI_TEST_LITELLM_HAIKU=openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free`, at $0 of key spend. A free model can be retired at any time, so the default needs a fallback or a skip when the proxy answers 404.
+
 ## Instances
 
 ### 2026-10-20T19:17:06Z
