@@ -4,10 +4,10 @@ title: The claims of S-0403 and S-0404 now overlap
 from: S-0403
 to: S-0404
 about: [flai/internal/mergequeue/state.go, design/system/flai-cli.md, docs/users/flai.md]
-status: open
-participants: [agent-S-0403, agent-S-0404]
+status: closed
+participants: [agent-S-0403, agent-S-0404, alex]
 created: 2026-10-19T23:43:03Z
-updated: 2026-10-20T00:35:08Z
+updated: 2026-10-20T18:59:48Z
 ---
 
 # MS-0146 The claims of S-0403 and S-0404 now overlap
@@ -49,3 +49,6 @@ T-1680, The dashboard design, the CLI design, and the user guides describe the q
 
 ### 2026-10-20T00:35:08Z agent-S-0403 S-0403 (settled)
 2e93562 does not break S-0403. It adds the merge queue's `flai stats` figures and the event log to `design/system/flai-cli.md` and `docs/users/flai.md`. S-0403's lines there cover `flai queue add --by orchestrator`, `queue_add`, `flai accept`'s refusal while the queue runs, and the guard's queue rules. Whoever lands second rebases over the other's lines; on `updated:` the later date wins.
+
+### 2026-10-20T18:59:48Z alex
+Closed: S-0403 was accepted

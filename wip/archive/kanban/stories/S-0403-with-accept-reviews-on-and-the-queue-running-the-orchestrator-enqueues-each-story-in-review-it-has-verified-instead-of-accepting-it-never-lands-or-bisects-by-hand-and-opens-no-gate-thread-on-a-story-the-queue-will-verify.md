@@ -3,11 +3,11 @@ id: S-0403
 type: story
 nature: feature
 title: With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify
-status: review
+status: done
 parent: E-0022
 owner: alex
 created: 2026-10-16T04:58:45Z
-updated: 2026-10-20T04:41:04Z
+updated: 2026-10-20T18:59:48Z
 transitions:
   - to: ready
     at: 2026-10-19T04:53:57Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-20T04:41:04Z
     by: agent-S-0403
+  - to: done
+    at: 2026-10-20T18:59:48Z
+    by: alex
 tags: [cli]
 topics: [orchestration, conventions, template]
 touches: [flai/internal/mcpserver/queue.go, flai/internal/mcpserver/queue_test.go, flai/internal/mcpserver/folder.go, flai/internal/guard/writes.go, flai/internal/guard/orchestrate_test.go, flai/cmd/queue.go, flai/cmd/queue_test.go, flai/cmd/accept.go, flai/cmd/accept_orchestrator_test.go, flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, template/root/.claude/agents/orchestrator.md, ".claude/agents/orchestrator.md", template/template.yaml, template/CHANGELOG.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/users/flai.md, docs/users/flai-reference.md, flai/internal/mergequeue/state.go, flai/internal/mergequeue/state_test.go, flai/internal/guard/call.go, flai/internal/guard/guard.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/server_test.go, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/cmd/guard.go, flai/internal/serve/orchestrate_hold.go, docs/operators/settings.md, design/issues/I-0169-message-share-refuses-a-split-between-two-stories-in-progress-so-an-agreed-split-cannot-lift-the-overlap-that-refuses-the-other-story-s-flai-task-new.md]
