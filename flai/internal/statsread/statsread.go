@@ -4,8 +4,11 @@
 package statsread
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,6 +16,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/metrics"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
@@ -24,14 +28,16 @@ import (
 // project: the strategic agents' activity documents, the threads, the
 // issues, the manifest's projects, the board's in-progress limit and pull
 // order, planning.default_duration, the files each story's commits
-// changed, the conversations between stories, the conflict log, and, under
-// pull-request acceptance only, each story's kept forge events. The caller
-// sets the window and grouping. When git cannot be read, Commits stays nil,
-// which leaves claims.drift out; a conversation that cannot be read is left
-// out; a conflict log that cannot be read sets ConflictsUnreadable, which
-// leaves coordination's conflicts out; and a story's kept forge state that
-// cannot be read is left out. Read logs a warning on log for each; any other
-// read that fails stops it.
+// changed, the conversations between stories, the conflict log, the merge
+// queue's event log, and, under pull-request acceptance only, each story's
+// kept forge events. The caller sets the window and grouping. When git
+// cannot be read, Commits stays nil, which leaves claims.drift out; a
+// conversation that cannot be read is left out; a conflict log that cannot
+// be read sets ConflictsUnreadable, which leaves coordination's conflicts
+// out; a merge queue event log that cannot be read leaves QueueLogged false,
+// as a missing one does, which leaves the queue section out; and a story's
+// kept forge state that cannot be read is left out. Read logs a warning on
+// log for each; any other read that fails stops it.
 func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.Item, metrics.Options, error) {
 	var opt metrics.Options
 	items, err := repo.List(true)
@@ -68,10 +74,29 @@ func Read(r execx.Runner, repo *workitem.Repo, log *slog.Logger) ([]*workitem.It
 			"detail", "coordination's conflicts are left out and coordination.logged is false; correct or remove the line the error names in "+storygit.ConflictsPath(repo.CacheDir()))
 	}
 	opt.Conflicts, opt.ConflictsUnreadable = conflicts, err != nil
+	opt.QueueEvents, opt.QueueLogged = queueEvents(repo.CacheDir(), log)
 	if repo.Manifest.Acceptance.PullRequest() {
 		opt.Forge = forgeEvents(repo.CacheDir(), log)
 	}
 	return items, opt, nil
+}
+
+// queueEvents reads the merge queue's event log under cacheDir, and whether
+// it is there and could be read: a missing log is no warning, and an empty
+// one is a log with no events. A log that cannot be read is warned of on log,
+// so that flai stats never fails on it (S-0404).
+func queueEvents(cacheDir string, log *slog.Logger) ([]mergequeue.Event, bool) {
+	path := mergequeue.EventsPath(cacheDir)
+	if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
+		return nil, false
+	}
+	events, err := mergequeue.ReadEvents(cacheDir)
+	if err != nil {
+		log.Warn("cannot read the merge queue's event log", "component", "stats", "err", err.Error(),
+			"detail", "the queue section is left out; correct or remove the line the error names in "+path)
+		return nil, false
+	}
+	return events, true
 }
 
 // forgeEvents reads the events of every story's kept forge state under

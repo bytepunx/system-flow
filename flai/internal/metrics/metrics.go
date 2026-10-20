@@ -10,6 +10,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/forge"
 	"github.com/bytepunx/system-flow/flai/internal/issues"
 	"github.com/bytepunx/system-flow/flai/internal/manifest"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -62,6 +63,12 @@ type Options struct {
 	// story is in it exactly when it has kept forge state, and nil in local
 	// mode (ADR-0168).
 	Forge map[string][]forge.StatusEvent
+	// QueueEvents are the merge queue's event log's lines, oldest first, and
+	// QueueLogged says the log exists and could be read: false, for a
+	// missing log or one that cannot be read, leaves the queue section out.
+	// Each is read by the caller (S-0404).
+	QueueEvents []mergequeue.Event
+	QueueLogged bool
 }
 
 // ItemMetrics are the per-item derived values.
@@ -112,6 +119,9 @@ type ItemMetrics struct {
 	WaitThreadsOrchestrator *float64 `json:"wait_threads_orchestrator_seconds,omitempty"`
 	// HeldSeconds is the time a story spent held in ready (S-0205).
 	HeldSeconds *float64 `json:"held_seconds,omitempty"`
+	// QueueWait is the sum of its merge queue waits that end in the window,
+	// absent with none (S-0404).
+	QueueWait *float64 `json:"queue_wait_seconds,omitempty"`
 	// Usage is what agents spent on it, when it carries any (S-0143), and
 	// what strategic agents did (ADR-0083).
 	Usage *ItemUsage `json:"usage,omitempty"`
@@ -213,6 +223,10 @@ type Report struct {
 	// Coordination is the conversations between stories, the conflicts
 	// found and met, and the stories started on a share, per week (S-0337).
 	Coordination Coordination `json:"coordination"`
+	// Queue is the merge queue's stories landed and sent back with their
+	// wait, its batches with their size, and its bisections, per week; nil
+	// when its event log is missing or cannot be read (S-0404).
+	Queue *Queue `json:"queue,omitempty"`
 }
 
 // Compute derives every metric from the items.
@@ -247,6 +261,10 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 	waits := threadWaits(all, opt.Threads, opt.Now)
 	pulls := forgeWaits(opt.Forge, opt.Now)
 	replay := replayHolds(items, all, start, opt)
+	var queued map[string]float64
+	if opt.QueueLogged {
+		rep.Queue, queued = mergeQueue(opt.QueueEvents, start, opt.Now)
+	}
 	held := replay.seconds
 	rate := CostPerAgentHour(all)
 	for _, it := range items {
@@ -255,6 +273,7 @@ func Compute(all []*workitem.Item, opt Options) *Report {
 		deriveWaitThreads(&m, it, waits[workitem.CanonicalID(it.ID)], opt.Now)
 		deriveWaitForge(&m, it, pulls, opt.Now)
 		m.HeldSeconds = held[it.ID]
+		deriveQueueWait(&m, queued)
 		perItem[it.ID] = m
 		rep.Items = append(rep.Items, m)
 	}

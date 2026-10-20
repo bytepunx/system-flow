@@ -201,8 +201,24 @@ func TestALandingIsAnAcceptanceByHand(t *testing.T) {
 	if hc != 0 || lc != 0 || json.Unmarshal([]byte(landStats), &figures) != nil || figures.Summary.Completed != 1 {
 		t.Fatalf("flai stats --json: %d %d\n%s", hc, lc, landStats)
 	}
-	if handStats != landStats {
-		t.Errorf("flai stats --json differs:\nby hand %s\nlanded  %s", handStats, landStats)
+	// The landing writes a landed line to the queue's event log (ADR-0177),
+	// so only the landed project reports a queue; the rest is the same.
+	var handFig, landFig map[string]any
+	if json.Unmarshal([]byte(handStats), &handFig) != nil || json.Unmarshal([]byte(landStats), &landFig) != nil {
+		t.Fatalf("flai stats --json:\nby hand %s\nlanded  %s", handStats, landStats)
+	}
+	var queue struct {
+		Weeks []struct {
+			Landed int `json:"landed"`
+		} `json:"weeks"`
+	}
+	raw, _ := json.Marshal(landFig["queue"])
+	if _, ok := handFig["queue"]; ok || json.Unmarshal(raw, &queue) != nil || len(queue.Weeks) == 0 || queue.Weeks[len(queue.Weeks)-1].Landed != 1 {
+		t.Errorf("only the landing reports a queue, with the story landed this week:\nby hand %s\nlanded  %s", handStats, landStats)
+	}
+	delete(landFig, "queue")
+	if h, l := string(mustJSON(t, handFig)), string(mustJSON(t, landFig)); h != l {
+		t.Errorf("flai stats --json differs:\nby hand %s\nlanded  %s", h, l)
 	}
 	assertLanded(t, landed, "alex")
 }

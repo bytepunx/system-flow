@@ -43,7 +43,11 @@ and coordination (by the week, the conversations between stories opened,
 agreed, escalated, and closed with a story; the conflicts a trial merge found
 against those a rebase met at sync or at acceptance, from
 .flai-cache/conflicts.jsonl; and the stories started on a share with the hold
-each saved, ADR-0138).
+each saved, ADR-0138), and queue (by the week, the stories the merge queue
+landed and sent back with their mean and longest queue wait, the batches it
+built with their mean and largest size, and its bisections, from
+.flai-cache/merge-queue/events.jsonl, with each item's queue_wait_seconds,
+ADR-0177; absent without that log).
 What strategic agents spent on items is reported apart from what agents did,
 under usage.strategic and each item's usage.strategic, beside the project's
 usage.cost_per_agent_hour and each item's expected_cost (ADR-0083). Each
@@ -57,7 +61,8 @@ day of it, and per story, from the stories' usage.turns, which flai serve
 measures from its agents' logs (S-0293).
 Touches drift and the exact touches need git; without it flai stats warns and
 leaves them out. A conflict log it cannot read is warned of too, and
-coordination.logged is false and its weeks carry no conflicts.`,
+coordination.logged is false and its weeks carry no conflicts; so is a merge
+queue event log it cannot read, and queue is absent.`,
 		Example: `  flai stats
   flai stats --since 90d --by nature
   flai stats --type task --json
@@ -130,9 +135,57 @@ func printSummary(a *app, rep *metrics.Report, pullRequest bool) {
 	printForecasts(a, rep.Forecasts)
 	printCostOfDelay(a, rep)
 	printWaiting(a, rep.Waiting, pullRequest)
+	printQueueStats(a, rep.Queue)
 	printTurns(a, rep.Turns)
 	printClaims(a, rep)
 	printCoordination(a, rep.Coordination)
+}
+
+// printQueueStats prints, over the window, the stories the merge queue
+// landed and sent back with their longest wait, and the batches it built
+// with their size and its bisections, then each week with any, with its mean
+// wait (S-0404). It prints nothing when the queue's event log is missing or
+// cannot be read, or when it counts nothing in the window.
+func printQueueStats(a *app, q *metrics.Queue) {
+	if q == nil {
+		return
+	}
+	var total metrics.QueueWeek
+	var busy []metrics.QueueWeek
+	var sizes float64
+	for _, w := range q.Weeks {
+		if w == (metrics.QueueWeek{Week: w.Week, Start: w.Start}) {
+			continue
+		}
+		busy = append(busy, w)
+		total.Landed += w.Landed
+		total.SentBack += w.SentBack
+		total.WaitMax = max(total.WaitMax, w.WaitMax)
+		total.Batches += w.Batches
+		sizes += w.BatchSizeMean * float64(w.Batches)
+		total.BatchSizeMax = max(total.BatchSizeMax, w.BatchSizeMax)
+		total.Bisections += w.Bisections
+	}
+	if len(busy) == 0 {
+		return
+	}
+	if total.Batches > 0 {
+		total.BatchSizeMean = sizes / float64(total.Batches)
+	}
+	fmt.Fprintln(a.out, "\nmerge queue:")
+	fmt.Fprintf(a.out, "  %-14s landed %d · sent back %d · longest wait %s\n", "stories", total.Landed, total.SentBack, metrics.Human(float64(total.WaitMax)))
+	fmt.Fprintf(a.out, "  %-14s %s\n", "batches", queueBatchesText(total))
+	fmt.Fprintln(a.out, "  by week:")
+	for _, w := range busy {
+		fmt.Fprintf(a.out, "    %s (%s)  stories landed %d · sent back %d · mean wait %s · longest %s; batches %s\n",
+			w.Week, w.Start, w.Landed, w.SentBack, metrics.Human(w.WaitMean), metrics.Human(float64(w.WaitMax)), queueBatchesText(w))
+	}
+}
+
+// queueBatchesText is how many batches the queue built, their mean and
+// largest size, and its bisections.
+func queueBatchesText(w metrics.QueueWeek) string {
+	return fmt.Sprintf("built %d · mean size %.1f · largest %d · bisections %d", w.Batches, w.BatchSizeMean, w.BatchSizeMax, w.Bisections)
 }
 
 // printCoordination prints, over the window, the conflicts found against

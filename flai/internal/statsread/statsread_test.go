@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/forge"
+	"github.com/bytepunx/system-flow/flai/internal/mergequeue"
 	"github.com/bytepunx/system-flow/flai/internal/messages"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
 	"github.com/bytepunx/system-flow/flai/internal/threads"
@@ -237,6 +238,52 @@ func TestReadWarnsOfAConflictLogItCannotRead(t *testing.T) {
 	warned := false
 	for _, ev := range warnings(t, &logged) {
 		warned = warned || (ev["level"] == "WARN" && ev["component"] == "stats" && ev["err"] != nil && ev["detail"] != nil && strings.Contains(ev["err"].(string), "conflict log"))
+	}
+	if !warned {
+		t.Errorf("no warning of the bad log: %s", logged.String())
+	}
+}
+
+// S-0404: a missing merge queue event log leaves the queue out with no
+// warning; an empty one is a log with no events; one that cannot be read
+// leaves the queue out and is warned of; and a readable one is passed on.
+func TestReadLoadsTheMergeQueuesEventLog(t *testing.T) {
+	repo := project(t)
+	var logged bytes.Buffer
+	_, opt, err := Read(execx.System{}, repo, slog.New(slog.NewJSONHandler(&logged, nil)))
+	if err != nil || opt.QueueLogged || opt.QueueEvents != nil {
+		t.Errorf("a missing log: %v, logged %v, %v", err, opt.QueueLogged, opt.QueueEvents)
+	}
+	for _, ev := range warnings(t, &logged) {
+		if strings.Contains(fmt.Sprint(ev["msg"]), "merge queue") {
+			t.Errorf("a missing log is warned of: %v", ev)
+		}
+	}
+
+	writeFile(t, mergequeue.EventsPath(repo.CacheDir()), "")
+	if _, opt, err = Read(execx.System{}, repo, slog.New(slog.DiscardHandler)); err != nil || !opt.QueueLogged || len(opt.QueueEvents) != 0 {
+		t.Errorf("an empty log: %v, logged %v, %v", err, opt.QueueLogged, opt.QueueEvents)
+	}
+
+	if err := mergequeue.AppendEvents(repo.CacheDir(), []mergequeue.Event{{At: time.Date(2026, 10, 1, 10, 0, 0, 0, time.UTC), Event: mergequeue.EventEnqueued, Stories: []string{"S-0001"}, By: "alex"}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, opt, err = Read(execx.System{}, repo, slog.New(slog.DiscardHandler)); err != nil || !opt.QueueLogged || len(opt.QueueEvents) != 1 || opt.QueueEvents[0].Event != mergequeue.EventEnqueued {
+		t.Errorf("a log of one line: %v, logged %v, %+v", err, opt.QueueLogged, opt.QueueEvents)
+	}
+
+	writeFile(t, mergequeue.EventsPath(repo.CacheDir()), "{not json\n")
+	logged.Reset()
+	_, opt, err = Read(execx.System{}, repo, slog.New(slog.NewJSONHandler(&logged, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opt.QueueLogged || opt.QueueEvents != nil {
+		t.Errorf("a bad log: logged %v, %v", opt.QueueLogged, opt.QueueEvents)
+	}
+	warned := false
+	for _, ev := range warnings(t, &logged) {
+		warned = warned || (ev["level"] == "WARN" && ev["component"] == "stats" && ev["err"] != nil && ev["detail"] != nil && strings.Contains(ev["err"].(string), "merge queue's event log"))
 	}
 	if !warned {
 		t.Errorf("no warning of the bad log: %s", logged.String())
