@@ -2,6 +2,7 @@
 package buildinfo
 
 import (
+	_ "embed"
 	"fmt"
 	"runtime"
 	"runtime/debug"
@@ -24,16 +25,51 @@ var (
 
 // Info is the resolved build metadata.
 type Info struct {
-	Version string `json:"version"`
-	Commit  string `json:"commit"`
-	Date    string `json:"date"`
-	Go      string `json:"go"`
+	Version       string `json:"version"`
+	Commit        string `json:"commit"`
+	Date          string `json:"date"`
+	Go            string `json:"go"`
+	TaskDoneRules int    `json:"task_done_rules"`
+}
+
+// The task-done rules number (ADR-0180): task-done-rules.txt holds one
+// positive integer, raised by one in any change to what flai task done
+// commits, messages, syncs, moves, logs, adds to the touches, or checks. A
+// flai/vX.Y.Z tag records it as that file at the commit it tags, so that
+// flai task done refuses an older flai only when a release raised it.
+//
+//go:embed task-done-rules.txt
+var taskDoneRulesText string
+
+// TaskDoneRulesPath is where the task-done rules number is kept, from the
+// root of the repository that tags flai releases (ADR-0180).
+const TaskDoneRulesPath = "flai/internal/buildinfo/task-done-rules.txt"
+
+// TaskDoneRules is this flai's task-done rules number (ADR-0180).
+var TaskDoneRules = mustTaskDoneRules(taskDoneRulesText)
+
+// ParseTaskDoneRules reads a task-done rules number from the text of
+// task-done-rules.txt: one positive integer, with surrounding space allowed.
+func ParseTaskDoneRules(text string) (int, bool) {
+	n, err := strconv.Atoi(strings.TrimSpace(text))
+	if err != nil || n < 1 {
+		return 0, false
+	}
+	return n, true
+}
+
+func mustTaskDoneRules(text string) int {
+	n, ok := ParseTaskDoneRules(text)
+	if !ok {
+		panic(fmt.Sprintf("buildinfo: %s holds %q, not a positive integer: write the task-done rules number there (ADR-0180)", TaskDoneRulesPath, text))
+	}
+	return n
 }
 
 // Get returns build metadata, filling commit and date from the Go build
 // info when they were not injected by the linker.
 func Get() Info {
-	info := Info{Version: Version, Commit: Commit, Date: Date, Go: runtime.Version()}
+	info := Info{Version: Version, Commit: Commit, Date: Date, Go: runtime.Version(), TaskDoneRules: TaskDoneRules}
 	if bi, ok := debug.ReadBuildInfo(); ok {
 		for _, s := range bi.Settings {
 			switch s.Key {

@@ -9,8 +9,9 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/buildinfo"
 )
 
-// versionReport is flai version --json: the build metadata, and the release
-// stamp and what verifying it found (S-0235).
+// versionReport is flai version --json: the build metadata, its task-done
+// rules number among it (ADR-0180), and the release stamp and what verifying
+// it found (S-0235).
 type versionReport struct {
 	buildinfo.Info
 	Release buildinfo.Stamp `json:"release"`

@@ -34,3 +34,25 @@ func TestBare(t *testing.T) {
 		}
 	}
 }
+
+// The embedded task-done rules number parses and reaches Get (ADR-0180).
+func TestTaskDoneRules(t *testing.T) {
+	if TaskDoneRules < 1 {
+		t.Errorf("TaskDoneRules = %d, want a positive integer from %s", TaskDoneRules, TaskDoneRulesPath)
+	}
+	if got := Get().TaskDoneRules; got != TaskDoneRules {
+		t.Errorf("Get().TaskDoneRules = %d, want %d", got, TaskDoneRules)
+	}
+}
+
+func TestParseTaskDoneRules(t *testing.T) {
+	for _, c := range []struct {
+		text string
+		want int
+	}{{"1\n", 1}, {" 12 ", 12}, {"0", 0}, {"-1", 0}, {"two", 0}, {"", 0}, {"1.5", 0}} {
+		n, ok := ParseTaskDoneRules(c.text)
+		if n != c.want || ok != (c.want > 0) {
+			t.Errorf("ParseTaskDoneRules(%q) = %d, %v, want %d, %v", c.text, n, ok, c.want, c.want > 0)
+		}
+	}
+}
