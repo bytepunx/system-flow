@@ -2585,6 +2585,8 @@ When the main branch moves while a verified batch waits, other than by the batch
 
 The queue keeps an event log, `.flai-cache/merge-queue/events.jsonl` in the main checkout: a line for each story enqueued, landed, sent back, or taken out, and for each batch built, verified, and bisected, which `flai stats` reads ([Flow metrics](#flow-metrics)). A line it cannot append is a warning, and the queue goes on.
 
+The send-back thread quotes what failed in full: the failing tier's findings as `flai verify` prints them, every line, a plain tier's failure lines and the tail of its output among them, up to 8,000 characters, and says where the whole output is (S-0457). Each tier the queue runs writes its whole output to `<tier>.log` in `.flai-cache/merge-queue/batches/<batch id>/` in the main checkout, and each step of a bisection to `step-<n>/` below it; the result in `state.json` names that folder as `log`, and its `findings` hold what the thread quotes. The folders outlive the batch's worktree, and the queue keeps the newest 20 batches' folders, removing older ones as it builds a batch. `flai verify` and `flai test` write no such logs.
+
 ### Whether a release is due
 
 ```bash
