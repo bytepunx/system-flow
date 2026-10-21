@@ -2,12 +2,12 @@
 id: I-0170
 title: The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke
 class: blocker
-status: open
+status: closed
 count: 1
 cost: 15m
 first_reported: 2026-10-20T19:17:06Z
 last_reported: 2026-10-20T19:17:06Z
-updated: 2026-10-21T02:08:41Z
+updated: 2026-10-21T07:50:11Z
 ---
 
 # I-0170 The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke
@@ -26,3 +26,4 @@ S-0451's close-out failed only at smoke, in TestGatewayLiteLLM/unified (flai/int
 ## Remediation
 
 Story S-0456 remediates this issue, created from it at 2026-10-21T02:08:41Z.
+Closed 2026-10-21T07:50:11Z: Fixed by S-0456 on S-0455's probe. TestGatewayLiteLLM no longer rests on one free model: it probes litellmHaikuDefaults (nemotron-3-ultra, minimax-m3.1-flash, nemotron-3.5-lightning, each passed the whole check live at $0 on 2026-10-21) in order and runs on the first the proxy answers, logging each passed over, so an OpenRouter retirement no longer fails smoke. An operator's own slug is probed alone and never replaced. The check fails, naming each slug and its answer, only when the whole list is refused, and never skips. TestLiteLLMPicksTheFirstFreeModelTheProxyAnswers reproduces the retired-first case against a stand-in proxy.
