@@ -1,0 +1,9 @@
+{
+  "examples": [
+    {
+      "name": "The rail at the width the layout docks it",
+      "width": 224,
+      "props": {}
+    }
+  ]
+}
