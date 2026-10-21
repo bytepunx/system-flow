@@ -2206,6 +2206,25 @@ Accepting an epic's last open story accepts the epic too (S-0200, [the workflow]
 
 Acceptance then tells the stories still in progress or in review what it changed under them. For each one whose claim ([Touches](#touches)) covers a path the merge brought into the main branch, shared paths included, it records which paths those are. A story with no touches is told of every path. The command prints `told S-0040 it overlaps: flai/cmd/accept.go`, `--json` lists them in `overlaps`, and the story's agent sees it in its MCP `inbox` as an `overlapped` change. Acceptance from the dashboard does the same.
 
+Acceptance then brings the main checkout's dependencies up to date when the merge changed them (S-0483, [ADR-0185](../../design/adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md)). A story worktree installs its own, but the main checkout keeps the install it has until something runs it again. To have acceptance run it, give the sub-project an `install` in `system-flow.yaml` ([project-manifest.md](../../design/system/project-manifest.md)):
+
+```yaml
+projects:
+  - name: flaiover
+    path: flaiover
+    install:
+      command: ["../scripts/flaiover-install.sh", "--if-needed"]  # argument list, no shell, run in the sub-project's folder
+      paths: ["package.json", "pnpm-lock.yaml"]                   # globs from the sub-project's folder
+```
+
+After the acceptance commit, `flai accept` runs the `command` of each sub-project whose `paths` match a path the merge brought into the main branch, in that sub-project's folder in the main checkout. Each runs once, in the order of `projects`, with its output on standard error. An acceptance that changes none of those paths runs nothing, and `--dry-run` runs none. `flai check` reports an `install` without a `command` or `paths` as `manifest.install`. The merge queue's landing installs the same way, and so does an acceptance resumed at its commit, from the story's committed paths. An install that fails does not undo the acceptance, which is already merged and committed. It prints what to run by hand:
+
+```text
+install for <sub-project> failed: <reason>; run <command> in <folder>
+```
+
+Fix the cause and run that command in that folder. `--json` lists each run in `installs`, with `project`, `command`, `ok`, and `error`.
+
 Acceptance checks what could fail midway before it changes anything: without a git committer identity it refuses and the story stays in review; an experiment story is refused until its results document is committed on its branch, and the refusal names the document to write, `design/experiments/<S-nnnn>-<slug>.md` (ADR-0066). Start it from `design/experiments/template.md`: front matter `title`, `updated`, `status`, and `story`, and the sections Hypothesis, Success measure, What was done, Results, and Recommendation, which says adopt, adapt, or drop; `flai check` validates it. With it, an experiment is accepted like a research story, and publishing gives no component a bump on its account, whatever it touched.
 
 After it rebases the story branch and before it fast-forwards the main branch, acceptance reads every file the branch adds or changes, markdown or not, and refuses, merging nothing, when any carries a merge conflict marker: a line that begins with `<<<<<<<`, `|||||||`, or `>>>>>>>` followed by a space or the line's end, the lines `flai check` reports as `markdown.conflict-marker`. Such a line means a conflict met during a sync was added to git unresolved. The refusal names each one as `path:line`, for example `story/S-0031 carries merge conflict markers at design/system/workflow.md:7, design/system/workflow.md:11`, and the story stays in review with its branch and worktree. Resolve each conflict in the worktree, keeping what both sides meant, remove the markers, commit, and accept again. `flai accept --dry-run`, and the dashboard's Accept dialog that shows it, lists the same markers as a blocker, read by the same check, so you see them before you accept (S-0276).
