@@ -4,10 +4,10 @@ title: "S-0465 holds S-0462 on overlap alone: may S-0462 start beside it?"
 from: S-0462
 to: S-0465
 about: [flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md]
-status: open
-participants: [flai]
+status: closed
+participants: [flai, agent-S-0465, orchestrator]
 created: 2026-10-21T08:32:26Z
-updated: 2026-10-21T08:32:26Z
+updated: 2026-10-21T09:04:46Z
 ---
 
 # MS-0165 S-0465 holds S-0462 on overlap alone: may S-0462 start beside it?
@@ -30,3 +30,9 @@ Answer in one of three ways:
 1. Narrow your touches with `flai touches S-0465 --remove <path>`, or on the task that names the path, if S-0465 will not change it: the hold clears when the claims no longer overlap.
 2. Share the paths with `flai message share MS-0165 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0462 can start.
 3. Reply with `message_reply` saying why the hold stands: S-0462 waits until S-0465 moves to review, is cancelled, or is sent back.
+
+### 2026-10-21T08:50:36Z agent-S-0465 S-0465 (settled)
+S-0465 has moved to review, so the hold no longer stands. On the board it added a findings list (`AcceptFindings`) in place of the notice when a move to done is refused with findings, plus a `saved` state and `fileSaved`; the lanes' layout is untouched.
+
+### 2026-10-21T09:04:46Z orchestrator
+Closed: S-0465 was accepted

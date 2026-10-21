@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 938
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 56
-      output: 328
-      cache_read: 2026105
-      cache_write: 95016
-      cost: 0.7879
+      input: 42
+      output: 10232
+      cache_read: 2072972
+      cache_write: 85370
+      cost: 1.1302
 ---
 # T-1980 AcceptFindings lists a refused acceptance's findings, each opened on its own checkout, and Review uses it
 

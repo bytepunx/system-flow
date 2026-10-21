@@ -4,10 +4,10 @@ title: "S-0408 plan: six tasks in five layers kept; cost of delay input needed, 
 anchor:
   path: wip/kanban/stories/S-0408-an-opencode-agent-s-protected-write-is-asked-of-the-story-s-owner-through-flai-s-hold-and-ask-from-the-plugin-s-permission-asked-or-refused-by-deny-rules-under-auto-as-an-adr-settles.md
   item: S-0408
-status: open
+status: resolved
 participants: [planner-S-0408, orchestrator]
 created: 2026-10-17T02:38:53Z
-updated: 2026-10-20T21:15:29Z
+updated: 2026-10-21T08:33:49Z
 ---
 
 # TH-0490 S-0408 plan: six tasks in five layers kept; cost of delay input needed, recommend penalty 500 USD a week on E-0023
@@ -98,3 +98,11 @@ The cost of delay input is in. You confirmed `penalty_per_week: 500` on E-0023 o
 - **Forecast:** still 50m. flai's own figure is now 45m. Delivery is 2026-10-21T00:23Z.
 
 Nothing is left open on this plan. The thread can be resolved.
+
+### 2026-10-21T08:33:47Z orchestrator
+Approved. The six tasks in five layers stand. The value of 76.92 USD a week is flai's share of the operator's penalty_per_week of 500 on E-0023 (TH-0470), and the 50m forecast is kept. Nothing is left open on this plan.
+
+Source: design/conventions/strategic-agents.md
+
+### 2026-10-21T08:33:49Z orchestrator
+Resolved: The plan for S-0408 is approved; its value comes from the E-0023 input the operator confirmed on TH-0470.

@@ -3,10 +3,10 @@ id: S-0456
 type: story
 nature: remediation
 title: The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T08:13:09Z
+updated: 2026-10-21T08:59:46Z
 transitions:
   - to: ready
     at: 2026-10-21T07:28:20Z
@@ -20,8 +20,11 @@ transitions:
   - to: in-progress
     at: 2026-10-21T08:12:42Z
     by: flai
+  - to: review
+    at: 2026-10-21T08:59:46Z
+    by: agent-S-0456
 tags: [flai, serve, tests]
-touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md]
+touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/I-0178-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-node-modules-without-it-so-every-other-close-out-fails-testeverylistedflaiovercomponentcompilesintheharness.md, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md]
 after: [S-0455]
 agent:
   harness: claude-code
@@ -30,31 +33,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2013
+  seconds: 4842
   priced_by: harness
   turns:
     - day: 2026-10-21
       ceremony: 2
       hand_edits: 3
-      work: 37
+      work: 64
   models:
     - model: claude-opus-5-5
-      input: 160
-      output: 56060
-      cache_read: 9630284
-      cache_write: 363331
-      cost: 5.535
+      input: 216
+      output: 68014
+      cache_read: 16762650
+      cache_write: 395536
+      cost: 7.4584
   strategic:
     - kind: orchestrator
-      seconds: 10610
+      seconds: 10706
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 403
-          output: 7078
-          cache_read: 49018653
-          cache_write: 94104
-          cost: 12.3135
+          input: 413
+          output: 7256
+          cache_read: 50582567
+          cache_write: 97400
+          cost: 12.7064
         - model: claude-sonnet-5-5
           input: 7
           output: 62

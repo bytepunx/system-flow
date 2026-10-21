@@ -24,16 +24,16 @@ touches: [design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-on
 after: [T-1981]
 usage:
   source: log
-  seconds: 5
+  seconds: 8
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 40
-      cache_read: 370660
-      cache_write: 941
-      cost: 0.138
+      input: 7
+      output: 1793
+      cache_read: 363161
+      cache_write: 14956
+      cost: 0.198
 ---
 # T-1982 Close I-0145 with what fixed it
 

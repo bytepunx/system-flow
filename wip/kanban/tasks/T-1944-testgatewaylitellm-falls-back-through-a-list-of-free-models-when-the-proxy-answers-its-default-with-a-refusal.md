@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 49
-      output: 17228
-      cache_read: 2959508
-      cache_write: 111656
-      cost: 1.701
+      input: 38
+      output: 12095
+      cache_read: 2980858
+      cache_write: 70337
+      cost: 1.3263
 ---
 # T-1944 TestGatewayLiteLLM falls back through a list of free models when the proxy answers its default with a refusal
 

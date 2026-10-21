@@ -26,14 +26,14 @@ usage:
   source: log
   seconds: 385
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 118
-      output: 624
-      cache_read: 4781134
-      cache_write: 124160
-      cost: 1.822
+      input: 97
+      output: 23663
+      cache_read: 4793944
+      cache_write: 197425
+      cost: 2.6137
 ---
 # T-1981 The board and the item page list a refused move to done's findings from its data, and filelinks no longer reads the refusal's words
 

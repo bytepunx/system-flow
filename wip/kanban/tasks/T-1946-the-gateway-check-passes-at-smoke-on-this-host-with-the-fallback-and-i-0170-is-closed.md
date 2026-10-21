@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 4156
-      cache_read: 713856
-      cache_write: 26932
-      cost: 0.4103
+      input: 9
+      output: 2917
+      cache_read: 719006
+      cache_write: 16966
+      cost: 0.3199
 ---
 # T-1946 The gateway check passes at smoke on this host with the fallback, and I-0170 is closed
 

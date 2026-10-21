@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 9
-      output: 3302
-      cache_read: 567160
-      cache_write: 21398
-      cost: 0.326
+      input: 7
+      output: 2318
+      cache_read: 571251
+      cache_write: 13479
+      cost: 0.2542
 ---
 # T-1945 The design and the contributors guide say the LiteLLM check falls back through its list of free models
 

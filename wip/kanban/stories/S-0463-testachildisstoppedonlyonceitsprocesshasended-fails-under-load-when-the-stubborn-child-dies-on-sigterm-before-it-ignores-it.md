@@ -3,10 +3,10 @@ id: S-0463
 type: story
 nature: remediation
 title: TestAChildIsStoppedOnlyOnceItsProcessHasEnded fails under load when the stubborn child dies on SIGTERM before it ignores it
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-21T07:19:49Z
-updated: 2026-10-21T08:19:31Z
+updated: 2026-10-21T08:57:51Z
 transitions:
   - to: ready
     at: 2026-10-21T07:33:31Z
@@ -20,8 +20,11 @@ transitions:
   - to: in-progress
     at: 2026-10-21T08:19:09Z
     by: flai
+  - to: review
+    at: 2026-10-21T08:57:51Z
+    by: agent-S-0463
 tags: [flai, tests, issues]
-touches: [flai/internal/host/host_test.go, design/issues/I-0173-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md, design/issues/summary.md, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md]
+touches: [flai/internal/host/host_test.go, design/issues/I-0173-testachildisstoppedonlyonceitsprocesshasended-fails-under-load-when-the-stubborn-child-dies-on-sigterm-before-it-ignores-it.md, design/issues/summary.md, design/issues/I-0175-a-story-s-in-progress-transition-from-flai-story-start-was-lost-when-a-concurrent-write-rewrote-the-item-file-leaving-it-ready-while-its-agent-worked-it.md, design/issues/I-0158-testasettledreplystartstheagentwaitingonitonce-in-flai-internal-serve-fails-now-and-then-in-the-close-out-s-integration-tier-on-a-branch-that-does-not-touch-serve.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/I-0179-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -29,21 +32,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2149
+  seconds: 4306
   priced_by: harness
   turns:
     - day: 2026-10-21
-      ceremony: 1
+      ceremony: 2
       test_runs: 4
       hand_edits: 2
-      work: 40
+      work: 69
   models:
     - model: claude-opus-5-5
-      input: 96
-      output: 22154
-      cache_read: 6571094
-      cache_write: 172223
-      cost: 3.1355
+      input: 160
+      output: 35847
+      cache_read: 13176350
+      cache_write: 209561
+      cost: 5.0293
   strategic:
     - kind: planner
       seconds: 62
@@ -56,15 +59,15 @@ usage:
           cache_write: 80352
           cost: 2.5393
     - kind: orchestrator
-      seconds: 867
+      seconds: 1928
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 93
-          output: 1462
-          cache_read: 14173933
-          cache_write: 56071
-          cost: 3.5675
+          input: 183
+          output: 2955
+          cache_read: 27294059
+          cache_write: 81054
+          cost: 6.8631
         - model: claude-sonnet-5-5
           input: 8
           output: 69

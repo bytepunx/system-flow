@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 5
   review: 5
 order:
-  - S-0459
   - S-0461
   - S-0462
   - S-0460

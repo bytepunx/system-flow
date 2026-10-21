@@ -3,10 +3,10 @@ id: S-0465
 type: story
 nature: improvement
 title: flai move to done refuses unfixed lint as text only, so the dashboard picks each file's checkout from the refusal's words
-status: in-progress
+status: done
 owner: alex
 created: 2026-10-21T07:24:59Z
-updated: 2026-10-21T08:27:05Z
+updated: 2026-10-21T09:04:46Z
 transitions:
   - to: ready
     at: 2026-10-21T07:38:29Z
@@ -14,6 +14,12 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:38:37Z
     by: agent-S-0465
+  - to: review
+    at: 2026-10-21T08:50:31Z
+    by: agent-S-0465
+  - to: done
+    at: 2026-10-21T09:04:46Z
+    by: orchestrator
 tags: [flai, flaiover]
 topics: [cli, dashboard]
 touches: [flai/cmd/move.go, flai/cmd/move_refused_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, docs/users/flai.md, design/system/flai-cli.md, flaiover/src/lib/components/AcceptFindings.svelte, flaiover/src/lib/components/AcceptFindings.svelte.test.ts, design/components/flaiover/src/lib/components/AcceptFindings.examples.json, flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, "flaiover/src/routes/items/[id]/+page.svelte", "flaiover/src/routes/items/[id]/item.svelte.test.ts", "flaiover/src/routes/api/items/[id]/move/+server.ts", flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md, design/issues/summary.md, docs/users/flai-reference.md]
@@ -24,32 +30,37 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1806
-  estimated: true
-  priced_by: estimate
+  seconds: 4331
+  priced_by: harness
   turns:
     - day: 2026-10-21
-      ceremony: 2
-      hand_edits: 1
-      work: 25
+      ceremony: 4
+      hand_edits: 2
+      work: 45
   models:
     - model: claude-opus-5-5
-      input: 276
-      output: 1599
-      cache_read: 11132133
-      cache_write: 625492
-      cost: 4.3672
+      input: 330
+      output: 80749
+      cache_read: 16358812
+      cache_write: 673693
+      cost: 8.9191
   strategic:
     - kind: orchestrator
-      seconds: 80
+      seconds: 483
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 319
-          cache_read: 1136833
-          cache_write: 14052
-          cost: 0.2886
+          input: 42
+          output: 575
+          cache_read: 4155665
+          cache_write: 23265
+          cost: 1.0477
+        - model: claude-sonnet-5-5
+          input: 10
+          output: 52
+          cache_read: 115647
+          cache_write: 44110
+          cost: 0.1308
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 9m
@@ -75,7 +86,7 @@ finalized:
 This story remediates [I-0145](../../../design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md), "flai move to done refuses unfixed lint as text only, so the dashboard picks each file's checkout from the refusal's words". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0145 describes no longer occurs, with a test that reproduces it where one fits
+- [x] The cause I-0145 describes no longer occurs, with a test that reproduces it where one fits
 - [x] I-0145 is closed with `flai issue close I-0145 --reason` saying what fixed it
 
 ## Tasks
@@ -114,3 +125,14 @@ The story declared no touches. No folder touch was kept: every file is named.
 Forecast: flai gave 36m (size 24, 89 s a unit). Raised to 1h. The change spans two components, moves a component out with its examples, and runs the Go and flaiover tiers. S-0378, which built this refusal for the review page, took 7163 s. Delivery is flai's, moved by the extra 24m.
 
 Cost of delay: 22.50 USD a week, as `flai cod` gives it from flai's input of 9m lost a cycle at 150 USD an hour. It stands. The issue has one instance, and the only loss is a file opened on the wrong checkout after a wording change.
+
+### Accepted by the orchestrator
+
+- Verified: b41df5464e287a6e010a7e03251c9de72e9c731a
+- Batch: 20261021-085133
+- Enqueued verified: b41df5464e287a6e010a7e03251c9de72e9c731a
+- At: 2026-10-21T09:04:46Z
+
+Verdict: S-0465 meets both acceptance criteria at b41df546; flai verify passed every step there.
+- 1: flai/cmd/move.go, flai/cmd/move_refused_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flaiover/src/lib/components/AcceptFindings.svelte, flaiover/src/lib/components/AcceptFindings.svelte.test.ts, flaiover/src/lib/components/Review.svelte, flaiover/src/routes/board/+page.svelte, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/items/[id]/+page.svelte, flaiover/src/routes/items/[id]/item.svelte.test.ts, flaiover/src/routes/api/items/[id]/move/+server.ts, flaiover/src/lib/filelinks.ts, flaiover/src/lib/filelinks.test.ts
+- 2: design/issues/I-0145-flai-move-to-done-refuses-unfixed-lint-as-text-only-so-the-dashboard-picks-each-file-s-checkout-from-the-refusal-s-words.md, design/issues/summary.md

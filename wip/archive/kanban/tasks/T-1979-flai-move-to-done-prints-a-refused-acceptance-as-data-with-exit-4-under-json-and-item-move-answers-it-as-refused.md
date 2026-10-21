@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 925
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 72
-      output: 408
-      cache_read: 2585274
-      cache_write: 277951
-      cost: 1.0635
+      input: 56
+      output: 13812
+      cache_read: 2798229
+      cache_write: 115237
+      cost: 1.5256
 ---
 # T-1979 flai move to done prints a refused acceptance as data with exit 4 under --json, and item.move answers it as Refused
 

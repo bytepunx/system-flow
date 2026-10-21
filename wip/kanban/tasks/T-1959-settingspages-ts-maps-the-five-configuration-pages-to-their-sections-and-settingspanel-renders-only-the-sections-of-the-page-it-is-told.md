@@ -3,15 +3,36 @@ id: T-1959
 type: task
 nature: improvement
 title: settingspages.ts maps the five Configuration pages to their sections, and SettingsPanel renders only the sections of the page it is told
-status: backlog
+status: done
 parent: S-0459
 owner: alex
 created: 2026-10-21T07:03:04Z
-updated: 2026-10-21T07:03:04Z
-transitions: []
+updated: 2026-10-21T09:04:18Z
+transitions:
+  - to: ready
+    at: 2026-10-21T08:51:42Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-21T08:51:43Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T09:04:18Z
+    by: agent-S-0459
 stream: S-0459
 tags: [dashboard]
 touches: [flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts]
+usage:
+  source: log
+  seconds: 755
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 96
+      output: 478
+      cache_read: 5135011
+      cache_write: 167145
+      cost: 1.9767
 ---
 # T-1959 settingspages.ts maps the five Configuration pages to their sections, and SettingsPanel renders only the sections of the page it is told
 

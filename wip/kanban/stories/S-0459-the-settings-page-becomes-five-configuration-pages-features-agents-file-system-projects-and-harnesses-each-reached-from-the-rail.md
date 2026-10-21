@@ -3,15 +3,18 @@ id: S-0459
 type: story
 nature: improvement
 title: The settings page becomes five Configuration pages, Features, Agents, File System, Projects, and Harnesses, each reached from the rail
-status: ready
+status: in-progress
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:57Z
-updated: 2026-10-21T08:32:26Z
+updated: 2026-10-21T08:50:47Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:25Z
     by: alex
+  - to: in-progress
+    at: 2026-10-21T08:50:47Z
+    by: agent-S-0459
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/settings/+page.svelte, flaiover/src/routes/settings/+page.ts, "flaiover/src/routes/settings/[page]/+page.svelte", "flaiover/src/routes/settings/[page]/+page.ts", flaiover/src/routes/settings/settings.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/operators/settings.md]
@@ -22,9 +25,22 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 813
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      ceremony: 2
+      hand_edits: 1
+      work: 12
+  models:
+    - model: claude-opus-5-5
+      input: 114
+      output: 584
+      cache_read: 5871124
+      cache_write: 276434
+      cost: 2.2919
   strategic:
     - kind: orchestrator
       seconds: 102
