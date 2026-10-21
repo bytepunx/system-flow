@@ -4,6 +4,7 @@
 	// as the designer with each step shown, or send back with a reason.
 	import UnreleasedList from './UnreleasedList.svelte';
 	import WorktreeUncommitted, { otherBlockers } from './WorktreeUncommitted.svelte';
+	import AcceptFindings, { findingsOf, unsavedFiles, type Finding } from './AcceptFindings.svelte';
 	import { api } from '$lib/api';
 	import { resolve } from '$app/paths';
 	import {
@@ -28,8 +29,7 @@
 	import { render, enhance } from '$lib/markdown';
 	import { localTime } from '$lib/localtime';
 	import { themeState } from '$lib/theme.svelte';
-	import { editable, editLabel, fileRef, linkSegments, type LinkSegment } from '$lib/filelinks';
-	import { openEditor } from '$lib/editor.svelte';
+	import { linkSegments, type LinkSegment } from '$lib/filelinks';
 	import { changedComponents, componentFile, diffPaths } from '$lib/explorer/changed';
 	import type { Component, ComponentsCatalogue } from '$lib/server/repo';
 	import { tick } from 'svelte';
@@ -88,20 +88,6 @@
 		patch: string;
 	};
 	type Progress = { step: string; msg: string };
-	/** A finding of the lint the fix left, as flai's refusal of the acceptance gives it (ADR-0140). */
-	type Finding = {
-		tier: string;
-		/** main, or story: the story's branch holds the file, and story names it. */
-		checkout: string;
-		story?: string;
-		path: string;
-		line?: number;
-		column?: number;
-		level?: string;
-		rule?: string;
-		alias?: string;
-		message: string;
-	};
 	type CheckStep = {
 		name: string;
 		command?: string;
@@ -142,7 +128,7 @@
 	let result = $state<{ tags?: string[]; by?: string; verified?: string } | null>(null);
 	let failure = $state<string | null>(null);
 	// A refusal for lint the fix left (S-0378): each finding, and the files saved in the editor since,
-	// by fileKey. Accept is on again once each file the editor can open has been saved.
+	// by AcceptFindings' key. Accept is on again once each file the editor can open has been saved.
 	let findings = $state<Finding[]>([]);
 	let saved = $state<string[]>([]);
 
@@ -217,16 +203,9 @@
 	const inReview = $derived(item?.status === 'review');
 	const needsChoice = $derived(!!preview?.uncommitted?.length && !include);
 	const chosen = $derived(issues.filter((r) => r.checked));
-	// A main-checkout finding is saved without a story; a story's on its branch.
-	const storyOf = (f: Finding) => (f.checkout === 'story' ? f.story : undefined);
-	const fileKey = (f: Finding) => `${storyOf(f) ?? ''}:${f.path}`;
-	// The editor opens a markdown file under the layout's folders that flai lets it edit.
-	const opens = (f: Finding) => !!fileRef(f.path) && editable(f.path);
 	// Another refusal's text, each file it names opening the editor on the story's branch.
 	const refusal = $derived(failure ? linkSegments(failure, { story: id }) : []);
-	const unsaved = $derived(
-		[...new Set(findings.filter(opens).map(fileKey))].filter((k) => !saved.includes(k))
-	);
+	const unsaved = $derived(unsavedFiles(findings, saved));
 	// an undone path neither kept nor yet restored holds Accept; its blocker is left to the card
 	const unresolved = $derived(undone.filter((u) => !kept[u.path]));
 	// The forge blockers are listed by kind, so the general list leaves out their messages.
@@ -290,26 +269,13 @@
 	const branchFile = (path: string) =>
 		((diff?.files ?? []) as DiffFile[]).find((f) => f.path === path);
 
-	function findingsOf(data: unknown): Finding[] {
-		const list = (data as { findings?: unknown } | undefined)?.findings;
-		return Array.isArray(list) ? (list as Finding[]) : [];
-	}
-
 	function undoneOf(data: unknown): Undone[] {
 		const list = (data as { undoes_main?: unknown } | undefined)?.undoes_main;
 		return Array.isArray(list) ? (list as Undone[]) : [];
 	}
 
-	function openFinding(f: Finding) {
-		const key = fileKey(f);
-		openEditor({
-			path: f.path,
-			line: f.line,
-			story: storyOf(f),
-			onsaved: () => {
-				if (!saved.includes(key)) saved = [...saved, key];
-			}
-		});
+	function fileSaved(key: string) {
+		if (!saved.includes(key)) saved = [...saved, key];
 	}
 
 	async function get<T>(path: string): Promise<T> {
@@ -1251,38 +1217,7 @@
 				<p class="mt-2 rounded border border-warn bg-warn-soft p-2 text-warn">{w}</p>
 			{/each}
 			{#if failure && findings.length}
-				<div
-					class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger"
-					role="alert"
-					data-testid="accept-findings"
-				>
-					<p class="font-medium">Not accepted. {item.id} is {item.status}.</p>
-					<p>The fix left lint in this markdown: correct each file at its line and save it.</p>
-					<p>Accept is on again once each file is saved.</p>
-					<ul class="mt-1 space-y-1 font-mono text-xs">
-						{#each findings as f, i (i)}
-							{@const where = f.line ? `${f.path}:${f.line}` : f.path}
-							<li data-testid="accept-finding">
-								{#if opens(f)}
-									<button
-										type="button"
-										class="cursor-pointer underline"
-										aria-label={editLabel({ path: f.path, line: f.line })}
-										onclick={() => openFinding(f)}>{where}</button
-									>
-								{:else}
-									<span class="font-medium">{where}</span>
-								{/if}
-								{#if storyOf(f)}<span class="text-muted">on {storyOf(f)}'s branch</span>{/if}
-								{#if f.rule}<span>{f.alias ? `${f.rule}/${f.alias}` : f.rule}</span>{/if}
-								<span class="whitespace-pre-wrap">{f.message}</span>
-								{#if saved.includes(fileKey(f))}
-									<span class="text-good" data-testid="finding-saved">saved</span>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				</div>
+				<AcceptFindings id={item.id} status={item.status} {findings} {saved} onsaved={fileSaved} />
 			{:else if failure}
 				<div class="mt-3 rounded border border-danger bg-danger-soft p-2 text-danger" role="alert">
 					<p class="font-medium">Not accepted. {item.id} is {item.status}. flai said:</p>

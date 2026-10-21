@@ -1,0 +1,45 @@
+{
+  "examples": [
+    {
+      "name": "A finding on the story's branch, its file saved",
+      "props": {
+        "id": "S-0465",
+        "status": "review",
+        "findings": [
+          {
+            "tier": "markdown",
+            "checkout": "story",
+            "story": "S-0465",
+            "path": "docs/users/flaiover.md",
+            "line": 12,
+            "column": 81,
+            "level": "error",
+            "rule": "MD009",
+            "alias": "no-trailing-spaces",
+            "message": "Trailing spaces [Expected: 0 or 2; Actual: 1]"
+          }
+        ],
+        "saved": ["S-0465:docs/users/flaiover.md"]
+      }
+    },
+    {
+      "name": "A finding in the main checkout",
+      "props": {
+        "id": "S-0465",
+        "status": "review",
+        "findings": [
+          {
+            "tier": "markdown",
+            "checkout": "main",
+            "path": "design/issues/summary.md",
+            "line": 3,
+            "level": "error",
+            "rule": "MD012",
+            "alias": "no-multiple-blanks",
+            "message": "Multiple consecutive blank lines [Expected: 1; Actual: 2]"
+          }
+        ]
+      }
+    }
+  ]
+}
