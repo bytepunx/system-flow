@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
 import SettingsPanel from './SettingsPanel.svelte';
 import type { PlanningTriggers, SettingsView } from '$lib/settings';
+import { SETTINGS_PAGES, type SettingsPageSlug } from '$lib/settingspages';
 
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
@@ -81,53 +82,97 @@ describe('SettingsPanel (S-0105)', () => {
 		api.mockReset();
 		document.body.innerHTML = '';
 	});
-	const show = async () => {
-		c = mount(SettingsPanel, { target: document.body });
+	/** Shows the panel on one Configuration page, in place of any shown before. */
+	const show = async (page: SettingsPageSlug) => {
+		if (c) unmount(c);
+		document.body.innerHTML = '';
+		c = mount(SettingsPanel, { target: document.body, props: { page } });
 		await settle();
 	};
+	/** Every section of every page flai can say: the shared paths and planning included. */
+	const full = () => {
+		const v = view(false, false);
+		v.host!.shared = [];
+		v.host!.planning = { plan: false, replan: 'deterministic', replan_set: false, schedule: '' };
+		return v;
+	};
+
+	describe.each(SETTINGS_PAGES.map((p) => [p.slug, p] as const))('on %s (S-0459)', (slug, page) => {
+		it('shows exactly its own sections, in its order, and no anchors', async () => {
+			backend(full());
+			await show(slug);
+			const shown = [...document.querySelectorAll('[data-testid^="section-"]')].map((s) =>
+				s.getAttribute('data-testid')
+			);
+			expect(shown).toEqual(page.sections.map((s) => `section-${s}`));
+			expect(document.querySelectorAll('section[id]')).toHaveLength(0);
+		});
+
+		it('says settings are read-only, with the command, and gates its sections while settings is off', async () => {
+			backend(full());
+			await show(slug);
+			expect(q('settings-state')!.textContent).toContain('Settings are read-only');
+			expect(q('settings-state')!.textContent).toContain('flai serve enable settings');
+			const gate = q('gate');
+			expect(gate, 'a gate on the page').not.toBeNull();
+			expect(gate!.textContent).toContain('flai serve enable settings');
+		});
+
+		it('says what is changed here and what needs settings on everywhere, while it is on here', async () => {
+			backend(view(true, false));
+			await show(slug);
+			expect(q('settings-state')!.textContent).toContain("This project's settings can be changed");
+			expect(q('settings-state')!.textContent).toContain(
+				'flai serve enable settings --all-projects'
+			);
+		});
+
+		it('says when flai on the host keeps no settings, or fails to answer', async () => {
+			backend({ ...view(false, false), host: undefined });
+			await show(slug);
+			expect(document.body.textContent).toContain(
+				'flai on the host keeps no settings for this project.'
+			);
+			expect(q('settings')).toBeNull();
+			api.mockImplementation(async () => answer(500, { error: 'flai: no project here' }));
+			await show(slug);
+			expect(document.querySelector('[role="alert"]')!.textContent).toContain(
+				'flai: no project here'
+			);
+			expect(q('settings')).toBeNull();
+		});
+	});
 
 	it('shows everything read-only, with the command that allows changing it, while settings is off', async () => {
 		backend(view(false, false));
-		await show();
+		await show('features');
 		expect(q('settings-state')!.textContent).toContain('flai serve enable settings');
 		expect(q<HTMLInputElement>('action-push')!.disabled).toBe(true);
+		expect(q('section-checks')!.textContent).toContain("the manifest's are used (unit)");
+		await show('agents');
 		expect(q<HTMLButtonElement>('save-default-agent')!.disabled).toBe(true);
+		await show('harnesses');
 		expect(q<HTMLButtonElement>('save-agent')!.disabled).toBe(true);
 		expect(q<HTMLTextAreaElement>('agent-command')!.value).toBe('run-agent\n{story}');
-		expect(q('section-checks')!.textContent).toContain("the manifest's are used (unit)");
+		await show('file-system');
 		expect(q('section-import')!.textContent).toContain('/home/me/git');
+		await show('projects');
 		expect(q('section-tokens')!.textContent).toContain('http://127.0.0.1:4243/mcp');
-	});
-
-	it('gives the first section of each of the nav rail’s Configuration pages its anchor (S-0458)', async () => {
-		const v = view(false, false);
-		v.host!.shared = [];
-		backend(v);
-		await show();
-		const anchored = {
-			features: 'section-actions',
-			agents: 'section-default-agent',
-			'file-system': 'section-shared',
-			projects: 'section-projects',
-			harnesses: 'section-agent'
-		};
-		for (const [id, section] of Object.entries(anchored)) {
-			expect(q(section)).not.toBeNull();
-			expect(document.getElementById(id)).toBe(q(section));
-		}
 	});
 
 	it('changes this project’s own settings when settings is on here, and not the host-wide ones', async () => {
 		const sent = backend(view(true, false));
-		await show();
-		expect(q<HTMLInputElement>('action-settings')!.disabled).toBe(true);
+		await show('harnesses');
 		expect(q<HTMLButtonElement>('save-agent')!.disabled).toBe(true);
 		expect(q('section-agent')!.textContent).toContain('flai serve enable settings --all-projects');
+		await show('features');
+		expect(q<HTMLInputElement>('action-settings')!.disabled).toBe(true);
 		const push = q<HTMLInputElement>('action-push')!;
 		push.checked = true;
 		push.dispatchEvent(new Event('change', { bubbles: true }));
 		await settle();
 		expect(sent[0]).toEqual({ kind: 'action', action: 'push', on: true });
+		await show('agents');
 		q<HTMLInputElement>('agent-model')!.value = 'claude-sonnet-5';
 		q<HTMLInputElement>('agent-model')!.dispatchEvent(new Event('input', { bubbles: true }));
 		q<HTMLButtonElement>('save-default-agent')!.click();
@@ -144,7 +189,7 @@ describe('SettingsPanel (S-0105)', () => {
 			import: [400, { error: '"relative" is not an absolute, clean path' }],
 			dashboard_token: [200, { login_url: 'http://x/login#token=abc' }]
 		});
-		await show();
+		await show('harnesses');
 		const cmd = q<HTMLTextAreaElement>('agent-command')!;
 		cmd.value = 'claude\n-p\nwork on {story}; echo $HOME\n';
 		cmd.dispatchEvent(new Event('input', { bubbles: true }));
@@ -175,6 +220,7 @@ describe('SettingsPanel (S-0105)', () => {
 			deny_protected: false
 		});
 
+		await show('features');
 		q<HTMLInputElement>('new-check-name')!.value = 'unit';
 		q<HTMLInputElement>('new-check-name')!.dispatchEvent(new Event('input', { bubbles: true }));
 		q<HTMLTextAreaElement>('new-check-command')!.value = 'go\ntest\n./...';
@@ -186,6 +232,7 @@ describe('SettingsPanel (S-0105)', () => {
 		await settle();
 		expect(sent[2]).toEqual({ kind: 'check', name: 'unit', command: ['go', 'test', './...'] });
 
+		await show('file-system');
 		q<HTMLInputElement>('new-folder')!.value = 'relative';
 		q<HTMLInputElement>('new-folder')!.dispatchEvent(new Event('input', { bubbles: true }));
 		await settle();
@@ -195,6 +242,7 @@ describe('SettingsPanel (S-0105)', () => {
 		expect(q('said-import')!.textContent).toContain('is not an absolute, clean path');
 		expect(q<HTMLInputElement>('new-folder')!.value).toBe('relative');
 
+		await show('projects');
 		q<HTMLButtonElement>('rotate-dashboard')!.click();
 		await settle();
 		expect(q('once-dashboard')!.textContent).toContain('http://x/login#token=abc');
@@ -231,7 +279,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('shows each harness’s guard and deny_protected, with what each gives up', async () => {
 			backend(lifted());
-			await show();
+			await show('harnesses');
 			expect(within<HTMLSelectElement>('harness-claude-code', 'harness-guard').value).toBe('');
 			const ccDeny = within<HTMLInputElement>('harness-claude-code', 'harness-deny-protected');
 			expect(ccDeny.checked).toBe(false);
@@ -264,7 +312,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('saves the command’s guard and deny_protected alone, and a harness’s beside its program', async () => {
 			const sent = backend(lifted());
-			await show();
+			await show('harnesses');
 			const guard = within<HTMLSelectElement>('harness-command', 'harness-guard');
 			guard.value = '';
 			guard.dispatchEvent(new Event('change', { bubbles: true }));
@@ -364,7 +412,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('lists each served project with its health, and the ones not served with why', async () => {
 			backend(projects());
-			await show();
+			await show('projects');
 			expect(q('served-sf')!.textContent).toContain('/home/me/git/sf');
 			expect(q('served-sf')!.textContent).toContain('connected since 2026-09-26 02:00 EDT');
 			expect(q('served-blog')!.textContent).toContain('not connected: dial: connection refused');
@@ -404,7 +452,7 @@ describe('SettingsPanel (S-0105)', () => {
 		it('removes a project only once it is confirmed, and says how to add it back', async () => {
 			const sent = backend(projects());
 			const refresh = vi.spyOn(switcher, 'refresh');
-			await show();
+			await show('projects');
 			q('served-sf')!.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!.click();
 			flushSync();
 			expect(q('confirm-remove')!.textContent).toContain('None of its files is touched');
@@ -432,7 +480,7 @@ describe('SettingsPanel (S-0105)', () => {
 			const refresh = vi.spyOn(switcher, 'refresh').mockImplementation(async () => {
 				if (++asked === 2) switcher.list = [];
 			});
-			await show();
+			await show('projects');
 			q('served-notes')!
 				.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!
 				.click();
@@ -462,7 +510,7 @@ describe('SettingsPanel (S-0105)', () => {
 			const refresh = vi.spyOn(switcher, 'refresh').mockImplementation(async () => {
 				switcher.list = [{ key: 'diary', name: 'Diary', connected: true }];
 			});
-			await show();
+			await show('projects');
 			q('unserved-diary')!
 				.querySelector<HTMLButtonElement>('[data-testid="serve-project"]')!
 				.click();
@@ -482,7 +530,7 @@ describe('SettingsPanel (S-0105)', () => {
 			const refresh = vi.spyOn(switcher, 'refresh').mockImplementation(async () => {
 				if (++asked === 2) switcher.list = [{ key: 'shop', name: 'Shop', connected: true }];
 			});
-			await show();
+			await show('projects');
 			q('unserved-shop')!
 				.querySelector<HTMLButtonElement>('[data-testid="serve-project"]')!
 				.click();
@@ -501,7 +549,7 @@ describe('SettingsPanel (S-0105)', () => {
 			backend(projects(), {
 				unserve: [403, { error: 'the host action "settings" is not enabled for /home/me/git/sf' }]
 			});
-			await show();
+			await show('projects');
 			q('served-sf')!.querySelector<HTMLButtonElement>('[data-testid="remove-project"]')!.click();
 			flushSync();
 			q<HTMLButtonElement>('confirm-remove-yes')!.click();
@@ -553,7 +601,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('shows each provider and whether its key’s variable is set, read-only until settings is on everywhere', async () => {
 			const sent = backend(providers(true, false));
-			await show();
+			await show('agents');
 			const litellm = box('litellm');
 			expect(field<HTMLSelectElement>(litellm, 'provider-api').value).toBe('anthropic-messages');
 			const apis = field<HTMLSelectElement>(litellm, 'provider-api').options;
@@ -585,13 +633,13 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('says when there are none', async () => {
 			backend(view(true, true));
-			await show();
+			await show('agents');
 			expect(q('providers-none')!.textContent).toContain('None');
 		});
 
 		it('saves a provider’s fields, its models one alias=name a line', async () => {
 			const sent = backend(providers(true, true));
-			await show();
+			await show('agents');
 			const litellm = box('litellm');
 			expect(q('section-providers')!.querySelector('[data-testid="gate"]')).toBeNull();
 			type(field<HTMLSelectElement>(litellm, 'provider-api'), 'openai-chat');
@@ -614,7 +662,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('sends no models when they are emptied, and says a line that is not alias=name without sending it', async () => {
 			const sent = backend(providers(true, true));
-			await show();
+			await show('agents');
 			const litellm = box('litellm');
 			type(field<HTMLTextAreaElement>(litellm, 'provider-models'), 'opus');
 			field<HTMLButtonElement>(litellm, 'save-provider').click();
@@ -639,7 +687,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('removes a provider whole', async () => {
 			const sent = backend(providers(true, true));
-			await show();
+			await show('agents');
 			field<HTMLButtonElement>(box('openrouter'), 'reset-provider').click();
 			await settle();
 			expect(sent).toEqual([{ kind: 'provider', name: 'openrouter', reset: true }]);
@@ -655,7 +703,7 @@ describe('SettingsPanel (S-0105)', () => {
 					}
 				]
 			});
-			await show();
+			await show('agents');
 			const add = q('new-provider')!;
 			type(q<HTMLInputElement>('new-provider-name')!, 'groq');
 			type(field<HTMLInputElement>(add, 'provider-base-url'), 'https://api.groq.com/openai/v1');
@@ -689,7 +737,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('shows the default agent’s provider and sends the one typed', async () => {
 			const sent = backend(providers(true, false));
-			await show();
+			await show('agents');
 			const provider = q<HTMLInputElement>('agent-provider')!;
 			expect(provider.value).toBe('litellm');
 			type(provider, ' openrouter ');
@@ -721,7 +769,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('lists the patterns read-only while settings is off, with no add field or remove button', async () => {
 			backend(shared(false));
-			await show();
+			await show('file-system');
 			expect(q('shared-docs/users/*.md')!.textContent).toContain('docs/users/*.md');
 			expect(q('shared-design/adrs')!.textContent).toContain('design/adrs');
 			expect(removeOf('design/adrs')).toBeNull();
@@ -739,13 +787,10 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('says when there are none, and leaves the section out when flai does not say', async () => {
 			backend(shared(true, []));
-			await show();
+			await show('file-system');
 			expect(q('shared-none')!.textContent).toContain('None');
-			unmount(c!);
-			c = undefined;
-			document.body.innerHTML = '';
 			backend(view(true, false));
-			await show();
+			await show('file-system');
 			expect(q('section-shared')).toBeNull();
 		});
 
@@ -753,7 +798,7 @@ describe('SettingsPanel (S-0105)', () => {
 			const sent = backend(shared(true), {
 				shared: [200, { added: ['flai/cmd/**/*.go'], shared: [], warnings: [] }]
 			});
-			await show();
+			await show('file-system');
 			expect(q('section-shared')!.textContent!.replace(/\s+/g, ' ')).toContain(
 				'* within a folder, ** across folders, and a plain path covers everything under it'
 			);
@@ -769,7 +814,7 @@ describe('SettingsPanel (S-0105)', () => {
 			const sent = backend(shared(true), {
 				shared: [200, { removed: ['design/adrs'], shared: ['docs/users/*.md'], warnings: [] }]
 			});
-			await show();
+			await show('file-system');
 			expect(removeOf('design/adrs')!.getAttribute('aria-label')).toBe('Remove design/adrs');
 			removeOf('design/adrs')!.click();
 			await settle();
@@ -787,7 +832,7 @@ describe('SettingsPanel (S-0105)', () => {
 					}
 				]
 			});
-			await show();
+			await show('file-system');
 			type('new-shared', 'design/adrs');
 			q<HTMLButtonElement>('add-shared')!.click();
 			await settle();
@@ -816,7 +861,7 @@ describe('SettingsPanel (S-0105)', () => {
 					}
 				]
 			});
-			await show();
+			await show('file-system');
 			type('shared-check-text', ' docs/users/flai.md ');
 			q<HTMLButtonElement>('shared-check')!.click();
 			await settle();
@@ -861,7 +906,7 @@ describe('SettingsPanel (S-0105)', () => {
 					}
 				]
 			});
-			await show();
+			await show('file-system');
 			type('shared-check-text', 'S-0001');
 			q<HTMLButtonElement>('shared-check')!.click();
 			await settle();
@@ -901,7 +946,7 @@ describe('SettingsPanel (S-0105)', () => {
 					next: '2026-10-05T06:00:00Z'
 				})
 			);
-			await show();
+			await show('agents');
 			// S-0229: the keys are edited on the Planner page, not by hand
 			expect(text('section-planning')).toContain('edited on the Planner page');
 			expect(q('planning-edit-link')!.getAttribute('href')).toBe('/workflow/planner');
@@ -925,7 +970,7 @@ describe('SettingsPanel (S-0105)', () => {
 					schedule: ''
 				})
 			);
-			await show();
+			await show('agents');
 			expect(text('planning-edits')).toContain('start the planner: off');
 			expect(text('planning-replan')).toContain('agent');
 			expect(text('planning-replan')).not.toContain('(default)');
@@ -933,9 +978,6 @@ describe('SettingsPanel (S-0105)', () => {
 				'the planner runs for each story whose delivery moved'
 			);
 			expect(text('planning-schedule')).toContain('in UTC: none');
-			unmount(c!);
-			c = undefined;
-			document.body.innerHTML = '';
 			backend(
 				planning({
 					plan: true,
@@ -946,7 +988,7 @@ describe('SettingsPanel (S-0105)', () => {
 					schedule_error: 'planning.schedule "61 * * * *": minute 61 is out of range'
 				})
 			);
-			await show();
+			await show('agents');
 			expect(q('planning-replan')!.querySelector('[role="alert"]')!.textContent).toContain(
 				'is not a replan policy'
 			);
@@ -958,7 +1000,7 @@ describe('SettingsPanel (S-0105)', () => {
 
 		it('leaves the section out when flai does not say', async () => {
 			backend(view(false, false));
-			await show();
+			await show('agents');
 			expect(q('section-planning')).toBeNull();
 		});
 	});

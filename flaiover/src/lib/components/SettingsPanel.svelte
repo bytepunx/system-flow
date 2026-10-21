@@ -3,7 +3,8 @@
 	// turned on the settings host action in a shell. Until then, and for the settings kept for every
 	// project until it is on everywhere, each section shows what is set and the command that allows
 	// changing it. Commands are written one argument a line: they are run as they stand, never
-	// through a shell, so nothing is quoted or split.
+	// through a shell, so nothing is quoted or split. It shows the sections of one Configuration page
+	// (S-0459, TH-0553), and the state of the settings host action on every one.
 	import { resolve } from '$app/paths';
 	import { api } from '$lib/api';
 	import { agentFrom, configText, parseConfig } from '$lib/agent';
@@ -27,7 +28,13 @@
 		type SettingsView,
 		type SharedCheck
 	} from '$lib/settings';
+	import { settingsPage, type SettingsPageSlug, type SettingsSection } from '$lib/settingspages';
 	import AgentFields from './AgentFields.svelte';
+
+	/** page: the Configuration page whose sections are shown. */
+	let { page }: { page: SettingsPageSlug } = $props();
+	const sections = $derived(settingsPage(page)?.sections ?? []);
+	const shows = (section: SettingsSection) => sections.includes(section);
 
 	let view = $state<SettingsView | null>(null);
 	let error = $state<string | null>(null);
@@ -403,60 +410,265 @@
 			</p>
 		</div>
 
-		<!-- The nav rail's Configuration pages open at the first section of each by its id, features,
-		agents, file-system, harnesses, and projects (S-0458, TH-0553). -->
-		<section id="features" data-testid="section-actions">
-			<h2 class="mb-2 font-medium">Host actions, for this project</h2>
-			{@render gate('action')}
-			<ul class="space-y-2">
-				{#each h.actions as a (a.name)}
-					<li class="flex items-start gap-3">
-						<input
-							type="checkbox"
-							class="mt-1"
-							checked={a.here || a.everywhere}
-							disabled={!can('action').ok || a.name === 'settings' || a.everywhere || busy !== null}
-							aria-label="{a.name} on for this project"
-							data-testid="action-{a.name}"
-							onchange={(e) =>
-								change('actions', 'action', { action: a.name, on: e.currentTarget.checked })}
-						/>
-						<div>
-							<span class="font-mono">{a.name}</span>
-							{#if a.everywhere}<span class="text-xs text-muted"> on for every project</span>{/if}
-							{#if a.name === 'settings'}<span class="text-xs text-muted">
-									changed only in a shell</span
-								>{/if}
-							<p class="text-xs text-muted">{a.means}</p>
+		{#if shows('actions')}
+			<section data-testid="section-actions">
+				<h2 class="mb-2 font-medium">Host actions, for this project</h2>
+				{@render gate('action')}
+				<ul class="space-y-2">
+					{#each h.actions as a (a.name)}
+						<li class="flex items-start gap-3">
+							<input
+								type="checkbox"
+								class="mt-1"
+								checked={a.here || a.everywhere}
+								disabled={!can('action').ok ||
+									a.name === 'settings' ||
+									a.everywhere ||
+									busy !== null}
+								aria-label="{a.name} on for this project"
+								data-testid="action-{a.name}"
+								onchange={(e) =>
+									change('actions', 'action', { action: a.name, on: e.currentTarget.checked })}
+							/>
+							<div>
+								<span class="font-mono">{a.name}</span>
+								{#if a.everywhere}<span class="text-xs text-muted"> on for every project</span>{/if}
+								{#if a.name === 'settings'}<span class="text-xs text-muted">
+										changed only in a shell</span
+									>{/if}
+								<p class="text-xs text-muted">{a.means}</p>
+							</div>
+						</li>
+					{/each}
+				</ul>
+				{@render result('actions')}
+			</section>
+		{/if}
+
+		{#if shows('checks')}
+			<section data-testid="section-checks">
+				<h2 class="mb-2 font-medium">Checks, run on a story in review, on this host</h2>
+				{@render gate('check')}
+				{#if h.checks.commands.length === 0}
+					<p class="text-xs text-muted">
+						None set on the host{h.manifest_checks?.length
+							? `: the manifest's are used (${h.manifest_checks.map((c) => c.name).join(', ')})`
+							: ''}.
+					</p>
+				{/if}
+				{#each h.checks.commands as c (c.name)}
+					<div class="mt-2" data-testid="check-{c.name}">
+						<span class="font-mono text-xs">{c.name}</span>
+						<textarea
+							class="h-16 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+							bind:value={checkForm[c.name]}></textarea>
+						<div class="flex gap-2">
+							<button
+								class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+								disabled={!can('check').ok || busy !== null}
+								onclick={() =>
+									change('checks', 'check', { name: c.name, command: argv(checkForm[c.name]) })}
+								>Save</button
+							>
+							<button
+								class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+								disabled={!can('check').ok || busy !== null}
+								onclick={() => change('checks', 'check', { name: c.name, command: null })}
+								>Remove</button
+							>
 						</div>
-					</li>
+					</div>
 				{/each}
-			</ul>
-			{@render result('actions')}
-		</section>
+				<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+					<input
+						class="rounded border border-line-strong bg-surface px-2 py-1"
+						bind:value={newCheckName}
+						placeholder="name"
+						data-testid="new-check-name"
+					/>
+					<textarea
+						class="h-16 rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs sm:col-span-2"
+						bind:value={newCheckCommand}
+						placeholder="scripts/test.sh"
+						data-testid="new-check-command"></textarea>
+				</div>
+				<button
+					class="mt-2 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+					disabled={!can('check').ok ||
+						busy !== null ||
+						!newCheckName.trim() ||
+						argv(newCheckCommand).length === 0}
+					data-testid="add-check"
+					onclick={async () => {
+						if (
+							await change('checks', 'check', {
+								name: newCheckName.trim(),
+								command: argv(newCheckCommand)
+							})
+						) {
+							newCheckName = '';
+							newCheckCommand = '';
+						}
+					}}>Add check</button
+				>
+				<label class="mt-3 flex items-center gap-2">
+					<span class="text-xs text-muted">time limit, minutes</span>
+					<input
+						class="w-20 rounded border border-line-strong bg-surface px-2 py-1"
+						bind:value={timeout}
+						inputmode="numeric"
+						data-testid="checks-timeout"
+					/>
+					<button
+						class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+						disabled={!can('checks_timeout').ok || busy !== null}
+						onclick={() => change('checks', 'checks_timeout', { minutes: Number(timeout) })}
+						>Save</button
+					>
+				</label>
+				{@render result('checks')}
+			</section>
+		{/if}
 
-		<section id="agents" data-testid="section-default-agent">
-			<h2 class="mb-2 font-medium">Default agent, for this project's new stories</h2>
-			{@render gate('default_agent')}
-			<AgentFields
-				bind:harness={dHarness}
-				bind:model={dModel}
-				bind:provider={dProvider}
-				bind:config={dConfig}
-				isDefault
-				note="Stored in system-flow.yaml and committed; empty fields leave it without them"
-			/>
-			<button
-				class="mt-2 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-				disabled={!can('default_agent').ok || busy !== null}
-				data-testid="save-default-agent"
-				onclick={saveDefaultAgent}>Save default agent</button
-			>
-			{@render result('default')}
-		</section>
+		{#if shows('default-agent')}
+			<section data-testid="section-default-agent">
+				<h2 class="mb-2 font-medium">Default agent, for this project's new stories</h2>
+				{@render gate('default_agent')}
+				<AgentFields
+					bind:harness={dHarness}
+					bind:model={dModel}
+					bind:provider={dProvider}
+					bind:config={dConfig}
+					isDefault
+					note="Stored in system-flow.yaml and committed; empty fields leave it without them"
+				/>
+				<button
+					class="mt-2 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+					disabled={!can('default_agent').ok || busy !== null}
+					data-testid="save-default-agent"
+					onclick={saveDefaultAgent}>Save default agent</button
+				>
+				{@render result('default')}
+			</section>
+		{/if}
 
-		{#if h.shared}
-			<section id="file-system" data-testid="section-shared">
+		{#if shows('providers')}
+			<section data-testid="section-providers">
+				<h2 class="mb-2 font-medium">Providers, where agents' model calls go, on this host</h2>
+				{@render gate('provider')}
+				<p class="text-xs text-muted">
+					flai serve starts an agent that names a provider with the key from the variable key_env
+					names. The key is never shown or asked for here: set the variable in flai serve's
+					environment.
+				</p>
+				{#each Object.keys(providerForms).sort() as name (name)}
+					{@const p = h.agent.providers?.[name]}
+					<div class="mt-4 rounded border border-line p-3" data-testid="provider-{name}">
+						<h3 class="mb-2 font-mono text-xs">provider {name}</h3>
+						{@render providerFields(providerForms[name])}
+						<p
+							class="mt-2 text-xs {p?.key_set ? 'text-good' : 'text-danger'}"
+							data-testid="provider-key"
+						>
+							{keyLine(name)}
+						</p>
+						<div class="mt-2 flex gap-2">
+							<button
+								class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+								disabled={!can('provider').ok || busy !== null}
+								data-testid="save-provider"
+								onclick={() => saveProvider('provider-' + name, name, providerForms[name])}
+								>Save</button
+							>
+							<button
+								class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+								disabled={!can('provider').ok || busy !== null}
+								data-testid="reset-provider"
+								onclick={() => change('provider-' + name, 'provider', { name, reset: true })}
+								>Remove</button
+							>
+						</div>
+						{@render result('provider-' + name)}
+					</div>
+				{/each}
+				{#if Object.keys(providerForms).length === 0}
+					<p class="mt-2 text-xs text-muted" data-testid="providers-none">
+						None: each agent's harness calls its own default.
+					</p>
+				{/if}
+				<div class="mt-4 rounded border border-line p-3" data-testid="new-provider">
+					<h3 class="mb-2 text-xs font-medium">Add a provider</h3>
+					<label class="mb-2 block">
+						<span class="mb-1 block text-xs text-muted">name</span>
+						<input
+							class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+							bind:value={newProviderName}
+							placeholder="litellm"
+							data-testid="new-provider-name"
+						/>
+					</label>
+					{@render providerFields(newProvider)}
+					<button
+						class="mt-2 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+						disabled={!can('provider').ok || busy !== null || !newProviderName.trim()}
+						data-testid="add-provider"
+						onclick={async () => {
+							if (await saveProvider('providers', newProviderName, newProvider)) {
+								newProviderName = '';
+								newProvider = providerForm();
+							}
+						}}>Add provider</button
+					>
+					{@render result('providers')}
+				</div>
+			</section>
+		{/if}
+
+		{#if h.planning && shows('planning')}
+			{@const p = h.planning}
+			<section data-testid="section-planning">
+				<h2 class="mb-2 font-medium">Planning again, for this project</h2>
+				<p class="text-xs text-muted">
+					Read-only here: the planning keys in system-flow.yaml are edited on the
+					<a class="underline" href={resolve('/workflow/planner')} data-testid="planning-edit-link"
+						>Planner page</a
+					>.
+				</p>
+				<ul class="mt-2 space-y-2">
+					<li data-testid="planning-edits">
+						Edits to a planned story start the planner: <span class="font-medium"
+							>{p.plan ? 'on' : 'off'}</span
+						>
+						<p class="text-xs text-muted">
+							The plan host action is {p.plan ? 'on' : 'off'} for this project; replanning and the schedule
+							act only while it is on.
+						</p>
+					</li>
+					<li data-testid="planning-replan">
+						When work ahead completes or the pull order changes:
+						<span class="font-mono">{p.replan}</span>
+						{#if !p.replan_set}<span class="text-xs text-muted">(default)</span>{/if}
+						{#if p.replan_error}
+							<p class="text-xs text-danger" role="alert">{p.replan_error}</p>
+						{:else}
+							<p class="text-xs text-muted">{replanMeans(p.replan)}</p>
+						{/if}
+					</li>
+					<li data-testid="planning-schedule">
+						Schedule, the planner over every ready story, in UTC:
+						{#if p.schedule}<code class="text-xs">{p.schedule}</code>{#if p.next}, next run {localTime(
+									p.next
+								)}{/if}{:else}none{/if}
+						{#if p.schedule_error}
+							<p class="text-xs text-danger" role="alert">{p.schedule_error}</p>
+						{/if}
+					</li>
+				</ul>
+			</section>
+		{/if}
+
+		{#if h.shared && shows('shared')}
+			<section data-testid="section-shared">
 				<h2 class="mb-2 font-medium">Shared paths, for this project</h2>
 				{@render gate('shared')}
 				<p class="text-xs text-muted">
@@ -554,498 +766,316 @@
 			</section>
 		{/if}
 
-		{#if h.planning}
-			{@const p = h.planning}
-			<section data-testid="section-planning">
-				<h2 class="mb-2 font-medium">Planning again, for this project</h2>
+		{#if shows('import')}
+			<section data-testid="section-import">
+				<h2 class="mb-2 font-medium">Import folders, on this host</h2>
+				{@render gate('import')}
 				<p class="text-xs text-muted">
-					Read-only here: the planning keys in system-flow.yaml are edited on the
-					<a class="underline" href={resolve('/workflow/planner')} data-testid="planning-edit-link"
-						>Planner page</a
-					>.
+					The board offers the git repositories in these folders for import.
 				</p>
-				<ul class="mt-2 space-y-2">
-					<li data-testid="planning-edits">
-						Edits to a planned story start the planner: <span class="font-medium"
-							>{p.plan ? 'on' : 'off'}</span
-						>
-						<p class="text-xs text-muted">
-							The plan host action is {p.plan ? 'on' : 'off'} for this project; replanning and the schedule
-							act only while it is on.
-						</p>
-					</li>
-					<li data-testid="planning-replan">
-						When work ahead completes or the pull order changes:
-						<span class="font-mono">{p.replan}</span>
-						{#if !p.replan_set}<span class="text-xs text-muted">(default)</span>{/if}
-						{#if p.replan_error}
-							<p class="text-xs text-danger" role="alert">{p.replan_error}</p>
-						{:else}
-							<p class="text-xs text-muted">{replanMeans(p.replan)}</p>
-						{/if}
-					</li>
-					<li data-testid="planning-schedule">
-						Schedule, the planner over every ready story, in UTC:
-						{#if p.schedule}<code class="text-xs">{p.schedule}</code>{#if p.next}, next run {localTime(
-									p.next
-								)}{/if}{:else}none{/if}
-						{#if p.schedule_error}
-							<p class="text-xs text-danger" role="alert">{p.schedule_error}</p>
-						{/if}
-					</li>
-				</ul>
-			</section>
-		{/if}
-
-		<section id="harnesses" data-testid="section-agent">
-			<h2 class="mb-2 font-medium">Starting agents, on this host</h2>
-			{@render gate('agent')}
-			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-				<label class="block">
-					<span class="mb-1 block text-xs text-muted">name: agents work as name-S-0001</span>
-					<input
-						class="w-full rounded border border-line-strong bg-surface px-2 py-1"
-						bind:value={aName}
-						placeholder="agent"
-						data-testid="agent-name"
-					/>
-				</label>
-			</div>
-			<label class="mt-2 block">
-				<span class="mb-1 block text-xs text-muted"
-					>command for stories that name no harness, one argument a line; {'{story}'}, {'{root}'},
-					{'{model}'}, and {'{harness}'} are replaced</span
-				>
-				<textarea
-					class="h-20 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-					bind:value={aCommand}
-					data-testid="agent-command"></textarea>
-			</label>
-			<div class="mt-2 flex gap-2">
-				<button
-					class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-					disabled={!can('agent').ok || busy !== null}
-					data-testid="save-agent"
-					onclick={saveAgent}>Save</button
-				>
-				<button
-					class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-					disabled={!can('agent').ok || busy !== null || h.agent.command.length === 0}
-					data-testid="clear-agent-command"
-					onclick={() => change('agent', 'agent', { command: null })}>Remove the command</button
-				>
-			</div>
-			{@render result('agent')}
-
-			{#each Object.keys(harnessForm).sort() as name (name)}
-				<div class="mt-4 rounded border border-line p-3" data-testid="harness-{name}">
-					<h3 class="mb-2 font-mono text-xs">harness {name}{harnessNote(name)}</h3>
-					{#if name !== 'command'}
-						<label class="block">
-							<span class="mb-1 block text-xs text-muted">program</span>
-							<input
-								class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-								bind:value={harnessForm[name].program}
-								data-testid="harness-program"
-							/>
-						</label>
-						<label class="mt-2 block">
-							<span class="mb-1 block text-xs text-muted"
-								>arguments: what its agent may do, one a line</span
+				<ul class="mt-2 space-y-1">
+					{#each h.import_roots as folder (folder)}
+						<li class="flex items-center gap-2">
+							<code class="text-xs">{folder}</code>
+							<button
+								class="rounded border border-line-strong px-2 text-xs disabled:opacity-50"
+								disabled={!can('import').ok || busy !== null}
+								onclick={() => change('import', 'import', { folder, add: false })}>Remove</button
 							>
-							<textarea
-								class="h-20 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-								bind:value={harnessForm[name].args}
-								data-testid="harness-args"></textarea>
-						</label>
-					{/if}
-					<label class="mt-2 block">
-						<span class="mb-1 block text-xs text-muted">guard</span>
-						<select
-							class="rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-							bind:value={harnessForm[name].guard}
-							data-testid="harness-guard"
-						>
-							<option value="">flai guard (default)</option>
-							<option value="none">none</option>
-						</select>
-					</label>
-					<p class="mt-1 text-xs text-muted" data-testid="harness-guard-gives-up">
-						{guardGivesUp(name)}
-					</p>
-					<label class="mt-2 flex items-start gap-2">
-						<input
-							type="checkbox"
-							class="mt-1"
-							bind:checked={harnessForm[name].deny_protected}
-							data-testid="harness-deny-protected"
-						/>
-						<span class="font-mono text-xs">deny_protected</span>
-					</label>
-					<p class="mt-1 text-xs text-muted" data-testid="harness-deny-gives-up">
-						{denyGivesUp(name)}
-					</p>
-					<div class="mt-2 flex gap-2">
-						<button
-							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-							disabled={!can('harness').ok || busy !== null}
-							data-testid="save-harness"
-							onclick={() => saveHarness(name)}>Save</button
-						>
-						<button
-							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-							disabled={!can('harness').ok || busy !== null || !harnessSet(name)}
-							data-testid="reset-harness"
-							onclick={() => change('harness-' + name, 'harness', { name, reset: true })}
-							>Back to the defaults</button
-						>
-					</div>
-					{@render result('harness-' + name)}
-				</div>
-			{/each}
-		</section>
-
-		<section data-testid="section-providers">
-			<h2 class="mb-2 font-medium">Providers, where agents' model calls go, on this host</h2>
-			{@render gate('provider')}
-			<p class="text-xs text-muted">
-				flai serve starts an agent that names a provider with the key from the variable key_env
-				names. The key is never shown or asked for here: set the variable in flai serve's
-				environment.
-			</p>
-			{#each Object.keys(providerForms).sort() as name (name)}
-				{@const p = h.agent.providers?.[name]}
-				<div class="mt-4 rounded border border-line p-3" data-testid="provider-{name}">
-					<h3 class="mb-2 font-mono text-xs">provider {name}</h3>
-					{@render providerFields(providerForms[name])}
-					<p
-						class="mt-2 text-xs {p?.key_set ? 'text-good' : 'text-danger'}"
-						data-testid="provider-key"
-					>
-						{keyLine(name)}
-					</p>
-					<div class="mt-2 flex gap-2">
-						<button
-							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-							disabled={!can('provider').ok || busy !== null}
-							data-testid="save-provider"
-							onclick={() => saveProvider('provider-' + name, name, providerForms[name])}
-							>Save</button
-						>
-						<button
-							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-							disabled={!can('provider').ok || busy !== null}
-							data-testid="reset-provider"
-							onclick={() => change('provider-' + name, 'provider', { name, reset: true })}
-							>Remove</button
-						>
-					</div>
-					{@render result('provider-' + name)}
-				</div>
-			{/each}
-			{#if Object.keys(providerForms).length === 0}
-				<p class="mt-2 text-xs text-muted" data-testid="providers-none">
-					None: each agent's harness calls its own default.
-				</p>
-			{/if}
-			<div class="mt-4 rounded border border-line p-3" data-testid="new-provider">
-				<h3 class="mb-2 text-xs font-medium">Add a provider</h3>
-				<label class="mb-2 block">
-					<span class="mb-1 block text-xs text-muted">name</span>
-					<input
-						class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-						bind:value={newProviderName}
-						placeholder="litellm"
-						data-testid="new-provider-name"
-					/>
-				</label>
-				{@render providerFields(newProvider)}
-				<button
-					class="mt-2 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-					disabled={!can('provider').ok || busy !== null || !newProviderName.trim()}
-					data-testid="add-provider"
-					onclick={async () => {
-						if (await saveProvider('providers', newProviderName, newProvider)) {
-							newProviderName = '';
-							newProvider = providerForm();
-						}
-					}}>Add provider</button
-				>
-				{@render result('providers')}
-			</div>
-		</section>
-
-		<section data-testid="section-checks">
-			<h2 class="mb-2 font-medium">Checks, run on a story in review, on this host</h2>
-			{@render gate('check')}
-			{#if h.checks.commands.length === 0}
-				<p class="text-xs text-muted">
-					None set on the host{h.manifest_checks?.length
-						? `: the manifest's are used (${h.manifest_checks.map((c) => c.name).join(', ')})`
-						: ''}.
-				</p>
-			{/if}
-			{#each h.checks.commands as c (c.name)}
-				<div class="mt-2" data-testid="check-{c.name}">
-					<span class="font-mono text-xs">{c.name}</span>
-					<textarea
-						class="h-16 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-						bind:value={checkForm[c.name]}></textarea>
-					<div class="flex gap-2">
-						<button
-							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-							disabled={!can('check').ok || busy !== null}
-							onclick={() =>
-								change('checks', 'check', { name: c.name, command: argv(checkForm[c.name]) })}
-							>Save</button
-						>
-						<button
-							class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-							disabled={!can('check').ok || busy !== null}
-							onclick={() => change('checks', 'check', { name: c.name, command: null })}
-							>Remove</button
-						>
-					</div>
-				</div>
-			{/each}
-			<div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-				<input
-					class="rounded border border-line-strong bg-surface px-2 py-1"
-					bind:value={newCheckName}
-					placeholder="name"
-					data-testid="new-check-name"
-				/>
-				<textarea
-					class="h-16 rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs sm:col-span-2"
-					bind:value={newCheckCommand}
-					placeholder="scripts/test.sh"
-					data-testid="new-check-command"></textarea>
-			</div>
-			<button
-				class="mt-2 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-				disabled={!can('check').ok ||
-					busy !== null ||
-					!newCheckName.trim() ||
-					argv(newCheckCommand).length === 0}
-				data-testid="add-check"
-				onclick={async () => {
-					if (
-						await change('checks', 'check', {
-							name: newCheckName.trim(),
-							command: argv(newCheckCommand)
-						})
-					) {
-						newCheckName = '';
-						newCheckCommand = '';
-					}
-				}}>Add check</button
-			>
-			<label class="mt-3 flex items-center gap-2">
-				<span class="text-xs text-muted">time limit, minutes</span>
-				<input
-					class="w-20 rounded border border-line-strong bg-surface px-2 py-1"
-					bind:value={timeout}
-					inputmode="numeric"
-					data-testid="checks-timeout"
-				/>
-				<button
-					class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-					disabled={!can('checks_timeout').ok || busy !== null}
-					onclick={() => change('checks', 'checks_timeout', { minutes: Number(timeout) })}
-					>Save</button
-				>
-			</label>
-			{@render result('checks')}
-		</section>
-
-		<section data-testid="section-import">
-			<h2 class="mb-2 font-medium">Import folders, on this host</h2>
-			{@render gate('import')}
-			<p class="text-xs text-muted">
-				The board offers the git repositories in these folders for import.
-			</p>
-			<ul class="mt-2 space-y-1">
-				{#each h.import_roots as folder (folder)}
-					<li class="flex items-center gap-2">
-						<code class="text-xs">{folder}</code>
-						<button
-							class="rounded border border-line-strong px-2 text-xs disabled:opacity-50"
-							disabled={!can('import').ok || busy !== null}
-							onclick={() => change('import', 'import', { folder, add: false })}>Remove</button
-						>
-					</li>
-				{/each}
-			</ul>
-			<div class="mt-2 flex gap-2">
-				<input
-					class="flex-1 rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
-					bind:value={newFolder}
-					placeholder="/home/you/git"
-					data-testid="new-folder"
-				/>
-				<button
-					class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-					disabled={!can('import').ok || busy !== null || !newFolder.trim()}
-					data-testid="add-folder"
-					onclick={async () => {
-						if (await change('import', 'import', { folder: newFolder.trim(), add: true }))
-							newFolder = '';
-					}}>Add folder</button
-				>
-			</div>
-			{@render result('import')}
-		</section>
-
-		<section id="projects" data-testid="section-projects">
-			<h2 class="mb-2 font-medium">Projects, served by flai on this host</h2>
-			{#if h.projects?.error}
-				<p class="text-xs text-danger" role="alert">{h.projects.error}</p>
-			{:else if h.projects}
-				{#if !h.projects.running}
-					<p class="text-xs text-muted">
-						flai serve is not running, so no project is on the dashboard. On the host, run
-						<code class="rounded bg-surface px-1">flai serve start</code>.
-					</p>
-				{/if}
-				<ul class="space-y-2">
-					{#each h.projects.served as p (p.root)}
-						<li class="rounded border border-line p-2" data-testid="served-{p.key}">
-							<div class="flex flex-wrap items-baseline gap-2">
-								<span class="font-mono">{p.key}</span>
-								<span>{p.name}</span>
-								<code class="text-xs text-muted">{p.root}</code>
-							</div>
-							<p
-								class="text-xs {p.state === 'connected' ? 'text-good' : 'text-danger'}"
-								data-testid="health"
-							>
-								{health(p)}
-							</p>
-							{#if p.from !== 'registry'}
-								<p class="text-xs text-muted" data-testid="served-below">
-									Served because it is below <code>{p.below}</code>{p.from === 'import'
-										? ', named under Import folders'
-										: ', the folder flai serve was started in'}.
-								</p>
-							{/if}
-							{#if confirming === p.root}
-								<div class="mt-1 text-xs" data-testid="confirm-remove">
-									<p>
-										Stop serving {p.name}? None of its files is touched and the dashboard keeps
-										running for the other projects.
-										{#if p.below}
-											It is below <code>{p.below}</code>, so it is listed below as removed, and
-											Serve there brings it back.
-										{:else}
-											Serve it again with
-											<code>flai serve project add {p.root}</code> on the host.
-										{/if}
-									</p>
-									<div class="mt-1 flex gap-2">
-										<button
-											class="rounded border border-danger px-2 text-danger disabled:opacity-50"
-											disabled={busy !== null}
-											data-testid="confirm-remove-yes"
-											onclick={() => unserveProject(p)}>Remove</button
-										>
-										<button
-											class="rounded border border-line-strong px-2"
-											data-testid="confirm-remove-no"
-											onclick={() => (confirming = null)}>Keep it</button
-										>
-									</div>
-								</div>
-							{:else}
-								<button
-									class="mt-1 rounded border border-line-strong px-2 text-xs disabled:opacity-50"
-									disabled={!p.settings || busy !== null}
-									data-testid="remove-project"
-									onclick={() => (confirming = p.root)}>Remove</button
-								>
-							{/if}
-							{#if !p.settings}
-								<p class="text-xs text-muted" data-testid="gate">
-									To remove it here, run <code class="rounded bg-surface px-1">{view.enable}</code>
-									on the host, in {p.root}.
-								</p>
-							{/if}
 						</li>
 					{/each}
 				</ul>
-				{#if h.projects.served.length === 0}
-					<p class="text-xs text-muted">No project is served.</p>
-				{/if}
-				{#if h.projects.unserved.length}
-					<h3 class="mt-3 mb-1 text-xs font-medium">
-						Below the import folders or the folder flai serve was started in, not served
-					</h3>
+				<div class="mt-2 flex gap-2">
+					<input
+						class="flex-1 rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+						bind:value={newFolder}
+						placeholder="/home/you/git"
+						data-testid="new-folder"
+					/>
+					<button
+						class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+						disabled={!can('import').ok || busy !== null || !newFolder.trim()}
+						data-testid="add-folder"
+						onclick={async () => {
+							if (await change('import', 'import', { folder: newFolder.trim(), add: true }))
+								newFolder = '';
+						}}>Add folder</button
+					>
+				</div>
+				{@render result('import')}
+			</section>
+		{/if}
+
+		{#if shows('projects')}
+			<section data-testid="section-projects">
+				<h2 class="mb-2 font-medium">Projects, served by flai on this host</h2>
+				{#if h.projects?.error}
+					<p class="text-xs text-danger" role="alert">{h.projects.error}</p>
+				{:else if h.projects}
+					{#if !h.projects.running}
+						<p class="text-xs text-muted">
+							flai serve is not running, so no project is on the dashboard. On the host, run
+							<code class="rounded bg-surface px-1">flai serve start</code>.
+						</p>
+					{/if}
 					<ul class="space-y-2">
-						{#each h.projects.unserved as p (p.root)}
-							<li class="rounded border border-line p-2" data-testid="unserved-{p.key || p.root}">
+						{#each h.projects.served as p (p.root)}
+							<li class="rounded border border-line p-2" data-testid="served-{p.key}">
 								<div class="flex flex-wrap items-baseline gap-2">
-									{#if p.key}<span class="font-mono">{p.key}</span>{/if}
-									{#if p.name}<span>{p.name}</span>{/if}
+									<span class="font-mono">{p.key}</span>
+									<span>{p.name}</span>
 									<code class="text-xs text-muted">{p.root}</code>
 								</div>
-								<p class="text-xs {p.removed ? 'text-muted' : 'text-danger'}" data-testid="reason">
-									{p.removed ? 'Removed from the dashboard; Serve brings it back.' : p.reason}
-								</p>
-								<button
-									class="mt-1 rounded border border-line-strong px-2 text-xs disabled:opacity-50"
-									disabled={!p.settings || busy !== null}
-									data-testid="serve-project"
-									onclick={() => serveProject(p)}>Serve</button
+								<p
+									class="text-xs {p.state === 'connected' ? 'text-good' : 'text-danger'}"
+									data-testid="health"
 								>
+									{health(p)}
+								</p>
+								{#if p.from !== 'registry'}
+									<p class="text-xs text-muted" data-testid="served-below">
+										Served because it is below <code>{p.below}</code>{p.from === 'import'
+											? ', named under Import folders'
+											: ', the folder flai serve was started in'}.
+									</p>
+								{/if}
+								{#if confirming === p.root}
+									<div class="mt-1 text-xs" data-testid="confirm-remove">
+										<p>
+											Stop serving {p.name}? None of its files is touched and the dashboard keeps
+											running for the other projects.
+											{#if p.below}
+												It is below <code>{p.below}</code>, so it is listed below as removed, and
+												Serve there brings it back.
+											{:else}
+												Serve it again with
+												<code>flai serve project add {p.root}</code> on the host.
+											{/if}
+										</p>
+										<div class="mt-1 flex gap-2">
+											<button
+												class="rounded border border-danger px-2 text-danger disabled:opacity-50"
+												disabled={busy !== null}
+												data-testid="confirm-remove-yes"
+												onclick={() => unserveProject(p)}>Remove</button
+											>
+											<button
+												class="rounded border border-line-strong px-2"
+												data-testid="confirm-remove-no"
+												onclick={() => (confirming = null)}>Keep it</button
+											>
+										</div>
+									</div>
+								{:else}
+									<button
+										class="mt-1 rounded border border-line-strong px-2 text-xs disabled:opacity-50"
+										disabled={!p.settings || busy !== null}
+										data-testid="remove-project"
+										onclick={() => (confirming = p.root)}>Remove</button
+									>
+								{/if}
 								{#if !p.settings}
 									<p class="text-xs text-muted" data-testid="gate">
-										To serve it here, run <code class="rounded bg-surface px-1">{view.enable}</code>
-										on the host, in {p.root}.
+										To remove it here, run
+										<code class="rounded bg-surface px-1">{view.enable}</code> on the host, in
+										{p.root}.
 									</p>
 								{/if}
 							</li>
 						{/each}
 					</ul>
+					{#if h.projects.served.length === 0}
+						<p class="text-xs text-muted">No project is served.</p>
+					{/if}
+					{#if h.projects.unserved.length}
+						<h3 class="mt-3 mb-1 text-xs font-medium">
+							Below the import folders or the folder flai serve was started in, not served
+						</h3>
+						<ul class="space-y-2">
+							{#each h.projects.unserved as p (p.root)}
+								<li class="rounded border border-line p-2" data-testid="unserved-{p.key || p.root}">
+									<div class="flex flex-wrap items-baseline gap-2">
+										{#if p.key}<span class="font-mono">{p.key}</span>{/if}
+										{#if p.name}<span>{p.name}</span>{/if}
+										<code class="text-xs text-muted">{p.root}</code>
+									</div>
+									<p
+										class="text-xs {p.removed ? 'text-muted' : 'text-danger'}"
+										data-testid="reason"
+									>
+										{p.removed ? 'Removed from the dashboard; Serve brings it back.' : p.reason}
+									</p>
+									<button
+										class="mt-1 rounded border border-line-strong px-2 text-xs disabled:opacity-50"
+										disabled={!p.settings || busy !== null}
+										data-testid="serve-project"
+										onclick={() => serveProject(p)}>Serve</button
+									>
+									{#if !p.settings}
+										<p class="text-xs text-muted" data-testid="gate">
+											To serve it here, run
+											<code class="rounded bg-surface px-1">{view.enable}</code> on the host, in
+											{p.root}.
+										</p>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					{/if}
 				{/if}
-			{/if}
-			{@render result('projects')}
-		</section>
+				{@render result('projects')}
+			</section>
+		{/if}
 
-		<section data-testid="section-tokens">
-			<h2 class="mb-2 font-medium">Tokens</h2>
-			<p>
-				MCP server for agents over HTTP:
-				{#if h.mcp?.running}<code class="text-xs">{h.mcp.url}</code>{:else}not running{/if}
-			</p>
-			{@render gate('mcp_token')}
-			<button
-				class="mt-1 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-				disabled={!can('mcp_token').ok || busy !== null}
-				data-testid="rotate-mcp"
-				onclick={() => rotate('mcp', 'mcp_token')}>Rotate the MCP token</button
-			>
-			<p class="text-xs text-muted">Every agent connected over HTTP must be given the new one.</p>
-			{#if once.mcp}<p class="mt-1 text-xs" data-testid="once-mcp">
-					New MCP token, shown once: <code class="break-all">{once.mcp}</code>
-				</p>{/if}
-			{@render result('mcp')}
-
-			<div class="mt-4">
-				{@render gate('dashboard_token')}
-				<button
-					class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
-					disabled={!can('dashboard_token').ok || busy !== null}
-					data-testid="rotate-dashboard"
-					onclick={() => rotate('dashboard', 'dashboard_token')}>Rotate the dashboard token</button
-				>
-				<p class="text-xs text-muted">
-					This browser stays logged in; every other session and every agent using the token must log
-					in again.
+		{#if shows('tokens')}
+			<section data-testid="section-tokens">
+				<h2 class="mb-2 font-medium">Tokens</h2>
+				<p>
+					MCP server for agents over HTTP:
+					{#if h.mcp?.running}<code class="text-xs">{h.mcp.url}</code>{:else}not running{/if}
 				</p>
-				{#if once.dashboard}<p class="mt-1 text-xs" data-testid="once-dashboard">
-						New login link, shown once: <code class="break-all">{once.dashboard}</code>
+				{@render gate('mcp_token')}
+				<button
+					class="mt-1 rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+					disabled={!can('mcp_token').ok || busy !== null}
+					data-testid="rotate-mcp"
+					onclick={() => rotate('mcp', 'mcp_token')}>Rotate the MCP token</button
+				>
+				<p class="text-xs text-muted">Every agent connected over HTTP must be given the new one.</p>
+				{#if once.mcp}<p class="mt-1 text-xs" data-testid="once-mcp">
+						New MCP token, shown once: <code class="break-all">{once.mcp}</code>
 					</p>{/if}
-				{@render result('dashboard')}
-			</div>
-		</section>
+				{@render result('mcp')}
+
+				<div class="mt-4">
+					{@render gate('dashboard_token')}
+					<button
+						class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+						disabled={!can('dashboard_token').ok || busy !== null}
+						data-testid="rotate-dashboard"
+						onclick={() => rotate('dashboard', 'dashboard_token')}
+						>Rotate the dashboard token</button
+					>
+					<p class="text-xs text-muted">
+						This browser stays logged in; every other session and every agent using the token must
+						log in again.
+					</p>
+					{#if once.dashboard}<p class="mt-1 text-xs" data-testid="once-dashboard">
+							New login link, shown once: <code class="break-all">{once.dashboard}</code>
+						</p>{/if}
+					{@render result('dashboard')}
+				</div>
+			</section>
+		{/if}
+
+		{#if shows('agent')}
+			<section data-testid="section-agent">
+				<h2 class="mb-2 font-medium">Starting agents, on this host</h2>
+				{@render gate('agent')}
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+					<label class="block">
+						<span class="mb-1 block text-xs text-muted">name: agents work as name-S-0001</span>
+						<input
+							class="w-full rounded border border-line-strong bg-surface px-2 py-1"
+							bind:value={aName}
+							placeholder="agent"
+							data-testid="agent-name"
+						/>
+					</label>
+				</div>
+				<label class="mt-2 block">
+					<span class="mb-1 block text-xs text-muted"
+						>command for stories that name no harness, one argument a line; {'{story}'}, {'{root}'},
+						{'{model}'}, and {'{harness}'} are replaced</span
+					>
+					<textarea
+						class="h-20 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+						bind:value={aCommand}
+						data-testid="agent-command"></textarea>
+				</label>
+				<div class="mt-2 flex gap-2">
+					<button
+						class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+						disabled={!can('agent').ok || busy !== null}
+						data-testid="save-agent"
+						onclick={saveAgent}>Save</button
+					>
+					<button
+						class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+						disabled={!can('agent').ok || busy !== null || h.agent.command.length === 0}
+						data-testid="clear-agent-command"
+						onclick={() => change('agent', 'agent', { command: null })}>Remove the command</button
+					>
+				</div>
+				{@render result('agent')}
+
+				{#each Object.keys(harnessForm).sort() as name (name)}
+					<div class="mt-4 rounded border border-line p-3" data-testid="harness-{name}">
+						<h3 class="mb-2 font-mono text-xs">harness {name}{harnessNote(name)}</h3>
+						{#if name !== 'command'}
+							<label class="block">
+								<span class="mb-1 block text-xs text-muted">program</span>
+								<input
+									class="w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+									bind:value={harnessForm[name].program}
+									data-testid="harness-program"
+								/>
+							</label>
+							<label class="mt-2 block">
+								<span class="mb-1 block text-xs text-muted"
+									>arguments: what its agent may do, one a line</span
+								>
+								<textarea
+									class="h-20 w-full rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+									bind:value={harnessForm[name].args}
+									data-testid="harness-args"></textarea>
+							</label>
+						{/if}
+						<label class="mt-2 block">
+							<span class="mb-1 block text-xs text-muted">guard</span>
+							<select
+								class="rounded border border-line-strong bg-surface px-2 py-1 font-mono text-xs"
+								bind:value={harnessForm[name].guard}
+								data-testid="harness-guard"
+							>
+								<option value="">flai guard (default)</option>
+								<option value="none">none</option>
+							</select>
+						</label>
+						<p class="mt-1 text-xs text-muted" data-testid="harness-guard-gives-up">
+							{guardGivesUp(name)}
+						</p>
+						<label class="mt-2 flex items-start gap-2">
+							<input
+								type="checkbox"
+								class="mt-1"
+								bind:checked={harnessForm[name].deny_protected}
+								data-testid="harness-deny-protected"
+							/>
+							<span class="font-mono text-xs">deny_protected</span>
+						</label>
+						<p class="mt-1 text-xs text-muted" data-testid="harness-deny-gives-up">
+							{denyGivesUp(name)}
+						</p>
+						<div class="mt-2 flex gap-2">
+							<button
+								class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+								disabled={!can('harness').ok || busy !== null}
+								data-testid="save-harness"
+								onclick={() => saveHarness(name)}>Save</button
+							>
+							<button
+								class="rounded border border-line-strong px-3 py-1 disabled:opacity-50"
+								disabled={!can('harness').ok || busy !== null || !harnessSet(name)}
+								data-testid="reset-harness"
+								onclick={() => change('harness-' + name, 'harness', { name, reset: true })}
+								>Back to the defaults</button
+							>
+						</div>
+						{@render result('harness-' + name)}
+					</div>
+				{/each}
+			</section>
+		{/if}
 	</div>
 {/if}
