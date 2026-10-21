@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -32,10 +33,15 @@ type Options struct {
 	Repo  *workitem.Repo
 	Agent string // whose inbox; "agent" when empty
 	Story string // only threads on this story and its tasks, in any zero padding
-	All   bool   // threads awaiting someone else too
-	Now   func() time.Time
+	All   bool   // every open thread, those awaiting the operator or another too
+	// Operator lists the threads awaiting the operator too, as the
+	// orchestrator's role does (ADR-0181).
+	Operator bool
+	Now      func() time.Time
 	// Own is the agent's own story, whose open conversations the inbox lists
-	// under messages (S-0331); none lists none.
+	// under messages (S-0331), and whose threads, and its tasks', await the
+	// agent (ADR-0181); none lists none, and the agent takes part only in the
+	// threads it wrote to.
 	Own string
 	// Runner asks git what is accepted and not yet published (ADR-0067),
 	// and the newest flai release in the project's history (S-0181);
@@ -51,12 +57,14 @@ type Inbox struct {
 	// FlaiOutdated is set while this flai is older than the newest flai
 	// release in the project's history (S-0181).
 	FlaiOutdated *release.Outdated `json:"flai_outdated,omitempty" jsonschema:"this MCP server's flai is older than the newest flai release tagged in the project's history, so it may lack rules and fields the project uses; listed on every call while it is true: tell the designer, who upgrades the host with the command named"`
-	AwaitingYou  int               `json:"awaiting_you" jsonschema:"threads awaiting you; messages never count here"`
+	AwaitingYou  int               `json:"awaiting_you" jsonschema:"threads awaiting you, those with awaiting 'you' (ADR-0181); threads awaiting the operator or another never count here, nor do messages"`
 	Threads      []ThreadSummary   `json:"threads"`
 	// ThreadsOmitted counts the open threads on other items that a
-	// story-scoped read leaves out of Threads (ADR-0179); zero, and absent,
-	// without a story.
-	ThreadsOmitted int `json:"threads_omitted,omitempty" jsonschema:"open threads on other items that this story's inbox leaves out, counted rather than listed (ADR-0179): call inbox to list them"`
+	// story-scoped read leaves out of Threads where it would have listed them
+	// (ADR-0179): without All, only those awaiting the agent (ADR-0181), and
+	// those awaiting the operator with Operator; zero, and absent, without a
+	// story.
+	ThreadsOmitted int `json:"threads_omitted,omitempty" jsonschema:"open threads on other items awaiting you that this story's inbox leaves out, counted rather than listed (ADR-0179, ADR-0181): call inbox to list them"`
 	// EntriesShortened counts the listed threads whose last entry or pending
 	// recommendation Fit shortened (ADR-0179).
 	EntriesShortened int                  `json:"entries_shortened,omitempty" jsonschema:"how many listed threads' last entries and pending recommendations were shortened to fit the answer (ADR-0179); read them whole with thread_get"`
@@ -85,25 +93,27 @@ func Read(ctx context.Context, opt Options) (Inbox, error) {
 		return Inbox{}, err
 	}
 	out := Inbox{Agent: opt.Agent, Threads: []ThreadSummary{}}
+	reader := Reader{Agent: opt.Agent, Own: opt.Own}
 	story := workitem.CanonicalID(opt.Story)
 	for _, th := range all {
 		if !th.Open() {
 			continue
 		}
-		sum := Summarize(opt.Repo, opt.Agent, th)
+		sum := Summarize(opt.Repo, reader, th)
+		listed := opt.All || sum.Awaiting == "you" || (opt.Operator && sum.Awaiting == "operator")
 		if opt.Story != "" && workitem.CanonicalID(sum.Story) != story {
 			// counted where it would have been listed (ADR-0179)
-			if sum.Awaiting == "you" || opt.All {
+			if listed {
 				out.ThreadsOmitted++
 			}
 			continue
 		}
 		if sum.Awaiting == "you" {
 			out.AwaitingYou++
-		} else if !opt.All {
-			continue
 		}
-		out.Threads = append(out.Threads, sum)
+		if listed {
+			out.Threads = append(out.Threads, sum)
+		}
 	}
 	// one list for the board and the changes (S-0156)
 	done = perf.Track(ctx, "repo.list")
@@ -239,29 +249,71 @@ type ThreadSummary struct {
 	Entries   int            `json:"entries"`
 	LastBy    string         `json:"last_by"`
 	LastEntry string         `json:"last_entry" jsonschema:"text of the most recent entry"`
-	Awaiting  string         `json:"awaiting" jsonschema:"'you' when the last entry is not yours, else 'other'; 'other' too on a thread you opened while a recommendation on it awaits the operator's confirmation, which is no answer until they confirm it"`
+	Awaiting  string         `json:"awaiting" jsonschema:"'you' when you take part in the thread (you are among its participants) or it is on your own story or one of its tasks, and its last entry is not yours, but not on a thread you opened while a recommendation on it awaits the operator's confirmation, which is no answer until they confirm it; else 'operator' when it awaits the operator, a recommendation on it pending or its last entry by neither the project's owner nor its story's; else 'other' (ADR-0181)"`
 	// PendingRecommendation is the recommendation awaiting the operator's
 	// confirmation (ADR-0090), nil when there is none.
 	PendingRecommendation *threads.Entry `json:"pending_recommendation" jsonschema:"the recommendation awaiting the operator's confirmation, null when there is none: the thread still awaits the operator until they confirm it or answer otherwise"`
 	Project               string         `json:"project,omitempty" jsonschema:"the project the thread is in, when the server serves more than one"`
 }
 
-// Summarize is th as agent sees it. It awaits the agent when the last entry
-// is someone else's, but for the agent that opened it while a recommendation
-// on it awaits the operator's confirmation: that is no answer to its question
-// until the operator confirms it (ADR-0090). Anyone else, the operator and
-// the recommendation's author included, sees it by its last entry.
-func Summarize(repo *workitem.Repo, agent string, th *threads.Thread) ThreadSummary {
+// Reader is who reads a thread (ADR-0181).
+type Reader struct {
+	Agent string // the reader's name; "agent" when empty
+	Own   string // the reader's own story, in any zero padding; "" for none
+}
+
+// Summarize is th as r sees it (ADR-0181). It awaits r, "you", when r takes
+// part in it, among its participants, or it is on r's own story or one of its
+// tasks, and its last entry is someone else's; but not for the agent that
+// opened it while a recommendation on it awaits the operator's confirmation:
+// that is no answer to its question until the operator confirms it
+// (ADR-0090). Any other open thread awaits the operator, "operator", while a
+// recommendation on it is pending or its last entry is by none of the
+// operator's names (operatorName), and is "other" otherwise, as is a thread
+// with no entries.
+func Summarize(repo *workitem.Repo, r Reader, th *threads.Thread) ThreadSummary {
+	if r.Agent == "" {
+		r.Agent = "agent"
+	}
 	entries := th.Entries()
 	out := ThreadSummary{ID: th.ID, Title: th.Title, Status: th.Status, Anchor: th.Anchor, Story: threads.StoryOf(repo, th), Updated: th.Updated, Entries: len(entries), Awaiting: "other", PendingRecommendation: th.PendingRecommendation()}
-	if n := len(entries); n > 0 {
-		out.LastBy, out.LastEntry = entries[n-1].Author, entries[n-1].Text
-		asked := out.PendingRecommendation != nil && th.Opener() == agent
-		if out.LastBy != agent && !asked {
-			out.Awaiting = "you"
-		}
+	n := len(entries)
+	if n == 0 {
+		return out
+	}
+	out.LastBy, out.LastEntry = entries[n-1].Author, entries[n-1].Text
+	pending := out.PendingRecommendation != nil
+	ownStory := r.Own != "" && out.Story != "" && workitem.CanonicalID(out.Story) == workitem.CanonicalID(r.Own)
+	takesPart := ownStory || slices.Contains(th.Participants, r.Agent)
+	asked := pending && th.Opener() == r.Agent
+	switch {
+	case takesPart && out.LastBy != r.Agent && !asked:
+		out.Awaiting = "you"
+	case pending || !operatorName(repo, out.Story, out.LastBy):
+		out.Awaiting = "operator"
 	}
 	return out
+}
+
+// operatorName says whether name is one of the operator's names for a thread
+// on story: the manifest's owner and the story's owner, those ADR-0097 takes
+// an answer from, or "designer" when neither is named, as the dashboard's
+// inbox.designer reads it (ADR-0181).
+func operatorName(repo *workitem.Repo, story, name string) bool {
+	owner := repo.Manifest.Owner
+	if owner != "" && name == owner {
+		return true
+	}
+	storyOwner := ""
+	if story != "" {
+		if it, err := repo.Get(story); err == nil {
+			storyOwner = it.Owner
+		}
+	}
+	if storyOwner != "" {
+		return name == storyOwner
+	}
+	return owner == "" && name == "designer"
 }
 
 // ---- messages ----

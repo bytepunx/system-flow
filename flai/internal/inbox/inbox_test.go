@@ -93,37 +93,194 @@ func threadIDs(in Inbox) []string {
 	return ids
 }
 
-// A thread whose last entry is someone else's awaits the agent; its own
-// question awaits someone else and is listed only with All; Story keeps the
-// threads on that story.
+// newThread opens a thread on on by author.
+func (f *fixture) newThread(t *testing.T, title, on, author, text string) *threads.Thread {
+	t.Helper()
+	th, err := threads.New(f.repo, threads.NewOptions{Title: title, On: on, Author: author, Text: text, Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return th
+}
+
+// reply adds an entry by author to the thread id, a recommendation when rec.
+func (f *fixture) reply(t *testing.T, id, author, text string, rec bool) *threads.Thread {
+	t.Helper()
+	th, err := threads.ReplyWith(f.repo, id, author, text, t0.Add(time.Minute), threads.Marks{Recommendation: rec})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return th
+}
+
+// ADR-0181: a thread on the agent's own story whose last entry is someone
+// else's awaits the agent; its own question there awaits the operator, listed
+// with Operator or All; a thread on another story that it takes no part in
+// awaits it not at all, listed only with All; Story keeps the threads on that
+// story.
 func TestThreadsAwaitingTheAgent(t *testing.T) {
 	f := setup(t)
 	other := f.storyIn(t, "Other", []string{"docs/other"})
-	asked, err := threads.New(f.repo, threads.NewOptions{Title: "Which way?", On: f.story.ID, Author: "alex", Text: "A or B?", Now: t0})
-	if err != nil {
-		t.Fatal(err)
-	}
-	mine, err := threads.New(f.repo, threads.NewOptions{Title: "May I?", On: f.story.ID, Author: "claude", Text: "Shall I?", Now: t0})
-	if err != nil {
-		t.Fatal(err)
-	}
-	elsewhere, err := threads.New(f.repo, threads.NewOptions{Title: "There?", On: other.ID, Author: "alex", Text: "And there?", Now: t0})
-	if err != nil {
-		t.Fatal(err)
-	}
+	asked := f.newThread(t, "Which way?", f.story.ID, "alex", "A or B?")
+	mine := f.newThread(t, "May I?", f.story.ID, "claude", "Shall I?")
+	elsewhere := f.newThread(t, "There?", other.ID, "alex", "And there?")
 
-	in := f.read(t, Options{Agent: "claude"})
-	if in.Agent != "claude" || in.AwaitingYou != 2 || strings.Join(threadIDs(in), " ") != asked.ID+" "+elsewhere.ID {
-		t.Errorf("awaiting claude: %d %v, want %s and %s", in.AwaitingYou, threadIDs(in), asked.ID, elsewhere.ID)
+	in := f.read(t, Options{Agent: "claude", Own: f.story.ID})
+	if in.Agent != "claude" || in.AwaitingYou != 1 || strings.Join(threadIDs(in), " ") != asked.ID {
+		t.Errorf("awaiting claude: %d %v, want %s", in.AwaitingYou, threadIDs(in), asked.ID)
 	}
 	if in.Threads[0].Awaiting != "you" || in.Threads[0].LastBy != "alex" || in.Threads[0].Story != f.story.ID {
 		t.Errorf("summary: %+v", in.Threads[0])
 	}
-	if got := threadIDs(f.read(t, Options{Agent: "claude", All: true})); len(got) != 3 {
-		t.Errorf("all lists the thread awaiting someone else too: %v (%s)", got, mine.ID)
+	op := f.read(t, Options{Agent: "claude", Own: f.story.ID, Operator: true})
+	if strings.Join(threadIDs(op), " ") != asked.ID+" "+mine.ID || op.AwaitingYou != 1 || op.Threads[1].Awaiting != "operator" {
+		t.Errorf("operator lists claude's own question too, awaiting the operator, without all: %v, awaiting %d", threadIDs(op), op.AwaitingYou)
 	}
-	if got := threadIDs(f.read(t, Options{Agent: "claude", Story: other.ID})); len(got) != 1 || got[0] != elsewhere.ID {
+	all := f.read(t, Options{Agent: "claude", Own: f.story.ID, All: true})
+	if got := threadIDs(all); len(got) != 3 || all.AwaitingYou != 1 || all.Threads[2].Awaiting != "other" {
+		t.Errorf("all lists the thread on another story too, awaiting another: %v, awaiting %d", got, all.AwaitingYou)
+	}
+	if none := f.read(t, Options{Agent: "claude"}); len(none.Threads) != 0 || none.AwaitingYou != 0 {
+		t.Errorf("with no story of its own, claude takes part only in its question, which awaits the operator: %v", threadIDs(none))
+	}
+	if got := threadIDs(f.read(t, Options{Agent: "claude", Story: other.ID, Own: other.ID})); len(got) != 1 || got[0] != elsewhere.ID {
 		t.Errorf("story keeps its own threads: %v", got)
+	}
+}
+
+// ADR-0181: awaiting is "you" for a participant, on another story too, and on
+// the agent's own story or a task of it; "operator" for an opener whose
+// recommendation awaits the operator, and for a thread whose last entry is by
+// none of the operator's names, the project's owner, the story's owner, or
+// "designer" when neither is named; else "other".
+func TestSummarizeAwaitingByTheRule(t *testing.T) {
+	f := setup(t)
+	f.repo.Manifest.Owner = "alex"
+	bobs, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Bob's", Parent: f.epic.ID, Owner: "bob", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := f.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "A task", Parent: f.story.ID, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	claude := Reader{Agent: "claude", Own: f.story.ID}
+	awaiting := func(r Reader, th *threads.Thread) string {
+		t.Helper()
+		return Summarize(f.repo, r, th).Awaiting
+	}
+
+	// a participant on another story's thread is awaited when another wrote last
+	there := f.newThread(t, "There?", bobs.ID, "claude", "May I?")
+	if got := awaiting(claude, there); got != "operator" {
+		t.Errorf("claude's own question on another story awaits the operator: %s", got)
+	}
+	there = f.reply(t, there.ID, "bob", "Yes.", false)
+	if got := awaiting(claude, there); got != "you" {
+		t.Errorf("a participant is awaited on another story's thread: %s", got)
+	}
+	if got := awaiting(Reader{Agent: "codex"}, there); got != "other" {
+		t.Errorf("the story owner's name counts as the operator's: bob wrote last, so it awaits another: %s", got)
+	}
+	carol := f.reply(t, f.newThread(t, "Carol's", bobs.ID, "planner", "Q?").ID, "carol", "Hm.", false)
+	if got := awaiting(Reader{Agent: "codex"}, carol); got != "operator" {
+		t.Errorf("a thread whose last entry is by none of the operator's names awaits the operator: %s", got)
+	}
+
+	// the agent's own story and a task of it, in any zero padding
+	onTask := f.newThread(t, "On the task", task.ID, "alex", "And this?")
+	if got := awaiting(Reader{Agent: "claude", Own: strings.Replace(f.story.ID, "S-", "S-0", 1)}, onTask); got != "you" {
+		t.Errorf("a thread on a task of the agent's own story awaits it: %s", got)
+	}
+	if got := awaiting(Reader{Agent: "claude"}, onTask); got != "other" {
+		t.Errorf("without its own story claude takes no part in it, and alex wrote last: %s", got)
+	}
+
+	// ADR-0090: the opener's question with a recommendation pending awaits
+	// the operator, who confirms it, and so does it for anyone else
+	rec := f.newThread(t, "Which?", f.story.ID, "claude", "A or B?")
+	rec = f.reply(t, rec.ID, "codex", "A, because.", true)
+	if Summarize(f.repo, claude, rec).PendingRecommendation == nil {
+		t.Fatal("the recommendation is pending")
+	}
+	if got := awaiting(claude, rec); got != "operator" {
+		t.Errorf("an opener with a pending recommendation reads operator: %s", got)
+	}
+	if got := awaiting(Reader{Agent: "alex"}, rec); got != "operator" {
+		t.Errorf("a pending recommendation awaits the operator: %s", got)
+	}
+
+	// with no owner named anywhere the operator is "designer"
+	f.repo.Manifest.Owner = ""
+	onPath := f.newThread(t, "On a path", "design/system", "designer", "Look here.")
+	if got := awaiting(claude, onPath); got != "other" {
+		t.Errorf("with no owner named, designer is the operator: %s", got)
+	}
+	onPath = f.reply(t, onPath.ID, "planner", "Looked.", false)
+	if got := awaiting(claude, onPath); got != "operator" {
+		t.Errorf("with no owner named, a planner's last entry awaits the operator: %s", got)
+	}
+	if got := awaiting(Reader{Agent: "planner"}, onPath); got != "operator" {
+		t.Errorf("the planner wrote last, so it awaits the operator, not the planner: %s", got)
+	}
+}
+
+// ADR-0181 reproduces the measurement of 2026-10-20: a new story's agent read
+// 31 threads awaiting it, none on its story, all planners' questions, the
+// orchestrator's escalations, and flai serve's notices awaiting the operator.
+// Its inbox, story-scoped or not, lists none and counts none, while the
+// orchestrator's role lists them all, and a thread on the agent's story or a
+// task of it whose last entry is the operator's awaits the agent.
+func TestTheOperatorsThreadsDoNotAwaitAStorysAgent(t *testing.T) {
+	f := setup(t)
+	f.repo.Manifest.Owner = "alex"
+	other := f.storyIn(t, "Other", []string{"docs/other"})
+	agent := "agent-" + f.story.ID
+	authors := []string{"planner-" + other.ID, "orchestrator", "flai"}
+	for i := range 31 {
+		on := []string{other.ID, f.epic.ID, "design/system"}[i%3]
+		th := f.newThread(t, fmt.Sprintf("Question %d", i), on, authors[i%3], "Operator, which way?")
+		if i%5 == 0 {
+			f.reply(t, th.ID, "alex", "Tell me more.", false)
+			f.reply(t, th.ID, authors[i%3], "Here is more.", false)
+		}
+	}
+
+	scoped := Options{Agent: agent, Story: f.story.ID, Own: f.story.ID}
+	unscoped := Options{Agent: agent, Own: f.story.ID}
+	for name, opt := range map[string]Options{"story-scoped": scoped, "unscoped": unscoped} {
+		in := f.read(t, opt)
+		if len(in.Threads) != 0 || in.AwaitingYou != 0 || in.ThreadsOmitted != 0 {
+			t.Errorf("the %s inbox lists and counts none of the operator's threads: %d listed, awaiting %d, omitted %d", name, len(in.Threads), in.AwaitingYou, in.ThreadsOmitted)
+		}
+	}
+	orch := f.read(t, Options{Agent: "orchestrator", Operator: true})
+	if len(orch.Threads) != 31 {
+		t.Fatalf("the orchestrator's role lists the 31 threads awaiting the operator: %d", len(orch.Threads))
+	}
+	for _, th := range orch.Threads {
+		if th.Awaiting != "operator" {
+			t.Errorf("%s awaits the operator, as the orchestrator reads it: %s", th.ID, th.Awaiting)
+		}
+	}
+
+	task, err := f.repo.Create(workitem.NewOptions{Type: workitem.Task, Title: "A task", Parent: f.story.ID, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onStory := f.newThread(t, "Which way here?", f.story.ID, "alex", "A or B?")
+	onTask := f.reply(t, f.newThread(t, "And on the task?", task.ID, "planner-"+f.story.ID, "Split it?").ID, "alex", "Yes, split it.", false)
+	for name, opt := range map[string]Options{"story-scoped": scoped, "unscoped": unscoped} {
+		in := f.read(t, opt)
+		if strings.Join(threadIDs(in), " ") != onStory.ID+" "+onTask.ID || in.AwaitingYou != 2 || in.ThreadsOmitted != 0 {
+			t.Errorf("the %s inbox lists the story's two threads, awaiting the agent: %v, awaiting %d, omitted %d", name, threadIDs(in), in.AwaitingYou, in.ThreadsOmitted)
+			continue
+		}
+		for _, th := range in.Threads {
+			if th.Awaiting != "you" || th.LastBy != "alex" || th.Story != f.story.ID {
+				t.Errorf("%s awaits the agent on its story: %+v", th.ID, th)
+			}
+		}
 	}
 }
 
@@ -355,34 +512,31 @@ func jsonSize(t *testing.T, v any) int {
 }
 
 // ADR-0179: a story-scoped read lists the threads on the story and counts,
-// not lists, those on other items that it would otherwise have listed; awaiting_you
-// counts the listed ones. Without a story the same repository lists both, and
-// threads_omitted is zero and absent from the JSON.
+// not lists, those on other items that it would otherwise have listed;
+// awaiting_you counts the listed ones. A thread elsewhere that does not await
+// the agent is not counted (ADR-0181). Without a story the same repository
+// lists both, and threads_omitted is zero and absent from the JSON.
 func TestAStoryScopedReadCountsTheThreadsOnOtherItems(t *testing.T) {
 	f := setup(t)
 	other := f.storyIn(t, "Other", []string{"docs/other"})
-	own, err := threads.New(f.repo, threads.NewOptions{Title: "Which way?", On: f.story.ID, Author: "alex", Text: "A or B?", Now: t0})
-	if err != nil {
-		t.Fatal(err)
-	}
-	elsewhere, err := threads.New(f.repo, threads.NewOptions{Title: "There?", On: other.ID, Author: "alex", Text: "And there?", Now: t0})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := threads.New(f.repo, threads.NewOptions{Title: "Mine there", On: other.ID, Author: "claude", Text: "Shall I?", Now: t0}); err != nil {
-		t.Fatal(err)
-	}
+	own := f.newThread(t, "Which way?", f.story.ID, "alex", "A or B?")
+	f.newThread(t, "There?", other.ID, "alex", "And there?")
+	answered := f.reply(t, f.newThread(t, "Mine there", other.ID, "claude", "Shall I?").ID, "alex", "Yes.", false)
+	f.newThread(t, "Asked there", other.ID, "claude", "May I?")
 
-	in := f.read(t, Options{Agent: "claude", Story: f.story.ID})
+	in := f.read(t, Options{Agent: "claude", Story: f.story.ID, Own: f.story.ID})
 	if got := threadIDs(in); len(got) != 1 || got[0] != own.ID || in.AwaitingYou != 1 || in.ThreadsOmitted != 1 {
 		t.Errorf("the story's thread listed, the one awaiting claude elsewhere counted: %v, awaiting %d, omitted %d", got, in.AwaitingYou, in.ThreadsOmitted)
 	}
-	if all := f.read(t, Options{Agent: "claude", Story: f.story.ID, All: true}); all.ThreadsOmitted != 2 {
+	if op := f.read(t, Options{Agent: "claude", Story: f.story.ID, Own: f.story.ID, Operator: true}); op.ThreadsOmitted != 2 {
+		t.Errorf("with operator, claude's question awaiting the operator elsewhere is counted too: %d", op.ThreadsOmitted)
+	}
+	if all := f.read(t, Options{Agent: "claude", Story: f.story.ID, Own: f.story.ID, All: true}); all.ThreadsOmitted != 3 {
 		t.Errorf("with all, every open thread elsewhere is counted: %d", all.ThreadsOmitted)
 	}
 
-	whole := f.read(t, Options{Agent: "claude"})
-	if got := threadIDs(whole); strings.Join(got, " ") != own.ID+" "+elsewhere.ID || whole.ThreadsOmitted != 0 {
+	whole := f.read(t, Options{Agent: "claude", Own: f.story.ID})
+	if got := threadIDs(whole); strings.Join(got, " ") != own.ID+" "+answered.ID || whole.ThreadsOmitted != 0 {
 		t.Errorf("without a story both are listed and none counted: %v, omitted %d", got, whole.ThreadsOmitted)
 	}
 	b, err := json.Marshal(whole)
@@ -397,7 +551,8 @@ func TestAStoryScopedReadCountsTheThreadsOnOtherItems(t *testing.T) {
 // I-0167: an inbox with 33 threads awaiting the agent on other items, none on
 // the story, each with a long last entry, and 50 changes, was over Claude
 // Code's tool-output limit. Read for the story, it lists none of the 33 and
-// counts them, and fitted it is at most ctxpack.PartLimit bytes of JSON.
+// counts them, and fitted it is at most ctxpack.PartLimit bytes of JSON. The
+// agent takes part in each, as ADR-0181 has a thread elsewhere await it.
 func TestTheStorysInboxWithManyThreadsElsewhereFitsThePartLimit(t *testing.T) {
 	f := setup(t)
 	other := f.storyIn(t, "Other", []string{"docs/other"})
@@ -407,9 +562,7 @@ func TestTheStorysInboxWithManyThreadsElsewhereFitsThePartLimit(t *testing.T) {
 		if i%2 == 1 {
 			on = f.epic.ID
 		}
-		if _, err := threads.New(f.repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on, Author: "alex", Text: long, Now: t0}); err != nil {
-			t.Fatal(err)
-		}
+		f.reply(t, f.newThread(t, fmt.Sprintf("Question %d", i), on, "claude", "Which way?").ID, "alex", long, false)
 	}
 	changes := make([]Event, 0, MaxEvents)
 	for i := range MaxEvents {
