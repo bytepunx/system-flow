@@ -3,15 +3,36 @@ id: T-1996
 type: task
 nature: remediation
 title: flaioverModules links another checkout's node_modules only when it was installed from this checkout's lockfile, with a test that reproduces I-0178
-status: backlog
+status: done
 parent: S-0482
 owner: alex
 created: 2026-10-21T12:08:38Z
-updated: 2026-10-21T12:09:59Z
-transitions: []
+updated: 2026-10-21T12:22:13Z
+transitions:
+  - to: ready
+    at: 2026-10-21T12:20:19Z
+    by: agent-S-0482
+  - to: in-progress
+    at: 2026-10-21T12:20:20Z
+    by: agent-S-0482
+  - to: done
+    at: 2026-10-21T12:22:13Z
+    by: agent-S-0482
 stream: S-0482
 tags: [flai, tests, components]
 touches: [flai/internal/components/integration_test.go]
+usage:
+  source: log
+  seconds: 113
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 99
+      cache_read: 928160
+      cache_write: 11444
+      cost: 0.3183
 ---
 # T-1996 flaioverModules links another checkout's node_modules only when it was installed from this checkout's lockfile, with a test that reproduces I-0178
 

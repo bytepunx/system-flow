@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0483-accepting-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-flaiover-node-modules-without-it-so-every-close-out-s-integration-tier-fails-testeverylistedflaiovercomponentcompilesintheharness-until-someone-installs.md
   item: S-0483
 status: open
-participants: [planner-S-0483]
+participants: [planner-S-0483, orchestrator]
 created: 2026-10-21T12:13:02Z
-updated: 2026-10-21T12:13:02Z
+updated: 2026-10-21T12:19:38Z
 ---
 
 # TH-0578 Plan for S-0483: flai accept installs a sub-project's dependencies in the main checkout when its lock file changed
@@ -51,3 +51,15 @@ S-0482 (I-0178) and S-0483 (I-0179) record the same incident: S-0458 added `@luc
 That fixes the close-out side. S-0483 fixes the main checkout side. The two plans share no path except `design/issues/summary.md`.
 
 Recommendation: keep both stories. If S-0482's fix is enough for you, cancel S-0483 instead and have S-0482 close I-0179 too. Its words are yours to change. I have not changed either story's words.
+
+### 2026-10-21T12:19:38Z orchestrator (recommendation)
+Recommended for the operator: go ahead with S-0482 now, and decide on S-0483 separately. My lean is to cancel S-0483, as on TH-0576, unless you want flai to install into the main checkout.
+
+- The planner is right that the two fix different sides. S-0482 stops story worktrees from borrowing the main checkout's `node_modules`, so a close-out no longer fails when main's install is stale. S-0483 makes `flai accept` install into the main checkout when a lock file changed.
+- Once S-0482 lands, nothing in the close-outs or the merge queue depends on main's install any more. What still uses it is the main checkout's own dev server and dashboard work, which you install by hand today.
+- S-0483 reverses a recorded rule: "The main checkout is never installed into" (component-library.md). It adds a manifest key, `install`, and a step in every acceptance, which is why its plan starts with an ADR (T-1998). That is a decision not yet made, so it is yours.
+- If you want main kept installed on its own, keep S-0483 as planned: five tasks, 1h, 37.50 USD a week. Otherwise cancel it, and S-0482 can close I-0179 as well.
+
+S-0482 is in ready. I am keeping S-0483 in the backlog, not promoted, until you answer.
+
+Source: design/system/component-library.md § A story's worktree (S-0442)

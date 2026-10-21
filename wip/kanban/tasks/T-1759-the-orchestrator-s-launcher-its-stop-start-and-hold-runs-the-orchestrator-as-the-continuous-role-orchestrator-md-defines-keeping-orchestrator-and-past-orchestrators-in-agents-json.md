@@ -7,11 +7,11 @@ status: backlog
 parent: S-0419
 owner: alex
 created: 2026-10-16T05:46:24Z
-updated: 2026-10-16T05:46:24Z
+updated: 2026-10-21T12:15:58Z
 transitions: []
 stream: S-0419
 tags: [cli]
-touches: [flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/role_continuous.go]
+touches: [flai/internal/serve/orchestrate.go, flai/internal/serve/orchestrate_hold.go, flai/internal/serve/role_continuous.go, flai/internal/serve/serve.go]
 after: [T-1756]
 ---
 # T-1759 The orchestrator's launcher, its stop, start, and hold, runs the orchestrator as the continuous role orchestrator.md defines, keeping orchestrator and past_orchestrators in agents.json

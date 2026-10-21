@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:19Z
-updated: 2026-10-21T12:13:57Z
+updated: 2026-10-21T12:20:39Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
@@ -34,15 +34,15 @@ usage:
           cache_write: 294016
           cost: 1.282
     - kind: orchestrator
-      seconds: 17
+      seconds: 152
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 6
-          output: 56
-          cache_read: 1164978
-          cache_write: 1348
-          cost: 0.2575
+          input: 50
+          output: 801
+          cache_read: 10944734
+          cache_write: 17651
+          cost: 2.4205
 draft: true
 cost_of_delay:
   value: 48.45
@@ -71,7 +71,7 @@ One path serves every role. `serve.Plan`, the orchestrator's launcher, and `serv
 
 ## Tasks
 - T-1753 planPrompt, orchestratePrompt, and analyzePrompt are read from the three role files' bodies, with the harness tests' prompt text unchanged
-- T-1754 A project with no design/roles runs the three roles from baseline files embedded in flai, and flai check warns roles.baseline naming flai upgrade
+- T-1754 A project with no design/workflows/roles runs the three roles from baseline files embedded in flai, and flai check warns roles.baseline naming flai upgrade
 - T-1756 serve.Plan and the replanner start the planner through the defined-role path, keeping plans in agents.json, and the text below planner.md's marker reaches its prompt
 - T-1757 serve.Analyze and the analysis schedule start the analyzer through the defined-role path, keeping analyzer and past_analyzers in agents.json
 - T-1759 The orchestrator's launcher, its stop, start, and hold, runs the orchestrator as the continuous role orchestrator.md defines, keeping orchestrator and past_orchestrators in agents.json
@@ -85,7 +85,7 @@ One path serves every role. `serve.Plan`, the orchestrator's launcher, and `serv
 ### Planning
 
 - **TH-0471's answers (2026-10-21).**
-  - **Answer 2** moves the folder from `design/roles/` to `design/workflows/roles/`. The goal, criterion 4, and the six role-file touches now say so. T-1754's title still says `design/roles`; its rewrite is asked on the plan thread.
+  - **Answer 2** moves the folder from `design/roles/` to `design/workflows/roles/`. The goal, criterion 4, and the six role-file touches now say so. T-1754's title and Work, and the Work of T-1753 and T-1756, were rewritten to the new folder and order, as the orchestrator approved on TH-0579.
   - **Answer 6** has flai generate a role's harness definition. This story keeps the three built-in roles on their `.claude/agents` definitions. `TestClaudeCodeStartsThePlanner`, `TheOrchestrator`, and `TheAnalyzer` write their fixtures under `.claude/agents` and assert the refusal that names `flai upgrade`, and criterion 1 keeps them unchanged. Generating the built-in definitions is proposed on the plan thread as a story of its own.
   - **Answer 1's** 4h is not yet on E-0024 (TH-0567, question 3).
 - **Order of the first two tasks.** T-1754, the embedded baseline, now comes first and T-1753 waits for it. The harness's prompt tests start roles in a temporary root with no role files. They pass unchanged only when the prompt falls back to the embedded bodies.
@@ -97,7 +97,7 @@ One path serves every role. `serve.Plan`, the orchestrator's launcher, and `serv
     - `flai/internal/serve/agents.go` on T-1756. A defined role's run is recorded under `roles`, and the built-in roles must keep `plans`, `orchestrator`, and `analyzer`.
     - `flai/internal/serve/serve.go` on T-1759. Today the launcher loop calls `orch.look` beside the replanner and the analysis scheduler. Once S-0418's role loop runs continuous roles, the orchestrator must be started by one of them, not both.
   - **Co-change, not added:** `docs/users/flai.md`, `design/system/flai-cli.md`, `template/template.yaml`, and `docs/operators/*`. No command, flag, manifest key, or template file changes here. `flai/cmd/plan.go`, `analyze.go`, and `serve_actions.go` call `serve` functions whose signatures stay.
-- **Forecast.** Raised from flai's 45m to 1h. flai's 45m is 89 s a unit over 85 done improvement stories on this model, times size 30 (5 criteria, 25 touches). The raise has two reasons. Rewiring three launchers with their tests unchanged is the epic's main regression risk. The plan is now five serial layers. The delivery is S-0419's start in flai's play-out, 21:27Z after S-0418, plus 1h times the cycle factor 1.15: 2026-10-21T22:37Z.
+- **Forecast.** Raised from flai's 45m to 1h. flai's 45m is 89 s a unit over 85 done improvement stories on this model, times size 30 (5 criteria, 25 touches). The raise has two reasons. Rewiring three launchers with their tests unchanged is the epic's main regression risk. The plan is now five serial layers. The delivery is S-0419's start in flai's play-out, 21:27Z after S-0418, plus 1h times the cycle factor 1.15: 2026-10-21T22:37Z. flai's replay since moved it to 22:36Z and rewrote the basis, keeping the 1h.
 - **Cost of delay.** 48.45 USD a week. I worked it out by hand from answer 1, as the planners of S-0414, S-0417, and S-0418 did, because `flai cod` refuses while E-0024 has no inputs.
   - 4h lost per cycle, at `planning.hour_rate` 150 over the default 168h cycle, gives E-0024 600 USD a week.
   - S-0419's share is its 1h over the 12h23m forecast for E-0024's twelve open stories: 60 / 743 × 600.

@@ -3,11 +3,11 @@ id: T-1966
 type: task
 nature: improvement
 title: The charts page lists its groups and kinds in the sidebar in place of the row above the chart
-status: in-progress
+status: done
 parent: S-0461
 owner: alex
 created: 2026-10-21T07:04:18Z
-updated: 2026-10-21T12:12:06Z
+updated: 2026-10-21T12:17:28Z
 transitions:
   - to: ready
     at: 2026-10-21T12:12:05Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-10-21T12:12:06Z
     by: agent-S-0461
+  - to: done
+    at: 2026-10-21T12:17:28Z
+    by: agent-S-0461
 stream: S-0461
 tags: [dashboard]
 touches: ["flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts"]
 after: [T-1984]
+usage:
+  source: log
+  seconds: 322
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 158
+      cache_read: 1401975
+      cache_write: 99324
+      cost: 0.5085
 ---
 # T-1966 The charts page lists its groups and kinds in the sidebar in place of the row above the chart
 

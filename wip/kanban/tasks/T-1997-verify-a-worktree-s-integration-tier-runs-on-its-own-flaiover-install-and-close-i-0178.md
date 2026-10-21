@@ -3,16 +3,37 @@ id: T-1997
 type: task
 nature: remediation
 title: Verify a worktree's integration tier runs on its own flaiover install, and close I-0178
-status: backlog
+status: done
 parent: S-0482
 owner: alex
 created: 2026-10-21T12:08:57Z
-updated: 2026-10-21T12:10:10Z
-transitions: []
+updated: 2026-10-21T12:23:49Z
+transitions:
+  - to: ready
+    at: 2026-10-21T12:22:26Z
+    by: agent-S-0482
+  - to: in-progress
+    at: 2026-10-21T12:22:27Z
+    by: agent-S-0482
+  - to: done
+    at: 2026-10-21T12:23:49Z
+    by: agent-S-0482
 stream: S-0482
 tags: [issues, tests]
 touches: [design/issues/I-0178-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-node-modules-without-it-so-every-other-close-out-fails-testeverylistedflaiovercomponentcompilesintheharness.md, design/issues/summary.md]
 after: [T-1994, T-1996]
+usage:
+  source: log
+  seconds: 79
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 51
+      cache_read: 468158
+      cache_write: 3503
+      cost: 0.1598
 ---
 # T-1997 Verify a worktree's integration tier runs on its own flaiover install, and close I-0178
 

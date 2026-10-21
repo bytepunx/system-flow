@@ -3,11 +3,17 @@ id: S-0482
 type: story
 nature: remediation
 title: A story that adds a flaiover dependency leaves the main checkout's node_modules without it, so every other close-out fails TestEveryListedFlaioverComponentCompilesInTheHarness
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-21T12:00:09Z
-updated: 2026-10-21T12:10:10Z
-transitions: []
+updated: 2026-10-21T12:19:11Z
+transitions:
+  - to: ready
+    at: 2026-10-21T12:14:19Z
+    by: orchestrator
+  - to: in-progress
+    at: 2026-10-21T12:19:11Z
+    by: agent-S-0482
 tags: []
 touches: [scripts/integration.sh, scripts/README.md, design/system/devex.md, flai/internal/components/integration_test.go, design/issues/I-0178-a-story-that-adds-a-flaiover-dependency-leaves-the-main-checkout-s-node-modules-without-it-so-every-other-close-out-fails-testeverylistedflaiovercomponentcompilesintheharness.md, design/issues/summary.md]
 agent:
@@ -16,20 +22,33 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 279
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      ceremony: 1
+      hand_edits: 1
+      work: 23
+  models:
+    - model: claude-opus-5-5
+      input: 50
+      output: 295
+      cache_read: 2990585
+      cache_write: 144414
+      cost: 1.0619
   strategic:
     - kind: orchestrator
-      seconds: 58
+      seconds: 116
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 20
-          output: 213
-          cache_read: 3949949
-          cache_write: 12885
-          cost: 0.875
+          input: 39
+          output: 459
+          cache_read: 8290409
+          cache_write: 20352
+          cost: 1.835
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m

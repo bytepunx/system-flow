@@ -3,11 +3,11 @@ id: T-1991
 type: task
 nature: remediation
 title: A benchmark and a reference test replay the holds over a generated history of this repository's size, and the profile names the fix
-status: in-progress
+status: done
 parent: S-0471
 owner: alex
 created: 2026-10-21T12:07:50Z
-updated: 2026-10-21T12:13:52Z
+updated: 2026-10-21T12:21:16Z
 transitions:
   - to: ready
     at: 2026-10-21T12:13:52Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-10-21T12:13:52Z
     by: agent-S-0471
+  - to: done
+    at: 2026-10-21T12:21:16Z
+    by: agent-S-0471
 stream: S-0471
 tags: [flai]
 touches: [flai/internal/metrics/claims_bench_test.go]
+usage:
+  source: log
+  seconds: 444
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 211
+      cache_read: 1782197
+      cache_write: 100773
+      cost: 0.6378
 ---
 # T-1991 A benchmark and a reference test replay the holds over a generated history of this repository's size, and the profile names the fix
 

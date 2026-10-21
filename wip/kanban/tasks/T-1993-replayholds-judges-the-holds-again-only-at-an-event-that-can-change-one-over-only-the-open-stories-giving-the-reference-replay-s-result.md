@@ -2,19 +2,25 @@
 id: T-1993
 type: task
 nature: remediation
-title: replayHolds rebuilds the holds only at an event that can change one and reuses each story's claim, giving the reference replay's result
-status: backlog
+title: replayHolds judges the holds again only at an event that can change one, over only the open stories, giving the reference replay's result
+status: in-progress
 parent: S-0471
 owner: alex
 created: 2026-10-21T12:08:09Z
-updated: 2026-10-21T12:08:09Z
-transitions: []
+updated: 2026-10-21T12:21:27Z
+transitions:
+  - to: ready
+    at: 2026-10-21T12:21:27Z
+    by: agent-S-0471
+  - to: in-progress
+    at: 2026-10-21T12:21:27Z
+    by: agent-S-0471
 stream: S-0471
 tags: [flai]
 touches: [flai/internal/metrics/claims.go, flai/internal/metrics/claims_test.go, flai/internal/workitem/hold.go]
 after: [T-1991]
 ---
-# T-1993 replayHolds rebuilds the holds only at an event that can change one and reuses each story's claim, giving the reference replay's result
+# T-1993 replayHolds judges the holds again only at an event that can change one, over only the open stories, giving the reference replay's result
 
 ## Work
 

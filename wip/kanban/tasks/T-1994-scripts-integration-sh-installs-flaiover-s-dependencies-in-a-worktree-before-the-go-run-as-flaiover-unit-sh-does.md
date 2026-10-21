@@ -3,15 +3,36 @@ id: T-1994
 type: task
 nature: remediation
 title: scripts/integration.sh installs flaiover's dependencies in a worktree before the Go run, as flaiover-unit.sh does
-status: backlog
+status: done
 parent: S-0482
 owner: alex
 created: 2026-10-21T12:08:19Z
-updated: 2026-10-21T12:08:19Z
-transitions: []
+updated: 2026-10-21T12:22:01Z
+transitions:
+  - to: ready
+    at: 2026-10-21T12:20:18Z
+    by: agent-S-0482
+  - to: in-progress
+    at: 2026-10-21T12:20:19Z
+    by: agent-S-0482
+  - to: done
+    at: 2026-10-21T12:22:01Z
+    by: agent-S-0482
 stream: S-0482
 tags: [scripts, tests]
 touches: [scripts/integration.sh, scripts/README.md, design/system/devex.md]
+usage:
+  source: log
+  seconds: 102
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 48
+      cache_read: 628663
+      cache_write: 6238
+      cost: 0.215
 ---
 # T-1994 scripts/integration.sh installs flaiover's dependencies in a worktree before the Go run, as flaiover-unit.sh does
 

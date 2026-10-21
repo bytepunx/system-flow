@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:44Z
-updated: 2026-10-21T12:11:54Z
+updated: 2026-10-21T12:18:59Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:29Z
@@ -17,7 +17,7 @@ transitions:
     by: agent-S-0461
 tags: [dashboard]
 topics: [dashboard]
-touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", "flaiover/src/routes/docs/[...path]/+page.svelte", flaiover/src/routes/docs/docs.svelte.test.ts, flaiover/src/lib/components/DocTree.svelte, design/components/flaiover/src/lib/components/DocTree.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json, flaiover/src/lib/components/DiffView.svelte]
+touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", "flaiover/src/routes/docs/[...path]/+page.svelte", flaiover/src/routes/docs/docs.svelte.test.ts, flaiover/src/lib/components/DocTree.svelte, design/components/flaiover/src/lib/components/DocTree.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md, flaiover/src/lib/components/PageSidebar.svelte, flaiover/src/lib/components/PageSidebar.svelte.test.ts, flaiover/src/lib/pagesidebar.svelte.ts, flaiover/src/lib/pagesidebar.svelte.test.ts, design/components/flaiover/src/lib/components/PageSidebar.examples.json, flaiover/src/lib/components/DiffView.svelte, flaiover/e2e/page-sidebar.e2e.ts]
 after: [S-0460]
 agent:
   harness: claude-code
@@ -26,21 +26,21 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 833
+  seconds: 1281
   estimated: true
   priced_by: estimate
   turns:
     - day: 2026-10-21
       ceremony: 1
       hand_edits: 3
-      work: 23
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 150
-      output: 770
-      cache_read: 7432617
-      cache_write: 349850
-      cost: 2.6346
+      input: 228
+      output: 1206
+      cache_read: 11671602
+      cache_write: 554643
+      cost: 4.141
   strategic:
     - kind: orchestrator
       seconds: 485
@@ -75,8 +75,8 @@ Three more of the pages the operator scrolls through most carry the sidebar S-04
 ## Acceptance criteria
 
 - [x] `/review/:id` has a `PageSidebar` whose scroll entries are Criteria, State, Threads, Changes, and Release plan, in the page's order. Under Changes there is one entry per changed file, and choosing one opens that file's panel and scrolls to it. Blockers and the undone-main cards stay above the sections, where Accept is decided.
-- [ ] `/charts/:kind` lists its groups and kinds in a `PageSidebar` in place of the row above the chart. Each kind is a pane entry that routes to `/charts/<kind>` as the links do now, and the chart window control stays with the chart.
-- [ ] `/docs/<path>` puts `DocTree` in the sidebar's place. Below it, the open document's headings, from `headingsOf`, are scroll entries, with the heading in view current. Editing a document and its threads work as before.
+- [x] `/charts/:kind` lists its groups and kinds in a `PageSidebar` in place of the row above the chart. Each kind is a pane entry that routes to `/charts/<kind>` as the links do now, and the chart window control stays with the chart.
+- [x] `/docs/<path>` puts `DocTree` in the sidebar's place. Below it, the open document's headings, from `headingsOf`, are scroll entries, with the heading in view current. Editing a document and its threads work as before.
 - [ ] Each page's existing tests pass, and new tests cover its sidebar's entries and what choosing one does. Below Tailwind's `md` width no page scrolls sideways.
 - [ ] `design/system/flaiover-dashboard.md` § Views and `docs/users/flaiover.md` (§ Reviewing a story, § Charts, § Docs) describe each sidebar. `DocTree`'s examples follow any change to its props.
 
@@ -86,6 +86,7 @@ Three more of the pages the operator scrolls through most carry the sidebar S-04
 - T-1967 The documents page holds the document tree and the open document's headings in the sidebar
 - T-1968 The dashboard's design and user docs describe the review, charts, and documents sidebars
 - T-1984 PageSidebar takes entries that link to another page and a header shown above its entries
+- T-2010 An end-to-end test finds that the review, charts, and documents pages never scroll sideways below md and keep the sidebar beside the content from md
 
 ## Notes
 

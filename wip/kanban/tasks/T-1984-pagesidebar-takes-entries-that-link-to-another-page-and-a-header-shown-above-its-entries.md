@@ -32,7 +32,7 @@ usage:
       output: 186
       cache_read: 1691903
       cache_write: 83341
-      cost: 0.601
+      cost: 0.6013
 ---
 
 # T-1984 PageSidebar takes entries that link to another page and a header shown above its entries

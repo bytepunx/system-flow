@@ -23,16 +23,16 @@ tags: [dashboard]
 touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, flaiover/src/lib/components/DiffView.svelte]
 usage:
   source: log
-  seconds: 756
+  seconds: 766
   estimated: true
   priced_by: estimate
   models:
     - model: claude-opus-5-5
-      input: 80
-      output: 389
-      cache_read: 4392138
-      cache_write: 149907
-      cost: 1.5376
+      input: 82
+      output: 413
+      cache_read: 4559324
+      cache_write: 161474
+      cost: 1.5989
 ---
 # T-1965 The review page's sidebar scrolls to its criteria, state, threads, each changed file, and release plan
 

@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 109
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 14
-      output: 170
-      cache_read: 858737
-      cache_write: 10788
-      cost: 0.2945
+      output: 2167
+      cache_read: 839696
+      cache_write: 29830
+      cost: 0.45
 ---
 # T-1985 TokenEditor marks each value cell's theme with an attribute of its own, not data-theme, and a test fails while any element in the editor carries data-theme
 

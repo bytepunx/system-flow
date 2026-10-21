@@ -6,7 +6,7 @@ title: The chart data takes about 4 s warm, against 10 ms measured on 2026-09-29
 status: in-progress
 owner: alex
 created: 2026-10-21T11:58:35Z
-updated: 2026-10-21T12:13:10Z
+updated: 2026-10-21T12:21:24Z
 transitions:
   - to: ready
     at: 2026-10-21T12:10:31Z
@@ -23,20 +23,32 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 488
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-10-21
+      hand_edits: 2
+      work: 9
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 328
+      cache_read: 2386228
+      cache_write: 224405
+      cost: 0.8843
   strategic:
     - kind: orchestrator
-      seconds: 9
+      seconds: 18
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 2
-          output: 26
-          cache_read: 419562
-          cache_write: 5321
-          cost: 0.0938
+          input: 7
+          output: 94
+          cache_read: 1472758
+          cache_write: 8062
+          cost: 0.3269
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 4s
@@ -67,7 +79,7 @@ This story remediates [I-0155](../../../design/issues/I-0155-the-chart-data-take
 
 ## Tasks
 - T-1991 A benchmark and a reference test replay the holds over a generated history of this repository's size, and the profile names the fix
-- T-1993 replayHolds rebuilds the holds only at an event that can change one and reuses each story's claim, giving the reference replay's result
+- T-1993 replayHolds judges the holds again only at an event that can change one, over only the open stories, giving the reference replay's result
 - T-1995 stats.get and flai stats are measured again on this repository, server-performance.md records the regression and its fix, and I-0155 is closed
 
 ## Notes

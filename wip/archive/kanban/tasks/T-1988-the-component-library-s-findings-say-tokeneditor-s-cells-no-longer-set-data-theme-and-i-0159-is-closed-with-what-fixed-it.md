@@ -24,16 +24,16 @@ touches: [design/system/component-library.md, design/issues/I-0159-tokeneditor-s
 after: [T-1985]
 usage:
   source: log
-  seconds: 14
+  seconds: 17
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 87
-      cache_read: 546372
-      cache_write: 2914
-      cost: 0.186
+      input: 9
+      output: 1369
+      cache_read: 530442
+      cache_write: 18844
+      cost: 0.2842
 ---
 # T-1988 The component library's findings say TokenEditor's cells no longer set data-theme, and I-0159 is closed with what fixed it
 
