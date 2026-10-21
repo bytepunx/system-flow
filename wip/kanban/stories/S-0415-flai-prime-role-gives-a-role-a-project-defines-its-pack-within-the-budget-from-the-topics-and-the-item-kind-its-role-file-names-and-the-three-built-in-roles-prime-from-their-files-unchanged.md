@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:36Z
-updated: 2026-10-21T02:13:44Z
+updated: 2026-10-21T02:16:18Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, conventions]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 29m
-  delivery: 2026-10-21T06:58:00Z
+  delivery: 2026-10-21T07:01:00Z
   basis: "Its own forecast of 29m; 10th in the pull order with an in-progress limit of 5, behind S-0453, S-0455, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0414."
   by: flai
-  at: 2026-10-21T02:13:44Z
+  at: 2026-10-21T02:16:18Z
 ---
 # S-0415 flai prime --role gives a role a project defines its pack within the budget, from the topics and the item kind its role file names, and the three built-in roles prime from their files unchanged
 
