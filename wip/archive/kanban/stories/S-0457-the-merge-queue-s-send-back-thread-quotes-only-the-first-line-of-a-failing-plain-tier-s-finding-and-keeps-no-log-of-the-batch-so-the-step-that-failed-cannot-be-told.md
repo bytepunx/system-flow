@@ -3,10 +3,10 @@ id: S-0457
 type: story
 nature: improvement
 title: The merge queue's send-back thread quotes only the first line of a failing plain tier's finding and keeps no log of the batch, so the step that failed cannot be told
-status: review
+status: done
 owner: alex
 created: 2026-10-21T02:13:46Z
-updated: 2026-10-21T07:06:59Z
+updated: 2026-10-21T07:47:11Z
 transitions:
   - to: ready
     at: 2026-10-21T06:12:25Z
@@ -22,6 +22,9 @@ transitions:
     by: alex
   - to: review
     at: 2026-10-21T07:06:59Z
+    by: alex
+  - to: done
+    at: 2026-10-21T07:47:11Z
     by: alex
 tags: [flai]
 topics: [cli]
@@ -49,15 +52,21 @@ usage:
       cost: 8.3841
   strategic:
     - kind: orchestrator
-      seconds: 470
+      seconds: 1815
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 944
-          cache_read: 16195196
-          cache_write: 28579
-          cost: 4.0672
+          input: 67
+          output: 1568
+          cache_read: 30907959
+          cache_write: 41074
+          cost: 7.7587
+        - model: claude-sonnet-5-5
+          input: 15
+          output: 52
+          cache_read: 300679
+          cache_write: 40964
+          cost: 0.2796
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 30m

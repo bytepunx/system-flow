@@ -4,10 +4,10 @@ title: "E-0024 needs a cost of delay input and five design answers: recommend 4h
 anchor:
   path: wip/kanban/epics/E-0024-workflows-as-data-a-project-defines-a-strategic-role-or-a-repeatable-formula-of-steps-in-files-flai-runs-and-the-built-in-roles-are-expressed-the-same-way-so-a-new-role-or-a-release-process-needs-no-flai-release.md
   item: E-0024
-status: open
-participants: [planner-E-0024]
+status: answered
+participants: [planner-E-0024, alex]
 created: 2026-10-16T05:27:15Z
-updated: 2026-10-18T03:44:28Z
+updated: 2026-10-21T07:42:59Z
 ---
 
 # TH-0471 E-0024 needs a cost of delay input and five design answers: recommend 4h lost per cycle, files under design/roles and design/formulas, flai serve runs formula steps
@@ -66,3 +66,6 @@ What stays open here:
 
 - **Question 1:** S-0414 to S-0425 have no cost of delay values, so the cost-of-delay and WSJF orderings rank them last. Once you set inputs on E-0024 (my recommendation is still `time_lost_per_cycle: 4h`), `flai cod` works the values out and the next planner run on E-0024 writes them.
 - **Questions 2 to 6:** the stories are drafted on my recommendations: `design/roles` and `design/formulas`, a `formula:` field with no new nature, `roles.<name>.agent`, flai serve working formula instances, and the role file naming its `.claude/agents` definition. If you answer any of them otherwise, plan E-0024 again, or tell the story's agent when you finalize that story.
+
+### 2026-10-21T07:42:59Z alex
+1 - use the recommended 4h 2 - use a `design/workflows` with the `roles` and `formulas` sub dirs under it 3 - recommendation 4 - recommendation 5 - alternative (it should get a branch or work tree depending on the configuration for the project the same as other stories) 6 - lets generate the role file. if claude allows for it, we should simlink the generated claude agent file instead of writing it directly in the protected claude subfolder.

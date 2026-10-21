@@ -3,12 +3,18 @@ id: T-1944
 type: task
 nature: remediation
 title: TestGatewayLiteLLM falls back through a list of free models when the proxy answers its default with a refusal
-status: backlog
+status: in-progress
 parent: S-0456
 owner: alex
 created: 2026-10-21T06:03:28Z
-updated: 2026-10-21T06:03:28Z
-transitions: []
+updated: 2026-10-21T07:29:51Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:29:51Z
+    by: agent-S-0456
+  - to: in-progress
+    at: 2026-10-21T07:29:51Z
+    by: agent-S-0456
 stream: S-0456
 tags: [flai, serve, tests]
 touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh]

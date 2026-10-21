@@ -1,20 +1,22 @@
 ---
 title: Active streams
-updated: 2026-10-21T07:28:26Z
+updated: 2026-10-21T07:47:11Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0453](S-0453.md) | A thread awaits an agent only when the agent takes part in it or it is on the agent's own story, so a story's agent no longer counts the threads awaiting the operator as its own | in-progress | agent-S-0453 | 2026-10-21T07:21:06Z |
+| [S-0453](S-0453.md) | A thread awaits an agent only when the agent takes part in it or it is on the agent's own story, so a story's agent no longer counts the threads awaiting the operator as its own | review | agent-S-0453 | 2026-10-21T07:44:04Z |
 | [S-0456](S-0456.md) | The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke | ready | agent-S-0456 | 2026-10-21T07:28:26Z |
-| [S-0457](S-0457.md) | The merge queue's send-back thread quotes only the first line of a failing plain tier's finding and keeps no log of the batch, so the step that failed cannot be told | review | agent-S-0457 | 2026-10-21T07:07:50Z |
+| [S-0463](S-0463.md) | TestAChildIsStoppedOnlyOnceItsProcessHasEnded fails under load when the stubborn child dies on SIGTERM before it ignores it | in-progress | agent-S-0463 | 2026-10-21T07:37:31Z |
+| [S-0464](S-0464.md) | The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories | in-progress | agent-S-0464 | 2026-10-21T07:32:34Z |
+| [S-0465](S-0465.md) | flai move to done refuses unfixed lint as text only, so the dashboard picks each file's checkout from the refusal's words | in-progress | agent-S-0465 | 2026-10-21T07:38:37Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
-| [planner](planner.md) | 83 | 796.5129 USD | 32797 | 2026-10-21T00:41:19Z |
-| [orchestrator](orchestrator.md) | 732 | 1096.2314 USD | 1032801 | 2026-10-21T07:31:01Z |
+| [planner](planner.md) | 84 | 799.0522 USD | 32859 | 2026-10-21T07:32:02Z |
+| [orchestrator](orchestrator.md) | 743 | 1098.5704 USD | 1033616 | 2026-10-21T07:44:36Z |
 | [analyzer](analyzer.md) | 1 | 5.0040 USD | 454 | 2026-10-15T22:49:08Z |

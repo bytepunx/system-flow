@@ -6,7 +6,7 @@ title: The LiteLLM gateway smoke check's default free model is refused by Claude
 status: ready
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T07:28:26Z
+updated: 2026-10-21T07:33:37Z
 transitions:
   - to: ready
     at: 2026-10-21T07:28:20Z
@@ -25,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 9639
+      seconds: 9911
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 54
-          output: 1149
-          cache_read: 23687329
-          cache_write: 15541
-          cost: 5.9422
+          input: 167
+          output: 3051
+          cache_read: 28729430
+          cache_write: 46798
+          cost: 7.2145
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-10-21T06:04:37Z
 forecast:
   duration: 1h
-  delivery: 2026-10-21T08:36:00Z
-  basis: "Its own forecast of 1h; 1st in the pull order with an in-progress limit of 5, behind S-0453."
+  delivery: 2026-10-21T08:41:00Z
+  basis: "Its own forecast of 1h; 2nd in the pull order with an in-progress limit of 5, behind S-0453, S-0464 and S-0463."
   by: flai
-  at: 2026-10-21T07:28:26Z
+  at: 2026-10-21T07:33:37Z
 finalized:
   by: alex
   at: 2026-10-21T05:58:31Z

@@ -3,10 +3,10 @@ id: S-0453
 type: story
 nature: remediation
 title: A thread awaits an agent only when the agent takes part in it or it is on the agent's own story, so a story's agent no longer counts the threads awaiting the operator as its own
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-20T21:49:07Z
-updated: 2026-10-21T07:17:03Z
+updated: 2026-10-21T07:43:54Z
 transitions:
   - to: ready
     at: 2026-10-21T00:36:24Z
@@ -20,9 +20,12 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:17:03Z
     by: flai
+  - to: review
+    at: 2026-10-21T07:43:54Z
+    by: agent-S-0453
 tags: [flai, template]
 topics: [mcp, inbox, orchestration]
-touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/task_test.go, flai/internal/storystart/start_test.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/story_start_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md]
+touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/task_test.go, flai/internal/storystart/start_test.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/story_start_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/summary.md]
 after: [S-0450]
 agent:
   harness: claude-code
@@ -31,20 +34,20 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 4700
+  seconds: 6323
   priced_by: harness
   turns:
     - day: 2026-10-21
-      ceremony: 3
+      ceremony: 5
       hand_edits: 2
-      work: 102
+      work: 138
   models:
     - model: claude-opus-5-5
-      input: 474
-      output: 155106
-      cache_read: 30558067
-      cache_write: 1285243
-      cost: 17.0997
+      input: 568
+      output: 169988
+      cache_read: 42667934
+      cache_write: 1576246
+      cost: 22.1477
   strategic:
     - kind: planner
       seconds: 709
@@ -63,21 +66,21 @@ usage:
           cache_write: 383777
           cost: 11.1721
     - kind: orchestrator
-      seconds: 4459
+      seconds: 6154
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 242
-          output: 4843
-          cache_read: 84115783
-          cache_write: 52022
-          cost: 21.1003
+          input: 305
+          output: 5739
+          cache_read: 100706223
+          cache_write: 76307
+          cost: 25.2655
         - model: claude-sonnet-5-5
-          input: 20
-          output: 101
-          cache_read: 480096
-          cache_write: 81528
-          cost: 0.4596
+          input: 35
+          output: 153
+          cache_read: 780774
+          cache_write: 122491
+          cost: 0.7392
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m

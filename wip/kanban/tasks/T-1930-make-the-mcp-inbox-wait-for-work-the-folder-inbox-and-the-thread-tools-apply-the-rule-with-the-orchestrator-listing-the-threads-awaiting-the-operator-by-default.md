@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 14298
-      cache_read: 2816855
-      cache_write: 118474
-      cost: 1.5763
+      input: 38
+      output: 11234
+      cache_read: 2819792
+      cache_write: 104169
+      cost: 1.4637
 ---
 # T-1930 Make the MCP inbox, wait_for_work, the folder inbox, and the thread tools apply the rule, with the orchestrator listing the threads awaiting the operator by default
 
