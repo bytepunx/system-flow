@@ -6,7 +6,7 @@ title: A story in review waits days for the operator when the orchestrator's acc
 status: backlog
 owner: alex
 created: 2026-10-21T11:57:59Z
-updated: 2026-10-21T11:57:59Z
+updated: 2026-10-21T20:51:58Z
 transitions: []
 tags: []
 agent:
@@ -35,12 +35,14 @@ usage:
           cache_read: 204810
           cache_write: 23259
           cost: 0.0083
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 96h
     by: flai
     at: 2026-10-21T11:57:59Z
+finalized:
+  by: alex
+  at: 2026-10-21T20:51:58Z
 ---
 # S-0467 A story in review waits days for the operator when the orchestrator's acceptance stops on a dirty main, a rebase on a shared path, or a gate it raised itself
 
