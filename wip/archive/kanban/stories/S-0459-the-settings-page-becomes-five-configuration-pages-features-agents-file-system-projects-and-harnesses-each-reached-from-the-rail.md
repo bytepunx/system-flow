@@ -3,11 +3,11 @@ id: S-0459
 type: story
 nature: improvement
 title: The settings page becomes five Configuration pages, Features, Agents, File System, Projects, and Harnesses, each reached from the rail
-status: review
+status: done
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:57Z
-updated: 2026-10-21T09:20:01Z
+updated: 2026-10-21T09:37:25Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:25Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-21T09:20:01Z
     by: system-flow
+  - to: done
+    at: 2026-10-21T09:37:25Z
+    by: orchestrator
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts, flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts, flaiover/src/routes/settings/+page.svelte, flaiover/src/routes/settings/+page.ts, "flaiover/src/routes/settings/[page]/+page.svelte", "flaiover/src/routes/settings/[page]/+page.ts", flaiover/src/routes/settings/settings.svelte.test.ts, flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, design/system/flaiover-dashboard.md, docs/users/flaiover.md, docs/operators/settings.md, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts]
@@ -112,3 +115,17 @@ The split is the operator's answer to TH-0553 question 4. Each page shows only i
   - **Co-change:** the rest of `flai touches suggest`'s list is hub documents and flai's Go code, none of which this story reaches. None was added.
 - **Forecast.** 45m against flai's 29m. Every `SettingsPanel` case is re-run on its section's page, and an anchor redirect must run in the browser, because the server never sees the hash. The delivery is flai's play-out, moved by its own 16m raise and S-0458's 43m.
 - **Cost of delay.** Not yet set. E-0027 has no inputs, so `flai cod` refuses. The input is asked on TH-0553 question 1.
+
+### Accepted by the orchestrator
+
+- Verified: d28ed3c9b392df0b3b5e0866a4aae16c765ca6dc
+- Batch: 20261021-092356
+- Enqueued verified: 87cd3e984a6b8803f3f193fad247515246178d9a
+- At: 2026-10-21T09:37:25Z
+
+Verdict: S-0459 meets all five acceptance criteria at 87cd3e98; flai verify passed every step there (the flaiover tier covering flaiover-lint and vitest).
+- 1: flaiover/src/lib/settingspages.ts, flaiover/src/lib/settingspages.test.ts
+- 2: flaiover/src/lib/settingspages.ts, flaiover/src/routes/settings/[page]/+page.ts, flaiover/src/routes/settings/[page]/+page.svelte, flaiover/src/routes/settings/+page.svelte, flaiover/src/routes/settings/settings.svelte.test.ts
+- 3: flaiover/src/lib/components/SettingsPanel.svelte, flaiover/src/lib/components/SettingsPanel.svelte.test.ts
+- 4: flaiover/src/lib/sitemenu.ts, flaiover/src/lib/sitemenu.test.ts, flaiover/src/lib/components/NavRail.svelte, flaiover/src/lib/components/NavRail.svelte.test.ts, flaiover/src/lib/components/ProjectSwitcher.svelte, flaiover/src/lib/components/ProjectSwitcher.svelte.test.ts
+- 5: docs/users/flaiover.md, design/system/flaiover-dashboard.md, docs/operators/settings.md
