@@ -6,7 +6,7 @@ title: A story that adds a flaiover dependency leaves the main checkout's node_m
 status: backlog
 owner: alex
 created: 2026-10-21T12:00:09Z
-updated: 2026-10-21T12:00:09Z
+updated: 2026-10-21T12:03:18Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
     by: flai
     at: 2026-10-21T12:00:09Z
+finalized:
+  by: alex
+  at: 2026-10-21T12:03:18Z
 ---
 # S-0482 A story that adds a flaiover dependency leaves the main checkout's node_modules without it, so every other close-out fails TestEveryListedFlaioverComponentCompilesInTheHarness
 
