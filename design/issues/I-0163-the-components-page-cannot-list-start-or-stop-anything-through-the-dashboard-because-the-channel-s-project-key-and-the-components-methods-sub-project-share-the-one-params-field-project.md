@@ -7,7 +7,7 @@ count: 1
 cost: 20m
 first_reported: 2026-10-18T02:25:28Z
 last_reported: 2026-10-18T02:25:28Z
-updated: 2026-10-18T02:25:28Z
+updated: 2026-10-21T11:59:09Z
 ---
 
 # I-0163 The Components page cannot list, start, or stop anything through the dashboard, because the channel's project key and the components methods' sub-project share the one params field project
@@ -26,3 +26,5 @@ The Components page is the whole of E-0026's operator-facing outcome and fails o
 - penalty_per_week: 1000
 
 ## Remediation
+
+Story S-0475 remediates this issue, created from it at 2026-10-21T11:59:09Z.
