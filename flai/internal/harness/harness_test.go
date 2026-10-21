@@ -1405,8 +1405,9 @@ func TestTheOrchestratorsPromptSaysWhatEachPermissionDoes(t *testing.T) {
 	}
 }
 
-// S-0220: the orchestrator is told what to do with the threads awaiting the
-// operator under each value of answer_threads, which it reads afresh since
+// S-0220, ADR-0181: the orchestrator is told what to do with the threads
+// inbox marks awaiting "operator", which it lists in the orchestrator's role
+// without all, under each value of answer_threads, which it reads afresh since
 // the operator may change it while it runs: nothing while it is off, a
 // sourced recommendation while it is recommend, and while it is autonomous
 // a sourced answer, or a recommendation escalating to the operator when no
@@ -1417,7 +1418,7 @@ func TestTheOrchestratorsPromptSaysWhatToDoWithThreads(t *testing.T) {
 	rules := map[string][]string{
 		"each value": {
 			"Reply on threads only as answer_threads says, and read it in system-flow.yaml in the main checkout each time before you act on threads: the operator may change it while you run",
-			"Take from inbox the threads awaiting the operator, those whose status is open and whose last entry is by a story's agent, leaving out the threads you opened and those whose pending_recommendation is not null",
+			"Take from inbox the threads it marks awaiting \"operator\", which it lists in your role without all true, leaving out the threads you opened, those whose last entry is yours, those whose pending_recommendation is not null, and those whose last entry is by neither a story's agent nor a planner, such as flai serve's notices",
 			"thread_reply logs the reply and its source in your decision log",
 			"Never resolve a thread you did not open, but a story's planner's while plan_backlog_stories is on, never answer a thread you opened, and never confirm a recommendation: the operator does",
 		},

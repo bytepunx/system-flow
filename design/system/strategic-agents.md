@@ -1,6 +1,6 @@
 ---
 title: Strategic agents
-updated: 2026-10-20
+updated: 2026-10-21
 status: active
 topics: [planning, orchestration, analysis]
 ---
@@ -352,7 +352,7 @@ Each action is one `activity_log` entry in `wip/agents/orchestrator.md`: what it
 
 ### Answering threads (S-0220)
 
-`orchestration.permissions.answer_threads` is `off`, `recommend`, or `autonomous`, and lets the orchestrator reply on the threads awaiting the operator: open, last entry by a story's agent, not opened by the orchestrator, and with no recommendation pending (`pending_recommendation` in `inbox`). The operator may change it while the orchestrator runs, so its prompt states the rules for each value and tells it to read the value from `system-flow.yaml` each time before it acts on threads (`orchestratePrompt`).
+`orchestration.permissions.answer_threads` is `off`, `recommend`, or `autonomous`, and lets the orchestrator reply on the threads awaiting the operator: those `inbox` marks `awaiting: "operator"`, which it lists in the orchestrator's role without `all: true` ([ADR-0181](../adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md)), save those the orchestrator opened, those whose last entry is its own, those with a recommendation pending (`pending_recommendation` in `inbox`), and those whose last entry is by neither a story's agent nor a planner, such as `flai serve`'s notices. The operator may change it while the orchestrator runs, so its prompt states the rules for each value and tells it to read the value from `system-flow.yaml` each time before it acts on threads (`orchestratePrompt`).
 
 | Value | It replies |
 |-------|------------|
