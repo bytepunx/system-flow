@@ -18,8 +18,13 @@ import (
 
 // The children in these tests are this test binary, told by childEnv what to
 // be: one that runs until it is asked to stop, one that ends at once, and
-// one that will not stop when asked.
-const childEnv = "FLAI_HOST_TEST_CHILD"
+// one that will not stop when asked, which waits ignoreDelayEnv before it
+// ignores SIGTERM and then writes the file ignoringEnv names.
+const (
+	childEnv       = "FLAI_HOST_TEST_CHILD"
+	ignoreDelayEnv = "FLAI_HOST_TEST_IGNORE_DELAY"
+	ignoringEnv    = "FLAI_HOST_TEST_IGNORING"
+)
 
 func TestMain(m *testing.M) {
 	switch os.Getenv(childEnv) {
@@ -40,7 +45,13 @@ func TestMain(m *testing.M) {
 		time.Sleep(50 * time.Millisecond)
 		os.Exit(3)
 	case "stubborn":
+		if d, err := time.ParseDuration(os.Getenv(ignoreDelayEnv)); err == nil {
+			time.Sleep(d)
+		}
 		signal.Ignore(syscall.SIGTERM)
+		if f := os.Getenv(ignoringEnv); f != "" {
+			_ = os.WriteFile(f, nil, 0o600)
+		}
 		time.Sleep(time.Minute)
 		os.Exit(0)
 	}
@@ -50,6 +61,26 @@ func spec(kind string, env ...string) func() (Spec, error) {
 	return func() (Spec, error) {
 		return Spec{Path: os.Args[0], Env: append([]string{childEnv + "=" + kind}, env...), Version: "test"}, nil
 	}
+}
+
+// stubborn is the spec of a child that will not stop when asked, and a wait
+// that returns once it ignores SIGTERM. The child is slow to ignore it, as on
+// a loaded runner, so a test that only sleeps before stopping it sees SIGTERM
+// end it at once (I-0173).
+func stubborn(t *testing.T) (func() (Spec, error), func()) {
+	ignoring := filepath.Join(t.TempDir(), "ignoring")
+	wait := func() {
+		t.Helper()
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			if _, err := os.Stat(ignoring); err == nil {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		t.Fatal("the stubborn child never said it ignores SIGTERM")
+	}
+	return spec("stubborn", ignoreDelayEnv+"=300ms", ignoringEnv+"="+ignoring), wait
 }
 
 type running struct {
@@ -325,14 +356,19 @@ func TestAProcessSomeoneElseStartedIsLeftAlone(t *testing.T) {
 }
 
 func TestAChildThatWillNotStopIsKilled(t *testing.T) {
-	r := start(t, Options{Serve: spec("stubborn"), Grace: 200 * time.Millisecond})
+	child, ignoring := stubborn(t)
+	r := start(t, Options{Serve: child, Grace: 200 * time.Millisecond})
 	pid := childOf(r.until("serve", isRunning(Serve, "")), Serve, "").PID
-	time.Sleep(100 * time.Millisecond) // it has ignored SIGTERM by now
+	ignoring()
+	asked := time.Now()
 	if err := r.stop(); err != nil {
 		t.Fatal(err)
 	}
 	if alive(pid) {
 		t.Errorf("pid %d survived the host", pid)
+	}
+	if d := time.Since(asked); d < r.o.Grace {
+		t.Errorf("stopped in %s, within the grace period: SIGTERM ended it, so it was never killed", d)
 	}
 }
 
@@ -340,13 +376,15 @@ func TestAChildThatWillNotStopIsKilled(t *testing.T) {
 // its process runs, and stopped only once it has gone. It said stopped at
 // once, and a slow runner caught the process still alive (CI after S-0106).
 func TestAChildIsStoppedOnlyOnceItsProcessHasEnded(t *testing.T) {
-	r := start(t, Options{MCP: func(string) (Spec, error) { return spec("stubborn")() }, Grace: time.Second})
+	child, ignoring := stubborn(t)
+	r := start(t, Options{MCP: func(string) (Spec, error) { return child() }, Grace: time.Second})
 	ctx := context.Background()
 	if _, err := r.client.KeepMCP(ctx, []string{"/a"}); err != nil {
 		t.Fatal(err)
 	}
 	pid := childOf(r.until("a running", isRunning(MCP, "/a")), MCP, "/a").PID
-	time.Sleep(100 * time.Millisecond) // it has ignored SIGTERM by now
+	ignoring()
+	asked := time.Now()
 	if _, err := r.client.Act(ctx, MCP, "stop"); err != nil {
 		t.Fatal(err)
 	}
@@ -357,6 +395,9 @@ func TestAChildIsStoppedOnlyOnceItsProcessHasEnded(t *testing.T) {
 	r.until("a stopped", func(st Status) bool { return childOf(st, MCP, "/a").State == "stopped" })
 	if alive(pid) {
 		t.Errorf("stopped, and pid %d still runs", pid)
+	}
+	if d := time.Since(asked); d < r.o.Grace {
+		t.Errorf("stopped in %s, within the grace period: SIGTERM ended a child that ignores it", d)
 	}
 }
 
