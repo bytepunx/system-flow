@@ -6,7 +6,7 @@ title: The LiteLLM gateway smoke check's default free model is refused by Claude
 status: backlog
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T02:08:41Z
+updated: 2026-10-21T05:58:31Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: flai
     at: 2026-10-21T02:08:41Z
+finalized:
+  by: alex
+  at: 2026-10-21T05:58:31Z
 ---
 # S-0456 The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke
 
