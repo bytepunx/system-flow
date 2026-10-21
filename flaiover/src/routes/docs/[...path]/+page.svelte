@@ -9,6 +9,8 @@
 	import { render, enhance } from '$lib/markdown';
 	import { headingsOf } from '$lib/edit';
 	import { touching, type Worker } from '$lib/touches';
+	import PageSidebar from '$lib/components/PageSidebar.svelte';
+	import { hashId, type SidebarEntry } from '$lib/pagesidebar.svelte';
 
 	type Node = {
 		name: string;
@@ -42,6 +44,37 @@
 		}
 	}
 
+	// S-0461: the open document's headings, as the sidebar's scroll entries. Their ids are the ones
+	// the renderer gave the headings (markdown-it-anchor, unique within the document), read from the
+	// rendered HTML, so an entry always names its heading; their labels are the headings' text.
+	type Heading = { id: string; label: string; level: number };
+	function headingsIn(rendered: string): Heading[] {
+		if (!rendered || typeof DOMParser === 'undefined') return [];
+		const body = new DOMParser().parseFromString(rendered, 'text/html').body;
+		return [...body.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')]
+			.filter((h) => h.id)
+			.map((h) => ({ id: h.id, label: h.textContent!.trim(), level: Number(h.tagName[1]) }));
+	}
+	// Each heading sits under the nearest heading above it of a higher level.
+	function nest(hs: Heading[]): SidebarEntry[] {
+		const top: SidebarEntry[] = [];
+		const open: { level: number; entry: SidebarEntry }[] = [];
+		for (const h of hs) {
+			const entry: SidebarEntry = { id: h.id, label: h.label, mode: 'scroll' };
+			while (open.length && open[open.length - 1].level >= h.level) open.pop();
+			const parent = open[open.length - 1]?.entry;
+			if (parent) (parent.children ??= []).push(entry);
+			else top.push(entry);
+			open.push({ level: h.level, entry });
+		}
+		return top;
+	}
+	const headings = $derived(headingsIn(html));
+	// Under a label, whose id has a space and so is never a heading's slug.
+	const sections = $derived<SidebarEntry[]>(
+		headings.length ? [{ id: 'On this page', label: 'On this page', children: nest(headings) }] : []
+	);
+
 	onMount(async () => {
 		void loadWorkers();
 		api('/api/board')
@@ -66,6 +99,10 @@
 				html = render(doc!.body, path);
 				await tick();
 				if (content) await enhance(content, themeState.dark);
+				// A link to one of its headings, from another document or shared, lands on it once drawn.
+				const at = hashId(location.hash);
+				if (at && headings.some((h) => h.id === at))
+					document.getElementById(at)?.scrollIntoView?.({ block: 'start' });
 			})
 			.catch((e) => {
 				error = e instanceof Error ? e.message : String(e);
@@ -77,14 +114,18 @@
 
 <svelte:head><title>{current ? current.split('/').pop() : 'Docs'} · flaiover</title></svelte:head>
 
-<div class="grid grid-cols-1 gap-6 md:grid-cols-[260px_minmax(0,1fr)]">
-	<aside class="max-h-[80vh] overflow-auto rounded border border-line bg-surface p-3">
-		{#if tree.length}
-			<DocTree nodes={tree} {current} />
-		{:else}
-			<p class="text-sm text-muted">Loading tree…</p>
-		{/if}
-	</aside>
+<!-- S-0461: the tree of documents heads the sidebar, and the open document's headings follow it as
+     scroll entries; the document, its front matter, and its threads are the content. -->
+<PageSidebar label="Documents" entries={sections}>
+	{#snippet header()}
+		<div class="max-h-96 overflow-y-auto rounded border border-line bg-surface p-3" data-doc-tree>
+			{#if tree.length}
+				<DocTree nodes={tree} {current} />
+			{:else}
+				<p class="text-sm text-muted">Loading tree…</p>
+			{/if}
+		</div>
+	{/snippet}
 	<section class="min-w-0">
 		{#if error}
 			<p class="rounded border border-danger bg-danger-soft p-3 text-sm text-danger">{error}</p>
@@ -124,11 +165,11 @@
 					</dl>
 				</details>
 			{/if}
-			<article bind:this={content} class="prose max-w-none">
+			<article bind:this={content} class="prose max-w-none overflow-x-auto">
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the mounted repository, rendered client side -->
 				{@html html}
 			</article>
 			<Threads on={current} headings={doc ? headingsOf(doc.body) : []} />
 		{/if}
 	</section>
-</div>
+</PageSidebar>
