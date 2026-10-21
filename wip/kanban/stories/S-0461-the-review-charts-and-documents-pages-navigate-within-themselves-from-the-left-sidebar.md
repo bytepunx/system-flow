@@ -3,15 +3,18 @@ id: S-0461
 type: story
 nature: improvement
 title: The review, charts, and documents pages navigate within themselves from the left sidebar
-status: ready
+status: in-progress
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:44Z
-updated: 2026-10-21T11:12:19Z
+updated: 2026-10-21T11:57:41Z
 transitions:
   - to: ready
     at: 2026-10-21T07:54:29Z
     by: alex
+  - to: in-progress
+    at: 2026-10-21T11:57:41Z
+    by: agent-S-0461
 tags: [dashboard]
 topics: [dashboard]
 touches: [flaiover/src/lib/components/Review.svelte, flaiover/src/lib/components/Review.svelte.test.ts, "flaiover/src/routes/charts/[kind]/+page.svelte", "flaiover/src/routes/charts/[kind]/charts.svelte.test.ts", "flaiover/src/routes/docs/[...path]/+page.svelte", flaiover/src/routes/docs/docs.svelte.test.ts, flaiover/src/lib/components/DocTree.svelte, design/components/flaiover/src/lib/components/DocTree.examples.json, design/system/flaiover-dashboard.md, docs/users/flaiover.md]

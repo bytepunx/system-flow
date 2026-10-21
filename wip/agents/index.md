@@ -1,12 +1,13 @@
 ---
 title: Active streams
-updated: 2026-10-21T11:57:35Z
+updated: 2026-10-21T11:57:41Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
+| [S-0461](S-0461.md) | The review, charts, and documents pages navigate within themselves from the left sidebar | in-progress | agent-S-0461 | 2026-10-21T11:57:41Z |
 
 ## Strategic agents
 
