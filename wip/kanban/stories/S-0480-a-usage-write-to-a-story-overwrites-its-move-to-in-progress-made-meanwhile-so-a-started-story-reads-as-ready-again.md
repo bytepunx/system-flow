@@ -6,7 +6,7 @@ title: A usage write to a story overwrites its move to in-progress made meanwhil
 status: backlog
 owner: alex
 created: 2026-10-21T11:59:52Z
-updated: 2026-10-21T11:59:52Z
+updated: 2026-10-21T12:03:36Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
     by: flai
     at: 2026-10-21T11:59:52Z
+finalized:
+  by: alex
+  at: 2026-10-21T12:03:36Z
 ---
 # S-0480 A usage write to a story overwrites its move to in-progress made meanwhile, so a started story reads as ready again
 
