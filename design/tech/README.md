@@ -1,6 +1,6 @@
 ---
 title: Technology index
-updated: 2026-09-29
+updated: 2026-10-21
 status: active
 ---
 
@@ -22,6 +22,7 @@ One file per technology. Each records the version in use, where it is used, why 
 | Tailwind CSS | 4.3 with typography | flaiover | [tailwind.md](tailwind.md) |
 | TypeScript | 6 | flaiover | [sveltekit.md](sveltekit.md) |
 | Apache ECharts | 6 | flaiover | [charts.md](charts.md) |
+| Lucide icons (`@lucide/svelte`) | 1.61 | flaiover | [icons.md](icons.md) |
 | ws | 8.21 | flaiover | [sveltekit.md](sveltekit.md) |
 | markdown-it, shiki, mermaid | 15.0, 4.4, 12.0 | flaiover | [markdown.md](markdown.md) |
 | Search (no library) | | flai | [search.md](search.md) |
