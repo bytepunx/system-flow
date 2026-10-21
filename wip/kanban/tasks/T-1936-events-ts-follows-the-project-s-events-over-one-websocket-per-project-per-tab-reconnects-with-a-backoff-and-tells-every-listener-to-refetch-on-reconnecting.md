@@ -3,16 +3,37 @@ id: T-1936
 type: task
 nature: remediation
 title: events.ts follows the project's events over one WebSocket per project per tab, reconnects with a backoff, and tells every listener to refetch on reconnecting
-status: backlog
+status: done
 parent: S-0454
 owner: alex
 created: 2026-10-20T22:21:24Z
-updated: 2026-10-20T22:21:24Z
-transitions: []
+updated: 2026-10-21T01:00:44Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:53:37Z
+    by: agent-S-0454
+  - to: in-progress
+    at: 2026-10-21T00:53:37Z
+    by: agent-S-0454
+  - to: done
+    at: 2026-10-21T01:00:44Z
+    by: agent-S-0454
 stream: S-0454
 tags: [dashboard, client-side]
 touches: [flaiover/src/lib/events.ts, flaiover/src/lib/events.test.ts, flaiover/src/lib/inbox.svelte.test.ts, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte.test.ts]
 after: [T-1931]
+usage:
+  source: log
+  seconds: 427
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 14680
+      cache_read: 2230304
+      cache_write: 59244
+      cost: 1.0974
 ---
 # T-1936 events.ts follows the project's events over one WebSocket per project per tab, reconnects with a backoff, and tells every listener to refetch on reconnecting
 

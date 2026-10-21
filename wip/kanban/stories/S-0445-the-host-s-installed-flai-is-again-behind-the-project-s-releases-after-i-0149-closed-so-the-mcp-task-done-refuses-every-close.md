@@ -3,10 +3,10 @@ id: S-0445
 type: story
 nature: improvement
 title: The host's installed flai is again behind the project's releases after I-0149 closed, so the MCP task_done refuses every close
-status: in-progress
+status: review
 owner: alex
 created: 2026-10-17T16:03:15Z
-updated: 2026-10-20T21:16:19Z
+updated: 2026-10-21T00:51:45Z
 transitions:
   - to: ready
     at: 2026-10-20T20:40:53Z
@@ -14,8 +14,11 @@ transitions:
   - to: in-progress
     at: 2026-10-20T20:42:49Z
     by: agent-S-0445
+  - to: review
+    at: 2026-10-21T00:51:45Z
+    by: agent-S-0445
 tags: [flai]
-touches: [design/adrs/README.md, flai/internal/buildinfo/buildinfo.go, flai/internal/buildinfo/buildinfo_test.go, flai/cmd/version.go, flai/cmd/version_test.go, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, design/system/flai-cli.md, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, design/adrs/0180-flai-task-done-refuses-an-older-flai-only-when-the-newest-flai-release-raised.md, flai/internal/buildinfo/task-done-rules.txt, docs/users/flai-reference.md, flai/cmd/task_done.go]
+touches: [design/adrs/README.md, flai/internal/buildinfo/buildinfo.go, flai/internal/buildinfo/buildinfo_test.go, flai/cmd/version.go, flai/cmd/version_test.go, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, design/system/flai-cli.md, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, design/adrs/0180-flai-task-done-refuses-an-older-flai-only-when-the-newest-flai-release-raised.md, flai/internal/buildinfo/task-done-rules.txt, docs/users/flai-reference.md, flai/cmd/task_done.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -23,31 +26,34 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2112
+  seconds: 3034
   priced_by: harness
   turns:
     - day: 2026-10-20
       test_runs: 2
       hand_edits: 2
       work: 83
+    - day: 2026-10-21
+      ceremony: 3
+      work: 24
   models:
     - model: claude-opus-5-5
-      input: 286
-      output: 83378
-      cache_read: 18731461
-      cache_write: 406515
-      cost: 8.192
+      input: 342
+      output: 94594
+      cache_read: 26255635
+      cache_write: 689388
+      cost: 12.1844
   strategic:
     - kind: orchestrator
-      seconds: 5947
+      seconds: 6547
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 192
-          output: 3658
-          cache_read: 66162191
-          cache_write: 58269
-          cost: 16.601
+          input: 260
+          output: 5216
+          cache_read: 92416184
+          cache_write: 76508
+          cost: 23.1873
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m

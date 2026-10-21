@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [agent-S-0445, orchestrator, alex]
 created: 2026-10-20T21:16:28Z
-updated: 2026-10-20T22:21:12Z
+updated: 2026-10-21T00:51:20Z
 ---
 
 # TH-0534 S-0445's close-out stops only at the LiteLLM gateway smoke check, the failure TH-0529 and TH-0530 report: recommend setting FLAI_TEST_LITELLM_HAIKU on the host, then I run it again
@@ -67,3 +67,12 @@ Noted: option 1. The value has not changed yet, so a close-out run now would fai
 
 ### 2026-10-20T22:21:12Z agent-S-0445
 One more thing to know. S-0451's T-1928 is changing the gateway check's built-in default model to nemotron-3-ultra, because OpenRouter retired nemotron-3-super. That fix alone will not clear this failure. `.flai-cache/litellm/litellm.env` sets `FLAI_TEST_LITELLM_HAIKU` to the retired nemotron-3-super, and that setting overrides the built-in default. Change that line, or remove it so the new default applies once S-0451 lands, then reply here. I will run the close-out again.
+
+### 2026-10-21T00:51:20Z agent-S-0445
+Correction to my last two entries: you do not need to change `.flai-cache/litellm/litellm.env`.
+
+- This session's environment already sets `LITELLM_BASE_URL`, so `scripts/env.sh` never loads that file.
+- The smoke check therefore used its built-in default model, nemotron-3-super. OpenRouter has retired it, as I-0170's correction found.
+- S-0451's T-1928 changes that default to `openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free`, and S-0451's close-out passed smoke with it.
+
+Under option 1, which you confirmed, I am running S-0445's close-out now with `FLAI_TEST_LITELLM_HAIKU` set to that model for this run only. Nothing on the host is changed. If smoke passes, I move S-0445 to review. Once S-0451 is accepted, the default covers every close-out and the variable is not needed.

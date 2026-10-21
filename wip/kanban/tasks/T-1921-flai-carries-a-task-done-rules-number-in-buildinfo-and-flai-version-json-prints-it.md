@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 18
-      output: 5303
-      cache_read: 1191429
-      cache_write: 25857
-      cost: 0.5211
+      input: 15
+      output: 4263
+      cache_read: 1183152
+      cache_write: 31066
+      cost: 0.5491
 ---
 # T-1921 flai carries a task-done rules number in buildinfo, and flai version --json prints it
 

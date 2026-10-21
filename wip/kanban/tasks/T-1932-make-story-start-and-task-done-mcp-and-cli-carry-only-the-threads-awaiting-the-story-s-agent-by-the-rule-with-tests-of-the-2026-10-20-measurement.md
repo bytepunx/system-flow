@@ -3,16 +3,37 @@ id: T-1932
 type: task
 nature: remediation
 title: Make story_start and task_done, MCP and CLI, carry only the threads awaiting the story's agent by the rule, with tests of the 2026-10-20 measurement
-status: backlog
+status: done
 parent: S-0453
 owner: alex
 created: 2026-10-20T22:20:55Z
-updated: 2026-10-20T22:20:55Z
-transitions: []
+updated: 2026-10-21T01:20:03Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:55:04Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-21T00:55:04Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T01:20:03Z
+    by: system-flow
 stream: S-0453
 tags: [flai]
 touches: [flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/task_test.go, flai/internal/storystart/start_test.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/story_start_test.go]
 after: [T-1929]
+usage:
+  source: log
+  seconds: 1499
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 101
+      output: 36570
+      cache_read: 5421321
+      cache_write: 259668
+      cost: 3.277
 ---
 # T-1932 Make story_start and task_done, MCP and CLI, carry only the threads awaiting the story's agent by the rule, with tests of the 2026-10-20 measurement
 

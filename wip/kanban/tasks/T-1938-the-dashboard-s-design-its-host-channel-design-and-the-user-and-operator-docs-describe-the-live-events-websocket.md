@@ -3,16 +3,37 @@ id: T-1938
 type: task
 nature: remediation
 title: The dashboard's design, its host channel design, and the user and operator docs describe the live-events WebSocket
-status: backlog
+status: done
 parent: S-0454
 owner: alex
 created: 2026-10-20T22:22:04Z
-updated: 2026-10-20T22:22:04Z
-transitions: []
+updated: 2026-10-21T01:16:30Z
+transitions:
+  - to: ready
+    at: 2026-10-21T01:02:02Z
+    by: agent-S-0454
+  - to: in-progress
+    at: 2026-10-21T01:02:03Z
+    by: agent-S-0454
+  - to: done
+    at: 2026-10-21T01:16:30Z
+    by: agent-S-0454
 stream: S-0454
 tags: [dashboard, docs]
-touches: [design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/tech/sveltekit.md, docs/users/flaiover.md, docs/operators/index.md]
+touches: [design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/tech/sveltekit.md, docs/users/flaiover.md, docs/operators/index.md, docs/users/flai.md]
 after: [T-1934, T-1936, T-1937]
+usage:
+  source: log
+  seconds: 867
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 12166
+      cache_read: 1848371
+      cache_write: 49098
+      cost: 0.9095
 ---
 # T-1938 The dashboard's design, its host channel design, and the user and operator docs describe the live-events WebSocket
 

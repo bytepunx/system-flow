@@ -3,16 +3,37 @@ id: T-1930
 type: task
 nature: remediation
 title: Make the MCP inbox, wait_for_work, the folder inbox, and the thread tools apply the rule, with the orchestrator listing the threads awaiting the operator by default
-status: backlog
+status: done
 parent: S-0453
 owner: alex
 created: 2026-10-20T22:20:41Z
-updated: 2026-10-20T22:21:35Z
-transitions: []
+updated: 2026-10-21T01:19:59Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:55:02Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-21T00:55:03Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T01:19:59Z
+    by: system-flow
 stream: S-0453
 tags: [flai]
 touches: [flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/orchestrator_threads_test.go]
 after: [T-1929]
+usage:
+  source: log
+  seconds: 1496
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 19012
+      cache_read: 2818398
+      cache_write: 134994
+      cost: 1.7036
 ---
 # T-1930 Make the MCP inbox, wait_for_work, the folder inbox, and the thread tools apply the rule, with the orchestrator listing the threads awaiting the operator by default
 

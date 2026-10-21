@@ -3,16 +3,37 @@ id: T-1935
 type: task
 nature: remediation
 title: Document in the user docs and the generated reference what inbox and wait_for_work report as awaiting you, operator, and other
-status: backlog
+status: done
 parent: S-0453
 owner: alex
 created: 2026-10-20T22:21:14Z
-updated: 2026-10-20T22:21:14Z
-transitions: []
+updated: 2026-10-21T01:26:05Z
+transitions:
+  - to: ready
+    at: 2026-10-21T01:25:26Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-21T01:25:27Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T01:26:05Z
+    by: system-flow
 stream: S-0453
 tags: [flai]
 touches: [docs/users/flai.md, docs/users/flai-reference.md]
 after: [T-1930, T-1932, T-1933]
+usage:
+  source: log
+  seconds: 38
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 7196
+      cache_read: 1066740
+      cache_write: 51094
+      cost: 0.6448
 ---
 # T-1935 Document in the user docs and the generated reference what inbox and wait_for_work report as awaiting you, operator, and other
 

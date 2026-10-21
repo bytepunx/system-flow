@@ -3,16 +3,37 @@ id: T-1940
 type: task
 nature: remediation
 title: The server-sent events endpoint and sse.ts are removed, as the ADR says
-status: backlog
+status: done
 parent: S-0454
 owner: alex
 created: 2026-10-20T22:22:45Z
-updated: 2026-10-20T22:22:45Z
-transitions: []
+updated: 2026-10-21T01:17:11Z
+transitions:
+  - to: ready
+    at: 2026-10-21T01:16:58Z
+    by: agent-S-0454
+  - to: in-progress
+    at: 2026-10-21T01:16:58Z
+    by: agent-S-0454
+  - to: done
+    at: 2026-10-21T01:17:11Z
+    by: agent-S-0454
 stream: S-0454
 tags: [dashboard, server-side]
 touches: [flaiover/src/routes/api/events/+server.ts, flaiover/src/lib/server/sse.ts, flaiover/src/lib/server/sse.test.ts]
 after: [T-1939]
+usage:
+  source: log
+  seconds: 13
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 7
+      output: 2556
+      cache_read: 388325
+      cache_write: 10315
+      cost: 0.1911
 ---
 # T-1940 The server-sent events endpoint and sse.ts are removed, as the ADR says
 

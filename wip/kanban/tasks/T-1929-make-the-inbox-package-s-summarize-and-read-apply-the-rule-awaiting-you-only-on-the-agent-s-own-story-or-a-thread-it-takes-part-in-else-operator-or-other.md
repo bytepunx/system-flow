@@ -3,16 +3,37 @@ id: T-1929
 type: task
 nature: remediation
 title: "Make the inbox package's Summarize and Read apply the rule: awaiting you only on the agent's own story or a thread it takes part in, else operator or other"
-status: backlog
+status: done
 parent: S-0453
 owner: alex
 created: 2026-10-20T22:20:23Z
-updated: 2026-10-20T22:21:28Z
-transitions: []
+updated: 2026-10-21T00:54:16Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:41:48Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-21T00:41:49Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T00:54:16Z
+    by: system-flow
 stream: S-0453
 tags: [flai]
 touches: [flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go]
 after: [T-1927]
+usage:
+  source: log
+  seconds: 747
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 10220
+      cache_read: 1515019
+      cache_write: 72566
+      cost: 0.9158
 ---
 # T-1929 Make the inbox package's Summarize and Read apply the rule: awaiting you only on the agent's own story or a thread it takes part in, else operator or other
 

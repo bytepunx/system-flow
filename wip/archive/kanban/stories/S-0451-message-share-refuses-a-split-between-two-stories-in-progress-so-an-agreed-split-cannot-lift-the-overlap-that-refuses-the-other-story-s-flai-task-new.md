@@ -3,10 +3,10 @@ id: S-0451
 type: story
 nature: improvement
 title: message_share refuses a split between two stories in progress, so an agreed split cannot lift the overlap that refuses the other story's flai task new
-status: review
+status: done
 owner: alex
 created: 2026-10-20T18:59:50Z
-updated: 2026-10-20T22:31:30Z
+updated: 2026-10-21T02:08:39Z
 transitions:
   - to: ready
     at: 2026-10-20T19:01:47Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-20T22:31:30Z
     by: agent-S-0451
+  - to: done
+    at: 2026-10-21T02:08:39Z
+    by: alex
 tags: []
 touches: [flai/internal/itemnew/itemnew.go, flai/internal/itemnew/itemnew_test.go, design/issues/I-0169-message-share-refuses-a-split-between-two-stories-in-progress-so-an-agreed-split-cannot-lift-the-overlap-that-refuses-the-other-story-s-flai-task-new.md, design/issues/summary.md, design/system/flai-cli.md, docs/users/flai.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, docs/contributors/index.md, docs/operators/index.md, flai/internal/serve/gateway_test.go, scripts/litellm.sh]
 agent:

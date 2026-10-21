@@ -3,16 +3,37 @@ id: T-1937
 type: task
 nature: remediation
 title: The component harness opens no WebSocket to the app's own server, fails it as a refused one, and lists it under Events
-status: backlog
+status: done
 parent: S-0454
 owner: alex
 created: 2026-10-20T22:21:42Z
-updated: 2026-10-20T22:21:42Z
-transitions: []
+updated: 2026-10-21T01:00:49Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:53:38Z
+    by: agent-S-0454
+  - to: in-progress
+    at: 2026-10-21T00:53:38Z
+    by: agent-S-0454
+  - to: done
+    at: 2026-10-21T01:00:49Z
+    by: agent-S-0454
 stream: S-0454
 tags: [components, dashboard]
 touches: [flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, design/system/component-library.md]
 after: [T-1931]
+usage:
+  source: log
+  seconds: 431
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 32
+      output: 12125
+      cache_read: 1842039
+      cache_write: 48930
+      cost: 0.9064
 ---
 # T-1937 The component harness opens no WebSocket to the app's own server, fails it as a refused one, and lists it under Events
 

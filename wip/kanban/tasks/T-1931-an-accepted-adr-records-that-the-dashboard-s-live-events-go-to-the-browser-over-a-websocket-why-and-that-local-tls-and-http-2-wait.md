@@ -3,15 +3,36 @@ id: T-1931
 type: task
 nature: remediation
 title: An accepted ADR records that the dashboard's live events go to the browser over a WebSocket, why, and that local TLS and HTTP/2 wait
-status: backlog
+status: done
 parent: S-0454
 owner: alex
 created: 2026-10-20T22:20:43Z
-updated: 2026-10-20T22:25:36Z
-transitions: []
+updated: 2026-10-21T00:53:26Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:53:19Z
+    by: agent-S-0454
+  - to: in-progress
+    at: 2026-10-21T00:53:19Z
+    by: agent-S-0454
+  - to: done
+    at: 2026-10-21T00:53:26Z
+    by: agent-S-0454
 stream: S-0454
 tags: [dashboard, adr]
-touches: [design/adrs/0179-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md, design/adrs/README.md]
+touches: [design/adrs/README.md, design/adrs/0182-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md]
+usage:
+  source: log
+  seconds: 7
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 2
+      output: 851
+      cache_read: 129283
+      cache_write: 3434
+      cost: 0.0636
 ---
 # T-1931 An accepted ADR records that the dashboard's live events go to the browser over a WebSocket, why, and that local TLS and HTTP/2 wait
 

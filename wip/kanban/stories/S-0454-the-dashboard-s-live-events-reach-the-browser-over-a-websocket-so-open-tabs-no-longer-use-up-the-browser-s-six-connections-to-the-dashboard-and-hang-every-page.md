@@ -3,37 +3,68 @@ id: S-0454
 type: story
 nature: remediation
 title: The dashboard's live events reach the browser over a WebSocket, so open tabs no longer use up the browser's six connections to the dashboard and hang every page
-status: ready
+status: review
 owner: alex
 created: 2026-10-20T22:10:33Z
-updated: 2026-10-21T00:41:56Z
+updated: 2026-10-21T02:06:07Z
 transitions:
   - to: ready
     at: 2026-10-21T00:36:37Z
     by: alex
+  - to: in-progress
+    at: 2026-10-21T00:51:51Z
+    by: agent-S-0454
+  - to: review
+    at: 2026-10-21T01:43:05Z
+    by: agent-S-0454
+  - to: in-progress
+    at: 2026-10-21T01:52:07Z
+    by: flai
+  - to: review
+    at: 2026-10-21T02:06:07Z
+    by: agent-S-0454
 tags: [dashboard]
 topics: [client-side, server-side, components]
-touches: [design/adrs/0179-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md, design/adrs/README.md, flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/hooks.server.ts, flaiover/server.js, flaiover/vite.config.ts, flaiover/src/lib/events.ts, flaiover/src/lib/events.test.ts, flaiover/src/lib/inbox.svelte.test.ts, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, flaiover/playwright.config.ts, flaiover/e2e/live-events.e2e.ts, scripts/flaiover-e2e.sh, Makefile, flaiover/src/routes/api/events/+server.ts, flaiover/src/lib/server/sse.ts, flaiover/src/lib/server/sse.test.ts, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/system/component-library.md, design/tech/sveltekit.md, docs/users/flaiover.md, docs/operators/index.md]
+touches: [design/adrs/README.md, flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/hooks.server.ts, flaiover/server.js, flaiover/vite.config.ts, flaiover/src/lib/events.ts, flaiover/src/lib/events.test.ts, flaiover/src/lib/inbox.svelte.test.ts, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, flaiover/playwright.config.ts, flaiover/e2e/live-events.e2e.ts, scripts/flaiover-e2e.sh, Makefile, flaiover/src/routes/api/events/+server.ts, flaiover/src/lib/server/sse.ts, flaiover/src/lib/server/sse.test.ts, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/system/component-library.md, design/tech/sveltekit.md, docs/users/flaiover.md, docs/operators/index.md, design/adrs/0182-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md, docs/users/flai.md, flaiover/package.json, scripts/README.md, design/issues/I-0171-the-litellm-gateway-smoke-check-fails-because-claude-code-2-1-296-refuses-the-default-haiku-model-name-as-unrecognized-model.md, design/issues/summary.md, design/issues/I-0172-the-merge-queue-s-send-back-thread-quotes-only-the-first-line-of-a-failing-plain-tier-s-finding-and-keeps-no-log-of-the-batch-so-the-step-that-failed-cannot-be-told.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3929
+  priced_by: harness
+  turns:
+    - day: 2026-10-21
+      ceremony: 1
+      test_runs: 4
+      hand_edits: 4
+      work: 77
+  models:
+    - model: claude-opus-5-5
+      input: 462
+      output: 172647
+      cache_read: 26229122
+      cache_write: 696727
+      cost: 12.9058
   strategic:
     - kind: orchestrator
-      seconds: 56
+      seconds: 4498
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 223
-          cache_read: 4225636
-          cache_write: 13882
-          cost: 1.0627
+          input: 112
+          output: 2744
+          cache_read: 44019605
+          cache_write: 57054
+          cost: 11.0496
+        - model: claude-sonnet-5-5
+          input: 18
+          output: 122
+          cache_read: 357958
+          cache_write: 62912
+          cost: 0.3445
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -63,13 +94,13 @@ Seen on 2026-10-20 with Brave at 127.0.0.1:4242. The flaiover log showed every r
 This story moves the live events to a WebSocket. WebSockets do not count toward the browser's six HTTP/1.1 connections. Local TLS and HTTP/2, which would multiplex every request over one connection, are left for later.
 
 ## Acceptance criteria
-- [ ] An accepted ADR records that the dashboard's live events go to the browser over a WebSocket instead of server-sent events, why (the six-connection limit and the 2026-10-20 instance), and that local TLS and HTTP/2 are deferred.
-- [ ] The server upgrades the live-events WebSocket in `flaiover/server.js` and in the dev server's upgrade plugin in `flaiover/vite.config.ts`, beside the `/agent` upgrade (ADR-0029). It sends the messages `/api/events` sends now: `ready` once, `change` with `{ path, kind }`, and `agent` with `{ story }`, for the project the URL's `project` parameter names. It keeps the connection alive with a ping, and stops listening to the project's `Repo` when the socket closes.
-- [ ] The upgrade is authenticated and authorized as a request to `/api/events` is in `flaiover/src/hooks.server.ts`. Upgrades bypass SvelteKit's hooks, so an unauthenticated or forbidden upgrade is refused with 401 or 403 before the socket opens, and a test shows it.
-- [ ] `flaiover/src/lib/events.ts` keeps its `listen` API and still shares one socket per project per tab. After a drop it reconnects with a backoff, and on reconnecting it tells every listener to refetch, since a WebSocket does not resume as an `EventSource` did. No component that listens changes.
-- [ ] A Playwright test reproduces the hang: at least seven pages of one browser context following the same project's events, where a fetch from the last page answers. Run against the server-sent events before the change, it hangs.
-- [ ] The component harness (ADR-0172) treats a WebSocket to the app's own server as it treats an `EventSource` now: it opens no connection, fails as a refused one does, and lists it under Events.
-- [ ] The server-sent events endpoint and `flaiover/src/lib/server/sse.ts` are removed, or kept only if something else still needs them, as the ADR says. `design/system/flaiover-dashboard.md`'s API table, `design/system/dashboard-host-channel.md`, and `docs/users/flaiover.md` describe the WebSocket.
+- [x] An accepted ADR records that the dashboard's live events go to the browser over a WebSocket instead of server-sent events, why (the six-connection limit and the 2026-10-20 instance), and that local TLS and HTTP/2 are deferred.
+- [x] The server upgrades the live-events WebSocket in `flaiover/server.js` and in the dev server's upgrade plugin in `flaiover/vite.config.ts`, beside the `/agent` upgrade (ADR-0029). It sends the messages `/api/events` sends now: `ready` once, `change` with `{ path, kind }`, and `agent` with `{ story }`, for the project the URL's `project` parameter names. It keeps the connection alive with a ping, and stops listening to the project's `Repo` when the socket closes.
+- [x] The upgrade is authenticated and authorized as a request to `/api/events` is in `flaiover/src/hooks.server.ts`. Upgrades bypass SvelteKit's hooks, so an unauthenticated or forbidden upgrade is refused with 401 or 403 before the socket opens, and a test shows it.
+- [x] `flaiover/src/lib/events.ts` keeps its `listen` API and still shares one socket per project per tab. After a drop it reconnects with a backoff, and on reconnecting it tells every listener to refetch, since a WebSocket does not resume as an `EventSource` did. No component that listens changes.
+- [x] A Playwright test reproduces the hang: at least seven pages of one browser context following the same project's events, where a fetch from the last page answers. Run against the server-sent events before the change, it hangs.
+- [x] The component harness (ADR-0172) treats a WebSocket to the app's own server as it treats an `EventSource` now: it opens no connection, fails as a refused one does, and lists it under Events.
+- [x] The server-sent events endpoint and `flaiover/src/lib/server/sse.ts` are removed, or kept only if something else still needs them, as the ADR says. `design/system/flaiover-dashboard.md`'s API table, `design/system/dashboard-host-channel.md`, and `docs/users/flaiover.md` describe the WebSocket.
 
 ## Tasks
 - T-1931 An accepted ADR records that the dashboard's live events go to the browser over a WebSocket, why, and that local TLS and HTTP/2 wait
@@ -108,3 +139,4 @@ Forecast 1h30m, delivery 2026-10-21T15:38:00Z. `flai forecast` gave 57m at size 
 Cost of delay 37.50 USD a week, as `flai cod` gives it from the orchestrator's input on TH-0535, 15m lost per 168h cycle at 150 USD an hour. Kept: it matches S-0445, a remediation with the same kind of stop and workaround.
 
 Topic `components` added: T-1937 changes the component harness.
+- 2026-10-21T01:52:07Z: moved to in-progress: merge queue batch 20261021-014447 fails with S-0454 at 6a4ae3b52fd6: smoke failed: smoke: smoke: template render and check

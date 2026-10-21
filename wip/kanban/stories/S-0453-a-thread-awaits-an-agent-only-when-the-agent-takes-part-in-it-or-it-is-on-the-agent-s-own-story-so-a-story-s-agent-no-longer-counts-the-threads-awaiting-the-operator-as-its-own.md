@@ -3,14 +3,20 @@ id: S-0453
 type: story
 nature: remediation
 title: A thread awaits an agent only when the agent takes part in it or it is on the agent's own story, so a story's agent no longer counts the threads awaiting the operator as its own
-status: backlog
+status: in-progress
 owner: alex
 created: 2026-10-20T21:49:07Z
-updated: 2026-10-21T00:29:28Z
-transitions: []
+updated: 2026-10-21T01:25:15Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:36:24Z
+    by: alex
+  - to: in-progress
+    at: 2026-10-21T00:37:12Z
+    by: agent-S-0453
 tags: [flai, template]
 topics: [mcp, inbox, orchestration]
-touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/task_test.go, flai/internal/storystart/start_test.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/story_start_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md]
+touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/task_test.go, flai/internal/storystart/start_test.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/story_start_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md]
 after: [S-0450]
 agent:
   harness: claude-code
@@ -18,9 +24,21 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3224
+  priced_by: harness
+  turns:
+    - day: 2026-10-21
+      ceremony: 1
+      hand_edits: 2
+      work: 69
+  models:
+    - model: claude-opus-5-5
+      input: 392
+      output: 142262
+      cache_read: 21089563
+      cache_write: 1010138
+      cost: 12.7479
   strategic:
     - kind: planner
       seconds: 709
@@ -39,15 +57,15 @@ usage:
           cache_write: 383777
           cost: 11.1721
     - kind: orchestrator
-      seconds: 3841
+      seconds: 4288
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 176
-          output: 3514
-          cache_read: 58835687
-          cache_write: 33021
-          cost: 14.758
+          input: 232
+          output: 4683
+          cache_read: 79672409
+          cache_write: 46435
+          cost: 19.985
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -77,10 +95,10 @@ S-0450 (ADR-0179) keeps `story_start` and `task_done` under Claude Code's limit 
 This story fixes the rule. The operator chose this on 2026-10-20 over shorter summaries everywhere and a general size cap. ADR-0179's 40,000-byte fit stays as the safety net.
 
 ## Acceptance criteria
-- [ ] An accepted ADR records the rule. A thread awaits an agent only when the agent is among its participants, or the thread is on the agent's own story or one of its tasks, and its last entry is not the agent's. ADR-0090's rule for an opener whose recommendation awaits confirmation stands. Any other open thread is `awaiting: "operator"` when it awaits the operator, else `"other"`. The ADR refines ADR-0179 and ADR-0090.
-- [ ] `inbox`, `wait_for_work`, `story_start`, and `task_done` apply the rule. A test reproduces the 2026-10-20 measurement: open threads awaiting the operator, none on the reading agent's story. The story's agent then gets no thread listed, `awaiting_you` 0, `threads_omitted` 0, and no `thread` answer from `wait_for_work`, while a thread the operator answered on the agent's story still awaits it.
-- [ ] The orchestrator still finds the threads awaiting the operator in `inbox` without `all: true`, as its role's default, and its instructions in `flai/internal/harness/harness.go` name them by `awaiting: "operator"`.
-- [ ] The operator's view is unchanged: the dashboard and `flai thread list` show the same threads awaiting the operator as before.
+- [x] An accepted ADR records the rule. A thread awaits an agent only when the agent is among its participants, or the thread is on the agent's own story or one of its tasks, and its last entry is not the agent's. ADR-0090's rule for an opener whose recommendation awaits confirmation stands. Any other open thread is `awaiting: "operator"` when it awaits the operator, else `"other"`. The ADR refines ADR-0179 and ADR-0090.
+- [x] `inbox`, `wait_for_work`, `story_start`, and `task_done` apply the rule. A test reproduces the 2026-10-20 measurement: open threads awaiting the operator, none on the reading agent's story. The story's agent then gets no thread listed, `awaiting_you` 0, `threads_omitted` 0, and no `thread` answer from `wait_for_work`, while a thread the operator answered on the agent's story still awaits it.
+- [x] The orchestrator still finds the threads awaiting the operator in `inbox` without `all: true`, as its role's default, and its instructions in `flai/internal/harness/harness.go` name them by `awaiting: "operator"`.
+- [x] The operator's view is unchanged: the dashboard and `flai thread list` show the same threads awaiting the operator as before.
 
 ## Tasks
 - T-1927 Record in an ADR and the design that a thread awaits an agent only when the agent takes part in it or it is on the agent's own story, and is awaiting operator or other otherwise

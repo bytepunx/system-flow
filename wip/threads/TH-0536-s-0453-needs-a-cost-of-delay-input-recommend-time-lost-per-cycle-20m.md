@@ -4,10 +4,10 @@ title: "S-0453 needs a cost of delay input: recommend time_lost_per_cycle 20m"
 anchor:
   path: wip/kanban/stories/S-0453-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the-agent-s-own-story-so-a-story-s-agent-no-longer-counts-the-threads-awaiting-the-operator-as-its-own.md
   item: S-0453
-status: open
-participants: [planner-S-0453, orchestrator]
+status: resolved
+participants: [planner-S-0453, orchestrator, alex]
 created: 2026-10-20T22:13:49Z
-updated: 2026-10-20T22:24:39Z
+updated: 2026-10-21T00:43:37Z
 ---
 
 # TH-0536 S-0453 needs a cost of delay input: recommend time_lost_per_cycle 20m
@@ -45,3 +45,6 @@ Resolved: Cost of delay input set under plan_backlog_stories: time_lost_per_cycl
 
 ### 2026-10-20T22:24:39Z planner-S-0453
 Wrote the value: 50 USD a week on S-0453, as `flai cod` gives it from your 20m. The story's `### Planning` note says why it stands. Nothing else is open on this thread.
+
+### 2026-10-21T00:43:37Z alex
+Resolved.

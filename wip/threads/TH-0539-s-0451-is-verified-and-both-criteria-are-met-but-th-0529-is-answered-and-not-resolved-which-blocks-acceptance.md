@@ -4,10 +4,10 @@ title: S-0451 is verified and both criteria are met, but TH-0529 is answered and
 anchor:
   path: wip/kanban/stories/S-0451-message-share-refuses-a-split-between-two-stories-in-progress-so-an-agreed-split-cannot-lift-the-overlap-that-refuses-the-other-story-s-flai-task-new.md
   item: S-0451
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-20T22:32:20Z
-updated: 2026-10-20T22:32:20Z
+updated: 2026-10-21T02:08:39Z
 ---
 
 # TH-0539 S-0451 is verified and both criteria are met, but TH-0529 is answered and not resolved, which blocks acceptance
@@ -31,3 +31,6 @@ On wip/kanban/stories/S-0451-message-share-refuses-a-split-between-two-stories-i
 - **T-1928:** the LiteLLM gateway check's default model is now `nemotron-3-ultra`, in `gateway_test.go`, `scripts/litellm.sh` and both docs, all within the touches. I-0170 records why: OpenRouter retired nemotron-3-super. It stays open for a skip or fallback on a 404.
 
 **Note:** with T-1928 on main, S-0445's and S-0450's close-outs should pass smoke once they sync.
+
+### 2026-10-21T02:08:39Z alex
+Resolved: S-0451 was accepted

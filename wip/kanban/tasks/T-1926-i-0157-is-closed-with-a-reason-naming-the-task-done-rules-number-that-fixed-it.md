@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 937
-      cache_read: 210458
-      cache_write: 4567
-      cost: 0.092
+      output: 753
+      cache_read: 208996
+      cache_write: 5488
+      cost: 0.097
 ---
 # T-1926 I-0157 is closed with a reason naming the task-done rules number that fixed it
 

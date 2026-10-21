@@ -4,10 +4,10 @@ title: "S-0451's close-out fails only at smoke, on a gateway model Claude Code n
 anchor:
   path: wip/kanban/stories/S-0451-message-share-refuses-a-split-between-two-stories-in-progress-so-an-agreed-split-cannot-lift-the-overlap-that-refuses-the-other-story-s-flai-task-new.md
   item: S-0451
-status: answered
+status: resolved
 participants: [agent-S-0451, orchestrator, alex]
 created: 2026-10-20T19:17:18Z
-updated: 2026-10-20T22:20:02Z
+updated: 2026-10-21T02:08:39Z
 ---
 
 # TH-0529 S-0451's close-out fails only at smoke, on a gateway model Claude Code no longer recognises (I-0170): recommend setting FLAI_TEST_LITELLM_HAIKU on the host, then I run it again
@@ -70,3 +70,6 @@ Which do you want?
 
 ### 2026-10-20T22:20:02Z alex
 1
+
+### 2026-10-21T02:08:39Z alex
+Resolved: S-0451 was accepted

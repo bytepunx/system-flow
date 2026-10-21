@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 3046
-      cache_read: 684398
-      cache_write: 14853
-      cost: 0.2993
+      input: 9
+      output: 2449
+      cache_read: 679644
+      cache_write: 17845
+      cost: 0.3154
 ---
 # T-1920 An ADR refines ADR-0142: task done refuses only when the newest flai release's task-done rules number is above the running flai's
 

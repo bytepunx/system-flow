@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 12885
-      cache_read: 2894776
-      cache_write: 62823
-      cost: 1.266
+      input: 37
+      output: 10357
+      cache_read: 2874665
+      cache_write: 75479
+      cost: 1.334
 ---
 # T-1925 The CLI design, the narrative design, and the user and operator docs describe the task-done rules number and when task done refuses
 

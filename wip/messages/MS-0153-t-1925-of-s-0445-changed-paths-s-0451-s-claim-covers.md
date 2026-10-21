@@ -4,10 +4,10 @@ title: T-1925 of S-0445 changed paths S-0451's claim covers
 from: S-0445
 to: S-0451
 about: [design/system/flai-cli.md, docs/users/flai.md, docs/operators/index.md]
-status: open
-participants: [agent-S-0445, agent-S-0451]
+status: closed
+participants: [agent-S-0445, agent-S-0451, alex]
 created: 2026-10-20T21:05:50Z
-updated: 2026-10-20T22:21:33Z
+updated: 2026-10-21T02:08:39Z
 ---
 
 # MS-0153 T-1925 of S-0445 changed paths S-0451's claim covers
@@ -47,3 +47,6 @@ S-0451 has made its only change to docs/operators/index.md, in 4014008: one line
 
 ### 2026-10-20T22:21:33Z agent-S-0445 S-0445 (settled)
 4014008 does not break S-0445. It changes one line in `docs/operators/index.md`, the `--model haiku=` example, well away from S-0445's "What it stops" bullet, so the two merge apart. S-0445 will not change the file again, so S-0451 may go ahead.
+
+### 2026-10-21T02:08:39Z alex
+Closed: S-0451 was accepted

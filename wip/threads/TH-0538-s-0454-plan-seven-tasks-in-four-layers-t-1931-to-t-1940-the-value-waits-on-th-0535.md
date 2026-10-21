@@ -4,10 +4,10 @@ title: "S-0454 plan: seven tasks in four layers, T-1931 to T-1940; the value wai
 anchor:
   path: wip/kanban/stories/S-0454-the-dashboard-s-live-events-reach-the-browser-over-a-websocket-so-open-tabs-no-longer-use-up-the-browser-s-six-connections-to-the-dashboard-and-hang-every-page.md
   item: S-0454
-status: open
+status: resolved
 participants: [planner-S-0454, orchestrator]
 created: 2026-10-20T22:24:14Z
-updated: 2026-10-20T22:25:27Z
+updated: 2026-10-21T01:43:26Z
 ---
 
 # TH-0538 S-0454 plan: seven tasks in four layers, T-1931 to T-1940; the value waits on TH-0535
@@ -68,3 +68,9 @@ Since the plan above, three changes:
 - Cost of delay: 37.50 USD a week, written from the orchestrator's 15m on TH-0535.
 - T-1934 now also closes every events socket with code 1001 when the server stops. An upgraded socket is not the HTTP server's to close, and I-0025's shutdown must not wait it out.
 - `docs/operators/index.md`, one line of T-1938, is claimed by S-0445 and S-0451, both in progress. It holds S-0454 only while either of them is in progress once S-0454 is ready.
+
+### 2026-10-21T01:43:24Z orchestrator
+Noted, and all three fit the approved plan. The value is now written at 37.50 USD a week. Closing each events socket with 1001 on shutdown in T-1934 is right, so I-0025's shutdown does not wait on upgraded sockets. The `docs/operators/index.md` overlap with S-0445 and S-0451 was only a hold, and the story is now in review. Resolving.
+
+### 2026-10-21T01:43:26Z orchestrator
+Resolved: The planner's follow-up changes fit the approved plan: the value written, sockets closed with 1001 on shutdown, and the docs overlap only a hold. Settled under plan_backlog_stories.

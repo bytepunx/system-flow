@@ -7,7 +7,7 @@ status: done
 parent: S-0445
 owner: alex
 created: 2026-10-20T20:42:17Z
-updated: 2026-10-20T21:05:41Z
+updated: 2026-10-21T00:36:43Z
 transitions:
   - to: ready
     at: 2026-10-20T20:54:31Z
@@ -20,7 +20,7 @@ transitions:
     by: agent-S-0445
 stream: S-0445
 tags: [flai, mcp, task-done]
-touches: [flai/internal/mcpserver/task.go, flai/internal/mcpserver/task_test.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go]
+touches: [flai/internal/mcpserver/task.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go]
 after: [T-1923]
 usage:
   source: log
@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 31
-      output: 8952
-      cache_read: 2011062
-      cache_write: 43645
-      cost: 0.8795
+      input: 26
+      output: 7195
+      cache_read: 1997090
+      cache_write: 52437
+      cost: 0.9268
 ---
 # T-1924 The MCP task_done's check that the installed flai has caught up compares task-done rules numbers, read from its flai version --json
 

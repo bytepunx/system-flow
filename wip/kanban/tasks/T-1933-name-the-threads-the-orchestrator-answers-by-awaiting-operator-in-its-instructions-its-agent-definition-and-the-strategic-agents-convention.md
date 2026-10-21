@@ -3,16 +3,37 @@ id: T-1933
 type: task
 nature: remediation
 title: Name the threads the orchestrator answers by awaiting operator in its instructions, its agent definition, and the strategic-agents convention
-status: backlog
+status: done
 parent: S-0453
 owner: alex
 created: 2026-10-20T22:21:02Z
-updated: 2026-10-20T22:21:02Z
-transitions: []
+updated: 2026-10-21T00:54:27Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:41:50Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-21T00:41:51Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T00:54:27Z
+    by: system-flow
 stream: S-0453
 tags: [flai, template]
 touches: [flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md]
 after: [T-1927]
+usage:
+  source: log
+  seconds: 756
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 12837
+      cache_read: 1903006
+      cache_write: 91149
+      cost: 1.1503
 ---
 # T-1933 Name the threads the orchestrator answers by awaiting operator in its instructions, its agent definition, and the strategic-agents convention
 

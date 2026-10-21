@@ -3,16 +3,37 @@ id: T-1934
 type: task
 nature: remediation
 title: The server upgrades the live-events WebSocket in server.js and the dev server, authenticated as /api/events is, and sends ready, change, and agent with a ping
-status: backlog
+status: done
 parent: S-0454
 owner: alex
 created: 2026-10-20T22:21:05Z
-updated: 2026-10-20T22:24:37Z
-transitions: []
+updated: 2026-10-21T01:00:34Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:53:35Z
+    by: agent-S-0454
+  - to: in-progress
+    at: 2026-10-21T00:53:36Z
+    by: agent-S-0454
+  - to: done
+    at: 2026-10-21T01:00:34Z
+    by: agent-S-0454
 stream: S-0454
 tags: [dashboard, server-side]
 touches: [flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/hooks.server.ts, flaiover/server.js, flaiover/vite.config.ts]
 after: [T-1931]
+usage:
+  source: log
+  seconds: 418
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 42
+      output: 15567
+      cache_read: 2365060
+      cache_write: 62823
+      cost: 1.1637
 ---
 # T-1934 The server upgrades the live-events WebSocket in server.js and the dev server, authenticated as /api/events is, and sends ready, change, and agent with a ping
 

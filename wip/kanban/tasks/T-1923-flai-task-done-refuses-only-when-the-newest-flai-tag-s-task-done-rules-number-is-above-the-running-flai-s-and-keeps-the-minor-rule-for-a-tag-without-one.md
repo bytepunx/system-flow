@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 42
-      output: 12152
-      cache_read: 2730027
-      cache_write: 59248
-      cost: 1.1939
+      input: 35
+      output: 9767
+      cache_read: 2711061
+      cache_write: 71184
+      cost: 1.2581
 ---
 # T-1923 flai task done refuses only when the newest flai tag's task-done rules number is above the running flai's, and keeps the minor rule for a tag without one
 

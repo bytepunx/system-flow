@@ -3,15 +3,36 @@ id: T-1927
 type: task
 nature: remediation
 title: Record in an ADR and the design that a thread awaits an agent only when the agent takes part in it or it is on the agent's own story, and is awaiting operator or other otherwise
-status: backlog
+status: done
 parent: S-0453
 owner: alex
 created: 2026-10-20T22:20:10Z
-updated: 2026-10-20T22:20:10Z
-transitions: []
+updated: 2026-10-21T00:40:47Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:39:44Z
+    by: system-flow
+  - to: in-progress
+    at: 2026-10-21T00:39:45Z
+    by: system-flow
+  - to: done
+    at: 2026-10-21T00:40:47Z
+    by: agent-S-0453
 stream: S-0453
 tags: [flai]
-touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md]
+touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md, design/adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md]
+usage:
+  source: log
+  seconds: 62
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 8323
+      cache_read: 1233786
+      cache_write: 59095
+      cost: 0.7458
 ---
 # T-1927 Record in an ADR and the design that a thread awaits an agent only when the agent takes part in it or it is on the agent's own story, and is awaiting operator or other otherwise
 

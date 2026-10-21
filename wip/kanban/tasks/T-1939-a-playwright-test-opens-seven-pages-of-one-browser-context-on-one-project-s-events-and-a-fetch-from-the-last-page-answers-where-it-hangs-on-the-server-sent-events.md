@@ -3,16 +3,37 @@ id: T-1939
 type: task
 nature: remediation
 title: A Playwright test opens seven pages of one browser context on one project's events and a fetch from the last page answers, where it hangs on the server-sent events
-status: backlog
+status: done
 parent: S-0454
 owner: alex
 created: 2026-10-20T22:22:29Z
-updated: 2026-10-20T22:22:29Z
-transitions: []
+updated: 2026-10-21T01:16:37Z
+transitions:
+  - to: ready
+    at: 2026-10-21T01:02:03Z
+    by: agent-S-0454
+  - to: in-progress
+    at: 2026-10-21T01:02:04Z
+    by: agent-S-0454
+  - to: done
+    at: 2026-10-21T01:16:37Z
+    by: agent-S-0454
 stream: S-0454
 tags: [dashboard, testing]
-touches: [flaiover/playwright.config.ts, flaiover/e2e/live-events.e2e.ts, scripts/flaiover-e2e.sh, Makefile]
+touches: [flaiover/playwright.config.ts, flaiover/e2e/live-events.e2e.ts, scripts/flaiover-e2e.sh, Makefile, scripts/README.md, flaiover/package.json]
 after: [T-1934, T-1936]
+usage:
+  source: log
+  seconds: 873
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 27536
+      cache_read: 4183366
+      cache_write: 111123
+      cost: 2.0584
 ---
 # T-1939 A Playwright test opens seven pages of one browser context on one project's events and a fetch from the last page answers, where it hangs on the server-sent events
 
