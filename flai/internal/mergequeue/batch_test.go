@@ -65,7 +65,7 @@ func (p *tierProc) Run(_ context.Context, _ string, argv, _ []string, _, stderr 
 // CheckoutVerifier does, with batchTiers run by p and real git, each tier
 // logged in the folder it is given.
 func verifier(p *tierProc) Verifier {
-	return func(ctx context.Context, dir, base, logDir string, started func(string)) (verify.Report, error) {
+	return func(ctx context.Context, dir, base, logDir string, _ []string, started func(string)) (verify.Report, error) {
 		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: batchTiers, Git: execx.System{}, Started: started, RunOptions: verify.RunOptions{Proc: p, LogDir: logDir}})
 	}
 }
@@ -801,6 +801,42 @@ func TestTheBatchRunsTheTiersMarkedQueue(t *testing.T) {
 	}
 }
 
+// S-0464 (I-0174): the batch's tiers, as flai serve runs them, are given the
+// stories the batch verifies, in batch order, in MERGE_QUEUE_STORIES, so that
+// the scripts they run scope flai check to them, and no CLOSE_OUT_STORY, as
+// the batch is no close-out; with neither they ran an unscoped flai check
+// --strict and failed every batch on findings outside its stories.
+func TestTheBatchsTiersAreGivenItsStoriesAndNoCloseOut(t *testing.T) {
+	for _, name := range []string{verify.StoryEnv, verify.MergeQueueStoriesEnv} {
+		t.Setenv(name, "") // restored after the test, unset in it
+		if err := os.Unsetenv(name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	envFile := filepath.Join(t.TempDir(), "env")
+	repo, _ := gitProject(t, "tests:\n  - name: unit\n    command: [sh, -c, \"env > '"+envFile+"'\"]\n    paths: [\"**/*.txt\"]\n")
+	a, _ := readyStory(t, repo, "A", t0.Add(time.Hour), "a.txt", "a\n")
+	b, _ := readyStory(t, repo, "B", t0.Add(2*time.Hour), "b.txt", "b\n")
+	enqueue(t, repo, b, a)
+
+	d := Deps{Runner: execx.System{}, Now: func() time.Time { return t1 }, Verify: CheckoutVerifier(execx.System{}, "")}
+	_, st := runBatch(t, d, repo)
+	if st.Batch == nil || st.Batch.Step != StepVerified || !slices.Equal(st.Batch.Stories, []string{b, a}) {
+		t.Fatalf("batch %+v, want %s and %s verified", st.Batch, b, a)
+	}
+	data, err := os.ReadFile(envFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	env := strings.Split(string(data), "\n")
+	if want := verify.MergeQueueStoriesEnv + "=" + b + "," + a; !slices.Contains(env, want) {
+		t.Errorf("the tier ran without %s", want)
+	}
+	if i := slices.IndexFunc(env, func(kv string) bool { return strings.HasPrefix(kv, verify.StoryEnv+"=") }); i >= 0 {
+		t.Errorf("the tier ran with %s, want no close-out", env[i])
+	}
+}
+
 // S-0399 criterion 2: a batch takes at most merge_queue.batch_max stories,
 // in the order they were enqueued; the rest stay enqueued.
 func TestBatchMaxCapsTheBatch(t *testing.T) {
@@ -825,11 +861,11 @@ func TestADroppedBatchKeepsItsResultAndIsReplaced(t *testing.T) {
 	enqueue(t, repo, a, b)
 	d := deps(proc, t1)
 	inner := d.Verify
-	d.Verify = func(ctx context.Context, dir, base, logDir string, started func(string)) (verify.Report, error) {
+	d.Verify = func(ctx context.Context, dir, base, logDir string, stories []string, started func(string)) (verify.Report, error) {
 		if _, err := AcceptedByHand(repo.CacheDir(), a, "alex", t1); err != nil {
 			t.Fatal(err)
 		}
-		return inner(ctx, dir, base, logDir, started)
+		return inner(ctx, dir, base, logDir, stories, started)
 	}
 
 	_, st := runBatch(t, d, repo)
@@ -904,7 +940,7 @@ func TestRunBatchDoesNothingWhenThereIsNothingToBuild(t *testing.T) {
 			}
 			before, _ := os.ReadFile(StatePath(repo.CacheDir()))
 			called := false
-			d := Deps{Runner: g, Now: func() time.Time { return t1 }, Verify: func(context.Context, string, string, string, func(string)) (verify.Report, error) {
+			d := Deps{Runner: g, Now: func() time.Time { return t1 }, Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
 			}}

@@ -25,9 +25,9 @@ var t2 = t1.Add(time.Hour)
 // head to <tier>.log in the folder it is given, standing for the tier's
 // output. Its finding names the files, or, with output set, is a plain
 // tier's that printed output and exited 1, as flai verify finds one. It
-// keeps the batch's step in the state as each verification runs; cancel,
-// when set, ends the run's context as one runs, and drop, when set, runs once
-// as one runs.
+// keeps the batch's step in the state and the stories it was given as each
+// verification runs; cancel, when set, ends the run's context as one runs,
+// and drop, when set, runs once as one runs.
 type fileVerifier struct {
 	cacheDir string
 	files    []string
@@ -36,11 +36,13 @@ type fileVerifier struct {
 	cancel   context.CancelFunc
 	drop     func()
 	steps    []string
+	stories  [][]string
 }
 
-func (v *fileVerifier) verify(_ context.Context, dir, _, logDir string, started func(string)) (verify.Report, error) {
+func (v *fileVerifier) verify(_ context.Context, dir, _, logDir string, stories []string, started func(string)) (verify.Report, error) {
 	tier := orDefault(v.tier, "unit")
 	started(tier)
+	v.stories = append(v.stories, slices.Clone(stories))
 	if head, err := (execx.System{}).Run(dir, "git", "rev-parse", "HEAD"); err == nil {
 		if err := os.MkdirAll(logDir, 0o755); err == nil {
 			_ = os.WriteFile(filepath.Join(logDir, tier+".log"), []byte(tier+" at "+head), 0o644)
@@ -98,7 +100,10 @@ func failedBatch(t *testing.T, n int, failWith ...int) (*workitem.Repo, *fileVer
 	if st.Batch == nil || st.Batch.Step != StepFailed || len(st.Batch.Heads) != n {
 		t.Fatalf("batch %+v, want %d stories failed", st.Batch, n)
 	}
-	v.steps = nil
+	if len(v.stories) != 1 || !slices.Equal(v.stories[0], stories) {
+		t.Fatalf("the batch was verified given %v, want %v once", v.stories, stories)
+	}
+	v.steps, v.stories = nil, nil
 	return repo, v, stories, heads, st
 }
 
@@ -225,6 +230,23 @@ func TestARedBatchIsBisectedToTheFirstStoryWithWhichItFails(t *testing.T) {
 	}
 }
 
+// S-0464 (I-0174): each bisection step's verifier is given that step's
+// stories, the batch's first ones in batch order, so that the tiers it runs
+// scope themselves to them rather than to the whole project.
+func TestEachBisectionStepIsVerifiedGivenItsStories(t *testing.T) {
+	repo, v, stories, _, _ := failedBatch(t, 4, 3)
+	_, st := runBisect(t, fileDeps(v, t2), repo)
+	bs := st.Batch.Bisect
+	if bs == nil || len(bs.Steps) != 2 || len(v.stories) != 2 {
+		t.Fatalf("bisection %+v, verified given %v; want two steps", bs, v.stories)
+	}
+	for i, s := range bs.Steps {
+		if want := stories[:len(s.Stories)]; !slices.Equal(v.stories[i], want) || !slices.Equal(s.Stories, want) {
+			t.Errorf("step %d verified given %v, want its stories %v", i, v.stories[i], want)
+		}
+	}
+}
+
 // S-0400 criterion 3: a bisection stopped while a step verifies leaves that
 // step without a result; the next run verifies it again in place, rather
 // than adding a second, and finishes.
@@ -316,7 +338,7 @@ func TestRunBisectDoesNothingWhenThereIsNothingToBisect(t *testing.T) {
 			writeState(t, repo.CacheDir(), tc.state)
 			before, _ := os.ReadFile(StatePath(repo.CacheDir()))
 			called := false
-			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }, Verify: func(context.Context, string, string, string, func(string)) (verify.Report, error) {
+			d := Deps{Runner: scriptedGit{}, Now: func() time.Time { return t2 }, Verify: func(context.Context, string, string, string, []string, func(string)) (verify.Report, error) {
 				called = true
 				return verify.Report{}, nil
 			}}

@@ -64,27 +64,29 @@ const (
 // merge-queue/batches, are kept, the new batch's among them.
 const logsKept = 20
 
-// Verifier verifies the batch's worktree at dir, built on base, with the
-// tiers flai verify selects for what it changes against base, calling
-// started with each tier's name as it starts, and writing each tier's whole
-// output to <tier>.log in logDir, an absolute folder outside the worktree.
-// An error with ctx ended is a verification stopped; any other is one that
-// could not run.
-type Verifier func(ctx context.Context, dir, base, logDir string, started func(tier string)) (verify.Report, error)
+// Verifier verifies the batch's worktree at dir, built on base with
+// stories, in batch order, with the tiers flai verify selects for what it
+// changes against base, calling started with each tier's name as it starts,
+// and writing each tier's whole output to <tier>.log in logDir, an absolute
+// folder outside the worktree. An error with ctx ended is a verification
+// stopped; any other is one that could not run.
+type Verifier func(ctx context.Context, dir, base, logDir string, stories []string, started func(tier string)) (verify.Report, error)
 
 // CheckoutVerifier is the Verifier flai serve runs: the test tiers of the
 // manifest in the batch's worktree, read for the flai at version, run with
-// verify.Tiers, git run through r, each logged in logDir. It leaves no tier
-// out: the tiers marked queue, which flai verify leaves to the batch while
-// the queue can batch, run here whenever the batch's paths select them
-// (ADR-0174).
+// verify.Tiers, git run through r, each logged in logDir and run with
+// verify.MergeQueueStoriesEnv set to the stories, comma-separated, and no
+// verify.StoryEnv, as the batch is no close-out. It leaves no tier out: the
+// tiers marked queue, which flai verify leaves to the batch while the queue
+// can batch, run here whenever the batch's paths select them (ADR-0174).
 func CheckoutVerifier(r execx.Runner, version string) Verifier {
-	return func(ctx context.Context, dir, base, logDir string, started func(string)) (verify.Report, error) {
+	return func(ctx context.Context, dir, base, logDir string, stories []string, started func(string)) (verify.Report, error) {
 		tiers, err := verify.CheckoutTiersFor(dir, r, version)
 		if err != nil {
 			return verify.Report{}, err
 		}
-		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: tiers, Git: r, Started: started, RunOptions: verify.RunOptions{LogDir: logDir}})
+		env := []string{verify.MergeQueueStoriesEnv + "=" + strings.Join(stories, ",")}
+		return verify.Tiers(ctx, verify.TierOptions{Dir: dir, Base: base, Tiers: tiers, Git: r, Started: started, RunOptions: verify.RunOptions{LogDir: logDir, Env: env}})
 	}
 }
 
@@ -132,7 +134,8 @@ type Deps struct {
 // in-progress with the paths as the reason and dequeued, or, when the move
 // fails, left out. With every story taken out the
 // batch is removed and the state left with none. Otherwise the batch is
-// verified once with d.Verify, and its result recorded, naming the folder,
+// verified once with d.Verify, given the stories kept in it in batch order,
+// and its result recorded, naming the folder,
 // BatchLogs, its tiers' whole output is kept in; of the batches' folders
 // there, the newest logsKept are kept, by batch ID, which is when each was
 // built. A batch dropped meanwhile keeps its result and stays dropped. Each
@@ -318,7 +321,7 @@ func (b *build) run(ctx context.Context, prev *Batch, picks []Entry, now time.Ti
 	if err := b.step(StepVerifying); err != nil {
 		return err
 	}
-	rep, verr := b.d.Verify(ctx, b.path, b.base, b.logs(""), func(tier string) {
+	rep, verr := b.d.Verify(ctx, b.path, b.base, b.logs(""), kept, func(tier string) {
 		if ctx.Err() != nil {
 			return
 		}

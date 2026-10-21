@@ -59,7 +59,8 @@ func withDefaults(d Deps) Deps {
 // Main itself counts as passing and the whole batch as failing. Each step
 // verifies main with the first stories of the batch, half those between the
 // most known to pass and the fewest known to fail, checked out in the batch's
-// worktree at the last one's rebased head, and halves again, until the first
+// worktree at the last one's rebased head and given to d.Verify as the
+// stories it verifies, and halves again, until the first
 // story with which the batch fails is found: its commit in the batch, the
 // result there, and a landing of the stories before it. The n-th step's
 // tiers write their whole output to step-<n> in the batch's BatchLogs, which
@@ -92,6 +93,7 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 			return ran, err
 		}
 		mid, commit, dropped, found, stepNo := 0, "", false, false, 0
+		var stories []string
 		if err := b.update(func(_ *State, batch *Batch) {
 			if batch.Dropped != nil {
 				dropped = true
@@ -106,8 +108,8 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 				return
 			}
 			mid = (bs.Good + bs.Bad) / 2
-			commit = batch.Heads[mid-1].Rebased
-			step := BisectStep{Stories: slices.Clone(batch.Stories[:mid]), Commit: commit, StartedAt: d.Now().UTC()}
+			commit, stories = batch.Heads[mid-1].Rebased, slices.Clone(batch.Stories[:mid])
+			step := BisectStep{Stories: stories, Commit: commit, StartedAt: d.Now().UTC()}
 			if last := len(bs.Steps) - 1; last >= 0 && bs.Steps[last].Result == nil {
 				bs.Steps[last] = step // a step a run stopped is verified again in place
 			} else {
@@ -132,7 +134,7 @@ func RunBisect(ctx context.Context, d Deps, repo *workitem.Repo) (bool, error) {
 		if err := os.RemoveAll(b.logs(sub)); err != nil {
 			d.Log.Warn("merge queue bisection step's earlier logs not removed; bisection goes on", "component", "mergequeue", "batch", b.id, "path", b.logs(sub), "err", err.Error())
 		}
-		rep, verr := d.Verify(ctx, b.path, b.base, b.logs(sub), func(tier string) {
+		rep, verr := d.Verify(ctx, b.path, b.base, b.logs(sub), stories, func(tier string) {
 			if ctx.Err() != nil {
 				return
 			}

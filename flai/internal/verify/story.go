@@ -37,6 +37,13 @@ const (
 // (ADR-0085).
 const StoryEnv = "CLOSE_OUT_STORY"
 
+// MergeQueueStoriesEnv names the variable a merge queue batch's tiers run
+// with set to the stories the batch verifies, comma-separated in batch
+// order, so that the scripts and tests that check the project scope
+// themselves to them; unlike StoryEnv it is no close-out, and leads them to
+// record no issue.
+const MergeQueueStoriesEnv = "MERGE_QUEUE_STORIES"
+
 // narrativeSections are the narrative's sections that must be written
 // before a story goes to review.
 var narrativeSections = []string{"Current state", "Next steps"}
@@ -430,7 +437,9 @@ type TierOptions struct {
 // stops at the first that fails, as Verify runs them, and answers them as a
 // report with no story and no step before the tiers. It verifies a checkout
 // that is no story's, as the merge queue's batch: it reuses no earlier run,
-// sets no CLOSE_OUT_STORY, and stores no report. It returns an error, with no
+// sets no CLOSE_OUT_STORY, and stores no report. The caller may name the
+// stories a batch verifies to its tiers by setting MergeQueueStoriesEnv in
+// RunOptions.Env. It returns an error, with no
 // report, when the checkout's HEAD or changes cannot be read, and, with the
 // report so far, when ctx ends.
 func Tiers(ctx context.Context, opts TierOptions) (Report, error) {
