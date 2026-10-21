@@ -12,6 +12,10 @@ vi.mock('$app/paths', () => ({
 	resolve: (route: string, params: Record<string, string>) =>
 		route.replace(/\[(\.\.\.)?(\w+)\]/, (_, __, k) => params[k] ?? '')
 }));
+const openEditor = vi.fn();
+vi.mock('$lib/editor.svelte', () => ({
+	openEditor: (...args: unknown[]) => openEditor(...args)
+}));
 const enhance = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('$lib/markdown', async (actual) => ({
 	...(await actual<typeof import('$lib/markdown')>()),
@@ -988,6 +992,82 @@ describe('the item page (S-0154)', () => {
 			await show({ ...story, id: 'T-0606', type: 'task', parent: 'S-0154' }, [conversation]);
 			expect(section()).toBeNull();
 			expect(api.mock.calls.some(([u]) => String(u).startsWith('/api/messages'))).toBe(false);
+		});
+	});
+
+	// S-0465, I-0145: an acceptance from the item page refused for lint the fix left lists the
+	// refusal's findings, each file opened on the checkout flai names, never on one read from its words.
+	describe('a move to done refused for lint the fix left (S-0465)', () => {
+		const finding = (over: Record<string, unknown>) => ({
+			tier: 'markdown',
+			checkout: 'story',
+			story: 'S-0154',
+			path: 'docs/bad.md',
+			line: 2,
+			rule: 'MD009',
+			message: 'Trailing spaces',
+			...over
+		});
+		const refuse = (body: Record<string, unknown>) =>
+			api.mockImplementation(async (url: string) => {
+				if (url === '/api/items/S-0154')
+					return answer({ item: { ...story, status: 'review' }, children: [] });
+				if (url === '/api/board') return answer({ writable: true });
+				if (url.startsWith('/api/threads')) return answer([]);
+				if (url === '/api/items/S-0154/acceptance')
+					return answer({ id: 'S-0154', blockers: [], plan: null });
+				if (url === '/api/items/S-0154/move') return { ok: false, json: async () => body };
+				return answer({ enabled: false });
+			});
+		const click = (text: string) =>
+			[...document.querySelectorAll('button')].find((b) => b.textContent === text)!.click();
+		const accept = async () => {
+			c = mount(ItemPage, { target: document.body });
+			await settle();
+			click('→ done');
+			await settle();
+			click('Accept');
+			await settle();
+		};
+		const link = (label: string) =>
+			document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+		afterEach(() => openEditor.mockReset());
+
+		it("lists the findings and opens each file on its own checkout, whatever the refusal's words say", async () => {
+			refuse({
+				error: "rule: S-0154 cannot be accepted: the main checkout's uncommitted files hold lint",
+				id: 'S-0154',
+				reason: 'S-0154 cannot be accepted',
+				findings: [
+					finding({}),
+					finding({ checkout: 'main', story: undefined, path: 'design/notes.md', line: 7 })
+				]
+			});
+			await accept();
+			const rows = [...document.querySelectorAll('[data-testid="accept-finding"]')].map(
+				(e) => e.textContent ?? ''
+			);
+			expect(rows).toHaveLength(2);
+			expect(rows[0]).toContain('docs/bad.md:2');
+			expect(rows[1]).toContain('design/notes.md:7');
+			expect(document.querySelector('[data-testid="item-notice"]')).toBeNull();
+			link('Edit docs/bad.md at line 2').click();
+			expect(openEditor).toHaveBeenLastCalledWith(
+				expect.objectContaining({ path: 'docs/bad.md', line: 2, story: 'S-0154' })
+			);
+			link('Edit design/notes.md at line 7').click();
+			const main = openEditor.mock.calls.at(-1)![0];
+			expect(main).toMatchObject({ path: 'design/notes.md', line: 7 });
+			expect(main.story).toBeUndefined();
+		});
+
+		it('keeps the text notice for a refusal without findings', async () => {
+			refuse({ error: 'S-0154 has an open blocker' });
+			await accept();
+			expect(document.querySelector('[data-testid="accept-findings"]')).toBeNull();
+			expect(document.querySelector('[data-testid="item-notice"]')!.textContent).toBe(
+				'refused: S-0154 has an open blocker'
+			);
 		});
 	});
 

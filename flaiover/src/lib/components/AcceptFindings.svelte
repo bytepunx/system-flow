@@ -72,7 +72,7 @@
 >
 	<p class="font-medium">Not accepted.{status ? ` ${id} is ${status}.` : ''}</p>
 	<p>The fix left lint in this markdown: correct each file at its line and save it.</p>
-	<p>Accept is on again once each file is saved.</p>
+	<p>Accept again once each file is saved.</p>
 	<ul class="mt-1 space-y-1 font-mono text-xs">
 		{#each findings as f, i (i)}
 			{@const where = f.line ? `${f.path}:${f.line}` : f.path}

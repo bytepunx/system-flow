@@ -87,7 +87,7 @@ describe('linkSegments', () => {
 		expect(threadRef).toEqual({ text: 'wip/threads/TH-0001.md' });
 	});
 
-	it("opens the files of a refusal for the main checkout's uncommitted files there, not on the story", () => {
+	it("opens a refusal's files on the story it is given, whatever checkout the refusal's words name (I-0145)", () => {
 		const text =
 			"S-0378 cannot be accepted: the main checkout's uncommitted files hold lint the fix of the markdown tier could not fix:\n  markdown: docs/users/flai.md:12: MD009";
 		const ref = linkSegments(text, { story: 'S-0378' }).find((s) => s.edit)!;
@@ -95,7 +95,7 @@ describe('linkSegments', () => {
 		expect(openEditor).toHaveBeenCalledWith({
 			path: 'docs/users/flai.md',
 			line: 12,
-			story: undefined
+			story: 'S-0378'
 		});
 	});
 

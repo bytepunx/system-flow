@@ -7,6 +7,7 @@
 	import Messages from '$lib/components/Messages.svelte';
 	import OpenQuestions from '$lib/components/OpenQuestions.svelte';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
+	import AcceptFindings, { findingsOf, type Finding } from '$lib/components/AcceptFindings.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import ItemEditor from '$lib/components/ItemEditor.svelte';
 	import StoryAgent from '$lib/components/StoryAgent.svelte';
@@ -83,6 +84,10 @@
 	let html = $state('');
 	let error = $state<string | null>(null);
 	let notice = $state<string | null>(null);
+	// A move to done refused for lint the fix left (S-0465): its findings, listed in place of the
+	// notice, each file opened on its own checkout, and the key of each file saved since.
+	let findings = $state<Finding[]>([]);
+	let saved = $state<string[]>([]);
 	let writable = $state(false);
 	let content: HTMLElement | undefined = $state();
 	let entry = $state('');
@@ -297,16 +302,24 @@
 	// (S-0154, S-0161).
 	onMount(() => follow(['item'], () => void load(true)));
 
+	function fileSaved(key: string) {
+		if (!saved.includes(key)) saved = [...saved, key];
+	}
+
 	async function post(path: string, body: Record<string, unknown>) {
 		notice = null;
+		findings = [];
+		saved = [];
 		const r = await api(path, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify(body)
 		});
 		const data = await r.json();
-		if (!r.ok) notice = `refused: ${data.error}`;
-		else if (data.tags?.length) notice = `accepted: released ${data.tags.join(', ')}`;
+		if (!r.ok) {
+			findings = findingsOf(data);
+			if (!findings.length) notice = `refused: ${data.error}`;
+		} else if (data.tags?.length) notice = `accepted: released ${data.tags.join(', ')}`;
 		else notice = `done${data.warnings?.length ? ': ' + data.warnings.join(' ') : ''}`;
 		await load();
 	}
@@ -441,6 +454,9 @@
 					links={{ story: branch }}
 					ondismiss={() => (notice = null)}
 				/>{/if}
+			{#if findings.length}
+				<AcceptFindings id={item.id} status={item.status} {findings} {saved} onsaved={fileSaved} />
+			{/if}
 			{#if item.type === 'story' && item.status === 'review'}
 				<p class="mt-3 text-sm">
 					<a

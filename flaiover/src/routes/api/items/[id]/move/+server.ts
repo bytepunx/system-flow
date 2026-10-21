@@ -9,7 +9,9 @@ import type { RequestHandler } from './$types';
  * include_uncommitted is the designer's choice in the acceptance confirmation to put uncommitted
  * files outside wip into the acceptance commit, and only for a move to done (S-0051). dry_run, only
  * for a move to cancelled, changes nothing and answers with what the cancellation would take with it
- * (S-0070, ADR-0028).
+ * (S-0070, ADR-0028). A move to done that flai refuses answers 422 with the refused object's
+ * findings, each a file to open on its own checkout and correct (ADR-0140), or its undoes_main
+ * (ADR-0155), beside error (S-0465).
  */
 type Moved = {
 	id: string;

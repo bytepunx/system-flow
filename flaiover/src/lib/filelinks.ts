@@ -101,16 +101,8 @@ export function editLink(ref: FileRef, opts: LinkOptions = {}): EditLink | null 
 	};
 }
 
-// How flai's refusal of an acceptance names lint left in the main checkout's uncommitted files
-// (ADR-0140, flai/cmd/accept_markdown.go): those files are fixed there, not on the story's branch.
-const MAIN_CHECKOUT_REFUSAL = "the main checkout's uncommitted files";
-
-/**
- * Split plain text, such as a refusal, into runs and the references in it the editor can open; a
- * refusal for the main checkout's uncommitted files opens them there, whatever story is given.
- */
+/** Split plain text, such as a refusal, into runs and the references in it the editor can open. */
 export function linkSegments(text: string, opts: LinkOptions = {}): LinkSegment[] {
-	if (opts.story && text.includes(MAIN_CHECKOUT_REFUSAL)) opts = { ...opts, story: undefined };
 	return parseFileRefs(text, opts.layout).map((s) => {
 		const edit = s.ref && editLink(s.ref, opts);
 		return edit ? { text: s.text, edit } : { text: s.text };

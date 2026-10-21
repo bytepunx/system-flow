@@ -11,6 +11,7 @@
 	import WipLimitDialog from '$lib/components/WipLimitDialog.svelte';
 	import { archiveOrder, backOf, forwardOf, laneCounts, longCounts, shortCounts } from '$lib/lanes';
 	import AcceptConfirm from '$lib/components/AcceptConfirm.svelte';
+	import AcceptFindings, { findingsOf, type Finding } from '$lib/components/AcceptFindings.svelte';
 	import CancelConfirm from '$lib/components/CancelConfirm.svelte';
 	import BoardCard from '$lib/components/BoardCard.svelte';
 	import MergeQueue, {
@@ -72,8 +73,16 @@
 
 	const states = ['backlog', 'ready', 'in-progress', 'review', 'done', 'cancelled'];
 	let board = $state<Board | null>(null);
-	// story, on a refused move, is the item's whose branch the files the refusal names are fixed on.
-	let notice = $state<{ kind: 'error' | 'warn' | 'ok'; text: string; story?: string } | null>(null);
+	// story, on a refused move, is the item's whose branch the files the refusal names are fixed on;
+	// findings, on a move to done refused for lint the fix left, are listed in place of the text, each
+	// file opened on its own checkout (S-0465), and saved holds the key of each file saved since.
+	let notice = $state<{
+		kind: 'error' | 'warn' | 'ok';
+		text: string;
+		story?: string;
+		findings?: Finding[];
+	} | null>(null);
+	let saved = $state<string[]>([]);
 	let dragging = $state<string | null>(null);
 	let over = $state<string | null>(null);
 
@@ -497,8 +506,13 @@
 		await load();
 	}
 
+	function fileSaved(key: string) {
+		if (!saved.includes(key)) saved = [...saved, key];
+	}
+
 	async function move(id: string, to: string, includeUncommitted = false, why?: string) {
 		notice = null;
+		saved = [];
 		let reason = why;
 		const from = board?.columns[
 			Object.keys(board.columns).find((s) => board!.columns[s].some((c) => c.id === id)) ?? ''
@@ -517,7 +531,8 @@
 			notice = {
 				kind: 'error',
 				text: body.error ?? r.statusText,
-				story: id.startsWith('S-') ? id : undefined
+				story: id.startsWith('S-') ? id : undefined,
+				findings: findingsOf(body)
 			};
 		else if (body.warnings?.length)
 			notice = { kind: 'warn', text: `${id} → ${to}. ${body.warnings.join(' ')}` };
@@ -640,7 +655,11 @@
 </div>
 <div class="mb-3"><BoardLegend /></div>
 <HostAgentNotice status={hostAgent} />
-{#if notice}
+{#if notice?.story && notice.findings?.length}
+	<div class="mb-3">
+		<AcceptFindings id={notice.story} findings={notice.findings} {saved} onsaved={fileSaved} />
+	</div>
+{:else if notice}
 	<DismissibleNotice
 		class="mb-3 rounded border p-2 text-sm {notice.kind === 'error'
 			? 'border-danger bg-danger-soft text-danger'

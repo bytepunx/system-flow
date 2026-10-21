@@ -10,6 +10,10 @@ import { BoardNatures, boardNatures, natures } from '$lib/boardnatures.svelte';
 const api = vi.fn();
 vi.mock('$lib/api', () => ({ api: (...args: unknown[]) => api(...args) }));
 vi.mock('$app/paths', () => ({ resolve: (route: string) => route }));
+const openEditor = vi.fn();
+vi.mock('$lib/editor.svelte', () => ({
+	openEditor: (...args: unknown[]) => openEditor(...args)
+}));
 
 import BoardPage from './+page.svelte';
 
@@ -574,5 +578,113 @@ describe('a card started on a share, and a hold asked about (S-0338)', () => {
 		expect(line('S-0232', 'shared')).toBeUndefined();
 		expect(line('S-0340', 'asked')).toBe('asked S-0232 in MS-0013');
 		expect(line('S-0338', 'asked')).toBeUndefined();
+	});
+});
+
+// S-0465, I-0145: a story dropped on done and refused for lint the fix left lists the refusal's
+// findings, each file opened on the checkout flai names, never on one read from flai's words.
+describe('a move to done refused for lint the fix left (S-0465)', () => {
+	let c: ReturnType<typeof mount> | undefined;
+	const finding = (over: Record<string, unknown>) => ({
+		tier: 'markdown',
+		checkout: 'story',
+		story: 'S-0041',
+		path: 'docs/bad.md',
+		line: 2,
+		rule: 'MD009',
+		message: 'Trailing spaces',
+		...over
+	});
+	const refuse = (body: Record<string, unknown>) => {
+		api.mockImplementation(async (url: string) => {
+			if (url === '/api/board')
+				return answer({
+					...board,
+					writable: true,
+					columns: {
+						review: [
+							{
+								id: 'S-0041',
+								type: 'story',
+								title: 'S-0041',
+								nature: 'feature',
+								status: 'review',
+								blocked: false,
+								age_seconds: 0
+							}
+						]
+					}
+				});
+			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
+			if (url === '/api/items/S-0041/acceptance')
+				return answer({ id: 'S-0041', blockers: [], plan: null });
+			if (url === '/api/items/S-0041/move')
+				return { ok: false, status: 422, statusText: 'Unprocessable', json: async () => body };
+			return answer({ enabled: false });
+		});
+	};
+	const accept = async () => {
+		c = mount(BoardPage, { target: document.body });
+		await settle();
+		document
+			.querySelector('a[data-id="S-0041"]')!
+			.dispatchEvent(new Event('dragstart', { bubbles: true }));
+		document
+			.querySelector('section[data-lane="done"]')!
+			.dispatchEvent(new Event('drop', { bubbles: true, cancelable: true }));
+		await settle();
+		[...document.querySelectorAll('button')].find((b) => b.textContent === 'Accept')!.click();
+		await settle();
+	};
+	const link = (label: string) =>
+		document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+	beforeEach(() => {
+		resetForTests();
+		vi.stubGlobal('WebSocket', FakeWebSocket);
+	});
+	afterEach(() => {
+		if (c) unmount(c);
+		c = undefined;
+		api.mockReset();
+		openEditor.mockReset();
+		vi.unstubAllGlobals();
+		document.body.innerHTML = '';
+	});
+
+	it("lists the findings and opens each file on its own checkout, whatever the refusal's words say", async () => {
+		refuse({
+			error: "rule: S-0041 cannot be accepted: the main checkout's uncommitted files hold lint",
+			id: 'S-0041',
+			reason: 'S-0041 cannot be accepted',
+			findings: [
+				finding({}),
+				finding({ checkout: 'main', story: undefined, path: 'design/notes.md', line: 7 })
+			]
+		});
+		await accept();
+		const rows = [...document.querySelectorAll('[data-testid="accept-finding"]')].map(
+			(e) => e.textContent ?? ''
+		);
+		expect(rows).toHaveLength(2);
+		expect(rows[0]).toContain('docs/bad.md:2');
+		expect(rows[1]).toContain('design/notes.md:7');
+		expect(document.querySelector('[data-testid="board-notice"]')).toBeNull();
+		link('Edit docs/bad.md at line 2').click();
+		expect(openEditor).toHaveBeenLastCalledWith(
+			expect.objectContaining({ path: 'docs/bad.md', line: 2, story: 'S-0041' })
+		);
+		link('Edit design/notes.md at line 7').click();
+		const main = openEditor.mock.calls.at(-1)![0];
+		expect(main).toMatchObject({ path: 'design/notes.md', line: 7 });
+		expect(main.story).toBeUndefined();
+	});
+
+	it('keeps the text notice for a refusal without findings', async () => {
+		refuse({ error: 'rule: S-0041 has an open blocker' });
+		await accept();
+		expect(document.querySelector('[data-testid="accept-findings"]')).toBeNull();
+		expect(document.querySelector('[data-testid="board-notice"]')!.textContent).toBe(
+			'rule: S-0041 has an open blocker'
+		);
 	});
 });
