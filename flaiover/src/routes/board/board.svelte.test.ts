@@ -2,7 +2,7 @@
 // once for changes that arrive together; the agents also when a thread does.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync, mount, unmount } from 'svelte';
-import { GATHER_MS } from '$lib/events';
+import { GATHER_MS, RETRY_MS } from '$lib/events';
 import { resetForTests } from '$lib/project.svelte';
 import { BoardTypes, boardTypes, itemTypes } from '$lib/boardtypes.svelte';
 import { BoardNatures, boardNatures, natures } from '$lib/boardnatures.svelte';
@@ -13,19 +13,17 @@ vi.mock('$app/paths', () => ({ resolve: (route: string) => route }));
 
 import BoardPage from './+page.svelte';
 
-/** Stands in for the browser's EventSource, as /api/events speaks through it. */
-class FakeEventSource {
-	static opened: FakeEventSource[] = [];
-	listeners: Record<string, (e: { data: string }) => void> = {};
+/** Stands in for the browser's WebSocket, as /api/events speaks through it. */
+class FakeWebSocket {
+	static opened: FakeWebSocket[] = [];
+	onmessage: ((e: { data: string }) => void) | null = null;
+	onclose: (() => void) | null = null;
 	constructor(public url: string) {
-		FakeEventSource.opened.push(this);
-	}
-	addEventListener(kind: string, f: (e: { data: string }) => void) {
-		this.listeners[kind] = f;
+		FakeWebSocket.opened.push(this);
 	}
 	close() {}
-	emit(kind: string, data: unknown) {
-		this.listeners[kind]?.({ data: JSON.stringify(data) });
+	emit(type: string, data: object = {}) {
+		this.onmessage?.({ data: JSON.stringify({ type, ...data }) });
 	}
 }
 
@@ -41,8 +39,8 @@ describe('the board follows the work items (S-0161)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	beforeEach(() => {
 		resetForTests();
-		FakeEventSource.opened = [];
-		vi.stubGlobal('EventSource', FakeEventSource);
+		FakeWebSocket.opened = [];
+		vi.stubGlobal('WebSocket', FakeWebSocket);
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/board') return answer(board);
 			if (url === '/api/publish') return answer({ plans: [], push_enabled: false });
@@ -70,7 +68,7 @@ describe('the board follows the work items (S-0161)', () => {
 		await settle();
 		expect(counts()).toEqual({ board: 1, publish: 1, agents: 1 });
 		api.mockClear();
-		return FakeEventSource.opened[0];
+		return FakeWebSocket.opened[0];
 	};
 
 	// S-0195, ADR-0067: publishing is the one way accepted work reaches the remote, so the board has
@@ -126,6 +124,19 @@ describe('the board follows the work items (S-0161)', () => {
 		await settle(GATHER_MS + 50);
 		expect(counts()).toEqual({ board: 0, publish: 0, agents: 1 });
 	});
+
+	// ADR-0182: a socket does not resume, so what changed while it was down is asked for again.
+	it('asks for everything again once the events reconnect after a drop', async () => {
+		const events = await open();
+		events.emit('ready');
+		events.onclose?.();
+		await settle(RETRY_MS);
+		expect(FakeWebSocket.opened).toHaveLength(2);
+		FakeWebSocket.opened[1].emit('ready');
+		await settle(GATHER_MS + 50);
+		expect(counts()).toMatchObject({ board: 1, publish: 1 });
+		expect(counts().agents).toBeGreaterThan(0);
+	});
 });
 
 // S-0174: while the clone lags its remote's release tags, the done lane leaves out the archived
@@ -165,7 +176,7 @@ describe('the done lane of a clone missing published tags (S-0174)', () => {
 		[...document.querySelectorAll('[data-card]')].map((e) => e.getAttribute('data-card'));
 	beforeEach(() => {
 		resetForTests();
-		vi.stubGlobal('EventSource', FakeEventSource);
+		vi.stubGlobal('WebSocket', FakeWebSocket);
 	});
 	afterEach(() => {
 		if (c) unmount(c);
@@ -240,7 +251,7 @@ describe("each lane's counts by type (S-0256)", () => {
 	};
 	beforeEach(() => {
 		resetForTests();
-		vi.stubGlobal('EventSource', FakeEventSource);
+		vi.stubGlobal('WebSocket', FakeWebSocket);
 		// stories only: the epic and the tasks are counted though not shown
 		boardTypes.set('epic', false);
 		boardTypes.set('story', true);
@@ -332,7 +343,7 @@ describe('the nature filter (S-0302)', () => {
 	};
 	beforeEach(() => {
 		resetForTests();
-		vi.stubGlobal('EventSource', FakeEventSource);
+		vi.stubGlobal('WebSocket', FakeWebSocket);
 		// the store as it starts from nothing stored, and every type ticked
 		localStorage.clear();
 		boardNatures.shown = new BoardNatures().shown;
@@ -429,7 +440,7 @@ describe('the type filter (S-0303)', () => {
 	};
 	beforeEach(() => {
 		resetForTests();
-		vi.stubGlobal('EventSource', FakeEventSource);
+		vi.stubGlobal('WebSocket', FakeWebSocket);
 		// the stores as they start from nothing stored
 		localStorage.clear();
 		boardTypes.shown = new BoardTypes().shown;
@@ -514,7 +525,7 @@ describe('a card started on a share, and a hold asked about (S-0338)', () => {
 	};
 	beforeEach(() => {
 		resetForTests();
-		vi.stubGlobal('EventSource', FakeEventSource);
+		vi.stubGlobal('WebSocket', FakeWebSocket);
 		api.mockImplementation(async (url: string) => {
 			if (url === '/api/board')
 				return answer({

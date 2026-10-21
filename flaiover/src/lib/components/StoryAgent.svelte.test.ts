@@ -9,21 +9,22 @@ vi.mock('$app/paths', () => ({
 	resolve: (route: string, params: Record<string, string>) => route.replace('[id]', params.id)
 }));
 
-class FakeEventSource {
-	static opened: FakeEventSource[] = [];
-	listeners: Record<string, (e?: { data: string }) => void> = {};
+/** Stands in for the browser's WebSocket, as /api/events speaks through it. */
+class FakeWebSocket {
+	static opened: FakeWebSocket[] = [];
+	onmessage: ((e: { data: string }) => void) | null = null;
 	constructor(public url: string) {
-		FakeEventSource.opened.push(this);
-	}
-	addEventListener(kind: string, f: (e?: { data: string }) => void) {
-		this.listeners[kind] = f;
+		FakeWebSocket.opened.push(this);
 	}
 	close() {}
+	emit(message: object) {
+		this.onmessage?.({ data: JSON.stringify(message) });
+	}
 }
 
 /** A file of the project changing, as /api/events says it, once the page has gathered it (S-0161). */
 const changed = async (path = 'wip/threads/TH-0009-port.md', kind = 'thread') => {
-	FakeEventSource.opened[0].listeners.change({ data: JSON.stringify({ path, kind }) });
+	FakeWebSocket.opened[0].emit({ type: 'change', path, kind });
 	await new Promise((r) => setTimeout(r, GATHER_MS));
 };
 const settle = async () => {
@@ -45,8 +46,8 @@ const run = {
 describe('StoryAgent (S-0104)', () => {
 	let c: ReturnType<typeof mount> | undefined;
 	beforeEach(() => {
-		FakeEventSource.opened = [];
-		vi.stubGlobal('EventSource', FakeEventSource);
+		FakeWebSocket.opened = [];
+		vi.stubGlobal('WebSocket', FakeWebSocket);
 	});
 	afterEach(() => {
 		if (c) unmount(c);
@@ -134,8 +135,7 @@ describe('StoryAgent (S-0104)', () => {
 		await show({ 'S-0104': { state: 'working', run } });
 		const asked = () => api.mock.calls.filter(([url]) => url === '/api/host-agent').length;
 		const before = asked();
-		const agent = (story: string) =>
-			FakeEventSource.opened[0].listeners.agent({ data: JSON.stringify({ story }) });
+		const agent = (story: string) => FakeWebSocket.opened[0].emit({ type: 'agent', story });
 		agent('S-0001');
 		await settle();
 		expect(asked()).toBe(before);

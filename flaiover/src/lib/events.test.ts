@@ -1,35 +1,52 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { debounced, follow, GATHER_MS, listen } from './events';
+import { debounced, follow, GATHER_MS, listen, RETRY_MAX_MS, RETRY_MS } from './events';
 import { projectState, resetForTests } from './project.svelte';
 
-/** Stands in for the browser's EventSource: where it listens, what for, and whether it closed. */
-class FakeEventSource {
-	static opened: FakeEventSource[] = [];
-	listeners: Record<string, (e: { data: string }) => void> = {};
+/** Stands in for the browser's WebSocket: where it connects, what the server says on it, and
+ * whether it closed. */
+class FakeWebSocket {
+	static opened: FakeWebSocket[] = [];
+	onmessage: ((e: { data: unknown }) => void) | null = null;
+	onclose: (() => void) | null = null;
 	closed = false;
 	constructor(public url: string) {
-		FakeEventSource.opened.push(this);
-	}
-	addEventListener(kind: string, f: (e: { data: string }) => void) {
-		this.listeners[kind] = f;
+		FakeWebSocket.opened.push(this);
 	}
 	close() {
 		this.closed = true;
+		this.onclose?.();
 	}
-	emit(kind: string, data: unknown) {
-		this.listeners[kind]?.({ data: JSON.stringify(data) });
+	/** The server sends a message. */
+	emit(message: unknown) {
+		this.onmessage?.({ data: JSON.stringify(message) });
+	}
+	/** The connection drops, as when the server restarts. */
+	drop() {
+		this.onclose?.();
 	}
 }
 
-describe('listen (S-0154)', () => {
-	beforeEach(() => {
-		resetForTests();
-		FakeEventSource.opened = [];
-		vi.stubGlobal('EventSource', FakeEventSource);
-	});
-	afterEach(() => vi.unstubAllGlobals());
+const PAGE = { protocol: 'http:', host: 'dash.test:4242' };
+const latest = () => FakeWebSocket.opened[FakeWebSocket.opened.length - 1];
 
-	it('serves every listener on the page from one stream per project, closed with the last', () => {
+function stubSocket() {
+	resetForTests();
+	FakeWebSocket.opened = [];
+	vi.stubGlobal('WebSocket', FakeWebSocket);
+	vi.stubGlobal('location', PAGE);
+}
+
+describe('listen (S-0154, ADR-0182)', () => {
+	beforeEach(() => {
+		stubSocket();
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.unstubAllGlobals();
+	});
+
+	it('serves every listener on the page from one socket per project, closed with the last', () => {
 		projectState.pick('alpha', false);
 		const paths: string[] = [];
 		const stories: string[] = [];
@@ -38,34 +55,117 @@ describe('listen (S-0154)', () => {
 			change: (p, kind) => paths.push(`b:${p}:${kind}`),
 			agent: (s) => stories.push(s)
 		});
-		expect(FakeEventSource.opened.map((e) => e.url)).toEqual(['/api/events?project=alpha']);
-		const source = FakeEventSource.opened[0];
+		expect(FakeWebSocket.opened.map((e) => e.url)).toEqual([
+			'ws://dash.test:4242/api/events?project=alpha'
+		]);
+		const socket = FakeWebSocket.opened[0];
 
-		source.emit('change', { path: 'wip/threads/TH-0001-x.md', kind: 'thread' });
-		source.emit('agent', { story: 'S-0154' });
+		socket.emit({ type: 'ready' });
+		socket.emit({ type: 'change', path: 'wip/threads/TH-0001-x.md', kind: 'thread' });
+		socket.emit({ type: 'agent', story: 'S-0154' });
 		expect(paths).toEqual(['a:wip/threads/TH-0001-x.md', 'b:wip/threads/TH-0001-x.md:thread']);
 		expect(stories).toEqual(['S-0154']);
 
 		stopA();
 		stopA(); // twice is once
-		expect(source.closed).toBe(false);
+		expect(socket.closed).toBe(false);
 		stopB();
-		expect(source.closed).toBe(true);
-		// the next listener opens a stream of its own
+		expect(socket.closed).toBe(true);
+		// closing it on purpose opens nothing again
+		vi.advanceTimersByTime(RETRY_MAX_MS);
+		expect(FakeWebSocket.opened).toHaveLength(1);
+		// the next listener opens a socket of its own
 		listen({})();
-		expect(FakeEventSource.opened).toHaveLength(2);
+		expect(FakeWebSocket.opened).toHaveLength(2);
 	});
 
-	it("listens to the picked project's stream", () => {
+	it("connects to the picked project's events, wss: on a page served over https:", () => {
+		vi.stubGlobal('location', { protocol: 'https:', host: 'dash.test' });
 		projectState.pick('beta', false);
 		const stop = listen({});
-		expect(FakeEventSource.opened.map((e) => e.url)).toEqual(['/api/events?project=beta']);
+		expect(FakeWebSocket.opened.map((e) => e.url)).toEqual([
+			'wss://dash.test/api/events?project=beta'
+		]);
 		stop();
 	});
 
-	it('does nothing where there is no EventSource', () => {
-		vi.stubGlobal('EventSource', undefined);
+	it('reads a change without a kind as other, and ignores what it cannot read', () => {
+		const seen: string[] = [];
+		const stop = listen({
+			change: (p, kind) => seen.push(`${p}:${kind}`),
+			agent: (s) => seen.push(`agent:${s}`)
+		});
+		const socket = latest();
+		socket.emit({ type: 'change', path: 'y' });
+		socket.onmessage?.({ data: 'not json' });
+		socket.emit({ type: 'ping' });
+		socket.emit(null);
+		expect(seen).toEqual(['y:other']);
+		stop();
+	});
+
+	it('opens a dropped socket again after a backoff that doubles to a cap, reset by ready', () => {
+		const stop = listen({});
+		const waits: number[] = [];
+		for (let i = 0; i < 7; i++) {
+			const before = FakeWebSocket.opened.length;
+			latest().drop();
+			let waited = 0;
+			while (FakeWebSocket.opened.length === before) {
+				vi.advanceTimersByTime(100);
+				waited += 100;
+			}
+			waits.push(waited);
+		}
+		expect(waits).toEqual([1000, 2000, 4000, 8000, 16000, RETRY_MAX_MS, RETRY_MAX_MS]);
+
+		latest().emit({ type: 'ready' });
+		latest().drop();
+		vi.advanceTimersByTime(RETRY_MS - 1);
+		const before = FakeWebSocket.opened.length;
+		vi.advanceTimersByTime(1);
+		expect(FakeWebSocket.opened).toHaveLength(before + 1);
+		stop();
+	});
+
+	it('tells every listener to ask again once a dropped socket is ready, not on the first ready', () => {
+		const a = { change: vi.fn(), agent: vi.fn() };
+		const b = { change: vi.fn() };
+		const stopA = listen(a);
+		const stopB = listen(b);
+		latest().emit({ type: 'ready' });
+		expect(a.change).not.toHaveBeenCalled();
+		expect(b.change).not.toHaveBeenCalled();
+
+		latest().drop();
+		vi.advanceTimersByTime(RETRY_MS);
+		expect(FakeWebSocket.opened).toHaveLength(2);
+		expect(a.change).not.toHaveBeenCalled();
+		latest().emit({ type: 'ready' });
+		// the manifest affects every kind a page follows, and an agent with no story is any agent
+		expect(a.change).toHaveBeenCalledExactlyOnceWith('system-flow.yaml', 'project');
+		expect(a.agent).toHaveBeenCalledExactlyOnceWith('');
+		expect(b.change).toHaveBeenCalledExactlyOnceWith('system-flow.yaml', 'project');
+
+		// a second ready on the same socket is not another reconnection
+		latest().emit({ type: 'ready' });
+		expect(a.change).toHaveBeenCalledTimes(1);
+		stopA();
+		stopB();
+	});
+
+	it('stops opening it again once the last listener leaves while it waits', () => {
+		const stop = listen({});
+		latest().drop();
+		stop();
+		vi.advanceTimersByTime(RETRY_MAX_MS);
+		expect(FakeWebSocket.opened).toHaveLength(1);
+	});
+
+	it('does nothing where there is no WebSocket', () => {
+		vi.stubGlobal('WebSocket', undefined);
 		expect(() => listen({ change: () => {} })()).not.toThrow();
+		expect(FakeWebSocket.opened).toEqual([]);
 	});
 });
 
@@ -117,9 +217,7 @@ describe('debounced (S-0161)', () => {
 
 describe('follow (S-0161)', () => {
 	beforeEach(() => {
-		resetForTests();
-		FakeEventSource.opened = [];
-		vi.stubGlobal('EventSource', FakeEventSource);
+		stubSocket();
 		vi.useFakeTimers();
 	});
 	afterEach(() => {
@@ -130,18 +228,18 @@ describe('follow (S-0161)', () => {
 	it('calls once for the changes of its kinds that arrive together, and ignores the rest', () => {
 		const f = vi.fn();
 		const stop = follow(['item'], f);
-		const source = FakeEventSource.opened[0];
-		source.emit('change', { path: 'wip/agents/S-0161.md', kind: 'narrative' });
-		source.emit('change', { path: 'wip/threads/TH-0001-x.md', kind: 'thread' });
-		source.emit('change', { path: 'design/system/overview.md', kind: 'document' });
+		const socket = FakeWebSocket.opened[0];
+		socket.emit({ type: 'change', path: 'wip/agents/S-0161.md', kind: 'narrative' });
+		socket.emit({ type: 'change', path: 'wip/threads/TH-0001-x.md', kind: 'thread' });
+		socket.emit({ type: 'change', path: 'design/system/overview.md', kind: 'document' });
 		vi.advanceTimersByTime(GATHER_MS);
 		expect(f).not.toHaveBeenCalled();
 
-		source.emit('change', { path: 'wip/kanban/stories/S-0001-a.md', kind: 'item' });
+		socket.emit({ type: 'change', path: 'wip/kanban/stories/S-0001-a.md', kind: 'item' });
 		vi.advanceTimersByTime(100);
-		source.emit('change', { path: 'wip/kanban/board.md', kind: 'item' });
+		socket.emit({ type: 'change', path: 'wip/kanban/board.md', kind: 'item' });
 		vi.advanceTimersByTime(100);
-		source.emit('change', { path: 'wip/agents/S-0161.md', kind: 'narrative' });
+		socket.emit({ type: 'change', path: 'wip/agents/S-0161.md', kind: 'narrative' });
 		vi.advanceTimersByTime(GATHER_MS);
 		expect(f).toHaveBeenCalledTimes(1);
 		expect(f).toHaveBeenLastCalledWith([
@@ -149,19 +247,19 @@ describe('follow (S-0161)', () => {
 			{ path: 'wip/kanban/board.md', kind: 'item' }
 		]);
 		stop();
-		expect(source.closed).toBe(true);
+		expect(socket.closed).toBe(true);
 	});
 
 	it('counts the manifest, a file the server could not tell apart, and a change without a kind', () => {
 		const f = vi.fn();
 		const stop = follow(['adr'], f);
-		const source = FakeEventSource.opened[0];
+		const socket = FakeWebSocket.opened[0];
 		for (const data of [
 			{ path: 'system-flow.yaml', kind: 'project' },
 			{ path: 'x', kind: 'other' },
 			{ path: 'y' }
 		]) {
-			source.emit('change', data);
+			socket.emit({ type: 'change', ...data });
 			vi.advanceTimersByTime(GATHER_MS);
 		}
 		expect(f).toHaveBeenCalledTimes(3);
@@ -171,9 +269,20 @@ describe('follow (S-0161)', () => {
 	it('asks nothing once stopped, even for changes it had gathered', () => {
 		const f = vi.fn();
 		const stop = follow(['item'], f);
-		FakeEventSource.opened[0].emit('change', { path: 'wip/kanban/board.md', kind: 'item' });
+		FakeWebSocket.opened[0].emit({ type: 'change', path: 'wip/kanban/board.md', kind: 'item' });
 		stop();
 		vi.advanceTimersByTime(GATHER_MS);
 		expect(f).not.toHaveBeenCalled();
+	});
+
+	it('asks again, whatever its kinds, once a dropped socket is ready again', () => {
+		const f = vi.fn();
+		const stop = follow(['adr'], f);
+		latest().drop();
+		vi.advanceTimersByTime(RETRY_MS);
+		latest().emit({ type: 'ready' });
+		vi.advanceTimersByTime(GATHER_MS);
+		expect(f).toHaveBeenCalledExactlyOnceWith([{ path: 'system-flow.yaml', kind: 'project' }]);
+		stop();
 	});
 });

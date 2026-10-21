@@ -15,8 +15,8 @@ vi.mock('$app/navigation', () => ({ goto: (...args: unknown[]) => goto(...args) 
 import BoardPage from './+page.svelte';
 import { PRESS_MS } from './longpress';
 
-class QuietEventSource {
-	addEventListener() {}
+/** Stands in for the browser's WebSocket to /api/events, which says nothing here. */
+class QuietWebSocket {
 	close() {}
 }
 
@@ -101,7 +101,7 @@ describe('a card’s menu (S-0202)', () => {
 
 	beforeEach(() => {
 		resetForTests();
-		vi.stubGlobal('EventSource', QuietEventSource);
+		vi.stubGlobal('WebSocket', QuietWebSocket);
 		posts = [];
 		agents = { enabled: false };
 		posted = answer({});

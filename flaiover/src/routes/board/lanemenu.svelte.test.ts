@@ -14,8 +14,8 @@ vi.mock('$app/navigation', () => ({ goto: (...args: unknown[]) => goto(...args) 
 
 import BoardPage from './+page.svelte';
 
-class QuietEventSource {
-	addEventListener() {}
+/** Stands in for the browser's WebSocket to /api/events, which says nothing here. */
+class QuietWebSocket {
 	close() {}
 }
 
@@ -121,7 +121,7 @@ describe('the lane menu (S-0167)', () => {
 
 	beforeEach(() => {
 		resetForTests();
-		vi.stubGlobal('EventSource', QuietEventSource);
+		vi.stubGlobal('WebSocket', QuietWebSocket);
 		posts = [];
 		refuse = () => null;
 		brings = {};

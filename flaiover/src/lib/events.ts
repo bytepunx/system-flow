@@ -1,9 +1,11 @@
 // The project's live events (/api/events) for everything on a page that follows them (S-0154):
-// one EventSource per project for the whole tab, opened by the first listener and closed with the
-// last, rather than one each. A browser keeps few connections to one origin, and a story page has
-// the inbox, the item, its threads, and its agent panel all listening.
+// one WebSocket per project for the whole tab, opened by the first listener and closed with the
+// last, rather than one each (ADR-0182). A story page has the inbox, the item, its threads, and its
+// agent panel all listening. A socket that drops is opened again after a backoff while anyone
+// listens, and since a new socket does not resume where the dropped one left off, every listener
+// is then told to ask again for what it shows.
 import { projectState } from '$lib/project.svelte';
-import { affects, type Change, type ChangeKind } from '$lib/changes';
+import { affects, MANIFEST, type Change, type ChangeKind } from '$lib/changes';
 
 export type Listener = {
 	/** A file of the project changed: `path` is repo-relative, `kind` what the server read it as (S-0161). */
@@ -13,44 +15,112 @@ export type Listener = {
 	agent?: (story: string) => void;
 };
 
-type Stream = { source: EventSource; listeners: Set<Listener> };
+/** The first wait before opening a dropped socket again, doubled after each drop until a `ready`. */
+export const RETRY_MS = 1000;
+/** The longest wait between attempts to open a dropped socket again. */
+export const RETRY_MAX_MS = 30000;
+
+type Stream = {
+	url: string;
+	listeners: Set<Listener>;
+	socket: WebSocket | null;
+	retry: ReturnType<typeof setTimeout> | null;
+	delay: number;
+	/** The socket open now replaces one that dropped, so its `ready` is a reconnection. */
+	reconnecting: boolean;
+};
 const streams = new Map<string, Stream>();
 
-function field(e: Event | undefined, name: string): string {
-	try {
-		const v = JSON.parse((e as MessageEvent | undefined)?.data ?? '{}')[name];
-		return typeof v === 'string' ? v : '';
-	} catch {
-		return '';
+/** The socket URL of a same-origin path, ws: or wss: as the page's own protocol. */
+function socketURL(path: string): string {
+	return `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}${path}`;
+}
+
+function text(v: unknown): string {
+	return typeof v === 'string' ? v : '';
+}
+
+/** Every listener asks again for all it shows: the manifest changing affects every kind
+ * (changes.ts), and an agent with no story is any agent. */
+function askAgain(s: Stream) {
+	for (const x of [...s.listeners]) {
+		x.change?.(MANIFEST, 'project');
+		x.agent?.('');
 	}
 }
 
+function receive(s: Stream, data: unknown) {
+	let m: { type?: unknown; path?: unknown; kind?: unknown; story?: unknown };
+	try {
+		m = JSON.parse(text(data)) ?? {};
+	} catch {
+		return;
+	}
+	if (m.type === 'ready') {
+		s.delay = RETRY_MS;
+		if (s.reconnecting) {
+			s.reconnecting = false;
+			askAgain(s);
+		}
+	} else if (m.type === 'change') {
+		const path = text(m.path);
+		const kind = (text(m.kind) || 'other') as ChangeKind;
+		for (const x of [...s.listeners]) x.change?.(path, kind);
+	} else if (m.type === 'agent') {
+		for (const x of [...s.listeners]) x.agent?.(text(m.story));
+	}
+}
+
+function connect(s: Stream) {
+	const socket = new WebSocket(s.url);
+	s.socket = socket;
+	socket.onmessage = (e) => receive(s, e.data);
+	socket.onclose = () => {
+		// the last listener leaving closes it on purpose and forgets it first
+		if (s.socket !== socket) return;
+		s.socket = null;
+		s.reconnecting = true;
+		s.retry = setTimeout(() => {
+			s.retry = null;
+			connect(s);
+		}, s.delay);
+		s.delay = Math.min(s.delay * 2, RETRY_MAX_MS);
+	};
+}
+
+function disconnect(s: Stream) {
+	if (s.retry) clearTimeout(s.retry);
+	s.retry = null;
+	const socket = s.socket;
+	s.socket = null;
+	socket?.close();
+}
+
 /** Follows the current project's events until the returned function is called; nothing where
- * there is no EventSource to follow them with. */
+ * there is no WebSocket to follow them with. */
 export function listen(l: Listener): () => void {
-	if (typeof EventSource === 'undefined') return () => {};
-	const url = projectState.tag('/api/events');
-	let s = streams.get(url);
+	if (typeof WebSocket === 'undefined' || typeof location === 'undefined') return () => {};
+	const path = projectState.tag('/api/events');
+	let s = streams.get(path);
 	if (!s) {
-		const source = new EventSource(url);
-		const stream: Stream = { source, listeners: new Set() };
-		source.addEventListener('change', (e) => {
-			const path = field(e, 'path');
-			const kind = (field(e, 'kind') || 'other') as ChangeKind;
-			for (const x of [...stream.listeners]) x.change?.(path, kind);
-		});
-		source.addEventListener('agent', (e) => {
-			for (const x of [...stream.listeners]) x.agent?.(field(e, 'story'));
-		});
-		streams.set(url, stream);
+		const stream: Stream = {
+			url: socketURL(path),
+			listeners: new Set(),
+			socket: null,
+			retry: null,
+			delay: RETRY_MS,
+			reconnecting: false
+		};
+		connect(stream);
+		streams.set(path, stream);
 		s = stream;
 	}
 	const mine = s;
 	mine.listeners.add(l);
 	return () => {
 		if (!mine.listeners.delete(l) || mine.listeners.size) return;
-		mine.source.close();
-		if (streams.get(url) === mine) streams.delete(url);
+		disconnect(mine);
+		if (streams.get(path) === mine) streams.delete(path);
 	};
 }
 

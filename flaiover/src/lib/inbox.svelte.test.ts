@@ -2,24 +2,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { inboxState } from './inbox.svelte';
 import { projectState, resetForTests } from './project.svelte';
 
-/** Stands in for the browser's EventSource: records where each one listens and whether it closed. */
-class FakeEventSource {
-	static opened: FakeEventSource[] = [];
+/** Stands in for the browser's WebSocket: records where each one connects and whether it closed. */
+class FakeWebSocket {
+	static opened: FakeWebSocket[] = [];
 	closed = false;
 	constructor(public url: string) {
-		FakeEventSource.opened.push(this);
+		FakeWebSocket.opened.push(this);
 	}
-	addEventListener() {}
 	close() {
 		this.closed = true;
 	}
 }
 
+/** The path and query each socket was opened on. */
+const paths = () =>
+	FakeWebSocket.opened.map((e) => {
+		const u = new URL(e.url);
+		return u.pathname + u.search;
+	});
+
 describe('inboxState across a project switch (S-0095)', () => {
 	beforeEach(() => {
 		resetForTests();
-		FakeEventSource.opened = [];
-		vi.stubGlobal('EventSource', FakeEventSource);
+		FakeWebSocket.opened = [];
+		vi.stubGlobal('WebSocket', FakeWebSocket);
 		vi.stubGlobal(
 			'fetch',
 			vi.fn(
@@ -44,15 +50,12 @@ describe('inboxState across a project switch (S-0095)', () => {
 		projectState.pick('alpha', false);
 		inboxState.start();
 		await vi.waitFor(() => expect(inboxState.data).not.toBeNull());
-		expect(FakeEventSource.opened.map((e) => e.url)).toEqual(['/api/events?project=alpha']);
+		expect(paths()).toEqual(['/api/events?project=alpha']);
 
 		projectState.pick('beta', false);
 		inboxState.restart();
-		expect(FakeEventSource.opened[0].closed).toBe(true);
-		expect(FakeEventSource.opened.map((e) => e.url)).toEqual([
-			'/api/events?project=alpha',
-			'/api/events?project=beta'
-		]);
+		expect(FakeWebSocket.opened[0].closed).toBe(true);
+		expect(paths()).toEqual(['/api/events?project=alpha', '/api/events?project=beta']);
 		// the new project's inbox is asked, not the old one's kept on show
 		await vi.waitFor(() =>
 			expect(inboxState.data?.entries[0].key).toBe('review:/api/inbox?project=beta')
@@ -61,6 +64,6 @@ describe('inboxState across a project switch (S-0095)', () => {
 
 	it('restart does nothing before the inbox has started (the login page)', () => {
 		inboxState.restart();
-		expect(FakeEventSource.opened).toEqual([]);
+		expect(FakeWebSocket.opened).toEqual([]);
 	});
 });
