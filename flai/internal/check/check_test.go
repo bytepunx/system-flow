@@ -120,14 +120,20 @@ func TestMonorepoIsClean(t *testing.T) {
 	}
 	// In a close-out (scripts/close-out.sh exports the story), the errors
 	// outside the story are main's, logged as scripts/check.sh notes them,
-	// and do not fail the story (S-0249).
-	story := os.Getenv("CLOSE_OUT_STORY")
-	if story != "" {
-		changed, err := storygit.StoryChanges(execx.System{}, repo, story)
-		if err != nil {
-			t.Fatal(err)
+	// and do not fail the story (S-0249); in a merge queue batch, those
+	// outside every story it verifies (I-0174).
+	stories := scopeStories()
+	story := strings.Join(stories, ",")
+	if len(stories) > 0 {
+		var changed []string
+		for _, id := range stories {
+			c, err := storygit.StoryChanges(execx.System{}, repo, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			changed = append(changed, c...)
 		}
-		if err := ScopeToStory(res, repo, story, changed); err != nil {
+		if err := ScopeToStories(res, repo, stories, changed); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -143,6 +149,23 @@ func TestMonorepoIsClean(t *testing.T) {
 			t.Logf("warning: %s:%d: %s: %s", f.Path, f.Line, f.Rule, f.Message)
 		}
 	}
+}
+
+// scopeStories is the stories the run is scoped to: the close-out's story
+// in CLOSE_OUT_STORY, else the merge queue batch's, comma-separated in
+// MERGE_QUEUE_STORIES (verify.MergeQueueStoriesEnv, which this package
+// cannot import: verify imports check), else none.
+func scopeStories() []string {
+	if story := os.Getenv("CLOSE_OUT_STORY"); story != "" {
+		return []string{story}
+	}
+	var stories []string
+	for _, id := range strings.Split(os.Getenv("MERGE_QUEUE_STORIES"), ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			stories = append(stories, id)
+		}
+	}
+	return stories
 }
 
 func TestCacheMustBeIgnored(t *testing.T) {

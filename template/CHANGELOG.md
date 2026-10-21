@@ -5,6 +5,10 @@
 - S-0453 A thread awaits an agent only when the agent takes part in it or it is on the agent's own story, so a story's agent no longer counts the threads awaiting the operator as its own (patch).
 - S-0453 The orchestrator answers the threads `inbox` marks `awaiting: "operator"` (patch, ADR-0181): in `strategic-agents.md`, the section "As the orchestrator" says that under `answer_threads` it takes from `inbox` the threads it marks `awaiting: "operator"`, which `inbox` lists in the orchestrator's role without `all: true`, and leaves out those it opened, those whose last entry is its own, those with a `pending_recommendation`, and those whose last entry is by neither a story's agent nor a planner, such as `flai serve`'s notices. The orchestrator's agent definition, `orchestrator.md`, names them the same way in its step 9. It needs a flai that has it, the release that carries S-0453: an older flai marks no thread `awaiting: "operator"`, so under it the orchestrator finds none to answer.
 
+## 1.0.106 - 2026-10-21
+
+- S-0464 The merge queue's batch scopes `scripts/check.sh` to the stories it verifies, so a finding on main outside every one of them no longer fails it (patch): with `MERGE_QUEUE_STORIES` set, as the merge queue's batch and each bisection step set it to the stories they verify, comma-separated, and `CLOSE_OUT_STORY` unset, `check.sh` runs `flai check --strict --story "$MERGE_QUEUE_STORIES"`, so a finding outside every one of them is a note, and records no issue, since the batch's checkout is never committed. With `CLOSE_OUT_STORY` set it runs as before, and with neither, as in CI and make, every finding counts. `scripts/README.md` says so. It needs a flai that has it, the release that carries S-0464: `flai check --story` with several stories, and the batch's `MERGE_QUEUE_STORIES`; an older flai's batch sets neither variable, and the check is unscoped as before.
+
 ## 1.0.105 - 2026-10-20
 
 - S-0403 With accept_reviews on and the queue running, the orchestrator enqueues each story in review it has verified instead of accepting it, never lands or bisects by hand, and opens no gate thread on a story the queue will verify (patch).

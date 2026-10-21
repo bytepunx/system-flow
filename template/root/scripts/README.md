@@ -4,7 +4,7 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 
 | Script | Does |
 |--------|------|
-| `check.sh` | Runs `flai check --strict` on this repository; with `CLOSE_OUT_STORY` set, as `flai verify` sets it for the tiers it runs, scoped to the story with `--story` and `--record-issues`, so findings outside it are notes recorded in issues |
+| `check.sh` | Runs `flai check --strict` on this repository; with `CLOSE_OUT_STORY` set, as `flai verify` sets it for the tiers it runs, scoped to the story with `--story` and `--record-issues`, so findings outside it are notes recorded in issues; else with `MERGE_QUEUE_STORIES` set, as the merge queue's batch and bisection set it to the stories they verify, comma-separated, scoped to them with `--story` alone, so a finding outside every one is a note and none is recorded |
 | `test.sh` | Behavior tests, fast, every iteration (`make test`); the `test` tier of `system-flow.yaml`'s `tests` |
 | `integration.sh` | Integration tests against real adapters (`make integration`); the `integration` tier |
 | `smoke.sh` | End-to-end smoke tests (`make smoke`); the `smoke` tier |

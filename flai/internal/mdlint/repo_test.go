@@ -11,6 +11,7 @@ import (
 	"github.com/bytepunx/system-flow/flai/internal/execx"
 	"github.com/bytepunx/system-flow/flai/internal/mdlint"
 	"github.com/bytepunx/system-flow/flai/internal/storygit"
+	"github.com/bytepunx/system-flow/flai/internal/verify"
 	"github.com/bytepunx/system-flow/flai/internal/workitem"
 )
 
@@ -27,20 +28,24 @@ func TestRepositoryLintsClean(t *testing.T) {
 	}
 	// In a close-out (scripts/close-out.sh exports the story), the branch
 	// holds wip/ as main last committed it: a finding in a wip file the story
-	// does not change is main's, logged and not failed (I-0117).
+	// does not change is main's, logged and not failed (I-0117). In a merge
+	// queue batch, the same holds for a file none of its stories changes
+	// (I-0174).
 	var changed []string
-	story := os.Getenv("CLOSE_OUT_STORY")
-	if story != "" {
+	stories := scopeStories()
+	story := strings.Join(stories, ",")
+	if len(stories) > 0 {
 		repo, err := workitem.Open(root)
 		if err != nil {
 			t.Fatal(err)
 		}
-		changed, err = storygit.StoryChanges(execx.System{}, repo, story)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if changed == nil {
-			changed = []string{}
+		changed = []string{}
+		for _, id := range stories {
+			c, err := storygit.StoryChanges(execx.System{}, repo, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			changed = append(changed, c...)
 		}
 	}
 	failing, outside, n, err := lintTree(root, changed)
@@ -56,6 +61,22 @@ func TestRepositoryLintsClean(t *testing.T) {
 	for _, f := range failing {
 		t.Errorf("mdlint reports, markdownlint does not: %s", f)
 	}
+}
+
+// scopeStories is the stories the run is scoped to: the close-out's story
+// in CLOSE_OUT_STORY, else the merge queue batch's, comma-separated in
+// MERGE_QUEUE_STORIES, else none.
+func scopeStories() []string {
+	if story := os.Getenv("CLOSE_OUT_STORY"); story != "" {
+		return []string{story}
+	}
+	var stories []string
+	for _, id := range strings.Split(os.Getenv(verify.MergeQueueStoriesEnv), ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			stories = append(stories, id)
+		}
+	}
+	return stories
 }
 
 // I-0117: a finding in main's wip fails only the close-out of a story that changes the file.
