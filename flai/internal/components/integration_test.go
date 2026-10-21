@@ -14,12 +14,14 @@ package components
 // nothing of the component before, only once the page selects it, and with
 // the props the page sent while it loaded, and that it answers the
 // component's requests for the app's own server itself. It needs node and
-// flaiover's dependencies installed, so it skips without them, and under
+// flaiover's dependencies installed from this tree's lockfile, so it skips
+// without them, fails on an install from another lockfile, and skips under
 // -short; the browser checks skip without Playwright's Chromium. The build
 // tag keeps it off Windows: the fixture links node_modules with symlinks,
 // and the test checks vite's process group.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -967,11 +969,18 @@ func lookString(l *inPlaceLook) string {
 
 // flaioverModules is flaiover's installed node_modules, which has vite,
 // svelte, and @sveltejs/vite-plugin-svelte: this checkout's, or, in a story
-// worktree whose flaiover has none installed, the main checkout's. The test
-// skips when neither has vite.
+// worktree whose flaiover has none installed, the main checkout's, but only
+// one installed from this checkout's flaiover/pnpm-lock.yaml (I-0178). The
+// test fails when the only installs with vite were made from another
+// lockfile, and skips when neither has vite.
 func flaioverModules(t *testing.T) string {
 	t.Helper()
 	repo, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lockfile := filepath.Join(repo, "flaiover", "pnpm-lock.yaml")
+	lock, err := os.ReadFile(lockfile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -983,13 +992,85 @@ func flaioverModules(t *testing.T) string {
 			candidates = append(candidates, filepath.Join(checkout, "flaiover", "node_modules"))
 		}
 	}
-	for _, c := range candidates {
-		if _, err := os.Stat(filepath.Join(c, ".bin", viteBin)); err == nil {
-			return c
-		}
+	candidates = slices.Compact(candidates)
+	modules, stale := installedFrom(lock, candidates)
+	if modules != "" {
+		return modules
 	}
-	t.Skipf("flaiover's dependencies are not installed in %s, so the fixture has no vite to run; install them with scripts/flaiover-install.sh", strings.Join(slices.Compact(candidates), " or "))
+	if len(stale) > 0 {
+		t.Fatalf("flaiover's dependencies in %s were installed from another pnpm-lock.yaml than %s, so the dev server would miss what this tree's components import; install them in this tree with %s --if-needed",
+			strings.Join(stale, " and "), lockfile, filepath.Join(repo, "scripts", "flaiover-install.sh"))
+	}
+	t.Skipf("flaiover's dependencies are not installed in %s, so the fixture has no vite to run; install them with scripts/flaiover-install.sh", strings.Join(candidates, " or "))
 	return ""
+}
+
+// installedFrom is the first of the node_modules candidates that has vite
+// and was installed from lock, as pnpm's copy of the lockfile it installed
+// from, .pnpm/lock.yaml, says; stale lists the candidates with vite that
+// were installed from another lockfile, or whose copy is missing.
+func installedFrom(lock []byte, candidates []string) (modules string, stale []string) {
+	for _, c := range candidates {
+		if _, err := os.Stat(filepath.Join(c, ".bin", viteBin)); err != nil {
+			continue
+		}
+		if installed, err := os.ReadFile(filepath.Join(c, ".pnpm", "lock.yaml")); err == nil && bytes.Equal(installed, lock) {
+			return c, nil
+		}
+		stale = append(stale, c)
+	}
+	return "", stale
+}
+
+// I-0178: a story worktree with no install of its own borrowed the main
+// checkout's, made before an acceptance added a dependency to the lockfile,
+// and every components test then failed on an import vite could not find.
+func TestInstalledFromRefusesAnInstallFromAnotherLockfile(t *testing.T) {
+	root := t.TempDir()
+	install := func(name, lock string) string {
+		dir := filepath.Join(root, name, "node_modules")
+		for _, p := range []string{filepath.Join(dir, ".bin", viteBin), filepath.Join(dir, ".pnpm", "lock.yaml")} {
+			if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := os.WriteFile(filepath.Join(dir, ".bin", viteBin), nil, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if lock != "" {
+			if err := os.WriteFile(filepath.Join(dir, ".pnpm", "lock.yaml"), []byte(lock), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return dir
+	}
+	before := "packages:\n  vite: {}\n"
+	after := before + "  '@lucide/svelte': {}\n"
+	none := filepath.Join(root, "worktree", "node_modules")
+	main := install("main", before)
+	current := install("current", after)
+	nocopy := install("nocopy", "")
+
+	for _, c := range []struct {
+		name       string
+		candidates []string
+		want       string
+		stale      []string
+	}{
+		{"the worktree has none and main's is from the lockfile before", []string{none, main}, "", []string{main}},
+		{"main's is from this lockfile", []string{none, current}, current, nil},
+		{"the worktree's own comes first", []string{current, main}, current, nil},
+		{"a stale own install is passed over for a current one", []string{main, current}, current, nil},
+		{"an install without pnpm's copy of its lockfile", []string{nocopy}, "", []string{nocopy}},
+		{"no install has vite", []string{none}, "", nil},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got, stale := installedFrom([]byte(after), c.candidates)
+			if got != c.want || !slices.Equal(stale, c.stale) {
+				t.Errorf("installedFrom = %q, stale %v; want %q, stale %v", got, stale, c.want, c.stale)
+			}
+		})
+	}
 }
 
 // linkModules makes dst a folder of links to each entry of the node_modules
