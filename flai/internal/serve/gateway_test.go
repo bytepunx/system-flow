@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ import (
 // FLAI_TEST_LITELLM_PASSTHROUGH=1, by its Anthropic pass-through, only where
 // LITELLM_BASE_URL and LITELLM_API_KEY are set and claude is on PATH. Each
 // spends on its key, capped by max_budget_usd, but the LiteLLM check's
-// default model is a free one.
+// default models are free ones.
 
 const (
 	// gatewayKeyEnv holds the OpenRouter key the check runs on.
@@ -78,13 +79,9 @@ const (
 	// litellmMasterEnv holds the proxy's master key, the only key that reads
 	// its spend log.
 	litellmMasterEnv = "LITELLM_MASTER_KEY"
-	// litellmHaikuEnv and litellmHaikuDefault are the slug the haiku alias
-	// resolves to by the unified API: by default a free OpenRouter model, so
-	// the check spends nothing (TH-0429). OpenRouter retired the free
-	// nemotron-3-super, answering 404, so the default is nemotron-3-ultra
-	// (I-0170, TH-0529).
-	litellmHaikuEnv     = "FLAI_TEST_LITELLM_HAIKU"
-	litellmHaikuDefault = "openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free"
+	// litellmHaikuEnv names the slug the haiku alias resolves to by the
+	// unified API, the operator's own when it is not on litellmHaikuDefaults.
+	litellmHaikuEnv = "FLAI_TEST_LITELLM_HAIKU"
 	// litellmPassThroughEnv set to 1 runs the pass-through too: it forwards
 	// the body to Anthropic as is, so it needs the proxy's upstream Anthropic
 	// key and takes Anthropic's own model ID, litellmPassThroughHaiku.
@@ -102,6 +99,18 @@ const (
 	// log stays put before they are taken as all there.
 	litellmLogSettled = 6 * time.Second
 )
+
+// litellmHaikuDefaults are the free OpenRouter models the haiku alias may
+// resolve to by the unified API, so the check spends nothing (TH-0429), in
+// the order the check probes them. OpenRouter retires a free model at any
+// time, answering 404 for it, so the check runs on the first the proxy
+// answers (I-0170, S-0456). Each passed the whole check at $0 of key spend
+// on 2026-10-21; scripts/litellm.sh's HAIKU_DEFAULT is the first.
+var litellmHaikuDefaults = []string{
+	"openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free",
+	"openrouter-messages/minimax/minimax-m3.1-flash:free",
+	"openrouter-messages/nvidia/nemotron-3.5-lightning:free",
+}
 
 // gatewayMissing names what the check needs and this host lacks, "" when
 // nothing: each of the variables names that getenv finds empty, and claude
@@ -445,12 +454,11 @@ func TestGatewayLiteLLM(t *testing.T) {
 	root := strings.TrimRight(os.Getenv(litellmBaseEnv), "/")
 	key := os.Getenv(litellmKeyEnv)
 	master := os.Getenv(litellmMasterEnv)
-	slug := envOr(litellmHaikuEnv, litellmHaikuDefault)
 	for _, c := range []struct {
 		name, route, baseURL, slug string
-		optIn, probe               bool
+		optIn, pick                bool // pick: the slug is litellmPick's
 	}{
-		{"unified", "LiteLLM (unified)", root, slug, false, true},
+		{"unified", "LiteLLM (unified)", root, "", false, true},
 		{"pass-through", "LiteLLM (Anthropic pass-through)", root + "/anthropic", litellmPassThroughHaiku, true, false},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -460,10 +468,16 @@ func TestGatewayLiteLLM(t *testing.T) {
 			ctx := context.Background()
 			// a model the proxy cannot reach fails claude with only a warning
 			// it prints on passing runs too, so ask the proxy first (I-0171)
-			if c.probe {
-				if err := litellmProbe(ctx, root, key, c.slug); err != nil {
-					t.Fatal(litellmProbeFailure(c.slug, litellmHaikuSource(os.Getenv), err))
+			if c.pick {
+				slug, passed, err := litellmPick(ctx, root, key, os.Getenv, litellmHaikuDefaults)
+				for _, p := range passed {
+					t.Logf("passed over %s", p)
 				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				c.slug = slug
+				t.Logf("the haiku alias resolves to %s", slug)
 			}
 			var before litellmKeyInfo
 			var beforeErr error
@@ -954,20 +968,13 @@ func TestLiteLLMProbeNamesTheModel(t *testing.T) {
 	if got, want := <-sent, (request{http.MethodPost, "/v1/messages", "Bearer sk-virtual", "2023-06-01", slug, 1}); got != want {
 		t.Errorf("the probe sent %+v, want %+v", got, want)
 	}
-	set := func(string) string { return slug }
-	unset := func(string) string { return "" }
-	for _, c := range []struct {
-		getenv func(string) string
-		source string
-	}{
-		{set, litellmHaikuEnv + ", set in the environment or by .flai-cache/litellm/litellm.env"},
-		{unset, "litellmHaikuDefault"},
-	} {
-		msg := litellmProbeFailure(slug, litellmHaikuSource(c.getenv), err)
-		for _, want := range []string{slug, c.source, "answered 404", "No endpoints found for nvidia/nemotron-3-super-120b-a12b:free.", "LITELLM_HAIKU_MODEL=<slug> scripts/litellm.sh up", "set " + litellmHaikuEnv} {
-			if !strings.Contains(msg, want) {
-				t.Errorf("the probe's failure does not name %q:\n%s", want, msg)
-			}
+	if refused := (*litellmRefusal)(nil); !errors.As(err, &refused) || refused.status != http.StatusNotFound {
+		t.Errorf("the probe of a retired model answered %#v, want a *litellmRefusal of 404", err)
+	}
+	msg := litellmProbeFailure(slug, litellmOwnSource, err)
+	for _, want := range []string{slug, litellmHaikuEnv + ", set in the environment or by .flai-cache/litellm/litellm.env", "answered 404", "No endpoints found for nvidia/nemotron-3-super-120b-a12b:free.", "LITELLM_HAIKU_MODEL=<slug> scripts/litellm.sh up", "set " + litellmHaikuEnv} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("the probe's failure does not name %q:\n%s", want, msg)
 		}
 	}
 
@@ -978,9 +985,150 @@ func TestLiteLLMProbeNamesTheModel(t *testing.T) {
 	<-sent
 
 	srv.Close()
-	if err := litellmProbe(ctx, srv.URL, "sk-virtual", slug); err == nil || !strings.Contains(err.Error(), "POST "+srv.URL+"/v1/messages") {
+	err = litellmProbe(ctx, srv.URL, "sk-virtual", slug)
+	if err == nil || !strings.Contains(err.Error(), "POST "+srv.URL+"/v1/messages") {
 		t.Errorf("the probe of a proxy that is down answered %v, want an error naming the POST", err)
 	}
+	if refused := (*litellmRefusal)(nil); errors.As(err, &refused) {
+		t.Errorf("the probe of a proxy that is down answered a refusal, %v, want no HTTP answer", err)
+	}
+}
+
+// TestLiteLLMPicksTheFirstFreeModelTheProxyAnswers covers the choice of the
+// unified case's model against a stand-in proxy that answers per model, with
+// no call out of this host (I-0170, S-0456): a first default the proxy
+// answers 404 for, as for a free model OpenRouter retired, is passed over for
+// the next; every default refused fails naming each; an operator's slug is
+// probed alone and not replaced; the key file's default walks the list; a
+// proxy that is down stops the walk at the first probe.
+func TestLiteLLMPicksTheFirstFreeModelTheProxyAnswers(t *testing.T) {
+	const (
+		retiredSlug = "openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free"
+		servedSlug  = "openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free"
+		limitedSlug = "openrouter-messages/google/gemma-4-31b-it:free"
+		ownSlug     = "openrouter-messages/acme/own-model:free"
+	)
+	retired := `{"error":{"message":"litellm.NotFoundError: AnthropicException - {\"error\":{\"message\":\"No endpoints found for nvidia/nemotron-3-super-120b-a12b:free.\",\"code\":404}}","type":null,"param":null,"code":"404"}}`
+	limited := `{"error":{"message":"litellm.RateLimitError: rate-limited upstream"}}`
+	// answers is the stand-in's answer per model; a model it lacks is a 404
+	answers := map[string]struct {
+		status int
+		body   string
+	}{
+		retiredSlug: {http.StatusNotFound, retired},
+		servedSlug:  {http.StatusOK, `{"type":"message","content":[]}`},
+		limitedSlug: {http.StatusTooManyRequests, limited},
+	}
+	var (
+		mu     sync.Mutex
+		probed []string
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Model string `json:"model"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		mu.Lock()
+		probed = append(probed, body.Model)
+		mu.Unlock()
+		a, ok := answers[body.Model]
+		if !ok {
+			a.status, a.body = http.StatusNotFound, `{"error":{"message":"no such model"}}`
+		}
+		w.WriteHeader(a.status)
+		_, _ = io.WriteString(w, a.body)
+	}))
+	defer srv.Close()
+	ctx := context.Background()
+	env := func(slug string) func(string) string {
+		return func(name string) string {
+			if name == litellmHaikuEnv {
+				return slug
+			}
+			return ""
+		}
+	}
+
+	for _, c := range []struct {
+		name     string
+		set      string
+		defaults []string
+		pick     string
+		probed   []string
+		passed   []string // each passed-over line names these, in order
+		failure  []string // the error names these; none when the pick is made
+	}{
+		{"a retired first default is passed over for the next (I-0170)", "", []string{retiredSlug, servedSlug, limitedSlug},
+			servedSlug, []string{retiredSlug, servedSlug}, []string{retiredSlug + ": POST " + srv.URL + "/v1/messages answered 404: ", "No endpoints found for nvidia/nemotron-3-super-120b-a12b:free."}, nil},
+		{"the key file's default on the list walks the list", retiredSlug, []string{retiredSlug, servedSlug},
+			servedSlug, []string{retiredSlug, servedSlug}, []string{retiredSlug + ": ", "answered 404"}, nil},
+		{"every default refused fails naming each", "", []string{retiredSlug, limitedSlug},
+			"", []string{retiredSlug, limitedSlug}, []string{retiredSlug + ": ", "answered 404", limitedSlug + ": ", "answered 429: litellm.RateLimitError: rate-limited upstream"},
+			[]string{"no model on litellmHaikuDefaults in gateway_test.go", retiredSlug + ": POST", "answered 404", limitedSlug + ": POST", "answered 429", "LITELLM_HAIKU_MODEL=<slug> scripts/litellm.sh up", "set " + litellmHaikuEnv}},
+		{"an operator's slug refused is not replaced", ownSlug, []string{servedSlug},
+			"", []string{ownSlug}, nil,
+			[]string{ownSlug, litellmOwnSource, "answered 404: no such model", "LITELLM_HAIKU_MODEL=<slug> scripts/litellm.sh up"}},
+		{"an operator's slug the proxy answers is the pick", servedSlug, []string{retiredSlug},
+			servedSlug, []string{servedSlug}, nil, nil},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			mu.Lock()
+			probed = nil
+			mu.Unlock()
+			slug, passed, err := litellmPick(ctx, srv.URL, "sk-virtual", env(c.set), c.defaults)
+			if slug != c.pick {
+				t.Errorf("the pick is %q, want %q", slug, c.pick)
+			}
+			mu.Lock()
+			got := slices.Clone(probed)
+			mu.Unlock()
+			if !slices.Equal(got, c.probed) {
+				t.Errorf("probed %q, want %q", got, c.probed)
+			}
+			if lines := strings.Join(passed, "\n"); !containsInOrder(lines, c.passed) || (c.passed == nil) != (passed == nil) {
+				t.Errorf("passed over %q, want lines naming %q", passed, c.passed)
+			}
+			switch {
+			case c.failure == nil && err != nil:
+				t.Errorf("the pick failed: %v", err)
+			case c.failure != nil && err == nil:
+				t.Errorf("the pick passed, want a failure naming %q", c.failure)
+			case c.failure != nil:
+				for _, want := range c.failure {
+					if !strings.Contains(err.Error(), want) {
+						t.Errorf("the failure does not name %q:\n%v", want, err)
+					}
+				}
+			}
+		})
+	}
+
+	srv.Close()
+	slug, passed, err := litellmPick(ctx, srv.URL, "sk-virtual", env(""), []string{retiredSlug, servedSlug})
+	if slug != "" || passed != nil || err == nil {
+		t.Fatalf("the pick through a proxy that is down answered %q, %q, %v; want no pick and a failure", slug, passed, err)
+	}
+	for _, want := range []string{retiredSlug, "POST " + srv.URL + "/v1/messages", "scripts/litellm.sh status"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the failure through a proxy that is down does not name %q:\n%v", want, err)
+		}
+	}
+	if strings.Contains(err.Error(), servedSlug) {
+		t.Errorf("the pick went on past a proxy that is down, to %s:\n%v", servedSlug, err)
+	}
+}
+
+// containsInOrder reports whether s holds each of parts, each after the
+// one before it.
+func containsInOrder(s string, parts []string) bool {
+	for _, p := range parts {
+		i := strings.Index(s, p)
+		if i < 0 {
+			return false
+		}
+		s = s[i+len(p):]
+	}
+	return true
 }
 
 // logLiteLLMSpend logs the proxy's reading of a run's spend: the key's
@@ -1034,9 +1182,22 @@ func litellmKey(ctx context.Context, root, key string) (litellmKeyInfo, error) {
 	return body.Info, err
 }
 
+// litellmRefusal is the proxy's answer to a probe when it is not 2xx; a probe
+// that gets no answer at all fails with another error.
+type litellmRefusal struct {
+	target string
+	status int
+	said   string
+}
+
+func (r *litellmRefusal) Error() string {
+	return fmt.Sprintf("POST %s answered %d: %s", r.target, r.status, r.said)
+}
+
 // litellmProbe sends one message of one token for slug by the unified API
 // of the proxy at root with key; it answers nil when the proxy answers 2xx,
-// and otherwise an error naming the status and what the proxy said.
+// a *litellmRefusal naming the status and what the proxy said when it
+// answers otherwise, and another error when it does not answer.
 func litellmProbe(ctx context.Context, root, key, slug string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
@@ -1069,7 +1230,7 @@ func litellmProbe(ctx context.Context, root, key, slug string) error {
 	if key != "" {
 		said = strings.ReplaceAll(said, key, "<redacted>")
 	}
-	return fmt.Errorf("POST %s answered %d: %s", target, resp.StatusCode, said)
+	return &litellmRefusal{target, resp.StatusCode, said}
 }
 
 // litellmErrorMessage is the message of the proxy's error body,
@@ -1087,14 +1248,41 @@ func litellmErrorMessage(body []byte) string {
 	return oneLine(string(body))
 }
 
-// litellmHaikuSource says where the unified case's slug came from:
-// litellmHaikuEnv, which the environment or the proxy's key file sets, the
-// check cannot tell which, or the built-in default when it is unset.
-func litellmHaikuSource(getenv func(string) string) string {
-	if getenv(litellmHaikuEnv) != "" {
-		return litellmHaikuEnv + ", set in the environment or by .flai-cache/litellm/litellm.env (scripts/env.sh sources it)"
+// litellmOwnSource is where an operator's slug comes from: litellmHaikuEnv,
+// which the environment or the proxy's key file sets, the check cannot tell
+// which, naming a slug not on litellmHaikuDefaults.
+const litellmOwnSource = litellmHaikuEnv + ", set in the environment or by .flai-cache/litellm/litellm.env (scripts/env.sh sources it), and not on litellmHaikuDefaults in gateway_test.go"
+
+// litellmPick chooses the unified case's slug by probing the proxy at root
+// with key. When litellmHaikuEnv, read by getenv, names a slug not on
+// defaults, it is the operator's: it is probed alone and never replaced.
+// Otherwise defaults are probed in order and the first the proxy answers 2xx
+// is the pick, so a free model OpenRouter retires does not fail the check
+// (I-0170, S-0456). passed names each slug refused before the pick, or before
+// the failure, with the proxy's answer. A probe that gets no answer stops the
+// walk, as every slug would fail alike.
+func litellmPick(ctx context.Context, root, key string, getenv func(string) string, defaults []string) (slug string, passed []string, err error) {
+	candidates, own := defaults, false
+	if set := getenv(litellmHaikuEnv); set != "" && !slices.Contains(defaults, set) {
+		candidates, own = []string{set}, true
 	}
-	return "the built-in default, litellmHaikuDefault in gateway_test.go, as " + litellmHaikuEnv + " is not set"
+	for _, candidate := range candidates {
+		probeErr := litellmProbe(ctx, root, key, candidate)
+		if probeErr == nil {
+			return candidate, passed, nil
+		}
+		var refused *litellmRefusal
+		if !errors.As(probeErr, &refused) {
+			return "", passed, fmt.Errorf("the LiteLLM proxy did not answer the probe of the haiku alias's model %q, so it would answer no model: %w; check that it is up with scripts/litellm.sh status, and start it with scripts/litellm.sh up", candidate, probeErr)
+		}
+		if own {
+			return "", passed, errors.New(litellmProbeFailure(candidate, litellmOwnSource, probeErr))
+		}
+		passed = append(passed, fmt.Sprintf("%s: %v", candidate, probeErr))
+	}
+	return "", passed, fmt.Errorf("no model on litellmHaikuDefaults in gateway_test.go answers through the LiteLLM proxy, so claude -p would fail with no more than its unrecognized_model warning: %s; "+
+		"OpenRouter retires a free model at any time, answering 404 for it (I-0170): name a free model it serves with LITELLM_HAIKU_MODEL=<slug> scripts/litellm.sh up, which writes it to .flai-cache/litellm/litellm.env, or set %s for this run, and add it to litellmHaikuDefaults once it passes the check",
+		strings.Join(passed, "; "), litellmHaikuEnv)
 }
 
 // litellmProbeFailure is what the check says when the probe of slug, which

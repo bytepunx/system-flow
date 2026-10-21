@@ -39,7 +39,11 @@
 #   LITELLM_HAIKU_MODEL   the gateway check's model, default HAIKU_DEFAULT below;
 #                         kept in admin.env only when set, so that a newer
 #                         default takes effect, and dropped from it when it is a
-#                         default this script has retired (I-0171)
+#                         default this script has retired (I-0171). A model on
+#                         litellmHaikuDefaults in gateway_test.go, as the
+#                         default is, lets the check fall back through that
+#                         list when the proxy refuses it; any other is the
+#                         check's only model (I-0170)
 #
 # POSIX sh. Needs docker with the compose plugin, curl, jq, and openssl.
 set -eu
@@ -53,7 +57,10 @@ COMPOSE="$DIR/compose.yaml"
 PROJECT="system-flow-litellm"
 ALIAS="system-flow-agents"
 # The model FLAI_TEST_LITELLM_HAIKU names when LITELLM_HAIKU_MODEL is not set:
-# a free OpenRouter model, so the gateway check spends nothing.
+# a free OpenRouter model, so the gateway check spends nothing. It must be on
+# litellmHaikuDefaults in flai/internal/serve/gateway_test.go, the first there:
+# the check takes a slug on that list as its default and falls back through
+# the list when the proxy refuses one, as when OpenRouter retires it (I-0170).
 HAIKU_DEFAULT="openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free"
 
 say() { echo "litellm: $*"; }
