@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -71,6 +73,51 @@ func TestRunStopsAtTheFirstFailingTier(t *testing.T) {
 	}
 	if !reflect.DeepEqual(res.Tiers, want) {
 		t.Errorf("tiers\n%+v\nwant\n%+v", res.Tiers, want)
+	}
+}
+
+// S-0457: with a log folder, each tier that runs writes its whole output,
+// stdout and stderr, to its own file there, which its result names, below
+// the run's root or at an absolute folder; a tier not reached writes none,
+// and with no folder nothing is written.
+func TestRunWritesEachTierThatRunsItsWholeOutputToALog(t *testing.T) {
+	steps := map[string]step{
+		"vet":  {stdout: "vetted\n"},
+		"test": {stdout: "--- FAIL: TestX\n", stderr: "boom\n", exit: 1},
+	}
+	tiers := []Selected{sel("vet", "", "vet"), sel("go test", "", "test"), sel("lint", "", "lint")}
+	root := t.TempDir()
+	res, _ := Run(context.Background(), root, tiers, RunOptions{Proc: &fakeProc{steps: steps}, FS: fstest.MapFS{}, LogDir: "logs"})
+	for _, c := range []struct{ tier, log, holds string }{
+		{"vet", filepath.Join("logs", "vet.log"), "vetted\n"},
+		{"go test", filepath.Join("logs", "go-test.log"), "--- FAIL: TestX\nboom\n"},
+	} {
+		tr := res.Tiers[slices.IndexFunc(res.Tiers, func(tr TierResult) bool { return tr.Name == c.tier })]
+		got, err := os.ReadFile(filepath.Join(root, tr.Log))
+		if tr.Log != c.log || err != nil || string(got) != c.holds {
+			t.Errorf("%s: log %q holds %q, %v; want %q holding %q", c.tier, tr.Log, got, err, c.log, c.holds)
+		}
+	}
+	if lint := res.Tiers[2]; lint.State != NotReached || lint.Log != "" {
+		t.Errorf("a tier not reached: %+v", lint)
+	}
+	if _, err := os.Stat(filepath.Join(root, "logs", "lint.log")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("a tier not reached wrote a log: %v", err)
+	}
+	if step := tierStep(res.Tiers[1]); step.Log != res.Tiers[1].Log {
+		t.Errorf("its step names %q", step.Log)
+	}
+
+	abs := filepath.Join(t.TempDir(), "batch")
+	res, _ = Run(context.Background(), "/repo", tiers[:1], RunOptions{Proc: &fakeProc{steps: steps}, FS: fstest.MapFS{}, LogDir: abs})
+	if got, err := os.ReadFile(filepath.Join(abs, "vet.log")); res.Tiers[0].Log != filepath.Join(abs, "vet.log") || err != nil || string(got) != "vetted\n" {
+		t.Errorf("an absolute folder: log %q holds %q, %v", res.Tiers[0].Log, got, err)
+	}
+
+	root = t.TempDir()
+	res, _ = Run(context.Background(), root, tiers, RunOptions{Proc: &fakeProc{steps: steps}, FS: fstest.MapFS{}})
+	if entries, err := os.ReadDir(root); err != nil || len(entries) != 0 || res.Tiers[0].Log != "" || res.Tiers[1].Log != "" {
+		t.Errorf("with no folder: wrote %v, %v, tiers %+v", entries, err, res.Tiers)
 	}
 }
 

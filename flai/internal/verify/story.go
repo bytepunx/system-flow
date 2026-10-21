@@ -137,6 +137,8 @@ type Step struct {
 	// CoveredBy names the tier that covers a skipped tier, as TierResult
 	// has it (S-0342).
 	CoveredBy string `json:"covered_by,omitempty"`
+	// Log is the file holding a tier's whole output, as TierResult has it.
+	Log string `json:"log,omitempty"`
 }
 
 // Reused counts the report's reused tiers and answers the earliest run they
@@ -624,7 +626,7 @@ func tierStep(tr TierResult) Step {
 	return Step{
 		Name: tr.Name, Tier: true, State: tr.State, DurationMS: tr.DurationMS, Duration: tr.Duration,
 		Findings: tr.Findings, Omitted: tr.Omitted, Command: tr.Command, Dir: tr.Dir, ExitCode: tr.ExitCode,
-		CoveredBy: tr.CoveredBy,
+		CoveredBy: tr.CoveredBy, Log: tr.Log,
 	}
 }
 

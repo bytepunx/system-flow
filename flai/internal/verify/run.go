@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
 
@@ -36,8 +37,9 @@ type Proc interface {
 // opts.Max. A tier that Select marked covered is not run: it is skipped,
 // naming the tier that covers it, in its place in the list, whether or not a
 // tier before it failed, and never fails the run. With nothing selected the
-// run passes. When ctx ends the tier running is stopped and failed, and Run
-// returns ctx's error with the result.
+// run passes. With opts.LogDir each tier that runs writes its whole output
+// to its own file there, which its result names. When ctx ends the tier
+// running is stopped and failed, and Run returns ctx's error with the result.
 func Run(ctx context.Context, root string, selected []Selected, opts RunOptions) (Result, error) {
 	if opts.FS == nil {
 		opts.FS = os.DirFS(root)
@@ -65,6 +67,7 @@ func Run(ctx context.Context, root string, selected []Selected, opts RunOptions)
 		out := runTier(ctx, root, s, opts)
 		tr.DurationMS = out.took.Round(time.Millisecond).Milliseconds()
 		tr.Duration = human(out.took)
+		tr.Log = out.log
 		if out.err == nil {
 			tr.ExitCode = &out.exit
 		}
@@ -88,6 +91,8 @@ type output struct {
 	exit                     int
 	err                      error
 	took                     time.Duration
+	// log is the file holding combined, as TierResult.Log names it.
+	log string
 }
 
 // failed reports whether the command failed, as a tier of format reads it.
@@ -98,10 +103,16 @@ func (o output) failed(format string) bool {
 	return format == FormatGofmtList && len(bytes.TrimSpace([]byte(o.stdout))) > 0
 }
 
-// runTier runs one selected tier and keeps what it printed.
+// runTier runs one selected tier and keeps what it printed, in a log file
+// too when opts.LogDir names a folder. A log that cannot be created or
+// written is not named, and the tier's result stands.
 func runTier(ctx context.Context, root string, s Selected, opts RunOptions) output {
 	var stdout, stderr bytes.Buffer
 	var combined lockedBuffer
+	logPath, logFile := openLog(root, opts.LogDir, s.Tier.Name)
+	if logFile != nil {
+		combined.log = logFile
+	}
 	dir := filepath.Join(root, filepath.FromSlash(s.Tier.Dir))
 	start := opts.Now()
 	var exit int
@@ -117,22 +128,64 @@ func runTier(ctx context.Context, root string, s Selected, opts RunOptions) outp
 	if err == nil && ctx.Err() != nil {
 		err = fmt.Errorf("stopped: %w", ctx.Err())
 	}
-	return output{
+	out := output{
 		stdout: stdout.String(), stderr: stderr.String(), combined: combined.String(),
 		exit: exit, err: err, took: opts.Now().Sub(start),
 	}
+	if logFile != nil && logFile.Close() == nil && combined.logErr == nil {
+		out.log = logPath
+	}
+	return out
+}
+
+// unsafeInLogName is what a tier's name may not keep in its log file's name.
+var unsafeInLogName = regexp.MustCompile(`[^A-Za-z0-9._-]`)
+
+// logName is the name of the log file of the tier named name: the name,
+// with each character outside A-Z, a-z, 0-9, dot, underscore, and hyphen a
+// hyphen, and .log.
+func logName(name string) string {
+	return unsafeInLogName.ReplaceAllString(name, "-") + ".log"
+}
+
+// openLog creates the log file of the tier named name in dir, below root
+// unless dir is absolute, and answers its path as dir names it; none when
+// dir is empty or the file cannot be created.
+func openLog(root, dir, name string) (string, *os.File) {
+	if dir == "" {
+		return "", nil
+	}
+	path := filepath.Join(dir, logName(name))
+	full := path
+	if !filepath.IsAbs(full) {
+		full = filepath.Join(root, full)
+	}
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		return "", nil
+	}
+	f, err := os.Create(full)
+	if err != nil {
+		return "", nil
+	}
+	return path, f
 }
 
 // lockedBuffer is a buffer two copies, of stdout and of stderr, write at
-// once.
+// once, and that copies each write to log, when it has one, until a write
+// to log fails, which logErr keeps.
 type lockedBuffer struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
+	mu     sync.Mutex
+	buf    bytes.Buffer
+	log    io.Writer
+	logErr error
 }
 
 func (b *lockedBuffer) Write(p []byte) (int, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.log != nil && b.logErr == nil {
+		_, b.logErr = b.log.Write(p)
+	}
 	return b.buf.Write(p)
 }
 

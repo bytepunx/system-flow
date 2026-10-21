@@ -114,6 +114,9 @@ type TierResult struct {
 	Omitted int `json:"omitted,omitempty"`
 	// CoveredBy names the tier that covers a skipped one.
 	CoveredBy string `json:"covered_by,omitempty"`
+	// Log is the file holding the tier's whole output, as RunOptions.LogDir
+	// names its folder; empty when none was written.
+	Log string `json:"log,omitempty"`
 }
 
 // Result is the answer to a run: pass, or the tier that failed and why.
@@ -138,6 +141,10 @@ type RunOptions struct {
 	// Env are KEY=value entries added to the environment each tier's
 	// command inherits, as Verify adds CLOSE_OUT_STORY.
 	Env []string
+	// LogDir is the folder each tier that runs writes its whole output to,
+	// as <tier>.log; relative to the run's root, or absolute. Empty writes
+	// nothing.
+	LogDir string
 }
 
 // Options are what Test needs to answer for a checkout.
