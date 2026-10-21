@@ -7,7 +7,7 @@ status: backlog
 parent: E-0027
 owner: alex
 created: 2026-10-21T06:59:38Z
-updated: 2026-10-21T07:19:47Z
+updated: 2026-10-21T07:29:11Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard, design]
@@ -17,13 +17,15 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 forecast:
   duration: 1h30m
   delivery: 2026-10-22T00:52:00Z
   basis: "Its own forecast of 1h30m; 30th in the pull order with an in-progress limit of 5, behind S-0453, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435 and S-0456."
   by: flai
   at: 2026-10-21T07:19:47Z
+finalized:
+  by: alex
+  at: 2026-10-21T07:29:11Z
 ---
 # S-0458 The dashboard's pages are reached from a left nav rail of five collapsible groups, and the top bar holds only the name, the project picker, the theme, and the status pills
 
