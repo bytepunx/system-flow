@@ -30,9 +30,9 @@ type WorkIn struct {
 
 // WorkOut is what an idle agent should do next, or why there is nothing yet.
 type WorkOut struct {
-	Reason     string               `json:"reason" jsonschema:"resume: your story is still in progress, go back to it; thread: a thread awaiting you was written to; pull: pull story now; empty when it timed out"`
+	Reason     string               `json:"reason" jsonschema:"resume: your story is still in progress, go back to it; thread: a thread awaiting you, awaiting 'you' as inbox says, was written to; pull: pull story now; empty when it timed out"`
 	Story      *workitem.BoardCard  `json:"story,omitempty" jsonschema:"the story to resume or to pull"`
-	Threads    []ThreadSummary      `json:"threads" jsonschema:"threads awaiting you that were written to since wait_for_work last answered"`
+	Threads    []ThreadSummary      `json:"threads" jsonschema:"threads awaiting you, those you take part in or on your own story, that were written to since wait_for_work last answered; never one awaiting the operator or another"`
 	Ready      []workitem.BoardCard `json:"ready" jsonschema:"stories ready to pull, in pull order; one an open story's claim holds, or that waits for a story it names in after, carries held with the reason and what clears it, and is not offered"`
 	CanPull    bool                 `json:"can_pull" jsonschema:"whether the in-progress limit leaves room and review is under its limit, so that one may be pulled"`
 	PullHold   string               `json:"pull_hold,omitempty" jsonschema:"why no story may be pulled now: the in-progress limit is full, or review is full and waits on acceptance"`
@@ -49,7 +49,9 @@ type WorkOut struct {
 // under its limit (a held one keeps its place and is offered once clear,
 // S-0128; a full review holds every one, S-0243). A thread that was already
 // awaiting the agent before is not work here, so one the agent cannot answer
-// does not wake it again and again; inbox lists every thread awaiting it.
+// does not wake it again and again; inbox lists every thread awaiting it. Only
+// a thread awaiting the agent counts, so the operator's threads never wake it
+// (ADR-0181).
 func (s *server) work(ctx context.Context, since time.Time) (WorkOut, error) {
 	view, err := s.boardView(ctx, false)
 	if err != nil {
@@ -74,11 +76,12 @@ func (s *server) work(ctx context.Context, since time.Time) (WorkOut, error) {
 	if err != nil {
 		return WorkOut{}, err
 	}
+	r := s.reader()
 	for _, th := range all {
 		if !th.Open() {
 			continue
 		}
-		sum := s.summary(th)
+		sum := s.summary(r, th)
 		updated, err := time.Parse(workitem.TimeFormat, th.Updated)
 		if sum.Awaiting == "you" && err == nil && !updated.Before(since.Truncate(time.Second)) {
 			out.Threads = append(out.Threads, sum)

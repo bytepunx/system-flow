@@ -105,6 +105,9 @@ func answeringFixture(t *testing.T, mode string) *answering {
 	t.Helper()
 	clock := &syncedClock{at: askedAt}
 	t.Setenv("FLAI_ROLE", "")
+	// neither session has a story of its own: the asker takes part in the
+	// thread it opens, and the orchestrator in none until it replies
+	t.Setenv("FLAI_STORY", "")
 	asker := setupWith(t, func(o *Options) { o.Now = clock.now })
 	root := projectRoot(asker.repo)
 	m := "version: 1\nname: t\nkey: t\nlayout:\n  design: design\n  docs: docs\n  wip: wip\norchestration:\n  permissions:\n    answer_threads: " + mode + "\n"
@@ -212,9 +215,11 @@ func (a *answering) refusedFor(t *testing.T, what string, out map[string]any, r 
 	}
 }
 
-// awaits checks the thread's status on disk and as the story's agent sees it
-// in its inbox: whether it awaits that agent, and whether a recommendation
-// awaits the operator's confirmation.
+// awaits checks the thread's status on disk and who it awaits in the inboxes,
+// read without all (ADR-0181): the story's agent's lists it awaiting "you"
+// when asker, and leaves it out otherwise; the orchestrator's, in its role,
+// lists it awaiting "operator" while it does not await the asker, with
+// whether a recommendation awaits the operator's confirmation.
 func (a *answering) awaits(t *testing.T, status string, asker, pending bool) {
 	t.Helper()
 	th, err := threads.Get(a.asker.repo, a.thread)
@@ -224,19 +229,29 @@ func (a *answering) awaits(t *testing.T, status string, asker, pending bool) {
 	if th.Status != status || (th.PendingRecommendation() != nil) != pending {
 		t.Errorf("%s: status %s, pending %v; want %s, pending %v", a.thread, th.Status, th.PendingRecommendation(), status, pending)
 	}
-	out, _ := a.asker.call(t, "inbox", map[string]any{"all": true})
-	var sum map[string]any
-	for _, s := range out["threads"].([]any) {
-		if s := s.(map[string]any); s["id"] == a.thread {
-			sum = s
+	listed := func(out map[string]any) map[string]any {
+		for _, s := range out["threads"].([]any) {
+			if s := s.(map[string]any); s["id"] == a.thread {
+				return s
+			}
 		}
+		return nil
 	}
-	want, wantN := "other", 0.0
+	out, _ := a.asker.call(t, "inbox", map[string]any{})
+	sum := listed(out)
+	if asker && (sum == nil || sum["awaiting"] != "you" || out["awaiting_you"] != 1.0 || (sum["pending_recommendation"] != nil) != pending || sum["status"] != status) {
+		t.Errorf("the asker's inbox: %v; want %s awaiting you, pending %v", out, a.thread, pending)
+	}
+	if !asker && (sum != nil || out["awaiting_you"] != 0.0) {
+		t.Errorf("the asker's inbox: %v; want %s left out", out, a.thread)
+	}
 	if asker {
-		want, wantN = "you", 1
+		return
 	}
-	if sum == nil || sum["awaiting"] != want || out["awaiting_you"] != wantN || (sum["pending_recommendation"] != nil) != pending || sum["status"] != status {
-		t.Errorf("the asker's inbox: %v; want %s awaiting %s, pending %v", out, a.thread, want, pending)
+	orch, _ := a.orch.call(t, "inbox", map[string]any{})
+	sum = listed(orch)
+	if sum == nil || sum["awaiting"] != "operator" || orch["awaiting_you"] != 0.0 || (sum["pending_recommendation"] != nil) != pending || sum["status"] != status {
+		t.Errorf("the orchestrator's inbox: %v; want %s awaiting operator, pending %v", orch, a.thread, pending)
 	}
 }
 

@@ -323,6 +323,8 @@ func TestItemMoveWarnsOnAHeldStory(t *testing.T) {
 // awaiting the agent before does not wake it again and again.
 func TestWaitForWorkWakesForAThreadWrittenWhileWaiting(t *testing.T) {
 	f := setup(t)
+	// the threads are on the agent's own story, so they await it (ADR-0181)
+	t.Setenv("FLAI_STORY", f.story.ID)
 	f.toReview(t)
 	if _, err := threads.New(f.repo, threads.NewOptions{Title: "Old", On: f.story.ID, Author: "alex", Text: "Long ago.", Now: t0}); err != nil {
 		t.Fatal(err)
@@ -372,7 +374,7 @@ func TestARecommendationIsNoAnswerToTheAgentThatAskedUntilConfirmed(t *testing.T
 	out, _ := f.call(t, "inbox", map[string]any{"all": true})
 	sum := out["threads"].([]any)[0].(map[string]any)
 	pending, _ := sum["pending_recommendation"].(map[string]any)
-	if out["awaiting_you"].(float64) != 0 || sum["awaiting"] != "other" || sum["last_by"] != workitem.ActivityOrchestrator || pending == nil || pending["recommendation"] != true {
+	if out["awaiting_you"].(float64) != 0 || sum["awaiting"] != "operator" || sum["last_by"] != workitem.ActivityOrchestrator || pending == nil || pending["recommendation"] != true {
 		t.Fatalf("a pending recommendation awaits the operator, not the agent that asked: %v", out)
 	}
 	if out, _ := f.call(t, "inbox", map[string]any{}); len(out["threads"].([]any)) != 0 {
@@ -411,5 +413,72 @@ func TestAnAnswerWithASourceIsAnAnswerToTheAgentThatAsked(t *testing.T) {
 	}
 	if sum := out["threads"].([]any)[0].(map[string]any); sum["awaiting"] != "you" || sum["status"] != "answered" || sum["pending_recommendation"] != nil {
 		t.Errorf("answered: %v", sum)
+	}
+}
+
+// ADR-0181, as measured on 2026-10-20: 31 open threads awaiting the operator,
+// the planners' questions, the orchestrator's escalations, and flai's
+// notices, none on the agent's story, neither wake an idle agent's
+// wait_for_work nor await it in inbox, where they used to count as its own;
+// one the operator answered, on another story, awaits no one. A thread on a
+// task of the agent's own story whose last entry is the operator's wakes it,
+// and awaits it.
+func TestTheOperatorsThreadsAwaitTheOperatorNotTheAgent(t *testing.T) {
+	f := setupWith(t, func(o *Options) { o.Repo.Manifest.Owner = "alex" })
+	t.Setenv("FLAI_STORY", f.story.ID)
+	f.toReview(t)
+	other, err := f.repo.Create(workitem.NewOptions{Type: workitem.Story, Title: "Other", Parent: f.story.Parent, Owner: "alex", Now: t0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := f.held(t, 3)
+	time.Sleep(150 * time.Millisecond)
+	at := t0.Add(2 * time.Minute)
+	authors := []string{"planner", workitem.ActivityOrchestrator, "flai"}
+	for i := range 31 {
+		on := other.ID
+		if i%2 == 1 {
+			on = "design/system/plan.md"
+		}
+		if _, err := threads.New(f.repo, threads.NewOptions{Title: fmt.Sprintf("Question %d", i), On: on, Author: authors[i%len(authors)], Text: "Which way?", Now: at}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	settled, err := threads.New(f.repo, threads.NewOptions{Title: "Settled", On: other.ID, Author: "planner", Text: "This way?", Now: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := threads.ReplyWith(f.repo, settled.ID, "alex", "That way.", at, threads.Marks{}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case out := <-done:
+		t.Fatalf("threads awaiting the operator woke the agent: %v", out)
+	case <-time.After(600 * time.Millisecond):
+	}
+	if out, _ := f.call(t, "inbox", map[string]any{}); out["awaiting_you"].(float64) != 0 || len(out["threads"].([]any)) != 0 {
+		t.Errorf("the operator's threads are in the agent's inbox: %v", out)
+	}
+	all, _ := f.call(t, "inbox", map[string]any{"all": true})
+	awaiting := map[string]int{}
+	for _, s := range all["threads"].([]any) {
+		awaiting[s.(map[string]any)["awaiting"].(string)]++
+	}
+	if awaiting["operator"] != 31 || awaiting["other"] != 1 || len(awaiting) != 2 || all["awaiting_you"].(float64) != 0 {
+		t.Errorf("all lists them by whom they await: %v", awaiting)
+	}
+
+	mine, err := threads.New(f.repo, threads.NewOptions{Title: "Which port?", On: f.task.ID, Author: "alex", Text: "Eight or nine?", Now: t0.Add(3 * time.Minute)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	woke := answered(t, done)
+	if ths := woke["threads"].([]any); woke["reason"] != WorkThread || len(ths) != 1 || ths[0].(map[string]any)["id"] != mine.ID {
+		t.Errorf("the operator's thread on the agent's own story wakes it: %v", woke)
+	}
+	out, _ := f.call(t, "inbox", map[string]any{})
+	ths := out["threads"].([]any)
+	if out["awaiting_you"].(float64) != 1 || len(ths) != 1 || ths[0].(map[string]any)["id"] != mine.ID || ths[0].(map[string]any)["awaiting"] != "you" {
+		t.Errorf("the thread on the agent's own story awaits it: %v", out)
 	}
 }

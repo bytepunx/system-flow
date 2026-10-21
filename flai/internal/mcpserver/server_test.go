@@ -137,6 +137,8 @@ func TestToolsAreAdvertised(t *testing.T) {
 
 func TestInboxReplyAndMirror(t *testing.T) {
 	f := setup(t)
+	// the thread is on the agent's own story, so it awaits the agent (ADR-0181)
+	t.Setenv("FLAI_STORY", f.story.ID)
 	th, err := threads.New(f.repo, threads.NewOptions{Title: "Which library?", On: f.task.ID, Author: "alex", Text: "SDK or hand-rolled?", Now: t0})
 	if err != nil {
 		t.Fatal(err)
@@ -154,7 +156,7 @@ func TestInboxReplyAndMirror(t *testing.T) {
 	}
 
 	reply, _ := f.call(t, "thread_reply", map[string]any{"id": "th-1", "text": "The official Go SDK."})
-	if reply["status"] != "answered" || reply["awaiting"] != "other" || len(reply["entry_list"].([]any)) != 2 {
+	if reply["status"] != "answered" || reply["awaiting"] != "operator" || len(reply["entry_list"].([]any)) != 2 {
 		t.Errorf("reply: %v", reply)
 	}
 	back, _ := threads.Get(f.repo, th.ID)
