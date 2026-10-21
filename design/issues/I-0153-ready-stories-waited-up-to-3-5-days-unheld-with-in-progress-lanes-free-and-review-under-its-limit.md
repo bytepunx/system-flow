@@ -7,7 +7,7 @@ count: 1
 cost: 75h
 first_reported: 2026-10-15T22:48:48Z
 last_reported: 2026-10-15T22:48:48Z
-updated: 2026-10-15T22:48:48Z
+updated: 2026-10-21T11:58:17Z
 usage:
   strategic:
     - kind: analyzer
@@ -47,3 +47,5 @@ flai stats items queue_time_seconds S-0216 305,070, S-0215 303,610, S-0214 301,4
 ## Remediation
 
 Found by the analysis in [2026-10-15-bottlenecks.md](../analysis/2026-10-15-bottlenecks.md).
+
+Story S-0469 remediates this issue, created from it at 2026-10-21T11:58:17Z.
