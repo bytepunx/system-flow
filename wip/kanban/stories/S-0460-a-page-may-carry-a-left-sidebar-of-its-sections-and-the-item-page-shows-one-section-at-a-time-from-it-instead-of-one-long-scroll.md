@@ -7,7 +7,7 @@ status: backlog
 parent: E-0027
 owner: alex
 created: 2026-10-21T07:00:19Z
-updated: 2026-10-21T07:28:26Z
+updated: 2026-10-21T07:47:11Z
 transitions: []
 tags: [dashboard]
 topics: [dashboard, design]
@@ -21,10 +21,10 @@ agent:
 draft: true
 forecast:
   duration: 1h
-  delivery: 2026-10-22T01:08:00Z
-  basis: "Its own forecast of 1h; 33rd in the pull order with an in-progress limit of 5, behind S-0453, S-0456, S-0464, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0458 and S-0459."
+  delivery: 2026-10-22T01:43:00Z
+  basis: "Its own forecast of 1h; 32nd in the pull order with an in-progress limit of 5, behind S-0463, S-0464, S-0465, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435, S-0458 and S-0459."
   by: flai
-  at: 2026-10-21T07:28:26Z
+  at: 2026-10-21T07:47:11Z
 ---
 # S-0460 A page may carry a left sidebar of its sections, and the item page shows one section at a time from it instead of one long scroll
 
