@@ -7,11 +7,11 @@ status: backlog
 parent: S-0415
 owner: alex
 created: 2026-10-16T05:43:39Z
-updated: 2026-10-16T05:43:47Z
+updated: 2026-10-21T11:16:39Z
 transitions: []
 stream: S-0415
 tags: [cli]
-touches: [flai/internal/context/strategic.go, flai/internal/context/strategic_test.go]
+touches: [flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/story.go]
 ---
 # T-1725 The strategic pack takes a role's topics and item kind from its role file in place of the Go map, with the three built-in packs unchanged
 
@@ -26,3 +26,5 @@ First layer: runs beside T-1726, which changes the conventions check.
 `go test ./internal/context/...` passes, the existing strategic tests unchanged. The fixture role's pack holds its topics' conventions and briefs.
 
 ## Notes
+
+- Planner, S-0415 (2026-10-21): `story.go` is added to the touches. `ForRole` in `flai/internal/context/story.go` refuses an unknown role naming `conventions.StrategicRoles`; with defined roles, it names the roles `roles.Load` gives. `roleAgent` (the planner, the orchestrator, the analyzer) and `Pack.strategic()`, which `context.go` reads, also hold the three roles in Go; the role file's name or description, and a flag `ForStrategic` sets, take their place. Proposed for `## Work` on the plan thread.

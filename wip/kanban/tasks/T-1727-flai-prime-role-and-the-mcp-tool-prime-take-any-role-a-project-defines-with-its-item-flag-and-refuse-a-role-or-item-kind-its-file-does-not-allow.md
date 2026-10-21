@@ -7,11 +7,11 @@ status: backlog
 parent: S-0415
 owner: alex
 created: 2026-10-16T05:43:51Z
-updated: 2026-10-16T05:43:51Z
+updated: 2026-10-21T11:16:52Z
 transitions: []
 stream: S-0415
 tags: [cli]
-touches: [flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/prime_test.go, docs/users/flai-reference.md]
+touches: [flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/prime_test.go, docs/users/flai-reference.md]
 after: [T-1725]
 ---
 # T-1727 flai prime --role and the MCP tool prime take any role a project defines, with its item flag, and refuse a role or item kind its file does not allow
@@ -27,3 +27,5 @@ Waits for T-1725, whose pack it returns.
 `go test ./cmd/... ./internal/mcpserver/...` passes, the existing prime tests unchanged.
 
 ## Notes
+
+- Planner, S-0415 (2026-10-21): `flai/internal/mcpserver/folder.go` is added to the touches. The `prime` tool's description, which names `plan`, `orchestrate`, and `analyze`, is registered there (`mcp.AddTool` with `Name: "prime"`); `server.go` holds `PrimeIn`'s `role` schema and `pack`, which choose by `conventions.StrategicRoles`. `prime.go`'s help (`--role plan, orchestrate, or analyze`) and its `--role` flag text change too, so the reference is regenerated.

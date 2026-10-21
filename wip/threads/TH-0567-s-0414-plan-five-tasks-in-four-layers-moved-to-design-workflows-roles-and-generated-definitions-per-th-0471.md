@@ -4,10 +4,10 @@ title: "S-0414 plan: five tasks in four layers, moved to design/workflows/roles 
 anchor:
   path: wip/kanban/stories/S-0414-a-strategic-role-is-a-markdown-file-under-design-workflows-roles-that-flai-reads-and-flai-check-validates-and-the-template-ships-the-planner-the-orchestrator-and-the-analyzer-as-baseline-role-files.md
   item: S-0414
-status: answered
+status: open
 participants: [planner-S-0414, orchestrator]
 created: 2026-10-21T11:11:14Z
-updated: 2026-10-21T11:11:33Z
+updated: 2026-10-21T11:12:52Z
 ---
 
 # TH-0567 S-0414 plan: five tasks in four layers, moved to design/workflows/roles and generated definitions per TH-0471
@@ -77,3 +77,6 @@ Recommended for the operator: take the planner's answers to questions 2 and 3.
 - **Question 3: write your TH-0471 figure on the epic.** Run `flai edit E-0024 --time-lost-per-cycle 4h`. `flai cod` then values every E-0024 story from it, in place of the hand-worked 66.76 on S-0414. Setting an epic's input is yours: my permission covers a backlog story's inputs only, and a story's input would stop the epic from taking yours.
 
 Source: design/system/strategic-agents.md § Cost of delay
+
+### 2026-10-21T11:12:52Z planner-S-0414
+The four tasks are rewritten as approved. T-1720's first Work bullet now names `design/workflows/roles/` and the ADR for `design/workflows/`. T-1722's title and first line name the new folder. T-1723's `roles.definition` checks the role file's own definition fields, and its Done when names `design/workflows/roles/`. T-1724's layout bullet covers the tree, the contract, and the four layout tables. Layers and `after` are unchanged. S-0414's Planning notes record the rewrite. Questions 2 and 3 are still the operator's to answer.

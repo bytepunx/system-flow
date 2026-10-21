@@ -7,11 +7,11 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:36Z
-updated: 2026-10-21T11:12:19Z
+updated: 2026-10-21T11:17:24Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, conventions]
-touches: [design/system/agent-context.md, design/system/conventions.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server.go, design/system/flai-cli.md]
+touches: [design/system/agent-context.md, design/system/conventions.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/prime.go, flai/cmd/prime_test.go, flai/internal/context/strategic.go, flai/internal/context/strategic_test.go, flai/internal/context/story.go, flai/internal/conventions/conventions.go, flai/internal/conventions/conventions_test.go, flai/internal/check/check.go, flai/internal/mcpserver/prime_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/folder.go, design/system/flai-cli.md]
 after: [S-0414]
 agent:
   harness: claude-code
@@ -24,22 +24,26 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 87
+      seconds: 330
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 657
-          cache_read: 5662976
-          cache_write: 9524
-          cost: 1.2526
+          input: 122
+          output: 1954
+          cache_read: 14213780
+          cache_write: 21995
+          cost: 3.1436
 draft: true
+cost_of_delay:
+  value: 32.52
+  by: planner-S-0415
+  at: 2026-10-21T11:17:24Z
 forecast:
-  duration: 29m
-  delivery: 2026-10-21T16:15:00Z
-  basis: "Its own forecast of 29m; 11th in the pull order with an in-progress limit of 5, behind S-0460, S-0461, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0414."
-  by: flai
-  at: 2026-10-21T11:12:19Z
+  duration: 38m
+  delivery: 2026-10-21T16:30:00Z
+  basis: "Median 107 s per unit of size over 84 done feature stories on claude-opus-5-5 in the large band, times size 21 (5 criteria, 16 touches); 11th in the pull order with an in-progress limit of 5, behind S-0460, S-0461, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412 and S-0414."
+  by: planner-S-0415
+  at: 2026-10-21T11:17:24Z
 ---
 # S-0415 flai prime --role gives a role a project defines its pack within the budget, from the topics and the item kind its role file names, and the three built-in roles prime from their files unchanged
 
@@ -68,11 +72,18 @@ A role a project defines primes as the planner, the orchestrator, and the analyz
 
 ### Planning
 
-- **Touches.** The story declared none. Every touch comes from its four tasks.
-  - **From layout:** `flai/internal/context/strategic.go` and its test, `flai/internal/conventions/conventions.go` and its test, `flai/cmd/prime.go` and its test, `flai/internal/mcpserver/server.go` (the `prime` tool) and `prime_test.go`, and `docs/users/flai-reference.md`, regenerated.
-  - **From design:** `agent-context.md` § Strategic packs, `conventions.md` § Roles, and `docs/users/flai.md` for criterion 5.
-  - **Co-change, added:** `design/system/flai-cli.md` (53%), which describes `flai prime`; shared.
-  - **Co-change, not added:** the operator docs, the dashboard's design, `design/adrs/README.md` (no ADR here), and `mcpserver/folder.go`, since the `prime` tool is registered already.
-  - No folder touch.
-- **Forecast.** Kept at flai's 29m. The forecast's basis gives the figures, and its delivery is flai's play-out moved by any raise times the cycle factor.
-- **Cost of delay.** Not set. Neither the story nor E-0024 has inputs, so `flai cod` refuses. The epic's input is asked on TH-0471, question 1, and the value follows its answer.
+- **TH-0471's answers (2026-10-21).** None changes this story's words. Role files now live under `design/workflows/roles/` (answer 2), which `roles.Load` (S-0414) resolves, so no path here names the folder. Generated harness definitions (answer 6) and per-role agents (answer 4) are not prime's concern.
+- **Touches.** 16, all files; no folder touch.
+  - **Declared, kept:** the 13 earlier touches.
+  - **From layout, added (code read 2026-10-21):**
+    - `flai/internal/context/story.go`: `ForRole` refuses an unknown role naming `conventions.StrategicRoles` (T-1725).
+    - `flai/internal/check/check.go`: `checker.conventions` is the one caller of `Set.Validate`, which needs the defined roles (T-1726).
+    - `flai/internal/mcpserver/folder.go`: the `prime` tool's description, naming the three roles, is registered there, not in `server.go` (T-1727). The earlier note that left it out was wrong.
+  - **Co-change, kept:** `design/system/flai-cli.md` (shared, holds nothing).
+  - **Co-change, not added:** `docs/operators/index.md` and `settings.md` (no setting or flag is added; `--role` is in the flag index already), `flaiover-dashboard.md` and `docs/users/flaiover.md` (no page changes), `design/adrs/README.md` (no ADR), `workflow.md`, and `template/CHANGELOG.md` (no template file changes; S-0414 ships the role files and their topics).
+  - **Left to later stories:** `internal/guard`, `internal/serve`, and `internal/harness` also read the fixed role list; S-0416 to S-0419 change them.
+- **Forecast.** flai's 38m is kept: 107 s a unit times size 21, five criteria and 16 touches. The three touches added are small edits, which overstates the size a little. Keeping the three packs byte for byte through a new loader is the risk, and it offsets that. The delivery is flai's play-out, 2026-10-21T16:30Z.
+- **Cost of delay.** 32.52 USD a week, worked out by hand from the operator's answer 1 on TH-0471, because `flai cod` refuses while E-0024 has no inputs.
+  - 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week.
+  - S-0415 takes the share its 38m is of the 11h41m forecast for E-0024's twelve open stories: 38 / 701 × 600.
+  - Once `time_lost_per_cycle: 4h` is on E-0024, `flai cod S-0415` gives the same figure while the forecasts stand.
