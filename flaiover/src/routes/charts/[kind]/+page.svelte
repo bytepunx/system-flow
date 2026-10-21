@@ -317,7 +317,7 @@
 		{#if shown.epic}
 			<label
 				>epic <select
-					class="rounded border border-line-strong bg-surface px-2 py-1"
+					class="max-w-64 rounded border border-line-strong bg-surface px-2 py-1"
 					bind:value={epic}
 					><option value="">all</option>{#each epics as e (e.id)}<option value={e.id}
 							>{e.id} {e.title}</option

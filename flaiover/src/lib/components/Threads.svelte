@@ -335,7 +335,7 @@
 						     repository paths, so relative links resolve from the root, and each file an
 						     entry links or names in code opens in the editor (S-0378). -->
 						<div
-							class="prose prose-sm mt-0.5 max-w-[85%] rounded-lg border px-3 py-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 {e.operator
+							class="prose prose-sm mt-0.5 max-w-[85%] rounded-lg border px-3 py-2 wrap-anywhere [&>:first-child]:mt-0 [&>:last-child]:mb-0 {e.operator
 								? 'border-primary bg-primary-soft'
 								: 'border-line bg-raised'}"
 							{@attach markdownInto(body(e), '', { story })}

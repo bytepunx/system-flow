@@ -883,12 +883,12 @@
 			{:else}
 				<div bind:this={narrativeContent}>
 					<h3 class="text-xs font-medium text-muted">Current state</h3>
-					<div class="prose mb-2 max-w-none">
+					<div class="prose mb-2 max-w-none wrap-anywhere">
 						<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the narrative, rendered client side -->
 						{@html currentStateHtml}
 					</div>
 					<h3 class="text-xs font-medium text-muted">Next steps</h3>
-					<div class="prose max-w-none">
+					<div class="prose max-w-none wrap-anywhere">
 						<!-- eslint-disable-next-line svelte/no-at-html-tags -- markdown from the narrative, rendered client side -->
 						{@html nextStepsHtml}
 					</div>
