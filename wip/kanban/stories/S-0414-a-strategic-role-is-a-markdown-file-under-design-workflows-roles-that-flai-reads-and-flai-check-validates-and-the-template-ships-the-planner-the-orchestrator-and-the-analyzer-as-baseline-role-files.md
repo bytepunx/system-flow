@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:25Z
-updated: 2026-10-21T11:11:48Z
+updated: 2026-10-21T11:12:19Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, template, conventions]
@@ -39,10 +39,10 @@ cost_of_delay:
   at: 2026-10-21T11:10:38Z
 forecast:
   duration: 1h17m
-  delivery: 2026-10-21T15:40:00Z
-  basis: "flai's 1h17m: median 107 s per unit of size over 84 done feature stories on claude-opus-5-5, large band, times size 43 (6 criteria, 37 touches), kept; 10th in the pull order with an in-progress limit of 5."
-  by: planner-S-0414
-  at: 2026-10-21T11:10:38Z
+  delivery: 2026-10-21T15:42:00Z
+  basis: "Its own forecast of 1h17m; 10th in the pull order with an in-progress limit of 5, behind S-0460, S-0461, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411 and S-0412."
+  by: flai
+  at: 2026-10-21T11:12:19Z
 ---
 # S-0414 A strategic role is a markdown file under design/workflows/roles that flai reads and flai check validates, and the template ships the planner, the orchestrator, and the analyzer as baseline role files
 
@@ -76,9 +76,9 @@ A project can say what a strategic role is in a file, not in Go. A role file und
 
 - **TH-0471's answers (2026-10-21).** The plan follows them, and they change this story in three places.
   - Answer 2 moves the folder from `design/roles/` to `design/workflows/roles/`. The title, the goal, and criteria 1, 4, and 6 now say so, and every `design/roles` touch became its `design/workflows/roles` path. `repository-layout.md` adds no `design/` subfolder without an ADR, so T-1720's ADR also records `design/workflows/`.
-  - Answer 6 has flai generate a role's harness definition from its role file. That overrides the third note above. Criteria 1, 3, and 6 now say so. Generating the definition, and the symlink into `.claude/agents` where Claude Code follows one, is proposed on the plan thread for a later story. In this story the role files carry the definition fields and `roles.definition` checks them, so behaviour stays unchanged.
+  - Answer 6 has flai generate a role's harness definition from its role file. That overrides the third note above. Criteria 1, 3, and 6 now say so. Generating the definition, and the symlink into `.claude/agents` where Claude Code follows one, is proposed on TH-0567 for a later story. In this story the role files carry the definition fields and `roles.definition` checks them, so behaviour stays unchanged.
   - Answer 1's input, `time_lost_per_cycle: 4h` on E-0024, is not yet on the epic.
-  - Each task got a Notes entry naming the answers. Its Work and Done when are unchanged, and the rewrites they need are proposed on the plan thread.
+  - T-1720, T-1722, T-1723, and T-1724 were rewritten to these answers, as the orchestrator approved on TH-0567. Their layers and `after` are unchanged.
 - **Touches.** All 37 are files but `design/adrs`.
   - **Declared, kept:** the 24 earlier touches that are not role files, from the five tasks.
   - **Declared, moved:** the eight role files and their two READMEs, now under `design/workflows/roles/` (answer 2).
