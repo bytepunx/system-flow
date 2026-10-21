@@ -6,7 +6,7 @@ title: Accepting a story that adds a flaiover dependency leaves the main checkou
 status: backlog
 owner: alex
 created: 2026-10-21T12:00:17Z
-updated: 2026-10-21T12:00:17Z
+updated: 2026-10-21T12:03:49Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
     by: flai
     at: 2026-10-21T12:00:17Z
+finalized:
+  by: alex
+  at: 2026-10-21T12:03:49Z
 ---
 # S-0483 Accepting a story that adds a flaiover dependency leaves the main checkout's flaiover/node_modules without it, so every close-out's integration tier fails TestEveryListedFlaioverComponentCompilesInTheHarness until someone installs
 
