@@ -3,11 +3,14 @@ id: S-0454
 type: story
 nature: remediation
 title: The dashboard's live events reach the browser over a WebSocket, so open tabs no longer use up the browser's six connections to the dashboard and hang every page
-status: backlog
+status: ready
 owner: alex
 created: 2026-10-20T22:10:33Z
-updated: 2026-10-21T00:29:28Z
-transitions: []
+updated: 2026-10-21T00:41:56Z
+transitions:
+  - to: ready
+    at: 2026-10-21T00:36:37Z
+    by: alex
 tags: [dashboard]
 topics: [client-side, server-side, components]
 touches: [design/adrs/0179-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md, design/adrs/README.md, flaiover/src/lib/server/events-socket.ts, flaiover/src/lib/server/events-socket.test.ts, flaiover/src/lib/server/agent.ts, flaiover/src/hooks.server.ts, flaiover/server.js, flaiover/vite.config.ts, flaiover/src/lib/events.ts, flaiover/src/lib/events.test.ts, flaiover/src/lib/inbox.svelte.test.ts, flaiover/src/routes/board/board.svelte.test.ts, flaiover/src/routes/board/cardmenu.svelte.test.ts, flaiover/src/routes/board/lanemenu.svelte.test.ts, flaiover/src/lib/components/StoryAgent.svelte.test.ts, flai/internal/components/harness/harness.mjs, flai/internal/components/integration_test.go, flai/internal/components/testdata/harness/src/lib/Fetcher.svelte, flaiover/playwright.config.ts, flaiover/e2e/live-events.e2e.ts, scripts/flaiover-e2e.sh, Makefile, flaiover/src/routes/api/events/+server.ts, flaiover/src/lib/server/sse.ts, flaiover/src/lib/server/sse.test.ts, design/system/flaiover-dashboard.md, design/system/dashboard-host-channel.md, design/system/component-library.md, design/tech/sveltekit.md, docs/users/flaiover.md, docs/operators/index.md]
@@ -22,15 +25,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 50
+      seconds: 56
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 203
-          cache_read: 3477317
-          cache_write: 13352
-          cost: 0.875
+          input: 12
+          output: 223
+          cache_read: 4225636
+          cache_write: 13882
+          cost: 1.0627
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -41,10 +44,10 @@ cost_of_delay:
   at: 2026-10-20T22:25:11Z
 forecast:
   duration: 1h30m
-  delivery: 2026-10-21T17:47:00Z
-  basis: "Its own forecast of 1h30m; 30th in the pull order with an in-progress limit of 5, behind S-0445, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424, S-0425, S-0428, S-0429, S-0430, S-0431, S-0432, S-0433, S-0434, S-0435 and S-0453."
+  delivery: 2026-10-21T02:18:00Z
+  basis: "Its own forecast of 1h30m; 2nd in the pull order with an in-progress limit of 5, behind S-0445, S-0453 and S-0455."
   by: flai
-  at: 2026-10-21T00:29:28Z
+  at: 2026-10-21T00:41:56Z
 finalized:
   by: alex
   at: 2026-10-20T22:12:50Z
