@@ -3,17 +3,20 @@ id: T-1973
 type: task
 nature: remediation
 title: flai check --story takes several stories, a finding outside every one of them a note
-status: in-progress
+status: done
 parent: S-0464
 owner: alex
 created: 2026-10-21T07:30:02Z
-updated: 2026-10-21T07:32:23Z
+updated: 2026-10-21T07:49:09Z
 transitions:
   - to: ready
     at: 2026-10-21T07:32:20Z
     by: agent-S-0464
   - to: in-progress
     at: 2026-10-21T07:32:23Z
+    by: agent-S-0464
+  - to: done
+    at: 2026-10-21T07:49:09Z
     by: agent-S-0464
 stream: S-0464
 tags: [flai]

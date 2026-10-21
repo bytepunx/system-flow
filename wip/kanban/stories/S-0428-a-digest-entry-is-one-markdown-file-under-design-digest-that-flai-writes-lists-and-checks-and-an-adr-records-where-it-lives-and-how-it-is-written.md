@@ -7,7 +7,7 @@ status: backlog
 parent: E-0025
 owner: alex
 created: 2026-10-16T05:58:10Z
-updated: 2026-10-21T07:33:37Z
+updated: 2026-10-21T07:47:11Z
 transitions: []
 tags: [cli, template]
 topics: [cli, conventions, planning, analysis]
@@ -20,10 +20,10 @@ agent:
 draft: true
 forecast:
   duration: 51m
-  delivery: 2026-10-21T19:19:00Z
-  basis: "Its own forecast of 51m; 23rd in the pull order with an in-progress limit of 5, behind S-0453, S-0464, S-0463, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424 and S-0425."
+  delivery: 2026-10-21T19:49:00Z
+  basis: "Its own forecast of 51m; 22nd in the pull order with an in-progress limit of 5, behind S-0463, S-0464, S-0465, S-0456, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422, S-0423, S-0424 and S-0425."
   by: flai
-  at: 2026-10-21T07:33:37Z
+  at: 2026-10-21T07:47:11Z
 ---
 # S-0428 A digest entry is one markdown file under design/digest that flai writes, lists, and checks, and an ADR records where it lives and how it is written
 

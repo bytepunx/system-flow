@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 1098.5704
-accrued_seconds: 1033616
-tasks_completed: 743
-last_run: 2026-10-21T07:44:36Z
+accrued_cost: 1099.3003
+accrued_seconds: 1033857
+tasks_completed: 745
+last_run: 2026-10-21T07:48:37Z
 ---
 
 # Orchestrator activity
@@ -5212,6 +5212,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0453
 - Seconds: 349
 - Cost: 0.4737 USD, estimated
+
+### 2026-10-21T07:47:35Z
+
+- Summary: Published flai 1.67.5 (tag flai/v1.67.5, pushed) under publish, policy judgement. Pending: 1 story, 75 USD/week. Bundled S-0457 (patch, 1.67.4 to 1.67.5), which the operator landed. Reason: a complete, self-contained fix to the merge queue's send-back diagnostics (I-0172), worth shipping while the queue is in daily use.
+- Items: S-0457
+- Seconds: 179
+- Cost: 0.1273 USD, estimated
+
+### 2026-10-21T07:48:37Z
+
+- Summary: S-0456 moved to in-progress, leaving ready empty. Re-applied the throughput order under order_ready, with nothing to order. The only promote candidate is S-0241 (2h), which I skip because it is blocked.
+- Items: S-0456
+- Seconds: 62
+- Cost: 0.6026 USD, estimated
 
 ## Refusals
 

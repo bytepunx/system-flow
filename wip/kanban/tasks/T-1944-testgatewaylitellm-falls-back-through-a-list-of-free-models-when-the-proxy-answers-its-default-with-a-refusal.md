@@ -3,17 +3,20 @@ id: T-1944
 type: task
 nature: remediation
 title: TestGatewayLiteLLM falls back through a list of free models when the proxy answers its default with a refusal
-status: in-progress
+status: done
 parent: S-0456
 owner: alex
 created: 2026-10-21T06:03:28Z
-updated: 2026-10-21T07:29:51Z
+updated: 2026-10-21T07:47:56Z
 transitions:
   - to: ready
     at: 2026-10-21T07:29:51Z
     by: agent-S-0456
   - to: in-progress
     at: 2026-10-21T07:29:51Z
+    by: agent-S-0456
+  - to: done
+    at: 2026-10-21T07:47:56Z
     by: agent-S-0456
 stream: S-0456
 tags: [flai, serve, tests]
@@ -43,3 +46,16 @@ Waits for nothing in this story. The story waits for S-0455, whose T-1942 adds t
 - Every slug on the list passed `TestGatewayLiteLLM` live, recorded in this task's notes.
 
 ## Notes
+
+Live runs of `TestGatewayLiteLLM` through `scripts/gateway-smoke.sh` on 2026-10-21, each slug as `openrouter-messages/<slug>`, every one at $0.000000 of key spend:
+
+| Slug | Result | Test time |
+|------|--------|-----------|
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | passed, picked from the key file's default | 146.3 s |
+| `minimax/minimax-m3.1-flash:free` | passed | 148.1 s |
+| `nvidia/nemotron-3.5-lightning:free` | passed | 161.2 s |
+| retired `nvidia/nemotron-3-super-120b-a12b:free` put first for one run | passed over on its 404, logged as `passed over`; the run passed on nemotron-3-ultra | 147.9 s |
+
+Probes only, not run whole: `poolside/laguna-s-2.1:free` and `cohere/north-mini-code:free` answered 200; `nvidia/nemotron-3.5-super-vl:free` 502, `google/gemma-4-31b-it:free` 429, `thinkingmachines/inkling:free` 403.
+
+The first run also ran `TestGatewayOpenRouter`, as `OPENROUTER_API_KEY` was set in the sub-agent's environment, and spent $0.051729 on the OpenRouter key; the later runs unset it.

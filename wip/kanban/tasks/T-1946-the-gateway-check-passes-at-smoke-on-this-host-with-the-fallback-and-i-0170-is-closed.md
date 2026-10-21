@@ -3,12 +3,18 @@ id: T-1946
 type: task
 nature: remediation
 title: The gateway check passes at smoke on this host with the fallback, and I-0170 is closed
-status: backlog
+status: in-progress
 parent: S-0456
 owner: alex
 created: 2026-10-21T06:03:47Z
-updated: 2026-10-21T06:03:47Z
-transitions: []
+updated: 2026-10-21T07:48:44Z
+transitions:
+  - to: ready
+    at: 2026-10-21T07:48:43Z
+    by: agent-S-0456
+  - to: in-progress
+    at: 2026-10-21T07:48:44Z
+    by: agent-S-0456
 stream: S-0456
 tags: [issues, tests]
 touches: [design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md]

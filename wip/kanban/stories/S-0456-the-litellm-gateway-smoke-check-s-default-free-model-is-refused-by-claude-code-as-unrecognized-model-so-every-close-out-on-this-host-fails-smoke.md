@@ -3,16 +3,19 @@ id: S-0456
 type: story
 nature: remediation
 title: The LiteLLM gateway smoke check's default free model is refused by Claude Code as unrecognized_model, so every close-out on this host fails smoke
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-21T02:08:41Z
-updated: 2026-10-21T07:47:11Z
+updated: 2026-10-21T07:48:30Z
 transitions:
   - to: ready
     at: 2026-10-21T07:28:20Z
     by: alex
+  - to: in-progress
+    at: 2026-10-21T07:48:27Z
+    by: agent-S-0456
 tags: [flai, serve, tests]
-touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md]
+touches: [flai/internal/serve/gateway_test.go, scripts/litellm.sh, design/system/agent-adapters.md, docs/contributors/index.md, design/issues/I-0170-the-litellm-gateway-smoke-check-s-default-free-model-is-refused-by-claude-code-as-unrecognized-model-so-every-close-out-on-this-host-fails-smoke.md, design/issues/summary.md, design/issues/I-0176-a-usage-write-to-a-story-overwrites-its-move-to-in-progress-made-meanwhile-so-a-started-story-reads-as-ready-again.md]
 after: [S-0455]
 agent:
   harness: claude-code
@@ -25,15 +28,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 9911
+      seconds: 9973
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 167
-          output: 3051
-          cache_read: 28729430
-          cache_write: 46798
-          cost: 7.2145
+          input: 203
+          output: 3643
+          cache_read: 31123915
+          cache_write: 55412
+          cost: 7.8171
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m

@@ -3,10 +3,10 @@ id: S-0453
 type: story
 nature: remediation
 title: A thread awaits an agent only when the agent takes part in it or it is on the agent's own story, so a story's agent no longer counts the threads awaiting the operator as its own
-status: review
+status: done
 owner: alex
 created: 2026-10-20T21:49:07Z
-updated: 2026-10-21T07:43:54Z
+updated: 2026-10-21T07:49:34Z
 transitions:
   - to: ready
     at: 2026-10-21T00:36:24Z
@@ -23,6 +23,9 @@ transitions:
   - to: review
     at: 2026-10-21T07:43:54Z
     by: agent-S-0453
+  - to: done
+    at: 2026-10-21T07:49:34Z
+    by: alex
 tags: [flai, template]
 topics: [mcp, inbox, orchestration]
 touches: [design/adrs/README.md, design/system/agent-narrative.md, design/system/flai-cli.md, flai/internal/inbox/inbox.go, flai/internal/inbox/inbox_test.go, flai/internal/mcpserver/server.go, flai/internal/mcpserver/work.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/messages.go, flai/internal/mcpserver/server_test.go, flai/internal/mcpserver/work_test.go, flai/internal/mcpserver/folder_test.go, flai/internal/mcpserver/orchestrator_threads_test.go, flai/internal/mcpserver/story_start_test.go, flai/internal/mcpserver/task_test.go, flai/internal/storystart/start_test.go, flai/internal/taskdone/taskdone_test.go, flai/cmd/task_done.go, flai/cmd/task_done_test.go, flai/cmd/story_start_test.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/system/strategic-agents.md, ".claude/agents/orchestrator.md", template/root/.claude/agents/orchestrator.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/adrs/0181-a-thread-awaits-an-agent-only-when-the-agent-takes-part-in-it-or-it-is-on-the.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/summary.md]

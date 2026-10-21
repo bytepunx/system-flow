@@ -6,7 +6,7 @@ title: The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/ch
 status: in-progress
 owner: alex
 created: 2026-10-21T07:19:58Z
-updated: 2026-10-21T07:31:41Z
+updated: 2026-10-21T07:47:38Z
 transitions:
   - to: ready
     at: 2026-10-21T07:27:18Z
@@ -16,7 +16,7 @@ transitions:
     by: agent-S-0464
 tags: [flai, template]
 topics: [cli, template, orchestration]
-touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/story.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/check/check_test.go, flai/internal/mdlint/repo_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/verify/story.go, scripts/check.sh, scripts/lint-md.sh, scripts/README.md, template/root/scripts/check.sh, template/root/scripts/README.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/devex.md, design/adrs/README.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/summary.md]
+touches: [flai/cmd/check.go, flai/cmd/check_test.go, flai/internal/check/story.go, flai/internal/check/scope.go, flai/internal/check/scope_test.go, flai/internal/check/check_test.go, flai/internal/mdlint/repo_test.go, flai/internal/mergequeue/batch.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/verify/story.go, scripts/check.sh, scripts/lint-md.sh, scripts/README.md, template/root/scripts/check.sh, template/root/scripts/README.md, template/CHANGELOG.md, docs/users/flai.md, docs/users/flai-reference.md, design/system/flai-cli.md, design/system/devex.md, design/adrs/README.md, design/issues/I-0174-the-merge-queue-s-batch-runs-smoke-with-no-close-out-story-so-scripts-check-sh-runs-an-unscoped-flai-check-strict-and-fails-every-batch-on-findings-outside-its-stories.md, design/issues/summary.md, flai/internal/mergequeue/land_test.go, flai/internal/serve/mergequeue_test.go]
 agent:
   harness: claude-code
   model: claude-opus-5-5

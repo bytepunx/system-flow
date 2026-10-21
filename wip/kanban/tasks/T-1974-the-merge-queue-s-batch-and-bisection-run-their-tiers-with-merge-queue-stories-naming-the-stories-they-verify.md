@@ -3,11 +3,11 @@ id: T-1974
 type: task
 nature: remediation
 title: The merge queue's batch and bisection run their tiers with MERGE_QUEUE_STORIES naming the stories they verify
-status: in-progress
+status: done
 parent: S-0464
 owner: alex
 created: 2026-10-21T07:30:16Z
-updated: 2026-10-21T07:32:23Z
+updated: 2026-10-21T07:47:38Z
 transitions:
   - to: ready
     at: 2026-10-21T07:32:21Z
@@ -15,9 +15,12 @@ transitions:
   - to: in-progress
     at: 2026-10-21T07:32:23Z
     by: agent-S-0464
+  - to: done
+    at: 2026-10-21T07:47:38Z
+    by: agent-S-0464
 stream: S-0464
 tags: [flai]
-touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/verify/story.go]
+touches: [flai/internal/mergequeue/batch.go, flai/internal/mergequeue/bisect.go, flai/internal/mergequeue/batch_test.go, flai/internal/mergequeue/bisect_test.go, flai/internal/verify/story.go, flai/internal/mergequeue/land_test.go, flai/internal/serve/mergequeue_test.go]
 ---
 # T-1974 The merge queue's batch and bisection run their tiers with MERGE_QUEUE_STORIES naming the stories they verify
 
