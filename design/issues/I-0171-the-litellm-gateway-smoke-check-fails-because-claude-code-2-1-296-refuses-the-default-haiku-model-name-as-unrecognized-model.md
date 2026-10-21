@@ -2,12 +2,12 @@
 id: I-0171
 title: The LiteLLM gateway smoke check fails because Claude Code 2.1.296 refuses the default haiku model name as unrecognized_model
 class: blocker
-status: open
+status: closed
 count: 3
 cost: 20m
 first_reported: 2026-10-20T20:07:32Z
 last_reported: 2026-10-21T01:54:10Z
-updated: 2026-10-21T01:54:10Z
+updated: 2026-10-21T06:00:19Z
 ---
 
 # I-0171 The LiteLLM gateway smoke check fails because Claude Code 2.1.296 refuses the default haiku model name as unrecognized_model
@@ -34,3 +34,4 @@ Merge queue batch 20261021-014447 sent S-0454 back at smoke (TH-0545). flai serv
 ## Remediation
 
 Story S-0455 remediates this issue, created from it at 2026-10-21T00:29:30Z.
+Closed 2026-10-21T06:00:19Z: S-0455. The cause was OpenRouter's 404 for the retired free nemotron-3-super, not Claude Code's unrecognized_model warning. T-1941: scripts/litellm.sh keeps LITELLM_HAIKU_MODEL in admin.env only when the operator sets it, and drops a retired default on any run, so a host follows the script's current default (nemotron-3-ultra, S-0451). T-1942: TestGatewayLiteLLM probes its model through the proxy before the Claude Code session and fails naming the slug, its source, and the upstream answer; TestLiteLLMProbeNamesTheModel reproduces the 404. On 2026-10-21 the host's files were rewritten on the operator's word (TH-0547), and the gateway check passed from the host's own litellm.env.
