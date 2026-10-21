@@ -2,12 +2,12 @@
 id: I-0174
 title: The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
 class: blocker
-status: open
+status: closed
 count: 2
 cost: 30m
 first_reported: 2026-10-21T06:29:55Z
 last_reported: 2026-10-21T07:20:28Z
-updated: 2026-10-21T07:20:28Z
+updated: 2026-10-21T08:00:37Z
 ---
 
 # I-0174 The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
@@ -28,3 +28,4 @@ Merge queue batches 20261021-065925, 20261021-070546, and 20261021-071126 each s
 ## Remediation
 
 Story S-0464 remediates this issue, created from it at 2026-10-21T07:19:58Z.
+Closed 2026-10-21T08:00:37Z: S-0464 (ADR-0183): the merge queue's batch and each bisection step run their tiers with MERGE_QUEUE_STORIES naming their stories (T-1974), flai check --story takes several stories (T-1973), and scripts/check.sh, scripts/lint-md.sh, TestMonorepoIsClean, and TestRepositoryLintsClean scope to them, recording no issue (T-1975). TestTheBatchsTiersAreGivenItsStoriesAndNoCloseOut and TestEachBisectionStepIsVerifiedGivenItsStories reproduce the cause, a batch's tiers given no scope; TestCheckStoryTakesSeveralStories shows a finding outside both stories no longer fails a scoped --strict run.
