@@ -3,11 +3,11 @@ id: I-0174
 title: The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
 class: blocker
 status: closed
-count: 3
-cost: 25m
+count: 4
+cost: 23m
 first_reported: 2026-10-21T06:29:55Z
-last_reported: 2026-10-21T08:13:09Z
-updated: 2026-10-21T08:13:09Z
+last_reported: 2026-10-21T08:19:31Z
+updated: 2026-10-21T08:19:31Z
 ---
 
 # I-0174 The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
@@ -28,6 +28,10 @@ Merge queue batches 20261021-065925, 20261021-070546, and 20261021-071126 each s
 ### 2026-10-21T08:13:09Z
 Story: S-0456.
 Merge queue batch 20261021-080642 verified S-0456 alone at 9db1029f06e4 and failed it at smoke: scripts/check.sh's unscoped flai check --strict found a wip.overlap between S-0458 and S-0465, two other stories in progress, which S-0456 neither owns nor changes. S-0456's own close-out had passed every step at 097b48d8, smoke included. flai serve sent S-0456 back on TH-0560; nothing on its branch needed a fix. S-0464, in review, fixes this.
+
+### 2026-10-21T08:19:31Z
+Story: S-0463.
+Merge queue batch 20261021-081243 failed with S-0463 at smoke (TH-0561): scripts/check.sh's repository check, run with no CLOSE_OUT_STORY, failed on a wip.overlap between S-0458 and S-0465, two other stories in progress. S-0463 changes only flai/internal/host/host_test.go and design/issues, and its own close-out, scoped to it, passed smoke. flai serve sent S-0463 back to in-progress for it; S-0464, in review, carries the fix.
 
 ## Remediation
 
