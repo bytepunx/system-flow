@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:19Z
-updated: 2026-10-21T16:13:32Z
+updated: 2026-10-21T16:25:08Z
 transitions: []
 tags: [cli, template, dashboard]
 topics: [cli, orchestration, template, conventions]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T16:11:12Z
 forecast:
   duration: 1h10m
-  delivery: 2026-10-22T09:05:00Z
-  basis: "flai's 58m at size 39 (5 criteria, 34 touches), 89 s a unit over 86 done improvement stories on this model in the large band, raised to 1h10m for the two live runs the touches do not count: an analyzer session the instance's agent waits on, and an import of a scratch repository worked by another agent to acceptance; 19th in the pull order after S-0423, whose play-out delivery of 2026-10-22T07:44Z plus 1h10m times the cycle factor 1.15 gives the delivery."
-  by: planner-S-0424
-  at: 2026-10-21T16:11:12Z
+  delivery: 2026-10-22T09:20:00Z
+  basis: "Its own forecast of 1h10m; 19th in the pull order with an in-progress limit of 5, behind S-0483, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415, S-0416, S-0417, S-0418, S-0419, S-0420, S-0421, S-0422 and S-0423."
+  by: flai
+  at: 2026-10-21T16:25:08Z
 ---
 # S-0424 The template ships baseline formulas for importing a repository from the board and for the analyzer's cadence, the board's import starts its formula, and each is run once here
 
