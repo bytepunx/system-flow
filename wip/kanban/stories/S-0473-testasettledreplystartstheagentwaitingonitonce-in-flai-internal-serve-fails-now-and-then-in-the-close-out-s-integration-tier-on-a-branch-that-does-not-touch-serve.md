@@ -6,7 +6,7 @@ title: TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fai
 status: backlog
 owner: alex
 created: 2026-10-21T11:58:53Z
-updated: 2026-10-21T11:58:53Z
+updated: 2026-10-21T12:04:09Z
 transitions: []
 tags: []
 agent:
@@ -14,12 +14,14 @@ agent:
   model: claude-opus-5-5
   config:
     effort: high
-draft: true
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 45m
     by: flai
     at: 2026-10-21T11:58:53Z
+finalized:
+  by: alex
+  at: 2026-10-21T12:04:09Z
 ---
 # S-0473 TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fails now and then in the close-out's integration tier on a branch that does not touch serve
 
