@@ -228,7 +228,8 @@ func addAcceptFlags(c *cobra.Command, o *acceptOptions) {
 }
 
 // accepted is what flai accept did, or under DryRun would do: the preview's
-// acceptance and the conversations it closes (ADR-0120).
+// acceptance, the conversations it closes (ADR-0120), and the sub-projects'
+// installs it ran (ADR-0185).
 type accepted struct {
 	*preview.Acceptance
 	// ClosedMessages are the conversations still open of the stories the
@@ -237,6 +238,9 @@ type accepted struct {
 	// closing names each of ClosedMessages with the story it was open with,
 	// for the text output.
 	closing []string
+	// Installs are the sub-projects' install commands the acceptance ran in
+	// the main checkout after its commit (ADR-0185).
+	Installs []installRun `json:"installs,omitempty"`
 }
 
 // acceptItem runs the acceptance flow for a story or an epic.
@@ -417,6 +421,8 @@ func (a *app) acceptItem(repo *workitem.Repo, it *workitem.Item, o acceptOptions
 	}
 	// 4. tell the stories still open what changed under their claim (S-0132)
 	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
+	// 5. bring the main checkout's installs up to what it changed (ADR-0185)
+	acc.Installs = a.installAccepted(repo, it, changed)
 	return acc, nil
 }
 
@@ -452,7 +458,7 @@ func (a *app) logAcceptConflict(repo *workitem.Repo, story string, err error) {
 }
 
 // finishCommit completes the acceptance of it, done and archived, whose
-// commit failed (I-0100): steps 3 and 4 only, with no merge, no transition,
+// commit failed (I-0100): steps 3 to 5 only, with no merge, no transition,
 // and no archive, since those happened.
 func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, acc *accepted, o acceptOptions) (*accepted, error) {
 	res := acc.Acceptance
@@ -485,6 +491,7 @@ func (a *app) finishCommit(repo *workitem.Repo, it *workitem.Item, acc *accepted
 		changed = committed[it.ID]
 	}
 	a.tellAccepted(repo, it, res, orDefault(o.by, a.author()), changed)
+	acc.Installs = a.installAccepted(repo, it, changed)
 	return acc, nil
 }
 
@@ -1085,6 +1092,13 @@ func (a *app) printAccept(acc *accepted) error {
 	}
 	for _, n := range res.Overlaps {
 		fmt.Fprintf(a.out, "told %s it overlaps: %s\n", n.ID, strings.Join(n.Paths, ", "))
+	}
+	for _, r := range acc.Installs {
+		if r.OK {
+			fmt.Fprintf(a.out, "installed %s: %s\n", r.Project, commandLine(r.Command))
+		} else {
+			fmt.Fprintln(a.out, r.failedLine())
+		}
 	}
 	return nil
 }
