@@ -7,7 +7,7 @@ count: 5
 cost: 9m
 first_reported: 2026-10-17T04:54:11Z
 last_reported: 2026-10-21T09:24:20Z
-updated: 2026-10-21T09:24:20Z
+updated: 2026-10-21T11:58:53Z
 ---
 
 # I-0158 TestASettledReplyStartsTheAgentWaitingOnItOnce in flai/internal/serve fails now and then in the close-out's integration tier on a branch that does not touch serve
@@ -38,3 +38,5 @@ Story: S-0463.
 Merge queue batch 20261021-091124 failed with S-0463 at integration (TH-0564): flai/internal/serve/agents_test.go:1348 'started before the reply', flai serve having started stub-agent again for S-0001 on a message on MS-0001. S-0463 changes only flai/internal/host/host_test.go and design/issues. flai serve sent S-0463 back to in-progress and out of the queue, so this flake now costs a story its place in the queue and a full close-out.
 
 ## Remediation
+
+Story S-0473 remediates this issue, created from it at 2026-10-21T11:58:53Z.
