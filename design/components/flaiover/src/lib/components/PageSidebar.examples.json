@@ -1,0 +1,81 @@
+{
+  "examples": [
+    {
+      "name": "A story's panes, with counts",
+      "props": {
+        "label": "Story sections",
+        "entries": [
+          { "id": "story", "label": "Story", "mode": "pane" },
+          { "id": "tasks", "label": "Tasks", "mode": "pane", "count": 4 },
+          { "id": "questions", "label": "Questions and threads", "mode": "pane", "count": 2 },
+          { "id": "messages", "label": "Messages", "mode": "pane", "count": 1 },
+          { "id": "agent", "label": "Agent", "mode": "pane" },
+          { "id": "history", "label": "History", "mode": "pane" },
+          { "id": "files", "label": "Files", "mode": "pane" },
+          { "id": "planning", "label": "Planning and usage", "mode": "pane" }
+        ],
+        "fallback": "story",
+        "pane": "The pane chosen in the sidebar is shown here."
+      }
+    },
+    {
+      "name": "The same panes below md, as one row",
+      "width": 375,
+      "props": {
+        "label": "Story sections",
+        "entries": [
+          { "id": "story", "label": "Story", "mode": "pane" },
+          { "id": "tasks", "label": "Tasks", "mode": "pane", "count": 4 },
+          { "id": "questions", "label": "Questions and threads", "mode": "pane", "count": 2 },
+          { "id": "messages", "label": "Messages", "mode": "pane", "count": 1 },
+          { "id": "agent", "label": "Agent", "mode": "pane" },
+          { "id": "history", "label": "History", "mode": "pane" }
+        ],
+        "fallback": "story",
+        "pane": "The pane chosen in the sidebar is shown here."
+      }
+    },
+    {
+      "name": "Scroll entries",
+      "props": {
+        "label": "On this page",
+        "entries": [
+          { "id": "goal", "label": "Goal", "mode": "scroll" },
+          { "id": "criteria", "label": "Acceptance criteria", "mode": "scroll", "count": 5 },
+          { "id": "notes", "label": "Notes", "mode": "scroll" }
+        ],
+        "children": "The page's sections, each with the id its entry names."
+      }
+    },
+    {
+      "name": "Panes with nested sections",
+      "props": {
+        "label": "Story sections",
+        "entries": [
+          {
+            "id": "story",
+            "label": "Story",
+            "mode": "pane",
+            "children": [
+              { "id": "goal", "label": "Goal", "mode": "scroll" },
+              { "id": "criteria", "label": "Acceptance criteria", "mode": "scroll" }
+            ]
+          },
+          {
+            "id": "questions",
+            "label": "Questions and threads",
+            "mode": "pane",
+            "count": 3,
+            "children": [
+              { "id": "open-questions", "label": "Open questions", "mode": "scroll", "count": 1 },
+              { "id": "threads", "label": "Threads", "mode": "scroll", "count": 2 }
+            ]
+          },
+          { "id": "history", "label": "History", "mode": "pane" }
+        ],
+        "fallback": "story",
+        "pane": "The pane chosen in the sidebar is shown here."
+      }
+    }
+  ]
+}
