@@ -1,6 +1,6 @@
 ---
 title: Project manifest
-updated: 2026-10-19
+updated: 2026-10-21
 status: active
 topics: [cli, template]
 ---
@@ -37,6 +37,9 @@ projects:                                    # releasable components at the repo
       include: ["src/lib/**/*.svelte"]       # globs from the sub-project's folder, as claims.shared; default src/lib/**/*.svelte
       exclude: ["src/lib/internal/**"]       # globs of files include finds that are not components; default none
       setup: src/app.css                     # a module of the sub-project the harness imports before any component; default none
+    install:                                 # optional (S-0483): what flai accept runs in the main checkout when an acceptance changes paths
+      command: ["../scripts/flaiover-install.sh", "--if-needed"]  # argv, no shell, run in the sub-project's folder
+      paths: ["package.json", "pnpm-lock.yaml"]  # globs from the sub-project's folder, as components' globs
   - name: template
     path: template
     kind: template                           # released by bumping template.yaml and CHANGELOG.md, not by tag
@@ -141,6 +144,11 @@ Rules:
   - `setup`, a module of the sub-project, relative to its folder, that the harness imports before any component, such as the app's stylesheet. Unset, there is none.
 
   `Project.ComponentSettings` gives the settings in effect, the key over those defaults, and false for a kind it does not take. `Manifest.ComponentErrors` reports, each by the sub-project's index, field, and name, such as `projects[1].components.include (sub-project "web") pattern "src/[" is not a valid glob …`: a glob that is empty, absolute, has a `.` or `..` segment, has `**` inside a segment, or does not parse; a `setup` that is absolute, not clean, or leaves the sub-project, or names no file under the sub-project's folder; and `components` on a sub-project of another kind. `flai check` reports them as `manifest.components` errors, and `flai manifest set` refuses a manifest that has one, with no file checked. `flai components config <sub-project> [--include] [--exclude] [--setup] [--unset]` writes the key whole, or removes it, through `manifest.SetComponents`. It keeps every other line of the manifest, the order of its keys, and its comments, and refuses an unknown sub-project and any problem `ComponentErrors` finds in the manifest as it would be, writing nothing. `manifest.EditComponents` gives the bytes it would write, for a caller that checks them first. A key it cannot edit in place, such as a sub-project written on one line, is refused with what to write instead.
+- `projects[].install` (S-0483, [ADR-0185](../adrs/0185-flai-accept-runs-a-sub-project-s-install-command-in-the-main-checkout-when-the.md)) is how a sub-project of any kind installs its dependencies, for `flai accept` to run in the main checkout after an acceptance that changed them. It has:
+  - `command`, the argument list, run with no shell in the sub-project's folder. Required, and its first element not empty.
+  - `paths`, globs relative to the sub-project's folder, written as `components.include` is. Required, at least one. An acceptance that changed a path one of them matches runs `command`.
+
+  `Manifest.InstallErrors` reports a missing or empty `command` or `paths` and a glob `components` would refuse, each by the sub-project's index, field, and name. `flai check` reports them as `manifest.install` errors. Unset, `flai accept` installs nothing for the sub-project. This repository sets flaiover's to `../scripts/flaiover-install.sh --if-needed` on `package.json` and `pnpm-lock.yaml`.
 - `dashboard.notify_url`, when set, makes the dashboard's server POST `{ project, entry: { key, kind, title, href, at } }` to that URL for each inbox entry that appears after it started: one attempt, a short timeout, a warning in the log on failure. The token and file contents are never sent. Unset by default.
 - `dashboard.autocommit: false` leaves documents saved from the dashboard uncommitted; the default commits each save on the main checkout, one path per commit (ADR-0023).
 - `dashboard.allow_unsigned`, when set, is this project's allowance for unsigned builds, over `dashboard.allow_unsigned` in the host's flai configuration (S-0239, [ADR-0070](../adrs/0070-releases-are-signed-with-a-cosign-key-pair-verified-before-they-are-installed.md)): `true` allows them for this project, `false` refuses them though the host allows them, and unset leaves the host's. `flai serve` reads it before each dial, and `flai dashboard` when it starts the container. What the allowance lets through and how it is shown is in [release-signing.md](release-signing.md#the-development-case). An older flai ignores it.
