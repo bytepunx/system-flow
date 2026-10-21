@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:39:46Z
-updated: 2026-10-21T11:43:45Z
+updated: 2026-10-21T11:57:35Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration, template]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T11:41:58Z
 forecast:
   duration: 1h10m
-  delivery: 2026-10-21T17:30:00Z
-  basis: "flai's 1h1m (107 s a unit over 84 done feature stories, size 34: 6 criteria, 28 touches) raised by 9m, because guard.go is 1646 lines whose three roles' rules move into data with every refusal text kept; delivery is flai's play-out, 12th in the pull order, moved by the raise."
-  by: planner-S-0416
-  at: 2026-10-21T11:43:45Z
+  delivery: 2026-10-21T17:46:00Z
+  basis: "Its own forecast of 1h10m; 12th in the pull order with an in-progress limit of 5, behind S-0461, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414 and S-0415."
+  by: flai
+  at: 2026-10-21T11:57:35Z
 ---
 # S-0416 flai guard reads a role's permitted calls from its role file and refuses the rest, and the planner's, the orchestrator's, and the analyzer's rules move into their files with their guard tests unchanged
 

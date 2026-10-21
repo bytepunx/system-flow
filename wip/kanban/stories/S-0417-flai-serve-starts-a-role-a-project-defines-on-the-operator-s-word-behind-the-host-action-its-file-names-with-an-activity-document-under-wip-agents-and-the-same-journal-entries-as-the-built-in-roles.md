@@ -7,11 +7,11 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:01Z
-updated: 2026-10-21T11:53:36Z
+updated: 2026-10-21T11:57:35Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration]
-touches: [design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/check/activity.go, flai/internal/check/activity_test.go, flai/internal/check/check.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/narrative.go, template/CHANGELOG.md, design/system/flai-cli.md, design/system/agent-narrative.md, flai/internal/serve/serve.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/hostapi/people.go, flaiover/src/lib/server/agent.ts]
+touches: [design/system/project-manifest.md, design/system/strategic-agents.md, docs/operators/index.md, docs/operators/settings.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/activity.go, flai/cmd/activity_test.go, flai/cmd/role.go, flai/cmd/role_test.go, flai/cmd/serve_actions.go, flai/cmd/serve_actions_test.go, flai/internal/check/activity.go, flai/internal/check/activity_test.go, flai/internal/check/check.go, flai/internal/harness/adapters.go, flai/internal/harness/harness.go, flai/internal/harness/harness_test.go, flai/internal/hostapi/hostapi.go, flai/internal/hostapi/hostapi_test.go, flai/internal/hostapi/writes.go, flai/internal/hostapi/writes_test.go, flai/internal/manifest/manifest.go, flai/internal/manifest/manifest_test.go, flai/internal/manifest/settings.go, flai/internal/manifest/settings_test.go, flai/internal/mcpserver/activity.go, flai/internal/mcpserver/activity_test.go, flai/internal/mcpserver/folder.go, flai/internal/mcpserver/role.go, flai/internal/mcpserver/role_test.go, flai/internal/serve/activity.go, flai/internal/serve/agents.go, flai/internal/serve/role.go, flai/internal/serve/role_test.go, flai/internal/workitem/activity.go, flai/internal/workitem/activity_test.go, flai/internal/workitem/narrative.go, template/CHANGELOG.md, design/system/flai-cli.md, design/system/agent-narrative.md, flai/internal/serve/serve.go, flai/cmd/mcp.go, flai/cmd/mcp_http.go, flai/internal/hostapi/settings.go, flai/internal/hostapi/settings_test.go, flai/internal/hostapi/people.go, flaiover/src/lib/server/agent.ts, flai/cmd/guard.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go]
 after: [S-0415, S-0416]
 agent:
   harness: claude-code
@@ -24,15 +24,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 449
+      seconds: 507
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 43
-          output: 635
-          cache_read: 5951289
-          cache_write: 15592
-          cost: 1.3176
+          input: 69
+          output: 1100
+          cache_read: 10009086
+          cache_write: 22137
+          cost: 2.2151
 draft: true
 cost_of_delay:
   value: 79.4
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T11:53:36Z
 forecast:
   duration: 1h37m
-  delivery: 2026-10-21T19:28:00Z
-  basis: "flai's 1h37m kept: 107 s a unit over 84 done feature stories on claude-opus-5-5 in the large band, size 54 (6 criteria, 48 touches); 13th in the pull order with an in-progress limit of 5; delivery is flai's play-out."
-  by: planner-S-0417
-  at: 2026-10-21T11:53:36Z
+  delivery: 2026-10-21T19:34:00Z
+  basis: "Its own forecast of 1h37m; 13th in the pull order with an in-progress limit of 5, behind S-0461, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415 and S-0416."
+  by: flai
+  at: 2026-10-21T11:57:35Z
 ---
 # S-0417 flai serve starts a role a project defines on the operator's word, behind the host action its file names, with an activity document under wip/agents and the same journal entries as the built-in roles
 
@@ -67,6 +67,7 @@ A role a project defines runs. `flai role run <name> [<item>]`, the MCP tool `ro
 - T-1738 serve starts, records, and settles a defined role's run under roles in agents.json and logs its activity in wip/agents/name.md, shown end to end with a fixture role
 - T-1739 flai role run, the MCP tool role_run, and the host API's role.run start a defined role, flai serve enable takes its action, and agent.status carries roles
 - T-1740 The design, the manifest's design, and the user and operator docs say how a defined role is started, as whom, and where its activity is logged
+- T-1983 flai guard gates a defined role's permission-bound calls on roles.name.permissions in the manifest, read at each call
 
 ## Notes
 
