@@ -1,6 +1,6 @@
 ---
 title: flaiover dashboard
-updated: 2026-10-20
+updated: 2026-10-21
 status: active
 ---
 
@@ -15,6 +15,8 @@ Running it, securing it, and the settings behind it are in the [operators guide]
 In a project, run `flai dashboard`. It starts the dashboard, and `flai serve` behind it, if they are not running, registers the project with them, and prints a login link. Open the link: <http://localhost:4242/login#token=...>. The token in it never leaves the browser; the page exchanges it for a session cookie and removes it from the address and the history. `flai dashboard token` prints the link again.
 
 **Login** is the page you land on without a session. Paste the token, or open the login link. When your session ends, because the token was rotated or the cookie was lost, any page sends you back here and returns you to where you were once you log in. If the token is right but the browser did not keep the cookie, the page says so and why, rather than asking for the token again; the operators guide explains the case of a tunnel that reports HTTPS.
+
+**Live updates.** A page shows what changes in the project without a reload. Each tab follows its project over one WebSocket, which does not count against the six connections a browser keeps to the dashboard. So any number of tabs can stay open. Before S-0454 each tab held one of those six, and with six tabs open every page of the dashboard stopped loading. When the connection drops, the tab connects again by itself and reads again what it shows.
 
 ## The header
 
@@ -624,7 +626,7 @@ A required prop without a value says `Required: give it a value`. Until each req
 
 **Events.** Under the props, **Events** lists the calls of the component's function props, newest first, up to the last 50. Each shows the time to the millisecond, the prop's name, and its arguments as JSON. An event argument shows as its type, and its detail for a custom event; an element as its tag, such as `<button>`. **Clear** empties the list. Picking another component empties it too.
 
-The frame does not send the component's requests to the app's own server, such as a fetch of `/api/...`, which the dev server cannot answer. It answers each itself and lists it under **Events**. A fetch shows as `fetch`, with its method and path, and is answered 501 Not Implemented, with an error that names it. A component that shows a request's error shows that one. An `EventSource`, a live stream, shows as `EventSource`, with its path, and fails without connecting. Loading the component's own files and assets is not affected.
+The frame does not send the component's requests to the app's own server, such as a fetch of `/api/...`, which the dev server cannot answer. It answers each itself and lists it under **Events**. A fetch shows as `fetch`, with its method and path, and is answered 501 Not Implemented, with an error that names it. A component that shows a request's error shows that one. An `EventSource` or a `WebSocket`, a live stream, shows as `EventSource` or `WebSocket`, with its path, and fails without connecting; a `WebSocket` closes as a refused one does. The dev server's own socket, which brings a saved change to the frame, is not affected. Loading the component's own files and assets is not affected.
 
 **Links that carry props.** The address keeps the props' values too, as `&props=`, so a reload, or the link opened in another tab, renders the component with the same props. The address has no `props` when no prop has a value. Picking another component drops the address's props, your changes, and the events: it starts at its defaults.
 

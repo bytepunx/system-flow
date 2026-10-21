@@ -1,6 +1,6 @@
 ---
 title: A channel between the dashboard and flai on the host
-updated: 2026-10-19
+updated: 2026-10-21
 status: active
 topics: [cli, dashboard]
 ---
@@ -31,7 +31,7 @@ The server half of flaiover has no page server code; its API routes are the whol
 | How | What | Where |
 |-----|------|-------|
 | Direct reads | The manifest; every item file, archive included; `board.md`; threads; narratives (log and open questions); the document tree with each file's front matter; one document; the ADR list; a crawl of every Markdown file into the search index. Front matter is parsed in TypeScript, and the board, the inbox, and the activity view are composed there | `repo.ts`, `board.ts`, `inbox.ts`, `activity.ts`, `search.ts` |
-| Watching | chokidar on the design, docs, and wip folders and the manifest. One `change` event per file feeds `/api/events` (SSE to the browser), the search index, the stats and inbox caches, and the notifier | `repo.ts`, `sse.ts`, `notify.ts` |
+| Watching | chokidar on the design, docs, and wip folders and the manifest. One `change` event per file feeds `/api/events` (server-sent events to the browser then, a WebSocket since S-0454, [ADR-0182](../adrs/0182-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md)), the search index, the stats and inbox caches, and the notifier | `repo.ts`, `sse.ts` (`events-socket.ts` since S-0454), `notify.ts` |
 | Running `flai` in the container | Every write, and every git operation, already goes through flai ([ADR-0016](../adrs/0016-dashboard-delegates-to-flai.md), [ADR-0023](../adrs/0023-documents-are-saved-through-flai.md)): `move`, `order`, `block`, `unblock`, `epic`/`story new`, `accept` (progress streamed as NDJSON) and its dry run, `stream diff`, `stream log`, `thread new`/`reply`/`resolve`, `doc show`/`save`, `adr new`/`accept`, `stats`, `check`, `push --pending --dry-run` (no longer asked by the dashboard since S-0195, [ADR-0067](../adrs/0067-accepted-work-reaches-the-remote-only-when-it-is-published-and-agents-publish.md)). About twenty commands with `--json`: this is already an API | `flai.ts` and its callers |
 | A process per MCP session | `/mcp` spawns `flai mcp` in the project and relays JSON-RPC ([ADR-0024](../adrs/0024-mcp-over-http-and-project-identity.md)) | `mcpbridge.ts` |
 
@@ -46,7 +46,7 @@ What the channel must carry to replace it: request and response for reads and fo
 - **Credentials are per agent and separate from users'.** A registration step yields a long-lived agent credential; each job gets a short-lived one ([GitHub runner auth](https://github.com/actions/runner/blob/main/docs/design/auth.md), [Buildkite tokens](https://buildkite.com/docs/agent/v3/tokens)).
 - **Tunnel clients hold one outbound connection and multiplex over it**, with application heartbeats and backoff on reconnect (cloudflared, the ngrok agent, VS Code's tunnel). Rancher's remotedialer gives the server a dial into the client's network over a client-opened WebSocket, which is exactly the capability to withhold here.
 - **MCP is moving away from servers asking clients.** The 2025-06-18 revision let a server send requests down the client's stream, but only sampling, elicitation, and roots, none of which means "do this"; the 2026-07-28 revision removes sessions, the GET stream, resumption, and server-initiated requests ([changelog](https://modelcontextprotocol.io/specification/latest/changelog)), and the Go SDK cannot receive a custom method from a server.
-- **SvelteKit has no WebSocket support** and none planned before version 3 ([issue 1491](https://github.com/sveltejs/kit/issues/1491)); the documented way is a small custom server that wraps adapter-node's handler. Server-sent events from a route work today, and flaiover already uses them. In Go, `coder/websocket` is maintained (ISC, context-aware); an SSE reader is a few lines of the standard library.
+- **SvelteKit has no WebSocket support** and none planned before version 3 ([issue 1491](https://github.com/sveltejs/kit/issues/1491)); the documented way is a small custom server that wraps adapter-node's handler. Server-sent events from a route work today, and flaiover used them for a page's live events until S-0454, which moved those to a WebSocket upgraded by the same custom server as `/agent` ([ADR-0182](../adrs/0182-the-dashboard-s-live-events-reach-the-browser-over-a-websocket.md)). In Go, `coder/websocket` is maintained (ISC, context-aware); an SSE reader is a few lines of the standard library.
 
 ## How it was tried
 

@@ -1,6 +1,6 @@
 ---
 title: Operators guide
-updated: 2026-10-20
+updated: 2026-10-21
 status: active
 ---
 
@@ -538,7 +538,7 @@ The flai on the host serves MCP and starts agents. When a flai release is accept
 - **Where its files are.** A folder named `serve` beside flai's config file: `projects.json` (what it serves), `removed.json` (the projects removed from below a folder, S-0123), `state.json` (rewritten every second while it runs), `serve.log`, `claude-checks.json` (each Claude Code version checked against `permission_prompt`, the provider each check ran through, `anthropic` for none, and its outcome, S-0286, S-0360, [ADR-0106](../../design/adrs/0106-a-story-whose-branch-changes-a-path-claude-code-protects-is-accepted-by-the.md)), and, since S-0080, the login token and the agent credential themselves — nothing in the folder is secret except those two files (mode 0600).
 - **Turning it off.** `flai dashboard --no-serve` starts the container without registering the project. The dashboard then has no flai to ask for that project: its board, items, and threads answer 503, every page says why, and `/_ready` reports not ready (its `host_flai` check), which matters if you probe it. Use it when you run `flai serve` yourself in a terminal. `flai serve` run that way, outside `flai host`, keeps no MCP server.
 - **What flai serve reads.** Each registered project's design, docs, and wip folders and its manifest, looked at every 300 ms for changes (a stat of each file; a few hundred files cost well under a millisecond of CPU a look), and, when the dashboard asks, Markdown files under those three folders and nothing else: a path that climbs out, a link that leads out, another folder, or another file type is refused by flai, whatever the dashboard sends. The search index is built from the same files and kept in `flai serve`'s memory.
-- **Stopping the container.** The image's server now closes every connection five seconds after SIGTERM (`SHUTDOWN_TIMEOUT`, in seconds), so a container asked to stop does stop, even with event streams open; before, a server that had stopped listening could linger while its container showed as up.
+- **Stopping the container.** On SIGTERM the image's server closes every page's live-events socket at once, and every other connection five seconds later (`SHUTDOWN_TIMEOUT`, in seconds), so a container asked to stop does stop, even with pages open; before, a server that had stopped listening could linger while its container showed as up.
 
 ### Importing repositories from the board (S-0098)
 
