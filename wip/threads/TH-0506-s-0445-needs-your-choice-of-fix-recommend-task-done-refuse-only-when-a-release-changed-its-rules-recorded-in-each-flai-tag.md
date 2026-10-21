@@ -4,10 +4,10 @@ title: "S-0445 needs your choice of fix: recommend task done refuse only when a 
 anchor:
   path: wip/kanban/stories/S-0445-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md
   item: S-0445
-status: answered
+status: resolved
 participants: [planner-S-0445, orchestrator, alex]
 created: 2026-10-18T02:30:52Z
-updated: 2026-10-20T21:12:38Z
+updated: 2026-10-21T02:14:44Z
 ---
 
 # TH-0506 S-0445 needs your choice of fix: recommend task done refuse only when a release changed its rules, recorded in each flai tag
@@ -71,3 +71,6 @@ You finalized S-0445 while this thread was still open, and an agent has pulled i
 Confirmed the recommendation of 2026-10-18T02:31:12Z orchestrator.
 
 Source: design/adrs/0142-flai-task-done-refuses-to-close-a-task-while-the-running-flai-s-major-or-minor.md § Decision
+
+### 2026-10-21T02:14:44Z alex
+Resolved: S-0445 was accepted

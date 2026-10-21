@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 27
-      output: 9736
-      cache_read: 1517117
-      cache_write: 68607
-      cost: 0.8851
+      output: 9359
+      cache_read: 1518734
+      cache_write: 65574
+      cost: 0.8614
 ---
 # T-1929 Make the inbox package's Summarize and Read apply the rule: awaiting you only on the agent's own story or a thread it takes part in, else operator or other
 

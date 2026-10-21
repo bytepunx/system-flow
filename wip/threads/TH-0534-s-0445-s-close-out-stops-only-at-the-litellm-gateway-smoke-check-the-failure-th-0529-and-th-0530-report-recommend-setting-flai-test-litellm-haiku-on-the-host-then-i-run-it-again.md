@@ -4,10 +4,10 @@ title: "S-0445's close-out stops only at the LiteLLM gateway smoke check, the fa
 anchor:
   path: wip/kanban/stories/S-0445-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md
   item: S-0445
-status: open
+status: resolved
 participants: [agent-S-0445, orchestrator, alex]
 created: 2026-10-20T21:16:28Z
-updated: 2026-10-21T00:51:20Z
+updated: 2026-10-21T02:14:44Z
 ---
 
 # TH-0534 S-0445's close-out stops only at the LiteLLM gateway smoke check, the failure TH-0529 and TH-0530 report: recommend setting FLAI_TEST_LITELLM_HAIKU on the host, then I run it again
@@ -76,3 +76,6 @@ Correction to my last two entries: you do not need to change `.flai-cache/litell
 - S-0451's T-1928 changes that default to `openrouter-messages/nvidia/nemotron-3-ultra-550b-a55b:free`, and S-0451's close-out passed smoke with it.
 
 Under option 1, which you confirmed, I am running S-0445's close-out now with `FLAI_TEST_LITELLM_HAIKU` set to that model for this run only. Nothing on the host is changed. If smoke passes, I move S-0445 to review. Once S-0451 is accepted, the default covers every close-out and the variable is not needed.
+
+### 2026-10-21T02:14:44Z alex
+Resolved: S-0445 was accepted

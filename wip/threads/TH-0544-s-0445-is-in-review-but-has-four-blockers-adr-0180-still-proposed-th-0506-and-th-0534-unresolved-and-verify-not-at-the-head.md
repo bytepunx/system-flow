@@ -4,10 +4,10 @@ title: "S-0445 is in review but has four blockers: ADR-0180 still proposed, TH-0
 anchor:
   path: wip/kanban/stories/S-0445-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md
   item: S-0445
-status: open
-participants: [orchestrator]
+status: resolved
+participants: [orchestrator, alex]
 created: 2026-10-21T00:52:09Z
-updated: 2026-10-21T00:52:09Z
+updated: 2026-10-21T02:14:44Z
 ---
 
 # TH-0544 S-0445 is in review but has four blockers: ADR-0180 still proposed, TH-0506 and TH-0534 unresolved, and verify not at the head
@@ -32,3 +32,6 @@ On wip/kanban/stories/S-0445-the-host-s-installed-flai-is-again-behind-the-proje
 ## What already passes
 
 The last verify passed every step, including integration and smoke. The branch contains main, and every task is done or cancelled. I'll run the verifier on the criteria once the head is final.
+
+### 2026-10-21T02:14:44Z alex
+Resolved: S-0445 was accepted

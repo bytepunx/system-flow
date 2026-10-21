@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 19
-      output: 6855
-      cache_read: 1068217
-      cache_write: 48307
-      cost: 0.6232
+      output: 6590
+      cache_read: 1069355
+      cache_write: 46171
+      cost: 0.6065
 ---
 # T-1935 Document in the user docs and the generated reference what inbox and wait_for_work report as awaiting you, operator, and other
 

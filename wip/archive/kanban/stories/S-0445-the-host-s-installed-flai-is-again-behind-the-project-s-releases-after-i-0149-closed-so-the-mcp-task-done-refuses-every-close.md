@@ -3,10 +3,10 @@ id: S-0445
 type: story
 nature: improvement
 title: The host's installed flai is again behind the project's releases after I-0149 closed, so the MCP task_done refuses every close
-status: review
+status: done
 owner: alex
 created: 2026-10-17T16:03:15Z
-updated: 2026-10-21T00:51:45Z
+updated: 2026-10-21T02:14:44Z
 transitions:
   - to: ready
     at: 2026-10-20T20:40:53Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-10-21T00:51:45Z
     by: agent-S-0445
+  - to: done
+    at: 2026-10-21T02:14:44Z
+    by: alex
 tags: [flai]
 touches: [design/adrs/README.md, flai/internal/buildinfo/buildinfo.go, flai/internal/buildinfo/buildinfo_test.go, flai/cmd/version.go, flai/cmd/version_test.go, flai/internal/release/outdated.go, flai/internal/release/outdated_test.go, flai/internal/taskdone/taskdone.go, flai/internal/taskdone/taskdone_test.go, flai/internal/mcpserver/task.go, flai/internal/mcpserver/installed.go, flai/internal/mcpserver/installed_test.go, design/system/flai-cli.md, design/system/agent-narrative.md, docs/users/flai.md, docs/operators/index.md, docs/operators/runbooks/update.md, design/issues/I-0157-the-host-s-installed-flai-is-again-behind-the-project-s-releases-after-i-0149-closed-so-the-mcp-task-done-refuses-every-close.md, design/issues/summary.md, design/adrs/0180-flai-task-done-refuses-an-older-flai-only-when-the-newest-flai-release-raised.md, flai/internal/buildinfo/task-done-rules.txt, docs/users/flai-reference.md, flai/cmd/task_done.go]
 agent:

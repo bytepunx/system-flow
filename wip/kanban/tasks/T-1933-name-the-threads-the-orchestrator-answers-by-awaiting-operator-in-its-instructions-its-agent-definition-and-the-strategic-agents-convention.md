@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 12230
-      cache_read: 1905640
-      cache_write: 86176
-      cost: 1.1118
+      input: 33
+      output: 11756
+      cache_read: 1907671
+      cache_write: 82367
+      cost: 1.082
 ---
 # T-1933 Name the threads the orchestrator answers by awaiting operator in its instructions, its agent definition, and the strategic-agents convention
 
