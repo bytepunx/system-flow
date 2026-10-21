@@ -7,11 +7,11 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:41:11Z
-updated: 2026-10-21T13:13:04Z
+updated: 2026-10-21T13:29:29Z
 transitions: []
 tags: [cli, template]
 topics: [cli, orchestration, template, conventions]
-touches: [design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go]
+touches: [design/adrs, design/adrs/README.md, design/workflows/formulas/publish.md, template/root/design/workflows/formulas/publish.md, template/template.yaml, template/CHANGELOG.md, design/workflows/roles/orchestrator.md, template/root/design/workflows/roles/orchestrator.md, design/conventions/strategic-agents.md, template/root/design/conventions/strategic-agents.md, design/conventions/work-management.md, template/root/design/conventions/work-management.md, design/system/strategic-agents.md, design/system/flai-cli.md, docs/operators/index.md, docs/users/flai.md, docs/users/flai-reference.md, flai/cmd/release.go, flai/cmd/release_evaluate_test.go, flai/cmd/release_push_action_test.go, flai/cmd/orchestrate_permissions_test.go, flai/cmd/formula.go, flai/cmd/formula_test.go, flai/internal/formulas/formulas.go, flai/internal/formulas/formulas_test.go, flai/internal/check/check.go, flai/internal/check/formulas_test.go, flai/internal/guard/roles.go, flai/internal/guard/roles_test.go, flai/internal/mcpserver/orchestrate.go, flai/internal/mcpserver/orchestrate_test.go]
 after: [S-0422]
 agent:
   harness: claude-code
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T13:13:04Z
 forecast:
   duration: 1h
-  delivery: 2026-10-22T04:42:00Z
-  basis: "Median 89 s per unit of size over 85 done improvement stories on claude-opus-5-5 in the large band, times size 34 (5 criteria, 29 touches), 51m, raised to 1h for the live run, whose agent waits on an instance another agent works and on its acceptance; 18th in the pull order with an in-progress limit of 5, after S-0422's delivery, times the cycle factor 1.15."
+  delivery: 2026-10-22T04:59:00Z
+  basis: "Median 89 s per unit of size over 85 done improvement stories on claude-opus-5-5 in the large band, times size 36 (5 criteria, 31 touches), 53m, raised to 1h for the live run, whose agent waits on an instance another agent works and on its acceptance; 18th in the pull order with an in-progress limit of 5, after S-0422's delivery, times the cycle factor 1.15."
   by: planner-S-0423
-  at: 2026-10-21T13:13:04Z
+  at: 2026-10-21T13:29:29Z
 ---
 # S-0423 The template ships a baseline publish formula that fetches, evaluates orchestration.release, and publishes what is pending, the orchestrator starts it in place of calling release_publish, and it is run once here
 
@@ -60,13 +60,14 @@ Publishing a release stops being prose. A baseline formula, `publish`, spells ou
 - [ ] `design/system/strategic-agents.md` § Publishing a release, the convention `strategic-agents.md` and `work-management.md` where they describe publishing, `docs/operators/index.md`, and `template/CHANGELOG.md` say that publishing is the `publish` formula.
 
 ## Tasks
-- T-1780 design/formulas/publish.md, in the template and here, fetches, evaluates the release policy, publishes what is pending, and records the versions and tags
+- T-1780 design/workflows/formulas/publish.md, in the template and here, fetches, evaluates the release policy, publishes what is pending, and records the versions and tags
 - T-1781 A formula step that publishes is refused while the push host action is off, and a publish refused for a moved remote stops the instance with flai's conflict message
 - T-1782 Under publish, the orchestrator's role file tells it to run flai formula run publish when release_evaluate is met, and the guard lets it run that formula
 - T-1783 The publish formula is run once in this repository, its instance worked to review and accepted, and the release or the evaluation that stopped it recorded
 - T-1784 The design, the conventions that describe publishing, the operator docs, and the changelog say that publishing is the publish formula
 - T-2013 A formula step may say in: main, which flai formula run writes into its task's Work as the main checkout's path and flai check validates
 - T-2014 release_publish refuses, naming flai formula run publish, while the project defines a publish formula, and stays for a project with none
+- T-2015 An ADR refining ADR-0094 records that under publish the orchestrator starts the publish formula in place of release_publish, which stays for a project with none
 
 ## Notes
 
@@ -77,17 +78,17 @@ Publishing a release stops being prose. A baseline formula, `publish`, spells ou
 
 ### Planning
 
-- **Plan thread.** TH-0583, 2026-10-21: the replan on TH-0471's answers 2 and 5, with four questions: where a main-checkout step runs (`in: main`, T-2013), the `push` gate (`flai release --pending` refusing an agent `flai serve` started, T-1781), the last step (three steps and the formula's body telling the agent to record the versions and tags), and the rewrite of T-1780 to T-1783's words, which predate the answers. Each of those tasks carries a Notes line saying what changed until the rewrite is approved.
-- **Layers.** T-2013 and T-2014 first; T-1780 after T-2013, since the formula file carries `in: main`; T-1781 and T-1782 after T-1780, T-1781 because both change `flai/cmd/release.go` and T-1782 because its test runs the formula; T-1783 after T-1781, T-1782, and T-2014, so that the run exercises the gate, the rule, and the refusal; T-1784 after T-2013 and T-1782, so that the docs can say what `in: main` and the orchestrator's rule do. No two tasks of a layer share a path.
-- **Touches.** 29, all files. The story declared none of its own; every touch comes from its seven tasks.
+- **Plan thread.** TH-0583, 2026-10-21: the replan on TH-0471's answers 2 and 5, with four questions: where a main-checkout step runs (`in: main`, T-2013), the `push` gate (`flai release --pending` refusing an agent `flai serve` started, T-1781), the last step (three steps and the formula's body telling the agent to record the versions and tags), and the rewrite of T-1780 to T-1783's words, which predate the answers. The orchestrator approved the plan and the rewrites that apply TH-0471 alone, which are made: T-1780's and T-1782's paths and T-1783's instance worked by a story's agent. Questions 1 to 3 went to the operator as a recommendation to take the three answers; T-1781's words, the `in: main` and three-step parts of T-1780, and criterion 1 change once it is confirmed. The orchestrator asked for an ADR refining ADR-0094, which is T-2015.
+- **Layers.** T-2013 and T-2015 first; T-1780 after T-2013, since the formula file carries `in: main`, and T-2014 after T-2015, which records the decision it enforces; T-1781 and T-1782 after T-1780, T-1781 because both change `flai/cmd/release.go` and T-1782 because its test runs the formula; T-1783 after T-1781, T-1782, and T-2014, so that the run exercises the gate, the rule, and the refusal; T-1784 after T-2013, T-1782, and T-2015, so that the docs can say what `in: main` and the orchestrator's rule do and link the ADR. No two tasks of a layer share a path.
+- **Touches.** 31: 30 files and one folder. The story declared none of its own; every touch comes from its eight tasks.
   - **Declared, kept:** 14 of the 20 earlier touches: the conventions in both copies, `design/system/strategic-agents.md` and `flai-cli.md`, the operator and user docs with `flai-reference.md`, the changelog, `template.yaml`, `flai/cmd/release.go` with `release_evaluate_test.go`, and `orchestrate_permissions_test.go`.
   - **Declared, moved:** `design/formulas/publish.md` and `design/roles/orchestrator.md`, in both copies, now under `design/workflows/` (answer 2), on T-1780 and T-1782.
   - **Declared, dropped:** `flai/internal/serve/formula.go` and `formula_publish_test.go`: the serve-side step runner answer 5 took out of S-0422.
-  - **From layout, added:** `flai/internal/formulas/formulas.go`, `flai/internal/check/check.go`, and `flai/cmd/formula.go`, with their tests, for a step's `in` field (T-2013) and flai's hold on the orchestrator's `formula run` (T-1782); `flai/cmd/release_push_action_test.go`, new, for the `push` gate (T-1781); `flai/internal/guard/roles.go` and its test, S-0416's role path, in case the `publish` permission on `formula run publish` needs code beside the role file (T-1782); `flai/internal/mcpserver/orchestrate.go` and `orchestrate_test.go`, where `release_publish` and `mayPublish` live (T-2014).
+  - **From layout, added:** `flai/internal/formulas/formulas.go`, `flai/internal/check/check.go`, and `flai/cmd/formula.go`, with their tests, for a step's `in` field (T-2013) and flai's hold on the orchestrator's `formula run` (T-1782); `flai/cmd/release_push_action_test.go`, new, for the `push` gate (T-1781); `flai/internal/guard/roles.go` and its test, S-0416's role path, in case the `publish` permission on `formula run publish` needs code beside the role file (T-1782); `flai/internal/mcpserver/orchestrate.go` and `orchestrate_test.go`, where `release_publish` and `mayPublish` live (T-2014); `design/adrs/README.md` for the ADR's row (T-2015).
   - **From design:** the role file in both copies, since S-0419 reads the orchestrator's prompt from it; the conventions and the docs criterion 5 names.
   - **Co-change, kept:** `docs/users/flai.md` and `design/system/flai-cli.md`, for `--require-met` and the refusal of `--pending`.
   - **Co-change, not added:** `docs/operators/settings.md` (19%: no new setting; `in` is a formula field and `push` has its row), `design/system/flaiover-dashboard.md` and `docs/users/flaiover.md` (no page changes), `design/system/workflow.md` (publishing is described in `strategic-agents.md` and the conventions), `flai/internal/harness/harness.go` (S-0419 moves the orchestrator's prompt into its role file before this story).
   - The run task, T-1783, touches nothing: the instance is a story of its own, and its agent's commits are its own.
-  - No folder touch.
-- **Forecast.** flai's 38m was for size 25; at size 34 (5 criteria, 29 touches) the same 89 s a unit gives 51m, raised to 1h because T-1783 waits on an instance another agent works and on its acceptance, which no touch counts, as the earlier plan raised it by 14m for the same reason. The delivery is flai's play-out after S-0422, 18th in the pull order, with the raise times the cycle factor 1.15: 2026-10-22T04:42Z.
+  - **Folder touch kept:** `design/adrs`, on T-2015, because the ADR's file name is known only once `flai adr new` makes it. The folder is in `claims.shared`, so it holds no story.
+- **Forecast.** flai's 38m was for size 25; at size 36 (5 criteria, 31 touches) the same 89 s a unit gives 53m, raised to 1h because T-1783 waits on an instance another agent works and on its acceptance, which no touch counts, as the earlier plan raised it by 14m for the same reason. The delivery is flai's play-out after S-0422, 18th in the pull order, with the duration times the cycle factor 1.15: 2026-10-22T04:59Z.
 - **Cost of delay.** 44.67 USD a week, worked out by hand from TH-0471's answer 1, as the planners of S-0414 to S-0422 did, because `flai cod` refuses while E-0024 has no inputs (TH-0567, question 3, confirmed and not yet written on the epic). 4h lost per cycle at `planning.hour_rate` 150 over the default 168h cycle gives E-0024 600 USD a week; S-0423's share is its 1h of the 13h26m forecast for E-0024's twelve open stories: 60 / 806 × 600. Once the input is on E-0024, `flai cod S-0423` gives the same figure while the forecasts stand.

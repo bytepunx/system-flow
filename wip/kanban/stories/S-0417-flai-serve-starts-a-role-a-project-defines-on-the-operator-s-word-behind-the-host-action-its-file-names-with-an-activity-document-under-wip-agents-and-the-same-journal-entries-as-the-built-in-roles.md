@@ -7,7 +7,7 @@ status: backlog
 parent: E-0024
 owner: alex
 created: 2026-10-16T05:40:01Z
-updated: 2026-10-21T13:07:24Z
+updated: 2026-10-21T13:25:33Z
 transitions: []
 tags: [cli, template]
 topics: [cli, planning, orchestration]
@@ -40,10 +40,10 @@ cost_of_delay:
   at: 2026-10-21T11:53:36Z
 forecast:
   duration: 1h37m
-  delivery: 2026-10-21T20:44:00Z
+  delivery: 2026-10-21T21:02:00Z
   basis: "Its own forecast of 1h37m; 12th in the pull order with an in-progress limit of 5, behind S-0479, S-0483, S-0241, S-0406, S-0407, S-0408, S-0409, S-0410, S-0411, S-0412, S-0414, S-0415 and S-0416."
   by: flai
-  at: 2026-10-21T13:07:24Z
+  at: 2026-10-21T13:25:33Z
 ---
 # S-0417 flai serve starts a role a project defines on the operator's word, behind the host action its file names, with an activity document under wip/agents and the same journal entries as the built-in roles
 
