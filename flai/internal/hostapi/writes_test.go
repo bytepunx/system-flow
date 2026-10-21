@@ -625,6 +625,46 @@ func TestAcceptRunRefusedForUnfixedLintCarriesTheFindings(t *testing.T) {
 	}
 }
 
+// I-0145: item.move to done runs flai move --json, and its refusal for lint
+// the fix left or for a path the branch undoes of main's change, exit 4, is
+// Refused with the refused object as data, as accept.run's is.
+func TestItemMoveToDoneRefusedCarriesTheRefusal(t *testing.T) {
+	p := withDocs(t)
+	reason := "S-0001 cannot be accepted: the main checkout's uncommitted files hold lint the fix of the markdown tier could not fix:\n  wip/notes/n.md:1: First line (markdown, MD041)\ncorrect them in the main checkout and run flai accept S-0001 again"
+	unfixed := Ran{Exit: 4, Stdout: []byte(`{"refused":{"id":"S-0001","reason":` + strconv.Quote(reason) + `,"findings":[` +
+		`{"tier":"markdown","checkout":"main","path":"wip/notes/n.md","line":1,"rule":"MD041","message":"First line"},` +
+		`{"tier":"markdown","checkout":"story","story":"S-0001","path":"docs/a.md","line":2,"rule":"MD009","message":"Trailing spaces"}]}}`),
+		Events: []map[string]any{{"level": "FATAL", "msg": "command failed", "err": "rule: " + reason}}}
+	rec := &recorder{ran: unfixed}
+	_, e := writeMethods(rec.run, time.Now, Host{})["item.move"](context.Background(), p, json.RawMessage(`{"id":"S-0001","to":"done",`+rid+`}`))
+	if len(rec.runs) != 1 || strings.Join(rec.runs[0].Args, " ") != "move S-0001 done --by=olive --json" {
+		t.Fatalf("item.move must run flai move with --json: %+v", rec.runs)
+	}
+	if e == nil || e.Code != Refused || e.Message != reason {
+		t.Fatalf("exit 4 should be Refused with flai's reason: %+v", e)
+	}
+	data, _ := e.Data.(map[string]any)
+	findings, _ := data["findings"].([]any)
+	if data["id"] != "S-0001" || data["reason"] != reason || len(findings) != 2 {
+		t.Fatalf("the error's data: %+v", e.Data)
+	}
+	if inMain, story := findings[0].(map[string]any), findings[1].(map[string]any); inMain["checkout"] != "main" || inMain["path"] != "wip/notes/n.md" ||
+		story["checkout"] != "story" || story["story"] != "S-0001" || story["path"] != "docs/a.md" {
+		t.Errorf("each finding's checkout: %+v %+v", inMain, story)
+	}
+
+	undone := Ran{Exit: 4, Stdout: []byte(`{"refused":{"id":"S-0001","reason":"S-0001 cannot be accepted yet: story/S-0001 undoes main's change to docs/a.md","undoes_main":[{"path":"docs/a.md","removed":3}]}}`),
+		Events: []map[string]any{{"level": "FATAL", "err": "S-0001 cannot be accepted yet: story/S-0001 undoes main's change to docs/a.md"}}}
+	rec = &recorder{ran: undone}
+	_, e = writeMethods(rec.run, time.Now, Host{})["item.move"](context.Background(), p, json.RawMessage(`{"id":"S-0001","to":"done",`+rid+`}`))
+	if e == nil || e.Code != Refused || e.Message != "S-0001 cannot be accepted yet: story/S-0001 undoes main's change to docs/a.md" {
+		t.Fatalf("a move to done blocked on an undone path is Refused: %+v", e)
+	}
+	if undoes, _ := e.Data.(map[string]any)["undoes_main"].([]any); len(undoes) != 1 {
+		t.Errorf("the refusal's data: %+v", e.Data)
+	}
+}
+
 // S-0221, ADR-0093: accept.run given by: orchestrator is the orchestrator's
 // acceptance. It is refused, running nothing, while the project's
 // accept_reviews is off, naming the permission; with it on, the commit and

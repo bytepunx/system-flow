@@ -858,7 +858,11 @@ func itemSpecs() map[string]spec {
 	}
 
 	return map[string]spec{
-		"item.move": {build: moveArgs},
+		// item.move to done from review is acceptance: flai move refuses it as
+		// flai accept does, so its refusal (exit 4) is Refused with the
+		// refused object, findings or undoes_main, as data, as accept.run's
+		// is (I-0145).
+		"item.move": {exits: map[int]int{4: Refused}, build: moveArgs},
 
 		// story.start: a ready story started in one call, as flai story start
 		// starts it (S-0274): moved to in-progress, its stream opened, its

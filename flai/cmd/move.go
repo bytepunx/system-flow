@@ -51,9 +51,12 @@ story's, and --json returns it as followed.
 
 Moving a story from review to done is acceptance: it runs the same flow as
 flai accept (merge the story branch, archive, commit), with the same flags.
-There is no other way for a story to become done. When the story is its
-epic's last open one, the epic is accepted and archived with it. Acceptance
-computes no release; see flai release --pending.`,
+It is refused as flai accept is: under --json, a refusal for lint the fix
+left or for a path the branch undoes of main's change exits 4 and prints
+{"refused": {...}}, the same object. There is no other way for a story to
+become done. When the story is its epic's last open one, the epic is accepted
+and archived with it. Acceptance computes no release; see flai release
+--pending.`,
 		Example: `  flai move S-004 in-progress
   flai move T-021 done
   flai move S-005 ready --yes                            # a draft, finalized with the move
@@ -76,7 +79,8 @@ computes no release; see flai release --pending.`,
 				accept.dryRun = accept.dryRun || dryRun
 				res, err := a.acceptItem(repo, it, accept)
 				if err != nil {
-					return err
+					// refused as flai accept refuses it: under --json, data and exit 4 (I-0145)
+					return a.acceptRefusal(err)
 				}
 				return a.printAccept(res)
 			}
