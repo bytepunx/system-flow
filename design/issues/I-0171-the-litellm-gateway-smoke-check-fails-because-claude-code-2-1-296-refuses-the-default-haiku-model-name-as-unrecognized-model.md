@@ -3,11 +3,11 @@ id: I-0171
 title: The LiteLLM gateway smoke check fails because Claude Code 2.1.296 refuses the default haiku model name as unrecognized_model
 class: blocker
 status: open
-count: 2
-cost: 15m
+count: 3
+cost: 20m
 first_reported: 2026-10-20T20:07:32Z
-last_reported: 2026-10-21T01:31:48Z
-updated: 2026-10-21T01:31:48Z
+last_reported: 2026-10-21T01:54:10Z
+updated: 2026-10-21T01:54:10Z
 ---
 
 # I-0171 The LiteLLM gateway smoke check fails because Claude Code 2.1.296 refuses the default haiku model name as unrecognized_model
@@ -26,6 +26,10 @@ Correction, 2026-10-20: the diagnosis above is wrong. `unrecognized_model` is on
 ### 2026-10-21T01:31:48Z
 Story: S-0454.
 S-0454's close-out passed every tier but smoke, where TestGatewayLiteLLM/unified failed: Claude Code 2.1.296 refused the built-in default openrouter-messages/nvidia/nemotron-3-super-120b-a12b:free as unrecognized_model. Ran it again with FLAI_TEST_LITELLM_HAIKU set to nemotron-3-ultra for that run only, as TH-0534 settled for S-0445.
+
+### 2026-10-21T01:54:10Z
+Story: S-0454.
+Merge queue batch 20261021-014447 sent S-0454 back at smoke (TH-0545). flai serve's environment has no LITELLM_BASE_URL, so scripts/env.sh loads .flai-cache/litellm/litellm.env, whose FLAI_TEST_LITELLM_HAIKU is still the retired nemotron-3-super-120b-a12b:free that Claude Code refuses. S-0454's own close-out passed smoke at the same commit with the variable set to nemotron-3-ultra; template render and check passes in a fresh worktree and with flai serve's config. Every batch fails smoke the same way until that line changes or S-0455 lands.
 
 ## Remediation
 
