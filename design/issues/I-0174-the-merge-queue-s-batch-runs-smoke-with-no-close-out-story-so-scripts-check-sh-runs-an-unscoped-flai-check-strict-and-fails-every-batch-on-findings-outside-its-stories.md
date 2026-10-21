@@ -7,7 +7,7 @@ count: 1
 cost: 20m
 first_reported: 2026-10-21T06:29:55Z
 last_reported: 2026-10-21T06:29:55Z
-updated: 2026-10-21T06:29:55Z
+updated: 2026-10-21T07:19:58Z
 ---
 
 # I-0174 The merge queue's batch runs smoke with no CLOSE_OUT_STORY, so scripts/check.sh runs an unscoped flai check --strict and fails every batch on findings outside its stories
@@ -22,3 +22,5 @@ Story: S-0455.
 Merge queue batch 20261021-061843 sent S-0455 back at smoke (TH-0551), at the commit b1d7174e whose own close-out passed smoke at 06:07Z; the thread quoted only "smoke: building bin/flai" (I-0172). Cause, reproduced in S-0455's worktree: `scripts/check.sh` passes `--story "$CLOSE_OUT_STORY" --record-issues` to `flai check --strict` only when CLOSE_OUT_STORY is set, and the batch's verification "sets no CLOSE_OUT_STORY" (design/system/flai-cli.md, The merge queue pass). `env -u CLOSE_OUT_STORY scripts/check.sh` exits 1 on six warnings, none in S-0455: item.archive S-0452 (cancelled, not archived), threads.archived TH-0526 (open on archived S-0404), issues.no-story I-0143, I-0144, I-0145, and the components.examples note for flaiover. With CLOSE_OUT_STORY=S-0455 the same check passes, and the rest of smoke (template, markdown lint, installer, LiteLLM gateway) passed with flai serve's PATH and keys. So every batch fails smoke, whatever its stories, while main carries any finding a scoped check passes over, and the bisection sends a sound story back each time. Fix options: the batch verifier sets CLOSE_OUT_STORY (or a list of its stories) for the tiers, or check.sh scopes to a batch's stories; until then, clearing the six findings on main (flai archive, resolving TH-0526, stories or closes for I-0143..I-0145) lets a batch pass.
 
 ## Remediation
+
+Story S-0464 remediates this issue, created from it at 2026-10-21T07:19:58Z.
