@@ -18,7 +18,7 @@
 
 	const BADGE = { inbox: InboxBadge };
 	const LICENSE = resolve('/license');
-	const here = $derived(locate(page.url.pathname, page.url.hash));
+	const here = $derived(locate(page.url.pathname));
 
 	// Arriving on a page in a group expands it, before the rail is drawn.
 	$effect.pre(() => {

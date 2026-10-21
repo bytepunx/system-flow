@@ -4,7 +4,7 @@
 	// (S-0098), where picking one asks whether to import it. Picking switches every screen in place:
 	// the layout keys the page on the current project, so the page remounts, asks again, and reopens
 	// its event stream for the project picked. A project flai serve serves that is not connected is
-	// labelled apart from one that is, and a link goes to the settings page, which says why (S-0122).
+	// labelled apart from one that is, and a link goes to the settings' Projects page, which says why (S-0122, S-0459).
 	// Each project says whether its flai is signed, and one whose flai the dashboard refused as
 	// unsigned says so, with the reason in the list of why (S-0237). One whose connection the
 	// dashboard let through unsigned under FLAIOVER_ALLOW_UNSIGNED names the side that was (S-0239).
@@ -84,7 +84,7 @@
 	{#if down.length}
 		<a
 			class="text-xs text-danger underline"
-			href={resolve('/settings')}
+			href={resolve('/settings/[page]', { page: 'projects' })}
 			data-testid="project-switcher-why"
 			onclick={why}
 			title={down.map((p) => `${p.name}: ${whyDown(p) ?? 'not connected'}`).join('\n')}

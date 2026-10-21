@@ -1,5 +1,5 @@
 // The nav rail's groups and pages (S-0458, replacing S-0172's two-tier header menu): five groups,
-// each with its icon and its pages in order, and which group and page a path and hash belong to.
+// each with its icon and its pages in order, and which group and page a path belongs to.
 import { resolve } from '$app/paths';
 import type { LucideIcon } from '@lucide/svelte';
 // Each icon by its own module, so dev and tests load the icons used and not the whole library.
@@ -38,9 +38,7 @@ export type LinkedPage = {
 	icon: LucideIcon;
 	/** The paths the page answers: it and every path below it. */
 	path: string;
-	/** With a hash, the page answers on its path only when the URL's hash is this one. */
-	hash?: string;
-	/** Where the rail links, resolve()d, with the hash when there is one. */
+	/** Where the rail links, resolve()d. */
 	href: string;
 	/** An indicator the page carries, shown on its group too. */
 	badge?: 'inbox';
@@ -53,7 +51,6 @@ export type SoonPage = {
 	icon: LucideIcon;
 	soon: true;
 	path?: never;
-	hash?: never;
 	href?: never;
 	badge?: never;
 };
@@ -244,49 +241,47 @@ export const SITE_MENU: MenuGroup[] = [
 		key: 'configuration',
 		label: 'Configuration',
 		icon: SettingsIcon,
-		// The settings page's sections by their anchors (TH-0553); Features, first, answers the page
-		// itself and any hash none of the others has.
+		// The Configuration pages (S-0459, TH-0553), each a page of the settings below /settings; the
+		// settingspages slugs are their keys. /settings itself, which goes on to one of them, and an
+		// unknown page below it are in the group with no page.
 		pages: [
 			{
 				key: 'features',
 				label: 'Features',
 				icon: ToggleRightIcon,
-				path: '/settings',
-				href: resolve('/settings#features')
+				path: '/settings/features',
+				href: resolve('/settings/[page]', { page: 'features' })
 			},
 			{
 				key: 'agents',
 				label: 'Agents',
 				icon: UserCogIcon,
-				path: '/settings',
-				hash: 'agents',
-				href: resolve('/settings#agents')
+				path: '/settings/agents',
+				href: resolve('/settings/[page]', { page: 'agents' })
 			},
 			{
 				key: 'file-system',
 				label: 'File System',
 				icon: FolderTreeIcon,
-				path: '/settings',
-				hash: 'file-system',
-				href: resolve('/settings#file-system')
+				path: '/settings/file-system',
+				href: resolve('/settings/[page]', { page: 'file-system' })
 			},
 			{
 				key: 'projects',
 				label: 'Projects',
 				icon: FolderKanbanIcon,
-				path: '/settings',
-				hash: 'projects',
-				href: resolve('/settings#projects')
+				path: '/settings/projects',
+				href: resolve('/settings/[page]', { page: 'projects' })
 			},
 			{
 				key: 'harnesses',
 				label: 'Harnesses',
 				icon: PlugIcon,
-				path: '/settings',
-				hash: 'harnesses',
-				href: resolve('/settings#harnesses')
+				path: '/settings/harnesses',
+				href: resolve('/settings/[page]', { page: 'harnesses' })
 			}
-		]
+		],
+		also: ['/settings']
 	}
 ];
 
@@ -295,36 +290,29 @@ function under(pathname: string, path: string): boolean {
 }
 
 /**
- * The group and page a path and hash belong to; either is null where the rail has none for it, as
- * for Overview, Updates, and License, which the top bar and the rail's foot link to. Within a group
- * the page with the longest path that answers wins, so Components at /design/components wins below
- * the design system at /design; a page with a hash answers only that hash, and on equal paths it
- * wins over one without.
+ * The group and page a path belongs to; either is null where the rail has none for it, as for
+ * Overview, Updates, and License, which the top bar and the rail's foot link to. Within a group the
+ * page with the longest path that answers wins, so Components at /design/components wins below the
+ * design system at /design.
  */
-export function locate(
-	pathname: string,
-	hash = '',
-	menu: MenuGroup[] = SITE_MENU
-): { group: GroupKey | null; page: PageKey | null } {
-	const h = hash.replace(/^#/, '');
-	const weight = (p: LinkedPage) => p.path.length * 2 + (p.hash ? 1 : 0);
-	for (const g of menu) {
+export function locate(pathname: string): { group: GroupKey | null; page: PageKey | null } {
+	for (const g of SITE_MENU) {
 		const page = g.pages
 			.filter((p): p is LinkedPage => !p.soon)
-			.filter((p) => under(pathname, p.path) && (!p.hash || p.hash === h))
-			.reduce<LinkedPage | undefined>((a, p) => (a && weight(a) >= weight(p) ? a : p), undefined);
+			.filter((p) => under(pathname, p.path))
+			.reduce<LinkedPage | undefined>(
+				(a, p) => (a && a.path.length >= p.path.length ? a : p),
+				undefined
+			);
 		if (page) return { group: g.key, page: page.key };
 		if (g.also?.some((a) => under(pathname, a))) return { group: g.key, page: null };
 	}
 	return { group: null, page: null };
 }
 
-/** A page's href with the project it was followed from, before any hash, for a copied link. */
+/** A page's href with the project it was followed from, for a copied link. */
 export function withProject(href: string, project: string | null | undefined): string {
-	if (!project) return href;
-	const at = href.indexOf('#');
-	const [path, hash] = at < 0 ? [href, ''] : [href.slice(0, at), href.slice(at)];
-	return `${path}?project=${encodeURIComponent(project)}${hash}`;
+	return project ? `${href}?project=${encodeURIComponent(project)}` : href;
 }
 
 /** The indicators a group shows: its pages', each once, in page order. */

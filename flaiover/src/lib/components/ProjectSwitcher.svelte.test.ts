@@ -95,7 +95,7 @@ describe('ProjectSwitcher (S-0080)', () => {
 		]);
 		expect(options[1].title).toBe('dial: refused');
 		const why = document.querySelector<HTMLAnchorElement>('[data-testid="project-switcher-why"]');
-		expect(why?.getAttribute('href')).toBe('/settings');
+		expect(why?.getAttribute('href')).toBe('/settings/projects');
 		expect(why?.textContent).toBe('1 not connected: why?');
 		expect(why?.title).toBe('Quay: dial: refused');
 	});

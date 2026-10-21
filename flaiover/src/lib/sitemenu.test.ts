@@ -1,4 +1,4 @@
-// S-0458: the nav rail's groups and pages, and which group and page a path and hash belong to.
+// S-0458: the nav rail's groups and pages, and which group and page a path belongs to.
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('$app/paths', () => ({
@@ -53,11 +53,11 @@ describe('the nav rail (S-0458)', () => {
 				'/search'
 			],
 			[
-				'/settings#features',
-				'/settings#agents',
-				'/settings#file-system',
-				'/settings#projects',
-				'/settings#harnesses'
+				'/settings/features',
+				'/settings/agents',
+				'/settings/file-system',
+				'/settings/projects',
+				'/settings/harnesses'
 			]
 		]);
 		const workflow = SITE_MENU[0].pages[3];
@@ -106,27 +106,14 @@ describe('the nav rail (S-0458)', () => {
 		expect(locate('/design/componentsx')).toEqual({ group: 'design', page: 'design-system' });
 	});
 
-	it('places a settings anchor on its page, and Features for none or an unknown one', () => {
-		expect(locate('/settings')).toEqual({ group: 'configuration', page: 'features' });
-		expect(locate('/settings', '')).toEqual({ group: 'configuration', page: 'features' });
-		expect(locate('/settings', '#features')).toEqual({ group: 'configuration', page: 'features' });
-		expect(locate('/settings', '#agents')).toEqual({ group: 'configuration', page: 'agents' });
-		expect(locate('/settings', '#file-system')).toEqual({
-			group: 'configuration',
-			page: 'file-system'
-		});
-		expect(locate('/settings', '#projects')).toEqual({ group: 'configuration', page: 'projects' });
-		expect(locate('/settings', '#harnesses')).toEqual({
-			group: 'configuration',
-			page: 'harnesses'
-		});
-		expect(locate('/settings', 'harnesses')).toEqual({
-			group: 'configuration',
-			page: 'harnesses'
-		});
-		expect(locate('/settings', '#tokens')).toEqual({ group: 'configuration', page: 'features' });
-		// a hash on another page changes nothing
-		expect(locate('/board', '#agents')).toEqual({ group: 'flow', page: 'board' });
+	it('places each Configuration page at its own path (S-0459)', () => {
+		for (const page of ['features', 'agents', 'file-system', 'projects', 'harnesses'])
+			expect(locate(`/settings/${page}`), page).toEqual({ group: 'configuration', page });
+	});
+
+	it('places /settings, which goes on to a page, and an unknown page in Configuration only', () => {
+		expect(locate('/settings')).toEqual({ group: 'configuration', page: null });
+		expect(locate('/settings/tokens')).toEqual({ group: 'configuration', page: null });
 	});
 
 	it('places a path only its group claims in the group, with no page', () => {
@@ -155,9 +142,9 @@ describe('the nav rail (S-0458)', () => {
 		expect(SITE_MENU.map((g) => groupBadges(g))).toEqual([['inbox'], [], [], [], []]);
 	});
 
-	it('keeps the project in a page’s href, before its hash', () => {
+	it('keeps the project in a page’s href', () => {
 		expect(withProject('/board', null)).toBe('/board');
 		expect(withProject('/board', 'harbour')).toBe('/board?project=harbour');
-		expect(withProject('/settings#agents', 'a b')).toBe('/settings?project=a%20b#agents');
+		expect(withProject('/settings/agents', 'a b')).toBe('/settings/agents?project=a%20b');
 	});
 });
